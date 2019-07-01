@@ -30,10 +30,10 @@ class AuthBase(object):
 
 class AuthClientUser(http.HttpClient, AuthBase):
     _API_VERSION = 1
-    """:obj:`int`: Version of the API this ApiClient is made for."""
+    ''':obj:`int`: Version of the API this ApiClient is made for.'''
 
-    _API_PATH = "api/V{version}/".format(version=_API_VERSION)
-    """:obj:`str`: Base path of API."""
+    _API_PATH = 'api/V{version}/'.format(version=_API_VERSION)
+    ''':obj:`str`: Base path of API.'''
 
     def __str__(self):
         """Show object info.
@@ -42,35 +42,33 @@ class AuthClientUser(http.HttpClient, AuthBase):
             :obj:`str`
 
         """
-        bits = [
-            "url={!r}".format(self._url),
-            "is_logged_in={!r}".format(self.is_logged_in),
-        ]
-        bits = "({})".format(", ".join(bits))
-        cls = "{c.__module__}.{c.__name__}".format(c=self.__class__)
-        return "{cls}{bits}".format(cls=cls, bits=bits)
+        bits = ['url={!r}'.format(self._url), 'is_logged_in={!r}'.format(self.is_logged_in)]
+        bits = '({})'.format(', '.join(bits))
+        cls = '{c.__module__}.{c.__name__}'.format(c=self.__class__)
+        return '{cls}{bits}'.format(cls=cls, bits=bits)
 
+    # pylint: disable=W0221
     def login(self, username, password):
         self.logout()
 
         self._session.auth = (username, password)
 
-        response = self(method="get", path=self._API_PATH, route="devices/count")
+        response = self(method='get', path=self._API_PATH, route='devices/count')
 
         if response.status_code in [401, 403]:
-            msg = "Login failed!"
+            msg = 'Login failed!'
             raise exceptions.InvalidCredentials(msg)
 
         response.raise_for_status()
 
-        msg = "Successfully logged in username {username!r}"
+        msg = 'Successfully logged in username {username!r}'
         msg = msg.format(username=username)
         self._log.info(msg)
 
     def logout(self):
         self._session.cookies.clear()
-        self._session.headers.pop("api-key", None)
-        self._session.headers.pop("api-secret", None)
+        self._session.headers.pop('api-key', None)
+        self._session.headers.pop('api-secret', None)
         self._session.auth = None
 
     @property
@@ -80,10 +78,10 @@ class AuthClientUser(http.HttpClient, AuthBase):
 
 class AuthClientKey(http.HttpClient, AuthBase):
     _API_VERSION = 1
-    """:obj:`int`: Version of the API this ApiClient is made for."""
+    ''':obj:`int`: Version of the API this ApiClient is made for.'''
 
-    _API_PATH = "api/V{version}/".format(version=_API_VERSION)
-    """:obj:`str`: Base path of API."""
+    _API_PATH = 'api/V{version}/'.format(version=_API_VERSION)
+    ''':obj:`str`: Base path of API.'''
 
     def __str__(self):
         """Show object info.
@@ -92,46 +90,35 @@ class AuthClientKey(http.HttpClient, AuthBase):
             :obj:`str`
 
         """
-        bits = [
-            "url={!r}".format(self._url),
-            "is_logged_in={!r}".format(self.is_logged_in),
-        ]
-        bits = "({})".format(", ".join(bits))
-        cls = "{c.__module__}.{c.__name__}".format(c=self.__class__)
-        return "{cls}{bits}".format(cls=cls, bits=bits)
+        bits = ['url={!r}'.format(self._url), 'is_logged_in={!r}'.format(self.is_logged_in)]
+        bits = '({})'.format(', '.join(bits))
+        cls = '{c.__module__}.{c.__name__}'.format(c=self.__class__)
+        return '{cls}{bits}'.format(cls=cls, bits=bits)
 
+    # pylint: disable=W0221
     def login(self, key, secret):
         self.logout()
-        creds = {"api-key": key, "api-secret": secret}
+        creds = {'api-key': key, 'api-secret': secret}
         self._session.headers.update(creds)
 
-        response = self(method="get", path=self._API_PATH, route="devices/count")
+        response = self(method='get', path=self._API_PATH, route='devices/count')
 
         if response.status_code in [401, 403]:
-            msg = "Login failed!"
+            msg = 'Login failed!'
             raise exceptions.InvalidCredentials(msg)
 
         response.raise_for_status()
 
-        msg = "Successfully logged in with API key & secret"
+        msg = 'Successfully logged in with API key & secret'
         self._log.info(msg)
-
-    def login_private(self):
-        msg = [
-            "Unable to login to private API with API key and secret",
-            "must use {cls} instead of {self}",
-        ]
-        msg = ", ".join(msg)
-        msg = msg.format(cls=AuthClientUser, self=self)
-        raise exceptions.PackageError(msg)
 
     def logout(self):
         self._session.cookies.clear()
-        self._session.headers.pop("api-key", None)
-        self._session.headers.pop("api-secret", None)
+        self._session.headers.pop('api-key', None)
+        self._session.headers.pop('api-secret', None)
         self._session.auth = None
 
     @property
     def is_logged_in(self):
         headers = self._session.headers
-        return all([headers.get("api-key", None), headers.get("api-secret", None)])
+        return all([headers.get('api-key', None), headers.get('api-secret', None)])

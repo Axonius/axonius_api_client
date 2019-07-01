@@ -11,4 +11,4 @@ from . import auth
 from . import exceptions
 from . import version
 
-__all__ = ("api", "http", "auth", "exceptions", "version")
+__all__ = ('api', 'http', 'auth', 'exceptions', 'version')
