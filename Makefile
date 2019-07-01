@@ -23,15 +23,14 @@ lint:
 	pipenv run pylint --rcfile=".pylintrc" setup.py
 
 build:
-	$(MAKE) lint
 	$(MAKE) clean_dist
 
 	pipenv run pip install --quiet --upgrade --requirement requirements-build.txt
 
-	# Building Source and Wheel (universal) distribution…
+	@echo "*** Building Source and Wheel (universal) distribution"
 	pipenv run python setup.py sdist bdist_wheel --universal
 
-	# twine checking
+	@echo "*** Checking package with twine"
 	pipenv run twine check dist/*
 
 clean_files:
@@ -52,15 +51,16 @@ clean:
 	$(MAKE) pipenv_clean
 
 git_check:
-	@git diff-index --quiet HEAD && echo "clean repo" || (echo "uncommited changes"; false)
-	@git tag | grep "$(VERSION)" && echo "$(VERSION) tag found" || (echo "no tag for '$(VERSION)'"; false)
+	@git diff-index --quiet HEAD && echo "*** REPO IS CLEAN" || (echo "!!! REPO IS DIRTY"; false)
+	@git tag | grep "$(VERSION)" && echo "*** FOUND TAG: $(VERSION)" || (echo "!!! NO TAG FOUND: $(VERSION)"; false)
 
 git_tag:
-	@git tag "v$(VERSION)"
+	@git tag "$(VERSION)"
 	@git push --tags
-	@echo "Added tag: v$(VERSION)"
+	@echo "*** ADDED TAG: $(VERSION)"
 
 publish:
+	$(MAKE) lint
 	$(MAKE) build
 	$(MAKE) git_check
 	pipenv run twine upload dist/*
