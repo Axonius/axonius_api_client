@@ -1,7 +1,7 @@
 PACKAGE := "axonius_api_client"
 VERSION := $(shell grep __version__ $(PACKAGE)/version.py | cut -d\' -f2)
 
-.PHONY: docs build
+.PHONY: build
 init:
 	$(MAKE) pkg_tools
 	$(MAKE) pipenv_clean

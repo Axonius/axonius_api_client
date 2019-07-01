@@ -10,5 +10,6 @@ from . import http
 from . import auth
 from . import exceptions
 from . import version
+from . import tools
 
-__all__ = ('api', 'http', 'auth', 'exceptions', 'version')
+__all__ = ('api', 'http', 'auth', 'exceptions', 'version', 'tools')
