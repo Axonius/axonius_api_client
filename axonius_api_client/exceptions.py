@@ -21,8 +21,36 @@ class InvalidCredentials(PackageError):
 class MustLogin(PackageError):
     """Error when not logged in."""
 
-    def __init__(self, auth_client):
-        self.auth_client = auth_client
-        msg = '{auth_client} is not logged in, use login()'
-        msg = msg.format(auth_client=auth_client)
+    def __init__(self, auth):
+        self.auth = auth
+        msg = '{auth} is not logged in, use login()'.format(auth=auth)
         super(MustLogin, self).__init__(msg)
+
+
+class UnknownAdapterName(PackageError):
+    """Error when unable to find an adapter name."""
+
+    def __init__(self, name, known_names):
+        self.name = name
+        self.known_names = known_names
+
+        msg = 'Unable to find adapter "{name}", valid adapters: {names}'
+        msg = msg.format(name=name, names=known_names)
+
+        super(UnknownAdapterName, self).__init__(msg)
+
+
+class UnknownFieldName(PackageError):
+    """Error when unable to find an adapter name."""
+
+    def __init__(self, name, known_names, adapter_name=None):
+        self.name = name
+        self.known_names = known_names
+        self.adapter_name = adapter_name
+        field_type = adapter_name if adapter_name else 'generic'
+        self.field_type = field_type
+
+        msg = 'Unable to find a {field_type} field "{field}", valid fields: {names}'
+        msg = msg.format(field_type=field_type, field=name, names=known_names)
+
+        super(UnknownFieldName, self).__init__(msg)

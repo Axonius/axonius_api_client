@@ -18,25 +18,26 @@ LOG = logging.getLogger(__name__)
 class HttpClient(object):
     """Wrapper for sending requests usings :obj:`requests.Session`."""
 
-    _LOG_REQUEST_ATTRS = [
-        'request to {request.url!r}',
-        'method={request.method!r}',
-        'headers={request.headers}',
-        'size={size}',
+    LOG_REQUEST_ATTRS = [
+        # 'request to {request.url!r}',
+        # 'method={request.method!r}',
+        # 'headers={request.headers}',
+        # 'size={size}',
     ]
     ''':obj:`list` of :obj:`str`: attributes to include when logging requests.'''
 
-    _LOG_RESPONSE_ATTRS = [
+    LOG_RESPONSE_ATTRS = [
         'response from {response.url!r}',
         'method={response.request.method!r}',
+        # 'headers={response.headers}',
         'status={response.status_code!r}',
-        'reason={response.reason!r}',
-        'elapsed={response.elapsed}',
+        # 'reason={response.reason!r}',
+        # 'elapsed={response.elapsed}',
         'size={size}',
     ]
     ''':obj:`list` of :obj:`str`: attributes to include when logging responses.'''
 
-    def __init__(self, url, connect_timeout=5, response_timeout=5, verify=False):
+    def __init__(self, url, connect_timeout=5, response_timeout=5, verify=False, quiet_urllib=True):
         """Constructor.
 
         Args:
@@ -80,37 +81,41 @@ class HttpClient(object):
         self._log = LOG.getChild(self.__class__.__name__)
         ''':obj:`logging.Logger`: Logger for this object.'''
 
-        self._url = url
+        self.url = url
         ''':obj:`str`: URL of Axonius API.'''
 
-        self._last_request = None
+        self.last_request = None
         ''':obj:`requests.PreparedRequest`: Last request sent.'''
 
-        self._last_response = None
+        self.last_response = None
         ''':obj:`requests.Response`: Last response received.'''
 
-        self._save_last = False
+        self.save_last = False
         ''':obj:`bool`: Save requests to last_request and responses to last_response.'''
 
-        self._history = []
+        self.history = []
         ''':obj:`list` of :obj:`requests.Response`: History of responses.'''
 
-        self._save_history = False
+        self.save_history = False
         ''':obj:`bool`: Append all responses to history.'''
 
-        self._connect_timeout = connect_timeout
+        self.connect_timeout = connect_timeout
         ''':obj:`int`: Seconds to wait for connection to url to open.'''
 
-        self._response_timeout = response_timeout
+        self.response_timeout = response_timeout
         ''':obj:`int`: Seconds to wait for response from url.'''
 
-        self._session = requests.Session()
+        self.session = requests.Session()
         ''':obj:`requests.Session`: Session object to use.'''
 
-        self._session.verify = verify
+        self.session.verify = verify
 
         if verify is False:
             warnings.simplefilter('ignore', requests.urllib3.exceptions.InsecureRequestWarning)
+
+        if quiet_urllib:
+            urllog = logging.getLogger('urllib3.connectionpool')
+            urllog.setLevel(logging.WARNING)
 
     def __call__(self, path, route='', method='get', data=None, params=None, headers=None, json=None, **kwargs):
         """Create, prepare, and then send a request using :attr:`session`.
@@ -139,25 +144,25 @@ class HttpClient(object):
             :obj:`requests.Response`
 
         """
-        url = requests.compat.urljoin(self._url, path)
+        url = requests.compat.urljoin(self.url, path)
         if route:
             url = requests.compat.urljoin(url, route.lstrip('/'))
 
         headers = headers or {}
-        headers.setdefault('User-Agent', self._user_agent)
+        headers.setdefault('User-Agent', self.user_agent)
 
         request = requests.Request(url=url, method=method, data=data, headers=headers, params=params, json=json)
-        prepped_request = self._session.prepare_request(request=request)
+        prepped_request = self.session.prepare_request(request=request)
 
-        if self._save_last:
-            self._last_request = prepped_request
+        if self.save_last:
+            self.last_request = prepped_request
 
-        if self._LOG_REQUEST_ATTRS:
-            msg = ', '.join(self._LOG_REQUEST_ATTRS)
+        if self.LOG_REQUEST_ATTRS:
+            msg = ', '.join(self.LOG_REQUEST_ATTRS)
             msg = msg.format(request=prepped_request, size=len(prepped_request.body or ''))
             self._log.debug(msg)
 
-        psettings = self._session.merge_environment_settings(
+        psettings = self.session.merge_environment_settings(
             url=prepped_request.url,
             proxies=kwargs.get('proxies', None),
             stream=kwargs.get('stream', None),
@@ -169,20 +174,20 @@ class HttpClient(object):
         send_args.update(psettings)
         send_args['request'] = prepped_request
         send_args['timeout'] = (
-            kwargs.get('connect_timeout', self._connect_timeout),
-            kwargs.get('response_timeout', self._response_timeout),
+            kwargs.get('connect_timeout', self.connect_timeout),
+            kwargs.get('response_timeout', self.response_timeout),
         )
 
-        response = self._session.send(**send_args)
+        response = self.session.send(**send_args)
 
-        if self._save_last:
-            self._last_response = response
+        if self.save_last:
+            self.last_response = response
 
-        if self._save_history:
-            self._history.append(response)
+        if self.save_history:
+            self.history.append(response)
 
-        if self._LOG_RESPONSE_ATTRS:
-            msg = ', '.join(self._LOG_RESPONSE_ATTRS)
+        if self.LOG_RESPONSE_ATTRS:
+            msg = ', '.join(self.LOG_RESPONSE_ATTRS)
             msg = msg.format(response=response, size=len(response.text or ''))
             self._log.debug(msg)
 
@@ -195,10 +200,7 @@ class HttpClient(object):
             :obj:`str`
 
         """
-        bits = ['url={!r}'.format(self._url)]
-        bits = '({})'.format(', '.join(bits))
-        cls = '{c.__module__}.{c.__name__}'.format(c=self.__class__)
-        return '{cls}{bits}'.format(cls=cls, bits=bits)
+        return '{c.__module__}.{c.__name__}({url})'.format(c=self.__class__, url=self.url)
 
     def __repr__(self):
         """Show object info.
@@ -210,7 +212,7 @@ class HttpClient(object):
         return self.__str__()
 
     @property
-    def _user_agent(self):
+    def user_agent(self):
         """Build a user agent string for use in User-Agent header.
 
         Returns:

@@ -51,10 +51,7 @@ class UrlParser(object):
             :obj:`str`
 
         """
-        bits = ['parsed={!r}'.format(self.parsed_str)]
-        bits = '({})'.format(', '.join(bits))
-        cls = '{c.__module__}.{c.__name__}'.format(c=self.__class__)
-        return '{cls}{bits}'.format(cls=cls, bits=bits)
+        return '{c.__module__}.{c.__name__}({parsed})'.format(c=self.__class__, parsed=self.parsed_str)
 
     def __repr__(self):
         """Show object info.
@@ -126,8 +123,7 @@ class UrlParser(object):
         """
         parsed = getattr(self, 'parsed', None)
         attrs = ['scheme', 'netloc', 'hostname', 'port', 'path', 'params', 'query', 'fragment']
-        vals = ', '.join(['{a}={v!r}'.format(a=a, v='{}'.format(getattr(parsed, a, '')) or '') for a in attrs])
-        return vals
+        return ', '.join(['{a}={v!r}'.format(a=a, v='{}'.format(getattr(parsed, a, '')) or '') for a in attrs])
 
     def make_netloc(self, host, port):
         """Create netloc from host and port.
@@ -142,8 +138,7 @@ class UrlParser(object):
             :obj:`str`
 
         """
-        netloc = ':'.join([host, port]) if port else host
-        return netloc
+        return ':'.join([host, port]) if port else host
 
     def reparse(self, parsed, default_scheme=''):
         """Reparse a parsed URL into a parsed URL with values fixed.
@@ -206,15 +201,12 @@ class UrlParser(object):
 
         if not port:
             if scheme == 'https':
-                port = '443'
-                netloc = self.make_netloc(host, port)
+                netloc = self.make_netloc(host, '443')
             elif scheme == 'http':
-                port = '80'
-                netloc = self.make_netloc(host, port)
+                netloc = self.make_netloc(host, '80')
 
         pass2 = urllib.parse.urlunparse((scheme, netloc, path, params, query, fragment))
-        ret = urllib.parse.urlparse(pass2)
-        return ret
+        return urllib.parse.urlparse(pass2)
 
     def unparse_base(self, parsed_result):
         """Unparse a parsed URL into just the scheme, hostname, and port parts.

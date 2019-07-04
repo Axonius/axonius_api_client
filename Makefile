@@ -8,7 +8,16 @@ init:
 	$(MAKE) pipenv_init
 
 pkg_tools:
-	pip install --quiet --upgrade pip disttools pipenv
+	pip install --quiet --upgrade --requirement requirements-pkg.txt
+
+pkg_dev:
+	pip install --quiet --upgrade --requirement requirements-dev.txt
+
+pkg_test:
+	pip install --quiet --upgrade --requirement requirements-test.txt
+
+pkg_build:
+	pip install --quiet --upgrade --requirement requirements-build.txt
 
 pipenv_clean:
 	pipenv --rm || true
@@ -17,15 +26,22 @@ pipenv_init:
 	pipenv install --dev --skip-lock
 
 lint:
-	pipenv run pip install --quiet --upgrade --requirement requirements-dev.txt
-	pipenv run black --line-length=120 -S .
+	$(MAKE) pkg_dev
+	pipenv run which black && black --line-length=120 -S .
 	pipenv run pylint --rcfile=".pylintrc" $(PACKAGE)
 	pipenv run pylint --rcfile=".pylintrc" setup.py
 
+test:
+	$(MAKE) pkg_test
+	pipenv run pytest --capture=no --showlocals --log-cli-level=DEBUG --verbose --exitfirst $(PACKAGE)/tests
+
+test_coverage:
+	$(MAKE) pkg_test
+	pipenv run pytest --junitxml=junit-report.xml --cov-config=.coveragerc --cov-report=term --cov-report xml --cov-report=html:cov_html --cov=$(PACKAGE) --capture=no --showlocals --log-cli-level=DEBUG --verbose --exitfirst $(PACKAGE)/tests
+
 build:
 	$(MAKE) clean_dist
-
-	pipenv run pip install --quiet --upgrade --requirement requirements-build.txt
+	$(MAKE) pkg_build
 
 	@echo "*** Building Source and Wheel (universal) distribution"
 	pipenv run python setup.py sdist bdist_wheel --universal
