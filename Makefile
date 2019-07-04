@@ -3,22 +3,22 @@ VERSION := $(shell grep __version__ $(PACKAGE)/version.py | cut -d\' -f2)
 
 .PHONY: build
 init:
-	$(MAKE) pip_tools
+	$(MAKE) pip_install_tools
 	$(MAKE) clean
 	$(MAKE) pyenv_init
 	$(MAKE) pipenv_init
 
-pip_tools:
+pip_install_tools:
 	pip install --quiet --upgrade --requirement requirements-pkg.txt
 
-pip_dev:
-	pip install --quiet --upgrade --requirement requirements-dev.txt
+pipenv_install_dev:
+	pipenv run pip install --quiet --upgrade --requirement requirements-dev.txt
 
-pip_lint:
-	pip install --quiet --upgrade --requirement requirements-lint.txt
+pipenv_install_lint:
+	pipenv run pip install --quiet --upgrade --requirement requirements-lint.txt
 
-pip_build:
-	pip install --quiet --upgrade --requirement requirements-build.txt
+pipenv_install_build:
+	pipenv run pip install --quiet --upgrade --requirement requirements-build.txt
 
 pipenv_clean:
 	pipenv --rm || true
@@ -33,22 +33,22 @@ pyenv_init:
 	pyenv local 3.7.3 3.6.8 2.7.16
 
 lint:
-	$(MAKE) pip_lint
+	$(MAKE) pipenv_install_lint
 	pipenv run which black && black $(PACKAGE) setup.py
 	pipenv run flake8 --max-line-length 89 $(PACKAGE) setup.py
 	pipenv run bandit -r . --skip B101 -x playground.py,setup.py
 
-test:
-	$(MAKE) pip_dev
+test_debug:
+	$(MAKE) pipenv_install_dev
 	pipenv run pytest --capture=no --showlocals --log-cli-level=DEBUG --verbose --exitfirst $(PACKAGE)/tests
 
-test_coverage:
-	$(MAKE) pip_dev
-	pipenv run pytest --junitxml=junit-report.xml --cov-config=.coveragerc --cov-report=term --cov-report xml --cov-report=html:cov_html --cov=$(PACKAGE) --capture=no --showlocals --log-cli-level=DEBUG --verbose --exitfirst $(PACKAGE)/tests
+test:
+	$(MAKE) pipenv_install_dev
+	pipenv run pytest --junitxml=junit-report.xml --cov-config=.coveragerc --cov-report=term --cov-report xml --cov-report=html:cov_html --cov=$(PACKAGE) --showlocals --log-cli-level=INFO --verbose --exitfirst $(PACKAGE)/tests
 
 build:
 	$(MAKE) clean_dist
-	$(MAKE) pip_build
+	$(MAKE) pipenv_install_build
 
 	@echo "*** Building Source and Wheel (universal) distribution"
 	pipenv run python setup.py sdist bdist_wheel --universal

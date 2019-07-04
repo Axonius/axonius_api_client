@@ -20,11 +20,13 @@
 		[
 			"--max-line-length=89"
 		],
-		"anaconda.pep257": true,
-		"anaconda.pep8_ignore":
+		"pep257": true,
+		"pep8_ignore":
 		[
-			"E309"
 		],
+		"anaconda_linter_phantoms": false,
+		"anaconda_linter_show_errors_on_save": true,
+		"pep257_ignore": ["D203", "D209", "D212", "D213", "D405", "D406", "D407", "D408", "D409", "D410", "D411"],
 		"color_scheme": "Monokai.sublime-color-scheme",
 		"font_face": "Ubuntu Mono",
 		"font_size": 15,

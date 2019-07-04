@@ -58,9 +58,8 @@ class UrlParser(object):
             :obj:`str`
 
         """
-        return "{c.__module__}.{c.__name__}({parsed})".format(
-            c=self.__class__, parsed=self.parsed_str
-        )
+        msg = "{c.__module__}.{c.__name__}({parsed})".format
+        return msg(c=self.__class__, parsed=self.parsed_str)
 
     def __repr__(self):
         """Show object info.
@@ -85,7 +84,7 @@ class UrlParser(object):
     def port(self):
         """Port part from :attr:`UrlParser.parsed`.
 
-        Returns:
+        Returns
             :obj:`int`
 
         """
@@ -237,9 +236,8 @@ class UrlParser(object):
 
         """
         # only unparse self.parsed into url with scheme and netloc
-        return urllib.parse.urlunparse(
-            (parsed_result.scheme, parsed_result.netloc, "", "", "", "")
-        )
+        bits = (parsed_result.scheme, parsed_result.netloc, "", "", "", "")
+        return urllib.parse.urlunparse(bits)
 
     def unparse_all(self, parsed_result):
         """Unparse a parsed URL with all the parts.

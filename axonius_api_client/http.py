@@ -19,10 +19,10 @@ class HttpClient(object):
     """Wrapper for sending requests usings :obj:`requests.Session`."""
 
     LOG_REQUEST_ATTRS = [
-        # "request to {request.url!r}",
-        # "method={request.method!r}",
+        "request to {request.url!r}",
+        "method={request.method!r}",
         # "headers={request.headers}",
-        # "size={size}",
+        "size={size}",
     ]
     """:obj:`list` of :obj:`str`: attributes to include when logging requests."""
 
@@ -37,14 +37,7 @@ class HttpClient(object):
     ]
     """:obj:`list` of :obj:`str`: attributes to include when logging responses."""
 
-    def __init__(
-        self,
-        url,
-        connect_timeout=5,
-        response_timeout=5,
-        verify=False,
-        quiet_urllib=True,
-    ):
+    def __init__(self, url, **kwargs):
         """Constructor.
 
         Args:
@@ -84,7 +77,6 @@ class HttpClient(object):
             not be used.
 
         """
-
         self._log = LOG.getChild(self.__class__.__name__)
         """:obj:`logging.Logger`: Logger for this object."""
 
@@ -97,27 +89,27 @@ class HttpClient(object):
         self.last_response = None
         """:obj:`requests.Response`: Last response received."""
 
-        self.save_last = False
+        self.save_last = kwargs.get("save_last", False)
         """:obj:`bool`: Save requests to last_request and responses to last_response."""
 
         self.history = []
         """:obj:`list` of :obj:`requests.Response`: History of responses."""
 
-        self.save_history = False
+        self.save_history = kwargs.get("save_history", False)
         """:obj:`bool`: Append all responses to history."""
 
-        self.connect_timeout = connect_timeout
+        self.connect_timeout = kwargs.get("connect_timeout", 5)
         """:obj:`int`: Seconds to wait for connection to url to open."""
 
-        self.response_timeout = response_timeout
+        self.response_timeout = kwargs.get("response_timeout", 5)
         """:obj:`int`: Seconds to wait for response from url."""
 
         self.session = requests.Session()
         """:obj:`requests.Session`: Session object to use."""
 
-        self.session.verify = verify
+        self.session.verify = kwargs.get("verify", False)
 
-        if quiet_urllib:
+        if kwargs.get("quiet_urllib", True):
             warnings.simplefilter(
                 "ignore", requests.urllib3.exceptions.InsecureRequestWarning
             )
@@ -162,7 +154,9 @@ class HttpClient(object):
 
         """
         url = requests.compat.urljoin(self.url, path)
+
         if route:
+            url = url.rstrip("/") + "/"
             url = requests.compat.urljoin(url, route.lstrip("/"))
 
         headers = headers or {}
@@ -183,7 +177,7 @@ class HttpClient(object):
             )
             self._log.debug(msg)
 
-        psettings = self.session.merge_environment_settings(
+        send_args = self.session.merge_environment_settings(
             url=prepped_request.url,
             proxies=kwargs.get("proxies", None),
             stream=kwargs.get("stream", None),
@@ -191,8 +185,6 @@ class HttpClient(object):
             cert=kwargs.get("cert", None),
         )
 
-        send_args = {}
-        send_args.update(psettings)
         send_args["request"] = prepped_request
         send_args["timeout"] = (
             kwargs.get("connect_timeout", self.connect_timeout),
@@ -221,7 +213,7 @@ class HttpClient(object):
             :obj:`str`
 
         """
-        return "{c.__module__}.{c.__name__}({url})".format(
+        return "{c.__module__}.{c.__name__}(url={url!r})".format(
             c=self.__class__, url=self.url
         )
 
