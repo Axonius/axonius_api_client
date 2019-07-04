@@ -47,10 +47,9 @@ class UnknownFieldName(PackageError):
         self.name = name
         self.known_names = known_names
         self.adapter_name = adapter_name
-        field_type = adapter_name if adapter_name else "generic"
-        self.field_type = field_type
+        self.field_type = adapter_name if adapter_name else "generic"
 
         msg = "Unable to find a {field_type} field {field!r}, valid fields: {names}"
-        msg = msg.format(field_type=field_type, field=name, names=known_names)
+        msg = msg.format(field_type=self.field_type, field=name, names=known_names)
 
         super(UnknownFieldName, self).__init__(msg)

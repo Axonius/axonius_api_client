@@ -3,20 +3,21 @@ VERSION := $(shell grep __version__ $(PACKAGE)/version.py | cut -d\' -f2)
 
 .PHONY: build
 init:
-	$(MAKE) pkg_tools
-	$(MAKE) pipenv_clean
+	$(MAKE) pip_tools
+	$(MAKE) clean
+	$(MAKE) pyenv_init
 	$(MAKE) pipenv_init
 
-pkg_tools:
+pip_tools:
 	pip install --quiet --upgrade --requirement requirements-pkg.txt
 
-pkg_dev:
+pip_dev:
 	pip install --quiet --upgrade --requirement requirements-dev.txt
 
-pkg_lint:
+pip_lint:
 	pip install --quiet --upgrade --requirement requirements-lint.txt
 
-pkg_build:
+pip_build:
 	pip install --quiet --upgrade --requirement requirements-build.txt
 
 pipenv_clean:
@@ -25,23 +26,29 @@ pipenv_clean:
 pipenv_init:
 	pipenv install --dev --skip-lock
 
+pyenv_init:
+	pyenv install 3.7.3 -s
+	pyenv install 3.6.8 -s
+	pyenv install 2.7.16 -s
+	pyenv local 3.7.3 3.6.8 2.7.16
+
 lint:
-	$(MAKE) pkg_lint
+	$(MAKE) pip_lint
 	pipenv run which black && black $(PACKAGE) setup.py
 	pipenv run flake8 --max-line-length 89 $(PACKAGE) setup.py
 	pipenv run bandit -r . --skip B101 -x playground.py,setup.py
 
 test:
-	$(MAKE) pkg_dev
+	$(MAKE) pip_dev
 	pipenv run pytest --capture=no --showlocals --log-cli-level=DEBUG --verbose --exitfirst $(PACKAGE)/tests
 
 test_coverage:
-	$(MAKE) pkg_dev
+	$(MAKE) pip_dev
 	pipenv run pytest --junitxml=junit-report.xml --cov-config=.coveragerc --cov-report=term --cov-report xml --cov-report=html:cov_html --cov=$(PACKAGE) --capture=no --showlocals --log-cli-level=DEBUG --verbose --exitfirst $(PACKAGE)/tests
 
 build:
 	$(MAKE) clean_dist
-	$(MAKE) pkg_build
+	$(MAKE) pip_build
 
 	@echo "*** Building Source and Wheel (universal) distribution"
 	pipenv run python setup.py sdist bdist_wheel --universal
