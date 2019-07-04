@@ -1,3 +1,0 @@
-codecov
-pytest
-pytest-cov

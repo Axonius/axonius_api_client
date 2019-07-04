@@ -1,0 +1,44 @@
+{
+	"build_systems":
+	[
+		{
+			"file_regex": "^[ ]*File \"(...*?)\", line ([0-9]*)",
+			"name": "Anaconda Python Builder",
+			"selector": "source.python",
+			"shell_cmd": "\"/Users/jimbo/.pyenv/shims/python\" -u \"$file\""
+		}
+	],
+	"folders":
+	[
+		{
+			"path": "/gh/axonius/axonius_api_client"
+		}
+	],
+	"settings":
+	{
+		"SublimeLinter.linters.flake8.args":
+		[
+			"--max-line-length=89"
+		],
+		"anaconda.pep257": true,
+		"anaconda.pep8_ignore":
+		[
+			"E309"
+		],
+		"color_scheme": "Monokai.sublime-color-scheme",
+		"font_face": "Ubuntu Mono",
+		"font_size": 15,
+		"python_interpreter": "~/.pyenv/shims/python",
+		"rulers":
+		[
+			89
+		],
+		"sublack.black_command": "~/.pyenv/shims/black",
+		"sublack.black_line_length": null,
+		"sublack.black_on_save": true,
+		"sublack.black_skip_string_normalization": false,
+		"tab_size": 4,
+		"translate_tabs_to_spaces": true,
+		"trim_trailing_white_space_on_save": true
+	}
+}

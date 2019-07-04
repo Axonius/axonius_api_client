@@ -13,8 +13,8 @@ pkg_tools:
 pkg_dev:
 	pip install --quiet --upgrade --requirement requirements-dev.txt
 
-pkg_test:
-	pip install --quiet --upgrade --requirement requirements-test.txt
+pkg_lint:
+	pip install --quiet --upgrade --requirement requirements-lint.txt
 
 pkg_build:
 	pip install --quiet --upgrade --requirement requirements-build.txt
@@ -26,17 +26,17 @@ pipenv_init:
 	pipenv install --dev --skip-lock
 
 lint:
-	$(MAKE) pkg_dev
-	pipenv run which black && black --line-length=120 -S .
-	pipenv run pylint --rcfile=".pylintrc" $(PACKAGE)
-	pipenv run pylint --rcfile=".pylintrc" setup.py
+	$(MAKE) pkg_lint
+	pipenv run which black && black $(PACKAGE) setup.py
+	pipenv run flake8 --max-line-length 89 $(PACKAGE) setup.py
+	pipenv run bandit -r . --skip B101 -x playground.py,setup.py
 
 test:
-	$(MAKE) pkg_test
+	$(MAKE) pkg_dev
 	pipenv run pytest --capture=no --showlocals --log-cli-level=DEBUG --verbose --exitfirst $(PACKAGE)/tests
 
 test_coverage:
-	$(MAKE) pkg_test
+	$(MAKE) pkg_dev
 	pipenv run pytest --junitxml=junit-report.xml --cov-config=.coveragerc --cov-report=term --cov-report xml --cov-report=html:cov_html --cov=$(PACKAGE) --capture=no --showlocals --log-cli-level=DEBUG --verbose --exitfirst $(PACKAGE)/tests
 
 build:

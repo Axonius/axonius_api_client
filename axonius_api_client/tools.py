@@ -13,7 +13,7 @@ from . import exceptions
 class UrlParser(object):
     """Parse a URL and ensure it has the neccessary bits."""
 
-    def __init__(self, url, default_scheme=''):
+    def __init__(self, url, default_scheme=""):
         """Constructor.
 
         Args:
@@ -30,17 +30,24 @@ class UrlParser(object):
 
         """
         self._init_url = url
-        ''':obj:`str`: Initial URL provided.'''
-        self._init_scheme = default_scheme
-        ''':obj:`str`: Default scheme provided.'''
-        self._init_parsed = urllib.parse.urlparse(url)
-        ''':obj:`urllib.parse.ParseResult`: First pass of parsing URL.'''
-        self.parsed = self.reparse(parsed=self._init_parsed, default_scheme=default_scheme)
-        ''':obj:`urllib.parse.ParseResult`: Second pass of parsing URL.'''
+        """:obj:`str`: Initial URL provided."""
 
-        for part in ['hostname', 'port', 'scheme']:
+        self._init_scheme = default_scheme
+        """:obj:`str`: Default scheme provided."""
+
+        self._init_parsed = urllib.parse.urlparse(url)
+        """:obj:`urllib.parse.ParseResult`: First pass of parsing URL."""
+
+        self.parsed = self.reparse(
+            parsed=self._init_parsed, default_scheme=default_scheme
+        )
+        """:obj:`urllib.parse.ParseResult`: Second pass of parsing URL."""
+
+        for part in ["hostname", "port", "scheme"]:
             if not getattr(self.parsed, part, None):
-                error = 'Parsed URL into "{pstr}" and no {part!r} provided in URL {url!r}'
+                error = (
+                    "Parsed URL into {pstr!r} and no {part!r} provided in URL {url!r}"
+                )
                 error = error.format(part=part, url=url, pstr=self.parsed_str)
                 raise exceptions.PackageError(error)
 
@@ -51,7 +58,9 @@ class UrlParser(object):
             :obj:`str`
 
         """
-        return '{c.__module__}.{c.__name__}({parsed})'.format(c=self.__class__, parsed=self.parsed_str)
+        return "{c.__module__}.{c.__name__}({parsed})".format(
+            c=self.__class__, parsed=self.parsed_str
+        )
 
     def __repr__(self):
         """Show object info.
@@ -112,7 +121,6 @@ class UrlParser(object):
         """
         return self.unparse_all(parsed_result=self.parsed)
 
-    # pylint: disable=R0201
     @property
     def parsed_str(self):
         """Create string of :attr:`UrlParser.parsed`.
@@ -121,9 +129,20 @@ class UrlParser(object):
             :obj:`str`
 
         """
-        parsed = getattr(self, 'parsed', None)
-        attrs = ['scheme', 'netloc', 'hostname', 'port', 'path', 'params', 'query', 'fragment']
-        return ', '.join(['{a}={v!r}'.format(a=a, v='{}'.format(getattr(parsed, a, '')) or '') for a in attrs])
+        parsed = getattr(self, "parsed", None)
+        attrs = [
+            "scheme",
+            "netloc",
+            "hostname",
+            "port",
+            "path",
+            "params",
+            "query",
+            "fragment",
+        ]
+        atmpl = "{a}={v!r}".format
+        attrs = [atmpl(a=a, v="{}".format(getattr(parsed, a, "")) or "") for a in attrs]
+        return ", ".join(attrs)
 
     def make_netloc(self, host, port):
         """Create netloc from host and port.
@@ -138,9 +157,9 @@ class UrlParser(object):
             :obj:`str`
 
         """
-        return ':'.join([host, port]) if port else host
+        return ":".join([host, port]) if port else host
 
-    def reparse(self, parsed, default_scheme=''):
+    def reparse(self, parsed, default_scheme=""):
         """Reparse a parsed URL into a parsed URL with values fixed.
 
         Args:
@@ -157,25 +176,23 @@ class UrlParser(object):
         """
         scheme, netloc, path, params, query, fragment = parsed
         host = parsed.hostname
-        port = format(parsed.port or '')
+        port = format(parsed.port or "")
 
-        if not netloc and scheme and path and path.split('/')[0].isdigit():
-            # pylint: disable=W0105
-            '''For case:
+        if not netloc and scheme and path and path.split("/")[0].isdigit():
+            """For case:
             >>> urllib.parse.urlparse('host:443/')
             ParseResult(
                 scheme='host', netloc='', path='443/', params='', query='', fragment=''
             )
-            '''
+            """
             host = scheme  # switch host from scheme to host
-            port = path.split('/')[0]  # remove / from path and assign to port
-            path = ''  # empty out path
+            port = path.split("/")[0]  # remove / from path and assign to port
+            path = ""  # empty out path
             scheme = default_scheme
-            netloc = ':'.join([host, port])
+            netloc = ":".join([host, port])
 
         if not netloc and path:
-            # pylint: disable=W0105
-            '''For cases:
+            """For cases:
             >>> urllib.parse.urlparse('host:443')
             ParseResult(
                 scheme='', netloc='', path='host:443', params='', query='', fragment=''
@@ -184,26 +201,26 @@ class UrlParser(object):
             ParseResult(
                 scheme='', netloc='', path='host', params='', query='', fragment=''
             )
-            '''
+            """
             netloc, path = path, netloc
-            if ':' in netloc:
-                host, port = netloc.split(':', 1)
-                netloc = ':'.join([host, port]) if port else host
+            if ":" in netloc:
+                host, port = netloc.split(":", 1)
+                netloc = ":".join([host, port]) if port else host
             else:
                 host = netloc
 
         scheme = scheme or default_scheme
         if not scheme and port:
-            if format(port) == '443':
-                scheme = 'https'
-            elif format(port) == '80':
-                scheme = 'http'
+            if format(port) == "443":
+                scheme = "https"
+            elif format(port) == "80":
+                scheme = "http"
 
         if not port:
-            if scheme == 'https':
-                netloc = self.make_netloc(host, '443')
-            elif scheme == 'http':
-                netloc = self.make_netloc(host, '80')
+            if scheme == "https":
+                netloc = self.make_netloc(host, "443")
+            elif scheme == "http":
+                netloc = self.make_netloc(host, "80")
 
         pass2 = urllib.parse.urlunparse((scheme, netloc, path, params, query, fragment))
         return urllib.parse.urlparse(pass2)
@@ -220,7 +237,9 @@ class UrlParser(object):
 
         """
         # only unparse self.parsed into url with scheme and netloc
-        return urllib.parse.urlunparse((parsed_result.scheme, parsed_result.netloc, '', '', '', ''))
+        return urllib.parse.urlunparse(
+            (parsed_result.scheme, parsed_result.netloc, "", "", "", "")
+        )
 
     def unparse_all(self, parsed_result):
         """Unparse a parsed URL with all the parts.

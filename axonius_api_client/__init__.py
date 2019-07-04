@@ -12,4 +12,4 @@ from . import exceptions
 from . import version
 from . import tools
 
-__all__ = ('api', 'http', 'auth', 'exceptions', 'version', 'tools')
+__all__ = ("api", "http", "auth", "exceptions", "version", "tools")
