@@ -10,6 +10,7 @@ import logging
 
 import requests
 
+from . import tools
 from . import version
 
 LOG = logging.getLogger(__name__)
@@ -118,7 +119,7 @@ class HttpClient(object):
 
     def __call__(
         self,
-        path,
+        path="",
         route="",
         method="get",
         data=None,
@@ -153,11 +154,7 @@ class HttpClient(object):
             :obj:`requests.Response`
 
         """
-        url = requests.compat.urljoin(self.url, path)
-
-        if route:
-            url = url.rstrip("/") + "/"
-            url = requests.compat.urljoin(url, route.lstrip("/"))
+        url = tools.urljoin(self.url, path, route)
 
         headers = headers or {}
         headers.setdefault("User-Agent", self.user_agent)

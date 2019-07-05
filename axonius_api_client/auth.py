@@ -19,23 +19,23 @@ LOG = logging.getLogger(__name__)
 class AuthBase(object):
     @abc.abstractmethod
     def login(self):
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover
 
     @abc.abstractmethod
     def logout(self):
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover
 
     @abc.abstractmethod
     def validate(self):
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover
 
     @abc.abstractproperty
     def is_logged_in(self):
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover
 
     @abc.abstractproperty
     def http_client(self):
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover
 
 
 class AuthMixins(object):

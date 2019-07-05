@@ -251,3 +251,15 @@ class UrlParser(object):
 
         """
         return urllib.parse.urlunparse(parsed_result)
+
+
+def urljoin(url, *parts):
+    """Join a URL to any number of parts."""
+    url = url.rstrip("/") + "/"
+    for part in parts:
+        if not part:
+            continue
+        url = url.rstrip("/") + "/"
+        part = part.lstrip("/")
+        url = urllib.parse.urljoin(url, part)
+    return url
