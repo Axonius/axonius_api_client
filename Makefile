@@ -1,7 +1,8 @@
 PACKAGE := "axonius_api_client"
 VERSION := $(shell grep __version__ $(PACKAGE)/version.py | cut -d\' -f2)
 
-.PHONY: build
+.PHONY: build docs
+
 init:
 	$(MAKE) pip_install_tools
 	$(MAKE) clean
@@ -19,6 +20,9 @@ pipenv_install_lint:
 
 pipenv_install_build:
 	pipenv run pip install --quiet --upgrade --requirement requirements-build.txt
+
+pipenv_install_docs:
+	pipenv run pip install --quiet --upgrade --requirement docs/requirements.txt
 
 pipenv_clean:
 	pipenv --rm || true
@@ -38,40 +42,35 @@ lint:
 	pipenv run flake8 --max-line-length 89 $(PACKAGE) setup.py
 	pipenv run bandit -r . --skip B101 -x playground.py,setup.py
 
-test_debug:
-	$(MAKE) pipenv_install_dev
-	pipenv run pytest --capture=no --showlocals --log-cli-level=DEBUG --verbose --exitfirst $(PACKAGE)/tests
-
 test:
 	$(MAKE) pipenv_install_dev
 	pipenv run pytest --junitxml=junit-report.xml --cov-config=.coveragerc --cov-report=term --cov-report xml --cov-report=html:cov_html --cov=$(PACKAGE) --showlocals --log-cli-level=INFO --verbose --exitfirst $(PACKAGE)/tests
 
-build:
-	$(MAKE) clean_dist
-	$(MAKE) pipenv_install_build
+test_debug:
+	$(MAKE) pipenv_install_dev
+	pipenv run pytest --capture=no --showlocals --log-cli-level=DEBUG --verbose --exitfirst $(PACKAGE)/tests
 
-	@echo "*** Building Source and Wheel (universal) distribution"
-	pipenv run python setup.py sdist bdist_wheel --universal
-
-	@echo "*** Checking package with twine"
-	pipenv run twine check dist/*
-
-clean_files:
-	find . -type d -name "__pycache__" | xargs rm -rf
-	find . -type f -name ".DS_Store" | xargs rm -f
-	find . -type f -name "*.pyc" | xargs rm -f
-
-clean_dist:
-	rm -rf build dist *.egg-info
-
-clean_test:
+test_clean:
 	rm -rf .egg .eggs junit-report.xml cov_html .tox .pytest_cache .coverage
 
-clean:
-	$(MAKE) clean_dist
-	$(MAKE) clean_files
-	$(MAKE) clean_test
-	$(MAKE) pipenv_clean
+docs:
+	$(MAKE) pipenv_install_docs
+	(pushd docs && pipenv run make html SPHINXOPTS="-na" && popd)
+	open docs/_build/html/index.html
+
+docs_coverage:
+	$(MAKE) pipenv_install_docs
+	(pushd docs && pipenv run make coverage && popd)
+	cat _build/coverage/python.txt
+
+docs_linkcheck:
+	$(MAKE) pipenv_install_docs
+	(pushd docs && pipenv run make linkcheck && popd)
+	cat docs/_build/linkcheck/output.txt
+
+docs_clean:
+	$(MAKE) pipenv_install_docs
+	(pushd docs && pipenv run make clean && popd)
 
 git_check:
 	@git diff-index --quiet HEAD && echo "*** REPO IS CLEAN" || (echo "!!! REPO IS DIRTY"; false)
@@ -87,3 +86,29 @@ publish:
 	$(MAKE) build
 	$(MAKE) git_check
 	pipenv run twine upload dist/*
+
+build:
+	$(MAKE) build_clean
+	$(MAKE) pipenv_install_build
+
+	@echo "*** Building Source and Wheel (universal) distribution"
+	pipenv run python setup.py sdist bdist_wheel --universal
+
+	@echo "*** Checking package with twine"
+	pipenv run twine check dist/*
+
+build_clean:
+	rm -rf build dist *.egg-info
+
+
+clean_files:
+	find . -type d -name "__pycache__" | xargs rm -rf
+	find . -type f -name ".DS_Store" | xargs rm -f
+	find . -type f -name "*.pyc" | xargs rm -f
+
+clean:
+	$(MAKE) clean_files
+	$(MAKE) build_clean
+	$(MAKE) test_clean
+	$(MAKE) docs_clean
+	$(MAKE) pipenv_clean

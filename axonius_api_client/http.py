@@ -25,7 +25,7 @@ class HttpClient(object):
         # "headers={request.headers}",
         "size={size}",
     ]
-    """:obj:`list` of :obj:`str`: attributes to include when logging requests."""
+    """:obj:`list` of :obj:`str`: Attributes to include when logging requests."""
 
     LOG_RESPONSE_ATTRS = [
         "response from {response.url!r}",
@@ -36,7 +36,7 @@ class HttpClient(object):
         # "elapsed={response.elapsed}",
         "size={size}",
     ]
-    """:obj:`list` of :obj:`str`: attributes to include when logging responses."""
+    """:obj:`list` of :obj:`str`: Attributes to include when logging responses."""
 
     def __init__(self, url, **kwargs):
         """Constructor.
@@ -44,18 +44,33 @@ class HttpClient(object):
         Args:
             url (:obj:`str`):
                 Axonius API URL.
-            connect_timeout (:obj:`int`, optional):
-                Seconds to wait for connection to url to open.
+            **kwargs:
+                connect_timeout (:obj:`int`, optional):
+                    Seconds to wait for connection to url to open.
 
-                Defaults to: 5.
-            response_timeout (:obj:`int`, optional):
-                Seconds to wait for response from url.
+                    Defaults to: 5.
+                response_timeout (:obj:`int`, optional):
+                    Seconds to wait for response from url.
 
-                Defaults to: 5.
-            verify (:obj:`bool` or :obj:`str`, optional):
-                Enable/Disable SSL cert validation.
+                    Defaults to: 5.
+                verify (:obj:`bool` or :obj:`str`, optional):
+                    Enable/Disable SSL cert validation.
 
-                Defaults to: False.
+                    Defaults to: False.
+                save_last (:obj:`bool`, optional):
+                    Save last request & response to :attr:`last_request` and
+                    :attr:`last_response`.
+
+                    Defaults to: False.
+                save_history (:obj:`bool`, optional):
+                    Add last response to :attr:`history`.
+
+                    Defaults to: False.
+                quiet_urllib (:obj:`bool`, optional):
+                    Disable urllib3 InsecureRequestWarning and set logging level
+                    for urllib3.connectionpool to WARNING.
+
+                    Defaults to: True.
 
         Notes:
             If verify is False, no SSL cert verification is done.

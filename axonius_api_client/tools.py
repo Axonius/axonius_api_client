@@ -254,7 +254,17 @@ class UrlParser(object):
 
 
 def urljoin(url, *parts):
-    """Join a URL to any number of parts."""
+    """Join a URL to any number of parts.
+
+    Args:
+        url (:obj:`str`):
+            URL to add parts to.
+        *parts: Strings to append to URL.
+
+    Returns:
+        :obj:`str`
+
+    """
     url = url.rstrip("/") + "/"
     for part in parts:
         if not part:

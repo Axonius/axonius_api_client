@@ -1,0 +1,5 @@
+{% extends "!layout.html" %}
+{% block extrahead %}
+    <link rel="stylesheet" href="{{ pathto('_static/hacks.css', true)|e }}" />
+{{ super() }}
+{% endblock %}

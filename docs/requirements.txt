@@ -1,0 +1,4 @@
+sphinx
+sphinx-git
+sphinx_bootstrap_theme
+docutils

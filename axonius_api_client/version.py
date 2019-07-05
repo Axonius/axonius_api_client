@@ -7,7 +7,7 @@ from __future__ import unicode_literals
 
 __version__ = "1.0.0"
 """:obj:`str`: Version of package."""
-__url__ = "https://www.axonius.com"
+__url__ = "https://github.com/Axonius/axonius_api_client"
 """:obj:`str`: URL of package."""
 __author__ = "Axonius"
 """:obj:`str`: Auth of package."""
