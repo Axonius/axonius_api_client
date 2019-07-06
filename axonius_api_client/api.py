@@ -28,7 +28,7 @@ class ApiClient(object):
 
     @abc.abstractproperty
     def _obj_route(self):
-        """Pass."""
+        """Get the object route."""
         raise NotImplementedError  # pragma: no cover
 
     def __init__(self, auth):
@@ -188,7 +188,20 @@ class ObjectMixins(object):
         return self._request(method="post", route="views", json=data)
 
     def delete_saved_query_by_name(self, name, regex=False):
-        """Pass."""
+        """Delete a saved query by name.
+
+        Args:
+            name (:obj:`str`):
+                Name of saved query to delete.
+            regex (:obj:`bool`, optional):
+                Search for name using regex.
+
+                Defaults to: False.
+
+        Returns:
+            :obj:`str`: empty string
+
+        """
         found = self.get_saved_queries_by_name(name=name, regex=regex)
         ids = [x["uuid"] for x in found]
         return self._delete_saved_queries(ids=ids)
@@ -448,7 +461,16 @@ class ObjectMixins(object):
         return self._request(method="get", route="views", params=params)
 
     def _delete_saved_queries(self, ids):
-        """Pass."""
+        """Delete saved queries by ids.
+
+        Args:
+            ids (:obj:`list` of :obj:`str`):
+                List of UUID's of saved queries to delete.
+
+        Returns:
+            :obj:`str`: empty string
+
+        """
         data = {"ids": ids}
         return self._request(method="delete", route="views", json=data)
 
@@ -474,7 +496,7 @@ class ApiUsers(ApiClient, ObjectMixins):
 
     @property
     def _obj_route(self):
-        """Pass."""
+        """Get the object route."""
         return "users"
 
 
@@ -500,7 +522,7 @@ class ApiDevices(ApiClient, ObjectMixins):
 
     @property
     def _obj_route(self):
-        """Pass."""
+        """Get the object route."""
         return "devices"
 
 
