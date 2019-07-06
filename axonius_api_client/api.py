@@ -353,6 +353,167 @@ class ApiClient(object):
 
             seen += len(page["assets"])
 
+    def create_user_saved_query(
+        self,
+        name,
+        query,
+        page_size=25,
+        sort_field="",
+        sort_descending=True,
+        sort_adapter="generic",
+        **fields
+    ):
+        """Create a user saved query.
+
+        Args:
+            name (:obj:`str`):
+                Name of saved query to create.
+            query (:obj:`str`):
+                Query built from Query Wizard in GUI to use in saved query.
+            page_size (:obj:`int`, optional):
+                Number of rows to show in each page in GUI.
+            sort_field (:obj:`str`, optional):
+                Name of field to sort results on.
+
+                Defaults to: "".
+            sort_descending (:obj:`bool`, optional):
+                Sort sort_field descending.
+
+                Defaults to: True.
+            sort_adapter (:obj:`str`, optional):
+                Name of adapter sort_field is from.
+
+                Defaults to: "generic".
+
+        Returns:
+            :obj:`str`: The ID of the new saved query.
+
+        """
+        for k, v in self.DEFAULT_USER_FIELDS.items():
+            fields.setdefault(k, v)
+
+        known_fields = self.get_user_fields()
+        validated_fields = self._validate_fields(known_fields=known_fields, **fields)
+
+        if sort_field:
+            sort_field = find_field(
+                name=sort_field, fields=known_fields, adapter=sort_adapter
+            )
+
+        data = {}
+        data["name"] = name
+        data["query_type"] = "saved"
+        data["view"] = {}
+        data["view"]["fields"] = validated_fields
+
+        # FUTURE: find out what this is
+        data["view"]["historical"] = None
+
+        # FUTURE: find out if this only impacts GUI
+        data["view"]["page"] = 0
+
+        # FUTURE: find out if this only impacts GUI
+        data["view"]["pageSize"] = page_size
+
+        data["view"]["query"] = {}
+
+        # FUTURE: validate 'expressions' is not needed
+        data["view"]["query"]["filter"] = query
+        data["sort"] = {}
+        data["sort"]["desc"] = sort_descending
+        data["sort"]["field"] = sort_field
+
+        return self._request(method="post", route="users/views", json=data)
+
+    def delete_user_saved_query_by_name(self, name, regex=False):
+        """Pass."""
+        found = self.get_user_saved_queries_by_name(name=name, regex=regex)
+        ids = [x["uuid"] for x in found]
+        return self._delete_user_saved_queries(ids=ids)
+
+    def get_user_saved_queries(self, query=None, page_size=20, max_rows=0):
+        """Get device saved queries using paging.
+
+        Args:
+            query (:obj:`str`, optional):
+                Query to filter rows to return. This is NOT a query built by
+                the Query Wizard in the GUI. This is something else. See
+                :meth:`get_user_saved_queries_by_name` for an example query.
+
+                Defaults to: None.
+            page_size (:obj:`int`, optional):
+                Get N rows per page.
+
+                Defaults to: 20.
+            max_rows (:obj:`int`, optional):
+                If not 0, only return up to N rows.
+
+                Defaults to: 0.
+
+        Yields:
+            :obj:`dict`: each row found in 'assets' from return.
+
+        """
+        page = self._get_user_saved_queries(
+            query=query, page_size=page_size, row_start=0
+        )
+
+        for row in page["assets"]:
+            yield row
+
+        # totalResources on page for this call just shows current page_size
+        # So we just have to loop until there are no more answers
+        seen = len(page["assets"])
+
+        while True:
+            page = self._get_user_saved_queries(
+                query=query, page_size=page_size, row_start=seen
+            )
+
+            for row in page["assets"]:
+                yield row
+
+            if (max_rows and seen >= max_rows) or not page["assets"]:
+                break
+
+            seen += len(page["assets"])
+
+    def get_user_saved_queries_by_name(self, name, regex=True):
+        """Get device saved queries by name using paging.
+
+        Args:
+            name (:obj:`str`):
+                Name of saved query to get.
+            regex (:obj:`bool`, optional):
+                Search for name using regex.
+
+                Defaults to: True.
+            page_size (:obj:`int`, optional):
+                Get N rows per page.
+
+                Defaults to: 20.
+            max_rows (:obj:`int`, optional):
+                If not 0, only return up to N rows.
+
+                Defaults to: 0.
+
+        Raises:
+            :exc:`exceptions.SavedQueryNotFound`
+
+        Returns:
+            :obj:`list` of :obj:`dict`: Each row matching name.
+
+        """
+        if regex:
+            query = 'name == regex("{name}", "i")'.format(name=name)
+        else:
+            query = 'name == "{name}"'.format(name=name)
+
+        found = list(self.get_user_saved_queries(query=query))
+        if not found:
+            raise exceptions.SavedQueryNotFound(query=query)
+        return found
+
     def get_user_fields(self):
         """Get the fields available for users.
 
@@ -367,6 +528,22 @@ class ApiClient(object):
             self, "_user_fields", self._request(method="get", route="users/fields")
         )
         return self._user_fields
+
+    def get_user_count(self, query=None):
+        """Get the number of users for a given query.
+
+        Args:
+            query (:obj:`str`, optional):
+                Query built from Query Wizard in GUI to count users of.
+
+        Returns:
+            :obj:`int`
+
+        """
+        params = {}
+        if query:
+            params["filter"] = query
+        return self._request(method="get", route="users/count", params=params)
 
     def get_users(self, query=None, page_size=100, max_rows=0, **fields):
         """Get users for a given query using paging.
@@ -531,6 +708,47 @@ class ApiClient(object):
                 fields = ",".join(fields)
             params["fields"] = fields
         return self._request(method="get", route="users", params=params)
+
+    def _get_user_saved_queries(self, query=None, row_start=0, page_size=0):
+        """Get device saved queries.
+
+        Args:
+            query (:obj:`str`, optional):
+                Query to filter rows to return. This is NOT a query built by
+                the Query Wizard in the GUI. This is something else. See
+                :meth:`get_user_saved_queries_by_name` for an example query.
+
+                Defaults to: None.
+            row_start (:obj:`int`, optional):
+                Skip N rows in the return.
+
+                Defaults to: 0.
+            page_size (:obj:`int`, optional):
+                Include N rows in the return.
+
+                Defaults to: 100.
+
+        Returns:
+            :obj:`dict`
+
+        """
+        params = {}
+
+        if page_size:
+            params["limit"] = page_size
+
+        if row_start:
+            params["skip"] = row_start
+
+        if query:
+            params["filter"] = query
+
+        return self._request(method="get", route="users/views", params=params)
+
+    def _delete_user_saved_queries(self, ids):
+        """Pass."""
+        data = {"ids": ids}
+        return self._request(method="delete", route="users/views", json=data)
 
     def _get_devices(self, query=None, fields=None, row_start=0, page_size=100):
         """Get a page of devices for a given query.
