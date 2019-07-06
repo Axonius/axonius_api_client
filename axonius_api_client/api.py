@@ -28,7 +28,12 @@ class ApiClient(object):
     """:obj:`str`: Base path of API."""
 
     DEFAULT_DEVICE_FIELDS = {
-        "generic": ["hostname", "network_interfaces.mac", "network_interfaces.ips"]
+        "generic": [
+            "adapters",
+            "specific_data.data.hostname",
+            "labels",
+            "specific_data.data.network_interfaces.ips",
+        ]
     }
 
     def __init__(self, auth):
@@ -65,18 +70,114 @@ class ApiClient(object):
         """
         return self.__str__()
 
+    def create_device_saved_query(
+        self,
+        name,
+        query,
+        page_size=25,
+        sort_field="",
+        sort_descending=True,
+        sort_adapter="generic",
+        **fields
+    ):
+        """Create a device saved query.
+
+        Args:
+            name (:obj:`str`):
+                Name of saved query to create.
+            query (:obj:`str`):
+                Query built from Query Wizard in GUI to use in saved query.
+            page_size (:obj:`int`, optional):
+                Number of rows to show in each page in GUI.
+            sort_field (:obj:`str`, optional):
+                Name of field to sort results on.
+
+                Defaults to: "".
+            sort_descending (:obj:`bool`, optional):
+                Sort sort_field descending.
+
+                Defaults to: True.
+            sort_adapter (:obj:`str`, optional):
+                Name of adapter sort_field is from.
+
+                Defaults to: "generic".
+
+        Returns:
+            :obj:`str`: The ID of the new saved query.
+
+        """
+        for k, v in self.DEFAULT_DEVICE_FIELDS.items():
+            fields.setdefault(k, v)
+
+        device_fields = self.get_device_fields()
+        validated_fields = self._validate_fields(known_fields=device_fields, **fields)
+
+        if sort_field:
+            sort_field = find_field(
+                name=sort_field, fields=device_fields, adapter=sort_adapter
+            )
+
+        data = {}
+        data["name"] = name
+        data["query_type"] = "saved"
+        data["view"] = {}
+        data["view"]["fields"] = validated_fields
+
+        # FUTURE: find out what this is
+        data["view"]["historical"] = None
+
+        # FUTURE: find out if this only impacts GUI
+        data["view"]["page"] = 0
+
+        # FUTURE: find out if this only impacts GUI
+        data["view"]["pageSize"] = page_size
+
+        data["view"]["query"] = {}
+
+        # FUTURE: validate 'expressions' is not needed
+        data["view"]["query"]["filter"] = query
+        data["sort"] = {}
+        data["sort"]["desc"] = sort_descending
+        data["sort"]["field"] = sort_field
+
+        return self._request(method="post", route="devices/views", json=data)
+
     def get_device_saved_queries(self, query=None, page_size=20, max_rows=0):
-        """Pass."""
-        page = self._get_saved_queries(query=query, page_size=page_size, row_start=0)
+        """Get device saved queries using paging.
+
+        Args:
+            query (:obj:`str`, optional):
+                Query to filter rows to return. This is NOT a query built by
+                the Query Wizard in the GUI. This is something else. See
+                :meth:`get_device_saved_queries_by_name` for an example query.
+
+                Defaults to: None.
+            page_size (:obj:`int`, optional):
+                Get N rows per page.
+
+                Defaults to: 20.
+            max_rows (:obj:`int`, optional):
+                If not 0, only return up to N rows.
+
+                Defaults to: 0.
+
+        Yields:
+            :obj:`dict`: each row found in 'assets' from return.
+
+        """
+        page = self._get_device_saved_queries(
+            query=query, page_size=page_size, row_start=0
+        )
 
         for row in page["assets"]:
             yield row
 
+        # totalResources on page for this call just shows current page_size
+        # So we just have to loop until there are no more answers
         seen = len(page["assets"])
 
-        # totalResources on page for this call just shows page_size
         while True:
-            page = self._get_saved_queries(
+            page = self._get_device_saved_queries(
                 query=query, page_size=page_size, row_start=seen
             )
 
@@ -91,18 +192,40 @@ class ApiClient(object):
     def get_device_saved_queries_by_name(
         self, name, regex=True, page_size=20, max_rows=0
     ):
-        """Pass."""
+        """Get device saved queries by name using paging.
+
+        Args:
+            name (:obj:`str`):
+                Name of saved query to get.
+            regex (:obj:`bool`, optional):
+                Search for name using regex.
+
+                Defaults to: True.
+            page_size (:obj:`int`, optional):
+                Get N rows per page.
+
+                Defaults to: 20.
+            max_rows (:obj:`int`, optional):
+                If not 0, only return up to N rows.
+
+                Defaults to: 0.
+
+        Returns:
+            :obj:`dict` or :obj:`list` of :obj:`dict`:
+                Each row matching name. Will return dict if only one row.
+
+        """
         if regex:
-            query = 'name == regex("{}", "i")'.format(name)
+            query = 'name == regex("{name}", "i")'.format(name=name)
         else:
-            query = 'name == "{}"'.format(name)
+            query = 'name == "{name}"'.format(name=name)
 
         found = list(
             self.get_saved_queries(query=query, page_size=page_size, max_rows=max_rows)
         )
         if not found:
             raise exceptions.SavedQueryNotFound(query=query)
-        return found
+        return found[0] if len(found) == 1 else found
 
     def get_device_fields(self):
         """Get the fields available for devices.
@@ -160,15 +283,15 @@ class ApiClient(object):
 
         Args:
             query (:obj:`str`, optional):
-                Query built from Query Wizard in GUI to select devices to return.
+                Query built from Query Wizard in GUI to select rows to return.
 
                 Defaults to: None.
             page_size (:obj:`int`, optional):
-                Get N devices per page.
+                Get N rows per page.
 
                 Defaults to: 100.
             max_rows (:obj:`int`, optional):
-                If not 0, only return up to N devices.
+                If not 0, only return up to N rows.
 
                 Defaults to: 0.
             **fields: Fields to include in result.
@@ -186,10 +309,10 @@ class ApiClient(object):
             fields.setdefault(k, v)
 
         device_fields = self.get_device_fields()
-        fields = self._validate_fields(known_fields=device_fields, **fields)
+        validated_fields = self._validate_fields(known_fields=device_fields, **fields)
 
         page = self._get_devices(
-            query=query, fields=fields, row_start=0, page_size=page_size
+            query=query, fields=validated_fields, row_start=0, page_size=page_size
         )
 
         for row in page["assets"]:
@@ -200,7 +323,10 @@ class ApiClient(object):
 
         while seen < total:
             page = self._get_devices(
-                query=query, fields=fields, row_start=seen, page_size=page_size
+                query=query,
+                fields=validated_fields,
+                row_start=seen,
+                page_size=page_size,
             )
 
             for row in page["assets"]:
@@ -255,50 +381,6 @@ class ApiClient(object):
 
         return response if raw else response.json()
 
-    def _get_devices(self, query=None, fields=None, row_start=0, page_size=100):
-        """Get a page of devices for a given query.
-
-        Args:
-            query (:obj:`str`, optional):
-                Query built from Query Wizard in GUI to select devices to return.
-
-                Defaults to: None.
-            fields (:obj:`list` of :obj:`str` or :obj:`str`):
-                List of device fields to include in return.
-                If str, CSV seperated list of fields.
-                If list, strs of fields.
-
-                Defaults to: None.
-            row_start (:obj:`int`, optional):
-                Skip N devices in the return.
-
-                Defaults to: 0.
-            page_size (:obj:`int`, optional):
-                Include N devices in the return.
-
-                Defaults to: 100.
-
-        Returns:
-            :obj:`dict`
-
-        """
-        params = {}
-
-        if row_start:
-            params["skip"] = row_start
-
-        if page_size:
-            params["limit"] = page_size
-
-        if query:
-            params["filter"] = query
-
-        if fields:
-            if isinstance(fields, (list, tuple)):
-                fields = ",".join(fields)
-            params["fields"] = fields
-        return self._request(method="get", route="devices", params=params)
-
     def _validate_fields(self, known_fields, **fields):
         """Validate provided fields are valid.
 
@@ -331,8 +413,73 @@ class ApiClient(object):
 
         return validated_fields
 
+    def _get_devices(self, query=None, fields=None, row_start=0, page_size=100):
+        """Get a page of devices for a given query.
+
+        Args:
+            query (:obj:`str`, optional):
+                Query built from Query Wizard in GUI to select rows to return.
+
+                Defaults to: None.
+            fields (:obj:`list` of :obj:`str` or :obj:`str`):
+                List of device fields to include in return.
+                If str, CSV seperated list of fields.
+                If list, strs of fields.
+
+                Defaults to: None.
+            row_start (:obj:`int`, optional):
+                Skip N rows in the return.
+
+                Defaults to: 0.
+            page_size (:obj:`int`, optional):
+                Include N rows in the return.
+
+                Defaults to: 100.
+
+        Returns:
+            :obj:`dict`
+
+        """
+        params = {}
+
+        if row_start:
+            params["skip"] = row_start
+
+        if page_size:
+            params["limit"] = page_size
+
+        if query:
+            params["filter"] = query
+
+        if fields:
+            if isinstance(fields, (list, tuple)):
+                fields = ",".join(fields)
+            params["fields"] = fields
+        return self._request(method="get", route="devices", params=params)
+
     def _get_device_saved_queries(self, query=None, row_start=0, page_size=0):
-        """Pass."""
+        """Get device saved queries.
+
+        Args:
+            query (:obj:`str`, optional):
+                Query to filter rows to return. This is NOT a query built by
+                the Query Wizard in the GUI. This is something else. See
+                :meth:`get_device_saved_queries_by_name` for an example query.
+
+                Defaults to: None.
+            row_start (:obj:`int`, optional):
+                Skip N rows in the return.
+
+                Defaults to: 0.
+            page_size (:obj:`int`, optional):
+                Include N rows in the return.
+
+                Defaults to: 100.
+
+        Returns:
+            :obj:`dict`
+
+        """
         params = {}
 
         if page_size:
@@ -420,16 +567,18 @@ def find_field(name, adapter, fields=None):
         prefix = ADAPTER_FIELD_PREFIX.format(adapter=adapter)
         container = fields["specific"][adapter] if fields else None
 
-    if not name.startswith(prefix):
-        name = prefix + name
+    fq_name = prefix + name if not name.startswith(prefix) else name
 
     if not container:
-        return name
+        return name if name in ["adapters", "labels"] else fq_name
 
     known_names = [x["name"] for x in container]
 
     if name in known_names:
         return known_names[known_names.index(name)]
+
+    if fq_name in known_names:
+        return known_names[known_names.index(fq_name)]
 
     prefix_len = len(prefix)
     known_names = [x[prefix_len:] if x.startswith(prefix) else x for x in known_names]
