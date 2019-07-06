@@ -19,6 +19,22 @@ AX_KEY = os.environ.get("AX_KEY", None) or None
 AX_SECRET = os.environ.get("AX_SECRET", None) or None
 
 
+def join(opts, switch):
+    """Join a string with switch."""
+    return "({})".format(" {} ".format(switch).join(opts))
+
+
+NEEDS_USERNAME = join(["--username", "$AX_USERNAME"], "OR")
+NEEDS_PASSWORD = join(["--password", "$AX_PASSWORD"], "OR")
+NEEDS_KEY = join(["--key", "$AX_KEY"], "OR")
+NEEDS_SECRET = join(["--secret", "$AX_SECRET"], "OR")
+NEEDS_URL = join(["--url", "$AX_URL"], "OR")
+
+NEEDS_USER_CREDS = join([NEEDS_USERNAME, NEEDS_PASSWORD], "AND")
+NEEDS_KEY_CREDS = join([NEEDS_KEY, NEEDS_SECRET], "AND")
+NEEDS_ANY_CREDS = join([NEEDS_USER_CREDS, NEEDS_KEY_CREDS], "AND/OR")
+
+
 def pytest_addoption(parser):
     """Add API connection options."""
     parser.addoption(
@@ -58,83 +74,89 @@ def pytest_addoption(parser):
     )
 
 
+def pytest_configure(config):
+    """Ini file additions."""
+    config.addinivalue_line(
+        "markers", "needs_user_creds: requires {}".format(NEEDS_USER_CREDS)
+    )
+    config.addinivalue_line(
+        "markers", "needs_key_creds: requires {}".format(NEEDS_KEY_CREDS)
+    )
+    config.addinivalue_line(
+        "markers", "needs_any_creds: requires {}".format(NEEDS_ANY_CREDS)
+    )
+    config.addinivalue_line("markers", "needs_url: requires {}".format(NEEDS_URL))
+    config.addinivalue_line(
+        "filterwarnings", "ignore::urllib3.exceptions.InsecureRequestWarning"
+    )
+
+
+def pytest_runtest_setup(item):
+    """Handle marks."""
+    username = item.config.getoption("--username")
+    password = item.config.getoption("--password")
+    key = item.config.getoption("--key")
+    secret = item.config.getoption("--secret")
+    url = item.config.getoption("--url")
+
+    needs = []
+
+    has_user_creds = all([username, password])
+    has_key_creds = all([key, secret])
+    has_any_creds = any([has_user_creds, has_key_creds])
+
+    if "needs_url" in item.keywords and not url:
+        needs.append(NEEDS_URL)
+
+    if "needs_user_creds" in item.keywords and not has_user_creds:
+        needs.append(NEEDS_USER_CREDS)
+
+    if "needs_key_creds" in item.keywords and not has_key_creds:
+        needs.append(NEEDS_KEY_CREDS)
+
+    if "needs_any_creds" in item.keywords and not has_any_creds:
+        needs.append(NEEDS_ANY_CREDS)
+
+    if needs:
+        msg = "Need {needs} for this test!"
+        msg = msg.format(needs=join(needs, "AND"))
+        pytest.skip(msg)
+
+
 @pytest.fixture(scope="session")
 def api_url(request):
-    """Fixture for getting user/name creds."""
+    """Fixture for getting API URL."""
     url = request.config.getoption("--url")
-    if not url:
-        msg = "Need --url or $AX_URL set for test!"
-        pytest.skip(msg)
-    parsed_url = axonius_api_client.tools.UrlParser(url=url, default_scheme="https")
-    return parsed_url.url
+    if url:
+        parsed_url = axonius_api_client.tools.UrlParser(url=url, default_scheme="https")
+        url = parsed_url.url
+    return url
 
 
 @pytest.fixture(scope="session")
 def creds_user(request):
     """Fixture for getting username/password creds."""
-    username = request.config.getoption("--username")
-    password = request.config.getoption("--password")
-
-    if not username:
-        msg = "Need --username or $AX_USERNAME for test!"
-        pytest.skip(msg)
-
-    if not password:
-        msg = "Need --password or $AX_PASSWORD for test!"
-        pytest.skip(msg)
-
-    return {"username": username, "password": password}
+    return {
+        "cls": axonius_api_client.auth.AuthUser,
+        "username": request.config.getoption("--username"),
+        "password": request.config.getoption("--password"),
+    }
 
 
 @pytest.fixture(scope="session")
 def creds_key(request):
     """Fixture for getting key/secret creds."""
-    key = request.config.getoption("--key")
-    secret = request.config.getoption("--secret")
-
-    if not key:
-        msg = "Need --key or $AX_KEY for test!"
-        pytest.skip(msg)
-
-    if not secret:
-        msg = "Need --secret or $AX_SECRET for test!"
-        pytest.skip(msg)
-
-    return {"key": key, "secret": secret}
+    return {
+        "cls": axonius_api_client.auth.AuthKey,
+        "key": request.config.getoption("--key"),
+        "secret": request.config.getoption("--secret"),
+    }
 
 
 @pytest.fixture(scope="session")
-def auth_objs(api_url, request):
-    """Fixture for getting multiple auth methods depending on what is supplied."""
-    key = request.config.getoption("--key")
-    secret = request.config.getoption("--secret")
-    username = request.config.getoption("--username")
-    password = request.config.getoption("--password")
-
-    http_client = axonius_api_client.http.HttpClient(url=api_url)
-
-    objs = []
-
-    if username and password:
-        obj = axonius_api_client.auth.AuthUser(
-            http_client=http_client, username=username, password=password
-        )
-        objs.append(obj)
-
-    if key and secret:
-        obj = axonius_api_client.auth.AuthKey(
-            http_client=http_client, key=key, secret=secret
-        )
-        objs.append(obj)
-
-    if not objs:
-        msg = (
-            "Need ((--username OR $AX_USERNAME) AND (--password OR $AX_PASSWORD))"
-            " AND/OR ((--key OR $AX_KEY) AND (--secret OR $AX_SECRET)) for test!"
-        )
-        pytest.skip(msg)
-
-    return objs
+def creds(request):
+    """Pass."""
+    return request.getfixturevalue(request.param)
 
 
 @pytest.fixture

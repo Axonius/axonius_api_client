@@ -10,9 +10,11 @@ import pytest
 import axonius_api_client
 
 
+@pytest.mark.needs_url
 class TestAuthUser(object):
     """Test axonius_api_client.auth.AuthUser."""
 
+    @pytest.mark.needs_user_creds
     def test_valid_creds(self, api_url, creds_user):
         """Test str/repr has URL."""
         http_client = axonius_api_client.http.HttpClient(url=api_url)
@@ -28,9 +30,11 @@ class TestAuthUser(object):
             axonius_api_client.auth.AuthUser(http_client=http_client, **creds_user)
 
 
+@pytest.mark.needs_url
 class TestAuthKey(object):
     """Test axonius_api_client.auth.AuthKey."""
 
+    @pytest.mark.needs_key_creds
     def test_valid_creds(self, api_url, creds_key):
         """Test str/repr has URL."""
         http_client = axonius_api_client.http.HttpClient(url=api_url)

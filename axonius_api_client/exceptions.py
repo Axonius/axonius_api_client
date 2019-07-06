@@ -18,24 +18,6 @@ class InvalidCredentials(PackageError):
     """Error on failed login."""
 
 
-class MustLogin(PackageError):
-    """Error when not logged in."""
-
-    def __init__(self, auth):
-        """Constructor.
-
-        Args:
-            auth (:obj:`axonius_api_client.auth.AuthBase`):
-                Authentication object.
-
-        """
-        self.auth = auth
-        """:obj:`axonius_api_client.auth.AuthBase`: Authentication object."""
-
-        msg = "{auth} is not logged in, use login()".format(auth=auth)
-        super(MustLogin, self).__init__(msg)
-
-
 class UnknownAdapterName(PackageError):
     """Error when unable to find an adapter name."""
 

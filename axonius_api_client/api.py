@@ -98,35 +98,31 @@ class ApiClient(object):
         """Get the fields available for devices.
 
         Notes:
-            Will only return fields on Axonius v2.7 or greater.
+            Will only return fields on Axonius v2.7 or greater. Caches result to self.
 
         Returns:
             :obj:`dict`
 
         """
-        try:
-            return self._request(method="get", route="devices/fields")
-        except Exception:
-            msg = "Unable to get device fields from API"
-            self._log.error(msg)
-            return None
+        self._device_fields = getattr(
+            self, "_device_fields", self._request(method="get", route="devices/fields")
+        )
+        return self._device_fields
 
     def get_user_fields(self):
         """Get the fields available for users.
 
         Notes:
-            Will only return fields on Axonius v2.7 or greater.
+            Will only return fields on Axonius v2.7 or greater. Caches result to self.
 
         Returns:
             :obj:`dict`
 
         """
-        try:
-            return self._request(method="get", route="users/fields")
-        except Exception:
-            msg = "Unable to get user fields from API"
-            self._log.error(msg)
-            return None
+        self._user_fields = getattr(
+            self, "_user_fields", self._request(method="get", route="users/fields")
+        )
+        return self._user_fields
 
     def _get_devices(self, query=None, fields=None, row_start=0, page_size=100):
         """Get a page of devices for a given query.
@@ -169,29 +165,26 @@ class ApiClient(object):
 
         Args:
             **fields: Fields to validate.
-
-                * 'generic' = ['f1', 'f2'] for generic data fields.
-                * 'specific' = ['f1', 'f2'] for generic data fields.
-                * 'adapter' = ['f1', 'f2'] for adapter specific data fields.
+                * generic=['f1', 'f2'] for generic fields.
+                * adapter=['f1', 'f2'] for adapter specific fields.
 
         Notes:
             This will try to use :meth:`get_device_fields` to validate the device
             fields, but if it returns None it will just ensure the fields are
             fully qualified.
 
-            * 'generic': ['field1'] => ['specific_data.data.field1']
-            * 'adapter_name': ['field1'] =>['adapters_data.adapter_name.field1']
+            * generic=['field1'] => ['specific_data.data.field1']
+            * adapter=['field1'] =>['adapters_data.adapter_name.field1']
 
         """
         validated_fields = []
         device_fields = self.get_device_fields()
 
         for name, afields in fields.items():
-            if name in ["specific", "generic"]:
-                name = None
             for field in afields:
                 field = find_field(name=field, fields=device_fields, adapter=name)
-                validated_fields.append(field)
+                if field not in validated_fields:
+                    validated_fields.append(field)
 
         return validated_fields
 
@@ -212,12 +205,14 @@ class ApiClient(object):
 
                 Defaults to: 0.
             **fields: Fields to include in result.
-                * 'generic' = ['f1', 'f2'] for generic data fields.
-                * 'specific' = ['f1', 'f2'] for generic data fields.
-                * 'adapter' = ['f1', 'f2'] for adapter specific data fields.
+                * generic=['f1', 'f2'] for generic fields.
+                * adapter=['f1', 'f2'] for adapter specific fields.
 
         Notes:
             Fields will be updated with :attr:`DEFAULT_DEVICE_FIELDS`.
+
+        Yields:
+            :obj:`dict`: each device found in 'assets' from return.
 
         """
         for k, v in self.DEFAULT_DEVICE_FIELDS.items():
@@ -240,13 +235,10 @@ class ApiClient(object):
                 query=query, fields=fields, row_start=seen, page_size=page_size
             )
 
-            if not page["assets"]:
-                break
-
             for device in page["assets"]:
                 yield device
 
-            if max_rows and seen >= max_rows:
+            if (max_rows and seen >= max_rows) or not page["assets"]:
                 break
 
             seen += len(page["assets"])
@@ -287,37 +279,36 @@ def find_adapter(name, known_names=None):
     raise exceptions.UnknownAdapterName(name=name, known_names=known_names)
 
 
-def find_field(name, fields=None, adapter=None):
+def find_field(name, adapter, fields=None):
     """Find a field for a given adapter.
 
     Args:
         name (:obj:`str`):
             Name of field to find.
+        adapter (:obj:`str`):
+            Name of adapter to look for field in.
+            If 'generic' look for the field in generic fields.
         fields (:obj:`dict`, optional):
             Return from :meth:`ApiClient.get_device_fields`.
 
             Defaults to: None.
-        adapter (:obj:`str`, optional):
-            Name of adapter to look for field in. If None, 'generic', or 'specific',
-            look for the field in generic fields.
-
-            Defaults to: None.
 
     Notes:
-        If adapter in None, 'generic', or 'specific', ensure name
-        begins with :attr:`GENERIC_FIELD_PREFIX`, otherwise ensure name
-        begins with :attr:`ADAPTER_FIELD_PREFIX`.
+        If adapter 'generic', ensure name begins with :attr:`GENERIC_FIELD_PREFIX`,
+        otherwise ensure name begins with :attr:`ADAPTER_FIELD_PREFIX`.
 
-        If fields is None, just ensure the name as fully qualified.
+        If fields is None, we can't validate that the field exists, so we just ensure
+        the name is fully qualified.
 
     Raises:
-        :exc:`exceptions.UnknownFieldName`: If name can not be found in fields.
+        :exc:`exceptions.UnknownFieldName`:
+            If fields is not None and name can not be found in fields.
 
     Returns:
         :obj:`str`
 
     """
-    if not adapter or adapter in ["generic", "specific"]:
+    if adapter == "generic":
         prefix = GENERIC_FIELD_PREFIX
         container = fields["generic"] if fields else None
     else:
@@ -326,7 +317,8 @@ def find_field(name, fields=None, adapter=None):
         prefix = ADAPTER_FIELD_PREFIX.format(adapter=adapter)
         container = fields["specific"][adapter] if fields else None
 
-    name = name if name.startswith(prefix) else prefix + name
+    if not name.startswith(prefix):
+        name = prefix + name
 
     if not container:
         return name
