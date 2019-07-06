@@ -64,7 +64,7 @@ class UnknownAdapterName(PackageError):
 class UnknownFieldName(PackageError):
     """Error when unable to find a generic or adapter field name."""
 
-    def __init__(self, name, known_names, adapter_name=None):
+    def __init__(self, name, known_names, adapter=None):
         """Constructor.
 
         Args:
@@ -72,7 +72,7 @@ class UnknownFieldName(PackageError):
                 Name of field that was not found.
             known_names (:obj:`list` of :obj:`str`):
                 Names of fields that exist.
-            adapter_name (:obj:`str`, optional):
+            adapter (:obj:`str`, optional):
                 Name of adapter that field was being looked for. If None, the field
                 is considered a generic field.
 
@@ -85,10 +85,10 @@ class UnknownFieldName(PackageError):
         self.known_names = known_names
         """:obj:`list` of :obj:`str`: Names of fields that exist."""
 
-        self.adapter_name = adapter_name
+        self.adapter = adapter
         """:obj:`str`: Name of adapter that field was being looked for."""
 
-        self.field_type = adapter_name if adapter_name else "generic"
+        self.field_type = adapter if adapter else "generic"
         """:obj:`str`: Type of field being looked for, generic or adapter specific."""
 
         msg = "Unable to find a {field_type} field {field!r}, valid fields: {names}"

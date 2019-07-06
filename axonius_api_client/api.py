@@ -14,7 +14,7 @@ LOG = logging.getLogger(__name__)
 GENERIC_FIELD_PREFIX = "specific_data.data."
 """:obj:`str`: Prefix that all generic fields should begin with."""
 
-ADAPTER_FIELD_PREFIX = "adapters_data.{adapter_name}."
+ADAPTER_FIELD_PREFIX = "adapters_data.{adapter}."
 """:obj:`str`: Prefix that all adapter fields should begin with."""
 
 
@@ -27,13 +27,8 @@ class ApiClient(object):
     _API_PATH = "api/V{version}/".format(version=_API_VERSION)
     """:obj:`str`: Base path of API."""
 
-    DEVICE_FIELDS = {
-        "generic": [
-            "hostname",
-            "name",
-            "network_interfaces.mac",
-            "network_interfaces.ips",
-        ]
+    DEFAULT_DEVICE_FIELDS = {
+        "generic": ["hostname", "network_interfaces.mac", "network_interfaces.ips"]
     }
 
     def __init__(self, auth):
@@ -177,7 +172,7 @@ class ApiClient(object):
 
                 * 'generic' = ['f1', 'f2'] for generic data fields.
                 * 'specific' = ['f1', 'f2'] for generic data fields.
-                * 'adapter_name' = ['f1', 'f2'] for adapter specific data fields.
+                * 'adapter' = ['f1', 'f2'] for adapter specific data fields.
 
         Notes:
             This will try to use :meth:`get_device_fields` to validate the device
@@ -191,15 +186,13 @@ class ApiClient(object):
         validated_fields = []
         device_fields = self.get_device_fields()
 
-        for adapter_name, adapter_fields in fields:
-            adapter_name = (
-                None if adapter_name in ["specific", "general"] else adapter_name
-            )
-            for adapter_field in adapter_fields:
-                adapter_field = find_field(
-                    name=adapter_field, fields=device_fields, adapter_name=adapter_name
-                )
-                validated_fields.append(adapter_field)
+        for name, afields in fields.items():
+            if name in ["specific", "generic"]:
+                name = None
+            for field in afields:
+                field = find_field(name=field, fields=device_fields, adapter=name)
+                validated_fields.append(field)
+
         return validated_fields
 
     def get_devices(self, query=None, page_size=100, max_rows=0, **fields):
@@ -221,10 +214,13 @@ class ApiClient(object):
             **fields: Fields to include in result.
                 * 'generic' = ['f1', 'f2'] for generic data fields.
                 * 'specific' = ['f1', 'f2'] for generic data fields.
-                * 'adapter_name' = ['f1', 'f2'] for adapter specific data fields.
+                * 'adapter' = ['f1', 'f2'] for adapter specific data fields.
+
+        Notes:
+            Fields will be updated with :attr:`DEFAULT_DEVICE_FIELDS`.
 
         """
-        for k, v in self.DEVICE_FIELDS:
+        for k, v in self.DEFAULT_DEVICE_FIELDS.items():
             fields.setdefault(k, v)
 
         fields = self._validate_device_fields(**fields)
@@ -287,11 +283,11 @@ def find_adapter(name, known_names=None):
         return known_names[known_names.index(name)]
 
     postfix_len = len(postfix)
-    known_names = [x[:postfix_len] if x.endswith(postfix) else x for x in known_names]
+    known_names = [x[:-postfix_len] if x.endswith(postfix) else x for x in known_names]
     raise exceptions.UnknownAdapterName(name=name, known_names=known_names)
 
 
-def find_field(name, fields=None, adapter_name=None):
+def find_field(name, fields=None, adapter=None):
     """Find a field for a given adapter.
 
     Args:
@@ -301,16 +297,18 @@ def find_field(name, fields=None, adapter_name=None):
             Return from :meth:`ApiClient.get_device_fields`.
 
             Defaults to: None.
-        adapter_name (:obj:`str`, optional):
-            Name of adapter to look for field in. If None, look for the field in the
-            generic fields.
+        adapter (:obj:`str`, optional):
+            Name of adapter to look for field in. If None, 'generic', or 'specific',
+            look for the field in generic fields.
 
             Defaults to: None.
 
     Notes:
-        If fields is None:
-            * If adapter_name, ensure name begins with :attr:`ADAPTER_FIELD_PREFIX`.
-            * If not adapter_name, ensure name begins with :attr:`GENERIC_FIELD_PREFIX`.
+        If adapter in None, 'generic', or 'specific', ensure name
+        begins with :attr:`GENERIC_FIELD_PREFIX`, otherwise ensure name
+        begins with :attr:`ADAPTER_FIELD_PREFIX`.
+
+        If fields is None, just ensure the name as fully qualified.
 
     Raises:
         :exc:`exceptions.UnknownFieldName`: If name can not be found in fields.
@@ -319,14 +317,14 @@ def find_field(name, fields=None, adapter_name=None):
         :obj:`str`
 
     """
-    if adapter_name:
-        known_adapter_names = fields["specific"] if fields else None
-        adapter_name = find_adapter(name=adapter_name, known_names=known_adapter_names)
-        prefix = ADAPTER_FIELD_PREFIX.format(adapter_name=adapter_name)
-        container = fields["specific"][adapter_name] if fields else None
-    else:
+    if not adapter or adapter in ["generic", "specific"]:
         prefix = GENERIC_FIELD_PREFIX
         container = fields["generic"] if fields else None
+    else:
+        known_adapters = list(fields["specific"].keys()) if fields else None
+        adapter = find_adapter(name=adapter, known_names=known_adapters)
+        prefix = ADAPTER_FIELD_PREFIX.format(adapter=adapter)
+        container = fields["specific"][adapter] if fields else None
 
     name = name if name.startswith(prefix) else prefix + name
 
@@ -341,5 +339,5 @@ def find_field(name, fields=None, adapter_name=None):
     prefix_len = len(prefix)
     known_names = [x[prefix_len:] if x.startswith(prefix) else x for x in known_names]
     raise exceptions.UnknownFieldName(
-        name=name, known_names=known_names, adapter_name=adapter_name
+        name=name, known_names=known_names, adapter=adapter
     )
