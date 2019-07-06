@@ -5,9 +5,13 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
+import abc
 import logging
 
+import six
+
 from . import exceptions
+from . import tools
 
 LOG = logging.getLogger(__name__)
 
@@ -18,35 +22,14 @@ ADAPTER_FIELD_PREFIX = "adapters_data.{adapter}."
 """:obj:`str`: Prefix that all adapter fields should begin with."""
 
 
+@six.add_metaclass(abc.ABCMeta)
 class ApiClient(object):
     """API client for Axonius REST API."""
 
-    _API_VERSION = 1
-    """:obj:`int`: Version of the API this ApiClient is made for."""
-
-    _API_PATH = "api/V{version}/".format(version=_API_VERSION)
-    """:obj:`str`: Base path of API."""
-
-    DEFAULT_DEVICE_FIELDS = {
-        "generic": [
-            "adapters",
-            "labels",
-            "specific_data.data.hostname",
-            "specific_data.data.network_interfaces.ips",
-            "specific_data.data.last_seen",
-        ]
-    }
-    """:obj:`dict`: Fields to set as default for device related methods with **fields."""
-
-    DEFAULT_USER_FIELDS = {
-        "generic": [
-            "adapters",
-            "labels",
-            "specific_data.data.username",
-            "specific_data.data.last_seen",
-        ]
-    }
-    """:obj:`dict`: Fields to set as default for user related methods with **fields."""
+    @abc.abstractproperty
+    def _obj_route(self):
+        """Pass."""
+        raise NotImplementedError  # pragma: no cover
 
     def __init__(self, auth):
         """Constructor.
@@ -82,169 +65,44 @@ class ApiClient(object):
         """
         return self.__str__()
 
-    def create_device_saved_query(
-        self,
-        name,
-        query,
-        page_size=25,
-        sort_field="",
-        sort_descending=True,
-        sort_adapter="generic",
-        **fields
-    ):
-        """Create a device saved query.
+    def _request(self, route, method="get", raw=False, **kwargs):
+        """Perform a REST API request.
 
         Args:
-            name (:obj:`str`):
-                Name of saved query to create.
-            query (:obj:`str`):
-                Query built from Query Wizard in GUI to use in saved query.
-            page_size (:obj:`int`, optional):
-                Number of rows to show in each page in GUI.
-            sort_field (:obj:`str`, optional):
-                Name of field to sort results on.
+            route (:obj:`str`):
+                REST API route to request.
+            method (:obj:`str`, optional):
+                HTTP method to use in request.
 
-                Defaults to: "".
-            sort_descending (:obj:`bool`, optional):
-                Sort sort_field descending.
+                Defaults to: "get".
+            raw (:obj:`bool`, optional):
+                Return the raw response. If False, return response.json().
 
-                Defaults to: True.
-            sort_adapter (:obj:`str`, optional):
-                Name of adapter sort_field is from.
-
-                Defaults to: "generic".
-
-        Returns:
-            :obj:`str`: The ID of the new saved query.
+                Defaults to: False.
+            **kwargs:
+                Passed to :meth:`axonius_api_client.http.HttpClient.__call__`
 
         """
-        for k, v in self.DEFAULT_DEVICE_FIELDS.items():
-            fields.setdefault(k, v)
-
-        device_fields = self.get_device_fields()
-        validated_fields = self._validate_fields(known_fields=device_fields, **fields)
-
-        if sort_field:
-            sort_field = find_field(
-                name=sort_field, fields=device_fields, adapter=sort_adapter
-            )
-
-        data = {}
-        data["name"] = name
-        data["query_type"] = "saved"
-        data["view"] = {}
-        data["view"]["fields"] = validated_fields
-
-        # FUTURE: find out what this is
-        data["view"]["historical"] = None
-
-        # FUTURE: find out if this only impacts GUI
-        data["view"]["page"] = 0
-
-        # FUTURE: find out if this only impacts GUI
-        data["view"]["pageSize"] = page_size
-
-        data["view"]["query"] = {}
-
-        # FUTURE: validate 'expressions' is not needed
-        data["view"]["query"]["filter"] = query
-        data["sort"] = {}
-        data["sort"]["desc"] = sort_descending
-        data["sort"]["field"] = sort_field
-
-        return self._request(method="post", route="devices/views", json=data)
-
-    def delete_device_saved_query_by_name(self, name, regex=False):
-        """Pass."""
-        found = self.get_device_saved_queries_by_name(name=name, regex=regex)
-        ids = [x["uuid"] for x in found]
-        return self._delete_device_saved_queries(ids=ids)
-
-    def get_device_saved_queries(self, query=None, page_size=20, max_rows=0):
-        """Get device saved queries using paging.
-
-        Args:
-            query (:obj:`str`, optional):
-                Query to filter rows to return. This is NOT a query built by
-                the Query Wizard in the GUI. This is something else. See
-                :meth:`get_device_saved_queries_by_name` for an example query.
-
-                Defaults to: None.
-            page_size (:obj:`int`, optional):
-                Get N rows per page.
-
-                Defaults to: 20.
-            max_rows (:obj:`int`, optional):
-                If not 0, only return up to N rows.
-
-                Defaults to: 0.
-
-        Yields:
-            :obj:`dict`: each row found in 'assets' from return.
-
-        """
-        page = self._get_device_saved_queries(
-            query=query, page_size=page_size, row_start=0
-        )
-
-        for row in page["assets"]:
-            yield row
-
-        # totalResources on page for this call just shows current page_size
-        # So we just have to loop until there are no more answers
-        seen = len(page["assets"])
-
-        while True:
-            page = self._get_device_saved_queries(
-                query=query, page_size=page_size, row_start=seen
-            )
-
-            for row in page["assets"]:
-                yield row
-
-            if (max_rows and seen >= max_rows) or not page["assets"]:
-                break
-
-            seen += len(page["assets"])
-
-    def get_device_saved_queries_by_name(self, name, regex=True):
-        """Get device saved queries by name using paging.
-
-        Args:
-            name (:obj:`str`):
-                Name of saved query to get.
-            regex (:obj:`bool`, optional):
-                Search for name using regex.
-
-                Defaults to: True.
-            page_size (:obj:`int`, optional):
-                Get N rows per page.
-
-                Defaults to: 20.
-            max_rows (:obj:`int`, optional):
-                If not 0, only return up to N rows.
-
-                Defaults to: 0.
-
-        Raises:
-            :exc:`exceptions.SavedQueryNotFound`
-
-        Returns:
-            :obj:`list` of :obj:`dict`: Each row matching name.
-
-        """
-        if regex:
-            query = 'name == regex("{name}", "i")'.format(name=name)
+        sargs = {}
+        sargs.update(kwargs)
+        if route:
+            sargs["route"] = tools.urljoin(self._obj_route, route)
         else:
-            query = 'name == "{name}"'.format(name=name)
+            sargs["route"] = self._obj_route
+        sargs["method"] = method
+        sargs.setdefault("path", self._API_PATH)
 
-        found = list(self.get_device_saved_queries(query=query))
-        if not found:
-            raise exceptions.SavedQueryNotFound(query=query)
-        return found
+        response = self._auth.http_client(**sargs)
+        response.raise_for_status()
 
-    def get_device_fields(self):
-        """Get the fields available for devices.
+        return response if raw else response.json()
+
+
+class ObjectMixins(object):
+    """Mixins for User & Device models."""
+
+    def get_fields(self):
+        """Get the fields.
 
         Notes:
             Will only return fields on Axonius v2.7 or greater. Caches result to self.
@@ -253,107 +111,11 @@ class ApiClient(object):
             :obj:`dict`
 
         """
-        self._device_fields = getattr(
-            self, "_device_fields", self._request(method="get", route="devices/fields")
-        )
-        return self._device_fields
+        if not getattr(self, "_fields", None):
+            self._fields = self._request(method="get", route="fields")
+        return self._fields
 
-    def get_device_count(self, query=None):
-        """Get the number of devices for a given query.
-
-        Args:
-            query (:obj:`str`, optional):
-                Query built from Query Wizard in GUI to count devices of.
-
-        Returns:
-            :obj:`int`
-
-        """
-        params = {}
-        if query:
-            params["filter"] = query
-        return self._request(method="get", route="devices/count", params=params)
-
-    def get_device_by_id(self, id):
-        """Get a device by internal_axon_id.
-
-        Args:
-            id (:obj:`str`):
-                internal_axon_id of device to get.
-
-        Raises:
-            :exc:`exceptions.DeviceIDNotFound`:
-                When :meth:`_request` raises exception.
-
-        Returns:
-            :obj:`dict`
-
-        """
-        try:
-            return self._request(method="get", route="devices/{id}".format(id=id))
-        except Exception:
-            raise exceptions.DeviceIDNotFound(id=id)
-
-    def get_devices(self, query=None, page_size=100, max_rows=0, **fields):
-        """Get devices for a given query using paging.
-
-        Args:
-            query (:obj:`str`, optional):
-                Query built from Query Wizard in GUI to select rows to return.
-
-                Defaults to: None.
-            page_size (:obj:`int`, optional):
-                Get N rows per page.
-
-                Defaults to: 100.
-            max_rows (:obj:`int`, optional):
-                If not 0, only return up to N rows.
-
-                Defaults to: 0.
-            **fields: Fields to include in result.
-                * generic=['f1', 'f2'] for generic fields.
-                * adapter=['f1', 'f2'] for adapter specific fields.
-
-        Notes:
-            Fields will be updated with :attr:`DEFAULT_DEVICE_FIELDS`.
-
-        Yields:
-            :obj:`dict`: each row found in 'assets' from return.
-
-        """
-        for k, v in self.DEFAULT_DEVICE_FIELDS.items():
-            fields.setdefault(k, v)
-
-        known_fields = self.get_device_fields()
-        validated_fields = self._validate_fields(known_fields=known_fields, **fields)
-
-        page = self._get_devices(
-            query=query, fields=validated_fields, row_start=0, page_size=page_size
-        )
-
-        for row in page["assets"]:
-            yield row
-
-        total = page["page"]["totalResources"]
-        seen = len(page["assets"])
-
-        while seen < total:
-            page = self._get_devices(
-                query=query,
-                fields=validated_fields,
-                row_start=seen,
-                page_size=page_size,
-            )
-
-            for row in page["assets"]:
-                yield row
-
-            if (max_rows and seen >= max_rows) or not page["assets"]:
-                break
-
-            seen += len(page["assets"])
-
-    def create_user_saved_query(
+    def create_saved_query(
         self,
         name,
         query,
@@ -363,7 +125,7 @@ class ApiClient(object):
         sort_adapter="generic",
         **fields
     ):
-        """Create a user saved query.
+        """Create a saved query.
 
         Args:
             name (:obj:`str`):
@@ -389,11 +151,11 @@ class ApiClient(object):
             :obj:`str`: The ID of the new saved query.
 
         """
-        for k, v in self.DEFAULT_USER_FIELDS.items():
+        for k, v in self.DEFAULT_FIELDS.items():
             fields.setdefault(k, v)
 
-        known_fields = self.get_user_fields()
-        validated_fields = self._validate_fields(known_fields=known_fields, **fields)
+        known_fields = self.get_fields()
+        validated_fields = validate_fields(known_fields=known_fields, **fields)
 
         if sort_field:
             sort_field = find_field(
@@ -423,16 +185,16 @@ class ApiClient(object):
         data["sort"]["desc"] = sort_descending
         data["sort"]["field"] = sort_field
 
-        return self._request(method="post", route="users/views", json=data)
+        return self._request(method="post", route="views", json=data)
 
-    def delete_user_saved_query_by_name(self, name, regex=False):
+    def delete_saved_query_by_name(self, name, regex=False):
         """Pass."""
-        found = self.get_user_saved_queries_by_name(name=name, regex=regex)
+        found = self.get_saved_queries_by_name(name=name, regex=regex)
         ids = [x["uuid"] for x in found]
-        return self._delete_user_saved_queries(ids=ids)
+        return self._delete_saved_queries(ids=ids)
 
-    def get_user_saved_queries(self, query=None, page_size=20, max_rows=0):
-        """Get device saved queries using paging.
+    def get_saved_queries(self, query=None, page_size=20, max_rows=0):
+        """Get saved queries using paging.
 
         Args:
             query (:obj:`str`, optional):
@@ -454,19 +216,15 @@ class ApiClient(object):
             :obj:`dict`: each row found in 'assets' from return.
 
         """
-        page = self._get_user_saved_queries(
-            query=query, page_size=page_size, row_start=0
-        )
+        page = self._get_saved_queries(query=query, page_size=page_size, row_start=0)
 
         for row in page["assets"]:
             yield row
 
-        # totalResources on page for this call just shows current page_size
-        # So we just have to loop until there are no more answers
         seen = len(page["assets"])
 
         while True:
-            page = self._get_user_saved_queries(
+            page = self._get_saved_queries(
                 query=query, page_size=page_size, row_start=seen
             )
 
@@ -478,8 +236,8 @@ class ApiClient(object):
 
             seen += len(page["assets"])
 
-    def get_user_saved_queries_by_name(self, name, regex=True):
-        """Get device saved queries by name using paging.
+    def get_saved_queries_by_name(self, name, regex=True):
+        """Get saved queries by name using paging.
 
         Args:
             name (:obj:`str`):
@@ -509,32 +267,17 @@ class ApiClient(object):
         else:
             query = 'name == "{name}"'.format(name=name)
 
-        found = list(self.get_user_saved_queries(query=query))
+        found = list(self.get_saved_queries(query=query))
         if not found:
             raise exceptions.SavedQueryNotFound(query=query)
         return found
 
-    def get_user_fields(self):
-        """Get the fields available for users.
-
-        Notes:
-            Will only return fields on Axonius v2.7 or greater. Caches result to self.
-
-        Returns:
-            :obj:`dict`
-
-        """
-        self._user_fields = getattr(
-            self, "_user_fields", self._request(method="get", route="users/fields")
-        )
-        return self._user_fields
-
-    def get_user_count(self, query=None):
-        """Get the number of users for a given query.
+    def get_count(self, query=None):
+        """Get the number of matches for a given query.
 
         Args:
             query (:obj:`str`, optional):
-                Query built from Query Wizard in GUI to count users of.
+                Query built from Query Wizard in GUI.
 
         Returns:
             :obj:`int`
@@ -543,10 +286,10 @@ class ApiClient(object):
         params = {}
         if query:
             params["filter"] = query
-        return self._request(method="get", route="users/count", params=params)
+        return self._request(method="get", route="count", params=params)
 
-    def get_users(self, query=None, page_size=100, max_rows=0, **fields):
-        """Get users for a given query using paging.
+    def get(self, query=None, page_size=100, max_rows=0, **fields):
+        """Get objects for a given query using paging.
 
         Args:
             query (:obj:`str`, optional):
@@ -566,19 +309,19 @@ class ApiClient(object):
                 * adapter=['f1', 'f2'] for adapter specific fields.
 
         Notes:
-            Fields will be updated with :attr:`DEFAULT_USER_FIELDS`.
+            Fields will be updated with :attr:`DEFAULT_FIELDS`.
 
         Yields:
             :obj:`dict`: each row found in 'assets' from return.
 
         """
-        for k, v in self.DEFAULT_USER_FIELDS.items():
+        for k, v in self.DEFAULT_FIELDS.items():
             fields.setdefault(k, v)
 
-        known_fields = self.get_user_fields()
-        validated_fields = self._validate_fields(known_fields=known_fields, **fields)
+        known_fields = self.get_fields()
+        validated_fields = validate_fields(known_fields=known_fields, **fields)
 
-        page = self._get_users(
+        page = self._get(
             query=query, fields=validated_fields, row_start=0, page_size=page_size
         )
 
@@ -589,7 +332,7 @@ class ApiClient(object):
         seen = len(page["assets"])
 
         while seen < total:
-            page = self._get_users(
+            page = self._get(
                 query=query,
                 fields=validated_fields,
                 row_start=seen,
@@ -604,69 +347,28 @@ class ApiClient(object):
 
             seen += len(page["assets"])
 
-    def _request(self, route, method="get", raw=False, **kwargs):
-        """Perform a REST API request.
+    def get_by_id(self, id):
+        """Get an object by internal_axon_id.
 
         Args:
-            route (:obj:`str`):
-                REST API route to request.
-            method (:obj:`str`, optional):
-                HTTP method to use in request.
+           id (:obj:`str`):
+               internal_axon_id of object to get.
 
-                Defaults to: "get".
-            raw (:obj:`bool`, optional):
-                Return the raw response. If False, return response.json().
-
-                Defaults to: False.
-            **kwargs:
-                Passed to :meth:`axonius_api_client.http.HttpClient.__call__`
-
-        """
-        sargs = {}
-        sargs.update(kwargs)
-        sargs["route"] = route
-        sargs["method"] = method
-        sargs.setdefault("path", self._API_PATH)
-
-        response = self._auth.http_client(**sargs)
-        response.raise_for_status()
-
-        return response if raw else response.json()
-
-    def _validate_fields(self, known_fields, **fields):
-        """Validate provided fields are valid.
-
-        Args:
-            known_fields (:obj:`dict`):
-                Known fields from :meth:`get_device_fields` or :meth:`get_user_fields`.
-            **fields: Fields to validate.
-                * generic=['f1', 'f2'] for generic fields.
-                * adapter=['f1', 'f2'] for adapter specific fields.
-
-        Notes:
-            This will try to use :meth:`get_device_fields` to validate the device
-            fields, but if it returns None it will just ensure the fields are
-            fully qualified.
-
-            * generic=['field1'] => ['specific_data.data.field1']
-            * adapter=['field1'] =>['adapters_data.adapter_name.field1']
+        Raises:
+           :exc:`exceptions.ObjectNotFound`:
+               When :meth:`_request` raises exception.
 
         Returns:
-            :obj:`list` of :obj:`str`
+           :obj:`dict`
 
         """
-        validated_fields = []
+        try:
+            return self._request(method="get", route="{id}".format(id=id))
+        except Exception:
+            raise exceptions.ObjectNotFound(id=id)
 
-        for name, afields in fields.items():
-            for field in afields:
-                field = find_field(name=field, fields=known_fields, adapter=name)
-                if field not in validated_fields:
-                    validated_fields.append(field)
-
-        return validated_fields
-
-    def _get_users(self, query=None, fields=None, row_start=0, page_size=100):
-        """Get a page of users for a given query.
+    def _get(self, query=None, fields=None, row_start=0, page_size=100):
+        """Get a page for a given query.
 
         Args:
             query (:obj:`str`, optional):
@@ -674,7 +376,7 @@ class ApiClient(object):
 
                 Defaults to: None.
             fields (:obj:`list` of :obj:`str` or :obj:`str`):
-                List of user fields to include in return.
+                List of fields to include in return.
                 If str, CSV seperated list of fields.
                 If list, strs of fields.
 
@@ -707,9 +409,9 @@ class ApiClient(object):
             if isinstance(fields, (list, tuple)):
                 fields = ",".join(fields)
             params["fields"] = fields
-        return self._request(method="get", route="users", params=params)
+        return self._request(method="get", route="", params=params)
 
-    def _get_user_saved_queries(self, query=None, row_start=0, page_size=0):
+    def _get_saved_queries(self, query=None, row_start=0, page_size=0):
         """Get device saved queries.
 
         Args:
@@ -743,97 +445,63 @@ class ApiClient(object):
         if query:
             params["filter"] = query
 
-        return self._request(method="get", route="users/views", params=params)
+        return self._request(method="get", route="views", params=params)
 
-    def _delete_user_saved_queries(self, ids):
+    def _delete_saved_queries(self, ids):
         """Pass."""
         data = {"ids": ids}
-        return self._request(method="delete", route="users/views", json=data)
+        return self._request(method="delete", route="views", json=data)
 
-    def _get_devices(self, query=None, fields=None, row_start=0, page_size=100):
-        """Get a page of devices for a given query.
 
-        Args:
-            query (:obj:`str`, optional):
-                Query built from Query Wizard in GUI to select rows to return.
+class ApiUsers(ApiClient, ObjectMixins):
+    """User related API methods."""
 
-                Defaults to: None.
-            fields (:obj:`list` of :obj:`str` or :obj:`str`):
-                List of device fields to include in return.
-                If str, CSV seperated list of fields.
-                If list, strs of fields.
+    _API_VERSION = 1
+    """:obj:`int`: Version of the API this ApiClient is made for."""
 
-                Defaults to: None.
-            row_start (:obj:`int`, optional):
-                Skip N rows in the return.
+    _API_PATH = "api/V{version}/".format(version=_API_VERSION)
+    """:obj:`str`: Base path of API."""
 
-                Defaults to: 0.
-            page_size (:obj:`int`, optional):
-                Include N rows in the return.
+    DEFAULT_FIELDS = {
+        "generic": [
+            "adapters",
+            "labels",
+            "specific_data.data.username",
+            "specific_data.data.last_seen",
+        ]
+    }
+    """:obj:`dict`: Fields to set as default for methods with **fields."""
 
-                Defaults to: 100.
-
-        Returns:
-            :obj:`dict`
-
-        """
-        params = {}
-
-        if row_start:
-            params["skip"] = row_start
-
-        if page_size:
-            params["limit"] = page_size
-
-        if query:
-            params["filter"] = query
-
-        if fields:
-            if isinstance(fields, (list, tuple)):
-                fields = ",".join(fields)
-            params["fields"] = fields
-        return self._request(method="get", route="devices", params=params)
-
-    def _get_device_saved_queries(self, query=None, row_start=0, page_size=0):
-        """Get device saved queries.
-
-        Args:
-            query (:obj:`str`, optional):
-                Query to filter rows to return. This is NOT a query built by
-                the Query Wizard in the GUI. This is something else. See
-                :meth:`get_device_saved_queries_by_name` for an example query.
-
-                Defaults to: None.
-            row_start (:obj:`int`, optional):
-                Skip N rows in the return.
-
-                Defaults to: 0.
-            page_size (:obj:`int`, optional):
-                Include N rows in the return.
-
-                Defaults to: 100.
-
-        Returns:
-            :obj:`dict`
-
-        """
-        params = {}
-
-        if page_size:
-            params["limit"] = page_size
-
-        if row_start:
-            params["skip"] = row_start
-
-        if query:
-            params["filter"] = query
-
-        return self._request(method="get", route="devices/views", params=params)
-
-    def _delete_device_saved_queries(self, ids):
+    @property
+    def _obj_route(self):
         """Pass."""
-        data = {"ids": ids}
-        return self._request(method="delete", route="devices/views", json=data)
+        return "users"
+
+
+class ApiDevices(ApiClient, ObjectMixins):
+    """Device related API methods."""
+
+    _API_VERSION = 1
+    """:obj:`int`: Version of the API this ApiClient is made for."""
+
+    _API_PATH = "api/V{version}/".format(version=_API_VERSION)
+    """:obj:`str`: Base path of API."""
+
+    DEFAULT_FIELDS = {
+        "generic": [
+            "adapters",
+            "labels",
+            "specific_data.data.hostname",
+            "specific_data.data.network_interfaces.ips",
+            "specific_data.data.last_seen",
+        ]
+    }
+    """:obj:`dict`: Fields to set as default for methods with **fields."""
+
+    @property
+    def _obj_route(self):
+        """Pass."""
+        return "devices"
 
 
 def find_adapter(name, known_names=None):
@@ -927,3 +595,36 @@ def find_field(name, adapter, fields=None):
     raise exceptions.UnknownFieldName(
         name=name, known_names=known_names, adapter=adapter
     )
+
+
+def validate_fields(known_fields, **fields):
+    """Validate provided fields are valid.
+
+    Args:
+        known_fields (:obj:`dict`):
+            Known fields from :meth:`get_device_fields` or :meth:`get_user_fields`.
+        **fields: Fields to validate.
+            * generic=['f1', 'f2'] for generic fields.
+            * adapter=['f1', 'f2'] for adapter specific fields.
+
+    Notes:
+        This will try to use :meth:`get_device_fields` to validate the device
+        fields, but if it returns None it will just ensure the fields are
+        fully qualified.
+
+        * generic=['field1'] => ['specific_data.data.field1']
+        * adapter=['field1'] =>['adapters_data.adapter_name.field1']
+
+    Returns:
+        :obj:`list` of :obj:`str`
+
+    """
+    validated_fields = []
+
+    for name, afields in fields.items():
+        for field in afields:
+            field = find_field(name=field, fields=known_fields, adapter=name)
+            if field not in validated_fields:
+                validated_fields.append(field)
+
+    return validated_fields

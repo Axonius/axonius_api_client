@@ -38,24 +38,24 @@ class SavedQueryNotFound(PackageError):
         super(SavedQueryNotFound, self).__init__(msg)
 
 
-class DeviceIDNotFound(PackageError):
-    """Error when unable to find a device by ID."""
+class ObjectNotFound(PackageError):
+    """Error when unable to find an object by ID."""
 
     def __init__(self, id):
         """Constructor.
 
         Args:
             id (:obj:`str`):
-                ID of device not found.
+                ID of object not found.
 
         """
         self.id = id
-        """:obj:`str`: ID of device not found.."""
+        """:obj:`str`: ID of object not found.."""
 
-        msg = "Unable to find device by id {id!r}"
+        msg = "Unable to find object by id {id!r}"
         msg = msg.format(id=id)
 
-        super(DeviceIDNotFound, self).__init__(msg)
+        super(ObjectNotFound, self).__init__(msg)
 
 
 class UnknownAdapterName(PackageError):
