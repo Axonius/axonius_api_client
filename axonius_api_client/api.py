@@ -65,34 +65,44 @@ class ApiClient(object):
         """
         return self.__str__()
 
-    def _request(self, route, method="get", raw=False, **kwargs):
-        """Perform a REST API request.
+    def get_device_saved_queries(self, query=None, page_size=20, max_rows=0):
+        """Pass."""
+        page = self._get_saved_queries(query=query, page_size=page_size, row_start=0)
 
-        Args:
-            route (:obj:`str`):
-                REST API route to request.
-            method (:obj:`str`, optional):
-                HTTP method to use in request.
+        for row in page["assets"]:
+            yield row
 
-                Defaults to: "get".
-            raw (:obj:`bool`, optional):
-                Return the raw response. If False, return response.json().
+        seen = len(page["assets"])
 
-                Defaults to: False.
-            **kwargs:
-                Passed to :meth:`axonius_api_client.http.HttpClient.__call__`
+        # totalResources on page for this call just shows page_size
+        while True:
+            page = self._get_saved_queries(
+                query=query, page_size=page_size, row_start=seen
+            )
 
-        """
-        sargs = {}
-        sargs.update(kwargs)
-        sargs["route"] = route
-        sargs["method"] = method
-        sargs.setdefault("path", self._API_PATH)
+            for row in page["assets"]:
+                yield row
 
-        response = self._auth.http_client(**sargs)
-        response.raise_for_status()
+            if (max_rows and seen >= max_rows) or not page["assets"]:
+                break
 
-        return response if raw else response.json()
+            seen += len(page["assets"])
+
+    def get_device_saved_queries_by_name(
+        self, name, regex=True, page_size=20, max_rows=0
+    ):
+        """Pass."""
+        if regex:
+            query = 'name == regex("{}", "i")'.format(name)
+        else:
+            query = 'name == "{}"'.format(name)
+
+        found = list(
+            self.get_saved_queries(query=query, page_size=page_size, max_rows=max_rows)
+        )
+        if not found:
+            raise exceptions.SavedQueryNotFound(query=query)
+        return found
 
     def get_device_fields(self):
         """Get the fields available for devices.
@@ -169,7 +179,7 @@ class ApiClient(object):
             Fields will be updated with :attr:`DEFAULT_DEVICE_FIELDS`.
 
         Yields:
-            :obj:`dict`: each device found in 'assets' from return.
+            :obj:`dict`: each row found in 'assets' from return.
 
         """
         for k, v in self.DEFAULT_DEVICE_FIELDS.items():
@@ -182,8 +192,8 @@ class ApiClient(object):
             query=query, fields=fields, row_start=0, page_size=page_size
         )
 
-        for device in page["assets"]:
-            yield device
+        for row in page["assets"]:
+            yield row
 
         total = page["page"]["totalResources"]
         seen = len(page["assets"])
@@ -193,8 +203,8 @@ class ApiClient(object):
                 query=query, fields=fields, row_start=seen, page_size=page_size
             )
 
-            for device in page["assets"]:
-                yield device
+            for row in page["assets"]:
+                yield row
 
             if (max_rows and seen >= max_rows) or not page["assets"]:
                 break
@@ -215,6 +225,35 @@ class ApiClient(object):
             self, "_user_fields", self._request(method="get", route="users/fields")
         )
         return self._user_fields
+
+    def _request(self, route, method="get", raw=False, **kwargs):
+        """Perform a REST API request.
+
+        Args:
+            route (:obj:`str`):
+                REST API route to request.
+            method (:obj:`str`, optional):
+                HTTP method to use in request.
+
+                Defaults to: "get".
+            raw (:obj:`bool`, optional):
+                Return the raw response. If False, return response.json().
+
+                Defaults to: False.
+            **kwargs:
+                Passed to :meth:`axonius_api_client.http.HttpClient.__call__`
+
+        """
+        sargs = {}
+        sargs.update(kwargs)
+        sargs["route"] = route
+        sargs["method"] = method
+        sargs.setdefault("path", self._API_PATH)
+
+        response = self._auth.http_client(**sargs)
+        response.raise_for_status()
+
+        return response if raw else response.json()
 
     def _get_devices(self, query=None, fields=None, row_start=0, page_size=100):
         """Get a page of devices for a given query.
@@ -244,8 +283,12 @@ class ApiClient(object):
 
         """
         params = {}
-        params["skip"] = row_start
-        params["limit"] = page_size
+
+        if row_start:
+            params["skip"] = row_start
+
+        if page_size:
+            params["limit"] = page_size
 
         if query:
             params["filter"] = query
@@ -287,6 +330,21 @@ class ApiClient(object):
                     validated_fields.append(field)
 
         return validated_fields
+
+    def _get_device_saved_queries(self, query=None, row_start=0, page_size=0):
+        """Pass."""
+        params = {}
+
+        if page_size:
+            params["limit"] = page_size
+
+        if row_start:
+            params["skip"] = row_start
+
+        if query:
+            params["filter"] = query
+
+        return self._request(method="get", route="devices/views", params=params)
 
 
 def find_adapter(name, known_names=None):

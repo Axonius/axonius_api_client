@@ -18,6 +18,26 @@ class InvalidCredentials(PackageError):
     """Error on failed login."""
 
 
+class SavedQueryNotFound(PackageError):
+    """Error when unable to find a saved query."""
+
+    def __init__(self, query):
+        """Constructor.
+
+        Args:
+            query (:obj:`str`):
+                Filter used to find saved queries.
+
+        """
+        self.query = query
+        """:obj:`str`: ID of device not found.."""
+
+        msg = "Unable to find saved query using filter {query!r}"
+        msg = msg.format(query=query)
+
+        super(SavedQueryNotFound, self).__init__(msg)
+
+
 class DeviceIDNotFound(PackageError):
     """Error when unable to find a device by ID."""
 
@@ -66,19 +86,16 @@ class UnknownAdapterName(PackageError):
 class UnknownFieldName(PackageError):
     """Error when unable to find a generic or adapter field name."""
 
-    def __init__(self, name, known_names, adapter=None):
+    def __init__(self, name, adapter, known_names):
         """Constructor.
 
         Args:
             name (:obj:`str`):
                 Name of field that was not found.
+            adapter (:obj:`str`):
+                Name of adapter that field was being looked for.
             known_names (:obj:`list` of :obj:`str`):
                 Names of fields that exist.
-            adapter (:obj:`str`, optional):
-                Name of adapter that field was being looked for. If None, the field
-                is considered a generic field.
-
-                Defaults to: None.
 
         """
         self.name = name
@@ -90,10 +107,7 @@ class UnknownFieldName(PackageError):
         self.adapter = adapter
         """:obj:`str`: Name of adapter that field was being looked for."""
 
-        self.field_type = adapter if adapter else "generic"
-        """:obj:`str`: Type of field being looked for, generic or adapter specific."""
-
-        msg = "Unable to find a {field_type} field {field!r}, valid fields: {names}"
-        msg = msg.format(field_type=self.field_type, field=name, names=known_names)
+        msg = "Unable to find {adapter} field {field!r}, valid fields: {names}"
+        msg = msg.format(adapter=adapter, field=name, names=known_names)
 
         super(UnknownFieldName, self).__init__(msg)
