@@ -18,6 +18,26 @@ class InvalidCredentials(PackageError):
     """Error on failed login."""
 
 
+class DeviceIDNotFound(PackageError):
+    """Error when unable to find a device by ID."""
+
+    def __init__(self, id):
+        """Constructor.
+
+        Args:
+            id (:obj:`str`):
+                ID of device not found.
+
+        """
+        self.id = id
+        """:obj:`str`: ID of device not found.."""
+
+        msg = "Unable to find device by id {id!r}"
+        msg = msg.format(id=id)
+
+        super(DeviceIDNotFound, self).__init__(msg)
+
+
 class UnknownAdapterName(PackageError):
     """Error when unable to find an adapter name."""
 

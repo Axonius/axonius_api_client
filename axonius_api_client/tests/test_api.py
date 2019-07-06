@@ -86,22 +86,30 @@ class TestApiClient(object):
     )
     def test__validate_fields_valid(self, api_client, fields):
         """Test valid dup fields dont show up and prefix gets added properly."""
-        api_client.get_device_fields()
+        device_fields = {}
+        device_fields.update(api_client.get_device_fields())
         # this should be monkey patched but... shrug
-        api_client._device_fields["specific"].update(DEVICE_FIELDS["specific"])
-        r = api_client._validate_device_fields(**fields["fields"])
+        device_fields["specific"].update(DEVICE_FIELDS["specific"])
+
+        r = api_client._validate_fields(known_fields=device_fields, **fields["fields"])
         assert r == fields["expected"]
 
     def test__validate_fields_invalid_field(self, api_client):
         """Test exc thrown when invalid generic field supplied."""
+        device_fields = api_client.get_device_fields()
         with pytest.raises(axonius_api_client.exceptions.UnknownFieldName):
-            api_client._validate_device_fields(generic=["this_wont_exist_yo"])
+            api_client._validate_fields(
+                known_fields=device_fields, generic=["this_wont_exist_yo"]
+            )
 
     def test__validate_fields_invalid_adapter(self, api_client):
         """Test exc thrown when invalid adapter name supplied."""
+        device_fields = api_client.get_device_fields()
         with pytest.raises(axonius_api_client.exceptions.UnknownAdapterName):
-            api_client._validate_device_fields(
-                generic=["hostname"], this_wont_exist_yo=["hostname"]
+            api_client._validate_fields(
+                known_fields=device_fields,
+                generic=["hostname"],
+                this_wont_exist_yo=["hostname"],
             )
 
     def test__get_devices_no_query_no_fields(self, api_client):
@@ -146,8 +154,41 @@ class TestApiClient(object):
         for dvc in api_client.get_devices(query=query, page_size=1, max_rows=2):
             assert "specific_data.data.hostname" in dvc
             assert "specific_data.data.network_interfaces.ips" in dvc
-            # can't test for specific_data.data.network_interfaces.macs
-            # not every adapter returns that
+            # not every dvc will have "specific_data.data.network_interfaces.macs"
+            # FUTURE: add cmd line option for adapter fields
+            # --adapter_fields cisco:hostname,network_interfaces.ips
+
+    def test_get_device_by_id_valid(self, api_client):
+        """Test get_device_by_id with a valid dvc id."""
+        dvcs = api_client._get_devices(page_size=1)
+        for dvc in dvcs["assets"]:
+            full_dvc = api_client.get_device_by_id(id=dvc["internal_axon_id"])
+            assert "generic" in full_dvc
+            assert "specific" in full_dvc
+
+    def test_get_device_by_id_invalid(self, api_client):
+        """Test get_device_by_id with an invalid dvc id."""
+        with pytest.raises(axonius_api_client.exceptions.DeviceIDNotFound):
+            api_client.get_device_by_id(id="this_wont_work_yo")
+
+    def test_get_device_count(self, api_client):
+        """Test devices/count API call."""
+        r = api_client.get_device_count()
+        assert isinstance(r, int)
+
+    def test_get_device_count_query(self, api_client):
+        """Test devices/count API call with query (unable to assume greater than 0)."""
+        r = api_client.get_device_count(
+            query='(specific_data.data.id == ({"$exists":true,"$ne": ""}))'
+        )
+        assert isinstance(r, int)
+
+    def test_get_device_count_query_0(self, api_client):
+        """Test devices/count API call with query that should return 0."""
+        r = api_client.get_device_count(
+            query='(specific_data.data.id == ({"$exists":false,"$ne": ""}))'
+        )
+        assert r == 0
 
 
 @pytest.mark.parametrize("adapter", ["known", "known_adapter"])

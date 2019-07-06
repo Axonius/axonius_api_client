@@ -61,7 +61,7 @@ docs:
 docs_coverage:
 	$(MAKE) pipenv_install_docs
 	(pushd docs && pipenv run make coverage && popd)
-	cat _build/coverage/python.txt
+	cat docs/_build/coverage/python.txt
 
 docs_linkcheck:
 	$(MAKE) pipenv_install_docs

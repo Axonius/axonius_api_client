@@ -109,6 +109,98 @@ class ApiClient(object):
         )
         return self._device_fields
 
+    def get_device_count(self, query=None):
+        """Get the number of devices for a given query.
+
+        Args:
+            query (:obj:`str`, optional):
+                Query built from Query Wizard in GUI to count devices of.
+
+        Returns:
+            :obj:`int`
+
+        """
+        params = {}
+        if query:
+            params["filter"] = query
+        return self._request(method="get", route="devices/count", params=params)
+
+    def get_device_by_id(self, id):
+        """Get a device by internal_axon_id.
+
+        Args:
+            id (:obj:`str`):
+                internal_axon_id of device to get.
+
+        Raises:
+            :exc:`exceptions.DeviceIDNotFound`:
+                When :meth:`_request` raises exception.
+
+        Returns:
+            :obj:`dict`
+
+        """
+        try:
+            return self._request(method="get", route="devices/{id}".format(id=id))
+        except Exception:
+            raise exceptions.DeviceIDNotFound(id=id)
+
+    def get_devices(self, query=None, page_size=100, max_rows=0, **fields):
+        """Get devices for a given query using paging.
+
+        Args:
+            query (:obj:`str`, optional):
+                Query built from Query Wizard in GUI to select devices to return.
+
+                Defaults to: None.
+            page_size (:obj:`int`, optional):
+                Get N devices per page.
+
+                Defaults to: 100.
+            max_rows (:obj:`int`, optional):
+                If not 0, only return up to N devices.
+
+                Defaults to: 0.
+            **fields: Fields to include in result.
+                * generic=['f1', 'f2'] for generic fields.
+                * adapter=['f1', 'f2'] for adapter specific fields.
+
+        Notes:
+            Fields will be updated with :attr:`DEFAULT_DEVICE_FIELDS`.
+
+        Yields:
+            :obj:`dict`: each device found in 'assets' from return.
+
+        """
+        for k, v in self.DEFAULT_DEVICE_FIELDS.items():
+            fields.setdefault(k, v)
+
+        device_fields = self.get_device_fields()
+        fields = self._validate_fields(known_fields=device_fields, **fields)
+
+        page = self._get_devices(
+            query=query, fields=fields, row_start=0, page_size=page_size
+        )
+
+        for device in page["assets"]:
+            yield device
+
+        total = page["page"]["totalResources"]
+        seen = len(page["assets"])
+
+        while seen < total:
+            page = self._get_devices(
+                query=query, fields=fields, row_start=seen, page_size=page_size
+            )
+
+            for device in page["assets"]:
+                yield device
+
+            if (max_rows and seen >= max_rows) or not page["assets"]:
+                break
+
+            seen += len(page["assets"])
+
     def get_user_fields(self):
         """Get the fields available for users.
 
@@ -146,13 +238,17 @@ class ApiClient(object):
                 Include N devices in the return.
 
                 Defaults to: 100.
+
+        Returns:
+            :obj:`dict`
+
         """
         params = {}
         params["skip"] = row_start
         params["limit"] = page_size
 
         if query:
-            params["query"] = query
+            params["filter"] = query
 
         if fields:
             if isinstance(fields, (list, tuple)):
@@ -160,10 +256,12 @@ class ApiClient(object):
             params["fields"] = fields
         return self._request(method="get", route="devices", params=params)
 
-    def _validate_device_fields(self, **fields):
+    def _validate_fields(self, known_fields, **fields):
         """Validate provided fields are valid.
 
         Args:
+            known_fields (:obj:`dict`):
+                Known fields from :meth:`get_device_fields` or :meth:`get_user_fields`.
             **fields: Fields to validate.
                 * generic=['f1', 'f2'] for generic fields.
                 * adapter=['f1', 'f2'] for adapter specific fields.
@@ -176,72 +274,19 @@ class ApiClient(object):
             * generic=['field1'] => ['specific_data.data.field1']
             * adapter=['field1'] =>['adapters_data.adapter_name.field1']
 
+        Returns:
+            :obj:`list` of :obj:`str`
+
         """
         validated_fields = []
-        device_fields = self.get_device_fields()
 
         for name, afields in fields.items():
             for field in afields:
-                field = find_field(name=field, fields=device_fields, adapter=name)
+                field = find_field(name=field, fields=known_fields, adapter=name)
                 if field not in validated_fields:
                     validated_fields.append(field)
 
         return validated_fields
-
-    def get_devices(self, query=None, page_size=100, max_rows=0, **fields):
-        """Get devices for a given query using paging.
-
-        Args:
-            query (:obj:`str`, optional):
-                Query built from Query Wizard in GUI to select devices to return.
-
-                Defaults to: None.
-            page_size (:obj:`int`, optional):
-                Get N devices per page.
-
-                Defaults to: 100.
-            max_rows (:obj:`int`, optional):
-                If not 0, only return up to N devices.
-
-                Defaults to: 0.
-            **fields: Fields to include in result.
-                * generic=['f1', 'f2'] for generic fields.
-                * adapter=['f1', 'f2'] for adapter specific fields.
-
-        Notes:
-            Fields will be updated with :attr:`DEFAULT_DEVICE_FIELDS`.
-
-        Yields:
-            :obj:`dict`: each device found in 'assets' from return.
-
-        """
-        for k, v in self.DEFAULT_DEVICE_FIELDS.items():
-            fields.setdefault(k, v)
-
-        fields = self._validate_device_fields(**fields)
-
-        page = self._get_devices(
-            query=query, fields=fields, row_start=0, page_size=page_size
-        )
-
-        for device in page["assets"]:
-            yield device
-
-        total = page["page"]["totalResources"]
-        seen = len(page["assets"])
-
-        while seen < total:
-            page = self._get_devices(
-                query=query, fields=fields, row_start=seen, page_size=page_size
-            )
-
-            for device in page["assets"]:
-                yield device
-
-            if (max_rows and seen >= max_rows) or not page["assets"]:
-                break
-
-            seen += len(page["assets"])
 
 
 def find_adapter(name, known_names=None):
