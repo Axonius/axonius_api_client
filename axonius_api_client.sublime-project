@@ -1,14 +1,33 @@
 {
-	"build_systems": [],
-	"folders": [{"path": "/gh/axonius/axonius_api_client"}],
+	"build_systems":
+	[
+		{
+			"file_regex": "^[ ]*File \"(...*?)\", line ([0-9]*)",
+			"name": "Anaconda Python Builder",
+			"selector": "source.python",
+			"shell_cmd": "\"/Users/jimbo/.pyenv/shims/python\" -u \"$file\""
+		}
+	],
+	"folders":
+	[
+		{
+			"path": "/gh/axonius/axonius_api_client"
+		}
+	],
 	"settings":
 	{
-		"SublimeLinter.linters.flake8.args": ["--max-line-length=89"],
-		"pep257": true,
-		"pep8_ignore": [],
+		"SublimeLinter.linters.flake8.args":
+		[
+			"--max-line-length=89"
+		],
 		"anaconda_linter_phantoms": false,
 		"anaconda_linter_show_errors_on_save": true,
-		"pep257_ignore": [
+		"color_scheme": "Monokai.sublime-color-scheme",
+		"font_face": "Ubuntu Mono",
+		"font_size": 15,
+		"pep257": true,
+		"pep257_ignore":
+		[
 			"D203",
 			"D209",
 			"D212",
@@ -21,11 +40,14 @@
 			"D410",
 			"D411"
 		],
-		"color_scheme": "Monokai.sublime-color-scheme",
-		"font_face": "Ubuntu Mono",
-		"font_size": 15,
+		"pep8_ignore":
+		[
+		],
 		"python_interpreter": "~/.pyenv/shims/python",
-		"rulers": [89],
+		"rulers":
+		[
+			89
+		],
 		"sublack.black_command": "~/.pyenv/shims/black",
 		"sublack.black_line_length": null,
 		"sublack.black_on_save": true,

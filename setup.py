@@ -38,7 +38,7 @@ setup(
     python_requires=">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*",
     install_requires=["requests[security,socks]"],
     keywords=["Axonius", "API Library"],
-    tests_require=["pytest", "pytest-cov", "coverage"],
+    tests_require=["pytest", "pytest-cov", "pytest-httpbin", "coverage"],
     license=ABOUT["__license__"],
     classifiers=[
         "Development Status :: 5 - Production/Stable",

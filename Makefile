@@ -44,11 +44,11 @@ lint:
 
 test:
 	$(MAKE) pipenv_install_dev
-	pipenv run pytest --junitxml=junit-report.xml --cov-config=.coveragerc --cov-report=term --cov-report xml --cov-report=html:cov_html --cov=$(PACKAGE) --showlocals --log-cli-level=INFO --verbose --exitfirst $(PACKAGE)/tests
+	pipenv run pytest -rA --junitxml=junit-report.xml --cov-config=.coveragerc --cov-report=term --cov-report xml --cov-report=html:cov_html --cov=$(PACKAGE) --showlocals --log-cli-level=INFO --verbose --exitfirst $(PACKAGE)/tests
 
 test_debug:
 	$(MAKE) pipenv_install_dev
-	pipenv run pytest --capture=no --showlocals --log-cli-level=DEBUG --verbose --exitfirst $(PACKAGE)/tests
+	pipenv run pytest -rA --capture=no --showlocals --log-cli-level=DEBUG --verbose --exitfirst $(PACKAGE)/tests
 
 test_clean:
 	rm -rf .egg .eggs junit-report.xml cov_html .tox .pytest_cache .coverage

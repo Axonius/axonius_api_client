@@ -7,6 +7,7 @@ name = "pypi"
 "codecov" = "*"
 "pytest" = ">=2.8.0"
 "pytest-cov" = "*"
+"pytest-httpbin" = "*"
 
 [packages]
 e1839a8 = {path = ".",editable = true}
