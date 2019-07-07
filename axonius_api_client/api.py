@@ -65,7 +65,7 @@ class ApiClient(object):
         """
         return self.__str__()
 
-    def _request(self, route, method="get", raw=False, **kwargs):
+    def _request(self, route, method="get", raw=False, do_raise=True, **kwargs):
         """Perform a REST API request.
 
         Args:
@@ -79,6 +79,10 @@ class ApiClient(object):
                 Return the raw response. If False, return response.json().
 
                 Defaults to: False.
+            do_raise (:obj:`bool`, optional):
+                Call :meth:`requests.Response.raise_for_status`.
+
+                Defaults to: True.
             **kwargs:
                 Passed to :meth:`axonius_api_client.http.HttpClient.__call__`
 
@@ -93,7 +97,11 @@ class ApiClient(object):
         sargs.setdefault("path", self._API_PATH)
 
         response = self._auth.http_client(**sargs)
-        response.raise_for_status()
+        if do_raise:
+            try:
+                response.raise_for_status()
+            except Exception as exc:
+                raise exceptions.ResponseError(response=response, exc=exc)
 
         return response if raw else response.json()
 
@@ -172,6 +180,9 @@ class ObjectMixins(object):
         data["view"]["historical"] = None
 
         # FUTURE: find out if this only impacts GUI
+        data["view"]["columnSizes"] = []
+
+        # FUTURE: find out if this only impacts GUI
         data["view"]["page"] = 0
 
         # FUTURE: find out if this only impacts GUI
@@ -181,13 +192,13 @@ class ObjectMixins(object):
 
         # FUTURE: validate 'expressions' is not needed
         data["view"]["query"]["filter"] = query
-        data["sort"] = {}
-        data["sort"]["desc"] = sort_descending
-        data["sort"]["field"] = sort_field
+        data["view"]["sort"] = {}
+        data["view"]["sort"]["desc"] = sort_descending
+        data["view"]["sort"]["field"] = sort_field
 
         return self._request(method="post", route="views", json=data)
 
-    def delete_saved_query_by_name(self, name, regex=False):
+    def delete_saved_query_by_name(self, name, regex=False, only1=True):
         """Delete a saved query by name.
 
         Args:
@@ -197,23 +208,27 @@ class ObjectMixins(object):
                 Search for name using regex.
 
                 Defaults to: False.
+            only1 (:obj:`bool`, optional):
+                Only allow one match to name.
+
+                Defaults to: True.
 
         Returns:
             :obj:`str`: empty string
 
         """
-        found = self.get_saved_queries_by_name(name=name, regex=regex)
-        ids = [x["uuid"] for x in found]
-        return self._delete_saved_queries(ids=ids)
+        found = self.get_saved_query_by_name(name=name, regex=regex, only1=True)
+        ids = [x["uuid"] for x in found] if isinstance(found, list) else [found["uuid"]]
+        return self._delete_saved_query(ids=ids)
 
-    def get_saved_queries(self, query=None, page_size=20, max_rows=0):
+    def get_saved_query(self, query=None, page_size=20, max_rows=0):
         """Get saved queries using paging.
 
         Args:
             query (:obj:`str`, optional):
                 Query to filter rows to return. This is NOT a query built by
                 the Query Wizard in the GUI. This is something else. See
-                :meth:`get_user_saved_queries_by_name` for an example query.
+                :meth:`get_user_saved_query_by_name` for an example query.
 
                 Defaults to: None.
             page_size (:obj:`int`, optional):
@@ -229,7 +244,7 @@ class ObjectMixins(object):
             :obj:`dict`: each row found in 'assets' from return.
 
         """
-        page = self._get_saved_queries(query=query, page_size=page_size, row_start=0)
+        page = self._get_saved_query(query=query, page_size=page_size, row_start=0)
 
         for row in page["assets"]:
             yield row
@@ -237,7 +252,7 @@ class ObjectMixins(object):
         seen = len(page["assets"])
 
         while True:
-            page = self._get_saved_queries(
+            page = self._get_saved_query(
                 query=query, page_size=page_size, row_start=seen
             )
 
@@ -249,7 +264,7 @@ class ObjectMixins(object):
 
             seen += len(page["assets"])
 
-    def get_saved_queries_by_name(self, name, regex=True):
+    def get_saved_query_by_name(self, name, regex=True, only1=False):
         """Get saved queries by name using paging.
 
         Args:
@@ -259,20 +274,16 @@ class ObjectMixins(object):
                 Search for name using regex.
 
                 Defaults to: True.
-            page_size (:obj:`int`, optional):
-                Get N rows per page.
+            only1 (:obj:`bool`, optional):
+                Only allow one match to name.
 
-                Defaults to: 20.
-            max_rows (:obj:`int`, optional):
-                If not 0, only return up to N rows.
-
-                Defaults to: 0.
+                Defaults to: True.
 
         Raises:
-            :exc:`exceptions.SavedQueryNotFound`
+            :exc:`exceptions.ObjectNotFound`
 
         Returns:
-            :obj:`list` of :obj:`dict`: Each row matching name.
+            :obj:`list` of :obj:`dict`: Each row matching name or :obj:`dict` if only1.
 
         """
         if regex:
@@ -280,10 +291,12 @@ class ObjectMixins(object):
         else:
             query = 'name == "{name}"'.format(name=name)
 
-        found = list(self.get_saved_queries(query=query))
-        if not found:
-            raise exceptions.SavedQueryNotFound(query=query)
-        return found
+        found = list(self.get_saved_query(query=query))
+        if not found or (len(found) > 1 and only1):
+            raise exceptions.ObjectNotFound(
+                value=query, value_type="query", object_type="Saved Query"
+            )
+        return found[0] if only1 else found
 
     def get_count(self, query=None):
         """Get the number of matches for a given query.
@@ -378,7 +391,9 @@ class ObjectMixins(object):
         try:
             return self._request(method="get", route="{id}".format(id=id))
         except Exception:
-            raise exceptions.ObjectNotFound(id=id)
+            raise exceptions.ObjectNotFound(
+                value=id, value_type="Axonius ID", object_type=self._obj_route
+            )
 
     def _get(self, query=None, fields=None, row_start=0, page_size=100):
         """Get a page for a given query.
@@ -424,24 +439,25 @@ class ObjectMixins(object):
             params["fields"] = fields
         return self._request(method="get", route="", params=params)
 
-    def _get_saved_queries(self, query=None, row_start=0, page_size=0):
+    def _get_saved_query(self, query=None, row_start=0, page_size=0):
         """Get device saved queries.
 
         Args:
             query (:obj:`str`, optional):
                 Query to filter rows to return. This is NOT a query built by
                 the Query Wizard in the GUI. This is something else. See
-                :meth:`get_user_saved_queries_by_name` for an example query.
+                :meth:`get_user_saved_query_by_name` for an example query. Empty
+                query will return all saved queries.
 
                 Defaults to: None.
             row_start (:obj:`int`, optional):
-                Skip N rows in the return.
+                If not 0, skip N rows in the return.
 
                 Defaults to: 0.
             page_size (:obj:`int`, optional):
-                Include N rows in the return.
+                If not 0, include N rows in the return.
 
-                Defaults to: 100.
+                Defaults to: 0.
 
         Returns:
             :obj:`dict`
@@ -460,7 +476,7 @@ class ObjectMixins(object):
 
         return self._request(method="get", route="views", params=params)
 
-    def _delete_saved_queries(self, ids):
+    def _delete_saved_query(self, ids):
         """Delete saved queries by ids.
 
         Args:
@@ -644,6 +660,8 @@ def validate_fields(known_fields, **fields):
     validated_fields = []
 
     for name, afields in fields.items():
+        if not isinstance(afields, (tuple, list)):
+            continue
         for field in afields:
             field = find_field(name=field, fields=known_fields, adapter=name)
             if field not in validated_fields:

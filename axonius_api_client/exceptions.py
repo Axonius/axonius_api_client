@@ -5,6 +5,16 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
+import json
+
+
+def json_pretty(text):
+    """Pass."""
+    try:
+        return json.dumps(json.loads(text), indent=2)
+    except Exception:
+        return text or ""
+
 
 class PackageError(Exception):
     """Parent exception for all package errors."""
@@ -18,42 +28,63 @@ class InvalidCredentials(PackageError):
     """Error on failed login."""
 
 
-class SavedQueryNotFound(PackageError):
-    """Error when unable to find a saved query."""
+class ResponseError(PackageError):
+    """Error when response.raise_for_error."""
 
-    def __init__(self, query):
+    def __init__(self, response, exc):
         """Constructor.
 
         Args:
-            query (:obj:`str`):
-                Filter used to find saved queries.
+            response (:obj:`requests.Response`):
+                Response error was thrown for.
+            exc (:obj:`Exception`):
+                Original exception thrown.
 
         """
-        self.query = query
-        """:obj:`str`: ID of device not found.."""
+        self.response = response
+        """:obj:`requests.Response`: Response error was thrown for."""
 
-        msg = "Unable to find saved query using filter {query!r}"
-        msg = msg.format(query=query)
+        self.exc = exc
+        """:obj:`Exception: Original exception thrown."""
 
-        super(SavedQueryNotFound, self).__init__(msg)
+        msg = [
+            "Error in {response}: {exc}".format(response=response, exc=exc),
+            "*** request_text ***",
+            json_pretty(response.request.body),
+            "*** response text ***",
+            json_pretty(response.text),
+        ]
+        msg = "\n".join(msg)
+
+        super(ResponseError, self).__init__(msg)
 
 
 class ObjectNotFound(PackageError):
-    """Error when unable to find an object by ID."""
+    """Error when unable to find an object."""
 
-    def __init__(self, id):
+    def __init__(self, value, value_type, object_type):
         """Constructor.
 
         Args:
-            id (:obj:`str`):
-                ID of object not found.
+            value (:obj:`str`):
+                Value used to find object.
+            value (:obj:`str`):
+                Type of value used to find object.
+            object_type (:obj:`str`):
+                Type of object searched for.
 
         """
-        self.id = id
-        """:obj:`str`: ID of object not found.."""
+        self.value = value
+        """:obj:`str`: Value used to find object."""
 
-        msg = "Unable to find object by id {id!r}"
-        msg = msg.format(id=id)
+        self.value_type = value_type
+        """:obj:`str`: Value type used to find object."""
+
+        self.object_type = object_type
+        """:obj:`str`: Type of object searched for."""
+
+        msg = "Unable to find {object_type} using {value_type}: {value!r}"
+        msg = msg.format(value=value, value_type=value_type, object_type=object_type)
 
         super(ObjectNotFound, self).__init__(msg)
 
