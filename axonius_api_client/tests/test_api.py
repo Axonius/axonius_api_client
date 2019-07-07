@@ -102,6 +102,35 @@ class TestApiUsers(object):
                 assert isinstance(data, (dict, str))
                 assert data
 
+    def test_get_by_name_valid(self, api_client):
+        """Test get_by_name with a valid host name."""
+        rows = list(api_client.get(max_rows=1, page_size=1))
+        if not rows:
+            msg = "No users on system, unable to test"
+            pytest.skip(msg)
+
+        name = rows[0]["specific_data.data.username"]
+        name = name[0] if isinstance(name, list) else name
+        row = api_client.get_by_name(name=name)
+        assert isinstance(row, dict)
+
+    def test_get_by_name_valid_regex(self, api_client):
+        """Test get_by_name with a valid host name."""
+        rows = list(api_client.get(max_rows=1, page_size=1))
+        if not rows:
+            msg = "No users on system, unable to test"
+            pytest.skip(msg)
+
+        name = rows[0]["specific_data.data.username"]
+        name = name[0] if isinstance(name, list) else name
+        row = api_client.get_by_name(name=name, regex=True, only1=False)
+        assert isinstance(row, (list, tuple))
+
+    def test_get_by_name_invalid(self, api_client):
+        """Test get_by_name with a valid host name."""
+        with pytest.raises(axonius_api_client.exceptions.ObjectNotFound):
+            api_client.get_by_name(name="this_should_not_exist_yo")
+
     def test_get_by_id_valid(self, api_client):
         """Test get_by_id with a valid row id."""
         rows = api_client._get(page_size=1)
@@ -309,6 +338,35 @@ class TestApiDevices(object):
             for data in row["specific_data.data"]:
                 assert isinstance(data, (dict, str))
                 assert data
+
+    def test_get_by_name_valid(self, api_client):
+        """Test get_by_name with a valid host name."""
+        rows = list(api_client.get(max_rows=1, page_size=1))
+        if not rows:
+            msg = "No devices on system, unable to test"
+            pytest.skip(msg)
+
+        name = rows[0]["specific_data.data.hostname"]
+        name = name[0] if isinstance(name, list) else name
+        row = api_client.get_by_name(name=name)
+        assert isinstance(row, dict)
+
+    def test_get_by_name_valid_regex(self, api_client):
+        """Test get_by_name with a valid host name."""
+        rows = list(api_client.get(max_rows=1, page_size=1))
+        if not rows:
+            msg = "No users on system, unable to test"
+            pytest.skip(msg)
+
+        name = rows[0]["specific_data.data.hostname"]
+        name = name[0] if isinstance(name, list) else name
+        row = api_client.get_by_name(name=name, regex=True, only1=False)
+        assert isinstance(row, (list, tuple))
+
+    def test_get_by_name_invalid(self, api_client):
+        """Test get_by_name with a valid host name."""
+        with pytest.raises(axonius_api_client.exceptions.ObjectNotFound):
+            api_client.get_by_name(name="this_should_not_exist_yo")
 
     def test_get_by_id_valid(self, api_client):
         """Test get_by_id with a valid row id."""

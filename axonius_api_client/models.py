@@ -26,11 +26,6 @@ ADAPTER_FIELD_PREFIX = "adapters_data.{adapter}."
 class ApiBase(object):
     """API client for Axonius REST API."""
 
-    @abc.abstractproperty
-    def _obj_route(self):
-        """Get the object route."""
-        raise NotImplementedError  # pragma: no cover
-
     def __init__(self, auth):
         """Constructor.
 
@@ -97,7 +92,7 @@ class ApiBase(object):
         else:
             sargs["route"] = self._obj_route
         sargs["method"] = method
-        sargs.setdefault("path", self._API_PATH)
+        sargs.setdefault("path", self._api_path)
 
         response = self._auth.http_client(**sargs)
         if do_raise:
@@ -108,9 +103,70 @@ class ApiBase(object):
 
         return response if raw else response.json()
 
+    @abc.abstractproperty
+    def _api_version(self):
+        """Get the API version to use.
 
+        Returns:
+            :obj:`int`
+
+        """
+        raise NotImplementedError  # pragma: no cover
+
+    @abc.abstractproperty
+    def _api_path(self):
+        """Get the API path to use.
+
+        Returns:
+            :obj:`str`
+
+        """
+        raise NotImplementedError  # pragma: no cover
+
+    @abc.abstractproperty
+    def _obj_route(self):
+        """Get the object route.
+
+        Returns:
+            :obj:`str`
+
+        """
+        raise NotImplementedError  # pragma: no cover
+
+
+@six.add_metaclass(abc.ABCMeta)
 class ModelMixins(object):
     """Mixins for User & Device models."""
+
+    @abc.abstractproperty
+    def _name_field(self):
+        """Get the field to use in :meth:`get_by_name`.
+
+        Returns:
+            :obj:`str`
+
+        """
+        raise NotImplementedError  # pragma: no cover
+
+    @abc.abstractproperty
+    def _default_fields(self):
+        """Fields to set as default for methods with **fields.
+
+        Returns:
+            :obj:`dict`
+
+        """
+        raise NotImplementedError  # pragma: no cover
+
+    @abc.abstractproperty
+    def _all_fields(self):
+        """Fields to use for methods with all_fields.
+
+        Returns:
+            :obj:`list` of :obj:`str`
+
+        """
+        raise NotImplementedError  # pragma: no cover
 
     def get_fields(self):
         """Get the fields.
@@ -134,6 +190,21 @@ class ModelMixins(object):
 
         """
         return self._request(method="get", route="labels")
+
+    def _add_labels(self, labels, ids):
+        """Add labels for device IDs.
+
+        Args:
+            labels (:obj:`list` of `str`):
+                Labels to add.
+            ids (:obj:`list` of `str`):
+                Axonius internal object IDs to add to labels.
+        """
+        data = {}
+        data["entities"] = {}
+        data["entities"]["ids"] = ids
+        data["labels"] = labels
+        return self._request(method="post", route="labels", json=data)
 
     def create_saved_query(
         self,
@@ -171,7 +242,7 @@ class ModelMixins(object):
             :obj:`str`: The ID of the new saved query.
 
         """
-        for k, v in self.DEFAULT_FIELDS.items():
+        for k, v in self._default_fields.items():
             fields.setdefault(k, v)
 
         known_fields = self.get_fields()
@@ -306,10 +377,12 @@ class ModelMixins(object):
             query = 'name == "{name}"'.format(name=name)
 
         found = list(self.get_saved_query(query=query))
+
         if not found or (len(found) > 1 and only1):
             raise exceptions.ObjectNotFound(
                 value=query, value_type="query", object_type="Saved Query"
             )
+
         return found[0] if only1 else found
 
     def get_count(self, query=None):
@@ -353,16 +426,16 @@ class ModelMixins(object):
                 * adapter=['f1', 'f2'] for adapter specific fields.
 
         Notes:
-            Fields will be updated with :attr:`DEFAULT_FIELDS`.
+            Fields will be updated with :attr:`_default_fields`.
 
         Yields:
             :obj:`dict`: each row found in 'assets' from return.
 
         """
         if all_fields:
-            validated_fields = ["specific_data.data"]
+            validated_fields = self._all_fields
         else:
-            for k, v in self.DEFAULT_FIELDS.items():
+            for k, v in self._default_fields.items():
                 fields.setdefault(k, v)
 
             known_fields = self.get_fields()
@@ -372,13 +445,18 @@ class ModelMixins(object):
             query=query, fields=validated_fields, row_start=0, page_size=page_size
         )
 
+        seen = 0
+
         for row in page["assets"]:
+            seen += 1
             yield row
+            if max_rows and seen >= max_rows:
+                return
 
-        total = page["page"]["totalResources"]
-        seen = len(page["assets"])
+        while True:
+            if (max_rows and seen >= max_rows) or not page["assets"]:
+                return
 
-        while seen < total:
             page = self._get(
                 query=query,
                 fields=validated_fields,
@@ -387,12 +465,8 @@ class ModelMixins(object):
             )
 
             for row in page["assets"]:
+                seen += 1
                 yield row
-
-            if (max_rows and seen >= max_rows) or not page["assets"]:
-                break
-
-            seen += len(page["assets"])
 
     def get_by_id(self, id):
         """Get an object by internal_axon_id.
@@ -415,6 +489,36 @@ class ModelMixins(object):
             raise exceptions.ObjectNotFound(
                 value=id, value_type="Axonius ID", object_type=self._obj_route
             )
+
+    def get_by_name(self, name, regex=False, only1=True, **kwargs):
+        """Get objects by name using paging.
+
+        Args:
+            name (:obj:`int`):
+                Name to match using :attr:`_name_field`.
+            **kwargs: Passed thru to :meth:`get`
+
+        Returns:
+            :obj:`list` of :obj:`dict`: Each row matching name or :obj:`dict` if only1.
+
+        """
+        if regex:
+            query = '{field} == regex("{name}", "i")'
+        else:
+            query = '{field} == "{name}"'
+
+        query = query.format(field=self._name_field, name=name)
+
+        kwargs["query"] = query
+
+        found = list(self.get(**kwargs))
+
+        if not found or (len(found) > 1 and only1):
+            raise exceptions.ObjectNotFound(
+                value=query, value_type="query", object_type=self._obj_route
+            )
+
+        return found[0] if only1 else found
 
     def _get(self, query=None, fields=None, row_start=0, page_size=100):
         """Get a page for a given query.
