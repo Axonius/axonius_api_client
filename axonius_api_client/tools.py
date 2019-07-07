@@ -5,7 +5,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
-from six.moves import urllib
+import six
 
 from . import exceptions
 
@@ -35,7 +35,7 @@ class UrlParser(object):
         self._init_scheme = default_scheme
         """:obj:`str`: Default scheme provided."""
 
-        self._init_parsed = urllib.parse.urlparse(url)
+        self._init_parsed = six.moves.urllib.parse.urlparse(url)
         """:obj:`urllib.parse.ParseResult`: First pass of parsing URL."""
 
         self.parsed = self.reparse(
@@ -221,8 +221,10 @@ class UrlParser(object):
             elif scheme == "http":
                 netloc = self.make_netloc(host, "80")
 
-        pass2 = urllib.parse.urlunparse((scheme, netloc, path, params, query, fragment))
-        return urllib.parse.urlparse(pass2)
+        pass2 = six.moves.urllib.parse.urlunparse(
+            (scheme, netloc, path, params, query, fragment)
+        )
+        return six.moves.urllib.parse.urlparse(pass2)
 
     def unparse_base(self, parsed_result):
         """Unparse a parsed URL into just the scheme, hostname, and port parts.
@@ -237,7 +239,7 @@ class UrlParser(object):
         """
         # only unparse self.parsed into url with scheme and netloc
         bits = (parsed_result.scheme, parsed_result.netloc, "", "", "", "")
-        return urllib.parse.urlunparse(bits)
+        return six.moves.urllib.parse.urlunparse(bits)
 
     def unparse_all(self, parsed_result):
         """Unparse a parsed URL with all the parts.
@@ -250,7 +252,7 @@ class UrlParser(object):
             :obj:`str`
 
         """
-        return urllib.parse.urlunparse(parsed_result)
+        return six.moves.urllib.parse.urlunparse(parsed_result)
 
 
 def urljoin(url, *parts):
@@ -271,5 +273,11 @@ def urljoin(url, *parts):
             continue
         url = url.rstrip("/") + "/"
         part = part.lstrip("/")
-        url = urllib.parse.urljoin(url, part)
+        url = six.moves.urllib.parse.urljoin(url, part)
     return url
+
+
+def grouper(iterable, n, fillvalue=None):
+    """Chunk up iterables."""
+    args = [iter(iterable)] * n
+    return six.moves.zip_longest(*args, fillvalue=fillvalue)

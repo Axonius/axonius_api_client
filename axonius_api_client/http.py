@@ -52,7 +52,7 @@ class HttpClient(object):
                 response_timeout (:obj:`int`, optional):
                     Seconds to wait for response from url.
 
-                    Defaults to: 5.
+                    Defaults to: 60.
                 verify (:obj:`bool` or :obj:`str`, optional):
                     Enable/Disable SSL cert validation.
 
@@ -117,7 +117,7 @@ class HttpClient(object):
         self.connect_timeout = kwargs.get("connect_timeout", 5)
         """:obj:`int`: Seconds to wait for connection to url to open."""
 
-        self.response_timeout = kwargs.get("response_timeout", 5)
+        self.response_timeout = kwargs.get("response_timeout", 60)
         """:obj:`int`: Seconds to wait for response from url."""
 
         self.session = requests.Session()

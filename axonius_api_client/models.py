@@ -138,36 +138,6 @@ class ApiBase(object):
 class ModelMixins(object):
     """Mixins for User & Device models."""
 
-    @abc.abstractproperty
-    def _name_field(self):
-        """Get the field to use in :meth:`get_by_name`.
-
-        Returns:
-            :obj:`str`
-
-        """
-        raise NotImplementedError  # pragma: no cover
-
-    @abc.abstractproperty
-    def _default_fields(self):
-        """Fields to set as default for methods with **fields.
-
-        Returns:
-            :obj:`dict`
-
-        """
-        raise NotImplementedError  # pragma: no cover
-
-    @abc.abstractproperty
-    def _all_fields(self):
-        """Fields to use for methods with all_fields.
-
-        Returns:
-            :obj:`list` of :obj:`str`
-
-        """
-        raise NotImplementedError  # pragma: no cover
-
     def get_fields(self):
         """Get the fields.
 
@@ -191,20 +161,88 @@ class ModelMixins(object):
         """
         return self._request(method="get", route="labels")
 
-    def _add_labels(self, labels, ids):
-        """Add labels for device IDs.
+    def add_labels_by_rows(self, rows, labels):
+        """Add labels to objects using rows returned from :meth:`get`.
 
         Args:
+            rows (:obj:`list` of :obj:`dict`):
+                Rows returned from :meth:`get`
             labels (:obj:`list` of `str`):
-                Labels to add.
-            ids (:obj:`list` of `str`):
-                Axonius internal object IDs to add to labels.
+                Labels to add to rows.
+
+        Returns:
+            :obj:`int`: Number of objects that had labels added
+
         """
-        data = {}
-        data["entities"] = {}
-        data["entities"]["ids"] = ids
-        data["labels"] = labels
-        return self._request(method="post", route="labels", json=data)
+        ids = [row["internal_axon_id"] for row in rows]
+
+        processed = 0
+
+        # only do 100 labels at a time, more seems to break API
+        for group in tools.grouper(ids, 100):
+            group = [x for x in group if x is not None]
+            response = self._add_labels(labels=labels, ids=group)
+            processed += response
+
+        return processed
+
+    def add_labels_by_query(self, query, labels):
+        """Add labels to objects using a query to select objects.
+
+        Args:
+            query (:obj:`str`):
+                Query built from Query Wizard in GUI to select objects to add labels to.
+            labels (:obj:`list` of `str`):
+                Labels to add to rows returned from query.
+
+        Returns:
+            :obj:`int`: Number of objects that had labels added
+
+        """
+        rows = list(self.get(query=query, default_fields=False))
+        return self.add_labels_by_rows(rows=rows, labels=labels)
+
+    def delete_labels_by_rows(self, rows, labels):
+        """Delete labels from objects using rows returned from :meth:`get`.
+
+        Args:
+            rows (:obj:`list` of :obj:`dict`):
+                Rows returned from :meth:`get`
+            labels (:obj:`list` of `str`):
+                Labels to delete from rows.
+
+        Returns:
+            :obj:`int`: Number of objects that had labels deleted.
+
+        """
+        ids = [row["internal_axon_id"] for row in rows]
+
+        processed = 0
+
+        # only do 100 labels at a time, more seems to break API
+        for group in tools.grouper(ids, 100):
+            group = [x for x in group if x is not None]
+            response = self._delete_labels(labels=labels, ids=group)
+            processed += response
+
+        return processed
+
+    def delete_labels_by_query(self, query, labels):
+        """Delete labels from objects using a query to select objects.
+
+        Args:
+            query (:obj:`str`):
+                Query built from Query Wizard in GUI to select objects to delete labels
+                from.
+            labels (:obj:`list` of `str`):
+                Labels to delete from rows returned from query.
+
+        Returns:
+            :obj:`int`: Number of objects that had labels deleted
+
+        """
+        rows = list(self.get(query=query, default_fields=False))
+        return self.delete_labels_by_rows(rows=rows, labels=labels)
 
     def create_saved_query(
         self,
@@ -401,7 +439,15 @@ class ModelMixins(object):
             params["filter"] = query
         return self._request(method="get", route="count", params=params)
 
-    def get(self, query=None, page_size=100, max_rows=0, all_fields=False, **fields):
+    def get(
+        self,
+        query=None,
+        page_size=100,
+        max_rows=0,
+        all_fields=False,
+        default_fields=True,
+        **fields
+    ):
         """Get objects for a given query using paging.
 
         Args:
@@ -421,12 +467,13 @@ class ModelMixins(object):
                 Ignore **fields and return all fields.
 
                 Defaults to: False.
+            default_fields (:obj:`bool`, optional):
+                Update **fields with :attr:`_default_fields`.
+
+                Defaults to: True.
             **fields: Fields to include in result.
                 * generic=['f1', 'f2'] for generic fields.
                 * adapter=['f1', 'f2'] for adapter specific fields.
-
-        Notes:
-            Fields will be updated with :attr:`_default_fields`.
 
         Yields:
             :obj:`dict`: each row found in 'assets' from return.
@@ -435,8 +482,9 @@ class ModelMixins(object):
         if all_fields:
             validated_fields = self._all_fields
         else:
-            for k, v in self._default_fields.items():
-                fields.setdefault(k, v)
+            if default_fields:
+                for k, v in self._default_fields.items():
+                    fields.setdefault(k, v)
 
             known_fields = self.get_fields()
             validated_fields = validate_fields(known_fields=known_fields, **fields)
@@ -614,6 +662,74 @@ class ModelMixins(object):
         """
         data = {"ids": ids}
         return self._request(method="delete", route="views", json=data)
+
+    def _add_labels(self, labels, ids, query=None):
+        """Add labels to object IDs.
+
+        Args:
+            labels (:obj:`list` of `str`):
+                Labels to add to ids.
+            ids (:obj:`list` of `str`):
+                Axonius internal object IDs to add to labels.
+
+        Returns:
+            :obj:`int`: Number of objects that had labels added
+
+        """
+        data = {}
+        data["entities"] = {}
+        data["entities"]["ids"] = ids
+        data["labels"] = labels
+        return self._request(method="post", route="labels", json=data)
+
+    def _delete_labels(self, labels, ids, query=None):
+        """Delete labels from object IDs.
+
+        Args:
+            labels (:obj:`list` of `str`):
+                Labels to delete from ids.
+            ids (:obj:`list` of `str`):
+                Axonius internal object IDs to delete from labels.
+
+        Returns:
+            :obj:`int`: Number of objects that had labels deleted.
+
+        """
+        data = {}
+        data["entities"] = {}
+        data["entities"]["ids"] = ids
+        data["labels"] = labels
+        return self._request(method="delete", route="labels", json=data)
+
+    @abc.abstractproperty
+    def _name_field(self):
+        """Get the field to use in :meth:`get_by_name`.
+
+        Returns:
+            :obj:`str`
+
+        """
+        raise NotImplementedError  # pragma: no cover
+
+    @abc.abstractproperty
+    def _default_fields(self):
+        """Fields to set as default for methods with **fields.
+
+        Returns:
+            :obj:`dict`
+
+        """
+        raise NotImplementedError  # pragma: no cover
+
+    @abc.abstractproperty
+    def _all_fields(self):
+        """Fields to use for methods with all_fields.
+
+        Returns:
+            :obj:`list` of :obj:`str`
+
+        """
+        raise NotImplementedError  # pragma: no cover
 
 
 def find_adapter(name, known_names=None):
