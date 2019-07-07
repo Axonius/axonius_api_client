@@ -45,6 +45,9 @@ class ApiBase(object):
         self._auth = auth
         """:obj:`axonius_api_client.auth.AuthBase`: Authentication object."""
 
+        if not auth.is_logged_in:
+            raise exceptions.NotLoggedIn(auth=auth)
+
     def __str__(self):
         """Show object info.
 
@@ -122,6 +125,15 @@ class ModelMixins(object):
         if not getattr(self, "_fields", None):
             self._fields = self._request(method="get", route="fields")
         return self._fields
+
+    def get_labels(self):
+        """Get the labels.
+
+        Returns:
+            :obj:`list` of :obj:`str`
+
+        """
+        return self._request(method="get", route="labels")
 
     def create_saved_query(
         self,
@@ -243,7 +255,7 @@ class ModelMixins(object):
                 Defaults to: 0.
 
         Yields:
-            :obj:`dict`: each row found in 'assets' from return.
+            :obj:`dict`: Each row found in 'assets' from return.
 
         """
         page = self._get_saved_query(query=query, page_size=page_size, row_start=0)
@@ -316,7 +328,7 @@ class ModelMixins(object):
             params["filter"] = query
         return self._request(method="get", route="count", params=params)
 
-    def get(self, query=None, page_size=100, max_rows=0, **fields):
+    def get(self, query=None, page_size=100, max_rows=0, all_fields=False, **fields):
         """Get objects for a given query using paging.
 
         Args:
@@ -332,6 +344,10 @@ class ModelMixins(object):
                 If not 0, only return up to N rows.
 
                 Defaults to: 0.
+            all_fields (:obj:`bool`, optional):
+                Ignore **fields and return all fields.
+
+                Defaults to: False.
             **fields: Fields to include in result.
                 * generic=['f1', 'f2'] for generic fields.
                 * adapter=['f1', 'f2'] for adapter specific fields.
@@ -343,11 +359,14 @@ class ModelMixins(object):
             :obj:`dict`: each row found in 'assets' from return.
 
         """
-        for k, v in self.DEFAULT_FIELDS.items():
-            fields.setdefault(k, v)
+        if all_fields:
+            validated_fields = ["specific_data.data"]
+        else:
+            for k, v in self.DEFAULT_FIELDS.items():
+                fields.setdefault(k, v)
 
-        known_fields = self.get_fields()
-        validated_fields = validate_fields(known_fields=known_fields, **fields)
+            known_fields = self.get_fields()
+            validated_fields = validate_fields(known_fields=known_fields, **fields)
 
         page = self._get(
             query=query, fields=validated_fields, row_start=0, page_size=page_size
@@ -619,3 +638,38 @@ def validate_fields(known_fields, **fields):
                 validated_fields.append(field)
 
     return validated_fields
+
+
+@six.add_metaclass(abc.ABCMeta)
+class AuthBase(object):
+    """Abstract base class for all Authentication methods."""
+
+    @abc.abstractmethod
+    def login(self):
+        """Login to API."""
+        raise NotImplementedError  # pragma: no cover
+
+    @abc.abstractmethod
+    def logout(self):
+        """Logout from API."""
+        raise NotImplementedError  # pragma: no cover
+
+    @abc.abstractproperty
+    def http_client(self):
+        """Get HttpClient object.
+
+        Returns:
+            :obj:`axonius_api_client.http.HttpClient`
+
+        """
+        raise NotImplementedError  # pragma: no cover
+
+    @abc.abstractproperty
+    def is_logged_in(self):
+        """Check if login has been called.
+
+        Returns:
+            :obj:`bool`
+
+        """
+        raise NotImplementedError  # pragma: no cover

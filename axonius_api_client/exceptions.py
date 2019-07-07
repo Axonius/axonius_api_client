@@ -28,6 +28,25 @@ class InvalidCredentials(PackageError):
     """Error on failed login."""
 
 
+class NotLoggedIn(PackageError):
+    """Error when not logged in."""
+
+    def __init__(self, auth):
+        """Constructor.
+
+        Args:
+            auth (:obj:`axonius_api_client.models.AuthBase`):
+                Authentication method.
+
+        """
+        self.auth = auth
+        """:obj:`axonius_api_client.models.AuthBase`: Authentication method."""
+
+        msg = "Must call login() on {auth}"
+        msg = msg.format(auth=auth)
+        super(NotLoggedIn, self).__init__(msg)
+
+
 class ResponseError(PackageError):
     """Error when response.raise_for_error."""
 

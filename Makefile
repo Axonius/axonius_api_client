@@ -31,6 +31,7 @@ pipenv_init:
 	pipenv install --dev --skip-lock
 
 pyenv_init:
+	# FUTURE: THROW ERROR IF NO PYENV AND SHOW LINK TO PYENV INSTALL INSTRUCTIONS
 	pyenv install 3.7.3 -s
 	pyenv install 3.6.8 -s
 	pyenv install 2.7.16 -s

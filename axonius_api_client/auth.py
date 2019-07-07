@@ -5,47 +5,15 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
-import abc
 import logging
 
-import six
-
+from . import models
 from . import exceptions
 
 LOG = logging.getLogger(__name__)
 
 
-@six.add_metaclass(abc.ABCMeta)
-class AuthBase(object):
-    """Abstract base class for all Authentication methods."""
-
-    @abc.abstractmethod
-    def login(self):
-        """Login to API."""
-        raise NotImplementedError  # pragma: no cover
-
-    @abc.abstractmethod
-    def logout(self):
-        """Logout from API."""
-        raise NotImplementedError  # pragma: no cover
-
-    @abc.abstractmethod
-    def validate(self):
-        """Validate credentials with API."""
-        raise NotImplementedError  # pragma: no cover
-
-    @abc.abstractproperty
-    def http_client(self):
-        """Get HttpClient object.
-
-        Returns:
-            :obj:`axonius_api_client.http.HttpClient`
-
-        """
-        raise NotImplementedError  # pragma: no cover
-
-
-class AuthUser(AuthBase):
+class AuthUser(models.AuthBase):
     """Authentication method using username & password."""
 
     _API_VERSION = 1
@@ -75,8 +43,6 @@ class AuthUser(AuthBase):
         self._creds = {"username": username, "password": password}
         """:obj:`dict`: Credential store."""
 
-        self.login()
-
     def __str__(self):
         """Show object info.
 
@@ -84,7 +50,10 @@ class AuthUser(AuthBase):
             :obj:`str`
 
         """
-        bits = ["url={!r}".format(self.http_client.url)]
+        bits = [
+            "url={!r}".format(self.http_client.url),
+            "is_logged_in={}".format(self.is_logged_in),
+        ]
         bits = "({})".format(", ".join(bits))
         return "{c.__module__}.{c.__name__}{bits}".format(c=self.__class__, bits=bits)
 
@@ -107,7 +76,7 @@ class AuthUser(AuthBase):
         """
         return self._http_client
 
-    def validate(self):
+    def _validate(self):
         """Validate credentials.
 
         Raises:
@@ -126,10 +95,10 @@ class AuthUser(AuthBase):
 
     def logout(self):
         """Logout from API."""
-        self._http_client.session.cookies.clear()
-        self._http_client.session.headers.pop("api-key", None)
-        self._http_client.session.headers.pop("api-secret", None)
-        self._http_client.session.auth = None
+        self.http_client.session.cookies.clear()
+        self.http_client.session.headers.pop("api-key", None)
+        self.http_client.session.headers.pop("api-secret", None)
+        self.http_client.session.auth = None
 
     def login(self):
         """Login to API."""
@@ -140,13 +109,27 @@ class AuthUser(AuthBase):
             self._creds["password"],
         )
 
-        self.validate()
+        try:
+            self._validate()
+        except Exception:
+            self.logout()
+            raise
 
         msg = "Successfully logged in with username & password"
         self._log.debug(msg)
 
+    @property
+    def is_logged_in(self):
+        """Check if login has been called.
 
-class AuthKey(AuthBase):
+        Returns:
+            :obj:`bool`
+
+        """
+        return bool(self.http_client.session.auth)
+
+
+class AuthKey(models.AuthBase):
     """Authentication method using API key & API secret."""
 
     _API_VERSION = 1
@@ -176,8 +159,6 @@ class AuthKey(AuthBase):
         self._creds = {"api-key": key, "api-secret": secret}
         """:obj:`dict`: Credential store."""
 
-        self.login()
-
     def __str__(self):
         """Show object info.
 
@@ -185,7 +166,10 @@ class AuthKey(AuthBase):
             :obj:`str`
 
         """
-        bits = ["url={!r}".format(self.http_client.url)]
+        bits = [
+            "url={!r}".format(self.http_client.url),
+            "is_logged_in={}".format(self.is_logged_in),
+        ]
         bits = "({})".format(", ".join(bits))
         return "{c.__module__}.{c.__name__}{bits}".format(c=self.__class__, bits=bits)
 
@@ -208,14 +192,14 @@ class AuthKey(AuthBase):
         """
         return self._http_client
 
-    def validate(self):
+    def _validate(self):
         """Validate credentials.
 
         Raises:
             :exc:`exceptions.InvalidCredentials`
 
         """
-        response = self._http_client(
+        response = self.http_client(
             method="get", path=self._API_PATH, route="devices/count"
         )
 
@@ -227,10 +211,10 @@ class AuthKey(AuthBase):
 
     def logout(self):
         """Logout from API."""
-        self._http_client.session.cookies.clear()
-        self._http_client.session.headers.pop("api-key", None)
-        self._http_client.session.headers.pop("api-secret", None)
-        self._http_client.session.auth = None
+        self.http_client.session.cookies.clear()
+        self.http_client.session.headers.pop("api-key", None)
+        self.http_client.session.headers.pop("api-secret", None)
+        self.http_client.session.auth = None
 
     def login(self):
         """Login to API."""
@@ -238,7 +222,23 @@ class AuthKey(AuthBase):
 
         self.http_client.session.headers.update(self._creds)
 
-        self.validate()
+        try:
+            self._validate()
+        except Exception:
+            self.logout()
+            raise
 
         msg = "Successfully logged in with API key & secret"
         self._log.debug(msg)
+
+    @property
+    def is_logged_in(self):
+        """Check if login has been called.
+
+        Returns:
+            :obj:`bool`
+
+        """
+        key = "api-key" in self.http_client.session.headers
+        secret = "api-secret" in self.http_client.session.headers
+        return all([key, secret])

@@ -25,8 +25,20 @@ class TestApiUsers(object):
             pytest.skip("No credentials provided for {}: {}".format(auth_cls, creds))
         http_client = axonius_api_client.http.HttpClient(url=api_url)
         auth = auth_cls(http_client=http_client, **creds)
+        auth.login()
         api_client = axonius_api_client.api.ApiUsers(auth=auth)
         return api_client
+
+    def test_not_logged_in(self, api_url, creds):
+        """Test exc thrown when auth method not logged in."""
+        auth_cls = creds["cls"]
+        creds = {k: v for k, v in creds.items() if k != "cls"}
+        if not any(list(creds.values())):
+            pytest.skip("No credentials provided for {}: {}".format(auth_cls, creds))
+        http_client = axonius_api_client.http.HttpClient(url=api_url)
+        auth = auth_cls(http_client=http_client, **creds)
+        with pytest.raises(axonius_api_client.exceptions.NotLoggedIn):
+            axonius_api_client.api.ApiUsers(auth=auth)
 
     def test_str_repr(self, api_client):
         """Test str/repr has URL."""
@@ -73,9 +85,22 @@ class TestApiUsers(object):
         "query", [None, '(specific_data.data.id == ({"$exists":true,"$ne": ""}))']
     )
     def test_get_no_fields(self, api_client, query):
-        """Test private get method with default fields."""
-        for dvc in api_client.get(query=query, page_size=1, max_rows=2):
-            assert "specific_data.data.username" in dvc
+        """Test get method with default fields."""
+        for row in api_client.get(query=query, page_size=1, max_rows=2):
+            assert "specific_data.data.username" in row
+
+    @pytest.mark.parametrize(
+        "query", [None, '(specific_data.data.id == ({"$exists":true,"$ne": ""}))']
+    )
+    def test_get_all_fields(self, api_client, query):
+        """Test get method with all fields."""
+        for row in api_client.get(
+            query=query, page_size=1, max_rows=2, all_fields=True
+        ):
+            assert "specific_data.data" in row
+            for data in row["specific_data.data"]:
+                assert isinstance(data, (dict, str))
+                assert data
 
     def test_get_by_id_valid(self, api_client):
         """Test get_by_id with a valid row id."""
@@ -197,8 +222,20 @@ class TestApiDevices(object):
             pytest.skip("No credentials provided for {}: {}".format(auth_cls, creds))
         http_client = axonius_api_client.http.HttpClient(url=api_url)
         auth = auth_cls(http_client=http_client, **creds)
+        auth.login()
         api_client = axonius_api_client.api.ApiDevices(auth=auth)
         return api_client
+
+    def test_not_logged_in(self, api_url, creds):
+        """Test exc thrown when auth method not logged in."""
+        auth_cls = creds["cls"]
+        creds = {k: v for k, v in creds.items() if k != "cls"}
+        if not any(list(creds.values())):
+            pytest.skip("No credentials provided for {}: {}".format(auth_cls, creds))
+        http_client = axonius_api_client.http.HttpClient(url=api_url)
+        auth = auth_cls(http_client=http_client, **creds)
+        with pytest.raises(axonius_api_client.exceptions.NotLoggedIn):
+            axonius_api_client.api.ApiDevices(auth=auth)
 
     def test__request_invalid(self, api_client):
         """Test private _request method throws ResponseError."""
@@ -253,12 +290,25 @@ class TestApiDevices(object):
         "query", [None, '(specific_data.data.id == ({"$exists":true,"$ne": ""}))']
     )
     def test_get_no_fields(self, api_client, query):
-        """Test private get method with default fields."""
-        for dvc in api_client.get(query=query, page_size=1, max_rows=2):
-            assert "specific_data.data.hostname" in dvc
-            assert "specific_data.data.network_interfaces.ips" in dvc
+        """Test get method with default fields."""
+        for row in api_client.get(query=query, page_size=1, max_rows=2):
+            assert "specific_data.data.hostname" in row
+            assert "specific_data.data.network_interfaces.ips" in row
             # FUTURE: add cmd line option for adapter fields
             # --adapter_fields cisco:hostname,network_interfaces.ips
+
+    @pytest.mark.parametrize(
+        "query", [None, '(specific_data.data.id == ({"$exists":true,"$ne": ""}))']
+    )
+    def test_get_all_fields(self, api_client, query):
+        """Test get method with all fields."""
+        for row in api_client.get(
+            query=query, page_size=1, max_rows=2, all_fields=True
+        ):
+            assert "specific_data.data" in row
+            for data in row["specific_data.data"]:
+                assert isinstance(data, (dict, str))
+                assert data
 
     def test_get_by_id_valid(self, api_client):
         """Test get_by_id with a valid row id."""

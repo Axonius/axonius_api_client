@@ -20,6 +20,7 @@ class TestAuthUser(object):
         creds = {k: v for k, v in creds_user.items() if k != "cls"}
         http_client = axonius_api_client.http.HttpClient(url=api_url)
         auth = axonius_api_client.auth.AuthUser(http_client=http_client, **creds)
+        auth.login()
         assert "url" in format(auth)
         assert "url" in repr(auth)
 
@@ -27,8 +28,9 @@ class TestAuthUser(object):
         """Test str/repr has URL."""
         creds = {"username": "bad", "password": "bad"}
         http_client = axonius_api_client.http.HttpClient(url=api_url)
+        auth = axonius_api_client.auth.AuthUser(http_client=http_client, **creds)
         with pytest.raises(axonius_api_client.exceptions.InvalidCredentials):
-            axonius_api_client.auth.AuthUser(http_client=http_client, **creds)
+            auth.login()
 
 
 @pytest.mark.needs_url
@@ -41,6 +43,7 @@ class TestAuthKey(object):
         creds = {k: v for k, v in creds_key.items() if k != "cls"}
         http_client = axonius_api_client.http.HttpClient(url=api_url)
         auth = axonius_api_client.auth.AuthKey(http_client=http_client, **creds)
+        auth.login()
         assert "url" in format(auth)
         assert "url" in repr(auth)
 
@@ -48,5 +51,6 @@ class TestAuthKey(object):
         """Test str/repr has URL."""
         creds = {"key": "bad", "secret": "bad"}
         http_client = axonius_api_client.http.HttpClient(url=api_url)
+        auth = axonius_api_client.auth.AuthKey(http_client=http_client, **creds)
         with pytest.raises(axonius_api_client.exceptions.InvalidCredentials):
-            axonius_api_client.auth.AuthKey(http_client=http_client, **creds)
+            auth.login()
