@@ -91,14 +91,14 @@ class TestUrlParser(object):
     def test_host_noschemeport(self):
         """Test exc when no port or scheme in URL."""
         exc = axonius_api_client.exceptions.PackageError
-        match = "no 'port'"
+        match = "no.*'port'"
         with pytest.raises(exc, match=match):
             axonius_api_client.tools.UrlParser("host")
 
     def test_unknownschemehost_noport(self):
         """Test exc when no port and non http/https scheme."""
         exc = axonius_api_client.exceptions.PackageError
-        match = "no 'port'"
+        match = "no.*'port'"
         with pytest.raises(exc, match=match):
             axonius_api_client.tools.UrlParser("httpx://host")
 

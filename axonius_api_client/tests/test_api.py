@@ -6,6 +6,7 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import pytest
+import six
 
 import axonius_api_client
 
@@ -99,7 +100,7 @@ class TestApiUsers(object):
         ):
             assert "specific_data.data" in row
             for data in row["specific_data.data"]:
-                assert isinstance(data, (dict, str))
+                assert isinstance(data, tuple([dict] + list(six.string_types)))
                 assert data
 
     def test_get_by_name_valid(self, api_client):
@@ -110,7 +111,7 @@ class TestApiUsers(object):
             pytest.skip(msg)
 
         name = rows[0]["specific_data.data.username"]
-        name = name[0] if isinstance(name, list) else name
+        name = name[0] if isinstance(name, (list, tuple)) else name
         row = api_client.get_by_name(name=name)
         assert isinstance(row, dict)
 
@@ -122,7 +123,7 @@ class TestApiUsers(object):
             pytest.skip(msg)
 
         name = rows[0]["specific_data.data.username"]
-        name = name[0] if isinstance(name, list) else name
+        name = name[0] if isinstance(name, (list, tuple)) else name
         row = api_client.get_by_name(name=name, regex=True, only1=False)
         assert isinstance(row, (list, tuple))
 
@@ -147,14 +148,14 @@ class TestApiUsers(object):
     def test_get_count(self, api_client):
         """Test devices/count API call."""
         response = api_client.get_count()
-        assert isinstance(response, int)
+        assert isinstance(response, six.integer_types)
 
     def test_get_count_query(self, api_client):
         """Test devices/count API call with query (unable to assume greater than 0)."""
         response = api_client.get_count(
             query='(specific_data.data.id == ({"$exists":true,"$ne": ""}))'
         )
-        assert isinstance(response, int)
+        assert isinstance(response, six.integer_types)
 
     def test_get_count_query_0(self, api_client):
         """Test devices/count API call with query that should return 0."""
@@ -182,7 +183,7 @@ class TestApiUsers(object):
         response = api_client.create_saved_query(
             name=name, query='(specific_data.data.id == ({"$exists":true,"$ne": ""}))'
         )
-        assert isinstance(response, str)
+        assert isinstance(response, six.string_types)
         return name, response
 
     @pytest.fixture
@@ -194,7 +195,7 @@ class TestApiUsers(object):
             query='(specific_data.data.id == ({"$exists":true,"$ne": ""}))',
             sort_field="id",
         )
-        assert isinstance(response, str)
+        assert isinstance(response, six.string_types)
         return name, response
 
     def test_get_saved_query_by_name_valid(
@@ -203,7 +204,7 @@ class TestApiUsers(object):
         """Test get_saved_query_by_name."""
         name, id = test_create_saved_query_badwolf123
         rows = api_client.get_saved_query_by_name(name=name, regex=True)
-        assert isinstance(rows, list)
+        assert isinstance(rows, (list, tuple))
         assert len(rows) > 0
         for row in rows:
             assert "name" in row
@@ -215,7 +216,7 @@ class TestApiUsers(object):
     ):
         """Test get_saved_query."""
         rows = list(api_client.get_saved_query(query=query))
-        assert isinstance(rows, list)
+        assert isinstance(rows, (list, tuple))
         assert len(rows) > 0
         for row in rows:
             assert "name" in row
@@ -336,7 +337,7 @@ class TestApiDevices(object):
         ):
             assert "specific_data.data" in row
             for data in row["specific_data.data"]:
-                assert isinstance(data, (dict, str))
+                assert isinstance(data, tuple([dict] + list(six.string_types)))
                 assert data
 
     def test_get_by_name_valid(self, api_client):
@@ -347,7 +348,7 @@ class TestApiDevices(object):
             pytest.skip(msg)
 
         name = rows[0]["specific_data.data.hostname"]
-        name = name[0] if isinstance(name, list) else name
+        name = name[0] if isinstance(name, (list, tuple)) else name
         row = api_client.get_by_name(name=name)
         assert isinstance(row, dict)
 
@@ -359,7 +360,7 @@ class TestApiDevices(object):
             pytest.skip(msg)
 
         name = rows[0]["specific_data.data.hostname"]
-        name = name[0] if isinstance(name, list) else name
+        name = name[0] if isinstance(name, (list, tuple)) else name
         row = api_client.get_by_name(name=name, regex=True, only1=False)
         assert isinstance(row, (list, tuple))
 
@@ -384,14 +385,14 @@ class TestApiDevices(object):
     def test_get_count(self, api_client):
         """Test devices/count API call."""
         response = api_client.get_count()
-        assert isinstance(response, int)
+        assert isinstance(response, six.integer_types)
 
     def test_get_count_query(self, api_client):
         """Test devices/count API call with query (unable to assume greater than 0)."""
         response = api_client.get_count(
             query='(specific_data.data.id == ({"$exists":true,"$ne": ""}))'
         )
-        assert isinstance(response, int)
+        assert isinstance(response, six.integer_types)
 
     def test_get_count_query_0(self, api_client):
         """Test devices/count API call with query that should return 0."""
@@ -419,7 +420,7 @@ class TestApiDevices(object):
         response = api_client.create_saved_query(
             name=name, query='(specific_data.data.id == ({"$exists":true,"$ne": ""}))'
         )
-        assert isinstance(response, str)
+        assert isinstance(response, six.string_types)
         return name, response
 
     @pytest.fixture
@@ -431,7 +432,7 @@ class TestApiDevices(object):
             query='(specific_data.data.id == ({"$exists":true,"$ne": ""}))',
             sort_field="id",
         )
-        assert isinstance(response, str)
+        assert isinstance(response, six.string_types)
         return name, response
 
     def test_get_saved_query_by_name_valid(
@@ -440,7 +441,7 @@ class TestApiDevices(object):
         """Test get_saved_query_by_name."""
         name, id = test_create_saved_query_badwolf123
         rows = api_client.get_saved_query_by_name(name=name, regex=True)
-        assert isinstance(rows, list)
+        assert isinstance(rows, (list, tuple))
         assert len(rows) > 0
         for row in rows:
             assert "name" in row
@@ -452,7 +453,7 @@ class TestApiDevices(object):
     ):
         """Test get_saved_query."""
         rows = list(api_client.get_saved_query(query=query))
-        assert isinstance(rows, list)
+        assert isinstance(rows, (list, tuple))
         assert len(rows) > 0
         for row in rows:
             assert "name" in row

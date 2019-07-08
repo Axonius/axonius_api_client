@@ -6,6 +6,7 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import logging
+import sys
 
 import pytest
 import requests
@@ -36,6 +37,9 @@ class TestHttpClient(object):
         with pytest.warns(requests.urllib3.exceptions.InsecureRequestWarning):
             http_client()
 
+    @pytest.mark.skipif(
+        sys.version_info < (3, 6), reason="requires python3.6 or higher"
+    )
     def test_verify_ca_bundle(self, httpbin_secure, httpbin_ca_bundle):
         """Test quiet_urllib=False no warning from urllib3 when using ca bundle."""
         url = httpbin_secure.url
@@ -65,8 +69,8 @@ class TestHttpClient(object):
         http_client = axonius_api_client.http.HttpClient(url=url)
         http_client()
         entries = [
-            "request to {!r}".format(httpbin_secure.url + "/"),
-            "response from {!r}".format(httpbin_secure.url + "/"),
+            "request.*{}".format(httpbin_secure.url + "/"),
+            "response.*{}".format(httpbin_secure.url + "/"),
         ]
         log_check(caplog, entries)
 
