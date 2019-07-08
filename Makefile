@@ -56,22 +56,22 @@ test_clean:
 
 docs:
 	$(MAKE) pipenv_install_docs
-	(pushd docs && pipenv run make html SPHINXOPTS="-na" && popd)
+	(cd docs && pipenv run make html SPHINXOPTS="-na" && cd ..)
 	open docs/_build/html/index.html
 
 docs_coverage:
 	$(MAKE) pipenv_install_docs
-	(pushd docs && pipenv run make coverage && popd)
+	(cd docs && pipenv run make coverage && cd ..)
 	cat docs/_build/coverage/python.txt
 
 docs_linkcheck:
 	$(MAKE) pipenv_install_docs
-	(pushd docs && pipenv run make linkcheck && popd)
+	(cd docs && pipenv run make linkcheck && cd ..)
 	cat docs/_build/linkcheck/output.txt
 
 docs_clean:
 	$(MAKE) pipenv_install_docs
-	(pushd docs && pipenv run make clean && popd)
+	(cd docs && pipenv run make clean && cd ..)
 
 git_check:
 	@git diff-index --quiet HEAD && echo "*** REPO IS CLEAN" || (echo "!!! REPO IS DIRTY"; false)
