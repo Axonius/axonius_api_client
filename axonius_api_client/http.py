@@ -141,6 +141,7 @@ class HttpClient(object):
         params=None,
         headers=None,
         json=None,
+        files=None,
         **kwargs
     ):
         """Create, prepare, and then send a request using :attr:`session`.
@@ -169,13 +170,20 @@ class HttpClient(object):
             :obj:`requests.Response`
 
         """
+        # FUTURE: doc kwargs and files
         url = tools.urljoin(self.url, path, route)
 
         headers = headers or {}
         headers.setdefault("User-Agent", self.user_agent)
 
         request = requests.Request(
-            url=url, method=method, data=data, headers=headers, params=params, json=json
+            url=url,
+            method=method,
+            data=data,
+            headers=headers,
+            params=params,
+            json=json,
+            files=files or [],
         )
         prepped_request = self.session.prepare_request(request=request)
 

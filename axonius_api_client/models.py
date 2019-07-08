@@ -85,13 +85,18 @@ class ApiBase(object):
                 Passed to :meth:`axonius_api_client.http.HttpClient.__call__`
 
         """
+        obj_route = kwargs.pop("obj_route", self._obj_route)
+
         sargs = {}
         sargs.update(kwargs)
+
         if route:
-            sargs["route"] = tools.urljoin(self._obj_route, route)
+            sargs["route"] = tools.urljoin(obj_route, route)
         else:
-            sargs["route"] = self._obj_route
+            sargs["route"] = obj_route
+
         sargs["method"] = method
+
         sargs.setdefault("path", self._api_path)
 
         response = self._auth.http_client(**sargs)
@@ -135,7 +140,7 @@ class ApiBase(object):
 
 
 @six.add_metaclass(abc.ABCMeta)
-class ModelMixins(object):
+class UserDeviceBase(object):
     """Mixins for User & Device models."""
 
     def get_fields(self):
@@ -568,7 +573,7 @@ class ModelMixins(object):
 
         return found[0] if only1 else found
 
-    def _get(self, query=None, fields=None, row_start=0, page_size=100):
+    def _get(self, query=None, fields=None, row_start=0, page_size=0):
         """Get a page for a given query.
 
         Args:
@@ -583,13 +588,13 @@ class ModelMixins(object):
 
                 Defaults to: None.
             row_start (:obj:`int`, optional):
-                Skip N rows in the return.
+                If not 0, skip N rows in the return.
 
                 Defaults to: 0.
             page_size (:obj:`int`, optional):
-                Include N rows in the return.
+                If not 0, include N rows in the return.
 
-                Defaults to: 100.
+                Defaults to: 0.
 
         Returns:
             :obj:`dict`
@@ -620,7 +625,7 @@ class ModelMixins(object):
                 Query to filter rows to return. This is NOT a query built by
                 the Query Wizard in the GUI. This is something else. See
                 :meth:`get_user_saved_query_by_name` for an example query. Empty
-                query will return all saved queries.
+                query will return all rows.
 
                 Defaults to: None.
             row_start (:obj:`int`, optional):

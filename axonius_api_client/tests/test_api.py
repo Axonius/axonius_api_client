@@ -471,3 +471,27 @@ class TestApiDevices(object):
         name, id = test_create_saved_query_badwolf456
         rows = api_client._delete_saved_query(ids=[id])
         assert not rows
+
+
+# HERE
+'''
+
+@pytest.mark.needs_url
+@pytest.mark.needs_any_creds
+@pytest.mark.parametrize("creds", ["creds_user", "creds_key"], indirect=True)
+class TestApiEnforcements(object):
+    """Test axonius_api_client.api.ApiEnforcements."""
+
+    @pytest.fixture(scope="session")
+    def api_client(self, api_url, creds):
+        """Get an API client."""
+        auth_cls = creds["cls"]
+        creds = {k: v for k, v in creds.items() if k != "cls"}
+        if not any(list(creds.values())):
+            pytest.skip("No credentials provided for {}: {}".format(auth_cls, creds))
+        http_client = axonius_api_client.http.HttpClient(url=api_url)
+        auth = auth_cls(http_client=http_client, **creds)
+        auth.login()
+        api_client = axonius_api_client.api.ApiEnforcements(auth=auth)
+        return api_client
+'''
