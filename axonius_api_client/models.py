@@ -986,3 +986,31 @@ class AuthMixins(object):
     def _set_http_lock(self):
         """Set HTTP Client auth lock."""
         self._http_client._auth_lock = self
+
+    def validate(self):
+        """Validate credentials.
+
+        Raises:
+            :exc:`exceptions.InvalidCredentials`
+
+        """
+        if not self.is_logged_in:
+            raise exceptions.NotLoggedIn(auth=self)
+
+        response = self.http_client(
+            method="get", path=self._api_path, route="devices/count"
+        )
+
+        if response.status_code in [401, 403]:
+            raise exceptions.InvalidCredentials(auth=self, exc=None)
+
+        try:
+            response.raise_for_status()
+        except Exception as exc:
+            raise exceptions.InvalidCredentials(auth=self, exc=exc)
+
+    def logout(self):
+        """Logout from API."""
+        if not self.is_logged_in:
+            raise exceptions.NotLoggedIn(auth=self)
+        self._logout()

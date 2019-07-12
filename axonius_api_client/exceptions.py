@@ -27,6 +27,29 @@ class PackageWarning(Warning):
 class InvalidCredentials(PackageError):
     """Error on failed login."""
 
+    def __init__(self, auth, exc=None):
+        """Constructor.
+
+        Args:
+            auth (:obj:`axonius_api_client.models.AuthBase`):
+                Authentication method.
+            exc (:obj:`Exception`, optional):
+                Original Exception, if any.
+
+                Defaults to: None.
+
+        """
+        self.auth = auth
+        """:obj:`axonius_api_client.models.AuthBase`: Authentication method."""
+
+        self.exc = exc
+        """:obj:`Exception`: Original Exception, if any."""
+
+        msg = "Invalid credentials on {auth}"
+        msg += "-- exception: {exc}" if exc else ""
+        msg = msg.format(auth=auth, exc=exc)
+        super(InvalidCredentials, self).__init__(msg)
+
 
 class NotLoggedIn(PackageError):
     """Error when not logged in."""
@@ -45,6 +68,25 @@ class NotLoggedIn(PackageError):
         msg = "Must call login() on {auth}"
         msg = msg.format(auth=auth)
         super(NotLoggedIn, self).__init__(msg)
+
+
+class AlreadyLoggedIn(PackageError):
+    """Error when already logged in."""
+
+    def __init__(self, auth):
+        """Constructor.
+
+        Args:
+            auth (:obj:`axonius_api_client.models.AuthBase`):
+                Authentication method.
+
+        """
+        self.auth = auth
+        """:obj:`axonius_api_client.models.AuthBase`: Authentication method."""
+
+        msg = "Already logged in on {auth}"
+        msg = msg.format(auth=auth)
+        super(AlreadyLoggedIn, self).__init__(msg)
 
 
 class ResponseError(PackageError):

@@ -40,33 +40,14 @@ class AuthUser(models.ApiVersion1, models.AuthMixins, models.AuthBase):
         self._check_http_lock()
         self._set_http_lock()
 
-    def _validate(self):
-        """Validate credentials.
-
-        Raises:
-            :exc:`exceptions.InvalidCredentials`
-
-        """
-        response = self._http_client(
-            method="get", path=self._api_path, route="devices/count"
-        )
-
-        if response.status_code in [401, 403]:
-            msg = "Login failed!"
-            raise exceptions.InvalidCredentials(msg)
-
-        response.raise_for_status()
-
-    def logout(self):
+    def _logout(self):
         """Logout from API."""
-        self.http_client.session.cookies.clear()
-        self.http_client.session.headers.pop("api-key", None)
-        self.http_client.session.headers.pop("api-secret", None)
         self.http_client.session.auth = None
 
     def login(self):
         """Login to API."""
-        self.logout()
+        if self.is_logged_in:
+            raise exceptions.AlreadyLoggedIn(auth=self)
 
         self.http_client.session.auth = (
             self._creds["username"],
@@ -74,9 +55,9 @@ class AuthUser(models.ApiVersion1, models.AuthMixins, models.AuthBase):
         )
 
         try:
-            self._validate()
+            self.validate()
         except Exception:
-            self.logout()
+            self._logout()
             raise
 
         msg = "Successfully logged in with username & password"
@@ -120,40 +101,22 @@ class AuthKey(models.ApiVersion1, models.AuthMixins, models.AuthBase):
         self._check_http_lock()
         self._set_http_lock()
 
-    def _validate(self):
-        """Validate credentials.
-
-        Raises:
-            :exc:`exceptions.InvalidCredentials`
-
-        """
-        response = self.http_client(
-            method="get", path=self._api_path, route="devices/count"
-        )
-
-        if response.status_code in [401, 403]:
-            msg = "Login failed!"
-            raise exceptions.InvalidCredentials(msg)
-
-        response.raise_for_status()
-
-    def logout(self):
+    def _logout(self):
         """Logout from API."""
-        self.http_client.session.cookies.clear()
         self.http_client.session.headers.pop("api-key", None)
         self.http_client.session.headers.pop("api-secret", None)
-        self.http_client.session.auth = None
 
     def login(self):
         """Login to API."""
-        self.logout()
+        if self.is_logged_in:
+            raise exceptions.AlreadyLoggedIn(auth=self)
 
         self.http_client.session.headers.update(self._creds)
 
         try:
-            self._validate()
+            self.validate()
         except Exception:
-            self.logout()
+            self._logout()
             raise
 
         msg = "Successfully logged in with API key & secret"
