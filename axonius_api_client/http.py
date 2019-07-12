@@ -42,7 +42,7 @@ class HttpClient(object):
         """Constructor.
 
         Args:
-            url (:obj:`str`):
+            url (:obj:`str` or :obj:`axonius_api_client.tools.UrlParser`):
                 Axonius API URL.
             **kwargs:
                 connect_timeout (:obj:`int`, optional):
@@ -95,6 +95,12 @@ class HttpClient(object):
         """
         self._log = LOG.getChild(self.__class__.__name__)
         """:obj:`logging.Logger`: Logger for this object."""
+
+        if isinstance(url, tools.UrlParser):
+            url = url.url
+        else:
+            parsed_url = tools.UrlParser(url=url, default_scheme="https")
+            url = parsed_url.url
 
         self.url = url
         """:obj:`str`: URL of Axonius API."""

@@ -13,7 +13,7 @@ from . import exceptions
 class UrlParser(object):
     """Parse a URL and ensure it has the neccessary bits."""
 
-    def __init__(self, url, default_scheme=""):
+    def __init__(self, url, default_scheme="https"):
         """Constructor.
 
         Args:
@@ -22,7 +22,7 @@ class UrlParser(object):
             default_scheme (:obj:`str`, optional):
                 If no scheme in URL, use this.
 
-                Defaults to: ""
+                Defaults to: "https"
 
         Raises:
             :exc:`exceptions.PackageError`:

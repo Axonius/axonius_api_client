@@ -93,7 +93,7 @@ class TestUrlParser(object):
         exc = axonius_api_client.exceptions.PackageError
         match = "no.*'port'"
         with pytest.raises(exc, match=match):
-            axonius_api_client.tools.UrlParser("host")
+            axonius_api_client.tools.UrlParser("host", default_scheme="")
 
     def test_unknownschemehost_noport(self):
         """Test exc when no port and non http/https scheme."""
@@ -111,14 +111,14 @@ class TestUrlParser(object):
 
     def test_hostport443_noscheme(self):
         """Test scheme added with port 443 and no scheme in URL."""
-        u = axonius_api_client.tools.UrlParser("host:443")
+        u = axonius_api_client.tools.UrlParser("host:443", default_scheme="")
         assert u.hostname == "host"
         assert u.port == 443
         assert u.scheme == "https"
 
     def test_hostport80_noscheme(self):
         """Test scheme added with port 80 and no scheme in URL."""
-        u = axonius_api_client.tools.UrlParser("host:80")
+        u = axonius_api_client.tools.UrlParser("host:80", default_scheme="")
         assert u.hostname == "host"
         assert u.port == 80
         assert u.scheme == "http"
