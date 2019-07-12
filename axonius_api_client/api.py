@@ -206,7 +206,7 @@ class ApiAdapters(models.ApiVersion1, models.ApiBase):
             :obj:`str`
 
         """
-        return "alerts"
+        return "adapters"
 
     def get(self):
         """Get all adapters.
