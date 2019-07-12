@@ -70,23 +70,34 @@ class TestHttpClient(object):
         response = http_client()
         assert response in http_client.history
 
-    def test_logging(self, httpbin_secure, caplog, log_check):
-        """Test logging of request/response."""
+    def test_logging_verbose_none(self, httpbin_secure, caplog, log_check):
+        """Test no logging of request/response when verbose=None."""
         caplog.set_level(logging.DEBUG)
         url = httpbin_secure.url
-        http_client = axonius_api_client.http.HttpClient(url=url)
+        http_client = axonius_api_client.http.HttpClient(url=url, verbose=None)
+        http_client()
+        assert not caplog.records
+
+    def test_logging_verbose_true(self, httpbin_secure, caplog, log_check):
+        """Test verbose logging of request/response when verbose=True."""
+        caplog.set_level(logging.DEBUG)
+        url = httpbin_secure.url
+        http_client = axonius_api_client.http.HttpClient(url=url, verbose=True)
+        http_client()
+        entries = [
+            "request.*{}.*headers".format(httpbin_secure.url + "/"),
+            "response.*{}.*headers".format(httpbin_secure.url + "/"),
+        ]
+        log_check(caplog, entries)
+
+    def test_logging_verbose_false(self, httpbin_secure, caplog, log_check):
+        """Test brief logging of request/response when verbose=False."""
+        caplog.set_level(logging.DEBUG)
+        url = httpbin_secure.url
+        http_client = axonius_api_client.http.HttpClient(url=url, verbose=False)
         http_client()
         entries = [
             "request.*{}".format(httpbin_secure.url + "/"),
             "response.*{}".format(httpbin_secure.url + "/"),
         ]
         log_check(caplog, entries)
-
-    def test_no_logging(self, httpbin_secure, caplog):
-        """Test no logging of request/response when attrs are empty."""
-        caplog.set_level(logging.DEBUG)
-        url = httpbin_secure.url
-        http_client = axonius_api_client.http.HttpClient(url=url)
-        http_client.LOG_REQUEST_ATTRS = []
-        http_client.LOG_RESPONSE_ATTRS = []
-        assert not caplog.records

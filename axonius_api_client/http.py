@@ -19,24 +19,39 @@ LOG = logging.getLogger(__name__)
 class HttpClient(object):
     """Wrapper for sending requests usings :obj:`requests.Session`."""
 
-    LOG_REQUEST_ATTRS = [
+    LOG_REQUEST_ATTRS_BRIEF = [
         "request to {request.url!r}",
         "method={request.method!r}",
-        # "headers={request.headers}",
         "size={size}",
     ]
-    """:obj:`list` of :obj:`str`: Attributes to include when logging requests."""
+    """:obj:`list` of :obj:`str`: Request attributes to log when verbose=False."""
 
-    LOG_RESPONSE_ATTRS = [
+    LOG_REQUEST_ATTRS_VERBOSE = [
+        "request to {request.url!r}",
+        "method={request.method!r}",
+        "headers={request.headers}",
+        "size={size}",
+    ]
+    """:obj:`list` of :obj:`str`: Request attributes to log when verbose=True."""
+
+    LOG_RESPONSE_ATTRS_BRIEF = [
         "response from {response.url!r}",
         "method={response.request.method!r}",
-        # "headers={response.headers}",
         "status={response.status_code!r}",
-        # "reason={response.reason!r}",
-        # "elapsed={response.elapsed}",
         "size={size}",
     ]
-    """:obj:`list` of :obj:`str`: Attributes to include when logging responses."""
+    """:obj:`list` of :obj:`str`: Response attributes to log when verbose=False."""
+
+    LOG_RESPONSE_ATTRS_VERBOSE = [
+        "response from {response.url!r}",
+        "method={response.request.method!r}",
+        "headers={response.headers}",
+        "status={response.status_code!r}",
+        "reason={response.reason!r}",
+        "elapsed={response.elapsed}",
+        "size={size}",
+    ]
+    """:obj:`list` of :obj:`str`: Response attributes to log when verbose=True."""
 
     def __init__(self, url, **kwargs):
         """Constructor.
@@ -57,6 +72,13 @@ class HttpClient(object):
                     Enable/Disable SSL cert validation.
 
                     Defaults to: False.
+                verbose (:obj:`bool`, optional):
+                    Log request and response verbose attributes.
+                    * True = Log verbose attributes,
+                    * False = Log brief attributes.
+                    * None = Log no attributes.
+
+                    Defaults to: None.
                 save_last (:obj:`bool`, optional):
                     Save last request & response to :attr:`last_request` and
                     :attr:`last_response`.
@@ -130,6 +152,17 @@ class HttpClient(object):
         """:obj:`requests.Session`: Session object to use."""
 
         self.session.verify = kwargs.get("verify", False)
+
+        verbose = kwargs.get("verbose", False)
+        if verbose is False:
+            self.LOG_REQUEST_ATTRS = self.LOG_REQUEST_ATTRS_BRIEF
+            self.LOG_RESPONSE_ATTRS = self.LOG_RESPONSE_ATTRS_BRIEF
+        elif verbose is True:
+            self.LOG_REQUEST_ATTRS = self.LOG_REQUEST_ATTRS_VERBOSE
+            self.LOG_RESPONSE_ATTRS = self.LOG_RESPONSE_ATTRS_VERBOSE
+        elif verbose is None:
+            self.LOG_REQUEST_ATTRS = []
+            self.LOG_RESPONSE_ATTRS = []
 
         if kwargs.get("quiet_urllib", True):
             warnings.simplefilter(
