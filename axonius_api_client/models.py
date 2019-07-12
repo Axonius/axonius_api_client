@@ -15,10 +15,10 @@ from . import tools
 
 LOG = logging.getLogger(__name__)
 
-GENERIC_FIELD_PREFIX = "specific_data.data."
+GENERIC_FIELD_PREFIX = "specific_data.data"
 """:obj:`str`: Prefix that all generic fields should begin with."""
 
-ADAPTER_FIELD_PREFIX = "adapters_data.{adapter}."
+ADAPTER_FIELD_PREFIX = "adapters_data.{adapter}"
 """:obj:`str`: Prefix that all adapter fields should begin with."""
 
 
@@ -449,7 +449,6 @@ class UserDeviceBase(object):
         query=None,
         page_size=100,
         max_rows=0,
-        all_fields=False,
         default_fields=True,
         **fields
     ):
@@ -468,10 +467,6 @@ class UserDeviceBase(object):
                 If not 0, only return up to N rows.
 
                 Defaults to: 0.
-            all_fields (:obj:`bool`, optional):
-                Ignore **fields and return all fields.
-
-                Defaults to: False.
             default_fields (:obj:`bool`, optional):
                 Update **fields with :attr:`_default_fields`.
 
@@ -484,15 +479,12 @@ class UserDeviceBase(object):
             :obj:`dict`: each row found in 'assets' from return.
 
         """
-        if all_fields:
-            validated_fields = self._all_fields
-        else:
-            if default_fields:
-                for k, v in self._default_fields.items():
-                    fields.setdefault(k, v)
+        if default_fields:
+            for k, v in self._default_fields.items():
+                fields.setdefault(k, v)
 
-            known_fields = self.get_fields()
-            validated_fields = validate_fields(known_fields=known_fields, **fields)
+        known_fields = self.get_fields()
+        validated_fields = validate_fields(known_fields=known_fields, **fields)
 
         page = self._get(
             query=query, fields=validated_fields, row_start=0, page_size=page_size
@@ -501,10 +493,10 @@ class UserDeviceBase(object):
         seen = 0
 
         for row in page["assets"]:
-            seen += 1
-            yield row
             if max_rows and seen >= max_rows:
                 return
+            seen += 1
+            yield row
 
         while True:
             if (max_rows and seen >= max_rows) or not page["assets"]:
@@ -793,6 +785,8 @@ def find_field(name, adapter, fields=None):
         If fields is None, we can't validate that the field exists, so we just ensure
         the name is fully qualified.
 
+        If name in "all" or prefix, returns prefix.
+
     Raises:
         :exc:`exceptions.UnknownFieldName`:
             If fields is not None and name can not be found in fields.
@@ -810,21 +804,26 @@ def find_field(name, adapter, fields=None):
         prefix = ADAPTER_FIELD_PREFIX.format(adapter=adapter)
         container = fields["specific"][adapter] if fields else None
 
-    fq_name = prefix + name if not name.startswith(prefix) else name
+    if not name.startswith(prefix):
+        fq_name = ".".join([x for x in [prefix, name] if x])
+    else:
+        fq_name = name
 
     if not container:
         return name if name in ["adapters", "labels"] else fq_name
 
     known_names = [x["name"] for x in container]
 
-    if name in known_names:
-        return known_names[known_names.index(name)]
+    for check in [name, fq_name]:
+        if check in ["all", prefix]:
+            return prefix
+        if check in known_names:
+            return known_names[known_names.index(check)]
 
-    if fq_name in known_names:
-        return known_names[known_names.index(fq_name)]
-
-    prefix_len = len(prefix)
+    prefix = prefix + "."
+    prefix_len = len(prefix + ".")
     known_names = [x[prefix_len:] if x.startswith(prefix) else x for x in known_names]
+    known_names += ["all", prefix]
     raise exceptions.UnknownFieldName(
         name=name, known_names=known_names, adapter=adapter
     )
