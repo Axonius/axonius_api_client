@@ -22,6 +22,30 @@ ADAPTER_FIELD_PREFIX = "adapters_data.{adapter}"
 """:obj:`str`: Prefix that all adapter fields should begin with."""
 
 
+class ApiVersion1(object):
+    """Mixin for API version 1."""
+
+    @property
+    def _api_version(self):
+        """Get the API version to use.
+
+        Returns:
+            :obj:`int`
+
+        """
+        return 1
+
+    @property
+    def _api_path(self):
+        """Get the API path to use.
+
+        Returns:
+            :obj:`str`
+
+        """
+        return "api/V{version}/".format(version=self._api_version)
+
+
 @six.add_metaclass(abc.ABCMeta)
 class ApiBase(object):
     """API client for Axonius REST API."""
@@ -859,6 +883,26 @@ def validate_fields(known_fields, **fields):
 class AuthBase(object):
     """Abstract base class for all Authentication methods."""
 
+    @abc.abstractproperty
+    def _api_version(self):
+        """Get the API version to use.
+
+        Returns:
+            :obj:`int`
+
+        """
+        raise NotImplementedError  # pragma: no cover
+
+    @abc.abstractproperty
+    def _api_path(self):
+        """Get the API path to use.
+
+        Returns:
+            :obj:`str`
+
+        """
+        raise NotImplementedError  # pragma: no cover
+
     @abc.abstractmethod
     def login(self):
         """Login to API."""
@@ -888,3 +932,57 @@ class AuthBase(object):
 
         """
         raise NotImplementedError  # pragma: no cover
+
+
+class AuthMixins(object):
+    """Mixins for AuthBase."""
+
+    def __str__(self):
+        """Show object info.
+
+        Returns:
+            :obj:`str`
+
+        """
+        bits = [
+            "url={!r}".format(self.http_client.url),
+            "is_logged_in={}".format(self.is_logged_in),
+        ]
+        bits = "({})".format(", ".join(bits))
+        return "{c.__module__}.{c.__name__}{bits}".format(c=self.__class__, bits=bits)
+
+    def __repr__(self):
+        """Show object info.
+
+        Returns:
+            :obj:`str`
+
+        """
+        return self.__str__()
+
+    @property
+    def http_client(self):
+        """Get HttpClient object.
+
+        Returns:
+            :obj:`axonius_api_client.http.HttpClient`
+
+        """
+        return self._http_client
+
+    def _check_http_lock(self):
+        """Check HTTP client not already used by another Auth.
+
+        Raises:
+            :exc:`exceptions.PackageError`
+
+        """
+        auth_lock = getattr(self.http_client, "_auth_lock", None)
+        if auth_lock:
+            msg = "{http_client} already being used by {auth}"
+            msg = msg.format(http_client=self.http_client, auth=auth_lock)
+            raise exceptions.PackageError(msg)
+
+    def _set_http_lock(self):
+        """Set HTTP Client auth lock."""
+        self._http_client._auth_lock = self

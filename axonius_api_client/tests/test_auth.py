@@ -32,6 +32,15 @@ class TestAuthUser(object):
         with pytest.raises(axonius_api_client.exceptions.InvalidCredentials):
             auth.login()
 
+    def test_http_lock_fail(self, api_url):
+        """Test using an http client from another authmethod throws exc."""
+        creds = {"username": "bad", "password": "bad"}
+        http_client = axonius_api_client.http.HttpClient(url=api_url)
+        auth1 = axonius_api_client.auth.AuthUser(http_client=http_client, **creds)
+        assert auth1.http_client._auth_lock
+        with pytest.raises(axonius_api_client.exceptions.PackageError):
+            axonius_api_client.auth.AuthUser(http_client=http_client, **creds)
+
 
 @pytest.mark.needs_url
 class TestAuthKey(object):
@@ -54,3 +63,12 @@ class TestAuthKey(object):
         auth = axonius_api_client.auth.AuthKey(http_client=http_client, **creds)
         with pytest.raises(axonius_api_client.exceptions.InvalidCredentials):
             auth.login()
+
+    def test_http_lock_fail(self, api_url):
+        """Test using an http client from another authmethod throws exc."""
+        creds = {"key": "bad", "secret": "bad"}
+        http_client = axonius_api_client.http.HttpClient(url=api_url)
+        auth1 = axonius_api_client.auth.AuthKey(http_client=http_client, **creds)
+        assert auth1.http_client._auth_lock
+        with pytest.raises(axonius_api_client.exceptions.PackageError):
+            axonius_api_client.auth.AuthKey(http_client=http_client, **creds)

@@ -13,14 +13,8 @@ from . import exceptions
 LOG = logging.getLogger(__name__)
 
 
-class AuthUser(models.AuthBase):
+class AuthUser(models.ApiVersion1, models.AuthMixins, models.AuthBase):
     """Authentication method using username & password."""
-
-    _API_VERSION = 1
-    """:obj:`int`: Version of the API this ApiClient is made for."""
-
-    _API_PATH = "api/V{version}/".format(version=_API_VERSION)
-    """:obj:`str`: Base path of API."""
 
     def __init__(self, http_client, username, password):
         """Constructor.
@@ -43,38 +37,8 @@ class AuthUser(models.AuthBase):
         self._creds = {"username": username, "password": password}
         """:obj:`dict`: Credential store."""
 
-    def __str__(self):
-        """Show object info.
-
-        Returns:
-            :obj:`str`
-
-        """
-        bits = [
-            "url={!r}".format(self.http_client.url),
-            "is_logged_in={}".format(self.is_logged_in),
-        ]
-        bits = "({})".format(", ".join(bits))
-        return "{c.__module__}.{c.__name__}{bits}".format(c=self.__class__, bits=bits)
-
-    def __repr__(self):
-        """Show object info.
-
-        Returns:
-            :obj:`str`
-
-        """
-        return self.__str__()
-
-    @property
-    def http_client(self):
-        """Get HttpClient object.
-
-        Returns:
-            :obj:`axonius_api_client.http.HttpClient`
-
-        """
-        return self._http_client
+        self._check_http_lock()
+        self._set_http_lock()
 
     def _validate(self):
         """Validate credentials.
@@ -84,7 +48,7 @@ class AuthUser(models.AuthBase):
 
         """
         response = self._http_client(
-            method="get", path=self._API_PATH, route="devices/count"
+            method="get", path=self._api_path, route="devices/count"
         )
 
         if response.status_code in [401, 403]:
@@ -129,14 +93,8 @@ class AuthUser(models.AuthBase):
         return bool(self.http_client.session.auth)
 
 
-class AuthKey(models.AuthBase):
+class AuthKey(models.ApiVersion1, models.AuthMixins, models.AuthBase):
     """Authentication method using API key & API secret."""
-
-    _API_VERSION = 1
-    """:obj:`int`: Version of the API this ApiClient is made for."""
-
-    _API_PATH = "api/V{version}/".format(version=_API_VERSION)
-    """:obj:`str`: Base path of API."""
 
     def __init__(self, http_client, key, secret):
         """Constructor.
@@ -159,38 +117,8 @@ class AuthKey(models.AuthBase):
         self._creds = {"api-key": key, "api-secret": secret}
         """:obj:`dict`: Credential store."""
 
-    def __str__(self):
-        """Show object info.
-
-        Returns:
-            :obj:`str`
-
-        """
-        bits = [
-            "url={!r}".format(self.http_client.url),
-            "is_logged_in={}".format(self.is_logged_in),
-        ]
-        bits = "({})".format(", ".join(bits))
-        return "{c.__module__}.{c.__name__}{bits}".format(c=self.__class__, bits=bits)
-
-    def __repr__(self):
-        """Show object info.
-
-        Returns:
-            :obj:`str`
-
-        """
-        return self.__str__()
-
-    @property
-    def http_client(self):
-        """Get HttpClient object.
-
-        Returns:
-            :obj:`axonius_api_client.http.HttpClient`
-
-        """
-        return self._http_client
+        self._check_http_lock()
+        self._set_http_lock()
 
     def _validate(self):
         """Validate credentials.
@@ -200,7 +128,7 @@ class AuthKey(models.AuthBase):
 
         """
         response = self.http_client(
-            method="get", path=self._API_PATH, route="devices/count"
+            method="get", path=self._api_path, route="devices/count"
         )
 
         if response.status_code in [401, 403]:

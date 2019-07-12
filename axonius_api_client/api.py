@@ -9,7 +9,7 @@ from . import exceptions
 from . import models
 
 
-class ApiUsers(models.ApiBase, models.UserDeviceBase):
+class ApiUsers(models.ApiVersion1, models.ApiBase, models.UserDeviceBase):
     """User related API methods."""
 
     @property
@@ -49,28 +49,8 @@ class ApiUsers(models.ApiBase, models.UserDeviceBase):
         """
         return "specific_data.data.username"
 
-    @property
-    def _api_version(self):
-        """Get the API version to use.
 
-        Returns:
-            :obj:`int`
-
-        """
-        return 1
-
-    @property
-    def _api_path(self):
-        """Get the API path to use.
-
-        Returns:
-            :obj:`str`
-
-        """
-        return "api/V{version}/".format(version=self._api_version)
-
-
-class ApiDevices(models.ApiBase, models.UserDeviceBase):
+class ApiDevices(models.ApiVersion1, models.ApiBase, models.UserDeviceBase):
     """Device related API methods."""
 
     @property
@@ -82,26 +62,6 @@ class ApiDevices(models.ApiBase, models.UserDeviceBase):
 
         """
         return "devices"
-
-    @property
-    def _api_version(self):
-        """Get the API version to use.
-
-        Returns:
-            :obj:`int`
-
-        """
-        return 1
-
-    @property
-    def _api_path(self):
-        """Get the API path to use.
-
-        Returns:
-            :obj:`str`
-
-        """
-        return "api/V{version}/".format(version=self._api_version)
 
     @property
     def _default_fields(self):
@@ -132,7 +92,7 @@ class ApiDevices(models.ApiBase, models.UserDeviceBase):
         return "specific_data.data.hostname"
 
 
-class ApiActions(models.ApiBase):
+class ApiActions(models.ApiVersion1, models.ApiBase):
     """Action related API methods.
 
     Notes:
@@ -150,26 +110,6 @@ class ApiActions(models.ApiBase):
 
         """
         return "actions"
-
-    @property
-    def _api_version(self):
-        """Get the API version to use.
-
-        Returns:
-            :obj:`int`
-
-        """
-        return 1
-
-    @property
-    def _api_path(self):
-        """Get the API path to use.
-
-        Returns:
-            :obj:`str`
-
-        """
-        return "api/V{version}/".format(version=self._api_version)
 
     def get(self):
         """Get all actions.
@@ -249,7 +189,7 @@ class ApiActions(models.ApiBase):
         return self._request(method="post", route="upload_file", data=data, files=files)
 
 
-class ApiAdapters(models.ApiBase):
+class ApiAdapters(models.ApiVersion1, models.ApiBase):
     """Adapter related API methods.
 
     Notes:
@@ -267,26 +207,6 @@ class ApiAdapters(models.ApiBase):
 
         """
         return "alerts"
-
-    @property
-    def _api_version(self):
-        """Get the API version to use.
-
-        Returns:
-            :obj:`int`
-
-        """
-        return 1
-
-    @property
-    def _api_path(self):
-        """Get the API path to use.
-
-        Returns:
-            :obj:`str`
-
-        """
-        return "api/V{version}/".format(version=self._api_version)
 
     def get(self):
         """Get all adapters.
@@ -364,7 +284,7 @@ class ApiAdapters(models.ApiBase):
         return self._request(method="delete", route=route, json=data)
 
 
-class ApiEnforcements(models.ApiBase):
+class ApiEnforcements(models.ApiVersion1, models.ApiBase):
     """Enforcement related API methods.
 
     Notes:
@@ -382,26 +302,6 @@ class ApiEnforcements(models.ApiBase):
 
         """
         return "alerts"
-
-    @property
-    def _api_version(self):
-        """Get the API version to use.
-
-        Returns:
-            :obj:`int`
-
-        """
-        return 1
-
-    @property
-    def _api_path(self):
-        """Get the API path to use.
-
-        Returns:
-            :obj:`str`
-
-        """
-        return "api/V{version}/".format(version=self._api_version)
 
     def _delete(self, ids):
         """Delete objects by internal axonius IDs.
