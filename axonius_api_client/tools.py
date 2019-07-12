@@ -7,6 +7,7 @@ from __future__ import unicode_literals
 
 import six
 
+from . import constants
 from . import exceptions
 
 
@@ -281,3 +282,20 @@ def grouper(iterable, n, fillvalue=None):
     """Chunk up iterables."""
     args = [iter(iterable)] * n
     return six.moves.zip_longest(*args, fillvalue=fillvalue)
+
+
+def check_max_page_size(page_size):
+    """Check if page size is over :data:`constants.MAX_PAGE_SIZE`.
+
+    Args:
+        page_size (:obj:`int`):
+            Page size to check.
+
+    Raises:
+        :exc:`exceptions.PackageError`
+
+    """
+    if page_size > constants.MAX_PAGE_SIZE:
+        msg = "Page size {page_size} is over maximum page size {max_size}"
+        msg = msg.format(page_size=page_size, max_size=constants.MAX_PAGE_SIZE)
+        raise exceptions.PackageError(msg)

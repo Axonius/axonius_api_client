@@ -93,9 +93,7 @@ class TestApiUsers(object):
     @pytest.mark.parametrize(
         "query", [None, '(specific_data.data.id == ({"$exists":true,"$ne": ""}))']
     )
-    @pytest.mark.parametrize(
-        "generic_fields", [["all"], ["specific_data.data"]]
-    )
+    @pytest.mark.parametrize("generic_fields", [["all"], ["specific_data.data"]])
     def test_get_all_fields(self, api_client, query, generic_fields):
         """Test get method with all fields."""
         for row in api_client.get(
@@ -332,9 +330,7 @@ class TestApiDevices(object):
     @pytest.mark.parametrize(
         "query", [None, '(specific_data.data.id == ({"$exists":true,"$ne": ""}))']
     )
-    @pytest.mark.parametrize(
-        "generic_fields", [["all"], ["specific_data.data"]]
-    )
+    @pytest.mark.parametrize("generic_fields", [["all"], ["specific_data.data"]])
     def test_get_all_fields(self, api_client, query, generic_fields):
         """Test get method with all fields."""
         for row in api_client.get(

@@ -9,6 +9,12 @@ import pytest
 import axonius_api_client
 
 
+def test_max_page_size_invalid():
+    page_size = axonius_api_client.constants.MAX_PAGE_SIZE + 100
+    with pytest.raises(axonius_api_client.exceptions.PackageError):
+        axonius_api_client.tools.check_max_page_size(page_size=page_size)
+
+
 class TestUrlJoin(object):
     """Test axonius_api_client.tools.urljoin."""
 

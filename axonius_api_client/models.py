@@ -10,6 +10,7 @@ import logging
 
 import six
 
+from . import constants
 from . import exceptions
 from . import tools
 
@@ -277,7 +278,7 @@ class UserDeviceBase(object):
         self,
         name,
         query,
-        page_size=25,
+        page_size=constants.DEFAULT_PAGE_SIZE,
         sort_field="",
         sort_descending=True,
         sort_adapter="generic",
@@ -292,6 +293,8 @@ class UserDeviceBase(object):
                 Query built from Query Wizard in GUI to use in saved query.
             page_size (:obj:`int`, optional):
                 Number of rows to show in each page in GUI.
+
+                Defaults to: :data:`constants.DEFAULT_PAGE_SIZE`.
             sort_field (:obj:`str`, optional):
                 Name of field to sort results on.
 
@@ -309,6 +312,7 @@ class UserDeviceBase(object):
             :obj:`str`: The ID of the new saved query.
 
         """
+        tools.check_max_page_size(page_size=page_size)
         for k, v in self._default_fields.items():
             fields.setdefault(k, v)
 
@@ -373,7 +377,9 @@ class UserDeviceBase(object):
         ids = [x["uuid"] for x in found] if isinstance(found, list) else [found["uuid"]]
         return self._delete_saved_query(ids=ids)
 
-    def get_saved_query(self, query=None, page_size=20, max_rows=0):
+    def get_saved_query(
+        self, query=None, page_size=constants.DEFAULT_PAGE_SIZE, max_rows=0
+    ):
         """Get saved queries using paging.
 
         Args:
@@ -386,7 +392,7 @@ class UserDeviceBase(object):
             page_size (:obj:`int`, optional):
                 Get N rows per page.
 
-                Defaults to: 20.
+                Defaults to: :data:`constants.DEFAULT_PAGE_SIZE`.
             max_rows (:obj:`int`, optional):
                 If not 0, only return up to N rows.
 
@@ -396,6 +402,7 @@ class UserDeviceBase(object):
             :obj:`dict`: Each row found in 'assets' from return.
 
         """
+        tools.check_max_page_size(page_size=page_size)
         page = self._get_saved_query(query=query, page_size=page_size, row_start=0)
 
         for row in page["assets"]:
@@ -471,7 +478,7 @@ class UserDeviceBase(object):
     def get(
         self,
         query=None,
-        page_size=100,
+        page_size=constants.DEFAULT_PAGE_SIZE,
         max_rows=0,
         default_fields=True,
         **fields
@@ -486,7 +493,7 @@ class UserDeviceBase(object):
             page_size (:obj:`int`, optional):
                 Get N rows per page.
 
-                Defaults to: 100.
+                Defaults to: :data:`constants.DEFAULT_PAGE_SIZE`.
             max_rows (:obj:`int`, optional):
                 If not 0, only return up to N rows.
 

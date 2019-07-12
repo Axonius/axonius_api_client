@@ -13,6 +13,7 @@ import axonius_api_client
 @pytest.mark.needs_url
 class TestAuthUser(object):
     """Test axonius_api_client.auth.AuthUser."""
+
     auth_cls = axonius_api_client.auth.AuthUser
     bad_creds = {"username": "bad", "password": "bad"}
 
@@ -84,6 +85,7 @@ class TestAuthUser(object):
 @pytest.mark.needs_url
 class TestAuthKey(object):
     """Test axonius_api_client.auth.AuthKey."""
+
     auth_cls = axonius_api_client.auth.AuthKey
     bad_creds = {"key": "bad", "secret": "bad"}
 
