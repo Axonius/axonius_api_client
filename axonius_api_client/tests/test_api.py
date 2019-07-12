@@ -93,12 +93,14 @@ class TestApiUsers(object):
     @pytest.mark.parametrize(
         "query", [None, '(specific_data.data.id == ({"$exists":true,"$ne": ""}))']
     )
-    def test_get_all_fields(self, api_client, query):
+    @pytest.mark.parametrize(
+        "generic_fields", [["all"], ["specific_data.data"]]
+    )
+    def test_get_all_fields(self, api_client, query, generic_fields):
         """Test get method with all fields."""
         for row in api_client.get(
-            query=query, page_size=1, max_rows=2, all_fields=True
+            query=query, page_size=1, max_rows=2, generic=generic_fields
         ):
-            assert "specific_data.data" in row
             for data in row["specific_data.data"]:
                 assert isinstance(data, tuple([dict] + list(six.string_types)))
                 assert data
@@ -330,12 +332,14 @@ class TestApiDevices(object):
     @pytest.mark.parametrize(
         "query", [None, '(specific_data.data.id == ({"$exists":true,"$ne": ""}))']
     )
-    def test_get_all_fields(self, api_client, query):
+    @pytest.mark.parametrize(
+        "generic_fields", [["all"], ["specific_data.data"]]
+    )
+    def test_get_all_fields(self, api_client, query, generic_fields):
         """Test get method with all fields."""
         for row in api_client.get(
-            query=query, page_size=1, max_rows=2, all_fields=True
+            query=query, page_size=1, max_rows=2, generic=generic_fields
         ):
-            assert "specific_data.data" in row
             for data in row["specific_data.data"]:
                 assert isinstance(data, tuple([dict] + list(six.string_types)))
                 assert data

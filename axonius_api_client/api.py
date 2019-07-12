@@ -40,16 +40,6 @@ class ApiUsers(models.ApiBase, models.UserDeviceBase):
         }
 
     @property
-    def _all_fields(self):
-        """Fields to use for methods with all_fields.
-
-        Returns:
-            :obj:`list` of :obj:`str`
-
-        """
-        return ["specific_data.data"]
-
-    @property
     def _name_field(self):
         """Field name to use in :meth:`axonius_api_client.UserDeviceBase.get_by_name`.
 
@@ -130,16 +120,6 @@ class ApiDevices(models.ApiBase, models.UserDeviceBase):
                 "specific_data.data.last_seen",
             ]
         }
-
-    @property
-    def _all_fields(self):
-        """Fields to use for methods with all_fields.
-
-        Returns:
-            :obj:`list` of :obj:`str`
-
-        """
-        return ["specific_data.data"]
 
     @property
     def _name_field(self):

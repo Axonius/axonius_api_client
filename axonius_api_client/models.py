@@ -468,7 +468,7 @@ class UserDeviceBase(object):
 
                 Defaults to: 0.
             default_fields (:obj:`bool`, optional):
-                Update **fields with :attr:`_default_fields`.
+                Update **fields with :attr:`_default_fields` if no fields supplied.
 
                 Defaults to: True.
             **fields: Fields to include in result.
@@ -479,12 +479,13 @@ class UserDeviceBase(object):
             :obj:`dict`: each row found in 'assets' from return.
 
         """
-        if default_fields:
+        if not fields and default_fields:
             for k, v in self._default_fields.items():
                 fields.setdefault(k, v)
 
         known_fields = self.get_fields()
         validated_fields = validate_fields(known_fields=known_fields, **fields)
+        print(validated_fields)
 
         page = self._get(
             query=query, fields=validated_fields, row_start=0, page_size=page_size
@@ -714,16 +715,6 @@ class UserDeviceBase(object):
 
         Returns:
             :obj:`dict`
-
-        """
-        raise NotImplementedError  # pragma: no cover
-
-    @abc.abstractproperty
-    def _all_fields(self):
-        """Fields to use for methods with all_fields.
-
-        Returns:
-            :obj:`list` of :obj:`str`
 
         """
         raise NotImplementedError  # pragma: no cover
