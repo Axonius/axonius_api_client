@@ -10,46 +10,28 @@ import logging
 
 import six
 
-from . import constants
 from . import exceptions
-from . import tools
+from . import utils
+from .. import constants
+from .. import tools
+
 
 LOG = logging.getLogger(__name__)
-
-GENERIC_FIELD_PREFIX = "specific_data.data"
-""":obj:`str`: Prefix that all generic fields should begin with."""
-
-ADAPTER_FIELD_PREFIX = "adapters_data.{adapter}"
-""":obj:`str`: Prefix that all adapter fields should begin with."""
-
-
-class ApiVersion1(object):
-    """Mixin for API version 1."""
-
-    @property
-    def _api_version(self):
-        """Get the API version to use.
-
-        Returns:
-            :obj:`int`
-
-        """
-        return 1
-
-    @property
-    def _api_path(self):
-        """Get the API path to use.
-
-        Returns:
-            :obj:`str`
-
-        """
-        return "api/V{version}/".format(version=self._api_version)
 
 
 @six.add_metaclass(abc.ABCMeta)
 class ApiBase(object):
     """API client for Axonius REST API."""
+
+    @abc.abstractproperty
+    def _router(self):
+        """Router for this API client.
+
+        Returns:
+            :obj:`constants.ApiRouter`
+
+        """
+        raise NotImplementedError  # pragma: no cover
 
     def __init__(self, auth):
         """Constructor.
@@ -65,8 +47,7 @@ class ApiBase(object):
         self._auth = auth
         """:obj:`axonius_api_client.auth.AuthBase`: Authentication object."""
 
-        if not auth.is_logged_in:
-            raise exceptions.NotLoggedIn(auth=auth)
+        auth.check_login()
 
     def __str__(self):
         """Show object info.
@@ -75,8 +56,10 @@ class ApiBase(object):
             :obj:`str`
 
         """
-        return "{c.__module__}.{c.__name__}(auth={auth})".format(
-            c=self.__class__, auth=self._auth
+        return "{c.__module__}.{c.__name__}(auth={auth!r}, url={url!r})".format(
+            c=self.__class__,
+            auth=self._auth.__class__.__name__,
+            url=self._auth._http_client.url,
         )
 
     def __repr__(self):
@@ -88,85 +71,105 @@ class ApiBase(object):
         """
         return self.__str__()
 
-    def _request(self, route, method="get", raw=False, do_raise=True, **kwargs):
+    def _request(
+        self, path, method="get", raw=False, is_json=True, check_status=True, **kwargs
+    ):
         """Perform a REST API request.
 
         Args:
-            route (:obj:`str`):
-                REST API route to request.
+            path (:obj:`str`):
+                Path to use in request.
             method (:obj:`str`, optional):
                 HTTP method to use in request.
 
                 Defaults to: "get".
             raw (:obj:`bool`, optional):
-                Return the raw response. If False, return response.json().
+                Return the raw response. If False, return response text or json.
 
                 Defaults to: False.
-            do_raise (:obj:`bool`, optional):
-                Call :meth:`requests.Response.raise_for_status`.
+            is_json (:obj:`bool`, optional):
+                Response should have JSON data.
+
+                Defaults to: True.
+            check_status (:obj:`bool`, optional):
+                Call :meth:`_check_response_status`.
 
                 Defaults to: True.
             **kwargs:
                 Passed to :meth:`axonius_api_client.http.HttpClient.__call__`
 
-        """
-        obj_route = kwargs.pop("obj_route", self._obj_route)
+        Returns:
+            :obj:`object` if is_json, or :obj:`str` if not is_json, or
+            :obj:`requests.Response` if raw
 
+        """
         sargs = {}
         sargs.update(kwargs)
-
-        if route:
-            sargs["route"] = tools.urljoin(obj_route, route)
-        else:
-            sargs["route"] = obj_route
-
-        sargs["method"] = method
-
-        sargs.setdefault("path", self._api_path)
+        sargs.update({"path": path, "method": method})
 
         response = self._auth.http_client(**sargs)
-        if do_raise:
-            try:
-                response.raise_for_status()
-            except Exception as exc:
-                raise exceptions.ResponseError(response=response, exc=exc)
 
-        return response if raw else response.json()
+        if check_status:
+            self._check_response_status(response=response)
 
-    @abc.abstractproperty
-    def _api_version(self):
-        """Get the API version to use.
+        if raw:
+            return response
 
-        Returns:
-            :obj:`int`
+        if is_json:
+            return self._check_response_json(response=response)
 
-        """
-        raise NotImplementedError  # pragma: no cover
+        return response.text
 
-    @abc.abstractproperty
-    def _api_path(self):
-        """Get the API path to use.
+    def _check_response_status(self, response):
+        """Check response status code.
 
-        Returns:
-            :obj:`str`
+        Raises:
+            :exc:`exceptions.ResponseError`
 
         """
-        raise NotImplementedError  # pragma: no cover
+        if response.status_code != 200:
+            raise exceptions.ResponseError(
+                response=response, exc=None, details=True, bodies=True
+            )
 
-    @abc.abstractproperty
-    def _obj_route(self):
-        """Get the object route.
+    def _check_response_json(self, response):
+        """Check response is JSON.
 
-        Returns:
-            :obj:`str`
+        Raises:
+            :exc:`exceptions.InvalidJson`
 
         """
-        raise NotImplementedError  # pragma: no cover
+        try:
+            return response.json()
+        except Exception as exc:
+            raise exceptions.InvalidJson(response=response, exc=exc)
+        # FUTURE: check for "error" in JSON dict
+        # Need a way to reproduce response with "error" in JSON dict
 
 
 @six.add_metaclass(abc.ABCMeta)
 class UserDeviceBase(object):
     """Mixins for User & Device models."""
+
+    @abc.abstractproperty
+    def _name_field(self):
+        """Field to use in :meth:`get_by_name`.
+
+        Returns:
+            :obj:`str`
+
+        """
+        raise NotImplementedError  # pragma: no cover
+
+    @abc.abstractproperty
+    def _default_fields(self):
+        """Fields to set as default for methods with **fields.
+
+        Returns:
+            :obj:`dict`
+
+        """
+        raise NotImplementedError  # pragma: no cover
 
     def get_fields(self):
         """Get the fields.
@@ -179,9 +182,10 @@ class UserDeviceBase(object):
 
         """
         if not getattr(self, "_fields", None):
-            self._fields = self._request(method="get", route="fields")
+            self._fields = self._request(method="get", path=self._router.fields)
         return self._fields
 
+    # FUTURE: needs tests
     def get_labels(self):
         """Get the labels.
 
@@ -189,8 +193,9 @@ class UserDeviceBase(object):
             :obj:`list` of :obj:`str`
 
         """
-        return self._request(method="get", route="labels")
+        return self._request(method="get", path=self._router.labels)
 
+    # FUTURE: needs tests
     def add_labels_by_rows(self, rows, labels):
         """Add labels to objects using rows returned from :meth:`get`.
 
@@ -216,6 +221,7 @@ class UserDeviceBase(object):
 
         return processed
 
+    # FUTURE: needs tests
     def add_labels_by_query(self, query, labels):
         """Add labels to objects using a query to select objects.
 
@@ -232,6 +238,7 @@ class UserDeviceBase(object):
         rows = list(self.get(query=query, default_fields=False))
         return self.add_labels_by_rows(rows=rows, labels=labels)
 
+    # FUTURE: needs tests
     def delete_labels_by_rows(self, rows, labels):
         """Delete labels from objects using rows returned from :meth:`get`.
 
@@ -257,6 +264,7 @@ class UserDeviceBase(object):
 
         return processed
 
+    # FUTURE: needs tests
     def delete_labels_by_query(self, query, labels):
         """Delete labels from objects using a query to select objects.
 
@@ -278,7 +286,7 @@ class UserDeviceBase(object):
         self,
         name,
         query,
-        page_size=constants.DEFAULT_PAGE_SIZE,
+        page_size=constants.GUI_PAGE_SIZES[0],
         sort_field="",
         sort_descending=True,
         sort_adapter="generic",
@@ -294,7 +302,7 @@ class UserDeviceBase(object):
             page_size (:obj:`int`, optional):
                 Number of rows to show in each page in GUI.
 
-                Defaults to: :data:`constants.DEFAULT_PAGE_SIZE`.
+                Defaults to: first item in :data:`constants.GUI_PAGE_SIZES`.
             sort_field (:obj:`str`, optional):
                 Name of field to sort results on.
 
@@ -312,15 +320,21 @@ class UserDeviceBase(object):
             :obj:`str`: The ID of the new saved query.
 
         """
-        tools.check_max_page_size(page_size=page_size)
+        # FUTURE: needs tests
+        if page_size not in constants.GUI_PAGE_SIZES:
+            msg = "page_size {size} invalid, must be one of {sizes}"
+            msg = msg.format(size=page_size, sizes=constants.GUI_PAGE_SIZES)
+            raise exceptions.ApiError(msg)
+
+        utils.check_max_page_size(page_size=page_size)
         for k, v in self._default_fields.items():
             fields.setdefault(k, v)
 
         known_fields = self.get_fields()
-        validated_fields = validate_fields(known_fields=known_fields, **fields)
+        validated_fields = utils.validate_fields(known_fields=known_fields, **fields)
 
         if sort_field:
-            sort_field = find_field(
+            sort_field = utils.find_field(
                 name=sort_field, fields=known_fields, adapter=sort_adapter
             )
 
@@ -352,7 +366,7 @@ class UserDeviceBase(object):
         data["view"]["sort"]["desc"] = sort_descending
         data["view"]["sort"]["field"] = sort_field
 
-        return self._request(method="post", route="views", json=data)
+        return self._request(method="post", path=self._router.views, json=data)
 
     def delete_saved_query_by_name(self, name, regex=False, only1=True):
         """Delete a saved query by name.
@@ -402,7 +416,6 @@ class UserDeviceBase(object):
             :obj:`dict`: Each row found in 'assets' from return.
 
         """
-        tools.check_max_page_size(page_size=page_size)
         page = self._get_saved_query(query=query, page_size=page_size, row_start=0)
 
         for row in page["assets"]:
@@ -453,8 +466,9 @@ class UserDeviceBase(object):
         found = list(self.get_saved_query(query=query))
 
         if not found or (len(found) > 1 and only1):
+            object_type = "Saved Query for {o}".format(o=self._router._object_type)
             raise exceptions.ObjectNotFound(
-                value=query, value_type="query", object_type="Saved Query"
+                value=query, value_type="query", object_type=object_type
             )
 
         return found[0] if only1 else found
@@ -473,13 +487,15 @@ class UserDeviceBase(object):
         params = {}
         if query:
             params["filter"] = query
-        return self._request(method="get", route="count", params=params)
+        return self._request(method="get", path=self._router.count, params=params)
 
     def get(
         self,
         query=None,
         page_size=constants.DEFAULT_PAGE_SIZE,
-        max_rows=0,
+        page_count=None,
+        row_count_min=None,
+        row_count_max=None,
         default_fields=True,
         **fields
     ):
@@ -494,10 +510,6 @@ class UserDeviceBase(object):
                 Get N rows per page.
 
                 Defaults to: :data:`constants.DEFAULT_PAGE_SIZE`.
-            max_rows (:obj:`int`, optional):
-                If not 0, only return up to N rows.
-
-                Defaults to: 0.
             default_fields (:obj:`bool`, optional):
                 Update **fields with :attr:`_default_fields` if no fields supplied.
 
@@ -510,39 +522,72 @@ class UserDeviceBase(object):
             :obj:`dict`: each row found in 'assets' from return.
 
         """
+        row_count_total = self.get_count(query=query)
+
+        if row_count_min == 1 and row_count_max == 1 and row_count_total != 1:
+            raise exceptions.ObjectNotFound(
+                value=query,
+                value_type="query",
+                object_type=self._router._object_type,
+                exc=None,
+            )
+
+        if row_count_min is not None and row_count_total < row_count_min:
+            raise exceptions.TooFewObjectsFound(
+                value=query,
+                value_type="query",
+                object_type=self._router._object_type,
+                row_count_total=row_count_total,
+                row_count_min=row_count_min,
+            )
+
+        if row_count_max is not None and row_count_total > row_count_max:
+            raise exceptions.TooManyObjectsFound(
+                value=query,
+                value_type="query",
+                object_type=self._router._object_type,
+                row_count_total=row_count_total,
+                row_count_max=row_count_max,
+            )
+
         if not fields and default_fields:
             for k, v in self._default_fields.items():
                 fields.setdefault(k, v)
 
         known_fields = self.get_fields()
-        validated_fields = validate_fields(known_fields=known_fields, **fields)
-        print(validated_fields)
+        validated_fields = utils.validate_fields(known_fields=known_fields, **fields)
+
+        row_count_seen = 0
+        page_count_seen = 0
 
         page = self._get(
-            query=query, fields=validated_fields, row_start=0, page_size=page_size
+            query=query,
+            fields=validated_fields,
+            row_start=0,
+            page_size=row_count_max if row_count_max else page_size,
         )
 
-        seen = 0
+        page_count_seen += 1
 
         for row in page["assets"]:
-            if max_rows and seen >= max_rows:
-                return
-            seen += 1
+            row_count_seen += 1
             yield row
 
-        while True:
-            if (max_rows and seen >= max_rows) or not page["assets"]:
+        while not row_count_seen >= row_count_total:
+            if page_count is not None and page_count_seen >= page_count:
                 return
 
             page = self._get(
                 query=query,
                 fields=validated_fields,
-                row_start=seen,
+                row_start=row_count_seen,
                 page_size=page_size,
             )
 
+            page_count_seen += 1
+
             for row in page["assets"]:
-                seen += 1
+                row_count_seen += 1
                 yield row
 
     def get_by_id(self, id):
@@ -560,14 +605,21 @@ class UserDeviceBase(object):
            :obj:`dict`
 
         """
+        path = self._router.by_id.format(id=id)
         try:
-            return self._request(method="get", route="{id}".format(id=id))
-        except Exception:
+            data = self._request(method="get", path=path)
+        except exceptions.ResponseError as exc:
             raise exceptions.ObjectNotFound(
-                value=id, value_type="Axonius ID", object_type=self._obj_route
+                value=id,
+                value_type="Axonius ID",
+                object_type=self._router._object_type,
+                exc=exc,
             )
+        return data
 
-    def get_by_name(self, name, regex=False, only1=True, **kwargs):
+    def get_by_name(
+        self, name, regex=False, row_count_min=1, row_count_max=1, **kwargs
+    ):
         """Get objects by name using paging.
 
         Args:
@@ -584,17 +636,15 @@ class UserDeviceBase(object):
         else:
             query = '{field} == "{name}"'
 
-        query = query.format(field=self._name_field, name=name)
+        field = kwargs.get("field", self._name_field)
+        query = query.format(field=field, name=name)
 
         kwargs["query"] = query
+        kwargs["row_count_min"] = row_count_min
+        kwargs["row_count_max"] = row_count_max
 
+        only1 = row_count_min == 1 and row_count_max == 1
         found = list(self.get(**kwargs))
-
-        if not found or (len(found) > 1 and only1):
-            raise exceptions.ObjectNotFound(
-                value=query, value_type="query", object_type=self._obj_route
-            )
-
         return found[0] if only1 else found
 
     def _get(self, query=None, fields=None, row_start=0, page_size=0):
@@ -624,6 +674,7 @@ class UserDeviceBase(object):
             :obj:`dict`
 
         """
+        utils.check_max_page_size(page_size=page_size)
         params = {}
 
         if row_start:
@@ -639,7 +690,7 @@ class UserDeviceBase(object):
             if isinstance(fields, (list, tuple)):
                 fields = ",".join(fields)
             params["fields"] = fields
-        return self._request(method="get", route="", params=params)
+        return self._request(method="get", path=self._router.root, params=params)
 
     def _get_saved_query(self, query=None, row_start=0, page_size=0):
         """Get device saved queries.
@@ -665,6 +716,7 @@ class UserDeviceBase(object):
             :obj:`dict`
 
         """
+        utils.check_max_page_size(page_size=page_size)
         params = {}
 
         if page_size:
@@ -676,7 +728,7 @@ class UserDeviceBase(object):
         if query:
             params["filter"] = query
 
-        return self._request(method="get", route="views", params=params)
+        return self._request(method="get", path=self._router.views, params=params)
 
     def _delete_saved_query(self, ids):
         """Delete saved queries by ids.
@@ -690,8 +742,9 @@ class UserDeviceBase(object):
 
         """
         data = {"ids": ids}
-        return self._request(method="delete", route="views", json=data)
+        return self._request(method="delete", path=self._router.views, json=data)
 
+    # FUTURE: needs tests
     def _add_labels(self, labels, ids, query=None):
         """Add labels to object IDs.
 
@@ -709,8 +762,9 @@ class UserDeviceBase(object):
         data["entities"] = {}
         data["entities"]["ids"] = ids
         data["labels"] = labels
-        return self._request(method="post", route="labels", json=data)
+        return self._request(method="post", path=self._router.labels, json=data)
 
+    # FUTURE: needs tests
     def _delete_labels(self, labels, ids, query=None):
         """Delete labels from object IDs.
 
@@ -728,296 +782,4 @@ class UserDeviceBase(object):
         data["entities"] = {}
         data["entities"]["ids"] = ids
         data["labels"] = labels
-        return self._request(method="delete", route="labels", json=data)
-
-    @abc.abstractproperty
-    def _name_field(self):
-        """Get the field to use in :meth:`get_by_name`.
-
-        Returns:
-            :obj:`str`
-
-        """
-        raise NotImplementedError  # pragma: no cover
-
-    @abc.abstractproperty
-    def _default_fields(self):
-        """Fields to set as default for methods with **fields.
-
-        Returns:
-            :obj:`dict`
-
-        """
-        raise NotImplementedError  # pragma: no cover
-
-
-def find_adapter(name, known_names=None):
-    """Find an adapter by name.
-
-    Args:
-        name (:obj:`str`):
-            Name of adapter to find.
-        known_names (:obj:`list` of :obj:`str`, optional):
-            List of known adapter names.
-
-            Defaults to: None.
-
-    Notes:
-        If known_names is None, this will just ensure name ends with '_adapter'.
-
-    Raises:
-        :exc:`exceptions.UnknownAdapterName`: If name can not be found in known_names.
-
-    Returns:
-        :obj:`str`
-
-    """
-    postfix = "_adapter"
-    name = name if name.endswith(postfix) else name + postfix
-
-    if not known_names:
-        return name
-
-    if name in known_names:
-        return known_names[known_names.index(name)]
-
-    postfix_len = len(postfix)
-    known_names = [x[:-postfix_len] if x.endswith(postfix) else x for x in known_names]
-    raise exceptions.UnknownAdapterName(name=name, known_names=known_names)
-
-
-def find_field(name, adapter, fields=None):
-    """Find a field for a given adapter.
-
-    Args:
-        name (:obj:`str`):
-            Name of field to find.
-        adapter (:obj:`str`):
-            Name of adapter to look for field in.
-            If 'generic' look for the field in generic fields.
-        fields (:obj:`dict`, optional):
-            Return from :meth:`ApiClient.get_device_fields`.
-
-            Defaults to: None.
-
-    Notes:
-        If adapter 'generic', ensure name begins with :attr:`GENERIC_FIELD_PREFIX`,
-        otherwise ensure name begins with :attr:`ADAPTER_FIELD_PREFIX`.
-
-        If fields is None, we can't validate that the field exists, so we just ensure
-        the name is fully qualified.
-
-        If name in "all" or prefix, returns prefix.
-
-    Raises:
-        :exc:`exceptions.UnknownFieldName`:
-            If fields is not None and name can not be found in fields.
-
-    Returns:
-        :obj:`str`
-
-    """
-    if adapter == "generic":
-        prefix = GENERIC_FIELD_PREFIX
-        container = fields["generic"] if fields else None
-    else:
-        known_adapters = list(fields["specific"].keys()) if fields else None
-        adapter = find_adapter(name=adapter, known_names=known_adapters)
-        prefix = ADAPTER_FIELD_PREFIX.format(adapter=adapter)
-        container = fields["specific"][adapter] if fields else None
-
-    if not name.startswith(prefix):
-        fq_name = ".".join([x for x in [prefix, name] if x])
-    else:
-        fq_name = name
-
-    if not container:
-        return name if name in ["adapters", "labels"] else fq_name
-
-    known_names = [x["name"] for x in container]
-
-    for check in [name, fq_name]:
-        if check in ["all", prefix]:
-            return prefix
-        if check in known_names:
-            return known_names[known_names.index(check)]
-
-    prefix = prefix + "."
-    prefix_len = len(prefix + ".")
-    known_names = [x[prefix_len:] if x.startswith(prefix) else x for x in known_names]
-    known_names += ["all", prefix]
-    raise exceptions.UnknownFieldName(
-        name=name, known_names=known_names, adapter=adapter
-    )
-
-
-def validate_fields(known_fields, **fields):
-    """Validate provided fields are valid.
-
-    Args:
-        known_fields (:obj:`dict`):
-            Known fields from :meth:`get_device_fields` or :meth:`get_user_fields`.
-        **fields: Fields to validate.
-            * generic=['f1', 'f2'] for generic fields.
-            * adapter=['f1', 'f2'] for adapter specific fields.
-
-    Notes:
-        This will try to use :meth:`get_device_fields` to validate the device
-        fields, but if it returns None it will just ensure the fields are
-        fully qualified.
-
-        * generic=['field1'] => ['specific_data.data.field1']
-        * adapter=['field1'] =>['adapters_data.adapter_name.field1']
-
-    Returns:
-        :obj:`list` of :obj:`str`
-
-    """
-    validated_fields = []
-
-    for name, afields in fields.items():
-        if not isinstance(afields, (tuple, list)):
-            continue
-        for field in afields:
-            field = find_field(name=field, fields=known_fields, adapter=name)
-            if field not in validated_fields:
-                validated_fields.append(field)
-
-    return validated_fields
-
-
-@six.add_metaclass(abc.ABCMeta)
-class AuthBase(object):
-    """Abstract base class for all Authentication methods."""
-
-    @abc.abstractproperty
-    def _api_version(self):
-        """Get the API version to use.
-
-        Returns:
-            :obj:`int`
-
-        """
-        raise NotImplementedError  # pragma: no cover
-
-    @abc.abstractproperty
-    def _api_path(self):
-        """Get the API path to use.
-
-        Returns:
-            :obj:`str`
-
-        """
-        raise NotImplementedError  # pragma: no cover
-
-    @abc.abstractmethod
-    def login(self):
-        """Login to API."""
-        raise NotImplementedError  # pragma: no cover
-
-    @abc.abstractmethod
-    def logout(self):
-        """Logout from API."""
-        raise NotImplementedError  # pragma: no cover
-
-    @abc.abstractproperty
-    def http_client(self):
-        """Get HttpClient object.
-
-        Returns:
-            :obj:`axonius_api_client.http.HttpClient`
-
-        """
-        raise NotImplementedError  # pragma: no cover
-
-    @abc.abstractproperty
-    def is_logged_in(self):
-        """Check if login has been called.
-
-        Returns:
-            :obj:`bool`
-
-        """
-        raise NotImplementedError  # pragma: no cover
-
-
-class AuthMixins(object):
-    """Mixins for AuthBase."""
-
-    def __str__(self):
-        """Show object info.
-
-        Returns:
-            :obj:`str`
-
-        """
-        bits = [
-            "url={!r}".format(self.http_client.url),
-            "is_logged_in={}".format(self.is_logged_in),
-        ]
-        bits = "({})".format(", ".join(bits))
-        return "{c.__module__}.{c.__name__}{bits}".format(c=self.__class__, bits=bits)
-
-    def __repr__(self):
-        """Show object info.
-
-        Returns:
-            :obj:`str`
-
-        """
-        return self.__str__()
-
-    @property
-    def http_client(self):
-        """Get HttpClient object.
-
-        Returns:
-            :obj:`axonius_api_client.http.HttpClient`
-
-        """
-        return self._http_client
-
-    def _check_http_lock(self):
-        """Check HTTP client not already used by another Auth.
-
-        Raises:
-            :exc:`exceptions.PackageError`
-
-        """
-        auth_lock = getattr(self.http_client, "_auth_lock", None)
-        if auth_lock:
-            msg = "{http_client} already being used by {auth}"
-            msg = msg.format(http_client=self.http_client, auth=auth_lock)
-            raise exceptions.PackageError(msg)
-
-    def _set_http_lock(self):
-        """Set HTTP Client auth lock."""
-        self._http_client._auth_lock = self
-
-    def validate(self):
-        """Validate credentials.
-
-        Raises:
-            :exc:`exceptions.InvalidCredentials`
-
-        """
-        if not self.is_logged_in:
-            raise exceptions.NotLoggedIn(auth=self)
-
-        response = self.http_client(
-            method="get", path=self._api_path, route="devices/count"
-        )
-
-        if response.status_code in [401, 403]:
-            raise exceptions.InvalidCredentials(auth=self, exc=None)
-
-        try:
-            response.raise_for_status()
-        except Exception as exc:
-            raise exceptions.InvalidCredentials(auth=self, exc=exc)
-
-    def logout(self):
-        """Logout from API."""
-        if not self.is_logged_in:
-            raise exceptions.NotLoggedIn(auth=self)
-        self._logout()
+        return self._request(method="delete", path=self._router.labels, json=data)

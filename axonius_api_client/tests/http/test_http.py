@@ -27,7 +27,9 @@ class TestHttpClient(object):
     def test_parsed_url(self, httpbin_secure):
         """Test url=UrlParser() works."""
         url = httpbin_secure.url
-        parsed_url = axonius_api_client.tools.UrlParser(url=url, default_scheme="https")
+        parsed_url = axonius_api_client.http.urlparser.UrlParser(
+            url=url, default_scheme="https"
+        )
         http_client = axonius_api_client.http.HttpClient(url=parsed_url)
         assert httpbin_secure.url in format(http_client)
         assert httpbin_secure.url in repr(http_client)

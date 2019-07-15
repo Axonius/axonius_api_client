@@ -10,8 +10,10 @@ import logging
 
 import requests
 
-from . import tools
-from . import version
+from . import urlparser
+from .. import constants
+from .. import tools
+from .. import version
 
 LOG = logging.getLogger(__name__)
 
@@ -19,45 +21,11 @@ LOG = logging.getLogger(__name__)
 class HttpClient(object):
     """Wrapper for sending requests usings :obj:`requests.Session`."""
 
-    LOG_REQUEST_ATTRS_BRIEF = [
-        "request to {request.url!r}",
-        "method={request.method!r}",
-        "size={size}",
-    ]
-    """:obj:`list` of :obj:`str`: Request attributes to log when verbose=False."""
-
-    LOG_REQUEST_ATTRS_VERBOSE = [
-        "request to {request.url!r}",
-        "method={request.method!r}",
-        "headers={request.headers}",
-        "size={size}",
-    ]
-    """:obj:`list` of :obj:`str`: Request attributes to log when verbose=True."""
-
-    LOG_RESPONSE_ATTRS_BRIEF = [
-        "response from {response.url!r}",
-        "method={response.request.method!r}",
-        "status={response.status_code!r}",
-        "size={size}",
-    ]
-    """:obj:`list` of :obj:`str`: Response attributes to log when verbose=False."""
-
-    LOG_RESPONSE_ATTRS_VERBOSE = [
-        "response from {response.url!r}",
-        "method={response.request.method!r}",
-        "headers={response.headers}",
-        "status={response.status_code!r}",
-        "reason={response.reason!r}",
-        "elapsed={response.elapsed}",
-        "size={size}",
-    ]
-    """:obj:`list` of :obj:`str`: Response attributes to log when verbose=True."""
-
     def __init__(self, url, **kwargs):
         """Constructor.
 
         Args:
-            url (:obj:`str` or :obj:`axonius_api_client.tools.UrlParser`):
+            url (:obj:`str` or :obj:`urlparser.UrlParser`):
                 Axonius API URL.
             **kwargs:
                 connect_timeout (:obj:`int`, optional):
@@ -83,7 +51,7 @@ class HttpClient(object):
                     Save last request & response to :attr:`last_request` and
                     :attr:`last_response`.
 
-                    Defaults to: False.
+                    Defaults to: True.
                 save_history (:obj:`bool`, optional):
                     Add last response to :attr:`history`.
 
@@ -118,10 +86,10 @@ class HttpClient(object):
         self._log = LOG.getChild(self.__class__.__name__)
         """:obj:`logging.Logger`: Logger for this object."""
 
-        if isinstance(url, tools.UrlParser):
+        if isinstance(url, urlparser.UrlParser):
             url = url.url
         else:
-            parsed_url = tools.UrlParser(url=url, default_scheme="https")
+            parsed_url = urlparser.UrlParser(url=url, default_scheme="https")
             url = parsed_url.url
 
         self.url = url
@@ -133,7 +101,7 @@ class HttpClient(object):
         self.last_response = None
         """:obj:`requests.Response`: Last response received."""
 
-        self.save_last = kwargs.get("save_last", False)
+        self.save_last = kwargs.get("save_last", True)
         """:obj:`bool`: Save requests to last_request and responses to last_response."""
 
         self.history = []
@@ -153,21 +121,27 @@ class HttpClient(object):
 
         self.session.verify = kwargs.get("verify", False)
 
-        verbose = kwargs.get("verbose", False)
-        if verbose is False:
-            self.LOG_REQUEST_ATTRS = self.LOG_REQUEST_ATTRS_BRIEF
-            self.LOG_RESPONSE_ATTRS = self.LOG_RESPONSE_ATTRS_BRIEF
-        elif verbose is True:
-            self.LOG_REQUEST_ATTRS = self.LOG_REQUEST_ATTRS_VERBOSE
-            self.LOG_RESPONSE_ATTRS = self.LOG_RESPONSE_ATTRS_VERBOSE
-        elif verbose is None:
-            self.LOG_REQUEST_ATTRS = []
-            self.LOG_RESPONSE_ATTRS = []
+        self.LOG_REQUEST_ATTRS = []
+        """:obj:`list` of :obj:`str`: Attributes to log before sending request."""
 
-        if kwargs.get("quiet_urllib", True):
-            warnings.simplefilter(
-                "ignore", requests.urllib3.exceptions.InsecureRequestWarning
-            )
+        self.LOG_RESPONSE_ATTRS = []
+        """:obj:`list` of :obj:`str`: Attributes to log after receiving response."""
+
+        verbose = kwargs.get("verbose", False)
+
+        if verbose is False:
+            self.LOG_REQUEST_ATTRS = constants.LOG_REQUEST_ATTRS_BRIEF
+            self.LOG_RESPONSE_ATTRS = constants.LOG_RESPONSE_ATTRS_BRIEF
+        elif verbose is True:
+            self.LOG_REQUEST_ATTRS = constants.LOG_REQUEST_ATTRS_VERBOSE
+            self.LOG_RESPONSE_ATTRS = constants.LOG_RESPONSE_ATTRS_VERBOSE
+
+        quiet_urllib = kwargs.get("quiet_urllib", True)
+
+        if quiet_urllib is True:
+            urlwarn = requests.urllib3.exceptions.InsecureRequestWarning
+            warnings.simplefilter("ignore", urlwarn)
+
             urllog = logging.getLogger("urllib3.connectionpool")
             urllog.setLevel(logging.WARNING)
 

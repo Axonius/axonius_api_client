@@ -22,9 +22,6 @@
 		],
 		"anaconda_linter_phantoms": false,
 		"anaconda_linter_show_errors_on_save": true,
-		"color_scheme": "Monokai.sublime-color-scheme",
-		"font_face": "Ubuntu Mono",
-		"font_size": 15,
 		"pep257": true,
 		"pep257_ignore":
 		[

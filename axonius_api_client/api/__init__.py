@@ -7,20 +7,21 @@ from __future__ import unicode_literals
 
 from . import exceptions
 from . import models
+from . import routers
 
 
-class ApiUsers(models.ApiVersion1, models.ApiBase, models.UserDeviceBase):
+class Users(models.ApiBase, models.UserDeviceBase):
     """User related API methods."""
 
     @property
-    def _obj_route(self):
-        """Get the object route.
+    def _router(self):
+        """Router for this API client.
 
         Returns:
-            :obj:`str`
+            :obj:`routers.Router`
 
         """
-        return "users"
+        return routers.ApiV1.users
 
     @property
     def _default_fields(self):
@@ -49,19 +50,49 @@ class ApiUsers(models.ApiVersion1, models.ApiBase, models.UserDeviceBase):
         """
         return "specific_data.data.username"
 
+    def get_by_email(
+        self, email, regex=False, row_count_min=1, row_count_max=1, **kwargs
+    ):
+        """Get objects by email using paging.
 
-class ApiDevices(models.ApiVersion1, models.ApiBase, models.UserDeviceBase):
+        Args:
+            email (:obj:`int`):
+                Name to match using mail field.
+            **kwargs: Passed thru to :meth:`get`
+
+        Returns:
+            :obj:`list` of :obj:`dict`: Each row matching email or :obj:`dict` if only1.
+
+        """
+        if regex:
+            query = '{field} == regex("{email}", "i")'
+        else:
+            query = '{field} == "{email}"'
+
+        field = kwargs.get("field", "mail")
+        query = query.format(field=field, email=email)
+
+        kwargs["query"] = query
+        kwargs["row_count_min"] = row_count_min
+        kwargs["row_count_max"] = row_count_max
+
+        only1 = row_count_min == 1 and row_count_max == 1
+        found = list(self.get(**kwargs))
+        return found[0] if only1 else found
+
+
+class Devices(models.ApiBase, models.UserDeviceBase):
     """Device related API methods."""
 
     @property
-    def _obj_route(self):
-        """Get the object route.
+    def _router(self):
+        """Router for this API client.
 
         Returns:
-            :obj:`str`
+            :obj:`routers.Router`
 
         """
-        return "devices"
+        return routers.ApiV1.devices
 
     @property
     def _default_fields(self):
@@ -92,7 +123,8 @@ class ApiDevices(models.ApiVersion1, models.ApiBase, models.UserDeviceBase):
         return "specific_data.data.hostname"
 
 
-class ApiActions(models.ApiVersion1, models.ApiBase):
+# FUTURE: needs tests
+class Actions(models.ApiBase):
     """Action related API methods.
 
     Notes:
@@ -102,14 +134,14 @@ class ApiActions(models.ApiVersion1, models.ApiBase):
     """
 
     @property
-    def _obj_route(self):
-        """Get the object route.
+    def _router(self):
+        """Router for this API client.
 
         Returns:
-            :obj:`str`
+            :obj:`routers.Router`
 
         """
-        return "actions"
+        return routers.ApiV1.actions
 
     def get(self):
         """Get all actions.
@@ -118,7 +150,7 @@ class ApiActions(models.ApiVersion1, models.ApiBase):
             :obj:`list` of :obj:`str`
 
         """
-        return self._request(method="get", obj_route="actions", route="")
+        return self._request(method="get", path=self._router.root)
 
     def run(self, name, ids, command):
         """Run an action.
@@ -136,7 +168,7 @@ class ApiActions(models.ApiVersion1, models.ApiBase):
         data["action_name"] = name
         data["internal_axon_ids"] = ids
         data["command"] = command
-        return self._request(method="post", route="shell", json=data)
+        return self._request(method="post", path=self._router.shell, json=data)
 
     def deploy(self, name, ids, binary_uuid, binary_filename, params=None):
         """Deploy an action.
@@ -167,7 +199,7 @@ class ApiActions(models.ApiVersion1, models.ApiBase):
         data["binary"]["uuid"] = binary_uuid
         if params:
             data["params"] = params
-        return self._request(method="post", route="deploy", json=data)
+        return self._request(method="post", path=self._router.deploy, json=data)
 
     def upload_file(self, binary, filename):
         """Upload a file to the system for use in deployment.
@@ -186,10 +218,13 @@ class ApiActions(models.ApiVersion1, models.ApiBase):
         data["field_name"] = "binary"
         files = {}
         files["userfile"] = (filename, binary)
-        return self._request(method="post", route="upload_file", data=data, files=files)
+        return self._request(
+            method="post", path=self._router.upload_file, data=data, files=files
+        )
 
 
-class ApiAdapters(models.ApiVersion1, models.ApiBase):
+# FUTURE: needs tests
+class Adapters(models.ApiBase):
     """Adapter related API methods.
 
     Notes:
@@ -199,14 +234,14 @@ class ApiAdapters(models.ApiVersion1, models.ApiBase):
     """
 
     @property
-    def _obj_route(self):
-        """Get the object route.
+    def _router(self):
+        """Router for this API client.
 
         Returns:
-            :obj:`str`
+            :obj:`routers.Router`
 
         """
-        return "adapters"
+        return routers.ApiV1.adapters
 
     def get(self):
         """Get all adapters.
@@ -215,7 +250,7 @@ class ApiAdapters(models.ApiVersion1, models.ApiBase):
             FUTURE: Figure this out.
 
         """
-        return self._request(method="get", route="")
+        return self._request(method="get", path=self._router.root)
 
     # FUTURE: public method
     def _check_client(self, name, config, node_id):
@@ -237,8 +272,8 @@ class ApiAdapters(models.ApiVersion1, models.ApiBase):
         data.update(config)
         data["instanceName"] = node_id
         data["oldInstanceName"] = node_id
-        route = "{name}/clients".format(name=name)
-        return self._request(method="post", route=route, json=data)
+        path = self._router.clients.format(adapter_name=name)
+        return self._request(method="post", path=path, json=data)
 
     # FUTURE: public method
     def _add_client(self, name, config, node_id):
@@ -259,8 +294,8 @@ class ApiAdapters(models.ApiVersion1, models.ApiBase):
         data = {}
         data.update(config)
         data["instanceName"] = node_id
-        route = "{name}/clients".format(name=name)
-        return self._request(method="put", route=route, json=data)
+        path = self._router.clients.format(adapter_name=name)
+        return self._request(method="put", path=path, json=data)
 
     # FUTURE: public method
     def _delete_client(self, name, id, node_id):
@@ -280,11 +315,13 @@ class ApiAdapters(models.ApiVersion1, models.ApiBase):
         """
         data = {}
         data["instanceName"] = node_id
-        route = "{name}/clients/{id}".format(name=name, id=id)
-        return self._request(method="delete", route=route, json=data)
+        path = self._router.clients.format(adapter_name=name)
+        path += "/{id}".format(id=id)
+        return self._request(method="delete", path=path, json=data)
 
 
-class ApiEnforcements(models.ApiVersion1, models.ApiBase):
+# FUTURE: needs tests
+class Enforcements(models.ApiBase):
     """Enforcement related API methods.
 
     Notes:
@@ -294,14 +331,14 @@ class ApiEnforcements(models.ApiVersion1, models.ApiBase):
     """
 
     @property
-    def _obj_route(self):
-        """Get the object route.
+    def _router(self):
+        """Router for this API client.
 
         Returns:
-            :obj:`str`
+            :obj:`routers.Router`
 
         """
-        return "alerts"
+        return routers.ApiV1.alerts
 
     def _delete(self, ids):
         """Delete objects by internal axonius IDs.
@@ -314,7 +351,7 @@ class ApiEnforcements(models.ApiVersion1, models.ApiBase):
             None
 
         """
-        return self._request(method="get", route="", json=ids)
+        return self._request(method="delete", path=self._router.root, json=ids)
 
     # FUTURE: public method
     def _create(self, name, main, success=None, failure=None, post=None, triggers=None):
@@ -359,7 +396,7 @@ class ApiEnforcements(models.ApiVersion1, models.ApiBase):
         data["actions"]["failure"] = success or []
         data["actions"]["post"] = success or []
         data["triggers"] = triggers or []
-        return self._request(method="put", route="", json=data)
+        return self._request(method="put", path=self._router.root, json=data)
 
     def get(self, query=None, row_start=0, page_size=0):
         """Get a page for a given query.
@@ -396,7 +433,8 @@ class ApiEnforcements(models.ApiVersion1, models.ApiBase):
         if query:
             params["filter"] = query
 
-        return self._request(method="get", route="", params=params)["assets"]
+        response = self._request(method="get", path=self._router.root, params=params)
+        return response["assets"]
 
     def delete_by_name(self, name, regex=False, only1=True):
         """Delete an enforcement by name.
@@ -452,7 +490,7 @@ class ApiEnforcements(models.ApiVersion1, models.ApiBase):
 
         if not found or (len(found) > 1 and only1):
             raise exceptions.ObjectNotFound(
-                value=query, value_type="query", object_type="Alert"
+                value=query, value_type="query", object_type="Alert", exc=None
             )
 
         return found[0] if only1 else found

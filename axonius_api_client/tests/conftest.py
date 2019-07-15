@@ -128,7 +128,9 @@ def api_url(request):
     """Fixture for getting API URL."""
     url = request.config.getoption("--url")
     if url:
-        parsed_url = axonius_api_client.tools.UrlParser(url=url, default_scheme="https")
+        parsed_url = axonius_api_client.http.urlparser.UrlParser(
+            url=url, default_scheme="https"
+        )
         url = parsed_url.url
     return url
 
