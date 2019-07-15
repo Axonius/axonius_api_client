@@ -2,7 +2,7 @@
 Todo Items
 ###############################################
 
-Sprint schedule is every 3 weeks.
+Sprint schedule is every 3 weeks. Look for FUTURE for todo items.
 
 1.0.0
 =============================================
