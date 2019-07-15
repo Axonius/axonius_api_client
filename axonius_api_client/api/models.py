@@ -152,16 +152,6 @@ class UserDeviceBase(object):
     """Mixins for User & Device models."""
 
     @abc.abstractproperty
-    def _name_field(self):
-        """Field to use in :meth:`get_by_name`.
-
-        Returns:
-            :obj:`str`
-
-        """
-        raise NotImplementedError  # pragma: no cover
-
-    @abc.abstractproperty
     def _default_fields(self):
         """Fields to set as default for methods with **fields.
 
@@ -639,23 +629,6 @@ class UserDeviceBase(object):
         only1 = kwargs["row_count_min"] == 1 and kwargs["row_count_max"] == 1
 
         return found[0] if only1 else found
-
-    def get_by_name(self, value, **kwargs):
-        """Get objects by name using paging.
-
-        Args:
-            value (:obj:`int`):
-                Name to match using :attr:`_name_field`.
-            **kwargs: Passed thru to :meth:`get`
-
-        Returns:
-            :obj:`list` of :obj:`dict`: Each row matching name or :obj:`dict` if only1.
-
-        """
-        kwargs.setdefault("field", self._name_field)
-        kwargs.setdefault("field_adapter", "generic")
-        kwargs["value"] = value
-        return self.get_by_field_value(**kwargs)
 
     def _get(self, query=None, fields=None, row_start=0, page_size=0):
         """Get a page for a given query.

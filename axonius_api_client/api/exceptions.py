@@ -44,7 +44,7 @@ class ResponseError(ApiError):
         """:obj:`str`: Error message."""
 
         self.exc = exc
-        """:obj:`Exception: Original exception thrown."""
+        """:obj:`Exception`: Original exception thrown."""
 
         msgs = []
 

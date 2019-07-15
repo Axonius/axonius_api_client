@@ -61,7 +61,7 @@ Table of Contents
    root/release_strategy.rst
    root/changelog.rst
    root/todo.rst
-   root/api/toc.rst
+   root/api_ref/toc.rst
 
 Indices and tables
 ###############################################

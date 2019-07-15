@@ -25,7 +25,7 @@ class Users(models.ApiBase, models.UserDeviceBase):
 
     @property
     def _default_fields(self):
-        """Fields to set as default for methods with **fields.
+        """Fields to set as default for methods with fields as kwargs.
 
         Returns:
             :obj:`dict`
@@ -41,23 +41,30 @@ class Users(models.ApiBase, models.UserDeviceBase):
             ]
         }
 
-    @property
-    def _name_field(self):
-        """Field name to use in :meth:`axonius_api_client.UserDeviceBase.get_by_name`.
+    def get_by_name(self, value, **kwargs):
+        """Get objects by name using paging.
+
+        Args:
+            value (:obj:`int`):
+                Value to find using field "specific_data.data.username".
+            **kwargs: Passed thru to :meth:`models.UserDeviceBase.get_by_field_value`
 
         Returns:
-            :obj:`str`
+            :obj:`list` of :obj:`dict`: Each row matching name or :obj:`dict` if only1.
 
         """
-        return "specific_data.data.username"
+        kwargs.setdefault("field", "specific_data.data.username")
+        kwargs.setdefault("field_adapter", "generic")
+        kwargs["value"] = value
+        return self.get_by_field_value(**kwargs)
 
     def get_by_email(self, value, **kwargs):
         """Get objects by email using paging.
 
         Args:
             value (:obj:`int`):
-                Email address to search for.
-            **kwargs: Passed thru to :meth:`get`
+                Value to find using field "specific_data.data.mail".
+            **kwargs: Passed thru to :meth:`models.UserDeviceBase.get_by_field_value`
 
         Returns:
             :obj:`list` of :obj:`dict`: Each row matching email or :obj:`dict` if only1.
@@ -84,7 +91,7 @@ class Devices(models.ApiBase, models.UserDeviceBase):
 
     @property
     def _default_fields(self):
-        """Fields to set as default for methods with **fields.
+        """Fields to set as default for methods with fields as kwargs.
 
         Returns:
             :obj:`dict`
@@ -100,23 +107,30 @@ class Devices(models.ApiBase, models.UserDeviceBase):
             ]
         }
 
-    @property
-    def _name_field(self):
-        """Field name to use in :meth:`axonius_api_client.UserDeviceBase.get_by_name`.
+    def get_by_name(self, value, **kwargs):
+        """Get objects by name using paging.
+
+        Args:
+            value (:obj:`int`):
+                Value to find using field "specific_data.data.username".
+            **kwargs: Passed thru to :meth:`models.UserDeviceBase.get_by_field_value`
 
         Returns:
-            :obj:`str`
+            :obj:`list` of :obj:`dict`: Each row matching name or :obj:`dict` if only1.
 
         """
-        return "specific_data.data.hostname"
+        kwargs.setdefault("field", "specific_data.data.hostname")
+        kwargs.setdefault("field_adapter", "generic")
+        kwargs["value"] = value
+        return self.get_by_field_value(**kwargs)
 
     def get_by_mac(self, value, **kwargs):
         """Get objects by MAC using paging.
 
         Args:
             value (:obj:`int`):
-                MAC address to search for.
-            **kwargs: Passed thru to :meth:`get`
+                Value to find using field "specific_data.data.network_interfaces.mac".
+            **kwargs: Passed thru to :meth:`models.UserDeviceBase.get_by_field_value`
 
         Returns:
             :obj:`list` of :obj:`dict`: Each row matching email or :obj:`dict` if only1.
@@ -166,7 +180,7 @@ class Actions(models.ApiBase):
             ids (:obj:`list` of :obj`str`):
                 Internal axonius IDs of device to run action against.
             command (:obj:`str`):
-                command to run.
+                Command to run.
 
         """
         data = {}
@@ -192,10 +206,8 @@ class Actions(models.ApiBase):
 
                 Defaults to: None.
 
-        Returns:
-            FUTURE: Figure this out.
-
         """
+        # FUTURE: Figure out return.
         data = {}
         data["action_name"] = name
         data["internal_axon_ids"] = ids
