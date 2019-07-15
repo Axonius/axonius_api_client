@@ -5,5 +5,6 @@ axonius_api_client package
 
     init.rst
     exceptions.rst
+    constants.rst
     version.rst
     tools.rst

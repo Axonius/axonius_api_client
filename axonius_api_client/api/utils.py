@@ -63,13 +63,15 @@ def find_field(name, adapter, fields=None):
             Name of adapter to look for field in.
             If 'generic' look for the field in generic fields.
         fields (:obj:`dict`, optional):
-            Return from :meth:`ApiClient.get_device_fields`.
+            Return from :meth:`axonius_api_client.api.models.UserDeviceBase.get_fields`.
 
             Defaults to: None.
 
     Notes:
-        If adapter 'generic', ensure name begins with :attr:`GENERIC_FIELD_PREFIX`,
-        otherwise ensure name begins with :attr:`ADAPTER_FIELD_PREFIX`.
+        If adapter 'generic', ensure name begins with
+        :attr:`axonius_api_client.constants.GENERIC_FIELD_PREFIX`,
+        otherwise ensure name begins with
+        :attr:`axonius_api_client.constants.ADAPTER_FIELD_PREFIX`.
 
         If fields is None, we can't validate that the field exists, so we just ensure
         the name is fully qualified.
@@ -132,14 +134,15 @@ def validate_fields(known_fields, **fields):
 
     Args:
         known_fields (:obj:`dict`):
-            Known fields from :meth:`get_device_fields` or :meth:`get_user_fields`.
+            Known fields from
+            :meth:`axonius_api_client.api.models.UserDeviceBase.get_fields`.
         **fields: Fields to validate.
             * generic=['f1', 'f2'] for generic fields.
             * adapter=['f1', 'f2'] for adapter specific fields.
 
     Notes:
-        This will try to use :meth:`get_device_fields` to validate the device
-        fields, but if it returns None it will just ensure the fields are
+        This will try to use known_fields to validate the device
+        fields, but if known_fields is empty it will just ensure the fields are
         fully qualified.
 
         * generic=['field1'] => ['specific_data.data.field1']
@@ -166,7 +169,7 @@ def validate_fields(known_fields, **fields):
 
 
 def check_max_page_size(page_size):
-    """Check if page size is over :data:`constants.MAX_PAGE_SIZE`.
+    """Check if page size is over :data:`axonius_api_client.constants.MAX_PAGE_SIZE`.
 
     Args:
         page_size (:obj:`int`):

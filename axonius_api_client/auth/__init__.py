@@ -26,8 +26,8 @@ class AuthMixins(object):
         Args:
             http_client (:obj:`axonius_api_client.http.HttpClient`):
                 HTTP client to use to send requests.
-            ** creds: Credentials used by this Auth method.
-                API secret to use in credentials.
+            creds:
+                Credentials used by this Auth method.
 
         """
         self._log = LOG.getChild(self.__class__.__name__)

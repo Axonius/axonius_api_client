@@ -182,6 +182,10 @@ class Actions(models.ApiBase):
             command (:obj:`str`):
                 Command to run.
 
+
+        Returns:
+            :obj:`object`
+
         """
         data = {}
         data["action_name"] = name
@@ -189,6 +193,7 @@ class Actions(models.ApiBase):
         data["command"] = command
         return self._request(method="post", path=self._router.shell, json=data)
 
+    # FUTURE: Figure out return.
     def deploy(self, name, ids, binary_uuid, binary_filename, params=None):
         """Deploy an action.
 
@@ -202,12 +207,12 @@ class Actions(models.ApiBase):
             binary_filename (:obj:`str`):
                 Filename of binary to use in deployment.
             params (:obj:`str`, optional):
-                FUTURE: Figure this out.
-
                 Defaults to: None.
 
+        Returns:
+            :obj:`object`
+
         """
-        # FUTURE: Figure out return.
         data = {}
         data["action_name"] = name
         data["internal_axon_ids"] = ids
@@ -222,7 +227,7 @@ class Actions(models.ApiBase):
         """Upload a file to the system for use in deployment.
 
         Args:
-            binary (:obj:`io.BinaryIO`):
+            binary (:obj:`io.BytesIO`):
                 Binary bits of file to upload.
             filename (:obj:`str`):
                 Name of file to upload.
@@ -264,7 +269,7 @@ class Adapters(models.ApiBase):
         """Get all adapters.
 
         Returns:
-            FUTURE: Figure this out.
+            :obj:`object`
 
         """
         return self._request(method="get", path=self._router.root)
@@ -282,7 +287,7 @@ class Adapters(models.ApiBase):
                 Node ID.
 
         Returns:
-            FUTURE: Figure this out.
+            :obj:`object`
 
         """
         data = {}
@@ -305,7 +310,7 @@ class Adapters(models.ApiBase):
                 Node ID.
 
         Returns:
-            FUTURE: Figure this out.
+            :obj:`object`
 
         """
         data = {}
@@ -327,7 +332,7 @@ class Adapters(models.ApiBase):
                 Node ID.
 
         Returns:
-            FUTURE: Figure this out.
+            :obj:`object`
 
         """
         data = {}

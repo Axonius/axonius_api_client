@@ -28,7 +28,7 @@ class ApiBase(object):
         """Router for this API client.
 
         Returns:
-            :obj:`constants.ApiRouter`
+            :obj:`axonius_api_client.api.routers.Router`
 
         """
         raise NotImplementedError  # pragma: no cover
@@ -37,7 +37,7 @@ class ApiBase(object):
         """Constructor.
 
         Args:
-            auth (:obj:`axonius_api_client.auth.AuthBase`):
+            auth (:obj:`axonius_api_client.auth.models.AuthBase`):
                 Authentication object.
 
         """
@@ -45,7 +45,7 @@ class ApiBase(object):
         """:obj:`logging.Logger`: Logger for this object."""
 
         self._auth = auth
-        """:obj:`axonius_api_client.auth.AuthBase`: Authentication object."""
+        """:obj:`axonius_api_client.auth.models.AuthBase`: Authentication object."""
 
         auth.check_login()
 
@@ -153,7 +153,7 @@ class UserDeviceBase(object):
 
     @abc.abstractproperty
     def _default_fields(self):
-        """Fields to set as default for methods with **fields.
+        """Fields to set as default for methods with fields as kwargs.
 
         Returns:
             :obj:`dict`
@@ -292,7 +292,8 @@ class UserDeviceBase(object):
             page_size (:obj:`int`, optional):
                 Number of rows to show in each page in GUI.
 
-                Defaults to: first item in :data:`constants.GUI_PAGE_SIZES`.
+                Defaults to: first item in
+                :data:`axonius_api_client.constants.GUI_PAGE_SIZES`.
             sort_field (:obj:`str`, optional):
                 Name of field to sort results on.
 
@@ -390,13 +391,13 @@ class UserDeviceBase(object):
             query (:obj:`str`, optional):
                 Query to filter rows to return. This is NOT a query built by
                 the Query Wizard in the GUI. This is something else. See
-                :meth:`get_user_saved_query_by_name` for an example query.
+                :meth:`get_saved_query_by_name` for an example query.
 
                 Defaults to: None.
             page_size (:obj:`int`, optional):
                 Get N rows per page.
 
-                Defaults to: :data:`constants.DEFAULT_PAGE_SIZE`.
+                Defaults to: :data:`axonius_api_client.constants.DEFAULT_PAGE_SIZE`.
             max_rows (:obj:`int`, optional):
                 If not 0, only return up to N rows.
 
@@ -499,14 +500,15 @@ class UserDeviceBase(object):
             page_size (:obj:`int`, optional):
                 Get N rows per page.
 
-                Defaults to: :data:`constants.DEFAULT_PAGE_SIZE`.
+                Defaults to: :data:`axonius_api_client.constants.DEFAULT_PAGE_SIZE`.
             default_fields (:obj:`bool`, optional):
-                Update **fields with :attr:`_default_fields` if no fields supplied.
+                Update fields with :attr:`_default_fields` if no fields supplied.
 
                 Defaults to: True.
-            **fields: Fields to include in result.
-                * generic=['f1', 'f2'] for generic fields.
-                * adapter=['f1', 'f2'] for adapter specific fields.
+            fields: Fields to include in result.
+
+                >>> generic=['f1', 'f2'] # for generic fields.
+                >>> adapter=['f1', 'f2'] # for adapter specific fields.
 
         Yields:
             :obj:`dict`: each row found in 'assets' from return.
@@ -589,7 +591,7 @@ class UserDeviceBase(object):
 
         Raises:
            :exc:`exceptions.ObjectNotFound`:
-               When :meth:`_request` raises exception.
+               When :meth:`ApiBase._request` raises exception.
 
         Returns:
            :obj:`dict`
@@ -682,7 +684,7 @@ class UserDeviceBase(object):
             query (:obj:`str`, optional):
                 Query to filter rows to return. This is NOT a query built by
                 the Query Wizard in the GUI. This is something else. See
-                :meth:`get_user_saved_query_by_name` for an example query. Empty
+                :meth:`get_saved_query_by_name` for an example query. Empty
                 query will return all rows.
 
                 Defaults to: None.

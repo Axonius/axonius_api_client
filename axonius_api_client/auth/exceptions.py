@@ -19,7 +19,7 @@ class InvalidCredentials(AuthError):
         """Constructor.
 
         Args:
-            auth (:obj:`axonius_api_client.models.AuthBase`):
+            auth (:obj:`axonius_api_client.auth.models.AuthBase`):
                 Authentication method.
             exc (:obj:`Exception`, optional):
                 Original Exception, if any.
@@ -28,7 +28,7 @@ class InvalidCredentials(AuthError):
 
         """
         self.auth = auth
-        """:obj:`axonius_api_client.models.AuthBase`: Authentication method."""
+        """:obj:`axonius_api_client.auth.models.AuthBase`: Authentication method."""
 
         self.exc = exc
         """:obj:`Exception`: Original Exception, if any."""
@@ -45,12 +45,12 @@ class NotLoggedIn(AuthError):
         """Constructor.
 
         Args:
-            auth (:obj:`axonius_api_client.models.AuthBase`):
+            auth (:obj:`axonius_api_client.auth.models.AuthBase`):
                 Authentication method.
 
         """
         self.auth = auth
-        """:obj:`axonius_api_client.models.AuthBase`: Authentication method."""
+        """:obj:`axonius_api_client.auth.models.AuthBase`: Authentication method."""
 
         msg = "Must call login() on {auth}"
         msg = msg.format(auth=auth)
@@ -64,12 +64,12 @@ class AlreadyLoggedIn(AuthError):
         """Constructor.
 
         Args:
-            auth (:obj:`axonius_api_client.models.AuthBase`):
+            auth (:obj:`axonius_api_client.auth.models.AuthBase`):
                 Authentication method.
 
         """
         self.auth = auth
-        """:obj:`axonius_api_client.models.AuthBase`: Authentication method."""
+        """:obj:`axonius_api_client.auth.models.AuthBase`: Authentication method."""
 
         msg = "Already logged in on {auth}"
         msg = msg.format(auth=auth)
