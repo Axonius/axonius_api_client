@@ -1,5 +1,5 @@
 PACKAGE := "axonius_api_client"
-VERSION := $(shell grep __version__ $(PACKAGE)/version.py | cut -d\' -f2)
+VERSION := $(shell grep __version__ $(PACKAGE)/version.py | cut -d\" -f2)
 
 # FUTURE: write Makefile doc
 
