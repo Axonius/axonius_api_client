@@ -157,7 +157,7 @@ class TestDevices(object):
 
         name = rows[0]["specific_data.data.hostname"]
         name = name[0] if isinstance(name, (list, tuple)) else name
-        row = api_client.get_by_name(name=name)
+        row = api_client.get_by_name(value=name)
         assert isinstance(row, dict)
 
     def test_get_by_name_valid_regex(self, api_client):
@@ -169,13 +169,13 @@ class TestDevices(object):
 
         name = rows[0]["specific_data.data.hostname"]
         name = name[0] if isinstance(name, (list, tuple)) else name
-        row = api_client.get_by_name(name=name, regex=True)
+        row = api_client.get_by_name(value=name, regex=True)
         assert isinstance(row, dict)
 
     def test_get_by_name_invalid(self, api_client):
         """Test get_by_name with a valid host name."""
         with pytest.raises(axonius_api_client.api.exceptions.ObjectNotFound):
-            api_client.get_by_name(name="this_should_not_exist_yo")
+            api_client.get_by_name(value="this_should_not_exist_yo")
 
     def test_get_min_max_1_notfound(self, api_client):
         """Test get_by_name with a valid host name."""

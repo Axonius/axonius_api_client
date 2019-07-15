@@ -37,6 +37,7 @@ class Users(models.ApiBase, models.UserDeviceBase):
                 "labels",
                 "specific_data.data.username",
                 "specific_data.data.last_seen",
+                "specific_data.data.mail",
             ]
         }
 
@@ -50,35 +51,22 @@ class Users(models.ApiBase, models.UserDeviceBase):
         """
         return "specific_data.data.username"
 
-    def get_by_email(
-        self, email, regex=False, row_count_min=1, row_count_max=1, **kwargs
-    ):
+    def get_by_email(self, value, **kwargs):
         """Get objects by email using paging.
 
         Args:
-            email (:obj:`int`):
-                Name to match using mail field.
+            value (:obj:`int`):
+                Email address to search for.
             **kwargs: Passed thru to :meth:`get`
 
         Returns:
             :obj:`list` of :obj:`dict`: Each row matching email or :obj:`dict` if only1.
 
         """
-        if regex:
-            query = '{field} == regex("{email}", "i")'
-        else:
-            query = '{field} == "{email}"'
-
-        field = kwargs.get("field", "mail")
-        query = query.format(field=field, email=email)
-
-        kwargs["query"] = query
-        kwargs["row_count_min"] = row_count_min
-        kwargs["row_count_max"] = row_count_max
-
-        only1 = row_count_min == 1 and row_count_max == 1
-        found = list(self.get(**kwargs))
-        return found[0] if only1 else found
+        kwargs.setdefault("field", "specific_data.data.mail")
+        kwargs.setdefault("field_adapter", "generic")
+        kwargs["value"] = value
+        return self.get_by_field_value(**kwargs)
 
 
 class Devices(models.ApiBase, models.UserDeviceBase):
@@ -121,6 +109,23 @@ class Devices(models.ApiBase, models.UserDeviceBase):
 
         """
         return "specific_data.data.hostname"
+
+    def get_by_mac(self, value, **kwargs):
+        """Get objects by MAC using paging.
+
+        Args:
+            value (:obj:`int`):
+                MAC address to search for.
+            **kwargs: Passed thru to :meth:`get`
+
+        Returns:
+            :obj:`list` of :obj:`dict`: Each row matching email or :obj:`dict` if only1.
+
+        """
+        kwargs.setdefault("field", "specific_data.data.network_interfaces.mac")
+        kwargs.setdefault("field_adapter", "generic")
+        kwargs["value"] = value
+        return self.get_by_field_value(**kwargs)
 
 
 # FUTURE: needs tests

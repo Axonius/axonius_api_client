@@ -617,13 +617,34 @@ class UserDeviceBase(object):
             )
         return data
 
-    def get_by_name(
-        self, name, regex=False, row_count_min=1, row_count_max=1, **kwargs
-    ):
+    def get_by_field_value(self, value, field, field_adapter, regex=False, **kwargs):
+        """Pass.
+
+        FUTURE: Flush out.
+        """
+        if regex:
+            query = '{field} == regex("{value}", "i")'
+        else:
+            query = '{field} == "{value}"'
+
+        known_fields = self.get_fields()
+        field = utils.find_field(name=field, fields=known_fields, adapter=field_adapter)
+
+        kwargs.setdefault("row_count_min", 1)
+        kwargs.setdefault("row_count_max", 1)
+        kwargs.setdefault("query", query.format(field=field, value=value))
+
+        found = list(self.get(**kwargs))
+
+        only1 = kwargs["row_count_min"] == 1 and kwargs["row_count_max"] == 1
+
+        return found[0] if only1 else found
+
+    def get_by_name(self, value, **kwargs):
         """Get objects by name using paging.
 
         Args:
-            name (:obj:`int`):
+            value (:obj:`int`):
                 Name to match using :attr:`_name_field`.
             **kwargs: Passed thru to :meth:`get`
 
@@ -631,21 +652,10 @@ class UserDeviceBase(object):
             :obj:`list` of :obj:`dict`: Each row matching name or :obj:`dict` if only1.
 
         """
-        if regex:
-            query = '{field} == regex("{name}", "i")'
-        else:
-            query = '{field} == "{name}"'
-
-        field = kwargs.get("field", self._name_field)
-        query = query.format(field=field, name=name)
-
-        kwargs["query"] = query
-        kwargs["row_count_min"] = row_count_min
-        kwargs["row_count_max"] = row_count_max
-
-        only1 = row_count_min == 1 and row_count_max == 1
-        found = list(self.get(**kwargs))
-        return found[0] if only1 else found
+        kwargs.setdefault("field", self._name_field)
+        kwargs.setdefault("field_adapter", "generic")
+        kwargs["value"] = value
+        return self.get_by_field_value(**kwargs)
 
     def _get(self, query=None, fields=None, row_start=0, page_size=0):
         """Get a page for a given query.
