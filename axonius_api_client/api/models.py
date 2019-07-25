@@ -480,6 +480,20 @@ class UserDeviceBase(object):
             params["filter"] = query
         return self._request(method="get", path=self._router.count, params=params)
 
+    def get_by_saved_query(self, name, page_size=constants.DEFAULT_PAGE_SIZE):
+        """Pass.
+
+        Future: Flush out.
+        """
+        sq = self.get_saved_query_by_name(name=name, regex=False, only1=True)
+        return list(
+            self.get(
+                query=sq["view"]["query"]["filter"],
+                page_size=page_size,
+                manual_fields=sq["view"]["fields"],
+            )
+        )
+
     def get(
         self,
         query=None,
@@ -488,6 +502,7 @@ class UserDeviceBase(object):
         row_count_min=None,
         row_count_max=None,
         default_fields=True,
+        manual_fields=None,
         **fields
     ):
         """Get objects for a given query using paging.
@@ -546,8 +561,13 @@ class UserDeviceBase(object):
             for k, v in self._default_fields.items():
                 fields.setdefault(k, v)
 
-        known_fields = self.get_fields()
-        validated_fields = utils.validate_fields(known_fields=known_fields, **fields)
+        if manual_fields:
+            validated_fields = manual_fields
+        else:
+            known_fields = self.get_fields()
+            validated_fields = utils.validate_fields(
+                known_fields=known_fields, **fields
+            )
 
         row_count_seen = 0
         page_count_seen = 0
@@ -730,7 +750,7 @@ class UserDeviceBase(object):
         return self._request(method="delete", path=self._router.views, json=data)
 
     # FUTURE: needs tests
-    def _add_labels(self, labels, ids, query=None):
+    def _add_labels(self, labels, ids):
         """Add labels to object IDs.
 
         Args:
@@ -750,7 +770,7 @@ class UserDeviceBase(object):
         return self._request(method="post", path=self._router.labels, json=data)
 
     # FUTURE: needs tests
-    def _delete_labels(self, labels, ids, query=None):
+    def _delete_labels(self, labels, ids):
         """Delete labels from object IDs.
 
         Args:

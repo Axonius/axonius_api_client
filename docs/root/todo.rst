@@ -14,6 +14,7 @@ Sprint schedule is every 3 weeks. Look for FUTURE for todo items.
 =============================================
 * :blue:`api`: api.Adapters flush out.
 * :green:`docs`: Add API examples.
+* :blue:`api`: skip fields on error arg
 
 1.0.3
 =============================================

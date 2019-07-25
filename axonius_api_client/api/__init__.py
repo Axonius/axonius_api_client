@@ -124,6 +124,9 @@ class Devices(models.ApiBase, models.UserDeviceBase):
         kwargs["value"] = value
         return self.get_by_field_value(**kwargs)
 
+    # TODO: get_by_ip
+    # TODO: get_by_in_subnet
+    # TODO: get_by_not_in_subnet
     def get_by_mac(self, value, **kwargs):
         """Get objects by MAC using paging.
 
