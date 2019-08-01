@@ -26,6 +26,9 @@ __author_email__ = "apiclient@axonius.com"
 __description__ = "Axonius API client for Python"
 """:obj:`str`: Description of package."""
 
+__docs__ = "https://axonius-api-client.readthedocs.io/en/latest/?"
+""":obj:`str`: Link to the documentation for this package."""
+
 __license__ = "MIT"
 """:obj:`str`: License of package."""
 
