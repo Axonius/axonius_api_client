@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Test suite for axonius_api_client.auth."""
+"""Test suite for axonius_api_client.api.interfaces.Users."""
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -9,14 +9,14 @@ import pytest
 import requests
 import six
 
-import axonius_api_client
+import axonius_api_client as axonapi
 
 
 @pytest.mark.needs_url
 @pytest.mark.needs_any_creds
 @pytest.mark.parametrize("creds", ["creds_user", "creds_key"], indirect=True)
 class TestUsers(object):
-    """Test axonius_api_client.api.Users."""
+    """Test axonius_api_client.api.interfaces.Users."""
 
     @pytest.fixture(scope="session")
     def api_client(self, api_url, creds):
@@ -25,16 +25,16 @@ class TestUsers(object):
         creds = {k: v for k, v in creds.items() if k != "cls"}
         if not any(list(creds.values())):
             pytest.skip("No credentials provided for {}: {}".format(auth_cls, creds))
-        http_client = axonius_api_client.http.HttpClient(url=api_url)
+        http_client = axonapi.HttpClient(url=api_url)
         auth = auth_cls(http_client=http_client, **creds)
         auth.login()
-        api_client = axonius_api_client.api.Users(auth=auth)
+        api_client = axonapi.Users(auth=auth)
         return api_client
 
     def test__request_json(self, api_client):
         """Test that JSON is returned when is_json=True."""
         response = api_client._request(
-            path=axonius_api_client.api.routers.ApiV1.users.count,
+            path=axonapi.api.routers.ApiV1.users.count,
             method="get",
             raw=False,
             is_json=True,
@@ -46,7 +46,7 @@ class TestUsers(object):
     def test__request_raw(self, api_client):
         """Test that response obj is returned when raw=True."""
         response = api_client._request(
-            path=axonius_api_client.api.routers.ApiV1.users.count,
+            path=axonapi.api.routers.ApiV1.users.count,
             method="get",
             raw=True,
             is_json=True,
@@ -57,7 +57,7 @@ class TestUsers(object):
     def test__request_text(self, api_client):
         """Test that str is returned when raw=False and is_json=False."""
         response = api_client._request(
-            path=axonius_api_client.api.routers.ApiV1.users.count,
+            path=axonapi.api.routers.ApiV1.users.count,
             method="get",
             raw=False,
             is_json=False,
@@ -71,10 +71,10 @@ class TestUsers(object):
         creds = {k: v for k, v in creds.items() if k != "cls"}
         if not any(list(creds.values())):
             pytest.skip("No credentials provided for {}: {}".format(auth_cls, creds))
-        http_client = axonius_api_client.http.HttpClient(url=api_url)
+        http_client = axonapi.HttpClient(url=api_url)
         auth = auth_cls(http_client=http_client, **creds)
-        with pytest.raises(axonius_api_client.auth.exceptions.NotLoggedIn):
-            axonius_api_client.api.Users(auth=auth)
+        with pytest.raises(axonapi.NotLoggedIn):
+            axonapi.Users(auth=auth)
 
     def test_str_repr(self, api_client):
         """Test str/repr has URL."""
@@ -164,22 +164,22 @@ class TestUsers(object):
 
     def test_get_by_name_invalid(self, api_client):
         """Test get_by_name with a valid host name."""
-        with pytest.raises(axonius_api_client.api.exceptions.ObjectNotFound):
+        with pytest.raises(axonapi.ObjectNotFound):
             api_client.get_by_name(value="this_should_not_exist_yo")
 
     def test_get_min_max_1_notfound(self, api_client):
         """Test get_by_name with a valid host name."""
-        with pytest.raises(axonius_api_client.api.exceptions.ObjectNotFound):
+        with pytest.raises(axonapi.ObjectNotFound):
             list(api_client.get(row_count_min=1, row_count_max=1))
 
     def test_get_min_toofew(self, api_client):
         """Test get_by_name with a valid host name."""
-        with pytest.raises(axonius_api_client.api.exceptions.TooFewObjectsFound):
+        with pytest.raises(axonapi.TooFewObjectsFound):
             list(api_client.get(row_count_min=9999999999))
 
     def test_get_min_toomany(self, api_client):
         """Test get_by_name with a valid host name."""
-        with pytest.raises(axonius_api_client.api.exceptions.TooManyObjectsFound):
+        with pytest.raises(axonapi.TooManyObjectsFound):
             list(api_client.get(row_count_max=0))
 
     def test_get_by_id_valid(self, api_client):
@@ -192,7 +192,7 @@ class TestUsers(object):
 
     def test_get_by_id_invalid(self, api_client):
         """Test get_by_id with an invalid row id."""
-        with pytest.raises(axonius_api_client.api.exceptions.ObjectNotFound):
+        with pytest.raises(axonapi.ObjectNotFound):
             api_client.get_by_id(id="this_wont_work_yo")
 
     def test_get_count(self, api_client):
@@ -223,7 +223,7 @@ class TestUsers(object):
 
     def test_get_saved_query_by_name_invalid(self, api_client):
         """Test get_saved_query_by_name."""
-        with pytest.raises(axonius_api_client.api.exceptions.ObjectNotFound):
+        with pytest.raises(axonapi.ObjectNotFound):
             api_client.get_saved_query_by_name(name="this_wont_exist_yo", regex=False)
 
     @pytest.fixture

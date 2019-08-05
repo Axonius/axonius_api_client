@@ -1,8 +1,7 @@
-axonius_api_client.api package
+axonius_api_client.tools package
 ===========================================================
 
 .. toctree::
 
-    interfaces.rst
-    routers.rst
+    log.rst
     utils.rst

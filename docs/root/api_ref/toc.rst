@@ -7,3 +7,4 @@ API Reference
     api/toc.rst
     auth/toc.rst
     http/toc.rst
+    tools/toc.rst

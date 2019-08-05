@@ -1,10 +1,10 @@
 PACKAGE := "axonius_api_client"
 VERSION := $(shell grep __version__ $(PACKAGE)/version.py | cut -d\" -f2)
 
-# FUTURE: write Makefile doc
-# FUTURE: add check that only master branch can publish / git tag
-
 .PHONY: build docs
+
+help:
+	@cat Makefile.help
 
 init:
 	$(MAKE) pip_install_tools
@@ -26,9 +26,6 @@ pipenv_install_build:
 
 pipenv_install_docs:
 	pipenv run pip install --quiet --upgrade --requirement docs/requirements.txt
-
-pipenv_clean:
-	pipenv --rm || true
 
 pipenv_init:
 	pipenv install --dev --skip-lock
@@ -53,12 +50,14 @@ test_debug:
 	$(MAKE) pipenv_install_dev
 	pipenv run pytest -rA --capture=no --showlocals --log-cli-level=DEBUG --verbose --exitfirst $(PACKAGE)/tests
 
-test_clean:
-	rm -rf .egg .eggs junit-report.xml cov_html .tox .pytest_cache .coverage
-
 docs:
 	$(MAKE) pipenv_install_docs
-	(cd docs && pipenv run make html SPHINXOPTS="-na" && cd ..)
+	(cd docs && pipenv run make html SPHINXOPTS="-Wna" && cd ..)
+
+docs_dev:
+	(cd docs && pipenv run make html SPHINXOPTS="-Wnv" && cd ..)
+
+make docs_open:
 	open docs/_build/html/index.html
 
 docs_coverage:
@@ -71,10 +70,6 @@ docs_linkcheck:
 	(cd docs && pipenv run make linkcheck && cd ..)
 	cat docs/_build/linkcheck/output.txt
 
-docs_clean:
-	$(MAKE) pipenv_install_docs
-	(cd docs && pipenv run make clean && cd ..)
-
 git_check:
 	@git diff-index --quiet HEAD && echo "*** REPO IS CLEAN" || (echo "!!! REPO IS DIRTY"; false)
 	@git tag | grep "$(VERSION)" && echo "*** FOUND TAG: $(VERSION)" || (echo "!!! NO TAG FOUND: $(VERSION)"; false)
@@ -84,14 +79,16 @@ git_tag:
 	@git push --tags
 	@echo "*** ADDED TAG: $(VERSION)"
 
-publish:
+pkg_publish:
+	# FUTURE: add check that only master branch can publish / git tag
+	# FUTURE: add cov_publish
 	$(MAKE) lint
-	$(MAKE) build
+	$(MAKE) pkg_build
 	$(MAKE) git_check
 	pipenv run twine upload dist/*
 
-build:
-	$(MAKE) build_clean
+pkg_build:
+	$(MAKE) clean_build
 	$(MAKE) pipenv_install_build
 
 	@echo "*** Building Source and Wheel (universal) distribution"
@@ -100,18 +97,27 @@ build:
 	@echo "*** Checking package with twine"
 	pipenv run twine check dist/*
 
-build_clean:
+clean_build:
 	rm -rf build dist *.egg-info
-
 
 clean_files:
 	find . -type d -name "__pycache__" | xargs rm -rf
 	find . -type f -name ".DS_Store" | xargs rm -f
 	find . -type f -name "*.pyc" | xargs rm -f
 
+clean_tests:
+	rm -rf .egg .eggs junit-report.xml cov_html .tox .pytest_cache .coverage
+
+clean_docs:
+	$(MAKE) pipenv_install_docs
+	(cd docs && pipenv run make clean && cd ..)
+
+clean_pipenv:
+	pipenv --rm || true
+
 clean:
 	$(MAKE) clean_files
-	$(MAKE) build_clean
-	$(MAKE) test_clean
-	$(MAKE) docs_clean
-	$(MAKE) pipenv_clean
+	$(MAKE) clean_build
+	$(MAKE) clean_tests
+	$(MAKE) clean_docs
+	$(MAKE) clean_pipenv

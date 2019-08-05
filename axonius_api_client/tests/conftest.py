@@ -8,9 +8,12 @@ from __future__ import unicode_literals
 import re
 import os
 
+import dotenv
 import pytest
 
-import axonius_api_client
+import axonius_api_client as axonapi
+
+dotenv.load_dotenv()
 
 AX_URL = os.environ.get("AX_URL", None) or None
 AX_USERNAME = os.environ.get("AX_USERNAME", None) or None
@@ -128,9 +131,7 @@ def api_url(request):
     """Fixture for getting API URL."""
     url = request.config.getoption("--url")
     if url:
-        parsed_url = axonius_api_client.http.urlparser.UrlParser(
-            url=url, default_scheme="https"
-        )
+        parsed_url = axonapi.UrlParser(url=url, default_scheme="https")
         url = parsed_url.url
     return url
 
@@ -139,7 +140,7 @@ def api_url(request):
 def creds_user(request):
     """Fixture for getting username/password creds."""
     return {
-        "cls": axonius_api_client.auth.AuthUser,
+        "cls": axonapi.AuthUser,
         "username": request.config.getoption("--username"),
         "password": request.config.getoption("--password"),
     }
@@ -149,7 +150,7 @@ def creds_user(request):
 def creds_key(request):
     """Fixture for getting key/secret creds."""
     return {
-        "cls": axonius_api_client.auth.AuthKey,
+        "cls": axonapi.AuthKey,
         "key": request.config.getoption("--key"),
         "secret": request.config.getoption("--secret"),
     }

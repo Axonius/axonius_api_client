@@ -1,7 +1,7 @@
-axonius_api_client.http.urlparser
+axonius_api_client.tools.log
 ===========================================================
 
-.. automodule:: axonius_api_client.http.urlparser
+.. automodule:: axonius_api_client.tools.log
     :members:
     :special-members:
     :private-members:

@@ -1,7 +1,7 @@
-axonius_api_client.auth.exceptions
+axonius_api_client.http.interfaces
 ===========================================================
 
-.. automodule:: axonius_api_client.auth.exceptions
+.. automodule:: axonius_api_client.http.interfaces
     :members:
     :special-members:
     :private-members:

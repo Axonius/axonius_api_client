@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Axonius API Client package."""
+"""Axonius API Client utility tools module."""
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -8,6 +8,16 @@ from __future__ import unicode_literals
 import json
 
 import six
+
+if six.PY2:
+    import pathlib2 as pathlib  # pragma: no cover
+else:
+    import pathlib
+
+
+def resolve_path(path):
+    """Pass."""
+    return pathlib.Path(path).absolute().resolve()
 
 
 def urljoin(url, *parts):

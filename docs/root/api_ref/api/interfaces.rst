@@ -1,7 +1,7 @@
-axonius_api_client.tools
+axonius_api_client.api.interfaces
 ===========================================================
 
-.. automodule:: axonius_api_client.tools
+.. automodule:: axonius_api_client.api.interfaces
     :members:
     :special-members:
     :private-members:

@@ -313,7 +313,7 @@ autodoc_default_options = {
 intersphinx_mapping = {
     "python": ("http://docs.python.org/3", None),
     # FUTURE: requests doc site down for now, re-enable later
-    # "requests": ("http://docs.python-requests.org/en/master/", None),
+    "requests": ("https://2.python-requests.org//en/master/", None),
     "urllib3": ("https://urllib3.readthedocs.io/en/latest/", None),
 }
 

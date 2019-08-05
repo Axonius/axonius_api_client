@@ -7,7 +7,7 @@ from __future__ import unicode_literals
 
 import six
 
-from . import exceptions
+from .. import exceptions
 
 
 class UrlParser(object):

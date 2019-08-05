@@ -7,9 +7,7 @@ from __future__ import unicode_literals
 
 import logging
 
-from . import exceptions
-from .. import tools
-from .. import constants
+from .. import exceptions, tools, constants
 
 LOG = logging.getLogger(__name__)
 
@@ -63,7 +61,8 @@ def find_field(name, adapter, fields=None):
             Name of adapter to look for field in.
             If 'generic' look for the field in generic fields.
         fields (:obj:`dict`, optional):
-            Return from :meth:`axonius_api_client.api.models.UserDeviceBase.get_fields`.
+            Return from
+            :meth:`axonius_api_client.api.interfaces.UserDeviceModel.get_fields`.
 
             Defaults to: None.
 
@@ -135,7 +134,7 @@ def validate_fields(known_fields, **fields):
     Args:
         known_fields (:obj:`dict`):
             Known fields from
-            :meth:`axonius_api_client.api.models.UserDeviceBase.get_fields`.
+            :meth:`axonius_api_client.api.interfaces.UserDeviceModel.get_fields`.
         **fields: Fields to validate.
             * generic=['f1', 'f2'] for generic fields.
             * adapter=['f1', 'f2'] for adapter specific fields.
