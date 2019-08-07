@@ -10,7 +10,7 @@ import os
 import click
 
 from ..tools import utils
-from . import context, cmd_fields
+from . import context, cmd_object_fields
 
 AX_DOTENV = os.environ.get("AX_DOTENV", "")
 CWD_PATH = utils.resolve_path(os.getcwd())
@@ -39,10 +39,15 @@ def users(ctx):
     return ctx
 
 
-# cli.add_command(devices)
-# cli.add_command(users)
-devices.add_command(cmd_fields.cmd)
-users.add_command(cmd_fields.cmd)
+@cli.group()
+@context.pass_context
+def adapters(ctx):
+    """Work with adapter objects."""
+    return ctx
+
+
+devices.add_command(cmd_object_fields.cmd)
+users.add_command(cmd_object_fields.cmd)
 
 
 def main(*args, **kwargs):

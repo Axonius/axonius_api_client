@@ -5,7 +5,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
-from .utils import UrlParser
-from .interfaces import HttpClient
+from .parser import UrlParser
+from .client import HttpClient
 
 __all__ = ("UrlParser", "HttpClient")

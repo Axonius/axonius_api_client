@@ -1,0 +1,262 @@
+{
+    "clients": [
+        {
+            "client_config": {
+                "dc_name": "TestDomain.test",
+                "dns_server_address": "10.0.236.211",
+                "password": ["unchanged"],
+                "use_ssl": "Unencrypted",
+                "user": "TestDomain\\Administrator",
+            },
+            "client_id": "TestDomain.test",
+            "date_fetched": "2019-08-02 18:19:02+00:00",
+            "error": "Error: Invalid server address.",
+            "node_id": "c5040e2539984bcba2e9b2e3733b5324",
+            "status": "error",
+            "uuid": "5d447e96347b941f129aee43",
+        }
+    ],
+    "config": {
+        "ActiveDirectoryAdapter": {
+            "config": {
+                "add_ip_conflict": False,
+                "fetch_users_image": True,
+                "ldap_connection_timeout": 10,
+                "ldap_field_to_exclude": [],
+                "ldap_page_size": 900,
+                "ldap_recieve_timeout": 120,
+                "report_generation_interval": 30,
+                "resolving_enabled": True,
+                "should_get_nested_groups_for_user": True,
+                "sync_resolving": False,
+                "verbose_auth_notifications": False,
+            },
+            "schema": {
+                "items": [
+                    {
+                        "name": "resolving_enabled",
+                        "title": "Enable IP Resolving",
+                        "type": "bool",
+                    },
+                    {
+                        "name": "sync_resolving",
+                        "title": "Wait for DNS resolving",
+                        "type": "bool",
+                    },
+                    {
+                        "name": "verbose_auth_notifications",
+                        "title": "Show verbose notifications about connection failures",
+                        "type": "bool",
+                    },
+                    {
+                        "name": "report_generation_interval",
+                        "title": "Report Generation Interval (Minutes)",
+                        "type": "number",
+                    },
+                    {
+                        "name": "fetch_users_image",
+                        "title": "Fetch Users Image",
+                        "type": "bool",
+                    },
+                    {
+                        "name": "should_get_nested_groups_for_user",
+                        "title": "Get nested group membership for each user",
+                        "type": "bool",
+                    },
+                    {
+                        "name": "add_ip_conflict",
+                        "title": "Should Add IP Conflict Tags",
+                        "type": "bool",
+                    },
+                    {
+                        "name": "ldap_page_size",
+                        "title": "LDAP pagination (entries per page)",
+                        "type": "number",
+                    },
+                    {
+                        "name": "ldap_connection_timeout",
+                        "title": "LDAP socket connection timeout (seconds)",
+                        "type": "number",
+                    },
+                    {
+                        "name": "ldap_recieve_timeout",
+                        "title": "LDAP socket receive timeout (seconds)",
+                        "type": "number",
+                    },
+                    {
+                        "items": {"type": "string"},
+                        "name": "ldap_field_to_exclude",
+                        "title": "Devices to exclude by objectCategory",
+                        "type": "array",
+                    },
+                ],
+                "pretty_name": "Active Directory Configuration",
+                "required": [
+                    "resolving_enabled",
+                    "sync_resolving",
+                    "report_generation_interval",
+                    "fetch_users_image",
+                    "should_get_nested_groups_for_user",
+                    "ldap_page_size",
+                    "add_ip_conflict",
+                    "ldap_connection_timeout",
+                    "ldap_recieve_timeout",
+                    "verbose_auth_notifications",
+                ],
+                "type": "array",
+            },
+        },
+        "AdapterBase": {
+            "config": {
+                "connect_client_timeout": 300,
+                "fetching_timeout": 5400,
+                "last_fetched_threshold_hours": 48,
+                "last_seen_prioritized": True,
+                "last_seen_threshold_hours": None,
+                "minimum_time_until_next_fetch": None,
+                "realtime_adapter": False,
+                "user_last_fetched_threshold_hours": None,
+                "user_last_seen_threshold_hours": 43800,
+            },
+            "schema": {
+                "items": [
+                    {
+                        "name": "last_seen_threshold_hours",
+                        "title": "Do not fetch device if not seen by source in last X hours",
+                        "type": "number",
+                    },
+                    {
+                        "name": "last_fetched_threshold_hours",
+                        "title": "Delete device if not fetched from source in last X hours",
+                        "type": "number",
+                    },
+                    {
+                        "name": "user_last_seen_threshold_hours",
+                        "title": "Do not fetch user if not seen by source in last X hours",
+                        "type": "number",
+                    },
+                    {
+                        "name": "user_last_fetched_threshold_hours",
+                        "title": "Delete user if not fetched from source in last X hours",
+                        "type": "number",
+                    },
+                    {
+                        "name": "minimum_time_until_next_fetch",
+                        "title": "Minimum hours to wait before next discovery cycle for this adapter",
+                        "type": "number",
+                    },
+                    {
+                        "name": "connect_client_timeout",
+                        "title": "Adapter server connection timeout in seconds",
+                        "type": "number",
+                    },
+                    {
+                        "name": "fetching_timeout",
+                        "title": "Entity fetching timeout in seconds",
+                        "type": "number",
+                    },
+                    {
+                        "name": "last_seen_prioritized",
+                        "title": "Discard entity data if 'Last Seen' fetched is older than 'Last Seen' saved",
+                        "type": "bool",
+                    },
+                    {
+                        "name": "realtime_adapter",
+                        "title": "Run as a real-time adapter",
+                        "type": "bool",
+                    },
+                ],
+                "pretty_name": "Adapter Configuration",
+                "required": [],
+                "type": "array",
+            },
+        },
+    },
+    "node_id": "c5040e2539984bcba2e9b2e3733b5324",
+    "node_name": "Master",
+    "schema": {
+        "items": [
+            {"name": "dc_name", "title": "DC Address", "type": "string"},
+            {
+                "name": "user",
+                "title": "Username (DOMAIN\\USERNAME)",
+                "type": "string",
+            },
+            {
+                "format": "password",
+                "name": "password",
+                "title": "Password",
+                "type": "string",
+            },
+            {
+                "name": "dns_server_address",
+                "title": "DNS Server Address",
+                "type": "string",
+            },
+            {
+                "description": "Alternative DNS suffix to append to hosts for ip resolving",
+                "name": "alternative_dns_suffix",
+                "title": "Alternative DNS suffix",
+                "type": "string",
+            },
+            {
+                "default": "Unencrypted",
+                "enum": ["Unencrypted", "Verified", "Unverified"],
+                "name": "use_ssl",
+                "title": "Use SSL for connection",
+                "type": "string",
+            },
+            {
+                "description": "The binary contents of the ca_file",
+                "name": "ca_file",
+                "title": "CA File",
+                "type": "file",
+            },
+            {
+                "description": "The binary contents of the cert_file",
+                "name": "cert_file",
+                "title": "Certificate File",
+                "type": "file",
+            },
+            {
+                "description": "The binary contents of the private_key",
+                "name": "private_key",
+                "title": "Private Key File",
+                "type": "file",
+            },
+            {
+                "name": "fetch_disabled_devices",
+                "title": "Fetch Disabled Devices",
+                "type": "bool",
+            },
+            {
+                "name": "fetch_disabled_users",
+                "title": "Fetch Disabled Users",
+                "type": "bool",
+            },
+            {
+                "name": "is_ad_gc",
+                "title": "Connect to Global Catalog (GC)",
+                "type": "bool",
+            },
+            {
+                "description": "List of OU names to fetch entities from",
+                "items": {"type": "string"},
+                "name": "ldap_ou_whitelist",
+                "title": "Organizational units whitelist",
+                "type": "array",
+            },
+        ],
+        "required": ["dc_name", "user", "domain_name", "password"],
+        "type": "array",
+    },
+    "status": "warning",
+    "supported_features": [
+        "Plugin",
+        "Userdisabelable",
+        "Triggerable",
+        "Devicedisabelable",
+        "Adapter",
+    ],
+    "unique_plugin_name": "active_directory_adapter_0",
+}

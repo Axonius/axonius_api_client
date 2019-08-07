@@ -36,19 +36,24 @@ from . import context
 @click.option(
     "--trim/--no-trim",
     default=True,
-    help="Remove '_adapter' from adapters and adapters_data.adapter. from fields",
+    help=(
+        "Remove '_adapter' from adapter names and "
+        "remove 'adapters_data.adapter.' from field names."
+    ),
     is_flag=True,
     show_envvar=True,
     show_default=True,
 )
 def cmd(clickctx, ctx, adapter_re, field_re, trim, **kwargs):
-    """Pass."""
+    """Get the fields (columns) for all adapters."""
     for k, v in kwargs.items():
         setattr(ctx, k, v)
+    ctx.clickctx = clickctx
 
-    client = ctx.client()
-    api = clickctx.parent.command.name
-    api = getattr(client, api)
+    client = ctx.start_client()
+
+    api = getattr(client, clickctx.parent.command.name)
+
     data = run(ctx=ctx, api=api, adapter_re=adapter_re, field_re=field_re, trim=trim)
 
     ctx.export(data=data)

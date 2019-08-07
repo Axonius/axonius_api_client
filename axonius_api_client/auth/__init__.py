@@ -5,6 +5,8 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
-from .interfaces import AuthUser, AuthKey
+from .auth_key import AuthKey
+from .auth_user import AuthUser
+from .mixins import AuthMixins
 
-__all__ = ("AuthUser", "AuthKey")
+__all__ = ("AuthUser", "AuthKey", "AuthMixins")

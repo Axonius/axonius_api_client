@@ -10,7 +10,7 @@ import logging
 
 import requests
 
-from . import utils
+from . import parser
 from .. import constants, tools, version
 
 LOG = logging.getLogger(__name__)
@@ -38,7 +38,7 @@ class HttpClient(object):
         """Constructor.
 
         Args:
-            url (:obj:`str` or :obj:`axonius_api_client.http.utils.UrlParser`):
+            url (:obj:`str` or :obj:`axonius_api_client.http.parser.UrlParser`):
                 Axonius API URL.
             connect_timeout (:obj:`int`, optional):
                 Seconds to wait for connection to url to open.
@@ -96,10 +96,10 @@ class HttpClient(object):
         """:obj:`logging.Logger`: Logger for this object."""
         tools.log_level_set(obj=self._log, level=log_level)
 
-        if isinstance(url, utils.UrlParser):
+        if isinstance(url, parser.UrlParser):
             url = url.url
         else:
-            parsed_url = utils.UrlParser(url=url, default_scheme="https")
+            parsed_url = parser.UrlParser(url=url, default_scheme="https")
             url = parsed_url.url
 
         self.url = url

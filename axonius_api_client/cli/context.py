@@ -159,6 +159,7 @@ def common_options(func):
         show_envvar=True,
         show_default=True,
     )
+    # FUTURE: error if os.path.sep in value
     @click.option(
         "--export-file",
         default=DEFAULTS["export_file"],
@@ -309,7 +310,7 @@ class Context(object):
         # warnings suck.
         warnings.simplefilter("ignore", SSLWARN_CLS)
 
-    def client(self):
+    def start_client(self):
         """Pass."""
         if not getattr(self, "obj", None):
             try:
