@@ -9,11 +9,11 @@ import os
 
 import click
 
-from ..tools import utils
-from . import context, cmd_object_fields
+from . import context, cmd_object_fields, cmd_shell
+from .. import tools
 
 AX_DOTENV = os.environ.get("AX_DOTENV", "")
-CWD_PATH = utils.resolve_path(os.getcwd())
+CWD_PATH = tools.resolve_path(os.getcwd())
 
 
 # FUTURE: prompt does not use CR when re-prompting on empty var with hide_input=False
@@ -46,6 +46,7 @@ def adapters(ctx):
     return ctx
 
 
+cli.add_command(cmd_shell.shell)
 devices.add_command(cmd_object_fields.cmd)
 users.add_command(cmd_object_fields.cmd)
 

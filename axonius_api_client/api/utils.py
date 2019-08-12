@@ -12,22 +12,22 @@ from .. import exceptions, tools, constants
 LOG = logging.getLogger(__name__)
 
 
-def find_adapter(name, known_names=None):
+def find_adapter(name, known=None):
     """Find an adapter by name.
 
     Args:
         name (:obj:`str`):
             Name of adapter to find.
-        known_names (:obj:`list` of :obj:`str`, optional):
+        known (:obj:`list` of :obj:`str`, optional):
             List of known adapter names.
 
             Defaults to: None.
 
     Notes:
-        If known_names is None, this will just ensure name ends with '_adapter'.
+        If known is None, this will just ensure name ends with '_adapter'.
 
     Raises:
-        :exc:`exceptions.UnknownAdapterName`: If name can not be found in known_names.
+        :exc:`exceptions.UnknownError`: If name can not be found in known.
 
     Returns:
         :obj:`str`
@@ -36,13 +36,18 @@ def find_adapter(name, known_names=None):
     postfix = "_adapter"
     name = name if name.endswith(postfix) else name + postfix
 
-    if not known_names:
+    if not known:
         found = name
-    elif name in known_names:
-        found = known_names[known_names.index(name)]
+    elif name in known:
+        found = known[known.index(name)]
     else:
-        known_names = tools.rstrip(obj=known_names, postfix=postfix)
-        raise exceptions.UnknownAdapterName(name=name, known_names=known_names)
+        known = tools.rstrip(obj=known, postfix=postfix)
+        raise exceptions.UnknownError(
+            value=name,
+            known=known,
+            reason_msg="adapter by name",
+            valid_msg="adapter names",
+        )
 
     msg = "Resolved adapter name {name!r} to {found!r}"
     msg = msg.format(name=name, found=found)
@@ -78,7 +83,7 @@ def find_field(name, adapter, fields=None):
         If name in "all" or prefix, returns prefix.
 
     Raises:
-        :exc:`exceptions.UnknownFieldName`:
+        :exc:`exceptions.UnknownError`:
             If fields is not None and name can not be found in fields.
 
     Returns:
@@ -90,7 +95,7 @@ def find_field(name, adapter, fields=None):
         container = fields["generic"] if fields else None
     else:
         known_adapters = list(fields["specific"].keys()) if fields else None
-        adapter = find_adapter(name=adapter, known_names=known_adapters)
+        adapter = find_adapter(name=adapter, known=known_adapters)
         prefix = constants.ADAPTER_FIELD_PREFIX.format(adapter_name=adapter)
         container = fields["specific"][adapter] if fields else None
 
@@ -104,21 +109,24 @@ def find_field(name, adapter, fields=None):
     if not container:
         found = name if name in ["adapters", "labels"] else fq_name
     else:
-        known_names = [x["name"] for x in container]
+        known = [x["name"] for x in container]
 
         for check in [name, fq_name]:
             if check in ["all", prefix]:
                 found = prefix
                 break
-            if check in known_names:
-                found = known_names[known_names.index(check)]
+            if check in known:
+                found = known[known.index(check)]
                 break
 
     if not found:
-        known_names = tools.lstrip(obj=known_names, prefix=prefix + ".")
-        known_names += ["all", prefix]
-        raise exceptions.UnknownFieldName(
-            name=name, known_names=known_names, adapter=adapter
+        known = tools.lstrip(obj=known, prefix=prefix + ".")
+        known += ["all", prefix]
+        raise exceptions.UnknownError(
+            value=name,
+            known=known,
+            reason_msg="adapter {adapter} by field".format(adapter=adapter),
+            valid_msg="field names",
         )
 
     msg = "Resolved {adapter!r} field name {name!r} to {found!r}"

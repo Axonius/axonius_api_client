@@ -71,7 +71,7 @@ class ResponseError(ApiError):
                 "url={r.url!r}",
             ]
 
-            txt = "({})".format(", ".join(txt).format(r=response))
+            txt = "({})".format(tools.csvjoin(txt).format(r=response))
             error = "{} Response details {}".format(error, txt)
 
         error = "{} (original exception: {})".format(error, exc) if exc else error
@@ -142,7 +142,7 @@ class TooFewObjectsFound(ApiError):
     """Error when too many objects found."""
 
     def __init__(
-        self, value, value_type, object_type, row_count_total, row_count_min, exc=None
+        self, value, value_type, object_type, count_total, count_min, exc=None
     ):
         """Constructor.
 
@@ -170,8 +170,8 @@ class TooFewObjectsFound(ApiError):
             val=value,
             val_type=value_type,
             obj_type=object_type,
-            tcnt=row_count_total,
-            tmin=row_count_min,
+            tcnt=count_total,
+            tmin=count_min,
         )
         msg = "{} -- original exception: {}".format(msg, exc) if exc else msg
 
@@ -182,7 +182,7 @@ class TooManyObjectsFound(ApiError):
     """Error when too many objects found."""
 
     def __init__(
-        self, value, value_type, object_type, row_count_total, row_count_max, exc=None
+        self, value, value_type, object_type, count_total, count_max, exc=None
     ):
         """Constructor.
 
@@ -210,67 +210,31 @@ class TooManyObjectsFound(ApiError):
             val=value,
             val_type=value_type,
             obj_type=object_type,
-            tcnt=row_count_total,
-            tmax=row_count_max,
+            tcnt=count_total,
+            tmax=count_max,
         )
         msg = "{} -- original exception: {}".format(msg, exc) if exc else msg
 
         super(TooManyObjectsFound, self).__init__(msg)
 
 
-class UnknownAdapterName(ApiError):
-    """Error when unable to find an adapter name."""
+class UnknownError(ApiError):
+    """Pass."""
 
-    def __init__(self, name, known_names):
-        """Constructor.
+    def __init__(self, value, known, reason_msg, valid_msg, **kwargs):
+        """Constructor."""
+        self.value = value
+        self.known = known
+        self.kwargs = kwargs
 
-        Args:
-            name (:obj:`str`):
-                Name of adapter that was not found.
-            known_names (:obj:`list` of :obj:`str`):
-                Names of adapters that exist.
+        reason = "Unable to find {reason_msg} {v!r}"
+        self.reason = reason.format(reason_msg=reason_msg, v=value)
 
-        """
-        self.name = name
-        """:obj:`str`: Name of adapter that was not found."""
-
-        self.known_names = known_names
-        """:obj:`list` of :obj:`str`: Names of adapters that exist."""
-
-        msg = "Unable to find adapter {name!r}, valid adapters: {names}"
-        msg = msg.format(name=name, names=known_names)
-
-        super(UnknownAdapterName, self).__init__(msg)
-
-
-class UnknownFieldName(ApiError):
-    """Error when unable to find a generic or adapter field name."""
-
-    def __init__(self, name, adapter, known_names):
-        """Constructor.
-
-        Args:
-            name (:obj:`str`):
-                Name of field that was not found.
-            adapter (:obj:`str`):
-                Name of adapter that field was being looked for.
-            known_names (:obj:`list` of :obj:`str`):
-                Names of fields that exist.
-
-        """
-        self.name = name
-        """:obj:`str`: Name of field that was not found."""
-
-        self.known_names = known_names
-        """:obj:`list` of :obj:`str`: Names of fields that exist."""
-
-        self.adapter = adapter
-        """:obj:`str`: Name of adapter that field was being looked for."""
-
-        msg = "Unable to find {adapter} field {field!r}, valid fields: {names}"
-        msg = msg.format(adapter=adapter, field=name, names=known_names)
-
-        super(UnknownFieldName, self).__init__(msg)
+        msg = "{reason}, valid {valid_msg}: {valids}"
+        msg = msg.format(
+            reason=self.reason, valid_msg=valid_msg, valids=tools.crjoin(known)
+        )
+        super(UnknownError, self).__init__(msg)
 
 
 class InvalidCredentials(AuthError):

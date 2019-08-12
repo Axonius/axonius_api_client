@@ -11,7 +11,7 @@ import logging
 import requests
 
 from . import parser
-from .. import constants, tools, version
+from .. import constants, tools, version, logs
 
 LOG = logging.getLogger(__name__)
 
@@ -94,7 +94,7 @@ class HttpClient(object):
         """
         self._log = LOG.getChild(self.__class__.__name__)
         """:obj:`logging.Logger`: Logger for this object."""
-        tools.log_level_set(obj=self._log, level=log_level)
+        logs.set_level(obj=self._log, level=log_level)
 
         if isinstance(url, parser.UrlParser):
             url = url.url
@@ -160,7 +160,7 @@ class HttpClient(object):
             self.LOG_RESPONSE_ATTRS = []
 
         urllog = logging.getLogger("urllib3.connectionpool")
-        tools.log_level_set(obj=urllog, level=log_level_urllib)
+        logs.set_level(obj=urllog, level=log_level_urllib)
 
     def __call__(
         self,

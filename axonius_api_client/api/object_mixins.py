@@ -37,9 +37,7 @@ class UserDeviceMixins(object):
             :obj:`dict`
 
         """
-        if not getattr(self, "_fields", None):
-            self._fields = self._request(method="get", path=self._router.fields)
-        return self._fields
+        return self._request(method="get", path=self._router.fields)
 
     # FUTURE: needs tests
     def get_labels(self):
@@ -187,12 +185,12 @@ class UserDeviceMixins(object):
         for k, v in self._default_fields.items():
             fields.setdefault(k, v)
 
-        known_fields = self.get_fields()
-        validated_fields = utils.validate_fields(known_fields=known_fields, **fields)
+        known = self.get_fields()
+        validated_fields = utils.validate_fields(known=known, **fields)
 
         if sort_field:
             sort_field = utils.find_field(
-                name=sort_field, fields=known_fields, adapter=sort_adapter
+                name=sort_field, fields=known, adapter=sort_adapter
             )
 
         data = {}
@@ -365,8 +363,8 @@ class UserDeviceMixins(object):
         query=None,
         page_size=constants.DEFAULT_PAGE_SIZE,
         page_count=None,
-        row_count_min=None,
-        row_count_max=None,
+        count_min=None,
+        count_max=None,
         default_fields=True,
         manual_fields=None,
         **fields
@@ -395,9 +393,9 @@ class UserDeviceMixins(object):
             :obj:`dict`: each row found in 'assets' from return.
 
         """
-        row_count_total = self.get_count(query=query)
+        count_total = self.get_count(query=query)
 
-        if row_count_min == 1 and row_count_max == 1 and row_count_total != 1:
+        if count_min == 1 and count_max == 1 and count_total != 1:
             raise exceptions.ObjectNotFound(
                 value=query,
                 value_type="query",
@@ -405,22 +403,22 @@ class UserDeviceMixins(object):
                 exc=None,
             )
 
-        if row_count_min is not None and row_count_total < row_count_min:
+        if count_min is not None and count_total < count_min:
             raise exceptions.TooFewObjectsFound(
                 value=query,
                 value_type="query",
                 object_type=self._router._object_type,
-                row_count_total=row_count_total,
-                row_count_min=row_count_min,
+                count_total=count_total,
+                count_min=count_min,
             )
 
-        if row_count_max is not None and row_count_total > row_count_max:
+        if count_max is not None and count_total > count_max:
             raise exceptions.TooManyObjectsFound(
                 value=query,
                 value_type="query",
                 object_type=self._router._object_type,
-                row_count_total=row_count_total,
-                row_count_max=row_count_max,
+                count_total=count_total,
+                count_max=count_max,
             )
 
         if not fields and default_fields:
@@ -430,10 +428,8 @@ class UserDeviceMixins(object):
         if manual_fields:
             validated_fields = manual_fields
         else:
-            known_fields = self.get_fields()
-            validated_fields = utils.validate_fields(
-                known_fields=known_fields, **fields
-            )
+            known = self.get_fields()
+            validated_fields = utils.validate_fields(known=known, **fields)
 
         row_count_seen = 0
         page_count_seen = 0
@@ -442,7 +438,7 @@ class UserDeviceMixins(object):
             query=query,
             fields=validated_fields,
             row_start=0,
-            page_size=row_count_max if row_count_max else page_size,
+            page_size=count_max if count_max else page_size,
         )
 
         page_count_seen += 1
@@ -451,7 +447,7 @@ class UserDeviceMixins(object):
             row_count_seen += 1
             yield row
 
-        while not row_count_seen >= row_count_total:
+        while not row_count_seen >= count_total:
             if page_count is not None and page_count_seen >= page_count:
                 return
 
@@ -518,16 +514,16 @@ class UserDeviceMixins(object):
         else:
             query = '{field} == "{value}"'
 
-        known_fields = self.get_fields()
-        field = utils.find_field(name=field, fields=known_fields, adapter=field_adapter)
+        known = self.get_fields()
+        field = utils.find_field(name=field, fields=known, adapter=field_adapter)
 
-        kwargs.setdefault("row_count_min", 1)
-        kwargs.setdefault("row_count_max", 1)
+        kwargs.setdefault("count_min", 1)
+        kwargs.setdefault("count_max", 1)
         kwargs.setdefault("query", query.format(field=field, value=value))
 
         found = list(self.get(**kwargs))
 
-        only1 = kwargs["row_count_min"] == 1 and kwargs["row_count_max"] == 1
+        only1 = kwargs["count_min"] == 1 and kwargs["count_max"] == 1
 
         return found[0] if only1 else found
 

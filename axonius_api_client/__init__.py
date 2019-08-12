@@ -30,22 +30,21 @@ from .exceptions import (
     ObjectNotFound,
     TooFewObjectsFound,
     TooManyObjectsFound,
-    UnknownAdapterName,
-    UnknownFieldName,
+    UnknownError,
     InvalidCredentials,
     NotLoggedIn,
     AlreadyLoggedIn,
     HttpError,
     ConnectError,
 )
-from . import version, tools, constants, cli
+from . import version, tools, logs, constants, cli
 from .models import ApiModel, AuthModel
 from .connect import Connect
 
 __version__ = version.__version__
 
 LOG = logging.getLogger(__name__)
-tools.add_null(obj=LOG)
+logs.add_null(obj=LOG)
 
 __all__ = (
     # http
@@ -54,6 +53,7 @@ __all__ = (
     # misc
     "version",
     "tools",
+    "logs",
     "constants",
     "cli",
     # auth
@@ -73,8 +73,7 @@ __all__ = (
     "ObjectNotFound",
     "TooFewObjectsFound",
     "TooManyObjectsFound",
-    "UnknownAdapterName",
-    "UnknownFieldName",
+    "UnknownError",
     "InvalidCredentials",
     "NotLoggedIn",
     "AlreadyLoggedIn",

@@ -76,3 +76,23 @@ def json_pretty(text):
         text = text or ""
     text = (text or "").strip()
     return text
+
+
+def _join(obj, j, pre=""):
+    """Pass."""
+    if isinstance(obj, dict):
+        obj = list(obj.keys())
+    if isinstance(obj, str):
+        obj = [obj]
+    obj = [format(x) for x in obj]
+    return pre + j.join(obj)
+
+
+def crjoin(obj, j="\n  "):
+    """Pass."""
+    return _join(obj=obj, j=j, pre=j)
+
+
+def csvjoin(obj, j=", "):
+    """Pass."""
+    return _join(obj=obj, j=j)

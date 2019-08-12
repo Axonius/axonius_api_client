@@ -9,8 +9,8 @@ import re
 
 import click
 
-from ..tools import utils
 from . import context
+from .. import tools
 
 
 @click.command("fields", context_settings=context.CONTEXT_SETTINGS)
@@ -114,7 +114,7 @@ def find(ctx, api, adapter_re=".*", field_re=".*", trim=True):
         for field in raw_fields["generic"]:
             new_field = {}
             new_field.update(field)
-            new_field["name"] = utils.lstrip(new_field["name"], gen_pre)
+            new_field["name"] = tools.lstrip(new_field["name"], gen_pre)
             gen_fields.append(new_field)
         adapters.update({"generic": gen_fields})
     else:
@@ -125,14 +125,14 @@ def find(ctx, api, adapter_re=".*", field_re=".*", trim=True):
     for adapter, adapter_fields in adapters.items():
         field_trim = "adapters_data.{}.".format(adapter)
         if trim:
-            adapter = utils.rstrip(obj=adapter, postfix="_adapter")
+            adapter = tools.rstrip(obj=adapter, postfix="_adapter")
         if not adapter_rec.search(adapter):
             continue
 
         for adapter_field in adapter_fields:
             field_name = adapter_field["name"]
             if trim:
-                field_name = utils.lstrip(field_name, field_trim)
+                field_name = tools.lstrip(field_name, field_trim)
             if not field_rec.search(field_name):
                 continue
             raw_data[adapter] = raw_data.get(adapter, [])

@@ -11,7 +11,7 @@ import time
 
 import six as six
 
-from .. import exceptions, constants
+from . import exceptions, constants
 
 if six.PY2:
     import pathlib2 as pathlib  # pragma: no cover
@@ -19,17 +19,17 @@ else:
     import pathlib
 
 
-def log_gmtime():
+def gmtime():
     """Set the logging system to use GMT for time strings."""
     logging.Formatter.converter = time.gmtime
 
 
-def log_localtime():
+def localtime():
     """Set the logging system to use local time for time strings."""
     logging.Formatter.converter = time.localtime
 
 
-def log_level_set(obj, level):
+def set_level(obj, level):
     """Set a logger or handler to a log level.
 
     Args:
@@ -40,10 +40,10 @@ def log_level_set(obj, level):
 
     """
     if level:
-        obj.setLevel(getattr(logging, log_level_str(level=level)))
+        obj.setLevel(getattr(logging, str_level(level=level)))
 
 
-def log_level_str(level):
+def str_level(level):
     """Get a logging level in str format.
 
     Args:
@@ -138,7 +138,7 @@ def add_handler(obj, htype, level="debug", hname="", fmt=constants.LOG_FMT, **kw
         handler.setFormatter(logging.Formatter(fmt))
 
     if level:
-        log_level_set(obj=handler, level=level)
+        set_level(obj=handler, level=level)
 
     obj.addHandler(handler)
     return handler
