@@ -15,6 +15,7 @@ from .. import tools
 AX_DOTENV = os.environ.get("AX_DOTENV", "")
 CWD_PATH = tools.resolve_path(os.getcwd())
 
+# FUTURE: FIX ADAPTER BASE SETTINGS NOT GETTING VALUES
 
 # FUTURE: prompt does not use CR when re-prompting on empty var with hide_input=False
 # FUTURE: add doc links
