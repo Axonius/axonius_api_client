@@ -7,10 +7,8 @@ from __future__ import unicode_literals
 
 from .actions import Actions
 from .adapters import Adapters
-from .object_users import Users
-from .object_devices import Devices
+from .users_devices import Users, Devices, UserDeviceMixins
 from .enforcements import Enforcements
-from .object_mixins import UserDeviceMixins
 from .utils import find_adapter, find_field, validate_fields
 from . import routers
 

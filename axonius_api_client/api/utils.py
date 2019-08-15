@@ -136,11 +136,11 @@ def find_field(name, adapter, fields=None):
     return found
 
 
-def validate_fields(known_fields, **fields):
+def validate_fields(known, **fields):
     """Validate provided fields are valid.
 
     Args:
-        known_fields (:obj:`dict`):
+        known (:obj:`dict`):
             Known fields from
             :meth:`axonius_api_client.api.interfaces.UserDeviceModel.get_fields`.
         **fields: Fields to validate.
@@ -148,8 +148,8 @@ def validate_fields(known_fields, **fields):
             * adapter=['f1', 'f2'] for adapter specific fields.
 
     Notes:
-        This will try to use known_fields to validate the device
-        fields, but if known_fields is empty it will just ensure the fields are
+        This will try to use known to validate the device
+        fields, but if known is empty it will just ensure the fields are
         fully qualified.
 
         * generic=['field1'] => ['specific_data.data.field1']
@@ -165,7 +165,7 @@ def validate_fields(known_fields, **fields):
         if not isinstance(afields, (tuple, list)):
             continue
         for field in afields:
-            field = find_field(name=field, fields=known_fields, adapter=name)
+            field = find_field(name=field, fields=known, adapter=name)
             if field not in validated_fields:
                 validated_fields.append(field)
 

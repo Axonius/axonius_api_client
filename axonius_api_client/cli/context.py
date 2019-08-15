@@ -72,6 +72,10 @@ DEFAULTS = {
     "certwarn": True,
     "wraperror": True,
     "verbose": True,
+    "log_package": "debug",
+    "log_http": "debug",
+    "log_auth": "debug",
+    "log": "debug",
     "export_file": "",
     "export_path": format(CWD_PATH),
     "export_format": "json",
@@ -80,8 +84,10 @@ DEFAULTS = {
 
 REQUIRED = ["url", "key", "secret"]
 
+LOG_CHOICES = ["debug", "info", "warning", "error", "critical"]
 
-def common_options(func):
+
+def connect_options(func):
     """Combine commonly appearing @click.option decorators."""
     #
     @click.option(
@@ -110,6 +116,16 @@ def common_options(func):
         hide_input=True,
         show_envvar=True,
     )
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        return func(*args, **kwargs)
+
+    return wrapper
+
+
+def root_options(func):
+    """Combine commonly appearing @click.option decorators."""
+    #
     @click.option(
         "--proxy",
         default=DEFAULTS["proxy"],
@@ -159,6 +175,25 @@ def common_options(func):
         show_envvar=True,
         show_default=True,
     )
+    @click.option(
+        "--log-package",
+        default=DEFAULTS["log_package"],
+        help="Logging level to use for package logger.",
+        type=click.Choice(LOG_CHOICES),
+        show_envvar=True,
+        show_default=True,
+    )
+    @click.version_option(version.__version__)
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        return func(*args, **kwargs)
+
+    return wrapper
+
+
+def export_options(func):
+    """Combine commonly appearing @click.option decorators."""
+    #
     # FUTURE: error if os.path.sep in value
     @click.option(
         "--export-file",
@@ -191,7 +226,6 @@ def common_options(func):
         show_envvar=True,
         show_default=True,
     )
-    @click.version_option(version.__version__)
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
         return func(*args, **kwargs)
@@ -206,6 +240,7 @@ class Context(object):
 
     def __init__(self, **kwargs):
         """Pass."""
+        print(locals())
         self.kwargs = kwargs
         self.obj = None
         for k, v in DEFAULTS.items():
@@ -323,12 +358,6 @@ class Context(object):
                     certverify=self.certverify,
                     certwarn=self.certwarn,
                     wraperror=self.wraperror,
-                    verbose=self.verbose,
-                    export_file=self.export_file,
-                    export_path=self.export_path,
-                    export_format=self.export_format,
-                    export_overwrite=self.export_overwrite,
-                    **self.kwargs
                 )
             except Exception as exc:
                 if self.wraperror:

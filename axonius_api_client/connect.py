@@ -6,14 +6,11 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import datetime
-import logging
 import re
 
 import requests
 
 from . import api, auth, exceptions, http
-
-LOG = logging.getLogger(__name__)
 
 
 class Connect(object):
@@ -46,10 +43,9 @@ class Connect(object):
         **kwargs
     ):
         """Pass."""
-        self._log = LOG.getChild(self.__class__.__name__)
         self._started = False
         self._start_dt = None
-        self._client_args = {
+        self._http_args = {
             "url": url,
             "https_proxy": proxy,
             "certpath": certpath,
@@ -59,7 +55,8 @@ class Connect(object):
         self._auth_args = {"key": key, "secret": secret}
         self._wraperror = wraperror
         self._kwargs = kwargs
-        self._client = http.HttpClient(**self._client_args)
+        self._http = http.HttpClient(**self._http_args)
+        self._auth = auth.AuthKey(http_client=self._http, **self._auth_args)
 
     def start(self):
         """Pass."""
@@ -67,25 +64,24 @@ class Connect(object):
             return
 
         try:
-            self._auth = auth.AuthKey(http_client=self._client, **self._auth_args)
             self._auth.login()
         except Exception as exc:
             if not self._wraperror:
                 raise
 
-            msg_pre = "Unable to connect to {url!r}".format(url=self._client.url)
+            msg_pre = "Unable to connect to {url!r}".format(url=self._http.url)
 
             if isinstance(exc, requests.exceptions.ConnectTimeout):
                 msg = "{pre}: connection timed out after {t} seconds"
-                msg = msg.format(pre=msg_pre, t=self._client.connect_timeout)
+                msg = msg.format(pre=msg_pre, t=self._http.connect_timeout)
                 raise exceptions.ConnectError(msg=msg, exc=exc)
             elif isinstance(exc, requests.exceptions.ConnectionError):
                 msg = "{pre}: {reason}"
                 msg = msg.format(pre=msg_pre, reason=self._get_exc_reason(exc=exc))
                 raise exceptions.ConnectError(msg=msg, exc=exc)
             elif isinstance(exc, exceptions.InvalidCredentials):
-                msg = "{pre}: Invalid Credentials supplied for {url!r}"
-                msg = msg.format(pre=msg_pre, url=self._client.url)
+                msg = "{pre}: Invalid Credentials supplied"
+                msg = msg.format(pre=msg_pre, url=self._http.url)
                 raise exceptions.ConnectError(msg=msg, exc=exc)
 
             msg = "{pre}: {exc}"

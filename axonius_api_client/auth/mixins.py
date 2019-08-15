@@ -7,7 +7,7 @@ from __future__ import unicode_literals
 
 import logging
 
-from .. import api, exceptions
+from .. import api, exceptions, logs
 
 LOG = logging.getLogger(__name__)
 
@@ -18,7 +18,7 @@ class AuthMixins(object):
     _logged_in = False
     """:obj:`bool`: Attribute checked by :meth:`is_logged_in`."""
 
-    def __init__(self, http_client, **creds):
+    def __init__(self, http_client, creds, **kwargs):
         """Constructor.
 
         Args:
@@ -28,8 +28,9 @@ class AuthMixins(object):
                 Credentials used by this Auth method.
 
         """
-        self._log = LOG.getChild(self.__class__.__name__)
-        """:obj:`logging.Logger`: Logger for this object."""
+        logger = kwargs.get("logger", logging.getLogger(self.__class__.__module__))
+        self._log = logger.getChild(self.__class__.__name__)
+        logs.set_level(obj=self._log, level=kwargs.get("log_level", "warning"))
 
         self._http_client = http_client
         """:obj:`axonius_api_client.http.interfaces.HttpClient`: HTTP Client."""

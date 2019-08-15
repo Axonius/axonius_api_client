@@ -15,11 +15,11 @@ from .. import tools
 AX_DOTENV = os.environ.get("AX_DOTENV", "")
 CWD_PATH = tools.resolve_path(os.getcwd())
 
-# FUTURE: FIX ADAPTER BASE SETTINGS NOT GETTING VALUES
 
 # FUTURE: prompt does not use CR when re-prompting on empty var with hide_input=False
 # FUTURE: add doc links
 @click.group()
+@context.root_options
 @context.pass_context
 def cli(ctx, **kwargs):
     """Axonius API Client command line tool."""
@@ -55,7 +55,6 @@ users.add_command(cmd_object_fields.cmd)
 def main(*args, **kwargs):
     """Pass."""
     context.load_dotenv()
-    # kwargs.setdefault("auto_envvar_prefix", "ax")
     return cli(*args, **kwargs)
 
 

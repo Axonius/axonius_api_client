@@ -5,18 +5,14 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
-import logging
-
 from .. import exceptions, models
 from . import mixins
-
-LOG = logging.getLogger(__name__)
 
 
 class AuthKey(mixins.AuthMixins, models.AuthModel):
     """Authentication method using API key & API secret."""
 
-    def __init__(self, http_client, key, secret):
+    def __init__(self, http_client, key, secret, **kwargs):
         """Constructor.
 
         Args:
@@ -28,7 +24,8 @@ class AuthKey(mixins.AuthMixins, models.AuthModel):
                 API secret to use in credentials.
 
         """
-        super(AuthKey, self).__init__(http_client=http_client, key=key, secret=secret)
+        creds = {"key": key, "secret": secret}
+        super(AuthKey, self).__init__(http_client=http_client, creds=creds, **kwargs)
 
     @property
     def _cred_fields(self):

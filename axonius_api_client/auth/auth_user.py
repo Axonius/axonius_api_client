@@ -5,18 +5,14 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
-import logging
-
 from .. import exceptions, models
 from . import mixins
-
-LOG = logging.getLogger(__name__)
 
 
 class AuthUser(mixins.AuthMixins, models.AuthModel):
     """Authentication method using username & password."""
 
-    def __init__(self, http_client, username, password):
+    def __init__(self, http_client, username, password, **kwargs):
         """Constructor.
 
         Args:
@@ -28,9 +24,8 @@ class AuthUser(mixins.AuthMixins, models.AuthModel):
                 Password to use in credentials.
 
         """
-        super(AuthUser, self).__init__(
-            http_client=http_client, username=username, password=password
-        )
+        creds = {"username": username, "password": password}
+        super(AuthUser, self).__init__(http_client=http_client, creds=creds, **kwargs)
 
     @property
     def _cred_fields(self):

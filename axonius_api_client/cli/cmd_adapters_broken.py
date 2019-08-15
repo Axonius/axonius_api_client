@@ -14,7 +14,8 @@ from . import context
 
 
 @click.command("errors", context_settings=context.CONTEXT_SETTINGS)
-@context.common_options
+@context.connect_options
+@context.export_options
 @context.pass_context
 @click.pass_context
 @click.option(

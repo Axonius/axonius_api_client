@@ -5,12 +5,11 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
-from . import routers
-from .. import models
+from . import routers, mixins
 
 
 # FUTURE: needs tests
-class Actions(models.ApiModel):
+class Actions(mixins.ApiMixins):
     """Action related API methods.
 
     Notes:

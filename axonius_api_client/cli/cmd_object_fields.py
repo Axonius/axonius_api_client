@@ -14,7 +14,8 @@ from .. import tools
 
 
 @click.command("fields", context_settings=context.CONTEXT_SETTINGS)
-@context.common_options
+@context.connect_options
+@context.export_options
 @context.pass_context
 @click.pass_context
 @click.option(
@@ -37,17 +38,31 @@ from .. import tools
     "--trim/--no-trim",
     default=True,
     help=(
-        "Remove '_adapter' from adapter names and "
-        "remove 'adapters_data.adapter.' from field names."
+        "Remove '_adapter' from adapter names and 'adapters_data.adapter.'"
+        " from field names."
     ),
     is_flag=True,
     show_envvar=True,
     show_default=True,
 )
-def cmd(clickctx, ctx, adapter_re, field_re, trim, **kwargs):
+def cmd(
+    clickctx,
+    ctx,
+    url,
+    key,
+    secret,
+    export_file,
+    export_path,
+    export_format,
+    export_overwrite,
+    adapter_re,
+    field_re,
+    trim,
+):
     """Get the fields (columns) for all adapters."""
-    for k, v in kwargs.items():
-        setattr(ctx, k, v)
+    ctx.url = url
+    ctx.key = key
+
     ctx.clickctx = clickctx
 
     client = ctx.start_client()

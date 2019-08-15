@@ -13,8 +13,6 @@ import requests
 from . import parser
 from .. import constants, tools, version, logs
 
-LOG = logging.getLogger(__name__)
-
 
 class HttpClient(object):
     """Wrapper for sending requests usings :obj:`requests.Session`."""
@@ -31,9 +29,7 @@ class HttpClient(object):
         https_proxy="",
         save_last=True,
         save_history=False,
-        log_attrs=True,
-        log_level="info",
-        log_level_urllib="warning",
+        **kwargs
     ):
         """Constructor.
 
@@ -75,26 +71,12 @@ class HttpClient(object):
                 Add last response to :attr:`history`.
 
                 Defaults to: False.
-            log_level (:obj:`bool`, optional):
-                Logging level for this logger.
-
-                Defaults to: "info".
-            log_level_urllib (:obj:`bool`, optional):
-                Logging level for urllib3.connectionpool.
-
-                Defaults to: "warning".
-            log_attrs (:obj:`bool`, optional):
-                Log request and response attributes at DEBUG level.
-                * True = Log verbose attributes,
-                * False = Log brief attributes.
-                * None = Log no attributes.
-
-                Defaults to: None.
 
         """
-        self._log = LOG.getChild(self.__class__.__name__)
+        logger = kwargs.get("logger", logging.getLogger(self.__class__.__module__))
+        self._log = logger.getChild(self.__class__.__name__)
         """:obj:`logging.Logger`: Logger for this object."""
-        logs.set_level(obj=self._log, level=log_level)
+        logs.set_level(obj=self._log, level=kwargs.get("log_level", "info"))
 
         if isinstance(url, parser.UrlParser):
             url = url.url
@@ -149,6 +131,7 @@ class HttpClient(object):
         elif certwarn is False:
             warnings.simplefilter("ignore", urlwarn)
 
+        log_attrs = kwargs.get("log_attrs", None)
         if log_attrs is True:
             self.LOG_REQUEST_ATTRS = constants.LOG_REQUEST_ATTRS_VERBOSE
             self.LOG_RESPONSE_ATTRS = constants.LOG_RESPONSE_ATTRS_VERBOSE
@@ -160,7 +143,7 @@ class HttpClient(object):
             self.LOG_RESPONSE_ATTRS = []
 
         urllog = logging.getLogger("urllib3.connectionpool")
-        logs.set_level(obj=urllog, level=log_level_urllib)
+        logs.set_level(obj=urllog, level=kwargs.get("log_level_urllib", "warning"))
 
     def __call__(
         self,
