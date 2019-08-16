@@ -7,20 +7,16 @@ from __future__ import unicode_literals
 
 from .actions import Actions
 from .adapters import Adapters
-from .users_devices import Users, Devices, UserDeviceMixins
+from .users_devices import Users, Devices
 from .enforcements import Enforcements
-from .utils import find_adapter, find_field, validate_fields
-from . import routers
+from . import routers, mixins
 
 __all__ = (
-    "UserDeviceMixins",
     "Users",
     "Devices",
     "Actions",
     "Adapters",
     "Enforcements",
-    "find_adapter",
-    "find_field",
-    "validate_fields",
     "routers",
+    "mixins",
 )

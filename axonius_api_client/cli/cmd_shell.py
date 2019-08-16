@@ -21,7 +21,7 @@ def jdump(obj):
 
 
 @click.command("shell", context_settings=context.CONTEXT_SETTINGS)
-@context.common_options
+@context.connect_options
 @click.option(
     "--spawn/--no-spawn",
     default=True,
@@ -31,20 +31,16 @@ def jdump(obj):
     show_default=True,
 )
 @context.pass_context
-@click.pass_context
-def shell(clickctx, ctx, spawn=True, **kwargs):
+def shell(ctx, url, key, secret, spawn):
     """Start an interactive shell."""
-    for k, v in kwargs.items():
-        setattr(ctx, k, v)
-
-    client = ctx.start_client()
-
-    shellvars = globals()
-    shellvars.update(locals())
-
-    readline.set_completer(rlcompleter.Completer(shellvars).complete)
-    readline.parse_and_bind("tab: complete")
+    client = ctx.start_client(url=url, key=key, secret=secret)
 
     if spawn:
+        shellvars = globals()
+        shellvars.update(locals())
+
+        readline.set_completer(rlcompleter.Completer(shellvars).complete)
+        readline.parse_and_bind("tab: complete")
+
         code.interact(local=shellvars)
     return ctx

@@ -12,6 +12,7 @@ import time
 import six as six
 
 from . import exceptions, constants
+from . import __package__ as PACKAGE_ROOT
 
 if six.PY2:
     import pathlib2 as pathlib  # pragma: no cover
@@ -27,6 +28,14 @@ def gmtime():
 def localtime():
     """Set the logging system to use local time for time strings."""
     logging.Formatter.converter = time.localtime
+
+
+def get_obj_log(obj, level, **kwargs):
+    """Pass."""
+    logger = kwargs.get("logger", logging.getLogger(obj.__class__.__module__))
+    log = logger.getChild(obj.__class__.__name__)
+    set_level(obj=log, level=level)
+    return log
 
 
 def set_level(obj, level):
@@ -69,48 +78,61 @@ def str_level(level):
 
     error = "Invalid logging level {level!r}, must be one of {lstr} or {lint}"
     error = error.format(
-        level=level, lstr=constants.LEVELS_STR_CSV, lint=constants.LEVELS_INT_CSV
+        level=level,
+        lstr=constants.LOG_LEVELS_STR_CSV,
+        lint=constants.LOG_LEVELS_INT_CSV,
     )
     raise exceptions.ToolsError(error)
 
 
-def add_stderr(
-    obj, level="debug", hname=constants.LOG_NAME_STDERR, fmt=constants.LOG_FMT
-):
+def add_stderr(obj, **kwargs):
     """Add a StreamHandler to a logger object."""
+    level = kwargs.get("level", constants.LOG_LEVEL_CONSOLE)
+    hname = kwargs.get("hname", constants.LOG_NAME_STDERR)
+    fmt = kwargs.get("fmt", constants.LOG_FMT_CONSOLE)
+    datefmt = kwargs.get("datefmt", constants.LOG_DATEFMT_CONSOLE)
+    htype = logging.StreamHandler
+
     return add_handler(
-        obj=obj, hname=hname, htype=logging.StreamHandler, level=level, fmt=fmt
+        obj=obj, hname=hname, htype=htype, level=level, fmt=fmt, datefmt=datefmt
     )
 
 
-def add_stdout(
-    obj, level="debug", hname=constants.LOG_NAME_STDOUT, fmt=constants.LOG_FMT
-):
+def add_stdout(obj, **kwargs):
     """Add a StreamHandler to a logger object."""
+    level = kwargs.get("level", constants.LOG_LEVEL_CONSOLE)
+    hname = kwargs.get("hname", constants.LOG_NAME_STDOUT)
+    fmt = kwargs.get("fmt", constants.LOG_FMT_CONSOLE)
+    datefmt = kwargs.get("datefmt", constants.LOG_DATEFMT_CONSOLE)
+    htype = logging.StreamHandler
+
     return add_handler(
-        obj=obj, hname=hname, htype=logging.StreamHandler, level=level, fmt=fmt
+        obj=obj, hname=hname, htype=htype, level=level, fmt=fmt, datefmt=datefmt
     )
 
 
-def add_file(
-    obj,
-    level="debug",
-    hname=constants.LOG_NAME_FILE,
-    file_path=constants.LOG_FILE_PATH,
-    file_name=constants.LOG_FILE_NAME,
-    file_path_mode=constants.LOG_FILE_PATH_MODE,
-    max_mb=constants.LOG_FILE_MAX_MB,
-    max_files=constants.LOG_FILE_MAX_FILES,
-    fmt=constants.LOG_FMT,
-):
+def add_file(obj, **kwargs):
     """Pass."""
+    level = kwargs.get("level", constants.LOG_LEVEL_FILE)
+    hname = kwargs.get("hname", constants.LOG_NAME_FILE)
+    file_path = kwargs.get("file_path", constants.LOG_FILE_PATH)
+    file_name = kwargs.get("file_name", constants.LOG_FILE_NAME)
+    file_path_mode = kwargs.get("file_path_mode", constants.LOG_FILE_PATH_MODE)
+    max_mb = kwargs.get("max_mb", constants.LOG_FILE_MAX_MB)
+    max_files = kwargs.get("max_files", constants.LOG_FILE_MAX_FILES)
+    fmt = kwargs.get("fmt", constants.LOG_FMT_FILE)
+    datefmt = kwargs.get("datefmt", constants.LOG_DATEFMT_FILE)
+    htype = logging.handlers.RotatingFileHandler
+
     path = pathlib.Path(file_path)
     path.mkdir(mode=file_path_mode, parents=True, exist_ok=True)
 
     return add_handler(
         obj=obj,
-        htype=logging.handlers.RotatingFileHandler,
+        level=level,
+        htype=htype,
         fmt=fmt,
+        datefmt=datefmt,
         hname=hname,
         filename=format(path / file_name),
         maxBytes=max_mb * 1024 * 1024,
@@ -118,16 +140,23 @@ def add_file(
     )
 
 
-def add_null(obj, hname="", traverse=True):
+def add_null(obj, **kwargs):
     """Add a Null handler to a logger if it has no handlers."""
+    hname = kwargs.get("hname", "")
+    traverse = kwargs.get("traverse", True)
     found = find_handlers(obj=obj, hname=hname, traverse=traverse)
-    if not found:
-        return add_handler(
-            obj=obj, htype=logging.NullHandler, hname=hname, fmt="", level=""
-        )
+    level = ""
+    datefmt = ""
+    fmt = ""
+    htype = logging.NullHandler
+    if found:
+        return found
+    return add_handler(
+        obj=obj, htype=htype, hname=hname, fmt=fmt, datefmt=datefmt, level=level
+    )
 
 
-def add_handler(obj, htype, level="debug", hname="", fmt=constants.LOG_FMT, **kwargs):
+def add_handler(obj, htype, level, hname, fmt, datefmt, **kwargs):
     """Pass."""
     handler = htype(**kwargs)
 
@@ -135,7 +164,7 @@ def add_handler(obj, htype, level="debug", hname="", fmt=constants.LOG_FMT, **kw
         handler.name = hname
 
     if fmt:
-        handler.setFormatter(logging.Formatter(fmt))
+        handler.setFormatter(logging.Formatter(fmt=fmt, datefmt=datefmt))
 
     if level:
         set_level(obj=handler, level=level)
@@ -144,36 +173,36 @@ def add_handler(obj, htype, level="debug", hname="", fmt=constants.LOG_FMT, **kw
     return handler
 
 
-def del_stderr(obj, hname=constants.LOG_NAME_STDOUT, traverse=True):
+def del_stderr(obj, **kwargs):
     """Remove a StreamHandler from a logger if found."""
-    return del_handler(
-        obj=obj, name=hname, htype=logging.StreamHandler, traverse=traverse
-    )
+    hname = kwargs.get("hname", constants.LOG_NAME_STDERR)
+    traverse = kwargs.get("traverse", True)
+    htype = logging.StreamHandler
+    return del_handler(obj=obj, name=hname, htype=htype, traverse=traverse)
 
 
-def del_stdout(obj, hname=constants.LOG_NAME_STDOUT, traverse=True):
+def del_stdout(obj, **kwargs):
     """Remove a StreamHandler from a logger if found."""
-    # return del_by_postfix(obj=obj, postfix=POSTFIX_STDOUT, traverse=traverse)
-    return del_handler(
-        obj=obj, name=hname, htype=logging.StreamHandler, traverse=traverse
-    )
+    hname = kwargs.get("hname", constants.LOG_NAME_STDOUT)
+    traverse = kwargs.get("traverse", True)
+    htype = logging.StreamHandler
+    return del_handler(obj=obj, name=hname, htype=htype, traverse=traverse)
 
 
-def del_file(
-    obj,
-    name=constants.LOG_NAME_FILE,
-    htype=logging.handlers.RotatingFileHandler,
-    traverse=True,
-):
+def del_file(obj, **kwargs):
     """Remove a RotatingFileHandler from a logger if found."""
-    return del_handler(obj=obj, name=name, htype=type, traverse=traverse)
+    hname = kwargs.get("hname", constants.LOG_NAME_FILE)
+    traverse = kwargs.get("traverse", True)
+    htype = logging.handlers.RotatingFileHandler
+    return del_handler(obj=obj, name=hname, htype=htype, traverse=traverse)
 
 
-def del_null(obj, hname="", traverse=True):
+def del_null(obj, **kwargs):
     """Remove a Null handler from a logger if found."""
-    return del_handler(
-        obj=obj, name=hname, htype=logging.NullHandler, traverse=traverse
-    )
+    hname = kwargs.get("hname", "")
+    traverse = kwargs.get("traverse", True)
+    htype = logging.NullHandler
+    return del_handler(obj=obj, name=hname, htype=htype, traverse=traverse)
 
 
 def del_handler(obj, hname="", htype="", traverse=True):
@@ -207,3 +236,7 @@ def find_handlers(obj, hname="", htype=None, traverse=True):
         )
 
     return handlers
+
+
+LOG = logging.getLogger(PACKAGE_ROOT)
+add_null(obj=LOG)

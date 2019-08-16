@@ -5,13 +5,10 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
-import logging
 import re
 
 from . import routers, mixins
 from .. import tools, exceptions
-
-# FUTURE: needs tests
 
 # FUTURE: public REST API does not support setting advanced settings
 """
@@ -46,7 +43,7 @@ body={"fetch_deregistred":false}
 """
 
 
-class Adapters(mixins.ApiMixins):
+class Adapters(mixins.ApiMixin):
     """Adapter related API methods."""
 
     @property
@@ -78,15 +75,16 @@ class Adapters(mixins.ApiMixins):
         client_min=None,
         client_bad=False,
         client_ok=False,
-        parse_obj=False,
+        return_parse_obj=False,
+        return_clients=True,
         error=True,
-        **client_settings
+        # **client_settings
     ):
         """Get all adapters."""
         raw = self._get()
-        parser = Parser(raw=raw, logger=self._log)
+        parser = Parser(raw=raw, parent=self)
 
-        if parse_obj:
+        if return_parse_obj:
             return parser
 
         adapters = parser.parse()
@@ -116,10 +114,17 @@ class Adapters(mixins.ApiMixins):
                 values="success", adapters=adapters, error=False
             )
 
-        for setting, value in client_settings:
-            adapters = parser.find_by_client_setting(
-                setting=setting, value=value, adapters=adapters, error=error
-            )
+        if return_clients:
+            clients = []
+            for adapter in adapters:
+                clients += adapter["clients"]
+            return clients
+
+        # FUTURE
+        # for setting, value in client_settings.items():
+        #     adapters = parser.find_by_client_setting(
+        #         setting=setting, value=value, adapters=adapters, error=error
+        #     )
 
         return adapters
 
@@ -198,10 +203,12 @@ class Parser(object):
     _RAW_SECRET = ["unchanged"]
     _SECRET = "__HIDDEN__"
 
-    def __init__(self, raw, **kwargs):
+    def __init__(self, raw, parent):
         """Pass."""
-        logger = kwargs.get("logger", logging.getLogger(self.__class__.__module__))
-        self._log = logger.getChild(self.__class__.__name__)
+        self._log = parent._log.getChild(self.__class__.__name__)
+        """:obj:`logging.Logger`: Logger for this object."""
+        self._parent = parent
+        self._raw = raw
 
     def parse(self):
         """Pass."""
@@ -217,7 +224,7 @@ class Parser(object):
 
         msg = "Parsed {n} adapters"
         msg = msg.format(n=len(parsed))
-        self.log.debug(msg)
+        self._log.debug(msg)
 
         return parsed
 
@@ -289,22 +296,24 @@ class Parser(object):
 
         for raw_client in raw_adapter["clients"]:
             raw_config = raw_client["client_config"]
-            parsed_config = {}
+            parsed_settings = {}
 
             for setting_name, setting_config in settings_client.items():
+                setting_config.pop("name", "")
                 value = raw_config.get(setting_name, self._NOTSET)
                 value = self._SECRET if value == self._RAW_SECRET else value
-                parsed_config[setting_name] = setting_config
-                parsed_config[setting_name]["value"] = value
+                parsed_settings[setting_name] = setting_config
+                parsed_settings[setting_name]["value"] = value
 
             parsed_client = {
                 k: v for k, v in raw_client.items() if k != "client_config"
             }
-            parsed_client["parent_adapter"] = parent["name"]
-            parsed_client["parent_node_name"] = parent["node_name"]
-            parsed_client["parent_node_id"] = parent["node_id"]
-            parsed_client["parent_status"] = parent["status"]
-            parsed_client["config"] = parsed_config
+            parsed_client["node_name"] = parent["node_name"]
+            parsed_client["node_id"] = parent["node_id"]
+            parsed_client["adapter"] = parent["name"]
+            parsed_client["adapter_status"] = parent["status"]
+            parsed_client["adapter_features"] = parent["features"]
+            parsed_client["settings"] = parsed_settings
             clients.append(parsed_client)
         return clients
 
@@ -333,8 +342,8 @@ class Parser(object):
                 value_re = re.compile(value, re.I)
                 if value_re.search(check) and adapter not in matches:
                     msg = "Matched adapter name {a!r} using value {v!r}"
-                    msg = msg.format(a=adapter["name"], value=value)
-                    self.log.debug(msg)
+                    msg = msg.format(a=adapter["name"], v=value)
+                    self._log.debug(msg)
 
                     matches.append(adapter)
 
@@ -445,8 +454,8 @@ class Parser(object):
                     value_re = re.compile(value, re.I)
                     if value_re.search(check) and adapter not in matches:
                         msg = "Matched adapter name {a!r} using client status {v!r}"
-                        msg = msg.format(a=adapter["name"], value=value)
-                        self.log.debug(msg)
+                        msg = msg.format(a=adapter["name"], v=value)
+                        self._log.debug(msg)
 
                         matches.append(adapter)
 
@@ -480,7 +489,7 @@ class Parser(object):
 
             msg = "Matched adapter name {a!r} using client min {cmin!r}, max {cmax!r}"
             msg = msg.format(a=adapter["name"], cmin=client_min, max=client_max)
-            self.log.debug(msg)
+            self._log.debug(msg)
 
             matches.append(adapter)
 
@@ -512,8 +521,8 @@ class Parser(object):
                     value_re = re.compile(value, re.I)
                     if value_re.search(check) and adapter not in matches:
                         msg = "Matched adapter name {a!r} using client id {v!r}"
-                        msg = msg.format(a=adapter["name"], value=value)
-                        self.log.debug(msg)
+                        msg = msg.format(a=adapter["name"], v=value)
+                        self._log.debug(msg)
 
                         matches.append(adapter)
 

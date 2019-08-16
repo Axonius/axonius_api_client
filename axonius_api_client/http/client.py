@@ -73,10 +73,9 @@ class HttpClient(object):
                 Defaults to: False.
 
         """
-        logger = kwargs.get("logger", logging.getLogger(self.__class__.__module__))
-        self._log = logger.getChild(self.__class__.__name__)
+        log_level = kwargs.get("log_level", constants.LOG_LEVEL_HTTP)
+        self._log = logs.get_obj_log(obj=self, level=log_level)
         """:obj:`logging.Logger`: Logger for this object."""
-        logs.set_level(obj=self._log, level=kwargs.get("log_level", "info"))
 
         if isinstance(url, parser.UrlParser):
             url = url.url
@@ -131,14 +130,14 @@ class HttpClient(object):
         elif certwarn is False:
             warnings.simplefilter("ignore", urlwarn)
 
-        log_attrs = kwargs.get("log_attrs", None)
-        if log_attrs is True:
+        log_attrs = kwargs.get("log_attrs", False)
+        if log_attrs:
             self.LOG_REQUEST_ATTRS = constants.LOG_REQUEST_ATTRS_VERBOSE
             self.LOG_RESPONSE_ATTRS = constants.LOG_RESPONSE_ATTRS_VERBOSE
         elif log_attrs is False:
             self.LOG_REQUEST_ATTRS = constants.LOG_REQUEST_ATTRS_BRIEF
             self.LOG_RESPONSE_ATTRS = constants.LOG_RESPONSE_ATTRS_BRIEF
-        else:
+        elif log_attrs is None:
             self.LOG_REQUEST_ATTRS = []
             self.LOG_RESPONSE_ATTRS = []
 

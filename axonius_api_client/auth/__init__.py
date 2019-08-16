@@ -7,6 +7,6 @@ from __future__ import unicode_literals
 
 from .auth_key import AuthKey
 from .auth_user import AuthUser
-from .mixins import AuthMixins
+from . import mixins
 
-__all__ = ("AuthUser", "AuthKey", "AuthMixins")
+__all__ = ("AuthUser", "AuthKey", "mixins")

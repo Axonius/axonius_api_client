@@ -17,7 +17,7 @@ import dotenv
 import requests
 import six
 
-from .. import connect, tools, version
+from .. import connect, tools
 
 AX_DOTENV = os.environ.get("AX_DOTENV", "")
 CWD_PATH = tools.resolve_path(os.getcwd())
@@ -45,46 +45,25 @@ def load_dotenv():
     dotenv.load_dotenv(format(path))
 
 
-def ok(msg):
+def ok(msg, exit=None):
     """Pass."""
     click.secho(OK_TMPL.format(msg=msg), **OK_ARGS)
+    if exit is not None:
+        sys.exit(exit)
 
 
-def error(msg, exit=True):
+def error(msg, exit=1):
     """Pass."""
     click.secho(ERROR_TMPL.format(msg=msg), **ERROR_ARGS)
-    if exit:
-        sys.exit(1)
+    if exit is not None:
+        sys.exit(exit)
 
 
-def warn(msg):
+def warn(msg, exit=None):
     """Pass."""
     click.secho(WARN_TMPL.format(msg=msg), **WARN_ARGS)
-
-
-DEFAULTS = {
-    "url": None,
-    "key": None,
-    "secret": None,
-    "proxy": "",
-    "certpath": None,
-    "certverify": False,
-    "certwarn": True,
-    "wraperror": True,
-    "verbose": True,
-    "log_package": "debug",
-    "log_http": "debug",
-    "log_auth": "debug",
-    "log": "debug",
-    "export_file": "",
-    "export_path": format(CWD_PATH),
-    "export_format": "json",
-    "export_overwrite": False,
-}
-
-REQUIRED = ["url", "key", "secret"]
-
-LOG_CHOICES = ["debug", "info", "warning", "error", "critical"]
+    if exit is not None:
+        sys.exit(exit)
 
 
 def connect_options(func):
@@ -92,7 +71,7 @@ def connect_options(func):
     #
     @click.option(
         "--url",
-        default=DEFAULTS["url"],
+        required=True,
         help="URL of Axonius instance.",
         metavar="URL",
         prompt="URL of Axonius instance",
@@ -100,7 +79,7 @@ def connect_options(func):
     )
     @click.option(
         "--key",
-        default=DEFAULTS["key"],
+        required=True,
         help="API Key of user in Axonius instance.",
         metavar="KEY",
         prompt="API Key of user in Axonius instance",
@@ -109,7 +88,7 @@ def connect_options(func):
     )
     @click.option(
         "--secret",
-        default=DEFAULTS["secret"],
+        required=True,
         help="API Secret of user in Axonius instance.",
         metavar="SECRET",
         prompt="API Secret of user in Axonius instance",
@@ -123,96 +102,28 @@ def connect_options(func):
     return wrapper
 
 
-def root_options(func):
-    """Combine commonly appearing @click.option decorators."""
-    #
-    @click.option(
-        "--proxy",
-        default=DEFAULTS["proxy"],
-        help="Proxy to use to connect to Axonius instance.",
-        metavar="PROXY",
-        show_envvar=True,
-        show_default=True,
-    )
-    @click.option(
-        "--certpath",
-        default=DEFAULTS["certpath"],
-        type=click.Path(exists=True, resolve_path=True),
-        help="Path to SSL certificate.",
-        metavar="PATH",
-        show_envvar=True,
-        show_default=True,
-    )
-    @click.option(
-        "--certverify/--no-certverify",
-        default=DEFAULTS["certverify"],
-        help="Perform SSL Certificate Verification.",
-        is_flag=True,
-        show_envvar=True,
-        show_default=True,
-    )
-    @click.option(
-        "--certwarn/--no-certwarn",
-        default=DEFAULTS["certwarn"],
-        help="Show warning for self-signed SSL certificates.",
-        is_flag=True,
-        show_envvar=True,
-        show_default=True,
-    )
-    @click.option(
-        "--wraperror/--no-wraperror",
-        default=DEFAULTS["wraperror"],
-        help="Show an error string instead of the full exception.",
-        is_flag=True,
-        show_envvar=True,
-        show_default=True,
-    )
-    @click.option(
-        "--verbose/--no-verbose",
-        default=DEFAULTS["verbose"],
-        help="Show more information.",
-        is_flag=True,
-        show_envvar=True,
-        show_default=True,
-    )
-    @click.option(
-        "--log-package",
-        default=DEFAULTS["log_package"],
-        help="Logging level to use for package logger.",
-        type=click.Choice(LOG_CHOICES),
-        show_envvar=True,
-        show_default=True,
-    )
-    @click.version_option(version.__version__)
-    @functools.wraps(func)
-    def wrapper(*args, **kwargs):
-        return func(*args, **kwargs)
-
-    return wrapper
-
-
 def export_options(func):
     """Combine commonly appearing @click.option decorators."""
     #
     # FUTURE: error if os.path.sep in value
     @click.option(
         "--export-file",
-        default=DEFAULTS["export_file"],
+        default="",
         help="Export to a file in export-path instead of printing to STDOUT.",
         show_envvar=True,
         show_default=True,
     )
     @click.option(
         "--export-path",
-        default=DEFAULTS["export_path"],
-        help="Path to create export_file in.",
+        default=format(CWD_PATH),
+        help="Path to create --export-file in.",
         type=click.Path(exists=False, resolve_path=True),
         show_envvar=True,
         show_default=True,
     )
     @click.option(
         "--export-format",
-        default=DEFAULTS["export_format"],
+        default="json",
         help="Format to use for STDOUT or export-file.",
         type=click.Choice(["csv", "json"]),
         show_envvar=True,
@@ -220,7 +131,7 @@ def export_options(func):
     )
     @click.option(
         "--export-overwrite/--no-export-overwrite",
-        default=DEFAULTS["export_overwrite"],
+        default=False,
         help="Overwrite export-file if exists.",
         is_flag=True,
         show_envvar=True,
@@ -238,13 +149,11 @@ class Context(object):
 
     CSV_QUOTING = csv.QUOTE_NONNUMERIC
 
-    def __init__(self, **kwargs):
+    def __init__(self):
         """Pass."""
-        print(locals())
-        self.kwargs = kwargs
         self.obj = None
-        for k, v in DEFAULTS.items():
-            setattr(self, k, v)
+        self._connect_args = {}
+        self._export_args = {}
 
     def __str__(self):
         """Show object info.
@@ -264,22 +173,20 @@ class Context(object):
         """
         return self.__str__()
 
-    def export(self, data):
+    def export(
+        self, data, export_file="", export_path=os.getcwd(), export_overwrite=False
+    ):
         """Pass."""
-        ex_file = self.export_file
-        ex_path = self.export_path
-        ex_overwrite = self.export_overwrite
-
-        if not ex_file:
+        if not export_file:
             click.echo(data)
             return
 
-        path = tools.resolve_path(ex_path)
+        path = tools.resolve_path(export_path)
         path.mkdir(mode=0o700, parents=True, exist_ok=True)
-        full_path = path / ex_file
+        full_path = path / export_file
         mode = "created"
         if full_path.exists():
-            if not ex_overwrite:
+            if not export_overwrite:
                 msg = "Export file {p} already exists and export-overwite is False!"
                 msg = msg.format(p=full_path)
                 self.echo_error(msg=msg)
@@ -292,18 +199,17 @@ class Context(object):
         msg = msg.format(p=format(full_path), mode=mode)
         self.echo_ok(msg)
 
-    def echo_ok(self, msg):
+    def echo_ok(self, msg, exit=None):
         """Pass."""
-        if self.verbose:
-            ok(msg)
+        ok(msg=msg, exit=exit)
 
-    def echo_error(self, msg):
+    def echo_error(self, msg, exit=1):
         """Pass."""
-        error(msg)
+        error(msg=msg, exit=exit)
 
-    def echo_warn(self, msg):
+    def echo_warn(self, msg, exit=None):
         """Pass."""
-        warn(msg)
+        warn(msg=msg, exit=exit)
 
     @staticmethod
     def to_json(data, indent=2):
@@ -329,38 +235,36 @@ class Context(object):
 
     def _start_client(self):
         """Pass."""
+        wraperror = self._connect_args.get("wraperror", True)
         with warnings.catch_warnings(record=True) as caught_warnings:
             try:
                 self.obj.start()
             except Exception as exc:
-                if self.wraperror:
+                if wraperror:
                     self.echo_error(format(exc))
                 raise
             for caught_warning in caught_warnings:
-                msg = format(caught_warning.message)
                 if isinstance(caught_warning.message, SSLWARN_CLS):
                     warn(SSLWARN_MSG)
-                    continue
-                warn(msg)
+                else:
+                    msg = format(caught_warning.message)
+                    warn(msg)
         # warnings suck.
         warnings.simplefilter("ignore", SSLWARN_CLS)
 
-    def start_client(self):
+    def start_client(self, url, key, secret):
         """Pass."""
         if not getattr(self, "obj", None):
+            wraperror = self._connect_args.get("wraperror", True)
+            connect_args = {}
+            connect_args.update(self._connect_args)
+            connect_args["url"] = url
+            connect_args["key"] = key
+            connect_args["secret"] = secret
             try:
-                self.obj = connect.Connect(
-                    url=self.url,
-                    key=self.key,
-                    secret=self.secret,
-                    proxy=self.proxy,
-                    certpath=self.certpath,
-                    certverify=self.certverify,
-                    certwarn=self.certwarn,
-                    wraperror=self.wraperror,
-                )
+                self.obj = connect.Connect(**connect_args)
             except Exception as exc:
-                if self.wraperror:
+                if wraperror:
                     self.echo_error(format(exc))
                 raise
 

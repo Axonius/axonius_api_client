@@ -9,8 +9,7 @@ from . import routers, mixins
 from .. import exceptions
 
 
-# FUTURE: needs tests
-class Enforcements(mixins.ApiMixins):
+class Enforcements(mixins.ApiMixin):
     """Enforcement related API methods.
 
     Notes:

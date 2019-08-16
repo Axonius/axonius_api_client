@@ -5,12 +5,10 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
-import logging
-
-from .. import exceptions, models
+from .. import exceptions, logs, constants, models
 
 
-class ApiMixins(models.ApiMixins):
+class ApiMixin(models.ApiModel):
     """API client for Axonius REST API."""
 
     def __init__(self, auth, **kwargs):
@@ -21,18 +19,18 @@ class ApiMixins(models.ApiMixins):
                 Authentication object.
 
         """
-        logger = kwargs.get("logger", logging.getLogger(self.__class__.__module__))
-        self._log = logger.getChild(self.__class__.__name__)
+        log_level = kwargs.get("log_level", constants.LOG_LEVEL_API)
+        self._log = logs.get_obj_log(obj=self, level=log_level)
         """:obj:`logging.Logger`: Logger for this object."""
 
         self._auth = auth
         """:obj:`AuthModel`: Authentication object."""
 
-        self.init(auth=auth, **kwargs)
+        self._init(auth=auth, **kwargs)
 
         auth.check_login()
 
-    def init(self, auth, **kwargs):
+    def _init(self, auth, **kwargs):
         """Pass."""
         pass
 
@@ -132,3 +130,19 @@ class ApiMixins(models.ApiMixins):
             raise exceptions.InvalidJson(response=response, exc=exc)
         # FUTURE: check for "error" in JSON dict
         # Need a way to reproduce response with "error" in JSON dict
+
+    def _check_max_page_size(self, page_size):
+        """Check if page size is over :data:`axonius_api_client.constants.MAX_PAGE_SIZE`.
+
+        Args:
+            page_size (:obj:`int`):
+                Page size to check.
+
+        Raises:
+            :exc:`exceptions.ApiError`
+
+        """
+        if page_size > constants.MAX_PAGE_SIZE:
+            msg = "Page size {page_size} is over maximum page size {max_size}"
+            msg = msg.format(page_size=page_size, max_size=constants.MAX_PAGE_SIZE)
+            raise exceptions.ApiError(msg)

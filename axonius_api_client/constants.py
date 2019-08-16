@@ -59,16 +59,30 @@ LOG_RESPONSE_ATTRS_VERBOSE = [
 ]
 """:obj:`list` of :obj:`str`: Response attributes to log when verbose=True."""
 
-LOG_FMT = "%(levelname)-8s [%(name)s:%(funcName)s()] %(message)s"
+LOG_FMT_CONSOLE = "%(levelname)-8s [%(name)s] %(message)s"
+LOG_FMT_FILE = "%(asctime)s %(levelname)-8s [%(name)s:%(funcName)s()] %(message)s"
+
+LOG_DATEFMT_CONSOLE = "%m/%d/%Y %I:%M:%S %p"
+LOG_DATEFMT_FILE = "%m/%d/%Y %I:%M:%S %p"
+
+LOG_LEVEL_CONSOLE = "warning"
+LOG_LEVEL_FILE = "debug"
+LOG_LEVEL_HTTP = "debug"
+LOG_LEVEL_AUTH = "debug"
+LOG_LEVEL_API = "debug"
+LOG_LEVEL_PACKAGE = "debug"
+
 LOG_LEVELS_STR = ["debug", "info", "warning", "error", "fatal"]
 LOG_LEVELS_STR_CSV = ", ".join(LOG_LEVELS_STR)
 LOG_LEVELS_INT = [getattr(logging, x.upper()) for x in LOG_LEVELS_STR]
 LOG_LEVELS_INT_CSV = ", ".join([format(x) for x in LOG_LEVELS_INT])
+
 LOG_FILE_PATH = os.getcwd()
 LOG_FILE_PATH_MODE = 0o700
 LOG_FILE_NAME = "{pkg}.log".format(pkg=PACKAGE_ROOT)
 LOG_FILE_MAX_MB = 5
 LOG_FILE_MAX_FILES = 5
+
 LOG_NAME_STDERR = "handler_stderr"
 LOG_NAME_STDOUT = "handler_stdout"
 LOG_NAME_FILE = "handler_file"

@@ -10,7 +10,7 @@ import re
 
 import requests
 
-from . import api, auth, exceptions, http
+from . import api, auth, exceptions, http, constants, logs
 
 
 class Connect(object):
@@ -30,33 +30,69 @@ class Connect(object):
                 return reason_re.sub(r"\1", reason).rstrip("')")
         return reason
 
-    def __init__(
-        self,
-        url,
-        key,
-        secret,
-        proxy="",
-        certpath="",
-        certverify=False,
-        certwarn=True,
-        wraperror=True,
-        **kwargs
-    ):
+    def __init__(self, url, key, secret, **kwargs):
         """Pass."""
         self._started = False
         self._start_dt = None
+        self._wraperror = kwargs.get("wraperror", True)
+
+        proxy = kwargs.get("proxy", "")
+        certpath = kwargs.get("certpath", "")
+        certverify = kwargs.get("certverify", False)
+        certwarn = kwargs.get("certwarn", True)
+        log_logger = kwargs.get("log_logger", logs.LOG)
+        log_level_package = kwargs.get("log_level_package", constants.LOG_LEVEL_PACKAGE)
+        log_level_http = kwargs.get("log_level_http", constants.LOG_LEVEL_HTTP)
+        log_level_auth = kwargs.get("log_level_auth", constants.LOG_LEVEL_AUTH)
+        log_level_api = kwargs.get("log_level_api", constants.LOG_LEVEL_API)
+        log_level_console = kwargs.get("log_level_console", constants.LOG_LEVEL_CONSOLE)
+        log_level_file = kwargs.get("log_level_file", constants.LOG_LEVEL_FILE)
+        log_console = kwargs.get("log_console", False)
+        log_console_method = kwargs.get("log_console_method", logs.add_stderr)
+        log_file = kwargs.get("log_file", False)
+        log_file_method = kwargs.get("log_file_method", logs.add_file)
+        log_file_name = kwargs.get("log_file_name", constants.LOG_FILE_NAME)
+        log_file_path = kwargs.get("log_file_path", constants.LOG_FILE_PATH)
+        log_file_max_mb = kwargs.get("log_file_max_mb", constants.LOG_FILE_MAX_MB)
+        log_file_max_files = kwargs.get(
+            "log_file_max_files", constants.LOG_FILE_MAX_FILES
+        )
+
+        logs.set_level(obj=log_logger, level=log_level_package)
+
+        if log_console:
+            self._handler_con = log_console_method(
+                obj=log_logger, level=log_level_console
+            )
+        else:
+            self._handler_con = None
+
+        if log_file:
+            self._handler_file = log_file_method(
+                obj=log_logger,
+                level=log_level_file,
+                file_path=log_file_path,
+                file_name=log_file_name,
+                max_mb=log_file_max_mb,
+                max_files=log_file_max_files,
+            )
+        else:
+            self._handler_file = None
+
         self._http_args = {
             "url": url,
             "https_proxy": proxy,
             "certpath": certpath,
             "certwarn": certwarn,
             "certverify": certverify,
+            "log_level": log_level_http,
         }
-        self._auth_args = {"key": key, "secret": secret}
-        self._wraperror = wraperror
-        self._kwargs = kwargs
+        self._auth_args = {"key": key, "secret": secret, "log_level": log_level_auth}
+
         self._http = http.HttpClient(**self._http_args)
         self._auth = auth.AuthKey(http_client=self._http, **self._auth_args)
+
+        self._api_args = {"auth": self._auth, "log_level": log_level_api}
 
     def start(self):
         """Pass."""
@@ -88,11 +124,12 @@ class Connect(object):
             msg = msg.format(pre=msg_pre, exc=exc)
             raise exceptions.ConnectError(msg=msg, exc=exc)
 
-        self.users = api.Users(auth=self._auth)
-        self.devices = api.Devices(auth=self._auth)
-        self.enforcements = api.Enforcements(auth=self._auth)
-        self.actions = api.Actions(auth=self._auth)
-        self.adapters = api.Adapters(auth=self._auth)
+        self.users = api.Users(**self._api_args)
+        self.devices = api.Devices(**self._api_args)
+        self.enforcements = api.Enforcements(**self._api_args)
+        self.actions = api.Actions(**self._api_args)
+        self.adapters = api.Adapters(**self._api_args)
+
         self._started = True
         self._start_dt = datetime.datetime.utcnow()
 
@@ -103,8 +140,8 @@ class Connect(object):
             :obj:`str`
 
         """
-        client = getattr(self, "_client", "")
-        url = getattr(client, "url", self._client_args["url"])
+        client = getattr(self, "_http", "")
+        url = getattr(client, "url", self._http_args["url"])
         if self._started:
             uptime = datetime.datetime.utcnow() - self._start_dt
             uptime = format(uptime).split(".")[0]

@@ -5,11 +5,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
-import logging
-
-from .. import api, exceptions, logs
-
-LOG = logging.getLogger(__name__)
+from .. import api, exceptions, logs, constants
 
 
 class AuthMixins(object):
@@ -28,9 +24,8 @@ class AuthMixins(object):
                 Credentials used by this Auth method.
 
         """
-        logger = kwargs.get("logger", logging.getLogger(self.__class__.__module__))
-        self._log = logger.getChild(self.__class__.__name__)
-        logs.set_level(obj=self._log, level=kwargs.get("log_level", "warning"))
+        log_level = kwargs.get("log_level", constants.LOG_LEVEL_AUTH)
+        self._log = logs.get_obj_log(obj=self, level=log_level)
 
         self._http_client = http_client
         """:obj:`axonius_api_client.http.interfaces.HttpClient`: HTTP Client."""

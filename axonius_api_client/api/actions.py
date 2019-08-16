@@ -8,8 +8,7 @@ from __future__ import unicode_literals
 from . import routers, mixins
 
 
-# FUTURE: needs tests
-class Actions(mixins.ApiMixins):
+class Actions(mixins.ApiMixin):
     """Action related API methods.
 
     Notes:

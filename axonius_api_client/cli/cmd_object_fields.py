@@ -16,8 +16,6 @@ from .. import tools
 @click.command("fields", context_settings=context.CONTEXT_SETTINGS)
 @context.connect_options
 @context.export_options
-@context.pass_context
-@click.pass_context
 @click.option(
     "--adapter-re",
     default=".*",
@@ -45,50 +43,44 @@ from .. import tools
     show_envvar=True,
     show_default=True,
 )
+@context.pass_context
+@click.pass_context
 def cmd(
     clickctx,
     ctx,
     url,
     key,
     secret,
+    export_format,
     export_file,
     export_path,
-    export_format,
     export_overwrite,
     adapter_re,
     field_re,
     trim,
 ):
     """Get the fields (columns) for all adapters."""
-    ctx.url = url
-    ctx.key = key
-
-    ctx.clickctx = clickctx
-
-    client = ctx.start_client()
+    ctx._clickctx = clickctx
+    client = ctx.start_client(url=url, key=key, secret=secret)
 
     api = getattr(client, clickctx.parent.command.name)
 
-    data = run(ctx=ctx, api=api, adapter_re=adapter_re, field_re=field_re, trim=trim)
-
-    ctx.export(data=data)
-    return ctx
-
-
-def run(ctx, api, adapter_re, field_re, trim):
-    """Pass."""
-    raw_data = find(
-        ctx=ctx, api=api, adapter_re=adapter_re, field_re=field_re, trim=trim
+    data = run(
+        ctx=ctx,
+        api=api,
+        adapter_re=adapter_re,
+        field_re=field_re,
+        trim=trim,
+        export_format=export_format,
     )
 
-    formatters = {"json": to_json, "csv": to_csv}
-    if ctx.export_format in formatters:
-        data = formatters[ctx.export_format](ctx=ctx, raw_data=raw_data)
-    else:
-        msg = "Export format {f!r} is unsupported! Must be one of: {sf}"
-        msg = msg.format(f=ctx.export_format, sf=list(formatters.keys()))
-        ctx.echo_error(msg=msg)
-    return data
+    ctx.export(
+        data=data,
+        export_file=export_file,
+        export_path=export_path,
+        export_overwrite=export_overwrite,
+    )
+    return ctx
 
 
 def to_json(ctx, raw_data):
@@ -110,16 +102,12 @@ def to_csv(ctx, raw_data):
     return ctx.dicts_to_csv(rows=rows, headers=headers)
 
 
-def find(ctx, api, adapter_re=".*", field_re=".*", trim=True):
+def run(ctx, api, export_format, adapter_re=".*", field_re=".*", trim=True):
     """Pass."""
     adapter_rec = re.compile(adapter_re, re.I)
     field_rec = re.compile(field_re, re.I)
 
-    raw_fields = api.get_fields()
-    api._fields = None
-    raw_fields = api.get_fields()
-    api._fields = None
-    raw_fields = api.get_fields()
+    raw_fields = api.fields()
 
     adapters = {}
     adapters.update(raw_fields["specific"])
@@ -157,4 +145,14 @@ def find(ctx, api, adapter_re=".*", field_re=".*", trim=True):
         msg = "No fields found matching adapter regex {are!r} and field regex {fre!r}"
         msg = msg.format(are=adapter_re, fre=field_re)
         ctx.echo_error(msg)
-    return raw_data
+
+    formatters = {"json": to_json, "csv": to_csv}
+
+    if export_format in formatters:
+        data = formatters[export_format](ctx=ctx, raw_data=raw_data)
+    else:
+        msg = "Export format {f!r} is unsupported! Must be one of: {sf}"
+        msg = msg.format(f=export_format, sf=list(formatters.keys()))
+        ctx.echo_error(msg=msg)
+
+    return data

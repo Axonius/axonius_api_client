@@ -26,7 +26,7 @@ class ApiModel(object):
 
 
 @six.add_metaclass(abc.ABCMeta)
-class UserDeviceModel(object):
+class ApiModelUserDevice(ApiModel):
     """API client for Axonius REST API."""
 
     @abc.abstractproperty
