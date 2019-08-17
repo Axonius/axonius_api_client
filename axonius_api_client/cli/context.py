@@ -45,25 +45,19 @@ def load_dotenv():
     dotenv.load_dotenv(format(path))
 
 
-def ok(msg, exit=None):
+def ok(msg):
     """Pass."""
     click.secho(OK_TMPL.format(msg=msg), **OK_ARGS)
-    if exit is not None:
-        sys.exit(exit)
 
 
-def error(msg, exit=1):
+def error(msg):
     """Pass."""
     click.secho(ERROR_TMPL.format(msg=msg), **ERROR_ARGS)
-    if exit is not None:
-        sys.exit(exit)
 
 
-def warn(msg, exit=None):
+def warn(msg):
     """Pass."""
     click.secho(WARN_TMPL.format(msg=msg), **WARN_ARGS)
-    if exit is not None:
-        sys.exit(exit)
 
 
 def connect_options(func):
@@ -125,7 +119,7 @@ def export_options(func):
         "--export-format",
         default="json",
         help="Format to use for STDOUT or export-file.",
-        type=click.Choice(["csv", "json"]),
+        # type=click.Choice(["csv", "json"]),
         show_envvar=True,
         show_default=True,
     )
@@ -152,6 +146,7 @@ class Context(object):
     def __init__(self):
         """Pass."""
         self.obj = None
+        self._click_ctx = None
         self._connect_args = {}
         self._export_args = {}
 
@@ -193,23 +188,28 @@ class Context(object):
             mode = "overwritten"
 
         full_path.touch(mode=0o600)
-        full_path.write_text(data)
+        with full_path.open(mode="w", newline="") as fh:
+            fh.write(data)
 
         msg = "Export file {p!r} {mode}!"
         msg = msg.format(p=format(full_path), mode=mode)
         self.echo_ok(msg)
 
-    def echo_ok(self, msg, exit=None):
+    def echo_ok(self, msg):
         """Pass."""
-        ok(msg=msg, exit=exit)
+        ok(msg=msg)
 
-    def echo_error(self, msg, exit=1):
+    def echo_error(self, msg, abort=True):
         """Pass."""
-        error(msg=msg, exit=exit)
+        error(msg=msg)
+        if abort:
+            sys.exit(1)
 
-    def echo_warn(self, msg, exit=None):
+    def echo_warn(self, msg, abort=False):
         """Pass."""
-        warn(msg=msg, exit=exit)
+        warn(msg=msg)
+        if abort:
+            sys.exit(1)
 
     @staticmethod
     def to_json(data, indent=2):
@@ -233,14 +233,18 @@ class Context(object):
             writer.writerow(row)
         return stream.getvalue()
 
+    @property
+    def wraperror(self):
+        """Pass."""
+        return self._connect_args.get("wraperror", True)
+
     def _start_client(self):
         """Pass."""
-        wraperror = self._connect_args.get("wraperror", True)
         with warnings.catch_warnings(record=True) as caught_warnings:
             try:
                 self.obj.start()
             except Exception as exc:
-                if wraperror:
+                if self.wraperror:
                     self.echo_error(format(exc))
                 raise
             for caught_warning in caught_warnings:
@@ -255,7 +259,6 @@ class Context(object):
     def start_client(self, url, key, secret):
         """Pass."""
         if not getattr(self, "obj", None):
-            wraperror = self._connect_args.get("wraperror", True)
             connect_args = {}
             connect_args.update(self._connect_args)
             connect_args["url"] = url
@@ -264,13 +267,37 @@ class Context(object):
             try:
                 self.obj = connect.Connect(**connect_args)
             except Exception as exc:
-                if wraperror:
+                if self.wraperror:
                     self.echo_error(format(exc))
                 raise
 
             self._start_client()
             self.echo_ok(msg=self.obj)
         return self.obj
+
+    def handle_export(
+        self,
+        raw_data,
+        formatters,
+        export_format,
+        export_file,
+        export_path,
+        export_overwrite,
+    ):
+        """Pass."""
+        if export_format in formatters:
+            data = formatters[export_format](ctx=self, raw_data=raw_data)
+        else:
+            msg = "Export format {f!r} is unsupported! Must be one of: {sf}"
+            msg = msg.format(f=export_format, sf=list(formatters.keys()))
+            self.echo_error(msg=msg)
+
+        self.export(
+            data=data,
+            export_file=export_file,
+            export_path=export_path,
+            export_overwrite=export_overwrite,
+        )
 
 
 pass_context = click.make_pass_decorator(Context, ensure=True)

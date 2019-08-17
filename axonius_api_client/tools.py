@@ -5,6 +5,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
+import datetime
 import json
 
 import six
@@ -88,11 +89,22 @@ def _join(obj, j, pre=""):
     return pre + j.join(obj)
 
 
-def crjoin(obj, j="\n  "):
+def crjoin(obj, j="\n  ", pre="\n  "):
     """Pass."""
-    return _join(obj=obj, j=j, pre=j)
+    return _join(obj=obj, j=j, pre=pre)
 
 
-def csvjoin(obj, j=", "):
+def csvjoin(obj, j=", ", pre=""):
     """Pass."""
-    return _join(obj=obj, j=j)
+    return _join(obj=obj, j=j, pre=pre)
+
+
+def dt_ago(hours=0, minutes=0, seconds=0, strip_ms=True, utc=True):
+    """Pass."""
+    if utc:
+        now = datetime.datetime.utcnow()
+    else:
+        now = datetime.datetime.now()
+    delta = datetime.timedelta(hours=hours, minutes=minutes, seconds=seconds)
+    then = now - delta
+    return then.replace(microsecond=0) if strip_ms else then

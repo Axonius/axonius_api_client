@@ -5,128 +5,72 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
+import datetime
 import re
 
 from . import routers, mixins
 from .. import tools, exceptions
 
-# FUTURE: public REST API does not support setting advanced settings
-"""
-# advanced settings
-method=POST
-path=/api/plugins/configs/carbonblack_defense_adapter/AdapterBase
-body=
-{
-    "connect_client_timeout": 300,
-    "fetching_timeout": 5400,
-    "last_fetched_threshold_hours": 49,
-    "last_seen_prioritized": false,
-    "last_seen_threshold_hours": 43800,
-    "minimum_time_until_next_fetch": null,
-    "realtime_adapter": false,
-    "user_last_fetched_threshold_hours": null,
-    "user_last_seen_threshold_hours": null
-}
-"""
 
-"""
-# adapter specific advanced settings
-method=POST
-path=/api/plugins/configs/carbonblack_defense_adapter/CarbonblackDefenseAdapter
-body={"fetch_deregistred":false}
-"""
+class Clients(object):
+    """Pass."""
 
-"""
-# rule to add to api.py
-@api_add_rule('plugins/configs/<plugin_name>/<config_name>', methods=['POST', 'GET'],
-    wrap around service.py: plugins_configs_set()
-"""
+    FETCH_DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
 
+    def __init__(self, parent):
+        """Pass."""
+        self._parent = parent
 
-class Adapters(mixins.ApiMixin):
-    """Adapter related API methods."""
+    def __str__(self):
+        """Pass."""
+        return "Client commands for {}".format(self._parent)
 
-    @property
-    def _router(self):
-        """Router for this API client.
+    def __repr__(self):
+        """Pass."""
+        return self.__str__()
 
-        Returns:
-            :obj:`axonius_api_client.api.routers.Router`
-
-        """
-        return routers.ApiV1.adapters
-
-    def _get(self):
-        """Get all adapters.
-
-        Returns:
-            :obj:`dict`
-
-        """
-        return self._request(method="get", path=self._router.root)
+    def _fetch_dt(self, client):
+        """Pass."""
+        dt = client.get("date_fetched")
+        dt = tools.rstrip(dt, "+00:00")
+        dt = datetime.datetime.strptime(dt, self.FETCH_DATE_FORMAT)
+        return dt
 
     def get(
         self,
-        names=None,
-        nodes=None,
-        features=None,
-        client_ids=None,
-        client_max=None,
-        client_min=None,
-        client_bad=False,
-        client_ok=False,
-        return_parse_obj=False,
-        return_clients=True,
-        error=True,
-        # **client_settings
+        fetched_within=None,
+        not_fetched_within=None,
+        status_error=True,
+        status_success=True,
+        **kwargs
     ):
         """Get all adapters."""
-        raw = self._get()
-        parser = Parser(raw=raw, parent=self)
+        adapters = self._parent.get(**kwargs)
 
-        if return_parse_obj:
-            return parser
+        clients = []
+        for adapter in adapters:
+            for client in adapter["clients"]:
+                status = client["status"]
 
-        adapters = parser.parse()
+                fetch_dt = self._fetch_dt(client)
 
-        adapters = parser.find_by_names(values=names, adapters=adapters, error=error)
+                if fetched_within is not None:
+                    if fetch_dt <= tools.dt_ago(minutes=fetched_within):
+                        continue
 
-        adapters = parser.find_by_nodes(values=nodes, adapters=adapters, error=error)
+                if not_fetched_within is not None:
+                    if fetch_dt >= tools.dt_ago(minutes=not_fetched_within):
+                        continue
 
-        adapters = parser.find_by_features(
-            values=features, adapters=adapters, error=error
-        )
+                if status == "success" and not status_success:
+                    continue
 
-        adapters = parser.find_by_client_ids(
-            values=client_ids, adapters=adapters, error=error
-        )
+                if status == "error" and not status_error:
+                    continue
 
-        adapters = parser.find_by_client_count(
-            client_min=client_min, client_max=client_max, adapters=adapters
-        )
+                clients.append(client)
 
-        if client_bad:
-            adapters = parser.find_by_client_statuses(
-                values="error", adapters=adapters, error=False
-            )
-        elif client_ok:
-            adapters = parser.find_by_client_statuses(
-                values="success", adapters=adapters, error=False
-            )
-
-        if return_clients:
-            clients = []
-            for adapter in adapters:
-                clients += adapter["clients"]
-            return clients
-
-        # FUTURE
-        # for setting, value in client_settings.items():
-        #     adapters = parser.find_by_client_setting(
-        #         setting=setting, value=value, adapters=adapters, error=error
-        #     )
-
-        return adapters
+        return clients
 
     # FUTURE: public method
     def _check_client(self, name, config, node_id):
@@ -196,6 +140,58 @@ class Adapters(mixins.ApiMixin):
         return self._request(method="delete", path=path, json=data)
 
 
+class Adapters(mixins.ApiMixin):
+    """Adapter related API methods."""
+
+    def _init(self, auth, **kwargs):
+        """Pass."""
+        self.clients = Clients(parent=self)
+
+    @property
+    def _router(self):
+        """Router for this API client.
+
+        Returns:
+            :obj:`axonius_api_client.api.routers.Router`
+
+        """
+        return routers.ApiV1.adapters
+
+    def _get(self):
+        """Get all adapters.
+
+        Returns:
+            :obj:`dict`
+
+        """
+        return self._request(method="get", path=self._router.root)
+
+    def get(
+        self,
+        names=None,
+        nodes=None,
+        only_success=False,
+        only_error=False,
+        client_max=None,
+        client_min=None,
+        error=True,
+    ):
+        """Get all adapters."""
+        raw = self._get()
+        parser = Parser(raw=raw, parent=self)
+        adapters = parser.parse()
+        adapters = parser.find_by_names(values=names, adapters=adapters, error=error)
+        adapters = parser.find_by_nodes(values=nodes, adapters=adapters, error=error)
+        adapters = parser.find_by(
+            adapters=adapters,
+            only_success=only_success,
+            only_error=only_error,
+            client_max=client_max,
+            client_min=client_min,
+        )
+        return adapters
+
+
 class Parser(object):
     """Pass."""
 
@@ -227,6 +223,178 @@ class Parser(object):
         self._log.debug(msg)
 
         return parsed
+
+    def find_by_names(self, values=None, adapters=None, error=True):
+        """Pass."""
+        if not adapters or values is None:
+            return adapters
+
+        if not isinstance(values, (tuple, list)):
+            values = [values]
+
+        values = [tools.rstrip(name, "_adapter").lower() for name in values]
+
+        matches = []
+        known = []
+
+        for adapter in adapters:
+            check = adapter["name"]
+
+            if check not in known:
+                known.append(check)
+
+            for value in values:
+                value_re = re.compile(value, re.I)
+                if value_re.search(check) and adapter not in matches:
+                    msg = "Matched adapter name {a!r} using value {v!r}"
+                    msg = msg.format(a=adapter["name"], v=value)
+                    self._log.debug(msg)
+
+                    matches.append(adapter)
+
+        if not matches and known and error:
+            raise exceptions.UnknownError(
+                value=values,
+                known=known,
+                reason_msg="adapter by names",
+                valid_msg="names",
+            )
+
+        return matches
+
+    def find_by_nodes(self, values=None, adapters=None, error=True):
+        """Pass."""
+        if not adapters or values is None:
+            return adapters
+
+        if not isinstance(values, (tuple, list)):
+            values = [values]
+
+        values = [name.lower() for name in values]
+
+        matches = []
+        known = []
+
+        for adapter in adapters:
+            check = adapter["node_name"]
+
+            if check not in known:
+                known.append(check)
+
+            for value in values:
+                value_re = re.compile(value, re.I)
+                if value_re.search(check) and adapter not in matches:
+                    matches.append(adapter)
+
+        if not matches and known and error:
+            raise exceptions.UnknownError(
+                value=values,
+                known=known,
+                reason_msg="adapter by node names",
+                valid_msg="node names",
+            )
+
+        return matches
+
+    def find_by_features(self, values=None, adapters=None, error=True):
+        """Pass."""
+        if not adapters or values is None:
+            return adapters
+
+        if not isinstance(values, (tuple, list)):
+            values = [values]
+
+        values = [name.lower() for name in values]
+
+        matches = []
+        known = []
+
+        for adapter in adapters:
+            for check in adapter["features"]:
+                if check not in known:
+                    known.append(check)
+
+                for value in values:
+                    value_re = re.compile(value, re.I)
+                    if value_re.search(check) and adapter not in matches:
+                        matches.append(adapter)
+
+        if not matches and known and error:
+            raise exceptions.UnknownError(
+                value=values,
+                known=known,
+                reason_msg="adapter by features",
+                valid_msg="features",
+            )
+
+        return matches
+
+    def find_by_client_count(self, client_min=None, client_max=None, adapters=None):
+        """Pass."""
+        if not adapters or (client_min is None and client_max is None):
+            return adapters
+
+        matches = []
+
+        for adapter in adapters:
+            client_count = len(adapter["clients"])
+
+            if client_min is not None and not client_count >= client_min:
+                continue
+
+            if client_max is not None and not client_count <= client_max:
+                continue
+
+            msg = "Matched adapter name {a!r} using client min {cmin!r}, max {cmax!r}"
+            msg = msg.format(a=adapter["name"], cmin=client_min, max=client_max)
+            self._log.debug(msg)
+
+            matches.append(adapter)
+
+        return matches
+
+    def find_by(
+        self,
+        adapters,
+        only_success=False,
+        only_error=False,
+        client_max=None,
+        client_min=None,
+    ):
+        """Pass."""
+        matches = []
+
+        for adapter in adapters:
+            clients = adapter["clients"]
+            client_cnt = len(clients)
+
+            if client_min is not None and not client_cnt >= client_min:
+                continue
+
+            if client_max is not None and not client_cnt <= client_max:
+                continue
+
+            if any([x["status"] == "error" for x in clients]) and only_success:
+                continue
+
+            if any([x["status"] == "success" for x in clients]) and only_error:
+                continue
+
+            matches.append(adapter)
+        return matches
+
+    @property
+    def nodes(self):
+        """Get list of all nodes."""
+        return list(self.parse().keys())
+
+    def __str__(self):
+        """Pass."""
+        return "Nodes: {n}".format(n=", ".join(self.nodes))
+
+    def __repr__(self):
+        """Pass."""
+        return self.__str__()
 
     def _parse_adapter(self, adapter_name, raw_adapter):
         """Pass."""
@@ -317,235 +485,35 @@ class Parser(object):
             clients.append(parsed_client)
         return clients
 
-    def find_by_names(self, values=None, adapters=None, error=True):
-        """Pass."""
-        adapters = adapters or self.parse()
 
-        if not adapters or values is None:
-            return adapters
+# FUTURE: public REST API does not support setting advanced settings
+"""
+# advanced settings
+method=POST
+path=/api/plugins/configs/carbonblack_defense_adapter/AdapterBase
+body=
+{
+    "connect_client_timeout": 300,
+    "fetching_timeout": 5400,
+    "last_fetched_threshold_hours": 49,
+    "last_seen_prioritized": false,
+    "last_seen_threshold_hours": 43800,
+    "minimum_time_until_next_fetch": null,
+    "realtime_adapter": false,
+    "user_last_fetched_threshold_hours": null,
+    "user_last_seen_threshold_hours": null
+}
+"""
 
-        if not isinstance(values, (tuple, list)):
-            values = [values]
+"""
+# adapter specific advanced settings
+method=POST
+path=/api/plugins/configs/carbonblack_defense_adapter/CarbonblackDefenseAdapter
+body={"fetch_deregistred":false}
+"""
 
-        values = [tools.rstrip(name, "_adapter").lower() for name in values]
-
-        matches = []
-        known = []
-
-        for adapter in adapters:
-            check = adapter["name"]
-
-            if check not in known:
-                known.append(check)
-
-            for value in values:
-                value_re = re.compile(value, re.I)
-                if value_re.search(check) and adapter not in matches:
-                    msg = "Matched adapter name {a!r} using value {v!r}"
-                    msg = msg.format(a=adapter["name"], v=value)
-                    self._log.debug(msg)
-
-                    matches.append(adapter)
-
-        if not matches and known and error:
-            raise exceptions.UnknownError(
-                value=values,
-                known=known,
-                reason_msg="adapter by names",
-                valid_msg="names",
-            )
-
-        return matches
-
-    def find_by_nodes(self, values=None, adapters=None, error=True):
-        """Pass."""
-        adapters = adapters or self.parse()
-
-        if not adapters or values is None:
-            return adapters
-
-        if not isinstance(values, (tuple, list)):
-            values = [values]
-
-        values = [name.lower() for name in values]
-
-        matches = []
-        known = []
-
-        for adapter in adapters:
-            check = adapter["node_name"]
-
-            if check not in known:
-                known.append(check)
-
-            for value in values:
-                value_re = re.compile(value, re.I)
-                if value_re.search(check) and adapter not in matches:
-                    matches.append(adapter)
-
-        if not matches and known and error:
-            raise exceptions.UnknownError(
-                value=values,
-                known=known,
-                reason_msg="adapter by node names",
-                valid_msg="node names",
-            )
-
-        return matches
-
-    def find_by_features(self, values=None, adapters=None, error=True):
-        """Pass."""
-        adapters = adapters or self.parse()
-
-        if not adapters or values is None:
-            return adapters
-
-        if not isinstance(values, (tuple, list)):
-            values = [values]
-
-        values = [name.lower() for name in values]
-
-        matches = []
-        known = []
-
-        for adapter in adapters:
-            for check in adapter["features"]:
-                if check not in known:
-                    known.append(check)
-
-                for value in values:
-                    value_re = re.compile(value, re.I)
-                    if value_re.search(check) and adapter not in matches:
-                        matches.append(adapter)
-
-        if not matches and known and error:
-            raise exceptions.UnknownError(
-                value=values,
-                known=known,
-                reason_msg="adapter by features",
-                valid_msg="features",
-            )
-
-        return matches
-
-    def find_by_client_statuses(self, values=None, adapters=None, error=True):
-        """Pass."""
-        adapters = adapters or self.parse()
-
-        if not adapters or values is None:
-            return adapters
-
-        if not isinstance(values, (tuple, list)):
-            values = [values]
-
-        values = [name.lower() for name in values]
-
-        matches = []
-        known = []
-
-        for adapter in adapters:
-            for client in adapter["clients"]:
-                check = client["status"]
-
-                if check not in known:
-                    known.append(check)
-
-                for value in values:
-                    value_re = re.compile(value, re.I)
-                    if value_re.search(check) and adapter not in matches:
-                        msg = "Matched adapter name {a!r} using client status {v!r}"
-                        msg = msg.format(a=adapter["name"], v=value)
-                        self._log.debug(msg)
-
-                        matches.append(adapter)
-
-        if not matches and known and error:
-            raise exceptions.UnknownError(
-                value=values,
-                known=known,
-                reason_msg="adapter by client statuses",
-                valid_msg="client statuses",
-            )
-
-        return matches
-
-    def find_by_client_count(self, client_min=None, client_max=None, adapters=None):
-        """Pass."""
-        adapters = adapters or self.parse()
-
-        if not adapters or (client_min is None and client_max is None):
-            return adapters
-
-        matches = []
-
-        for adapter in adapters:
-            client_count = len(adapter["clients"])
-
-            if client_min is not None and not client_count >= client_min:
-                continue
-
-            if client_max is not None and not client_count <= client_max:
-                continue
-
-            msg = "Matched adapter name {a!r} using client min {cmin!r}, max {cmax!r}"
-            msg = msg.format(a=adapter["name"], cmin=client_min, max=client_max)
-            self._log.debug(msg)
-
-            matches.append(adapter)
-
-        return matches
-
-    def find_by_client_ids(self, values=None, adapters=None, error=True):
-        """Pass."""
-        adapters = adapters or self.parse()
-
-        if not adapters or values is None:
-            return adapters
-
-        if not isinstance(values, (tuple, list)):
-            values = [values]
-
-        values = [name.lower() for name in values]
-
-        matches = []
-        known = []
-
-        for adapter in adapters:
-            for client in adapter["clients"]:
-                check = client["client_id"]
-
-                if check not in known:
-                    known.append(check)
-
-                for value in values:
-                    value_re = re.compile(value, re.I)
-                    if value_re.search(check) and adapter not in matches:
-                        msg = "Matched adapter name {a!r} using client id {v!r}"
-                        msg = msg.format(a=adapter["name"], v=value)
-                        self._log.debug(msg)
-
-                        matches.append(adapter)
-
-        if not matches and known and error:
-            raise exceptions.UnknownError(
-                value=values,
-                known=known,
-                reason_msg="adapter by client ID",
-                valid_msg="client IDs",
-            )
-
-        return matches
-
-    # FUTURE: find by client config key == value
-    @property
-    def nodes(self):
-        """Get list of all nodes."""
-        return list(self.parse().keys())
-
-    def __str__(self):
-        """Pass."""
-        return "Nodes: {n}".format(n=", ".join(self.nodes))
-
-    def __repr__(self):
-        """Pass."""
-        return self.__str__()
+"""
+# rule to add to api.py
+@api_add_rule('plugins/configs/<plugin_name>/<config_name>', methods=['POST', 'GET'],
+    wrap around service.py: plugins_configs_set()
+"""

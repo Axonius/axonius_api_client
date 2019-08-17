@@ -9,7 +9,13 @@ import os
 
 import click
 
-from . import context, cmd_object_fields, cmd_adapters, cmd_shell
+from . import (
+    context,
+    cmd_object_fields,
+    cmd_adapters_get_clients,
+    cmd_adapters_get,
+    cmd_shell,
+)
 from .. import tools, constants, version, logs
 
 AX_DOTENV = os.environ.get("AX_DOTENV", "")
@@ -170,9 +176,10 @@ CWD_PATH = tools.resolve_path(os.getcwd())
 )
 @click.version_option(version.__version__)
 @context.pass_context
-def cli(ctx, log_level_override, **kwargs):
+@click.pass_context
+def cli(click_ctx, ctx, log_level_override, log_console_output, **kwargs):
     """Axonius API Client command line tool."""
-    log_console_output = kwargs.get("log_console_output", "stderr")
+    ctx._click_ctx = click_ctx
 
     if log_console_output == "stderr":
         kwargs["log_console_method"] = logs.add_stderr
@@ -180,10 +187,9 @@ def cli(ctx, log_level_override, **kwargs):
         kwargs["log_console_method"] = logs.add_stdout
 
     if log_level_override:
-        for k, v in kwargs.items():
-            if "log_level_" not in k:
-                continue
-            kwargs[k] = log_level_override
+        kwargs.update(
+            {k: log_level_override for k in kwargs if k.startswith("log_level_")}
+        )
 
     ctx._connect_args.update(kwargs)
     return ctx
@@ -213,7 +219,8 @@ def adapters(ctx):
 cli.add_command(cmd_shell.shell)
 devices.add_command(cmd_object_fields.cmd)
 users.add_command(cmd_object_fields.cmd)
-adapters.add_command(cmd_adapters.clients)
+adapters.add_command(cmd_adapters_get_clients.cmd)
+adapters.add_command(cmd_adapters_get.cmd)
 
 
 def main(*args, **kwargs):
@@ -232,3 +239,17 @@ if __name__ == "__main__":
 # fetch time field? older than N days?
 
 # report of broken adapter clients
+
+"""
+/devices fields
+devices missing-adapters
+devices get --query b --field generic:1
+
+/users fields
+users missing-adapters
+users get --query b --field generic:1
+
+/adapters get-clients
+adapters get
+adapters add-client
+"""
