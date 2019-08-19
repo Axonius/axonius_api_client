@@ -212,9 +212,9 @@ class Context(object):
             sys.exit(1)
 
     @staticmethod
-    def to_json(data, indent=2):
+    def to_json(raw_data, indent=2, **kwargs):
         """Pass."""
-        return json.dumps(data, indent=indent)
+        return json.dumps(raw_data, indent=indent)
 
     @classmethod
     def dicts_to_csv(cls, rows, headers=None):
@@ -230,6 +230,7 @@ class Context(object):
         writer = csv.DictWriter(stream, quoting=cls.CSV_QUOTING, fieldnames=headers)
         writer.writeheader()
         for row in rows:
+            print(list(row))
             writer.writerow(row)
         return stream.getvalue()
 
@@ -256,11 +257,12 @@ class Context(object):
         # warnings suck.
         warnings.simplefilter("ignore", SSLWARN_CLS)
 
-    def start_client(self, url, key, secret):
+    def start_client(self, url, key, secret, **kwargs):
         """Pass."""
         if not getattr(self, "obj", None):
             connect_args = {}
             connect_args.update(self._connect_args)
+            connect_args.update(kwargs)
             connect_args["url"] = url
             connect_args["key"] = key
             connect_args["secret"] = secret
@@ -283,10 +285,13 @@ class Context(object):
         export_file,
         export_path,
         export_overwrite,
+        **kwargs
     ):
         """Pass."""
+        kwargs.setdefault("ctx", self)
+        kwargs["raw_data"] = raw_data
         if export_format in formatters:
-            data = formatters[export_format](ctx=self, raw_data=raw_data)
+            data = formatters[export_format](**kwargs)
         else:
             msg = "Export format {f!r} is unsupported! Must be one of: {sf}"
             msg = msg.format(f=export_format, sf=list(formatters.keys()))

@@ -37,6 +37,7 @@ LOG_REQUEST_ATTRS_VERBOSE = [
     "method={request.method!r}",
     "headers={request.headers}",
     "size={size}",
+    "body={request.body!r}",
 ]
 """:obj:`list` of :obj:`str`: Request attributes to log when verbose=True."""
 
@@ -56,6 +57,7 @@ LOG_RESPONSE_ATTRS_VERBOSE = [
     "reason={response.reason!r}",
     "elapsed={response.elapsed}",
     "size={size}",
+    # "body={response.text!r}",
 ]
 """:obj:`list` of :obj:`str`: Response attributes to log when verbose=True."""
 

@@ -563,28 +563,92 @@ class Fields(mixins.ApiChild):
 class Reports(mixins.ApiChild):
     """Pass."""
 
-    def adapters(self, query=None):
+    def adapters(
+        self,
+        serial_lines=False,
+        serial_dates=False,
+        unconfigured=False,
+        others_not_seen=False,
+        **kwargs
+    ):
         """Pass."""
         sys_adapters = self._parent.adapters.get()
+        broken_adapters = [x for x in sys_adapters if x["status_bool"] is False]
+        unconfig_adapters = [x for x in sys_adapters if x["status_bool"] is None]
+
         fields = self._parent.fields.get()
 
-        raw_rows = self._parent.get(query=query)
-
+        kwargs["fields"] = fields
+        raw_rows = self._parent.get(**kwargs)
         rows = []
 
         for raw_row in raw_rows:
-            row_adapters = tools.rstrip(raw_row.get("adapters", []), "_adapter")
-            fetch_times = raw_row.pop("specific_data.data.fetch_time", [])
-            fetch_times = [format(x) for x in tools.dt_parse(fetch_times)]
+            row = {}
+            missing = []
+            row["adapters"] = tools.rstrip(raw_row.get("adapters", []), "_adapter")
 
-            row = {k: v for k, v in raw_row.items() if "." in k or k in ["labels"]}
+            for k, v in raw_row.items():
+                if "." in k or k in ["labels"]:
+                    row[k] = v
+
+            ftimes = raw_row.get("specific_data.data.fetch_time", []) or []
+
+            if not isinstance(ftimes, (list, tuple)):
+                ftimes = [ftimes]
+
+            ftimes = [x for x in tools.dt_parse(ftimes)]
 
             for adapter in sys_adapters:
                 name = adapter["name"]
-                if name in row_adapters:
-                    row[name] = fetch_times[row_adapters.index(name)]
-                elif name in fields:
-                    row[name] = "MISSING"
+
+                otype = self._parent.__class__.__name__.upper()
+                other_status = name in fields
+
+                if not other_status and not others_not_seen:
+                    continue
+
+                if not adapter["clients"] or adapter["status_bool"] is None:
+                    if not unconfigured:
+                        continue
+                    ftime = "NEVER; NO CLIENTS"
+                elif adapter["status_bool"] is False:
+                    ftime = "NEVER; CLIENTS BROKEN"
+                elif adapter["status_bool"] is True:
+                    ftime = "NEVER; CLIENTS OK"
+
+                if name in row["adapters"]:
+                    try:
+                        ftime = ftimes[row["adapters"].index(name)]
+                    except Exception:
+                        ftime = "UNABLE TO DETERMINE"
+                elif other_status and name not in missing:
+                    missing.append(name)
+
+                if serial_dates:
+                    ftime = format(ftime)
+
+                if serial_lines:
+                    status_lines = [
+                        "FETCHED THIS {}: {}".format(otype.rstrip("S"), ftime),
+                        "FETCHED OTHER {}: {}".format(otype, other_status),
+                        "CLIENTS OK: {}".format(adapter["client_count_ok"]),
+                        "CLIENTS BAD: {}".format(adapter["client_count_bad"]),
+                    ]
+                else:
+                    status_lines = {
+                        "FETCHED_THIS_{}".format(otype.rstrip("S")): ftime,
+                        "FETCHED_OTHER_{}".format(otype): other_status,
+                        "CLIENTS_OK": adapter["client_count_ok"],
+                        "CLIENTS_BAD": adapter["client_count_bad"],
+                    }
+
+                row["adapter: {}".format(name)] = status_lines
+
+            row["count_not_fetched"] = len(missing)
+            row["count_fetched"] = len(row["adapters"])
+            row["count_total"] = len(sys_adapters)
+            row["count_total_broken"] = len(broken_adapters)
+            row["count_total_unconfigured"] = len(unconfig_adapters)
 
             rows.append(row)
 
@@ -602,7 +666,7 @@ class UserDeviceMixin(models.ApiModelUserDevice, mixins.ApiMixin):
         self.reports = Reports(parent=self)
         self.adapters = adapters.Adapters(auth=auth, **kwargs)
 
-    def _get(self, query=None, fields=None, row_start=0, page_size=0):
+    def _get(self, query=None, fields=None, row_start=0, page_size=0, use_post=True):
         """Get a page for a given query.
 
         Args:
@@ -645,7 +709,11 @@ class UserDeviceMixin(models.ApiModelUserDevice, mixins.ApiMixin):
             if isinstance(fields, (list, tuple)):
                 fields = ",".join(fields)
             params["fields"] = fields
-        return self._request(method="get", path=self._router.root, params=params)
+
+        if use_post:
+            return self._request(method="post", path=self._router.root, json=params)
+        else:
+            return self._request(method="get", path=self._router.root, params=params)
 
     def _check_counts(
         self,
@@ -687,7 +755,7 @@ class UserDeviceMixin(models.ApiModelUserDevice, mixins.ApiMixin):
             )
         return False
 
-    def count(self, query=None):
+    def count(self, query=None, use_post=True):
         """Get the number of matches for a given query.
 
         Args:
@@ -701,7 +769,11 @@ class UserDeviceMixin(models.ApiModelUserDevice, mixins.ApiMixin):
         params = {}
         if query:
             params["filter"] = query
-        return self._request(method="get", path=self._router.count, params=params)
+
+        if use_post:
+            return self._request(method="post", path=self._router.count, json=params)
+        else:
+            return self._request(method="get", path=self._router.count, params=params)
 
     def get(
         self,
@@ -711,6 +783,7 @@ class UserDeviceMixin(models.ApiModelUserDevice, mixins.ApiMixin):
         page_size=None,
         manual_fields=None,
         default_fields=True,
+        use_post=True,
         **kwargs
     ):
         """Get objects for a given query using paging.
@@ -739,9 +812,13 @@ class UserDeviceMixin(models.ApiModelUserDevice, mixins.ApiMixin):
         """
         page_size = page_size or constants.DEFAULT_PAGE_SIZE
 
-        if not kwargs and default_fields:
+        if default_fields:
             for k, v in self._default_fields.items():
-                kwargs.setdefault(k, v)
+                if k not in kwargs:
+                    kwargs[k] = v
+                for i in v:
+                    if i not in kwargs[k]:
+                        kwargs[k].append(v)
 
         if manual_fields:
             fields = manual_fields
@@ -757,7 +834,11 @@ class UserDeviceMixin(models.ApiModelUserDevice, mixins.ApiMixin):
 
         while True:
             page = self._get(
-                query=query, fields=fields, row_start=count_total, page_size=page_size
+                query=query,
+                fields=fields,
+                row_start=count_total,
+                page_size=page_size,
+                use_post=use_post,
             )
 
             rows += page["assets"]
@@ -806,16 +887,13 @@ class UserDeviceMixin(models.ApiModelUserDevice, mixins.ApiMixin):
             )
         return data
 
-    def get_by_saved_query(self, name, page_size=None):
+    def get_by_saved_query(self, name, **kwargs):
         """Pass."""
-        page_size = page_size or constants.DEFAULT_PAGE_SIZE
-
         sq = self.saved_query.get(name=name, regex=False, count_min=1, count_max=1)
 
-        query = sq["view"]["query"]["filter"]
-        manual_fields = sq["view"]["fields"]
-
-        return self.get(query=query, page_size=page_size, manual_fields=manual_fields)
+        kwargs["query"] = sq["view"]["query"]["filter"]
+        kwargs["manual_fields"] = sq["view"]["fields"]
+        return self.get(**kwargs)
 
     def get_by_field_value(self, value, name, adapter_name, regex=False, **kwargs):
         """Build query to perform equals or regex search.
@@ -869,7 +947,7 @@ class Users(UserDeviceMixin):
             :obj:`dict`
 
         """
-        return {"generic": ["fetch_time", "labels", "username", "mail"]}
+        return {"generic": ["id", "fetch_time", "labels", "username", "mail"]}
 
     def get_by_name(self, value, **kwargs):
         """Get objects by name using paging.
@@ -926,7 +1004,13 @@ class Devices(UserDeviceMixin):
 
         """
         return {
-            "generic": ["fetch_time", "labels", "hostname", "network_interfaces.ips"]
+            "generic": [
+                "id",
+                "fetch_time",
+                "labels",
+                "hostname",
+                "network_interfaces.ips",
+            ]
         }
 
     def get_by_name(self, value, **kwargs):

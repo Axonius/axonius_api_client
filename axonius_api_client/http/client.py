@@ -130,15 +130,20 @@ class HttpClient(object):
         elif certwarn is False:
             warnings.simplefilter("ignore", urlwarn)
 
-        log_attrs = kwargs.get("log_attrs", False)
-        if log_attrs:
+        log_attrs_request = kwargs.get("log_attrs_request", False)
+        if log_attrs_request:
             self.LOG_REQUEST_ATTRS = constants.LOG_REQUEST_ATTRS_VERBOSE
-            self.LOG_RESPONSE_ATTRS = constants.LOG_RESPONSE_ATTRS_VERBOSE
-        elif log_attrs is False:
+        elif log_attrs_request is False:
             self.LOG_REQUEST_ATTRS = constants.LOG_REQUEST_ATTRS_BRIEF
-            self.LOG_RESPONSE_ATTRS = constants.LOG_RESPONSE_ATTRS_BRIEF
-        elif log_attrs is None:
+        elif log_attrs_request is None:
             self.LOG_REQUEST_ATTRS = []
+
+        log_attrs_response = kwargs.get("log_attrs_response", False)
+        if log_attrs_response:
+            self.LOG_RESPONSE_ATTRS = constants.LOG_RESPONSE_ATTRS_VERBOSE
+        elif log_attrs_response is False:
+            self.LOG_RESPONSE_ATTRS = constants.LOG_RESPONSE_ATTRS_BRIEF
+        elif log_attrs_response is None:
             self.LOG_RESPONSE_ATTRS = []
 
         urllog = logging.getLogger("urllib3.connectionpool")

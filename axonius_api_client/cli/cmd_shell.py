@@ -33,7 +33,9 @@ def jdump(obj):
 @context.pass_context
 def shell(ctx, url, key, secret, spawn):
     """Start an interactive shell."""
-    client = ctx.start_client(url=url, key=key, secret=secret)
+    client = ctx.start_client(
+        url=url, key=key, secret=secret, log_attrs_request=True, save_history=True
+    )
 
     if spawn:
         shellvars = globals()

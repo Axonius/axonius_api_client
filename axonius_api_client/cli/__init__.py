@@ -9,13 +9,7 @@ import os
 
 import click
 
-from . import (
-    context,
-    cmd_object_fields,
-    cmd_adapters_get_clients,
-    cmd_adapters_get,
-    cmd_shell,
-)
+from . import context, cmd_object, cmd_adapters, cmd_shell
 from .. import tools, constants, version, logs
 
 AX_DOTENV = os.environ.get("AX_DOTENV", "")
@@ -217,10 +211,15 @@ def adapters(ctx):
 
 
 cli.add_command(cmd_shell.shell)
-devices.add_command(cmd_object_fields.cmd)
-users.add_command(cmd_object_fields.cmd)
-adapters.add_command(cmd_adapters_get_clients.cmd)
-adapters.add_command(cmd_adapters_get.cmd)
+
+users.add_command(cmd_object.fields)
+users.add_command(cmd_object.adapters)
+
+devices.add_command(cmd_object.fields)
+devices.add_command(cmd_object.adapters)
+
+adapters.add_command(cmd_adapters.get_clients)
+adapters.add_command(cmd_adapters.get)
 
 
 def main(*args, **kwargs):
@@ -234,9 +233,6 @@ if __name__ == "__main__":
 
 # report of all adapters missing from all devices
 # report of all adapters missing from all users
-
-# adapters field missing any clients configured for any adapters?
-# fetch time field? older than N days?
 
 # report of broken adapter clients
 

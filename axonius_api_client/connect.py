@@ -40,6 +40,9 @@ class Connect(object):
         certpath = kwargs.get("certpath", "")
         certverify = kwargs.get("certverify", False)
         certwarn = kwargs.get("certwarn", True)
+        save_history = kwargs.get("save_history", False)
+        log_attrs_request = kwargs.get("log_attrs_request", False)
+        log_attrs_response = kwargs.get("log_attrs_response", False)
         log_logger = kwargs.get("log_logger", logs.LOG)
         log_level_package = kwargs.get("log_level_package", constants.LOG_LEVEL_PACKAGE)
         log_level_http = kwargs.get("log_level_http", constants.LOG_LEVEL_HTTP)
@@ -86,6 +89,9 @@ class Connect(object):
             "certwarn": certwarn,
             "certverify": certverify,
             "log_level": log_level_http,
+            "log_attrs_request": log_attrs_request,
+            "log_attrs_response": log_attrs_response,
+            "save_history": save_history,
         }
         self._auth_args = {"key": key, "secret": secret, "log_level": log_level_auth}
 
