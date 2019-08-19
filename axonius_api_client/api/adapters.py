@@ -5,72 +5,14 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
-import datetime
 import re
 
 from . import routers, mixins
 from .. import tools, exceptions
 
 
-class Clients(object):
+class Clients(mixins.ApiChild):
     """Pass."""
-
-    FETCH_DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
-
-    def __init__(self, parent):
-        """Pass."""
-        self._parent = parent
-
-    def __str__(self):
-        """Pass."""
-        return "Client commands for {}".format(self._parent)
-
-    def __repr__(self):
-        """Pass."""
-        return self.__str__()
-
-    def _fetch_dt(self, client):
-        """Pass."""
-        dt = client.get("date_fetched")
-        dt = tools.rstrip(dt, "+00:00")
-        dt = datetime.datetime.strptime(dt, self.FETCH_DATE_FORMAT)
-        return dt
-
-    def get(
-        self,
-        fetched_within=None,
-        not_fetched_within=None,
-        status_error=True,
-        status_success=True,
-        **kwargs
-    ):
-        """Get all adapters."""
-        adapters = self._parent.get(**kwargs)
-
-        clients = []
-        for adapter in adapters:
-            for client in adapter["clients"]:
-                status = client["status"]
-
-                fetch_dt = self._fetch_dt(client)
-
-                if fetched_within is not None:
-                    if fetch_dt <= tools.dt_ago(minutes=fetched_within):
-                        continue
-
-                if not_fetched_within is not None:
-                    if fetch_dt >= tools.dt_ago(minutes=not_fetched_within):
-                        continue
-
-                if status == "success" and not status_success:
-                    continue
-
-                if status == "error" and not status_error:
-                    continue
-
-                clients.append(client)
-
-        return clients
 
     # FUTURE: public method
     def _check_client(self, name, config, node_id):
@@ -139,6 +81,35 @@ class Clients(object):
         path += "/{id}".format(id=id)
         return self._request(method="delete", path=path, json=data)
 
+    def get(self, within=None, not_within=None, status=None, **kwargs):
+        """Get all adapters."""
+        adapters = kwargs.get("adapters", self._parent.get(**kwargs))
+        clients = []
+
+        for adapter in adapters:
+            for client in adapter["clients"]:
+                # FUTURE: date_fetched for client seems to be only for
+                # when fetch has been triggered from "save" in adapters>client page??
+                minutes_ago = tools.dt_minutes_ago(client["date_fetched"])
+
+                if within is not None:
+                    if minutes_ago >= within:
+                        continue
+
+                if not_within is not None:
+                    if minutes_ago <= not_within:
+                        continue
+
+                if client["status_bool"] and status is False:
+                    continue
+
+                if not client["status_bool"] and status is True:
+                    continue
+
+                clients.append(client)
+
+        return clients
+
 
 class Adapters(mixins.ApiMixin):
     """Adapter related API methods."""
@@ -166,66 +137,44 @@ class Adapters(mixins.ApiMixin):
         """
         return self._request(method="get", path=self._router.root)
 
+    def _get_parse(self, **kwargs):
+        """Pass."""
+        if "adapters" in kwargs:
+            adapters = kwargs["adapters"]
+        else:
+            raw = self._get()
+            parser = ParserAdapters(raw=raw, parent=self)
+            adapters = parser.parse()
+        return adapters
+
     def get(
         self,
         names=None,
         nodes=None,
-        only_success=False,
-        only_error=False,
+        client_status=None,
         client_max=None,
         client_min=None,
-        error=True,
+        **kwargs
     ):
         """Get all adapters."""
-        raw = self._get()
-        parser = Parser(raw=raw, parent=self)
-        adapters = parser.parse()
-        adapters = parser.find_by_names(values=names, adapters=adapters, error=error)
-        adapters = parser.find_by_nodes(values=nodes, adapters=adapters, error=error)
-        adapters = parser.find_by(
-            adapters=adapters,
-            only_success=only_success,
-            only_error=only_error,
-            client_max=client_max,
-            client_min=client_min,
+        adapters = self._get_parse(**kwargs)
+        error = kwargs.get("error", True)
+
+        adapters = self.get_by_names(values=names, adapters=adapters, error=error)
+        adapters = self.get_by_nodes(values=nodes, adapters=adapters, error=error)
+        adapters = self.get_by_client_count(
+            client_max=client_max, client_min=client_min, adapters=adapters
+        )
+        adapters = self.get_by_client_status(
+            client_status=client_status, adapters=adapters
         )
         return adapters
 
-
-class Parser(object):
-    """Pass."""
-
-    _NOTSET = "__NOTSET__"
-    _RAW_SECRET = ["unchanged"]
-    _SECRET = "__HIDDEN__"
-
-    def __init__(self, raw, parent):
+    def get_by_names(self, values=None, **kwargs):
         """Pass."""
-        self._log = parent._log.getChild(self.__class__.__name__)
-        """:obj:`logging.Logger`: Logger for this object."""
-        self._parent = parent
-        self._raw = raw
+        adapters = self._get_parse(**kwargs)
+        error = kwargs.get("error", True)
 
-    def parse(self):
-        """Pass."""
-        parsed = []
-
-        for adapter_name, raw_adapters in self._raw.items():
-            for raw_adapter in raw_adapters:
-                parsed.append(
-                    self._parse_adapter(
-                        adapter_name=adapter_name, raw_adapter=raw_adapter
-                    )
-                )
-
-        msg = "Parsed {n} adapters"
-        msg = msg.format(n=len(parsed))
-        self._log.debug(msg)
-
-        return parsed
-
-    def find_by_names(self, values=None, adapters=None, error=True):
-        """Pass."""
         if not adapters or values is None:
             return adapters
 
@@ -246,10 +195,6 @@ class Parser(object):
             for value in values:
                 value_re = re.compile(value, re.I)
                 if value_re.search(check) and adapter not in matches:
-                    msg = "Matched adapter name {a!r} using value {v!r}"
-                    msg = msg.format(a=adapter["name"], v=value)
-                    self._log.debug(msg)
-
                     matches.append(adapter)
 
         if not matches and known and error:
@@ -262,8 +207,11 @@ class Parser(object):
 
         return matches
 
-    def find_by_nodes(self, values=None, adapters=None, error=True):
+    def get_by_nodes(self, values=None, **kwargs):
         """Pass."""
+        adapters = self._get_parse(**kwargs)
+        error = kwargs.get("error", True)
+
         if not adapters or values is None:
             return adapters
 
@@ -296,8 +244,11 @@ class Parser(object):
 
         return matches
 
-    def find_by_features(self, values=None, adapters=None, error=True):
+    def get_by_features(self, values=None, **kwargs):
         """Pass."""
+        adapters = self._get_parse(**kwargs)
+        error = kwargs.get("error", True)
+
         if not adapters or values is None:
             return adapters
 
@@ -329,8 +280,10 @@ class Parser(object):
 
         return matches
 
-    def find_by_client_count(self, client_min=None, client_max=None, adapters=None):
+    def get_by_client_count(self, client_min=None, client_max=None, **kwargs):
         """Pass."""
+        adapters = self._get_parse(**kwargs)
+
         if not adapters or (client_min is None and client_max is None):
             return adapters
 
@@ -345,84 +298,85 @@ class Parser(object):
             if client_max is not None and not client_count <= client_max:
                 continue
 
-            msg = "Matched adapter name {a!r} using client min {cmin!r}, max {cmax!r}"
-            msg = msg.format(a=adapter["name"], cmin=client_min, max=client_max)
-            self._log.debug(msg)
-
             matches.append(adapter)
 
         return matches
 
-    def find_by(
-        self,
-        adapters,
-        only_success=False,
-        only_error=False,
-        client_max=None,
-        client_min=None,
-    ):
+    def get_by_client_status(self, client_status=None, **kwargs):
         """Pass."""
+        adapters = self._get_parse(**kwargs)
+
+        if not adapters or client_status is None:
+            return adapters
+
         matches = []
 
         for adapter in adapters:
             clients = adapter["clients"]
-            client_cnt = len(clients)
+            match = True
 
-            if client_min is not None and not client_cnt >= client_min:
-                continue
+            for client in clients:
+                if not client["status_bool"] and client_status:
+                    match = False
+                if client["status_bool"] and not client_status:
+                    match = False
 
-            if client_max is not None and not client_cnt <= client_max:
-                continue
+            if match:
+                matches.append(adapter)
 
-            if any([x["status"] == "error" for x in clients]) and only_success:
-                continue
-
-            if any([x["status"] == "success" for x in clients]) and only_error:
-                continue
-
-            matches.append(adapter)
         return matches
 
-    @property
-    def nodes(self):
-        """Get list of all nodes."""
-        return list(self.parse().keys())
 
-    def __str__(self):
-        """Pass."""
-        return "Nodes: {n}".format(n=", ".join(self.nodes))
+class ParserAdapters(mixins.ApiParser):
+    """Pass."""
 
-    def __repr__(self):
-        """Pass."""
-        return self.__str__()
+    _NOTSET = "__NOTSET__"
+    _RAW_SECRET = ["unchanged"]
+    _SECRET = "__HIDDEN__"
 
-    def _parse_adapter(self, adapter_name, raw_adapter):
+    def _parse_adapter(self, name, raw):
         """Pass."""
         parsed = {
-            "name": tools.rstrip(adapter_name, "_adapter"),
-            "name_raw": adapter_name,
-            "name_plugin": raw_adapter["unique_plugin_name"],
-            "node_name": raw_adapter["node_name"],
-            "node_id": raw_adapter["node_id"],
-            "status": raw_adapter["status"],
-            "features": raw_adapter["supported_features"],
+            "name": tools.rstrip(name, "_adapter"),
+            "name_raw": name,
+            "name_plugin": raw["unique_plugin_name"],
+            "node_name": raw["node_name"],
+            "node_id": raw["node_id"],
+            "status": raw["status"],
+            "features": raw["supported_features"],
         }
 
-        parsed["clients"] = self._clients(raw_adapter=raw_adapter, parent=parsed)
-        parsed["settings_clients"] = self._settings_clients(raw_adapter=raw_adapter)
-        parsed["settings_adapter"] = self._settings_adapter(
-            raw_adapter=raw_adapter, base=False
-        )
-        parsed["settings_advanced"] = self._settings_adapter(
-            raw_adapter=raw_adapter, base=True
-        )
+        clients = self._clients(raw=raw, parent=parsed)
+        client_count = len(clients)
+        client_count_ok = len([x for x in clients if x["status_bool"] is True])
+        client_count_bad = len([x for x in clients if x["status_bool"] is False])
+
+        if parsed["status"] == "success":
+            status_bool = True
+        elif parsed["status"] == "warning":
+            status_bool = False
+        else:
+            status_bool = None
+
+        settings_clients = self._settings_clients(raw=raw)
+        settings_adapter = self._settings_adapter(raw=raw, base=False)
+        settings_advanced = self._settings_adapter(raw=raw, base=True)
+
+        parsed["clients"] = clients
+        parsed["client_count"] = client_count
+        parsed["client_count_ok"] = client_count_ok
+        parsed["client_count_bad"] = client_count_bad
+        parsed["status_bool"] = status_bool
+        parsed["settings_clients"] = settings_clients
+        parsed["settings_adapter"] = settings_adapter
+        parsed["settings_advanced"] = settings_advanced
         return parsed
 
-    def _settings_clients(self, raw_adapter):
+    def _settings_clients(self, raw):
         """Pass."""
         settings = {}
 
-        schema = raw_adapter["schema"]
+        schema = raw["schema"]
         items = schema["items"]
         required = schema["required"]
 
@@ -433,11 +387,11 @@ class Parser(object):
 
         return settings
 
-    def _settings_adapter(self, raw_adapter, base=True):
+    def _settings_adapter(self, raw, base=True):
         """Pass."""
         settings = {}
 
-        for raw_name, raw_settings in raw_adapter["config"].items():
+        for raw_name, raw_settings in raw["config"].items():
             is_base = raw_name == "AdapterBase"
             if (is_base and not base) or (not is_base and base) or settings:
                 continue
@@ -456,13 +410,13 @@ class Parser(object):
 
         return settings
 
-    def _clients(self, raw_adapter, parent):
+    def _clients(self, raw, parent):
         """Pass."""
         clients = []
 
-        settings_client = self._settings_clients(raw_adapter=raw_adapter)
+        settings_client = self._settings_clients(raw=raw)
 
-        for raw_client in raw_adapter["clients"]:
+        for raw_client in raw["clients"]:
             raw_config = raw_client["client_config"]
             parsed_settings = {}
 
@@ -473,6 +427,13 @@ class Parser(object):
                 parsed_settings[setting_name] = setting_config
                 parsed_settings[setting_name]["value"] = value
 
+            if raw_client["status"] == "success":
+                status_bool = True
+            elif raw_client["status"] == "error":
+                status_bool = False
+            else:
+                status_bool = None
+
             parsed_client = {
                 k: v for k, v in raw_client.items() if k != "client_config"
             }
@@ -482,8 +443,20 @@ class Parser(object):
             parsed_client["adapter_status"] = parent["status"]
             parsed_client["adapter_features"] = parent["features"]
             parsed_client["settings"] = parsed_settings
+            parsed_client["status_bool"] = status_bool
             clients.append(parsed_client)
         return clients
+
+    def parse(self):
+        """Pass."""
+        parsed = []
+
+        for name, raw_adapters in self._raw.items():
+            for raw in raw_adapters:
+                adapter = self._parse_adapter(name=name, raw=raw)
+                parsed.append(adapter)
+
+        return parsed
 
 
 # FUTURE: public REST API does not support setting advanced settings

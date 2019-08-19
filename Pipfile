@@ -10,6 +10,4 @@ name = "pypi"
 "pytest-httpbin" = "*"
 
 [packages]
-"python-dotenv" = "*"
-"click" = "*"
 e1839a8 = {path = ".",editable = true}

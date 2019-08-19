@@ -36,7 +36,12 @@ setup(
     package_data={"": ["LICENSE"]},
     include_package_data=True,
     python_requires=">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*",
-    install_requires=["requests[security,socks]", "click", "python-dotenv"],
+    install_requires=[
+        "requests[security,socks]",
+        "click",
+        "python-dotenv",
+        "python-dateutil",
+    ],
     keywords=["Axonius", "API Library"],
     tests_require=["pytest", "pytest-cov", "pytest-httpbin", "coverage"],
     license=ABOUT["__license__"],

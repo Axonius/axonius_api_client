@@ -29,30 +29,21 @@ from .. import tools
     show_default=True,
 )
 @click.option(
-    "--status-error",
-    default=False,
-    help="Only clients with a status of error.",
-    is_flag=True,
+    "--status",
+    help="Only clients with a success if True or error if False.",
+    type=click.BOOL,
     show_envvar=True,
     show_default=True,
 )
 @click.option(
-    "--status-success",
-    default=False,
-    help="Only clients with a status of success.",
-    is_flag=True,
-    show_envvar=True,
-    show_default=True,
-)
-@click.option(
-    "--fetched-within",
+    "--within",
     help="Only clients fetched in past N minutes.",
     type=click.INT,
     show_envvar=True,
     show_default=True,
 )
 @click.option(
-    "--not-fetched-within",
+    "--not-within",
     help="Only clients NOT fetched in past N minutes.",
     type=click.INT,
     show_envvar=True,
@@ -68,12 +59,11 @@ def cmd(
     export_file,
     export_path,
     export_overwrite,
-    status_success,
-    status_error,
+    status,
     name,
     node,
-    fetched_within,
-    not_fetched_within,
+    within,
+    not_within,
 ):
     """Get all adapters with clients that have errors."""
     client = ctx.start_client(url=url, key=key, secret=secret)
@@ -82,10 +72,9 @@ def cmd(
         raw_data = client.adapters.clients.get(
             names=name or None,
             nodes=node or None,
-            status_error=status_error,
-            status_success=status_success,
-            fetched_within=fetched_within,
-            not_fetched_within=not_fetched_within,
+            status=status,
+            within=within,
+            not_within=not_within,
         )
     except Exception as exc:
         if ctx.wraperror:

@@ -110,7 +110,7 @@ class InvalidJson(ResponseError):
 class ObjectNotFound(ApiError):
     """Error when unable to find an object."""
 
-    def __init__(self, value, value_type, object_type, exc=None):
+    def __init__(self, value, value_type, object_type, known_callback=None, exc=None):
         """Constructor.
 
         Args:
@@ -133,12 +133,21 @@ class ObjectNotFound(ApiError):
 
         msg = "Unable to find {obj_type} using {val_type}: {val!r}"
         msg = msg.format(val=value, val_type=value_type, obj_type=object_type)
-        msg = "{} -- original exception: {}".format(msg, exc) if exc else msg
+        if exc:
+            msg += " -- original exception: {}".format(exc)
+
+        if known_callback:
+            try:
+                known = known_callback()
+            except Exception as kexc:
+                known = ["known callback {} failed {}".format(known_callback, kexc)]
+
+            msg += " valids: {}".format(tools.crjoin(known))
 
         super(ObjectNotFound, self).__init__(msg)
 
 
-class TooFewObjectsFound(ApiError):
+class TooFewObjectsFound(ObjectNotFound):
     """Error when too many objects found."""
 
     def __init__(
@@ -175,10 +184,10 @@ class TooFewObjectsFound(ApiError):
         )
         msg = "{} -- original exception: {}".format(msg, exc) if exc else msg
 
-        super(TooFewObjectsFound, self).__init__(msg)
+        super(ObjectNotFound, self).__init__(msg)
 
 
-class TooManyObjectsFound(ApiError):
+class TooManyObjectsFound(ObjectNotFound):
     """Error when too many objects found."""
 
     def __init__(
@@ -215,10 +224,10 @@ class TooManyObjectsFound(ApiError):
         )
         msg = "{} -- original exception: {}".format(msg, exc) if exc else msg
 
-        super(TooManyObjectsFound, self).__init__(msg)
+        super(ObjectNotFound, self).__init__(msg)
 
 
-class UnknownError(ApiError):
+class UnknownError(ObjectNotFound):
     """Pass."""
 
     def __init__(self, value, known, reason_msg, valid_msg, **kwargs):
@@ -234,7 +243,7 @@ class UnknownError(ApiError):
         msg = msg.format(
             reason=self.reason, valid_msg=valid_msg, valids=tools.crjoin(known)
         )
-        super(UnknownError, self).__init__(msg)
+        super(ObjectNotFound, self).__init__(msg)
 
 
 class InvalidCredentials(AuthError):

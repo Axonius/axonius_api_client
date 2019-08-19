@@ -10,7 +10,6 @@ import re
 import click
 
 from . import context
-from .. import tools
 
 
 @click.command("fields", context_settings=context.CONTEXT_SETTINGS)
@@ -55,35 +54,19 @@ def cmd(
     adapter_rec = re.compile(adapter_re, re.I)
     field_rec = re.compile(field_re, re.I)
 
-    raw_fields = api.fields()
-
-    adapters = {}
-    adapters.update(raw_fields["specific"])
-
-    gen_fields = []
-    for field in raw_fields["generic"]:
-        new_field = {}
-        new_field.update(field)
-        new_field["name"] = tools.lstrip(new_field["name"], "specific_data.data.")
-        gen_fields.append(new_field)
-
-    adapters.update({"generic": gen_fields})
+    raw_fields = api.fields.get()
 
     raw_data = {}
 
-    for adapter, adapter_fields in adapters.items():
-        field_trim = "adapters_data.{}.".format(adapter)
-        adapter = tools.rstrip(obj=adapter, postfix="_adapter")
-
+    for adapter, adapter_fields in raw_fields.items():
         if not adapter_rec.search(adapter):
             continue
 
-        for adapter_field in adapter_fields:
-            field_name = tools.lstrip(adapter_field["name"], field_trim)
-            if not field_rec.search(field_name):
+        for field, field_into in adapter_fields.items():
+            if not field_rec.search(field):
                 continue
             raw_data[adapter] = raw_data.get(adapter, [])
-            raw_data[adapter].append(field_name)
+            raw_data[adapter].append(field)
 
     if not raw_data:
         msg = "No fields found matching adapter regex {are!r} and field regex {fre!r}"

@@ -146,3 +146,37 @@ class ApiMixin(models.ApiModel):
             msg = "Page size {page_size} is over maximum page size {max_size}"
             msg = msg.format(page_size=page_size, max_size=constants.MAX_PAGE_SIZE)
             raise exceptions.ApiError(msg)
+
+
+class ApiChild(object):
+    """Pass."""
+
+    def __init__(self, parent):
+        """Pass."""
+        self._parent = parent
+        self._log = parent._log.getChild(self.__class__.__name__)
+
+    def __str__(self):
+        """Pass."""
+        return "{} for {}".format(self.__class__.__name__, self._parent)
+
+    def __repr__(self):
+        """Pass."""
+        return self.__str__()
+
+
+class ApiParser(object):
+    """Pass."""
+
+    def __init__(self, raw, parent):
+        """Pass."""
+        self._parent = parent
+        self._raw = raw
+
+    def __str__(self):
+        """Pass."""
+        return "{} for {}".format(self.__class__.__name__, self._parent)
+
+    def __repr__(self):
+        """Pass."""
+        return self.__str__()

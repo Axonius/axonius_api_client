@@ -19,5 +19,9 @@ if __name__ == "__main__":
 
     try:
         ctx = axonapi.cli.main(standalone_mode=False)
+        devices = ctx.obj.devices
+        adapters = ctx.obj.adapters
+        users = ctx.obj.users
     except SystemExit:
-        print("system exit")
+        # print("system exit")
+        pass

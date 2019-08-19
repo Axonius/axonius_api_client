@@ -8,6 +8,10 @@ from __future__ import unicode_literals
 import datetime
 import json
 
+import dateutil.parser
+import dateutil.tz
+import dateutil.relativedelta
+
 import six
 
 if six.PY2:
@@ -99,12 +103,39 @@ def csvjoin(obj, j=", ", pre=""):
     return _join(obj=obj, j=j, pre=pre)
 
 
-def dt_ago(hours=0, minutes=0, seconds=0, strip_ms=True, utc=True):
+def dt_parse(dt, err=False):
     """Pass."""
-    if utc:
-        now = datetime.datetime.utcnow()
-    else:
-        now = datetime.datetime.now()
+    if isinstance(dt, (list, tuple)):
+        return [dt_parse(x, err) for x in dt]
+    try:
+        return dateutil.parser.parse(dt)
+    except Exception:
+        if err:
+            raise
+        return dt
+
+
+def dt_minutes_ago(then):
+    """Pass."""
+    now = datetime.datetime.now(dateutil.tz.tzutc())
+    then = dateutil.parser.parse(then)
+    return round((now - then).total_seconds() / 60)
+
+
+'''
+
+def dt_delta(then):
+    """Pass."""
+    now = datetime.datetime.now(dateutil.tz.tzutc())
+    then = dt_parse(then)
+    return dateutil.relativedelta.relativedelta(now, then)
+
+
+def dt_ago(hours=0, minutes=0, seconds=0, strip_ms=True):
+    """Pass."""
+    now = datetime.datetime.now(dateutil.tz.tzutc())
     delta = datetime.timedelta(hours=hours, minutes=minutes, seconds=seconds)
     then = now - delta
     return then.replace(microsecond=0) if strip_ms else then
+
+'''

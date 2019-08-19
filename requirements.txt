@@ -1,3 +1,4 @@
 requests[security,socks]
 python-dotenv
+python-dateutil
 click

@@ -8,7 +8,6 @@ from __future__ import unicode_literals
 import click
 
 from . import context
-from .. import tools
 
 
 @click.command("get", context_settings=context.CONTEXT_SETTINGS)
@@ -29,18 +28,9 @@ from .. import tools
     show_default=True,
 )
 @click.option(
-    "--only-success",
-    default=False,
-    help="Only adapters with clients that have no errors.",
-    is_flag=True,
-    show_envvar=True,
-    show_default=True,
-)
-@click.option(
-    "--only-error",
-    default=False,
-    help="Only adapters with clients that have errors.",
-    is_flag=True,
+    "--client-status",
+    help="Only adapters with clients that are ok if True or bad if False.",
+    type=click.BOOL,
     show_envvar=True,
     show_default=True,
 )
@@ -70,8 +60,7 @@ def cmd(
     export_overwrite,
     name,
     node,
-    only_success,
-    only_error,
+    client_status,
     client_min,
     client_max,
 ):
@@ -82,8 +71,7 @@ def cmd(
         raw_data = client.adapters.get(
             names=name or None,
             nodes=node or None,
-            only_success=only_success,
-            only_error=only_error,
+            client_status=client_status,
             client_min=client_min,
             client_max=client_max,
         )
@@ -112,26 +100,5 @@ def to_json(ctx, raw_data):
 
 def to_csv(ctx, raw_data):
     """Pass."""
-    # TODO THROW ERROR, TOO COMPLEX TO CSVIFY
-    headers = [
-        "adapter",
-        "adapter_features",
-        "adapter_status",
-        "node_name",
-        "node_id",
-        "client_id",
-        "uuid",
-        "date_fetched",
-        "status",
-        "error",
-        "settings",
-    ]
-
-    for client in raw_data:
-        features = client.pop("adapter_features")
-        client["adapter_features"] = tools.crjoin(features, j="\n", pre="")
-
-        settings = client.pop("settings")
-        settings = ["{} = {}".format(k, v["value"]) for k, v in settings.items()]
-        client["settings"] = tools.crjoin(settings, j="\n", pre="")
-    return ctx.dicts_to_csv(rows=raw_data, headers=headers)
+    msg = "Data structures for Adapters are too complex to turn into CSV, use JSON!"
+    ctx.echo_error(msg)

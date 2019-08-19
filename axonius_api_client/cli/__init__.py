@@ -244,12 +244,15 @@ if __name__ == "__main__":
 /devices fields
 devices missing-adapters
 devices get --query b --field generic:1
+get fields
+get adapters
+get objects
 
 /users fields
 users missing-adapters
 users get --query b --field generic:1
 
 /adapters get-clients
-adapters get
+/adapters get
 adapters add-client
 """
