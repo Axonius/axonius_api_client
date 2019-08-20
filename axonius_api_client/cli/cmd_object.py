@@ -33,6 +33,7 @@ from .. import tools
 )
 @click.option(
     "--default-fields/--no-default-fields",
+    default=True,
     help="Include default fields for this object type.",
     is_flag=True,
     show_envvar=True,
