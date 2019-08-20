@@ -19,6 +19,61 @@ if six.PY2:
 else:
     import pathlib
 
+STR = six.string_types
+INT = six.integer_types
+SIMPLE = tuple(list(STR) + list(INT))
+LIST = (list, tuple)
+
+
+def is_dict(obj):
+    """Pass."""
+    return isinstance(obj, dict)
+
+
+def is_list(obj):
+    """Pass."""
+    return isinstance(obj, LIST)
+
+
+def is_simple(obj):
+    """Pass."""
+    return isinstance(obj, SIMPLE)
+
+
+def is_list_of_simple(obj, or_simple=False):
+    """Pass."""
+    if or_simple and is_simple(obj):
+        return True
+
+    if is_list(obj):
+        return all([is_simple(x) for x in obj])
+
+    return False
+
+
+def is_list_of_dict(obj):
+    """Pass."""
+    return is_list(obj) and all([is_dict(x) for x in obj])
+
+
+def listify(obj, otype=SIMPLE, oempty=True, itype=SIMPLE):
+    """Pass."""
+    if obj in [None, ""]:
+        return []
+
+    if otype and not isinstance(obj, LIST):
+        if isinstance(obj, otype):
+            obj = [obj]
+        elif oempty:
+            obj = []
+
+    if not isinstance(obj, LIST):
+        obj = [obj]
+
+    if itype:
+        obj = [i for i in obj if isinstance(i, itype)]
+    return obj
+
 
 def resolve_path(path):
     """Pass."""
@@ -55,9 +110,9 @@ def grouper(iterable, n, fillvalue=None):
 
 def rstrip(obj, postfix):
     """Pass."""
-    if isinstance(obj, (list, tuple)):
+    if isinstance(obj, LIST):
         obj = [rstrip(x, postfix) for x in obj]
-    elif isinstance(obj, six.string_types):
+    elif isinstance(obj, STR):
         plen = len(postfix)
         obj = obj[:-plen] if obj.endswith(postfix) else obj
     return obj
@@ -65,32 +120,36 @@ def rstrip(obj, postfix):
 
 def lstrip(obj, prefix):
     """Pass."""
-    if isinstance(obj, (list, tuple)):
+    if isinstance(obj, LIST):
         obj = [lstrip(obj=x, prefix=prefix) for x in obj]
-    elif isinstance(obj, six.string_types):
+    elif isinstance(obj, STR):
         plen = len(prefix)
         obj = obj[plen:] if obj.startswith(prefix) else obj
     return obj
 
 
+def to_json(obj, **kwargs):
+    """Pass."""
+    kwargs.setdefault("indent", 2)
+    return json.dumps(obj, **kwargs)
+
+
 def json_pretty(text):
     """Pass."""
     try:
-        text = json.dumps(json.loads(text), indent=2)
+        text = to_json(json.loads(text))
     except Exception:
         text = text or ""
-    text = (text or "").strip()
-    return text
+    return (text or "").strip()
 
 
 def _join(obj, j, pre=""):
     """Pass."""
     if isinstance(obj, dict):
-        obj = list(obj.keys())
-    if isinstance(obj, str):
+        obj = list(obj)
+    if isinstance(obj, SIMPLE):
         obj = [obj]
-    obj = [format(x) for x in obj]
-    return pre + j.join(obj)
+    return pre + j.join([format(x) for x in obj])
 
 
 def crjoin(obj, j="\n  ", pre="\n  "):
@@ -105,7 +164,7 @@ def csvjoin(obj, j=", ", pre=""):
 
 def dt_parse(dt, err=False):
     """Pass."""
-    if isinstance(dt, (list, tuple)):
+    if isinstance(dt, LIST):
         return [dt_parse(x, err) for x in dt]
     try:
         return dateutil.parser.parse(dt)
@@ -122,6 +181,7 @@ def dt_minutes_ago(then):
     return round((now - then).total_seconds() / 60)
 
 
+# FUTURE: use or lose
 '''
 
 def dt_delta(then):

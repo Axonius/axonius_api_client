@@ -5,19 +5,9 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
-import code
-import readline
-import rlcompleter
-import json
-
 import click
 
 from . import context
-
-
-def jdump(obj):
-    """JSON dump utility."""
-    print(json.dumps(obj, indent=2))
 
 
 @click.command("shell", context_settings=context.CONTEXT_SETTINGS)
@@ -33,16 +23,20 @@ def jdump(obj):
 @context.pass_context
 def shell(ctx, url, key, secret, spawn):
     """Start an interactive shell."""
-    client = ctx.start_client(
-        url=url, key=key, secret=secret, log_attrs_request=True, save_history=True
-    )
+    client = ctx.start_client(url=url, key=key, secret=secret, save_history=True)
+
+    client._http.save_history = True
+
+    devices = client.devices
+    users = client.users
+    adapters = client.adapters
+    actions = client.actions
+    enforcements = client.enforcements
+
+    shellvars = {}
+    shellvars.update(globals())
+    shellvars.update(locals())
 
     if spawn:
-        shellvars = globals()
-        shellvars.update(locals())
-
-        readline.set_completer(rlcompleter.Completer(shellvars).complete)
-        readline.parse_and_bind("tab: complete")
-
-        code.interact(local=shellvars)
+        context.spawn_shell(shellvars)
     return ctx

@@ -16,6 +16,7 @@ AX_DOTENV = os.environ.get("AX_DOTENV", "")
 CWD_PATH = tools.resolve_path(os.getcwd())
 
 
+# TODO: FIGURE OUT HOW REPORTS GUI SENDS CSV
 # FUTURE: prompt does not use CR when re-prompting on empty var with hide_input=False
 # FUTURE: add doc links
 @click.group()
@@ -94,6 +95,36 @@ CWD_PATH = tools.resolve_path(os.getcwd())
     "--log-file/--no-log-file",
     default=False,
     help="Enable logging to --log-file-name in --log-file-path.",
+    is_flag=True,
+    show_envvar=True,
+    show_default=True,
+)
+@click.option(
+    "--log-request-attrs/--no-log-request-attrs",
+    default=None,
+    help="Log http client verbose or brief request attributes (none by default).",
+    is_flag=True,
+    show_envvar=True,
+    show_default=True,
+)
+@click.option(
+    "--log-response-attrs/--no-log-response-attrs",
+    default=None,
+    help="Log http client verbose or brief response attributes (none by default).",
+    is_flag=True,
+    show_envvar=True,
+    show_default=True,
+)
+@click.option(
+    "--log-request-body/--no-log-request-body",
+    help="Log http client request body.",
+    is_flag=True,
+    show_envvar=True,
+    show_default=True,
+)
+@click.option(
+    "--log-response-body/--no-log-response-body",
+    help="Log http client response body.",
     is_flag=True,
     show_envvar=True,
     show_default=True,
@@ -212,9 +243,11 @@ def adapters(ctx):
 
 cli.add_command(cmd_shell.shell)
 
+users.add_command(cmd_object.get)
 users.add_command(cmd_object.fields)
 users.add_command(cmd_object.adapters)
 
+devices.add_command(cmd_object.get)
 devices.add_command(cmd_object.fields)
 devices.add_command(cmd_object.adapters)
 
@@ -231,24 +264,11 @@ def main(*args, **kwargs):
 if __name__ == "__main__":
     main()
 
-# report of all adapters missing from all devices
-# report of all adapters missing from all users
-
-# report of broken adapter clients
-
 """
-/devices fields
-devices missing-adapters
 devices get --query b --field generic:1
-get fields
-get adapters
-get objects
-
-/users fields
-users missing-adapters
 users get --query b --field generic:1
+get saved-query!
 
-/adapters get-clients
-/adapters get
+FUTURE:
 adapters add-client
 """

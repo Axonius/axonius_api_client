@@ -38,6 +38,16 @@ SSLWARN_CLS = requests.urllib3.exceptions.InsecureRequestWarning
 
 CONTEXT_SETTINGS = {"auto_envvar_prefix": "AX"}
 
+FIELD_FORMAT = "fields need to be in the format of adapter_name:field_name"
+DEFAULT_FIELD = "generic:{field}"
+
+
+def jdump(obj, **kwargs):
+    """JSON dump utility."""
+    kwargs.setdefault("sort_keys", True)
+    kwargs.setdefault("indent", 2)
+    print(json.dumps(obj, **kwargs))
+
 
 def load_dotenv():
     """Pass."""
@@ -138,6 +148,34 @@ def export_options(func):
     return wrapper
 
 
+def cb_fields(ctx, param, value):
+    """Pass."""
+    fields = {}
+
+    if not value:
+        return fields
+
+    if not isinstance(value, (list, tuple)):
+        value = [value]
+
+    for x in value:
+        if ":" not in x:
+            x = DEFAULT_FIELD.format(field=x)
+
+        try:
+            adapter, field = x.split(":")
+            adapter, field = adapter.lower().strip(), field.lower().strip()
+        except ValueError:
+            raise click.BadParameter(FIELD_FORMAT)
+
+        fields[adapter] = fields.get(adapter, [])
+
+        if field not in fields[adapter]:
+            fields[adapter].append(field)
+
+    return fields
+
+
 class Context(object):
     """Pass."""
 
@@ -230,7 +268,6 @@ class Context(object):
         writer = csv.DictWriter(stream, quoting=cls.CSV_QUOTING, fieldnames=headers)
         writer.writeheader()
         for row in rows:
-            print(list(row))
             writer.writerow(row)
         return stream.getvalue()
 
@@ -306,3 +343,47 @@ class Context(object):
 
 
 pass_context = click.make_pass_decorator(Context, ensure=True)
+
+
+def register_readline(shellvars=None):
+    """Pass."""
+    try:
+        import atexit
+        import os
+        import readline
+        import rlcompleter
+
+        shellvars = shellvars or {}
+
+        home = os.path.expanduser("~")
+        histfile = ".python_history"
+        histfile = os.path.join(home, histfile)
+
+        if os.path.isfile(histfile):
+            readline.read_history_file(histfile)
+
+        if os.path.isdir(home):
+            atexit.register(readline.write_history_file, histfile)
+
+        readline.set_completer(rlcompleter.Completer(shellvars).complete)
+
+        readline_doc = getattr(readline, "__doc__", "")
+
+        if readline_doc is not None and "libedit" in readline_doc:
+            readline.parse_and_bind("bind ^I rl_complete")
+        else:
+            readline.parse_and_bind("tab: complete")
+    except Exception as exc:
+        msg = "Unable to register history and autocomplete: {}".format(exc)
+        print(msg)
+
+
+def spawn_shell(shellvars=None):
+    """Pass."""
+    import code
+
+    shellvars = shellvars or {}
+    shellvars.setdefault("jdump", jdump)
+    register_readline(shellvars)
+
+    code.interact(local=shellvars)

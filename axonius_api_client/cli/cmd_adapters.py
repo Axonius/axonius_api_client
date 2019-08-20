@@ -189,21 +189,36 @@ def get_clients_to_csv(ctx, raw_data, **kwargs):
         "adapter",
         "adapter_features",
         "adapter_status",
+        "status",
+        "status_bool",
         "node_name",
         "node_id",
         "client_id",
         "uuid",
         "date_fetched",
-        "status",
-        "error",
-        "settings",
     ]
 
-    for client in raw_data:
-        features = client.pop("adapter_features")
-        client["adapter_features"] = tools.crjoin(features, j="\n", pre="")
+    end = ["error", "settings"]
 
-        settings = client.pop("settings")
-        settings = ["{} = {}".format(k, v["value"]) for k, v in settings.items()]
-        client["settings"] = tools.crjoin(settings, j="\n", pre="")
+    found = []
+
+    stmpl = "{} = {}".format
+
+    for client in raw_data:
+        settings = client.get("settings", []) or []
+        settings = [stmpl(k, v["value"]) for k, v in settings.items()]
+        client["settings"] = settings
+
+        for k, v in client.items():
+            found.append(k)
+
+            v = tools.listify(v, otype=None, itype=None)
+            v = tools.crjoin(v, j="\n", pre="")
+
+            client[k] = v
+
+            if k not in headers + end:
+                headers.append(k)
+
+    headers = [x for x in headers + end if x in found]
     return ctx.dicts_to_csv(rows=raw_data, headers=headers)

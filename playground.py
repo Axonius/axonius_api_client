@@ -6,25 +6,12 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
-import json
-
-
-def jdump(obj):
-    """JSON dump utility."""
-    print(json.dumps(obj, indent=2))
-
 
 if __name__ == "__main__":
     import axonius_api_client as axonapi
 
     try:
-        ctx = axonapi.cli.main(standalone_mode=False)
-        try:
-            devices = ctx.obj.devices
-            adapters = ctx.obj.adapters
-            users = ctx.obj.users
-        except Exception:
-            pass
+        # ctx = axonapi.cli.main(standalone_mode=False)
+        ctx = axonapi.cli.main()
     except SystemExit:
-        # print("system exit")
         pass

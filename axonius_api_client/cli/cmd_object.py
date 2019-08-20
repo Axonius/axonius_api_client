@@ -13,6 +13,162 @@ from . import context
 from .. import tools
 
 
+@click.command("get", context_settings=context.CONTEXT_SETTINGS)
+@context.connect_options
+@context.export_options
+@click.option(
+    "--query",
+    help="Query built from Query Wizard to filter objects (empty returns all).",
+    metavar="QUERY",
+    show_envvar=True,
+    show_default=True,
+)
+@click.option(
+    "--field",
+    help="Field (column) to include in the format of adapter:field.",
+    callback=context.cb_fields,
+    multiple=True,
+    show_envvar=True,
+    show_default=True,
+)
+@click.option(
+    "--default-fields/--no-default-fields",
+    help="Include default fields for this object type.",
+    is_flag=True,
+    show_envvar=True,
+    show_default=True,
+)
+@context.pass_context
+@click.pass_context
+def get(
+    clickctx,
+    ctx,
+    url,
+    key,
+    secret,
+    export_format,
+    export_file,
+    export_path,
+    export_overwrite,
+    query,
+    field,
+    default_fields,
+):
+    """Get all objects matching a query."""
+    client = ctx.start_client(url=url, key=key, secret=secret)
+
+    api = getattr(client, clickctx.parent.command.name)
+
+    try:
+        raw_data = api.get(query=query, default_fields=default_fields, **field)
+    except Exception as exc:
+        if ctx.wraperror:
+            ctx.echo_error(format(exc))
+        raise
+
+    formatters = {"json": ctx.to_json, "csv": get_to_csv}
+
+    d = get_to_csv(ctx=ctx, raw_data=raw_data)
+    # ctx.handle_export(
+    #     raw_data=raw_data,
+    #     formatters=formatters,
+    #     export_format=export_format,
+    #     export_file=export_file,
+    #     export_path=export_path,
+    #     export_overwrite=export_overwrite,
+    # )
+
+    shellvars = {}
+    shellvars.update(globals())
+    shellvars.update(locals())
+    context.spawn_shell(shellvars=shellvars)
+    return ctx
+
+
+def crjoin(obj):
+    """Pass."""
+    return tools.crjoin(obj, j="\n", pre="")
+
+
+"""
+simple:
+python playground.py --log-console --log-level-console debug devices get --query 'specific_data.data.hostname == "WIN-76F9735PMOJ"'
+
+plugin name list getting indexed out!!
+
+complex:
+python playground.py --log-console --log-level-console debug devices get --query 'specific_data.data.hostname == "WIN-76F9735PMOJ"' --field all --no-default-fields
+
+"""  # noqa # WIP
+
+
+def handle_basics(item, pre=""):
+    """Pass."""
+    new_item = {}
+
+    remove = []
+
+    if not tools.is_dict(item):
+        return new_item
+
+    for k, v in item.items():
+        if tools.is_list_of_simple(v, True):
+            remove.append(k)
+            new_item[pre + k] = crjoin(v)
+            continue
+
+    for x in remove:
+        item.pop(x, None)
+
+    return new_item
+
+
+def handle_list_of_dict(item):
+    """Pass."""
+    new_item = {}
+
+    pre = "{}{}.".format
+
+    for k, v in item.items():
+        if not tools.is_list_of_dict(v):
+            continue
+
+        for idx, sub_item in enumerate(v):
+            basics = handle_basics(sub_item, pre=pre(k, idx))
+            new_item.update(basics)
+
+            for sub_k, sub_v in sub_item.items():
+                sub_basics = handle_basics(sub_v, pre=pre(k, idx))
+                new_item.update(sub_basics)
+            print(list(sub_item))
+
+    # for x in new_item:
+    #     item.pop(x, None)
+
+    return new_item
+
+
+def get_to_csv(ctx, raw_data):
+    """Pass."""
+    rows = []
+    headers = []
+
+    for raw_row in raw_data:
+        basics = handle_basics(raw_row)
+        lod = handle_list_of_dict(raw_row)
+
+        found_headers = list(basics) + list(lod)
+        headers += [x for x in found_headers if x not in headers]
+
+        row = {}
+        row.update(basics)
+        row.update(lod)
+
+        rows.append(row)
+
+    return {"rows": rows, "headers": headers}
+
+
 @click.command("fields", context_settings=context.CONTEXT_SETTINGS)
 @context.connect_options
 @context.export_options

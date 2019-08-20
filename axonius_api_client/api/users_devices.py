@@ -5,8 +5,6 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
-import six
-
 from . import routers, mixins, adapters
 from .. import tools, constants, exceptions, models
 
@@ -72,7 +70,10 @@ class SavedQuery(mixins.ApiChild):
 
     def _get_names(self, **kwargs):
         """Pass."""
-        return sorted([x["name"] for x in self._get()])
+        try:
+            return sorted([x["name"] for x in self._get()])
+        except Exception:
+            return []
 
     def _get_direct(self, query=None, row_start=0, page_size=0):
         """Get device saved queries.
@@ -138,9 +139,10 @@ class SavedQuery(mixins.ApiChild):
         sort_field="",
         sort_descending=True,
         sort_adapter="generic",
-        default_fields=True,
         manual_fields=None,
+        page=0,
         page_size=None,
+        historical=None,
         **kwargs
     ):
         """Create a saved query.
@@ -181,17 +183,13 @@ class SavedQuery(mixins.ApiChild):
 
         self._parent._check_max_page_size(page_size=page_size)
 
-        if not kwargs and default_fields:
-            for k, v in self._parent._default_fields.items():
-                kwargs.setdefault(k, v)
-
         if "fields" not in kwargs:
             kwargs["fields"] = self._parent.fields.get()
 
         if manual_fields:
-            validated_fields = manual_fields
+            val_fields = manual_fields
         else:
-            validated_fields = self._parent.fields.validate(**kwargs)
+            val_fields = self._parent.fields.validate(**kwargs)
 
         if sort_field:
             sort_field = self._parent.fields.find(
@@ -203,12 +201,12 @@ class SavedQuery(mixins.ApiChild):
         data["query_type"] = "saved"
 
         data["view"] = {}
-        data["view"]["fields"] = validated_fields
+        data["view"]["fields"] = val_fields
         data["view"]["columnSizes"] = []
         # FUTURE: find out what this does (historical data toggle?)
-        data["view"]["historical"] = None
+        data["view"]["historical"] = historical
         # FUTURE: find out what this does (first page shown in GUI?)
-        data["view"]["page"] = 0
+        data["view"]["page"] = page
         data["view"]["pageSize"] = page_size
 
         data["view"]["query"] = {}
@@ -280,11 +278,10 @@ class SavedQuery(mixins.ApiChild):
 
         found = self._get(**kwargs)
 
-        only1 = (
-            kwargs.get("count_min", None) == 1 and kwargs.get("count_max", None) == 1
-        )
+        count_min = kwargs.get("count_min", None)
+        count_max = kwargs.get("count_max", None)
 
-        return found[0] if only1 else found
+        return found[0] if count_min == 1 and count_max == 1 else found
 
 
 class Labels(mixins.ApiChild):
@@ -515,7 +512,7 @@ class Fields(mixins.ApiChild):
                 valid_msg="field names",
             )
 
-    def validate(self, **kwargs):
+    def validate(self, fields=None, error=True, default_fields=True, **kwargs):
         """Validate provided fields.
 
         Args:
@@ -527,31 +524,32 @@ class Fields(mixins.ApiChild):
             :obj:`list` of :obj:`str`
 
         """
-        fields = kwargs.pop("fields", None) or self.get()
-        error = kwargs.pop("error", True)
+        fields = fields or self.get()
+
+        obj_default_fields = getattr(self._parent, "_default_fields")
+        if default_fields and obj_default_fields:
+            for k, v in obj_default_fields.items():
+                kwargs[k] = tools.listify(kwargs.get(k, []))
+                kwargs[k] += [x for x in v if x not in kwargs[k]]
 
         val_fields = []
 
-        for adapter_name, adapter_fields in kwargs.items():
-            if adapter_fields is None:
-                adapter_fields = []
-
-            if isinstance(adapter_fields, six.string_types):
-                adapter_fields = [adapter_fields]
-
-            if not isinstance(adapter_fields, (list, tuple)):
+        for k, v in kwargs.items():
+            if not isinstance(k, tools.STR):
                 continue
 
-            for adapter_field in adapter_fields:
+            v = tools.listify(v)
+
+            for f in v:
+                if not isinstance(f, tools.STR):
+                    continue
+
                 val_field = self.find(
-                    name=adapter_field,
-                    adapter_name=adapter_name,
-                    fields=fields,
-                    error=error,
+                    name=f, adapter_name=k, fields=fields, error=error
                 )
 
                 msg = "Validated adapter name {a!r} field {f!r} as {v!r}"
-                msg = msg.format(a=adapter_name, f=adapter_field, v=val_field)
+                msg = msg.format(a=k, f=f, v=val_field)
                 self._log.debug(msg)
 
                 if val_field not in val_fields:
@@ -782,7 +780,6 @@ class UserDeviceMixin(models.ApiModelUserDevice, mixins.ApiMixin):
         count_max=None,
         page_size=None,
         manual_fields=None,
-        default_fields=True,
         use_post=True,
         **kwargs
     ):
@@ -812,18 +809,10 @@ class UserDeviceMixin(models.ApiModelUserDevice, mixins.ApiMixin):
         """
         page_size = page_size or constants.DEFAULT_PAGE_SIZE
 
-        if default_fields:
-            for k, v in self._default_fields.items():
-                if k not in kwargs:
-                    kwargs[k] = v
-                for i in v:
-                    if i not in kwargs[k]:
-                        kwargs[k].append(v)
-
         if manual_fields:
-            fields = manual_fields
+            val_fields = manual_fields
         else:
-            fields = self.fields.validate(**kwargs)
+            val_fields = self.fields.validate(**kwargs)
 
         if count_max is not None and count_max < page_size:
             page_size = count_max
@@ -835,7 +824,7 @@ class UserDeviceMixin(models.ApiModelUserDevice, mixins.ApiMixin):
         while True:
             page = self._get(
                 query=query,
-                fields=fields,
+                fields=val_fields,
                 row_start=count_total,
                 page_size=page_size,
                 use_post=use_post,

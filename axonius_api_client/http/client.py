@@ -130,20 +130,24 @@ class HttpClient(object):
         elif certwarn is False:
             warnings.simplefilter("ignore", urlwarn)
 
-        log_attrs_request = kwargs.get("log_attrs_request", False)
-        if log_attrs_request:
+        self.LOG_REQUEST_BODY = kwargs.get("log_request_body", False)
+        self.LOG_RESPONSE_BODY = kwargs.get("log_response_body", False)
+
+        log_request_attrs = kwargs.get("log_request_attrs", False)
+        log_response_attrs = kwargs.get("log_response_attrs", False)
+
+        if log_request_attrs:
             self.LOG_REQUEST_ATTRS = constants.LOG_REQUEST_ATTRS_VERBOSE
-        elif log_attrs_request is False:
+        elif log_request_attrs is False:
             self.LOG_REQUEST_ATTRS = constants.LOG_REQUEST_ATTRS_BRIEF
-        elif log_attrs_request is None:
+        elif log_request_attrs is None:
             self.LOG_REQUEST_ATTRS = []
 
-        log_attrs_response = kwargs.get("log_attrs_response", False)
-        if log_attrs_response:
+        if log_response_attrs:
             self.LOG_RESPONSE_ATTRS = constants.LOG_RESPONSE_ATTRS_VERBOSE
-        elif log_attrs_response is False:
+        elif log_response_attrs is False:
             self.LOG_RESPONSE_ATTRS = constants.LOG_RESPONSE_ATTRS_BRIEF
-        elif log_attrs_response is None:
+        elif log_response_attrs is None:
             self.LOG_RESPONSE_ATTRS = []
 
         urllog = logging.getLogger("urllib3.connectionpool")
@@ -228,6 +232,10 @@ class HttpClient(object):
             kwargs.get("response_timeout", self.response_timeout),
         )
 
+        if self.LOG_REQUEST_BODY:
+            msg = "request body:\n{}".format(tools.json_pretty(prepped_request.body))
+            self._log.debug(msg)
+
         response = self.session.send(**send_args)
 
         if self.save_last:
@@ -239,6 +247,10 @@ class HttpClient(object):
         if self.LOG_RESPONSE_ATTRS:
             msg = ", ".join(self.LOG_RESPONSE_ATTRS)
             msg = msg.format(response=response, size=len(response.text or ""))
+            self._log.debug(msg)
+
+        if self.LOG_RESPONSE_BODY:
+            msg = "response body:\n{}".format(tools.json_pretty(response.text))
             self._log.debug(msg)
 
         return response
