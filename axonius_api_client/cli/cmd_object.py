@@ -68,20 +68,21 @@ def get(
 
     formatters = {"json": ctx.to_json, "csv": get_to_csv}
 
-    d = get_to_csv(ctx=ctx, raw_data=raw_data)
-    # ctx.handle_export(
-    #     raw_data=raw_data,
-    #     formatters=formatters,
-    #     export_format=export_format,
-    #     export_file=export_file,
-    #     export_path=export_path,
-    #     export_overwrite=export_overwrite,
-    # )
+    # d = get_to_csv(ctx=ctx, raw_data=raw_data)
 
-    shellvars = {}
-    shellvars.update(globals())
-    shellvars.update(locals())
-    context.spawn_shell(shellvars=shellvars)
+    ctx.handle_export(
+        raw_data=raw_data,
+        formatters=formatters,
+        export_format=export_format,
+        export_file=export_file,
+        export_path=export_path,
+        export_overwrite=export_overwrite,
+    )
+
+    # shellvars = {}
+    # shellvars.update(globals())
+    # shellvars.update(locals())
+    # context.spawn_shell(shellvars=shellvars)
     return ctx
 
 
