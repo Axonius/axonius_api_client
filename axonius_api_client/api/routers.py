@@ -89,6 +89,7 @@ class ApiV1(object):
         base=base,
         version=version,
         clients="{adapter_name}/clients",
+        upload_file="{adapter_name}/{node_id}/upload_file",
     )
 
     alerts = Router(object_type="alerts", base=base, version=version)
