@@ -9,6 +9,14 @@ from .. import exceptions
 from .. import tools
 
 
+def trydecode(x):
+    """Pass."""
+    try:
+        return x.decode()
+    except Exception:
+        return x
+
+
 class ApiError(exceptions.PackageError):
     """Parent exception for all API errors."""
 
@@ -64,10 +72,14 @@ class ResponseError(ApiError):
         msgs.append(error)
 
         if bodies:
-            req_txt = tools.json_pretty(response.request.body)
-            resp_txt = tools.json_pretty(response.request.body)
+            req_txt = trydecode(response.request.body)
+            req_txt = format(tools.json_pretty(req_txt))
+
+            resp_txt = trydecode(response.text)
+            resp_txt = format(tools.json_pretty(resp_txt))
             msgs += ["*** request ***", req_txt, "*** response ***", resp_txt]
 
+        # msgs = [format(x) for x in msgs]
         msg = msgs[0] if len(msgs) == 1 else "\n".join(msgs)
 
         super(ResponseError, self).__init__(msg)
