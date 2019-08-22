@@ -344,6 +344,41 @@ class Adapters(models.ApiBase):
         path += "/{id}".format(id=id)
         return self._request(method="delete", path=path, json=data)
 
+    def upload_file(
+        self,
+        adapter_name,
+        node_id,
+        binary,
+        filename,
+        content_type=None,
+        field_name="binary",
+    ):
+        """Upload a file to the system for use in deployment.
+
+        Args:
+            binary (:obj:`io.BytesIO`):
+                Binary bits of file to upload.
+            filename (:obj:`str`):
+                Name of file to upload.
+
+        Returns:
+            :obj:`str`: UUID of uploaded file.
+
+        """
+        if content_type:
+            userfile = (filename, binary, content_type)
+        else:
+            userfile = (filename, binary)
+
+        data = {}
+        data["field_name"] = field_name
+        files = {}
+        files["userfile"] = userfile
+        path = self._router.upload_file.format(
+            adapter_name=adapter_name, node_id=node_id
+        )
+        return self._request(method="post", path=path, data=data, files=files)
+
 
 # FUTURE: needs tests
 class Enforcements(models.ApiBase):
