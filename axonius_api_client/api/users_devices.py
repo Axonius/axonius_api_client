@@ -240,7 +240,7 @@ class SavedQuery(mixins.ApiChild):
 
         """
         found = self.get(name=name, regex=regex, **kwargs)
-        if not isinstance(found, (list, tuple)):
+        if not tools.is_type.list(found):
             found = [found]
         return self._delete(ids=[x["uuid"] for x in found])
 
@@ -422,6 +422,7 @@ class Labels(mixins.ApiChild):
         return self.delete_by_rows(rows=rows, labels=labels)
 
 
+# FUTURE: how to get raw_data fields without using 'specific_data'
 class Fields(mixins.ApiChild):
     """Pass."""
 
@@ -461,7 +462,7 @@ class Fields(mixins.ApiChild):
 
         """
         fields = kwargs.get("fields", None) or self.get()
-        check_name = tools.rstrip(name, "_adapter").lower()
+        check_name = tools.strip.right(name, "_adapter").lower()
         check_name = "generic" if check_name in self._GENERIC_ALTS else check_name
 
         if check_name in fields:
@@ -535,13 +536,13 @@ class Fields(mixins.ApiChild):
         val_fields = []
 
         for k, v in kwargs.items():
-            if not isinstance(k, tools.STR):
+            if not tools.is_type.str(k):
                 continue
 
             v = tools.listify(v)
 
             for f in v:
-                if not isinstance(f, tools.STR):
+                if not tools.is_type.str(f):
                     continue
 
                 val_field = self.find(
@@ -551,6 +552,9 @@ class Fields(mixins.ApiChild):
                 msg = "Validated adapter name {a!r} field {f!r} as {v!r}"
                 msg = msg.format(a=k, f=f, v=val_field)
                 self._log.debug(msg)
+
+                if f.lower() in ["all"]:
+                    return [val_field]
 
                 if val_field not in val_fields:
                     val_fields.append(val_field)
@@ -583,18 +587,15 @@ class Reports(mixins.ApiChild):
         for raw_row in raw_rows:
             row = {}
             missing = []
-            row["adapters"] = tools.rstrip(raw_row.get("adapters", []), "_adapter")
+            row["adapters"] = tools.strip.right(raw_row.get("adapters", []), "_adapter")
 
             for k, v in raw_row.items():
                 if "." in k or k in ["labels"]:
                     row[k] = v
 
             ftimes = raw_row.get("specific_data.data.fetch_time", []) or []
-
-            if not isinstance(ftimes, (list, tuple)):
-                ftimes = [ftimes]
-
-            ftimes = [x for x in tools.dt_parse(ftimes)]
+            ftimes = ftimes if tools.is_type.list(ftimes) else [ftimes]
+            ftimes = [x for x in tools.dt.parse(ftimes)]
 
             for adapter in sys_adapters:
                 name = adapter["name"]
@@ -704,9 +705,9 @@ class UserDeviceMixin(models.ApiModelUserDevice, mixins.ApiMixin):
             params["filter"] = query
 
         if fields:
-            if isinstance(fields, (list, tuple)):
-                fields = ",".join(fields)
-            params["fields"] = fields
+            params["fields"] = (
+                ",".join(fields) if tools.is_type.list(fields) else fields
+            )
 
         if use_post:
             return self._request(method="post", path=self._router.root, json=params)
@@ -1057,14 +1058,14 @@ class ParserFields(mixins.ApiParser):
 
         for field in self._raw["generic"]:
             field["adapter_prefix"] = prefix
-            field_name = tools.lstrip(field["name"], prefix).strip(".")
+            field_name = tools.strip.left(field["name"], prefix).strip(".")
             self._exists(field_name, fields, "Generic field")
             fields[field_name] = field
 
         return fields
 
     def _adapter(self, name, raw_fields):
-        short_name = tools.rstrip(name, "_adapter")
+        short_name = tools.strip.right(name, "_adapter")
 
         prefix = constants.ADAPTER_FIELD_PREFIX
         prefix = prefix.format(adapter_name=name)
@@ -1073,7 +1074,7 @@ class ParserFields(mixins.ApiParser):
 
         for field in raw_fields:
             field["adapter_prefix"] = prefix
-            field_name = tools.lstrip(field["name"], prefix).strip(".")
+            field_name = tools.strip.left(field["name"], prefix).strip(".")
             self._exists(field_name, fields, "Adapter {} field".format(short_name))
             fields[field_name] = field
 

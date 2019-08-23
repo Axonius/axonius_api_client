@@ -192,7 +192,7 @@ class HttpClient(object):
 
         """
         # FUTURE: doc kwargs and files
-        url = tools.urljoin(self.url, path, route)
+        url = tools.join.url(self.url, path, route)
 
         headers = headers or {}
         headers.setdefault("User-Agent", self.user_agent)
@@ -233,7 +233,7 @@ class HttpClient(object):
         )
 
         if self.LOG_REQUEST_BODY:
-            msg = "request body:\n{}".format(tools.json_pretty(prepped_request.body))
+            msg = "request body:\n{}".format(tools.json.pretty(prepped_request.body))
             self._log.debug(msg)
 
         response = self.session.send(**send_args)
@@ -250,7 +250,7 @@ class HttpClient(object):
             self._log.debug(msg)
 
         if self.LOG_RESPONSE_BODY:
-            msg = "response body:\n{}".format(tools.json_pretty(response.text))
+            msg = "response body:\n{}".format(tools.json.pretty(response.text))
             self._log.debug(msg)
 
         return response

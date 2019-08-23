@@ -6,7 +6,7 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 from . import routers, mixins
-from .. import exceptions
+from .. import exceptions, tools
 
 
 class Enforcements(mixins.ApiMixin):
@@ -144,7 +144,12 @@ class Enforcements(mixins.ApiMixin):
 
         """
         found = self.get_by_name(name=name, regex=regex, only1=True)
-        ids = [x["uuid"] for x in found] if isinstance(found, list) else [found["uuid"]]
+
+        if tools.is_type.list(found):
+            ids = [x["uuid"] for x in found]
+        else:
+            ids = [found["uuid"]]
+
         return self._delete(ids=ids)
 
     def get_by_name(self, name, regex=True, only1=False):

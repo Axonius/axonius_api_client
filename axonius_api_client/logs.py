@@ -11,7 +11,7 @@ import time
 
 import six as six
 
-from . import exceptions, constants
+from . import exceptions, constants, tools
 from . import __package__ as PACKAGE_ROOT
 
 if six.PY2:
@@ -63,7 +63,7 @@ def str_level(level):
         :obj:`str`
 
     """
-    if isinstance(level, six.string_types):
+    if tools.is_type.str(level):
         if hasattr(logging, level.upper()):
             return level.upper()
         if level.isdigit():
@@ -71,7 +71,7 @@ def str_level(level):
             if hasattr(logging, level_mapped):
                 return level_mapped
 
-    if isinstance(level, int):
+    if tools.is_type.int(level):
         level_mapped = logging.getLevelName(level)
         if hasattr(logging, level_mapped):
             return level_mapped

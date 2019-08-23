@@ -90,7 +90,7 @@ class Clients(mixins.ApiChild):
             for client in adapter["clients"]:
                 # FUTURE: date_fetched for client seems to be only for
                 # when fetch has been triggered from "save" in adapters>client page??
-                minutes_ago = tools.dt_minutes_ago(client["date_fetched"])
+                minutes_ago = tools.dt.minutes_ago(client["date_fetched"])
 
                 if within is not None:
                     if minutes_ago >= within:
@@ -178,10 +178,10 @@ class Adapters(mixins.ApiMixin):
         if not adapters or values is None:
             return adapters
 
-        if not isinstance(values, (tuple, list)):
+        if not tools.is_type.list(values):
             values = [values]
 
-        values = [tools.rstrip(name, "_adapter").lower() for name in values]
+        values = [tools.strip.right(name, "_adapter").lower() for name in values]
 
         matches = []
         known = []
@@ -215,7 +215,7 @@ class Adapters(mixins.ApiMixin):
         if not adapters or values is None:
             return adapters
 
-        if not isinstance(values, (tuple, list)):
+        if not tools.is_type.list(values):
             values = [values]
 
         values = [name.lower() for name in values]
@@ -252,7 +252,7 @@ class Adapters(mixins.ApiMixin):
         if not adapters or values is None:
             return adapters
 
-        if not isinstance(values, (tuple, list)):
+        if not tools.is_type.list(values):
             values = [values]
 
         values = [name.lower() for name in values]
@@ -337,7 +337,7 @@ class ParserAdapters(mixins.ApiParser):
     def _parse_adapter(self, name, raw):
         """Pass."""
         parsed = {
-            "name": tools.rstrip(name, "_adapter"),
+            "name": tools.strip.right(name, "_adapter"),
             "name_raw": name,
             "name_plugin": raw["unique_plugin_name"],
             "node_name": raw["node_name"],

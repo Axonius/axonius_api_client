@@ -71,7 +71,7 @@ class ResponseError(ApiError):
                 "url={r.url!r}",
             ]
 
-            txt = "({})".format(tools.csvjoin(txt).format(r=response))
+            txt = "({})".format(tools.join.csv(txt).format(r=response))
             error = "{} Response details {}".format(error, txt)
 
         error = "{} (original exception: {})".format(error, exc) if exc else error
@@ -79,8 +79,8 @@ class ResponseError(ApiError):
         msgs.append(error)
 
         if bodies:
-            req_txt = tools.json_pretty(response.request.body)
-            resp_txt = tools.json_pretty(response.request.body)
+            req_txt = tools.json.pretty(response.request.body)
+            resp_txt = tools.json.pretty(response.request.body)
             msgs += ["*** request ***", req_txt, "*** response ***", resp_txt]
 
         msg = msgs[0] if len(msgs) == 1 else "\n".join(msgs)
@@ -142,7 +142,7 @@ class ObjectNotFound(ApiError):
             except Exception as kexc:
                 known = ["known callback {} failed {}".format(known_callback, kexc)]
 
-            msg += " valids: {}".format(tools.crjoin(known))
+            msg += " valids: {}".format(tools.join.cr(known))
 
         super(ObjectNotFound, self).__init__(msg)
 
@@ -241,7 +241,7 @@ class UnknownError(ObjectNotFound):
 
         msg = "{reason}, valid {valid_msg}: {valids}"
         msg = msg.format(
-            reason=self.reason, valid_msg=valid_msg, valids=tools.crjoin(known)
+            reason=self.reason, valid_msg=valid_msg, valids=tools.join.cr(known)
         )
         super(ObjectNotFound, self).__init__(msg)
 

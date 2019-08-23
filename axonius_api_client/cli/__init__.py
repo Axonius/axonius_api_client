@@ -9,11 +9,19 @@ import os
 
 import click
 
-from . import context, cmd_object, cmd_adapters, cmd_shell
+from . import (
+    context,
+    cmd_object_get,
+    cmd_object_fields,
+    cmd_object_adapters,
+    cmd_adapters_get,
+    cmd_adapters_get_clients,
+    cmd_shell,
+)
 from .. import tools, constants, version, logs
 
 AX_DOTENV = os.environ.get("AX_DOTENV", "")
-CWD_PATH = tools.resolve_path(os.getcwd())
+CWD_PATH = tools.path.resolve(os.getcwd())
 
 
 # TODO: FIGURE OUT HOW REPORTS GUI SENDS CSV
@@ -241,18 +249,18 @@ def adapters(ctx):
     return ctx
 
 
-cli.add_command(cmd_shell.shell)
+cli.add_command(cmd_shell.cmd)
 
-users.add_command(cmd_object.get)
-users.add_command(cmd_object.fields)
-users.add_command(cmd_object.adapters)
+users.add_command(cmd_object_get.cmd)
+users.add_command(cmd_object_fields.cmd)
+users.add_command(cmd_object_adapters.cmd)
 
-devices.add_command(cmd_object.get)
-devices.add_command(cmd_object.fields)
-devices.add_command(cmd_object.adapters)
+devices.add_command(cmd_object_get.cmd)
+devices.add_command(cmd_object_fields.cmd)
+devices.add_command(cmd_object_adapters.cmd)
 
-adapters.add_command(cmd_adapters.get_clients)
-adapters.add_command(cmd_adapters.get)
+adapters.add_command(cmd_adapters_get.cmd)
+adapters.add_command(cmd_adapters_get_clients.cmd)
 
 
 def main(*args, **kwargs):

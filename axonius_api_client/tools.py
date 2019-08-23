@@ -6,7 +6,8 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import datetime
-import json
+import json as _json
+import csv as _csv
 
 import dateutil.parser
 import dateutil.tz
@@ -19,183 +20,392 @@ if six.PY2:
 else:
     import pathlib
 
-STR = six.string_types
-INT = six.integer_types
-SIMPLE = tuple(list(STR) + list(INT))
-LIST = (list, tuple)
 
-
-def is_dict(obj):
+class is_type(object):
     """Pass."""
-    return isinstance(obj, dict)
 
+    @staticmethod
+    def str(obj):
+        """Pass."""
+        return isinstance(obj, six.string_types)
 
-def is_list(obj):
-    """Pass."""
-    return isinstance(obj, LIST)
+    @staticmethod
+    def int(obj):
+        """Pass."""
+        return isinstance(obj, six.integer_types)
 
+    @staticmethod
+    def dict(obj):
+        """Pass."""
+        return isinstance(obj, dict)
 
-def is_simple(obj):
-    """Pass."""
-    return isinstance(obj, SIMPLE)
+    @staticmethod
+    def list(obj):
+        """Pass."""
+        return isinstance(obj, (list, tuple))
 
+    @staticmethod
+    def float(obj):
+        """Pass."""
+        return isinstance(obj, float)
 
-def is_list_of_simple(obj, or_simple=False):
-    """Pass."""
-    if or_simple and is_simple(obj):
+    @staticmethod
+    def none(obj):
+        """Pass."""
+        return obj is None
+
+    @staticmethod
+    def empty(obj):
+        """Pass."""
+        return obj in [None, "", [], {}, ()]
+
+    @staticmethod
+    def bool(obj):
+        """Pass."""
+        return isinstance(obj, bool)
+
+    @staticmethod
+    def simple(obj):
+        """Pass."""
+        return (
+            is_type.str(obj)
+            or is_type.int(obj)
+            or is_type.bool(obj)
+            or is_type.float(obj)
+            or is_type.none(obj)
+        )
+
+    @staticmethod
+    def lot(obj, t):
+        """Pass."""
+        if not is_type.list(obj):
+            return False
+        for x in obj:
+            if not t(x):
+                return False
         return True
 
-    if is_list(obj):
-        return all([is_simple(x) for x in obj])
+    @staticmethod
+    def los(obj):
+        """Pass."""
+        return is_type.lot(obj, is_type.simple)
 
-    return False
+    @staticmethod
+    def lod(obj):
+        """Pass."""
+        return is_type.lot(obj, is_type.dict)
+
+    @staticmethod
+    def lol(obj):
+        """Pass."""
+        return is_type.lot(obj, is_type.list)
+
+    @staticmethod
+    def lols(obj):
+        """Pass."""
+        if not is_type.lol(obj):
+            return False
+
+        for x in obj:
+            if not is_type.los(x):
+                return False
+        return True
 
 
-def is_list_of_dict(obj):
+class path(object):
     """Pass."""
-    return is_list(obj) and all([is_dict(x) for x in obj])
+
+    @staticmethod
+    def resolve(obj):
+        """Pass."""
+        return pathlib.Path(obj).absolute().resolve()
+
+    @staticmethod
+    def read(obj, binary=False, is_json=False):
+        """Pass."""
+        obj = path.resolve(obj)
+        data = obj.read_bytes() if binary else obj.read_text()
+
+        if obj.suffix == ".json":
+            try:
+                return json.load(data)
+            except Exception:
+                return data
+
+        if is_json:
+            return json.load(data)
+
+        return data
+
+    @staticmethod
+    def write(obj, data, binary=False, is_json=False, **kwargs):
+        """Pass."""
+        obj = path.resolve(obj)
+
+        method = obj.write_bytes if binary else obj.write_text
+
+        if obj.suffix == ".json" and not is_type.str(data):
+            kwargs.setdefault("error", False)
+            return method(json.cereal(data, **kwargs))
+
+        if is_json and not is_type.str(data):
+            return method(json.cereal(data, **kwargs))
+
+        return method(data)
 
 
-def listify(obj, otype=SIMPLE, oempty=True, itype=SIMPLE):
+class join(object):
     """Pass."""
-    if obj in [None, ""]:
-        return []
 
-    if otype and not isinstance(obj, LIST):
-        if isinstance(obj, otype):
-            obj = [obj]
-        elif oempty:
-            obj = []
+    @staticmethod
+    def url(url, *parts):
+        """Join a URL to any number of parts.
 
-    if not isinstance(obj, LIST):
-        obj = [obj]
+        Args:
+            url (:obj:`str`):
+                URL to add parts to.
+            *parts: Strings to append to URL.
 
-    if itype:
-        obj = [i for i in obj if isinstance(i, itype)]
-    return obj
+        Returns:
+            :obj:`str`
 
-
-def resolve_path(path):
-    """Pass."""
-    return pathlib.Path(path).absolute().resolve()
-
-
-def urljoin(url, *parts):
-    """Join a URL to any number of parts.
-
-    Args:
-        url (:obj:`str`):
-            URL to add parts to.
-        *parts: Strings to append to URL.
-
-    Returns:
-        :obj:`str`
-
-    """
-    url = url.rstrip("/") + "/"
-    for part in parts:
-        if not part:
-            continue
+        """
         url = url.rstrip("/") + "/"
-        part = part.lstrip("/")
-        url = six.moves.urllib.parse.urljoin(url, part)
-    return url
+        for part in parts:
+            if not part:
+                continue
+            url = url.rstrip("/") + "/"
+            part = part.lstrip("/")
+            url = six.moves.urllib.parse.urljoin(url, part)
+        return url
+
+    @staticmethod
+    def dot(*obj):
+        """Pass."""
+        return ".".join([format(x) for x in obj if format(x)])
+
+    @staticmethod
+    def cr(obj, indent=0, pre=True):
+        """Pass."""
+        joiner = "\n{}".format(" " * indent)
+        joined = joiner.join([format(x) for x in listify(obj)])
+        if pre and joined:
+            return joiner + joined
+        return joined
+
+    @staticmethod
+    def csv(obj, space=True):
+        """Pass."""
+        joiner = ", " if space else ","
+        return joiner.join([format(x) for x in listify(obj)])
+
+
+class strip(object):
+    """Pass."""
+
+    @staticmethod
+    def right(obj, postfix):
+        """Pass."""
+        if is_type.list(obj):
+            obj = [strip.right(x, postfix) for x in obj]
+        elif is_type.str(obj):
+            plen = len(postfix)
+            obj = obj[:-plen] if obj.endswith(postfix) else obj
+        return obj
+
+    @staticmethod
+    def left(obj, prefix):
+        """Pass."""
+        if is_type.list(obj):
+            return [strip.left(obj=x, prefix=prefix) for x in obj]
+        elif is_type.str(obj):
+            plen = len(prefix)
+            return obj[plen:] if obj.startswith(prefix) else obj
+        return obj
+
+
+class json(object):
+    """Pass."""
+
+    @staticmethod
+    def cereal(obj, indent=2, sort_keys=False, **kwargs):
+        """Pass."""
+        error = kwargs.pop("error", True)
+        try:
+            return _json.dumps(obj, indent=indent, sort_keys=sort_keys, **kwargs)
+        except Exception:
+            if error:
+                raise
+            return obj
+
+    @staticmethod
+    def toast(obj, **kwargs):
+        """Pass."""
+        return _json.loads(obj, **kwargs)
+
+    @staticmethod
+    def butter(text, **kwargs):
+        """Pass."""
+        try:
+            return (json.cereal(json.toast(text), **kwargs) or "").strip()
+        except Exception:
+            return text or ""
+
+
+class dt(object):
+    """Pass."""
+
+    @staticmethod
+    def parse(obj, err=False):
+        """Pass."""
+        if is_type.list(obj):
+            return [dt.parse(x, err) for x in obj]
+        try:
+            return dateutil.parser.parse(obj)
+        except Exception:
+            if err:
+                raise
+            return obj
+
+    @staticmethod
+    def minutes_ago(then):
+        """Pass."""
+        now = datetime.datetime.now(dateutil.tz.tzutc())
+        then = dateutil.parser.parse(then)
+        return round((now - then).total_seconds() / 60)
+
+
+# FUTURE: Add logging about unhandled bits...
+class csv(object):
+    """Pass."""
+
+    QUOTING = _csv.QUOTE_NONNUMERIC
+
+    @classmethod
+    def cereal(
+        cls,
+        rows,
+        stream=None,
+        compress=False,
+        headers=None,
+        stream_value=True,
+        **kwargs
+    ):
+        """Pass."""
+        rows = cls.compress(rows) if compress else rows
+
+        kwargs.setdefault("quoting", cls.QUOTING)
+        kwargs.setdefault("f", stream or six.StringIO())
+        kwargs["fieldnames"] = kwargs.get("fieldnames", headers or [])
+
+        if not kwargs["fieldnames"]:
+            for row in rows:
+                for key in row:
+                    if key not in kwargs["fieldnames"]:
+                        kwargs["fieldnames"].append(key)
+
+        writer = _csv.DictWriter(**kwargs)
+
+        writer.writeheader()
+
+        for row in rows:
+            writer.writerow(row)
+
+        if stream_value:
+            return kwargs["f"].getvalue()
+
+        return kwargs["f"]
+
+    @classmethod
+    def _compress_complex(cls, item, pre):
+        """Pass."""
+        new_item = {}
+
+        if is_type.dict(item):
+            for k in list(item):
+                k_pre = join.dot(pre, k)
+
+                if is_type.simple(item[k]) or is_type.los(item[k]):
+                    new_item[k_pre] = join.cr(item.pop(k), pre=False)
+                    continue
+
+                new_sub_item = cls._compress_complex(item[k], k_pre)
+                new_item.update(new_sub_item)
+
+                if not item[k]:
+                    item.pop(k)
+
+            return new_item
+
+        if is_type.lod(item):
+            for idx, sub_item in enumerate(list(item)):
+                k_pre = join.dot(pre, idx)
+
+                new_sub_item = cls._compress_complex(sub_item, k_pre)
+                new_item.update(new_sub_item)
+                if not sub_item:
+                    item.remove(sub_item)
+            return new_item
+
+        if is_type.lols(item):
+            new_sub_item = []
+
+            for sub_item in list(item):
+                new_sub_item.append(join.cr(sub_item, pre=False))
+                item.remove(sub_item)
+
+            new_item[pre] = join.cr(new_sub_item, pre=False)
+            return new_item
+
+        if is_type.lol(item):
+            for idx, sub_item in enumerate(list(item)):
+                k_pre = join.dot(pre, idx)
+
+                if is_type.los(sub_item):
+                    new_item[k_pre] = join.cr(sub_item, pre=False)
+                    item.remove(sub_item)
+            return new_item
+
+        return new_item
+
+    @classmethod
+    def compress_dict(cls, item):
+        """Pass."""
+        new_item = {}
+
+        for k in list(item):
+            if is_type.simple(item[k]) or is_type.los(item[k]):
+                new_item[k] = join.cr(item.pop(k), pre=False)
+                continue
+
+            new_complex = cls._compress_complex(item[k], k)
+            new_item.update(new_complex)
+
+            if not item[k]:
+                item.pop(k)
+
+        return new_item
+
+    @classmethod
+    def compress(cls, items):
+        """Pass."""
+        return [cls.compress_dict(x) for x in items]
+
+
+def listify(obj):
+    """Pass."""
+    if is_type.list(obj):
+        return list(obj)
+    if is_type.none(obj):
+        return []
+    if is_type.simple(obj):
+        return [obj]
+    if is_type.dict(obj):
+        return list(obj)
+    return obj
 
 
 def grouper(iterable, n, fillvalue=None):
     """Chunk up iterables."""
     args = [iter(iterable)] * n
     return six.moves.zip_longest(*args, fillvalue=fillvalue)
-
-
-def rstrip(obj, postfix):
-    """Pass."""
-    if isinstance(obj, LIST):
-        obj = [rstrip(x, postfix) for x in obj]
-    elif isinstance(obj, STR):
-        plen = len(postfix)
-        obj = obj[:-plen] if obj.endswith(postfix) else obj
-    return obj
-
-
-def lstrip(obj, prefix):
-    """Pass."""
-    if isinstance(obj, LIST):
-        obj = [lstrip(obj=x, prefix=prefix) for x in obj]
-    elif isinstance(obj, STR):
-        plen = len(prefix)
-        obj = obj[plen:] if obj.startswith(prefix) else obj
-    return obj
-
-
-def to_json(obj, **kwargs):
-    """Pass."""
-    kwargs.setdefault("indent", 2)
-    return json.dumps(obj, **kwargs)
-
-
-def json_pretty(text):
-    """Pass."""
-    try:
-        text = to_json(json.loads(text))
-    except Exception:
-        text = text or ""
-    return (text or "").strip()
-
-
-def _join(obj, j, pre=""):
-    """Pass."""
-    if isinstance(obj, dict):
-        obj = list(obj)
-    if isinstance(obj, SIMPLE):
-        obj = [obj]
-    return pre + j.join([format(x) for x in obj])
-
-
-def crjoin(obj, j="\n  ", pre="\n  "):
-    """Pass."""
-    return _join(obj=obj, j=j, pre=pre)
-
-
-def csvjoin(obj, j=", ", pre=""):
-    """Pass."""
-    return _join(obj=obj, j=j, pre=pre)
-
-
-def dt_parse(dt, err=False):
-    """Pass."""
-    if isinstance(dt, LIST):
-        return [dt_parse(x, err) for x in dt]
-    try:
-        return dateutil.parser.parse(dt)
-    except Exception:
-        if err:
-            raise
-        return dt
-
-
-def dt_minutes_ago(then):
-    """Pass."""
-    now = datetime.datetime.now(dateutil.tz.tzutc())
-    then = dateutil.parser.parse(then)
-    return round((now - then).total_seconds() / 60)
-
-
-# FUTURE: use or lose
-'''
-
-def dt_delta(then):
-    """Pass."""
-    now = datetime.datetime.now(dateutil.tz.tzutc())
-    then = dt_parse(then)
-    return dateutil.relativedelta.relativedelta(now, then)
-
-
-def dt_ago(hours=0, minutes=0, seconds=0, strip_ms=True):
-    """Pass."""
-    now = datetime.datetime.now(dateutil.tz.tzutc())
-    delta = datetime.timedelta(hours=hours, minutes=minutes, seconds=seconds)
-    then = now - delta
-    return then.replace(microsecond=0) if strip_ms else then
-
-'''

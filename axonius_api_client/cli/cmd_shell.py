@@ -21,7 +21,7 @@ from . import context
     show_default=True,
 )
 @context.pass_context
-def shell(ctx, url, key, secret, spawn):
+def cmd(ctx, url, key, secret, spawn):
     """Start an interactive shell."""
     client = ctx.start_client(url=url, key=key, secret=secret, save_history=True)
 

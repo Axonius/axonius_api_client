@@ -5,9 +5,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
-import csv
 import functools
-import json
 import os
 import sys
 import warnings
@@ -15,12 +13,11 @@ import warnings
 import click
 import dotenv
 import requests
-import six
 
 from .. import connect, tools
 
 AX_DOTENV = os.environ.get("AX_DOTENV", "")
-CWD_PATH = tools.resolve_path(os.getcwd())
+CWD_PATH = tools.path.resolve(os.getcwd())
 OK_ARGS = {"fg": "green", "bold": True, "err": True}
 OK_TMPL = "** {msg}"
 
@@ -44,14 +41,12 @@ DEFAULT_FIELD = "generic:{field}"
 
 def jdump(obj, **kwargs):
     """JSON dump utility."""
-    kwargs.setdefault("sort_keys", True)
-    kwargs.setdefault("indent", 2)
-    print(json.dumps(obj, **kwargs))
+    print(tools.json.butter(obj, **kwargs))
 
 
 def load_dotenv():
     """Pass."""
-    path = tools.resolve_path(AX_DOTENV) if AX_DOTENV else CWD_PATH / ".env"
+    path = tools.path.resolve(AX_DOTENV) if AX_DOTENV else CWD_PATH / ".env"
     dotenv.load_dotenv(format(path))
 
 
@@ -155,8 +150,7 @@ def cb_fields(ctx, param, value):
     if not value:
         return fields
 
-    if not isinstance(value, (list, tuple)):
-        value = [value]
+    value = value if tools.is_type.list(value) else [value]
 
     for x in value:
         if ":" not in x:
@@ -178,8 +172,6 @@ def cb_fields(ctx, param, value):
 
 class Context(object):
     """Pass."""
-
-    CSV_QUOTING = csv.QUOTE_NONNUMERIC
 
     def __init__(self):
         """Pass."""
@@ -214,18 +206,23 @@ class Context(object):
             click.echo(data)
             return
 
-        path = tools.resolve_path(export_path)
+        path = tools.path.resolve(export_path)
         path.mkdir(mode=0o700, parents=True, exist_ok=True)
+
         full_path = path / export_file
+
         mode = "created"
+
         if full_path.exists():
             if not export_overwrite:
                 msg = "Export file {p} already exists and export-overwite is False!"
                 msg = msg.format(p=full_path)
                 self.echo_error(msg=msg)
+
             mode = "overwritten"
 
         full_path.touch(mode=0o600)
+
         with full_path.open(mode="w", newline="") as fh:
             fh.write(data)
 
@@ -250,26 +247,16 @@ class Context(object):
             sys.exit(1)
 
     @staticmethod
-    def to_json(raw_data, indent=2, **kwargs):
+    def to_json(ctx, raw_data, **kwargs):
         """Pass."""
-        return json.dumps(raw_data, indent=indent)
+        return tools.json.cereal(raw_data, **kwargs)
 
-    @classmethod
-    def dicts_to_csv(cls, rows, headers=None):
+    @staticmethod
+    def to_csv(ctx, raw_data, **kwargs):
         """Pass."""
-        if headers is None:
-            headers = []
-            for row in rows:
-                for key in row:
-                    if key not in headers:
-                        headers.append(key)
-
-        stream = six.StringIO()
-        writer = csv.DictWriter(stream, quoting=cls.CSV_QUOTING, fieldnames=headers)
-        writer.writeheader()
-        for row in rows:
-            writer.writerow(row)
-        return stream.getvalue()
+        kwargs.setdefault("compress", True)
+        kwargs.setdefault("stream_value", True)
+        return tools.csv.cereal(raw_data, **kwargs)
 
     @property
     def wraperror(self):
@@ -322,13 +309,14 @@ class Context(object):
         export_file,
         export_path,
         export_overwrite,
+        ctx=None,
         **kwargs
     ):
         """Pass."""
-        kwargs.setdefault("ctx", self)
-        kwargs["raw_data"] = raw_data
         if export_format in formatters:
-            data = formatters[export_format](**kwargs)
+            data = formatters[export_format](
+                ctx=ctx or self, raw_data=raw_data, **kwargs
+            )
         else:
             msg = "Export format {f!r} is unsupported! Must be one of: {sf}"
             msg = msg.format(f=export_format, sf=list(formatters.keys()))
