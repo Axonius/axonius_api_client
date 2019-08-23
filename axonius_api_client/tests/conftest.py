@@ -141,8 +141,10 @@ def creds_user(request):
     """Fixture for getting username/password creds."""
     return {
         "cls": axonapi.AuthUser,
-        "username": request.config.getoption("--username"),
-        "password": request.config.getoption("--password"),
+        "creds": {
+            "username": request.config.getoption("--username"),
+            "password": request.config.getoption("--password"),
+        },
     }
 
 
@@ -151,8 +153,10 @@ def creds_key(request):
     """Fixture for getting key/secret creds."""
     return {
         "cls": axonapi.AuthKey,
-        "key": request.config.getoption("--key"),
-        "secret": request.config.getoption("--secret"),
+        "creds": {
+            "key": request.config.getoption("--key"),
+            "secret": request.config.getoption("--secret"),
+        },
     }
 
 

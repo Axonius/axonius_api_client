@@ -331,8 +331,8 @@ class ParserAdapters(mixins.ApiParser):
     """Pass."""
 
     _NOTSET = "__NOTSET__"
-    _RAW_SECRET = ["unchanged"]
-    _SECRET = "__HIDDEN__"
+    _RAW_HIDDEN = ["unchanged"]
+    _HIDDEN = "__HIDDEN__"
 
     def _parse_adapter(self, name, raw):
         """Pass."""
@@ -423,7 +423,7 @@ class ParserAdapters(mixins.ApiParser):
             for setting_name, setting_config in settings_client.items():
                 setting_config.pop("name", "")
                 value = raw_config.get(setting_name, self._NOTSET)
-                value = self._SECRET if value == self._RAW_SECRET else value
+                value = self._HIDDEN if value == self._RAW_HIDDEN else value
                 parsed_settings[setting_name] = setting_config
                 parsed_settings[setting_name]["value"] = value
 
