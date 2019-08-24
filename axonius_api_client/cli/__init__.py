@@ -1,24 +1,21 @@
 # -*- coding: utf-8 -*-
 """Command line interface for Axonius API Client."""
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import os
 
 import click
 
+from .. import constants, logs, tools, version
 from . import (
-    context,
-    cmd_object_get,
-    cmd_object_fields,
-    cmd_object_adapters,
     cmd_adapters_get,
     cmd_adapters_get_clients,
+    cmd_object_adapters,
+    cmd_object_fields,
+    cmd_object_get,
     cmd_shell,
+    context,
 )
-from .. import tools, constants, version, logs
 
 AX_DOTENV = os.environ.get("AX_DOTENV", "")
 CWD_PATH = tools.path.resolve(os.getcwd())

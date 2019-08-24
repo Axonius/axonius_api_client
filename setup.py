@@ -1,13 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """Package setup."""
+import codecs
 import os
 
-import codecs
-
-from setuptools import setup
-from setuptools import find_packages
-
+from setuptools import find_packages, setup
 
 HERE = os.path.abspath(os.path.dirname(__file__))
 VERSION_PATH = os.path.join(HERE, "axonius_api_client", "version.py")

@@ -1,16 +1,13 @@
 # -*- coding: utf-8 -*-
 """Axon Connection class."""
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import datetime
 import re
 
 import requests
 
-from . import api, auth, exceptions, http, constants, logs
+from . import api, auth, constants, exceptions, http, logs
 
 
 class Connect(object):

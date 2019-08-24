@@ -8,10 +8,10 @@ pipenv_init             build a venv using pipenv
 pyenv_init              setup pyenv with python 3.7.3, 3.6.8, 2.7.16
 
 # docs
-docs                    make pipenv_install_docs, run docs/make html and rebuild ALL docs
-docs_dev                make pipenv_install_docs, run docs/make html and only rebuild changed docs
-docs_coverage           make pipenv_install_docs, run docs/make coverage
-docs_linkcheck          make pipenv_install_docs, run docs/make linkcheck
+docs                    run docs/make html and rebuild ALL docs
+docs_dev                run docs/make html and only rebuild changed docs
+docs_coverage           run docs/make coverage
+docs_linkcheck          run docs/make linkcheck
 docs_open               open built docs (osx only)
 
 # git fun
@@ -23,9 +23,9 @@ pkg_build               make clean, make pipenv_install_build, build the package
 pkg_publish             make lint, make pkg_build, make git_check, publish the package to pypi
 
 # testing
-lint                    make pipenv_install_lint, run black, flake8, and bandit
-test                    make pipenv_install_dev, run pytest with coverage reports
-test_debug              make pipenv_install_dev, run pytest with logging at debug
+lint                    run black, isort, pydocstyle, flake8, and bandit
+test                    run pytest with coverage reports
+test_debug              run pytest with logging at debug
 
 # clean up
 clean_docs              make pipenv_install_docs, run docs/make clean
@@ -39,4 +39,4 @@ clean                   make clean_files, make clean_build, make clean_tests, ma
 help                    this...
 
 # call me first
-init                    make pip_install_tools, make clean, make py_env, make pipenv_init
+init                    make pip_install_tools, make clean, make py_env, make pipenv_init, make pipenv_install_*

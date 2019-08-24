@@ -1,11 +1,9 @@
 # -*- coding: utf-8 -*-
 """Test suite for axonius_api_client.tools."""
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import pytest
+
 import axonius_api_client as axonapi
 
 

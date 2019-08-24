@@ -11,6 +11,10 @@ init:
 	$(MAKE) clean
 	$(MAKE) pyenv_init
 	$(MAKE) pipenv_init
+	$(MAKE) pipenv_install_lint
+	$(MAKE) pipenv_install_dev
+	$(MAKE) pipenv_install_docs
+	$(MAKE) pipenv_install_build
 
 pip_install_tools:
 	pip install --quiet --upgrade --requirement requirements-pkg.txt
@@ -35,37 +39,29 @@ pyenv_init:
 	pyenv local 3.7.4 || true
 
 lint:
-	$(MAKE) pipenv_install_lint
 	pipenv run which black && black $(PACKAGE) setup.py
+	pipenv run isort -y $(PACKAGE) setup.py
 	pipenv run pydocstyle $(PACKAGE) setup.py
 	pipenv run flake8 --max-line-length 89 $(PACKAGE) setup.py
 	pipenv run bandit -r . --skip B101 -x playground.py,setup.py
 
 test:
-	$(MAKE) pipenv_install_dev
 	pipenv run pytest -rA --junitxml=junit-report.xml --cov-config=.coveragerc --cov-report=term --cov-report xml --cov-report=html:cov_html --cov=$(PACKAGE) --showlocals --log-cli-level=INFO --verbose --exitfirst $(PACKAGE)/tests
 
 test_debug:
-	$(MAKE) pipenv_install_dev
 	pipenv run pytest -rA --capture=no --showlocals --log-cli-level=DEBUG --verbose --exitfirst $(PACKAGE)/tests
 
 docs:
-	$(MAKE) pipenv_install_docs
 	(cd docs && pipenv run make html SPHINXOPTS="-Wna" && cd ..)
-
-docs_dev:
-	(cd docs && pipenv run make html SPHINXOPTS="-Wnv" && cd ..)
 
 make docs_open:
 	open docs/_build/html/index.html
 
 docs_coverage:
-	$(MAKE) pipenv_install_docs
 	(cd docs && pipenv run make coverage && cd ..)
 	cat docs/_build/coverage/python.txt
 
 docs_linkcheck:
-	$(MAKE) pipenv_install_docs
 	(cd docs && pipenv run make linkcheck && cd ..)
 	cat docs/_build/linkcheck/output.txt
 
@@ -88,7 +84,6 @@ pkg_publish:
 
 pkg_build:
 	$(MAKE) clean_build
-	$(MAKE) pipenv_install_build
 
 	@echo "*** Building Source and Wheel (universal) distribution"
 	pipenv run python setup.py sdist bdist_wheel --universal
@@ -108,8 +103,7 @@ clean_tests:
 	rm -rf .egg .eggs junit-report.xml cov_html .tox .pytest_cache .coverage
 
 clean_docs:
-	$(MAKE) pipenv_install_docs
-	(cd docs && pipenv run make clean && cd ..)
+	rm -rf docs/_build
 
 clean_pipenv:
 	pipenv --rm || true

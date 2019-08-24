@@ -1,9 +1,6 @@
 # -*- coding: utf-8 -*-
 """Axonius API Client logging tools module."""
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import logging
 import logging.handlers
@@ -11,8 +8,8 @@ import time
 
 import six as six
 
-from . import exceptions, constants, tools
 from . import __package__ as PACKAGE_ROOT
+from . import constants, exceptions, tools
 
 if six.PY2:
     import pathlib2 as pathlib  # pragma: no cover

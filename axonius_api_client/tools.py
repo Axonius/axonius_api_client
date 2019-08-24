@@ -1,18 +1,14 @@
 # -*- coding: utf-8 -*-
 """Axonius API Client utility tools module."""
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, print_function, unicode_literals
 
+import csv as _csv
 import datetime
 import json as _json
-import csv as _csv
 
 import dateutil.parser
-import dateutil.tz
 import dateutil.relativedelta
-
+import dateutil.tz
 import six
 
 if six.PY2:

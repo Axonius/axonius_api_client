@@ -1,17 +1,14 @@
 # -*- coding: utf-8 -*-
 """Axonius API Client package."""
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, print_function, unicode_literals
 
-import warnings
 import logging
+import warnings
 
 import requests
 
+from .. import constants, logs, tools, version
 from . import parser
-from .. import constants, tools, version, logs
 
 
 class HttpClient(object):
