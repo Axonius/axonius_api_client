@@ -31,14 +31,13 @@ pipenv_init:
 	pipenv install --dev --skip-lock
 
 pyenv_init:
-	pyenv install 3.7.3 -s || true
-	pyenv install 3.6.8 -s || true
-	pyenv install 2.7.16 -s || true
-	pyenv local 3.7.3 3.6.8 2.7.16 || true
+	pyenv install 3.7.4 -s || true
+	pyenv local 3.7.4 || true
 
 lint:
 	$(MAKE) pipenv_install_lint
 	pipenv run which black && black $(PACKAGE) setup.py
+	pipenv run pydocstyle $(PACKAGE) setup.py
 	pipenv run flake8 --max-line-length 89 $(PACKAGE) setup.py
 	pipenv run bandit -r . --skip B101 -x playground.py,setup.py
 
