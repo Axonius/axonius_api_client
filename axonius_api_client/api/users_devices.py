@@ -2,11 +2,11 @@
 """Axonius API Client package."""
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-from .. import constants, exceptions, models, tools
+from .. import constants, exceptions, tools
 from . import adapters, mixins, routers
 
 
-class SavedQuery(mixins.ApiChild):
+class SavedQuery(mixins.Child):
     """Pass."""
 
     def _get(self, query=None, count_min=None, count_max=None, **kwargs):
@@ -281,7 +281,7 @@ class SavedQuery(mixins.ApiChild):
         return found[0] if count_min == 1 and count_max == 1 else found
 
 
-class Labels(mixins.ApiChild):
+class Labels(mixins.Child):
     """Pass."""
 
     def _add(self, labels, ids):
@@ -420,7 +420,7 @@ class Labels(mixins.ApiChild):
 
 
 # FUTURE: how to get raw_data fields without using 'specific_data'
-class Fields(mixins.ApiChild):
+class Fields(mixins.Child):
     """Pass."""
 
     _GENERIC_ALTS = ["generic", "general", "specific"]
@@ -559,7 +559,7 @@ class Fields(mixins.ApiChild):
         return val_fields
 
 
-class Reports(mixins.ApiChild):
+class Reports(mixins.Child):
     """Pass."""
 
     def adapters(
@@ -651,7 +651,7 @@ class Reports(mixins.ApiChild):
         return rows
 
 
-class UserDeviceMixin(models.ApiModelUserDevice, mixins.ApiMixin):
+class UserDeviceMixin(mixins.ModelUserDevice, mixins.Mixins):
     """Mixins for User & Device models."""
 
     def _init(self, auth, **kwargs):
@@ -661,6 +661,7 @@ class UserDeviceMixin(models.ApiModelUserDevice, mixins.ApiMixin):
         self.fields = Fields(parent=self)
         self.reports = Reports(parent=self)
         self.adapters = adapters.Adapters(auth=auth, **kwargs)
+        super(UserDeviceMixin, self)._init(auth=auth, **kwargs)
 
     def _get(self, query=None, fields=None, row_start=0, page_size=0, use_post=True):
         """Get a page for a given query.
@@ -1036,7 +1037,7 @@ class Devices(UserDeviceMixin):
         return self.get_by_field_value(value=value, **kwargs)
 
 
-class ParserFields(mixins.ApiParser):
+class ParserFields(mixins.Parser):
     """Pass."""
 
     def _exists(self, item, source, desc):

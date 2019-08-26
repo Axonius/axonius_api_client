@@ -6,7 +6,7 @@ import os
 
 import click
 
-from .. import constants, logs, tools, version
+from .. import constants, tools, version
 from . import (
     cmd_adapters_get,
     cmd_adapters_get_clients,
@@ -212,9 +212,9 @@ def cli(click_ctx, ctx, log_level_override, log_console_output, **kwargs):
     ctx._click_ctx = click_ctx
 
     if log_console_output == "stderr":
-        kwargs["log_console_method"] = logs.add_stderr
+        kwargs["log_console_method"] = tools.logs.add_stderr
     elif log_console_output == "stdout":
-        kwargs["log_console_method"] = logs.add_stdout
+        kwargs["log_console_method"] = tools.logs.add_stdout
 
     if log_level_override:
         kwargs.update(

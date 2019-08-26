@@ -6,7 +6,7 @@ from .. import exceptions, tools
 from . import mixins, routers
 
 
-class Enforcements(mixins.ApiMixin):
+class Enforcements(mixins.Mixins):
     """Enforcement related API methods.
 
     Notes:

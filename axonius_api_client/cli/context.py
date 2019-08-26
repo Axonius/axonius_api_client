@@ -11,7 +11,7 @@ import click
 import dotenv
 import requests
 
-from .. import connect, tools
+from .. import tools
 
 AX_DOTENV = os.environ.get("AX_DOTENV", "")
 CWD_PATH = tools.path.resolve(os.getcwd())
@@ -38,7 +38,7 @@ DEFAULT_FIELD = "generic:{field}"
 
 def jdump(obj, **kwargs):
     """JSON dump utility."""
-    print(tools.json.butter(obj, **kwargs))
+    print(tools.json.re_load(obj, **kwargs))
 
 
 def load_dotenv():
@@ -246,7 +246,7 @@ class Context(object):
     @staticmethod
     def to_json(ctx, raw_data, **kwargs):
         """Pass."""
-        return tools.json.cereal(raw_data, **kwargs)
+        return tools.json.dump(raw_data, **kwargs)
 
     @staticmethod
     def to_csv(ctx, raw_data, **kwargs):
@@ -288,7 +288,7 @@ class Context(object):
             connect_args["key"] = key
             connect_args["secret"] = secret
             try:
-                self.obj = connect.Connect(**connect_args)
+                self.obj = tools.Connect(**connect_args)
             except Exception as exc:
                 if self.wraperror:
                     self.echo_error(format(exc))

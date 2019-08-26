@@ -5,7 +5,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from . import mixins, routers
 
 
-class Actions(mixins.ApiMixin):
+class Actions(mixins.Mixins):
     """Action related API methods.
 
     Notes:

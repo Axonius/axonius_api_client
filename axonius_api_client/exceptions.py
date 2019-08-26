@@ -68,7 +68,7 @@ class ResponseError(ApiError):
                 "url={r.url!r}",
             ]
 
-            txt = "({})".format(tools.join.csv(txt).format(r=response))
+            txt = "({})".format(tools.join.comma(*txt).format(r=response))
             error = "{} Response details {}".format(error, txt)
 
         error = "{} (original exception: {})".format(error, exc) if exc else error

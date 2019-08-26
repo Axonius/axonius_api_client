@@ -8,7 +8,7 @@ from .. import exceptions, tools
 from . import mixins, routers
 
 
-class Clients(mixins.ApiChild):
+class Clients(mixins.Child):
     """Pass."""
 
     # FUTURE: public method
@@ -108,7 +108,7 @@ class Clients(mixins.ApiChild):
         return clients
 
 
-class Adapters(mixins.ApiMixin):
+class Adapters(mixins.Mixins):
     """Adapter related API methods."""
 
     def _init(self, auth, **kwargs):
@@ -324,7 +324,7 @@ class Adapters(mixins.ApiMixin):
         return matches
 
 
-class ParserAdapters(mixins.ApiParser):
+class ParserAdapters(mixins.Parser):
     """Pass."""
 
     _NOTSET = "__NOTSET__"

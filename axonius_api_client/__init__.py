@@ -2,30 +2,48 @@
 """Axonius API Client package."""
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-from . import api, auth, cli, constants, exceptions, http, logs, models, tools, version
+from . import api, auth, cli, constants, exceptions, http, tools, version
 from .api import Actions, Adapters, Devices, Enforcements, Users
-from .auth import AuthKey, AuthUser
-from .connect import Connect
-from .http import HttpClient, UrlParser
+from .http import Http, ParserUrl
+from .auth import ApiKey as AuthApiKey
+from .auth import Creds as AuthCreds
+from .tools import Connect
+from .exceptions import (
+    AxonError,
+    ApiError,
+    ToolsError,
+    AuthError,
+    HttpError,
+    ResponseError,
+    InvalidJson,
+    ObjectNotFound,
+    TooFewObjectsFound,
+    TooManyObjectsFound,
+    UnknownError,
+    InvalidCredentials,
+    NotLoggedIn,
+    AlreadyLoggedIn,
+    ConnectError,
+)
 
 __version__ = version.__version__
-LOG = logs.LOG
+LOG = tools.LOG
 
 __all__ = (
-    # http
-    "HttpClient",
-    "UrlParser",
-    # auth
-    "AuthUser",
-    "AuthKey",
+    # Connection handler
+    "Connect",
+    # http client
+    "Http",
+    "ParserUrl",
+    # authentication
+    "AuthCreds",
+    "AuthApiKey",
     # api
     "Users",
     "Devices",
     "Actions",
     "Adapters",
     "Enforcements",
-    # Connection
-    "Connect",
     # modules
     "api",
     "auth",
@@ -33,8 +51,22 @@ __all__ = (
     "exceptions",
     "version",
     "tools",
-    "logs",
     "constants",
     "cli",
-    "models",
+    # exceptions
+    "AxonError",
+    "ApiError",
+    "ToolsError",
+    "AuthError",
+    "HttpError",
+    "ResponseError",
+    "InvalidJson",
+    "ObjectNotFound",
+    "TooFewObjectsFound",
+    "TooManyObjectsFound",
+    "UnknownError",
+    "InvalidCredentials",
+    "NotLoggedIn",
+    "AlreadyLoggedIn",
+    "ConnectError",
 )

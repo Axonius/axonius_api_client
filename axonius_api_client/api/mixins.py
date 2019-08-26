@@ -2,10 +2,43 @@
 """Axonius API Client package."""
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-from .. import constants, exceptions, logs, models
+import six
+import abc
+
+from .. import constants, exceptions, tools
 
 
-class ApiMixin(models.ApiModel):
+@six.add_metaclass(abc.ABCMeta)
+class Model(object):
+    """API client for Axonius REST API."""
+
+    @abc.abstractproperty
+    def _router(self):
+        """Router for this API client.
+
+        Returns:
+            :obj:`axonius_api_client.api.routers.Router`
+
+        """
+        raise NotImplementedError  # pragma: no cover
+
+
+@six.add_metaclass(abc.ABCMeta)
+class ModelUserDevice(Model):
+    """API client for Axonius REST API."""
+
+    @abc.abstractproperty
+    def _default_fields(self):
+        """Fields to set as default for methods with fields as kwargs.
+
+        Returns:
+            :obj:`dict`
+
+        """
+        raise NotImplementedError  # pragma: no cover
+
+
+class Mixins(Model):
     """API client for Axonius REST API."""
 
     def __init__(self, auth, **kwargs):
@@ -17,7 +50,7 @@ class ApiMixin(models.ApiModel):
 
         """
         log_level = kwargs.get("log_level", constants.LOG_LEVEL_API)
-        self._log = logs.get_obj_log(obj=self, level=log_level)
+        self._log = tools.logs.get_obj_log(obj=self, level=log_level)
         """:obj:`logging.Logger`: Logger for this object."""
 
         self._auth = auth
@@ -41,7 +74,7 @@ class ApiMixin(models.ApiModel):
         return "{c.__module__}.{c.__name__}(auth={auth!r}, url={url!r})".format(
             c=self.__class__,
             auth=self._auth.__class__.__name__,
-            url=self._auth._http_client.url,
+            url=self._auth._http.url,
         )
 
     def __repr__(self):
@@ -78,7 +111,7 @@ class ApiMixin(models.ApiModel):
 
                 Defaults to: True.
             **kwargs:
-                Passed to :meth:`axonius_api_client.http.interfaces.HttpClient.__call__`
+                Passed to :meth:`axonius_api_client.http.client.HttpClient.__call__`
 
         Returns:
             :obj:`object` if is_json, or :obj:`str` if not is_json, or
@@ -89,7 +122,7 @@ class ApiMixin(models.ApiModel):
         sargs.update(kwargs)
         sargs.update({"path": path, "method": method})
 
-        response = self._auth.http_client(**sargs)
+        response = self._auth.http(**sargs)
 
         if check_status:
             self._check_response_status(response=response)
@@ -125,7 +158,7 @@ class ApiMixin(models.ApiModel):
             return response.json()
         except Exception as exc:
             raise exceptions.InvalidJson(response=response, exc=exc)
-        # FUTURE: check for "error" in JSON dict
+        # TODO: check for "error" in JSON dict
         # Need a way to reproduce response with "error" in JSON dict
 
     def _check_max_page_size(self, page_size):
@@ -145,7 +178,7 @@ class ApiMixin(models.ApiModel):
             raise exceptions.ApiError(msg)
 
 
-class ApiChild(object):
+class Child(object):
     """Pass."""
 
     def __init__(self, parent):
@@ -162,7 +195,7 @@ class ApiChild(object):
         return self.__str__()
 
 
-class ApiParser(object):
+class Parser(object):
     """Pass."""
 
     def __init__(self, raw, parent):

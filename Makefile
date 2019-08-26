@@ -46,10 +46,12 @@ lint:
 	pipenv run bandit -r . --skip B101 -x playground.py,setup.py
 
 test:
-	pipenv run pytest -rA --junitxml=junit-report.xml --cov-config=.coveragerc --cov-report=term --cov-report xml --cov-report=html:cov_html --cov=$(PACKAGE) --showlocals --log-cli-level=INFO --verbose --exitfirst $(PACKAGE)/tests
+	# --cov-report=term --log-cli-level=INFO --verbose -rA
+	pipenv run pytest --junitxml=junit-report.xml --cov-config=.coveragerc --cov-report xml --cov-report=html:cov_html --cov=$(PACKAGE) --showlocals  --exitfirst $(PACKAGE)/tests
 
 test_debug:
-	pipenv run pytest -rA --capture=no --showlocals --log-cli-level=DEBUG --verbose --exitfirst $(PACKAGE)/tests
+# 	pipenv run pytest -rA --capture=no --showlocals --log-cli-level=DEBUG --verbose --exitfirst $(PACKAGE)/tests
+	pipenv run pytest --showlocals --exitfirst $(PACKAGE)/tests
 
 docs:
 	(cd docs && pipenv run make html SPHINXOPTS="-Wna" && cd ..)

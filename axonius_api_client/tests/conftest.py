@@ -128,7 +128,7 @@ def api_url(request):
     """Fixture for getting API URL."""
     url = request.config.getoption("--url")
     if url:
-        parsed_url = axonapi.UrlParser(url=url, default_scheme="https")
+        parsed_url = axonapi.ParserUrl(url=url, default_scheme="https")
         url = parsed_url.url
     return url
 
@@ -137,7 +137,7 @@ def api_url(request):
 def creds_user(request):
     """Fixture for getting username/password creds."""
     return {
-        "cls": axonapi.AuthUser,
+        "cls": axonapi.AuthCreds,
         "creds": {
             "username": request.config.getoption("--username"),
             "password": request.config.getoption("--password"),
@@ -149,7 +149,7 @@ def creds_user(request):
 def creds_key(request):
     """Fixture for getting key/secret creds."""
     return {
-        "cls": axonapi.AuthKey,
+        "cls": axonapi.AuthApiKey,
         "creds": {
             "key": request.config.getoption("--key"),
             "secret": request.config.getoption("--secret"),
