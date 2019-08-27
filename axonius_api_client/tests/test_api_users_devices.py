@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """Test suite for axonapi.api.users_devices."""
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import copy
 
@@ -72,10 +71,14 @@ class TestUserDevices(object):
         assert isinstance(api.adapters, axonapi.api.adapters.Adapters)
         return api
 
+    @pytest.mark.parametrize(
+        "manual_fields",
+        [{"users": USERS_FIELDS_MANUAL, "devices": DEVICES_FIELDS_MANUAL}],
+    )
     @pytest.fixture(scope="session")
-    def single_asset(self, apiobj):
+    def single_asset(self, apiobj, manual_fields):
         """Pass."""
-        return apiobj._get(page_size=1)["assets"][0]
+        return apiobj._get(page_size=1, fields=manual_fields)["assets"][0]
 
     @pytest.fixture(scope="session")
     def single_asset_query(self, single_asset):
@@ -432,6 +435,27 @@ class TestUserDevices(object):
         for entry in data:
             assert axonapi.tools.is_type.str(entry)
 
+    def test_get_by_id(self, apiobj, single_asset):
+        """Pass."""
+        data = apiobj.get_by_id(single_asset["internal_axon_id"])
+        assert axonapi.tools.is_type.dict(data)
+        assert data
+        keys = ["generic", "internal_axon_id", "specific", "accurate_for_datetime"]
+        for key in keys:
+            assert key in data
+
+    def test_get_by_sq(self, apiobj, test_sq_get):
+        """Pass."""
+        name = test_sq_get[0]["name"]
+        data = apiobj.get_by_saved_query(name=name)
+        assert axonapi.tools.is_type.list(data)
+        assert data
+        keys = ["adapter_list_length", "adapters", "internal_axon_id"]
+        for entry in data:
+            for key in keys:
+                assert key in entry
+
+    def test_get_by_fv(self, apiobj)
     # TODO
     # test response error by using invalid route
     # test "error" in json response somehow (need to add code for it too)
