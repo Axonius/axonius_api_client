@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Axonius API Client package."""
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
 from .. import constants, exceptions, tools
 from . import adapters, mixins, routers
@@ -8,69 +9,6 @@ from . import adapters, mixins, routers
 
 class SavedQuery(mixins.Child):
     """Pass."""
-
-    def _get(self, query=None, count_min=None, count_max=None, **kwargs):
-        """Get saved queries using paging.
-
-        Args:
-            query (:obj:`str`, optional):
-                Query to filter rows to return. This is NOT a query built by
-                the Query Wizard in the GUI. This is something else. See
-                :meth:`get` for an example query.
-
-                Defaults to: None.
-            page_size (:obj:`int`, optional):
-                Get N rows per page.
-
-                Defaults to: :data:`axonius_api_client.constants.DEFAULT_PAGE_SIZE`.
-            max_rows (:obj:`int`, optional):
-                If not 0, only return up to N rows.
-
-                Defaults to: 0.
-
-        Yields:
-            :obj:`dict`: Each row found in 'assets' from return.
-
-        """
-        page_size = kwargs.pop("page_size", constants.DEFAULT_PAGE_SIZE)
-
-        rows = []
-        count_total = 0
-        objtype = self._parent._router._object_type
-        objtype = "Saved Query filter for {o}".format(o=objtype)
-
-        while True:
-            page = self._get_direct(
-                query=query, page_size=page_size, row_start=count_total
-            )
-
-            rows += page["assets"]
-            count_total += len(page["assets"])
-
-            do_break = self._parent._check_counts(
-                value=query,
-                value_type="query",
-                objtype=objtype,
-                count_min=count_min,
-                count_max=count_max,
-                count_total=count_total,
-                known_callback=self._get_names,
-            )
-
-            if not page["assets"]:
-                do_break = True
-
-            if do_break:
-                break
-
-        return rows
-
-    def _get_names(self, **kwargs):
-        """Pass."""
-        try:
-            return sorted([x["name"] for x in self._get()])
-        except Exception:
-            return []
 
     def _get_direct(self, query=None, row_start=0, page_size=0):
         """Get device saved queries.
@@ -112,6 +50,63 @@ class SavedQuery(mixins.Child):
         return self._parent._request(
             method="get", path=self._parent._router.views, params=params
         )
+
+    def _get(self, query=None, count_min=None, count_max=None, **kwargs):
+        """Get saved queries using paging.
+
+        Args:
+            query (:obj:`str`, optional):
+                Query to filter rows to return. This is NOT a query built by
+                the Query Wizard in the GUI. This is something else. See
+                :meth:`get` for an example query.
+
+                Defaults to: None.
+            page_size (:obj:`int`, optional):
+                Get N rows per page.
+
+                Defaults to: :data:`axonius_api_client.constants.DEFAULT_PAGE_SIZE`.
+            max_rows (:obj:`int`, optional):
+                If not 0, only return up to N rows.
+
+                Defaults to: 0.
+
+        Yields:
+            :obj:`dict`: Each row found in 'assets' from return.
+
+        """
+        page_size = kwargs.pop("page_size", constants.DEFAULT_PAGE_SIZE)
+        known_cb = kwargs.pop("known_callback", self.get_names)
+
+        rows = []
+        count_total = 0
+        objtype = self._parent._router._object_type
+        objtype = "Saved Query filter for {o}".format(o=objtype)
+
+        while True:
+            page = self._get_direct(
+                query=query, page_size=page_size, row_start=count_total
+            )
+
+            rows += page["assets"]
+            count_total += len(page["assets"])
+
+            do_break = self._parent._check_counts(
+                value=query,
+                value_type="query",
+                objtype=objtype,
+                count_min=count_min,
+                count_max=count_max,
+                count_total=count_total,
+                known_callback=known_cb,
+            )
+
+            if not page["assets"]:
+                do_break = True
+
+            if do_break:
+                break
+
+        return rows
 
     def _delete(self, ids):
         """Delete saved queries by ids.
@@ -213,9 +208,12 @@ class SavedQuery(mixins.Child):
         data["view"]["sort"]["desc"] = sort_descending
         data["view"]["sort"]["field"] = sort_field
 
-        return self._parent._request(
+        created = self._parent._request(
             method="post", path=self._parent._router.views, json=data
         )
+        found = self.get(name=name)
+        assert found["uuid"] == created, "UUID Mismatch between created and found!"
+        return found
 
     def delete(self, name, regex=False, **kwargs):
         """Delete a saved query by name.
@@ -237,10 +235,12 @@ class SavedQuery(mixins.Child):
 
         """
         found = self.get(name=name, regex=regex, **kwargs)
-        if not tools.is_type.list(found):
-            found = [found]
+        found = found if tools.is_type.list(found) else [found]
         return self._delete(ids=[x["uuid"] for x in found])
 
+    # FUTURE add get_by_create_user
+    # FUTURE add get_by_mod_time
+    # FUTURE add get_by_fetch_time
     def get(self, name=None, regex=False, **kwargs):
         """Get saved queries using paging.
 
@@ -279,6 +279,10 @@ class SavedQuery(mixins.Child):
         count_max = kwargs.get("count_max", None)
 
         return found[0] if count_min == 1 and count_max == 1 else found
+
+    def get_names(self, **kwargs):
+        """Pass."""
+        return sorted([x["name"] for x in self._get()])
 
 
 class Labels(mixins.Child):
@@ -533,28 +537,27 @@ class Fields(mixins.Child):
         val_fields = []
 
         for k, v in kwargs.items():
-            if not tools.is_type.str(k):
-                continue
+            if tools.is_type.str(k):
+                v = tools.listify(v)
 
-            v = tools.listify(v)
+                for f in v:
+                    if tools.is_type.str(f):
+                        val_field = self.find(
+                            name=f, adapter_name=k, fields=fields, error=error
+                        )
 
-            for f in v:
-                if not tools.is_type.str(f):
-                    continue
+                        msg = "Validated adapter name {a!r} field {f!r} as {v!r}"
+                        msg = msg.format(a=k, f=f, v=val_field)
+                        self._log.debug(msg)
 
-                val_field = self.find(
-                    name=f, adapter_name=k, fields=fields, error=error
-                )
+                        if f.lower() in ["all"] or val_field in [
+                            "specific_data",
+                            "specific_data.data",
+                        ]:
+                            return [val_field]
 
-                msg = "Validated adapter name {a!r} field {f!r} as {v!r}"
-                msg = msg.format(a=k, f=f, v=val_field)
-                self._log.debug(msg)
-
-                if f.lower() in ["all"]:
-                    return [val_field]
-
-                if val_field not in val_fields:
-                    val_fields.append(val_field)
+                        if val_field and val_field not in val_fields:
+                            val_fields.append(val_field)
 
         return val_fields
 
@@ -813,8 +816,8 @@ class UserDeviceMixin(mixins.ModelUserDevice, mixins.Mixins):
         else:
             val_fields = self.fields.validate(**kwargs)
 
-        if count_max is not None and count_max < page_size:
-            page_size = count_max
+        count_less = count_max is not None and count_max < page_size
+        page_size = count_max if count_less else page_size
 
         count_total = 0
 

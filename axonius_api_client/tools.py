@@ -1,20 +1,21 @@
 # -*- coding: utf-8 -*-
 """Axonius API Client utility tools module."""
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
 import csv as _csv
 import datetime
 import json as _json
-import re
 import logging
 import logging.handlers
+import re
 import time
 
 import dateutil.parser
 import dateutil.relativedelta
 import dateutil.tz
-import six
 import requests
+import six
 
 from . import __package__ as PACKAGE_ROOT
 from . import api, auth, constants, exceptions, http

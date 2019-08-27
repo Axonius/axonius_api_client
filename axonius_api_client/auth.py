@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
 """Axonius API authentication module."""
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
+
+import abc
 
 import six
-import abc
 
 from . import api, constants, exceptions, tools
 

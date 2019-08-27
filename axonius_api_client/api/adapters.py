@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Axonius API Client package."""
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
 import re
 
@@ -11,6 +12,7 @@ from . import mixins, routers
 class Clients(mixins.Child):
     """Pass."""
 
+    # TODO: Add csv upload file
     # FUTURE: public method
     def _check_client(self, name, config, node_id):
         """Check connectivity for a client of an adapter.

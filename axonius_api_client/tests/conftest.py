@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Conf for py.test."""
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
 import os
 import re
@@ -124,7 +125,7 @@ def pytest_runtest_setup(item):
 
 
 @pytest.fixture(scope="session")
-def api_url(request):
+def url(request):
     """Fixture for getting API URL."""
     url = request.config.getoption("--url")
     if url:

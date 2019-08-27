@@ -1,4 +1,4 @@
-PACKAGE := "axonius_api_client"
+PACKAGE := axonius_api_client
 VERSION := $(shell grep __version__ $(PACKAGE)/version.py | cut -d\" -f2)
 
 .PHONY: build docs
@@ -39,11 +39,11 @@ pyenv_init:
 	pyenv local 3.7.4 || true
 
 lint:
-	pipenv run which black && black $(PACKAGE) setup.py
-	pipenv run isort -y $(PACKAGE) setup.py
-	pipenv run pydocstyle $(PACKAGE) setup.py
-	pipenv run flake8 --max-line-length 89 $(PACKAGE) setup.py
-	pipenv run bandit -r . --skip B101 -x playground.py,setup.py
+	pipenv run which black && black $(PACKAGE) setup.py axonshell*.py
+	pipenv run isort -rc -y $(PACKAGE) setup.py axonshell*.py
+	pipenv run pydocstyle $(PACKAGE) setup.py axonshell*.py
+	pipenv run flake8 --max-line-length 89 $(PACKAGE) setup.py axonshell*.py
+	pipenv run bandit --skip B101 -r $(PACKAGE)
 
 test:
 	# --cov-report=term --log-cli-level=INFO --verbose -rA
@@ -53,10 +53,13 @@ test_debug:
 # 	pipenv run pytest -rA --capture=no --showlocals --log-cli-level=DEBUG --verbose --exitfirst $(PACKAGE)/tests
 	pipenv run pytest --showlocals --exitfirst $(PACKAGE)/tests
 
+cov_open:
+	open cov_html/index.html
+
 docs:
 	(cd docs && pipenv run make html SPHINXOPTS="-Wna" && cd ..)
 
-make docs_open:
+docs_open:
 	open docs/_build/html/index.html
 
 docs_coverage:

@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Axonius API HTTP client module."""
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
 import logging
 import warnings
@@ -8,7 +9,7 @@ import warnings
 import requests
 import six
 
-from . import constants, tools, version, exceptions
+from . import constants, exceptions, tools, version
 
 
 class Http(object):

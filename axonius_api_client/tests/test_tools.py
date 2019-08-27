@@ -1,16 +1,21 @@
 # -*- coding: utf-8 -*-
 """Test suite for axonius_api_client.tools."""
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
-import axonius_api_client as axonapi
-import pytest
-import tempfile
 import datetime
-import six
 import logging
+import tempfile
 import time
 
+import pytest
+import six
+
+import axonius_api_client as axonapi
+
 tools = axonapi.tools
+
+BAD_CRED = "tardis"
 
 
 class TestJoinUrl(object):
@@ -1308,18 +1313,18 @@ class TestLogs(object):
 class TestConnect(object):
     """Pass."""
 
-    def test_no_start(self, api_url):
+    def test_no_start(self, url):
         """Pass."""
-        c = tools.Connect(url=api_url, key="x", secret="x")
+        c = tools.Connect(url=url, key=BAD_CRED, secret=BAD_CRED)
         assert "Not connected" in format(c)
         assert "Not connected" in repr(c)
         assert c._handler_file is None
         assert c._handler_con is None
 
-    def test_no_start_logs(self, api_url):
+    def test_no_start_logs(self, url):
         """Pass."""
         c = tools.Connect(
-            url=api_url, key="x", secret="x", log_console=True, log_file=True
+            url=url, key=BAD_CRED, secret=BAD_CRED, log_console=True, log_file=True
         )
         assert "Not connected" in format(c)
         assert "Not connected" in repr(c)
@@ -1327,10 +1332,10 @@ class TestConnect(object):
         assert isinstance(c._handler_con, logging.Handler)
 
     @pytest.mark.needs_key_creds
-    def test_start(self, api_url, creds_key):
+    def test_start(self, url, creds_key):
         """Pass."""
         c = tools.Connect(
-            url=api_url,
+            url=url,
             key=creds_key["creds"]["key"],
             secret=creds_key["creds"]["secret"],
             certwarn=False,
@@ -1339,9 +1344,9 @@ class TestConnect(object):
         assert "Connected" in format(c)
         assert "Connected" in repr(c)
 
-    def test_invalid_creds(self, api_url):
+    def test_invalid_creds(self, url):
         """Pass."""
-        c = tools.Connect(url=api_url, key="x", secret="x", certwarn=False)
+        c = tools.Connect(url=url, key=BAD_CRED, secret=BAD_CRED, certwarn=False)
         c._http._CONNECT_TIMEOUT = 1
         with pytest.raises(axonapi.exceptions.ConnectError) as exc:
             c.start()
@@ -1349,7 +1354,9 @@ class TestConnect(object):
 
     def test_connect_timeout(self):
         """Pass."""
-        c = tools.Connect(url="127.0.0.99", key="x", secret="x", certwarn=False)
+        c = tools.Connect(
+            url="127.0.0.99", key=BAD_CRED, secret=BAD_CRED, certwarn=False
+        )
         c._http._CONNECT_TIMEOUT = 1
         with pytest.raises(axonapi.exceptions.ConnectError) as exc:
             c.start()
@@ -1360,7 +1367,7 @@ class TestConnect(object):
     def test_connect_error(self):
         """Pass."""
         c = tools.Connect(
-            url="https://127.0.0.1:3919", key="x", secret="x", certwarn=False
+            url="https://127.0.0.1:3919", key=BAD_CRED, secret=BAD_CRED, certwarn=False
         )
         c._http._CONNECT_TIMEOUT = 1
         with pytest.raises(axonapi.exceptions.ConnectError) as exc:
@@ -1369,18 +1376,20 @@ class TestConnect(object):
             exc.value.exc, axonapi.http.requests.exceptions.ConnectionError
         )
 
-    def test_invalid_creds_nowrap(self, api_url):
+    def test_invalid_creds_nowrap(self, url):
         """Pass."""
         c = tools.Connect(
-            url=api_url, key="x", secret="x", certwarn=False, wraperror=False
+            url=url, key=BAD_CRED, secret=BAD_CRED, certwarn=False, wraperror=False
         )
         c._http._CONNECT_TIMEOUT = 1
         with pytest.raises(axonapi.exceptions.InvalidCredentials):
             c.start()
 
-    def test_other_exc(self, api_url):
+    def test_other_exc(self, url):
         """Pass."""
-        c = tools.Connect(url="127.0.0.1", key="x", secret="x", certwarn=False)
+        c = tools.Connect(
+            url="127.0.0.1", key=BAD_CRED, secret=BAD_CRED, certwarn=False
+        )
         c._http._CONNECT_TIMEOUT = 1
         c._auth._creds = None
         with pytest.raises(axonapi.exceptions.ConnectError):
