@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """Parent exception and warnings for this package."""
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 from . import tools
 
@@ -77,8 +76,8 @@ class ResponseError(ApiError):
         msgs.append(error)
 
         if bodies:
-            req_txt = tools.json.pretty(response.request.body)
-            resp_txt = tools.json.pretty(response.request.body)
+            req_txt = tools.json.re_load(response.request.body)
+            resp_txt = tools.json.re_load(response.request.body)
             msgs += ["*** request ***", req_txt, "*** response ***", resp_txt]
 
         msg = msgs[0] if len(msgs) == 1 else "\n".join(msgs)

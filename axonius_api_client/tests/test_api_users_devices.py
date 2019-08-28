@@ -2,8 +2,6 @@
 """Test suite for axonapi.api.users_devices."""
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-import copy
-
 import pytest
 import requests
 
@@ -13,24 +11,17 @@ CLASSES = [axonapi.api.Users, axonapi.Devices]
 
 LABELS = ["badwolf_dundundun"]
 
-QUERY_SINGLE = '(specific_data.data.id == ({"$exists":true,"$ne": ""}))'
-QUERY_MULTI = [None, QUERY_SINGLE]
+QUERY_ID_EXISTS = '(specific_data.data.id == ({"$exists":true,"$ne": ""}))'
 
-USERS_FIELDS_MANUAL = ["specific_data.data.username"]
-USERS_FIELDS_VAL = ["username"]
+USERS_FIELD_MANUAL = "specific_data.data.username"
+DEVICES_FIELD_MANUAL = "specific_data.data.hostname"
+USERS_FIELDS_MANUALS = [USERS_FIELD_MANUAL]
+DEVICES_FIELDS_MANUALS = ["specific_data.data.hostname"]
 
-DEVICES_FIELDS_MANUAL = ["specific_data.data.hostname"]
-DEVICES_FIELDS_VAL = ["hostname"]
-
-GENERIC_FIELDS = {
-    "users": {"generic": USERS_FIELDS_VAL},
-    "devices": {"generic": DEVICES_FIELDS_VAL},
-}
-
-GENERIC_FIELDS_MIX = {
-    "users": {"generic": USERS_FIELDS_VAL + USERS_FIELDS_MANUAL},
-    "devices": {"generic": DEVICES_FIELDS_VAL + DEVICES_FIELDS_MANUAL},
-}
+USERS_FIELD_VALIDATE = "username"
+USERS_FIELDS_VALIDATES = [USERS_FIELD_VALIDATE]
+DEVICES_FIELD_VALIDATE = "hostname"
+DEVICES_FIELDS_VALIDATES = [DEVICES_FIELD_VALIDATE]
 
 
 def need_creds(creds):
@@ -41,12 +32,14 @@ def need_creds(creds):
 
 @pytest.mark.needs_url
 @pytest.mark.needs_any_creds
-@pytest.mark.parametrize("creds", ["creds_user", "creds_key"], indirect=True)
-@pytest.mark.parametrize("apicls", CLASSES, scope="session")
-class TestUserDevices(object):
+@pytest.mark.parametrize(
+    "creds", ["creds_user", "creds_key"], indirect=True, scope="class"
+)
+@pytest.mark.parametrize("apicls", CLASSES, scope="class")
+class TestBoth(object):
     """Pass."""
 
-    @pytest.fixture(scope="session")
+    @pytest.fixture(scope="class")
     def apiobj(self, url, creds, apicls):
         """Pass."""
         need_creds(creds)
@@ -71,27 +64,97 @@ class TestUserDevices(object):
         assert isinstance(api.adapters, axonapi.api.adapters.Adapters)
         return api
 
-    @pytest.mark.parametrize(
-        "manual_fields",
-        [{"users": USERS_FIELDS_MANUAL, "devices": DEVICES_FIELDS_MANUAL}],
-    )
-    @pytest.fixture(scope="session")
-    def single_asset(self, apiobj, manual_fields):
+    @pytest.fixture(scope="class")
+    def fields_list_manual(self, apiobj):
         """Pass."""
-        return apiobj._get(page_size=1, fields=manual_fields)["assets"][0]
+        api_type = apiobj._router._object_type
+        if api_type == "users":
+            return USERS_FIELDS_MANUALS
+        elif api_type == "devices":
+            return DEVICES_FIELDS_MANUALS
 
-    @pytest.fixture(scope="session")
+    @pytest.fixture(scope="class")
+    def fields_list_validate(self, apiobj):
+        """Pass."""
+        api_type = apiobj._router._object_type
+        if api_type == "users":
+            return USERS_FIELDS_VALIDATES
+        elif api_type == "devices":
+            return DEVICES_FIELDS_VALIDATES
+
+    @pytest.fixture(scope="class")
+    def fields_list_mix(self, apiobj):
+        """Pass."""
+        api_type = apiobj._router._object_type
+        if api_type == "users":
+            return USERS_FIELDS_VALIDATES + USERS_FIELDS_MANUALS
+        elif api_type == "devices":
+            return DEVICES_FIELDS_VALIDATES + DEVICES_FIELDS_MANUALS
+
+    @pytest.fixture(scope="class")
+    def fields_dict_manual(self, apiobj):
+        """Pass."""
+        api_type = apiobj._router._object_type
+        if api_type == "users":
+            return {"generic": USERS_FIELDS_MANUALS}
+        elif api_type == "devices":
+            return {"generic": DEVICES_FIELDS_MANUALS}
+
+    @pytest.fixture(scope="class")
+    def fields_dict_validate(self, apiobj):
+        """Pass."""
+        api_type = apiobj._router._object_type
+        if api_type == "users":
+            return {"generic": USERS_FIELDS_VALIDATES}
+        elif api_type == "devices":
+            return {"generic": DEVICES_FIELDS_VALIDATES}
+
+    @pytest.fixture(scope="class")
+    def fields_dict_mix(self, apiobj):
+        """Pass."""
+        api_type = apiobj._router._object_type
+        if api_type == "users":
+            return {"generic": USERS_FIELDS_VALIDATES + USERS_FIELDS_MANUALS}
+        elif api_type == "devices":
+            return {"generic": DEVICES_FIELDS_VALIDATES + DEVICES_FIELDS_MANUALS}
+
+    @pytest.fixture(scope="class")
+    def single_asset(self, apiobj, fields_list_manual):
+        """Pass."""
+        api_type = apiobj._router._object_type
+        data = apiobj._get(page_size=1, fields=fields_list_manual)
+        assert axonapi.tools.is_type.dict(data)
+
+        assets = data["assets"]
+        assert axonapi.tools.is_type.list(assets)
+
+        if not assets:
+            reason = "No {} returned with no fields: {}"
+            reason = reason.format(api_type, fields_list_manual)
+            pytest.skip(reason=reason)
+
+        assert len(assets) == 1
+
+        asset = assets[0]
+        assert axonapi.tools.is_type.dict(asset)
+
+        for x in fields_list_manual:
+            assert x in asset
+
+        return asset
+
+    @pytest.fixture(scope="class")
     def single_asset_query(self, single_asset):
         """Pass."""
         asset_id = single_asset["internal_axon_id"]
         return 'internal_axon_id == "{}"'.format(asset_id)
 
-    @pytest.fixture(scope="session")
+    @pytest.fixture(scope="class")
     def api_fields(self, apiobj):
         """Pass."""
         return apiobj.fields.get()
 
-    @pytest.fixture(scope="session")
+    @pytest.fixture(scope="class")
     def test_sq_get(self, apiobj):
         """Pass."""
         data = apiobj.saved_query.get()
@@ -142,22 +205,14 @@ class TestUserDevices(object):
         with pytest.raises(axonapi.NotLoggedIn):
             apicls(auth=auth)
 
-    @pytest.mark.parametrize("query", QUERY_MULTI)
-    @pytest.mark.parametrize(
-        "fields",
-        [
-            {"users": None, "devices": None},
-            {"users": USERS_FIELDS_MANUAL, "devices": DEVICES_FIELDS_MANUAL},
-        ],
-    )
+    @pytest.mark.parametrize("query", [None, QUERY_ID_EXISTS])
     @pytest.mark.parametrize("use_post", [True, False])
     @pytest.mark.parametrize("row_start", [0, 1])
-    def test__get(self, apiobj, query, fields, use_post, row_start):
+    def test__get(self, apiobj, query, fields_list_manual, use_post, row_start):
         """Test private get."""
         api_type = apiobj._router._object_type
-        api_fields = fields[api_type]
         data = apiobj._get(
-            fields=api_fields,
+            fields=fields_list_manual,
             row_start=row_start,
             page_size=1,
             query=query,
@@ -177,37 +232,25 @@ class TestUserDevices(object):
         for entry in data["assets"]:
             assert axonapi.tools.is_type.dict(entry)
             assert "adapters" in entry
-            if api_fields:
-                for field in api_fields:
-                    assert field in entry
-            else:
-                assert "specific_data" in entry
+            for field in fields_list_manual:
+                assert field in entry
 
-    @pytest.mark.parametrize("query", QUERY_MULTI)
+    @pytest.mark.parametrize("query", [None, QUERY_ID_EXISTS])
     @pytest.mark.parametrize("use_post", [True, False])
     def test_count(self, apiobj, query, use_post):
         """Test count."""
         data = apiobj.count(query=query, use_post=use_post)
         assert axonapi.tools.is_type.int(data)
 
-    @pytest.mark.parametrize(
-        "manual_fields",
-        [{"users": USERS_FIELDS_MANUAL, "devices": DEVICES_FIELDS_MANUAL}],
-    )
-    def test_get_manual(self, apiobj, manual_fields, single_asset_query):
+    def test_get_manual(self, apiobj, fields_list_manual, single_asset_query):
         """Pass."""
-        api_type = apiobj._router._object_type
-        api_manual_fields = manual_fields[api_type]
-        data = apiobj.get(query=single_asset_query, manual_fields=api_manual_fields)
+        data = apiobj.get(query=single_asset_query, manual_fields=fields_list_manual)
         assert axonapi.tools.is_type.list(data)
         assert len(data) == 1
 
-    @pytest.mark.parametrize("val_fields", [GENERIC_FIELDS_MIX])
-    def test_get_val(self, apiobj, val_fields, single_asset_query):
+    def test_get_validate(self, apiobj, fields_dict_mix, single_asset_query):
         """Pass."""
-        api_type = apiobj._router._object_type
-        api_manual_fields = copy.deepcopy(val_fields[api_type])
-        data = apiobj.get(query=single_asset_query, **api_manual_fields)
+        data = apiobj.get(query=single_asset_query, **fields_dict_mix)
         assert axonapi.tools.is_type.list(data)
         assert len(data) == 1
 
@@ -251,29 +294,23 @@ class TestUserDevices(object):
     @pytest.mark.parametrize(
         "sort_field",
         [
-            {"users": USERS_FIELDS_MANUAL[0], "devices": DEVICES_FIELDS_MANUAL[0]},
-            {"users": USERS_FIELDS_VAL[0], "devices": DEVICES_FIELDS_VAL[0]},
+            {"users": USERS_FIELD_MANUAL, "devices": DEVICES_FIELD_MANUAL},
+            {"users": USERS_FIELD_VALIDATE, "devices": DEVICES_FIELD_VALIDATE},
             {"users": None, "devices": None},
         ],
     )
-    @pytest.mark.parametrize(
-        "manual_fields",
-        [{"users": USERS_FIELDS_MANUAL, "devices": DEVICES_FIELDS_MANUAL}],
-    )
-    def test_sq_create_delete_manual(self, sort_field, manual_fields, apiobj):
+    def test_sq_create_delete_manual(self, sort_field, fields_list_manual, apiobj):
         """Pass."""
         api_type = apiobj._router._object_type
-        api_manual_fields = manual_fields[api_type]
         api_sort_field = sort_field[api_type]
-        api_sort_field = api_sort_field
 
         name = "BADWOLF {}".format(axonapi.tools.dt.now())
 
         created = apiobj.saved_query.create(
             name=name,
-            query=QUERY_SINGLE,
+            query=QUERY_ID_EXISTS,
             sort_field=api_sort_field,
-            manual_fields=api_manual_fields,
+            manual_fields=fields_list_manual,
         )
         assert axonapi.tools.is_type.dict(created)
         assert created["name"] == name
@@ -283,15 +320,12 @@ class TestUserDevices(object):
         with pytest.raises(axonapi.exceptions.ObjectNotFound):
             apiobj.saved_query.get(name=name)
 
-    @pytest.mark.parametrize("fields", [GENERIC_FIELDS, {"users": {}, "devices": {}}])
-    def test_sq_create_delete_val(self, fields, apiobj):
+    def test_sq_create_delete_validate(self, fields_dict_validate, apiobj):
         """Pass."""
-        api_type = apiobj._router._object_type
-
         name = "BADWOLF {}".format(axonapi.tools.dt.now())
 
         created = apiobj.saved_query.create(
-            name=name, query=QUERY_SINGLE, **copy.deepcopy(fields[api_type])
+            name=name, query=QUERY_ID_EXISTS, **fields_dict_validate
         )
         assert axonapi.tools.is_type.dict(created)
         assert created["name"] == name
@@ -362,9 +396,7 @@ class TestUserDevices(object):
         assert axonapi.tools.is_type.dict(api_fields)
         assert "generic" in api_fields
 
-    @pytest.mark.parametrize(
-        "adapter_name", ["generic", "active_directory"], scope="session"
-    )
+    @pytest.mark.parametrize("adapter_name", ["generic", "active_directory"])
     def test_fields_find_adapter(self, apiobj, api_fields, adapter_name):
         """Pass."""
         name, obj_fields = apiobj.fields.find_adapter(adapter_name, fields=api_fields)
@@ -376,21 +408,44 @@ class TestUserDevices(object):
         with pytest.raises(axonapi.exceptions.UnknownError):
             apiobj.fields.find_adapter("badwolf", fields=api_fields)
 
-    @pytest.mark.parametrize("generic_fields", [GENERIC_FIELDS_MIX])
-    def test_fields_find(self, apiobj, api_fields, generic_fields):
+    def test_fields_find_adapter_invalid_noerr(self, apiobj, api_fields):
         """Pass."""
-        api_type = apiobj._router._object_type
-        api_type_fields = generic_fields[api_type]["generic"]
-        for api_type_field in api_type_fields:
-            name = apiobj.fields.find(
-                adapter_name="generic", name=api_type_field, fields=api_fields
+        name, fields = apiobj.fields.find_adapter(
+            "badwolf", fields=api_fields, error=False
+        )
+        assert name.startswith("INVALID_")
+        assert fields == {}
+
+    def test_fields_find(self, apiobj, api_fields, fields_list_mix):
+        """Pass."""
+        for field in fields_list_mix:
+            aname, fname = apiobj.fields.find(
+                adapter_name="generic", name=field, fields=api_fields
             )
-            assert axonapi.tools.is_type.str(name)
+            assert axonapi.tools.is_type.str(aname)
+            assert axonapi.tools.is_type.str(fname)
+            assert aname == "generic"
 
     def test_fields_find_invalid_field(self, apiobj, api_fields):
         """Pass."""
         with pytest.raises(axonapi.exceptions.UnknownError):
             apiobj.fields.find(adapter_name="generic", name="AJKSLJAKN")
+
+    def test_fields_find_invalid_field_noerr1(self, apiobj, api_fields):
+        """Pass."""
+        name, field = apiobj.fields.find(
+            adapter_name="generic", name="AJKSLJAKN", error=False
+        )
+        assert name == "generic"
+        assert field == "INVALID_AJKSLJAKN"
+
+    def test_fields_find_invalid_field_noerr2(self, apiobj, api_fields):
+        """Pass."""
+        name, field = apiobj.fields.find(
+            adapter_name="moo", name="AJKSLJAKN", error=False
+        )
+        assert name == "INVALID_moo"
+        assert field == "INVALID_AJKSLJAKN"
 
     def test_fields_find_invalid_adapter(self, apiobj, api_fields):
         """Pass."""
@@ -399,41 +454,48 @@ class TestUserDevices(object):
 
     def test_fields_validate_ignores(self, apiobj, api_fields):
         """Pass."""
-        kwargs = {"x": [None, pytest]}
+        kwargs = {"x": [None, set()]}
         data = apiobj.fields.validate(fields=api_fields, default_fields=False, **kwargs)
         assert not data
 
-    @pytest.mark.parametrize("generic_fields", [GENERIC_FIELDS_MIX])
-    def test_fields_validate(self, apiobj, api_fields, generic_fields):
+    def test_fields_validate_ignores_noerr(self, apiobj, api_fields):
         """Pass."""
-        api_type = apiobj._router._object_type
-        api_type_fields = copy.deepcopy(generic_fields[api_type])
+        kwargs = {"x": ["x"], "y": ["y"], "generic": ["z"]}
         data = apiobj.fields.validate(
-            fields=api_fields, default_fields=False, **api_type_fields
+            fields=api_fields, default_fields=False, fields_error=False, **kwargs
+        )
+        assert not data
+
+    def test_fields_validate_nonlist(self, apiobj, api_fields, fields_dict_mix):
+        """Pass."""
+        data = apiobj.fields.validate(
+            fields=api_fields,
+            default_fields=False,
+            fields_error=False,
+            **fields_dict_mix
         )
         assert axonapi.tools.is_type.list(data)
-        if len(data) != 1:
-            import pdb
+        assert len(data) == 1
 
-            pdb.set_trace()
+    def test_fields_validate(self, apiobj, api_fields, fields_dict_mix):
+        """Pass."""
+        data = apiobj.fields.validate(
+            fields=api_fields, default_fields=False, **fields_dict_mix
+        )
+        assert axonapi.tools.is_type.list(data)
         assert len(data) == 1
         for entry in data:
             assert axonapi.tools.is_type.str(entry)
 
-    @pytest.mark.parametrize("generic_fields", [GENERIC_FIELDS_MIX])
-    def test_fields_validate_all(self, apiobj, api_fields, generic_fields):
+    def test_fields_validate_all(self, apiobj, api_fields, fields_dict_mix):
         """Pass."""
-        api_type = apiobj._router._object_type
-        api_type_fields = copy.deepcopy(generic_fields[api_type])
-        api_type_fields["generic"].append("all")
+        fields_dict_mix["generic"].append("all")
         data = apiobj.fields.validate(
-            fields=api_fields, default_fields=False, **api_type_fields
+            fields=api_fields, default_fields=False, **fields_dict_mix
         )
         assert axonapi.tools.is_type.list(data)
         assert len(data) == 1
         assert data[0] == "specific_data"
-        for entry in data:
-            assert axonapi.tools.is_type.str(entry)
 
     def test_get_by_id(self, apiobj, single_asset):
         """Pass."""
@@ -443,6 +505,11 @@ class TestUserDevices(object):
         keys = ["generic", "internal_axon_id", "specific", "accurate_for_datetime"]
         for key in keys:
             assert key in data
+
+    def test_get_by_id_fail(self, apiobj):
+        """Pass."""
+        with pytest.raises(axonapi.exceptions.ObjectNotFound):
+            apiobj.get_by_id("BADWOLF")
 
     def test_get_by_sq(self, apiobj, test_sq_get):
         """Pass."""
@@ -455,8 +522,266 @@ class TestUserDevices(object):
             for key in keys:
                 assert key in entry
 
-    def test_get_by_fv(self, apiobj)
-    # TODO
-    # test response error by using invalid route
-    # test "error" in json response somehow (need to add code for it too)
-    # test invalid json response somehow
+    def test_get_by_fv_re(self, apiobj, fields_dict_manual):
+        """Pass."""
+        for k, v in fields_dict_manual.items():
+            adapter_name = k
+            field_name = v[0]
+            break
+
+        data = apiobj.get_by_field_value(
+            value="a",
+            name=field_name,
+            adapter_name=adapter_name,
+            regex=True,
+            **fields_dict_manual
+        )
+        assert axonapi.tools.is_type.list(data)
+        assert data
+        keys = ["adapter_list_length", "adapters", "internal_axon_id", field_name]
+        for entry in data:
+            for key in keys:
+                assert key in entry
+
+    def test_get_by_fv(self, apiobj, single_asset, fields_dict_manual):
+        """Pass."""
+        for k, v in fields_dict_manual.items():
+            adapter_name = k
+            field_name = v[0]
+            break
+
+        field_value = single_asset[field_name]
+        if axonapi.tools.is_type.list(field_value):
+            field_value = field_value[0]
+
+        data = apiobj.get_by_field_value(
+            value=field_value,
+            name=field_name,
+            adapter_name=adapter_name,
+            **fields_dict_manual
+        )
+
+        assert axonapi.tools.is_type.dict(data)
+        keys = ["adapter_list_length", "adapters", "internal_axon_id", field_name]
+        for key in keys:
+            assert key in data
+
+    def test_get_by_fv_err(self, apiobj, fields_dict_manual):
+        """Pass."""
+        for k, v in fields_dict_manual.items():
+            adapter_name = k
+            field_name = v[0]
+            break
+
+        with pytest.raises(axonapi.exceptions.ObjectNotFound):
+            apiobj.get_by_field_value(
+                value="askdjfsdfsadgasg",
+                name=field_name,
+                adapter_name=adapter_name,
+                **fields_dict_manual
+            )
+
+
+@pytest.mark.needs_url
+@pytest.mark.needs_any_creds
+@pytest.mark.parametrize(
+    "creds", ["creds_user", "creds_key"], indirect=True, scope="class"
+)
+class TestUsers(object):
+    """Pass."""
+
+    FIELDS = ["specific_data.data.username", "specific_data.data.mail"]
+
+    @pytest.fixture(scope="class")
+    def apiobj(self, url, creds):
+        """Pass."""
+        need_creds(creds)
+        http = axonapi.Http(url=url, certwarn=False)
+        auth = creds["cls"](http=http, **creds["creds"])
+        auth.login()
+        api = axonapi.api.Users(auth=auth)
+        assert format(auth.__class__.__name__) in format(api)
+        assert format(auth.__class__.__name__) in repr(api)
+        assert http.url in format(api)
+        assert http.url in repr(api)
+        assert axonapi.tools.is_type.dict(api._default_fields)
+        assert isinstance(api._router, axonapi.api.routers.Router)
+        assert isinstance(api.labels, axonapi.api.mixins.Child)
+        assert isinstance(api.labels, axonapi.api.users_devices.Labels)
+        assert isinstance(api.saved_query, axonapi.api.mixins.Child)
+        assert isinstance(api.saved_query, axonapi.api.users_devices.SavedQuery)
+        assert isinstance(api.fields, axonapi.api.mixins.Child)
+        assert isinstance(api.fields, axonapi.api.users_devices.Fields)
+        assert isinstance(api.reports, axonapi.api.mixins.Child)
+        assert isinstance(api.reports, axonapi.api.users_devices.Reports)
+        assert isinstance(api.adapters, axonapi.api.adapters.Adapters)
+        return api
+
+    @pytest.fixture(scope="class")
+    def single_asset(self, apiobj):
+        """Pass."""
+        query = '(specific_data.data.username == ({"$exists":true,"$ne": ""})) and (specific_data.data.mail == ({"$exists":true,"$ne": ""}))'  # noqa
+
+        data = apiobj._get(query=query, page_size=1, fields=self.FIELDS)
+        assert axonapi.tools.is_type.dict(data)
+
+        assets = data["assets"]
+        assert axonapi.tools.is_type.list(assets)
+
+        if not assets:
+            reason = "No users returned with no fields: {}"
+            reason = reason.format(self.FIELDS)
+            pytest.skip(reason=reason)
+
+        assert len(assets) == 1
+
+        asset = assets[0]
+        assert axonapi.tools.is_type.dict(asset)
+
+        for x in self.FIELDS:
+            assert x in asset
+            assert asset[x]
+
+        return asset
+
+    def test_get_by_username(self, apiobj, single_asset):
+        """Pass."""
+        value = single_asset["specific_data.data.username"]
+        value = value[0] if axonapi.tools.is_type.list(value) else value
+
+        data = apiobj.get_by_username(value=value, **{"generic": self.FIELDS})
+
+        assert axonapi.tools.is_type.dict(data)
+
+        for x in self.FIELDS:
+            assert x in data
+            assert data[x]
+
+    def test_get_by_mail(self, apiobj, single_asset):
+        """Pass."""
+        value = single_asset["specific_data.data.mail"]
+        value = value[0] if axonapi.tools.is_type.list(value) else value
+
+        data = apiobj.get_by_mail(value=value, **{"generic": self.FIELDS})
+
+        assert axonapi.tools.is_type.dict(data)
+
+        for x in self.FIELDS:
+            assert x in data
+            assert data[x]
+
+
+@pytest.mark.needs_url
+@pytest.mark.needs_any_creds
+@pytest.mark.parametrize(
+    "creds", ["creds_user", "creds_key"], indirect=True, scope="class"
+)
+class TestDevices(object):
+    """Pass."""
+
+    FIELDS = [
+        "specific_data.data.network_interfaces.ips",
+        "specific_data.data.network_interfaces.mac",
+        "specific_data.data.hostname",
+    ]
+
+    @pytest.fixture(scope="class")
+    def apiobj(self, url, creds):
+        """Pass."""
+        need_creds(creds)
+        http = axonapi.Http(url=url, certwarn=False)
+        auth = creds["cls"](http=http, **creds["creds"])
+        auth.login()
+        api = axonapi.api.Devices(auth=auth)
+        assert format(auth.__class__.__name__) in format(api)
+        assert format(auth.__class__.__name__) in repr(api)
+        assert http.url in format(api)
+        assert http.url in repr(api)
+        assert axonapi.tools.is_type.dict(api._default_fields)
+        assert isinstance(api._router, axonapi.api.routers.Router)
+        assert isinstance(api.labels, axonapi.api.mixins.Child)
+        assert isinstance(api.labels, axonapi.api.users_devices.Labels)
+        assert isinstance(api.saved_query, axonapi.api.mixins.Child)
+        assert isinstance(api.saved_query, axonapi.api.users_devices.SavedQuery)
+        assert isinstance(api.fields, axonapi.api.mixins.Child)
+        assert isinstance(api.fields, axonapi.api.users_devices.Fields)
+        assert isinstance(api.reports, axonapi.api.mixins.Child)
+        assert isinstance(api.reports, axonapi.api.users_devices.Reports)
+        assert isinstance(api.adapters, axonapi.api.adapters.Adapters)
+        return api
+
+    @pytest.fixture(scope="class")
+    def single_asset(self, apiobj):
+        """Pass."""
+        query = '(specific_data.data.network_interfaces.ips == ({"$exists":true,"$ne": ""})) and (specific_data.data.network_interfaces.mac == ({"$exists":true,"$ne": ""})) and (specific_data.data.hostname == ({"$exists":true,"$ne": ""}))'  # noqa
+
+        data = apiobj._get(query=query, page_size=1, fields=self.FIELDS)
+        assert axonapi.tools.is_type.dict(data)
+
+        assets = data["assets"]
+        assert axonapi.tools.is_type.list(assets)
+
+        if not assets:
+            reason = "No devices returned with no fields: {}"
+            reason = reason.format(self.FIELDS)
+            pytest.skip(reason=reason)
+
+        assert len(assets) == 1
+
+        asset = assets[0]
+        assert axonapi.tools.is_type.dict(asset)
+
+        for x in self.FIELDS:
+            assert x in asset
+            assert asset[x]
+
+        return asset
+
+    def test_get_by_hostname(self, apiobj, single_asset):
+        """Pass."""
+        value = single_asset["specific_data.data.hostname"]
+        value = value[0] if axonapi.tools.is_type.list(value) else value
+
+        data = apiobj.get_by_hostname(value=value, **{"generic": self.FIELDS})
+
+        assert axonapi.tools.is_type.dict(data)
+
+        for x in self.FIELDS:
+            assert x in data
+            assert data[x]
+
+    def test_get_by_mac(self, apiobj, single_asset):
+        """Pass."""
+        value = single_asset["specific_data.data.network_interfaces.mac"]
+        value = value[0] if axonapi.tools.is_type.list(value) else value
+
+        data = apiobj.get_by_mac(value=value, **{"generic": self.FIELDS})
+
+        assert axonapi.tools.is_type.dict(data)
+
+        for x in self.FIELDS:
+            assert x in data
+            assert data[x]
+
+    def test_get_by_ip(self, apiobj, single_asset):
+        """Pass."""
+        value = single_asset["specific_data.data.network_interfaces.ips"]
+        value = value[0] if axonapi.tools.is_type.list(value) else value
+
+        data = apiobj.get_by_ip(value=value, **{"generic": self.FIELDS})
+
+        assert axonapi.tools.is_type.dict(data)
+
+        for x in self.FIELDS:
+            assert x in data
+            assert data[x]
+
+
+# TODO
+# test response error by using invalid route
+# test "error" in json response somehow (need to add code for it too)
+# test invalid json response somehow
+# test validate fields_error=False
+# test parser fields
+# test in subnet/not in subnet
+# test check_count logic

@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """Axonius API Client package."""
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
+
+import ipaddress
 
 from .. import constants, exceptions, tools
 from . import adapters, mixins, routers
@@ -428,6 +429,9 @@ class Fields(mixins.Child):
     """Pass."""
 
     _GENERIC_ALTS = ["generic", "general", "specific"]
+    _ALL_ALTS = ["all", "", "*", "specific_data"]
+    _FORCE_SINGLE = ["specific_data", "specific_data.data"]
+    _INVALID = "INVALID_"
 
     def _get(self):
         """Get the fields.
@@ -444,7 +448,7 @@ class Fields(mixins.Child):
         parser = ParserFields(raw=raw, parent=self)
         return parser.parse()
 
-    def find_adapter(self, name, **kwargs):
+    def find_adapter(self, name, error=True, **kwargs):
         """Find an adapter by name.
 
         Args:
@@ -464,19 +468,28 @@ class Fields(mixins.Child):
         """
         fields = kwargs.get("fields", None) or self.get()
         check_name = tools.strip.right(name, "_adapter").lower()
-        check_name = "generic" if check_name in self._GENERIC_ALTS else check_name
+
+        if check_name in self._GENERIC_ALTS:
+            check_name = "generic"
 
         if check_name in fields:
             return check_name, fields[check_name]
 
-        raise exceptions.UnknownError(
-            value=name,
-            known=list(fields),
-            reason_msg="adapter by name",
-            valid_msg="adapter names",
-        )
+        if error:
+            raise exceptions.UnknownError(
+                value=name,
+                known=list(fields),
+                reason_msg="adapter by name",
+                valid_msg="adapter names",
+            )
 
-    def find(self, name, adapter_name, **kwargs):
+        msg = "Failed to validate adapter {cn!r} (supplied {n!r})"
+        msg = msg.format(n=name, cn=check_name)
+        self._log.warning(msg)
+
+        return self._INVALID + name, {}
+
+    def find(self, name, adapter_name, error=True, **kwargs):
         """Find a field for a given adapter.
 
         Args:
@@ -494,27 +507,51 @@ class Fields(mixins.Child):
 
         """
         fields = kwargs.get("fields", None) or self.get()
-        error = kwargs.get("error", True)
 
-        adapter_name, adapter_fields = self.find_adapter(
-            name=adapter_name, fields=fields
+        aname, afields = self.find_adapter(
+            name=adapter_name, fields=fields, error=error
         )
 
-        check_name = "all" if not name else name.lower()
+        check_name = name.lower()
 
-        for short_name, field_info in adapter_fields.items():
+        if check_name in self._ALL_ALTS:
+            check_name = "all"
+
+        for short_name, field_info in afields.items():
             if check_name in [short_name, field_info["name"]]:
-                return field_info["name"]
+                vfield = field_info["name"]
+
+                msg = "Validated adapter name {a!r} field {f!r} as {v!r}"
+                msg = msg.format(a=aname, f=name, v=vfield)
+                self._log.debug(msg)
+
+                return aname, vfield
 
         if error:
             raise exceptions.UnknownError(
                 value=name,
-                known=list(adapter_fields),
-                reason_msg="adapter {a!r} by field".format(a=adapter_name),
+                known=list(afields),
+                reason_msg="adapter {a!r} by field".format(a=aname),
                 valid_msg="field names",
             )
 
-    def validate(self, fields=None, error=True, default_fields=True, **kwargs):
+        msg = "Failed to validate field {cn!r} (supplied {n!r}) for adapter {a!r}"
+        msg = msg.format(n=name, cn=check_name, a=aname)
+        self._log.warning(msg)
+
+        return aname, self._INVALID + name
+
+    @staticmethod
+    def _conjoin_dol(cd, d):
+        for k, v in d.items():
+            if tools.is_type.str(k):
+                if k not in cd:
+                    cd[k] = []
+                for x in tools.listify(v):
+                    if x not in cd[k] and tools.is_type.str(x):
+                        cd[k].append(x)
+
+    def validate(self, fields=None, fields_error=True, default_fields=True, **kwargs):
         """Validate provided fields.
 
         Args:
@@ -527,39 +564,35 @@ class Fields(mixins.Child):
 
         """
         fields = fields or self.get()
+        pfields = {}
+        vfields = {}
+        ofields = getattr(self._parent, "_default_fields", {})
 
-        obj_default_fields = getattr(self._parent, "_default_fields")
-        if default_fields and obj_default_fields:
-            for k, v in obj_default_fields.items():
-                kwargs[k] = tools.listify(kwargs.get(k, []))
-                kwargs[k] += [x for x in v if x not in kwargs[k]]
+        if default_fields and ofields and tools.is_type.dict(ofields):
+            self._conjoin_dol(pfields, ofields)
 
-        val_fields = []
+        self._conjoin_dol(pfields, kwargs)
 
-        for k, v in kwargs.items():
-            if tools.is_type.str(k):
-                v = tools.listify(v)
+        for aname, afields in pfields.items():
+            for afield in afields:
+                vaname, vafield = self.find(
+                    name=afield, adapter_name=aname, fields=fields, error=fields_error
+                )
 
-                for f in v:
-                    if tools.is_type.str(f):
-                        val_field = self.find(
-                            name=f, adapter_name=k, fields=fields, error=error
-                        )
+                if any([x.startswith(self._INVALID) for x in [vafield, vaname]]):
+                    continue
 
-                        msg = "Validated adapter name {a!r} field {f!r} as {v!r}"
-                        msg = msg.format(a=k, f=f, v=val_field)
-                        self._log.debug(msg)
+                if vafield in self._FORCE_SINGLE:
+                    vfields[vaname] = [vafield]
+                    break
 
-                        if f.lower() in ["all"] or val_field in [
-                            "specific_data",
-                            "specific_data.data",
-                        ]:
-                            return [val_field]
+                if vaname not in vfields:
+                    vfields[vaname] = []
 
-                        if val_field and val_field not in val_fields:
-                            val_fields.append(val_field)
+                if vafield not in vfields[vaname]:
+                    vfields[vaname].append(vafield)
 
-        return val_fields
+        return [i for l in vfields.values() for i in l]
 
 
 class Reports(mixins.Child):
@@ -723,11 +756,12 @@ class UserDeviceMixin(mixins.ModelUserDevice, mixins.Mixins):
         count_total,
         count_min,
         count_max,
+        error=True,
         known_callback=None,
     ):
         """Pass."""
         if count_min == 1 and count_max == 1:
-            if count_total != 1:
+            if count_total != 1 and error:
                 raise exceptions.ObjectNotFound(
                     value=value,
                     value_type=value_type,
@@ -737,22 +771,26 @@ class UserDeviceMixin(mixins.ModelUserDevice, mixins.Mixins):
             return True
 
         if count_min is not None and count_total < count_min:
-            raise exceptions.TooFewObjectsFound(
-                value=value,
-                value_type=value_type,
-                object_type=objtype,
-                count_total=count_total,
-                count_min=count_min,
-            )
+            if error:
+                raise exceptions.TooFewObjectsFound(
+                    value=value,
+                    value_type=value_type,
+                    object_type=objtype,
+                    count_total=count_total,
+                    count_min=count_min,
+                )
+            return True
 
         if count_max is not None and count_total > count_max:
-            raise exceptions.TooManyObjectsFound(
-                value=value,
-                value_type=value_type,
-                object_type=objtype,
-                count_total=count_total,
-                count_max=count_max,
-            )
+            if error:
+                raise exceptions.TooManyObjectsFound(
+                    value=value,
+                    value_type=value_type,
+                    object_type=objtype,
+                    count_total=count_total,
+                    count_max=count_max,
+                )
+            return True
         return False
 
     def count(self, query=None, use_post=True):
@@ -780,6 +818,7 @@ class UserDeviceMixin(mixins.ModelUserDevice, mixins.Mixins):
         query=None,
         count_min=None,
         count_max=None,
+        count_error=True,
         page_size=None,
         manual_fields=None,
         use_post=True,
@@ -842,6 +881,7 @@ class UserDeviceMixin(mixins.ModelUserDevice, mixins.Mixins):
                 count_min=count_min,
                 count_max=count_max,
                 count_total=count_total,
+                error=count_error,
             )
 
             if not page["assets"]:
@@ -912,8 +952,8 @@ class UserDeviceMixin(mixins.ModelUserDevice, mixins.Mixins):
             kwargs.setdefault("count_min", 1)
             kwargs.setdefault("count_max", 1)
 
-        field = self.fields.find(name=name, adapter_name=adapter_name)
-        kwargs.setdefault("query", query.format(field=field, value=value))
+        aname, afield = self.fields.find(name=name, adapter_name=adapter_name)
+        kwargs.setdefault("query", query.format(field=afield, value=value))
         return self.get(**kwargs)
 
 
@@ -940,7 +980,7 @@ class Users(UserDeviceMixin):
         """
         return {"generic": ["id", "fetch_time", "labels", "username", "mail"]}
 
-    def get_by_name(self, value, **kwargs):
+    def get_by_username(self, value, **kwargs):
         """Get objects by name using paging.
 
         Args:
@@ -956,7 +996,7 @@ class Users(UserDeviceMixin):
         kwargs.setdefault("adapter_name", "generic")
         return self.get_by_field_value(value=value, **kwargs)
 
-    def get_by_email(self, value, **kwargs):
+    def get_by_mail(self, value, **kwargs):
         """Get objects by email using paging.
 
         Args:
@@ -1004,7 +1044,7 @@ class Devices(UserDeviceMixin):
             ]
         }
 
-    def get_by_name(self, value, **kwargs):
+    def get_by_hostname(self, value, **kwargs):
         """Get objects by name using paging.
 
         Args:
@@ -1020,9 +1060,6 @@ class Devices(UserDeviceMixin):
         kwargs.setdefault("adapter_name", "generic")
         return self.get_by_field_value(value=value, **kwargs)
 
-    # TODO: get_by_ip
-    # TODO: get_by_in_subnet
-    # TODO: get_by_not_in_subnet
     def get_by_mac(self, value, **kwargs):
         """Get objects by MAC using paging.
 
@@ -1038,6 +1075,84 @@ class Devices(UserDeviceMixin):
         kwargs.setdefault("name", "network_interfaces.mac")
         kwargs.setdefault("adapter_name", "generic")
         return self.get_by_field_value(value=value, **kwargs)
+
+    def get_by_ip(self, value, **kwargs):
+        """Get objects by MAC using paging.
+
+        Args:
+            value (:obj:`int`):
+                Value to find using field "network_interfaces.mac".
+            **kwargs: Passed thru to :meth:`UserDeviceModel.get_by_field_value`
+
+        Returns:
+            :obj:`list` of :obj:`dict`: Each row matching email or :obj:`dict` if only1.
+
+        """
+        kwargs.setdefault("name", "network_interfaces.ips")
+        kwargs.setdefault("adapter_name", "generic")
+        return self.get_by_field_value(value=value, **kwargs)
+
+    def get_by_in_subnet(self, value, **kwargs):
+        """Get objects by MAC using paging.
+
+        Args:
+            value (:obj:`int`):
+                Value to find using field "network_interfaces.mac".
+            **kwargs: Passed thru to :meth:`UserDeviceModel.get_by_field_value`
+
+        Returns:
+            :obj:`list` of :obj:`dict`: Each row matching email or :obj:`dict` if only1.
+
+        """
+        network = ipaddress.ip_network(value)
+
+        begin = int(network.network_address)
+        end = int(network.broadcast_address)
+
+        match_field = "specific_data.data.network_interfaces.ips_raw"
+
+        match = 'match({{"$gte": {begin}, "$lte": {end}}})'
+        match = match.format(begin=begin, end=end)
+
+        query = "{match_field} == {match}"
+        query = query.format(match_field=match_field, match=match)
+
+        kwargs["query"] = query
+        return self.get(**kwargs)
+
+    def get_by_not_in_subnet(self, value, **kwargs):
+        """Get objects by MAC using paging.
+
+        Args:
+            value (:obj:`int`):
+                Value to find using field "network_interfaces.mac".
+            **kwargs: Passed thru to :meth:`UserDeviceModel.get_by_field_value`
+
+        Returns:
+            :obj:`list` of :obj:`dict`: Each row matching email or :obj:`dict` if only1.
+
+        """
+        network = ipaddress.ip_network(value)
+
+        ip_begin = int(ipaddress.ip_address("0.0.0.0"))
+        ip_end = int(ipaddress.ip_address("255.255.255.255"))
+
+        begin = int(network.network_address)
+        end = int(network.broadcast_address)
+
+        field = "specific_data.data.network_interfaces.ips_raw"
+
+        match1 = 'match({{"$gte": {ip_begin}, "$lte": {begin}}})'
+        match1 = match1.format(begin=begin, ip_begin=ip_begin)
+
+        match2 = 'match({{"$gte": {end}, "$lte": {ip_end}}})'
+        match2 = match2.format(end=end, ip_end=ip_end)
+
+        query = "{field} == {match1} or {field} == {match2}"
+        query = query.format(field=field, match1=match1, match2=match2)
+
+        kwargs["query"] = query
+        return self.get(**kwargs)
 
 
 class ParserFields(mixins.Parser):
