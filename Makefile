@@ -39,8 +39,8 @@ pyenv_init:
 	pyenv local 3.7.4 || true
 
 lint:
-	pipenv run which black && black $(PACKAGE) setup.py axonshell*.py
 	pipenv run isort -rc -y $(PACKAGE) setup.py axonshell*.py
+	pipenv run which black && black $(PACKAGE) setup.py axonshell*.py
 	pipenv run pydocstyle $(PACKAGE) setup.py axonshell*.py
 	pipenv run flake8 --max-line-length 89 $(PACKAGE) setup.py axonshell*.py
 	pipenv run bandit --skip B101 -r $(PACKAGE)

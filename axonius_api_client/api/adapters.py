@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """Axonius API Client package."""
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import re
 
@@ -110,7 +109,7 @@ class Clients(mixins.Child):
         return clients
 
 
-class Adapters(mixins.Mixins):
+class Adapters(mixins.Model, mixins.Mixins):
     """Adapter related API methods."""
 
     def _init(self, auth, **kwargs):

@@ -1,17 +1,29 @@
 # -*- coding: utf-8 -*-
 """Axonius API Client package."""
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 from . import api, auth, cli, constants, exceptions, http, tools, version
 from .api import Actions, Adapters, Devices, Enforcements, Users
 from .auth import ApiKey as AuthApiKey
 from .auth import Creds as AuthCreds
-from .exceptions import (AlreadyLoggedIn, ApiError, AuthError, AxonError,
-                         ConnectError, HttpError, InvalidCredentials,
-                         InvalidJson, NotLoggedIn, ObjectNotFound,
-                         ResponseError, TooFewObjectsFound, ToolsError,
-                         TooManyObjectsFound, UnknownError)
+from .exceptions import (
+    AlreadyLoggedIn,
+    ApiError,
+    AuthError,
+    AxonError,
+    ConnectError,
+    HttpError,
+    InvalidCredentials,
+    JsonError,
+    JsonInvalid,
+    NotLoggedIn,
+    ObjectNotFound,
+    ResponseError,
+    TooFewObjectsFound,
+    ToolsError,
+    TooManyObjectsFound,
+    UnknownError,
+)
 from .http import Http, ParserUrl
 from .tools import Connect
 
@@ -49,7 +61,8 @@ __all__ = (
     "AuthError",
     "HttpError",
     "ResponseError",
-    "InvalidJson",
+    "JsonInvalid",
+    "JsonError",
     "ObjectNotFound",
     "TooFewObjectsFound",
     "TooManyObjectsFound",

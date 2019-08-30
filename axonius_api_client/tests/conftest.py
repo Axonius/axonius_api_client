@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """Conf for py.test."""
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import os
 import re

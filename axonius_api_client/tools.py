@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """Axonius API Client utility tools module."""
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import csv as _csv
 import datetime
@@ -44,8 +43,23 @@ def grouper(iterable, n, fillvalue=None):
     return six.moves.zip_longest(*([iter(iterable)] * n), fillvalue=fillvalue)
 
 
+def nest_depth(obj):
+    """Pass."""
+    if is_type.complex(obj):
+        if is_type.dict(obj):
+            obj = obj.values()
+        calcs = [nest_depth(x) for x in obj if is_type.complex(x)]
+        return 1 + (max(calcs) if calcs else 0)
+    return 0
+
+
 class is_type(object):
     """Pass."""
+
+    @staticmethod
+    def complex(x):
+        """Pass."""
+        return is_type.dict(x) or is_type.list(x)
 
     @staticmethod
     def bytes(obj):

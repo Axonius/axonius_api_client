@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """Axonius API Client package."""
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import abc
 
@@ -40,7 +39,7 @@ class ModelUserDevice(Model):
         raise NotImplementedError  # pragma: no cover
 
 
-class Mixins(Model):
+class Mixins(object):
     """API client for Axonius REST API."""
 
     def __init__(self, auth, **kwargs):
@@ -124,18 +123,27 @@ class Mixins(Model):
         sargs.update(kwargs)
         sargs.update({"path": path, "method": method})
 
-        response = self._auth.http(**sargs)
+        checks = ["json", "params"]
+        size_keys = ["limit"]
+        for check in checks:
+            for size_key in size_keys:
+                if size_key in kwargs.get(check, {}):
+                    self._check_max_page_size(kwargs[check][size_key])
 
-        if check_status:
-            self._check_response_status(response=response)
+        response = self._auth.http(**sargs)
 
         if raw:
             return response
 
         if is_json:
-            return self._check_response_json(response=response)
+            data = self._check_response_json(response=response)
+        else:
+            data = response.text
 
-        return response.text
+        if check_status:
+            self._check_response_status(response=response)
+
+        return data
 
     def _check_response_status(self, response):
         """Check response status code.
@@ -157,11 +165,15 @@ class Mixins(Model):
 
         """
         try:
-            return response.json()
+            data = response.json()
         except Exception as exc:
-            raise exceptions.InvalidJson(response=response, exc=exc)
-        # TODO: check for "error" in JSON dict
-        # Need a way to reproduce response with "error" in JSON dict
+            raise exceptions.JsonInvalid(response=response, exc=exc)
+        if tools.is_type.dict(data):
+            has_error = data.get("error")
+            has_error_status = data.get("status") == "error"
+            if has_error or has_error_status:
+                raise exceptions.JsonError(response=response, data=data)
+        return data
 
     def _check_max_page_size(self, page_size):
         """Check if page size is over :data:`axonius_api_client.constants.MAX_PAGE_SIZE`.
@@ -197,18 +209,16 @@ class Child(object):
         return self.__str__()
 
 
-class Parser(object):
+@six.add_metaclass(abc.ABCMeta)
+class Parser(Child):
     """Pass."""
 
-    def __init__(self, raw, parent):
+    def __init__(self, raw, parent, **kwargs):
         """Pass."""
         self._parent = parent
         self._raw = raw
 
-    def __str__(self):
+    @abc.abstractmethod
+    def parse(self):
         """Pass."""
-        return "{} for {}".format(self.__class__.__name__, self._parent)
-
-    def __repr__(self):
-        """Pass."""
-        return self.__str__()
+        raise NotImplementedError  # pragma: no cover

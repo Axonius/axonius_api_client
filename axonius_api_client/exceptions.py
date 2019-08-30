@@ -60,6 +60,9 @@ class ResponseError(ApiError):
 
         msgs = []
 
+        if error:
+            msgs.append(error)
+
         if details:
             txt = [
                 "code={r.status_code!r}",
@@ -67,28 +70,31 @@ class ResponseError(ApiError):
                 "method={r.request.method!r}",
                 "url={r.url!r}",
             ]
+            txt = tools.join.comma(txt).format(r=response)
+            error = "Response details: {}".format(txt)
+            msgs.append(error)
 
-            txt = "({})".format(tools.join.comma(*txt).format(r=response))
-            error = "{} Response details {}".format(error, txt)
-
-        error = "{} (original exception: {})".format(error, exc) if exc else error
-
-        msgs.append(error)
+        if exc:
+            error = "original exception: {}".format(exc)
+            msgs.append(error)
 
         if bodies:
-            req_txt = tools.json.re_load(response.request.body)
-            resp_txt = tools.json.re_load(response.request.body)
-            msgs += ["*** request ***", req_txt, "*** response ***", resp_txt]
+            msgs += [
+                "*** request ***",
+                tools.json.re_load(response.request.body),
+                "*** response ***",
+                tools.json.re_load(response.text),
+            ]
 
-        msg = msgs[0] if len(msgs) == 1 else "\n".join(msgs)
+        msg = tools.join.cr(msgs)
 
         super(ResponseError, self).__init__(msg)
 
 
-class InvalidJson(ResponseError):
+class JsonInvalid(ResponseError):
     """Error when response has invalid JSON."""
 
-    def __init__(self, response, exc=None):
+    def __init__(self, response, exc=None, details=True, bodies=True):
         """Constructor.
 
         Args:
@@ -100,8 +106,31 @@ class InvalidJson(ResponseError):
                 Defaults to: None.
 
         """
-        error = "Invalid JSON in response"
-        super(InvalidJson, self).__init__(response=response, error=error, exc=exc)
+        error = "JSON is not valid in response"
+        super(JsonInvalid, self).__init__(
+            response=response, error=error, exc=exc, details=details, bodies=bodies
+        )
+
+
+class JsonError(ResponseError):
+    """Error when response has error key in JSON."""
+
+    def __init__(self, response, data, exc=None, details=True, bodies=True):
+        """Constructor.
+
+        Args:
+            response (:obj:`requests.Response`):
+                Response error was thrown for.
+            exc (:obj:`Exception`, optional):
+                Original exception thrown.
+
+                Defaults to: None.
+
+        """
+        error = "JSON has non-empty 'error' key in response"
+        super(JsonError, self).__init__(
+            response=response, error=error, exc=exc, details=details, bodies=bodies
+        )
 
 
 class ObjectNotFound(ApiError):

@@ -1,12 +1,11 @@
 # -*- coding: utf-8 -*-
 """Axonius API Client package."""
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 from . import mixins, routers
 
 
-class Actions(mixins.Mixins):
+class Actions(mixins.Model, mixins.Mixins):
     """Action related API methods.
 
     Notes:

@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """Test suite for axonius_api_client.tools."""
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import datetime
 import logging
@@ -464,6 +463,50 @@ class TestGrouper(object):
         assert x == [(1, 2), (3, 4), (5, 6), (7, "x")]
 
 
+class TestNestDepth(object):
+    """Test tools.listify."""
+
+    def test_dict1(self):
+        """Simple test."""
+        x = tools.nest_depth({"x": 1, "y": 1})
+        assert x == 1
+
+    def test_dict2(self):
+        """Simple test."""
+        x = tools.nest_depth({"x": 1, "y": {"z": 1}})
+        assert x == 2
+
+    def test_tuple(self):
+        """Simple test."""
+        x = tools.nest_depth((1, 2))
+        assert x == 1
+
+    def test_list1(self):
+        """Simple test."""
+        x = tools.nest_depth([1, 2])
+        assert x == 1
+
+    def test_list2(self):
+        """Simple test."""
+        x = tools.nest_depth([[1], [2]])
+        assert x == 2
+
+    def test_int(self):
+        """Simple test."""
+        x = tools.nest_depth(1)
+        assert x == 0
+
+    def test_str(self):
+        """Simple test."""
+        x = tools.nest_depth("1")
+        assert x == 0
+
+    def test_none(self):
+        """Simple test."""
+        x = tools.nest_depth(None)
+        assert x == 0
+
+
 class TestListify(object):
     """Test tools.listify."""
 
@@ -523,6 +566,7 @@ class TestIsType(object):
         assert not tools.is_type.lols(x)
         assert not tools.is_type.dt(x)
         assert not tools.is_type.dtdelta(x)
+        assert not tools.is_type.complex(x)
 
     def test_str(self):
         """Simple test."""
@@ -546,6 +590,7 @@ class TestIsType(object):
         assert not tools.is_type.lols(x)
         assert not tools.is_type.dt(x)
         assert not tools.is_type.dtdelta(x)
+        assert not tools.is_type.complex(x)
 
     def test_str_empty(self):
         """Simple test."""
@@ -569,6 +614,7 @@ class TestIsType(object):
         assert not tools.is_type.lols(x)
         assert not tools.is_type.dt(x)
         assert not tools.is_type.dtdelta(x)
+        assert not tools.is_type.complex(x)
 
     def test_str_int(self):
         """Simple test."""
@@ -592,6 +638,7 @@ class TestIsType(object):
         assert not tools.is_type.lols(x)
         assert not tools.is_type.dt(x)
         assert not tools.is_type.dtdelta(x)
+        assert not tools.is_type.complex(x)
 
     def test_int(self):
         """Simple test."""
@@ -615,6 +662,7 @@ class TestIsType(object):
         assert not tools.is_type.lols(x)
         assert not tools.is_type.dt(x)
         assert not tools.is_type.dtdelta(x)
+        assert not tools.is_type.complex(x)
 
     def test_float(self):
         """Simple test."""
@@ -638,6 +686,7 @@ class TestIsType(object):
         assert not tools.is_type.lols(x)
         assert not tools.is_type.dt(x)
         assert not tools.is_type.dtdelta(x)
+        assert not tools.is_type.complex(x)
 
     def test_dict_empty(self):
         """Simple test."""
@@ -661,6 +710,7 @@ class TestIsType(object):
         assert not tools.is_type.lols(x)
         assert not tools.is_type.dt(x)
         assert not tools.is_type.dtdelta(x)
+        assert tools.is_type.complex(x)
 
     def test_dict(self):
         """Simple test."""
@@ -684,6 +734,7 @@ class TestIsType(object):
         assert not tools.is_type.lols(x)
         assert not tools.is_type.dt(x)
         assert not tools.is_type.dtdelta(x)
+        assert tools.is_type.complex(x)
 
     def test_tuple(self):
         """Simple test."""
@@ -707,6 +758,7 @@ class TestIsType(object):
         assert not tools.is_type.lols(x)
         assert not tools.is_type.dt(x)
         assert not tools.is_type.dtdelta(x)
+        assert tools.is_type.complex(x)
 
     def test_tuple_empty(self):
         """Simple test."""
@@ -730,6 +782,7 @@ class TestIsType(object):
         assert not tools.is_type.lols(x)
         assert not tools.is_type.dt(x)
         assert not tools.is_type.dtdelta(x)
+        assert tools.is_type.complex(x)
 
     def test_list(self):
         """Simple test."""
@@ -753,6 +806,7 @@ class TestIsType(object):
         assert not tools.is_type.lols(x)
         assert not tools.is_type.dt(x)
         assert not tools.is_type.dtdelta(x)
+        assert tools.is_type.complex(x)
 
     def test_list_empty(self):
         """Simple test."""
@@ -776,6 +830,7 @@ class TestIsType(object):
         assert not tools.is_type.lols(x)
         assert not tools.is_type.dt(x)
         assert not tools.is_type.dtdelta(x)
+        assert tools.is_type.complex(x)
 
     def test_none(self):
         """Simple test."""
@@ -799,6 +854,7 @@ class TestIsType(object):
         assert not tools.is_type.lols(x)
         assert not tools.is_type.dt(x)
         assert not tools.is_type.dtdelta(x)
+        assert not tools.is_type.complex(x)
 
     def test_empty(self):
         """Simple test."""
@@ -834,6 +890,7 @@ class TestIsType(object):
         assert not tools.is_type.lols(x)
         assert not tools.is_type.dt(x)
         assert not tools.is_type.dtdelta(x)
+        assert not tools.is_type.complex(x)
 
     def test_simple(self):
         """Simple test."""

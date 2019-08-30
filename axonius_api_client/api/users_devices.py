@@ -35,8 +35,6 @@ class SavedQuery(mixins.Child):
             :obj:`dict`
 
         """
-        self._parent._check_max_page_size(page_size=page_size)
-
         params = {}
 
         if page_size:
@@ -173,8 +171,6 @@ class SavedQuery(mixins.Child):
             msg = "page_size {size} invalid, must be one of {sizes}"
             msg = msg.format(size=page_size, sizes=constants.GUI_PAGE_SIZES)
             raise exceptions.ApiError(msg)
-
-        self._parent._check_max_page_size(page_size=page_size)
 
         if "fields" not in kwargs:
             kwargs["fields"] = self._parent.fields.get()
@@ -595,107 +591,16 @@ class Fields(mixins.Child):
         return [i for l in vfields.values() for i in l]
 
 
-class Reports(mixins.Child):
-    """Pass."""
-
-    def adapters(
-        self,
-        serial_lines=False,
-        serial_dates=False,
-        unconfigured=False,
-        others_not_seen=False,
-        **kwargs
-    ):
-        """Pass."""
-        sys_adapters = self._parent.adapters.get()
-        broken_adapters = [x for x in sys_adapters if x["status_bool"] is False]
-        unconfig_adapters = [x for x in sys_adapters if x["status_bool"] is None]
-
-        fields = self._parent.fields.get()
-
-        kwargs["fields"] = fields
-        raw_rows = self._parent.get(**kwargs)
-        rows = []
-
-        for raw_row in raw_rows:
-            row = {}
-            missing = []
-            row["adapters"] = tools.strip.right(raw_row.get("adapters", []), "_adapter")
-
-            for k, v in raw_row.items():
-                if "." in k or k in ["labels"]:
-                    row[k] = v
-
-            ftimes = raw_row.get("specific_data.data.fetch_time", []) or []
-            ftimes = ftimes if tools.is_type.list(ftimes) else [ftimes]
-            ftimes = [x for x in tools.dt.parse(ftimes)]
-
-            for adapter in sys_adapters:
-                name = adapter["name"]
-
-                otype = self._parent.__class__.__name__.upper()
-                other_status = name in fields
-
-                if not other_status and not others_not_seen:
-                    continue
-
-                if not adapter["clients"] or adapter["status_bool"] is None:
-                    if not unconfigured:
-                        continue
-                    ftime = "NEVER; NO CLIENTS"
-                elif adapter["status_bool"] is False:
-                    ftime = "NEVER; CLIENTS BROKEN"
-                elif adapter["status_bool"] is True:
-                    ftime = "NEVER; CLIENTS OK"
-
-                if name in row["adapters"]:
-                    try:
-                        ftime = ftimes[row["adapters"].index(name)]
-                    except Exception:
-                        ftime = "UNABLE TO DETERMINE"
-                elif other_status and name not in missing:
-                    missing.append(name)
-
-                if serial_dates:
-                    ftime = format(ftime)
-
-                if serial_lines:
-                    status_lines = [
-                        "FETCHED THIS {}: {}".format(otype.rstrip("S"), ftime),
-                        "FETCHED OTHER {}: {}".format(otype, other_status),
-                        "CLIENTS OK: {}".format(adapter["client_count_ok"]),
-                        "CLIENTS BAD: {}".format(adapter["client_count_bad"]),
-                    ]
-                else:
-                    status_lines = {
-                        "FETCHED_THIS_{}".format(otype.rstrip("S")): ftime,
-                        "FETCHED_OTHER_{}".format(otype): other_status,
-                        "CLIENTS_OK": adapter["client_count_ok"],
-                        "CLIENTS_BAD": adapter["client_count_bad"],
-                    }
-
-                row["adapter: {}".format(name)] = status_lines
-
-            row["count_not_fetched"] = len(missing)
-            row["count_fetched"] = len(row["adapters"])
-            row["count_total"] = len(sys_adapters)
-            row["count_total_broken"] = len(broken_adapters)
-            row["count_total_unconfigured"] = len(unconfig_adapters)
-
-            rows.append(row)
-
-        return rows
-
-
 class UserDeviceMixin(mixins.ModelUserDevice, mixins.Mixins):
     """Mixins for User & Device models."""
+
+    _LAST_GET = None
 
     def _init(self, auth, **kwargs):
         """Pass."""
         self.labels = Labels(parent=self)
         self.saved_query = SavedQuery(parent=self)
         self.fields = Fields(parent=self)
-        self.reports = Reports(parent=self)
         self.adapters = adapters.Adapters(auth=auth, **kwargs)
         super(UserDeviceMixin, self)._init(auth=auth, **kwargs)
 
@@ -726,7 +631,6 @@ class UserDeviceMixin(mixins.ModelUserDevice, mixins.Mixins):
             :obj:`dict`
 
         """
-        self._check_max_page_size(page_size=page_size)
         params = {}
 
         if row_start:
@@ -739,9 +643,10 @@ class UserDeviceMixin(mixins.ModelUserDevice, mixins.Mixins):
             params["filter"] = query
 
         if fields:
-            params["fields"] = (
-                ",".join(fields) if tools.is_type.list(fields) else fields
-            )
+            fields = ",".join(fields) if tools.is_type.list(fields) else fields
+            params["fields"] = fields
+
+        self._LAST_GET = {"query": query, "fields": fields}
 
         if use_post:
             return self._request(method="post", path=self._router.root, json=params)
@@ -862,6 +767,10 @@ class UserDeviceMixin(mixins.ModelUserDevice, mixins.Mixins):
 
         rows = []
 
+        msg = "Starting get with query {q!r} and fields {f!r}"
+        msg = msg.format(q=query, f=val_fields)
+        self._log.debug(msg)
+
         while True:
             page = self._get(
                 query=query,
@@ -890,7 +799,17 @@ class UserDeviceMixin(mixins.ModelUserDevice, mixins.Mixins):
             if do_break:
                 break
 
-        return rows[0] if count_min == 1 and count_max == 1 else rows
+        msg = "Finished get with query {q!r} - returned {c} assets"
+        msg = msg.format(q=query, c=len(rows))
+        self._log.debug(msg)
+
+        if count_max is not None:
+            if count_max == 1 and rows:
+                return rows[0]
+            elif rows:
+                return rows[:count_max]
+
+        return rows
 
     def get_by_id(self, id):
         """Get an object by internal_axon_id.
@@ -955,6 +874,22 @@ class UserDeviceMixin(mixins.ModelUserDevice, mixins.Mixins):
         aname, afield = self.fields.find(name=name, adapter_name=adapter_name)
         kwargs.setdefault("query", query.format(field=afield, value=value))
         return self.get(**kwargs)
+
+    def report_adapters(
+        self, serial=False, unconfigured=False, others_not_seen=False, **kwargs
+    ):
+        """Pass."""
+        kwargs["fields"] = kwargs.get("fields", None) or self._parent.fields.get()
+        rows = kwargs.get("rows", []) or self.get(**kwargs)
+        adapters = kwargs.get("adapters", {}) or self.adapters.get()
+        parser = ParserReportsAdapter(raw=rows, parent=self)
+        return parser.parse(
+            fields=kwargs["fields"],
+            adapters=adapters,
+            serial=serial,
+            unconfigured=unconfigured,
+            others_not_seen=others_not_seen,
+        )
 
 
 class Users(UserDeviceMixin):
@@ -1092,6 +1027,24 @@ class Devices(UserDeviceMixin):
         kwargs.setdefault("adapter_name", "generic")
         return self.get_by_field_value(value=value, **kwargs)
 
+    def _build_subnet_query(self, value, not_flag=False):
+        """Pass."""
+        network = ipaddress.ip_network(value)
+
+        begin = int(network.network_address)
+        end = int(network.broadcast_address)
+
+        match_field = "specific_data.data.network_interfaces.ips_raw"
+
+        match = 'match({{"$gte": {begin}, "$lte": {end}}})'
+        match = match.format(begin=begin, end=end)
+        if not_flag:
+            query = "not {match_field} == {match}"
+        else:
+            query = "{match_field} == {match}"
+        query = query.format(match_field=match_field, match=match)
+        return query
+
     def get_by_in_subnet(self, value, **kwargs):
         """Get objects by MAC using paging.
 
@@ -1104,20 +1057,7 @@ class Devices(UserDeviceMixin):
             :obj:`list` of :obj:`dict`: Each row matching email or :obj:`dict` if only1.
 
         """
-        network = ipaddress.ip_network(value)
-
-        begin = int(network.network_address)
-        end = int(network.broadcast_address)
-
-        match_field = "specific_data.data.network_interfaces.ips_raw"
-
-        match = 'match({{"$gte": {begin}, "$lte": {end}}})'
-        match = match.format(begin=begin, end=end)
-
-        query = "{match_field} == {match}"
-        query = query.format(match_field=match_field, match=match)
-
-        kwargs["query"] = query
+        kwargs["query"] = self._build_subnet_query(value=value, not_flag=False)
         return self.get(**kwargs)
 
     def get_by_not_in_subnet(self, value, **kwargs):
@@ -1132,6 +1072,9 @@ class Devices(UserDeviceMixin):
             :obj:`list` of :obj:`dict`: Each row matching email or :obj:`dict` if only1.
 
         """
+        """
+        For reference, how GUI does "not in subnet".
+
         network = ipaddress.ip_network(value)
 
         ip_begin = int(ipaddress.ip_address("0.0.0.0"))
@@ -1150,9 +1093,108 @@ class Devices(UserDeviceMixin):
 
         query = "{field} == {match1} or {field} == {match2}"
         query = query.format(field=field, match1=match1, match2=match2)
-
-        kwargs["query"] = query
+        """
+        kwargs["query"] = self._build_subnet_query(value=value, not_flag=True)
         return self.get(**kwargs)
+
+
+class ParserReportsAdapter(mixins.Parser):
+    """Pass."""
+
+    def _mkserial(self, obj):
+        """Pass."""
+        if self._serial and tools.is_type.list(obj):
+            return tools.join.cr(obj, pre=False)
+        return obj
+
+    def _row(self, raw_row):
+        """Pass."""
+        row = {}
+        missing = []
+
+        adapters = tools.strip.right(raw_row.get("adapters", []), "_adapter")
+        row["adapters"] = self._mkserial(adapters)
+
+        for k, v in raw_row.items():
+            if "." in k or k in ["labels"]:
+                row[k] = self._mkserial(v)
+
+        ftimes = raw_row.get("specific_data.data.fetch_time", []) or []
+        ftimes = ftimes if tools.is_type.list(ftimes) else [ftimes]
+        ftimes = [x for x in tools.dt.parse(ftimes)]
+
+        for adapter in self._adapters:
+            name = adapter["name"]
+
+            otype = self._parent.__class__.__name__.upper()
+            others_have_seen = name in self._fields
+
+            is_unconfigured = not adapter["clients"] or adapter["status_bool"] is None
+
+            skips = [
+                is_unconfigured and not self._unconfigured,
+                not others_have_seen and not self._others_not_seen,
+            ]
+
+            if any(skips):
+                continue
+
+            ftime = "NEVER; NO CLIENTS"
+
+            if adapter["status_bool"] is False:
+                ftime = "NEVER; CLIENTS BROKEN"
+            elif adapter["status_bool"] is True:
+                ftime = "NEVER; CLIENTS OK"
+
+            if name in row["adapters"]:
+                name_idx = row["adapters"].index(name)
+                try:
+                    ftime = ftimes[name_idx]
+                except Exception:
+                    ftime = "UNABLE TO DETERMINE"
+            elif others_have_seen and name not in missing:
+                missing.append(name)
+
+            if self._serial:
+                ftime = format(ftime)
+                status_lines = [
+                    "FETCHED THIS {}: {}".format(otype.rstrip("S"), ftime),
+                    "FETCHED OTHER {}: {}".format(otype, others_have_seen),
+                    "CLIENTS OK: {}".format(adapter["client_count_ok"]),
+                    "CLIENTS BAD: {}".format(adapter["client_count_bad"]),
+                ]
+            else:
+                status_lines = {
+                    "FETCHED_THIS_{}".format(otype.rstrip("S")): ftime,
+                    "FETCHED_OTHER_{}".format(otype): others_have_seen,
+                    "CLIENTS_OK": adapter["client_count_ok"],
+                    "CLIENTS_BAD": adapter["client_count_bad"],
+                }
+
+            row["adapter: {}".format(name)] = self._mkserial(status_lines)
+
+        row["adapters_missing"] = self._mkserial(missing)
+        # row["count_fetched"] = len(row["adapters"])
+        # row["count_total"] = len(self._adapters)
+        # row["count_total_broken"] = len(self._broken_adapters)
+        # row["count_total_unconfigured"] = len(self._unconfig_adapters)
+        return row
+
+    def parse(
+        self, adapters, fields, serial=False, unconfigured=False, others_not_seen=False
+    ):
+        """Pass."""
+        self._adapters = adapters
+        self._fields = fields
+        self._serial = serial
+        self._unconfigured = unconfigured
+        self._others_not_seen = others_not_seen
+
+        self._broken_adapters = [x for x in adapters if x["status_bool"] is False]
+        self._unconfig_adapters = [x for x in adapters if x["status_bool"] is None]
+        self._config_adapters = [x for x in adapters if x["status_bool"] is True]
+
+        return [self._row(x) for x in self._raw]
 
 
 class ParserFields(mixins.Parser):
