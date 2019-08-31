@@ -218,7 +218,11 @@ class Mixins(object):
         if count_min == 1 and count_max == 1:
             if count_total != 1 and error:
                 raise exceptions.ObjectNotFound(
-                    value=value, value_type=value_type, object_type=objtype, known=known
+                    value=value,
+                    value_type=value_type,
+                    object_type=objtype,
+                    known=known,
+                    count_total=count_total,
                 )
             return True
 

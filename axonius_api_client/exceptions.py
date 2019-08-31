@@ -9,7 +9,15 @@ class AxonError(Exception):
     """Parent exception for all package errors."""
 
 
+class AxonWarning(Warning):
+    """Pass."""
+
+
 class ApiError(AxonError):
+    """Parent exception for all API errors."""
+
+
+class ApiWarning(AxonWarning):
     """Parent exception for all API errors."""
 
 
@@ -23,6 +31,27 @@ class AuthError(AxonError):
 
 class HttpError(AxonError):
     """Parent exception for all Authentication errors."""
+
+
+class ClientSettingError(ApiError):
+    """Pass."""
+
+    def __init__(self, name, value, error, schema):
+        """Pass."""
+        self.name = name
+        self.value = value
+        self.error = error
+        self.schema = schema
+
+        msg = "{req} setting {n!r} with value of {v!r} {error}, setting schema:\n  {ss}"
+        msg = msg.format(
+            req="Required" if schema["required"] else "Optional",
+            n=name,
+            v=value,
+            error=error,
+            ss=tools.json.dump(schema),
+        )
+        super(ClientSettingError, self).__init__(msg)
 
 
 class ResponseError(ApiError):
@@ -127,7 +156,16 @@ class JsonError(ResponseError):
                 Defaults to: None.
 
         """
-        error = "JSON has non-empty 'error' key in response"
+        has_error = data.get("error")
+        has_error_status = data.get("status") == "error"
+
+        error = "JSON has an error message in response"
+
+        if has_error:
+            error = "JSON has error='{}' in response".format(has_error)
+        elif has_error_status:
+            error = "JSON has status='error' in response"
+
         super(JsonError, self).__init__(
             response=response, error=error, exc=exc, details=details, bodies=bodies
         )
@@ -158,7 +196,9 @@ class ClientConnectFailure(ResponseError):
 class ObjectNotFound(ApiError):
     """Error when unable to find an object."""
 
-    def __init__(self, value, value_type, object_type, known=None, exc=None):
+    def __init__(
+        self, value, value_type, object_type, count_total=0, known=None, exc=None
+    ):
         """Constructor.
 
         Args:
@@ -181,8 +221,10 @@ class ObjectNotFound(ApiError):
 
         msgs = []
 
-        msg = "Unable to find {obj_type} using {val_type}: {val!r}"
-        msg = msg.format(val=value, val_type=value_type, obj_type=object_type)
+        msg = "Found {c} {obj_type} using {val_type}: {val!r}"
+        msg = msg.format(
+            c=count_total, val=value, val_type=value_type, obj_type=object_type
+        )
         msgs.append(msg)
 
         if exc:

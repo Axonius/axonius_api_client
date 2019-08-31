@@ -6,6 +6,7 @@ from .. import exceptions, tools
 from . import mixins, routers
 
 
+# TODO: add warning, exclude from coverage
 class Enforcements(mixins.Model, mixins.Mixins):
     """Enforcement related API methods.
 

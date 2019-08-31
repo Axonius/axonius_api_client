@@ -172,6 +172,11 @@ class is_type(object):
         """Pass."""
         return isinstance(obj, datetime.timedelta)
 
+    @staticmethod
+    def path(obj):
+        """Pass."""
+        return isinstance(obj, pathlib.Path)
+
 
 class path(object):
     """Pass."""
@@ -876,11 +881,12 @@ class Connect(object):
                 msg = msg.format(pre=msg_pre, exc=exc)
                 raise exceptions.ConnectError(msg=msg, exc=exc)
 
+            # TODO move these into attrs
             self.users = api.Users(**self._api_args)
             self.devices = api.Devices(**self._api_args)
-            self.enforcements = api.Enforcements(**self._api_args)
-            self.actions = api.Actions(**self._api_args)
             self.adapters = api.Adapters(**self._api_args)
+            # self.enforcements = api.Enforcements(**self._api_args)
+            # self.actions = api.Actions(**self._api_args)
 
             self._started = True
             self._start_dt = datetime.datetime.utcnow()

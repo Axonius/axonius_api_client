@@ -45,7 +45,7 @@ class TestAdapters(object):
 
         return api
 
-    def test__get(self, apiobj):
-        """Pass."""
-        data = apiobj._get()
-        assert tools.is_type.dict(data)
+    # def test__get(self, apiobj):
+    #     """Pass."""
+    #     data = apiobj._get()
+    #     assert tools.is_type.dict(data)

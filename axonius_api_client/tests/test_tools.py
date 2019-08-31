@@ -567,6 +567,7 @@ class TestIsType(object):
         assert not tools.is_type.dt(x)
         assert not tools.is_type.dtdelta(x)
         assert not tools.is_type.complex(x)
+        assert not tools.is_type.path(x)
 
     def test_str(self):
         """Simple test."""
@@ -591,6 +592,7 @@ class TestIsType(object):
         assert not tools.is_type.dt(x)
         assert not tools.is_type.dtdelta(x)
         assert not tools.is_type.complex(x)
+        assert not tools.is_type.path(x)
 
     def test_str_empty(self):
         """Simple test."""
@@ -615,6 +617,7 @@ class TestIsType(object):
         assert not tools.is_type.dt(x)
         assert not tools.is_type.dtdelta(x)
         assert not tools.is_type.complex(x)
+        assert not tools.is_type.path(x)
 
     def test_str_int(self):
         """Simple test."""
@@ -639,13 +642,14 @@ class TestIsType(object):
         assert not tools.is_type.dt(x)
         assert not tools.is_type.dtdelta(x)
         assert not tools.is_type.complex(x)
+        assert not tools.is_type.path(x)
 
     def test_int(self):
         """Simple test."""
         x = 0
         assert not tools.is_type.bytes(x)
         assert not tools.is_type.str(x)
-        assert not tools.is_type.str_int(x)
+        assert tools.is_type.str_int(x)
         assert tools.is_type.int(x)
         assert not tools.is_type.dict(x)
         assert not tools.is_type.tuple(x)
@@ -663,6 +667,7 @@ class TestIsType(object):
         assert not tools.is_type.dt(x)
         assert not tools.is_type.dtdelta(x)
         assert not tools.is_type.complex(x)
+        assert not tools.is_type.path(x)
 
     def test_float(self):
         """Simple test."""
@@ -687,6 +692,7 @@ class TestIsType(object):
         assert not tools.is_type.dt(x)
         assert not tools.is_type.dtdelta(x)
         assert not tools.is_type.complex(x)
+        assert not tools.is_type.path(x)
 
     def test_dict_empty(self):
         """Simple test."""
@@ -711,6 +717,7 @@ class TestIsType(object):
         assert not tools.is_type.dt(x)
         assert not tools.is_type.dtdelta(x)
         assert tools.is_type.complex(x)
+        assert not tools.is_type.path(x)
 
     def test_dict(self):
         """Simple test."""
@@ -735,6 +742,7 @@ class TestIsType(object):
         assert not tools.is_type.dt(x)
         assert not tools.is_type.dtdelta(x)
         assert tools.is_type.complex(x)
+        assert not tools.is_type.path(x)
 
     def test_tuple(self):
         """Simple test."""
@@ -759,6 +767,7 @@ class TestIsType(object):
         assert not tools.is_type.dt(x)
         assert not tools.is_type.dtdelta(x)
         assert tools.is_type.complex(x)
+        assert not tools.is_type.path(x)
 
     def test_tuple_empty(self):
         """Simple test."""
@@ -783,6 +792,7 @@ class TestIsType(object):
         assert not tools.is_type.dt(x)
         assert not tools.is_type.dtdelta(x)
         assert tools.is_type.complex(x)
+        assert not tools.is_type.path(x)
 
     def test_list(self):
         """Simple test."""
@@ -807,6 +817,7 @@ class TestIsType(object):
         assert not tools.is_type.dt(x)
         assert not tools.is_type.dtdelta(x)
         assert tools.is_type.complex(x)
+        assert not tools.is_type.path(x)
 
     def test_list_empty(self):
         """Simple test."""
@@ -831,6 +842,7 @@ class TestIsType(object):
         assert not tools.is_type.dt(x)
         assert not tools.is_type.dtdelta(x)
         assert tools.is_type.complex(x)
+        assert not tools.is_type.path(x)
 
     def test_none(self):
         """Simple test."""
@@ -855,6 +867,7 @@ class TestIsType(object):
         assert not tools.is_type.dt(x)
         assert not tools.is_type.dtdelta(x)
         assert not tools.is_type.complex(x)
+        assert not tools.is_type.path(x)
 
     def test_empty(self):
         """Simple test."""
@@ -891,6 +904,7 @@ class TestIsType(object):
         assert not tools.is_type.dt(x)
         assert not tools.is_type.dtdelta(x)
         assert not tools.is_type.complex(x)
+        assert not tools.is_type.path(x)
 
     def test_simple(self):
         """Simple test."""
@@ -954,6 +968,10 @@ class TestIsType(object):
         assert not tools.is_type.dtdelta(datetime.datetime.now())
         assert not tools.is_type.dtdelta(datetime.datetime.utcnow())
         assert tools.is_type.dtdelta(datetime.timedelta())
+
+    def test_path(self):
+        """Simple test."""
+        assert tools.is_type.path(tools.pathlib.Path("x"))
 
 
 class TestStrip(object):

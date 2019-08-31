@@ -3,19 +3,46 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import re
+import warnings
 
 from .. import exceptions, tools
 from . import mixins, routers
 
 
+def load_filepath(filepath):
+    """Pass."""
+    rpath = tools.path.resolve(filepath)
+
+    if not rpath.is_file():
+        msg = "Supplied filepath='{fp}' (resolved='{rp}') does not exist!"
+        msg = msg.format(fp=filepath, rp=rpath)
+        raise exceptions.ApiError(msg)
+
+    filecontent = rpath.read_text()
+    filename = rpath.name
+    return filename, filecontent
+
+
 class Clients(mixins.Child):
     """Pass."""
 
-    # TODO: Add csv upload file method
+    CSV_FIELDS = {
+        "device": ["id", "serial", "mac_address", "hostname", "name"],
+        "user": ["id", "username", "mail", "name"],
+        "sw": ["hostname", "installed_sw_name"],
+    }
+
+    SETTING_TYPES = {
+        "bool": tools.is_type.bool,
+        "number": tools.is_type.str_int,
+        "integer": tools.is_type.str_int,
+        "array": tools.is_type.los,
+        "string": tools.is_type.str,
+    }
+
     # TODO: Add fetch method
-    # TODO: public add method
     # TODO: public delete method
-    def _check(self, adapter_name, client_config, node_id):
+    def _check(self, adapter, config, node_id):
         """Check connectivity for a client of an adapter.
 
         Args:
@@ -31,39 +58,17 @@ class Clients(mixins.Child):
 
         """
         data = {}
-        data.update(client_config)
+        data.update(config)
         data["instanceName"] = node_id
         data["oldInstanceName"] = node_id
-        path = self._parent._router.clients.format(adapter_name=adapter_name)
+        path = self._parent._router.clients.format(adapter_name=adapter)
         return self._parent._request(method="post", path=path, json=data, raw=True)
 
-    def _upload_file(
-        self,
-        adapter_name,
-        node_id,
-        file_name,
-        file_contents,
-        field_name=None,
-        content_type=None,
-    ):
-        """Pass."""
-        data = {"field_name": field_name or file_name}
-
-        if content_type:
-            files = {"userfile": (file_name, file_contents, content_type)}
-        else:
-            files = {"userfile": (file_name, file_contents)}
-
-        path = self._parent._router.clients_upload_file.format(
-            adapter_name=adapter_name, node_id=node_id
-        )
-        return self._parent._request(method="post", path=path, json=data, files=files)
-
-    def _add(self, adapter_name, config, node_id):
+    def _add(self, adapter, config, node_id):
         """Add a client to an adapter.
 
         Args:
-            adapter_name (:obj:`str`):
+            adapter (:obj:`str`):
                 Name of adapter to add client to.
             config (:obj:`dict`):
                 Client configuration.
@@ -77,9 +82,10 @@ class Clients(mixins.Child):
         data = {}
         data.update(config)
         data["instanceName"] = node_id
-        path = self._router.clients.format(adapter_name=adapter_name)
-        return self._request(method="put", path=path, json=data)
+        path = self._parent._router.clients.format(adapter_name=adapter)
+        return self._parent._request(method="put", path=path, json=data)
 
+    # FUTURE: how to delete assets too?
     def _delete(self, name, id, node_id):
         """Delete a client from an adapter.
 
@@ -100,21 +106,155 @@ class Clients(mixins.Child):
         path = self._router.clients_id.format(adapter_name=name, id=id)
         return self._request(method="delete", path=path, json=data)
 
-    def get(
-        self,
-        ids=None,
-        status=None,
-        error=True,
-        all_clients=None,
-        all_adapters=None,
-        **kwargs
-    ):
+    def _parse_config(self, adapter_data, **kwargs):
+        """Pass."""
+        config = {}
+
+        for name, schema in adapter_data["settings_clients"].items():
+            required = schema["required"]
+            type_str = schema["type"]
+            enum = schema.get("enum", [])
+            default = schema.get("default", None)
+            value = kwargs.get(name, None)
+
+            msg = "Processing {req} setting {n!r} with value of {v!r}, schema: {ss}"
+            msg = msg.format(
+                req="required" if required else "optional", n=name, v=value, ss=schema
+            )
+            self._log.debug(msg)
+
+            if value is None:
+                if default is None and required:
+                    error = "was not supplied"
+                    raise exceptions.ClientSettingError(
+                        name=name, value=value, schema=schema, error=error
+                    )
+                elif default is not None:
+                    value = default
+                else:
+                    continue
+
+            if enum and value not in enum:
+                error = "invalid choice, must be one of {enum}"
+                error = error.format(enum=enum)
+                raise exceptions.ClientSettingError(
+                    name=name, value=value, schema=schema, error=error
+                )
+
+            if type_str == "file":
+                value = self._check_file(
+                    name=name, value=value, schema=schema, adapter_data=adapter_data
+                )
+
+            if type_str in self.SETTING_TYPES:
+                self._check_type(
+                    name=name,
+                    schema=schema,
+                    value=value,
+                    type_cb=self.SETTING_TYPES[type_str],
+                )
+
+            # FUTURE: number/integer need to be coerced???
+            # FUTURE: warning/error for unhandled types?
+
+            config[name] = value
+        return config
+
+    @staticmethod
+    def _upload_dict(d):
+        """Pass."""
+        return {"uuid": d["uuid"], "filename": d["filename"]}
+
+    def _check_file(self, name, value, schema, adapter_data):
+        """Pass."""
+        if tools.is_type.str(value) or tools.is_type.path(value):
+            uploaded = self._parent.upload_file(
+                adapter_data=adapter_data, field=name, path=value
+            )
+            return self._upload_dict(uploaded)
+
+        self._check_type(
+            name=name, schema=schema, value=value, type_cb=tools.is_type.dict
+        )
+
+        uuid = value.get("uuid", None)
+        filename = value.get("filename", None)
+        filepath = value.get("filepath", None)
+        filecontent = value.get("filecontent", None)
+        filecontent_type = value.get("filecontent_type", None)
+
+        if uuid:
+            if not filename:
+                ex = {name: {"uuid": "uuid", "filename": "filename"}}
+
+                if filepath:
+                    value["filename"] = tools.path.resolve(filepath).name
+                else:
+                    error = (
+                        "must supply 'filename' when supplying 'uuid', example: {ex}"
+                    )
+                    error = error.format(n=name, ex=ex)
+                    raise exceptions.ClientSettingError(
+                        name=name, value=value, schema=schema, error=error
+                    )
+
+            return self._upload_dict(value)
+        else:
+            if not filepath and (not filecontent or not filename):
+                ex1 = "('filecontent' and 'filename') (example: {})".format(
+                    {
+                        name: {
+                            "filename": "filename",
+                            "filecontent": "binary content",
+                            "filecontent_type": "optional mime type",
+                        }
+                    }
+                )
+                ex2 = "'filepath' (example: {})".format(
+                    {
+                        name: {
+                            "filepath": "path to file",
+                            "filecontent_type": "optional mime type",
+                        }
+                    }
+                )
+
+                error = "Must supply {ex1} or {ex2}!"
+                error = error.format(ex1=ex1, ex2=ex2)
+                raise exceptions.ClientSettingError(
+                    name=name, value=value, schema=schema, error=error
+                )
+
+            uploaded = self._parent.upload_file(
+                adapter_data=adapter_data,
+                filename=filename,
+                filepath=filepath,
+                filecontent=filecontent,
+                filecontent_type=filecontent_type,
+                field=name,
+            )
+
+            return self._upload_dict(uploaded)
+
+    def _check_type(self, name, value, type_cb, schema):
+        """Pass."""
+        required = schema["required"]
+        pre = "{req} setting {n!r} with value {v!r}"
+        pre = pre.format(req="Required" if required else "Optional", n=name, v=value)
+
+        if not type_cb(value):
+            error = "is invalid type {st!r}"
+            error = error.format(st=type(value).__name__)
+            raise exceptions.ClientSettingError(
+                name=name, value=value, schema=schema, error=error
+            )
+
+    def get(self, ids=None, status=None, error=True, **kwargs):
         """Get all clients for all adapters."""
-        if not all_clients:
-            all_adapters = all_adapters or self._parent.get(error=error, **kwargs)
-            all_clients = [
-                client for adapter in all_adapters for client in adapter["clients"]
-            ]
+        all_adapters = self._parent.get(error=error, **kwargs)
+        all_clients = [
+            client for adapter in all_adapters for client in adapter["clients"]
+        ]
 
         matches = []
         known_ids = []
@@ -178,25 +318,23 @@ class Clients(mixins.Child):
 
         return matches
 
-    def check(
-        self, adapter_names=None, ids=None, nodes=None, error_check=True, **kwargs
-    ):
+    def check(self, ids=None, adapters=None, nodes=None, error_check=True, **kwargs):
         """Pass."""
-        clients = self.get(ids=ids, names=adapter_names, nodes=nodes, **kwargs)
+        clients = self.get(ids=ids, names=adapters, nodes=nodes, **kwargs)
 
         results = []
 
         for client in clients:
             response = self._check(
-                adapter_name=client["adapter_raw"],
-                client_config=client["client_config"],
+                adapter=client["adapter_raw"],
+                config=client["client_config"],
                 node_id=client["node_id"],
             )
 
-            status = not response.text
             adapter = client["adapter"]
-            error = tools.json.re_load(response.text)
             node = client["node_name"]
+            status = not response.text
+            error = tools.json.re_load(response.text)
 
             if error_check and not status:
                 raise exceptions.ClientConnectFailure(
@@ -214,7 +352,7 @@ class Clients(mixins.Child):
 
         return results[0] if len(results) == 1 else results
 
-    def add(self, adapter_name, node_name, all_adapters=None, **kwargs):
+    def add(self, adapter, node="master", **kwargs):
         """Add a client to an adapter.
 
         Args:
@@ -229,135 +367,106 @@ class Clients(mixins.Child):
             :obj:`object`
 
         """
-        adapter = self._parent.get(
-            names=adapter_name,
-            nodes=node_name,
+        kwargs["adapter_data"] = self._parent.get(
+            names=adapter,
+            nodes=node,
             count_min=1,
             count_max=1,
             count_error=True,
-            all_adapters=all_adapters,
+            use_regex=False,
         )
 
-        # client_config = {}
+        name_raw = kwargs["adapter_data"]["name_raw"]
+        node_id = kwargs["adapter_data"]["node_id"]
 
-        errors = []
+        config = self._parse_config(**kwargs)
 
-        for setting, schema in adapter["settings_clients"]:
-            if setting not in kwargs:
-                if schema["required"]:
-                    msg = "Required client setting {s!r} was not supplied"
-                    msg = msg.format(s=setting)
-                    errors.append(msg)
-                continue
+        return self._add(adapter=name_raw, config=config, node_id=node_id)
 
-            try:
-                self._check_setting_type(setting=setting, schema=schema, **kwargs)
-            except exceptions.ApiError as exc:
-                errors.append(format(exc))
+    def add_csv(
+        self,
+        node="master",
+        fieldname=None,
+        is_users=False,
+        is_installed_sw=False,
+        filename=None,
+        filecontent=None,
+        filepath=None,
+        url=None,
+        share=None,
+        share_username=None,
+        share_password=None,
+    ):
+        """Add a client to the CSV adapter.
 
-        if errors:
-            msg = "Errors when trying to add a client for adapter {name!r}:{errors}"
-            msg = msg.format(name=adapter["name"], errors=tools.join.cr(errors))
-            raise exceptions.ApiError(msg)
+        Args:
+            name (:obj:`str`):
+                Name of adapter to add client to.
+            config (:obj:`dict`):
+                Client configuration.
+            node_id (:obj:`str`):
+                Node ID.
 
-        return adapter
+        Returns:
+            :obj:`object`
 
-    def _check_setting_type(self, setting_name, schema, **kwargs):
-        """Pass."""
-        type_str = schema["type"]
-        value = kwargs.get(setting_name, None)
+        """
+        if not any([fieldname, filename, filepath]):
+            error = "Must supply 'fieldname' or 'filename' or 'filepath'"
+            raise exceptions.ApiError(error)
 
-        if type_str == "bool":
-            type_result = tools.is_type.bool(value)
-        elif type_str in ["number", "integer"]:
-            type_result = tools.is_type.str_int(value)
-        elif type_str == "file":
-            type_result = self._check_upload_file(**kwargs)
-            # TODO: this doesn't work -- we need to ensure it's
-            # "csv": {"uuid": resp["uuid"], "filename": CSV_FILENAME}
-            # we could do is type dict
-            # if has uuid in it, already uploaded use that
-            # if has filename/filepath/etc, upload it and get uuid
+        if filepath:
+            filename, filecontent = load_filepath(filepath)
+
+        fieldname = fieldname or filename
+
+        config = {}
+        config["is_users_csv"] = is_users
+        config["is_installed_sw"] = is_installed_sw
+        config["user_id"] = fieldname
+
+        if filename and filecontent:
+            if is_users:
+                ids = self.CSV_FIELDS["user"]
+                ids_type = "user"
+            elif is_installed_sw:
+                ids = self.CSV_FIELDS["sw"]
+                ids_type = "installed software"
+            else:
+                ids = self.CSV_FIELDS["device"]
+                ids_type = "device"
+
+            headers = filecontent.splitlines()[0].lower().split(",")
+            headers_has_any_id = any([x in headers for x in ids])
+
+            if not headers_has_any_id:
+                error = "No {ids_type} identifiers {ids} found in CSV headers {h}"
+                error = error.format(ids_type=ids_type, ids=ids, h=headers)
+                warnings.warn(error, exceptions.ApiWarning)
+
+            config["csv"] = {}
+            config["csv"]["filename"] = filename
+            config["csv"]["filecontent"] = filecontent
+            config["csv"]["filecontent_type"] = "text/csv"
+        elif url:
+            config["csv_http"] = url
+        elif share:
+            config["csv_share"] = share
+            config["csv_share_username"] = share_username
+            config["csv_share_password"] = share_password
         else:
-            type_result = tools.is_type.str(value)
-        if not type_result:
-            msg = [
-                "Setting {s!r} is invalid type",
-                "must be type {mt!r}",
-                "supplied type {st!r}",
+            opts = [
+                "'filepath': path to CSV file to load",
+                "'filename' and 'filecontent': name and contents of CSV to load",
+                "'url': URL of CSV to fetch",
+                "'share' (optional: 'share_username' and 'share_password'): "
+                "SMB share path of CSV to fetch",
             ]
-            msg = tools.join.comma(msg).format(
-                s=setting_name, mt=type_str, st=type(value).__name__
-            )
-            raise exceptions.ApiError(msg)
+            error = "Must supply one of the following:{opts}"
+            error = error.format(opts=tools.join.cr(opts))
+            raise exceptions.ApiError(error)
 
-    def _check_upload_file(**kwargs):
-        """Pass."""
-        pre_keys = [
-            "file_path",
-            "file_name",
-            "file_contents",
-            "content_type",
-            "field_name",
-        ]
-        pre_keys = {x: kwargs.get("pre", "") + x for x in pre_keys}
-        lookup = {k: kwargs.get(v, None) for k, v in pre_keys.items()}
-
-        if lookup["file_path"]:
-            path = tools.path.resolve(lookup["file_path"])
-
-            if not path.is_file():
-                msg = "Supplied {fp_key!r}='{fp}' resolved='{rp}' does not exist!"
-                msg = msg.format(
-                    fp=lookup["file_path"], rp=path, fp_key=pre_keys["file_path"]
-                )
-
-                raise exceptions.ApiError(msg)
-
-            lookup["file_contents"] = path.read_bytes()
-            lookup["file_name"] = lookup["file_name"] or path.name
-        elif lookup["file_contents"] and lookup["file_name"]:
-            lookup["file_name"] = lookup["file_name"]
-            lookup["file_contents"] = lookup["file_contents"]
-        else:
-            msg = "Must supply {fp_key!r} or {fc_key!r} and {fn_key}!"
-            msg = msg.format(
-                fp_key=pre_keys["file_path"],
-                fc_key=pre_keys["file_contents"],
-                fn_key=pre_keys["file_name"],
-            )
-            raise exceptions.ApiError(msg)
-
-        return lookup
-
-    def upload_file(self, adapter_name=None, node_name=None, **kwargs):
-        """Pass."""
-        adapter_data = kwargs.get("adapter_data", None)
-        file_checked = kwargs.get("file_checked", None) or self._check_upload_file(
-            **kwargs
-        )
-
-        if (not adapter_name and not node_name) or not adapter_data:
-            msg = "Must supply 'adapter_name' and 'node_name' or 'adapter_data'!"
-            raise exceptions.ApiError(msg)
-
-        adapter_data = adapter_data or self._parent.get(
-            names=adapter_name,
-            nodes=node_name,
-            count_min=1,
-            count_max=1,
-            count_error=True,
-            all_adapters=kwargs.get("all_adapters", None),
-        )
-
-        return self._upload_file(
-            adapter_name=adapter_data["name_raw"],
-            node_id=adapter_data["node_id"],
-            file_name=file_checked["file_name"],
-            file_contents=file_checked["file_contents"],
-            field_name=file_checked["field_name"],
-            content_type=file_checked["content_type"],
-        )
+        return self.add(adapter="csv", node=node, **config)
 
 
 class Adapters(mixins.Model, mixins.Mixins):
@@ -394,52 +503,63 @@ class Adapters(mixins.Model, mixins.Mixins):
             all_adapters = parser.parse()
         return all_adapters
 
+    def _upload_file(
+        self, adapter, node_id, filename, field, filecontent, filecontent_type=None
+    ):
+        """Pass."""
+        data = {"field_name": field}
+
+        if filecontent_type:
+            files = {"userfile": (filename, filecontent, filecontent_type)}
+        else:
+            files = {"userfile": (filename, filecontent)}
+
+        path = self._router.clients_upload_file.format(
+            adapter_name=adapter, node_id=node_id
+        )
+        ret = self._request(method="post", path=path, data=data, files=files)
+        ret["filename"] = filename
+        return ret
+
     def get(
         self,
         names=None,
         nodes=None,
-        client_status=None,
+        status=None,
         client_max=None,
         client_min=None,
         count_min=None,
         count_max=None,
         count_error=True,
         all_adapters=None,
+        use_regex=False,
         error=True,
     ):
         """Get all adapters."""
         all_adapters = self._get_parse(all_adapters=all_adapters)
 
         adapters = self.get_by_names(
-            values=names, all_adapters=all_adapters, error=error
+            values=names, all_adapters=all_adapters, error=error, use_regex=use_regex
         )
-        adapters = self.get_by_nodes(values=nodes, all_adapters=adapters, error=error)
+        adapters = self.get_by_nodes(
+            values=nodes, all_adapters=adapters, error=error, use_regex=use_regex
+        )
         adapters = self.get_by_client_count(
             client_max=client_max, client_min=client_min, all_adapters=adapters
         )
-        adapters = self.get_by_client_status(
-            client_status=client_status, all_adapters=adapters
-        )
+        adapters = self.get_by_status(status=status, all_adapters=adapters)
 
         value = [
-            "names: {names!r}",
-            "nodes: {nodes!r}",
-            "client_status: {client_status}",
-            "client_max: {client_max}",
-            "client_min: {client_min}",
-            "count_max: {count_max}",
-            "count_min: {count_min}",
+            "names: {!r}".format(names),
+            "nodes: {!r}".format(nodes),
+            "status: {}".format(status),
+            "client_max: {}".format(client_max),
+            "client_min: {}".format(client_min),
+            "count_max: {}".format(count_max),
+            "count_min: {}".format(count_min),
+            "use_regex: {}".format(use_regex),
         ]
         value = tools.join.comma(value)
-        value = value.format(
-            names=names,
-            nodes=nodes,
-            client_max=client_max,
-            client_min=client_min,
-            client_status=client_status,
-            count_min=count_min,
-            count_max=count_max,
-        )
 
         self._check_counts(
             value=value,
@@ -448,7 +568,7 @@ class Adapters(mixins.Model, mixins.Mixins):
             count_min=count_min,
             count_max=count_max,
             count_total=len(adapters),
-            known_callback=self.get_brief,
+            known=self.get_brief,
             error=count_error,
         )
 
@@ -470,7 +590,7 @@ class Adapters(mixins.Model, mixins.Mixins):
             adapter_strs.append(adapter_str)
         return adapter_strs
 
-    def get_by_names(self, values=None, error=True, all_adapters=None):
+    def get_by_names(self, values=None, error=True, all_adapters=None, use_regex=False):
         """Pass."""
         all_adapters = self._get_parse(all_adapters=all_adapters)
 
@@ -490,21 +610,27 @@ class Adapters(mixins.Model, mixins.Mixins):
                 known.append(check)
 
             for value in values:
-                value_re = re.compile(value, re.I)
-                if value_re.search(check) and adapter not in matches:
+                if use_regex:
+                    value_re = re.compile(value, re.I)
+                    match = value_re.search(check)
+                else:
+                    match = check.lower() == value.lower()
+
+                if match and adapter not in matches:
                     matches.append(adapter)
 
         if not matches and error:
+            reason_msg = "adapter by names using regex {}".format(use_regex)
             raise exceptions.UnknownError(
                 value=values,
                 known=known or self.get_brief,
-                reason_msg="adapter by names",
+                reason_msg=reason_msg,
                 valid_msg="names",
             )
 
         return matches
 
-    def get_by_nodes(self, values=None, error=True, all_adapters=None):
+    def get_by_nodes(self, values=None, error=True, all_adapters=None, use_regex=False):
         """Pass."""
         all_adapters = self._get_parse(all_adapters=all_adapters)
 
@@ -524,21 +650,29 @@ class Adapters(mixins.Model, mixins.Mixins):
                 known.append(check)
 
             for value in values:
-                value_re = re.compile(value, re.I)
-                if value_re.search(check) and adapter not in matches:
+                if use_regex:
+                    value_re = re.compile(value, re.I)
+                    match = value_re.search(check)
+                else:
+                    match = check.lower() == value.lower()
+
+                if match and adapter not in matches:
                     matches.append(adapter)
 
         if not matches and error:
+            reason_msg = "adapter by node names using regex {}".format(use_regex)
             raise exceptions.UnknownError(
                 value=values,
                 known=known or self.get_brief,
-                reason_msg="adapter by node names",
+                reason_msg=reason_msg,
                 valid_msg="node names",
             )
 
         return matches
 
-    def get_by_features(self, values=None, error=True, all_adapters=None):
+    def get_by_features(
+        self, values=None, error=True, all_adapters=None, use_regex=False
+    ):
         """Pass."""
         all_adapters = self._get_parse(all_adapters=all_adapters)
 
@@ -557,15 +691,21 @@ class Adapters(mixins.Model, mixins.Mixins):
                     known.append(check)
 
                 for value in values:
-                    value_re = re.compile(value, re.I)
-                    if value_re.search(check) and adapter not in matches:
+                    if use_regex:
+                        value_re = re.compile(value, re.I)
+                        match = value_re.search(check)
+                    else:
+                        match = check.lower() == value.lower()
+
+                    if match and adapter not in matches:
                         matches.append(adapter)
 
         if not matches and known and error:
+            reason_msg = "adapter by features using regex {}".format(use_regex)
             raise exceptions.UnknownError(
                 value=values,
                 known=known or self.get_brief,
-                reason_msg="adapter by features",
+                reason_msg=reason_msg,
                 valid_msg="features",
             )
 
@@ -576,9 +716,6 @@ class Adapters(mixins.Model, mixins.Mixins):
     ):
         """Pass."""
         all_adapters = self._get_parse(all_adapters=all_adapters)
-
-        if client_min is None and client_max is None:
-            return all_adapters
 
         matches = []
 
@@ -594,10 +731,11 @@ class Adapters(mixins.Model, mixins.Mixins):
             matches.append(adapter)
 
         if not matches and error:
-            values = ["client_min: {client_min}", "client_max: {client_max}"]
-            values = tools.join.comma(values).format(
-                client_min=client_min, client_max=client_max
-            )
+            values = [
+                "client_min: {}".format(client_min),
+                "client_max: {}".format(client_max),
+            ]
+            values = tools.join.comma(values)
             raise exceptions.UnknownError(
                 value=values,
                 known=self.get_brief,
@@ -607,29 +745,67 @@ class Adapters(mixins.Model, mixins.Mixins):
 
         return matches
 
-    def get_by_client_status(self, client_status=None, all_adapters=None):
+    def get_by_status(self, status=None, all_adapters=None):
         """Pass."""
         all_adapters = self._get_parse(all_adapters=all_adapters)
 
-        if client_status is None:
+        if status is None:
             return all_adapters
 
         matches = []
 
         for adapter in all_adapters:
-            clients = adapter["clients"]
-            match = True
-
-            for client in clients:
-                if not client["status_bool"] and client_status:
-                    match = False
-                if client["status_bool"] and not client_status:
-                    match = False
-
-            if match:
+            if adapter["status_bool"] is True and status is True:
+                matches.append(adapter)
+            elif adapter["status_bool"] is False and status is False:
                 matches.append(adapter)
 
         return matches
+
+    def upload_file(
+        self,
+        field,
+        filename=None,
+        filecontent=None,
+        filecontent_type=None,
+        filepath=None,
+        name=None,
+        node="master",
+        adapter_data=None,
+        all_adapters=None,
+    ):
+        """Pass."""
+        if not adapter_data and (not name or not node):
+            msg = "Must supply adapter ('name' and 'node') or 'adapter_data'!"
+            raise exceptions.ApiError(msg)
+
+        if not filepath and (not filecontent or not filename):
+            msg = "Must supply ('filecontent' and 'filename') or 'filepath'!"
+            raise exceptions.ApiError(msg)
+
+        if filepath:
+            filename, filecontent = load_filepath(filepath)
+
+        if not tools.is_type.bytes(filecontent):
+            filecontent = filecontent.encode()
+
+        adapter_data = adapter_data or self.get(
+            names=name,
+            nodes=node,
+            count_min=1,
+            count_max=1,
+            count_error=True,
+            all_adapters=all_adapters,
+        )
+
+        return self._upload_file(
+            adapter=adapter_data["name_raw"],
+            node_id=adapter_data["node_id"],
+            filename=filename,
+            field=field,
+            filecontent=filecontent,
+            filecontent_type=filecontent_type,
+        )
 
 
 class ParserAdapters(mixins.Parser):
