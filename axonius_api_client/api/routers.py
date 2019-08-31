@@ -2,6 +2,8 @@
 """Constants for this package."""
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+from .. import tools
+
 
 class Router(object):
     """Simple object store for REST API routes."""
@@ -17,11 +19,11 @@ class Router(object):
         self._version = version
         self._base = base
         self._object_type = object_type
-        self.root = "{base}/{object_type}".format(base=base, object_type=object_type)
+        self.root = tools.join.url(base, object_type)
         self._routes = ["root"]
         for k, v in routes.items():
             self._routes.append(k)
-            setattr(self, k, "{root}/{route}".format(root=self.root, route=v))
+            setattr(self, k, tools.join.url(self.root, v))
 
     def __str__(self):
         """Show object info.
@@ -86,6 +88,8 @@ class ApiV1(object):
         base=base,
         version=version,
         clients="{adapter_name}/clients",
+        clients_id="{adapter_name}/clients/{id}",
+        clients_upload_file="{adapter_name}/{node_id}/upload_file",
     )
 
     alerts = Router(object_type="alerts", base=base, version=version)

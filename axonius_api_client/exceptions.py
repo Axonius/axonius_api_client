@@ -133,10 +133,32 @@ class JsonError(ResponseError):
         )
 
 
+class ClientConnectFailure(ResponseError):
+    """Error when response has error key in JSON."""
+
+    def __init__(self, response, adapter, node, exc=None, details=True, bodies=True):
+        """Constructor.
+
+        Args:
+            response (:obj:`requests.Response`):
+                Response error was thrown for.
+            exc (:obj:`Exception`, optional):
+                Original exception thrown.
+
+                Defaults to: None.
+
+        """
+        error = "Client connectivity failed for adapter {adapter!r} on node {node!r}"
+        error = error.format(adapter=adapter, node=node)
+        super(ClientConnectFailure, self).__init__(
+            response=response, error=error, exc=exc, details=details, bodies=bodies
+        )
+
+
 class ObjectNotFound(ApiError):
     """Error when unable to find an object."""
 
-    def __init__(self, value, value_type, object_type, known_callback=None, exc=None):
+    def __init__(self, value, value_type, object_type, known=None, exc=None):
         """Constructor.
 
         Args:
@@ -157,19 +179,31 @@ class ObjectNotFound(ApiError):
         self.object_type = object_type
         """:obj:`str`: Type of object searched for."""
 
+        msgs = []
+
         msg = "Unable to find {obj_type} using {val_type}: {val!r}"
         msg = msg.format(val=value, val_type=value_type, obj_type=object_type)
+        msgs.append(msg)
+
         if exc:
-            msg += " -- original exception: {}".format(exc)
+            msg = " -- original exception: {}"
+            msg = msg.format(exc)
+            msgs.append(msg)
 
-        if known_callback:
+        if callable(known):
             try:
-                known = known_callback()
+                known = tools.join.cr(known())
             except Exception as kexc:
-                known = ["known callback {} failed {}".format(known_callback, kexc)]
+                msg = "known callback {} failed {}"
+                msg = msg.format(known, kexc)
+                msgs.append(msg)
 
-            msg += " valids: {}".format(tools.join.cr(known))
+        if known:
+            msg = " valids: {}"
+            msg = msg.format(known)
+            msgs.append(msg)
 
+        msg = tools.join.cr(msgs)
         super(ObjectNotFound, self).__init__(msg)
 
 

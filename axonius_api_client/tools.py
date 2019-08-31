@@ -74,7 +74,7 @@ class is_type(object):
     @staticmethod
     def str_int(obj):
         """Pass."""
-        return isinstance(obj, six.string_types) and obj.isdigit()
+        return is_type.int(obj) or (isinstance(obj, six.string_types) and obj.isdigit())
 
     @staticmethod
     def int(obj):

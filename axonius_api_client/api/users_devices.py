@@ -50,7 +50,7 @@ class SavedQuery(mixins.Child):
             method="get", path=self._parent._router.views, params=params
         )
 
-    def _get(self, query=None, count_min=None, count_max=None, **kwargs):
+    def _get(self, query=None, count_min=None, count_max=None, page_size=None):
         """Get saved queries using paging.
 
         Args:
@@ -73,8 +73,7 @@ class SavedQuery(mixins.Child):
             :obj:`dict`: Each row found in 'assets' from return.
 
         """
-        page_size = kwargs.pop("page_size", constants.DEFAULT_PAGE_SIZE)
-        known_cb = kwargs.pop("known_callback", self.get_names)
+        page_size = constants.DEFAULT_PAGE_SIZE if page_size is None else page_size
 
         rows = []
         count_total = 0
@@ -96,7 +95,7 @@ class SavedQuery(mixins.Child):
                 count_min=count_min,
                 count_max=count_max,
                 count_total=count_total,
-                known_callback=known_cb,
+                known=self.get_names,
             )
 
             if not page["assets"]:
@@ -134,7 +133,8 @@ class SavedQuery(mixins.Child):
         page=0,
         page_size=None,
         historical=None,
-        **kwargs
+        fields=None,
+        **kwargs,
     ):
         """Create a saved query.
 
@@ -165,15 +165,14 @@ class SavedQuery(mixins.Child):
             :obj:`str`: The ID of the new saved query.
 
         """
-        page_size = page_size or constants.GUI_PAGE_SIZES[0]
+        page_size = constants.GUI_PAGE_SIZES[0] if page_size is None else page_size
 
         if page_size not in constants.GUI_PAGE_SIZES:
             msg = "page_size {size} invalid, must be one of {sizes}"
             msg = msg.format(size=page_size, sizes=constants.GUI_PAGE_SIZES)
             raise exceptions.ApiError(msg)
 
-        if "fields" not in kwargs:
-            kwargs["fields"] = self._parent.fields.get()
+        fields = fields or self._parent.fields.get()
 
         if manual_fields:
             val_fields = manual_fields
@@ -209,10 +208,13 @@ class SavedQuery(mixins.Child):
             method="post", path=self._parent._router.views, json=data
         )
         found = self.get(name=name)
-        assert found["uuid"] == created, "UUID Mismatch between created and found!"
+        if found["uuid"] != created:
+            msg = "UUID Mismatch between created {c!r} and found {f!r}"
+            msg = msg.format(c=created, f=found["uuid"])
+            raise exceptions.ApiError(msg)
         return found
 
-    def delete(self, name, regex=False, **kwargs):
+    def delete(self, name, regex=False, count_min=1, count_max=1, page_size=None):
         """Delete a saved query by name.
 
         Args:
@@ -231,14 +233,22 @@ class SavedQuery(mixins.Child):
             :obj:`str`: empty string
 
         """
-        found = self.get(name=name, regex=regex, **kwargs)
+        found = self.get(
+            name=name,
+            regex=regex,
+            count_min=count_min,
+            count_max=count_max,
+            page_size=page_size,
+        )
         found = found if tools.is_type.list(found) else [found]
         return self._delete(ids=[x["uuid"] for x in found])
 
-    # FUTURE add get_by_create_user
-    # FUTURE add get_by_mod_time
-    # FUTURE add get_by_fetch_time
-    def get(self, name=None, regex=False, **kwargs):
+    # TODO add get_by_create_user
+    # TODO add get_by_mod_time
+    # TODO add get_by_fetch_time
+    def get(
+        self, name=None, regex=False, count_min=None, count_max=None, page_size=None
+    ):
         """Get saved queries using paging.
 
         Args:
@@ -263,19 +273,16 @@ class SavedQuery(mixins.Child):
         if name:
             if regex:
                 query = 'name == regex("{name}", "i")'.format(name=name)
-                kwargs.setdefault("query", query)
             else:
                 query = 'name == "{name}"'.format(name=name)
-                kwargs.setdefault("count_min", 1)
-                kwargs.setdefault("count_max", 1)
-                kwargs.setdefault("query", query)
+                count_max = 1
+                count_min = 1
 
-        found = self._get(**kwargs)
+        found = self._get(
+            query=query, count_min=count_min, count_max=count_max, page_size=page_size
+        )
 
-        count_min = kwargs.get("count_min", None)
-        count_max = kwargs.get("count_max", None)
-
-        return found[0] if count_min == 1 and count_max == 1 else found
+        return self._only1(rows=found[0], count_min=1, count_max=1)
 
     def get_names(self, **kwargs):
         """Pass."""
@@ -444,7 +451,7 @@ class Fields(mixins.Child):
         parser = ParserFields(raw=raw, parent=self)
         return parser.parse()
 
-    def find_adapter(self, name, error=True, **kwargs):
+    def find_adapter(self, name, error=True, all_fields=None):
         """Find an adapter by name.
 
         Args:
@@ -462,19 +469,19 @@ class Fields(mixins.Child):
             :obj:`str`, :obj:`dict`
 
         """
-        fields = kwargs.get("fields", None) or self.get()
+        all_fields = all_fields or self.get()
         check_name = tools.strip.right(name, "_adapter").lower()
 
         if check_name in self._GENERIC_ALTS:
             check_name = "generic"
 
-        if check_name in fields:
-            return check_name, fields[check_name]
+        if check_name in all_fields:
+            return check_name, all_fields[check_name]
 
         if error:
             raise exceptions.UnknownError(
                 value=name,
-                known=list(fields),
+                known=list(all_fields),
                 reason_msg="adapter by name",
                 valid_msg="adapter names",
             )
@@ -485,7 +492,7 @@ class Fields(mixins.Child):
 
         return self._INVALID + name, {}
 
-    def find(self, name, adapter_name, error=True, **kwargs):
+    def find(self, name, adapter_name, error=True, all_fields=None):
         """Find a field for a given adapter.
 
         Args:
@@ -502,10 +509,10 @@ class Fields(mixins.Child):
             :obj:`str`
 
         """
-        fields = kwargs.get("fields", None) or self.get()
+        all_fields = all_fields or self.get()
 
         aname, afields = self.find_adapter(
-            name=adapter_name, fields=fields, error=error
+            name=adapter_name, all_fields=all_fields, error=error
         )
 
         check_name = name.lower()
@@ -547,7 +554,9 @@ class Fields(mixins.Child):
                     if x not in cd[k] and tools.is_type.str(x):
                         cd[k].append(x)
 
-    def validate(self, fields=None, fields_error=True, default_fields=True, **kwargs):
+    def validate(
+        self, all_fields=None, fields_error=True, default_fields=True, **kwargs
+    ):
         """Validate provided fields.
 
         Args:
@@ -559,7 +568,7 @@ class Fields(mixins.Child):
             :obj:`list` of :obj:`str`
 
         """
-        fields = fields or self.get()
+        all_fields = all_fields or self.get()
         pfields = {}
         vfields = {}
         ofields = getattr(self._parent, "_default_fields", {})
@@ -572,7 +581,10 @@ class Fields(mixins.Child):
         for aname, afields in pfields.items():
             for afield in afields:
                 vaname, vafield = self.find(
-                    name=afield, adapter_name=aname, fields=fields, error=fields_error
+                    name=afield,
+                    adapter_name=aname,
+                    fields=all_fields,
+                    error=fields_error,
                 )
 
                 if any([x.startswith(self._INVALID) for x in [vafield, vaname]]):
@@ -653,51 +665,6 @@ class UserDeviceMixin(mixins.ModelUserDevice, mixins.Mixins):
         else:
             return self._request(method="get", path=self._router.root, params=params)
 
-    def _check_counts(
-        self,
-        value,
-        value_type,
-        objtype,
-        count_total,
-        count_min,
-        count_max,
-        error=True,
-        known_callback=None,
-    ):
-        """Pass."""
-        if count_min == 1 and count_max == 1:
-            if count_total != 1 and error:
-                raise exceptions.ObjectNotFound(
-                    value=value,
-                    value_type=value_type,
-                    object_type=objtype,
-                    known_callback=known_callback,
-                )
-            return True
-
-        if count_min is not None and count_total < count_min:
-            if error:
-                raise exceptions.TooFewObjectsFound(
-                    value=value,
-                    value_type=value_type,
-                    object_type=objtype,
-                    count_total=count_total,
-                    count_min=count_min,
-                )
-            return True
-
-        if count_max is not None and count_total > count_max:
-            if error:
-                raise exceptions.TooManyObjectsFound(
-                    value=value,
-                    value_type=value_type,
-                    object_type=objtype,
-                    count_total=count_total,
-                    count_max=count_max,
-                )
-            return True
-        return False
-
     def count(self, query=None, use_post=True):
         """Get the number of matches for a given query.
 
@@ -727,7 +694,7 @@ class UserDeviceMixin(mixins.ModelUserDevice, mixins.Mixins):
         page_size=None,
         manual_fields=None,
         use_post=True,
-        **kwargs
+        **kwargs,
     ):
         """Get objects for a given query using paging.
 
@@ -753,7 +720,7 @@ class UserDeviceMixin(mixins.ModelUserDevice, mixins.Mixins):
             :obj:`list` of :obj:`dict` or :obj:`dict`
 
         """
-        page_size = page_size or constants.DEFAULT_PAGE_SIZE
+        page_size = constants.DEFAULT_PAGE_SIZE if page_size is None else page_size
 
         if manual_fields:
             val_fields = manual_fields
@@ -803,13 +770,7 @@ class UserDeviceMixin(mixins.ModelUserDevice, mixins.Mixins):
         msg = msg.format(q=query, c=len(rows))
         self._log.debug(msg)
 
-        if count_max is not None:
-            if count_max == 1 and rows:
-                return rows[0]
-            elif rows:
-                return rows[:count_max]
-
-        return rows
+        return self._only1(rows=rows, count_min=count_min, count_max=count_max)
 
     def get_by_id(self, id):
         """Get an object by internal_axon_id.
@@ -876,15 +837,20 @@ class UserDeviceMixin(mixins.ModelUserDevice, mixins.Mixins):
         return self.get(**kwargs)
 
     def report_adapters(
-        self, serial=False, unconfigured=False, others_not_seen=False, **kwargs
+        self,
+        serial=False,
+        unconfigured=False,
+        others_not_seen=False,
+        all_fields=None,
+        **kwargs,
     ):
         """Pass."""
-        kwargs["fields"] = kwargs.get("fields", None) or self._parent.fields.get()
-        rows = kwargs.get("rows", []) or self.get(**kwargs)
+        all_fields = all_fields or self._parent.fields.get()
+        rows = kwargs.get("rows", []) or self.get(all_fields=all_fields, **kwargs)
         adapters = kwargs.get("adapters", {}) or self.adapters.get()
         parser = ParserReportsAdapter(raw=rows, parent=self)
         return parser.parse(
-            fields=kwargs["fields"],
+            fields=all_fields,
             adapters=adapters,
             serial=serial,
             unconfigured=unconfigured,
@@ -1174,10 +1140,6 @@ class ParserReportsAdapter(mixins.Parser):
             row["adapter: {}".format(name)] = self._mkserial(status_lines)
 
         row["adapters_missing"] = self._mkserial(missing)
-        # row["count_fetched"] = len(row["adapters"])
-        # row["count_total"] = len(self._adapters)
-        # row["count_total_broken"] = len(self._broken_adapters)
-        # row["count_total_unconfigured"] = len(self._unconfig_adapters)
         return row
 
     def parse(

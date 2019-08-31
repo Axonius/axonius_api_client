@@ -194,7 +194,7 @@ class TestBoth(object):
             method="get",
             raw=False,
             is_json=True,
-            check_status=True,
+            error_status=True,
         )
         assert tools.is_type.dict(response)
 
@@ -205,7 +205,7 @@ class TestBoth(object):
             method="get",
             raw=True,
             is_json=True,
-            check_status=True,
+            error_status=True,
         )
         assert isinstance(response, requests.Response)
 
@@ -216,7 +216,7 @@ class TestBoth(object):
             method="get",
             raw=False,
             is_json=False,
-            check_status=True,
+            error_status=True,
         )
         assert tools.is_type.str(response)
 
@@ -923,9 +923,3 @@ class TestDevices(object):
             for ip in ips:
                 match = regex.match(ip)
                 assert not match
-
-
-# TODO
-# test response error by using invalid route
-# test "error" in json response somehow (need to add code for it too)
-# test invalid json response somehow

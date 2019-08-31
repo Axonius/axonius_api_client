@@ -42,6 +42,9 @@ class ModelUserDevice(Model):
 class Mixins(object):
     """API client for Axonius REST API."""
 
+    _LIMIT_CHECKS = ["json", "params"]
+    _LIMIT_KEYS = ["limit"]
+
     def __init__(self, auth, **kwargs):
         """Constructor.
 
@@ -88,7 +91,14 @@ class Mixins(object):
         return self.__str__()
 
     def _request(
-        self, path, method="get", raw=False, is_json=True, check_status=True, **kwargs
+        self,
+        path,
+        method="get",
+        raw=False,
+        is_json=True,
+        error_status=True,
+        error_json=True,
+        **kwargs
     ):
         """Perform a REST API request.
 
@@ -107,7 +117,7 @@ class Mixins(object):
                 Response should have JSON data.
 
                 Defaults to: True.
-            check_status (:obj:`bool`, optional):
+            error_status (:obj:`bool`, optional):
                 Call :meth:`_check_response_status`.
 
                 Defaults to: True.
@@ -123,24 +133,22 @@ class Mixins(object):
         sargs.update(kwargs)
         sargs.update({"path": path, "method": method})
 
-        checks = ["json", "params"]
-        size_keys = ["limit"]
-        for check in checks:
-            for size_key in size_keys:
-                if size_key in kwargs.get(check, {}):
-                    self._check_max_page_size(kwargs[check][size_key])
+        for limit_check in self._LIMIT_CHECKS:
+            for limit_key in self._LIMIT_KEYS:
+                if limit_key in kwargs.get(limit_check, {}):
+                    self._check_max_page_size(kwargs[limit_check][limit_key])
 
         response = self._auth.http(**sargs)
 
         if raw:
             return response
 
-        if is_json:
-            data = self._check_response_json(response=response)
+        if is_json and response.text:
+            data = self._check_response_json(response=response, error_json=error_json)
         else:
             data = response.text
 
-        if check_status:
+        if error_status:
             self._check_response_status(response=response)
 
         return data
@@ -157,7 +165,7 @@ class Mixins(object):
                 response=response, exc=None, details=True, bodies=True
             )
 
-    def _check_response_json(self, response):
+    def _check_response_json(self, response, error_json=True):
         """Check response is JSON.
 
         Raises:
@@ -167,12 +175,16 @@ class Mixins(object):
         try:
             data = response.json()
         except Exception as exc:
-            raise exceptions.JsonInvalid(response=response, exc=exc)
+            if error_json:
+                raise exceptions.JsonInvalid(response=response, exc=exc)
+
         if tools.is_type.dict(data):
             has_error = data.get("error")
             has_error_status = data.get("status") == "error"
-            if has_error or has_error_status:
+
+            if (has_error or has_error_status) and error_json:
                 raise exceptions.JsonError(response=response, data=data)
+
         return data
 
     def _check_max_page_size(self, page_size):
@@ -190,6 +202,57 @@ class Mixins(object):
             msg = "Page size {page_size} is over maximum page size {max_size}"
             msg = msg.format(page_size=page_size, max_size=constants.MAX_PAGE_SIZE)
             raise exceptions.ApiError(msg)
+
+    def _check_counts(
+        self,
+        value,
+        value_type,
+        objtype,
+        count_total,
+        count_min,
+        count_max,
+        error=True,
+        known=None,
+    ):
+        """Pass."""
+        if count_min == 1 and count_max == 1:
+            if count_total != 1 and error:
+                raise exceptions.ObjectNotFound(
+                    value=value, value_type=value_type, object_type=objtype, known=known
+                )
+            return True
+
+        if count_min is not None and count_total < count_min:
+            if error:
+                raise exceptions.TooFewObjectsFound(
+                    value=value,
+                    value_type=value_type,
+                    object_type=objtype,
+                    count_total=count_total,
+                    count_min=count_min,
+                )
+            return True
+
+        if count_max is not None and count_total > count_max:
+            if error:
+                raise exceptions.TooManyObjectsFound(
+                    value=value,
+                    value_type=value_type,
+                    object_type=objtype,
+                    count_total=count_total,
+                    count_max=count_max,
+                )
+            return True
+        return False
+
+    def _only1(self, rows, count_max=None, count_min=None):
+        """Pass."""
+        if count_max is not None:
+            if count_max == 1 and rows:
+                return rows[0]
+            elif rows:
+                return rows[:count_max]
+        return rows
 
 
 class Child(object):

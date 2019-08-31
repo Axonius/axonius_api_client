@@ -88,9 +88,3 @@ class TestMixins(object):
         page_size = axonapi.constants.MAX_PAGE_SIZE + 1000
         with pytest.raises(axonapi.exceptions.ApiError):
             apiobj._check_max_page_size(page_size)
-
-
-# TODO
-# test response error by using invalid route
-# test "error" in json response somehow (need to add code for it too)
-# test invalid json response somehow
