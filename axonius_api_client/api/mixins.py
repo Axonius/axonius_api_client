@@ -209,8 +209,8 @@ class Mixins(object):
         value_type,
         objtype,
         count_total,
-        count_min,
-        count_max,
+        count_min=None,
+        count_max=None,
         error=True,
         known=None,
     ):

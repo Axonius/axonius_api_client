@@ -54,6 +54,22 @@ class ClientSettingError(ApiError):
         super(ClientSettingError, self).__init__(msg)
 
 
+class ClientSettingMissingError(ClientSettingError):
+    """Pass."""
+
+
+class ClientSettingInvalidTypeError(ClientSettingError):
+    """Pass."""
+
+
+class ClientSettingInvalidChoiceError(ClientSettingError):
+    """Pass."""
+
+
+class ClientSettingUnknownError(ClientSettingError):
+    """Pass."""
+
+
 class ResponseError(ApiError):
     """Parent exception for any response error."""
 
@@ -234,15 +250,15 @@ class ObjectNotFound(ApiError):
 
         if callable(known):
             try:
-                known = tools.join.cr(known())
+                known = known()
             except Exception as kexc:
                 msg = "known callback {} failed {}"
                 msg = msg.format(known, kexc)
                 msgs.append(msg)
 
         if known:
-            msg = " valids: {}"
-            msg = msg.format(known)
+            msg = " valids: {v}"
+            msg = msg.format(v=tools.join.cr(known))
             msgs.append(msg)
 
         msg = tools.join.cr(msgs)
@@ -338,13 +354,26 @@ class UnknownError(ObjectNotFound):
         self.known = known
         self.kwargs = kwargs
 
-        reason = "Unable to find {reason_msg} {v!r}"
-        self.reason = reason.format(reason_msg=reason_msg, v=value)
+        msgs = []
 
-        msg = "{reason}, valid {valid_msg}: {valids}"
-        msg = msg.format(
-            reason=self.reason, valid_msg=valid_msg, valids=tools.join.cr(known)
-        )
+        msg = "Unable to find {reason_msg} {v!r}"
+        msg = msg.format(reason_msg=reason_msg, v=value)
+        msgs.append(msg)
+
+        if callable(known):
+            try:
+                known = known()
+            except Exception as kexc:
+                msg = "known callback {} failed {}"
+                msg = msg.format(known, kexc)
+                msgs.append(msg)
+
+        if known:
+            msg = " valid {valid_msg}: {v}"
+            msg = msg.format(valid_msg=valid_msg, v=tools.join.cr(known))
+            msgs.append(msg)
+
+        msg = tools.join.cr(msgs)
         super(ObjectNotFound, self).__init__(msg)
 
 
