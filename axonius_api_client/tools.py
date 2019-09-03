@@ -25,7 +25,7 @@ else:
     import pathlib
 
 
-def listify(obj):
+def listify(obj, dictkeys=True):
     """Pass."""
     if is_type.tuple(obj):
         return list(obj)
@@ -34,7 +34,7 @@ def listify(obj):
     if is_type.simple(obj):
         return [obj]
     if is_type.dict(obj):
-        return list(obj)
+        return list(obj) if dictkeys else [obj]
     return obj
 
 
@@ -45,12 +45,29 @@ def grouper(iterable, n, fillvalue=None):
 
 def nest_depth(obj):
     """Pass."""
-    if is_type.complex(obj):
-        if is_type.dict(obj):
-            obj = obj.values()
+    if is_type.dict(obj):
+        obj = list(obj.values())
+
+    if is_type.list(obj):
         calcs = [nest_depth(x) for x in obj if is_type.complex(x)]
         return 1 + (max(calcs) if calcs else 0)
     return 0
+
+
+def values_match(checks, values, use_regex=False, ignore_case=True):
+    """Pass."""
+    re_flags = re.I if ignore_case else 0
+
+    for check in listify(checks, dictkeys=False):
+        re_text = check if use_regex else "^{}$".format(check)
+        re_pattern = re.compile(re_text, re_flags)
+        re_method = re_pattern.search if use_regex else re_pattern.match
+
+        for value in listify(values, dictkeys=False):
+            if not re_method(value):
+                return False
+
+    return True
 
 
 class is_type(object):

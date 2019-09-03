@@ -33,7 +33,43 @@ class HttpError(AxonError):
     """Parent exception for all Authentication errors."""
 
 
-class ClientSettingError(ApiError):
+class ClientError(ApiError):
+    """Pass."""
+
+
+class ClientDeleteForceFalse(ClientError):
+    """Pass."""
+
+
+class ClientDeleteFailure(ClientError):
+    """Pass."""
+
+
+class ClientDeleteWarning(ApiWarning):
+    """Pass."""
+
+
+class ClientConnectFailure(ClientError):
+    """Error when response has error key in JSON."""
+
+    def __init__(self, response, adapter, node):
+        """Constructor.
+
+        Args:
+            response (:obj:`requests.Response`):
+                Response error was thrown for.
+            exc (:obj:`Exception`, optional):
+                Original exception thrown.
+
+                Defaults to: None.
+
+        """
+        msg = "Client connectivity failed for adapter {a!r} on node {n!r}:\n{r}"
+        msg = msg.format(a=adapter, n=node, r=tools.json.re_load(response))
+        super(ClientConnectFailure, self).__init__(msg)
+
+
+class ClientConfigError(ClientError):
     """Pass."""
 
     def __init__(self, name, value, error, schema):
@@ -51,22 +87,22 @@ class ClientSettingError(ApiError):
             error=error,
             ss=tools.json.dump(schema),
         )
-        super(ClientSettingError, self).__init__(msg)
+        super(ClientConfigError, self).__init__(msg)
 
 
-class ClientSettingMissingError(ClientSettingError):
+class ClientConfigMissingError(ClientConfigError):
     """Pass."""
 
 
-class ClientSettingInvalidTypeError(ClientSettingError):
+class ClientConfigInvalidTypeError(ClientConfigError):
     """Pass."""
 
 
-class ClientSettingInvalidChoiceError(ClientSettingError):
+class ClientConfigInvalidChoiceError(ClientConfigError):
     """Pass."""
 
 
-class ClientSettingUnknownError(ClientSettingError):
+class ClientConfigUnknownError(ClientConfigError):
     """Pass."""
 
 
@@ -136,6 +172,10 @@ class ResponseError(ApiError):
         super(ResponseError, self).__init__(msg)
 
 
+class ResponseCodeNot200(ResponseError):
+    """Error when response has invalid JSON."""
+
+
 class JsonInvalid(ResponseError):
     """Error when response has invalid JSON."""
 
@@ -172,39 +212,16 @@ class JsonError(ResponseError):
                 Defaults to: None.
 
         """
-        has_error = data.get("error")
-        has_error_status = data.get("status") == "error"
+        data_error = "Unknown"
+        data_status = "Unknown"
+        if tools.is_type.dict(data):
+            data_error = data.get("error", "No error key!")
+            data_status = data.get("status", "No status key!")
 
-        error = "JSON has an error message in response"
-
-        if has_error:
-            error = "JSON has error='{}' in response".format(has_error)
-        elif has_error_status:
-            error = "JSON has status='error' in response"
+        error = "JSON has error={e!r} with status {s!r} in response"
+        error = error.format(e=data_error, s=data_status)
 
         super(JsonError, self).__init__(
-            response=response, error=error, exc=exc, details=details, bodies=bodies
-        )
-
-
-class ClientConnectFailure(ResponseError):
-    """Error when response has error key in JSON."""
-
-    def __init__(self, response, adapter, node, exc=None, details=True, bodies=True):
-        """Constructor.
-
-        Args:
-            response (:obj:`requests.Response`):
-                Response error was thrown for.
-            exc (:obj:`Exception`, optional):
-                Original exception thrown.
-
-                Defaults to: None.
-
-        """
-        error = "Client connectivity failed for adapter {adapter!r} on node {node!r}"
-        error = error.format(adapter=adapter, node=node)
-        super(ClientConnectFailure, self).__init__(
             response=response, error=error, exc=exc, details=details, bodies=bodies
         )
 
@@ -248,13 +265,7 @@ class ObjectNotFound(ApiError):
             msg = msg.format(exc)
             msgs.append(msg)
 
-        if callable(known):
-            try:
-                known = known()
-            except Exception as kexc:
-                msg = "known callback {} failed {}"
-                msg = msg.format(known, kexc)
-                msgs.append(msg)
+        known = known_cb(known)
 
         if known:
             msg = " valids: {v}"
@@ -360,13 +371,7 @@ class UnknownError(ObjectNotFound):
         msg = msg.format(reason_msg=reason_msg, v=value)
         msgs.append(msg)
 
-        if callable(known):
-            try:
-                known = known()
-            except Exception as kexc:
-                msg = "known callback {} failed {}"
-                msg = msg.format(known, kexc)
-                msgs.append(msg)
+        known = known_cb(known)
 
         if known:
             msg = " valid {valid_msg}: {v}"
@@ -449,3 +454,13 @@ class ConnectError(AxonError):
         self.msg = msg
         self.exc = exc
         super(ConnectError, self).__init__(msg)
+
+
+def known_cb(known):
+    """Pass."""
+    if callable(known):
+        try:
+            known = known()
+        except Exception as kexc:  # pragma: no cover
+            known = ["known callback {} failed {}".format(known, kexc)]
+    return known

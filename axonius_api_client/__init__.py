@@ -4,8 +4,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 from . import api, auth, cli, constants, exceptions, http, tools, version
 from .api import Actions, Adapters, Devices, Enforcements, Users
-from .auth import ApiKey as AuthApiKey
-from .auth import Creds as AuthCreds
+from .auth import ApiKey
 from .exceptions import (
     AlreadyLoggedIn,
     ApiError,
@@ -37,8 +36,7 @@ __all__ = (
     "Http",
     "ParserUrl",
     # authentication
-    "AuthCreds",
-    "AuthApiKey",
+    "ApiKey",
     # api
     "Users",
     "Devices",

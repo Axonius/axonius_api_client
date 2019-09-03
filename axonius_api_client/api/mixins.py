@@ -96,8 +96,9 @@ class Mixins(object):
         method="get",
         raw=False,
         is_json=True,
-        error_status=True,
-        error_json=True,
+        error_code_not_200=True,
+        error_json_bad_status=True,
+        error_json_invalid=True,
         **kwargs
     ):
         """Perform a REST API request.
@@ -118,7 +119,7 @@ class Mixins(object):
 
                 Defaults to: True.
             error_status (:obj:`bool`, optional):
-                Call :meth:`_check_response_status`.
+                Call :meth:`_check_response_code`.
 
                 Defaults to: True.
             **kwargs:
@@ -144,28 +145,35 @@ class Mixins(object):
             return response
 
         if is_json and response.text:
-            data = self._check_response_json(response=response, error_json=error_json)
+            data = self._check_response_json(
+                response=response,
+                error_json_bad_status=error_json_bad_status,
+                error_json_invalid=error_json_invalid,
+            )
         else:
             data = response.text
 
-        if error_status:
-            self._check_response_status(response=response)
+        self._check_response_code(
+            response=response, error_code_not_200=error_code_not_200
+        )
 
         return data
 
-    def _check_response_status(self, response):
+    def _check_response_code(self, response, error_code_not_200=True):
         """Check response status code.
 
         Raises:
             :exc:`exceptions.ResponseError`
 
         """
-        if response.status_code != 200:
-            raise exceptions.ResponseError(
+        if response.status_code != 200 and error_code_not_200:
+            raise exceptions.ResponseCodeNot200(
                 response=response, exc=None, details=True, bodies=True
             )
 
-    def _check_response_json(self, response, error_json=True):
+    def _check_response_json(
+        self, response, error_json_bad_status=True, error_json_invalid=True
+    ):
         """Check response is JSON.
 
         Raises:
@@ -175,14 +183,15 @@ class Mixins(object):
         try:
             data = response.json()
         except Exception as exc:
-            if error_json:
+            if error_json_invalid:
                 raise exceptions.JsonInvalid(response=response, exc=exc)
+            return response.text
 
         if tools.is_type.dict(data):
             has_error = data.get("error")
             has_error_status = data.get("status") == "error"
 
-            if (has_error or has_error_status) and error_json:
+            if (has_error or has_error_status) and error_json_bad_status:
                 raise exceptions.JsonError(response=response, data=data)
 
         return data

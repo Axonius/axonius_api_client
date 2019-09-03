@@ -13,10 +13,8 @@ tools = axonapi.tools
 
 
 @pytest.mark.needs_url
-@pytest.mark.needs_any_creds
-@pytest.mark.parametrize(
-    "creds", ["creds_user", "creds_key"], indirect=True, scope="class"
-)
+@pytest.mark.needs_key_creds
+@pytest.mark.parametrize("creds", ["creds_key"], indirect=True, scope="class")
 class TestMixins(object):
     """Pass."""
 
@@ -44,24 +42,34 @@ class TestMixins(object):
         response = apiobj._request(path=apiobj._router.fields, method="get")
         assert tools.is_type.dict(response)
 
-    def test__request_no_json_error(self, apiobj):
-        """Test that JSON is returned when is_json=True."""
-        with pytest.raises(axonapi.exceptions.ResponseError):
+    def test__request_json_error(self, apiobj):
+        """Test exc thrown when json has error status."""
+        with pytest.raises(axonapi.exceptions.JsonError):
             apiobj._request(
-                path=apiobj._router.root + "/badwolf", method="get", is_json=False
+                path=apiobj._router.root + "/badwolf",
+                method="get",
+                error_code_not_200=False,
+            )
+
+    def test__request_no_json_error(self, apiobj):
+        """Test exc thrown when status code != 200."""
+        with pytest.raises(axonapi.exceptions.ResponseCodeNot200):
+            apiobj._request(
+                path=apiobj._router.root + "/badwolf",
+                method="get",
+                error_code_not_200=True,
+                is_json=False,
             )
 
     def test__request_json_invalid(self, apiobj):
-        """Test that JSON is returned when is_json=True."""
+        """Test exc thrown when invalid json."""
         with pytest.raises(axonapi.exceptions.JsonInvalid):
             apiobj._request(path="", method="get")
 
-    def test__request_json_error(self, apiobj):
-        """Test that JSON is returned when is_json=True."""
-        with pytest.raises(axonapi.exceptions.JsonError):
-            apiobj._request(
-                path=apiobj._router.by_id.format(id="badwolf"), method="get"
-            )
+    def test__request_json_invalid_text(self, apiobj):
+        """Test that str is returned when is_json=True and error_json_invalid=False."""
+        response = apiobj._request(path="", method="get", error_json_invalid=False)
+        assert tools.is_type.str(response)
 
     def test__request_raw(self, apiobj):
         """Test that response is returned when raw=True."""

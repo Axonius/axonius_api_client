@@ -8,12 +8,11 @@ import axonius_api_client as axonapi
 
 
 @pytest.mark.needs_url
-@pytest.mark.needs_any_creds
-@pytest.mark.parametrize("creds", ["creds_user", "creds_key"], indirect=True)
+@pytest.mark.needs_key_creds
+@pytest.mark.parametrize("creds", ["creds_key"], indirect=True, scope="class")
 class TestAuth(object):
     """Test axonius_api_client.auth."""
 
-    @pytest.mark.needs_key_creds
     def test_valid_creds(self, url, creds):
         """Test str/repr has URL."""
         http = axonapi.Http(url=url, certwarn=False)
@@ -23,7 +22,6 @@ class TestAuth(object):
         assert "url" in format(auth)
         assert "url" in repr(auth)
 
-    @pytest.mark.needs_key_creds
     def test_logout(self, url, creds):
         """Test no exc when logout() after login()."""
         http = axonapi.Http(url=url, certwarn=False)
@@ -32,7 +30,6 @@ class TestAuth(object):
         auth.logout()
         assert not auth.is_logged_in
 
-    @pytest.mark.needs_key_creds
     def test_login_already_logged_in(self, url, creds):
         """Test exc thrown when login() and login() already called."""
         http = axonapi.Http(url=url, certwarn=False)
@@ -41,7 +38,6 @@ class TestAuth(object):
         with pytest.raises(axonapi.AlreadyLoggedIn):
             auth.login()
 
-    @pytest.mark.needs_key_creds
     def test_logout_not_logged_in(self, url, creds):
         """Test exc thrown when logout() but login() not called."""
         http = axonapi.Http(url=url, certwarn=False)

@@ -2,7 +2,7 @@
 """Axonius API Client package."""
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-import re
+import time
 import warnings
 
 from .. import exceptions, tools
@@ -26,7 +26,6 @@ class Clients(mixins.Child):
         "string": tools.is_type.str,
     }
 
-    # TODO: Add fetch method
     def _check(self, adapter_name, node_id, config):
         """Check connectivity for a client of an adapter.
 
@@ -47,7 +46,13 @@ class Clients(mixins.Child):
         data["instanceName"] = node_id
         data["oldInstanceName"] = node_id
         path = self._parent._router.clients.format(adapter_name=adapter_name)
-        return self._parent._request(method="post", path=path, json=data, raw=True)
+        return self._parent._request(
+            method="post",
+            path=path,
+            json=data,
+            error_json_bad_status=False,
+            error_code_not_200=False,
+        )
 
     def _add(self, adapter_name, node_id, config):
         """Add a client to an adapter.
@@ -68,10 +73,15 @@ class Clients(mixins.Child):
         data.update(config)
         data["instanceName"] = node_id
         path = self._parent._router.clients.format(adapter_name=adapter_name)
-        return self._parent._request(method="put", path=path, json=data)
+        return self._parent._request(
+            method="put",
+            path=path,
+            json=data,
+            error_json_bad_status=False,
+            error_code_not_200=False,
+        )
 
-    # TODO: how to delete assets too?
-    def _delete(self, adapter_name, node_id, client_id):
+    def _delete(self, adapter_name, node_id, client_id, delete_entities=False):
         """Delete a client from an adapter.
 
         Args:
@@ -89,11 +99,22 @@ class Clients(mixins.Child):
         data = {}
         data["instanceName"] = node_id
         path = self._parent._router.clients_id.format(
-            adapter_name=adapter_name, client_id=client_id
+            adapter_name=adapter_name,
+            client_id=client_id,
+            error_json_bad_status=False,
+            error_code_not_200=False,
         )
-        return self._parent._request(method="delete", path=path, json=data)
+        params = {"deleteEntities": delete_entities}
+        return self._parent._request(
+            method="delete",
+            path=path,
+            json=data,
+            params=params,
+            error_json_bad_status=False,
+            error_code_not_200=False,
+        )
 
-    def _parse_config(self, adapter, settings_client, config):
+    def _config_parse(self, adapter, settings_client, config):
         """Pass."""
         new_config = {}
 
@@ -116,7 +137,7 @@ class Clients(mixins.Child):
                 if not required:
                     continue
                 error = "value was not supplied and has no default value"
-                raise exceptions.ClientSettingMissingError(
+                raise exceptions.ClientConfigMissingError(
                     name=name, value=value, schema=schema, error=error
                 )
 
@@ -126,16 +147,16 @@ class Clients(mixins.Child):
             if enum and value not in enum:
                 error = "invalid value {value!r}, must be one of {enum}"
                 error = error.format(value=value, enum=enum)
-                raise exceptions.ClientSettingInvalidChoiceError(
+                raise exceptions.ClientConfigInvalidChoiceError(
                     name=name, value=value, schema=schema, error=error
                 )
 
             if type_str == "file":
-                value = self._check_file_setting(
+                value = self._config_file_check(
                     name=name, value=value, schema=schema, adapter=adapter
                 )
             elif type_str in self.SETTING_TYPES:
-                self._check_setting_type(
+                self._config_type_check(
                     name=name,
                     schema=schema,
                     value=value,
@@ -144,7 +165,7 @@ class Clients(mixins.Child):
             else:
                 error = "Unknown setting type: {type_str!r}"
                 error = error.format(type_str=type_str)
-                raise exceptions.ClientSettingUnknownError(
+                raise exceptions.ClientConfigUnknownError(
                     name=name, value=value, schema=schema, error=error
                 )
 
@@ -154,19 +175,19 @@ class Clients(mixins.Child):
         return new_config
 
     @staticmethod
-    def _upload_dict(d):
+    def _config_file(d):
         """Pass."""
         return {"uuid": d["uuid"], "filename": d["filename"]}
 
-    def _check_file_setting(self, name, value, schema, adapter):
+    def _config_file_check(self, name, value, schema, adapter):
         """Pass."""
         if tools.is_type.str(value) or tools.is_type.path(value):
             uploaded = self._parent.upload_file_path(
                 adapter=adapter, field=name, filepath=value
             )
-            return self._upload_dict(uploaded)
+            return self._config_file(uploaded)
 
-        self._check_setting_type(
+        self._config_type_check(
             name=name, schema=schema, value=value, type_cb=tools.is_type.dict
         )
 
@@ -176,7 +197,13 @@ class Clients(mixins.Child):
         filecontent = value.get("filecontent", None)
         filecontent_type = value.get("filecontent_type", None)
 
-        ex_uuid = {name: {"uuid": "uuid", "filename": "filename"}}
+        ex_uuid = {
+            name: {
+                "uuid": "uuid",
+                "filename": "filename",
+                "filepath": "optional str or pathlib to get filename from",
+            }
+        }
         ex_filecontent = {
             name: {
                 "filename": "filename",
@@ -194,15 +221,15 @@ class Clients(mixins.Child):
                 if filepath:
                     value["filename"] = tools.path.resolve(filepath).name
                 else:
-                    error = (
-                        "must supply 'filename' when supplying 'uuid', example: {ex}"
+                    error = "must supply {opts} when supplying 'uuid', example: {ex}"
+                    error = error.format(
+                        n=name, ex=ex_uuid, opts="'filename' or 'filepath'"
                     )
-                    error = error.format(n=name, ex=ex_uuid)
-                    raise exceptions.ClientSettingMissingError(
+                    raise exceptions.ClientConfigMissingError(
                         name=name, value=value, schema=schema, error=error
                     )
 
-            return self._upload_dict(value)
+            return self._config_file(value)
         else:
             if filepath:
                 uploaded = self._parent.upload_file_path(
@@ -227,11 +254,24 @@ class Clients(mixins.Child):
                     ex_uuid,
                 ]
                 error = tools.join.cr(error)
-                raise exceptions.ClientSettingMissingError(
+                raise exceptions.ClientConfigMissingError(
                     name=name, value=value, schema=schema, error=error
                 )
 
-            return self._upload_dict(uploaded)
+            return self._config_file(uploaded)
+
+    def _config_type_check(self, name, value, type_cb, schema):
+        """Pass."""
+        required = schema["required"]
+        pre = "{req} setting {n!r} with value {v!r}"
+        pre = pre.format(req="Required" if required else "Optional", n=name, v=value)
+
+        if not type_cb(value):
+            error = "is invalid type {st!r}"
+            error = error.format(st=type(value).__name__)
+            raise exceptions.ClientConfigInvalidTypeError(
+                name=name, value=value, schema=schema, error=error
+            )
 
     def _validate_csv(
         self, filename, filecontent, is_users=False, is_installed_sw=False
@@ -248,8 +288,8 @@ class Clients(mixins.Child):
             ids_type = "device"
 
         headers_content = filecontent
-        if tools.is_type.bytes(filecontent):
-            headers_content = filecontent.decode()
+        if tools.is_type.bytes(headers_content):
+            headers_content = headers_content.decode()
 
         headers = headers_content.splitlines()[0].lower().split(",")
         headers_has_any_id = any([x in headers for x in ids])
@@ -259,136 +299,294 @@ class Clients(mixins.Child):
             msg = msg.format(ids_type=ids_type, ids=ids, name=filename, h=headers)
             warnings.warn(msg, exceptions.ApiWarning)
 
-    def _check_setting_type(self, name, value, type_cb, schema):
+    @staticmethod
+    def _build_known(clients):
         """Pass."""
-        required = schema["required"]
-        pre = "{req} setting {n!r} with value {v!r}"
-        pre = pre.format(req="Required" if required else "Optional", n=name, v=value)
+        tmpl = [
+            "Adapter {adapter!r}",
+            "id {client_id!r}",
+            "uuid {uuid!r}",
+            "status {status_bool}",
+        ]
+        tmpl = tools.join.comma(tmpl)
+        return [tmpl.format(**c) for c in clients]
 
-        if not type_cb(value):
-            error = "is invalid type {st!r}"
-            error = error.format(st=type(value).__name__)
-            raise exceptions.ClientSettingInvalidTypeError(
-                name=name, value=value, schema=schema, error=error
+    def get(self, adapter, node="master"):
+        """Get all clients for an adapter."""
+        if tools.is_type.str(adapter):
+            adapter = self._parent.get_single(name=adapter, node=node)
+            clients = adapter["clients"]
+        elif tools.is_type.los(adapter):
+            all_adapters = self._parent.get()
+            all_adapters = self._parent.filter_by_names(
+                adapters=all_adapters, names=adapter
             )
+            all_adapters = self._parent.filter_by_nodes(
+                adapters=all_adapters, nodes=node
+            )
+            clients = [c for a in all_adapters for c in a]
+        elif tools.is_type.none(adapter):
+            all_adapters = self._parent.get()
+            all_adapters = self._parent.filter_by_nodes(
+                adapters=all_adapters, nodes=node
+            )
+            clients = [c for a in all_adapters for c in a]
+        else:
+            clients = adapter["clients"]
+        return clients
 
-    def get(
+    def filter_by_ids(
         self,
-        adapter,
-        node="master",
+        clients,
         ids=None,
         use_regex=False,
-        status=None,
         count_min=None,
         count_max=None,
         count_error=True,
-        adapters=None,
     ):
         """Get all clients for all adapters."""
-        if tools.is_type.str(adapter):
-            adapter = self._parent.get_single(
-                name=adapter, node=node, adapters=adapters
+        matches = []
+
+        for client in clients:
+            match = tools.values_match(
+                checks=ids, values=client["client_id"], use_regex=use_regex
             )
 
-        matches = []
-        known = []
-
-        for client in adapter["clients"]:
-            client_id = client["client_id"]
-
-            client_str = "Adapter {adapter!r} client id {client_id!r}"
-            client_str = client_str.format(**client)
-
-            if client_str not in known:
-                known.append(client_str)
-
-            for value in tools.listify(ids):
-                if use_regex:
-                    value_re = re.compile(value, re.I)
-                    if not value_re.search(client_id):
-                        continue
-                else:
-                    if not value.lower() == client_id.lower():
-                        continue
-
-            if client["status_bool"] is True and status is False:
-                continue
-
-            if client["status_bool"] is False and status is True:
-                continue
-
-            if client not in matches:
+            if match and client not in matches:
                 matches.append(client)
 
         self._parent._check_counts(
             value=ids,
-            value_type="clients by ids using regex {}".format(use_regex),
-            objtype=self._parent._router._object_type,
+            value_type="client ids and regex {}".format(use_regex),
+            objtype="adapter clients",
             count_min=count_min,
             count_max=count_max,
             count_total=len(matches),
-            known=known,
+            known=self._build_known(clients),
             error=count_error,
         )
 
         return matches
 
-    # TODO also add force!
-    def delete(self, adapter_name):
-        """Pass."""
-
-    def check(
+    def filter_by_uuids(
         self,
-        adapter,
-        node="master",
-        ids=None,
+        clients,
+        uuids=None,
         use_regex=False,
-        status=None,
         count_min=None,
         count_max=None,
         count_error=True,
-        error=True,
-        clients=None,
     ):
-        """Pass."""
-        clients = clients or self.get(
-            adapter=adapter,
-            node=node,
-            ids=ids,
-            use_regex=use_regex,
-            status=status,
+        """Get all clients for all adapters."""
+        matches = []
+
+        for client in clients:
+            match = tools.values_match(
+                checks=uuids, values=client["uuid"], use_regex=use_regex
+            )
+
+            if match and client not in matches:
+                matches.append(client)
+
+        self._parent._check_counts(
+            value=uuids,
+            value_type="uuids and regex {}".format(use_regex),
+            objtype="adapter clients",
             count_min=count_min,
             count_max=count_max,
-            count_error=count_error,
+            count_total=len(matches),
+            known=self._build_known(clients),
+            error=count_error,
         )
+
+        return matches
+
+    def filter_by_status(
+        self, clients, status=None, count_min=None, count_max=None, count_error=True
+    ):
+        """Get all clients for all adapters."""
+        matches = []
+
+        for client in clients:
+            match = True
+
+            if client["status_bool"] is True and status is False:
+                match = False
+
+            if client["status_bool"] is False and status is True:
+                match = False
+
+            if match and client not in matches:
+                matches.append(client)
+
+        self._parent._check_counts(
+            value=status,
+            value_type="by status",
+            objtype="adapter clients",
+            count_min=count_min,
+            count_max=count_max,
+            count_total=len(matches),
+            known=self._build_known(clients),
+            error=count_error,
+        )
+
+        return matches
+
+    def delete(
+        self,
+        clients,
+        delete_entities=False,
+        force=False,
+        warning=True,
+        error=True,
+        sleep=5,
+    ):
+        """Pass."""
+        clients = tools.listify(clients, dictkeys=False)
+
+        delmode = "client and {} entities of".format("ALL" if delete_entities else "NO")
+
+        done = []
+
+        for client in clients:
+            dinfo = {
+                "adapter": client["adapter"],
+                "node_name": client["node_name"],
+                "client_id": client["client_id"],
+                "client_uuid": client["uuid"],
+                "client_status": client["status_bool"],
+            }
+
+            pinfo = ["{}: {!r}".format(k, v) for k, v in dinfo.items()]
+            pstr = tools.join.comma(pinfo).format(**client)
+
+            if not force:
+                emsg = "Must supply force=True to {d}: {p}"
+                emsg = emsg.format(d=delmode, p=pstr)
+                raise exceptions.ClientDeleteForceFalse(emsg)
+
+            if warning:
+                wmsg = "In {s} seconds will delete {d} {p}"
+                wmsg = wmsg.format(s=sleep, d=delmode, p=pstr)
+                warnings.warn(wmsg, exceptions.ClientDeleteWarning)
+
+            dargs = {
+                "adapter_name": client["adapter_raw"],
+                "node_id": client["node_id"],
+                "client_id": client["uuid"],
+                "delete_entities": delete_entities,
+            }
+
+            dpa = "{d} {p} using args: {a}"
+            dpa = dpa.format(d=delmode, p=pstr, a=dargs)
+
+            lmsg = "About to delete {dpa}"
+            lmsg = lmsg.format(dpa=dpa)
+            self._log.info(lmsg)
+
+            time.sleep(sleep)
+
+            result = self._delete(**dargs)
+
+            had_error = tools.is_type.dict(result) and (
+                result["status"] == "error" or result["error"]
+            )
+
+            lmsg = "Finished deleting {dpa} - had error {he} with return {r}"
+            lmsg = lmsg.format(dpa=dpa, he=had_error, r=result)
+            self._log.info(lmsg)
+
+            dmsg = "{s} {d} {p}, error: {e}"
+            dmsg = dmsg.format(
+                s="Failed to delete" if had_error else "Successfully deleted",
+                d=delmode,
+                p=pstr,
+                e=("\n" + tools.json.re_load(result)) if result else None,
+            )
+
+            dinfo["delete_success"] = not had_error
+            dinfo["delete_msg"] = dmsg
+
+            done.append(dinfo)
+
+            if had_error:
+                if warning and not error:
+                    warnings.warn(dmsg, exceptions.ClientDeleteWarning)
+                elif error:
+                    raise exceptions.ClientDeleteFailure(dmsg)
+
+        return done
+
+    def _check_connect_error(self, adapter, node, check_bool, response, error=True):
+        """Pass."""
+        if error and check_bool:
+            raise exceptions.ClientConnectFailure(
+                response=response, adapter=adapter, node=node
+            )
+
+    def check(self, clients, error=True):
+        """Pass."""
+        clients = tools.listify(clients, dictkeys=False)
         results = []
 
         for client in clients:
-            response = self._check(
+            checked = self._check(
                 adapter_name=client["adapter_raw"],
-                config=client["settings_raw"],
+                config=client["client_config"],
                 node_id=client["node_id"],
             )
 
-            if error and response.text:
-                raise exceptions.ClientConnectFailure(
-                    response=response,
-                    adapter=client["adapter"],
-                    node=client["node_name"],
-                )
+            self._check_connect_error(
+                adapter=client["adapter"],
+                node=client["node_name"],
+                check_bool=checked,
+                response=checked,
+                error=error,
+            )
 
             result = {
                 "adapter": client["adapter"],
                 "node": client["node_name"],
-                "status": not bool(response.text),
-                "response": tools.json.re_load(response.text),
+                "status": not bool(checked),
+                "response": tools.json.re_load(checked),
             }
 
             results.append(result)
 
         return results
 
-    def add(self, adapter, config, node="master", adapters=None):
+    def start_discovery(self, clients, error=True):
+        """Pass."""
+        clients = tools.listify(clients, dictkeys=False)
+        results = []
+
+        for client in clients:
+            started = self._add(
+                adapter_name=client["adapter_raw"],
+                config=client["client_config"],
+                node_id=client["node_id"],
+            )
+
+            self._check_connect_error(
+                adapter=client["adapter"],
+                node=client["node_name"],
+                check_bool=started["status"] == "error" or started["error"],
+                response=started,
+                error=error,
+            )
+
+            result = {
+                "adapter": client["adapter"],
+                "node": client["node_name"],
+                "status": not bool(started),
+                "response": tools.json.re_load(started),
+            }
+
+            results.append(result)
+
+        return results
+
+    def add(self, adapter, config, node="master", error=True, adapters=None):
         """Add a client to an adapter.
 
         Args:
@@ -408,15 +606,32 @@ class Clients(mixins.Child):
                 name=adapter, node=node, adapters=adapters
             )
 
-        parsed_config = self._parse_config(
-            adapter=adapter, settings_client=adapter["settings_client"], config=config
+        parsed_config = self._config_parse(
+            adapter=adapter, settings_client=adapter["settings_clients"], config=config
         )
 
-        return self._add(
+        added = self._add(
             adapter_name=adapter["name_raw"],
             node_id=adapter["node_id"],
             config=parsed_config,
         )
+
+        self._check_connect_error(
+            adapter=adapter["name"],
+            node=adapter["node_name"],
+            check_bool=added["status"] == "error" or added["error"],
+            response=added,
+            error=error,
+        )
+
+        # new clients don't always show up right away, so we wait a sec
+        time.sleep(1)
+
+        clients = self.get(adapter=adapter["name"], node=adapter["node_name"])
+        found = self.filter_by_uuids(
+            clients=clients, uuids=added["id"], count_min=1, count_max=1
+        )
+        return found[0]
 
     def add_csv_str(
         self,
@@ -426,12 +641,16 @@ class Clients(mixins.Child):
         node="master",
         is_users=False,
         is_installed_sw=False,
+        error=True,
     ):
         """Pass."""
         adapter = self._parent.get_single(name="csv", node=node)
 
         self._validate_csv(
-            filecontent=filecontent, is_users=is_users, is_installed_sw=is_installed_sw
+            filename=filename,
+            filecontent=filecontent,
+            is_users=is_users,
+            is_installed_sw=is_installed_sw,
         )
 
         config = {}
@@ -443,10 +662,16 @@ class Clients(mixins.Child):
         config["csv"]["filecontent"] = filecontent
         config["csv"]["filecontent_type"] = "text/csv"
 
-        return self.add(adapter=adapter, config=config)
+        return self.add(adapter=adapter, config=config, error=error)
 
     def add_csv_file(
-        self, filepath, fieldname, node="master", is_users=False, is_installed_sw=False
+        self,
+        filepath,
+        fieldname,
+        node="master",
+        is_users=False,
+        is_installed_sw=False,
+        error=True,
     ):
         """Pass."""
         adapter = self._parent.get_single(name="csv", node=node)
@@ -454,7 +679,10 @@ class Clients(mixins.Child):
         filename, filecontent = self._parent._load_filepath(filepath)
 
         self._validate_csv(
-            filecontent=filecontent, is_users=is_users, is_installed_sw=is_installed_sw
+            filename=filename,
+            filecontent=filecontent,
+            is_users=is_users,
+            is_installed_sw=is_installed_sw,
         )
 
         config = {}
@@ -466,10 +694,16 @@ class Clients(mixins.Child):
         config["csv"]["filecontent"] = filecontent
         config["csv"]["filecontent_type"] = "text/csv"
 
-        return self.add(adapter=adapter, config=config)
+        return self.add(adapter=adapter, config=config, error=error)
 
     def add_csv_url(
-        self, url, fieldname, node="master", is_users=False, is_installed_sw=False
+        self,
+        url,
+        fieldname,
+        node="master",
+        is_users=False,
+        is_installed_sw=False,
+        error=True,
     ):
         """Pass."""
         adapter = self._parent.get_single(name="csv", node=node)
@@ -480,7 +714,7 @@ class Clients(mixins.Child):
         config["user_id"] = fieldname
         config["csv_http"] = url
 
-        return self.add(adapter=adapter, config=config)
+        return self.add(adapter=adapter, config=config, error=error)
 
     def add_csv_share(
         self,
@@ -491,6 +725,7 @@ class Clients(mixins.Child):
         is_installed_sw=False,
         share_username=None,
         share_password=None,
+        error=True,
     ):
         """Pass."""
         adapter = self._parent.get_single(name="csv", node=node)
@@ -500,13 +735,11 @@ class Clients(mixins.Child):
         config["is_installed_sw"] = is_installed_sw
         config["user_id"] = fieldname
         config["csv_share"] = share
-        config["csv_share_username"] = share_username
-        config["csv_share_password"] = share_password
-        return self._add(
-            adapter_name=adapter["name_raw"],
-            node_id=adapter["node_id"],
-            config=self._parse_config(adapter=adapter, **config),
-        )
+        if share_username:
+            config["csv_share_username"] = share_username
+        if share_password:
+            config["csv_share_password"] = share_password
+        return self.add(adapter=adapter, config=config, error=error)
 
 
 class Adapters(mixins.Model, mixins.Mixins):
@@ -571,59 +804,52 @@ class Adapters(mixins.Model, mixins.Mixins):
         filename = rpath.name
         return filename, filecontent
 
-    def get(self, adapters=None):
+    @staticmethod
+    def _build_known(adapters):
         """Pass."""
-        if adapters is None:
-            raw = self._get()
-            parser = ParserAdapters(raw=raw, parent=self)
-            adapters = parser.parse()
+        tmpl = ["name: {name!r}", "node name {node_name!r}", "clients {client_count}"]
+        tmpl = tools.join.comma(tmpl)
+        return [tmpl.format(**a) for a in adapters]
+
+    def get(self):
+        """Pass."""
+        raw = self._get()
+        parser = ParserAdapters(raw=raw, parent=self)
+        adapters = parser.parse()
         return adapters
 
     def get_single(self, name, node="master", adapters=None):
         """Pass."""
-        adapters = self.get_by_names(
+        adapters = self.get()
+        adapters = self.filter_by_names(
             names=name, count_min=1, count_max=1, adapters=adapters
         )
-        adapters = self.get_by_nodes(
+        adapters = self.filter_by_nodes(
             nodes=node, count_min=1, count_max=1, adapters=adapters
         )
         return adapters[0]
 
-    def get_by_names(
+    def filter_by_names(
         self,
+        adapters,
         names,
         use_regex=False,
         count_min=None,
         count_max=None,
         count_error=True,
-        adapters=None,
     ):
         """Pass."""
-        adapters = self.get(adapters=adapters)
-
-        names = [
-            tools.strip.right(name, "_adapter").lower() for name in tools.listify(names)
-        ]
+        names = [tools.strip.right(name, "_adapter") for name in tools.listify(names)]
 
         matches = []
-        known = []
 
         for adapter in adapters:
-            known_str = "name: {name!r}, node name {node_name!r}"
-            known_str = known_str.format(**adapter)
+            match = tools.values_match(
+                checks=names, values=adapter["name"], use_regex=use_regex
+            )
 
-            if known_str not in known:
-                known.append(known_str)
-
-            for name in names:
-                if use_regex:
-                    name_re = re.compile(name, re.I)
-                    match = name_re.search(adapter["name"])
-                else:
-                    match = adapter["name"].lower() == name.lower()
-
-                if match and adapter not in matches:
-                    matches.append(adapter)
+            if match and adapter not in matches:
+                matches.append(adapter)
 
         self._check_counts(
             value=names,
@@ -632,44 +858,31 @@ class Adapters(mixins.Model, mixins.Mixins):
             count_min=count_min,
             count_max=count_max,
             count_total=len(matches),
-            known=known,
+            known=self._build_known(adapters),
             error=count_error,
         )
 
         return matches
 
-    def get_by_nodes(
+    def filter_by_nodes(
         self,
+        adapters,
         nodes,
-        use_regex=False,
+        use_regex=True,
         count_min=None,
         count_max=None,
         count_error=True,
-        adapters=None,
     ):
         """Pass."""
-        adapters = self.get(adapters=adapters)
-
-        nodes = [name.lower() for name in tools.listify(nodes)]
         matches = []
-        known = []
 
         for adapter in adapters:
-            known_str = "name: {name!r}, node name {node_name!r}"
-            known_str = known_str.format(**adapter)
+            match = tools.values_match(
+                checks=nodes, values=adapter["node_name"], use_regex=use_regex
+            )
 
-            if known_str not in known:
-                known.append(known_str)
-
-            for node in nodes:
-                if use_regex:
-                    node_re = re.compile(node, re.I)
-                    match = node_re.search(adapter["node_name"])
-                else:
-                    match = adapter["node_name"].lower() == node.lower()
-
-                if match and adapter not in matches:
-                    matches.append(adapter)
+            if match and adapter not in matches:
+                matches.append(adapter)
 
         self._check_counts(
             value=nodes,
@@ -678,70 +891,22 @@ class Adapters(mixins.Model, mixins.Mixins):
             count_min=count_min,
             count_max=count_max,
             count_total=len(matches),
-            known=known,
+            known=self._build_known(adapters),
             error=count_error,
         )
 
         return matches
 
-    def get_by_features(
+    def filter_by_client_count(
         self,
-        features,
-        use_regex=False,
-        count_min=None,
-        count_max=None,
-        count_error=True,
-        adapters=None,
-    ):
-        """Pass."""
-        adapters = self.get(adapters=adapters)
-
-        features = tools.listify(features)
-        features = [name.lower() for name in features]
-
-        matches = []
-        known = []
-
-        for adapter in adapters:
-            for check in adapter["features"]:
-                if check not in known:
-                    known.append(check)
-
-                for feature in features:
-                    if use_regex:
-                        feature_re = re.compile(feature, re.I)
-                        match = feature_re.search(check)
-                    else:
-                        match = check.lower() == feature.lower()
-
-                    if match and adapter not in matches:
-                        matches.append(adapter)
-
-        self._check_counts(
-            value=features,
-            value_type="adapter by features using regex {}".format(use_regex),
-            objtype=self._router._object_type,
-            count_min=count_min,
-            count_max=count_max,
-            count_total=len(matches),
-            known=known,
-            error=count_error,
-        )
-
-        return matches
-
-    def get_by_client_count(
-        self,
+        adapters,
         client_min=None,
         client_max=None,
         count_min=None,
         count_max=None,
         count_error=True,
-        adapters=None,
     ):
         """Pass."""
-        adapters = self.get(adapters=adapters)
-
         known = []
         matches = []
 
@@ -780,17 +945,10 @@ class Adapters(mixins.Model, mixins.Mixins):
 
         return matches
 
-    def get_by_status(
-        self,
-        status=None,
-        count_min=None,
-        count_max=None,
-        count_error=True,
-        adapters=None,
+    def filter_by_status(
+        self, adapters, status=None, count_min=None, count_max=None, count_error=True
     ):
         """Pass."""
-        adapters = self.get(adapters=adapters)
-
         known = []
         matches = []
 
@@ -829,13 +987,11 @@ class Adapters(mixins.Model, mixins.Mixins):
         filecontent,
         filecontent_type=None,
         node="master",
-        all_adapters=None,
+        adapters=None,
     ):
         """Pass."""
         if tools.is_type.str(adapter):
-            adapter = self.get_single(
-                name=adapter, node=node, all_adapters=all_adapters
-            )
+            adapter = self.get_single(name=adapter, node=node, adapters=adapters)
 
         return self._upload_file(
             adapter_name=adapter["name_raw"],
@@ -853,13 +1009,11 @@ class Adapters(mixins.Model, mixins.Mixins):
         filepath,
         filecontent_type=None,
         node="master",
-        all_adapters=None,
+        adapters=None,
     ):
         """Pass."""
         if tools.is_type.str(adapter):
-            adapter = self.get_single(
-                name=adapter, node=node, all_adapters=all_adapters
-            )
+            adapter = self.get_single(name=adapter, node=node, adapters=adapters)
 
         filename, filecontent = self._load_filepath(filepath)
         return self._upload_file(
@@ -979,7 +1133,7 @@ class ParserAdapters(mixins.Parser):
             parsed_client["adapter_status"] = parent["status"]
             parsed_client["adapter_features"] = parent["features"]
             parsed_client["settings"] = parsed_settings
-            parsed_client["settings_raw"] = raw_config
+            parsed_client["client_config"] = raw_config
             parsed_client["status_bool"] = status_bool
             clients.append(parsed_client)
 

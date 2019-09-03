@@ -5,7 +5,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from . import mixins, routers
 
 
-# TODO: add warning, exclude from coverage
+# TODO: add warning
 class Actions(mixins.Model, mixins.Mixins):
     """Action related API methods.
 

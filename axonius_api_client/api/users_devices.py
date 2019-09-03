@@ -154,15 +154,15 @@ class SavedQuery(mixins.Child):
         return self.get_by_id(value=created)
 
     def delete_by_name(
-        self, value, regex=False, count_min=1, count_max=1, page_size=None
+        self, value, use_regex=False, count_min=1, count_max=1, page_size=None
     ):
         """Delete a saved query by name.
 
         Args:
             name (:obj:`str`):
                 Name of saved query to delete.
-            regex (:obj:`bool`, optional):
-                Search for name using regex.
+            use_regex (:obj:`bool`, optional):
+                Search for name using use_regex.
 
                 Defaults to: False.
             only1 (:obj:`bool`, optional):
@@ -176,7 +176,7 @@ class SavedQuery(mixins.Child):
         """
         found = self.get_by_name(
             value=value,
-            regex=regex,
+            use_regex=use_regex,
             count_min=count_min,
             count_max=count_max,
             page_size=page_size,
@@ -239,14 +239,14 @@ class SavedQuery(mixins.Child):
         return self._parent._only1(rows=rows, count_min=count_min, count_max=count_max)
 
     def get_by_name(
-        self, value, regex=False, count_min=None, count_max=None, page_size=None
+        self, value, use_regex=False, count_min=None, count_max=None, page_size=None
     ):
         """Get saved queries using paging.
 
         Args:
             name (:obj:`str`):
                 Name of saved query to get.
-            regex (:obj:`bool`, optional):
+            use_regex (:obj:`bool`, optional):
                 Search for name using regex.
 
                 Defaults to: True.
@@ -262,7 +262,7 @@ class SavedQuery(mixins.Child):
             :obj:`list` of :obj:`dict`: Each row matching name or :obj:`dict` if only1.
 
         """
-        if regex:
+        if use_regex:
             query = 'name == regex("{value}", "i")'.format(value=value)
         else:
             query = 'name == "{value}"'.format(value=value)
@@ -824,14 +824,14 @@ class UserDeviceMixin(mixins.ModelUserDevice, mixins.Mixins):
     def get_by_saved_query(self, name, **kwargs):
         """Pass."""
         sq = self.saved_query.get_by_name(
-            value=name, regex=False, count_min=1, count_max=1
+            value=name, use_regex=False, count_min=1, count_max=1
         )
 
         kwargs["query"] = sq["view"]["query"]["filter"]
         kwargs["manual_fields"] = sq["view"]["fields"]
         return self.get(**kwargs)
 
-    def get_by_field_value(self, value, name, adapter_name, regex=False, **kwargs):
+    def get_by_field_value(self, value, name, adapter_name, use_regex=False, **kwargs):
         """Build query to perform equals or regex search.
 
         Args:
@@ -850,7 +850,7 @@ class UserDeviceMixin(mixins.ModelUserDevice, mixins.Mixins):
             :obj:`list` of :obj:`dict` or :obj:`dict`
 
         """
-        if regex:
+        if use_regex:
             query = '{field} == regex("{value}", "i")'
         else:
             query = '{field} == "{value}"'

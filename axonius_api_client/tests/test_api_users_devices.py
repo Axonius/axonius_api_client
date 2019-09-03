@@ -38,10 +38,8 @@ tools = axonapi.tools
 
 
 @pytest.mark.needs_url
-@pytest.mark.needs_any_creds
-@pytest.mark.parametrize(
-    "creds", ["creds_user", "creds_key"], indirect=True, scope="class"
-)
+@pytest.mark.needs_key_creds
+@pytest.mark.parametrize("creds", ["creds_key"], indirect=True, scope="class")
 @pytest.mark.parametrize("apicls", [axonapi.api.Users, axonapi.Devices], scope="class")
 class TestBoth(object):
     """Pass."""
@@ -439,7 +437,7 @@ class TestBoth(object):
     def test_sq_get_name_re(self, apiobj, test_sq_get):
         """Pass."""
         name = test_sq_get[0]["name"][0]
-        data = apiobj.saved_query.get_by_name(value=name, regex=True)
+        data = apiobj.saved_query.get_by_name(value=name, use_regex=True)
         assert tools.is_type.lod(data)
         assert len(data) >= 1
 
@@ -628,7 +626,7 @@ class TestBoth(object):
             value="a",
             name=field_name,
             adapter_name=adapter_name,
-            regex=True,
+            use_regex=True,
             **fields_dict_manual
         )
         assert tools.is_type.list(data)
@@ -700,10 +698,8 @@ class TestBoth(object):
 
 
 @pytest.mark.needs_url
-@pytest.mark.needs_any_creds
-@pytest.mark.parametrize(
-    "creds", ["creds_user", "creds_key"], indirect=True, scope="class"
-)
+@pytest.mark.needs_key_creds
+@pytest.mark.parametrize("creds", ["creds_key"], indirect=True, scope="class")
 class TestUsers(object):
     """Pass."""
 
@@ -806,10 +802,8 @@ class TestUsers(object):
 
 
 @pytest.mark.needs_url
-@pytest.mark.needs_any_creds
-@pytest.mark.parametrize(
-    "creds", ["creds_user", "creds_key"], indirect=True, scope="class"
-)
+@pytest.mark.needs_key_creds
+@pytest.mark.parametrize("creds", ["creds_key"], indirect=True, scope="class")
 class TestDevices(object):
     """Pass."""
 

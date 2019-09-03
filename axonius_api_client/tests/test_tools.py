@@ -507,6 +507,114 @@ class TestNestDepth(object):
         assert x == 0
 
 
+class TestValuesMatch(object):
+    """Test tools.values_match."""
+
+    def test_no_case_no_regex(self):
+        """Simple test."""
+        x = tools.values_match(
+            checks="x", values="x", use_regex=False, ignore_case=False
+        )
+        assert x
+        x = tools.values_match(
+            checks="x", values="X", use_regex=False, ignore_case=False
+        )
+        assert not x
+        x = tools.values_match(
+            checks="x", values=["X"], use_regex=False, ignore_case=False
+        )
+        assert not x
+        x = tools.values_match(
+            checks="x", values=["X", "x"], use_regex=False, ignore_case=False
+        )
+        assert not x
+
+    def test_case_no_regex(self):
+        """Simple test."""
+        x = tools.values_match(
+            checks="x", values="X", use_regex=False, ignore_case=True
+        )
+        assert x
+        x = tools.values_match(
+            checks="x", values="x", use_regex=False, ignore_case=True
+        )
+        assert x
+        x = tools.values_match(
+            checks="x", values="xxxxx", use_regex=False, ignore_case=True
+        )
+        assert not x
+        x = tools.values_match(
+            checks="x", values=["X"], use_regex=False, ignore_case=True
+        )
+        assert x
+        x = tools.values_match(
+            checks="x", values=["X", "x"], use_regex=False, ignore_case=True
+        )
+        assert x
+        x = tools.values_match(
+            checks="x", values=["A", "a"], use_regex=False, ignore_case=True
+        )
+        assert not x
+
+    def test_case_regex(self):
+        """Simple test."""
+        x = tools.values_match(checks="x", values="X", use_regex=True, ignore_case=True)
+        assert x
+        x = tools.values_match(
+            checks=".*", values="X", use_regex=True, ignore_case=True
+        )
+        assert x
+        x = tools.values_match(checks="x", values="x", use_regex=True, ignore_case=True)
+        assert x
+        x = tools.values_match(
+            checks="x", values="xxxxx", use_regex=True, ignore_case=True
+        )
+        assert x
+        x = tools.values_match(
+            checks="x", values=["X"], use_regex=True, ignore_case=True
+        )
+        assert x
+        x = tools.values_match(
+            checks="x", values=["X", "x"], use_regex=True, ignore_case=True
+        )
+        assert x
+        x = tools.values_match(
+            checks="x", values=["A", "a"], use_regex=True, ignore_case=True
+        )
+        assert not x
+
+    def test_no_case_regex(self):
+        """Simple test."""
+        x = tools.values_match(
+            checks="x", values="X", use_regex=True, ignore_case=False
+        )
+        assert not x
+        x = tools.values_match(
+            checks=".*", values="X", use_regex=True, ignore_case=False
+        )
+        assert x
+        x = tools.values_match(
+            checks="x", values="x", use_regex=True, ignore_case=False
+        )
+        assert x
+        x = tools.values_match(
+            checks="x", values="xxxxx", use_regex=True, ignore_case=False
+        )
+        assert x
+        x = tools.values_match(
+            checks="x", values=["X"], use_regex=True, ignore_case=False
+        )
+        assert not x
+        x = tools.values_match(
+            checks="x", values=["X", "x"], use_regex=True, ignore_case=False
+        )
+        assert not x
+        x = tools.values_match(
+            checks="x", values=["A", "a"], use_regex=True, ignore_case=False
+        )
+        assert not x
+
+
 class TestListify(object):
     """Test tools.listify."""
 
@@ -514,6 +622,11 @@ class TestListify(object):
         """Simple test."""
         x = tools.listify({"x": 1, "y": 1})
         assert x == ["x", "y"]
+
+    def test_dict_notkeys(self):
+        """Simple test."""
+        x = tools.listify({"x": 1, "y": 1}, dictkeys=False)
+        assert x == [{"x": 1, "y": 1}]
 
     def test_tuple(self):
         """Simple test."""
