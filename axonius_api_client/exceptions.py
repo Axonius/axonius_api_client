@@ -33,23 +33,31 @@ class HttpError(AxonError):
     """Parent exception for all Authentication errors."""
 
 
-class ClientError(ApiError):
+class CnxError(ApiError):
     """Pass."""
 
 
-class ClientDeleteForceFalse(ClientError):
+class CnxWarning(ApiWarning):
     """Pass."""
 
 
-class ClientDeleteFailure(ClientError):
+class CnxDeleteForce(CnxError):
     """Pass."""
 
 
-class ClientDeleteWarning(ApiWarning):
+class CnxDeleteFailure(CnxError):
     """Pass."""
 
 
-class ClientConnectFailure(ClientError):
+class CnxDeleteWarning(CnxWarning):
+    """Pass."""
+
+
+class CnxCsvWarning(CnxWarning):
+    """Pass."""
+
+
+class CnxFailure(CnxError):
     """Error when response has error key in JSON."""
 
     def __init__(self, response, adapter, node):
@@ -64,12 +72,12 @@ class ClientConnectFailure(ClientError):
                 Defaults to: None.
 
         """
-        msg = "Client connectivity failed for adapter {a!r} on node {n!r}:\n{r}"
+        msg = "Cnx test failed for adapter {a!r} on node {n!r}:\n{r}"
         msg = msg.format(a=adapter, n=node, r=tools.json.re_load(response))
-        super(ClientConnectFailure, self).__init__(msg)
+        super(CnxFailure, self).__init__(msg)
 
 
-class ClientConfigError(ClientError):
+class CnxSettingError(CnxError):
     """Pass."""
 
     def __init__(self, name, value, error, schema):
@@ -87,22 +95,22 @@ class ClientConfigError(ClientError):
             error=error,
             ss=tools.json.dump(schema),
         )
-        super(ClientConfigError, self).__init__(msg)
+        super(CnxSettingError, self).__init__(msg)
 
 
-class ClientConfigMissingError(ClientConfigError):
+class CnxSettingMissing(CnxSettingError):
     """Pass."""
 
 
-class ClientConfigInvalidTypeError(ClientConfigError):
+class CnxSettingInvalidType(CnxSettingError):
     """Pass."""
 
 
-class ClientConfigInvalidChoiceError(ClientConfigError):
+class CnxSettingInvalidChoice(CnxSettingError):
     """Pass."""
 
 
-class ClientConfigUnknownError(ClientConfigError):
+class CnxSettingUnknownType(CnxSettingError):
     """Pass."""
 
 
@@ -200,7 +208,7 @@ class JsonInvalid(ResponseError):
 class JsonError(ResponseError):
     """Error when response has error key in JSON."""
 
-    def __init__(self, response, data, exc=None, details=True, bodies=True):
+    def __init__(self, response, data, exc=None, details=True, bodies=False):
         """Constructor.
 
         Args:
@@ -212,14 +220,12 @@ class JsonError(ResponseError):
                 Defaults to: None.
 
         """
-        data_error = "Unknown"
-        data_status = "Unknown"
         if tools.is_type.dict(data):
-            data_error = data.get("error", "No error key!")
-            data_status = data.get("status", "No status key!")
+            data = ["{}: {}".format(k, v) for k, v in data.items()]
+            data = tools.join.cr(data, indent="    ")
 
-        error = "JSON has error={e!r} with status {s!r} in response"
-        error = error.format(e=data_error, s=data_status)
+        error = "Found error in response JSON: {d}"
+        error = error.format(d=data)
 
         super(JsonError, self).__init__(
             response=response, error=error, exc=exc, details=details, bodies=bodies

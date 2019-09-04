@@ -2,6 +2,9 @@
 """Test suite for axonapi.api.users_devices."""
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+import pdb  # noqa
+import warnings
+
 import pytest
 
 import axonius_api_client as axonapi
@@ -11,47 +14,49 @@ from . import need_creds
 tools = axonapi.tools
 exceptions = axonapi.exceptions
 
+# FUTURE: adding client with parsed config instead of raw config breaks adapters._get()
+
 CSV_FILENAME = "badwolf.csv"
 CSV_FILECONTENTS = ["mac_address,field1", "06:37:53:6E:A2:9C,e", "06:37:53:6E:A2:9C,h"]
 CSV_FILECONTENT_STR = "\r\n".join(CSV_FILECONTENTS) + "\r\n"
 CSV_FILECONTENT_BYTES = CSV_FILECONTENT_STR.encode()
 
 FAKE_CLIENT_OK = {
-    "adapter": "fluff1",
-    "client_id": "foobar1",
+    "adapter_name": "fluff1",
+    "id": "foobar1",
     "uuid": "abc123",
-    "status_bool": True,
+    "status": True,
 }
 FAKE_CLIENT_BAD = {
-    "adapter": "fluff1",
-    "client_id": "foobar2",
+    "adapter_name": "fluff1",
+    "id": "foobar2",
     "uuid": "zxy987",
-    "status_bool": False,
+    "status": False,
 }
 FAKE_CLIENTS = [FAKE_CLIENT_OK, FAKE_CLIENT_BAD]
 FAKE_ADAPTER_CLIENTS_OK = {
-    "clients": [FAKE_CLIENT_OK],
+    "cnx": [FAKE_CLIENT_OK],
     "name": "fluff1",
     "name_raw": "fluff1_adapter",
     "node_name": "master",
-    "client_count": 2,
-    "status_bool": True,
+    "cnx_count": 2,
+    "status": True,
 }
 FAKE_ADAPTER_CLIENTS_BAD = {
-    "clients": FAKE_CLIENTS,
+    "cnx": FAKE_CLIENTS,
     "name": "fluff2",
     "name_raw": "fluff2_adapter",
     "node_name": "master",
-    "client_count": 2,
-    "status_bool": False,
+    "cnx_count": 2,
+    "status": False,
 }
 FAKE_ADAPTER_NOCLIENTS = {
-    "clients": [],
+    "cnx": [],
     "name": "fluff3",
     "name_raw": "fluff3_adapter",
     "node_name": "master",
-    "client_count": 0,
-    "status_bool": None,
+    "cnx_count": 0,
+    "status": None,
 }
 FAKE_ADAPTERS = [
     FAKE_ADAPTER_CLIENTS_BAD,
@@ -98,10 +103,10 @@ class TestAdapters(object):
         assert http.url in format(api)
         assert http.url in repr(api)
 
-        assert isinstance(api.clients, axonapi.api.mixins.Child)
-        assert isinstance(api.clients, axonapi.api.adapters.Clients)
-        assert api.clients.__class__.__name__ in format(api.clients)
-        assert api.clients.__class__.__name__ in repr(api.clients)
+        assert isinstance(api.cnx, axonapi.api.mixins.Child)
+        assert isinstance(api.cnx, axonapi.api.adapters.Cnx)
+        assert api.cnx.__class__.__name__ in format(api.cnx)
+        assert api.cnx.__class__.__name__ in repr(api.cnx)
 
         assert isinstance(api._router, axonapi.api.routers.Router)
 
@@ -126,76 +131,216 @@ class TestAdapters(object):
         with pytest.raises(exceptions.ApiError):
             apiobj._load_filepath(test_path)
 
+    def val_client(self, name, instance, client):
+        """Pass."""
+        assert tools.is_type.dict(client)
+        assert tools.is_type.dict(client["client_config"]) and client["client_config"]
+        assert tools.is_type.str(client["uuid"]) and client["uuid"]
+        assert tools.is_type.str(client["client_id"])
+        if not client["client_id"]:
+            msg = "Client for {} has an empty client_id {}"
+            msg = msg.format(name, client["client_id"])
+            warnings.warn(msg)
+
+        assert tools.is_type.str(client["error"]) or tools.is_type.none(client["error"])
+        assert tools.is_type.str(client["node_id"]) and client["node_id"]
+        assert tools.is_type.str(client["status"]) and client["status"] in [
+            "error",
+            "success",
+        ]
+
+        if client["status"] == "error":
+            assert instance["status"] == "warning"
+        assert tools.is_type.str(client["uuid"]) and client["uuid"]
+
+    def val_schema(self, name, schema):
+        """Pass."""
+        assert tools.is_type.lod(schema["items"]) and schema["items"]
+        assert tools.is_type.los(schema["required"])
+        for req in schema["required"]:
+            item_names = [x["name"] for x in schema["items"]]
+            # FUTURE: schema's are defining required items that dont exist in items
+            if req not in item_names:
+                msg = "Schema for {} has required item {!r} not in defined items {}"
+                msg = msg.format(name, req, item_names)
+                warnings.warn(msg)
+
+        for item in schema["items"]:
+            assert tools.is_type.str(item["name"]) and item["name"]
+            assert tools.is_type.str(item["type"]) and item["type"]
+            assert tools.is_type.str(item["title"]) and item["title"]
+            assert item["type"] in [
+                "number",
+                "integer",
+                "string",
+                "bool",
+                "array",
+                "file",
+            ]
+
+    def val_instance(self, name, instance):
+        """Pass."""
+        assert tools.is_type.str(instance["node_id"]) and instance["node_id"]
+        assert (
+            tools.is_type.str(instance["unique_plugin_name"])
+            and instance["unique_plugin_name"]
+        )
+        assert tools.is_type.str(instance["node_name"]) and instance["node_name"]
+        assert instance["status"] in ["warning", "success", None, ""]
+        assert tools.is_type.los(instance["supported_features"])
+        assert tools.is_type.list(instance["clients"])
+        assert tools.is_type.dict(instance["config"]) and instance["config"]
+        assert tools.is_type.dict(instance["schema"]) and instance["schema"]
+
+        self.val_schema(name, instance["schema"])
+
+        assert len(instance["config"]) in [1, 2]
+        assert "AdapterBase" in instance["config"]
+
+        for config_name, config in instance["config"].items():
+            # AdapterBase: {"config": {}, "schema": {}}
+            assert tools.is_type.dict(config["config"]) and config["config"]
+            assert (
+                tools.is_type.str(config["schema"]["pretty_name"])
+                and config["schema"]["pretty_name"]
+            )
+            assert tools.is_type.dict(config["schema"]) and config["schema"]
+            self.val_schema(name, config["schema"])
+
+        for client in instance["clients"]:
+            self.val_client(name, instance, client)
+
     def test__get(self, apiobj):
         """Pass."""
         data = apiobj._get()
         assert tools.is_type.dict(data)
-        # TODO do asserts for structure
+        for name, instances in data.items():
+            assert name.endswith("_adapter")
+            assert tools.is_type.list(instances)
+            for instance in instances:
+                self.val_instance(name, instance)
 
     def test_get(self, apiobj):
         """Pass."""
         data = apiobj.get()
         assert tools.is_type.list(data)
         for x in data:
+            assert sorted(list(x)) == sorted(
+                [
+                    "adv_settings",
+                    "cnx",
+                    "cnx_bad",
+                    "cnx_count",
+                    "cnx_count_bad",
+                    "cnx_count_ok",
+                    "cnx_ok",
+                    "cnx_settings",
+                    "features",
+                    "name",
+                    "name_plugin",
+                    "name_raw",
+                    "node_id",
+                    "node_name",
+                    "settings",
+                    "status",
+                    "status_raw",
+                ]
+            )
             assert tools.is_type.dict(x)
             assert tools.is_type.str(x["name"])
             assert tools.is_type.str(x["name_raw"])
             assert tools.is_type.str(x["name_plugin"])
             assert tools.is_type.str(x["node_name"])
             assert tools.is_type.str(x["node_id"])
-            assert tools.is_type.str(x["status"])
-            assert tools.is_type.list(x["features"])
-            assert tools.is_type.int(x["client_count"])
-            assert tools.is_type.int(x["client_count_ok"])
-            assert tools.is_type.int(x["client_count_bad"])
-            assert tools.is_type.bool(x["status_bool"]) or tools.is_type.none(
-                x["status_bool"]
-            )
-            assert tools.is_type.dict(x["settings_clients"])
-            assert tools.is_type.dict(x["settings_adapter"])
-            assert tools.is_type.dict(x["settings_advanced"])
-            assert tools.is_type.list(x["clients"])
+            assert tools.is_type.str(x["status_raw"])
+            assert tools.is_type.los(x["features"])
+            assert tools.is_type.int(x["cnx_count"])
+            assert tools.is_type.int(x["cnx_count_ok"])
+            assert tools.is_type.int(x["cnx_count_bad"])
+            assert tools.is_type.bool(x["status"]) or tools.is_type.none(x["status"])
+            assert tools.is_type.dict(x["cnx_settings"])
+            assert tools.is_type.dict(x["settings"])
+            assert tools.is_type.dict(x["adv_settings"])
 
-            for s, si in x["settings_clients"].items():
+            for i in ["cnx", "cnx_ok", "cnx_bad"]:
+                assert tools.is_type.list(x[i])
+                if x[i]:
+                    assert tools.is_type.lod(x[i])
+
+            for s, si in x["cnx_settings"].items():
                 assert tools.is_type.dict(si)
                 assert tools.is_type.bool(si["required"])
+                assert tools.is_type.str(si["name"]) and si["name"]
+                assert tools.is_type.str(si["type"]) and si["type"]
+                assert tools.is_type.str(si["title"]) and si["title"]
 
-            for s, si in x["settings_adapter"].items():
+            for s, si in x["settings"].items():
                 assert tools.is_type.dict(si)
                 assert tools.is_type.bool(si["required"])
+                assert tools.is_type.str(si["name"]) and si["name"]
+                assert tools.is_type.str(si["type"]) and si["type"]
+                assert tools.is_type.str(si["title"]) and si["title"]
                 assert "value" in si
 
-            for s, si in x["settings_advanced"].items():
+            for s, si in x["adv_settings"].items():
                 assert tools.is_type.dict(si)
                 assert tools.is_type.bool(si["required"])
+                assert tools.is_type.str(si["name"]) and si["name"]
+                assert tools.is_type.str(si["type"]) and si["type"]
+                assert tools.is_type.str(si["title"]) and si["title"]
                 assert "value" in si
 
-            for c in x["clients"]:
+            for c in x["cnx"]:
+                assert sorted(list(c)) == sorted(
+                    [
+                        "adapter_name",
+                        "adapter_name_raw",
+                        "adapter_status",
+                        "config",
+                        "config_raw",
+                        "date_fetched",
+                        "error",
+                        "id",
+                        "node_id",
+                        "node_name",
+                        "status",
+                        "status_raw",
+                        "uuid",
+                    ]
+                )
                 assert tools.is_type.dict(c)
-                assert tools.is_type.dict(c["client_config"])
-                assert c["node_name"] == x["node_name"]
-                assert c["node_id"] == x["node_id"]
-                assert c["adapter"] == x["name"]
-                assert c["adapter_raw"] == x["name_raw"]
+                assert c["adapter_name"] == x["name"]
+                assert c["adapter_name_raw"] == x["name_raw"]
                 assert c["adapter_status"] == x["status"]
-                assert c["adapter_features"] == x["features"]
-                assert tools.is_type.bool(c["status_bool"])
-                if c["status_bool"] is False:
-                    assert x["status_bool"] is False
-                if c["status_bool"] is True:
-                    assert x["status_bool"] in [True, False]
-                assert tools.is_type.dict(c["settings"])
-                for s, si in c["settings"].items():
+                assert tools.is_type.dict(c["config"]) and c["config"]
+                assert tools.is_type.dict(c["config_raw"]) and c["config_raw"]
+                assert tools.is_type.str(c["date_fetched"])
+                assert tools.is_type.str(c["error"]) or tools.is_type.none(c["error"])
+                assert tools.is_type.str(c["id"])
+                assert c["node_id"] == x["node_id"]
+                assert c["node_name"] == x["node_name"]
+                assert tools.is_type.bool(c["status"])
+                assert tools.is_type.str(c["status_raw"])
+                assert tools.is_type.str(c["uuid"])
+
+                if c["status"] is False:
+                    assert x["status"] is False
+                if c["status"] is True:
+                    assert x["status"] in [True, False]
+
+                for s, si in c["config"].items():
                     assert tools.is_type.dict(si)
                     assert "value" in si
                     assert tools.is_type.bool(si["required"])
-                    assert tools.is_type.str(si["type"])
-                    assert tools.is_type.str(si["title"])
+                    assert tools.is_type.str(si["type"]) and si["type"]
+                    assert tools.is_type.str(si["title"]) and si["title"]
                     assert si["name"] == s
+
                     if "enum" in si:
-                        assert tools.is_type.list(si["enum"])
+                        assert tools.is_type.los(si["enum"])
+
                     if si["type"] == "array" and si["value"]:
-                        assert tools.is_type.list(si["value"])
+                        assert tools.is_type.los(si["value"])
 
     def test_get_single(self, apiobj):
         """Pass."""
@@ -354,32 +499,32 @@ class TestAdapters(object):
         assert tools.is_type.list(data)
         assert len(data) == 3
 
-    def test_filter_by_client_count(self, apiobj):
+    def test_filter_by_cnx_count(self, apiobj):
         """Pass."""
         with pytest.raises(exceptions.TooFewObjectsFound):
-            apiobj.filter_by_client_count(
-                client_min=9999, count_min=1, adapters=FAKE_ADAPTERS
+            apiobj.filter_by_cnx_count(
+                cnx_min=9999, count_min=1, adapters=FAKE_ADAPTERS
             )
 
-        data = apiobj.filter_by_client_count(
-            client_min=9999, count_min=1, count_error=False, adapters=FAKE_ADAPTERS
+        data = apiobj.filter_by_cnx_count(
+            cnx_min=9999, count_min=1, count_error=False, adapters=FAKE_ADAPTERS
         )
         assert tools.is_type.list(data)
         assert len(data) == 0
 
-        data = apiobj.filter_by_client_count(client_min=9999, adapters=FAKE_ADAPTERS)
+        data = apiobj.filter_by_cnx_count(cnx_min=9999, adapters=FAKE_ADAPTERS)
         assert tools.is_type.list(data)
         assert len(data) == 0
 
-        data = apiobj.filter_by_client_count(client_min=1, adapters=FAKE_ADAPTERS)
+        data = apiobj.filter_by_cnx_count(cnx_min=1, adapters=FAKE_ADAPTERS)
         assert tools.is_type.list(data)
         assert len(data) >= 1
 
-        data = apiobj.filter_by_client_count(client_max=1, adapters=FAKE_ADAPTERS)
+        data = apiobj.filter_by_cnx_count(cnx_max=1, adapters=FAKE_ADAPTERS)
         assert tools.is_type.list(data)
         assert len(data) >= 1
 
-        data = apiobj.filter_by_client_count(client_max=0, adapters=FAKE_ADAPTERS)
+        data = apiobj.filter_by_cnx_count(cnx_max=0, adapters=FAKE_ADAPTERS)
         assert tools.is_type.list(data)
         assert len(data) >= 1
 
@@ -388,17 +533,17 @@ class TestAdapters(object):
         data = apiobj.filter_by_status(status=True, adapters=FAKE_ADAPTERS)
         assert tools.is_type.list(data)
         for x in data:
-            assert x["status_bool"] is True
+            assert x["status"] is True
 
         data = apiobj.filter_by_status(status=False, adapters=FAKE_ADAPTERS)
         assert tools.is_type.list(data)
         for x in data:
-            assert x["status_bool"] is False
+            assert x["status"] is False
 
         data = apiobj.filter_by_status(status=None, adapters=FAKE_ADAPTERS)
         assert tools.is_type.list(data)
         for x in data:
-            assert x["status_bool"] is None
+            assert x["status"] is None
 
     def _create_csv_client(self, apiobj, csv_adapter):
         """Pass."""
@@ -416,38 +561,40 @@ class TestAdapters(object):
         config["user_id"] = "private_create_csv_client"
         config["csv"] = uploaded
 
-        added = apiobj.clients._add(
+        added = apiobj.cnx._add(
             adapter_name=csv_adapter["name_raw"],
             node_id=csv_adapter["node_id"],
             config=config,
         )
         assert tools.is_type.dict(added)
         assert tools.is_type.str(added["id"])
+
         assert added["error"] is None
         assert added["status"] == "success"
         assert added["client_id"] == "private_create_csv_client"
+        assert tools.is_type.str(added["id"]) and added["id"]
         return added, config
 
     def _delete_csv_client(self, apiobj, csv_adapter, added):
         """Pass."""
-        deleted = apiobj.clients._delete(
+        deleted = apiobj.cnx._delete(
             adapter_name=csv_adapter["name_raw"],
             node_id=csv_adapter["node_id"],
-            client_id=added["id"],
+            cnx_uuid=added["id"],
         )
         assert not deleted
 
-        not_deleted = apiobj.clients._delete(
+        not_deleted = apiobj.cnx._delete(
             adapter_name=csv_adapter["name_raw"],
             node_id=csv_adapter["node_id"],
-            client_id=added["id"],
+            cnx_uuid=added["id"],
         )
         assert not_deleted
         return deleted, not_deleted
 
     def _check_csv_client(self, apiobj, csv_adapter, config):
         """Pass."""
-        checked = apiobj.clients._check(
+        checked = apiobj.cnx._check(
             adapter_name=csv_adapter["name_raw"],
             node_id=csv_adapter["node_id"],
             config=config,
@@ -480,9 +627,9 @@ class TestAdapters(object):
             dict(name="test10", type="file", required=True),
         )
 
-        parsed_config = apiobj.clients._config_parse(
+        parsed_config = apiobj.cnx._config_parse(
             adapter=csv_adapter,
-            settings_client=settings,
+            settings=settings,
             config=dict(
                 test1=False,
                 test_ignore="",
@@ -509,17 +656,15 @@ class TestAdapters(object):
     def test_clients__config_parse_missing(self, apiobj, csv_adapter):
         """Pass."""
         settings = build_test_settings(dict(name="test1", type="string", required=True))
-        with pytest.raises(exceptions.ClientConfigMissingError):
-            apiobj.clients._config_parse(
-                adapter=csv_adapter, settings_client=settings, config={}
-            )
+        with pytest.raises(exceptions.CnxSettingMissing):
+            apiobj.cnx._config_parse(adapter=csv_adapter, settings=settings, config={})
 
     def test_clients__config_parse_badtype(self, apiobj, csv_adapter):
         """Pass."""
         settings = build_test_settings(dict(name="test1", type="string", required=True))
-        with pytest.raises(exceptions.ClientConfigInvalidTypeError):
-            apiobj.clients._config_parse(
-                adapter=csv_adapter, settings_client=settings, config=dict(test1=True)
+        with pytest.raises(exceptions.CnxSettingInvalidType):
+            apiobj.cnx._config_parse(
+                adapter=csv_adapter, settings=settings, config=dict(test1=True)
             )
 
     def test_clients__config_parse_badchoice(self, apiobj, csv_adapter):
@@ -527,9 +672,9 @@ class TestAdapters(object):
         settings = build_test_settings(
             dict(name="test1", type="string", required=True, enum=["x"])
         )
-        with pytest.raises(exceptions.ClientConfigInvalidChoiceError):
-            apiobj.clients._config_parse(
-                adapter=csv_adapter, settings_client=settings, config=dict(test1="a")
+        with pytest.raises(exceptions.CnxSettingInvalidChoice):
+            apiobj.cnx._config_parse(
+                adapter=csv_adapter, settings=settings, config=dict(test1="a")
             )
 
     def test_clients__config_parse_unknowntype(self, apiobj, csv_adapter):
@@ -537,25 +682,25 @@ class TestAdapters(object):
         settings = build_test_settings(
             dict(name="test1", type="badwolf", required=True)
         )
-        with pytest.raises(exceptions.ClientConfigUnknownError):
-            apiobj.clients._config_parse(
-                adapter=csv_adapter, settings_client=settings, config=dict(test1="a")
+        with pytest.raises(exceptions.CnxSettingUnknownType):
+            apiobj.cnx._config_parse(
+                adapter=csv_adapter, settings=settings, config=dict(test1="a")
             )
 
     def test_clients__config_file(self, apiobj):
         """Pass."""
         d = {"uuid": "x", "filename": "x", "extra": "x"}
-        assert apiobj.clients._config_file(d) == {"uuid": "x", "filename": "x"}
+        assert apiobj.cnx._config_file(d) == {"uuid": "x", "filename": "x"}
 
     def test_clients__config_check_type(self, apiobj):
         """Pass."""
         schema = {"name": "test", "title": "test", "type": "string", "required": True}
-        apiobj.clients._config_type_check(
+        apiobj.cnx._config_type_check(
             name="test", value="a", type_cb=tools.is_type.str, schema=schema
         )
 
-        with pytest.raises(exceptions.ClientConfigInvalidTypeError):
-            apiobj.clients._config_type_check(
+        with pytest.raises(exceptions.CnxSettingInvalidType):
+            apiobj.cnx._config_type_check(
                 name="test", value="a", type_cb=tools.is_type.int, schema=schema
             )
 
@@ -564,9 +709,9 @@ class TestAdapters(object):
         test_path = tmp_path / CSV_FILENAME
         test_path.write_bytes(CSV_FILECONTENT_BYTES)
 
-        schema = csv_adapter["settings_clients"]["csv"]
+        schema = csv_adapter["cnx_settings"]["csv"]
 
-        data = apiobj.clients._config_file_check(
+        data = apiobj.cnx._config_file_check(
             name="csv", value=test_path, schema=schema, adapter=csv_adapter
         )
         assert tools.is_type.dict(data)
@@ -574,7 +719,7 @@ class TestAdapters(object):
         assert all([tools.is_type.str(x) for x in data.values()])
         assert data["filename"] == CSV_FILENAME
 
-        data = apiobj.clients._config_file_check(
+        data = apiobj.cnx._config_file_check(
             name="csv", value=format(test_path), schema=schema, adapter=csv_adapter
         )
         assert tools.is_type.dict(data)
@@ -583,7 +728,7 @@ class TestAdapters(object):
         assert data["filename"] == CSV_FILENAME
 
         with pytest.raises(exceptions.ApiError):
-            data = apiobj.clients._config_file_check(
+            data = apiobj.cnx._config_file_check(
                 name="csv",
                 value=tmp_path / "missing_badwolf.csv",
                 schema=schema,
@@ -591,7 +736,7 @@ class TestAdapters(object):
             )
 
         with pytest.raises(exceptions.ApiError):
-            data = apiobj.clients._config_file_check(
+            data = apiobj.cnx._config_file_check(
                 name="csv",
                 value=format(tmp_path / "missing_badwolf.csv"),
                 schema=schema,
@@ -600,16 +745,16 @@ class TestAdapters(object):
 
     def test_clients__config_file_check_dict_uuid(self, apiobj, csv_adapter):
         """Pass."""
-        schema = csv_adapter["settings_clients"]["csv"]
+        schema = csv_adapter["cnx_settings"]["csv"]
 
         value = {"uuid": "x", "filename": CSV_FILENAME}
-        data = apiobj.clients._config_file_check(
+        data = apiobj.cnx._config_file_check(
             name="csv", value=value, schema=schema, adapter=csv_adapter
         )
         assert tools.is_type.dict(data)
         assert data == value
 
-        data = apiobj.clients._config_file_check(
+        data = apiobj.cnx._config_file_check(
             name="csv",
             value={"uuid": "x", "filepath": CSV_FILENAME},
             schema=schema,
@@ -618,7 +763,7 @@ class TestAdapters(object):
         assert tools.is_type.dict(data)
         assert data == value
 
-        data = apiobj.clients._config_file_check(
+        data = apiobj.cnx._config_file_check(
             name="csv",
             value={"uuid": "x", "filepath": tools.path.resolve(CSV_FILENAME)},
             schema=schema,
@@ -627,16 +772,16 @@ class TestAdapters(object):
         assert tools.is_type.dict(data)
         assert data == value
 
-        with pytest.raises(exceptions.ClientConfigMissingError):
-            data = apiobj.clients._config_file_check(
+        with pytest.raises(exceptions.CnxSettingMissing):
+            data = apiobj.cnx._config_file_check(
                 name="csv", value={"uuid": "x"}, schema=schema, adapter=csv_adapter
             )
 
     def test_clients__config_file_check_dict_filename(self, apiobj, csv_adapter):
         """Pass."""
-        schema = csv_adapter["settings_clients"]["csv"]
+        schema = csv_adapter["cnx_settings"]["csv"]
 
-        data = apiobj.clients._config_file_check(
+        data = apiobj.cnx._config_file_check(
             name="csv",
             value={"filename": CSV_FILENAME, "filecontent": CSV_FILECONTENT_BYTES},
             schema=schema,
@@ -647,16 +792,16 @@ class TestAdapters(object):
         assert all([tools.is_type.str(x) for x in data.values()])
         assert data["filename"] == CSV_FILENAME
 
-        with pytest.raises(exceptions.ClientConfigMissingError):
-            data = apiobj.clients._config_file_check(
+        with pytest.raises(exceptions.CnxSettingMissing):
+            data = apiobj.cnx._config_file_check(
                 name="csv",
                 value={"filename": CSV_FILENAME},
                 schema=schema,
                 adapter=csv_adapter,
             )
 
-        with pytest.raises(exceptions.ClientConfigMissingError):
-            data = apiobj.clients._config_file_check(
+        with pytest.raises(exceptions.CnxSettingMissing):
+            data = apiobj.cnx._config_file_check(
                 name="csv", value={}, schema=schema, adapter=csv_adapter
             )
 
@@ -667,9 +812,9 @@ class TestAdapters(object):
         test_path = tmp_path / CSV_FILENAME
         test_path.write_bytes(CSV_FILECONTENT_BYTES)
 
-        schema = csv_adapter["settings_clients"]["csv"]
+        schema = csv_adapter["cnx_settings"]["csv"]
 
-        data = apiobj.clients._config_file_check(
+        data = apiobj.cnx._config_file_check(
             name="csv",
             value={"filepath": test_path},
             schema=schema,
@@ -680,30 +825,30 @@ class TestAdapters(object):
         assert all([tools.is_type.str(x) for x in data.values()])
         assert data["filename"] == CSV_FILENAME
 
-        with pytest.raises(exceptions.ClientConfigMissingError):
-            data = apiobj.clients._config_file_check(
+        with pytest.raises(exceptions.CnxSettingMissing):
+            data = apiobj.cnx._config_file_check(
                 name="csv",
                 value={"filename": "x.csv"},
                 schema=schema,
                 adapter=csv_adapter,
             )
 
-        with pytest.raises(exceptions.ClientConfigMissingError):
-            data = apiobj.clients._config_file_check(
+        with pytest.raises(exceptions.CnxSettingMissing):
+            data = apiobj.cnx._config_file_check(
                 name="csv", value={}, schema=schema, adapter=csv_adapter
             )
 
     def test_clients__validate_csv_device(self, apiobj):
         """Pass."""
-        content = "{},test1\nabc,def\n".format(apiobj.clients.CSV_FIELDS["device"][0])
+        content = "{},test1\nabc,def\n".format(apiobj.cnx._CSV_FIELDS["device"][0])
 
         with pytest.warns(None) as record:
-            apiobj.clients._validate_csv(filename=CSV_FILENAME, filecontent=content)
+            apiobj.cnx._validate_csv(filename=CSV_FILENAME, filecontent=content)
 
         assert len(record) == 0
 
         with pytest.warns(None) as record:
-            apiobj.clients._validate_csv(
+            apiobj.cnx._validate_csv(
                 filename=CSV_FILENAME, filecontent=content.encode()
             )
 
@@ -711,17 +856,17 @@ class TestAdapters(object):
 
         content = "test2,test1\nabc,def\n"
 
-        with pytest.warns(exceptions.ApiWarning) as record:
-            apiobj.clients._validate_csv(filename=CSV_FILENAME, filecontent=content)
+        with pytest.warns(exceptions.CnxCsvWarning) as record:
+            apiobj.cnx._validate_csv(filename=CSV_FILENAME, filecontent=content)
 
         assert len(record) == 1
 
     def test_clients__validate_csv_users(self, apiobj):
         """Pass."""
-        content = "{},test1\nabc,def\n".format(apiobj.clients.CSV_FIELDS["user"][0])
+        content = "{},test1\nabc,def\n".format(apiobj.cnx._CSV_FIELDS["user"][0])
 
         with pytest.warns(None) as record:
-            apiobj.clients._validate_csv(
+            apiobj.cnx._validate_csv(
                 filename=CSV_FILENAME, filecontent=content, is_users=True
             )
 
@@ -729,8 +874,8 @@ class TestAdapters(object):
 
         content = "test2,test1\nabc,def\n"
 
-        with pytest.warns(exceptions.ApiWarning) as record:
-            apiobj.clients._validate_csv(
+        with pytest.warns(exceptions.CnxCsvWarning) as record:
+            apiobj.cnx._validate_csv(
                 filename=CSV_FILENAME, filecontent=content, is_users=True
             )
 
@@ -738,10 +883,10 @@ class TestAdapters(object):
 
     def test_clients__validate_csv_sw(self, apiobj):
         """Pass."""
-        content = "{},test1\nabc,def\n".format(apiobj.clients.CSV_FIELDS["sw"][0])
+        content = "{},test1\nabc,def\n".format(apiobj.cnx._CSV_FIELDS["sw"][0])
 
         with pytest.warns(None) as record:
-            apiobj.clients._validate_csv(
+            apiobj.cnx._validate_csv(
                 filename=CSV_FILENAME, filecontent=content, is_installed_sw=True
             )
 
@@ -749,8 +894,8 @@ class TestAdapters(object):
 
         content = "test2,test1\nabc,def\n"
 
-        with pytest.warns(exceptions.ApiWarning) as record:
-            apiobj.clients._validate_csv(
+        with pytest.warns(exceptions.CnxCsvWarning) as record:
+            apiobj.cnx._validate_csv(
                 filename=CSV_FILENAME, filecontent=content, is_installed_sw=True
             )
 
@@ -758,116 +903,110 @@ class TestAdapters(object):
 
     def test_clients_get_adapter(self, apiobj):
         """Pass."""
-        clients = apiobj.clients.get(adapter=FAKE_ADAPTER_CLIENTS_OK)
+        clients = apiobj.cnx.get(adapter=FAKE_ADAPTER_CLIENTS_OK)
         assert tools.is_type.list(clients)
-        assert clients == FAKE_ADAPTER_CLIENTS_OK["clients"]
+        assert clients == FAKE_ADAPTER_CLIENTS_OK["cnx"]
 
     def test_clients_get_str(self, apiobj):
         """Pass."""
-        clients = apiobj.clients.get(adapter="csv")
+        clients = apiobj.cnx.get(adapter="csv")
         assert tools.is_type.list(clients)
         for x in clients:
-            assert x["adapter"] == "csv"
+            assert x["adapter_name"] == "csv"
 
     def test_clients_get_los(self, apiobj):
         """Pass."""
-        clients = apiobj.clients.get(adapter=["csv", "active_directory"])
+        clients = apiobj.cnx.get(adapter=["csv", "active_directory"])
         assert tools.is_type.list(clients)
         for x in clients:
-            assert x["adapter"] in ["csv", "active_directory"]
+            assert x["adapter_name"] in ["csv", "active_directory"]
 
     def test_clients_get_none(self, apiobj):
         """Pass."""
-        clients = apiobj.clients.get(adapter=None)
+        clients = apiobj.cnx.get(adapter=None)
         assert tools.is_type.list(clients)
 
     def test_clients_filter_by_status(self, apiobj):
         """Pass."""
-        good = apiobj.clients.filter_by_status(clients=FAKE_CLIENTS, status=True)
+        good = apiobj.cnx.filter_by_status(cnxs=FAKE_CLIENTS, status=True)
         assert good == [FAKE_CLIENTS[0]]
 
-        bad = apiobj.clients.filter_by_status(clients=FAKE_CLIENTS, status=False)
+        bad = apiobj.cnx.filter_by_status(cnxs=FAKE_CLIENTS, status=False)
         assert bad == [FAKE_CLIENTS[1]]
 
     def test_clients_filter_by_ids(self, apiobj):
         """Pass."""
-        just1re = apiobj.clients.filter_by_ids(
-            clients=FAKE_CLIENTS, ids=FAKE_CLIENTS[0]["client_id"], use_regex=True
+        just1re = apiobj.cnx.filter_by_ids(
+            cnxs=FAKE_CLIENTS, ids=FAKE_CLIENTS[0]["id"], use_regex=True
         )
         assert tools.is_type.list(just1re)
         assert just1re == [FAKE_CLIENTS[0]]
 
-        just1 = apiobj.clients.filter_by_ids(
-            clients=FAKE_CLIENTS,
-            ids=FAKE_CLIENTS[0]["client_id"],
-            count_min=1,
-            count_max=1,
+        just1 = apiobj.cnx.filter_by_ids(
+            cnxs=FAKE_CLIENTS, ids=FAKE_CLIENTS[0]["id"], count_min=1, count_max=1
         )
         assert just1 == [FAKE_CLIENTS[0]]
 
         with pytest.raises(exceptions.ObjectNotFound):
-            apiobj.clients.filter_by_ids(
-                clients=FAKE_CLIENTS, ids="badwolfyfakfjlka", count_min=1, count_max=1
+            apiobj.cnx.filter_by_ids(
+                cnxs=FAKE_CLIENTS, ids="badwolfyfakfjlka", count_min=1, count_max=1
             )
 
     def test_clients_filter_by_uuids(self, apiobj):
         """Pass."""
-        just1re = apiobj.clients.filter_by_uuids(
-            clients=FAKE_CLIENTS, uuids=FAKE_CLIENTS[0]["uuid"], use_regex=True
+        just1re = apiobj.cnx.filter_by_uuids(
+            cnxs=FAKE_CLIENTS, uuids=FAKE_CLIENTS[0]["uuid"], use_regex=True
         )
         assert tools.is_type.list(just1re)
         assert just1re == [FAKE_CLIENTS[0]]
 
-        just1 = apiobj.clients.filter_by_uuids(
-            clients=FAKE_CLIENTS,
-            uuids=FAKE_CLIENTS[0]["uuid"],
-            count_min=1,
-            count_max=1,
+        just1 = apiobj.cnx.filter_by_uuids(
+            cnxs=FAKE_CLIENTS, uuids=FAKE_CLIENTS[0]["uuid"], count_min=1, count_max=1
         )
         assert just1 == [FAKE_CLIENTS[0]]
 
         with pytest.raises(exceptions.ObjectNotFound):
-            apiobj.clients.filter_by_uuids(
-                clients=FAKE_CLIENTS, uuids="badwolfyfakfjlka", count_min=1, count_max=1
+            apiobj.cnx.filter_by_uuids(
+                cnxs=FAKE_CLIENTS, uuids="badwolfyfakfjlka", count_min=1, count_max=1
             )
 
     def test_clients_start_discovery(self, apiobj):
         """Pass."""
-        clients = apiobj.clients.get(adapter="active_directory")
+        clients = apiobj.cnx.get(adapter="active_directory")
 
         if not clients:
             reason = "No active directory clients"
             pytest.skip(reason)
 
-        started = apiobj.clients.start_discovery(clients=clients, error=False)
+        started = apiobj.cnx.start_discovery(cnxs=clients, error=False)
         assert tools.is_type.list(started)
         assert len(started) == len(clients)
 
     def test_clients_check(self, apiobj):
         """Pass."""
-        clients = apiobj.clients.get(adapter="active_directory")
+        clients = apiobj.cnx.get(adapter="active_directory")
 
         if not clients:
             reason = "No active directory clients"
             pytest.skip(reason)
 
         for client in clients:
-            checked = apiobj.clients._check(
-                adapter_name=client["adapter_raw"],
+            checked = apiobj.cnx._check(
+                adapter_name=client["adapter_name_raw"],
                 node_id=client["node_id"],
-                config=client["client_config"],
+                config=client["config_raw"],
             )
 
             if checked:
-                data = apiobj.clients.check(clients=client, error=False)
+                data = apiobj.cnx.check(cnxs=client, error=False)
             else:
-                data = apiobj.clients.check(clients=client, error=True)
+                data = apiobj.cnx.check(cnxs=client, error=True)
 
             assert tools.is_type.list(data)
             assert len(data) == 1
             assert tools.is_type.dict(data[0])
-            assert data[0]["adapter"] == client["adapter"]
-            assert data[0]["node"] == client["node_name"]
+            assert data[0]["adapter_name"] == client["adapter_name"]
+            assert data[0]["node_name"] == client["node_name"]
 
             if checked:
                 assert data[0]["status"] is False
@@ -876,86 +1015,86 @@ class TestAdapters(object):
                 assert data[0]["status"] is True
                 assert not data[0]["response"]
 
-            client["client_config"]["dc_name"] = "badwolf"
+            client["config_raw"]["dc_name"] = "badwolf"
 
-            with pytest.raises(exceptions.ClientConnectFailure):
-                apiobj.clients.check(clients=client)
+            with pytest.raises(exceptions.CnxFailure):
+                apiobj.cnx.check(cnxs=client)
 
-            data = apiobj.clients.check(clients=client, error=False)
+            data = apiobj.cnx.check(cnxs=client, error=False)
 
             assert tools.is_type.list(data)
             assert len(data) == 1
             assert tools.is_type.dict(data[0])
-            assert data[0]["adapter"] == client["adapter"]
-            assert data[0]["node"] == client["node_name"]
+            assert data[0]["adapter_name"] == client["adapter_name"]
+            assert data[0]["node_name"] == client["node_name"]
             assert data[0]["status"] is False
             assert data[0]["response"]
 
     def test_clients_add_delete(self, apiobj):
         """Pass."""
         config = {"dc_name": "BADWOLF", "user": "BADWOLF", "password": "BADWOLF"}
-        with pytest.raises(exceptions.ClientConnectFailure):
-            apiobj.clients.add(adapter="active_directory", config=config)
+        with pytest.raises(exceptions.CnxFailure):
+            apiobj.cnx.add(adapter="active_directory", config=config)
 
-        added = apiobj.clients.add(
-            adapter="active_directory", config=config, error=False
-        )
+        added = apiobj.cnx.add(adapter="active_directory", config=config, error=False)
         assert tools.is_type.dict(added)
 
-        with pytest.raises(exceptions.ClientConnectFailure):
-            apiobj.clients.check(clients=added)
+        with pytest.raises(exceptions.CnxFailure):
+            apiobj.cnx.check(cnxs=added)
 
-        with pytest.raises(exceptions.ClientDeleteForceFalse):
-            apiobj.clients.delete(clients=added, error=True, warning=True)
+        with pytest.raises(exceptions.CnxDeleteForce):
+            apiobj.cnx.delete(cnxs=added, error=True, warning=True)
 
-        with pytest.warns(exceptions.ClientDeleteWarning):
-            deleted = apiobj.clients.delete(
-                clients=added, force=True, error=True, warning=True, sleep=0
+        with pytest.warns(exceptions.CnxDeleteWarning):
+            deleted = apiobj.cnx.delete(
+                cnxs=added, force=True, error=True, warning=True, sleep=0
             )
 
         assert tools.is_type.list(deleted)
         assert len(deleted) == 1
 
         deleted_item = deleted[0]
-        assert deleted_item["adapter"] == added["adapter"]
+        assert deleted_item["adapter_name"] == added["adapter_name"]
         assert deleted_item["node_name"] == added["node_name"]
-        assert deleted_item["client_id"] == added["client_id"]
-        assert deleted_item["client_uuid"] == added["uuid"]
-        assert deleted_item["delete_success"]
+        assert deleted_item["id"] == added["id"]
+        assert deleted_item["uuid"] == added["uuid"]
+        assert tools.is_type.bool(deleted_item["delete_success"])
+        assert tools.is_type.str(deleted_item["delete_msg"])
 
-        with pytest.warns(exceptions.ClientDeleteWarning):
-            with pytest.raises(exceptions.ClientDeleteFailure):
-                deleted = apiobj.clients.delete(
-                    clients=added, force=True, error=True, warning=True, sleep=0
+        with pytest.warns(exceptions.CnxDeleteWarning):
+            with pytest.raises(exceptions.CnxDeleteFailure):
+                deleted = apiobj.cnx.delete(
+                    cnxs=added, force=True, error=True, warning=True, sleep=0
                 )
 
-        with pytest.warns(exceptions.ClientDeleteWarning):
-            deleted = apiobj.clients.delete(
-                clients=added, force=True, error=False, warning=True, sleep=0
+        with pytest.warns(exceptions.CnxDeleteWarning):
+            deleted = apiobj.cnx.delete(
+                cnxs=added, force=True, error=False, warning=True, sleep=0
             )
 
-        deleted = apiobj.clients.delete(
-            clients=added, force=True, error=False, warning=False, sleep=0
+        deleted = apiobj.cnx.delete(
+            cnxs=added, force=True, error=False, warning=False, sleep=0
         )
 
     def delete_added(self, apiobj, added):
         """Pass."""
-        deleted = apiobj.clients.delete(
-            clients=added, force=True, error=False, warning=False, sleep=0
+        deleted = apiobj.cnx.delete(
+            cnxs=added, force=True, error=False, warning=False, sleep=0
         )
         assert tools.is_type.list(deleted)
         assert len(deleted) == 1
 
         deleted_item = deleted[0]
-        assert deleted_item["adapter"] == added["adapter"]
+        assert deleted_item["adapter_name"] == added["adapter_name"]
         assert deleted_item["node_name"] == added["node_name"]
-        assert deleted_item["client_id"] == added["client_id"]
-        assert deleted_item["client_uuid"] == added["uuid"]
-        assert deleted_item["delete_success"]
+        assert deleted_item["id"] == added["id"]
+        assert deleted_item["uuid"] == added["uuid"]
+        assert tools.is_type.bool(deleted_item["delete_success"])
+        assert tools.is_type.str(deleted_item["delete_msg"])
 
     def test_clients_add_delete_csv_str(self, apiobj):
         """Pass."""
-        added = apiobj.clients.add_csv_str(
+        added = apiobj.cnx.add_csv_str(
             filename=CSV_FILENAME,
             filecontent=CSV_FILECONTENT_BYTES,
             fieldname="STR_" + CSV_FILENAME,
@@ -969,7 +1108,7 @@ class TestAdapters(object):
         test_path = tmp_path / CSV_FILENAME
         test_path.write_text(CSV_FILECONTENT_STR)
 
-        added = apiobj.clients.add_csv_file(
+        added = apiobj.cnx.add_csv_file(
             filepath=test_path, fieldname="FILE_" + CSV_FILENAME
         )
         assert tools.is_type.dict(added)
@@ -978,7 +1117,7 @@ class TestAdapters(object):
 
     def test_clients_add_delete_csv_url(self, apiobj):
         """Pass."""
-        added = apiobj.clients.add_csv_url(
+        added = apiobj.cnx.add_csv_url(
             url="https://localhost/idontexist.csv",
             fieldname="idontexist.csv",
             error=False,
@@ -990,17 +1129,13 @@ class TestAdapters(object):
     def test_clients_add_delete_csv_share(self, apiobj):
         """Pass."""
         moo = "moo"
-        added = apiobj.clients.add_csv_share(
+        added = apiobj.cnx.add_csv_share(
             share="smb://localhost/thereforeiamnot.csv",
             share_username=moo,
             share_password=moo,
             fieldname="thereforeiamnot.csv",
             error=False,
         )
-        if not tools.is_type.dict(added):
-            import pdb
-
-            pdb.set_trace()
         assert tools.is_type.dict(added)
 
         self.delete_added(apiobj, added)

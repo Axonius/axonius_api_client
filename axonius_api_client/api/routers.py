@@ -87,8 +87,8 @@ class ApiV1(object):
         object_type="adapters",
         base=base,
         version=version,
-        clients="{adapter_name}/clients",
-        clients_id="{adapter_name}/clients/{client_id}",
+        cnxs="{adapter_name}/clients",
+        cnxs_uuid="{adapter_name}/clients/{cnx_uuid}",
         upload_file="{adapter_name}/{node_id}/upload_file",
     )
 

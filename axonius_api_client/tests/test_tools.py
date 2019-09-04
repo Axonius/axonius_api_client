@@ -13,6 +13,7 @@ import six
 import axonius_api_client as axonapi
 
 tools = axonapi.tools
+exceptions = axonapi.exceptions
 
 BAD_CRED = "tardis"
 
@@ -256,7 +257,7 @@ class TestPathWrite(object):
         sub2 = sub1 / "sub2"
         path = sub2 / "file.txt"
         data = "abc\n123\n"
-        with pytest.raises(axonapi.exceptions.ToolsError):
+        with pytest.raises(exceptions.ToolsError):
             tools.path.write(obj=path, data=data, make_parent=False)
 
     def test_noperm_parent(self):
@@ -274,7 +275,7 @@ class TestPathWrite(object):
         path = sub2 / "file.txt"
         data = "abc\n123\n"
         tools.path.write(obj=path, data=data)
-        with pytest.raises(axonapi.exceptions.ToolsError):
+        with pytest.raises(exceptions.ToolsError):
             tools.path.write(obj=path, data=data, overwrite=False)
 
     def test_overwrite_true(self, tmp_path):
@@ -1382,7 +1383,7 @@ class TestCsv(object):
     def test_compress_dicts_complex_unhandled(self):
         """Pass."""
         x = [{"a": {"b": [[{"c": 1}], [{"d": 2}]]}}]
-        with pytest.raises(axonapi.exceptions.ToolsError):
+        with pytest.raises(exceptions.ToolsError):
             tools.csv.compress_dicts(x)
 
 
@@ -1419,7 +1420,7 @@ class TestLogs(object):
 
     def test_str_level_fail(self):
         """Pass."""
-        with pytest.raises(axonapi.exceptions.ToolsError):
+        with pytest.raises(exceptions.ToolsError):
             tools.logs.str_level("xx")
 
     def test_add_del_stderr(self):
@@ -1531,14 +1532,19 @@ class TestConnect(object):
         c.start()
         assert "Connected" in format(c)
         assert "Connected" in repr(c)
+        with pytest.warns(exceptions.ApiWarning):
+            format(c.enforcements)
+        format(c.users)
+        format(c.devices)
+        format(c.adapters)
 
     def test_invalid_creds(self, url):
         """Pass."""
         c = tools.Connect(url=url, key=BAD_CRED, secret=BAD_CRED, certwarn=False)
         c._http._CONNECT_TIMEOUT = 1
-        with pytest.raises(axonapi.exceptions.ConnectError) as exc:
+        with pytest.raises(exceptions.ConnectError) as exc:
             c.start()
-        assert isinstance(exc.value.exc, axonapi.exceptions.InvalidCredentials)
+        assert isinstance(exc.value.exc, exceptions.InvalidCredentials)
 
     def test_connect_timeout(self):
         """Pass."""
@@ -1546,7 +1552,7 @@ class TestConnect(object):
             url="127.0.0.99", key=BAD_CRED, secret=BAD_CRED, certwarn=False
         )
         c._http._CONNECT_TIMEOUT = 1
-        with pytest.raises(axonapi.exceptions.ConnectError) as exc:
+        with pytest.raises(exceptions.ConnectError) as exc:
             c.start()
         assert isinstance(
             exc.value.exc, axonapi.http.requests.exceptions.ConnectTimeout
@@ -1558,7 +1564,7 @@ class TestConnect(object):
             url="https://127.0.0.1:3919", key=BAD_CRED, secret=BAD_CRED, certwarn=False
         )
         c._http._CONNECT_TIMEOUT = 1
-        with pytest.raises(axonapi.exceptions.ConnectError) as exc:
+        with pytest.raises(exceptions.ConnectError) as exc:
             c.start()
         assert isinstance(
             exc.value.exc, axonapi.http.requests.exceptions.ConnectionError
@@ -1570,7 +1576,7 @@ class TestConnect(object):
             url=url, key=BAD_CRED, secret=BAD_CRED, certwarn=False, wraperror=False
         )
         c._http._CONNECT_TIMEOUT = 1
-        with pytest.raises(axonapi.exceptions.InvalidCredentials):
+        with pytest.raises(exceptions.InvalidCredentials):
             c.start()
 
     def test_other_exc(self, url):
@@ -1580,7 +1586,7 @@ class TestConnect(object):
         )
         c._http._CONNECT_TIMEOUT = 1
         c._auth._creds = None
-        with pytest.raises(axonapi.exceptions.ConnectError):
+        with pytest.raises(exceptions.ConnectError):
             c.start()
 
     def test_reason(self):

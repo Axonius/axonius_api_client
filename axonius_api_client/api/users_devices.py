@@ -8,6 +8,568 @@ from .. import constants, exceptions, tools
 from . import adapters, mixins, routers
 
 
+class UserDeviceMixin(mixins.ModelUserDevice, mixins.Mixins):
+    """Mixins for User & Device models."""
+
+    _LAST_GET = None
+
+    def _init(self, auth, **kwargs):
+        """Pass."""
+        # cross reference
+        self.adapters = adapters.Adapters(auth=auth, **kwargs)
+
+        # children
+        self.labels = Labels(parent=self)
+        self.saved_query = SavedQuery(parent=self)
+        self.fields = Fields(parent=self)
+
+        super(UserDeviceMixin, self)._init(auth=auth, **kwargs)
+
+    # FUTURE:
+    # BR for use_post, defaults to limit == 2000
+    def _get(self, query=None, fields=None, row_start=0, page_size=0, use_post=False):
+        """Get a page for a given query.
+
+        Args:
+            query (:obj:`str`, optional):
+                Query built from Query Wizard in GUI to select rows to return.
+
+                Defaults to: None.
+            fields (:obj:`list` of :obj:`str` or :obj:`str`):
+                List of fields to include in return.
+                If str, CSV seperated list of fields.
+                If list, strs of fields.
+
+                Defaults to: None.
+            row_start (:obj:`int`, optional):
+                If not 0, skip N rows in the return.
+
+                Defaults to: 0.
+            page_size (:obj:`int`, optional):
+                If not 0, include N rows in the return.
+
+                Defaults to: 0.
+
+        Returns:
+            :obj:`dict`
+
+        """
+        params = {}
+        params["skip"] = row_start
+        params["limit"] = page_size
+
+        if query:
+            use_post = True if len(query) >= 1000 else use_post
+            params["filter"] = query
+
+        if fields:
+            fields = ",".join(fields) if tools.is_type.list(fields) else fields
+            params["fields"] = fields
+
+        self._LAST_GET = params
+
+        if use_post:
+            return self._request(method="post", path=self._router.root, json=params)
+        else:
+            return self._request(method="get", path=self._router.root, params=params)
+
+    def count(self, query=None, use_post=False):
+        """Get the number of matches for a given query.
+
+        Args:
+            query (:obj:`str`, optional):
+                Query built from Query Wizard in GUI.
+
+        Returns:
+            :obj:`int`
+
+        """
+        params = {}
+        if query:
+            use_post = True if len(query) >= 1000 else use_post
+            params["filter"] = query
+
+        if use_post:
+            return self._request(method="post", path=self._router.count, json=params)
+        else:
+            return self._request(method="get", path=self._router.count, params=params)
+
+    def get(
+        self,
+        query=None,
+        count_min=None,
+        count_max=None,
+        count_error=True,
+        page_size=None,
+        manual_fields=None,
+        use_post=False,
+        **kwargs,
+    ):
+        """Get objects for a given query using paging.
+
+        Args:
+            query (:obj:`str`, optional):
+                Query built from Query Wizard in GUI to select rows to return.
+
+                Defaults to: None.
+            page_size (:obj:`int`, optional):
+                Get N rows per page.
+
+                Defaults to: :data:`axonius_api_client.constants.DEFAULT_PAGE_SIZE`.
+            default_fields (:obj:`bool`, optional):
+                Update fields with :attr:`_default_fields` if no fields supplied.
+
+                Defaults to: True.
+            kwargs: Fields to include in result.
+
+                >>> generic=['f1', 'f2'] # for generic fields.
+                >>> adapter=['f1', 'f2'] # for adapter specific fields.
+
+        Returns:
+            :obj:`list` of :obj:`dict` or :obj:`dict`
+
+        """
+        page_size = constants.DEFAULT_PAGE_SIZE if page_size is None else page_size
+
+        if manual_fields:
+            val_fields = manual_fields
+        else:
+            val_fields = self.fields.validate(**kwargs)
+
+        count_less = count_max is not None and count_max < page_size
+        page_size = count_max if count_less else page_size
+
+        count_total = 0
+
+        rows = []
+
+        msg = "Starting get with query {q!r} and fields {f!r}"
+        msg = msg.format(q=query, f=val_fields)
+        self._log.debug(msg)
+
+        while True:
+            page = self._get(
+                query=query,
+                fields=val_fields,
+                row_start=count_total,
+                page_size=page_size,
+                use_post=use_post,
+            )
+
+            rows += page["assets"]
+            count_total += len(page["assets"])
+
+            do_break = self._check_counts(
+                value=query,
+                value_type="query",
+                objtype=self._router._object_type,
+                count_min=count_min,
+                count_max=count_max,
+                count_total=count_total,
+                error=count_error,
+            )
+
+            if not page["assets"]:
+                do_break = True
+
+            if do_break:
+                break
+
+        msg = "Finished get with query {q!r} - returned {c} assets"
+        msg = msg.format(q=query, c=len(rows))
+        self._log.debug(msg)
+
+        return self._only1(rows=rows, count_min=count_min, count_max=count_max)
+
+    def get_by_id(self, id):
+        """Get an object by internal_axon_id.
+
+        Args:
+           id (:obj:`str`):
+               internal_axon_id of object to get.
+
+        Raises:
+           :exc:`exceptions.ObjectNotFound`:
+
+        Returns:
+           :obj:`dict`
+
+        """
+        path = self._router.by_id.format(id=id)
+        try:
+            data = self._request(method="get", path=path)
+        except exceptions.ResponseError as exc:
+            raise exceptions.ObjectNotFound(
+                value=id,
+                value_type="Axonius ID",
+                object_type=self._router._object_type,
+                exc=exc,
+            )
+        return data
+
+    def get_by_saved_query(self, name, **kwargs):
+        """Pass."""
+        sq = self.saved_query.get_by_name(
+            value=name, use_regex=False, count_min=1, count_max=1
+        )
+
+        kwargs["query"] = sq["view"]["query"]["filter"]
+        kwargs["manual_fields"] = sq["view"]["fields"]
+        return self.get(**kwargs)
+
+    def get_by_field_value(self, value, name, adapter_name, use_regex=False, **kwargs):
+        """Build query to perform equals or regex search.
+
+        Args:
+            value (:obj:`str`):
+                Value to search for equals or regex query against name.
+            name (:obj:`str`):
+                Field to use when building equals or regex query.
+            adapter_name (:obj:`str`):
+                Adapter name is from.
+            regex (:obj:`bool`, optional):
+                Build a regex instead of equals query.
+            kwargs:
+                Passed through to :meth:`get`.
+
+        Returns:
+            :obj:`list` of :obj:`dict` or :obj:`dict`
+
+        """
+        if use_regex:
+            query = '{field} == regex("{value}", "i")'
+        else:
+            query = '{field} == "{value}"'
+            kwargs.setdefault("count_min", 1)
+            kwargs.setdefault("count_max", 1)
+
+        aname, afield = self.fields.find(name=name, adapter_name=adapter_name)
+        kwargs.setdefault("query", query.format(field=afield, value=value))
+        return self.get(**kwargs)
+
+    def report_adapters(
+        self,
+        serial=False,
+        unconfigured=False,
+        others_not_seen=False,
+        all_fields=None,
+        **kwargs,
+    ):
+        """Pass."""
+        all_fields = all_fields or self._parent.fields.get()
+        rows = kwargs.get("rows", []) or self.get(all_fields=all_fields, **kwargs)
+        adapters = kwargs.get("adapters", {}) or self.adapters.get()
+        parser = ParserReportsAdapter(raw=rows, parent=self)
+        return parser.parse(
+            fields=all_fields,
+            adapters=adapters,
+            serial=serial,
+            unconfigured=unconfigured,
+            others_not_seen=others_not_seen,
+        )
+
+
+class Users(UserDeviceMixin):
+    """User related API methods."""
+
+    @property
+    def _router(self):
+        """Router for this API client.
+
+        Returns:
+            :obj:`axonius_api_client.api.routers.Router`
+
+        """
+        return routers.ApiV1.users
+
+    @property
+    def _default_fields(self):
+        """Fields to set as default for methods with fields as kwargs.
+
+        Returns:
+            :obj:`dict`
+
+        """
+        return {"generic": ["id", "fetch_time", "labels", "username", "mail"]}
+
+    def get_by_username(self, value, **kwargs):
+        """Get objects by name using paging.
+
+        Args:
+            value (:obj:`int`):
+                Value to find using field "username".
+            **kwargs: Passed thru to :meth:`UserDeviceModel.get_by_field_value`
+
+        Returns:
+            :obj:`list` of :obj:`dict`: Each row matching name or :obj:`dict` if only1.
+
+        """
+        kwargs.setdefault("name", "username")
+        kwargs.setdefault("adapter_name", "generic")
+        return self.get_by_field_value(value=value, **kwargs)
+
+    def get_by_mail(self, value, **kwargs):
+        """Get objects by email using paging.
+
+        Args:
+            value (:obj:`int`):
+                Value to find using field "mail".
+            **kwargs: Passed thru to :meth:`UserDeviceModel.get_by_field_value`
+
+        Returns:
+            :obj:`list` of :obj:`dict`: Each row matching email or :obj:`dict` if only1.
+
+        """
+        kwargs.setdefault("name", "mail")
+        kwargs.setdefault("adapter_name", "generic")
+        return self.get_by_field_value(value=value, **kwargs)
+
+
+class Devices(UserDeviceMixin):
+    """Device related API methods."""
+
+    @property
+    def _router(self):
+        """Router for this API client.
+
+        Returns:
+            :obj:`axonius_api_client.api.routers.Router`
+
+        """
+        return routers.ApiV1.devices
+
+    @property
+    def _default_fields(self):
+        """Fields to set as default for methods with fields as kwargs.
+
+        Returns:
+            :obj:`dict`
+
+        """
+        return {
+            "generic": [
+                "id",
+                "fetch_time",
+                "labels",
+                "hostname",
+                "network_interfaces.ips",
+            ]
+        }
+
+    def get_by_hostname(self, value, **kwargs):
+        """Get objects by name using paging.
+
+        Args:
+            value (:obj:`int`):
+                Value to find using field "username".
+            **kwargs: Passed thru to :meth:`UserDeviceModel.get_by_field_value`
+
+        Returns:
+            :obj:`list` of :obj:`dict`: Each row matching name or :obj:`dict` if only1.
+
+        """
+        kwargs.setdefault("name", "hostname")
+        kwargs.setdefault("adapter_name", "generic")
+        return self.get_by_field_value(value=value, **kwargs)
+
+    def get_by_mac(self, value, **kwargs):
+        """Get objects by MAC using paging.
+
+        Args:
+            value (:obj:`int`):
+                Value to find using field "network_interfaces.mac".
+            **kwargs: Passed thru to :meth:`UserDeviceModel.get_by_field_value`
+
+        Returns:
+            :obj:`list` of :obj:`dict`: Each row matching email or :obj:`dict` if only1.
+
+        """
+        kwargs.setdefault("name", "network_interfaces.mac")
+        kwargs.setdefault("adapter_name", "generic")
+        return self.get_by_field_value(value=value, **kwargs)
+
+    def get_by_ip(self, value, **kwargs):
+        """Get objects by MAC using paging.
+
+        Args:
+            value (:obj:`int`):
+                Value to find using field "network_interfaces.mac".
+            **kwargs: Passed thru to :meth:`UserDeviceModel.get_by_field_value`
+
+        Returns:
+            :obj:`list` of :obj:`dict`: Each row matching email or :obj:`dict` if only1.
+
+        """
+        kwargs.setdefault("name", "network_interfaces.ips")
+        kwargs.setdefault("adapter_name", "generic")
+        return self.get_by_field_value(value=value, **kwargs)
+
+    def _build_subnet_query(self, value, not_flag=False):
+        """Pass."""
+        network = ipaddress.ip_network(value)
+
+        begin = int(network.network_address)
+        end = int(network.broadcast_address)
+
+        match_field = "specific_data.data.network_interfaces.ips_raw"
+
+        match = 'match({{"$gte": {begin}, "$lte": {end}}})'
+        match = match.format(begin=begin, end=end)
+        if not_flag:
+            query = "not {match_field} == {match}"
+        else:
+            query = "{match_field} == {match}"
+        query = query.format(match_field=match_field, match=match)
+        return query
+
+    def get_by_in_subnet(self, value, **kwargs):
+        """Get objects by MAC using paging.
+
+        Args:
+            value (:obj:`int`):
+                Value to find using field "network_interfaces.mac".
+            **kwargs: Passed thru to :meth:`UserDeviceModel.get_by_field_value`
+
+        Returns:
+            :obj:`list` of :obj:`dict`: Each row matching email or :obj:`dict` if only1.
+
+        """
+        kwargs["query"] = self._build_subnet_query(value=value, not_flag=False)
+        return self.get(**kwargs)
+
+    def get_by_not_in_subnet(self, value, **kwargs):
+        """Get objects by MAC using paging.
+
+        Args:
+            value (:obj:`int`):
+                Value to find using field "network_interfaces.mac".
+            **kwargs: Passed thru to :meth:`UserDeviceModel.get_by_field_value`
+
+        Returns:
+            :obj:`list` of :obj:`dict`: Each row matching email or :obj:`dict` if only1.
+
+        """
+        """
+        For reference, how GUI does "not in subnet".
+
+        network = ipaddress.ip_network(value)
+
+        ip_begin = int(ipaddress.ip_address("0.0.0.0"))
+        ip_end = int(ipaddress.ip_address("255.255.255.255"))
+
+        begin = int(network.network_address)
+        end = int(network.broadcast_address)
+
+        field = "specific_data.data.network_interfaces.ips_raw"
+
+        match1 = 'match({{"$gte": {ip_begin}, "$lte": {begin}}})'
+        match1 = match1.format(begin=begin, ip_begin=ip_begin)
+
+        match2 = 'match({{"$gte": {end}, "$lte": {ip_end}}})'
+        match2 = match2.format(end=end, ip_end=ip_end)
+
+        query = "{field} == {match1} or {field} == {match2}"
+        query = query.format(field=field, match1=match1, match2=match2)
+        """
+        kwargs["query"] = self._build_subnet_query(value=value, not_flag=True)
+        return self.get(**kwargs)
+
+
+class ParserReportsAdapter(mixins.Parser):
+    """Pass."""
+
+    def _mkserial(self, obj):
+        """Pass."""
+        if self._serial and tools.is_type.list(obj):
+            return tools.join.cr(obj, pre=False)
+        return obj
+
+    def _row(self, raw_row):
+        """Pass."""
+        row = {}
+        missing = []
+
+        adapters = tools.strip.right(raw_row.get("adapters", []), "_adapter")
+        row["adapters"] = self._mkserial(adapters)
+
+        for k, v in raw_row.items():
+            if "." in k or k in ["labels"]:
+                row[k] = self._mkserial(v)
+
+        ftimes = raw_row.get("specific_data.data.fetch_time", []) or []
+        ftimes = ftimes if tools.is_type.list(ftimes) else [ftimes]
+        ftimes = [x for x in tools.dt.parse(ftimes)]
+
+        for adapter in self._adapters:
+            name = adapter["name"]
+
+            otype = self._parent.__class__.__name__.upper()
+            others_have_seen = name in self._fields
+
+            is_unconfigured = not adapter["clients"] or adapter["status_bool"] is None
+
+            skips = [
+                is_unconfigured and not self._unconfigured,
+                not others_have_seen and not self._others_not_seen,
+            ]
+
+            if any(skips):
+                continue
+
+            ftime = "NEVER; NO CLIENTS"
+
+            if adapter["status_bool"] is False:
+                ftime = "NEVER; CLIENTS BROKEN"
+            elif adapter["status_bool"] is True:
+                ftime = "NEVER; CLIENTS OK"
+
+            if name in row["adapters"]:
+                name_idx = row["adapters"].index(name)
+                try:
+                    ftime = ftimes[name_idx]
+                except Exception:
+                    ftime = "UNABLE TO DETERMINE"
+            elif others_have_seen and name not in missing:
+                missing.append(name)
+
+            if self._serial:
+                ftime = format(ftime)
+                status_lines = [
+                    "FETCHED THIS {}: {}".format(otype.rstrip("S"), ftime),
+                    "FETCHED OTHER {}: {}".format(otype, others_have_seen),
+                    "CLIENTS OK: {}".format(adapter["client_count_ok"]),
+                    "CLIENTS BAD: {}".format(adapter["client_count_bad"]),
+                ]
+            else:
+                status_lines = {
+                    "FETCHED_THIS_{}".format(otype.rstrip("S")): ftime,
+                    "FETCHED_OTHER_{}".format(otype): others_have_seen,
+                    "CLIENTS_OK": adapter["client_count_ok"],
+                    "CLIENTS_BAD": adapter["client_count_bad"],
+                }
+
+            row["adapter: {}".format(name)] = self._mkserial(status_lines)
+
+        row["adapters_missing"] = self._mkserial(missing)
+        return row
+
+    def parse(
+        self, adapters, fields, serial=False, unconfigured=False, others_not_seen=False
+    ):
+        """Pass."""
+        self._adapters = adapters
+        self._fields = fields
+        self._serial = serial
+        self._unconfigured = unconfigured
+        self._others_not_seen = others_not_seen
+
+        self._broken_adapters = [x for x in adapters if x["status_bool"] is False]
+        self._unconfig_adapters = [x for x in adapters if x["status_bool"] is None]
+        self._config_adapters = [x for x in adapters if x["status_bool"] is True]
+
+        return [self._row(x) for x in self._raw]
+
+
 class SavedQuery(mixins.Child):
     """Pass."""
 
@@ -624,564 +1186,6 @@ class Fields(mixins.Child):
                     vfields[vaname].append(vafield)
 
         return [i for l in vfields.values() for i in l]
-
-
-class UserDeviceMixin(mixins.ModelUserDevice, mixins.Mixins):
-    """Mixins for User & Device models."""
-
-    _LAST_GET = None
-
-    def _init(self, auth, **kwargs):
-        """Pass."""
-        self.labels = Labels(parent=self)
-        self.saved_query = SavedQuery(parent=self)
-        self.fields = Fields(parent=self)
-        self.adapters = adapters.Adapters(auth=auth, **kwargs)
-        super(UserDeviceMixin, self)._init(auth=auth, **kwargs)
-
-    def _get(self, query=None, fields=None, row_start=0, page_size=0, use_post=True):
-        """Get a page for a given query.
-
-        Args:
-            query (:obj:`str`, optional):
-                Query built from Query Wizard in GUI to select rows to return.
-
-                Defaults to: None.
-            fields (:obj:`list` of :obj:`str` or :obj:`str`):
-                List of fields to include in return.
-                If str, CSV seperated list of fields.
-                If list, strs of fields.
-
-                Defaults to: None.
-            row_start (:obj:`int`, optional):
-                If not 0, skip N rows in the return.
-
-                Defaults to: 0.
-            page_size (:obj:`int`, optional):
-                If not 0, include N rows in the return.
-
-                Defaults to: 0.
-
-        Returns:
-            :obj:`dict`
-
-        """
-        params = {}
-
-        if row_start:
-            params["skip"] = row_start
-
-        if page_size:
-            params["limit"] = page_size
-
-        if query:
-            params["filter"] = query
-
-        if fields:
-            fields = ",".join(fields) if tools.is_type.list(fields) else fields
-            params["fields"] = fields
-
-        self._LAST_GET = {"query": query, "fields": fields}
-
-        if use_post:
-            return self._request(method="post", path=self._router.root, json=params)
-        else:
-            return self._request(method="get", path=self._router.root, params=params)
-
-    def count(self, query=None, use_post=True):
-        """Get the number of matches for a given query.
-
-        Args:
-            query (:obj:`str`, optional):
-                Query built from Query Wizard in GUI.
-
-        Returns:
-            :obj:`int`
-
-        """
-        params = {}
-        if query:
-            params["filter"] = query
-
-        if use_post:
-            return self._request(method="post", path=self._router.count, json=params)
-        else:
-            return self._request(method="get", path=self._router.count, params=params)
-
-    def get(
-        self,
-        query=None,
-        count_min=None,
-        count_max=None,
-        count_error=True,
-        page_size=None,
-        manual_fields=None,
-        use_post=True,
-        **kwargs,
-    ):
-        """Get objects for a given query using paging.
-
-        Args:
-            query (:obj:`str`, optional):
-                Query built from Query Wizard in GUI to select rows to return.
-
-                Defaults to: None.
-            page_size (:obj:`int`, optional):
-                Get N rows per page.
-
-                Defaults to: :data:`axonius_api_client.constants.DEFAULT_PAGE_SIZE`.
-            default_fields (:obj:`bool`, optional):
-                Update fields with :attr:`_default_fields` if no fields supplied.
-
-                Defaults to: True.
-            kwargs: Fields to include in result.
-
-                >>> generic=['f1', 'f2'] # for generic fields.
-                >>> adapter=['f1', 'f2'] # for adapter specific fields.
-
-        Returns:
-            :obj:`list` of :obj:`dict` or :obj:`dict`
-
-        """
-        page_size = constants.DEFAULT_PAGE_SIZE if page_size is None else page_size
-
-        if manual_fields:
-            val_fields = manual_fields
-        else:
-            val_fields = self.fields.validate(**kwargs)
-
-        count_less = count_max is not None and count_max < page_size
-        page_size = count_max if count_less else page_size
-
-        count_total = 0
-
-        rows = []
-
-        msg = "Starting get with query {q!r} and fields {f!r}"
-        msg = msg.format(q=query, f=val_fields)
-        self._log.debug(msg)
-
-        while True:
-            page = self._get(
-                query=query,
-                fields=val_fields,
-                row_start=count_total,
-                page_size=page_size,
-                use_post=use_post,
-            )
-
-            rows += page["assets"]
-            count_total += len(page["assets"])
-
-            do_break = self._check_counts(
-                value=query,
-                value_type="query",
-                objtype=self._router._object_type,
-                count_min=count_min,
-                count_max=count_max,
-                count_total=count_total,
-                error=count_error,
-            )
-
-            if not page["assets"]:
-                do_break = True
-
-            if do_break:
-                break
-
-        msg = "Finished get with query {q!r} - returned {c} assets"
-        msg = msg.format(q=query, c=len(rows))
-        self._log.debug(msg)
-
-        return self._only1(rows=rows, count_min=count_min, count_max=count_max)
-
-    def get_by_id(self, id):
-        """Get an object by internal_axon_id.
-
-        Args:
-           id (:obj:`str`):
-               internal_axon_id of object to get.
-
-        Raises:
-           :exc:`exceptions.ObjectNotFound`:
-
-        Returns:
-           :obj:`dict`
-
-        """
-        path = self._router.by_id.format(id=id)
-        try:
-            data = self._request(method="get", path=path)
-        except exceptions.ResponseError as exc:
-            raise exceptions.ObjectNotFound(
-                value=id,
-                value_type="Axonius ID",
-                object_type=self._router._object_type,
-                exc=exc,
-            )
-        return data
-
-    def get_by_saved_query(self, name, **kwargs):
-        """Pass."""
-        sq = self.saved_query.get_by_name(
-            value=name, use_regex=False, count_min=1, count_max=1
-        )
-
-        kwargs["query"] = sq["view"]["query"]["filter"]
-        kwargs["manual_fields"] = sq["view"]["fields"]
-        return self.get(**kwargs)
-
-    def get_by_field_value(self, value, name, adapter_name, use_regex=False, **kwargs):
-        """Build query to perform equals or regex search.
-
-        Args:
-            value (:obj:`str`):
-                Value to search for equals or regex query against name.
-            name (:obj:`str`):
-                Field to use when building equals or regex query.
-            adapter_name (:obj:`str`):
-                Adapter name is from.
-            regex (:obj:`bool`, optional):
-                Build a regex instead of equals query.
-            kwargs:
-                Passed through to :meth:`get`.
-
-        Returns:
-            :obj:`list` of :obj:`dict` or :obj:`dict`
-
-        """
-        if use_regex:
-            query = '{field} == regex("{value}", "i")'
-        else:
-            query = '{field} == "{value}"'
-            kwargs.setdefault("count_min", 1)
-            kwargs.setdefault("count_max", 1)
-
-        aname, afield = self.fields.find(name=name, adapter_name=adapter_name)
-        kwargs.setdefault("query", query.format(field=afield, value=value))
-        return self.get(**kwargs)
-
-    def report_adapters(
-        self,
-        serial=False,
-        unconfigured=False,
-        others_not_seen=False,
-        all_fields=None,
-        **kwargs,
-    ):
-        """Pass."""
-        all_fields = all_fields or self._parent.fields.get()
-        rows = kwargs.get("rows", []) or self.get(all_fields=all_fields, **kwargs)
-        adapters = kwargs.get("adapters", {}) or self.adapters.get()
-        parser = ParserReportsAdapter(raw=rows, parent=self)
-        return parser.parse(
-            fields=all_fields,
-            adapters=adapters,
-            serial=serial,
-            unconfigured=unconfigured,
-            others_not_seen=others_not_seen,
-        )
-
-
-class Users(UserDeviceMixin):
-    """User related API methods."""
-
-    @property
-    def _router(self):
-        """Router for this API client.
-
-        Returns:
-            :obj:`axonius_api_client.api.routers.Router`
-
-        """
-        return routers.ApiV1.users
-
-    @property
-    def _default_fields(self):
-        """Fields to set as default for methods with fields as kwargs.
-
-        Returns:
-            :obj:`dict`
-
-        """
-        return {"generic": ["id", "fetch_time", "labels", "username", "mail"]}
-
-    def get_by_username(self, value, **kwargs):
-        """Get objects by name using paging.
-
-        Args:
-            value (:obj:`int`):
-                Value to find using field "username".
-            **kwargs: Passed thru to :meth:`UserDeviceModel.get_by_field_value`
-
-        Returns:
-            :obj:`list` of :obj:`dict`: Each row matching name or :obj:`dict` if only1.
-
-        """
-        kwargs.setdefault("name", "username")
-        kwargs.setdefault("adapter_name", "generic")
-        return self.get_by_field_value(value=value, **kwargs)
-
-    def get_by_mail(self, value, **kwargs):
-        """Get objects by email using paging.
-
-        Args:
-            value (:obj:`int`):
-                Value to find using field "mail".
-            **kwargs: Passed thru to :meth:`UserDeviceModel.get_by_field_value`
-
-        Returns:
-            :obj:`list` of :obj:`dict`: Each row matching email or :obj:`dict` if only1.
-
-        """
-        kwargs.setdefault("name", "mail")
-        kwargs.setdefault("adapter_name", "generic")
-        return self.get_by_field_value(value=value, **kwargs)
-
-
-class Devices(UserDeviceMixin):
-    """Device related API methods."""
-
-    @property
-    def _router(self):
-        """Router for this API client.
-
-        Returns:
-            :obj:`axonius_api_client.api.routers.Router`
-
-        """
-        return routers.ApiV1.devices
-
-    @property
-    def _default_fields(self):
-        """Fields to set as default for methods with fields as kwargs.
-
-        Returns:
-            :obj:`dict`
-
-        """
-        return {
-            "generic": [
-                "id",
-                "fetch_time",
-                "labels",
-                "hostname",
-                "network_interfaces.ips",
-            ]
-        }
-
-    def get_by_hostname(self, value, **kwargs):
-        """Get objects by name using paging.
-
-        Args:
-            value (:obj:`int`):
-                Value to find using field "username".
-            **kwargs: Passed thru to :meth:`UserDeviceModel.get_by_field_value`
-
-        Returns:
-            :obj:`list` of :obj:`dict`: Each row matching name or :obj:`dict` if only1.
-
-        """
-        kwargs.setdefault("name", "hostname")
-        kwargs.setdefault("adapter_name", "generic")
-        return self.get_by_field_value(value=value, **kwargs)
-
-    def get_by_mac(self, value, **kwargs):
-        """Get objects by MAC using paging.
-
-        Args:
-            value (:obj:`int`):
-                Value to find using field "network_interfaces.mac".
-            **kwargs: Passed thru to :meth:`UserDeviceModel.get_by_field_value`
-
-        Returns:
-            :obj:`list` of :obj:`dict`: Each row matching email or :obj:`dict` if only1.
-
-        """
-        kwargs.setdefault("name", "network_interfaces.mac")
-        kwargs.setdefault("adapter_name", "generic")
-        return self.get_by_field_value(value=value, **kwargs)
-
-    def get_by_ip(self, value, **kwargs):
-        """Get objects by MAC using paging.
-
-        Args:
-            value (:obj:`int`):
-                Value to find using field "network_interfaces.mac".
-            **kwargs: Passed thru to :meth:`UserDeviceModel.get_by_field_value`
-
-        Returns:
-            :obj:`list` of :obj:`dict`: Each row matching email or :obj:`dict` if only1.
-
-        """
-        kwargs.setdefault("name", "network_interfaces.ips")
-        kwargs.setdefault("adapter_name", "generic")
-        return self.get_by_field_value(value=value, **kwargs)
-
-    def _build_subnet_query(self, value, not_flag=False):
-        """Pass."""
-        network = ipaddress.ip_network(value)
-
-        begin = int(network.network_address)
-        end = int(network.broadcast_address)
-
-        match_field = "specific_data.data.network_interfaces.ips_raw"
-
-        match = 'match({{"$gte": {begin}, "$lte": {end}}})'
-        match = match.format(begin=begin, end=end)
-        if not_flag:
-            query = "not {match_field} == {match}"
-        else:
-            query = "{match_field} == {match}"
-        query = query.format(match_field=match_field, match=match)
-        return query
-
-    def get_by_in_subnet(self, value, **kwargs):
-        """Get objects by MAC using paging.
-
-        Args:
-            value (:obj:`int`):
-                Value to find using field "network_interfaces.mac".
-            **kwargs: Passed thru to :meth:`UserDeviceModel.get_by_field_value`
-
-        Returns:
-            :obj:`list` of :obj:`dict`: Each row matching email or :obj:`dict` if only1.
-
-        """
-        kwargs["query"] = self._build_subnet_query(value=value, not_flag=False)
-        return self.get(**kwargs)
-
-    def get_by_not_in_subnet(self, value, **kwargs):
-        """Get objects by MAC using paging.
-
-        Args:
-            value (:obj:`int`):
-                Value to find using field "network_interfaces.mac".
-            **kwargs: Passed thru to :meth:`UserDeviceModel.get_by_field_value`
-
-        Returns:
-            :obj:`list` of :obj:`dict`: Each row matching email or :obj:`dict` if only1.
-
-        """
-        """
-        For reference, how GUI does "not in subnet".
-
-        network = ipaddress.ip_network(value)
-
-        ip_begin = int(ipaddress.ip_address("0.0.0.0"))
-        ip_end = int(ipaddress.ip_address("255.255.255.255"))
-
-        begin = int(network.network_address)
-        end = int(network.broadcast_address)
-
-        field = "specific_data.data.network_interfaces.ips_raw"
-
-        match1 = 'match({{"$gte": {ip_begin}, "$lte": {begin}}})'
-        match1 = match1.format(begin=begin, ip_begin=ip_begin)
-
-        match2 = 'match({{"$gte": {end}, "$lte": {ip_end}}})'
-        match2 = match2.format(end=end, ip_end=ip_end)
-
-        query = "{field} == {match1} or {field} == {match2}"
-        query = query.format(field=field, match1=match1, match2=match2)
-        """
-        kwargs["query"] = self._build_subnet_query(value=value, not_flag=True)
-        return self.get(**kwargs)
-
-
-class ParserReportsAdapter(mixins.Parser):
-    """Pass."""
-
-    def _mkserial(self, obj):
-        """Pass."""
-        if self._serial and tools.is_type.list(obj):
-            return tools.join.cr(obj, pre=False)
-        return obj
-
-    def _row(self, raw_row):
-        """Pass."""
-        row = {}
-        missing = []
-
-        adapters = tools.strip.right(raw_row.get("adapters", []), "_adapter")
-        row["adapters"] = self._mkserial(adapters)
-
-        for k, v in raw_row.items():
-            if "." in k or k in ["labels"]:
-                row[k] = self._mkserial(v)
-
-        ftimes = raw_row.get("specific_data.data.fetch_time", []) or []
-        ftimes = ftimes if tools.is_type.list(ftimes) else [ftimes]
-        ftimes = [x for x in tools.dt.parse(ftimes)]
-
-        for adapter in self._adapters:
-            name = adapter["name"]
-
-            otype = self._parent.__class__.__name__.upper()
-            others_have_seen = name in self._fields
-
-            is_unconfigured = not adapter["clients"] or adapter["status_bool"] is None
-
-            skips = [
-                is_unconfigured and not self._unconfigured,
-                not others_have_seen and not self._others_not_seen,
-            ]
-
-            if any(skips):
-                continue
-
-            ftime = "NEVER; NO CLIENTS"
-
-            if adapter["status_bool"] is False:
-                ftime = "NEVER; CLIENTS BROKEN"
-            elif adapter["status_bool"] is True:
-                ftime = "NEVER; CLIENTS OK"
-
-            if name in row["adapters"]:
-                name_idx = row["adapters"].index(name)
-                try:
-                    ftime = ftimes[name_idx]
-                except Exception:
-                    ftime = "UNABLE TO DETERMINE"
-            elif others_have_seen and name not in missing:
-                missing.append(name)
-
-            if self._serial:
-                ftime = format(ftime)
-                status_lines = [
-                    "FETCHED THIS {}: {}".format(otype.rstrip("S"), ftime),
-                    "FETCHED OTHER {}: {}".format(otype, others_have_seen),
-                    "CLIENTS OK: {}".format(adapter["client_count_ok"]),
-                    "CLIENTS BAD: {}".format(adapter["client_count_bad"]),
-                ]
-            else:
-                status_lines = {
-                    "FETCHED_THIS_{}".format(otype.rstrip("S")): ftime,
-                    "FETCHED_OTHER_{}".format(otype): others_have_seen,
-                    "CLIENTS_OK": adapter["client_count_ok"],
-                    "CLIENTS_BAD": adapter["client_count_bad"],
-                }
-
-            row["adapter: {}".format(name)] = self._mkserial(status_lines)
-
-        row["adapters_missing"] = self._mkserial(missing)
-        return row
-
-    def parse(
-        self, adapters, fields, serial=False, unconfigured=False, others_not_seen=False
-    ):
-        """Pass."""
-        self._adapters = adapters
-        self._fields = fields
-        self._serial = serial
-        self._unconfigured = unconfigured
-        self._others_not_seen = others_not_seen
-
-        self._broken_adapters = [x for x in adapters if x["status_bool"] is False]
-        self._unconfig_adapters = [x for x in adapters if x["status_bool"] is None]
-        self._config_adapters = [x for x in adapters if x["status_bool"] is True]
-
-        return [self._row(x) for x in self._raw]
 
 
 class ParserFields(mixins.Parser):

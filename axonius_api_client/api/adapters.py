@@ -2,6 +2,8 @@
 """Axonius API Client package."""
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+import pdb  # noqa
+
 import time
 import warnings
 
@@ -9,16 +11,16 @@ from .. import exceptions, tools
 from . import mixins, routers
 
 
-class Clients(mixins.Child):
+class Cnx(mixins.Child):
     """Pass."""
 
-    CSV_FIELDS = {
+    _CSV_FIELDS = {
         "device": ["id", "serial", "mac_address", "hostname", "name"],
         "user": ["id", "username", "mail", "name"],
         "sw": ["hostname", "installed_sw_name"],
     }
 
-    SETTING_TYPES = {
+    _SETTING_TYPES = {
         "bool": tools.is_type.bool,
         "number": tools.is_type.str_int,
         "integer": tools.is_type.str_int,
@@ -26,14 +28,17 @@ class Clients(mixins.Child):
         "string": tools.is_type.str,
     }
 
+    _ADD_REFETCH_RETRY = 5
+    _ADD_REFETCH_SLEEP = 1
+
     def _check(self, adapter_name, node_id, config):
-        """Check connectivity for a client of an adapter.
+        """Test an adapter connection.
 
         Args:
             name (:obj:`str`):
-                Name of adapter to check client connectivity of.
+                Name of adapter to test connection of.
             config (:obj:`dict`):
-                Client configuration.
+                Connection configuration.
             node_id (:obj:`str`):
                 Node ID.
 
@@ -45,7 +50,9 @@ class Clients(mixins.Child):
         data.update(config)
         data["instanceName"] = node_id
         data["oldInstanceName"] = node_id
-        path = self._parent._router.clients.format(adapter_name=adapter_name)
+
+        path = self._parent._router.cnxs.format(adapter_name=adapter_name)
+
         return self._parent._request(
             method="post",
             path=path,
@@ -55,11 +62,11 @@ class Clients(mixins.Child):
         )
 
     def _add(self, adapter_name, node_id, config):
-        """Add a client to an adapter.
+        """Add a connection to an adapter.
 
         Args:
             adapter (:obj:`str`):
-                Name of adapter to add client to.
+                Name of adapter to add connection to.
             config (:obj:`dict`):
                 Client configuration.
             node_id (:obj:`str`):
@@ -72,7 +79,9 @@ class Clients(mixins.Child):
         data = {}
         data.update(config)
         data["instanceName"] = node_id
-        path = self._parent._router.clients.format(adapter_name=adapter_name)
+
+        path = self._parent._router.cnxs.format(adapter_name=adapter_name)
+
         return self._parent._request(
             method="put",
             path=path,
@@ -81,14 +90,14 @@ class Clients(mixins.Child):
             error_code_not_200=False,
         )
 
-    def _delete(self, adapter_name, node_id, client_id, delete_entities=False):
-        """Delete a client from an adapter.
+    def _delete(self, adapter_name, node_id, cnx_uuid, delete_entities=False):
+        """Delete a connection from an adapter.
 
         Args:
             name (:obj:`str`):
-                Name of adapter to delete client from.
+                Name of adapter to delete connection from.
             id (:obj:`str`):
-                ID of client to remove.
+                ID of connection to remove.
             node_id (:obj:`str`):
                 Node ID.
 
@@ -98,13 +107,13 @@ class Clients(mixins.Child):
         """
         data = {}
         data["instanceName"] = node_id
-        path = self._parent._router.clients_id.format(
-            adapter_name=adapter_name,
-            client_id=client_id,
-            error_json_bad_status=False,
-            error_code_not_200=False,
-        )
+
         params = {"deleteEntities": delete_entities}
+
+        path = self._parent._router.cnxs_uuid.format(
+            adapter_name=adapter_name, cnx_uuid=cnx_uuid
+        )
+
         return self._parent._request(
             method="delete",
             path=path,
@@ -114,11 +123,11 @@ class Clients(mixins.Child):
             error_code_not_200=False,
         )
 
-    def _config_parse(self, adapter, settings_client, config):
+    def _config_parse(self, adapter, settings, config):
         """Pass."""
         new_config = {}
 
-        for name, schema in settings_client.items():
+        for name, schema in settings.items():
             required = schema["required"]
             type_str = schema["type"]
             enum = schema.get("enum", [])
@@ -137,7 +146,7 @@ class Clients(mixins.Child):
                 if not required:
                     continue
                 error = "value was not supplied and has no default value"
-                raise exceptions.ClientConfigMissingError(
+                raise exceptions.CnxSettingMissing(
                     name=name, value=value, schema=schema, error=error
                 )
 
@@ -147,7 +156,7 @@ class Clients(mixins.Child):
             if enum and value not in enum:
                 error = "invalid value {value!r}, must be one of {enum}"
                 error = error.format(value=value, enum=enum)
-                raise exceptions.ClientConfigInvalidChoiceError(
+                raise exceptions.CnxSettingInvalidChoice(
                     name=name, value=value, schema=schema, error=error
                 )
 
@@ -155,17 +164,17 @@ class Clients(mixins.Child):
                 value = self._config_file_check(
                     name=name, value=value, schema=schema, adapter=adapter
                 )
-            elif type_str in self.SETTING_TYPES:
+            elif type_str in self._SETTING_TYPES:
                 self._config_type_check(
                     name=name,
                     schema=schema,
                     value=value,
-                    type_cb=self.SETTING_TYPES[type_str],
+                    type_cb=self._SETTING_TYPES[type_str],
                 )
             else:
                 error = "Unknown setting type: {type_str!r}"
                 error = error.format(type_str=type_str)
-                raise exceptions.ClientConfigUnknownError(
+                raise exceptions.CnxSettingUnknownType(
                     name=name, value=value, schema=schema, error=error
                 )
 
@@ -225,7 +234,7 @@ class Clients(mixins.Child):
                     error = error.format(
                         n=name, ex=ex_uuid, opts="'filename' or 'filepath'"
                     )
-                    raise exceptions.ClientConfigMissingError(
+                    raise exceptions.CnxSettingMissing(
                         name=name, value=value, schema=schema, error=error
                     )
 
@@ -254,7 +263,7 @@ class Clients(mixins.Child):
                     ex_uuid,
                 ]
                 error = tools.join.cr(error)
-                raise exceptions.ClientConfigMissingError(
+                raise exceptions.CnxSettingMissing(
                     name=name, value=value, schema=schema, error=error
                 )
 
@@ -269,7 +278,7 @@ class Clients(mixins.Child):
         if not type_cb(value):
             error = "is invalid type {st!r}"
             error = error.format(st=type(value).__name__)
-            raise exceptions.ClientConfigInvalidTypeError(
+            raise exceptions.CnxSettingInvalidType(
                 name=name, value=value, schema=schema, error=error
             )
 
@@ -278,13 +287,13 @@ class Clients(mixins.Child):
     ):
         """Pass."""
         if is_users:
-            ids = self.CSV_FIELDS["user"]
+            ids = self._CSV_FIELDS["user"]
             ids_type = "user"
         elif is_installed_sw:
-            ids = self.CSV_FIELDS["sw"]
+            ids = self._CSV_FIELDS["sw"]
             ids_type = "installed software"
         else:
-            ids = self.CSV_FIELDS["device"]
+            ids = self._CSV_FIELDS["device"]
             ids_type = "device"
 
         headers_content = filecontent
@@ -297,26 +306,32 @@ class Clients(mixins.Child):
         if not headers_has_any_id:
             msg = "No {ids_type} identifiers {ids} found in CSV file {name} headers {h}"
             msg = msg.format(ids_type=ids_type, ids=ids, name=filename, h=headers)
-            warnings.warn(msg, exceptions.ApiWarning)
+            warnings.warn(msg, exceptions.CnxCsvWarning)
 
     @staticmethod
-    def _build_known(clients):
+    def _build_known(cnxs):
         """Pass."""
         tmpl = [
-            "Adapter {adapter!r}",
-            "id {client_id!r}",
+            "Adapter {adapter_name!r}",
+            "id {id!r}",
             "uuid {uuid!r}",
-            "status {status_bool}",
+            "status {status}",
         ]
         tmpl = tools.join.comma(tmpl)
-        return [tmpl.format(**c) for c in clients]
+        return [tmpl.format(**c) for c in cnxs]
+
+    def _check_connect_error(self, adapter, node, check_bool, response, error=True):
+        """Pass."""
+        if error and check_bool:
+            raise exceptions.CnxFailure(response=response, adapter=adapter, node=node)
 
     def get(self, adapter, node="master"):
-        """Get all clients for an adapter."""
+        """Get all connections for an adapter."""
         if tools.is_type.str(adapter):
             adapter = self._parent.get_single(name=adapter, node=node)
-            clients = adapter["clients"]
-        elif tools.is_type.los(adapter):
+            return adapter["cnx"]
+
+        if tools.is_type.los(adapter):
             all_adapters = self._parent.get()
             all_adapters = self._parent.filter_by_names(
                 adapters=all_adapters, names=adapter
@@ -324,45 +339,45 @@ class Clients(mixins.Child):
             all_adapters = self._parent.filter_by_nodes(
                 adapters=all_adapters, nodes=node
             )
-            clients = [c for a in all_adapters for c in a]
-        elif tools.is_type.none(adapter):
+            return [c for a in all_adapters for c in a["cnx"]]
+
+        if tools.is_type.none(adapter):
             all_adapters = self._parent.get()
             all_adapters = self._parent.filter_by_nodes(
                 adapters=all_adapters, nodes=node
             )
-            clients = [c for a in all_adapters for c in a]
+            return [c for a in all_adapters for c in a]
         else:
-            clients = adapter["clients"]
-        return clients
+            return adapter["cnx"]
 
     def filter_by_ids(
         self,
-        clients,
+        cnxs,
         ids=None,
         use_regex=False,
         count_min=None,
         count_max=None,
         count_error=True,
     ):
-        """Get all clients for all adapters."""
+        """Get all connections for all adapters."""
         matches = []
 
-        for client in clients:
+        for cnx in cnxs:
             match = tools.values_match(
-                checks=ids, values=client["client_id"], use_regex=use_regex
+                checks=ids, values=cnx["id"], use_regex=use_regex
             )
 
-            if match and client not in matches:
-                matches.append(client)
+            if match and cnx not in matches:
+                matches.append(cnx)
 
         self._parent._check_counts(
             value=ids,
-            value_type="client ids and regex {}".format(use_regex),
-            objtype="adapter clients",
+            value_type="connection ids and regex {}".format(use_regex),
+            objtype="adapter connections",
             count_min=count_min,
             count_max=count_max,
             count_total=len(matches),
-            known=self._build_known(clients),
+            known=self._build_known(cnxs),
             error=count_error,
         )
 
@@ -370,63 +385,63 @@ class Clients(mixins.Child):
 
     def filter_by_uuids(
         self,
-        clients,
+        cnxs,
         uuids=None,
         use_regex=False,
         count_min=None,
         count_max=None,
         count_error=True,
     ):
-        """Get all clients for all adapters."""
+        """Get all connections for all adapters."""
         matches = []
 
-        for client in clients:
+        for cnx in cnxs:
             match = tools.values_match(
-                checks=uuids, values=client["uuid"], use_regex=use_regex
+                checks=uuids, values=cnx["uuid"], use_regex=use_regex
             )
 
-            if match and client not in matches:
-                matches.append(client)
+            if match and cnx not in matches:
+                matches.append(cnx)
 
         self._parent._check_counts(
             value=uuids,
             value_type="uuids and regex {}".format(use_regex),
-            objtype="adapter clients",
+            objtype="adapter connections",
             count_min=count_min,
             count_max=count_max,
             count_total=len(matches),
-            known=self._build_known(clients),
+            known=self._build_known(cnxs),
             error=count_error,
         )
 
         return matches
 
     def filter_by_status(
-        self, clients, status=None, count_min=None, count_max=None, count_error=True
+        self, cnxs, status=None, count_min=None, count_max=None, count_error=True
     ):
-        """Get all clients for all adapters."""
+        """Get all connections for all adapters."""
         matches = []
 
-        for client in clients:
+        for cnx in cnxs:
             match = True
 
-            if client["status_bool"] is True and status is False:
+            if cnx["status"] is True and status is False:
                 match = False
 
-            if client["status_bool"] is False and status is True:
+            if cnx["status"] is False and status is True:
                 match = False
 
-            if match and client not in matches:
-                matches.append(client)
+            if match and cnx not in matches:
+                matches.append(cnx)
 
         self._parent._check_counts(
             value=status,
             value_type="by status",
-            objtype="adapter clients",
+            objtype="adapter connections",
             count_min=count_min,
             count_max=count_max,
             count_total=len(matches),
-            known=self._build_known(clients),
+            known=self._build_known(cnxs),
             error=count_error,
         )
 
@@ -434,7 +449,7 @@ class Clients(mixins.Child):
 
     def delete(
         self,
-        clients,
+        cnxs,
         delete_entities=False,
         force=False,
         warning=True,
@@ -442,38 +457,39 @@ class Clients(mixins.Child):
         sleep=5,
     ):
         """Pass."""
-        clients = tools.listify(clients, dictkeys=False)
+        cnxs = tools.listify(cnxs, dictkeys=False)
 
-        delmode = "client and {} entities of".format("ALL" if delete_entities else "NO")
+        delmode = "connection and {} entities of"
+        delmode = delmode.format("ALL" if delete_entities else "NO")
 
         done = []
 
-        for client in clients:
+        for cnx in cnxs:
             dinfo = {
-                "adapter": client["adapter"],
-                "node_name": client["node_name"],
-                "client_id": client["client_id"],
-                "client_uuid": client["uuid"],
-                "client_status": client["status_bool"],
+                "adapter_name": cnx["adapter_name"],
+                "node_name": cnx["node_name"],
+                "id": cnx["id"],
+                "uuid": cnx["uuid"],
+                "status": cnx["status"],
             }
 
             pinfo = ["{}: {!r}".format(k, v) for k, v in dinfo.items()]
-            pstr = tools.join.comma(pinfo).format(**client)
+            pstr = tools.join.comma(pinfo).format(**cnx)
 
             if not force:
                 emsg = "Must supply force=True to {d}: {p}"
                 emsg = emsg.format(d=delmode, p=pstr)
-                raise exceptions.ClientDeleteForceFalse(emsg)
+                raise exceptions.CnxDeleteForce(emsg)
 
             if warning:
                 wmsg = "In {s} seconds will delete {d} {p}"
                 wmsg = wmsg.format(s=sleep, d=delmode, p=pstr)
-                warnings.warn(wmsg, exceptions.ClientDeleteWarning)
+                warnings.warn(wmsg, exceptions.CnxDeleteWarning)
 
             dargs = {
-                "adapter_name": client["adapter_raw"],
-                "node_id": client["node_id"],
-                "client_id": client["uuid"],
+                "adapter_name": cnx["adapter_name_raw"],
+                "node_id": cnx["node_id"],
+                "cnx_uuid": cnx["uuid"],
                 "delete_entities": delete_entities,
             }
 
@@ -511,42 +527,35 @@ class Clients(mixins.Child):
 
             if had_error:
                 if warning and not error:
-                    warnings.warn(dmsg, exceptions.ClientDeleteWarning)
+                    warnings.warn(dmsg, exceptions.CnxDeleteWarning)
                 elif error:
-                    raise exceptions.ClientDeleteFailure(dmsg)
+                    raise exceptions.CnxDeleteFailure(dmsg)
 
         return done
 
-    def _check_connect_error(self, adapter, node, check_bool, response, error=True):
+    def check(self, cnxs, error=True):
         """Pass."""
-        if error and check_bool:
-            raise exceptions.ClientConnectFailure(
-                response=response, adapter=adapter, node=node
-            )
-
-    def check(self, clients, error=True):
-        """Pass."""
-        clients = tools.listify(clients, dictkeys=False)
+        cnxs = tools.listify(cnxs, dictkeys=False)
         results = []
 
-        for client in clients:
+        for cnx in cnxs:
             checked = self._check(
-                adapter_name=client["adapter_raw"],
-                config=client["client_config"],
-                node_id=client["node_id"],
+                adapter_name=cnx["adapter_name_raw"],
+                config=cnx["config_raw"],
+                node_id=cnx["node_id"],
             )
 
             self._check_connect_error(
-                adapter=client["adapter"],
-                node=client["node_name"],
+                adapter=cnx["adapter_name"],
+                node=cnx["node_name"],
                 check_bool=checked,
                 response=checked,
                 error=error,
             )
 
             result = {
-                "adapter": client["adapter"],
-                "node": client["node_name"],
+                "adapter_name": cnx["adapter_name"],
+                "node_name": cnx["node_name"],
                 "status": not bool(checked),
                 "response": tools.json.re_load(checked),
             }
@@ -555,29 +564,29 @@ class Clients(mixins.Child):
 
         return results
 
-    def start_discovery(self, clients, error=True):
+    def start_discovery(self, cnxs, error=True):
         """Pass."""
-        clients = tools.listify(clients, dictkeys=False)
+        cnxs = tools.listify(cnxs, dictkeys=False)
         results = []
 
-        for client in clients:
+        for cnx in cnxs:
             started = self._add(
-                adapter_name=client["adapter_raw"],
-                config=client["client_config"],
-                node_id=client["node_id"],
+                adapter_name=cnx["adapter_name_raw"],
+                config=cnx["config_raw"],
+                node_id=cnx["node_id"],
             )
 
             self._check_connect_error(
-                adapter=client["adapter"],
-                node=client["node_name"],
+                adapter=cnx["adapter_name"],
+                node=cnx["node_name"],
                 check_bool=started["status"] == "error" or started["error"],
                 response=started,
                 error=error,
             )
 
             result = {
-                "adapter": client["adapter"],
-                "node": client["node_name"],
+                "adapter": cnx["adapter_name"],
+                "node": cnx["node_name"],
                 "status": not bool(started),
                 "response": tools.json.re_load(started),
             }
@@ -587,11 +596,11 @@ class Clients(mixins.Child):
         return results
 
     def add(self, adapter, config, node="master", error=True, adapters=None):
-        """Add a client to an adapter.
+        """Add a connection to an adapter.
 
         Args:
             name (:obj:`str`):
-                Name of adapter to add client to.
+                Name of adapter to add connection to.
             config (:obj:`dict`):
                 Client configuration.
             node_id (:obj:`str`):
@@ -607,7 +616,7 @@ class Clients(mixins.Child):
             )
 
         parsed_config = self._config_parse(
-            adapter=adapter, settings_client=adapter["settings_clients"], config=config
+            adapter=adapter, settings=adapter["cnx_settings"], config=config
         )
 
         added = self._add(
@@ -624,14 +633,33 @@ class Clients(mixins.Child):
             error=error,
         )
 
-        # new clients don't always show up right away, so we wait a sec
-        time.sleep(1)
+        # new connections don't always show up right away, so we have to do some magic
+        count = 0
 
-        clients = self.get(adapter=adapter["name"], node=adapter["node_name"])
-        found = self.filter_by_uuids(
-            clients=clients, uuids=added["id"], count_min=1, count_max=1
-        )
-        return found[0]
+        while count < self._ADD_REFETCH_RETRY:
+            # re-fetch all connections for this adapter
+            cnxs = self.get(adapter=adapter["name"], node=adapter["node_name"])
+
+            # try to find the newly created connection
+            found = self.filter_by_uuids(
+                cnxs=cnxs,
+                uuids=added["id"],
+                count_min=1,
+                count_max=1,
+                count_error=count >= self._ADD_REFETCH_RETRY,
+            )
+
+            if len(found) == 1:
+                return found[0]
+            else:  # pragma: no cover
+                # not always triggered, so ignore test coverage
+                dmsg = "Added connection {added} not in system yet, try {c} of {r}"
+                dmsg = dmsg.format(added=added, c=count, r=self._ADD_REFETCH_RETRY)
+                self._log.debug(dmsg)
+
+                count += 1
+
+                time.sleep(self._ADD_REFETCH_SLEEP)
 
     def add_csv_str(
         self,
@@ -747,7 +775,10 @@ class Adapters(mixins.Model, mixins.Mixins):
 
     def _init(self, auth, **kwargs):
         """Pass."""
-        self.clients = Clients(parent=self)
+        # children
+        self.cnx = Cnx(parent=self)
+
+        super(Adapters, self)._init(auth=auth, **kwargs)
 
     @property
     def _router(self):
@@ -807,7 +838,7 @@ class Adapters(mixins.Model, mixins.Mixins):
     @staticmethod
     def _build_known(adapters):
         """Pass."""
-        tmpl = ["name: {name!r}", "node name {node_name!r}", "clients {client_count}"]
+        tmpl = ["name: {name!r}", "node name {node_name!r}", "connections {cnx_count}"]
         tmpl = tools.join.comma(tmpl)
         return [tmpl.format(**a) for a in adapters]
 
@@ -897,11 +928,11 @@ class Adapters(mixins.Model, mixins.Mixins):
 
         return matches
 
-    def filter_by_client_count(
+    def filter_by_cnx_count(
         self,
         adapters,
-        client_min=None,
-        client_max=None,
+        cnx_min=None,
+        cnx_max=None,
         count_min=None,
         count_max=None,
         count_error=True,
@@ -911,30 +942,29 @@ class Adapters(mixins.Model, mixins.Mixins):
         matches = []
 
         for adapter in adapters:
-            known_str = (
-                "name: {name!r}, node name {node_name!r}, client count: {client_count}"
-            )
-            known_str = known_str.format(**adapter)
+            known_str = [
+                "name: {name!r}",
+                "node name {node_name!r}",
+                "connection counts: {cnx_count}",
+            ]
+            known_str = tools.join.comma(known_str).format(**adapter)
 
             if known_str not in known:
                 known.append(known_str)
 
-            if client_min is not None and not adapter["client_count"] >= client_min:
+            if cnx_min is not None and not adapter["cnx_count"] >= cnx_min:
                 continue
-            if client_max == 0 and not adapter["client_count"] == 0:
+            if cnx_max == 0 and not adapter["cnx_count"] == 0:
                 continue
-            if client_max is not None and not adapter["client_count"] <= client_max:
+            if cnx_max is not None and not adapter["cnx_count"] <= cnx_max:
                 continue
 
             matches.append(adapter)
 
-        values = [
-            "client_min: {}".format(client_min),
-            "client_max: {}".format(client_max),
-        ]
+        values = ["cnx_min: {}".format(cnx_min), "cnx_max: {}".format(cnx_max)]
         self._check_counts(
             value=values,
-            value_type="adapter by client count",
+            value_type="adapter by connection count",
             objtype=self._router._object_type,
             count_min=count_min,
             count_max=count_max,
@@ -953,17 +983,17 @@ class Adapters(mixins.Model, mixins.Mixins):
         matches = []
 
         for adapter in adapters:
-            known_str = "name: {name!r}, node name {node_name!r}, status: {status_bool}"
+            known_str = "name: {name!r}, node name {node_name!r}, status: {status}"
             known_str = known_str.format(**adapter)
 
             if known_str not in known:
                 known.append(known_str)
 
-            if adapter["status_bool"] is True and status is True:
+            if adapter["status"] is True and status is True:
                 matches.append(adapter)
-            elif adapter["status_bool"] is False and status is False:
+            elif adapter["status"] is False and status is False:
                 matches.append(adapter)
-            elif adapter["status_bool"] is None and status is None:
+            elif adapter["status"] is None and status is None:
                 matches.append(adapter)
 
         self._check_counts(
@@ -1037,37 +1067,34 @@ class ParserAdapters(mixins.Parser):
             "name_plugin": raw["unique_plugin_name"],
             "node_name": raw["node_name"],
             "node_id": raw["node_id"],
-            "status": raw["status"],
+            "status_raw": raw["status"],
             "features": raw["supported_features"],
         }
 
-        clients = self._clients(raw=raw, parent=parsed)
-        client_count = len(clients)
-        client_count_ok = len([x for x in clients if x["status_bool"] is True])
-        client_count_bad = len([x for x in clients if x["status_bool"] is False])
-
-        if parsed["status"] == "success":
-            status_bool = True
-        elif parsed["status"] == "warning":
-            status_bool = False
+        if parsed["status_raw"] == "success":
+            parsed["status"] = True
+        elif parsed["status_raw"] == "warning":
+            parsed["status"] = False
         else:
-            status_bool = None
+            parsed["status"] = None
 
-        settings_clients = self._settings_clients(raw=raw)
-        settings_adapter = self._settings_adapter(raw=raw, base=False)
-        settings_advanced = self._settings_adapter(raw=raw, base=True)
+        cnx = self._cnx(raw=raw, parent=parsed)
+        cnx_ok = [x for x in cnx if x["status"] is True]
+        cnx_bad = [x for x in cnx if x["status"] is False]
 
-        parsed["clients"] = clients
-        parsed["client_count"] = client_count
-        parsed["client_count_ok"] = client_count_ok
-        parsed["client_count_bad"] = client_count_bad
-        parsed["status_bool"] = status_bool
-        parsed["settings_clients"] = settings_clients
-        parsed["settings_adapter"] = settings_adapter
-        parsed["settings_advanced"] = settings_advanced
+        parsed["cnx"] = cnx
+        parsed["cnx_ok"] = cnx_ok
+        parsed["cnx_bad"] = cnx_bad
+        parsed["cnx_settings"] = self._cnx_settings(raw=raw)
+        parsed["cnx_count"] = len(cnx)
+        parsed["cnx_count_ok"] = len(cnx_ok)
+        parsed["cnx_count_bad"] = len(cnx_bad)
+        parsed["settings"] = self._adapter_settings(raw=raw, base=False)
+        parsed["adv_settings"] = self._adapter_settings(raw=raw, base=True)
+
         return parsed
 
-    def _settings_clients(self, raw):
+    def _cnx_settings(self, raw):
         """Pass."""
         settings = {}
 
@@ -1082,7 +1109,7 @@ class ParserAdapters(mixins.Parser):
 
         return settings
 
-    def _settings_adapter(self, raw, base=True):
+    def _adapter_settings(self, raw, base=True):
         """Pass."""
         settings = {}
 
@@ -1103,41 +1130,38 @@ class ParserAdapters(mixins.Parser):
 
         return settings
 
-    def _clients(self, raw, parent):
+    def _cnx(self, raw, parent):
         """Pass."""
-        clients = []
+        cnx = []
 
-        settings_client = self._settings_clients(raw=raw)
+        cnx_settings = self._cnx_settings(raw=raw)
 
-        for raw_client in raw["clients"]:
-            raw_config = raw_client["client_config"]
+        for raw_cnx in raw["clients"]:
+            raw_config = raw_cnx["client_config"]
             parsed_settings = {}
 
-            for setting_name, setting_config in settings_client.items():
+            for setting_name, setting_config in cnx_settings.items():
                 value = raw_config.get(setting_name, None)
                 parsed_settings[setting_name] = setting_config.copy()
                 parsed_settings[setting_name]["value"] = value
 
-            status_bool = None
+            pcnx = {}
+            pcnx["node_name"] = parent["node_name"]
+            pcnx["node_id"] = parent["node_id"]
+            pcnx["adapter_name"] = parent["name"]
+            pcnx["adapter_name_raw"] = parent["name_raw"]
+            pcnx["adapter_status"] = parent["status"]
+            pcnx["config"] = parsed_settings
+            pcnx["config_raw"] = raw_config
+            pcnx["status_raw"] = raw_cnx["status"]
+            pcnx["status"] = raw_cnx["status"] == "success"
+            pcnx["id"] = raw_cnx["client_id"]
+            pcnx["uuid"] = raw_cnx["uuid"]
+            pcnx["date_fetched"] = raw_cnx["date_fetched"]
+            pcnx["error"] = raw_cnx["error"]
+            cnx.append(pcnx)
 
-            if raw_client["status"] == "success":
-                status_bool = True
-            elif raw_client["status"] == "error":
-                status_bool = False
-
-            parsed_client = raw_client.copy()
-            parsed_client["node_name"] = parent["node_name"]
-            parsed_client["node_id"] = parent["node_id"]
-            parsed_client["adapter"] = parent["name"]
-            parsed_client["adapter_raw"] = parent["name_raw"]
-            parsed_client["adapter_status"] = parent["status"]
-            parsed_client["adapter_features"] = parent["features"]
-            parsed_client["settings"] = parsed_settings
-            parsed_client["client_config"] = raw_config
-            parsed_client["status_bool"] = status_bool
-            clients.append(parsed_client)
-
-        return clients
+        return cnx
 
     def parse(self):
         """Pass."""

@@ -11,6 +11,9 @@ import axonius_api_client as axonapi
 
 from . import need_creds
 
+tools = axonapi.tools
+exceptions = axonapi.exceptions
+
 LABELS = ["badwolf_dundundun"]
 
 QUERY_ID_EXISTS = '(specific_data.data.id == ({"$exists":true,"$ne": ""}))'
@@ -33,8 +36,9 @@ DEVICES_FIELDS_VALIDATES = [
     "network_interfaces.mac",
 ]
 QUERY_TMPL = '({} == ({{"$exists":true,"$ne": ""}}))'.format
-
-tools = axonapi.tools
+macs = ["00:11:22:33:44:55"] * 10000
+macs = " ".join(["'{}'".format(mac) for mac in macs])
+LONG_QUERY = "not specific_data.data.network_interfaces.mac in [{}]".format(macs)
 
 
 @pytest.mark.needs_url
@@ -148,12 +152,22 @@ class TestBoth(object):
         return 'internal_axon_id == "{}"'.format(asset_id)
 
     @pytest.fixture(scope="class")
-    def all_assets(self, apiobj, all_fields, fields_list_manual):
+    def fields_list_manual_query(self, apiobj, fields_list_manual):
+        """Pass."""
+        return " and ".join([QUERY_TMPL(f) for f in fields_list_manual])
+
+    @pytest.fixture(scope="class")
+    def all_assets(
+        self, apiobj, all_fields, fields_list_manual, fields_list_manual_query
+    ):
         """Pass."""
         api_type = apiobj._router._object_type
-        query = " and ".join([QUERY_TMPL(f) for f in fields_list_manual])
         data = apiobj.get(
-            query=query, all_fields=all_fields, manual_fields=fields_list_manual
+            query=fields_list_manual_query,
+            all_fields=all_fields,
+            manual_fields=fields_list_manual,
+            count_max=10,
+            count_error=False,
         )
         assert tools.is_type.list(data)
 
@@ -226,19 +240,41 @@ class TestBoth(object):
         with pytest.raises(axonapi.NotLoggedIn):
             apicls(auth=auth)
 
-    @pytest.mark.parametrize("query", [None, QUERY_ID_EXISTS])
-    @pytest.mark.parametrize("use_post", [True, False])
-    @pytest.mark.parametrize("row_start", [0, 1])
-    def test__get(self, apiobj, query, fields_list_manual, use_post, row_start):
+    def test__get_query_fields_none(self, apiobj):
         """Test private get."""
         api_type = apiobj._router._object_type
-        data = apiobj._get(
+
+        gargs = dict(fields=None, row_start=0, page_size=1, query=None, use_post=False)
+
+        data = apiobj._get(**gargs)
+
+        assert tools.is_type.dict(data)
+        assert "assets" in data
+        assert tools.is_type.list(data["assets"])
+
+        if not data["assets"]:
+            msg = "No {t} on system, unable to test _get"
+            msg = msg.format(t=api_type)
+            pytest.skip(msg)
+
+        assert len(data["assets"]) == 1
+
+    def test__get_post_false(
+        self, apiobj, fields_list_manual_query, fields_list_manual
+    ):
+        """Test private get."""
+        api_type = apiobj._router._object_type
+
+        gargs = dict(
             fields=fields_list_manual,
-            row_start=row_start,
+            row_start=0,
             page_size=1,
-            query=query,
-            use_post=use_post,
+            query=fields_list_manual_query,
+            use_post=False,
         )
+
+        data = apiobj._get(**gargs)
+
         assert tools.is_type.dict(data)
         assert "assets" in data
         assert tools.is_type.list(data["assets"])
@@ -256,6 +292,69 @@ class TestBoth(object):
             for field in fields_list_manual:
                 assert field in entry
 
+    # FUTURE: use_post = True ignores page_size (limit) and just returns 2000 items
+    def test__get_post_true(self, apiobj, fields_list_manual_query, fields_list_manual):
+        """Test private get."""
+        api_type = apiobj._router._object_type
+
+        gargs = dict(
+            fields=fields_list_manual,
+            row_start=0,
+            page_size=1,
+            query=fields_list_manual_query,
+            use_post=True,
+        )
+
+        data = apiobj._get(**gargs)
+
+        assert tools.is_type.dict(data)
+        assert "assets" in data
+        assert tools.is_type.list(data["assets"])
+
+        if not data["assets"]:
+            msg = "No {t} on system, unable to test _get"
+            msg = msg.format(t=api_type)
+            pytest.skip(msg)
+
+        if data["page"]["totalResources"] < 2000:
+            assert len(data["assets"]) == data["page"]["totalResources"]
+        else:
+            assert len(data["assets"]) == 2000
+
+        for entry in data["assets"]:
+            assert tools.is_type.dict(entry)
+            assert "adapters" in entry
+            for field in fields_list_manual:
+                assert field in entry
+
+    def test__get_long_query_uses_post(self, apiobj):
+        """Pass."""
+        api_type = apiobj._router._object_type
+
+        data = apiobj._get(query=LONG_QUERY, page_size=1)
+
+        assert tools.is_type.dict(data)
+        assert "assets" in data
+        assert tools.is_type.list(data["assets"])
+
+        if not data["assets"]:
+            msg = "No {t} on system, unable to test _get"
+            msg = msg.format(t=api_type)
+            pytest.skip(msg)
+
+        assert apiobj._auth.http._LAST_RESPONSE.request.method == "POST"
+
+        if data["page"]["totalResources"] < 2000:
+            assert len(data["assets"]) == data["page"]["totalResources"]
+        else:
+            assert len(data["assets"]) == 2000
+
+    def test_count_long_query_uses_post(self, apiobj):
+        """Pass."""
+        data = apiobj.count(query=LONG_QUERY)
+        assert tools.is_type.int(data)
+        assert apiobj._auth.http._LAST_RESPONSE.request.method == "POST"
+
     @pytest.mark.parametrize("query", [None, QUERY_ID_EXISTS])
     @pytest.mark.parametrize("use_post", [True, False])
     def test_count(self, apiobj, query, use_post):
@@ -265,19 +364,24 @@ class TestBoth(object):
 
     def test_get_manual(self, apiobj, fields_list_manual, single_asset_query):
         """Pass."""
-        data = apiobj.get(query=single_asset_query, manual_fields=fields_list_manual)
-        assert tools.is_type.list(data)
-        assert len(data) == 1
+        data = apiobj.get(
+            query=single_asset_query,
+            manual_fields=fields_list_manual,
+            count_max=1,
+            count_error=False,
+        )
+        assert tools.is_type.dict(data)
 
     def test_get_validate(self, apiobj, fields_dict_mix, single_asset_query):
         """Pass."""
-        data = apiobj.get(query=single_asset_query, **fields_dict_mix)
-        assert tools.is_type.list(data)
-        assert len(data) == 1
+        data = apiobj.get(
+            query=single_asset_query, count_max=1, count_error=False, **fields_dict_mix
+        )
+        assert tools.is_type.dict(data)
 
     def test_get_cntmax_error(self, apiobj, fields_dict_mix):
         """Pass."""
-        with pytest.raises(axonapi.exceptions.TooManyObjectsFound):
+        with pytest.raises(exceptions.TooManyObjectsFound):
             apiobj.get(count_max=1, **fields_dict_mix)
 
     def test_get_cntmax_noerror1(self, apiobj, fields_dict_mix):
@@ -293,7 +397,7 @@ class TestBoth(object):
 
     def test_get_cntmin_error(self, apiobj, fields_dict_mix):
         """Pass."""
-        with pytest.raises(axonapi.exceptions.TooFewObjectsFound):
+        with pytest.raises(exceptions.TooFewObjectsFound):
             apiobj.get(
                 query='not (specific_data.data.id == ({"$exists":true,"$ne": ""}))',
                 count_min=1,
@@ -319,11 +423,11 @@ class TestBoth(object):
             count_error=False,
             **fields_dict_mix
         )
-        assert len(data) == 0
+        assert not data
 
     def test_get_cntmaxmin_error(self, apiobj, fields_dict_mix):
         """Pass."""
-        with pytest.raises(axonapi.exceptions.ObjectNotFound):
+        with pytest.raises(exceptions.ObjectNotFound):
             apiobj.get(
                 query='not (specific_data.data.id == ({"$exists":true,"$ne": ""}))',
                 count_min=1,
@@ -345,17 +449,6 @@ class TestBoth(object):
             assert tools.is_type.dict(entry)
             assert "name" in entry
             assert tools.is_type.str(entry["name"])
-
-    # def test_sq_get(self, apiobj):
-    #     """Test sq private get."""
-    #     data = apiobj.saved_query._get()
-    #     assert tools.is_type.list(data)
-    #     assert len(data) >= 1
-
-    #     for entry in data:
-    #         assert tools.is_type.dict(entry)
-    #         assert "name" in entry
-    #         assert tools.is_type.str(entry["name"])
 
     def test_sq_get_names(self, apiobj):
         """Test sq get_names."""
@@ -392,10 +485,10 @@ class TestBoth(object):
 
         apiobj.saved_query.delete_by_name(value=created["name"])
 
-        with pytest.raises(axonapi.exceptions.ObjectNotFound):
+        with pytest.raises(exceptions.ObjectNotFound):
             apiobj.saved_query.get_by_name(value=created["name"])
 
-        with pytest.raises(axonapi.exceptions.ObjectNotFound):
+        with pytest.raises(exceptions.ObjectNotFound):
             apiobj.saved_query.get_by_id(value=created["uuid"])
 
     def test_sq_create_delete_validate(self, fields_dict_validate, apiobj):
@@ -410,20 +503,20 @@ class TestBoth(object):
 
         apiobj.saved_query.delete_by_name(value=created["name"])
 
-        with pytest.raises(axonapi.exceptions.ObjectNotFound):
+        with pytest.raises(exceptions.ObjectNotFound):
             apiobj.saved_query.get_by_name(value=created["name"])
 
-        with pytest.raises(axonapi.exceptions.ObjectNotFound):
+        with pytest.raises(exceptions.ObjectNotFound):
             apiobj.saved_query.get_by_id(value=created["uuid"])
 
     def test_sq_create_page_size_invalid(self, apiobj):
         """Pass."""
-        with pytest.raises(axonapi.exceptions.ApiError):
+        with pytest.raises(exceptions.ApiError):
             apiobj.saved_query.create(name="BADWOLF", query=None, page_size=99290)
 
     def test_sq_get_invalid(self, apiobj):
         """Pass."""
-        with pytest.raises(axonapi.exceptions.ObjectNotFound):
+        with pytest.raises(exceptions.ObjectNotFound):
             apiobj.saved_query.get_by_name(value="AJKSLDBIBRASNVOIRHOUHG")
 
     def test_sq_get_name(self, apiobj, test_sq_get):
@@ -488,7 +581,7 @@ class TestBoth(object):
 
     def test_fields_find_adapter_invalid(self, apiobj, all_fields):
         """Pass."""
-        with pytest.raises(axonapi.exceptions.UnknownError):
+        with pytest.raises(exceptions.UnknownError):
             apiobj.fields.find_adapter("badwolf", all_fields=all_fields)
 
     def test_fields_find_adapter_invalid_noerr(self, apiobj, all_fields):
@@ -511,7 +604,7 @@ class TestBoth(object):
 
     def test_fields_find_invalid_field(self, apiobj, all_fields):
         """Pass."""
-        with pytest.raises(axonapi.exceptions.UnknownError):
+        with pytest.raises(exceptions.UnknownError):
             apiobj.fields.find(
                 adapter_name="generic", name="AJKSLJAKN", all_fields=all_fields
             )
@@ -534,7 +627,7 @@ class TestBoth(object):
 
     def test_fields_find_invalid_adapter(self, apiobj, all_fields):
         """Pass."""
-        with pytest.raises(axonapi.exceptions.UnknownError):
+        with pytest.raises(exceptions.UnknownError):
             apiobj.fields.find(
                 adapter_name="SDNJS:LDJGSKLDJF", name="AJKSLJAKN", all_fields=all_fields
             )
@@ -601,7 +694,7 @@ class TestBoth(object):
 
     def test_get_by_id_fail(self, apiobj):
         """Pass."""
-        with pytest.raises(axonapi.exceptions.ObjectNotFound):
+        with pytest.raises(exceptions.ObjectNotFound):
             apiobj.get_by_id("BADWOLF")
 
     def test_get_by_sq(self, apiobj, test_sq_get):
@@ -609,7 +702,6 @@ class TestBoth(object):
         name = test_sq_get[0]["name"]
         data = apiobj.get_by_saved_query(name=name)
         assert tools.is_type.list(data)
-        assert data
         keys = ["adapter_list_length", "adapters", "internal_axon_id"]
         for entry in data:
             for key in keys:
@@ -666,7 +758,7 @@ class TestBoth(object):
             field_name = v[0]
             break
 
-        with pytest.raises(axonapi.exceptions.ObjectNotFound):
+        with pytest.raises(exceptions.ObjectNotFound):
             apiobj.get_by_field_value(
                 value="askdjfsdfsadgasg",
                 name=field_name,
@@ -679,22 +771,23 @@ class TestBoth(object):
         raw_fields = apiobj.fields._get()
         raw_fields["generic"].append(raw_fields["generic"][0])
         parser = axonapi.api.users_devices.ParserFields(parent=apiobj, raw=raw_fields)
-        with pytest.raises(axonapi.exceptions.ApiError):
+        with pytest.raises(exceptions.ApiError):
             parser.parse()
 
-    def test_reports_adapter(self, apiobj, all_assets, all_fields):
-        """Pass."""
-        report = apiobj.report_adapters(rows=all_assets, all_fields=all_fields)
-        assert tools.is_type.list(report)
-        assert tools.nest_depth(report) >= 3
+    # TODO: RE-DO!
+    # def test_reports_adapter(self, apiobj, all_assets, all_fields):
+    #     """Pass."""
+    #     report = apiobj.report_adapters(rows=all_assets, all_fields=all_fields)
+    #     assert tools.is_type.list(report)
+    #     assert tools.nest_depth(report) >= 3
 
-    def test_reports_adapter_serial(self, apiobj, all_assets, all_fields):
-        """Pass."""
-        report = apiobj.report_adapters(
-            rows=all_assets, all_fields=all_fields, serial=True
-        )
-        assert tools.is_type.list(report)
-        assert tools.nest_depth(report) == 2
+    # def test_reports_adapter_serial(self, apiobj, all_assets, all_fields):
+    #     """Pass."""
+    #     report = apiobj.report_adapters(
+    #         rows=all_assets, all_fields=all_fields, serial=True
+    #     )
+    #     assert tools.is_type.list(report)
+    #     assert tools.nest_depth(report) == 2
 
 
 @pytest.mark.needs_url
@@ -733,7 +826,9 @@ class TestUsers(object):
     @pytest.fixture(scope="class")
     def all_assets(self, apiobj):
         """Pass."""
-        data = apiobj.get(query=self.QUERY, manual_fields=self.FIELDS)
+        data = apiobj.get(
+            query=self.QUERY, manual_fields=self.FIELDS, count_max=10, count_error=False
+        )
         assert tools.is_type.list(data)
 
         if not data:
@@ -841,7 +936,9 @@ class TestDevices(object):
     @pytest.fixture(scope="class")
     def all_assets(self, apiobj):
         """Pass."""
-        data = apiobj.get(query=self.QUERY, manual_fields=self.FIELDS)
+        data = apiobj.get(
+            query=self.QUERY, manual_fields=self.FIELDS, count_max=10, count_error=False
+        )
         assert tools.is_type.list(data)
 
         if not data:

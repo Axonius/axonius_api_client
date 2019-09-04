@@ -161,12 +161,17 @@ class is_type(object):
     @staticmethod
     def lod(obj):
         """Pass."""
-        return is_type.lot(obj, is_type.dict) and obj
+        if not obj:
+            return False
+
+        return is_type.lot(obj, is_type.dict)
 
     @staticmethod
     def lol(obj):
         """Pass."""
-        return is_type.lot(obj, is_type.list) and obj
+        if not obj:
+            return False
+        return is_type.lot(obj, is_type.list)
 
     @staticmethod
     def lols(obj):
@@ -870,6 +875,38 @@ class Connect(object):
 
         self._api_args = {"auth": self._auth, "log_level": log_level_api}
 
+    @property
+    def users(self):
+        """Pass."""
+        self.start()
+        if not hasattr(self, "_users"):
+            self._users = api.Users(**self._api_args)
+        return self._users
+
+    @property
+    def devices(self):
+        """Pass."""
+        self.start()
+        if not hasattr(self, "_devices"):
+            self._devices = api.Devices(**self._api_args)
+        return self._devices
+
+    @property
+    def adapters(self):
+        """Pass."""
+        self.start()
+        if not hasattr(self, "_adapters"):
+            self._adapters = api.Adapters(**self._api_args)
+        return self._adapters
+
+    @property
+    def enforcements(self):
+        """Pass."""
+        self.start()
+        if not hasattr(self, "_enforcements"):
+            self._enforcements = api.Enforcements(**self._api_args)
+        return self._enforcements
+
     def start(self):
         """Pass."""
         if not self._started:
@@ -897,13 +934,6 @@ class Connect(object):
                 msg = "{pre}: {exc}"
                 msg = msg.format(pre=msg_pre, exc=exc)
                 raise exceptions.ConnectError(msg=msg, exc=exc)
-
-            # TODO move these into attrs
-            self.users = api.Users(**self._api_args)
-            self.devices = api.Devices(**self._api_args)
-            self.adapters = api.Adapters(**self._api_args)
-            # self.enforcements = api.Enforcements(**self._api_args)
-            # self.actions = api.Actions(**self._api_args)
 
             self._started = True
             self._start_dt = datetime.datetime.utcnow()

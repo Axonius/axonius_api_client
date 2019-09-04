@@ -22,9 +22,9 @@ def join(opts, switch):
     return "({})".format(" {} ".format(switch).join(opts))
 
 
-NEEDS_KEY = join(["--key", "$AX_KEY"], "OR")
-NEEDS_SECRET = join(["--secret", "$AX_SECRET"], "OR")
-NEEDS_URL = join(["--url", "$AX_URL"], "OR")
+NEEDS_KEY = join(["--key", "$AX_KEY", ".env/AX_KEY"], "OR")
+NEEDS_SECRET = join(["--secret", "$AX_SECRET", ".env/AX_SEXRET"], "OR")
+NEEDS_URL = join(["--url", "$AX_URL", ".env/AX_URL"], "OR")
 
 NEEDS_KEY_CREDS = join([NEEDS_KEY, NEEDS_SECRET], "AND")
 
