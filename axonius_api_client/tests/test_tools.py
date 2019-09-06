@@ -11,9 +11,7 @@ import pytest
 import six
 
 import axonius_api_client as axonapi
-
-tools = axonapi.tools
-exceptions = axonapi.exceptions
+from axonius_api_client import exceptions, tools
 
 BAD_CRED = "tardis"
 
@@ -1532,7 +1530,7 @@ class TestConnect(object):
         c.start()
         assert "Connected" in format(c)
         assert "Connected" in repr(c)
-        with pytest.warns(exceptions.ApiWarning):
+        with pytest.warns(exceptions.BetaWarning):
             format(c.enforcements)
         format(c.users)
         format(c.devices)

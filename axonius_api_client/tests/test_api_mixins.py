@@ -6,10 +6,9 @@ import pytest
 import requests
 
 import axonius_api_client as axonapi
+from axonius_api_client import exceptions, tools
 
 from . import need_creds
-
-tools = axonapi.tools
 
 
 @pytest.mark.needs_url
@@ -44,7 +43,7 @@ class TestMixins(object):
 
     def test__request_json_error(self, apiobj):
         """Test exc thrown when json has error status."""
-        with pytest.raises(axonapi.exceptions.JsonError):
+        with pytest.raises(exceptions.JsonError):
             apiobj._request(
                 path=apiobj._router.root + "/badwolf",
                 method="get",
@@ -53,7 +52,7 @@ class TestMixins(object):
 
     def test__request_no_json_error(self, apiobj):
         """Test exc thrown when status code != 200."""
-        with pytest.raises(axonapi.exceptions.ResponseCodeNot200):
+        with pytest.raises(exceptions.ResponseCodeNot200):
             apiobj._request(
                 path=apiobj._router.root + "/badwolf",
                 method="get",
@@ -63,7 +62,7 @@ class TestMixins(object):
 
     def test__request_json_invalid(self, apiobj):
         """Test exc thrown when invalid json."""
-        with pytest.raises(axonapi.exceptions.JsonInvalid):
+        with pytest.raises(exceptions.JsonInvalid):
             apiobj._request(path="", method="get")
 
     def test__request_json_invalid_text(self, apiobj):
@@ -88,11 +87,5 @@ class TestMixins(object):
         need_creds(creds)
         http = axonapi.Http(url=url, certwarn=False)
         auth = creds["cls"](http=http, **creds["creds"])
-        with pytest.raises(axonapi.NotLoggedIn):
+        with pytest.raises(exceptions.NotLoggedIn):
             axonapi.api.mixins.Mixins(auth=auth)
-
-    def test__check_max_page_size(self, apiobj):
-        """Pass."""
-        page_size = axonapi.constants.MAX_PAGE_SIZE + 1000
-        with pytest.raises(axonapi.exceptions.ApiError):
-            apiobj._check_max_page_size(page_size)

@@ -7,14 +7,16 @@ import os
 
 from . import __package__ as PACKAGE_ROOT
 
-MAX_PAGE_SIZE = 2000
+MAX_PAGING_SIZE = 2000
 """:obj:`int`: Maximum page size that REST API allows."""
 
-DEFAULT_PAGE_SIZE = 1000
+DEFAULT_PAGING_SIZE = 1000
 """:obj:`int`: Default page size to use for public API methods."""
 
-GUI_PAGE_SIZES = [25, 50, 100]
+GUI_PAGING_SIZES = [25, 50, 100]
 """:obj:`list` of :obj:`int`: Valid page sizes for GUI paging."""
+
+QUERY_USE_POST_LENGTH = 1000
 
 GENERIC_FIELD_PREFIX = "specific_data.data"
 """:obj:`str`: Prefix that all generic fields should begin with."""
@@ -83,3 +85,11 @@ LOG_FILE_MAX_FILES = 5
 LOG_NAME_STDERR = "handler_stderr"
 LOG_NAME_STDOUT = "handler_stdout"
 LOG_NAME_FILE = "handler_file"
+
+
+CSV_FIELDS = {
+    "device": ["id", "serial", "mac_address", "hostname", "name"],
+    "user": ["id", "username", "mail", "name"],
+    "sw": ["hostname", "installed_sw_name"],
+}
+SETTING_UNCHANGED = ["unchanged"]

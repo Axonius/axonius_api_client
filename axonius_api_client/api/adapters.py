@@ -3,771 +3,11 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import pdb  # noqa
-
 import time
 import warnings
 
-from .. import exceptions, tools
+from .. import constants, exceptions, tools
 from . import mixins, routers
-
-
-class Cnx(mixins.Child):
-    """Pass."""
-
-    _CSV_FIELDS = {
-        "device": ["id", "serial", "mac_address", "hostname", "name"],
-        "user": ["id", "username", "mail", "name"],
-        "sw": ["hostname", "installed_sw_name"],
-    }
-
-    _SETTING_TYPES = {
-        "bool": tools.is_type.bool,
-        "number": tools.is_type.str_int,
-        "integer": tools.is_type.str_int,
-        "array": tools.is_type.los,
-        "string": tools.is_type.str,
-    }
-
-    _ADD_REFETCH_RETRY = 5
-    _ADD_REFETCH_SLEEP = 1
-
-    def _check(self, adapter_name, node_id, config):
-        """Test an adapter connection.
-
-        Args:
-            name (:obj:`str`):
-                Name of adapter to test connection of.
-            config (:obj:`dict`):
-                Connection configuration.
-            node_id (:obj:`str`):
-                Node ID.
-
-        Returns:
-            :obj:`object`
-
-        """
-        data = {}
-        data.update(config)
-        data["instanceName"] = node_id
-        data["oldInstanceName"] = node_id
-
-        path = self._parent._router.cnxs.format(adapter_name=adapter_name)
-
-        return self._parent._request(
-            method="post",
-            path=path,
-            json=data,
-            error_json_bad_status=False,
-            error_code_not_200=False,
-        )
-
-    def _add(self, adapter_name, node_id, config):
-        """Add a connection to an adapter.
-
-        Args:
-            adapter (:obj:`str`):
-                Name of adapter to add connection to.
-            config (:obj:`dict`):
-                Client configuration.
-            node_id (:obj:`str`):
-                Node ID.
-
-        Returns:
-            :obj:`object`
-
-        """
-        data = {}
-        data.update(config)
-        data["instanceName"] = node_id
-
-        path = self._parent._router.cnxs.format(adapter_name=adapter_name)
-
-        return self._parent._request(
-            method="put",
-            path=path,
-            json=data,
-            error_json_bad_status=False,
-            error_code_not_200=False,
-        )
-
-    def _delete(self, adapter_name, node_id, cnx_uuid, delete_entities=False):
-        """Delete a connection from an adapter.
-
-        Args:
-            name (:obj:`str`):
-                Name of adapter to delete connection from.
-            id (:obj:`str`):
-                ID of connection to remove.
-            node_id (:obj:`str`):
-                Node ID.
-
-        Returns:
-            :obj:`object`
-
-        """
-        data = {}
-        data["instanceName"] = node_id
-
-        params = {"deleteEntities": delete_entities}
-
-        path = self._parent._router.cnxs_uuid.format(
-            adapter_name=adapter_name, cnx_uuid=cnx_uuid
-        )
-
-        return self._parent._request(
-            method="delete",
-            path=path,
-            json=data,
-            params=params,
-            error_json_bad_status=False,
-            error_code_not_200=False,
-        )
-
-    def _config_parse(self, adapter, settings, config):
-        """Pass."""
-        new_config = {}
-
-        for name, schema in settings.items():
-            required = schema["required"]
-            type_str = schema["type"]
-            enum = schema.get("enum", [])
-
-            value = config.get(name, None)
-
-            has_value = name in config
-            has_default = "default" in schema
-
-            req = "required" if required else "optional"
-            msg = "Processing {req} setting {n!r} with value of {v!r}, schema: {ss}"
-            msg = msg.format(req=req, n=name, v=value, ss=schema)
-            self._log.debug(msg)
-
-            if not has_value and not has_default:
-                if not required:
-                    continue
-                error = "value was not supplied and has no default value"
-                raise exceptions.CnxSettingMissing(
-                    name=name, value=value, schema=schema, error=error
-                )
-
-            if not has_value and has_default:
-                value = schema["default"]
-
-            if enum and value not in enum:
-                error = "invalid value {value!r}, must be one of {enum}"
-                error = error.format(value=value, enum=enum)
-                raise exceptions.CnxSettingInvalidChoice(
-                    name=name, value=value, schema=schema, error=error
-                )
-
-            if type_str == "file":
-                value = self._config_file_check(
-                    name=name, value=value, schema=schema, adapter=adapter
-                )
-            elif type_str in self._SETTING_TYPES:
-                self._config_type_check(
-                    name=name,
-                    schema=schema,
-                    value=value,
-                    type_cb=self._SETTING_TYPES[type_str],
-                )
-            else:
-                error = "Unknown setting type: {type_str!r}"
-                error = error.format(type_str=type_str)
-                raise exceptions.CnxSettingUnknownType(
-                    name=name, value=value, schema=schema, error=error
-                )
-
-            # FUTURE: number/integer need to be coerced???
-
-            new_config[name] = value
-        return new_config
-
-    @staticmethod
-    def _config_file(d):
-        """Pass."""
-        return {"uuid": d["uuid"], "filename": d["filename"]}
-
-    def _config_file_check(self, name, value, schema, adapter):
-        """Pass."""
-        if tools.is_type.str(value) or tools.is_type.path(value):
-            uploaded = self._parent.upload_file_path(
-                adapter=adapter, field=name, filepath=value
-            )
-            return self._config_file(uploaded)
-
-        self._config_type_check(
-            name=name, schema=schema, value=value, type_cb=tools.is_type.dict
-        )
-
-        uuid = value.get("uuid", None)
-        filename = value.get("filename", None)
-        filepath = value.get("filepath", None)
-        filecontent = value.get("filecontent", None)
-        filecontent_type = value.get("filecontent_type", None)
-
-        ex_uuid = {
-            name: {
-                "uuid": "uuid",
-                "filename": "filename",
-                "filepath": "optional str or pathlib to get filename from",
-            }
-        }
-        ex_filecontent = {
-            name: {
-                "filename": "filename",
-                "filecontent": "binary content",
-                "filecontent_type": "optional mime type",
-            }
-        }
-
-        ex_filepath = {
-            name: {"filepath": "path to file", "filecontent_type": "optional mime type"}
-        }
-
-        if uuid:
-            if not filename:
-                if filepath:
-                    value["filename"] = tools.path.resolve(filepath).name
-                else:
-                    error = "must supply {opts} when supplying 'uuid', example: {ex}"
-                    error = error.format(
-                        n=name, ex=ex_uuid, opts="'filename' or 'filepath'"
-                    )
-                    raise exceptions.CnxSettingMissing(
-                        name=name, value=value, schema=schema, error=error
-                    )
-
-            return self._config_file(value)
-        else:
-            if filepath:
-                uploaded = self._parent.upload_file_path(
-                    field=name,
-                    adapter=adapter,
-                    filepath=filepath,
-                    filecontent_type=filecontent_type,
-                )
-            elif filecontent and filename:
-                uploaded = self._parent.upload_file_str(
-                    field=name,
-                    adapter=adapter,
-                    filename=filename,
-                    filecontent=filecontent,
-                    filecontent_type=filecontent_type,
-                )
-            else:
-                error = [
-                    "Must supply one of the following:",
-                    ex_filecontent,
-                    ex_filepath,
-                    ex_uuid,
-                ]
-                error = tools.join.cr(error)
-                raise exceptions.CnxSettingMissing(
-                    name=name, value=value, schema=schema, error=error
-                )
-
-            return self._config_file(uploaded)
-
-    def _config_type_check(self, name, value, type_cb, schema):
-        """Pass."""
-        required = schema["required"]
-        pre = "{req} setting {n!r} with value {v!r}"
-        pre = pre.format(req="Required" if required else "Optional", n=name, v=value)
-
-        if not type_cb(value):
-            error = "is invalid type {st!r}"
-            error = error.format(st=type(value).__name__)
-            raise exceptions.CnxSettingInvalidType(
-                name=name, value=value, schema=schema, error=error
-            )
-
-    def _validate_csv(
-        self, filename, filecontent, is_users=False, is_installed_sw=False
-    ):
-        """Pass."""
-        if is_users:
-            ids = self._CSV_FIELDS["user"]
-            ids_type = "user"
-        elif is_installed_sw:
-            ids = self._CSV_FIELDS["sw"]
-            ids_type = "installed software"
-        else:
-            ids = self._CSV_FIELDS["device"]
-            ids_type = "device"
-
-        headers_content = filecontent
-        if tools.is_type.bytes(headers_content):
-            headers_content = headers_content.decode()
-
-        headers = headers_content.splitlines()[0].lower().split(",")
-        headers_has_any_id = any([x in headers for x in ids])
-
-        if not headers_has_any_id:
-            msg = "No {ids_type} identifiers {ids} found in CSV file {name} headers {h}"
-            msg = msg.format(ids_type=ids_type, ids=ids, name=filename, h=headers)
-            warnings.warn(msg, exceptions.CnxCsvWarning)
-
-    @staticmethod
-    def _build_known(cnxs):
-        """Pass."""
-        tmpl = [
-            "Adapter {adapter_name!r}",
-            "id {id!r}",
-            "uuid {uuid!r}",
-            "status {status}",
-        ]
-        tmpl = tools.join.comma(tmpl)
-        return [tmpl.format(**c) for c in cnxs]
-
-    def _check_connect_error(self, adapter, node, check_bool, response, error=True):
-        """Pass."""
-        if error and check_bool:
-            raise exceptions.CnxFailure(response=response, adapter=adapter, node=node)
-
-    def get(self, adapter, node="master"):
-        """Get all connections for an adapter."""
-        if tools.is_type.str(adapter):
-            adapter = self._parent.get_single(name=adapter, node=node)
-            return adapter["cnx"]
-
-        if tools.is_type.los(adapter):
-            all_adapters = self._parent.get()
-            all_adapters = self._parent.filter_by_names(
-                adapters=all_adapters, names=adapter
-            )
-            all_adapters = self._parent.filter_by_nodes(
-                adapters=all_adapters, nodes=node
-            )
-            return [c for a in all_adapters for c in a["cnx"]]
-
-        if tools.is_type.none(adapter):
-            all_adapters = self._parent.get()
-            all_adapters = self._parent.filter_by_nodes(
-                adapters=all_adapters, nodes=node
-            )
-            return [c for a in all_adapters for c in a]
-        else:
-            return adapter["cnx"]
-
-    def filter_by_ids(
-        self,
-        cnxs,
-        ids=None,
-        use_regex=False,
-        count_min=None,
-        count_max=None,
-        count_error=True,
-    ):
-        """Get all connections for all adapters."""
-        matches = []
-
-        for cnx in cnxs:
-            match = tools.values_match(
-                checks=ids, values=cnx["id"], use_regex=use_regex
-            )
-
-            if match and cnx not in matches:
-                matches.append(cnx)
-
-        self._parent._check_counts(
-            value=ids,
-            value_type="connection ids and regex {}".format(use_regex),
-            objtype="adapter connections",
-            count_min=count_min,
-            count_max=count_max,
-            count_total=len(matches),
-            known=self._build_known(cnxs),
-            error=count_error,
-        )
-
-        return matches
-
-    def filter_by_uuids(
-        self,
-        cnxs,
-        uuids=None,
-        use_regex=False,
-        count_min=None,
-        count_max=None,
-        count_error=True,
-    ):
-        """Get all connections for all adapters."""
-        matches = []
-
-        for cnx in cnxs:
-            match = tools.values_match(
-                checks=uuids, values=cnx["uuid"], use_regex=use_regex
-            )
-
-            if match and cnx not in matches:
-                matches.append(cnx)
-
-        self._parent._check_counts(
-            value=uuids,
-            value_type="uuids and regex {}".format(use_regex),
-            objtype="adapter connections",
-            count_min=count_min,
-            count_max=count_max,
-            count_total=len(matches),
-            known=self._build_known(cnxs),
-            error=count_error,
-        )
-
-        return matches
-
-    def filter_by_status(
-        self, cnxs, status=None, count_min=None, count_max=None, count_error=True
-    ):
-        """Get all connections for all adapters."""
-        matches = []
-
-        for cnx in cnxs:
-            match = True
-
-            if cnx["status"] is True and status is False:
-                match = False
-
-            if cnx["status"] is False and status is True:
-                match = False
-
-            if match and cnx not in matches:
-                matches.append(cnx)
-
-        self._parent._check_counts(
-            value=status,
-            value_type="by status",
-            objtype="adapter connections",
-            count_min=count_min,
-            count_max=count_max,
-            count_total=len(matches),
-            known=self._build_known(cnxs),
-            error=count_error,
-        )
-
-        return matches
-
-    def delete(
-        self,
-        cnxs,
-        delete_entities=False,
-        force=False,
-        warning=True,
-        error=True,
-        sleep=5,
-    ):
-        """Pass."""
-        cnxs = tools.listify(cnxs, dictkeys=False)
-
-        delmode = "connection and {} entities of"
-        delmode = delmode.format("ALL" if delete_entities else "NO")
-
-        done = []
-
-        for cnx in cnxs:
-            dinfo = {
-                "adapter_name": cnx["adapter_name"],
-                "node_name": cnx["node_name"],
-                "id": cnx["id"],
-                "uuid": cnx["uuid"],
-                "status": cnx["status"],
-            }
-
-            pinfo = ["{}: {!r}".format(k, v) for k, v in dinfo.items()]
-            pstr = tools.join.comma(pinfo).format(**cnx)
-
-            if not force:
-                emsg = "Must supply force=True to {d}: {p}"
-                emsg = emsg.format(d=delmode, p=pstr)
-                raise exceptions.CnxDeleteForce(emsg)
-
-            if warning:
-                wmsg = "In {s} seconds will delete {d} {p}"
-                wmsg = wmsg.format(s=sleep, d=delmode, p=pstr)
-                warnings.warn(wmsg, exceptions.CnxDeleteWarning)
-
-            dargs = {
-                "adapter_name": cnx["adapter_name_raw"],
-                "node_id": cnx["node_id"],
-                "cnx_uuid": cnx["uuid"],
-                "delete_entities": delete_entities,
-            }
-
-            dpa = "{d} {p} using args: {a}"
-            dpa = dpa.format(d=delmode, p=pstr, a=dargs)
-
-            lmsg = "About to delete {dpa}"
-            lmsg = lmsg.format(dpa=dpa)
-            self._log.info(lmsg)
-
-            time.sleep(sleep)
-
-            result = self._delete(**dargs)
-
-            had_error = tools.is_type.dict(result) and (
-                result["status"] == "error" or result["error"]
-            )
-
-            lmsg = "Finished deleting {dpa} - had error {he} with return {r}"
-            lmsg = lmsg.format(dpa=dpa, he=had_error, r=result)
-            self._log.info(lmsg)
-
-            dmsg = "{s} {d} {p}, error: {e}"
-            dmsg = dmsg.format(
-                s="Failed to delete" if had_error else "Successfully deleted",
-                d=delmode,
-                p=pstr,
-                e=("\n" + tools.json.re_load(result)) if result else None,
-            )
-
-            dinfo["delete_success"] = not had_error
-            dinfo["delete_msg"] = dmsg
-
-            done.append(dinfo)
-
-            if had_error:
-                if warning and not error:
-                    warnings.warn(dmsg, exceptions.CnxDeleteWarning)
-                elif error:
-                    raise exceptions.CnxDeleteFailure(dmsg)
-
-        return done
-
-    def check(self, cnxs, error=True):
-        """Pass."""
-        cnxs = tools.listify(cnxs, dictkeys=False)
-        results = []
-
-        for cnx in cnxs:
-            checked = self._check(
-                adapter_name=cnx["adapter_name_raw"],
-                config=cnx["config_raw"],
-                node_id=cnx["node_id"],
-            )
-
-            self._check_connect_error(
-                adapter=cnx["adapter_name"],
-                node=cnx["node_name"],
-                check_bool=checked,
-                response=checked,
-                error=error,
-            )
-
-            result = {
-                "adapter_name": cnx["adapter_name"],
-                "node_name": cnx["node_name"],
-                "status": not bool(checked),
-                "response": tools.json.re_load(checked),
-            }
-
-            results.append(result)
-
-        return results
-
-    def start_discovery(self, cnxs, error=True):
-        """Pass."""
-        cnxs = tools.listify(cnxs, dictkeys=False)
-        results = []
-
-        for cnx in cnxs:
-            started = self._add(
-                adapter_name=cnx["adapter_name_raw"],
-                config=cnx["config_raw"],
-                node_id=cnx["node_id"],
-            )
-
-            self._check_connect_error(
-                adapter=cnx["adapter_name"],
-                node=cnx["node_name"],
-                check_bool=started["status"] == "error" or started["error"],
-                response=started,
-                error=error,
-            )
-
-            result = {
-                "adapter": cnx["adapter_name"],
-                "node": cnx["node_name"],
-                "status": not bool(started),
-                "response": tools.json.re_load(started),
-            }
-
-            results.append(result)
-
-        return results
-
-    def add(self, adapter, config, node="master", error=True, adapters=None):
-        """Add a connection to an adapter.
-
-        Args:
-            name (:obj:`str`):
-                Name of adapter to add connection to.
-            config (:obj:`dict`):
-                Client configuration.
-            node_id (:obj:`str`):
-                Node ID.
-
-        Returns:
-            :obj:`object`
-
-        """
-        if tools.is_type.str(adapter):
-            adapter = self._parent.get_single(
-                name=adapter, node=node, adapters=adapters
-            )
-
-        parsed_config = self._config_parse(
-            adapter=adapter, settings=adapter["cnx_settings"], config=config
-        )
-
-        added = self._add(
-            adapter_name=adapter["name_raw"],
-            node_id=adapter["node_id"],
-            config=parsed_config,
-        )
-
-        self._check_connect_error(
-            adapter=adapter["name"],
-            node=adapter["node_name"],
-            check_bool=added["status"] == "error" or added["error"],
-            response=added,
-            error=error,
-        )
-
-        # new connections don't always show up right away, so we have to do some magic
-        count = 0
-
-        while count < self._ADD_REFETCH_RETRY:
-            # re-fetch all connections for this adapter
-            cnxs = self.get(adapter=adapter["name"], node=adapter["node_name"])
-
-            # try to find the newly created connection
-            found = self.filter_by_uuids(
-                cnxs=cnxs,
-                uuids=added["id"],
-                count_min=1,
-                count_max=1,
-                count_error=count >= self._ADD_REFETCH_RETRY,
-            )
-
-            if len(found) == 1:
-                return found[0]
-            else:  # pragma: no cover
-                # not always triggered, so ignore test coverage
-                dmsg = "Added connection {added} not in system yet, try {c} of {r}"
-                dmsg = dmsg.format(added=added, c=count, r=self._ADD_REFETCH_RETRY)
-                self._log.debug(dmsg)
-
-                count += 1
-
-                time.sleep(self._ADD_REFETCH_SLEEP)
-
-    def add_csv_str(
-        self,
-        filename,
-        filecontent,
-        fieldname,
-        node="master",
-        is_users=False,
-        is_installed_sw=False,
-        error=True,
-    ):
-        """Pass."""
-        adapter = self._parent.get_single(name="csv", node=node)
-
-        self._validate_csv(
-            filename=filename,
-            filecontent=filecontent,
-            is_users=is_users,
-            is_installed_sw=is_installed_sw,
-        )
-
-        config = {}
-        config["is_users_csv"] = is_users
-        config["is_installed_sw"] = is_installed_sw
-        config["user_id"] = fieldname
-        config["csv"] = {}
-        config["csv"]["filename"] = filename
-        config["csv"]["filecontent"] = filecontent
-        config["csv"]["filecontent_type"] = "text/csv"
-
-        return self.add(adapter=adapter, config=config, error=error)
-
-    def add_csv_file(
-        self,
-        filepath,
-        fieldname,
-        node="master",
-        is_users=False,
-        is_installed_sw=False,
-        error=True,
-    ):
-        """Pass."""
-        adapter = self._parent.get_single(name="csv", node=node)
-
-        filename, filecontent = self._parent._load_filepath(filepath)
-
-        self._validate_csv(
-            filename=filename,
-            filecontent=filecontent,
-            is_users=is_users,
-            is_installed_sw=is_installed_sw,
-        )
-
-        config = {}
-        config["is_users_csv"] = is_users
-        config["is_installed_sw"] = is_installed_sw
-        config["user_id"] = fieldname
-        config["csv"] = {}
-        config["csv"]["filename"] = filename
-        config["csv"]["filecontent"] = filecontent
-        config["csv"]["filecontent_type"] = "text/csv"
-
-        return self.add(adapter=adapter, config=config, error=error)
-
-    def add_csv_url(
-        self,
-        url,
-        fieldname,
-        node="master",
-        is_users=False,
-        is_installed_sw=False,
-        error=True,
-    ):
-        """Pass."""
-        adapter = self._parent.get_single(name="csv", node=node)
-
-        config = {}
-        config["is_users_csv"] = is_users
-        config["is_installed_sw"] = is_installed_sw
-        config["user_id"] = fieldname
-        config["csv_http"] = url
-
-        return self.add(adapter=adapter, config=config, error=error)
-
-    def add_csv_share(
-        self,
-        share,
-        fieldname,
-        node="master",
-        is_users=False,
-        is_installed_sw=False,
-        share_username=None,
-        share_password=None,
-        error=True,
-    ):
-        """Pass."""
-        adapter = self._parent.get_single(name="csv", node=node)
-
-        config = {}
-        config["is_users_csv"] = is_users
-        config["is_installed_sw"] = is_installed_sw
-        config["user_id"] = fieldname
-        config["csv_share"] = share
-        if share_username:
-            config["csv_share_username"] = share_username
-        if share_password:
-            config["csv_share_password"] = share_password
-        return self.add(adapter=adapter, config=config, error=error)
 
 
 class Adapters(mixins.Model, mixins.Mixins):
@@ -780,15 +20,12 @@ class Adapters(mixins.Model, mixins.Mixins):
 
         super(Adapters, self)._init(auth=auth, **kwargs)
 
-    @property
-    def _router(self):
-        """Router for this API client.
-
-        Returns:
-            :obj:`axonius_api_client.api.routers.Router`
-
-        """
-        return routers.ApiV1.adapters
+    @staticmethod
+    def _build_known(adapters):
+        """Pass."""
+        tmpl = ["name: {name!r}", "node name {node_name!r}", "connections {cnx_count}"]
+        tmpl = tools.join.comma(tmpl)
+        return [tmpl.format(**a) for a in adapters]
 
     def _get(self):
         """Get all adapters.
@@ -798,28 +35,6 @@ class Adapters(mixins.Model, mixins.Mixins):
 
         """
         return self._request(method="get", path=self._router.root)
-
-    def _upload_file(
-        self,
-        adapter_name,
-        node_id,
-        filename,
-        field,
-        filecontent,
-        filecontent_type=None,
-        fileheaders=None,
-    ):
-        """Pass."""
-        data = {"field_name": field}
-        files = {"userfile": (filename, filecontent, filecontent_type, fileheaders)}
-
-        path = self._router.upload_file.format(
-            adapter_name=adapter_name, node_id=node_id
-        )
-
-        ret = self._request(method="post", path=path, data=data, files=files)
-        ret["filename"] = filename
-        return ret
 
     @staticmethod
     def _load_filepath(filepath):
@@ -835,12 +50,37 @@ class Adapters(mixins.Model, mixins.Mixins):
         filename = rpath.name
         return filename, filecontent
 
-    @staticmethod
-    def _build_known(adapters):
+    @property
+    def _router(self):
+        """Router for this API client.
+
+        Returns:
+            :obj:`axonius_api_client.api.routers.Router`
+
+        """
+        return routers.ApiV1.adapters
+
+    def _upload_file(
+        self,
+        adapter_name,
+        node_id,
+        name,
+        field,
+        content,
+        content_type=None,
+        headers=None,
+    ):
         """Pass."""
-        tmpl = ["name: {name!r}", "node name {node_name!r}", "connections {cnx_count}"]
-        tmpl = tools.join.comma(tmpl)
-        return [tmpl.format(**a) for a in adapters]
+        data = {"field_name": field}
+        files = {"userfile": (name, content, content_type, headers)}
+
+        path = self._router.upload_file.format(
+            adapter_name=adapter_name, node_id=node_id
+        )
+
+        ret = self._request(method="post", path=path, data=data, files=files)
+        ret["filename"] = name
+        return ret
 
     def get(self):
         """Pass."""
@@ -849,14 +89,17 @@ class Adapters(mixins.Model, mixins.Mixins):
         adapters = parser.parse()
         return adapters
 
-    def get_single(self, name, node="master", adapters=None):
+    def get_single(self, adapter, node="master"):
         """Pass."""
+        if tools.is_type.dict(adapter):
+            return adapter
+
         adapters = self.get()
         adapters = self.filter_by_names(
-            names=name, count_min=1, count_max=1, adapters=adapters
+            names=adapter, count_min=1, count_max=1, count_error=True, adapters=adapters
         )
         adapters = self.filter_by_nodes(
-            nodes=node, count_min=1, count_max=1, adapters=adapters
+            nodes=node, count_min=1, count_max=1, count_error=True, adapters=adapters
         )
         return adapters[0]
 
@@ -1010,56 +253,802 @@ class Adapters(mixins.Model, mixins.Mixins):
         return matches
 
     def upload_file_str(
-        self,
-        adapter,
-        field,
-        filename,
-        filecontent,
-        filecontent_type=None,
-        node="master",
-        adapters=None,
+        self, adapter, field, name, content, node="master", content_type=None
     ):
         """Pass."""
-        if tools.is_type.str(adapter):
-            adapter = self.get_single(name=adapter, node=node, adapters=adapters)
+        adapter = self.get_single(adapter=adapter, node=node)
 
         return self._upload_file(
             adapter_name=adapter["name_raw"],
             node_id=adapter["node_id"],
-            filename=filename,
+            name=name,
             field=field,
-            filecontent=filecontent,
-            filecontent_type=filecontent_type,
+            content=content,
+            content_type=content_type,
         )
 
-    def upload_file_path(
-        self,
-        adapter,
-        field,
-        filepath,
-        filecontent_type=None,
-        node="master",
-        adapters=None,
-    ):
+    def upload_file_path(self, adapter, field, path, node="master", content_type=None):
         """Pass."""
-        if tools.is_type.str(adapter):
-            adapter = self.get_single(name=adapter, node=node, adapters=adapters)
+        adapter = self.get_single(adapter=adapter, node=node)
 
-        filename, filecontent = self._load_filepath(filepath)
+        name, content = self._load_filepath(path)
+
         return self._upload_file(
             adapter_name=adapter["name_raw"],
             node_id=adapter["node_id"],
-            filename=filename,
+            name=name,
             field=field,
-            filecontent=filecontent,
-            filecontent_type=filecontent_type,
+            content=content,
+            content_type=content_type,
+        )
+
+
+class Cnx(mixins.Child):
+    """Pass."""
+
+    def _add(self, adapter_name, node_id, config):
+        """Add a connection to an adapter.
+
+        Args:
+            adapter (:obj:`str`):
+                Name of adapter to add connection to.
+            config (:obj:`dict`):
+                Client configuration.
+            node_id (:obj:`str`):
+                Node ID.
+
+        Returns:
+            :obj:`object`
+
+        """
+        data = {}
+        data.update(config)
+        data["instanceName"] = node_id
+
+        path = self._parent._router.cnxs.format(adapter_name=adapter_name)
+
+        return self._parent._request(
+            method="put",
+            path=path,
+            json=data,
+            error_json_bad_status=False,
+            error_code_not_200=False,
+        )
+
+    @staticmethod
+    def _build_known(cnxs):
+        """Pass."""
+        tmpl = [
+            "Adapter: {adapter_name!r}",
+            "ID: {id!r}",
+            "UUID: {uuid!r}",
+            "Status: {status}",
+        ]
+        tmpl = tools.join.comma(tmpl)
+        return [tmpl.format(**c) for c in cnxs]
+
+    def _check(self, adapter_name, node_id, config):
+        """Test an adapter connection.
+
+        Args:
+            name (:obj:`str`):
+                Name of adapter to test connection of.
+            config (:obj:`dict`):
+                Connection configuration.
+            node_id (:obj:`str`):
+                Node ID.
+
+        Returns:
+            :obj:`object`
+
+        """
+        data = {}
+        data.update(config)
+        data["instanceName"] = node_id
+        data["oldInstanceName"] = node_id
+
+        path = self._parent._router.cnxs.format(adapter_name=adapter_name)
+
+        return self._parent._request(
+            method="post",
+            path=path,
+            json=data,
+            error_json_bad_status=False,
+            error_code_not_200=False,
+        )
+
+    def _delete(self, adapter_name, node_id, cnx_uuid, delete_entities=False):
+        """Delete a connection from an adapter.
+
+        Args:
+            name (:obj:`str`):
+                Name of adapter to delete connection from.
+            id (:obj:`str`):
+                ID of connection to remove.
+            node_id (:obj:`str`):
+                Node ID.
+
+        Returns:
+            :obj:`object`
+
+        """
+        data = {}
+        data["instanceName"] = node_id
+
+        params = {"deleteEntities": delete_entities}
+
+        path = self._parent._router.cnxs_uuid.format(
+            adapter_name=adapter_name, cnx_uuid=cnx_uuid
+        )
+
+        return self._parent._request(
+            method="delete",
+            path=path,
+            json=data,
+            params=params,
+            error_json_bad_status=False,
+            error_code_not_200=False,
+        )
+
+    def _update(self, adapter_name, node_id, config, cnx_uuid):
+        """Add a connection to an adapter.
+
+        Args:
+            adapter (:obj:`str`):
+                Name of adapter to add connection to.
+            config (:obj:`dict`):
+                Client configuration.
+            node_id (:obj:`str`):
+                Node ID.
+
+        Returns:
+            :obj:`object`
+
+        """
+        data = {}
+        data.update(config)
+        data["instanceName"] = node_id
+        data["oldInstanceName"] = node_id
+
+        path = self._parent._router.cnxs_uuid.format(
+            adapter_name=adapter_name, cnx_uuid=cnx_uuid
+        )
+        return self._parent._request(
+            method="put",
+            path=path,
+            json=data,
+            error_json_bad_status=False,
+            error_code_not_200=False,
+        )
+
+    def add(
+        self,
+        adapter,
+        config,
+        parse_config=True,
+        node="master",
+        retry=15,
+        sleep=15,
+        error=True,
+    ):
+        """Add a connection to an adapter.
+
+        Args:
+            name (:obj:`str`):
+                Name of adapter to add connection to.
+            config (:obj:`dict`):
+                Client configuration.
+            node_id (:obj:`str`):
+                Node ID.
+
+        Returns:
+            :obj:`object`
+
+        """
+        adapter = self._parent.get_single(adapter=adapter, node=node)
+
+        if parse_config:
+            parser = ParserCnxConfig(raw=config, parent=self)
+            config = parser.parse(adapter=adapter, settings=adapter["cnx_settings"])
+
+        response = self._add(
+            adapter_name=adapter["name_raw"], node_id=adapter["node_id"], config=config
+        )
+
+        had_error = response["status"] == "error" or response["error"]
+        if had_error and error:
+            raise exceptions.CnxConnectFailure(
+                response=response, adapter=adapter["name"], node=adapter["node_name"]
+            )
+
+        refetched = {}
+        refetched["response_had_error"] = had_error
+        refetched["response"] = response
+        refetched["cnx"] = self.refetch(
+            adapter_name=adapter["name"],
+            node_name=adapter["node_name"],
+            response=response,
+            retry=retry,
+            sleep=sleep,
+            uuid=response["id"],
+            id=None,
+        )
+
+        return refetched
+
+    def add_csv_str(
+        self,
+        name,
+        content,
+        field,
+        node="master",
+        is_users=False,
+        is_installed_sw=False,
+        parse_config=True,
+        retry=15,
+        sleep=15,
+        error=True,
+    ):
+        """Pass."""
+        adapter = self._parent.get_single(adapter="csv", node=node)
+
+        validate_csv(
+            name=name,
+            content=content,
+            is_users=is_users,
+            is_installed_sw=is_installed_sw,
+        )
+
+        config = {}
+        config["is_users_csv"] = is_users
+        config["is_installed_sw"] = is_installed_sw
+        config["user_id"] = field
+        config["csv"] = {}
+        config["csv"]["filename"] = name
+        config["csv"]["filecontent"] = content
+        config["csv"]["filecontent_type"] = "text/csv"
+
+        return self.add(
+            adapter=adapter,
+            config=config,
+            parse_config=parse_config,
+            retry=retry,
+            sleep=sleep,
+            error=error,
+        )
+
+    def add_csv_file(
+        self,
+        path,
+        field,
+        node="master",
+        is_users=False,
+        is_installed_sw=False,
+        parse_config=True,
+        retry=15,
+        sleep=15,
+        error=True,
+    ):
+        """Pass."""
+        adapter = self._parent.get_single(adapter="csv", node=node)
+
+        name, content = self._parent._load_filepath(path)
+
+        validate_csv(
+            name=name,
+            content=content,
+            is_users=is_users,
+            is_installed_sw=is_installed_sw,
+        )
+
+        config = {}
+        config["is_users_csv"] = is_users
+        config["is_installed_sw"] = is_installed_sw
+        config["user_id"] = field
+        config["csv"] = {}
+        config["csv"]["filename"] = name
+        config["csv"]["filecontent"] = content
+        config["csv"]["filecontent_type"] = "text/csv"
+
+        return self.add(
+            adapter=adapter,
+            config=config,
+            parse_config=parse_config,
+            retry=retry,
+            sleep=sleep,
+            error=error,
+        )
+
+    def add_csv_url(
+        self,
+        url,
+        field,
+        node="master",
+        is_users=False,
+        is_installed_sw=False,
+        parse_config=True,
+        retry=15,
+        sleep=15,
+        error=True,
+    ):
+        """Pass."""
+        adapter = self._parent.get_single(adapter="csv", node=node)
+
+        config = {}
+        config["is_users_csv"] = is_users
+        config["is_installed_sw"] = is_installed_sw
+        config["user_id"] = field
+        config["csv_http"] = url
+
+        return self.add(
+            adapter=adapter,
+            config=config,
+            parse_config=parse_config,
+            retry=retry,
+            sleep=sleep,
+            error=error,
+        )
+
+    def add_csv_share(
+        self,
+        share,
+        field,
+        node="master",
+        is_users=False,
+        is_installed_sw=False,
+        username=None,
+        password=None,
+        parse_config=True,
+        retry=15,
+        sleep=15,
+        error=True,
+    ):
+        """Pass."""
+        adapter = self._parent.get_single(adapter="csv", node=node)
+
+        config = {}
+        config["is_users_csv"] = is_users
+        config["is_installed_sw"] = is_installed_sw
+        config["user_id"] = field
+        config["csv_share"] = share
+        if username:
+            config["csv_share_username"] = username
+        if password:
+            config["csv_share_password"] = password
+
+        return self.add(
+            adapter=adapter,
+            config=config,
+            parse_config=parse_config,
+            retry=retry,
+            sleep=sleep,
+            error=error,
+        )
+
+    def check(self, cnx, retry=15, sleep=15, error=True):
+        """Pass."""
+        response = self._check(
+            adapter_name=cnx["adapter_name_raw"],
+            config=cnx["config_raw"],
+            node_id=cnx["node_id"],
+        )
+
+        had_error = bool(response)
+
+        if had_error and error:
+            raise exceptions.CnxConnectFailure(
+                response=response, adapter=cnx["adapter_name"], node=cnx["node_name"]
+            )
+
+        refetched = {}
+        refetched["response_had_error"] = had_error
+        refetched["response"] = response
+        refetched["cnx"] = self.refetch(
+            adapter_name=cnx["adapter_name"],
+            node_name=cnx["node_name"],
+            response=response,
+            retry=retry,
+            sleep=sleep,
+            uuid=None,
+            id=cnx["id"],
+        )
+
+        return refetched
+
+    def delete(
+        self,
+        cnx,
+        delete_entities=False,
+        force=False,
+        warning=True,
+        error=True,
+        sleep=15,
+    ):
+        """Pass."""
+        cnxinfo = [
+            "Adapter name: {adapter_name}",
+            "Node name: {node_name}",
+            "Connection ID: {id}",
+            "Connection UUID: {uuid}",
+            "Connection status: {status}",
+            "Delete all entities: {de}",
+        ]
+        cnxinfo = tools.join.cr(cnxinfo).format(de=delete_entities, **cnx)
+
+        if not force:
+            raise exceptions.CnxDeleteForce(cnxinfo=cnxinfo)
+
+        if warning:
+            warnings.warn(exceptions.CnxDeleteWarning(cnxinfo=cnxinfo, sleep=sleep))
+
+        dargs = {
+            "adapter_name": cnx["adapter_name_raw"],
+            "node_id": cnx["node_id"],
+            "cnx_uuid": cnx["uuid"],
+            "delete_entities": delete_entities,
+        }
+
+        lsmsg = [
+            "Connection info: {cnxinfo}",
+            "About to delete connection in {s} seconds using args: {a}",
+        ]
+        lsmsg = tools.join.cr(lsmsg).format(cnxinfo=cnxinfo, s=sleep, a=dargs)
+        self._log.info(lsmsg)
+
+        time.sleep(sleep)
+
+        response = self._delete(**dargs)
+
+        had_error = tools.is_type.dict(response) and (
+            response["status"] == "error" or response["error"]
+        )
+
+        lfmsg = [
+            "Connection info: {cnxinfo}",
+            "Deleted connection with error {he} and return {r}",
+        ]
+        lfmsg = tools.join.cr(lfmsg).format(cnxinfo=cnxinfo, he=had_error, r=response)
+        self._log.info(lfmsg)
+
+        if had_error:
+            if warning and not error:
+                warnings.warn(
+                    exceptions.CnxDeleteFailedWarning(
+                        cnxinfo=cnxinfo, response=response
+                    )
+                )
+            elif error:
+                raise exceptions.CnxDeleteFailed(cnxinfo=cnxinfo, response=response)
+
+        ret = {}
+        ret["response_had_error"] = had_error
+        ret["response"] = response
+        ret["cnx"] = cnx
+
+        return ret
+
+    def get(self, adapter, node="master"):
+        """Get all connections for an adapter."""
+        if tools.is_type.lostr(adapter):
+            all_adapters = self._parent.get()
+            all_adapters = self._parent.filter_by_names(
+                adapters=all_adapters, names=adapter
+            )
+            all_adapters = self._parent.filter_by_nodes(
+                adapters=all_adapters, nodes=node
+            )
+            return [c for a in all_adapters for c in a["cnx"]]
+
+        if tools.is_type.none(adapter):
+            all_adapters = self._parent.get()
+            all_adapters = self._parent.filter_by_nodes(
+                adapters=all_adapters, nodes=node
+            )
+            return [c for a in all_adapters for c in a["cnx"]]
+
+        adapter = self._parent.get_single(adapter=adapter, node=node)
+        return adapter["cnx"]
+
+    def refetch(self, adapter_name, node_name, response, uuid, id, retry=15, sleep=15):
+        """Pass."""
+        count = 0
+
+        # new connections don't always show up right away, so we have to do some magic
+        while count < retry:
+            # re-fetch all connections for this adapter
+            # try to find the newly created connection
+            cnxs = self.get(adapter=adapter_name, node=node_name)
+            cnxs = self.filter_by_uuids(cnxs=cnxs, uuids=uuid, count_error=False)
+            cnxs = self.filter_by_ids(cnxs=cnxs, ids=id, count_error=False)
+
+            if len(cnxs) == 1:
+                return cnxs[0]
+
+            count += 1
+
+            dmsg = [
+                "Connection not in system yet",
+                "try {c} of {r}",
+                "sleeping another {s} seconds",
+                "Looking for connection: {response}",
+            ]
+            dmsg = tools.join.comma(dmsg).format(
+                response=response, c=count, r=retry, s=sleep
+            )
+            self._log.debug(dmsg)
+
+            time.sleep(sleep)
+
+        raise exceptions.CnxRefetchFailure(
+            response=response, adapter=adapter_name, node=node_name
+        )
+
+    def filter_by_ids(
+        self,
+        cnxs,
+        ids=None,
+        use_regex=False,
+        count_min=None,
+        count_max=None,
+        count_error=True,
+    ):
+        """Get all connections for all adapters."""
+        matches = []
+
+        for cnx in cnxs:
+            match = tools.values_match(
+                checks=ids, values=cnx["id"], use_regex=use_regex
+            )
+
+            if match and cnx not in matches:
+                matches.append(cnx)
+
+        self._parent._check_counts(
+            value=ids,
+            value_type="connection ids and regex {}".format(use_regex),
+            objtype="adapter connections",
+            count_min=count_min,
+            count_max=count_max,
+            count_total=len(matches),
+            known=self._build_known(cnxs),
+            error=count_error,
+        )
+
+        return matches
+
+    def filter_by_uuids(
+        self,
+        cnxs,
+        uuids=None,
+        use_regex=False,
+        count_min=None,
+        count_max=None,
+        count_error=True,
+    ):
+        """Get all connections for all adapters."""
+        matches = []
+
+        for cnx in cnxs:
+            match = tools.values_match(
+                checks=uuids, values=cnx["uuid"], use_regex=use_regex
+            )
+
+            if match and cnx not in matches:
+                matches.append(cnx)
+
+        self._parent._check_counts(
+            value=uuids,
+            value_type="uuids and regex {}".format(use_regex),
+            objtype="adapter connections",
+            count_min=count_min,
+            count_max=count_max,
+            count_total=len(matches),
+            known=self._build_known(cnxs),
+            error=count_error,
+        )
+
+        return matches
+
+    def filter_by_status(
+        self, cnxs, status=None, count_min=None, count_max=None, count_error=True
+    ):
+        """Get all connections for all adapters."""
+        matches = []
+
+        for cnx in cnxs:
+            match = True
+
+            if cnx["status"] is True and status is False:
+                match = False
+
+            if cnx["status"] is False and status is True:
+                match = False
+
+            if match and cnx not in matches:
+                matches.append(cnx)
+
+        self._parent._check_counts(
+            value=status,
+            value_type="by status",
+            objtype="adapter connections",
+            count_min=count_min,
+            count_max=count_max,
+            count_total=len(matches),
+            known=self._build_known(cnxs),
+            error=count_error,
+        )
+
+        return matches
+
+    def update(
+        self, cnx, new_config=None, parse_config=True, retry=15, sleep=15, error=True
+    ):
+        """Pass."""
+        if parse_config and new_config:
+            adapter = self._parent.get_single(adapter=cnx["adapter_name"])
+            parser = ParserCnxConfig(raw=new_config, parent=self)
+            new_config = parser.parse(adapter=adapter, settings=adapter["cnx_settings"])
+
+        response = self._update(
+            adapter_name=cnx["adapter_name_raw"],
+            node_id=cnx["node_id"],
+            config=new_config or cnx["config_raw"],
+            cnx_uuid=cnx["uuid"],
+        )
+
+        had_error = response["status"] == "error" or response["error"]
+
+        if had_error and error:
+            raise exceptions.CnxConnectFailure(
+                response=response, adapter=cnx["adapter_name"], node=cnx["node_name"]
+            )
+
+        refetched = {}
+        refetched["response_had_error"] = had_error
+        refetched["response"] = response
+        refetched["cnx"] = self.refetch(
+            adapter_name=cnx["adapter_name"],
+            node_name=cnx["node_name"],
+            response=response,
+            retry=retry,
+            sleep=sleep,
+            uuid=response["id"],
+            id=None,
+        )
+
+        return refetched
+
+
+class ParserCnxConfig(mixins.Parser):
+    """Pass."""
+
+    SETTING_TYPES = {
+        "bool": tools.is_type.bool,
+        "number": tools.is_type.str_int,
+        "integer": tools.is_type.str_int,
+        "array": tools.is_type.lostr,
+        "string": tools.is_type.str,
+    }
+
+    def check_value(self, name, value, schema, adapter):
+        """Pass."""
+        type_str = schema["type"]
+        enum = schema.get("enum", [])
+
+        if value == constants.SETTING_UNCHANGED:
+            return value
+
+        if enum and value not in enum:
+            raise exceptions.CnxSettingInvalidChoice(
+                name=name, value=value, schema=schema, enum=enum, adapter=adapter
+            )
+
+        if type_str == "file":
+            if not tools.is_type.dict(value):
+                raise exceptions.CnxSettingInvalidType(
+                    name=name,
+                    value=value,
+                    schema=schema,
+                    mustbe="dict",
+                    adapter=adapter,
+                )
+
+            return self.parse_file(
+                name=name, value=value, schema=schema, adapter=adapter
+            )
+
+        if type_str in self.SETTING_TYPES:
+            type_cb = self.SETTING_TYPES[type_str]
+
+            if not type_cb(value):
+                raise exceptions.CnxSettingInvalidType(
+                    name=name,
+                    value=value,
+                    schema=schema,
+                    adapter=adapter,
+                    mustbe=type_str,
+                )
+            return value
+
+        raise exceptions.CnxSettingUnknownType(
+            name=name, value=value, schema=schema, type_str=type_str, adapter=adapter
+        )
+
+    def parse(self, adapter, settings):
+        """Pass."""
+        new_config = {}
+
+        for name, schema in settings.items():
+            required = schema["required"]
+
+            value = self._raw.get(name, None)
+
+            has_value = name in self._raw
+            has_default = "default" in schema
+
+            req = "required" if required else "optional"
+            msg = "Processing {req} setting {n!r} with value of {v!r}, schema: {ss}"
+            msg = msg.format(req=req, n=name, v=value, ss=schema)
+            self._log.debug(msg)
+
+            if not has_value and not has_default:
+                if not required:
+                    continue
+
+                raise exceptions.CnxSettingMissing(
+                    name=name, value=value, schema=schema, adapter=adapter
+                )
+
+            if not has_value and has_default:
+                value = schema["default"]
+
+            new_config[name] = self.check_value(
+                name=name, value=value, schema=schema, adapter=adapter
+            )
+
+        return new_config
+
+    def parse_file(self, name, value, schema, adapter):
+        """Pass."""
+        uuid = value.get("uuid", None)
+        filename = value.get("filename", None)
+        filepath = value.get("filepath", None)
+        filecontent = value.get("filecontent", None)
+        filecontent_type = value.get("filecontent_type", None)
+
+        if uuid and filename:
+            return {"uuid": uuid, "filename": filename}
+
+        # TODO: try here
+        if filepath:
+            uploaded = self._parent._parent.upload_file_path(
+                field=name,
+                adapter=adapter,
+                path=filepath,
+                content_type=filecontent_type,
+            )
+
+            return {"uuid": uploaded["uuid"], "filename": uploaded["filename"]}
+
+        if filecontent and filename:
+            uploaded = self._parent._parent.upload_file_str(
+                field=name,
+                adapter=adapter,
+                name=filename,
+                content=filecontent,
+                content_type=filecontent_type,
+            )
+            return {"uuid": uploaded["uuid"], "filename": uploaded["filename"]}
+
+        raise exceptions.CnxSettingFileMissing(
+            name=name, value=value, schema=schema, adapter=adapter
         )
 
 
 class ParserAdapters(mixins.Parser):
     """Pass."""
 
-    def _parse_adapter(self, name, raw):
+    def _adapter(self, name, raw):
         """Pass."""
         parsed = {
             "name": tools.strip.right(name, "_adapter"),
@@ -1094,21 +1083,6 @@ class ParserAdapters(mixins.Parser):
 
         return parsed
 
-    def _cnx_settings(self, raw):
-        """Pass."""
-        settings = {}
-
-        schema = raw["schema"]
-        items = schema["items"]
-        required = schema["required"]
-
-        for item in items:
-            setting_name = item["name"]
-            settings[setting_name] = {k: v for k, v in item.items()}
-            settings[setting_name]["required"] = setting_name in required
-
-        return settings
-
     def _adapter_settings(self, raw, base=True):
         """Pass."""
         settings = {}
@@ -1130,6 +1104,21 @@ class ParserAdapters(mixins.Parser):
 
         return settings
 
+    def _cnx_settings(self, raw):
+        """Pass."""
+        settings = {}
+
+        schema = raw["schema"]
+        items = schema["items"]
+        required = schema["required"]
+
+        for item in items:
+            setting_name = item["name"]
+            settings[setting_name] = {k: v for k, v in item.items()}
+            settings[setting_name]["required"] = setting_name in required
+
+        return settings
+
     def _cnx(self, raw, parent):
         """Pass."""
         cnx = []
@@ -1142,6 +1131,13 @@ class ParserAdapters(mixins.Parser):
 
             for setting_name, setting_config in cnx_settings.items():
                 value = raw_config.get(setting_name, None)
+
+                if value == constants.SETTING_UNCHANGED:
+                    value = "__HIDDEN__"
+
+                if setting_name not in raw_config:
+                    value = "__NOTSET__"
+
                 parsed_settings[setting_name] = setting_config.copy()
                 parsed_settings[setting_name]["value"] = value
 
@@ -1169,10 +1165,37 @@ class ParserAdapters(mixins.Parser):
 
         for name, raw_adapters in self._raw.items():
             for raw in raw_adapters:
-                adapter = self._parse_adapter(name=name, raw=raw)
+                adapter = self._adapter(name=name, raw=raw)
                 parsed.append(adapter)
 
         return parsed
+
+
+def validate_csv(name, content, is_users=False, is_installed_sw=False):
+    """Pass."""
+    if is_users:
+        ids = constants.CSV_FIELDS["user"]
+        ids_type = "user"
+    elif is_installed_sw:
+        ids = constants.CSV_FIELDS["sw"]
+        ids_type = "installed software"
+    else:
+        ids = constants.CSV_FIELDS["device"]
+        ids_type = "device"
+
+    headers_content = content
+    if tools.is_type.bytes(headers_content):
+        headers_content = headers_content.decode()
+
+    headers = headers_content.splitlines()[0].lower().split(",")
+    headers_has_any_id = any([x in headers for x in ids])
+
+    if not headers_has_any_id:
+        warnings.warn(
+            exceptions.CnxCsvWarning(
+                ids_type=ids_type, ids=ids, name=name, headers=headers
+            )
+        )
 
 
 # FUTURE: public REST API does not support setting advanced settings

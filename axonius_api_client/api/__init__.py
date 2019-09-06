@@ -5,7 +5,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from . import adapters, enforcements, mixins, routers, users_devices
 from .adapters import Adapters
 from .enforcements import Enforcements
-from .mixins import Model
 from .users_devices import Devices, Users
 
 __all__ = (
@@ -14,7 +13,6 @@ __all__ = (
     "Devices",
     "Adapters",
     "Enforcements",
-    "Model",
     # modules
     "routers",
     "users_devices",

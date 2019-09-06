@@ -21,6 +21,17 @@ class ApiWarning(AxonWarning):
     """Parent exception for all API errors."""
 
 
+class BetaWarning(AxonWarning):
+    """Pass."""
+
+    def __init__(self, obj):
+        """Constructor."""
+        msg = "Object {obj} is considered **BETA** status! Here be dragons..."
+        msg = msg.format(obj=obj)
+
+        super(AxonWarning, self).__init__(msg)
+
+
 class ToolsError(AxonError):
     """Parent exception for all tools errors."""
 
@@ -44,20 +55,112 @@ class CnxWarning(ApiWarning):
 class CnxDeleteForce(CnxError):
     """Pass."""
 
+    def __init__(self, cnxinfo):
+        """Constructor.
 
-class CnxDeleteFailure(CnxError):
+        Args:
+            added (:obj:`requests.Response`):
+                Response error was thrown for.
+            exc (:obj:`Exception`, optional):
+                Original exception thrown.
+
+                Defaults to: None.
+
+        """
+        msg = [
+            "Connection info: {cnxinfo}",
+            "Will not delete connection unless force=True!!",
+        ]
+        msg = tools.join.cr(msg).format(cnxinfo=cnxinfo)
+        super(CnxDeleteForce, self).__init__(msg)
+
+
+class CnxDeleteFailed(CnxError):
     """Pass."""
+
+    def __init__(self, cnxinfo, response):
+        """Constructor."""
+        self.cnxinfo = cnxinfo
+        self.response = response
+
+        msg = [
+            "Connection info: {cnxinfo}",
+            "Failed to delete connection!!",
+            "Response:{response}",
+        ]
+        msg = tools.join.cr(msg).format(
+            cnxinfo=cnxinfo, response=tools.json.re_load(response)
+        )
+
+        super(CnxDeleteFailed, self).__init__(msg)
 
 
 class CnxDeleteWarning(CnxWarning):
     """Pass."""
 
+    def __init__(self, cnxinfo, sleep):
+        """Constructor."""
+        msg = ["Connection info: {cnxinfo}", "Will delete connection in {s} seconds!!"]
+        msg = tools.join.cr(msg).format(s=sleep, cnxinfo=cnxinfo)
+
+        super(CnxDeleteWarning, self).__init__(msg)
+
+
+class CnxDeleteFailedWarning(CnxWarning):
+    """Pass."""
+
+    def __init__(self, cnxinfo, response):
+        """Constructor."""
+        self.cnxinfo = cnxinfo
+        self.response = response
+
+        msg = [
+            "Connection info: {cnxinfo}",
+            "Failed to delete connection!!",
+            "Response: {response}",
+        ]
+        msg = tools.join.cr(msg).format(cnxinfo=cnxinfo, response=response)
+
+        super(CnxDeleteFailedWarning, self).__init__(msg)
+
+
+class CnxRefetchFailure(CnxError):
+    """Pass."""
+
+    def __init__(self, response, adapter, node):
+        """Constructor.
+
+        Args:
+            response (:obj:`requests.Response`):
+                Response error was thrown for.
+            exc (:obj:`Exception`, optional):
+                Original exception thrown.
+
+                Defaults to: None.
+
+        """
+        self.response = response
+        self.adapter = adapter
+        self.node = node
+
+        msg = "Failed to find connection for adapter {a!r} on node {n!r}:\n  {r}"
+        msg = msg.format(a=adapter, n=node, r=tools.json.re_load(response))
+
+        super(CnxRefetchFailure, self).__init__(msg)
+
 
 class CnxCsvWarning(CnxWarning):
     """Pass."""
 
+    def __init__(self, ids_type, ids, name, headers):
+        """Constructor."""
+        msg = "No {ids_type} identifiers {ids} found in CSV file {name} headers {h}"
+        msg = msg.format(ids_type=ids_type, ids=ids, name=name, h=headers)
 
-class CnxFailure(CnxError):
+        super(CnxCsvWarning, self).__init__(msg)
+
+
+class CnxConnectFailure(CnxError):
     """Error when response has error key in JSON."""
 
     def __init__(self, response, adapter, node):
@@ -72,46 +175,140 @@ class CnxFailure(CnxError):
                 Defaults to: None.
 
         """
-        msg = "Cnx test failed for adapter {a!r} on node {n!r}:\n{r}"
+        self.response = response
+        self.adapter = adapter
+        self.node = node
+
+        msg = "Connection test failed for adapter {a!r} on node {n!r}:\n{r}"
         msg = msg.format(a=adapter, n=node, r=tools.json.re_load(response))
-        super(CnxFailure, self).__init__(msg)
+
+        super(CnxConnectFailure, self).__init__(msg)
 
 
 class CnxSettingError(CnxError):
     """Pass."""
 
-    def __init__(self, name, value, error, schema):
+    def __init__(self, name, value, schema, adapter, error):
         """Pass."""
         self.name = name
         self.value = value
-        self.error = error
         self.schema = schema
+        self.adapter = adapter
+        self.error = error
 
-        msg = "{req} setting {n!r} with value of {v!r} {error}, setting schema:\n  {ss}"
-        msg = msg.format(
-            req="Required" if schema["required"] else "Optional",
+        msg = [
+            "Error with {req} setting {n!r} on adapter {a!r} on node {an!r}",
+            "Supplied value of {v!r}",
+            "Setting schema:",
+            "{ss}",
+            "Error: {error}",
+        ]
+
+        msg = tools.join.cr(msg).format(
+            a=adapter["name"],
+            an=adapter["node_name"],
+            req="required" if schema["required"] else "optional",
             n=name,
             v=value,
             error=error,
             ss=tools.json.dump(schema),
         )
+
         super(CnxSettingError, self).__init__(msg)
 
 
 class CnxSettingMissing(CnxSettingError):
     """Pass."""
 
+    def __init__(self, name, value, schema, adapter):
+        """Pass."""
+        error = "Setting {n!r} was not supplied and no default value defined"
+        error = error.format(n=name)
+
+        super(CnxSettingMissing, self).__init__(
+            name=name, value=value, schema=schema, error=error, adapter=adapter
+        )
+
+
+class CnxSettingFileMissing(CnxSettingError):
+    """Pass."""
+
+    def __init__(self, name, value, schema, adapter):
+        """Pass."""
+        examples = [
+            {
+                name: {
+                    "uuid": "uuid of already uploaded file",
+                    "filename": "name of already uploaded file",
+                }
+            },
+            {
+                name: {
+                    "filename": "name of file to use when uploading file",
+                    "filecontent": "content of file to upload",
+                    "filecontent_type": "optional mime type",
+                }
+            },
+            {
+                name: {
+                    "filepath": "path of file to upload",
+                    "filecontent_type": "optional mime type",
+                }
+            },
+        ]
+        examples = tools.join.cr([format(x) for x in examples])
+
+        error = "File setting {n!r} with value {v!r} is invalid, examples: {ex}"
+        error = error.format(n=name, v=value, ex=examples)
+
+        super(CnxSettingFileMissing, self).__init__(
+            name=name, value=value, schema=schema, error=error, adapter=adapter
+        )
+
 
 class CnxSettingInvalidType(CnxSettingError):
     """Pass."""
+
+    def __init__(self, name, value, schema, mustbe, adapter):
+        """Pass."""
+        self.mustbe = mustbe
+
+        error = "Invalid type supplied {t!r}, must be type {mt!r}"
+        error = error.format(t=type(value).__name__, mt=mustbe)
+
+        super(CnxSettingInvalidType, self).__init__(
+            name=name, value=value, schema=schema, error=error, adapter=adapter
+        )
 
 
 class CnxSettingInvalidChoice(CnxSettingError):
     """Pass."""
 
+    def __init__(self, name, value, enum, schema, adapter):
+        """Pass."""
+        self.enum = enum
+
+        error = "Invalid value {v!r}, must be one of {e}"
+        error = error.format(v=value, e=enum)
+
+        super(CnxSettingInvalidChoice, self).__init__(
+            name=name, value=value, schema=schema, error=error, adapter=adapter
+        )
+
 
 class CnxSettingUnknownType(CnxSettingError):
     """Pass."""
+
+    def __init__(self, name, value, type_str, schema, adapter):
+        """Pass."""
+        self.type_str = type_str
+
+        error = "Unknown connection setting type {t!r} in schema"
+        error = error.format(t=type_str)
+
+        super(CnxSettingUnknownType, self).__init__(
+            name=name, value=value, schema=schema, error=error, adapter=adapter
+        )
 
 
 class ResponseError(ApiError):
@@ -362,10 +559,10 @@ class TooManyObjectsFound(ObjectNotFound):
         super(ObjectNotFound, self).__init__(msg)
 
 
-class UnknownError(ObjectNotFound):
+class ValueNotFound(ObjectNotFound):
     """Pass."""
 
-    def __init__(self, value, known, reason_msg, valid_msg, **kwargs):
+    def __init__(self, value, value_msg, known, known_msg, **kwargs):
         """Constructor."""
         self.value = value
         self.known = known
@@ -373,16 +570,15 @@ class UnknownError(ObjectNotFound):
 
         msgs = []
 
-        msg = "Unable to find {reason_msg} {v!r}"
-        msg = msg.format(reason_msg=reason_msg, v=value)
+        msg = "Unable to find {value_msg} {v!r}"
+        msg = msg.format(value_msg=value_msg, v=value)
         msgs.append(msg)
 
         known = known_cb(known)
 
-        if known:
-            msg = " valid {valid_msg}: {v}"
-            msg = msg.format(valid_msg=valid_msg, v=tools.join.cr(known))
-            msgs.append(msg)
+        msg = "Valid {known_msg}: {v}"
+        msg = msg.format(known_msg=known_msg, v=tools.join.cr(known, indent="    "))
+        msgs.append(msg)
 
         msg = tools.join.cr(msgs)
         super(ObjectNotFound, self).__init__(msg)

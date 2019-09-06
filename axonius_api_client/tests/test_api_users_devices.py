@@ -2,14 +2,17 @@
 """Test suite for axonapi.api.users_devices."""
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-import re
-
 import pytest
-import requests
 
 import axonius_api_client as axonapi
 
 from . import need_creds
+
+# import re
+
+
+# import requests
+
 
 tools = axonapi.tools
 exceptions = axonapi.exceptions
@@ -45,7 +48,7 @@ LONG_QUERY = "not specific_data.data.network_interfaces.mac in [{}]".format(macs
 @pytest.mark.needs_key_creds
 @pytest.mark.parametrize("creds", ["creds_key"], indirect=True, scope="class")
 @pytest.mark.parametrize("apicls", [axonapi.api.Users, axonapi.Devices], scope="class")
-class TestBoth(object):
+class TestUsersDevices(object):
     """Pass."""
 
     @pytest.fixture(scope="class")
@@ -86,6 +89,8 @@ class TestBoth(object):
         assert isinstance(api.adapters, axonapi.api.adapters.Adapters)
         return api
 
+
+'''
     @pytest.fixture(scope="class")
     def fields_list_manual(self, apiobj):
         """Pass."""
@@ -775,19 +780,19 @@ class TestBoth(object):
             parser.parse()
 
     # TODO: RE-DO!
-    # def test_reports_adapter(self, apiobj, all_assets, all_fields):
-    #     """Pass."""
-    #     report = apiobj.report_adapters(rows=all_assets, all_fields=all_fields)
-    #     assert tools.is_type.list(report)
-    #     assert tools.nest_depth(report) >= 3
+    def test_reports_adapter(self, apiobj, all_assets, all_fields):
+        """Pass."""
+        report = apiobj.report_adapters(rows=all_assets, all_fields=all_fields)
+        assert tools.is_type.list(report)
+        assert tools.nest_depth(report) >= 3
 
-    # def test_reports_adapter_serial(self, apiobj, all_assets, all_fields):
-    #     """Pass."""
-    #     report = apiobj.report_adapters(
-    #         rows=all_assets, all_fields=all_fields, serial=True
-    #     )
-    #     assert tools.is_type.list(report)
-    #     assert tools.nest_depth(report) == 2
+    def test_reports_adapter_serial(self, apiobj, all_assets, all_fields):
+        """Pass."""
+        report = apiobj.report_adapters(
+            rows=all_assets, all_fields=all_fields, serial=True
+        )
+        assert tools.is_type.list(report)
+        assert tools.nest_depth(report) == 2
 
 
 @pytest.mark.needs_url
@@ -1028,3 +1033,4 @@ class TestDevices(object):
             for ip in ips:
                 match = regex.match(ip)
                 assert not match
+'''

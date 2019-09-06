@@ -5,6 +5,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import pytest
 
 import axonius_api_client as axonapi
+from axonius_api_client import exceptions
 
 
 @pytest.mark.needs_url
@@ -35,14 +36,14 @@ class TestAuth(object):
         http = axonapi.Http(url=url, certwarn=False)
         auth = creds["cls"](http=http, **creds["creds"])
         auth.login()
-        with pytest.raises(axonapi.AlreadyLoggedIn):
+        with pytest.raises(exceptions.AlreadyLoggedIn):
             auth.login()
 
     def test_logout_not_logged_in(self, url, creds):
         """Test exc thrown when logout() but login() not called."""
         http = axonapi.Http(url=url, certwarn=False)
         auth = creds["cls"](http=http, **creds["creds"])
-        with pytest.raises(axonapi.NotLoggedIn):
+        with pytest.raises(exceptions.NotLoggedIn):
             auth.logout()
 
     def test_invalid_creds(self, url, creds):
@@ -50,7 +51,7 @@ class TestAuth(object):
         http = axonapi.Http(url=url, certwarn=False)
         bad_creds = {k: "badwolf1" for k in creds["creds"]}
         auth = creds["cls"](http=http, **bad_creds)
-        with pytest.raises(axonapi.InvalidCredentials):
+        with pytest.raises(exceptions.InvalidCredentials):
             auth.login()
 
     def test_http_lock_fail(self, url, creds):
@@ -58,5 +59,5 @@ class TestAuth(object):
         http = axonapi.Http(url=url)
         auth = creds["cls"](http=http, **creds["creds"])
         assert auth.http._auth_lock
-        with pytest.raises(axonapi.AuthError):
+        with pytest.raises(exceptions.AuthError):
             creds["cls"](http=http, **creds["creds"])

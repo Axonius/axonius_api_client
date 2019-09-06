@@ -32,7 +32,7 @@ class TestEnforcements(object):
         auth = creds["cls"](http=http, **creds["creds"])
         auth.login()
 
-        with pytest.warns(exceptions.ApiWarning):
+        with pytest.warns(exceptions.BetaWarning):
             api = axonapi.Enforcements(auth=auth)
 
         assert format(auth.__class__.__name__) in format(api)
@@ -56,7 +56,11 @@ class TestEnforcements(object):
     # AND no task shows up in EC
     def test_actions__shell(self, apiobj):
         """Pass."""
-        devices = apiobj.devices._get(query=LINUX_QUERY, page_size=1, row_start=0)
+        devices = apiobj.devices._get(query=LINUX_QUERY, paging_size=1, row_start=0)
         ids = [x["internal_axon_id"] for x in devices["assets"]]
+        if not ids:
+            reason = "No linux devices found!"
+            pytest.skip(reason)
+
         data = apiobj.actions._shell(name=ACTION_NAME, ids=ids, command=ACTION_CMD)
         assert not data

@@ -153,6 +153,12 @@ class is_type(object):
                 return False
         return True
 
+    # TODO add to tests
+    @staticmethod
+    def lostr(obj):
+        """Pass."""
+        return is_type.lot(obj, is_type.str)
+
     @staticmethod
     def los(obj):
         """Pass."""

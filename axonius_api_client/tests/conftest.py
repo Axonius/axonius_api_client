@@ -90,11 +90,7 @@ def pytest_runtest_setup(item):
 @pytest.fixture(scope="session")
 def url(request):
     """Fixture for getting API URL."""
-    url = request.config.getoption("--url")
-    if url:
-        parsed_url = axonapi.ParserUrl(url=url, default_scheme="https")
-        url = parsed_url.url
-    return url
+    return request.config.getoption("--url")
 
 
 @pytest.fixture(scope="session")

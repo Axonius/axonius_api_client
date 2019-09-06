@@ -3,20 +3,27 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import logging
+import pdb  # noqa
 import sys
 
 import pytest
 import requests
 
 import axonius_api_client as axonapi
+from axonius_api_client import exceptions
+
+InsecureRequestWarning = requests.urllib3.exceptions.InsecureRequestWarning
+
+# turns all warnings into errors for this module
+pytestmark = pytest.mark.filterwarnings("error")
 
 
 class TestParserUrl(object):
-    """Test axonapi.ParserUrl."""
+    """Test axonapi.http.ParserUrl."""
 
     def test_schemehostport443(self):
         """Test a proper URL gets parsed the same."""
-        u = axonapi.ParserUrl("https://host:443/blah")
+        u = axonapi.http.ParserUrl("https://host:443/blah")
         assert u.hostname == "host"
         assert u.port == 443
         assert u.scheme == "https"
@@ -26,55 +33,55 @@ class TestParserUrl(object):
 
     def test_str_repr(self):
         """Test str/repr has URL path."""
-        u = axonapi.ParserUrl("https://host:443/blah")
+        u = axonapi.http.ParserUrl("https://host:443/blah")
         assert u.parsed.path in format(u)
         assert u.parsed.path in repr(u)
 
     def test_schemehost_noport443(self):
         """Test port gets added for https scheme."""
-        u = axonapi.ParserUrl("https://host")
+        u = axonapi.http.ParserUrl("https://host")
         assert u.hostname == "host"
         assert u.port == 443
         assert u.scheme == "https"
 
     def test_host_noschemeport(self):
         """Test exc when no port or scheme in URL."""
-        exc = axonapi.HttpError
+        exc = exceptions.HttpError
         match = "no.*'port'"
         with pytest.raises(exc, match=match):
-            axonapi.ParserUrl("host", default_scheme="")
+            axonapi.http.ParserUrl("host", default_scheme="")
 
     def test_unknownschemehost_noport(self):
         """Test exc when no port and non http/https scheme."""
-        exc = axonapi.HttpError
+        exc = exceptions.HttpError
         match = "no.*'port'"
         with pytest.raises(exc, match=match):
-            axonapi.ParserUrl("httpx://host")
+            axonapi.http.ParserUrl("httpx://host")
 
     def test_hostport443_withslash(self):
         """Test scheme added with port 443 and no scheme in URL."""
-        u = axonapi.ParserUrl("host:443/")
+        u = axonapi.http.ParserUrl("host:443/")
         assert u.hostname == "host"
         assert u.port == 443
         assert u.scheme == "https"
 
     def test_hostport443_noscheme(self):
         """Test scheme added with port 443 and no scheme in URL."""
-        u = axonapi.ParserUrl("host:443", default_scheme="")
+        u = axonapi.http.ParserUrl("host:443", default_scheme="")
         assert u.hostname == "host"
         assert u.port == 443
         assert u.scheme == "https"
 
     def test_hostport80_noscheme(self):
         """Test scheme added with port 80 and no scheme in URL."""
-        u = axonapi.ParserUrl("host:80", default_scheme="")
+        u = axonapi.http.ParserUrl("host:80", default_scheme="")
         assert u.hostname == "host"
         assert u.port == 80
         assert u.scheme == "http"
 
     def test_schemehost_noport80(self):
         """Test port added with no port and http scheme in URL."""
-        u = axonapi.ParserUrl("http://host")
+        u = axonapi.http.ParserUrl("http://host")
         assert u.hostname == "host"
         assert u.port == 80
         assert u.scheme == "http"
@@ -93,7 +100,7 @@ class TestHttp(object):
     def test_parsed_url(self, httpbin_secure):
         """Test url=ParserUrl() works."""
         url = httpbin_secure.url
-        parsed_url = axonapi.ParserUrl(url=url, default_scheme="https")
+        parsed_url = axonapi.http.ParserUrl(url=url, default_scheme="https")
         http = axonapi.Http(url=parsed_url)
         assert httpbin_secure.url in format(http)
         assert httpbin_secure.url in repr(http)
@@ -104,12 +111,20 @@ class TestHttp(object):
         http = axonapi.Http(url=url)
         assert axonapi.version.__version__ in http.user_agent
 
-    def test_not_quiet_urllib(self, httpbin_secure):
+    def test_certwarn_true(self, httpbin_secure):
         """Test quiet_urllib=False shows warning from urllib3."""
         url = httpbin_secure.url
-        http = axonapi.Http(url=url, quiet_urllib=False)
-        with pytest.warns(requests.urllib3.exceptions.InsecureRequestWarning):
+        http = axonapi.Http(url=url, certwarn=True, save_history=True)
+
+        with pytest.warns(InsecureRequestWarning):
             http()
+
+    def test_certwarn_false(self, httpbin_secure):
+        """Test quiet_urllib=False shows warning from urllib3."""
+        url = httpbin_secure.url
+        http = axonapi.Http(url=url, certwarn=False)
+
+        http()
 
     @pytest.mark.skipif(
         sys.version_info < (3, 6), reason="requires python3.6 or higher"
@@ -117,7 +132,7 @@ class TestHttp(object):
     def test_verify_ca_bundle(self, httpbin_secure, httpbin_ca_bundle):
         """Test quiet_urllib=False no warning from urllib3 when using ca bundle."""
         url = httpbin_secure.url
-        http = axonapi.Http(url=url, log_level_urllib=False, certwarn=False)
+        http = axonapi.Http(url=url, certwarn=False)
         response = http()
         assert response.status_code == 200
 

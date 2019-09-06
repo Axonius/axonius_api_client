@@ -134,10 +134,12 @@ class Mixins(object):
         sargs.update(kwargs)
         sargs.update({"path": path, "method": method})
 
-        for limit_check in self._LIMIT_CHECKS:
-            for limit_key in self._LIMIT_KEYS:
-                if limit_key in kwargs.get(limit_check, {}):
-                    self._check_max_page_size(kwargs[limit_check][limit_key])
+        limit_datas = [sargs[x] for x in self._LIMIT_CHECKS if sargs.get(x)]
+
+        for limit_data in limit_datas:
+            limit = limit_data.get("limit")
+            if "limit" in limit_data and limit > constants.MAX_PAGING_SIZE:
+                limit_data["limit"] = constants.MAX_PAGING_SIZE
 
         response = self._auth.http(**sargs)
 
@@ -196,22 +198,6 @@ class Mixins(object):
 
         return data
 
-    def _check_max_page_size(self, page_size):
-        """Check if page size is over :data:`axonius_api_client.constants.MAX_PAGE_SIZE`.
-
-        Args:
-            page_size (:obj:`int`):
-                Page size to check.
-
-        Raises:
-            :exc:`exceptions.ApiError`
-
-        """
-        if page_size > constants.MAX_PAGE_SIZE:
-            msg = "Page size {page_size} is over maximum page size {max_size}"
-            msg = msg.format(page_size=page_size, max_size=constants.MAX_PAGE_SIZE)
-            raise exceptions.ApiError(msg)
-
     def _check_counts(
         self,
         value,
@@ -258,7 +244,7 @@ class Mixins(object):
             return True
         return False
 
-    def _only1(self, rows, count_max=None, count_min=None):
+    def _only1(self, rows, count_max=None, count_min=None, **kwargs):
         """Pass."""
         if count_max is not None:
             if count_max == 1 and rows:
@@ -293,6 +279,7 @@ class Parser(Child):
         """Pass."""
         self._parent = parent
         self._raw = raw
+        self._log = parent._log.getChild(self.__class__.__name__)
 
     @abc.abstractmethod
     def parse(self):

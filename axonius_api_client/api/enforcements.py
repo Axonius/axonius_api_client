@@ -132,10 +132,9 @@ class Enforcements(mixins.Model, mixins.Mixins):
         # children
         self.actions = Actions(parent=self)
 
-        msg = "This module is considered **BETA** status! Here be dragons..."
-        warnings.warn(msg, exceptions.ApiWarning)
-
         super(Enforcements, self)._init(auth=auth, **kwargs)
+
+        warnings.warn(exceptions.BetaWarning(obj=self))
 
     @property
     def _router(self):
