@@ -10,6 +10,8 @@ import six
 
 from . import constants, exceptions, tools, version
 
+InsecureRequestWarning = requests.urllib3.exceptions.InsecureRequestWarning
+
 
 class Http(object):
     """HTTP client for sending requests usings :obj:`requests.Session`.
@@ -176,11 +178,10 @@ class Http(object):
         elif log_request_attrs is False:
             self._LOG_REQUEST_ATTRS = constants.LOG_REQUEST_ATTRS_BRIEF
 
-        urlwarn = requests.urllib3.exceptions.InsecureRequestWarning
         if certwarn is True:
-            warnings.simplefilter("once", urlwarn)
+            warnings.simplefilter("once", InsecureRequestWarning)
         elif certwarn is False:
-            warnings.simplefilter("ignore", urlwarn)
+            warnings.simplefilter("ignore", InsecureRequestWarning)
 
         urllog = logging.getLogger("urllib3.connectionpool")
         tools.logs.set_level(

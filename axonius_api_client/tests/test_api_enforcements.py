@@ -6,7 +6,7 @@ import pytest
 
 import axonius_api_client as axonapi
 
-from . import need_creds
+from . import utils
 
 tools = axonapi.tools
 exceptions = axonapi.exceptions
@@ -16,33 +16,27 @@ ACTION_NAME = "Touch Axonius File"
 ACTION_CMD = "echo 'Touched by axonius' > /home/ubuntu/axonius_file"
 
 
-@pytest.mark.needs_url
-@pytest.mark.needs_key_creds
-@pytest.mark.parametrize("creds", ["creds_key"], indirect=True, scope="class")
+@pytest.fixture(scope="module")
+def apiobj(request):
+    """Pass."""
+    auth = utils.get_auth(request)
+
+    with pytest.warns(exceptions.BetaWarning):
+        api = axonapi.Enforcements(auth=auth)
+
+    utils.check_apiobj(authobj=auth, apiobj=api)
+
+    utils.check_apiobj_xref(
+        apiobj=api,
+        users=axonapi.api.users_devices.Users,
+        devices=axonapi.api.users_devices.Devices,
+    )
+
+    return api
+
+
 class TestEnforcements(object):
     """Pass."""
-
-    @pytest.fixture(scope="class")
-    def apiobj(self, url, creds):
-        """Pass."""
-        need_creds(creds)
-
-        http = axonapi.Http(url=url, certwarn=False)
-
-        auth = creds["cls"](http=http, **creds["creds"])
-        auth.login()
-
-        with pytest.warns(exceptions.BetaWarning):
-            api = axonapi.Enforcements(auth=auth)
-
-        assert format(auth.__class__.__name__) in format(api)
-        assert format(auth.__class__.__name__) in repr(api)
-        assert http.url in format(api)
-        assert http.url in repr(api)
-
-        assert isinstance(api._router, axonapi.api.routers.Router)
-
-        return api
 
     def test_actions__get(self, apiobj):
         """Pass."""

@@ -7,57 +7,76 @@ import pytest
 import axonius_api_client as axonapi
 from axonius_api_client import exceptions
 
+from . import utils
 
-@pytest.mark.needs_url
-@pytest.mark.needs_key_creds
-@pytest.mark.parametrize("creds", ["creds_key"], indirect=True, scope="class")
-class TestAuth(object):
+
+class TestApiKey(object):
     """Test axonius_api_client.auth."""
 
-    def test_valid_creds(self, url, creds):
+    def test_valid_creds(self, request):
         """Test str/repr has URL."""
-        http = axonapi.Http(url=url, certwarn=False)
-        auth = creds["cls"](http=http, **creds["creds"])
+        http = axonapi.Http(url=utils.get_url(request), certwarn=False)
+
+        auth = axonapi.ApiKey(http=http, **utils.get_key_creds(request))
+
         auth.login()
+
         assert auth.is_logged_in
         assert "url" in format(auth)
         assert "url" in repr(auth)
 
-    def test_logout(self, url, creds):
+    def test_logout(self, request):
         """Test no exc when logout() after login()."""
-        http = axonapi.Http(url=url, certwarn=False)
-        auth = creds["cls"](http=http, **creds["creds"])
+        http = axonapi.Http(url=utils.get_url(request), certwarn=False)
+
+        auth = axonapi.ApiKey(http=http, **utils.get_key_creds(request))
+
         auth.login()
+
+        assert auth.is_logged_in
+
         auth.logout()
+
         assert not auth.is_logged_in
 
-    def test_login_already_logged_in(self, url, creds):
+    def test_login_already_logged_in(self, request):
         """Test exc thrown when login() and login() already called."""
-        http = axonapi.Http(url=url, certwarn=False)
-        auth = creds["cls"](http=http, **creds["creds"])
+        http = axonapi.Http(url=utils.get_url(request), certwarn=False)
+
+        auth = axonapi.ApiKey(http=http, **utils.get_key_creds(request))
+
         auth.login()
+
         with pytest.raises(exceptions.AlreadyLoggedIn):
             auth.login()
 
-    def test_logout_not_logged_in(self, url, creds):
+    def test_logout_not_logged_in(self, request):
         """Test exc thrown when logout() but login() not called."""
-        http = axonapi.Http(url=url, certwarn=False)
-        auth = creds["cls"](http=http, **creds["creds"])
+        http = axonapi.Http(url=utils.get_url(request), certwarn=False)
+
+        auth = axonapi.ApiKey(http=http, **utils.get_key_creds(request))
+
         with pytest.raises(exceptions.NotLoggedIn):
             auth.logout()
 
-    def test_invalid_creds(self, url, creds):
+    def test_invalid_creds(self, request):
         """Test str/repr has URL."""
-        http = axonapi.Http(url=url, certwarn=False)
-        bad_creds = {k: "badwolf1" for k in creds["creds"]}
-        auth = creds["cls"](http=http, **bad_creds)
+        http = axonapi.Http(url=utils.get_url(request), certwarn=False)
+
+        bad = "badwolf"
+
+        auth = axonapi.ApiKey(http=http, key=bad, secret=bad)
+
         with pytest.raises(exceptions.InvalidCredentials):
             auth.login()
 
-    def test_http_lock_fail(self, url, creds):
+    def test_http_lock_fail(self, request):
         """Test using an http client from another authmethod throws exc."""
-        http = axonapi.Http(url=url)
-        auth = creds["cls"](http=http, **creds["creds"])
+        http = axonapi.Http(url=utils.get_url(request), certwarn=False)
+
+        auth = axonapi.ApiKey(http=http, **utils.get_key_creds(request))
+
         assert auth.http._auth_lock
+
         with pytest.raises(exceptions.AuthError):
-            creds["cls"](http=http, **creds["creds"])
+            auth = axonapi.ApiKey(http=http, **utils.get_key_creds(request))

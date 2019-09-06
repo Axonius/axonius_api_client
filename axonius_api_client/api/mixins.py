@@ -136,6 +136,7 @@ class Mixins(object):
 
         limit_datas = [sargs[x] for x in self._LIMIT_CHECKS if sargs.get(x)]
 
+        # TODO: test
         for limit_data in limit_datas:
             limit = limit_data.get("limit")
             if "limit" in limit_data and limit > constants.MAX_PAGING_SIZE:
@@ -243,15 +244,6 @@ class Mixins(object):
                 )
             return True
         return False
-
-    def _only1(self, rows, count_max=None, count_min=None, **kwargs):
-        """Pass."""
-        if count_max is not None:
-            if count_max == 1 and rows:
-                return rows[0]
-            elif rows:
-                return rows[:count_max]
-        return rows
 
 
 class Child(object):

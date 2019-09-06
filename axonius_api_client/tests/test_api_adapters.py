@@ -11,7 +11,7 @@ import axonius_api_client as axonapi
 from axonius_api_client import constants, exceptions
 from axonius_api_client.tools import is_type
 
-from . import need_creds
+from . import utils
 
 # FUTURE: BR: adding cnx with parsed config instead of raw config breaks adapters._get()
 # TODO: add atexit to verify no badwolf cnxs
@@ -69,45 +69,26 @@ FAKE_ADAPTER_NOCLIENTS = {
 FAKE_ADAPTERS = [FAKE_ADAPTER_CNXS_BAD, FAKE_ADAPTER_CNXS_OK, FAKE_ADAPTER_NOCLIENTS]
 
 
-@pytest.mark.needs_url
-@pytest.mark.needs_key_creds
-@pytest.mark.parametrize("creds", ["creds_key"], indirect=True, scope="session")
-class TestBase(object):
+@pytest.fixture(scope="module")
+def apiobj(request):
     """Pass."""
+    auth = utils.get_auth(request)
 
-    @pytest.fixture(scope="session")
-    def apiobj(self, url, creds):
-        """Pass."""
-        need_creds(creds)
+    api = axonapi.Adapters(auth=auth)
 
-        http = axonapi.Http(url=url, certwarn=False)
+    utils.check_apiobj(authobj=auth, apiobj=api)
 
-        auth = creds["cls"](http=http, **creds["creds"])
-        auth.login()
-
-        api = axonapi.api.Adapters(auth=auth)
-
-        assert format(auth.__class__.__name__) in format(api)
-        assert format(auth.__class__.__name__) in repr(api)
-        assert http.url in format(api)
-        assert http.url in repr(api)
-
-        assert isinstance(api.cnx, axonapi.api.mixins.Child)
-        assert isinstance(api.cnx, axonapi.api.adapters.Cnx)
-        assert api.cnx.__class__.__name__ in format(api.cnx)
-        assert api.cnx.__class__.__name__ in repr(api.cnx)
-
-        assert isinstance(api._router, axonapi.api.routers.Router)
-
-        return api
-
-    @pytest.fixture(scope="session")
-    def csv_adapter(self, apiobj):
-        """Pass."""
-        return apiobj.get_single(adapter="csv", node="master")
+    utils.check_apiobj_children(apiobj=api, cnx=axonapi.api.adapters.Cnx)
+    return api
 
 
-class TestAdapters(TestBase):
+@pytest.fixture(scope="module")
+def csv_adapter(apiobj):
+    """Pass."""
+    return apiobj.get_single(adapter="csv", node="master")
+
+
+class TestAdapters(object):
     """Pass."""
 
     def test__load_filepath(self, apiobj, tmp_path):
@@ -339,7 +320,7 @@ class TestAdapters(TestBase):
             assert x["status"] is None
 
 
-class TestCnx(TestBase):
+class TestCnx(object):
     """Pass."""
 
     def _add_csv(self, apiobj, csv_adapter, name):
@@ -801,7 +782,7 @@ class TestValidateCsv(object):
         assert len(record) == 1, "did not throw only one warning"
 
 
-class TestParserCnxConfig(TestBase):
+class TestParserCnxConfig(object):
     """Pass."""
 
     def test_ignore(self, apiobj, csv_adapter):
@@ -1061,7 +1042,7 @@ class TestParserCnxConfig(TestBase):
         assert parsed_config == dict(test1={"uuid": "x", "filename": CSV_FILENAME})
 
 
-class TestParserAdapters(TestBase):
+class TestParserAdapters(object):
     """Pass."""
 
     def test_adapters(self, apiobj):
@@ -1197,7 +1178,7 @@ class TestParserAdapters(TestBase):
         assert not adapter
 
 
-class TestRawAdapters(TestBase):
+class TestRawAdapters(object):
     """Pass."""
 
     def test_adapters(self, apiobj):

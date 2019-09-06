@@ -438,12 +438,18 @@ class dt(object):
             return dt.parse(delta)
         return datetime.datetime.now(tz)
 
+    # TODO: test
     @staticmethod
-    def minutes_ago(then):
+    def seconds_ago(then):
         """Pass."""
         then = dt.parse(obj=then)
         now = dt.now(tz=then.tzinfo)
-        return round((now - then).total_seconds() / 60)
+        return (now - then).total_seconds()
+
+    @staticmethod
+    def minutes_ago(then):
+        """Pass."""
+        return round(dt.seconds_ago(then) / 60)
 
     @staticmethod
     def within_minutes(obj, n=None):

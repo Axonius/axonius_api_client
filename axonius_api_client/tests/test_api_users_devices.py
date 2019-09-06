@@ -6,8 +6,6 @@ import pytest
 
 import axonius_api_client as axonapi
 
-from . import need_creds
-
 # import re
 
 
@@ -44,21 +42,16 @@ macs = " ".join(["'{}'".format(mac) for mac in macs])
 LONG_QUERY = "not specific_data.data.network_interfaces.mac in [{}]".format(macs)
 
 
-@pytest.mark.needs_url
-@pytest.mark.needs_key_creds
-@pytest.mark.parametrize("creds", ["creds_key"], indirect=True, scope="class")
-@pytest.mark.parametrize("apicls", [axonapi.api.Users, axonapi.Devices], scope="class")
-class TestUsersDevices(object):
+'''
+class TestBase(object):
     """Pass."""
 
     @pytest.fixture(scope="class")
-    def apiobj(self, url, creds, apicls):
+    def apiobj(self, url, creds_key, apicls):
         """Pass."""
-        need_creds(creds)
-
         http = axonapi.Http(url=url, certwarn=False)
 
-        auth = creds["cls"](http=http, **creds["creds"])
+        auth = creds_key["cls"](http=http, **creds_key["creds"])
         auth.login()
 
         api = apicls(auth=auth)
@@ -89,6 +82,13 @@ class TestUsersDevices(object):
         assert isinstance(api.adapters, axonapi.api.adapters.Adapters)
         return api
 
+
+@pytest.mark.needs_url
+@pytest.mark.needs_key_creds
+@pytest.mark.parametrize("apicls", [axonapi.api.Users, axonapi.Devices], scope="class")
+class TestUsersDevicesFields(TestBase):
+    """Pass."""
+'''
 
 '''
     @pytest.fixture(scope="class")

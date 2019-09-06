@@ -165,6 +165,8 @@ class UserDeviceMixin(mixins.ModelUserDevice, mixins.Mixins):
         msg = msg.format(q=query, f=val_fields)
         self._log.debug(msg)
 
+        start = tools.dt.now()
+
         while True:
             page = self._get(
                 query=query,
@@ -193,11 +195,17 @@ class UserDeviceMixin(mixins.ModelUserDevice, mixins.Mixins):
             if do_break:
                 break
 
-        msg = "Finished get with query {q!r} - returned {c} assets"
-        msg = msg.format(q=query, c=len(rows))
+        msg = "Finished get with query {q!r} - returned {c} assets in {s} seconds"
+        msg = msg.format(q=query, c=len(rows), s=tools.dt.seconds_ago(start))
         self._log.debug(msg)
 
-        return self._only1(rows=rows, count_min=count_min, count_max=count_max)
+        if count_max is not None:
+            if count_max == 1 and rows:
+                return rows[0]
+            elif rows:
+                return rows[:count_max]
+
+        return rows
 
     def get_by_field_value(
         self,
@@ -771,7 +779,13 @@ class SavedQuery(mixins.Child):
             if do_break:
                 break
 
-        return self._parent._only1(rows=rows, count_min=count_min, count_max=count_max)
+        if count_max is not None:
+            if count_max == 1 and rows:
+                return rows[0]
+            elif rows:
+                return rows[:count_max]
+
+        return rows
 
     def get_by_name(self, value, use_regex=False, not_flag=False, **kwargs):
         """Get saved queries using paging.
@@ -812,10 +826,15 @@ class SavedQuery(mixins.Child):
 
         rows = self.get(query=query, **kwargs)
 
-        count_min = kwargs.get("count_min", None)
         count_max = kwargs.get("count_max", None)
 
-        return self._only1(rows=rows, count_min=count_min, count_max=count_max)
+        if count_max is not None:
+            if count_max == 1 and rows:
+                return rows[0]
+            elif rows:
+                return rows[:count_max]
+
+        return rows
 
     def get_by_id(self, value, paging_size=None):
         """Get saved queries using paging.

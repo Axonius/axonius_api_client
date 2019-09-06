@@ -7,34 +7,24 @@ import requests
 
 import axonius_api_client as axonapi
 from axonius_api_client import exceptions, tools
+from . import utils
 
-from . import need_creds
+
+@pytest.fixture(scope="module")
+def apiobj(request):
+    """Pass."""
+    auth = utils.get_auth(request)
+
+    api = axonapi.api.mixins.Mixins(auth=auth)
+    api._router = axonapi.api.routers.ApiV1.devices
+
+    utils.check_apiobj(authobj=auth, apiobj=api)
+
+    return api
 
 
-@pytest.mark.needs_url
-@pytest.mark.needs_key_creds
-@pytest.mark.parametrize("creds", ["creds_key"], indirect=True, scope="class")
 class TestMixins(object):
     """Pass."""
-
-    @pytest.fixture(scope="class")
-    def apiobj(self, url, creds):
-        """Pass."""
-        need_creds(creds)
-
-        http = axonapi.Http(url=url, certwarn=False)
-
-        auth = creds["cls"](http=http, **creds["creds"])
-        auth.login()
-
-        api = axonapi.api.mixins.Mixins(auth=auth)
-        api._router = axonapi.api.routers.ApiV1.users
-
-        assert format(auth.__class__.__name__) in format(api)
-        assert format(auth.__class__.__name__) in repr(api)
-        assert http.url in format(api)
-        assert http.url in repr(api)
-        return api
 
     def test__request_json(self, apiobj):
         """Test that JSON is returned when is_json=True."""
@@ -81,11 +71,3 @@ class TestMixins(object):
             path=apiobj._router.fields, method="get", is_json=False
         )
         assert tools.is_type.str(response)
-
-    def test_not_logged_in(self, url, creds):
-        """Test exc thrown when auth method not logged in."""
-        need_creds(creds)
-        http = axonapi.Http(url=url, certwarn=False)
-        auth = creds["cls"](http=http, **creds["creds"])
-        with pytest.raises(exceptions.NotLoggedIn):
-            axonapi.api.mixins.Mixins(auth=auth)
