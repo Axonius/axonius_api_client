@@ -6,7 +6,7 @@ import abc
 
 import six
 
-from . import api, constants, exceptions, tools
+from . import api, constants, exceptions, logs
 
 
 @six.add_metaclass(abc.ABCMeta)
@@ -71,7 +71,7 @@ class Mixins(object):
 
         """
         log_level = kwargs.get("log_level", constants.LOG_LEVEL_AUTH)
-        self._log = tools.logs.get_obj_log(obj=self, level=log_level)
+        self._log = logs.get_obj_log(obj=self, level=log_level)
 
         self._http = http
         """:obj:`axonius_api_client.http.Http`: HTTP Client."""

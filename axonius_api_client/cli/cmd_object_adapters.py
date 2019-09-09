@@ -97,7 +97,7 @@ def to_csv(ctx, raw_data, **kwargs):
             if k not in headers:
                 headers.append(k)
 
-            row[k] = tools.join.cr(v, pre=False) if tools.is_type.list(v) else v
+            row[k] = tools.join.cr(v, pre=False) if tools.is_list(v) else v
 
     headers = sorted(headers, reverse=True)
     return tools.csv.cereal(rows=rows, headers=headers)

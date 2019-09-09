@@ -11,10 +11,10 @@ import click
 import dotenv
 import requests
 
-from .. import tools
+from .. import connect, tools
 
 AX_DOTENV = os.environ.get("AX_DOTENV", "")
-CWD_PATH = tools.path.resolve(os.getcwd())
+CWD_PATH = tools.path(obj=os.getcwd())
 OK_ARGS = {"fg": "green", "bold": True, "err": True}
 OK_TMPL = "** {msg}"
 
@@ -38,12 +38,12 @@ DEFAULT_FIELD = "generic:{field}"
 
 def jdump(obj, **kwargs):
     """JSON dump utility."""
-    print(tools.json.re_load(obj, **kwargs))
+    print(tools.json_reload(obj, **kwargs))
 
 
 def load_dotenv():
     """Pass."""
-    path = tools.path.resolve(AX_DOTENV) if AX_DOTENV else CWD_PATH / ".env"
+    path = tools.path(obj=AX_DOTENV) if AX_DOTENV else CWD_PATH / ".env"
     dotenv.load_dotenv(format(path))
 
 
@@ -147,7 +147,7 @@ def cb_fields(ctx, param, value):
     if not value:
         return fields
 
-    value = value if tools.is_type.list(value) else [value]
+    value = value if isinstance(value, tools.LIST) else [value]
 
     for x in value:
         if ":" not in x:
@@ -203,7 +203,7 @@ class Context(object):
             click.echo(data)
             return
 
-        path = tools.path.resolve(export_path)
+        path = tools.path(obj=export_path)
         path.mkdir(mode=0o700, parents=True, exist_ok=True)
 
         full_path = path / export_file
@@ -246,7 +246,7 @@ class Context(object):
     @staticmethod
     def to_json(ctx, raw_data, **kwargs):
         """Pass."""
-        return tools.json.dump(raw_data, **kwargs)
+        return tools.json_dump(obj=raw_data, **kwargs)
 
     @staticmethod
     def to_csv(ctx, raw_data, **kwargs):
@@ -288,7 +288,7 @@ class Context(object):
             connect_args["key"] = key
             connect_args["secret"] = secret
             try:
-                self.obj = tools.Connect(**connect_args)
+                self.obj = connect.Connect(**connect_args)
             except Exception as exc:
                 if self.wraperror:
                     self.echo_error(format(exc))

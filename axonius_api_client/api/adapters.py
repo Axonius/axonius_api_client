@@ -20,13 +20,6 @@ class Adapters(mixins.Model, mixins.Mixins):
 
         super(Adapters, self)._init(auth=auth, **kwargs)
 
-    @staticmethod
-    def _build_known(adapters):
-        """Pass."""
-        tmpl = ["name: {name!r}", "node name {node_name!r}", "connections {cnx_count}"]
-        tmpl = tools.join.comma(tmpl)
-        return [tmpl.format(**a) for a in adapters]
-
     def _get(self):
         """Get all adapters.
 
@@ -35,20 +28,6 @@ class Adapters(mixins.Model, mixins.Mixins):
 
         """
         return self._request(method="get", path=self._router.root)
-
-    @staticmethod
-    def _load_filepath(filepath):
-        """Pass."""
-        rpath = tools.path.resolve(filepath)
-
-        if not rpath.is_file():
-            msg = "Supplied filepath='{fp}' (resolved='{rp}') does not exist!"
-            msg = msg.format(fp=filepath, rp=rpath)
-            raise exceptions.ApiError(msg)
-
-        filecontent = rpath.read_bytes()
-        filename = rpath.name
-        return filename, filecontent
 
     @property
     def _router(self):
@@ -89,166 +68,160 @@ class Adapters(mixins.Model, mixins.Mixins):
         adapters = parser.parse()
         return adapters
 
+    def get_known(self, **kwargs):
+        """Pass."""
+        adapters = kwargs.get("adapters") or self.get()
+        tmpl = [
+            "name: {name!r}",
+            "node name: {node_name!r}",
+            "cnx count: {cnx_count}",
+            "status: {status}",
+        ]
+        tmpl = tools.join_comma(obj=tmpl).format
+        return [tmpl(**a) for a in adapters]
+
     def get_single(self, adapter, node="master"):
         """Pass."""
-        if tools.is_type.dict(adapter):
+        if isinstance(adapter, dict):
             return adapter
 
-        adapters = self.get()
-        adapters = self.filter_by_names(
-            names=adapter, count_min=1, count_max=1, count_error=True, adapters=adapters
-        )
+        all_adapters = self.get()
+
         adapters = self.filter_by_nodes(
-            nodes=node, count_min=1, count_max=1, count_error=True, adapters=adapters
+            value=node, adapters=all_adapters, use_regex=False
         )
+
+        adapters = self.filter_by_names(
+            value=adapter, adapters=adapters, use_regex=False
+        )
+
+        if len(adapters) != 1:
+            raise exceptions.ValueNotFound(
+                value="name {} and node name {}".format(adapter, node),
+                value_msg="Adapters by name and node name",
+                known=self.get_known,
+                known_msg="Adapters",
+                match_type="equals",
+                adapters=all_adapters,
+            )
+
         return adapters[0]
 
     def filter_by_names(
-        self,
-        adapters,
-        names,
-        use_regex=False,
-        count_min=None,
-        count_max=None,
-        count_error=True,
+        self, adapters, value, use_regex=False, match_count=None, match_error=True
     ):
         """Pass."""
-        names = [tools.strip.right(name, "_adapter") for name in tools.listify(names)]
+        value = [
+            tools.strip_right(obj=name, fix="_adapter")
+            for name in tools.listify(obj=value, dictkeys=True)
+        ]
 
         matches = []
 
         for adapter in adapters:
             match = tools.values_match(
-                checks=names, values=adapter["name"], use_regex=use_regex
+                checks=value, values=adapter["name"], use_regex=use_regex
             )
 
             if match and adapter not in matches:
                 matches.append(adapter)
 
-        self._check_counts(
-            value=names,
-            value_type="adapter by names using regex {}".format(use_regex),
-            objtype=self._router._object_type,
-            count_min=count_min,
-            count_max=count_max,
-            count_total=len(matches),
-            known=self._build_known(adapters),
-            error=count_error,
-        )
+        if (match_count and len(matches) != match_count) and match_error:
+            raise exceptions.ValueNotFound(
+                value=value,
+                value_msg="Adapters by names",
+                known=self.get_known,
+                known_msg="Adapters",
+                match_type="regex matches" if use_regex else "equals",
+                adapters=adapters,
+            )
 
         return matches
 
     def filter_by_nodes(
         self,
         adapters,
-        nodes,
-        use_regex=True,
-        count_min=None,
-        count_max=None,
-        count_error=True,
+        value,
+        use_regex=False,
+        ignore_case=True,
+        match_count=None,
+        match_error=True,
     ):
         """Pass."""
         matches = []
 
         for adapter in adapters:
             match = tools.values_match(
-                checks=nodes, values=adapter["node_name"], use_regex=use_regex
+                checks=value,
+                values=adapter["node_name"],
+                use_regex=use_regex,
+                ignore_case=ignore_case,
             )
 
             if match and adapter not in matches:
                 matches.append(adapter)
 
-        self._check_counts(
-            value=nodes,
-            value_type="adapter by node names using regex {}".format(use_regex),
-            objtype=self._router._object_type,
-            count_min=count_min,
-            count_max=count_max,
-            count_total=len(matches),
-            known=self._build_known(adapters),
-            error=count_error,
-        )
+        if (match_count and len(matches) != match_count) and match_error:
+            raise exceptions.ValueNotFound(
+                value=value,
+                value_msg="Adapters by node names",
+                known=self.get_known,
+                known_msg="Adapters",
+                match_type="regex matches" if use_regex else "equals",
+                adapters=adapters,
+            )
 
         return matches
 
     def filter_by_cnx_count(
-        self,
-        adapters,
-        cnx_min=None,
-        cnx_max=None,
-        count_min=None,
-        count_max=None,
-        count_error=True,
+        self, adapters, value=None, match_count=None, match_error=True
     ):
         """Pass."""
-        known = []
         matches = []
 
         for adapter in adapters:
-            known_str = [
-                "name: {name!r}",
-                "node name {node_name!r}",
-                "connection counts: {cnx_count}",
-            ]
-            known_str = tools.join.comma(known_str).format(**adapter)
-
-            if known_str not in known:
-                known.append(known_str)
-
-            if cnx_min is not None and not adapter["cnx_count"] >= cnx_min:
-                continue
-            if cnx_max == 0 and not adapter["cnx_count"] == 0:
-                continue
-            if cnx_max is not None and not adapter["cnx_count"] <= cnx_max:
+            if value is not None and adapter["cnx_count"] != value:
                 continue
 
-            matches.append(adapter)
+            if adapter not in matches:
+                matches.append(adapter)
 
-        values = ["cnx_min: {}".format(cnx_min), "cnx_max: {}".format(cnx_max)]
-        self._check_counts(
-            value=values,
-            value_type="adapter by connection count",
-            objtype=self._router._object_type,
-            count_min=count_min,
-            count_max=count_max,
-            count_total=len(matches),
-            known=known,
-            error=count_error,
-        )
+        if (match_count and len(matches) != match_count) and match_error:
+            raise exceptions.ValueNotFound(
+                value=value,
+                value_msg="Adapters by connection count",
+                known=self.get_known,
+                known_msg="Adapters",
+                adapters=adapters,
+                match_type="is",
+            )
 
         return matches
 
     def filter_by_status(
-        self, adapters, status=None, count_min=None, count_max=None, count_error=True
+        self, adapters, value=None, match_count=None, match_error=True
     ):
         """Pass."""
-        known = []
         matches = []
 
         for adapter in adapters:
-            known_str = "name: {name!r}, node name {node_name!r}, status: {status}"
-            known_str = known_str.format(**adapter)
+            if isinstance(value, tools.LIST):
+                if adapter["status"] not in value:
+                    continue
+            elif adapter["status"] != value:
+                continue
 
-            if known_str not in known:
-                known.append(known_str)
-
-            if adapter["status"] is True and status is True:
-                matches.append(adapter)
-            elif adapter["status"] is False and status is False:
-                matches.append(adapter)
-            elif adapter["status"] is None and status is None:
+            if adapter not in matches:
                 matches.append(adapter)
 
-        self._check_counts(
-            value=status,
-            value_type="adapter by client count",
-            objtype=self._router._object_type,
-            count_min=count_min,
-            count_max=count_max,
-            count_total=len(matches),
-            known=known,
-            error=count_error,
-        )
+        if (match_count and len(matches) != match_count) and match_error:
+            raise exceptions.ValueNotFound(
+                value=value,
+                value_msg="Adapters by status",
+                known=self.get_known,
+                known_msg="Adapters",
+                adapters=adapters,
+            )
 
         return matches
 
@@ -271,7 +244,9 @@ class Adapters(mixins.Model, mixins.Mixins):
         """Pass."""
         adapter = self.get_single(adapter=adapter, node=node)
 
-        name, content = self._load_filepath(path)
+        path, content = tools.path_read(obj=path, binary=True, is_json=False)
+
+        name = path.name
 
         return self._upload_file(
             adapter_name=adapter["name_raw"],
@@ -314,18 +289,6 @@ class Cnx(mixins.Child):
             error_json_bad_status=False,
             error_code_not_200=False,
         )
-
-    @staticmethod
-    def _build_known(cnxs):
-        """Pass."""
-        tmpl = [
-            "Adapter: {adapter_name!r}",
-            "ID: {id!r}",
-            "UUID: {uuid!r}",
-            "Status: {status}",
-        ]
-        tmpl = tools.join.comma(tmpl)
-        return [tmpl.format(**c) for c in cnxs]
 
     def _check(self, adapter_name, node_id, config):
         """Test an adapter connection.
@@ -470,8 +433,8 @@ class Cnx(mixins.Child):
             response=response,
             retry=retry,
             sleep=sleep,
-            uuid=response["id"],
-            id=None,
+            filter_method=self.filter_by_uuids,
+            filter_value=response["id"],
         )
 
         return refetched
@@ -532,7 +495,9 @@ class Cnx(mixins.Child):
         """Pass."""
         adapter = self._parent.get_single(adapter="csv", node=node)
 
-        name, content = self._parent._load_filepath(path)
+        path, content = tools.path_read(obj=path, binary=True, is_json=False)
+
+        name = path.name
 
         validate_csv(
             name=name,
@@ -649,8 +614,8 @@ class Cnx(mixins.Child):
             response=response,
             retry=retry,
             sleep=sleep,
-            uuid=None,
-            id=cnx["id"],
+            filter_method=self.filter_by_ids,
+            filter_value=cnx["id"],
         )
 
         return refetched
@@ -673,7 +638,7 @@ class Cnx(mixins.Child):
             "Connection status: {status}",
             "Delete all entities: {de}",
         ]
-        cnxinfo = tools.join.cr(cnxinfo).format(de=delete_entities, **cnx)
+        cnxinfo = tools.join_cr(obj=cnxinfo).format(de=delete_entities, **cnx)
 
         if not force:
             raise exceptions.CnxDeleteForce(cnxinfo=cnxinfo)
@@ -692,14 +657,14 @@ class Cnx(mixins.Child):
             "Connection info: {cnxinfo}",
             "About to delete connection in {s} seconds using args: {a}",
         ]
-        lsmsg = tools.join.cr(lsmsg).format(cnxinfo=cnxinfo, s=sleep, a=dargs)
+        lsmsg = tools.join_cr(obj=lsmsg).format(cnxinfo=cnxinfo, s=sleep, a=dargs)
         self._log.info(lsmsg)
 
         time.sleep(sleep)
 
         response = self._delete(**dargs)
 
-        had_error = tools.is_type.dict(response) and (
+        had_error = isinstance(response, dict) and (
             response["status"] == "error" or response["error"]
         )
 
@@ -707,7 +672,9 @@ class Cnx(mixins.Child):
             "Connection info: {cnxinfo}",
             "Deleted connection with error {he} and return {r}",
         ]
-        lfmsg = tools.join.cr(lfmsg).format(cnxinfo=cnxinfo, he=had_error, r=response)
+        lfmsg = tools.join_cr(obj=lfmsg).format(
+            cnxinfo=cnxinfo, he=had_error, r=response
+        )
         self._log.info(lfmsg)
 
         if had_error:
@@ -727,39 +694,150 @@ class Cnx(mixins.Child):
 
         return ret
 
+    def filter_by_ids(
+        self, cnxs, value=None, use_regex=False, match_count=None, match_error=True
+    ):
+        """Get all connections for all adapters."""
+        matches = []
+
+        for cnx in cnxs:
+            match = tools.values_match(
+                checks=value, values=cnx["id"], use_regex=use_regex
+            )
+
+            if match and cnx not in matches:
+                matches.append(cnx)
+
+        if (match_count and len(matches) != match_count) and match_error:
+            raise exceptions.ValueNotFound(
+                value=value,
+                value_msg="Adapter connections by id",
+                known=self.get_known,
+                known_msg="Adapter connections",
+                match_type="regex matches" if use_regex else "equals",
+                cnxs=cnxs,
+            )
+
+        return matches
+
+    def filter_by_uuids(
+        self, cnxs, value=None, use_regex=False, match_count=None, match_error=True
+    ):
+        """Get all connections for all adapters."""
+        matches = []
+
+        for cnx in cnxs:
+            match = tools.values_match(
+                checks=value, values=cnx["uuid"], use_regex=use_regex
+            )
+
+            if match and cnx not in matches:
+                matches.append(cnx)
+
+        if (match_count and len(matches) != match_count) and match_error:
+            raise exceptions.ValueNotFound(
+                value=value,
+                value_msg="Adapter connections by uuid",
+                known=self.get_known,
+                known_msg="Adapter connections",
+                match_type="regex matches" if use_regex else "equals",
+                cnxs=cnxs,
+            )
+
+        return matches
+
+    def filter_by_status(self, cnxs, value=None, match_count=None, match_error=True):
+        """Get all connections for all adapters."""
+        matches = []
+
+        for cnx in cnxs:
+            if isinstance(value, tools.LIST):
+                if cnx["status"] not in value:
+                    continue
+            elif cnx["status"] != value:
+                continue
+
+            if cnx not in matches:
+                matches.append(cnx)
+
+        if (match_count and len(matches) != match_count) and match_error:
+            raise exceptions.ValueNotFound(
+                value=value,
+                value_msg="Adapter connections by status",
+                known=self.get_known,
+                known_msg="Adapter connections",
+                cnxs=cnxs,
+            )
+
+        return matches
+
     def get(self, adapter, node="master"):
         """Get all connections for an adapter."""
-        if tools.is_type.lostr(adapter):
+        if isinstance(adapter, tools.LIST):
             all_adapters = self._parent.get()
             all_adapters = self._parent.filter_by_names(
-                adapters=all_adapters, names=adapter
+                adapters=all_adapters, value=adapter
             )
             all_adapters = self._parent.filter_by_nodes(
-                adapters=all_adapters, nodes=node
+                adapters=all_adapters, value=node
             )
             return [c for a in all_adapters for c in a["cnx"]]
 
-        if tools.is_type.none(adapter):
+        if adapter is None:
             all_adapters = self._parent.get()
             all_adapters = self._parent.filter_by_nodes(
-                adapters=all_adapters, nodes=node
+                adapters=all_adapters, value=node
             )
             return [c for a in all_adapters for c in a["cnx"]]
 
         adapter = self._parent.get_single(adapter=adapter, node=node)
         return adapter["cnx"]
 
-    def refetch(self, adapter_name, node_name, response, uuid, id, retry=15, sleep=15):
+    def get_known(self, **kwargs):
+        """Pass."""
+        cnxs = kwargs.get("cnxs") or self.get()
+        tmpl = [
+            "Adapter: {adapter_name!r}",
+            "cnx id: {id!r}",
+            "cnx uuid: {uuid!r}",
+            "cnx status: {status}",
+        ]
+        tmpl = tools.join_comma(obj=tmpl)
+        return [tmpl.format(**c) for c in cnxs]
+
+    def refetch(
+        self,
+        adapter_name,
+        node_name,
+        response,
+        filter_method,
+        filter_value,
+        retry=15,
+        sleep=15,
+    ):
         """Pass."""
         count = 0
+        retry = retry or 1
 
         # new connections don't always show up right away, so we have to do some magic
         while count < retry:
             # re-fetch all connections for this adapter
             # try to find the newly created connection
-            cnxs = self.get(adapter=adapter_name, node=node_name)
-            cnxs = self.filter_by_uuids(cnxs=cnxs, uuids=uuid, count_error=False)
-            cnxs = self.filter_by_ids(cnxs=cnxs, ids=id, count_error=False)
+            all_cnxs = self.get(adapter=adapter_name, node=node_name)
+
+            msg = "Retry count {c}/{r} and sleep {s} - find {fv!r} using {fm!r}"
+            msg = msg.format(
+                c=count, r=retry, s=sleep, fv=filter_value, fm=filter_method
+            )
+            self._log.debug(msg)
+
+            cnxs = filter_method(
+                cnxs=all_cnxs, value=filter_value, match_count=1, match_error=False
+            )
+
+            msg = "Found {c} matches out of {ct} cnxs using {fv!r}"
+            msg = msg.format(c=len(cnxs), ct=len(all_cnxs), fv=filter_value)
+            self._log.debug(msg)
 
             if len(cnxs) == 1:
                 return cnxs[0]
@@ -772,7 +850,7 @@ class Cnx(mixins.Child):
                 "sleeping another {s} seconds",
                 "Looking for connection: {response}",
             ]
-            dmsg = tools.join.comma(dmsg).format(
+            dmsg = tools.join_comma(obj=dmsg).format(
                 response=response, c=count, r=retry, s=sleep
             )
             self._log.debug(dmsg)
@@ -780,105 +858,14 @@ class Cnx(mixins.Child):
             time.sleep(sleep)
 
         raise exceptions.CnxRefetchFailure(
-            response=response, adapter=adapter_name, node=node_name
+            response=response,
+            adapter=adapter_name,
+            node=node_name,
+            filter_method=filter_method,
+            filter_value=filter_value,
+            known=self.get_known,
+            cnxs=all_cnxs,
         )
-
-    def filter_by_ids(
-        self,
-        cnxs,
-        ids=None,
-        use_regex=False,
-        count_min=None,
-        count_max=None,
-        count_error=True,
-    ):
-        """Get all connections for all adapters."""
-        matches = []
-
-        for cnx in cnxs:
-            match = tools.values_match(
-                checks=ids, values=cnx["id"], use_regex=use_regex
-            )
-
-            if match and cnx not in matches:
-                matches.append(cnx)
-
-        self._parent._check_counts(
-            value=ids,
-            value_type="connection ids and regex {}".format(use_regex),
-            objtype="adapter connections",
-            count_min=count_min,
-            count_max=count_max,
-            count_total=len(matches),
-            known=self._build_known(cnxs),
-            error=count_error,
-        )
-
-        return matches
-
-    def filter_by_uuids(
-        self,
-        cnxs,
-        uuids=None,
-        use_regex=False,
-        count_min=None,
-        count_max=None,
-        count_error=True,
-    ):
-        """Get all connections for all adapters."""
-        matches = []
-
-        for cnx in cnxs:
-            match = tools.values_match(
-                checks=uuids, values=cnx["uuid"], use_regex=use_regex
-            )
-
-            if match and cnx not in matches:
-                matches.append(cnx)
-
-        self._parent._check_counts(
-            value=uuids,
-            value_type="uuids and regex {}".format(use_regex),
-            objtype="adapter connections",
-            count_min=count_min,
-            count_max=count_max,
-            count_total=len(matches),
-            known=self._build_known(cnxs),
-            error=count_error,
-        )
-
-        return matches
-
-    def filter_by_status(
-        self, cnxs, status=None, count_min=None, count_max=None, count_error=True
-    ):
-        """Get all connections for all adapters."""
-        matches = []
-
-        for cnx in cnxs:
-            match = True
-
-            if cnx["status"] is True and status is False:
-                match = False
-
-            if cnx["status"] is False and status is True:
-                match = False
-
-            if match and cnx not in matches:
-                matches.append(cnx)
-
-        self._parent._check_counts(
-            value=status,
-            value_type="by status",
-            objtype="adapter connections",
-            count_min=count_min,
-            count_max=count_max,
-            count_total=len(matches),
-            known=self._build_known(cnxs),
-            error=count_error,
-        )
-
-        return matches
 
     def update(
         self, cnx, new_config=None, parse_config=True, retry=15, sleep=15, error=True
@@ -889,12 +876,24 @@ class Cnx(mixins.Child):
             parser = ParserCnxConfig(raw=new_config, parent=self)
             new_config = parser.parse(adapter=adapter, settings=adapter["cnx_settings"])
 
+        msg = [
+            "Updating cnx id={id}",
+            "uuid={uuid}",
+            "adapter={adapter_name}",
+            "node={node_name}",
+        ]
+        msg = tools.join_comma(obj=msg).format(**cnx)
+        self._log.debug(msg)
+
         response = self._update(
             adapter_name=cnx["adapter_name_raw"],
             node_id=cnx["node_id"],
             config=new_config or cnx["config_raw"],
             cnx_uuid=cnx["uuid"],
         )
+
+        msg = "Updating cnx response {r}".format(r=response)
+        self._log.debug(msg)
 
         had_error = response["status"] == "error" or response["error"]
 
@@ -912,8 +911,8 @@ class Cnx(mixins.Child):
             response=response,
             retry=retry,
             sleep=sleep,
-            uuid=response["id"],
-            id=None,
+            filter_method=self.filter_by_uuids,
+            filter_value=response["id"],
         )
 
         return refetched
@@ -921,14 +920,6 @@ class Cnx(mixins.Child):
 
 class ParserCnxConfig(mixins.Parser):
     """Pass."""
-
-    SETTING_TYPES = {
-        "bool": tools.is_type.bool,
-        "number": tools.is_type.str_int,
-        "integer": tools.is_type.str_int,
-        "array": tools.is_type.lostr,
-        "string": tools.is_type.str,
-    }
 
     def check_value(self, name, value, schema, adapter):
         """Pass."""
@@ -944,7 +935,7 @@ class ParserCnxConfig(mixins.Parser):
             )
 
         if type_str == "file":
-            if not tools.is_type.dict(value):
+            if not isinstance(value, dict):
                 raise exceptions.CnxSettingInvalidType(
                     name=name,
                     value=value,
@@ -957,21 +948,33 @@ class ParserCnxConfig(mixins.Parser):
                 name=name, value=value, schema=schema, adapter=adapter
             )
 
-        if type_str in self.SETTING_TYPES:
-            type_cb = self.SETTING_TYPES[type_str]
+        if type_str == "bool":
+            if isinstance(value, bool):
+                return value
+        elif type_str in ["number", "integer"]:
+            if tools.is_int(obj=value, digit=True):
+                return int(value)
+        elif type_str == "array":
+            if (
+                isinstance(value, tools.LIST)
+                and value
+                and all([isinstance(x, tools.STR) for x in value])
+            ):
+                return value
+        elif type_str == "string":
+            if isinstance(value, tools.STR):
+                return value
+        else:
+            raise exceptions.CnxSettingUnknownType(
+                name=name,
+                value=value,
+                schema=schema,
+                type_str=type_str,
+                adapter=adapter,
+            )
 
-            if not type_cb(value):
-                raise exceptions.CnxSettingInvalidType(
-                    name=name,
-                    value=value,
-                    schema=schema,
-                    adapter=adapter,
-                    mustbe=type_str,
-                )
-            return value
-
-        raise exceptions.CnxSettingUnknownType(
-            name=name, value=value, schema=schema, type_str=type_str, adapter=adapter
+        raise exceptions.CnxSettingInvalidType(
+            name=name, value=value, schema=schema, adapter=adapter, mustbe=type_str
         )
 
     def parse(self, adapter, settings):
@@ -1051,7 +1054,7 @@ class ParserAdapters(mixins.Parser):
     def _adapter(self, name, raw):
         """Pass."""
         parsed = {
-            "name": tools.strip.right(name, "_adapter"),
+            "name": tools.strip_right(obj=name, fix="_adapter"),
             "name_raw": name,
             "name_plugin": raw["unique_plugin_name"],
             "node_name": raw["node_name"],
@@ -1184,7 +1187,7 @@ def validate_csv(name, content, is_users=False, is_installed_sw=False):
         ids_type = "device"
 
     headers_content = content
-    if tools.is_type.bytes(headers_content):
+    if isinstance(headers_content, tools.BYTES):
         headers_content = headers_content.decode()
 
     headers = headers_content.splitlines()[0].lower().split(",")

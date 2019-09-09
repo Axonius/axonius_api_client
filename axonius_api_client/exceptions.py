@@ -73,7 +73,7 @@ class CnxDeleteForce(CnxError):
             "Connection info: {cnxinfo}",
             "Will not delete connection unless force=True!!",
         ]
-        msg = tools.join.cr(msg).format(cnxinfo=cnxinfo)
+        msg = tools.join_cr(obj=msg).format(cnxinfo=cnxinfo)
         super(CnxDeleteForce, self).__init__(msg)
 
 
@@ -90,8 +90,8 @@ class CnxDeleteFailed(CnxError):
             "Failed to delete connection!!",
             "Response:{response}",
         ]
-        msg = tools.join.cr(msg).format(
-            cnxinfo=cnxinfo, response=tools.json.re_load(response)
+        msg = tools.join_cr(obj=msg).format(
+            cnxinfo=cnxinfo, response=tools.json_reload(obj=response, error=False)
         )
 
         super(CnxDeleteFailed, self).__init__(msg)
@@ -103,7 +103,7 @@ class CnxDeleteWarning(CnxWarning):
     def __init__(self, cnxinfo, sleep):
         """Constructor."""
         msg = ["Connection info: {cnxinfo}", "Will delete connection in {s} seconds!!"]
-        msg = tools.join.cr(msg).format(s=sleep, cnxinfo=cnxinfo)
+        msg = tools.join_cr(obj=msg).format(s=sleep, cnxinfo=cnxinfo)
 
         super(CnxDeleteWarning, self).__init__(msg)
 
@@ -121,7 +121,7 @@ class CnxDeleteFailedWarning(CnxWarning):
             "Failed to delete connection!!",
             "Response: {response}",
         ]
-        msg = tools.join.cr(msg).format(cnxinfo=cnxinfo, response=response)
+        msg = tools.join_cr(obj=msg).format(cnxinfo=cnxinfo, response=response)
 
         super(CnxDeleteFailedWarning, self).__init__(msg)
 
@@ -129,7 +129,9 @@ class CnxDeleteFailedWarning(CnxWarning):
 class CnxRefetchFailure(CnxError):
     """Pass."""
 
-    def __init__(self, response, adapter, node):
+    def __init__(
+        self, response, adapter, node, filter_value, filter_method, known=None, **kwargs
+    ):
         """Constructor.
 
         Args:
@@ -144,10 +146,23 @@ class CnxRefetchFailure(CnxError):
         self.response = response
         self.adapter = adapter
         self.node = node
+        self.known = known
+        self.kwargs = kwargs
 
-        msg = "Failed to find connection for adapter {a!r} on node {n!r}:\n  {r}"
-        msg = msg.format(a=adapter, n=node, r=tools.json.re_load(response))
+        if known:
+            known = known_cb(known=known, kwargs=kwargs)
+            known = tools.join_cr(obj=known, indent="    ")
 
+        msgs = [
+            "Failed to find connection",
+            "Adapter {!r} on node {!r}".format(adapter, node),
+            "Filter value {!r}".format(filter_value),
+            "Filter method {}".format(filter_method),
+            tools.json_reload(obj=response, error=False),
+            "Known connections: {}".format(known),
+        ]
+
+        msg = tools.join_cr(obj=msgs)
         super(CnxRefetchFailure, self).__init__(msg)
 
 
@@ -182,7 +197,9 @@ class CnxConnectFailure(CnxError):
         self.node = node
 
         msg = "Connection test failed for adapter {a!r} on node {n!r}:\n{r}"
-        msg = msg.format(a=adapter, n=node, r=tools.json.re_load(response))
+        msg = msg.format(
+            a=adapter, n=node, r=tools.json_reload(obj=response, error=False)
+        )
 
         super(CnxConnectFailure, self).__init__(msg)
 
@@ -206,14 +223,14 @@ class CnxSettingError(CnxError):
             "Error: {error}",
         ]
 
-        msg = tools.join.cr(msg).format(
+        msg = tools.join_cr(obj=msg).format(
             a=adapter["name"],
             an=adapter["node_name"],
             req="required" if schema["required"] else "optional",
             n=name,
             v=value,
             error=error,
-            ss=tools.json.dump(schema),
+            ss=tools.json_dump(obj=schema, error=False),
         )
 
         super(CnxSettingError, self).__init__(msg)
@@ -258,7 +275,7 @@ class CnxSettingFileMissing(CnxSettingError):
                 }
             },
         ]
-        examples = tools.join.cr([format(x) for x in examples])
+        examples = tools.join_cr(obj=[format(x) for x in examples])
 
         error = "File setting {n!r} with value {v!r} is invalid, examples: {ex}"
         error = error.format(n=name, v=value, ex=examples)
@@ -358,7 +375,7 @@ class ResponseError(ApiError):
                 "method={r.request.method!r}",
                 "url={r.url!r}",
             ]
-            txt = tools.join.comma(txt).format(r=response)
+            txt = tools.join_comma(obj=txt).format(r=response)
             error = "Response details: {}".format(txt)
             msgs.append(error)
 
@@ -369,12 +386,12 @@ class ResponseError(ApiError):
         if bodies:
             msgs += [
                 "*** request ***",
-                tools.json.re_load(response.request.body),
+                tools.json_reload(obj=response.request.body, error=False),
                 "*** response ***",
-                tools.json.re_load(response.text),
+                tools.json_reload(obj=response.text, error=False),
             ]
 
-        msg = tools.join.cr(msgs)
+        msg = tools.join_cr(obj=msgs)
 
         super(ResponseError, self).__init__(msg)
 
@@ -419,9 +436,9 @@ class JsonError(ResponseError):
                 Defaults to: None.
 
         """
-        if tools.is_type.dict(data):
+        if isinstance(data, dict):
             data = ["{}: {}".format(k, v) for k, v in data.items()]
-            data = tools.join.cr(data, indent="    ")
+            data = tools.join_cr(obj=data, indent="    ")
 
         error = "Found error in response JSON: {d}"
         error = error.format(d=data)
@@ -431,159 +448,46 @@ class JsonError(ResponseError):
         )
 
 
-class ObjectNotFound(ApiError):
-    """Error when unable to find an object."""
-
-    def __init__(
-        self, value, value_type, object_type, count_total=0, known=None, exc=None
-    ):
-        """Constructor.
-
-        Args:
-            value (:obj:`str`):
-                Value used to find object.
-            value (:obj:`str`):
-                Type of value used to find object.
-            object_type (:obj:`str`):
-                Type of object searched for.
-
-        """
-        self.value = value
-        """:obj:`str`: Value used to find object."""
-
-        self.value_type = value_type
-        """:obj:`str`: Value type used to find object."""
-
-        self.object_type = object_type
-        """:obj:`str`: Type of object searched for."""
-
-        msgs = []
-
-        msg = "Found {c} {obj_type} using {val_type}: {val!r}"
-        msg = msg.format(
-            c=count_total, val=value, val_type=value_type, obj_type=object_type
-        )
-        msgs.append(msg)
-
-        if exc:
-            msg = " -- original exception: {}"
-            msg = msg.format(exc)
-            msgs.append(msg)
-
-        known = known_cb(known)
-
-        if known:
-            msg = " valids: {v}"
-            msg = msg.format(v=tools.join.cr(known))
-            msgs.append(msg)
-
-        msg = tools.join.cr(msgs)
-        super(ObjectNotFound, self).__init__(msg)
-
-
-class TooFewObjectsFound(ObjectNotFound):
-    """Error when too many objects found."""
-
-    def __init__(
-        self, value, value_type, object_type, count_total, count_min, exc=None
-    ):
-        """Constructor.
-
-        Args:
-            value (:obj:`str`):
-                Value used to find object.
-            value (:obj:`str`):
-                Type of value used to find object.
-            object_type (:obj:`str`):
-                Type of object searched for.
-
-        """
-        self.value = value
-        """:obj:`str`: Value used to find object."""
-
-        self.value_type = value_type
-        """:obj:`str`: Value type used to find object."""
-
-        self.object_type = object_type
-        """:obj:`str`: Type of object searched for."""
-
-        msg = "Expected at least {tmin}, found {tcnt} {obj_type} objects"
-        msg += " using {val_type}: {val!r}"
-        msg = msg.format(
-            val=value,
-            val_type=value_type,
-            obj_type=object_type,
-            tcnt=count_total,
-            tmin=count_min,
-        )
-        msg = "{} -- original exception: {}".format(msg, exc) if exc else msg
-
-        super(ObjectNotFound, self).__init__(msg)
-
-
-class TooManyObjectsFound(ObjectNotFound):
-    """Error when too many objects found."""
-
-    def __init__(
-        self, value, value_type, object_type, count_total, count_max, exc=None
-    ):
-        """Constructor.
-
-        Args:
-            value (:obj:`str`):
-                Value used to find object.
-            value (:obj:`str`):
-                Type of value used to find object.
-            object_type (:obj:`str`):
-                Type of object searched for.
-
-        """
-        self.value = value
-        """:obj:`str`: Value used to find object."""
-
-        self.value_type = value_type
-        """:obj:`str`: Value type used to find object."""
-
-        self.object_type = object_type
-        """:obj:`str`: Type of object searched for."""
-
-        msg = "Expected no more than {tmax}, found {tcnt} {obj_type} objects"
-        msg += " using {val_type}: {val!r}"
-        msg = msg.format(
-            val=value,
-            val_type=value_type,
-            obj_type=object_type,
-            tcnt=count_total,
-            tmax=count_max,
-        )
-        msg = "{} -- original exception: {}".format(msg, exc) if exc else msg
-
-        super(ObjectNotFound, self).__init__(msg)
-
-
-class ValueNotFound(ObjectNotFound):
+class ValueNotFound(ApiError):
     """Pass."""
 
-    def __init__(self, value, value_msg, known, known_msg, **kwargs):
+    def __init__(
+        self,
+        value,
+        value_msg,
+        known=None,
+        known_msg=None,
+        exc=None,
+        match_type="equals",
+        **kwargs
+    ):
         """Constructor."""
         self.value = value
         self.known = known
         self.kwargs = kwargs
+        self.exc = exc
 
         msgs = []
 
-        msg = "Unable to find {value_msg} {v!r}"
-        msg = msg.format(value_msg=value_msg, v=value)
+        if exc:
+            msg = "Original exception: {exc}".format(exc=exc)
+            msgs.append(msg)
+
+        msg = "Unable to find {vm} that {mt} value {v!r}"
+        msg = msg.format(vm=value_msg, v=value, mt=match_type)
         msgs.append(msg)
 
-        known = known_cb(known)
+        if known:
+            known = known_cb(known=known, kwargs=kwargs)
 
-        msg = "Valid {known_msg}: {v}"
-        msg = msg.format(known_msg=known_msg, v=tools.join.cr(known, indent="    "))
-        msgs.append(msg)
+            msg = "Valid {known_msg}: {v}"
+            msg = msg.format(
+                known_msg=known_msg, v=tools.join_cr(obj=known, indent="    ")
+            )
+            msgs.append(msg)
 
-        msg = tools.join.cr(msgs)
-        super(ObjectNotFound, self).__init__(msg)
+        msg = tools.join_cr(obj=msgs)
+        super(ApiError, self).__init__(msg)
 
 
 class InvalidCredentials(AuthError):
@@ -660,11 +564,15 @@ class ConnectError(AxonError):
         super(ConnectError, self).__init__(msg)
 
 
-def known_cb(known):
+def known_cb(known, kwargs=None):
     """Pass."""
+    kwargs = kwargs or {}
+
     if callable(known):
         try:
-            known = known()
-        except Exception as kexc:  # pragma: no cover
-            known = ["known callback {} failed {}".format(known, kexc)]
+            known = known(**kwargs)
+        except Exception as exc:
+            msg = "known callback {cb} with kwargs {kw} failed with exception {exc}"
+            known = [msg.format(cb=known, kw=kwargs, exc=exc)]
+
     return known

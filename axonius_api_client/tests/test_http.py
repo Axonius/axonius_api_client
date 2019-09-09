@@ -180,7 +180,9 @@ class TestHttp(object):
 
         ax_url = utils.get_url(request)
 
-        http = axonapi.Http(url=ax_url, log_request_attrs=True, certwarn=False)
+        http = axonapi.Http(
+            url=ax_url, log_request_attrs=True, certwarn=False, log_level="debug"
+        )
 
         http()
 
@@ -195,7 +197,9 @@ class TestHttp(object):
 
         ax_url = utils.get_url(request)
 
-        http = axonapi.Http(url=ax_url, log_request_attrs=False, certwarn=False)
+        http = axonapi.Http(
+            url=ax_url, log_request_attrs=False, certwarn=False, log_level="debug"
+        )
 
         http()
 
@@ -210,7 +214,9 @@ class TestHttp(object):
 
         ax_url = utils.get_url(request)
 
-        http = axonapi.Http(url=ax_url, log_request_attrs=None, certwarn=False)
+        http = axonapi.Http(
+            url=ax_url, log_request_attrs=None, certwarn=False, log_level="debug"
+        )
 
         http()
 
@@ -222,7 +228,9 @@ class TestHttp(object):
 
         ax_url = utils.get_url(request)
 
-        http = axonapi.Http(url=ax_url, log_response_attrs=True, certwarn=False)
+        http = axonapi.Http(
+            url=ax_url, log_response_attrs=True, certwarn=False, log_level="debug"
+        )
 
         http()
 
@@ -237,7 +245,9 @@ class TestHttp(object):
 
         ax_url = utils.get_url(request)
 
-        http = axonapi.Http(url=ax_url, log_response_attrs=False, certwarn=False)
+        http = axonapi.Http(
+            url=ax_url, log_response_attrs=False, certwarn=False, log_level="debug"
+        )
         http()
 
         assert len(caplog.records) == 1
@@ -251,7 +261,9 @@ class TestHttp(object):
 
         ax_url = utils.get_url(request)
 
-        http = axonapi.Http(url=ax_url, log_response_attrs=None, certwarn=False)
+        http = axonapi.Http(
+            url=ax_url, log_response_attrs=None, certwarn=False, log_level="debug"
+        )
 
         http()
 
@@ -263,7 +275,9 @@ class TestHttp(object):
 
         ax_url = utils.get_url(request)
 
-        http = axonapi.Http(url=ax_url, log_response_body=True, certwarn=False)
+        http = axonapi.Http(
+            url=ax_url, log_response_body=True, certwarn=False, log_level="debug"
+        )
 
         http()
 
@@ -278,7 +292,9 @@ class TestHttp(object):
 
         ax_url = utils.get_url(request)
 
-        http = axonapi.Http(url=ax_url, log_response_body=False, certwarn=False)
+        http = axonapi.Http(
+            url=ax_url, log_response_body=False, certwarn=False, log_level="debug"
+        )
 
         http()
 
@@ -290,7 +306,9 @@ class TestHttp(object):
 
         ax_url = utils.get_url(request)
 
-        http = axonapi.Http(url=ax_url, log_request_body=True, certwarn=False)
+        http = axonapi.Http(
+            url=ax_url, log_request_body=True, certwarn=False, log_level="debug"
+        )
 
         http()
 
@@ -305,7 +323,9 @@ class TestHttp(object):
 
         ax_url = utils.get_url(request)
 
-        http = axonapi.Http(url=ax_url, log_request_body=False, certwarn=False)
+        http = axonapi.Http(
+            url=ax_url, log_request_body=False, certwarn=False, log_level="debug"
+        )
 
         http()
 

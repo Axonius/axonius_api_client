@@ -7,22 +7,13 @@ import os
 
 from . import __package__ as PACKAGE_ROOT
 
-MAX_PAGING_SIZE = 2000
+MAX_PAGE_SIZE = 2000
 """:obj:`int`: Maximum page size that REST API allows."""
 
-DEFAULT_PAGING_SIZE = 1000
-""":obj:`int`: Default page size to use for public API methods."""
-
-GUI_PAGING_SIZES = [25, 50, 100]
+GUI_PAGE_SIZES = [25, 50, 100]
 """:obj:`list` of :obj:`int`: Valid page sizes for GUI paging."""
 
 QUERY_USE_POST_LENGTH = 1000
-
-GENERIC_FIELD_PREFIX = "specific_data.data"
-""":obj:`str`: Prefix that all generic fields should begin with."""
-
-ADAPTER_FIELD_PREFIX = "adapters_data.{adapter_name}"
-""":obj:`str`: Prefix that all adapter fields should begin with."""
 
 LOG_REQUEST_ATTRS_BRIEF = [
     "request to {request.url!r}",
@@ -64,11 +55,11 @@ LOG_FMT_FILE = "%(asctime)s %(levelname)-8s [%(name)s:%(funcName)s()] %(message)
 LOG_DATEFMT_CONSOLE = "%m/%d/%Y %I:%M:%S %p"
 LOG_DATEFMT_FILE = "%m/%d/%Y %I:%M:%S %p"
 
-LOG_LEVEL_CONSOLE = "warning"
-LOG_LEVEL_FILE = "debug"
-LOG_LEVEL_HTTP = "debug"
-LOG_LEVEL_AUTH = "debug"
-LOG_LEVEL_API = "debug"
+LOG_LEVEL_CONSOLE = "info"
+LOG_LEVEL_FILE = "info"
+LOG_LEVEL_HTTP = "info"
+LOG_LEVEL_AUTH = "info"
+LOG_LEVEL_API = "info"
 LOG_LEVEL_PACKAGE = "debug"
 
 LOG_LEVELS_STR = ["debug", "info", "warning", "error", "fatal"]

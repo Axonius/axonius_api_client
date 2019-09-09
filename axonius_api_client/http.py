@@ -8,7 +8,7 @@ import warnings
 import requests
 import six
 
-from . import constants, exceptions, tools, version
+from . import constants, exceptions, logs, tools, version
 
 InsecureRequestWarning = requests.urllib3.exceptions.InsecureRequestWarning
 
@@ -114,7 +114,7 @@ class Http(object):
 
         """
         log_level = kwargs.get("log_level", constants.LOG_LEVEL_HTTP)
-        self._log = tools.logs.get_obj_log(obj=self, level=log_level)
+        self._log = logs.get_obj_log(obj=self, level=log_level)
         """:obj:`logging.Logger`: Logger for this object."""
 
         if isinstance(url, ParserUrl):
@@ -184,9 +184,7 @@ class Http(object):
             warnings.simplefilter("ignore", InsecureRequestWarning)
 
         urllog = logging.getLogger("urllib3.connectionpool")
-        tools.logs.set_level(
-            obj=urllog, level=kwargs.get("log_level_urllib", "warning")
-        )
+        logs.set_level(obj=urllog, level=kwargs.get("log_level_urllib", "warning"))
 
     def __call__(
         self,
@@ -247,7 +245,7 @@ class Http(object):
             :obj:`requests.Response`
 
         """
-        url = tools.join.url(self.url, path, route)
+        url = tools.join_url(self.url, path, route)
 
         headers = headers or {}
         headers.setdefault("User-Agent", self.user_agent)
@@ -289,7 +287,9 @@ class Http(object):
 
         if self._LOG_REQUEST_BODY:
             msg = "request body:\n{body}"
-            msg = msg.format(body=tools.json.dump(prepped_request.body, error=False))
+            msg = msg.format(
+                body=tools.json_dump(obj=prepped_request.body, error=False)
+            )
             self._log.debug(msg)
 
         response = self.session.send(**send_args)
@@ -307,7 +307,7 @@ class Http(object):
 
         if self._LOG_RESPONSE_BODY:
             msg = "response body:\n{body}"
-            msg = msg.format(body=tools.json.dump(response.text, error=False))
+            msg = msg.format(body=tools.json_dump(obj=response.text, error=False))
             self._log.debug(msg)
 
         return response

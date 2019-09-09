@@ -19,11 +19,11 @@ class Router(object):
         self._version = version
         self._base = base
         self._object_type = object_type
-        self.root = tools.join.url(base, object_type)
+        self.root = tools.join_url(base, object_type)
         self._routes = ["root"]
         for k, v in routes.items():
             self._routes.append(k)
-            setattr(self, k, tools.join.url(self.root, v))
+            setattr(self, k, tools.join_url(self.root, v))
 
     def __str__(self):
         """Show object info.

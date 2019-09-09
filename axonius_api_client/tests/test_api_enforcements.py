@@ -8,7 +8,6 @@ import axonius_api_client as axonapi
 
 from . import utils
 
-tools = axonapi.tools
 exceptions = axonapi.exceptions
 
 LINUX_QUERY = 'specific_data.data.os.type == "Linux"'
@@ -41,7 +40,6 @@ class TestEnforcements(object):
     def test_actions__get(self, apiobj):
         """Pass."""
         data = apiobj.actions._get()
-        assert tools.is_type.los(data)
         assert ["deploy", "shell", "upload_file"] == data
 
     # FUTURE:
@@ -50,7 +48,7 @@ class TestEnforcements(object):
     # AND no task shows up in EC
     def test_actions__shell(self, apiobj):
         """Pass."""
-        devices = apiobj.devices._get(query=LINUX_QUERY, paging_size=1, row_start=0)
+        devices = apiobj.devices._get(query=LINUX_QUERY, page_size=1, row_start=0)
         ids = [x["internal_axon_id"] for x in devices["assets"]]
         if not ids:
             reason = "No linux devices found!"

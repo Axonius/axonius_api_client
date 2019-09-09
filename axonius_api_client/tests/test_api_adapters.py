@@ -8,8 +8,7 @@ import warnings
 import pytest
 
 import axonius_api_client as axonapi
-from axonius_api_client import constants, exceptions
-from axonius_api_client.tools import is_type
+from axonius_api_client import constants, exceptions, tools
 
 from . import utils
 
@@ -91,40 +90,26 @@ def csv_adapter(apiobj):
 class TestAdapters(object):
     """Pass."""
 
-    def test__load_filepath(self, apiobj, tmp_path):
-        """Pass."""
-        test_path = tmp_path / CSV_FILENAME
-        test_path.write_bytes(CSV_FILECONTENT_BYTES)
-        filename, filecontent = apiobj._load_filepath(test_path)
-        assert filename == CSV_FILENAME
-        assert filecontent == CSV_FILECONTENT_BYTES
-
-    def test__load_filepath_fail(self, apiobj, tmp_path):
-        """Pass."""
-        test_path = tmp_path / "fun2.txt"
-        with pytest.raises(exceptions.ApiError):
-            apiobj._load_filepath(test_path)
-
     def test__get(self, apiobj):
         """Pass."""
         adapters = apiobj._get()
-        assert is_type.dict(adapters)
+        assert isinstance(adapters, dict)
 
     def test_get(self, apiobj):
         """Pass."""
         adapters = apiobj.get()
-        assert is_type.list(adapters)
+        assert isinstance(adapters, tools.LIST)
 
     def test_get_single(self, apiobj):
         """Pass."""
-        with pytest.raises(exceptions.ObjectNotFound):
+        with pytest.raises(exceptions.ValueNotFound):
             apiobj.get_single(adapter="badwolf")
 
-        with pytest.raises(exceptions.ObjectNotFound):
+        with pytest.raises(exceptions.ValueNotFound):
             apiobj.get_single(adapter="csv", node="badwolf")
 
         data = apiobj.get_single(adapter="csv")
-        assert is_type.dict(data)
+        assert isinstance(data, dict)
         assert data["name"] == "csv"
 
         data1 = apiobj.get_single(adapter=data)
@@ -139,7 +124,7 @@ class TestAdapters(object):
             name=CSV_FILENAME,
             content=CSV_FILECONTENT_BYTES,
         )
-        assert is_type.dict(data)
+        assert isinstance(data, dict)
         assert data["uuid"]
         assert data["filename"]
 
@@ -150,7 +135,7 @@ class TestAdapters(object):
             name=CSV_FILENAME,
             content=CSV_FILECONTENT_STR,
         )
-        assert is_type.dict(data)
+        assert isinstance(data, dict)
         assert data["uuid"]
         assert data["filename"]
 
@@ -162,7 +147,7 @@ class TestAdapters(object):
             name=CSV_FILENAME,
             content=CSV_FILECONTENT_BYTES,
         )
-        assert is_type.dict(data)
+        assert isinstance(data, dict)
         assert data["uuid"]
         assert data["filename"]
 
@@ -172,7 +157,7 @@ class TestAdapters(object):
             name=CSV_FILENAME,
             content=CSV_FILECONTENT_STR,
         )
-        assert is_type.dict(data)
+        assert isinstance(data, dict)
         assert data["uuid"]
         assert data["filename"]
 
@@ -182,142 +167,154 @@ class TestAdapters(object):
         test_path.write_text(CSV_FILECONTENT_STR)
 
         data = apiobj.upload_file_path(adapter=csv_adapter, field="csv", path=test_path)
-        assert is_type.dict(data)
-        assert is_type.str(data["uuid"])
+        assert isinstance(data, dict)
+        assert isinstance(data["uuid"], tools.STR)
         assert data["filename"] == CSV_FILENAME
 
         test_path.write_bytes(CSV_FILECONTENT_BYTES)
 
         data = apiobj.upload_file_path(adapter=csv_adapter, field="csv", path=test_path)
-        assert is_type.dict(data)
-        assert is_type.str(data["uuid"])
+        assert isinstance(data, dict)
+        assert isinstance(data["uuid"], tools.STR)
         assert data["filename"] == CSV_FILENAME
 
     def test_filter_by_names_regex(self, apiobj):
         """Pass."""
         data = apiobj.filter_by_names(
-            names=".*", use_regex=True, adapters=FAKE_ADAPTERS
+            value=".*", use_regex=True, adapters=FAKE_ADAPTERS
         )
-        assert is_type.list(data)
+        assert isinstance(data, tools.LIST)
         assert len(data) >= 1
 
         data = apiobj.filter_by_names(
-            names=FAKE_ADAPTER_CNXS_OK["name"], use_regex=False, adapters=FAKE_ADAPTERS
+            value=FAKE_ADAPTER_CNXS_OK["name"], use_regex=False, adapters=FAKE_ADAPTERS
         )
-        assert is_type.list(data)
+        assert isinstance(data, tools.LIST)
         assert len(data) == 1
 
     def test_filter_by_names_counts(self, apiobj):
         """Pass."""
-        with pytest.raises(exceptions.TooFewObjectsFound):
-            apiobj.filter_by_names(names="xxx", count_min=1, adapters=FAKE_ADAPTERS)
+        with pytest.raises(exceptions.ValueNotFound):
+            apiobj.filter_by_names(value="xxx", match_count=1, adapters=FAKE_ADAPTERS)
 
         data = apiobj.filter_by_names(
-            names="xxx", count_min=1, count_error=False, adapters=FAKE_ADAPTERS
+            value="xxx", match_count=1, match_error=False, adapters=FAKE_ADAPTERS
         )
-        assert is_type.list(data)
+        assert isinstance(data, tools.LIST)
         assert len(data) == 0
 
-        with pytest.raises(exceptions.TooManyObjectsFound):
+        with pytest.raises(exceptions.ValueNotFound):
             apiobj.filter_by_names(
-                names=".*", count_max=1, use_regex=True, adapters=FAKE_ADAPTERS
+                value=".*",
+                match_count=1,
+                match_error=True,
+                use_regex=True,
+                adapters=FAKE_ADAPTERS,
             )
 
         data = apiobj.filter_by_names(
-            names=".*",
-            count_max=1,
+            value=".*",
+            match_count=1,
             use_regex=True,
-            count_error=False,
+            match_error=False,
             adapters=FAKE_ADAPTERS,
         )
-        assert is_type.list(data)
+        assert isinstance(data, tools.LIST)
         assert len(data) == 3
 
     def test_filter_by_nodes_regex(self, apiobj):
         """Pass."""
         data = apiobj.filter_by_nodes(
-            nodes="master", use_regex=True, adapters=FAKE_ADAPTERS
+            value="master", use_regex=True, adapters=FAKE_ADAPTERS
         )
-        assert is_type.list(data)
+        assert isinstance(data, tools.LIST)
         assert len(data) >= 1
 
         data = apiobj.filter_by_nodes(
-            nodes="master", use_regex=False, adapters=FAKE_ADAPTERS
+            value="master", use_regex=False, adapters=FAKE_ADAPTERS
         )
-        assert is_type.list(data)
+        assert isinstance(data, tools.LIST)
         assert len(data) >= 1
 
     def test_filter_by_nodes_counts(self, apiobj):
         """Pass."""
-        with pytest.raises(exceptions.TooFewObjectsFound):
-            apiobj.filter_by_nodes(nodes="xxx", count_min=1, adapters=FAKE_ADAPTERS)
-
-        data = apiobj.filter_by_nodes(
-            nodes="xxx", count_min=1, count_error=False, adapters=FAKE_ADAPTERS
-        )
-        assert is_type.list(data)
-        assert len(data) == 0
-
-        with pytest.raises(exceptions.TooManyObjectsFound):
+        with pytest.raises(exceptions.ValueNotFound):
             apiobj.filter_by_nodes(
-                nodes=".*", count_max=1, use_regex=True, adapters=FAKE_ADAPTERS
+                value="xxx", match_count=1, match_error=True, adapters=FAKE_ADAPTERS
             )
 
         data = apiobj.filter_by_nodes(
-            nodes=".*",
-            count_max=1,
-            count_error=False,
+            value="xxx", match_count=1, match_error=False, adapters=FAKE_ADAPTERS
+        )
+        assert isinstance(data, tools.LIST)
+        assert len(data) == 0
+
+        with pytest.raises(exceptions.ValueNotFound):
+            apiobj.filter_by_nodes(
+                value=".*",
+                match_count=1,
+                match_error=True,
+                use_regex=True,
+                adapters=FAKE_ADAPTERS,
+            )
+
+        data = apiobj.filter_by_nodes(
+            value=".*",
+            match_count=1,
+            match_error=False,
             use_regex=True,
             adapters=FAKE_ADAPTERS,
         )
-        assert is_type.list(data)
+        assert isinstance(data, tools.LIST)
         assert len(data) == 3
 
     def test_filter_by_cnx_count(self, apiobj):
         """Pass."""
-        with pytest.raises(exceptions.TooFewObjectsFound):
+        with pytest.raises(exceptions.ValueNotFound):
             apiobj.filter_by_cnx_count(
-                cnx_min=9999, count_min=1, adapters=FAKE_ADAPTERS
+                value=9999, match_count=1, match_error=True, adapters=FAKE_ADAPTERS
             )
 
+        data = apiobj.filter_by_cnx_count(adapters=FAKE_ADAPTERS)
+        assert isinstance(data, tools.LIST)
+        assert len(data) == 3
+
+        data = apiobj.filter_by_cnx_count(value=2, adapters=FAKE_ADAPTERS)
+        assert isinstance(data, tools.LIST)
+        assert len(data) == 2
+
         data = apiobj.filter_by_cnx_count(
-            cnx_min=9999, count_min=1, count_error=False, adapters=FAKE_ADAPTERS
+            value=9999, match_count=1, match_error=False, adapters=FAKE_ADAPTERS
         )
-        assert is_type.list(data)
+        assert isinstance(data, tools.LIST)
         assert len(data) == 0
-
-        data = apiobj.filter_by_cnx_count(cnx_min=9999, adapters=FAKE_ADAPTERS)
-        assert is_type.list(data)
-        assert len(data) == 0
-
-        data = apiobj.filter_by_cnx_count(cnx_min=1, adapters=FAKE_ADAPTERS)
-        assert is_type.list(data)
-        assert len(data) >= 1
-
-        data = apiobj.filter_by_cnx_count(cnx_max=1, adapters=FAKE_ADAPTERS)
-        assert is_type.list(data)
-        assert len(data) >= 1
-
-        data = apiobj.filter_by_cnx_count(cnx_max=0, adapters=FAKE_ADAPTERS)
-        assert is_type.list(data)
-        assert len(data) >= 1
 
     def test_filter_by_status(self, apiobj):
         """Pass."""
-        data = apiobj.filter_by_status(status=True, adapters=FAKE_ADAPTERS)
-        assert is_type.list(data)
+        data = apiobj.filter_by_status(value=True, adapters=FAKE_ADAPTERS)
+        assert isinstance(data, tools.LIST)
         for x in data:
             assert x["status"] is True
 
-        data = apiobj.filter_by_status(status=False, adapters=FAKE_ADAPTERS)
-        assert is_type.list(data)
+        data = apiobj.filter_by_status(value=False, adapters=FAKE_ADAPTERS)
+        assert isinstance(data, tools.LIST)
         for x in data:
             assert x["status"] is False
 
-        data = apiobj.filter_by_status(status=None, adapters=FAKE_ADAPTERS)
-        assert is_type.list(data)
+        data = apiobj.filter_by_status(value=None, adapters=FAKE_ADAPTERS)
+        assert isinstance(data, tools.LIST)
         for x in data:
             assert x["status"] is None
+
+        data = apiobj.filter_by_status(value=[False, True], adapters=FAKE_ADAPTERS)
+        assert isinstance(data, tools.LIST)
+        for x in data:
+            assert x["status"] in [False, True]
+
+        with pytest.raises(exceptions.ValueNotFound):
+            apiobj.filter_by_status(
+                value="x", adapters=FAKE_ADAPTERS, match_count=1, match_error=True
+            )
 
 
 class TestCnx(object):
@@ -344,13 +341,13 @@ class TestCnx(object):
             node_id=csv_adapter["node_id"],
             config=config,
         )
-        assert is_type.dict(added)
-        assert is_type.str(added["id"])
+        assert isinstance(added, dict)
+        assert isinstance(added["id"], tools.STR)
 
         assert added["error"] is None
         assert added["status"] == "success"
         assert added["client_id"] == "private_create_csv"
-        assert is_type.str(added["id"]) and added["id"]
+        assert isinstance(added["id"], tools.STR) and added["id"]
         return added, config
 
     def _delete_csv(self, apiobj, csv_adapter, added):
@@ -369,11 +366,13 @@ class TestCnx(object):
         )
         assert not_deleted
 
-    def test__build_known(self, apiobj, csv_adapter):
-        """Pass."""
-        cnxs = apiobj.cnx.get(adapter=csv_adapter)
-        known = apiobj.cnx._build_known(cnxs)
-        assert is_type.lostr(known)
+    # def test__build_known(self, apiobj, csv_adapter):
+    #     """Pass."""
+    #     cnxs = apiobj.cnx.get(adapter=csv_adapter)
+    #     known = apiobj.cnx._build_known(cnxs)
+    #     assert isinstance(known, tools.LIST)
+    #     for x in known:
+    #         assert isinstance(x, tools.STR)
 
     def test_refetch(self, apiobj, csv_adapter):
         """Pass."""
@@ -385,8 +384,8 @@ class TestCnx(object):
             adapter_name=csv_adapter["name"],
             node_name=csv_adapter["node_name"],
             response=response,
-            uuid=response["id"],
-            id=None,
+            filter_method=apiobj.cnx.filter_by_uuids,
+            filter_value=response["id"],
         )
         assert refetched["uuid"] == response["id"]
 
@@ -401,8 +400,8 @@ class TestCnx(object):
                 adapter_name=csv_adapter["name"],
                 node_name=csv_adapter["node_name"],
                 response=response,
-                uuid="djafskjdf;kjsanhgdsaf",
-                id=None,
+                filter_value="djafskjdf;kjsanhgdsaf",
+                filter_method=apiobj.cnx.filter_by_uuids,
                 retry=1,
                 sleep=0,
             )
@@ -419,8 +418,8 @@ class TestCnx(object):
             config=config,
         )
 
-        assert is_type.dict(checked)
-        assert is_type.str(checked["message"])
+        assert isinstance(checked, dict)
+        assert isinstance(checked["message"], tools.STR)
         assert checked["status"] == "error"
         assert checked["type"] == "NotImplementedError"
 
@@ -445,8 +444,8 @@ class TestCnx(object):
             adapter_name=adapter["name"],
             node_name=adapter["node_name"],
             response=exc.value.response,
-            uuid=exc.value.response["id"],
-            id=None,
+            filter_value=exc.value.response["id"],
+            filter_method=apiobj.cnx.filter_by_uuids,
         )
 
         apiobj.cnx.delete(refetched, force=True, sleep=0, warning=False)
@@ -474,80 +473,90 @@ class TestCnx(object):
     def test_get_adapter(self, apiobj, csv_adapter):
         """Pass."""
         cnxs = apiobj.cnx.get(adapter=csv_adapter)
-        assert is_type.list(cnxs)
+        assert isinstance(cnxs, tools.LIST)
         for x in cnxs:
             assert x["adapter_name"] == "csv"
 
     def test_get_str(self, apiobj):
         """Pass."""
         cnxs = apiobj.cnx.get(adapter="csv")
-        assert is_type.list(cnxs)
+        assert isinstance(cnxs, tools.LIST)
         for x in cnxs:
             assert x["adapter_name"] == "csv"
 
     def test_get_list(self, apiobj):
         """Pass."""
         cnxs = apiobj.cnx.get(adapter=["csv", "active_directory"])
-        assert is_type.list(cnxs)
+        assert isinstance(cnxs, tools.LIST)
         for x in cnxs:
             assert x["adapter_name"] in ["csv", "active_directory"]
 
     def test_get_none(self, apiobj):
         """Pass."""
         all_adapters = apiobj.get()
-        ok_adapters = apiobj.filter_by_status(adapters=all_adapters, status=True)
+        ok_adapters = apiobj.filter_by_status(adapters=all_adapters, value=True)
         cnxs = apiobj.cnx.get(adapter=None)
-        assert is_type.lod(cnxs)
+        assert isinstance(cnxs, tools.LIST)
+        for cnx in cnxs:
+            assert isinstance(cnx, dict)
         assert len(cnxs) >= len(ok_adapters)
 
     def test_filter_by_status(self, apiobj):
         """Pass."""
-        good = apiobj.cnx.filter_by_status(cnxs=FAKE_CNXS, status=True)
+        good = apiobj.cnx.filter_by_status(cnxs=FAKE_CNXS, value=True)
         assert good == [FAKE_CNXS[0]]
 
-        bad = apiobj.cnx.filter_by_status(cnxs=FAKE_CNXS, status=False)
+        bad = apiobj.cnx.filter_by_status(cnxs=FAKE_CNXS, value=False)
         assert bad == [FAKE_CNXS[1]]
+
+        both = apiobj.cnx.filter_by_status(cnxs=FAKE_CNXS, value=[True, False])
+        assert both == FAKE_CNXS
+
+        with pytest.raises(exceptions.ValueNotFound):
+            apiobj.cnx.filter_by_status(
+                cnxs=FAKE_CNXS, value=["x"], match_count=1, match_error=True
+            )
 
     def test_filter_by_ids(self, apiobj):
         """Pass."""
         just1re = apiobj.cnx.filter_by_ids(
-            cnxs=FAKE_CNXS, ids=FAKE_CNXS[0]["id"], use_regex=True
+            cnxs=FAKE_CNXS, value=FAKE_CNXS[0]["id"], use_regex=True
         )
-        assert is_type.list(just1re)
+        assert isinstance(just1re, tools.LIST)
         assert just1re == [FAKE_CNXS[0]]
 
         just1 = apiobj.cnx.filter_by_ids(
-            cnxs=FAKE_CNXS, ids=FAKE_CNXS[0]["id"], count_min=1, count_max=1
+            cnxs=FAKE_CNXS, value=FAKE_CNXS[0]["id"], match_count=1
         )
         assert just1 == [FAKE_CNXS[0]]
 
-        with pytest.raises(exceptions.ObjectNotFound):
+        with pytest.raises(exceptions.ValueNotFound):
             apiobj.cnx.filter_by_ids(
-                cnxs=FAKE_CNXS, ids="badwolfyfakfjlka", count_min=1, count_max=1
+                cnxs=FAKE_CNXS, value="badwolfyfakfjlka", match_count=1
             )
 
     def test_filter_by_uuids(self, apiobj):
         """Pass."""
         just1re = apiobj.cnx.filter_by_uuids(
-            cnxs=FAKE_CNXS, uuids=FAKE_CNXS[0]["uuid"], use_regex=True
+            cnxs=FAKE_CNXS, value=FAKE_CNXS[0]["uuid"], use_regex=True
         )
-        assert is_type.list(just1re)
+        assert isinstance(just1re, tools.LIST)
         assert just1re == [FAKE_CNXS[0]]
 
         just1 = apiobj.cnx.filter_by_uuids(
-            cnxs=FAKE_CNXS, uuids=FAKE_CNXS[0]["uuid"], count_min=1, count_max=1
+            cnxs=FAKE_CNXS, value=FAKE_CNXS[0]["uuid"], match_count=1
         )
         assert just1 == [FAKE_CNXS[0]]
 
-        with pytest.raises(exceptions.ObjectNotFound):
+        with pytest.raises(exceptions.ValueNotFound):
             apiobj.cnx.filter_by_uuids(
-                cnxs=FAKE_CNXS, uuids="badwolfyfakfjlka", count_min=1, count_max=1
+                cnxs=FAKE_CNXS, value="badwolfyfakfjlka", match_count=1
             )
 
     def test_update_success(self, apiobj):
         """Pass."""
         cnxs = apiobj.cnx.get(adapter=None)
-        cnxs = apiobj.cnx.filter_by_status(cnxs=cnxs, status=True)
+        cnxs = apiobj.cnx.filter_by_status(cnxs=cnxs, value=True)
 
         if not cnxs:
             reason = "No working connections found!"
@@ -579,8 +588,8 @@ class TestCnx(object):
             adapter_name=cnx["cnx"]["adapter_name"],
             node_name=cnx["cnx"]["node_name"],
             response=exc.value.response,
-            uuid=exc.value.response["id"],
-            id=None,
+            filter_value=exc.value.response["id"],
+            filter_method=apiobj.cnx.filter_by_uuids,
         )
 
         with pytest.warns(exceptions.CnxDeleteWarning):
@@ -605,8 +614,8 @@ class TestCnx(object):
             adapter_name=cnx["cnx"]["adapter_name"],
             node_name=cnx["cnx"]["node_name"],
             response=exc.value.response,
-            uuid=exc.value.response["id"],
-            id=None,
+            filter_value=exc.value.response["id"],
+            filter_method=apiobj.cnx.filter_by_uuids,
         )
 
         with pytest.warns(exceptions.CnxDeleteWarning):
@@ -615,7 +624,7 @@ class TestCnx(object):
     def test_check_success(self, apiobj):
         """Pass."""
         cnxs = apiobj.cnx.get(adapter=None)
-        cnxs = apiobj.cnx.filter_by_status(cnxs=cnxs, status=True)
+        cnxs = apiobj.cnx.filter_by_status(cnxs=cnxs, value=True)
 
         if not cnxs:
             reason = "No working connections found!"
@@ -627,7 +636,7 @@ class TestCnx(object):
             if not checked["response_had_error"]:
                 data = apiobj.cnx.check(cnx=cnx, error=True)
 
-                assert is_type.dict(data)
+                assert isinstance(data, dict)
                 assert data["cnx"]["uuid"] == cnx["uuid"]
                 assert "response" in data
                 return
@@ -635,7 +644,7 @@ class TestCnx(object):
     def test_check_failure(self, apiobj):
         """Pass."""
         cnxs = apiobj.cnx.get(adapter=None)
-        cnxs = apiobj.cnx.filter_by_status(cnxs=cnxs, status=False)
+        cnxs = apiobj.cnx.filter_by_status(cnxs=cnxs, value=False)
 
         if not cnxs:
             reason = "No broken connections found!"
@@ -657,7 +666,7 @@ class TestCnx(object):
             content=CSV_FILECONTENT_BYTES,
             field="badwolf_add_csv_str",
         )
-        assert is_type.dict(added)
+        assert isinstance(added, dict)
 
         apiobj.cnx.delete(
             cnx=added["cnx"], force=True, error=False, warning=False, sleep=0
@@ -669,7 +678,7 @@ class TestCnx(object):
         test_path.write_text(CSV_FILECONTENT_STR)
 
         added = apiobj.cnx.add_csv_file(path=test_path, field="badwolf_add_csv_file")
-        assert is_type.dict(added)
+        assert isinstance(added, dict)
 
         apiobj.cnx.delete(
             cnx=added["cnx"], force=True, error=False, warning=False, sleep=0
@@ -682,7 +691,7 @@ class TestCnx(object):
             field="badwolf_add_csv_url",
             error=False,
         )
-        assert is_type.dict(added)
+        assert isinstance(added, dict)
 
         apiobj.cnx.delete(
             cnx=added["cnx"], force=True, error=False, warning=False, sleep=0
@@ -698,7 +707,7 @@ class TestCnx(object):
             field="badwolf_add_csv_share",
             error=False,
         )
-        assert is_type.dict(added)
+        assert isinstance(added, dict)
 
         apiobj.cnx.delete(
             cnx=added["cnx"], force=True, error=False, warning=False, sleep=0
@@ -853,7 +862,7 @@ class TestParserCnxConfig(object):
         parser = axonapi.api.adapters.ParserCnxConfig(raw=config, parent=apiobj.cnx)
         parsed_config = parser.parse(adapter=csv_adapter, settings=fake_settings)
 
-        assert parsed_config == dict(test1="2")
+        assert parsed_config == dict(test1=2)
 
     def test_integer(self, apiobj, csv_adapter):
         """Pass."""
@@ -864,7 +873,7 @@ class TestParserCnxConfig(object):
         parser = axonapi.api.adapters.ParserCnxConfig(raw=config, parent=apiobj.cnx)
         parsed_config = parser.parse(adapter=csv_adapter, settings=fake_settings)
 
-        assert parsed_config == dict(test1="2")
+        assert parsed_config == dict(test1=2)
 
     def test_bool(self, apiobj, csv_adapter):
         """Pass."""
@@ -1050,13 +1059,13 @@ class TestParserAdapters(object):
         raw = apiobj._get()
         parser = axonapi.api.adapters.ParserAdapters(raw=raw, parent=apiobj)
         adapters = parser.parse()
-        assert is_type.list(adapters)
+        assert isinstance(adapters, tools.LIST)
         for adapter in adapters:
             self.validate_adapter(adapter)
 
     def validate_cnx(self, aname, aname_raw, astatus, anid, anname, cnx):
         """Pass."""
-        assert is_type.dict(cnx)
+        assert isinstance(cnx, dict)
         adapter_name = cnx.pop("adapter_name")
         adapter_name_raw = cnx.pop("adapter_name_raw")
         adapter_status = cnx.pop("adapter_status")
@@ -1074,16 +1083,16 @@ class TestParserAdapters(object):
         assert adapter_name == aname
         assert adapter_name_raw == aname_raw
         assert adapter_status == astatus
-        assert is_type.dict(config) and config
-        assert is_type.dict(config_raw) and config_raw
-        assert is_type.str(date_fetched)
-        assert is_type.str(error) or is_type.none(error)
-        assert is_type.str(cid)
+        assert isinstance(config, dict) and config
+        assert isinstance(config_raw, dict) and config_raw
+        assert isinstance(date_fetched, tools.STR)
+        assert isinstance(error, tools.STR) or error is None
+        assert isinstance(cid, tools.STR)
         assert node_id == anid
         assert node_name == anname
-        assert is_type.bool(status)
-        assert is_type.str(status_raw)
-        assert is_type.str(uuid)
+        assert isinstance(status, bool)
+        assert isinstance(status_raw, tools.STR)
+        assert isinstance(uuid, tools.STR)
 
         if status is False:
             assert astatus is False
@@ -1108,23 +1117,25 @@ class TestParserAdapters(object):
 
             if check_value:
                 item_value = item.pop("value")
-                assert is_type.simple(item_value) or is_type.empty(item_value)
+                assert isinstance(item_value, tools.SIMPLE) or item_value in [None, []]
 
-            assert is_type.str(item_name) and item_name
-            assert is_type.str(item_type) and item_type
-            assert is_type.str(item_title) and item_title
-            assert is_type.dict(item_items)
-            assert is_type.simple(item_default) or is_type.empty(item_default)
-            assert is_type.los(item_enum)
-            assert is_type.str(item_format)
-            assert is_type.str(item_description)
-            assert is_type.bool(item_required)
+            assert isinstance(item_name, tools.STR) and item_name
+            assert isinstance(item_type, tools.STR) and item_type
+            assert isinstance(item_title, tools.STR) and item_title
+            assert isinstance(item_items, dict)
+            assert isinstance(item_default, tools.SIMPLE) or item_default in [None, []]
+            assert isinstance(item_enum, tools.LIST)
+            for x in item_enum:
+                assert isinstance(x, tools.STR)
+            assert isinstance(item_format, tools.STR)
+            assert isinstance(item_description, tools.STR)
+            assert isinstance(item_required, bool)
             assert item_type in ["number", "integer", "string", "bool", "array", "file"]
             assert not item
 
     def validate_adapter(self, adapter):
         """Pass."""
-        assert is_type.dict(adapter)
+        assert isinstance(adapter, dict)
 
         adv_settings = adapter.pop("adv_settings")
         cnx = adapter.pop("cnx")
@@ -1144,27 +1155,29 @@ class TestParserAdapters(object):
         status = adapter.pop("status")
         status_raw = adapter.pop("status_raw")
 
-        assert is_type.str(name)
-        assert is_type.str(name_raw)
-        assert is_type.str(name_plugin)
-        assert is_type.str(node_name)
-        assert is_type.str(node_id)
-        assert is_type.str(status_raw)
-        assert is_type.los(features)
-        assert is_type.int(cnx_count)
-        assert is_type.int(cnx_count_ok)
-        assert is_type.int(cnx_count_bad)
-        assert is_type.bool(status) or is_type.none(status)
-        assert is_type.dict(cnx_settings)
-        assert is_type.dict(settings)
-        assert is_type.dict(adv_settings)
+        assert isinstance(name, tools.STR)
+        assert isinstance(name_raw, tools.STR)
+        assert isinstance(name_plugin, tools.STR)
+        assert isinstance(node_name, tools.STR)
+        assert isinstance(node_id, tools.STR)
+        assert isinstance(status_raw, tools.STR)
+        assert isinstance(features, tools.LIST)
+        for x in features:
+            assert isinstance(x, tools.STR)
+        assert isinstance(cnx_count, tools.INT)
+        assert isinstance(cnx_count_ok, tools.INT)
+        assert isinstance(cnx_count_bad, tools.INT)
+        assert isinstance(status, bool) or status is None
+        assert isinstance(cnx_settings, dict)
+        assert isinstance(settings, dict)
+        assert isinstance(adv_settings, dict)
 
         self.validate_settings(settings, True)
         self.validate_settings(adv_settings, True)
         self.validate_settings(cnx_settings, False)
 
         for cnxs in [cnx, cnx_ok, cnx_bad]:
-            assert is_type.list(cnxs)
+            assert isinstance(cnxs, tools.LIST)
             for connection in [x for x in cnxs if x]:
                 self.validate_cnx(
                     aname=name,
@@ -1184,18 +1197,18 @@ class TestRawAdapters(object):
     def test_adapters(self, apiobj):
         """Pass."""
         adapters = apiobj._get()
-        assert is_type.dict(adapters)
+        assert isinstance(adapters, dict)
 
         for name, instances in adapters.items():
             assert name.endswith("_adapter")
-            assert is_type.list(instances)
+            assert isinstance(instances, tools.LIST)
 
             for instance in instances:
                 self.validate_instance(name, instance)
 
     def validate_client(self, name, client, instance_status):
         """Pass."""
-        assert is_type.dict(client)
+        assert isinstance(client, dict)
 
         client_config = client.pop("client_config")
         uuid = client.pop("uuid")
@@ -1205,19 +1218,23 @@ class TestRawAdapters(object):
         status = client.pop("status")
         date_fetched = client.pop("date_fetched")
 
-        assert is_type.dict(client_config) and client_config
-        assert is_type.str(client_id)
-        assert is_type.str(date_fetched)
-        assert is_type.str(uuid) and uuid
+        assert isinstance(client_config, dict) and client_config
+        assert isinstance(client_id, tools.STR)
+        assert isinstance(date_fetched, tools.STR)
+        assert isinstance(uuid, tools.STR) and uuid
 
         if not client_id:
             msg = "Client for {} has an empty client_id {}"
             msg = msg.format(name, client_id)
             warnings.warn(msg)
 
-        assert is_type.str(error) or is_type.none(error)
-        assert is_type.str(node_id) and node_id
-        assert is_type.str(status) and status in ["warning", "error", "success"]
+        assert isinstance(error, tools.STR) or error is None
+        assert isinstance(node_id, tools.STR) and node_id
+        assert isinstance(status, tools.STR) and status in [
+            "warning",
+            "error",
+            "success",
+        ]
 
         if status == "error":
             assert instance_status == "warning"
@@ -1226,17 +1243,18 @@ class TestRawAdapters(object):
 
     def validate_schema(self, name, schema):
         """Pass."""
-        assert is_type.dict(schema)
+        assert isinstance(schema, dict)
 
         items = schema.pop("items")
         required = schema.pop("required")
         schema_type = schema.pop("type")
 
-        assert is_type.lod(items) and items
-        assert is_type.los(required)
+        assert isinstance(items, tools.LIST) and items
+        assert isinstance(required, tools.LIST)
         assert schema_type == "array"
 
         for req in required:
+            assert isinstance(req, tools.STR)
             item_names = [x["name"] for x in items]
 
             # FUTURE: schema's are defining required items that dont exist in items
@@ -1246,6 +1264,7 @@ class TestRawAdapters(object):
                 warnings.warn(msg)
 
         for item in items:
+            assert isinstance(item, dict)
             item_name = item.pop("name")
             item_type = item.pop("type")
             item_title = item.pop("title")
@@ -1255,14 +1274,16 @@ class TestRawAdapters(object):
             item_default = item.pop("default", "")
             item_items = item.pop("items", {})
 
-            assert is_type.str(item_name) and item_name
-            assert is_type.str(item_type) and item_type
-            assert is_type.str(item_title) and item_title
-            assert is_type.dict(item_items)
-            assert is_type.simple(item_default) or is_type.empty(item_default)
-            assert is_type.los(item_enum)
-            assert is_type.str(item_format)
-            assert is_type.str(item_description)
+            assert isinstance(item_name, tools.STR) and item_name
+            assert isinstance(item_type, tools.STR) and item_type
+            assert isinstance(item_title, tools.STR) and item_title
+            assert isinstance(item_items, dict)
+            assert isinstance(item_default, tools.SIMPLE) or item_default is None
+            assert isinstance(item_enum, tools.LIST)
+            for x in item_enum:
+                assert isinstance(x, tools.STR)
+            assert isinstance(item_format, tools.STR)
+            assert isinstance(item_description, tools.STR)
             assert item_type in ["number", "integer", "string", "bool", "array", "file"]
             assert not item
 
@@ -1281,14 +1302,16 @@ class TestRawAdapters(object):
 
         assert not instance
 
-        assert is_type.str(node_id) and node_id
-        assert is_type.str(unique_plugin_name) and unique_plugin_name
-        assert is_type.str(node_name) and node_name
+        assert isinstance(node_id, tools.STR) and node_id
+        assert isinstance(unique_plugin_name, tools.STR) and unique_plugin_name
+        assert isinstance(node_name, tools.STR) and node_name
         assert status in ["warning", "success", None, ""]
-        assert is_type.los(supported_features)
-        assert is_type.list(clients)
-        assert is_type.dict(config) and config
-        assert is_type.dict(schema) and schema
+        assert isinstance(supported_features, tools.LIST)
+        for x in supported_features:
+            assert isinstance(x, tools.STR)
+        assert isinstance(clients, tools.LIST)
+        assert isinstance(config, dict) and config
+        assert isinstance(schema, dict) and schema
 
         self.validate_schema(name, schema)
 
@@ -1300,9 +1323,9 @@ class TestRawAdapters(object):
             item_schema = item.pop("schema")
             item_pretty_name = item_schema.pop("pretty_name")
 
-            assert is_type.dict(item_config) and item_config
-            assert is_type.str(item_pretty_name) and item_pretty_name
-            assert is_type.dict(item_schema) and item_schema
+            assert isinstance(item_config, dict) and item_config
+            assert isinstance(item_pretty_name, tools.STR) and item_pretty_name
+            assert isinstance(item_schema, dict) and item_schema
 
             self.validate_schema(name, item_schema)
 

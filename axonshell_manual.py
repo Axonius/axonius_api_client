@@ -9,6 +9,7 @@ import dotenv
 
 import axonius_api_client as axonapi
 
+tools = axonapi.tools
 dotenv.load_dotenv()
 
 AX_URL = os.environ["AX_URL"]
@@ -18,12 +19,18 @@ AX_SECRET = os.environ["AX_SECRET"]
 
 def jdump(obj, **kwargs):
     """JSON dump utility."""
-    print(axonapi.tools.json.re_load(obj, **kwargs))
+    print(axonapi.tools.json_reload(obj, **kwargs))
 
 
 if __name__ == "__main__":
-    ctx = axonapi.tools.Connect(
-        url=AX_URL, key=AX_KEY, secret=AX_SECRET, certwarn=False
+    ctx = axonapi.Connect(
+        url=AX_URL,
+        key=AX_KEY,
+        secret=AX_SECRET,
+        certwarn=False,
+        log_level_console="debug",
+        log_level_api="debug",
+        log_console=True,
     )
     try:
         ctx.start()

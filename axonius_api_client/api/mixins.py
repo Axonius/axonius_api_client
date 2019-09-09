@@ -6,7 +6,7 @@ import abc
 
 import six
 
-from .. import constants, exceptions, tools
+from .. import constants, exceptions, logs
 
 
 @six.add_metaclass(abc.ABCMeta)
@@ -42,9 +42,6 @@ class ModelUserDevice(Model):
 class Mixins(object):
     """API client for Axonius REST API."""
 
-    _LIMIT_CHECKS = ["json", "params"]
-    _LIMIT_KEYS = ["limit"]
-
     def __init__(self, auth, **kwargs):
         """Constructor.
 
@@ -54,7 +51,7 @@ class Mixins(object):
 
         """
         log_level = kwargs.get("log_level", constants.LOG_LEVEL_API)
-        self._log = tools.logs.get_obj_log(obj=self, level=log_level)
+        self._log = logs.get_obj_log(obj=self, level=log_level)
         """:obj:`logging.Logger`: Logger for this object."""
 
         self._auth = auth
@@ -134,14 +131,6 @@ class Mixins(object):
         sargs.update(kwargs)
         sargs.update({"path": path, "method": method})
 
-        limit_datas = [sargs[x] for x in self._LIMIT_CHECKS if sargs.get(x)]
-
-        # TODO: test
-        for limit_data in limit_datas:
-            limit = limit_data.get("limit")
-            if "limit" in limit_data and limit > constants.MAX_PAGING_SIZE:
-                limit_data["limit"] = constants.MAX_PAGING_SIZE
-
         response = self._auth.http(**sargs)
 
         if raw:
@@ -190,7 +179,7 @@ class Mixins(object):
                 raise exceptions.JsonInvalid(response=response, exc=exc)
             return response.text
 
-        if tools.is_type.dict(data):
+        if isinstance(data, dict):
             has_error = data.get("error")
             has_error_status = data.get("status") == "error"
 
@@ -198,52 +187,6 @@ class Mixins(object):
                 raise exceptions.JsonError(response=response, data=data)
 
         return data
-
-    def _check_counts(
-        self,
-        value,
-        value_type,
-        objtype,
-        count_total,
-        count_min=None,
-        count_max=None,
-        error=True,
-        known=None,
-    ):
-        """Pass."""
-        if count_min == 1 and count_max == 1:
-            if count_total != 1 and error:
-                raise exceptions.ObjectNotFound(
-                    value=value,
-                    value_type=value_type,
-                    object_type=objtype,
-                    known=known,
-                    count_total=count_total,
-                )
-            return True
-
-        if count_min is not None and count_total < count_min:
-            if error:
-                raise exceptions.TooFewObjectsFound(
-                    value=value,
-                    value_type=value_type,
-                    object_type=objtype,
-                    count_total=count_total,
-                    count_min=count_min,
-                )
-            return True
-
-        if count_max is not None and count_total > count_max:
-            if error:
-                raise exceptions.TooManyObjectsFound(
-                    value=value,
-                    value_type=value_type,
-                    object_type=objtype,
-                    count_total=count_total,
-                    count_max=count_max,
-                )
-            return True
-        return False
 
 
 class Child(object):

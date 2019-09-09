@@ -3,11 +3,10 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import ipaddress
+import pdb  # noqa
 
 from .. import constants, exceptions, tools
 from . import adapters, mixins, routers
-
-# TODO: include outdated!
 
 
 class UserDeviceMixin(mixins.ModelUserDevice, mixins.Mixins):
@@ -27,8 +26,22 @@ class UserDeviceMixin(mixins.ModelUserDevice, mixins.Mixins):
 
         super(UserDeviceMixin, self)._init(auth=auth, **kwargs)
 
+    def _count(self, query=None, use_post=False):
+        """Pass."""
+        params = {}
+        if query:
+            if len(query) >= constants.QUERY_USE_POST_LENGTH:
+                use_post = True
+
+            params["filter"] = query
+
+        if use_post:
+            return self._request(method="post", path=self._router.count, json=params)
+        else:
+            return self._request(method="get", path=self._router.count, params=params)
+
     # FUTURE: BR for use_post, defaults to limit == 2000
-    def _get(self, query=None, fields=None, row_start=0, paging_size=0, use_post=False):
+    def _get(self, query=None, fields=None, row_start=0, page_size=0, use_post=False):
         """Get a page for a given query.
 
         Args:
@@ -46,7 +59,7 @@ class UserDeviceMixin(mixins.ModelUserDevice, mixins.Mixins):
                 If not 0, skip N rows in the return.
 
                 Defaults to: 0.
-            paging_size (:obj:`int`, optional):
+            page_size (:obj:`int`, optional):
                 If not 0, include N rows in the return.
 
                 Defaults to: 0.
@@ -55,9 +68,16 @@ class UserDeviceMixin(mixins.ModelUserDevice, mixins.Mixins):
             :obj:`dict`
 
         """
+        if not page_size or page_size > constants.MAX_PAGE_SIZE:
+            msg = "Changed page size from {ps} to max page size {mps}"
+            msg = msg.format(ps=page_size, mps=constants.MAX_PAGE_SIZE)
+            self._log.debug(msg)
+
+            page_size = constants.MAX_PAGE_SIZE
+
         params = {}
         params["skip"] = row_start
-        params["limit"] = paging_size
+        params["limit"] = page_size
 
         if query:
             if len(query) >= constants.QUERY_USE_POST_LENGTH:
@@ -66,7 +86,7 @@ class UserDeviceMixin(mixins.ModelUserDevice, mixins.Mixins):
             params["filter"] = query
 
         if fields:
-            if tools.is_type.list(fields):
+            if isinstance(fields, tools.LIST):
                 fields = ",".join(fields)
 
             params["fields"] = fields
@@ -83,20 +103,6 @@ class UserDeviceMixin(mixins.ModelUserDevice, mixins.Mixins):
         path = self._router.by_id.format(id=id)
         return self._request(method="get", path=path)
 
-    def _count(self, query=None, use_post=False):
-        """Pass."""
-        params = {}
-        if query:
-            if len(query) >= constants.QUERY_USE_POST_LENGTH:
-                use_post = True
-
-            params["filter"] = query
-
-        if use_post:
-            return self._request(method="post", path=self._router.count, json=params)
-        else:
-            return self._request(method="get", path=self._router.count, params=params)
-
     def count(self, query=None, use_post=False):
         """Get the number of matches for a given query.
 
@@ -110,168 +116,156 @@ class UserDeviceMixin(mixins.ModelUserDevice, mixins.Mixins):
         """
         return self._count(query=query, use_post=use_post)
 
-    def get(
+    def find_by_value(
         self,
-        *fields,
-        query=None,
-        fields_default=True,
-        fields_error=True,
-        count_min=None,
-        count_max=None,
-        count_error=True,
-        paging_size=None,
-        use_post=False,
-    ):
-        """Get objects for a given query using paging.
-
-        Args:
-            query (:obj:`str`, optional):
-                Query built from Query Wizard in GUI to select rows to return.
-
-                Defaults to: None.
-            paging_size (:obj:`int`, optional):
-                Get N rows per page.
-
-                Defaults to: :data:`axonius_api_client.constants.DEFAULT_PAGING_SIZE`.
-            fields_default (:obj:`bool`, optional):
-                Update fields with :attr:`_default_fields` if no fields supplied.
-
-                Defaults to: True.
-            kwargs: Fields to include in result.
-
-                >>> generic=['f1', 'f2'] # for generic fields.
-                >>> adapter=['f1', 'f2'] # for adapter specific fields.
-
-        Returns:
-            :obj:`list` of :obj:`dict` or :obj:`dict`
-
-        """
-        if paging_size is None:
-            paging_size = constants.DEFAULT_PAGING_SIZE
-
-        val_fields = self.fields.validate(
-            searches=fields, error=fields_error, default=fields_default
-        )
-
-        if count_max is not None:
-            if count_max < paging_size:
-                paging_size = count_max
-
-        count_total = 0
-
-        rows = []
-
-        msg = "Starting get with query {q!r} and fields {f!r}"
-        msg = msg.format(q=query, f=val_fields)
-        self._log.debug(msg)
-
-        start = tools.dt.now()
-
-        while True:
-            page = self._get(
-                query=query,
-                fields=val_fields,
-                row_start=count_total,
-                paging_size=paging_size,
-                use_post=use_post,
-            )
-
-            rows += page["assets"]
-            count_total += len(page["assets"])
-
-            do_break = self._check_counts(
-                value=query,
-                value_type="query",
-                objtype=self._router._object_type,
-                count_min=count_min,
-                count_max=count_max,
-                count_total=count_total,
-                error=count_error,
-            )
-
-            if not page["assets"]:
-                do_break = True
-
-            if do_break:
-                break
-
-        msg = "Finished get with query {q!r} - returned {c} assets in {s} seconds"
-        msg = msg.format(q=query, c=len(rows), s=tools.dt.seconds_ago(start))
-        self._log.debug(msg)
-
-        if count_max is not None:
-            if count_max == 1 and rows:
-                return rows[0]
-            elif rows:
-                return rows[:count_max]
-
-        return rows
-
-    def get_by_field_value(
-        self,
-        *fields,
         value,
         field,
-        fields_default=True,
-        fields_error=True,
         use_regex=False,
         not_flag=False,
-        count_min=None,
-        count_max=None,
-        count_error=True,
-        paging_size=None,
-        use_post=False,
+        match_count=None,
+        match_error=True,
+        **kwargs,
     ):
-        """Build query to perform equals or regex search.
-
-        Args:
-            value (:obj:`str`):
-                Value to search for equals or regex query against name.
-            name (:obj:`str`):
-                Field to use when building equals or regex query.
-            adapter_name (:obj:`str`):
-                Adapter name is from.
-            regex (:obj:`bool`, optional):
-                Build a regex instead of equals query.
-            kwargs:
-                Passed through to :meth:`get`.
-
-        Returns:
-            :obj:`list` of :obj:`dict` or :obj:`dict`
-
-        """
-        all_fields = self.fields.get()
-
-        field = self.fields.find(field=field, all_fields=all_fields, error=True)[0]
+        """Build query to perform equals or regex search."""
+        field = self.fields.find_single(field=field)
 
         if use_regex:
             query = '{field} == regex("{value}", "i")'
             query = query.format(field=field, value=value)
-        elif tools.is_type.list(value):
+        elif isinstance(value, tools.LIST):
             jvalue = " ".join(["'{}'".format(v) for v in value])
             query = "{field} in [{value}]"
             query = query.format(field=field, value=jvalue)
         else:
             query = '{field} == "{value}"'
             query = query.format(field=field, value=value)
-            count_min = 1
-            count_max = 1
-            count_error = True
+
+            if not not_flag:
+                kwargs["max_rows"] = 1
+                match_count = 1
+                match_error = 1
 
         if not_flag:
             query = "not {q}".format(q=query)
 
-        return self.get(
-            *fields,
-            query=query,
-            fields_default=fields_default,
-            fields_error=fields_error,
-            count_min=count_min,
-            count_max=count_max,
-            count_error=count_error,
-            paging_size=paging_size,
-            use_post=use_post,
+        kwargs["query"] = query
+        rows = self.get(**kwargs)
+
+        if (match_count and len(rows) != match_count) and match_error:
+            value_msg = "{o} by field {f!r} value {v!r}"
+            value_msg = value_msg.format(o=self._router._object_type, f=field, v=value)
+            raise exceptions.ValueNotFound(value=query, value_msg=value_msg)
+
+        if match_count == 1 and len(rows) == 1:
+            return rows[0]
+
+        return rows
+
+    def get(
+        self,
+        query=None,
+        fields=None,
+        fields_default=True,
+        fields_error=True,
+        max_rows=None,
+        max_pages=None,
+        page_size=None,
+        use_post=False,
+    ):
+        """Get objects for a given query using paging."""
+        fields = self.fields.validate(
+            fields=fields, error=fields_error, default=fields_default
         )
+
+        if not page_size or page_size > constants.MAX_PAGE_SIZE:
+            msg = "Changed page_size={ps} to max_page_size={mps}"
+            msg = msg.format(ps=page_size, mps=constants.MAX_PAGE_SIZE)
+            self._log.debug(msg)
+
+            page_size = constants.MAX_PAGE_SIZE
+
+        page_info = 0
+        page_num = 0
+        rows_fetched = 0
+        rows = []
+        fetch_start = tools.dt_now()
+
+        msg = [
+            "Starting get: page_size={}".format(page_size),
+            "query={!r}".format(query or ""),
+            "fields={!r}".format(fields),
+        ]
+        self._log.debug(tools.join_comma(msg))
+
+        while True:
+            page_start = tools.dt_now()
+            page_num += 1
+            rows_left = max_rows - len(rows) if max_rows else -1
+
+            if 0 < rows_left < page_size:
+                msg = "Changed page_size={ps} to rows_left={rl} (max_rows={mr})"
+                msg = msg.format(ps=page_size, rl=rows_left, mr=max_rows)
+                self._log.debug(msg)
+
+                page_size = rows_left
+
+            msg = [
+                "Fetching page_num={}".format(page_num),
+                "page_size={}".format(page_size),
+                "rows_fetched={}".format(rows_fetched),
+                "use_post={}".format(use_post),
+            ]
+            self._log.debug(tools.join_comma(obj=msg))
+
+            page = self._get(
+                query=query,
+                fields=fields,
+                row_start=rows_fetched,
+                page_size=page_size,
+                use_post=use_post,
+            )
+
+            assets = page["assets"]
+            page_info = page["page"]
+
+            rows += assets
+            rows_fetched += len(assets)
+
+            msg = [
+                "Fetched page_num={}".format(page_num),
+                "page_took={}".format(tools.dt_sec_ago(obj=page_start)),
+                "rows_fetched={}".format(rows_fetched),
+                "page_info={}".format(page_info),
+            ]
+            self._log.debug(tools.join_comma(obj=msg))
+
+            if not assets:
+                msg = "Stopped fetch loop, page with no assets returned"
+                self._log.debug(msg)
+                break
+
+            if max_pages and page_num >= max_pages:
+                msg = "Stopped fetch loop, hit max_pages={mp}"
+                msg = msg.format(mp=max_pages)
+                self._log.debug(msg)
+                break
+
+            if max_rows and len(rows) >= max_rows:
+                msg = "Stopped fetch loop, hit max_rows={mr} with rows_fetched={rf}"
+                msg = msg.format(mr=max_rows, rf=rows_fetched)
+                self._log.debug(msg)
+                break
+
+        msg = [
+            "Finished get: rows_fetched={}".format(rows_fetched),
+            "total_rows={}".format(page_info["totalResources"]),
+            "fetch_took={}".format(tools.dt_sec_ago(obj=fetch_start)),
+            "query={!r}".format(query or ""),
+            "fields={!r}".format(fields),
+        ]
+        self._log.info(tools.join_comma(obj=msg))
+
+        return rows
 
     def get_by_id(self, id):
         """Get an object by internal_axon_id.
@@ -280,9 +274,6 @@ class UserDeviceMixin(mixins.ModelUserDevice, mixins.Mixins):
            id (:obj:`str`):
                internal_axon_id of object to get.
 
-        Raises:
-           :exc:`exceptions.ObjectNotFound`:
-
         Returns:
            :obj:`dict`
 
@@ -290,49 +281,35 @@ class UserDeviceMixin(mixins.ModelUserDevice, mixins.Mixins):
         try:
             return self._get_by_id(id=id)
         except exceptions.JsonError as exc:
-            # ResponseError or JsonError??
-            raise exceptions.ObjectNotFound(
-                value=id,
-                value_type="Axonius ID",
-                object_type=self._router._object_type,
-                exc=exc,
-            )
+            msg = "Axonius ID for {t}".format(t=self._router._object_type)
+            raise exceptions.ValueNotFound(value=id, value_msg=msg, exc=exc)
 
     def get_by_saved_query(
-        self,
-        name,
-        count_min=None,
-        count_max=None,
-        count_error=True,
-        paging_size=None,
-        use_post=False,
+        self, name, max_rows=None, max_pages=None, page_size=None, use_post=False
     ):
         """Pass."""
-        sq = self.saved_query.get_by_name(
-            value=name, use_regex=False, count_min=1, count_max=1
-        )
+        sq = self.saved_query.find_by_name(value=name, use_regex=False)
 
         return self.get(
-            *sq["view"]["fields"],
             query=sq["view"]["query"]["filter"],
-            count_min=count_min,
-            count_max=count_max,
-            count_error=count_error,
-            paging_size=paging_size,
+            fields={"manual": sq["view"]["fields"]},
+            max_rows=max_rows,
+            max_pages=max_pages,
+            page_size=page_size,
             use_post=use_post,
         )
 
-    def report_adapters(
-        self, rows, serial=False, unconfigured=False, others_not_seen=False
-    ):
-        """Pass."""
-        return ParserReportsAdapter(raw=rows, parent=self).parse(
-            fields=self._parent.fields.get(),
-            adapters=self.adapters.get(),
-            serial=serial,
-            unconfigured=unconfigured,
-            others_not_seen=others_not_seen,
-        )
+    # def report_adapters(
+    #     self, rows, serial=False, unconfigured=False, others_not_seen=False
+    # ):
+    #     """Pass."""
+    #     return ParserReportsAdapter(raw=rows, parent=self).parse(
+    #         fields=self._parent.fields.get(),
+    #         adapters=self.adapters.get(),
+    #         serial=serial,
+    #         unconfigured=unconfigured,
+    #         others_not_seen=others_not_seen,
+    #     )
 
 
 class Users(UserDeviceMixin):
@@ -364,35 +341,33 @@ class Users(UserDeviceMixin):
             "specific_data.data.mail",
         ]
 
-    def get_by_username(self, *fields, value, **kwargs):
+    def find_by_username(self, value, field="username", **kwargs):
         """Get objects by name using paging.
 
         Args:
             value (:obj:`int`):
                 Value to find using field "username".
-            **kwargs: Passed thru to :meth:`UserDeviceModel.get_by_field_value`
+            **kwargs: Passed thru to :meth:`UserDeviceModel.find_by_value`
 
         Returns:
             :obj:`list` of :obj:`dict`: Each row matching name or :obj:`dict` if only1.
 
         """
-        kwargs["field"] = "specific_data.data.username"
-        return self.get_by_field_value(*fields, value=value, **kwargs)
+        return self.find_by_value(value=value, field=field, **kwargs)
 
-    def get_by_mail(self, *fields, value, **kwargs):
+    def find_by_mail(self, value, field="mail", **kwargs):
         """Get objects by email using paging.
 
         Args:
             value (:obj:`int`):
                 Value to find using field "mail".
-            **kwargs: Passed thru to :meth:`UserDeviceModel.get_by_field_value`
+            **kwargs: Passed thru to :meth:`UserDeviceModel.find_by_value`
 
         Returns:
             :obj:`list` of :obj:`dict`: Each row matching email or :obj:`dict` if only1.
 
         """
-        kwargs["field"] = "specific_data.data.mail"
-        return self.get_by_field_value(*fields, value=value, **kwargs)
+        return self.find_by_value(value=value, field=field, **kwargs)
 
 
 class Devices(UserDeviceMixin):
@@ -442,121 +417,143 @@ class Devices(UserDeviceMixin):
         query = query.format(match_field=match_field, match=match)
         return query
 
-    def get_by_hostname(self, *fields, value, **kwargs):
+    def find_by_hostname(self, value, field="hostname", **kwargs):
         """Get objects by name using paging.
 
         Args:
             value (:obj:`int`):
                 Value to find using field "username".
-            **kwargs: Passed thru to :meth:`UserDeviceModel.get_by_field_value`
+            **kwargs: Passed thru to :meth:`UserDeviceModel.find_by_value`
 
         Returns:
             :obj:`list` of :obj:`dict`: Each row matching name or :obj:`dict` if only1.
 
         """
-        kwargs["field"] = "specific_data.data.hostname"
-        return self.get_by_field_value(*fields, value=value, **kwargs)
+        return self.find_by_value(value=value, field=field, **kwargs)
 
-    def get_by_mac(self, *fields, value, **kwargs):
+    def find_by_mac(self, value, field="network_interfaces.mac", **kwargs):
         """Get objects by MAC using paging.
 
         Args:
             value (:obj:`int`):
                 Value to find using field "network_interfaces.mac".
-            **kwargs: Passed thru to :meth:`UserDeviceModel.get_by_field_value`
+            **kwargs: Passed thru to :meth:`UserDeviceModel.find_by_value`
 
         Returns:
             :obj:`list` of :obj:`dict`: Each row matching email or :obj:`dict` if only1.
 
         """
-        kwargs["field"] = "specific_data.data.network_interfaces.mac"
-        return self.get_by_field_value(*fields, value=value, **kwargs)
+        return self.find_by_value(value=value, field=field, **kwargs)
 
-    def get_by_ip(self, *fields, value, **kwargs):
+    def find_by_ip(self, value, field="network_interfaces.ips", **kwargs):
         """Get objects by MAC using paging.
 
         Args:
             value (:obj:`int`):
                 Value to find using field "network_interfaces.mac".
-            **kwargs: Passed thru to :meth:`UserDeviceModel.get_by_field_value`
+            **kwargs: Passed thru to :meth:`UserDeviceModel.find_by_value`
 
         Returns:
             :obj:`list` of :obj:`dict`: Each row matching email or :obj:`dict` if only1.
 
         """
-        kwargs["field"] = "specific_data.data.network_interfaces.ips"
-        return self.get_by_field_value(*fields, value=value, **kwargs)
+        return self.find_by_value(value=value, field=field, **kwargs)
 
-    def get_by_in_subnet(self, *fields, value, **kwargs):
+    def find_by_in_subnet(self, value, **kwargs):
         """Get objects by MAC using paging.
 
         Args:
             value (:obj:`int`):
                 Value to find using field "network_interfaces.mac".
-            **kwargs: Passed thru to :meth:`UserDeviceModel.get_by_field_value`
+            **kwargs: Passed thru to :meth:`UserDeviceModel.find_by_value`
 
         Returns:
             :obj:`list` of :obj:`dict`: Each row matching email or :obj:`dict` if only1.
 
         """
         kwargs["query"] = self._build_subnet_query(value=value, not_flag=False)
-        return self.get(*fields, **kwargs)
+        return self.get(**kwargs)
 
-    def get_by_not_in_subnet(self, *fields, value, **kwargs):
+    def find_by_not_in_subnet(self, value, **kwargs):
         """Get objects by MAC using paging.
 
         Args:
             value (:obj:`int`):
                 Value to find using field "network_interfaces.mac".
-            **kwargs: Passed thru to :meth:`UserDeviceModel.get_by_field_value`
+            **kwargs: Passed thru to :meth:`UserDeviceModel.find_by_value`
 
         Returns:
             :obj:`list` of :obj:`dict`: Each row matching email or :obj:`dict` if only1.
 
         """
         kwargs["query"] = self._build_subnet_query(value=value, not_flag=True)
-        return self.get(*fields, **kwargs)
+        return self.get(**kwargs)
 
 
 class SavedQuery(mixins.Child):
     """Pass."""
 
-    def _get(self, query=None, row_start=0, paging_size=None):
-        """Get device saved queries.
+    def _add(
+        self,
+        name,
+        query,
+        fields,
+        sort=None,
+        sort_descending=True,
+        column_filters=None,
+        gui_page_size=None,
+    ):
+        """Create a saved query.
 
         Args:
-            query (:obj:`str`, optional):
-                Query to filter rows to return. This is NOT a query built by
-                the Query Wizard in the GUI. This is something else. See
-                :meth:`get_saved_query_by_name` for an example query. Empty
-                query will return all rows.
+            name (:obj:`str`):
+                Name of saved query to create.
+            query (:obj:`str`):
+                Query built from Query Wizard in GUI to use in saved query.
+            page_size (:obj:`int`, optional):
+                Number of rows to show in each page in GUI.
 
-                Defaults to: None.
-            row_start (:obj:`int`, optional):
-                If not 0, skip N rows in the return.
+                Defaults to: first item in
+                :data:`axonius_api_client.constants.GUI_PAGE_SIZES`.
+            sort (:obj:`str`, optional):
+                Name of field to sort results on.
 
-                Defaults to: 0.
-            paging_size (:obj:`int`, optional):
-                If not 0, include N rows in the return.
+                Defaults to: "".
+            sort_descending (:obj:`bool`, optional):
+                Sort sort descending.
 
-                Defaults to: 0.
+                Defaults to: True.
+            sort_adapter (:obj:`str`, optional):
+                Name of adapter sort is from.
+
+                Defaults to: "generic".
 
         Returns:
-            :obj:`dict`
+            :obj:`str`: The ID of the new saved query.
 
         """
-        if paging_size is None:
-            paging_size = constants.DEFAULT_PAGING_SIZE
+        if gui_page_size not in constants.GUI_PAGE_SIZES:
+            gui_page_size = constants.GUI_PAGE_SIZES[0]
 
-        params = {}
-        params["limit"] = paging_size
-        params["skip"] = row_start
+        data = {}
+        data["name"] = name
+        data["query_type"] = "saved"
 
-        if query:
-            params["filter"] = query
+        data["view"] = {}
+        data["view"]["fields"] = fields
+        data["view"]["colFilters"] = column_filters or {}
+        data["view"]["pageSize"] = gui_page_size
+
+        data["view"]["query"] = {}
+        data["view"]["query"]["filter"] = query
+
+        data["view"]["sort"] = {}
+        data["view"]["sort"]["desc"] = sort_descending
+        data["view"]["sort"]["field"] = sort or ""
 
         path = self._parent._router.views
-        return self._parent._request(method="get", path=path, params=params)
+
+        return self._parent._request(method="post", path=path, json=data)
 
     def _delete(self, ids):
         """Delete saved queries by ids.
@@ -569,84 +566,65 @@ class SavedQuery(mixins.Child):
             :obj:`str`: empty string
 
         """
-        data = {"ids": ids}
+        data = {"ids": tools.listify(ids)}
+
         path = self._parent._router.views
+
         return self._parent._request(method="delete", path=path, json=data)
 
-    def _create(
-        self,
-        name,
-        query,
-        fields,
-        sort_field=None,
-        sort_field_descending=True,
-        column_filters=None,
-        gui_paging_size=None,
-    ):
-        """Create a saved query.
+    def _get(self, query=None, row_start=0, page_size=None):
+        """Get device saved queries.
 
         Args:
-            name (:obj:`str`):
-                Name of saved query to create.
-            query (:obj:`str`):
-                Query built from Query Wizard in GUI to use in saved query.
-            paging_size (:obj:`int`, optional):
-                Number of rows to show in each page in GUI.
+            query (:obj:`str`, optional):
+                Query to filter rows to return. This is NOT a query built by
+                the Query Wizard in the GUI. This is something else. See
+                :meth:`find_saved_query_by_name` for an example query. Empty
+                query will return all rows.
 
-                Defaults to: first item in
-                :data:`axonius_api_client.constants.GUI_PAGING_SIZES`.
-            sort_field (:obj:`str`, optional):
-                Name of field to sort results on.
+                Defaults to: None.
+            row_start (:obj:`int`, optional):
+                If not 0, skip N rows in the return.
 
-                Defaults to: "".
-            sort_descending (:obj:`bool`, optional):
-                Sort sort_field descending.
+                Defaults to: 0.
+            page_size (:obj:`int`, optional):
+                If not 0, include N rows in the return.
 
-                Defaults to: True.
-            sort_adapter (:obj:`str`, optional):
-                Name of adapter sort_field is from.
-
-                Defaults to: "generic".
+                Defaults to: 0.
 
         Returns:
-            :obj:`str`: The ID of the new saved query.
+            :obj:`dict`
 
         """
-        if gui_paging_size not in constants.GUI_PAGING_SIZES:
-            gui_paging_size = constants.GUI_PAGING_SIZES[0]
+        if not page_size or page_size > constants.MAX_PAGE_SIZE:
+            msg = "Changed page size from {ps} to max page size {mps}"
+            msg = msg.format(ps=page_size, mps=constants.MAX_PAGE_SIZE)
+            self._log.debug(msg)
 
-        data = {}
-        data["name"] = name
-        data["query_type"] = "saved"
+            page_size = constants.MAX_PAGE_SIZE
 
-        data["view"] = {}
-        data["view"]["fields"] = fields
-        data["view"]["colFilters"] = column_filters or {}
-        data["view"]["pageSize"] = gui_paging_size
+        params = {}
+        params["limit"] = page_size
+        params["skip"] = row_start
 
-        data["view"]["query"] = {}
-        data["view"]["query"]["filter"] = query
-
-        data["view"]["sort"] = {}
-        data["view"]["sort"]["desc"] = sort_field_descending
-        data["view"]["sort"]["field"] = sort_field or ""
+        if query:
+            params["filter"] = query
 
         path = self._parent._router.views
 
-        return self._parent._request(method="post", path=path, json=data)
+        return self._parent._request(method="get", path=path, params=params)
 
-    def create(
+    def add(
         self,
-        *fields,
         name,
         query,
+        fields=None,
         fields_default=True,
         fields_error=True,
-        sort_field=None,
-        sort_field_manual=False,
-        sort_field_descending=True,
+        sort=None,
+        sort_descending=True,
         column_filters=None,
-        gui_paging_size=None,
+        gui_page_size=None,
     ):
         """Create a saved query.
 
@@ -655,21 +633,21 @@ class SavedQuery(mixins.Child):
                 Name of saved query to create.
             query (:obj:`str`):
                 Query built from Query Wizard in GUI to use in saved query.
-            paging_size (:obj:`int`, optional):
+            page_size (:obj:`int`, optional):
                 Number of rows to show in each page in GUI.
 
                 Defaults to: first item in
-                :data:`axonius_api_client.constants.GUI_PAGING_SIZES`.
-            sort_field (:obj:`str`, optional):
+                :data:`axonius_api_client.constants.GUI_PAGE_SIZES`.
+            sort (:obj:`str`, optional):
                 Name of field to sort results on.
 
                 Defaults to: "".
             sort_descending (:obj:`bool`, optional):
-                Sort sort_field descending.
+                Sort sort descending.
 
                 Defaults to: True.
             sort_adapter (:obj:`str`, optional):
-                Name of adapter sort_field is from.
+                Name of adapter sort is from.
 
                 Defaults to: "generic".
 
@@ -679,26 +657,35 @@ class SavedQuery(mixins.Child):
         """
         all_fields = self._parent.fields.get()
 
-        val_fields = self._parent.fields.validate(
-            *fields, default=fields_default, error=fields_error, all_fields=all_fields
+        fields = self._parent.fields.validate(
+            fields=fields,
+            default=fields_default,
+            error=fields_error,
+            all_fields=all_fields,
         )
 
-        if sort_field and not sort_field_manual:
-            sort_field = self._parent.fields.find(
-                field=sort_field, all_fields=all_fields, error=True
-            )[0]
+        find_single = self._parent.fields.find_single
 
-        created = self._create(
+        if sort:
+            sort = find_single(field=sort, all_fields=all_fields)
+
+        if column_filters:
+            column_filters = {
+                find_single(field=k, all_fields=all_fields): v
+                for k, v in column_filters.items()
+            }
+
+        added = self._add(
             name=name,
             query=query,
-            fields=val_fields,
+            fields=fields,
             column_filters=column_filters,
-            sort_field=sort_field,
-            sort_field_descending=sort_field_descending,
-            gui_paging_size=gui_paging_size,
+            sort=sort,
+            sort_descending=sort_descending,
+            gui_page_size=gui_page_size,
         )
 
-        return self.get_by_id(value=created)
+        return self.find_by_id(value=added)
 
     def delete(self, rows):
         """Delete a saved query by name.
@@ -719,14 +706,9 @@ class SavedQuery(mixins.Child):
             :obj:`str`: empty string
 
         """
-        if tools.is_type.list(rows):
-            ids = [x["uuid"] for x in rows]
-        else:
-            ids = [rows["uuid"]]
+        return self._delete(ids=[x["uuid"] for x in tools.listify(rows)])
 
-        return self._delete(ids=ids)
-
-    def get(self, query=None, count_min=None, count_max=None, paging_size=None):
+    def get(self, query=None, max_rows=None, max_pages=None, page_size=None):
         """Get saved queries using paging.
 
         Args:
@@ -736,10 +718,10 @@ class SavedQuery(mixins.Child):
                 :meth:`get` for an example query.
 
                 Defaults to: None.
-            paging_size (:obj:`int`, optional):
+            page_size (:obj:`int`, optional):
                 Get N rows per page.
 
-                Defaults to: :data:`axonius_api_client.constants.DEFAULT_PAGING_SIZE`.
+                Defaults to: :data:`axonius_api_client.constants.DEFAULT_PAGE_SIZE`.
             max_rows (:obj:`int`, optional):
                 If not 0, only return up to N rows.
 
@@ -749,45 +731,118 @@ class SavedQuery(mixins.Child):
             :obj:`dict`: Each row found in 'assets' from return.
 
         """
-        rows = []
-        count_total = 0
+        if not page_size or page_size > constants.MAX_PAGE_SIZE:
+            msg = "Changed page_size={ps} to max_page_size={mps}"
+            msg = msg.format(ps=page_size, mps=constants.MAX_PAGE_SIZE)
+            self._log.debug(msg)
 
-        objtype = self._parent._router._object_type
-        objtype = "Saved Query filter for {o}".format(o=objtype)
+            page_size = constants.MAX_PAGE_SIZE
+
+        page_info = 0
+        page_num = 0
+        rows_fetched = 0
+        rows = []
+        fetch_start = tools.dt_now()
+
+        # objtype = self._parent._router._object_type
+        # objtype = "Saved Query filter for {o}".format(o=objtype)
+
+        msg = [
+            "Starting get: page_size={}".format(page_size),
+            "query={!r}".format(query or ""),
+        ]
+        self._log.debug(tools.join_comma(msg))
 
         while True:
-            page = self._get(
-                query=query, paging_size=paging_size, row_start=count_total
-            )
+            page_start = tools.dt_now()
+            page_num += 1
+            rows_left = max_rows - len(rows) if max_rows else -1
 
-            rows += page["assets"]
-            count_total += len(page["assets"])
+            if 0 < rows_left < page_size:
+                msg = "Changed page_size={ps} to rows_left={rl} (max_rows={mr})"
+                msg = msg.format(ps=page_size, rl=rows_left, mr=max_rows)
+                self._log.debug(msg)
 
-            do_break = self._parent._check_counts(
-                value=query,
-                value_type="query",
-                objtype=objtype,
-                count_min=count_min,
-                count_max=count_max,
-                count_total=count_total,
-                known=sorted([x["name"] for x in self._get()]),
-            )
+                page_size = rows_left
 
-            if not page["assets"]:
-                do_break = True
+            msg = [
+                "Fetching page_num={}".format(page_num),
+                "page_size={}".format(page_size),
+                "rows_fetched={}".format(rows_fetched),
+            ]
+            self._log.debug(tools.join_comma(obj=msg))
 
-            if do_break:
+            page = self._get(query=query, page_size=page_size, row_start=rows_fetched)
+
+            assets = page["assets"]
+            page_info = page["page"]
+
+            rows += assets
+            rows_fetched += len(assets)
+
+            msg = [
+                "Fetched page_num={}".format(page_num),
+                "page_took={}".format(tools.dt_sec_ago(obj=page_start)),
+                "rows_fetched={}".format(rows_fetched),
+                "page_info={}".format(page_info),
+            ]
+            self._log.debug(tools.join_comma(obj=msg))
+
+            if not assets:
+                msg = "Stopped fetch loop, page with no assets returned"
+                self._log.debug(msg)
                 break
 
-        if count_max is not None:
-            if count_max == 1 and rows:
-                return rows[0]
-            elif rows:
-                return rows[:count_max]
+            if max_pages and page_num >= max_pages:
+                msg = "Stopped fetch loop, hit max_pages={mp}"
+                msg = msg.format(mp=max_pages)
+                self._log.debug(msg)
+                break
+
+            if max_rows and len(rows) >= max_rows:
+                msg = "Stopped fetch loop, hit max_rows={mr} with rows_fetched={rf}"
+                msg = msg.format(mr=max_rows, rf=rows_fetched)
+                self._log.debug(msg)
+                break
+
+        msg = [
+            "Finished get: rows_fetched={}".format(rows_fetched),
+            "total_rows={}".format(page_info["totalResources"]),
+            "fetch_took={}".format(tools.dt_sec_ago(obj=fetch_start)),
+            "query={!r}".format(query or ""),
+        ]
+        self._log.info(tools.join_comma(obj=msg))
 
         return rows
 
-    def get_by_name(self, value, use_regex=False, not_flag=False, **kwargs):
+    def find_by_id(self, value, match_error=True, **kwargs):
+        """Get saved queries using paging."""
+        rows = self.get(**kwargs)
+
+        for row in rows:
+            if row["uuid"] == value:
+                return row
+
+        if match_error:
+            ktmpl = "name: {name!r}, uuid: {uuid!r}".format
+            known = [ktmpl(**row) for row in rows]
+            known_msg = "Saved Queries"
+            value_msg = "Saved Query by UUID"
+            raise exceptions.ValueNotFound(
+                value=value, value_msg=value_msg, known=known, known_msg=known_msg
+            )
+
+        return None
+
+    def find_by_name(
+        self,
+        value,
+        use_regex=False,
+        not_flag=False,
+        match_count=None,
+        match_error=True,
+        **kwargs,
+    ):
         """Get saved queries using paging.
 
         Args:
@@ -802,9 +857,6 @@ class SavedQuery(mixins.Child):
 
                 Defaults to: True.
 
-        Raises:
-            :exc:`exceptions.ObjectNotFound`
-
         Returns:
             :obj:`list` of :obj:`dict`: Each row matching name or :obj:`dict` if only1.
 
@@ -817,59 +869,29 @@ class SavedQuery(mixins.Child):
             query = query.format(value=value)
 
             if not not_flag:
-                kwargs.setdefault("count_min", 1)
-                kwargs.setdefault("count_max", 1)
-                kwargs.setdefault("count_error", True)
+                kwargs["max_rows"] = 1
+                match_count = 1
+                match_error = 1
 
         if not_flag:
             query = "not {}".format(query)
 
-        rows = self.get(query=query, **kwargs)
+        kwargs["query"] = query
+        rows = self.get(**kwargs)
 
-        count_max = kwargs.get("count_max", None)
+        if (match_count and len(rows) != match_count) and match_error:
+            ktmpl = "name: {name!r}, uuid: {uuid!r}".format
+            known = [ktmpl(**row) for row in self.get()]
+            known_msg = "Saved Queries"
+            value_msg = "Saved Query by name"
+            raise exceptions.ValueNotFound(
+                value=value, value_msg=value_msg, known=known, known_msg=known_msg
+            )
 
-        if count_max is not None:
-            if count_max == 1 and rows:
-                return rows[0]
-            elif rows:
-                return rows[:count_max]
+        if match_count == 1 and len(rows) == 1:
+            return rows[0]
 
         return rows
-
-    def get_by_id(self, value, paging_size=None):
-        """Get saved queries using paging.
-
-        Args:
-            name (:obj:`str`):
-                Name of saved query to get.
-            regex (:obj:`bool`, optional):
-                Search for name using regex.
-
-                Defaults to: True.
-            only1 (:obj:`bool`, optional):
-                Only allow one match to name.
-
-                Defaults to: True.
-
-        Raises:
-            :exc:`exceptions.ObjectNotFound`
-
-        Returns:
-            :obj:`list` of :obj:`dict`: Each row matching name or :obj:`dict` if only1.
-
-        """
-        rows = self.get(paging_size=paging_size)
-
-        for row in rows:
-            if row["uuid"] == value:
-                return row
-
-        objtype = self._parent._router._object_type
-        objtype = "Saved Query by ID for {o}".format(o=objtype)
-
-        raise exceptions.ObjectNotFound(
-            value=value, value_type="Saved Query ID", object_type=objtype
-        )
 
 
 class Labels(mixins.Child):
@@ -897,7 +919,18 @@ class Labels(mixins.Child):
 
         return self._parent._request(method="post", path=path, json=data)
 
-    def _delete(self, labels, ids):
+    def _get(self):
+        """Get the labels.
+
+        Returns:
+            :obj:`list` of :obj:`str`
+
+        """
+        path = self._parent._router.labels
+
+        return self._parent._request(method="get", path=path)
+
+    def _remove(self, labels, ids):
         """Delete labels from object IDs.
 
         Args:
@@ -918,26 +951,6 @@ class Labels(mixins.Child):
         path = self._parent._router.labels
 
         return self._parent._request(method="delete", path=path, json=data)
-
-    def _get(self):
-        """Get the labels.
-
-        Returns:
-            :obj:`list` of :obj:`str`
-
-        """
-        path = self._parent._router.labels
-
-        return self._parent._request(method="get", path=path)
-
-    def get(self):
-        """Get the labels.
-
-        Returns:
-            :obj:`list` of :obj:`str`
-
-        """
-        return self._get()
 
     def add(self, rows, labels):
         """Add labels to objects using rows returned from :meth:`get`.
@@ -964,6 +977,15 @@ class Labels(mixins.Child):
 
         return processed
 
+    def get(self):
+        """Get the labels.
+
+        Returns:
+            :obj:`list` of :obj:`str`
+
+        """
+        return self._get()
+
     def remove(self, rows, labels):
         """Delete labels from objects using rows returned from :meth:`get`.
 
@@ -984,19 +1006,17 @@ class Labels(mixins.Child):
         # only do 100 labels at a time, more seems to break API
         for group in tools.grouper(ids, 100):
             group = [x for x in group if x is not None]
-            response = self._delete(labels=labels, ids=group)
+            response = self._remove(labels=labels, ids=group)
             processed += response
 
         return processed
 
 
-# FUTURE: how to get raw_data fields without using 'specific_data'
 class Fields(mixins.Child):
     """Pass."""
 
     _GENERIC_ALTS = ["generic", "general", "specific"]
-    _ALL_ALTS = ["all", "", "*", "specific_data"]
-    _FORCE_SINGLE = ["specific_data", "specific_data.data"]
+    _ALL_ALTS = ["all", "*", "specific_data"]
 
     def _get(self):
         """Get the fields.
@@ -1007,17 +1027,11 @@ class Fields(mixins.Child):
         """
         return self._parent._request(method="get", path=self._parent._router.fields)
 
-    def get(self):
-        """Pass."""
-        raw = self._get()
-        parser = ParserFields(raw=raw, parent=self)
-        return parser.parse()
-
     def find_adapter(self, adapter, error=True, all_fields=None):
         """Find an adapter by name."""
         all_fields = all_fields or self.get()
 
-        check = tools.strip.right(adapter.lower(), "_adapter")
+        check = tools.strip_right(obj=adapter.lower().strip(), fix="_adapter")
 
         if check in self._GENERIC_ALTS:
             check = "generic"
@@ -1032,8 +1046,8 @@ class Fields(mixins.Child):
         if error:
             raise exceptions.ValueNotFound(
                 value=adapter,
-                known=list(all_fields),
                 value_msg="adapter by name",
+                known=list(all_fields),
                 known_msg="adapter names",
             )
 
@@ -1043,26 +1057,35 @@ class Fields(mixins.Child):
 
         return None, {}
 
+    def find_single(self, field, all_fields=None):
+        """Find a single field."""
+        found = self.find(field=field, error=True, all_fields=all_fields)
+        return found[0]
+
     def find(self, field, error=True, all_fields=None):
         """Find a field for a given adapter."""
         all_fields = all_fields or self.get()
 
         all_fq = [f["name"] for af in all_fields.values() for f in af.values()]
 
-        if field.lower() in all_fq:
+        check = field.strip()
+
+        if check in all_fq:
             fqmsg = "Validated field {sf!r} as already fully qualified"
             fqmsg = fqmsg.format(sf=field)
             self._log.debug(fqmsg)
 
-            return [field]
+            return [check]
 
-        if ":" in field.lower():
-            search_adapter, search_fields = field.lower().split(":", 1)
+        if ":" in check:
+            search_adapter, search_fields = check.split(":", 1)
         else:
-            search_adapter, search_fields = ("generic", field.lower())
+            search_adapter, search_fields = ("generic", check)
 
         search_adapter = search_adapter.strip()
-        search_fields = [x.strip() for x in search_fields.split(",") if x.strip()]
+        search_fields = [
+            x.strip().lower() for x in search_fields.split(",") if x.strip()
+        ]
 
         real_adapter, real_fields = self.find_adapter(
             adapter=search_adapter, error=error, all_fields=all_fields
@@ -1077,7 +1100,7 @@ class Fields(mixins.Child):
             found_field = None
 
             if search_field in self._ALL_ALTS:
-                found_field = real_fields["all"]
+                found_field = real_fields["all"]["name"]
             elif search_field in all_fq:
                 found_field = search_field
             elif search_field in real_fields:
@@ -1115,16 +1138,26 @@ class Fields(mixins.Child):
 
         return found
 
-    def validate(self, *fields, default=True, error=True, all_fields=None):
+    def get(self):
+        """Pass."""
+        raw = self._get()
+        parser = ParserFields(raw=raw, parent=self)
+        return parser.parse()
+
+    def validate(self, fields=None, default=True, error=True, all_fields=None):
         """Validate provided fields."""
+        if isinstance(fields, dict) and "manual" in fields:
+            return fields["manual"]
+
         all_fields = all_fields or self.get()
+        fields = tools.listify(fields)
 
         if default:
             val_fields = self._parent._default_fields
         else:
             val_fields = []
 
-        for field in fields:
+        for field in [x for x in fields if isinstance(x, tools.STR) and x]:
             found = self.find(field=field, all_fields=all_fields, error=error)
             val_fields += [x for x in found if x not in val_fields]
 
@@ -1143,30 +1176,55 @@ class ParserFields(mixins.Parser):
 
     def _generic(self):
         """Pass."""
-        prefix = constants.GENERIC_FIELD_PREFIX
-        all_prefix = prefix.split(".")[0]
-
-        fields = {"all_data": {"name": prefix}, "all": {"name": all_prefix}}
+        fields = {
+            "all_data": {
+                "name": "specific_data.data",
+                "title": "All data subsets for generic adapter",
+                "type": "array",
+                "adapter_prefix": "specific_data",
+            },
+            "all": {
+                "name": "specific_data",
+                "title": "All data for generic adapter",
+                "type": "array",
+                "adapter_prefix": "specific_data",
+            },
+        }
 
         for field in self._raw["generic"]:
-            field["adapter_prefix"] = prefix
-            field_name = tools.strip.left(field["name"], prefix).strip(".")
+            field["adapter_prefix"] = "specific_data"
+            field_name = tools.strip_left(
+                obj=field["name"], fix="specific_data.data"
+            ).strip(".")
             self._exists(field_name, fields, "Generic field")
             fields[field_name] = field
 
         return fields
 
     def _adapter(self, name, raw_fields):
-        short_name = tools.strip.right(name, "_adapter")
+        short_name = tools.strip_right(obj=name, fix="_adapter")
 
-        prefix = constants.ADAPTER_FIELD_PREFIX
+        prefix = "adapters_data.{adapter_name}"
         prefix = prefix.format(adapter_name=name)
 
-        fields = {"all": {"name": prefix}, "raw": {"name": "{}.raw".format(prefix)}}
+        fields = {
+            "all": {
+                "name": prefix,
+                "title": "All data for {} adapter".format(prefix),
+                "type": "array",
+                "adapter_prefix": prefix,
+            },
+            "raw": {
+                "name": "{}.raw".format(prefix),
+                "title": "All raw data for {} adapter".format(prefix),
+                "type": "array",
+                "adapter_prefix": prefix,
+            },
+        }
 
         for field in raw_fields:
             field["adapter_prefix"] = prefix
-            field_name = tools.strip.left(field["name"], prefix).strip(".")
+            field_name = tools.strip_left(obj=field["name"], fix=prefix).strip(".")
             self._exists(field_name, fields, "Adapter {} field".format(short_name))
             fields[field_name] = field
 
@@ -1179,19 +1237,20 @@ class ParserFields(mixins.Parser):
 
         for name, raw_fields in self._raw["specific"].items():
             short_name, fields = self._adapter(name=name, raw_fields=raw_fields)
-            self._exists(short_name, ret, "Adapter")
+            self._exists(short_name, ret, "Adapter {}".format(name))
             ret[short_name] = fields
 
         return ret
 
 
+'''
 class ParserReportsAdapter(mixins.Parser):
     """Pass."""
 
     def _mkserial(self, obj):
         """Pass."""
-        if self._serial and tools.is_type.list(obj):
-            return tools.join.cr(obj, pre=False)
+        if self._serial and isinstance(obj, tools.LIST):
+            return tools.join_cr(obj=obj, pre=False)
         return obj
 
     def _row(self, raw_row):
@@ -1199,7 +1258,7 @@ class ParserReportsAdapter(mixins.Parser):
         row = {}
         missing = []
 
-        adapters = tools.strip.right(raw_row.get("adapters", []), "_adapter")
+        adapters = tools.strip_right(obj=raw_row.get("adapters", []), fix="_adapter")
         row["adapters"] = self._mkserial(adapters)
 
         for k, v in raw_row.items():
@@ -1207,8 +1266,11 @@ class ParserReportsAdapter(mixins.Parser):
                 row[k] = self._mkserial(v)
 
         ftimes = raw_row.get("specific_data.data.fetch_time", []) or []
-        ftimes = ftimes if tools.is_type.list(ftimes) else [ftimes]
-        ftimes = [x for x in tools.dt.parse(ftimes)]
+
+        if not isinstance(ftimes, tools.LIST):
+            ftimes = [ftimes]
+
+        ftimes = [x for x in tools.dt_parse(obj=ftimes)]
 
         for adapter in self._adapters:
             name = adapter["name"]
@@ -1278,3 +1340,5 @@ class ParserReportsAdapter(mixins.Parser):
         self._config_adapters = [x for x in adapters if x["status"] is True]
 
         return [self._row(x) for x in self._raw]
+
+'''

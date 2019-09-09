@@ -263,7 +263,7 @@ class Enforcements(mixins.Model, mixins.Mixins):
         """
         found = self.get_by_name(name=name, regex=regex, only1=True)
 
-        if tools.is_type.list(found):
+        if isinstance(found, tools.LIST):
             ids = [x["uuid"] for x in found]
         else:
             ids = [found["uuid"]]
@@ -285,9 +285,6 @@ class Enforcements(mixins.Model, mixins.Mixins):
 
                 Defaults to: True.
 
-        Raises:
-            :exc:`exceptions.ObjectNotFound`
-
         Returns:
             :obj:`list` of :obj:`dict`: Each row matching name or :obj:`dict` if only1.
 
@@ -298,10 +295,5 @@ class Enforcements(mixins.Model, mixins.Mixins):
             query = 'name == "{name}"'.format(name=name)
 
         found = self.get(query=query)
-
-        if not found or (len(found) > 1 and only1):
-            raise exceptions.ObjectNotFound(
-                value=query, value_type="query", object_type="Alert", exc=None
-            )
 
         return found[0] if only1 else found
