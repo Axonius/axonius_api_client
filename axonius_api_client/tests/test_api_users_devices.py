@@ -25,14 +25,21 @@ SCHEMA_FIELD_FORMATS = [
 ]
 FIELD_TYPES = ["string", "bool", "array", "integer", "number"]
 
-QUERY_ID = '(internal_axon_id == "{internal_axon_id}")'.format
-QUERY_ID_EXISTS = '(specific_data.data.id == ({"$exists":true,"$ne": ""}))'
+QUERY_ID = '((internal_axon_id == "{internal_axon_id}"))'.format
+QUERY_EQ = '(({f} == "{v}"))'.format
+QUERY_FIELD_EXISTS = '(({field} == ({{"$exists":true,"$ne": ""}})))'.format
+"""
+# multi
+((internal_axon_id == ({"$exists":true,"$ne":""})))
+    and
+((specific_data.data.username == ({"$exists":true,"$ne":""})))
+    and
+((specific_data.data.mail == ({"$exists":true,"$ne":""})))
 
-# QUERY_TMPL = '({} == ({{"$exists":true,"$ne": ""}}))'.format
+# single
+((internal_axon_id == ({"$exists":true,"$ne":""})))
 
-# macs = ["00:11:22:33:44:55"] * 10000
-# macs = " ".join(["'{}'".format(mac) for mac in macs])
-# LONG_QUERY = "not specific_data.data.network_interfaces.mac in [{}]".format(macs)
+"""
 
 USERS_TEST_DATA = {
     "adapters": [
@@ -136,7 +143,7 @@ DEVICES_TEST_DATA = {
 }
 
 
-class TestBase(object):
+class Base(object):
     """Pass."""
 
     @pytest.fixture(scope="class")
@@ -170,10 +177,24 @@ class TestBase(object):
 
         return api
 
-    def get_single_asset(self, apiobj, fields=None, query=None, refetch=None):
+    def get_single_asset(
+        self, apiobj, with_fields=None, fields=None, query=None, refetch=None
+    ):
         """Pass."""
-        if refetch and not query:
+        if not query and refetch:
             query = QUERY_ID(**refetch)
+
+        if not query:
+            if not with_fields:
+                with_fields = apiobj._default_fields
+
+            query_fields = tools.listify(with_fields)
+            query_fields = [x for x in query_fields if x not in ["labels"]]
+            query_lines = [QUERY_FIELD_EXISTS(field=x) for x in query_fields]
+            query = " and ".join(query_lines)
+
+        if not fields:
+            fields = apiobj._default_fields
 
         data = apiobj._get(query=query, fields=fields, page_size=1)
         assert isinstance(data, dict)
@@ -199,7 +220,7 @@ class TestBase(object):
 
 
 @pytest.mark.parametrize("apicls", [axonapi.api.Users, axonapi.Devices], scope="class")
-class TestBoth(TestBase):
+class TestBoth(Base):
     """Pass."""
 
     def test__count_post_false(self, apiobj):
@@ -224,6 +245,15 @@ class TestBoth(TestBase):
         assert isinstance(data["assets"], tools.LIST)
         assert len(data["assets"]) == 1
         assert isinstance(data["assets"][0], dict)
+
+    def test__get_page_size_over_max(self, apiobj):
+        """Pass."""
+        data = apiobj._get(page_size=3000, use_post=False)
+        assert isinstance(data, dict)
+        assert isinstance(data["assets"], tools.LIST)
+
+        response = apiobj._auth._http._LAST_RESPONSE
+        assert "limit=2000" in response.request.url
 
     def test__get_query_len_forces_post(self, apiobj):
         """Pass."""
@@ -262,9 +292,209 @@ class TestBoth(TestBase):
         assert isinstance(data, list)
         assert len(data) == 1
 
+    def test_get_maxpages(self, apiobj):
+        """Pass."""
+        data = apiobj.get(max_rows=22, max_pages=1)
+        assert isinstance(data, list)
+        assert len(data) == 22
+
+    def test_get_id(self, apiobj):
+        """Pass."""
+        asset = self.get_single_asset(apiobj=apiobj, fields=apiobj._default_fields)
+
+        data = apiobj.get_by_id(id=asset["internal_axon_id"])
+        assert isinstance(data, dict)
+        assert data["internal_axon_id"] == asset["internal_axon_id"]
+
+    def test_get_id_error(self, apiobj):
+        """Pass."""
+        with pytest.raises(exceptions.ValueNotFound):
+            apiobj.get_by_id(id="badwolf")
+
+    def test_find_by_field_value(self, apiobj):
+        """Pass."""
+        asset = self.get_single_asset(apiobj=apiobj, fields=apiobj._default_fields)
+        assert isinstance(asset, dict)
+        field = apiobj.TEST_DATA["single_field"]["exp"]
+        value = asset[field]
+
+        assert value
+        found = apiobj.find_by_value(
+            value=value, field=field, fields=apiobj._default_fields, match_count=1
+        )
+        assert found[field] == value
+
+    def test_find_by_field_value_list(self, apiobj):
+        """Pass."""
+        asset = self.get_single_asset(apiobj=apiobj, fields=apiobj._default_fields)
+        assert isinstance(asset, dict)
+        field = apiobj.TEST_DATA["single_field"]["exp"]
+        # value_is_list = isinstance(asset[field], tools.LIST)
+        value = asset[field]
+        value_list = tools.listify(value)
+        assert value
+        found = apiobj.find_by_value(
+            value=value_list, field=field, fields=apiobj._default_fields, match_count=1
+        )
+        found_value = found[field]
+
+        assert tools.listify(found_value) == value_list
+
+    def test_find_by_field_value_regex(self, apiobj):
+        """Pass."""
+        field = apiobj.TEST_DATA["single_field"]["exp"]
+        value_re = "[a-zA-Z]"
+        found = apiobj.find_by_value(
+            value="RE:{}".format(value_re), field=field, match_count=1, max_rows=1
+        )
+        assert isinstance(found, dict)
+        assert any(
+            [
+                re.search(value_re, f)
+                for f in tools.listify(obj=found[field], dictkeys=False)
+            ]
+        )
+
+    def test_find_by_field_value_not(self, apiobj):
+        """Pass."""
+        count = apiobj.count()
+        asset = self.get_single_asset(apiobj=apiobj, fields=apiobj._default_fields)
+        assert isinstance(asset, dict)
+        field = apiobj.TEST_DATA["single_field"]["exp"]
+
+        asset_value = asset[field]
+        if isinstance(asset_value, tools.LIST):
+            value = ["NOT:{}".format(x) for x in asset_value]
+        else:
+            value = "NOT:{}".format(asset_value)
+        found = apiobj.find_by_value(
+            value=value, field=field, fields=apiobj._default_fields, match_error=False
+        )
+        assert isinstance(found, tools.LIST)
+        assert len(found) == count - 1
+
+    def test_find_by_field_value_match_error(self, apiobj):
+        """Pass."""
+        field = apiobj.TEST_DATA["single_field"]["exp"]
+        with pytest.raises(exceptions.ValueNotFound):
+            apiobj.find_by_value(
+                value="BaDWoLf_8675309",
+                field=field,
+                match_count=1,
+                max_rows=2,
+                match_error=True,
+            )
+
+
+class Single(Base):
+    """Pass."""
+
+    def find_by_specifics(self, apiobj, specfield, specmethod):
+        """Pass."""
+        asset = self.get_single_asset(apiobj=apiobj, fields=specfield)
+        asset_value = asset[specfield]
+        value = tools.listify(obj=asset_value)[0]
+        query_post = "and {}".format(QUERY_FIELD_EXISTS(field=specfield))
+        found = getattr(apiobj, specmethod)(
+            value=value, query_post=query_post, match_count=1, fields=specfield
+        )
+        assert isinstance(found, dict)
+        # pdb.set_trace()
+        found_value = found[specfield]
+        assert tools.listify(found_value) == tools.listify(asset_value)
+
+
+@pytest.mark.parametrize("apicls", [axonapi.api.Users], scope="class")
+class TestUsers(Single):
+    """Pass."""
+
+    @pytest.mark.parametrize(
+        "specfield,specmethod",
+        [
+            ["specific_data.data.username", "find_by_username"],
+            ["specific_data.data.mail", "find_by_mail"],
+        ],
+        scope="class",
+    )
+    def test_find_by_specifics(self, apiobj, specfield, specmethod):
+        """Pass."""
+        self.find_by_specifics(
+            apiobj=apiobj, specfield=specfield, specmethod=specmethod
+        )
+        # asset = self.get_single_asset(apiobj=apiobj, fields=specfield)
+        # asset_value = asset[specfield]
+        # value = tools.listify(obj=asset_value)[0]
+        # found = getattr(apiobj, specmethod)(value=value)
+        # assert isinstance(found, dict)
+        # assert tools.listify(found[specfield]) == tools.listify(asset[specfield])
+
+
+@pytest.mark.parametrize("apicls", [axonapi.api.Devices], scope="class")
+class TestDevices(Single):
+    """Pass."""
+
+    @pytest.mark.parametrize(
+        "specfield,specmethod",
+        [
+            ["specific_data.data.hostname", "find_by_hostname"],
+            ["specific_data.data.network_interfaces.mac", "find_by_mac"],
+            ["specific_data.data.network_interfaces.ips", "find_by_ip"],
+        ],
+        scope="class",
+    )
+    def test_find_by_specifics(self, apiobj, specfield, specmethod):
+        """Pass."""
+        self.find_by_specifics(
+            apiobj=apiobj, specfield=specfield, specmethod=specmethod
+        )
+        # asset = self.get_single_asset(apiobj=apiobj, fields=specfield)
+        # found = getattr(apiobj, specmethod)(value=asset[specfield])
+        # assert isinstance(found, dict)
+        # assert tools.listify(found[specfield]) == tools.listify(asset[specfield])
+
+    def test_find_by_in_subnet(self, apiobj):
+        """Pass."""
+        specfield = "specific_data.data.network_interfaces.subnets"
+        findfield = "specific_data.data.network_interfaces.ips"
+        asset = self.get_single_asset(apiobj=apiobj, fields=[findfield, specfield])
+        asset_value = asset[specfield]
+
+        value = tools.listify(obj=asset_value)[0]
+
+        found = apiobj.find_by_in_subnet(
+            value=value,
+            max_rows=1,
+            fields=findfield,
+            query_post=" and {}".format(QUERY_FIELD_EXISTS(field=findfield)),
+        )
+
+        assert isinstance(found, tools.LIST)
+
+        found_value = tools.listify(obj=found[0][findfield])[0]
+        assert found_value == tools.listify(obj=asset[findfield], dictkeys=False)[0]
+
+    def test_find_by_in_subnet_not(self, apiobj):
+        """Pass."""
+        specfield = "specific_data.data.network_interfaces.subnets"
+        findfield = "specific_data.data.network_interfaces.ips"
+        asset = self.get_single_asset(apiobj=apiobj, fields=[findfield, specfield])
+        asset_value = asset[specfield]
+
+        value = tools.listify(obj=asset_value)[0]
+
+        found = apiobj.find_by_in_subnet(
+            value="NOT:{}".format(value),
+            max_rows=1,
+            fields=findfield,
+            query_post=" and {}".format(QUERY_FIELD_EXISTS(field=findfield)),
+        )
+        # could do value checking here, but we'd have to get every asset
+        # lets not do that...
+        assert isinstance(found, tools.LIST)
+
 
 @pytest.mark.parametrize("apicls", [axonapi.api.Users, axonapi.Devices], scope="class")
-class TestFields(TestBase):
+class TestFields(Base):
     """Pass."""
 
     def test__get(self, apiobj):
@@ -409,7 +639,7 @@ class TestFields(TestBase):
 
 
 @pytest.mark.parametrize("apicls", [axonapi.api.Users, axonapi.Devices], scope="class")
-class TestLabels(TestBase):
+class TestLabels(Base):
     """Pass."""
 
     def test__get(self, apiobj):
@@ -536,7 +766,7 @@ class TestLabels(TestBase):
 
 
 @pytest.mark.parametrize("apicls", [axonapi.api.Users, axonapi.Devices], scope="class")
-class TestSavedQuery(TestBase):
+class TestSavedQuery(Base):
     """Pass."""
 
     def test__get(self, apiobj):
@@ -683,7 +913,13 @@ class TestSavedQuery(TestBase):
         for row in rows:
             assert isinstance(row, dict)
 
-    def test_get_notfound_noerror(self, apiobj):
+    def test_get_maxpages(self, apiobj):
+        """Pass."""
+        data = apiobj.saved_query.get(max_pages=1, max_rows=1)
+        assert isinstance(data, tools.LIST)
+        assert len(data) == 1
+
+    def test_get_empty(self, apiobj):
         """Pass."""
         query = 'name == "badwolf_notfound"'
         data = apiobj.saved_query.get(query=query)
@@ -695,6 +931,11 @@ class TestSavedQuery(TestBase):
         data = apiobj.saved_query.get()
         found = apiobj.saved_query.find_by_id(value=data[0]["uuid"])
         assert isinstance(found, dict)
+
+    def test_find_by_id_notfound_noerr(self, apiobj):
+        """Pass."""
+        found = apiobj.saved_query.find_by_id(value="badwolf", match_error=False)
+        assert found is None
 
     def test_find_by_id_notfound(self, apiobj):
         """Pass."""
@@ -709,14 +950,14 @@ class TestSavedQuery(TestBase):
 
     def test_find_by_name_regex(self, apiobj):
         """Pass."""
-        found = apiobj.saved_query.find_by_name(value=".*", use_regex=True)
+        found = apiobj.saved_query.find_by_name(value="RE:.*")
         assert isinstance(found, list)
         assert len(found) >= 1
 
     def test_find_by_name_notflag(self, apiobj):
         """Pass."""
         data = apiobj.saved_query.get()
-        found = apiobj.saved_query.find_by_name(value=data[0]["name"], not_flag=True)
+        found = apiobj.saved_query.find_by_name(value="NOT:{}".format(data[0]["name"]))
         assert isinstance(found, list)
         assert len(found) == len(data) - 1
 
@@ -814,574 +1055,10 @@ class TestSavedQuery(TestBase):
             apiobj.saved_query.find_by_name(name)
 
 
-'''
-
-@pytest.mark.parametrize("apicls", [axonapi.api.Users, axonapi.Devices], scope="class")
-class TestUsersDevices(TestBase):
-    """Pass."""
-
-    def test__get_query_fields_none(self, apiobj):
-        """Test private get."""
-        api_type = apiobj._router._object_type
-
-        gargs = dict(fields=None, row_start=0, page_size=1, query=None, use_post=False)
-
-        data = apiobj._get(**gargs)
-
-        assert is_type.dict(data)
-        assert "assets" in data
-        assert is_type.list(data["assets"])
-
-        if not data["assets"]:
-            msg = "No {t} on system, unable to test _get"
-            msg = msg.format(t=api_type)
-            pytest.skip(msg)
-
-        assert len(data["assets"]) == 1
-
-    def test__get_post_false(
-        self, apiobj, fields_list_manual_query, fields_list_manual
-    ):
-        """Test private get."""
-        api_type = apiobj._router._object_type
-
-        gargs = dict(
-            fields=fields_list_manual,
-            row_start=0,
-            page_size=1,
-            query=fields_list_manual_query,
-            use_post=False,
-        )
-
-        data = apiobj._get(**gargs)
-
-        assert is_type.dict(data)
-        assert "assets" in data
-        assert is_type.list(data["assets"])
-
-        if not data["assets"]:
-            msg = "No {t} on system, unable to test _get"
-            msg = msg.format(t=api_type)
-            pytest.skip(msg)
-
-        assert len(data["assets"]) == 1
-
-        for entry in data["assets"]:
-            assert is_type.dict(entry)
-            assert "adapters" in entry
-            for field in fields_list_manual:
-                assert field in entry
-
-    # FUTURE: use_post = True ignores page_size (limit) and just returns 2000 items
-    def test__get_post_true(self, apiobj, fields_list_manual_query, fields_list_manual):
-        """Test private get."""
-        api_type = apiobj._router._object_type
-
-        gargs = dict(
-            fields=fields_list_manual,
-            row_start=0,
-            page_size=1,
-            query=fields_list_manual_query,
-            use_post=True,
-        )
-
-        data = apiobj._get(**gargs)
-
-        assert is_type.dict(data)
-        assert "assets" in data
-        assert is_type.list(data["assets"])
-
-        if not data["assets"]:
-            msg = "No {t} on system, unable to test _get"
-            msg = msg.format(t=api_type)
-            pytest.skip(msg)
-
-        if data["page"]["totalResources"] < 2000:
-            assert len(data["assets"]) == data["page"]["totalResources"]
-        else:
-            assert len(data["assets"]) == 2000
-
-        for entry in data["assets"]:
-            assert is_type.dict(entry)
-            assert "adapters" in entry
-            for field in fields_list_manual:
-                assert field in entry
-
-    def test__get_long_query_uses_post(self, apiobj):
-        """Pass."""
-        api_type = apiobj._router._object_type
-
-        data = apiobj._get(query=LONG_QUERY, page_size=1)
-
-        assert is_type.dict(data)
-        assert "assets" in data
-        assert is_type.list(data["assets"])
-
-        if not data["assets"]:
-            msg = "No {t} on system, unable to test _get"
-            msg = msg.format(t=api_type)
-            pytest.skip(msg)
-
-        assert apiobj._auth.http._LAST_RESPONSE.request.method == "POST"
-
-        if data["page"]["totalResources"] < 2000:
-            assert len(data["assets"]) == data["page"]["totalResources"]
-        else:
-            assert len(data["assets"]) == 2000
-
-    def test_count_long_query_uses_post(self, apiobj):
-        """Pass."""
-        data = apiobj.count(query=LONG_QUERY)
-        assert is_type.int(data)
-        assert apiobj._auth.http._LAST_RESPONSE.request.method == "POST"
-
-    @pytest.mark.parametrize("query", [None, QUERY_ID_EXISTS])
-    @pytest.mark.parametrize("use_post", [True, False])
-    def test_count(self, apiobj, query, use_post):
-        """Test count."""
-        data = apiobj.count(query=query, use_post=use_post)
-        assert is_type.int(data)
-
-    def test_get_manual(self, apiobj, fields_list_manual, single_asset_query):
-        """Pass."""
-        data = apiobj.get(
-            query=single_asset_query,
-            manual_fields=fields_list_manual,
-            count_max=1,
-            count_error=False,
-        )
-        assert is_type.dict(data)
-
-    def test_get_validate(self, apiobj, fields_dict_mix, single_asset_query):
-        """Pass."""
-        data = apiobj.get(
-            query=single_asset_query, count_max=1, count_error=False, **fields_dict_mix
-        )
-        assert is_type.dict(data)
-
-    def test_get_cntmax_error(self, apiobj, fields_dict_mix):
-        """Pass."""
-        with pytest.raises(exceptions.TooManyObjectsFound):
-            apiobj.get(count_max=1, **fields_dict_mix)
-
-    def test_get_cntmax_noerror1(self, apiobj, fields_dict_mix):
-        """Pass."""
-        data = apiobj.get(count_max=1, count_error=False, **fields_dict_mix)
-        assert is_type.dict(data)
-
-    def test_get_cntmax_noerror2(self, apiobj, fields_dict_mix):
-        """Pass."""
-        data = apiobj.get(count_max=2, count_error=False, **fields_dict_mix)
-        assert is_type.list(data)
-        assert len(data) == 2
-
-    def test_get_cntmin_error(self, apiobj, fields_dict_mix):
-        """Pass."""
-        with pytest.raises(exceptions.TooFewObjectsFound):
-            apiobj.get(
-                query='not (specific_data.data.id == ({"$exists":true,"$ne": ""}))',
-                count_min=1,
-                **fields_dict_mix
-            )
-
-    def test_get_cntmin_noerror(self, apiobj, fields_dict_mix):
-        """Pass."""
-        data = apiobj.get(
-            query='not (specific_data.data.id == ({"$exists":true,"$ne": ""}))',
-            count_min=1,
-            count_error=False,
-            **fields_dict_mix
-        )
-        assert len(data) == 0
-
-    def test_get_cntmaxmin_noerror(self, apiobj, fields_dict_mix):
-        """Pass."""
-        data = apiobj.get(
-            query='not (specific_data.data.id == ({"$exists":true,"$ne": ""}))',
-            count_min=1,
-            count_max=1,
-            count_error=False,
-            **fields_dict_mix
-        )
-        assert not data
-
-    def test_get_cntmaxmin_error(self, apiobj, fields_dict_mix):
-        """Pass."""
-        with pytest.raises(exceptions.ValueNotFound):
-            apiobj.get(
-                query='not (specific_data.data.id == ({"$exists":true,"$ne": ""}))',
-                count_min=1,
-                count_max=1,
-                **fields_dict_mix
-            )
-
-    def test_sq_get_name(self, apiobj, test_sq_get):
-        """Pass."""
-        name = test_sq_get[0]["name"]
-        data = apiobj.saved_query.find_by_name(value=name)
-        assert is_type.dict(data)
-        assert "name" in data
-        assert is_type.str(data["name"])
-
-    def test_sq_get_name_re(self, apiobj, test_sq_get):
-        """Pass."""
-        name = test_sq_get[0]["name"][0]
-        data = apiobj.saved_query.find_by_name(value=name, use_regex=True)
-        assert is_type.lod(data)
-        assert len(data) >= 1
-
-    def test_get_by_id(self, apiobj, single_asset):
-        """Pass."""
-        data = apiobj.get_by_id(single_asset["internal_axon_id"])
-        assert is_type.dict(data)
-        assert data
-        keys = ["generic", "internal_axon_id", "specific", "accurate_for_datetime"]
-        for key in keys:
-            assert key in data
-
-    def test_get_by_id_fail(self, apiobj):
-        """Pass."""
-        with pytest.raises(exceptions.ValueNotFound):
-            apiobj.get_by_id("BADWOLF")
-
-    def test_get_by_sq(self, apiobj, test_sq_get):
-        """Pass."""
-        name = test_sq_get[0]["name"]
-        data = apiobj.get_by_saved_query(name=name)
-        assert is_type.list(data)
-        keys = ["adapter_list_length", "adapters", "internal_axon_id"]
-        for entry in data:
-            for key in keys:
-                assert key in entry
-
-    def test_get_by_fv_re(self, apiobj, fields_dict_manual):
-        """Pass."""
-        for k, v in fields_dict_manual.items():
-            adapter_name = k
-            field_name = v[0]
-            break
-
-        data = apiobj.get_by_field_value(
-            value="a",
-            name=field_name,
-            adapter_name=adapter_name,
-            use_regex=True,
-            **fields_dict_manual
-        )
-        assert is_type.list(data)
-        assert data
-        keys = ["adapter_list_length", "adapters", "internal_axon_id", field_name]
-        for entry in data:
-            for key in keys:
-                assert key in entry
-
-    def test_get_by_fv(self, apiobj, single_asset, fields_dict_manual):
-        """Pass."""
-        for k, v in fields_dict_manual.items():
-            adapter_name = k
-            field_name = v[0]
-            break
-
-        field_value = single_asset[field_name]
-        if is_type.list(field_value):
-            field_value = field_value[0]
-
-        data = apiobj.get_by_field_value(
-            value=field_value,
-            name=field_name,
-            adapter_name=adapter_name,
-            **fields_dict_manual
-        )
-
-        assert is_type.dict(data)
-        keys = ["adapter_list_length", "adapters", "internal_axon_id", field_name]
-        for key in keys:
-            assert key in data
-
-    def test_get_by_fv_err(self, apiobj, fields_dict_manual):
-        """Pass."""
-        for k, v in fields_dict_manual.items():
-            adapter_name = k
-            field_name = v[0]
-            break
-
-        with pytest.raises(exceptions.ValueNotFound):
-            apiobj.get_by_field_value(
-                value="askdjfsdfsadgasg",
-                name=field_name,
-                adapter_name=adapter_name,
-                **fields_dict_manual
-            )
-
-    def test_fields_parser_dupe(self, apiobj):
-        """Pass."""
-        raw_fields = apiobj.fields._get()
-        raw_fields["generic"].append(raw_fields["generic"][0])
-        parser = axonapi.api.users_devices.ParserFields(parent=apiobj, raw=raw_fields)
-        with pytest.raises(exceptions.ApiError):
-            parser.parse()
-
-    # TODO: RE-DO!
-    def test_reports_adapter(self, apiobj, all_assets, all_fields):
-        """Pass."""
-        report = apiobj.report_adapters(rows=all_assets, all_fields=all_fields)
-        assert is_type.list(report)
-        assert tools.nest_depth(report) >= 3
-
-    def test_reports_adapter_serial(self, apiobj, all_assets, all_fields):
-        """Pass."""
-        report = apiobj.report_adapters(
-            rows=all_assets, all_fields=all_fields, serial=True
-        )
-        assert is_type.list(report)
-        assert tools.nest_depth(report) == 2
-
-
-@pytest.mark.needs_url
-@pytest.mark.needs_key_creds
-@pytest.mark.parametrize("creds", ["creds_key"], indirect=True, scope="class")
-class TestUsers(object):
-    """Pass."""
-
-    FIELDS = ["specific_data.data.username", "specific_data.data.mail"]
-
-    QUERY = " and ".join([QUERY_TMPL(f) for f in FIELDS])
-
-    @pytest.fixture(scope="class")
-    def apiobj(self, url, creds):
-        """Pass."""
-        need_creds(creds)
-        http = axonapi.Http(url=url, certwarn=False)
-        auth = creds["cls"](http=http, **creds["creds"])
-        auth.login()
-        api = axonapi.api.Users(auth=auth)
-        assert format(auth.__class__.__name__) in format(api)
-        assert format(auth.__class__.__name__) in repr(api)
-        assert http.url in format(api)
-        assert http.url in repr(api)
-        assert is_type.dict(api._default_fields)
-        assert isinstance(api._router, axonapi.api.routers.Router)
-        assert isinstance(api.labels, axonapi.api.mixins.Child)
-        assert isinstance(api.labels, axonapi.api.users_devices.Labels)
-        assert isinstance(api.saved_query, axonapi.api.mixins.Child)
-        assert isinstance(api.saved_query, axonapi.api.users_devices.SavedQuery)
-        assert isinstance(api.fields, axonapi.api.mixins.Child)
-        assert isinstance(api.fields, axonapi.api.users_devices.Fields)
-        assert isinstance(api.adapters, axonapi.api.adapters.Adapters)
-        return api
-
-    @pytest.fixture(scope="class")
-    def all_assets(self, apiobj):
-        """Pass."""
-        data = apiobj.get(
-            query=self.QUERY, manual_fields=self.FIELDS, count_max=10, count_error=False
-        )
-        assert is_type.list(data)
-
-        if not data:
-            reason = "No users returned with fields: {}"
-            reason = reason.format(self.FIELDS)
-            pytest.skip(reason=reason)
-
-        for asset in data:
-            assert is_type.dict(asset)
-            for x in self.FIELDS:
-                assert x in asset
-                assert asset[x]
-
-        return data
-
-    @pytest.fixture(scope="class")
-    def single_asset(self, apiobj):
-        """Pass."""
-        data = apiobj._get(query=self.QUERY, page_size=1, fields=self.FIELDS)
-        assert is_type.dict(data)
-
-        assets = data["assets"]
-        assert is_type.list(assets)
-
-        if not assets:
-            reason = "No users returned with fields: {}"
-            reason = reason.format(self.FIELDS)
-            pytest.skip(reason=reason)
-
-        assert len(assets) == 1
-
-        asset = assets[0]
-        assert is_type.dict(asset)
-
-        for x in self.FIELDS:
-            assert x in asset
-            assert asset[x]
-
-        return asset
-
-    def test_get_by_username(self, apiobj, single_asset):
-        """Pass."""
-        value = single_asset["specific_data.data.username"]
-        value = value[0] if is_type.list(value) else value
-
-        data = apiobj.get_by_username(value=value, **{"generic": self.FIELDS})
-
-        assert is_type.dict(data)
-
-        for x in self.FIELDS:
-            assert x in data
-            assert data[x]
-
-    def test_get_by_mail(self, apiobj, single_asset):
-        """Pass."""
-        value = single_asset["specific_data.data.mail"]
-        value = value[0] if is_type.list(value) else value
-
-        data = apiobj.get_by_mail(value=value, **{"generic": self.FIELDS})
-
-        assert is_type.dict(data)
-
-        for x in self.FIELDS:
-            assert x in data
-            assert data[x]
-
-
-@pytest.mark.needs_url
-@pytest.mark.needs_key_creds
-@pytest.mark.parametrize("creds", ["creds_key"], indirect=True, scope="class")
-class TestDevices(object):
-    """Pass."""
-
-    FIELDS = [
-        "specific_data.data.network_interfaces.ips",
-        "specific_data.data.network_interfaces.mac",
-        "specific_data.data.hostname",
-    ]
-
-    QUERY = " and ".join([QUERY_TMPL(f) for f in FIELDS])
-
-    @pytest.fixture(scope="class")
-    def apiobj(self, url, creds):
-        """Pass."""
-        need_creds(creds)
-        http = axonapi.Http(url=url, certwarn=False)
-        auth = creds["cls"](http=http, **creds["creds"])
-        auth.login()
-        api = axonapi.api.Devices(auth=auth)
-        assert format(auth.__class__.__name__) in format(api)
-        assert format(auth.__class__.__name__) in repr(api)
-        assert http.url in format(api)
-        assert http.url in repr(api)
-        assert is_type.dict(api._default_fields)
-        assert isinstance(api._router, axonapi.api.routers.Router)
-        assert isinstance(api.labels, axonapi.api.mixins.Child)
-        assert isinstance(api.labels, axonapi.api.users_devices.Labels)
-        assert isinstance(api.saved_query, axonapi.api.mixins.Child)
-        assert isinstance(api.saved_query, axonapi.api.users_devices.SavedQuery)
-        assert isinstance(api.fields, axonapi.api.mixins.Child)
-        assert isinstance(api.fields, axonapi.api.users_devices.Fields)
-        assert isinstance(api.adapters, axonapi.api.adapters.Adapters)
-        return api
-
-    @pytest.fixture(scope="class")
-    def all_assets(self, apiobj):
-        """Pass."""
-        data = apiobj.get(
-            query=self.QUERY, manual_fields=self.FIELDS, count_max=10, count_error=False
-        )
-        assert is_type.list(data)
-
-        if not data:
-            reason = "No devices returned with fields: {}"
-            reason = reason.format(self.FIELDS)
-            pytest.skip(reason=reason)
-
-        for asset in data:
-            assert is_type.dict(asset)
-            for x in self.FIELDS:
-                assert x in asset
-                assert asset[x]
-
-        return data
-
-    def test_get_by_hostname(self, apiobj, all_assets):
-        """Pass."""
-        value = all_assets[0]["specific_data.data.hostname"]
-        value = value[0] if is_type.list(value) else value
-
-        data = apiobj.get_by_hostname(value=value, **{"generic": self.FIELDS})
-
-        assert is_type.dict(data)
-
-        for x in self.FIELDS:
-            assert x in data
-            assert data[x]
-
-    def test_get_by_mac(self, apiobj, all_assets):
-        """Pass."""
-        value = all_assets[0]["specific_data.data.network_interfaces.mac"]
-        value = value[0] if is_type.list(value) else value
-
-        data = apiobj.get_by_mac(value=value, **{"generic": self.FIELDS})
-
-        assert is_type.dict(data)
-
-        for x in self.FIELDS:
-            assert x in data
-            assert data[x]
-
-    def test_get_by_ip(self, apiobj, all_assets):
-        """Pass."""
-        value = all_assets[0]["specific_data.data.network_interfaces.ips"]
-        value = value[0] if is_type.list(value) else value
-
-        data = apiobj.get_by_ip(value=value, **{"generic": self.FIELDS})
-
-        assert is_type.dict(data)
-
-        for x in self.FIELDS:
-            assert x in data
-            assert data[x]
-
-    def test_get_by_in_subnet(self, apiobj, all_assets):
-        """Pass."""
-        value = all_assets[0]["specific_data.data.network_interfaces.ips"]
-        value = value[0] if is_type.list(value) else value
-
-        search = "{}/32".format(value)
-        data = apiobj.get_by_in_subnet(value=search, **{"generic": self.FIELDS})
-
-        assert is_type.list(data)
-        assert len(data) == 1
-
-        for asset in data:
-            assert is_type.dict(asset)
-            for x in self.FIELDS:
-                assert x in asset
-                assert asset[x]
-
-    def test_get_by_not_in_subnet(self, apiobj, all_assets):
-        """Pass."""
-        value = all_assets[0]["specific_data.data.network_interfaces.ips"]
-        value = value[0] if is_type.list(value) else value
-        regex = re.compile(value)
-
-        search = "{}/32".format(value)
-        data = apiobj.get_by_not_in_subnet(value=search, **{"generic": self.FIELDS})
-
-        assert is_type.list(data)
-
-        for asset in data:
-            assert is_type.dict(asset)
-            ips = asset.get("specific_data.data.network_interfaces.ips", [])
-            ips = axonapi.tools.listify(ips)
-            for ip in ips:
-                match = regex.match(ip)
-                assert not match
-'''
-
-
 @pytest.mark.parametrize(
     "apicls", [(axonapi.api.Users), (axonapi.Devices)], scope="class"
 )
-class TestParsedFields(TestBase):
+class TestParsedFields(Base):
     """Pass."""
 
     def test_fields(self, apiobj):
@@ -1496,7 +1173,7 @@ class TestParsedFields(TestBase):
 @pytest.mark.parametrize(
     "apicls", [(axonapi.api.Users), (axonapi.Devices)], scope="class"
 )
-class TestRawFields(TestBase):
+class TestRawFields(Base):
     """Pass."""
 
     def test_fields(self, apiobj):
