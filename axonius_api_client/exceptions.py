@@ -396,7 +396,7 @@ class ResponseError(ApiError):
         super(ResponseError, self).__init__(msg)
 
 
-class ResponseCodeNot200(ResponseError):
+class ResponseNotOk(ResponseError):
     """Error when response has invalid JSON."""
 
 

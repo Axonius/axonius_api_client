@@ -21,6 +21,7 @@ class UserDeviceMixin(mixins.ModelUserDevice, mixins.Mixins):
         self.labels = Labels(parent=self)
         self.saved_query = SavedQuery(parent=self)
         self.fields = Fields(parent=self)
+        self.reports = Reports(parent=self)
 
         super(UserDeviceMixin, self)._init(auth=auth, **kwargs)
 
@@ -114,6 +115,7 @@ class UserDeviceMixin(mixins.ModelUserDevice, mixins.Mixins):
         """
         return self._count(query=query, use_post=use_post)
 
+    # FUTURE: include outdated and/or query_pre?
     def find_by_value(
         self,
         value,
@@ -121,6 +123,7 @@ class UserDeviceMixin(mixins.ModelUserDevice, mixins.Mixins):
         query_post="",
         match_count=None,
         match_error=True,
+        eq_single=True,
         fields=None,
         fields_default=True,
         fields_error=True,
@@ -154,11 +157,10 @@ class UserDeviceMixin(mixins.ModelUserDevice, mixins.Mixins):
         else:
             query = '{not_flag}{field} == "{value}"'
 
-            # if field == "specific_data.data.username":
-            #     pdb.set_trace()
-            if not query_post and not not_flag:
+            if eq_single and (not query_post and not not_flag):
                 max_rows = 1
                 match_count = 1
+                match_error = True
 
         query = query.format(not_flag=not_flag, field=field, value=value) + query_post
 
@@ -315,7 +317,7 @@ class UserDeviceMixin(mixins.ModelUserDevice, mixins.Mixins):
         self, name, max_rows=None, max_pages=None, page_size=None, use_post=False
     ):
         """Pass."""
-        sq = self.saved_query.find_by_name(value=name, use_regex=False)
+        sq = self.saved_query.find_by_name(value=name, match_count=1, match_error=True)
 
         return self.get(
             query=sq["view"]["query"]["filter"],
@@ -325,18 +327,6 @@ class UserDeviceMixin(mixins.ModelUserDevice, mixins.Mixins):
             page_size=page_size,
             use_post=use_post,
         )
-
-    # def report_adapters(
-    #     self, rows, serial=False, unconfigured=False, others_not_seen=False
-    # ):
-    #     """Pass."""
-    #     return ParserReportsAdapter(raw=rows, parent=self).parse(
-    #         fields=self._parent.fields.get(),
-    #         adapters=self.adapters.get(),
-    #         serial=serial,
-    #         unconfigured=unconfigured,
-    #         others_not_seen=others_not_seen,
-    #     )
 
 
 class Users(UserDeviceMixin):
@@ -739,7 +729,9 @@ class SavedQuery(mixins.Child):
             :obj:`str`: empty string
 
         """
-        return self._delete(ids=[x["uuid"] for x in tools.listify(rows)])
+        return self._delete(
+            ids=[x["uuid"] for x in tools.listify(obj=rows, dictkeys=False)]
+        )
 
     def get(self, query=None, max_rows=None, max_pages=None, page_size=None):
         """Get saved queries using paging.
@@ -776,9 +768,6 @@ class SavedQuery(mixins.Child):
         rows_fetched = 0
         rows = []
         fetch_start = tools.dt_now()
-
-        # objtype = self._parent._router._object_type
-        # objtype = "Saved Query filter for {o}".format(o=objtype)
 
         msg = [
             "Starting get: page_size={}".format(page_size),
@@ -874,6 +863,7 @@ class SavedQuery(mixins.Child):
         value,
         match_count=None,
         match_error=True,
+        eq_single=True,
         max_rows=None,
         max_pages=None,
         page_size=None,
@@ -908,7 +898,7 @@ class SavedQuery(mixins.Child):
         else:
             query = '{not_flag}name == "{value}"'
 
-            if not not_flag:
+            if eq_single and not not_flag:
                 max_rows = 1
                 match_count = 1
                 match_error = True
@@ -1204,6 +1194,46 @@ class Fields(mixins.Child):
         return val_fields
 
 
+class Reports(mixins.Child):
+    """Pass."""
+
+    # FUTURE:
+    """
+    get all users
+    for each device
+        find any users whose username matches last logged in user
+        device[users] = found_users
+    """
+
+    def missing_adapters(self, rows, adapters=None, fields=None):
+        """Pass."""
+        adapters = adapters or self._parent.adapters.get()
+        fields = fields or self._parent.fields.get()
+        new_rows = []
+
+        for raw_row in rows:
+            row = {k: v for k, v in raw_row.items() if "." in k or k in ["labels"]}
+            row["adapters"] = tools.strip_right(
+                obj=tools.listify(obj=raw_row.get("adapters", [])), fix="_adapter"
+            )
+            row["missing_nocnx"] = []
+            row["missing"] = []
+
+            for adapter in adapters:
+                # this row does not have data from this adapter
+                if adapter["name"] not in row["adapters"]:
+                    # this adapter has no connections
+                    if not adapter["cnx"]:
+                        row["missing_nocnx"].append(adapter["name"])
+                    # this adapter has been fetched by other assets, but not this one
+                    elif adapter["name"] in fields:
+                        row["missing"].append(adapter["name"])
+
+            new_rows.append(row)
+
+        return new_rows
+
+
 class ParserFields(mixins.Parser):
     """Pass."""
 
@@ -1281,104 +1311,3 @@ class ParserFields(mixins.Parser):
             ret[short_name] = fields
 
         return ret
-
-
-'''
-class ParserReportsAdapter(mixins.Parser):
-    """Pass."""
-
-    def _mkserial(self, obj):
-        """Pass."""
-        if self._serial and isinstance(obj, tools.LIST):
-            return tools.join_cr(obj=obj, pre=False)
-        return obj
-
-    def _row(self, raw_row):
-        """Pass."""
-        row = {}
-        missing = []
-
-        adapters = tools.strip_right(obj=raw_row.get("adapters", []), fix="_adapter")
-        row["adapters"] = self._mkserial(adapters)
-
-        for k, v in raw_row.items():
-            if "." in k or k in ["labels"]:
-                row[k] = self._mkserial(v)
-
-        ftimes = raw_row.get("specific_data.data.fetch_time", []) or []
-
-        if not isinstance(ftimes, tools.LIST):
-            ftimes = [ftimes]
-
-        ftimes = [x for x in tools.dt_parse(obj=ftimes)]
-
-        for adapter in self._adapters:
-            name = adapter["name"]
-
-            otype = self._parent.__class__.__name__.upper()
-            others_have_seen = name in self._fields
-
-            is_unconfigured = not adapter["cnx"] or adapter["status"] is None
-
-            skips = [
-                is_unconfigured and not self._unconfigured,
-                not others_have_seen and not self._others_not_seen,
-            ]
-
-            if any(skips):
-                continue
-
-            ftime = "NEVER; NO CONNECTIONS"
-
-            if adapter["status"] is False:
-                ftime = "NEVER; CONNECTIONS BROKEN"
-            elif adapter["status"] is True:
-                ftime = "NEVER; CONNECTIONS OK"
-
-            if name in row["adapters"]:
-                name_idx = row["adapters"].index(name)
-                try:
-                    ftime = ftimes[name_idx]
-                except Exception:
-                    ftime = "UNABLE TO DETERMINE"
-            elif others_have_seen and name not in missing:
-                missing.append(name)
-
-            if self._serial:
-                ftime = format(ftime)
-                status_lines = [
-                    "FETCHED THIS {}: {}".format(otype.rstrip("S"), ftime),
-                    "FETCHED OTHER {}: {}".format(otype, others_have_seen),
-                    "CONNECTIONS OK: {}".format(adapter["cnx_count_ok"]),
-                    "CONNECTIONS BAD: {}".format(adapter["cnx_count_bad"]),
-                ]
-            else:
-                status_lines = {
-                    "FETCHED_THIS_{}".format(otype.rstrip("S")): ftime,
-                    "FETCHED_OTHER_{}".format(otype): others_have_seen,
-                    "CONNECTIONS_OK": adapter["cnx_count_ok"],
-                    "CONNECTIONS_BAD": adapter["cnx_count_bad"],
-                }
-
-            row["adapter: {}".format(name)] = self._mkserial(status_lines)
-
-        row["adapters_missing"] = self._mkserial(missing)
-        return row
-
-    def parse(
-        self, adapters, fields, serial=False, unconfigured=False, others_not_seen=False
-    ):
-        """Pass."""
-        self._adapters = adapters
-        self._fields = fields
-        self._serial = serial
-        self._unconfigured = unconfigured
-        self._others_not_seen = others_not_seen
-
-        self._broken_adapters = [x for x in adapters if x["status"] is False]
-        self._unconfig_adapters = [x for x in adapters if x["status"] is None]
-        self._config_adapters = [x for x in adapters if x["status"] is True]
-
-        return [self._row(x) for x in self._raw]
-
-'''

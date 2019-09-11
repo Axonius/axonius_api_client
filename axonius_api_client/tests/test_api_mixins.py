@@ -74,18 +74,16 @@ class TestMixins(object):
         """Test exc thrown when json has error status."""
         with pytest.raises(exceptions.JsonError):
             apiobj._request(
-                path=apiobj._router.root + "/badwolf",
-                method="get",
-                error_code_not_200=False,
+                path=apiobj._router.root + "/badwolf", method="get", error_status=False
             )
 
     def test_no_json_error(self, apiobj):
         """Test exc thrown when status code != 200."""
-        with pytest.raises(exceptions.ResponseCodeNot200):
+        with pytest.raises(exceptions.ResponseNotOk):
             apiobj._request(
                 path=apiobj._router.root + "/badwolf",
                 method="get",
-                error_code_not_200=True,
+                error_status=True,
                 is_json=False,
             )
 

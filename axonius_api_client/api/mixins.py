@@ -93,7 +93,7 @@ class Mixins(object):
         method="get",
         raw=False,
         is_json=True,
-        error_code_not_200=True,
+        error_status=True,
         error_json_bad_status=True,
         error_json_invalid=True,
         **kwargs
@@ -145,23 +145,24 @@ class Mixins(object):
         else:
             data = response.text
 
-        self._check_response_code(
-            response=response, error_code_not_200=error_code_not_200
-        )
+        self._check_response_code(response=response, error_status=error_status)
 
         return data
 
-    def _check_response_code(self, response, error_code_not_200=True):
+    def _check_response_code(self, response, error_status=True):
         """Check response status code.
 
         Raises:
             :exc:`exceptions.ResponseError`
 
         """
-        if response.status_code != 200 and error_code_not_200:
-            raise exceptions.ResponseCodeNot200(
-                response=response, exc=None, details=True, bodies=True
-            )
+        if error_status:
+            try:
+                response.raise_for_status()
+            except Exception as exc:
+                raise exceptions.ResponseNotOk(
+                    response=response, exc=exc, details=True, bodies=True
+                )
 
     def _check_response_json(
         self, response, error_json_bad_status=True, error_json_invalid=True

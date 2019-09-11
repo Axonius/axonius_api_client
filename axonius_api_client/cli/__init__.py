@@ -21,8 +21,8 @@ AX_DOTENV = os.environ.get("AX_DOTENV", "")
 CWD_PATH = tools.path(obj=os.getcwd())
 
 
-# TODO: add cert_human logic
-# TODO: FIGURE OUT HOW REPORTS GUI SENDS CSV
+# FUTURE: add cert_human logic
+# FUTURE: FIGURE OUT HOW REPORTS GUI SENDS CSV
 # FUTURE: prompt does not use CR when re-prompting on empty var with hide_input=False
 # FUTURE: add doc links
 @click.group()

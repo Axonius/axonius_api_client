@@ -287,7 +287,7 @@ class Cnx(mixins.Child):
             path=path,
             json=data,
             error_json_bad_status=False,
-            error_code_not_200=False,
+            error_status=False,
         )
 
     def _check(self, adapter_name, node_id, config):
@@ -317,7 +317,7 @@ class Cnx(mixins.Child):
             path=path,
             json=data,
             error_json_bad_status=False,
-            error_code_not_200=False,
+            error_status=False,
         )
 
     def _delete(self, adapter_name, node_id, cnx_uuid, delete_entities=False):
@@ -350,7 +350,7 @@ class Cnx(mixins.Child):
             json=data,
             params=params,
             error_json_bad_status=False,
-            error_code_not_200=False,
+            error_status=False,
         )
 
     def _update(self, adapter_name, node_id, config, cnx_uuid):
@@ -381,7 +381,7 @@ class Cnx(mixins.Child):
             path=path,
             json=data,
             error_json_bad_status=False,
-            error_code_not_200=False,
+            error_status=False,
         )
 
     def add(

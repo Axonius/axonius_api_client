@@ -162,6 +162,7 @@ class Base(object):
             labels=axonapi.api.users_devices.Labels,
             saved_query=axonapi.api.users_devices.SavedQuery,
             fields=axonapi.api.users_devices.Fields,
+            reports=axonapi.api.users_devices.Reports,
         )
 
         utils.check_apiobj_xref(apiobj=api, adapters=axonapi.api.adapters.Adapters)
@@ -311,6 +312,14 @@ class TestBoth(Base):
         with pytest.raises(exceptions.ValueNotFound):
             apiobj.get_by_id(id="badwolf")
 
+    def test_get_by_saved_query(self, apiobj):
+        """Pass."""
+        sqs = apiobj.saved_query.get()
+        sq = sqs[0]
+        sq_name = sq["name"]
+        data = apiobj.get_by_saved_query(name=sq_name, max_rows=1)
+        assert isinstance(data, tools.LIST)
+
     def test_find_by_field_value(self, apiobj):
         """Pass."""
         asset = self.get_single_asset(apiobj=apiobj, fields=apiobj._default_fields)
@@ -329,7 +338,6 @@ class TestBoth(Base):
         asset = self.get_single_asset(apiobj=apiobj, fields=apiobj._default_fields)
         assert isinstance(asset, dict)
         field = apiobj.TEST_DATA["single_field"]["exp"]
-        # value_is_list = isinstance(asset[field], tools.LIST)
         value = asset[field]
         value_list = tools.listify(value)
         assert value
@@ -399,7 +407,6 @@ class Single(Base):
             value=value, query_post=query_post, match_count=1, fields=specfield
         )
         assert isinstance(found, dict)
-        # pdb.set_trace()
         found_value = found[specfield]
         assert tools.listify(found_value) == tools.listify(asset_value)
 
@@ -421,12 +428,6 @@ class TestUsers(Single):
         self.find_by_specifics(
             apiobj=apiobj, specfield=specfield, specmethod=specmethod
         )
-        # asset = self.get_single_asset(apiobj=apiobj, fields=specfield)
-        # asset_value = asset[specfield]
-        # value = tools.listify(obj=asset_value)[0]
-        # found = getattr(apiobj, specmethod)(value=value)
-        # assert isinstance(found, dict)
-        # assert tools.listify(found[specfield]) == tools.listify(asset[specfield])
 
 
 @pytest.mark.parametrize("apicls", [axonapi.api.Devices], scope="class")
@@ -447,10 +448,6 @@ class TestDevices(Single):
         self.find_by_specifics(
             apiobj=apiobj, specfield=specfield, specmethod=specmethod
         )
-        # asset = self.get_single_asset(apiobj=apiobj, fields=specfield)
-        # found = getattr(apiobj, specmethod)(value=asset[specfield])
-        # assert isinstance(found, dict)
-        # assert tools.listify(found[specfield]) == tools.listify(asset[specfield])
 
     def test_find_by_in_subnet(self, apiobj):
         """Pass."""
@@ -491,6 +488,28 @@ class TestDevices(Single):
         # could do value checking here, but we'd have to get every asset
         # lets not do that...
         assert isinstance(found, tools.LIST)
+
+
+@pytest.mark.parametrize("apicls", [axonapi.api.Users, axonapi.Devices], scope="class")
+class TestReports(Base):
+    """Pass."""
+
+    @pytest.fixture(scope="class")
+    def report_data(self, apiobj):
+        """Pass."""
+        rows = apiobj.get(max_rows=20)
+        assert isinstance(rows, tools.LIST)
+        assert len(rows) == 20
+        return rows
+
+    def test_missing_adapters(self, apiobj, report_data):
+        """Pass."""
+        report = apiobj.reports.missing_adapters(rows=report_data)
+        assert isinstance(report, tools.LIST)
+        for item in report:
+            assert isinstance(item, dict)
+            assert isinstance(item["missing"], tools.LIST)
+            assert isinstance(item["missing_nocnx"], tools.LIST)
 
 
 @pytest.mark.parametrize("apicls", [axonapi.api.Users, axonapi.Devices], scope="class")
@@ -561,6 +580,11 @@ class TestFields(Base):
                 for x in found:
                     assert isinstance(x, tools.STR)
                 assert found == info["exp"]
+
+    def test_find_manual(self, apiobj):
+        """Pass."""
+        found = apiobj.fields.find(field="MANUAL:badwolf", all_fields=apiobj.ALL_FIELDS)
+        assert found == "badwolf"
 
     def test_find_bad_adapter(self, apiobj):
         """Pass."""
