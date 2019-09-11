@@ -2,8 +2,6 @@
 """Test suite for axonapi.api.users_devices."""
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-import pdb  # noqa
-
 import pytest
 import requests
 

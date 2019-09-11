@@ -7,7 +7,6 @@ if __name__ == "__main__":
     import axonius_api_client as axonapi
 
     try:
-        # ctx = axonapi.cli.main(standalone_mode=False)
-        ctx = axonapi.cli.main()
+        ctx = axonapi.cli.cli()
     except SystemExit:
         pass

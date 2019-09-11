@@ -4,7 +4,10 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import re
 
+from click.testing import CliRunner
+
 import axonius_api_client as axonapi
+from axonius_api_client import cli
 
 
 def log_check(caplog, entries):
@@ -70,3 +73,43 @@ def check_apiobj_xref(apiobj, **kwargs):
 
         assert isinstance(attr, axonapi.api.mixins.Model)
         assert isinstance(attr, v)
+
+
+def load_clirunner(request, monkeypatch):
+    """Pass."""
+    runner = CliRunner(mix_stderr=False)
+
+    url = request.config.getoption("--ax-url")
+    key = request.config.getoption("--ax-key")
+    secret = request.config.getoption("--ax-secret")
+
+    monkeypatch.setenv("AX_URL", url)
+    monkeypatch.setenv("AX_KEY", key)
+    monkeypatch.setenv("AX_SECRET", secret)
+    monkeypatch.setattr(cli.context, "load_dotenv", mock_load_dotenv)
+    return runner
+
+
+def check_stderr_lines(result):
+    """Pass."""
+    stderr = result.stderr.splitlines()
+
+    assert stderr[0] == (
+        "** WARNING: Unverified HTTPS request! Set AX_CERT environment variable "
+        "or --cert option to the path of a CA bundle!"
+    ), stderr
+    assert stderr[1].startswith("** Connected to "), stderr
+
+
+def mock_load_dotenv():
+    """Pass."""
+    pass
+
+
+class MockError(Exception):
+    """Pass."""
+
+
+def mock_failure(*args, **kwargs):
+    """Pass."""
+    raise MockError("badwolf")

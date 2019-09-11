@@ -2,7 +2,6 @@
 """Axonius API Client package."""
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-import pdb  # noqa
 import time
 import warnings
 
@@ -87,13 +86,9 @@ class Adapters(mixins.Model, mixins.Mixins):
 
         all_adapters = self.get()
 
-        adapters = self.filter_by_nodes(
-            value=node, adapters=all_adapters, use_regex=False
-        )
+        adapters = self.filter_by_nodes(value=node, adapters=all_adapters)
 
-        adapters = self.filter_by_names(
-            value=adapter, adapters=adapters, use_regex=False
-        )
+        adapters = self.filter_by_names(value=adapter, adapters=adapters)
 
         if len(adapters) != 1:
             raise exceptions.ValueNotFound(
@@ -108,7 +103,7 @@ class Adapters(mixins.Model, mixins.Mixins):
         return adapters[0]
 
     def filter_by_names(
-        self, adapters, value, use_regex=False, match_count=None, match_error=True
+        self, adapters, value, ignore_case=True, match_count=None, match_error=True
     ):
         """Pass."""
         value = [
@@ -119,8 +114,9 @@ class Adapters(mixins.Model, mixins.Mixins):
         matches = []
 
         for adapter in adapters:
+
             match = tools.values_match(
-                checks=value, values=adapter["name"], use_regex=use_regex
+                checks=value, values=adapter["name"], ignore_case=ignore_case
             )
 
             if match and adapter not in matches:
@@ -132,30 +128,20 @@ class Adapters(mixins.Model, mixins.Mixins):
                 value_msg="Adapters by names",
                 known=self.get_known,
                 known_msg="Adapters",
-                match_type="regex matches" if use_regex else "equals",
                 adapters=adapters,
             )
 
         return matches
 
     def filter_by_nodes(
-        self,
-        adapters,
-        value,
-        use_regex=False,
-        ignore_case=True,
-        match_count=None,
-        match_error=True,
+        self, adapters, value, ignore_case=True, match_count=None, match_error=True
     ):
         """Pass."""
         matches = []
 
         for adapter in adapters:
             match = tools.values_match(
-                checks=value,
-                values=adapter["node_name"],
-                use_regex=use_regex,
-                ignore_case=ignore_case,
+                checks=value, values=adapter["node_name"], ignore_case=ignore_case
             )
 
             if match and adapter not in matches:
@@ -167,7 +153,6 @@ class Adapters(mixins.Model, mixins.Mixins):
                 value_msg="Adapters by node names",
                 known=self.get_known,
                 known_msg="Adapters",
-                match_type="regex matches" if use_regex else "equals",
                 adapters=adapters,
             )
 
@@ -695,14 +680,14 @@ class Cnx(mixins.Child):
         return ret
 
     def filter_by_ids(
-        self, cnxs, value=None, use_regex=False, match_count=None, match_error=True
+        self, cnxs, value=None, ignore_case=True, match_count=None, match_error=True
     ):
         """Get all connections for all adapters."""
         matches = []
 
         for cnx in cnxs:
             match = tools.values_match(
-                checks=value, values=cnx["id"], use_regex=use_regex
+                checks=value, values=cnx["id"], ignore_case=ignore_case
             )
 
             if match and cnx not in matches:
@@ -714,21 +699,20 @@ class Cnx(mixins.Child):
                 value_msg="Adapter connections by id",
                 known=self.get_known,
                 known_msg="Adapter connections",
-                match_type="regex matches" if use_regex else "equals",
                 cnxs=cnxs,
             )
 
         return matches
 
     def filter_by_uuids(
-        self, cnxs, value=None, use_regex=False, match_count=None, match_error=True
+        self, cnxs, value=None, ignore_case=True, match_count=None, match_error=True
     ):
         """Get all connections for all adapters."""
         matches = []
 
         for cnx in cnxs:
             match = tools.values_match(
-                checks=value, values=cnx["uuid"], use_regex=use_regex
+                checks=value, values=cnx["uuid"], ignore_case=ignore_case
             )
 
             if match and cnx not in matches:
@@ -740,7 +724,6 @@ class Cnx(mixins.Child):
                 value_msg="Adapter connections by uuid",
                 known=self.get_known,
                 known_msg="Adapter connections",
-                match_type="regex matches" if use_regex else "equals",
                 cnxs=cnxs,
             )
 

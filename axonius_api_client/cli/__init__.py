@@ -2,23 +2,18 @@
 """Command line interface for Axonius API Client."""
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-import os
-
 import click
 
-from .. import constants, logs, tools, version
+from .. import constants, version
 from . import (
     cmd_adapters_get,
     cmd_adapters_get_clients,
-    cmd_object_adapters,
     cmd_object_fields,
     cmd_object_get,
+    cmd_object_missing_adapters,
     cmd_shell,
     context,
 )
-
-AX_DOTENV = os.environ.get("AX_DOTENV", "")
-CWD_PATH = tools.path(obj=os.getcwd())
 
 
 # FUTURE: add cert_human logic
@@ -75,25 +70,10 @@ CWD_PATH = tools.path(obj=os.getcwd())
     show_default=True,
 )
 @click.option(
-    "--log-level-override",
-    help="Override the logging level for everything.",
-    type=click.Choice(constants.LOG_LEVELS_STR),
-    show_envvar=True,
-    show_default=True,
-)
-@click.option(
     "--log-console/--no-log-console",
     default=False,
     help="Enable logging to --log-console-output.",
     is_flag=True,
-    show_envvar=True,
-    show_default=True,
-)
-@click.option(
-    "--log-console-output",
-    default="stderr",
-    help="Send console logging to stderr or stdout.",
-    type=click.Choice(["stderr", "stdout"]),
     show_envvar=True,
     show_default=True,
 )
@@ -208,21 +188,11 @@ CWD_PATH = tools.path(obj=os.getcwd())
 @click.version_option(version.__version__)
 @context.pass_context
 @click.pass_context
-def cli(click_ctx, ctx, log_level_override, log_console_output, **kwargs):
+def cli(click_ctx, ctx, **kwargs):
     """Axonius API Client command line tool."""
     ctx._click_ctx = click_ctx
-
-    if log_console_output == "stderr":
-        kwargs["log_console_method"] = logs.add_stderr
-    elif log_console_output == "stdout":
-        kwargs["log_console_method"] = logs.add_stdout
-
-    if log_level_override:
-        kwargs.update(
-            {k: log_level_override for k in kwargs if k.startswith("log_level_")}
-        )
-
     ctx._connect_args.update(kwargs)
+    context.load_dotenv()
     return ctx
 
 
@@ -251,30 +221,11 @@ cli.add_command(cmd_shell.cmd)
 
 users.add_command(cmd_object_get.cmd)
 users.add_command(cmd_object_fields.cmd)
-users.add_command(cmd_object_adapters.cmd)
+users.add_command(cmd_object_missing_adapters.cmd)
 
 devices.add_command(cmd_object_get.cmd)
 devices.add_command(cmd_object_fields.cmd)
-devices.add_command(cmd_object_adapters.cmd)
+devices.add_command(cmd_object_missing_adapters.cmd)
 
 adapters.add_command(cmd_adapters_get.cmd)
 adapters.add_command(cmd_adapters_get_clients.cmd)
-
-
-def main(*args, **kwargs):
-    """Pass."""
-    context.load_dotenv()
-    return cli(*args, **kwargs)
-
-
-if __name__ == "__main__":
-    main()
-
-"""
-devices get --query b --field generic:1
-users get --query b --field generic:1
-get saved-query!
-
-FUTURE:
-adapters add-client
-"""

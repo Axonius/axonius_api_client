@@ -408,7 +408,7 @@ class Enforcements(mixins.Model, mixins.Mixins):
             not_flag = "not "
 
         if value.startswith("RE:"):
-            value = tools.strip_left(obj=value, fix="RE:")
+            value = tools.strip_left(obj=value, fix="RE:").strip()
             query = '{not_flag}name == regex("{value}", "i")'
         else:
             query = '{not_flag}name == "{value}"'

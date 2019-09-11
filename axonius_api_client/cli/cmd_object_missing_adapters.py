@@ -8,7 +8,7 @@ from .. import tools
 from . import context
 
 
-@click.command("adapters", context_settings=context.CONTEXT_SETTINGS)
+@click.command("missing-adapters", context_settings=context.CONTEXT_SETTINGS)
 @context.connect_options
 @context.export_options
 @click.option(

@@ -65,27 +65,30 @@ def cmd(
     client = ctx.start_client(url=url, key=key, secret=secret)
 
     try:
-        raw_data = client.adapters.get(
-            names=name or None,
-            nodes=node or None,
-            client_status=client_status,
-            client_min=client_min,
-            client_max=client_max,
-        )
+        raw_data = client.adapters.get()
+        raw_data = client.adapters.filter_by_names
+        raw_data
+        # raw_data = client.adapters.get(
+        #     names=name or None,
+        #     nodes=node or None,
+        #     client_status=client_status,
+        #     client_min=client_min,
+        #     client_max=client_max,
+        # )
     except Exception as exc:
         if ctx.wraperror:
             ctx.echo_error(format(exc))
         raise
 
-    formatters = {"json": ctx.to_json, "csv": to_csv}
-    ctx.handle_export(
-        raw_data=raw_data,
-        formatters=formatters,
-        export_format=export_format,
-        export_file=export_file,
-        export_path=export_path,
-        export_overwrite=export_overwrite,
-    )
+    # formatters = {"json": ctx.to_json, "csv": to_csv}
+    # ctx.handle_export(
+    #     raw_data=raw_data,
+    #     formatters=formatters,
+    #     export_format=export_format,
+    #     export_file=export_file,
+    #     export_path=export_path,
+    #     export_overwrite=export_overwrite,
+    # )
 
     return ctx
 

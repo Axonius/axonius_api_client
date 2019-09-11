@@ -2,6 +2,7 @@
 """Command line interface for Axonius API Client."""
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+import pdb  # noqa
 import re
 
 import click
@@ -86,8 +87,6 @@ def cmd(
         export_path=export_path,
         export_overwrite=export_overwrite,
     )
-
-    return ctx
 
 
 def to_csv(ctx, raw_data, **kwargs):

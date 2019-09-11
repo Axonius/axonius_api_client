@@ -2,12 +2,7 @@
 """Test suite for axonius_api_client.tools."""
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-import pdb  # noqa
-
 from axonius_api_client import exceptions, tools
-
-# import pytest
-
 
 # FUTURE: Test subclassing/strings/etc
 

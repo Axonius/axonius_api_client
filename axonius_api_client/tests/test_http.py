@@ -3,7 +3,6 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import logging
-import pdb  # noqa
 import sys
 
 import pytest
@@ -15,9 +14,6 @@ from axonius_api_client import exceptions
 from . import utils
 
 InsecureRequestWarning = requests.urllib3.exceptions.InsecureRequestWarning
-
-# turns all warnings into errors for this module
-# pytestmark = pytest.mark.filterwarnings("error")
 
 
 class TestParserUrl(object):

@@ -2,7 +2,6 @@
 """Test suite for axonius_api_client.tools."""
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-import pdb  # noqa
 import tempfile
 
 import pytest
@@ -495,106 +494,62 @@ class TestValuesMatch(object):
 
     def test_no_case_no_regex(self):
         """Simple test."""
-        x = tools.values_match(
-            checks="x", values="x", use_regex=False, ignore_case=False
-        )
+        x = tools.values_match(checks="x", values="x", ignore_case=False)
         assert x
-        x = tools.values_match(
-            checks="x", values="X", use_regex=False, ignore_case=False
-        )
+        x = tools.values_match(checks="x", values="X", ignore_case=False)
         assert not x
-        x = tools.values_match(
-            checks="x", values=["X"], use_regex=False, ignore_case=False
-        )
+        x = tools.values_match(checks="x", values=["X"], ignore_case=False)
         assert not x
-        x = tools.values_match(
-            checks="x", values=["X", "x"], use_regex=False, ignore_case=False
-        )
+        x = tools.values_match(checks="x", values=["X", "x"], ignore_case=False)
         assert not x
 
     def test_case_no_regex(self):
         """Simple test."""
-        x = tools.values_match(
-            checks="x", values="X", use_regex=False, ignore_case=True
-        )
+        x = tools.values_match(checks="x", values="X", ignore_case=True)
         assert x
-        x = tools.values_match(
-            checks="x", values="x", use_regex=False, ignore_case=True
-        )
+        x = tools.values_match(checks="x", values="x", ignore_case=True)
         assert x
-        x = tools.values_match(
-            checks="x", values="xxxxx", use_regex=False, ignore_case=True
-        )
+        x = tools.values_match(checks="x", values="xxxxx", ignore_case=True)
         assert not x
-        x = tools.values_match(
-            checks="x", values=["X"], use_regex=False, ignore_case=True
-        )
+        x = tools.values_match(checks="x", values=["X"], ignore_case=True)
         assert x
-        x = tools.values_match(
-            checks="x", values=["X", "x"], use_regex=False, ignore_case=True
-        )
+        x = tools.values_match(checks="x", values=["X", "x"], ignore_case=True)
         assert x
-        x = tools.values_match(
-            checks="x", values=["A", "a"], use_regex=False, ignore_case=True
-        )
+        x = tools.values_match(checks="x", values=["A", "a"], ignore_case=True)
         assert not x
 
     def test_case_regex(self):
         """Simple test."""
-        x = tools.values_match(checks="x", values="X", use_regex=True, ignore_case=True)
+        x = tools.values_match(checks="RE:x", values="X", ignore_case=True)
         assert x
-        x = tools.values_match(
-            checks=".*", values="X", use_regex=True, ignore_case=True
-        )
+        x = tools.values_match(checks="RE:.*", values="X", ignore_case=True)
         assert x
-        x = tools.values_match(checks="x", values="x", use_regex=True, ignore_case=True)
+        x = tools.values_match(checks="RE:x", values="x", ignore_case=True)
         assert x
-        x = tools.values_match(
-            checks="x", values="xxxxx", use_regex=True, ignore_case=True
-        )
+        x = tools.values_match(checks="RE:x", values="xxxxx", ignore_case=True)
         assert x
-        x = tools.values_match(
-            checks="x", values=["X"], use_regex=True, ignore_case=True
-        )
+        x = tools.values_match(checks="RE:x", values=["X"], ignore_case=True)
         assert x
-        x = tools.values_match(
-            checks="x", values=["X", "x"], use_regex=True, ignore_case=True
-        )
+        x = tools.values_match(checks="RE:x", values=["X", "x"], ignore_case=True)
         assert x
-        x = tools.values_match(
-            checks="x", values=["A", "a"], use_regex=True, ignore_case=True
-        )
+        x = tools.values_match(checks="RE:x", values=["A", "a"], ignore_case=True)
         assert not x
 
     def test_no_case_regex(self):
         """Simple test."""
-        x = tools.values_match(
-            checks="x", values="X", use_regex=True, ignore_case=False
-        )
+        x = tools.values_match(checks="RE:x", values="X", ignore_case=False)
         assert not x
-        x = tools.values_match(
-            checks=".*", values="X", use_regex=True, ignore_case=False
-        )
+        x = tools.values_match(checks="RE:.*", values="X", ignore_case=False)
         assert x
-        x = tools.values_match(
-            checks="x", values="x", use_regex=True, ignore_case=False
-        )
+        x = tools.values_match(checks="RE:x", values="x", ignore_case=False)
         assert x
-        x = tools.values_match(
-            checks="x", values="xxxxx", use_regex=True, ignore_case=False
-        )
+        x = tools.values_match(checks="RE:x", values="xxxxx", ignore_case=False)
         assert x
-        x = tools.values_match(
-            checks="x", values=["X"], use_regex=True, ignore_case=False
-        )
+        x = tools.values_match(checks="RE:x", values=["X"], ignore_case=False)
         assert not x
-        x = tools.values_match(
-            checks="x", values=["X", "x"], use_regex=True, ignore_case=False
-        )
+        x = tools.values_match(checks="RE:x", values=["X", "x"], ignore_case=False)
         assert not x
-        x = tools.values_match(
-            checks="x", values=["A", "a"], use_regex=True, ignore_case=False
-        )
+        x = tools.values_match(checks="RE:x", values=["A", "a"], ignore_case=False)
         assert not x
 
 

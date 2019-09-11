@@ -67,7 +67,7 @@ def nest_depth(obj):
     return 0
 
 
-def values_match(checks, values, use_regex=False, ignore_case=True):
+def values_match(checks, values, ignore_case=True):
     """Pass."""
     if ignore_case:
         re_flags = re.I
@@ -75,8 +75,8 @@ def values_match(checks, values, use_regex=False, ignore_case=True):
         re_flags = 0
 
     for check in listify(obj=checks, dictkeys=False):
-        if use_regex:
-            re_text = check
+        if check.startswith("RE:"):
+            re_text = strip_left(obj=check, fix="RE:").strip()
             re_pattern = re.compile(re_text, re_flags)
             re_method = re_pattern.search
         else:

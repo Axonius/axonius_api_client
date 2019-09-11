@@ -3,7 +3,6 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import ipaddress
-import pdb  # noqa
 
 from .. import constants, exceptions, tools
 from . import adapters, mixins, routers
@@ -716,14 +715,6 @@ class SavedQuery(mixins.Child):
         Args:
             name (:obj:`str`):
                 Name of saved query to delete.
-            use_regex (:obj:`bool`, optional):
-                Search for name using use_regex.
-
-                Defaults to: False.
-            only1 (:obj:`bool`, optional):
-                Only allow one match to name.
-
-                Defaults to: True.
 
         Returns:
             :obj:`str`: empty string
