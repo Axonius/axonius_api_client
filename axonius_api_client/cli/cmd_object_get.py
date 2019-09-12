@@ -20,7 +20,7 @@ from . import context
 @click.option(
     "--field",
     help="Field (column) to include in the format of adapter:field.",
-    callback=context.cb_fields,
+    # callback=context.cb_fields,
     multiple=True,
     show_envvar=True,
     show_default=True,

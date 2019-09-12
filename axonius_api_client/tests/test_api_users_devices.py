@@ -452,7 +452,11 @@ class TestDevices(Single):
         """Pass."""
         specfield = "specific_data.data.network_interfaces.subnets"
         findfield = "specific_data.data.network_interfaces.ips"
-        asset = self.get_single_asset(apiobj=apiobj, fields=[findfield, specfield])
+        withfields = [findfield, specfield]
+        asset = self.get_single_asset(
+            apiobj=apiobj, with_fields=withfields, fields=withfields
+        )
+        assert specfield in asset, list(asset)
         asset_value = asset[specfield]
 
         value = tools.listify(obj=asset_value)[0]
@@ -473,7 +477,11 @@ class TestDevices(Single):
         """Pass."""
         specfield = "specific_data.data.network_interfaces.subnets"
         findfield = "specific_data.data.network_interfaces.ips"
-        asset = self.get_single_asset(apiobj=apiobj, fields=[findfield, specfield])
+        withfields = [findfield, specfield]
+        asset = self.get_single_asset(
+            apiobj=apiobj, with_fields=withfields, fields=withfields
+        )
+        assert specfield in asset, list(asset)
         asset_value = asset[specfield]
 
         value = tools.listify(obj=asset_value)[0]

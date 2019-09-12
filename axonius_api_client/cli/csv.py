@@ -12,14 +12,12 @@ from .. import exceptions, tools
 QUOTING = csv.QUOTE_NONNUMERIC
 
 
-def listofdict(
-    rows, stream=None, compress=False, headers=None, stream_value=True, **kwargs
-):
+def dictwriter(rows, stream=None, headers=None, stream_value=True, **kwargs):
     """Pass."""
     rows = copy.deepcopy(rows)
 
-    if compress:
-        rows = [compress_dict(obj=x) for x in rows]
+    # if compress:
+    #     rows = [compress_dict(obj=x) for x in rows]
 
     kwargs.setdefault("quoting", QUOTING)
     kwargs.setdefault("f", stream or six.StringIO())

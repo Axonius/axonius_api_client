@@ -35,7 +35,12 @@ class TestCliObjectFields(object):
 
         assert result.exit_code != 0
         stderr = result.stderr.splitlines()
-        assert stderr[-1] == "** ERROR: badwolf"
+        assert len(stderr) == 4
+        assert (
+            stderr[-2]
+            == "** ERROR: WRAPPED EXCEPTION: axonius_api_client.tests.utils.MockError"
+        )
+        assert stderr[-1] == "badwolf"
 
     def test_get_exc_nowrap(self, request, monkeypatch, cmd):
         """Pass."""

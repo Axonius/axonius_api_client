@@ -7,8 +7,7 @@ import re
 
 import click
 
-from .. import tools
-from . import context
+from . import context, csv
 
 
 @click.command("fields", context_settings=context.CONTEXT_SETTINGS)
@@ -53,24 +52,20 @@ def cmd(
     adapter_rec = re.compile(adapter_re, re.I)
     field_rec = re.compile(field_re, re.I)
 
-    try:
-        raw_fields = api.fields.get()
-    except Exception as exc:
-        if ctx.wraperror:
-            ctx.echo_error(format(exc))
-        raise
-
     raw_data = {}
 
-    for adapter, adapter_fields in raw_fields.items():
-        if not adapter_rec.search(adapter):
-            continue
+    with context.exc_wrap(wraperror=ctx.wraperror):
+        raw_fields = api.fields.get()
 
-        for field, field_into in adapter_fields.items():
-            if not field_rec.search(field):
+        for adapter, adapter_fields in raw_fields.items():
+            if not adapter_rec.search(adapter):
                 continue
-            raw_data[adapter] = raw_data.get(adapter, [])
-            raw_data[adapter].append(field)
+
+            for field, field_into in adapter_fields.items():
+                if not field_rec.search(field):
+                    continue
+                raw_data[adapter] = raw_data.get(adapter, [])
+                raw_data[adapter].append(field)
 
     if not raw_data:
         msg = "No fields found matching adapter regex {are!r} and field regex {fre!r}"
@@ -104,4 +99,4 @@ def to_csv(ctx, raw_data, **kwargs):
     kwargs["rows"] = rows
     kwargs["headers"] = headers
     kwargs["stream_value"] = True
-    return tools.csv.cereal(**kwargs)
+    return csv.dictwriter(**kwargs)
