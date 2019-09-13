@@ -25,7 +25,8 @@ class TestCliHelp(object):
             ["users", "get"],
             ["adapters"],
             ["adapters", "get"],
-            ["adapters", "get-clients"],
+            ["adapters", "cnx"],
+            ["adapters", "cnx", "get"],
             ["shell"],
         ],
     )
@@ -34,4 +35,4 @@ class TestCliHelp(object):
         runner = CliRunner()
 
         result = runner.invoke(cli=cli.cli, args=cmd + ["--help"])
-        assert result.exit_code == 0
+        assert result.exit_code == 0, cmd

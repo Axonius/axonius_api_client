@@ -2,12 +2,12 @@
 """Command line interface for Axonius API Client."""
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-import pdb  # noqa
 import re
 
 import click
 
-from . import context, csv
+from ... import tools
+from .. import context
 
 
 @click.command("fields", context_settings=context.CONTEXT_SETTINGS)
@@ -72,7 +72,7 @@ def cmd(
         msg = msg.format(are=adapter_re, fre=field_re)
         ctx.echo_error(msg)
 
-    formatters = {"json": ctx.to_json, "csv": to_csv}
+    formatters = {"json": to_json, "csv": to_csv}
 
     ctx.handle_export(
         raw_data=raw_data,
@@ -96,7 +96,9 @@ def to_csv(ctx, raw_data, **kwargs):
             row_data = {adapter: field}
             rows[idx].update(row_data)
 
-    kwargs["rows"] = rows
-    kwargs["headers"] = headers
-    kwargs["stream_value"] = True
-    return csv.dictwriter(**kwargs)
+    return context.dictwriter(rows=rows, headers=headers)
+
+
+def to_json(ctx, raw_data, **kwargs):
+    """Pass."""
+    return tools.json_dump(obj=raw_data)

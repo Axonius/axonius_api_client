@@ -11,7 +11,7 @@ import dateutil.relativedelta
 import dateutil.tz
 import six
 
-from . import exceptions, tools
+from . import exceptions
 
 if six.PY2:
     import pathlib2 as pathlib  # pragma: no cover
@@ -74,7 +74,12 @@ def values_match(checks, values, ignore_case=True):
     else:
         re_flags = 0
 
-    for check in listify(obj=checks, dictkeys=False):
+    checks = listify(obj=checks, dictkeys=False)
+    if checks in EMPTY:
+        return True
+
+    for check in checks:
+        check = format(check)
         if check.startswith("RE:"):
             re_text = strip_left(obj=check, fix="RE:").strip()
             re_pattern = re.compile(re_text, re_flags)
@@ -85,10 +90,10 @@ def values_match(checks, values, ignore_case=True):
             re_method = re_pattern.match
 
         for value in listify(obj=values, dictkeys=False):
-            if not re_method(value):
-                return False
+            if re_method(value):
+                return True
 
-    return True
+    return False
 
 
 def is_int(obj, digit=False):
@@ -289,7 +294,7 @@ def path_read(obj, binary=False, is_json=False, **kwargs):
     if is_json:
         data = json_load(obj=data, **kwargs)
 
-    if robj.suffix == ".json" and isinstance(data, tools.STR):
+    if robj.suffix == ".json" and isinstance(data, STR):
         kwargs.setdefault("error", False)
         data = json_load(obj=data, **kwargs)
 
@@ -314,16 +319,16 @@ def path_write(
     if is_json:
         data = json_dump(obj=data, **kwargs)
 
-    if obj.suffix == ".json" and not isinstance(data, tools.STR):
+    if obj.suffix == ".json" and not isinstance(data, STR):
         kwargs.setdefault("error", False)
         data = json_dump(obj=data, **kwargs)
 
     if binary:
-        if not isinstance(data, tools.BYTES):
+        if not isinstance(data, BYTES):
             data = data.encode(binary_encoding)
         method = obj.write_bytes
     else:
-        if isinstance(data, tools.BYTES):
+        if isinstance(data, BYTES):
             data = data.decode(binary_encoding)
         method = obj.write_text
 

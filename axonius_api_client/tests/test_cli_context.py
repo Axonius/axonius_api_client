@@ -3,28 +3,121 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import os
-
 import pdb  # noqa
 
 import pytest
 from click.testing import CliRunner
 
-from axonius_api_client import cli
+from axonius_api_client import cli, connect, tools
 
 from . import utils
+
+
+def to_json(ctx, raw_data, **kwargs):
+    """Pass."""
+    return tools.json_dump(obj=raw_data, **kwargs)
+
+
+class TestCliDictwriter(object):
+    """Pass."""
+
+    def test_default(self):
+        """Pass."""
+        rows = [{"x": "1"}]
+        data = cli.context.dictwriter(rows=rows)
+        assert data in ['"x"\r\n"1"\r\n', '"x"\n"1"\n']
+
+
+class TestCliWriteHistFile(object):
+    """Pass."""
+
+    def test_default(self, monkeypatch):
+        """Pass."""
+        runner = CliRunner(mix_stderr=False)
+
+        with runner.isolated_filesystem():
+            histpath = tools.pathlib.Path(os.getcwd())
+            histfile = histpath / cli.context.HISTFILE
+            monkeypatch.setattr(cli.context, "HISTPATH", format(histpath))
+            cli.context.write_hist_file()
+            assert histfile.is_file(), list(histpath.iterdir())
+
+
+class TestCliExcWrap(object):
+    """Pass."""
+
+    def test_exc_wrap_true(self, capsys):
+        """Pass."""
+        with pytest.raises(SystemExit):
+            with cli.context.exc_wrap(wraperror=True):
+                raise utils.MockError("badwolf")
+
+        captured = capsys.readouterr()
+
+        stderr = captured.err.splitlines()
+        assert len(stderr) == 2
+
+        stdout = captured.out.splitlines()
+        assert not stdout
+
+        exp0 = "** ERROR: WRAPPED EXCEPTION: {c.__module__}.{c.__name__}"
+        exp0 = exp0.format(c=utils.MockError)
+        assert stderr[0] == exp0
+        assert stderr[1] == "badwolf"
+
+    def test_exc_wrap_false(self, capsys):
+        """Pass."""
+        with pytest.raises(utils.MockError):
+            with cli.context.exc_wrap(wraperror=False):
+                raise utils.MockError("badwolf")
+
+
+class TestCliSpawnShell(object):
+    """Pass."""
+
+    def test_default(self, monkeypatch):
+        """Pass."""
+        runner = CliRunner(mix_stderr=False)
+
+        monkeypatch.setattr("sys.stdin", tools.six.StringIO("exit()"))
+
+        with runner.isolated_filesystem():
+            histpath = tools.pathlib.Path(os.getcwd())
+            monkeypatch.setattr(cli.context, "HISTPATH", format(histpath))
+
+            with pytest.raises(SystemExit):
+                cli.context.spawn_shell()
 
 
 class TestCliRegisterReadline(object):
     """Pass."""
 
-    def test_default(self):
+    def test_default(self, monkeypatch):
         """Pass."""
-        cli.context.register_readline()
+        runner = CliRunner(mix_stderr=False)
+
+        with runner.isolated_filesystem():
+            histpath = tools.pathlib.Path(os.getcwd())
+            histfile = histpath / cli.context.HISTFILE
+            monkeypatch.setattr(cli.context, "HISTPATH", format(histpath))
+
+            cli.context.register_readline()
+            assert histfile.is_file(), list(histpath.iterdir())
 
     def test_exc(self, monkeypatch, capsys):
         """Pass."""
         monkeypatch.setattr(cli.context, "readline", utils.MockError)
-        cli.context.register_readline()
+        runner = CliRunner(mix_stderr=False)
+
+        with runner.isolated_filesystem():
+            histpath = tools.pathlib.Path(os.getcwd())
+            histfile = histpath / cli.context.HISTFILE
+            monkeypatch.setattr(cli.context, "HISTPATH", format(histpath))
+
+            cli.context.register_readline()
+
+            assert histfile.is_file(), list(histpath.iterdir())
+
         captured = capsys.readouterr()
         assert (
             captured.err.splitlines()[0]
@@ -66,6 +159,7 @@ class TestCliContext(object):
         obj = cli.context.Context()
         assert format(obj)
         assert repr(obj)
+        assert obj.wraperror is True
 
     def test_export_stdout(self, capsys):
         """Pass."""
@@ -207,27 +301,59 @@ class TestCliContext(object):
 
         assert stderr[0] == "** ERROR: badwolf"
 
-    def test_exc_wrap_true(self, capsys):
+    def test_start_client(self, request):
         """Pass."""
-        with pytest.raises(SystemExit):
-            with cli.context.exc_wrap(wraperror=True):
-                raise utils.MockError("badwolf")
+        obj = cli.context.Context()
+        url = request.config.getoption("--ax-url")
+        key = request.config.getoption("--ax-key")
+        secret = request.config.getoption("--ax-secret")
+        assert obj.obj is None
+        client = obj.start_client(url=url, key=key, secret=secret)
+        assert isinstance(client, connect.Connect)
+        assert client == obj.obj
+
+    def test_handle_export(self, capsys):
+        """Pass."""
+        obj = cli.context.Context()
+        obj.handle_export(
+            raw_data={},
+            formatters={"json": to_json},
+            export_format="json",
+            export_file=None,
+            export_path=None,
+            export_overwrite=False,
+        )
 
         captured = capsys.readouterr()
 
         stderr = captured.err.splitlines()
-        assert len(stderr) == 2
+        assert not stderr
+
+        stdout = captured.out.splitlines()
+        assert len(stdout) == 1
+
+        assert stdout[0] == "{}"
+
+    def test_handle_export_invalid(self, capsys):
+        """Pass."""
+        obj = cli.context.Context()
+        with pytest.raises(SystemExit):
+            obj.handle_export(
+                raw_data={},
+                formatters={"json": to_json},
+                export_format="jsox",
+                export_file=None,
+                export_path=None,
+                export_overwrite=False,
+            )
+
+        captured = capsys.readouterr()
+
+        stderr = captured.err.splitlines()
+        assert len(stderr) == 1
 
         stdout = captured.out.splitlines()
         assert not stdout
 
-        exp0 = "** ERROR: WRAPPED EXCEPTION: {c.__module__}.{c.__name__}"
-        exp0 = exp0.format(c=utils.MockError)
-        assert stderr[0] == exp0
-        assert stderr[1] == "badwolf"
-
-    def test_exc_wrap_false(self, capsys):
-        """Pass."""
-        with pytest.raises(utils.MockError):
-            with cli.context.exc_wrap(wraperror=False):
-                raise utils.MockError("badwolf")
+        exp0 = "** ERROR: Export format {!r} is unsupported".format("jsox")
+        assert stderr[0].startswith(exp0)

@@ -19,12 +19,25 @@ class TestCliObjectFields(object):
         """Pass."""
         runner = utils.load_clirunner(request, monkeypatch)
 
-        result = runner.invoke(cli=cli.cli, args=[cmd, "fields"])
+        result = runner.invoke(
+            cli=cli.cli, args=[cmd, "fields", "--export-format", "json"]
+        )
 
         assert result.exit_code == 0
 
         json_reloaded = json.loads(result.stdout)
         assert isinstance(json_reloaded, dict)
+
+    def test_csv(self, request, monkeypatch, cmd):
+        """Pass."""
+        runner = utils.load_clirunner(request, monkeypatch)
+
+        result = runner.invoke(
+            cli=cli.cli, args=[cmd, "fields", "--export-format", "csv"]
+        )
+
+        assert result.exit_code == 0
+        utils.check_csv_cols(result.stdout, ["generic"])
 
     def test_get_exc_wrap(self, request, monkeypatch, cmd):
         """Pass."""

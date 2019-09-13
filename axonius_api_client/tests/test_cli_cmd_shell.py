@@ -2,10 +2,12 @@
 """Test suite for axonius_api_client.tools."""
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+import os
+
 import pytest
 from click.testing import CliRunner
 
-from axonius_api_client import cli, exceptions
+from axonius_api_client import cli, exceptions, tools
 
 from . import utils
 
@@ -25,11 +27,17 @@ class TestCliShell(object):
         monkeypatch.delenv("AX_KEY", raising=False)
         monkeypatch.delenv("AX_SECRET", raising=False)
         monkeypatch.setattr(cli.context, "load_dotenv", utils.mock_load_dotenv)
-
         prompt_input = "\n".join([url, key, secret, "exit()"])
 
-        with pytest.warns(exceptions.BetaWarning):
-            result = runner.invoke(cli=cli.cli, args=["shell"], input=prompt_input)
+        with runner.isolated_filesystem():
+            histpath = tools.pathlib.Path(os.getcwd())
+            histfile = histpath / cli.context.HISTFILE
+            monkeypatch.setattr(cli.context, "HISTPATH", format(histpath))
+
+            with pytest.warns(exceptions.BetaWarning):
+                result = runner.invoke(cli=cli.cli, args=["shell"], input=prompt_input)
+
+            assert histfile.is_file(), list(histpath.iterdir())
 
         assert result.exit_code == 0
 
@@ -47,8 +55,15 @@ class TestCliShell(object):
 
         prompt_input = "\n".join(["exit()"])
 
-        with pytest.warns(exceptions.BetaWarning):
-            result = runner.invoke(cli=cli.cli, args=["shell"], input=prompt_input)
+        with runner.isolated_filesystem():
+            histpath = tools.pathlib.Path(os.getcwd())
+            histfile = histpath / cli.context.HISTFILE
+            monkeypatch.setattr(cli.context, "HISTPATH", format(histpath))
+
+            with pytest.warns(exceptions.BetaWarning):
+                result = runner.invoke(cli=cli.cli, args=["shell"], input=prompt_input)
+
+            assert histfile.is_file(), list(histpath.iterdir())
 
         assert result.exit_code == 0
 

@@ -2,12 +2,13 @@
 """Test suite."""
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+import csv
 import re
 
 from click.testing import CliRunner
 
 import axonius_api_client as axonapi
-from axonius_api_client import cli
+from axonius_api_client import cli, tools
 
 
 def log_check(caplog, entries):
@@ -113,3 +114,18 @@ class MockError(Exception):
 def mock_failure(*args, **kwargs):
     """Pass."""
     raise MockError("badwolf")
+
+
+def check_csv_cols(content, cols):
+    """Pass."""
+    QUOTING = csv.QUOTE_NONNUMERIC
+    fh = tools.six.StringIO()
+    fh.write(content)
+    fh.seek(0)
+    reader = csv.DictReader(fh, quoting=QUOTING)
+    rows = []
+    for row in reader:
+        rows.append(row)
+        for x in cols:
+            assert x in row, "column {!r} not in {}".format(x, list(row))
+    return rows

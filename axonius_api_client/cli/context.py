@@ -2,8 +2,13 @@
 """Command line interface for Axonius API Client."""
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+import atexit
+import csv
 import functools
 import os
+import pdb  # noqa
+import readline
+import rlcompleter
 import sys
 import warnings
 
@@ -11,17 +16,14 @@ import click
 import dotenv
 import requests
 
-import atexit
-import readline
-import rlcompleter
-
-from . import csv
 from .. import connect, tools
 from ..tools import json_reload as jdump
 
 HISTPATH = os.path.expanduser("~")
 HISTFILE = ".python_history"
 CONTEXT_SETTINGS = {"auto_envvar_prefix": "AX"}
+REASON = "Export format {ef!r} is unsupported!  Must be one of: {sf}"
+QUOTING = csv.QUOTE_NONNUMERIC
 
 
 def load_dotenv():
@@ -95,7 +97,7 @@ def export_options(func):
         "--export-format",
         default="json",
         help="Format to use for STDOUT or export-file.",
-        # type=click.Choice(["csv", "json"]),
+        type=click.Choice(["csv", "json"]),
         show_envvar=True,
         show_default=True,
     )
@@ -127,7 +129,7 @@ class exc_wrap(object):
 
     def __exit__(self, exc, value, traceback):
         """Pass."""
-        if value and self.wraperror:
+        if value and self.wraperror and not isinstance(value, SystemExit):
             msg = "WRAPPED EXCEPTION: {c.__module__}.{c.__name__}\n{v}"
             msg = msg.format(c=value.__class__, v=value)
             Context.echo_error(msg)
@@ -163,18 +165,50 @@ class exc_wrap(object):
 #     return fields
 
 
+def dictwriter(rows, stream=None, headers=None, quoting=QUOTING, **kwargs):
+    """Pass."""
+    fh = stream or tools.six.StringIO()
+
+    headers = headers or []
+
+    if not headers:
+        for row in rows:
+            headers += [k for k in row if k not in headers]
+
+    writer = csv.DictWriter(fh, fieldnames=headers, quoting=quoting, **kwargs)
+
+    writer.writeheader()
+
+    for row in rows:
+        writer.writerow(row)
+
+    return fh.getvalue()
+
+
+def write_hist_file():
+    """Pass."""
+    histpath = tools.pathlib.Path(HISTPATH)
+    histfile = histpath / HISTFILE
+
+    histpath.mkdir(mode=0o700, exist_ok=True)
+    histfile.touch(mode=0o600, exist_ok=True)
+
+    readline.write_history_file(format(histfile))
+
+
 def register_readline(shellvars=None):
     """Pass."""
+    shellvars = shellvars or {}
+
+    histpath = tools.pathlib.Path(HISTPATH)
+    histfile = histpath / HISTFILE
+
+    histpath.mkdir(mode=0o700, exist_ok=True)
+    histfile.touch(mode=0o600, exist_ok=True)
+
     try:
-        shellvars = shellvars or {}
-
-        histfile = os.path.join(HISTPATH, HISTFILE)
-
-        if os.path.isfile(histfile):
-            readline.read_history_file(histfile)
-
-        if os.path.isdir(HISTPATH):
-            atexit.register(readline.write_history_file, histfile)
+        readline.read_history_file(format(histfile))
+        atexit.register(write_hist_file)
 
         readline.set_completer(rlcompleter.Completer(shellvars).complete)
 
@@ -289,35 +323,10 @@ class Context(object):
         """Pass."""
         click.secho(cls.WARN_TMPL.format(msg=msg), **cls.WARN_ARGS)
 
-    @staticmethod
-    def to_json(ctx, raw_data, **kwargs):
-        """Pass."""
-        return tools.json_dump(obj=raw_data, **kwargs)
-
-    @staticmethod
-    def to_csv(ctx, raw_data, **kwargs):
-        """Pass."""
-        return csv.dictwriter(raw_data, **kwargs)
-
     @property
     def wraperror(self):
         """Pass."""
         return self._connect_args.get("wraperror", True)
-
-    def _start_client(self):
-        """Pass."""
-        with warnings.catch_warnings(record=True) as caught_warnings:
-            with exc_wrap(wraperror=self.wraperror):
-                self.obj.start()
-
-            for caught_warning in caught_warnings:
-                wmsg = caught_warning.message
-                wmsg = self.SSLWARN_MSG if isinstance(wmsg, self.SSLWARN_CLS) else wmsg
-                wmsg = format(wmsg)
-                self.echo_warn(wmsg)
-
-        # warnings suck.
-        warnings.simplefilter("ignore", self.SSLWARN_CLS)
 
     def start_client(self, url, key, secret, **kwargs):
         """Pass."""
@@ -332,8 +341,21 @@ class Context(object):
             with exc_wrap(wraperror=self.wraperror):
                 self.obj = connect.Connect(**connect_args)
 
-            self._start_client()
+                with warnings.catch_warnings(record=True) as caught_warnings:
+                    self.obj.start()
+
+                for caught_warning in caught_warnings:
+                    wmsg = caught_warning.message
+                    is_ssl = isinstance(wmsg, self.SSLWARN_CLS)
+                    wmsg = self.SSLWARN_MSG if is_ssl else wmsg
+                    wmsg = format(wmsg)
+                    self.echo_warn(wmsg)
+
+            # warnings suck.
+            warnings.simplefilter("ignore", self.SSLWARN_CLS)
+
             self.echo_ok(msg=self.obj)
+
         return self.obj
 
     def handle_export(
@@ -345,17 +367,17 @@ class Context(object):
         export_path,
         export_overwrite,
         ctx=None,
+        reason=REASON,
         **kwargs
     ):
         """Pass."""
-        if export_format in formatters:
+        if export_format not in formatters:
+            self.echo_error(msg=reason.format(ef=export_format, sf=list(formatters)))
+
+        with exc_wrap(wraperror=self.wraperror):
             data = formatters[export_format](
                 ctx=ctx or self, raw_data=raw_data, **kwargs
             )
-        else:
-            msg = "Export format {f!r} is unsupported! Must be one of: {sf}"
-            msg = msg.format(f=export_format, sf=list(formatters.keys()))
-            self.echo_error(msg=msg)
 
         self.export(
             data=data,

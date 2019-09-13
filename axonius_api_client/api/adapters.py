@@ -103,7 +103,7 @@ class Adapters(mixins.Model, mixins.Mixins):
         return adapters[0]
 
     def filter_by_names(
-        self, adapters, value, ignore_case=True, match_count=None, match_error=True
+        self, adapters, value=None, ignore_case=True, match_count=None, match_error=True
     ):
         """Pass."""
         value = [
@@ -114,7 +114,6 @@ class Adapters(mixins.Model, mixins.Mixins):
         matches = []
 
         for adapter in adapters:
-
             match = tools.values_match(
                 checks=value, values=adapter["name"], ignore_case=ignore_case
             )
@@ -134,7 +133,7 @@ class Adapters(mixins.Model, mixins.Mixins):
         return matches
 
     def filter_by_nodes(
-        self, adapters, value, ignore_case=True, match_count=None, match_error=True
+        self, adapters, value=None, ignore_case=True, match_count=None, match_error=True
     ):
         """Pass."""
         matches = []
@@ -781,6 +780,7 @@ class Cnx(mixins.Child):
         cnxs = kwargs.get("cnxs") or self.get()
         tmpl = [
             "Adapter: {adapter_name!r}",
+            "Node: {node_name!r}",
             "cnx id: {id!r}",
             "cnx uuid: {uuid!r}",
             "cnx status: {status}",

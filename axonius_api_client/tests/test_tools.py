@@ -501,6 +501,8 @@ class TestValuesMatch(object):
         x = tools.values_match(checks="x", values=["X"], ignore_case=False)
         assert not x
         x = tools.values_match(checks="x", values=["X", "x"], ignore_case=False)
+        assert x
+        x = tools.values_match(checks="x", values=["X", "y"], ignore_case=False)
         assert not x
 
     def test_case_no_regex(self):
@@ -548,7 +550,7 @@ class TestValuesMatch(object):
         x = tools.values_match(checks="RE:x", values=["X"], ignore_case=False)
         assert not x
         x = tools.values_match(checks="RE:x", values=["X", "x"], ignore_case=False)
-        assert not x
+        assert x
         x = tools.values_match(checks="RE:x", values=["A", "a"], ignore_case=False)
         assert not x
 

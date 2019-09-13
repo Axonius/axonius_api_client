@@ -5,17 +5,10 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import click
 
 from .. import constants, version
-from . import (
-    cmd_adapters_get,
-    cmd_adapters_get_clients,
-    cmd_object_fields,
-    cmd_object_get,
-    cmd_object_missing_adapters,
-    cmd_shell,
-    context,
-)
+from . import cmd_shell, context, grp_adapters, grp_objects
 
 
+# FUTURE: way to only import stuff in function?
 # FUTURE: add cert_human logic
 # FUTURE: FIGURE OUT HOW REPORTS GUI SENDS CSV
 # FUTURE: prompt does not use CR when re-prompting on empty var with hide_input=False
@@ -196,36 +189,7 @@ def cli(click_ctx, ctx, **kwargs):
     return ctx
 
 
-@cli.group()
-@context.pass_context
-def devices(ctx):
-    """Work with device objects."""
-    return ctx
-
-
-@cli.group()
-@context.pass_context
-def users(ctx):
-    """Work with user objects."""
-    return ctx
-
-
-@cli.group()
-@context.pass_context
-def adapters(ctx):
-    """Work with adapter objects."""
-    return ctx
-
-
 cli.add_command(cmd_shell.cmd)
-
-users.add_command(cmd_object_get.cmd)
-users.add_command(cmd_object_fields.cmd)
-users.add_command(cmd_object_missing_adapters.cmd)
-
-devices.add_command(cmd_object_get.cmd)
-devices.add_command(cmd_object_fields.cmd)
-devices.add_command(cmd_object_missing_adapters.cmd)
-
-adapters.add_command(cmd_adapters_get.cmd)
-adapters.add_command(cmd_adapters_get_clients.cmd)
+cli.add_command(grp_objects.devices)
+cli.add_command(grp_objects.users)
+cli.add_command(grp_adapters.adapters)
