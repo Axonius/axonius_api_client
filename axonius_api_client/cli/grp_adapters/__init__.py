@@ -4,8 +4,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import click
 
-from .. import context
-from . import cmd_get, grp_cnx
+from .. import context, grp_cnx
+from . import cmd_get
 
 
 @click.group()

@@ -4,8 +4,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import click
 
-from .... import tools
-from ... import context
+from ... import tools
+from .. import context
 
 
 @click.command("get", context_settings=context.CONTEXT_SETTINGS)
