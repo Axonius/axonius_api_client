@@ -7,7 +7,7 @@ import pytest
 import axonius_api_client as axonapi
 from axonius_api_client import exceptions
 
-from . import utils
+from .. import utils
 
 
 class TestApiKey(object):

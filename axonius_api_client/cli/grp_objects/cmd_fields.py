@@ -6,7 +6,6 @@ import re
 
 import click
 
-from ... import tools
 from .. import context
 
 
@@ -72,7 +71,7 @@ def cmd(
         msg = msg.format(are=adapter_re, fre=field_re)
         ctx.echo_error(msg)
 
-    formatters = {"json": to_json, "csv": to_csv}
+    formatters = {"json": context.to_json, "csv": to_csv}
 
     ctx.handle_export(
         raw_data=raw_data,
@@ -97,8 +96,3 @@ def to_csv(ctx, raw_data, **kwargs):
             rows[idx].update(row_data)
 
     return context.dictwriter(rows=rows, headers=headers)
-
-
-def to_json(ctx, raw_data, **kwargs):
-    """Pass."""
-    return tools.json_dump(obj=raw_data)

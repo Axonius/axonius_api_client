@@ -9,7 +9,7 @@ import pytest
 import axonius_api_client as axonapi
 from axonius_api_client import constants, exceptions, tools
 
-from . import utils
+from .. import utils
 
 FIELD_FORMATS = ["discrete", "image", "date-time", "table", "ip", "subnet", "version"]
 SCHEMA_FIELD_FORMATS = [
@@ -226,14 +226,14 @@ class TestBoth(Base):
     def test__count_post_false(self, apiobj):
         """Pass."""
         data = apiobj._count(use_post=False)
-        assert isinstance(data, int)
+        assert isinstance(data, tools.INT)
 
     def test__count_query_len_forces_post(self, apiobj):
         """Pass."""
         long_query = self.build_long_query(apiobj)
 
         data = apiobj._count(query=long_query, use_post=False)
-        assert isinstance(data, int)
+        assert isinstance(data, tools.INT)
 
         response = apiobj._auth._http._LAST_RESPONSE
         assert response.request.method == "POST"
@@ -284,18 +284,18 @@ class TestBoth(Base):
     def test_count(self, apiobj):
         """Pass."""
         data = apiobj.count()
-        assert isinstance(data, int)
+        assert isinstance(data, tools.INT)
 
     def test_get(self, apiobj):
         """Pass."""
         data = apiobj.get(max_rows=1)
-        assert isinstance(data, list)
+        assert isinstance(data, tools.LIST)
         assert len(data) == 1
 
     def test_get_maxpages(self, apiobj):
         """Pass."""
         data = apiobj.get(max_rows=22, max_pages=1)
-        assert isinstance(data, list)
+        assert isinstance(data, tools.LIST)
         assert len(data) == 22
 
     def test_get_id(self, apiobj):
@@ -310,6 +310,14 @@ class TestBoth(Base):
         """Pass."""
         with pytest.raises(exceptions.ValueNotFound):
             apiobj.get_by_id(id="badwolf")
+
+    def test_count_by_saved_query(self, apiobj):
+        """Pass."""
+        sqs = apiobj.saved_query.get()
+        sq = sqs[0]
+        sq_name = sq["name"]
+        data = apiobj.count_by_saved_query(name=sq_name)
+        assert isinstance(data, tools.INT)
 
     def test_get_by_saved_query(self, apiobj):
         """Pass."""
@@ -448,7 +456,7 @@ class TestDevices(Single):
             apiobj=apiobj, specfield=specfield, specmethod=specmethod
         )
 
-    def test_find_by_in_subnet(self, apiobj):
+    def test_find_by_subnet(self, apiobj):
         """Pass."""
         specfield = "specific_data.data.network_interfaces.subnets"
         findfield = "specific_data.data.network_interfaces.ips"
@@ -461,7 +469,7 @@ class TestDevices(Single):
 
         value = tools.listify(obj=asset_value)[0]
 
-        found = apiobj.find_by_in_subnet(
+        found = apiobj.find_by_subnet(
             value=value,
             max_rows=1,
             fields=findfield,
@@ -473,7 +481,7 @@ class TestDevices(Single):
         found_value = tools.listify(obj=found[0][findfield])[0]
         assert found_value == tools.listify(obj=asset[findfield], dictkeys=False)[0]
 
-    def test_find_by_in_subnet_not(self, apiobj):
+    def test_find_by_subnet_not(self, apiobj):
         """Pass."""
         specfield = "specific_data.data.network_interfaces.subnets"
         findfield = "specific_data.data.network_interfaces.ips"
@@ -486,7 +494,7 @@ class TestDevices(Single):
 
         value = tools.listify(obj=asset_value)[0]
 
-        found = apiobj.find_by_in_subnet(
+        found = apiobj.find_by_subnet(
             value="NOT:{}".format(value),
             max_rows=1,
             fields=findfield,
@@ -676,14 +684,14 @@ class TestLabels(Base):
     def test__get(self, apiobj):
         """Pass."""
         fields = apiobj.labels._get()
-        assert isinstance(fields, list)
+        assert isinstance(fields, tools.LIST)
         for x in fields:
             assert isinstance(x, tools.STR)
 
     def test_get(self, apiobj):
         """Pass."""
         fields = apiobj.labels._get()
-        assert isinstance(fields, list)
+        assert isinstance(fields, tools.LIST)
         for x in fields:
             assert isinstance(x, tools.STR)
 
@@ -982,14 +990,14 @@ class TestSavedQuery(Base):
     def test_find_by_name_regex(self, apiobj):
         """Pass."""
         found = apiobj.saved_query.find_by_name(value="RE:.*")
-        assert isinstance(found, list)
+        assert isinstance(found, tools.LIST)
         assert len(found) >= 1
 
     def test_find_by_name_notflag(self, apiobj):
         """Pass."""
         data = apiobj.saved_query.get()
         found = apiobj.saved_query.find_by_name(value="NOT:{}".format(data[0]["name"]))
-        assert isinstance(found, list)
+        assert isinstance(found, tools.LIST)
         assert len(found) == len(data) - 1
 
     def test__add_get_delete(self, apiobj):
@@ -1007,7 +1015,7 @@ class TestSavedQuery(Base):
 
         got = apiobj.saved_query._get(query='name == "{}"'.format(name))
         assert isinstance(got, dict)
-        assert isinstance(got["assets"], list)
+        assert isinstance(got["assets"], tools.LIST)
         assert len(got["assets"]) == 1
         assert isinstance(got["assets"][0], dict)
 
@@ -1016,7 +1024,7 @@ class TestSavedQuery(Base):
 
         re_got = apiobj.saved_query._get(query='name == "{}"'.format(name))
         assert isinstance(re_got, dict)
-        assert isinstance(re_got["assets"], list)
+        assert isinstance(re_got["assets"], tools.LIST)
         assert len(re_got["assets"]) == 0
 
     def test_add_delete(self, apiobj):
@@ -1218,7 +1226,7 @@ class TestRawFields(Base):
 
         assert not raw, list(raw)
         assert isinstance(schema, dict)
-        assert isinstance(generic, list)
+        assert isinstance(generic, tools.LIST)
         assert isinstance(specific, dict)
 
         generic_schema = schema.pop("generic")

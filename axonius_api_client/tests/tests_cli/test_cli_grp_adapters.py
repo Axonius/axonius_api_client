@@ -6,10 +6,10 @@ import json
 
 from axonius_api_client import cli, tools
 
-from . import utils
+from .. import utils
 
 
-class TestCliAdapters(object):
+class TestCliGrpAdaptersCmdGet(object):
     """Pass."""
 
     def test_json(self, request, monkeypatch):

@@ -5,14 +5,23 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import click
 
 from .. import context
+from . import grp_common
 
 
-@click.command("get", context_settings=context.CONTEXT_SETTINGS)
+@click.command("get-by-subnet", context_settings=context.CONTEXT_SETTINGS)
 @context.connect_options
 @context.export_options
 @click.option(
+    "--value",
+    help="Value to search for.",
+    required=True,
+    show_envvar=True,
+    show_default=True,
+)
+@click.option(
     "--query",
-    help="Query built from Query Wizard to filter objects (empty returns all).",
+    help="Query to add to the end of the query built to search for --value.",
+    default="",
     metavar="QUERY",
     show_envvar=True,
     show_default=True,
@@ -28,7 +37,7 @@ from .. import context
 @click.option(
     "--fields-default/--no-fields-default",
     default=True,
-    help="Include default fields for this object type.",
+    help="Include default columns for this object type.",
     is_flag=True,
     show_envvar=True,
     show_default=True,
@@ -48,28 +57,27 @@ def cmd(
     export_file,
     export_path,
     export_overwrite,
+    value,
     query,
     field,
     fields_default,
     max_rows,
 ):
     """Get all objects matching a query."""
-    client = ctx.start_client(url=url, key=key, secret=secret)
-
-    api = getattr(client, clickctx.parent.command.name)
-
-    with context.exc_wrap(wraperror=ctx.wraperror):
-        raw_data = api.get(
-            query=query, fields=field, fields_default=fields_default, max_rows=max_rows
-        )
-
-    formatters = {"json": context.to_json, "csv": context.obj_to_csv}
-
-    ctx.handle_export(
-        raw_data=raw_data,
-        formatters=formatters,
+    grp_common.get_by_cmd(
+        clickctx=clickctx,
+        ctx=ctx,
+        url=url,
+        key=key,
+        secret=secret,
         export_format=export_format,
         export_file=export_file,
         export_path=export_path,
         export_overwrite=export_overwrite,
+        value=value,
+        query=query,
+        field=field,
+        fields_default=fields_default,
+        max_rows=max_rows,
+        method="find_by_subnet",
     )

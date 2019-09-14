@@ -16,5 +16,3 @@ def cnx(ctx):
 
 
 cnx.add_command(cmd_get.cmd)
-
-__all__ = ("cmd_get", "cnx")

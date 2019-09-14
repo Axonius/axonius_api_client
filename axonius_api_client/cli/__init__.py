@@ -7,8 +7,41 @@ import click
 from .. import constants, version
 from . import cmd_shell, context, grp_adapters, grp_objects
 
+# TODO:
+#   grp_cnx+=
+#       cmd_create_csv_file
+#           --path REQUIRED
+#           --field REQUIRED
+#           --is-users = False
+#           --is-installed-sw = False
+#           --node = "master"
+#       cmd_create_csv_url
+#           --url REQUIRED
+#           --field REQUIRED
+#           --is-users = False
+#           --is-installed-sw = False
+#           --node = "master"
+#       cmd_create_csv_share
+#           --share REQUIRED
+#           --field REQUIRED
+#           --username OPTIONAL
+#           --password OPTIONAL
+#           --is-users = False
+#           --is-installed-sw = False
+#           --node = "master"
+#       cmd_update  --config name=value --new-config name=value
+#           --new-config = OPTIONAL (json string?)
+#           --prompt-config = False
 
-# FUTURE: way to only import stuff in function?
+# grp_enforcements -- WITH BETA WARNING
+#   cmd_get
+#       --name OPTIONAL
+
+
+# FUTURE: wrap json datasets with objtype info
+# FUTURE: --verbose/--no-verbose to silence echo_ok
+# FUTURE: --warning/--no-warning to silence echo_warn
+# FUTURE: way to only import cli stuffs so package doesnt see unless needed
 # FUTURE: add cert_human logic
 # FUTURE: FIGURE OUT HOW REPORTS GUI SENDS CSV
 # FUTURE: prompt does not use CR when re-prompting on empty var with hide_input=False

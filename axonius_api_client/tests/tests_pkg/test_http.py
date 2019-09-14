@@ -11,7 +11,7 @@ import requests
 import axonius_api_client as axonapi
 from axonius_api_client import exceptions
 
-from . import utils
+from .. import utils
 
 InsecureRequestWarning = requests.urllib3.exceptions.InsecureRequestWarning
 

@@ -6,7 +6,6 @@ import atexit
 import csv
 import functools
 import os
-import pdb  # noqa
 import readline
 import rlcompleter
 import sys
@@ -135,34 +134,36 @@ class exc_wrap(object):
             Context.echo_error(msg)
 
 
-# FIELD_FORMAT = "fields need to be in the format of adapter_name:field_name"
-# DEFAULT_FIELD = "generic:{field}"
+def json_from_stream(ctx, stream, src):
+    """Pass."""
+    stream_name = getattr(stream, "name", format(stream))
+    if stream.isatty():
+        # its STDIN with no input
+        msg = "No input provided on {s} for {src}"
+        msg = msg.format(s=stream_name, src=src)
+        ctx.echo_error(msg)
 
-# def cb_fields(ctx, param, value):
-#     """Pass."""
-#     fields = {}
+    # its STDIN with input or a file
+    content = stream.read()
+    msg = "Read {n} bytes from {s} for {src}"
+    msg = msg.format(n=len(content), s=stream_name, src=src)
+    ctx.echo_ok(msg)
 
-#     if not value:
-#         return fields
+    content = content.strip()
 
-#     value = value if isinstance(value, tools.LIST) else [value]
+    if not content:
+        msg = "Empty content supplied in {s} for {src}"
+        msg = msg.format(s=stream_name, src=src)
+        ctx.echo_error(msg)
 
-#     for x in value:
-#         if ":" not in x:
-#             x = DEFAULT_FIELD.format(field=x)
+    with exc_wrap(wraperror=ctx.wraperror):
+        content = tools.json_load(obj=content)
 
-#         try:
-#             adapter, field = x.split(":")
-#             adapter, field = adapter.lower().strip(), field.lower().strip()
-#         except ValueError:
-#             raise click.BadParameter(FIELD_FORMAT)
+    msg = "Loaded JSON content from {src} as {t} with length of {n}"
+    msg = msg.format(t=type(content).__name__, src=src, n=len(content))
+    ctx.echo_ok(msg)
 
-#         fields[adapter] = fields.get(adapter, [])
-
-#         if field not in fields[adapter]:
-#             fields[adapter].append(field)
-
-#     return fields
+    return content
 
 
 def dictwriter(rows, stream=None, headers=None, quoting=QUOTING, **kwargs):
@@ -183,6 +184,115 @@ def dictwriter(rows, stream=None, headers=None, quoting=QUOTING, **kwargs):
         writer.writerow(row)
 
     return fh.getvalue()
+
+
+def to_json(ctx, raw_data, **kwargs):
+    """Pass."""
+    return tools.json_dump(obj=raw_data)
+
+
+def is_simple(o):
+    """Is simple."""
+    return isinstance(o, tools.SIMPLE) or o is None
+
+
+def is_list(o):
+    """Is simple."""
+    return isinstance(o, tools.LIST)
+
+
+def is_los(o):
+    """Is simple or list of simples."""
+    return is_simple(o) or (is_list(o) and all([is_simple(x) for x in o]))
+
+
+def is_dos(o):
+    """Is dict with simple or list of simple values."""
+    return isinstance(o, dict) and all([is_los(v) for v in o.values()])
+
+
+def obj_to_csv(ctx, raw_data, **kwargs):
+    """Pass."""
+    raw_data = tools.listify(obj=raw_data, dictkeys=False)
+    rows = []
+
+    for raw_row in raw_data:
+        row = {}
+        rows.append(row)
+        for raw_key, raw_value in raw_row.items():
+
+            if is_los(raw_value):
+                row[raw_key] = join_cr(raw_value, is_cell=True)
+                continue
+
+            if is_list(raw_value) and all([is_dos(x) for x in raw_value]):
+                values = {}
+
+                for raw_item in raw_value:
+                    for k, v in raw_item.items():
+                        new_key = "{}.{}".format(raw_key, k)
+
+                        values[new_key] = values.get(new_key, [])
+
+                        values[new_key] += tools.listify(v, dictkeys=False)
+
+                for k, v in values.items():
+                    row[k] = join_cr(v, is_cell=True)
+
+                continue
+
+            msg = "Data of type {t} is too complex for CSV format"
+            msg = msg.format(t=type(raw_value).__name__)
+            row[raw_key] = msg
+
+    return dictwriter(rows=rows)
+
+
+def check_empty(
+    ctx, this_data, prev_data, value_type, value, objtype, known_cb, known_cb_key
+):
+    """Pass."""
+    if value in tools.EMPTY:
+        return
+
+    value = tools.join_comma(obj=value, empty=False)
+    if not this_data:
+        msg = "Valid {objtype}:{valid}\n"
+        msg = msg.format(
+            valid=tools.join_cr(known_cb(**{known_cb_key: prev_data})), objtype=objtype
+        )
+        ctx.echo_error(msg, abort=False)
+
+        msg = "No {objtype} found when searching by {value_type}: {value}"
+        msg = msg.format(objtype=objtype, value_type=value_type, value=value)
+        ctx.echo_error(msg)
+
+    msg = "Found {cnt} {objtype} by {value_type}: {value}"
+    msg = msg.format(
+        objtype=objtype, cnt=len(this_data), value_type=value_type, value=value
+    )
+    ctx.echo_ok(msg)
+
+
+def join_kv(obj):
+    """Pass."""
+    kv_tmpl = "{}: {}".format
+    items = [kv_tmpl(v["title"], v["value"]) for k, v in obj.items()]
+    return join_cr(items)
+
+
+MAX_LEN = 30000
+MAX_STR = "...TRIMMED - {} items over max cell length {}".format
+
+
+def join_cr(obj, is_cell=False):
+    """Pass."""
+    stro = tools.join_cr(obj=obj, pre=False, post=False, indent="")
+
+    if is_cell and len(stro) >= MAX_LEN:
+        stro = tools.join_cr([stro[:MAX_LEN], MAX_STR(len(obj), MAX_LEN)])
+
+    return stro
 
 
 def write_hist_file():

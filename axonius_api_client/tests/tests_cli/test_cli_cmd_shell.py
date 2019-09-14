@@ -9,7 +9,7 @@ from click.testing import CliRunner
 
 from axonius_api_client import cli, exceptions, tools
 
-from . import utils
+from .. import utils
 
 
 class TestCliShell(object):

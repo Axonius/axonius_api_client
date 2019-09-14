@@ -9,7 +9,7 @@ import pytest
 import axonius_api_client as axonapi
 from axonius_api_client import connect, exceptions
 
-from . import utils
+from .. import utils
 
 BAD_CRED = "tardis"
 

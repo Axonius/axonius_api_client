@@ -6,8 +6,10 @@ import os
 
 from setuptools import find_packages, setup
 
+PROJECT = "axonius_api_client"
+SHELL_CMD = "axonshell"
 HERE = os.path.abspath(os.path.dirname(__file__))
-VERSION_PATH = os.path.join(HERE, "axonius_api_client", "version.py")
+VERSION_PATH = os.path.join(HERE, PROJECT, "version.py")
 
 
 ABOUT = {}
@@ -55,4 +57,5 @@ setup(
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.7",
     ],
+    entry_points={"console_scripts": ["{}={}.cli:cli".format(SHELL_CMD, PROJECT)]},
 )

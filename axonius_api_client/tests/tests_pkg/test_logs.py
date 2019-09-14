@@ -27,7 +27,7 @@ class TestLogs(object):
     def test_get_obj_log(self):
         """Pass."""
         log = logs.get_obj_log(obj=self, level="warning")
-        assert log.name == "axonius_api_client.tests.test_logs.TestLogs"
+        assert log.name == "axonius_api_client.tests.tests_pkg.test_logs.TestLogs"
         assert log.level == logging.WARNING
 
     def test_str_level_int(self):

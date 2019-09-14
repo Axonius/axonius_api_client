@@ -9,10 +9,10 @@ import pytest
 import axonius_api_client as axonapi
 from axonius_api_client import constants, exceptions, tools
 
-from . import utils
+from .. import utils
 
 # FUTURE: BR: adding cnx with parsed config instead of raw config breaks adapters._get()
-# TODO: add atexit to verify no badwolf cnxs
+# FUTURE: add atexit to verify no badwolf cnxs?
 
 CSV_FILENAME = "badwolf.csv"
 CSV_FIELDS = ["mac_address", "field1"]

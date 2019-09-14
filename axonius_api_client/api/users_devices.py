@@ -114,6 +114,20 @@ class UserDeviceMixin(mixins.ModelUserDevice, mixins.Mixins):
         """
         return self._count(query=query, use_post=use_post)
 
+    def count_by_saved_query(self, name, use_post=False):
+        """Get the number of matches for a given query.
+
+        Args:
+            query (:obj:`str`, optional):
+                Query built from Query Wizard in GUI.
+
+        Returns:
+            :obj:`int`
+
+        """
+        sq = self.saved_query.find_by_name(value=name, match_count=1, match_error=True)
+        return self._count(query=sq["view"]["query"]["filter"], use_post=use_post)
+
     # FUTURE: include outdated and/or query_pre?
     def find_by_value(
         self,
@@ -148,13 +162,15 @@ class UserDeviceMixin(mixins.ModelUserDevice, mixins.Mixins):
             not_flag = "not "
 
         if isinstance(value, tools.LIST):
-            value = " ".join(["'{}'".format(v) for v in value])
+            value = tools.strip_left(obj=value, fix="RE:")
+            value = ", ".join(["'{}'".format(v.strip()) for v in value])
             query = "{not_flag}{field} in [{value}]"
         elif value.startswith("RE:"):
             value = tools.strip_left(obj=value, fix="RE:").strip()
             query = '{not_flag}{field} == regex("{value}", "i")'
         else:
             query = '{not_flag}{field} == "{value}"'
+            value = value.strip()
 
             if eq_single and (not query_post and not not_flag):
                 max_rows = 1
@@ -212,7 +228,7 @@ class UserDeviceMixin(mixins.ModelUserDevice, mixins.Mixins):
 
             page_size = constants.MAX_PAGE_SIZE
 
-        page_info = 0
+        page_info = {}
         page_num = 0
         rows_fetched = 0
         rows = []
@@ -286,12 +302,12 @@ class UserDeviceMixin(mixins.ModelUserDevice, mixins.Mixins):
 
         msg = [
             "Finished get: rows_fetched={}".format(rows_fetched),
-            "total_rows={}".format(page_info["totalResources"]),
+            "total_rows={}".format(page_info.get("totalResources", 0)),
             "fetch_took={}".format(tools.dt_sec_ago(obj=fetch_start)),
             "query={!r}".format(query or ""),
             "fields={!r}".format(fields),
         ]
-        self._log.info(tools.join_comma(obj=msg))
+        self._log.debug(tools.join_comma(obj=msg))
 
         return rows
 
@@ -472,7 +488,7 @@ class Devices(UserDeviceMixin):
             value=value, field="specific_data.data.network_interfaces.ips", **kwargs
         )
 
-    def find_by_in_subnet(self, value, query_post="", **kwargs):
+    def find_by_subnet(self, value, query_post="", **kwargs):
         """Get objects by MAC using paging.
 
         Args:
@@ -636,6 +652,7 @@ class SavedQuery(mixins.Child):
 
         return self._parent._request(method="get", path=path, params=params)
 
+    # FUTURE: FR: Have backend process expressions on add if none supplied
     def add(
         self,
         name,
@@ -824,7 +841,7 @@ class SavedQuery(mixins.Child):
             "fetch_took={}".format(tools.dt_sec_ago(obj=fetch_start)),
             "query={!r}".format(query or ""),
         ]
-        self._log.info(tools.join_comma(obj=msg))
+        self._log.debug(tools.join_comma(obj=msg))
 
         return rows
 
@@ -1203,7 +1220,8 @@ class Reports(mixins.Child):
         new_rows = []
 
         for raw_row in rows:
-            row = {k: v for k, v in raw_row.items() if "." in k or k in ["labels"]}
+            # row = {k: v for k, v in raw_row.items() if "." in k or k in ["labels"]}
+            row = {k: v for k, v in raw_row.items()}
             row["adapters"] = tools.strip_right(
                 obj=tools.listify(obj=raw_row.get("adapters", [])), fix="_adapter"
             )

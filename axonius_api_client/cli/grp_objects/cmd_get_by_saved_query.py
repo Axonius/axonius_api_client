@@ -7,29 +7,13 @@ import click
 from .. import context
 
 
-@click.command("get", context_settings=context.CONTEXT_SETTINGS)
+@click.command("get-by-saved-query", context_settings=context.CONTEXT_SETTINGS)
 @context.connect_options
 @context.export_options
 @click.option(
-    "--query",
-    help="Query built from Query Wizard to filter objects (empty returns all).",
-    metavar="QUERY",
-    show_envvar=True,
-    show_default=True,
-)
-@click.option(
-    "--field",
-    help="Columns to include in the format of adapter:field.",
-    metavar="ADAPTER:FIELD",
-    multiple=True,
-    show_envvar=True,
-    show_default=True,
-)
-@click.option(
-    "--fields-default/--no-fields-default",
-    default=True,
-    help="Include default fields for this object type.",
-    is_flag=True,
+    "--name",
+    help="Name of saved query to get assets from.",
+    required=True,
     show_envvar=True,
     show_default=True,
 )
@@ -48,9 +32,7 @@ def cmd(
     export_file,
     export_path,
     export_overwrite,
-    query,
-    field,
-    fields_default,
+    name,
     max_rows,
 ):
     """Get all objects matching a query."""
@@ -59,9 +41,7 @@ def cmd(
     api = getattr(client, clickctx.parent.command.name)
 
     with context.exc_wrap(wraperror=ctx.wraperror):
-        raw_data = api.get(
-            query=query, fields=field, fields_default=fields_default, max_rows=max_rows
-        )
+        raw_data = api.get_by_saved_query(name=name, max_rows=max_rows)
 
     formatters = {"json": context.to_json, "csv": context.obj_to_csv}
 

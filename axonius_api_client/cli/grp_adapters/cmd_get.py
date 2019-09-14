@@ -2,11 +2,8 @@
 """Command line interface for Axonius API Client."""
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-import pdb  # noqa
-
 import click
 
-from ... import tools
 from .. import context
 
 
@@ -60,7 +57,7 @@ from .. import context
 )
 @click.option(
     "--include-settings/--no-include-settings",
-    help="Include connection, adapter, and advanced setitngs in CSV export.",
+    help="Include connection, adapter, and advanced settings in CSV export.",
     default=False,
     is_flag=True,
     show_envvar=True,
@@ -102,46 +99,58 @@ def cmd(
         all_adapters = client.adapters.get()
 
         by_nodes = client.adapters.filter_by_nodes(adapters=all_adapters, value=node)
-        check_empty(
+        context.check_empty(
             ctx=ctx,
             this_data=by_nodes,
             prev_data=all_adapters,
             value_type="node names",
             value=node,
+            objtype="adapters",
+            known_cb=ctx.obj.adapters.get_known,
+            known_cb_key="adapters",
         )
 
         by_names = client.adapters.filter_by_names(adapters=by_nodes, value=name)
-        check_empty(
+        context.check_empty(
             ctx=ctx,
             this_data=by_names,
             prev_data=by_nodes,
             value_type="names",
             value=name,
+            objtype="adapters",
+            known_cb=ctx.obj.adapters.get_known,
+            known_cb_key="adapters",
         )
 
         by_statuses = client.adapters.filter_by_status(
             adapters=by_names, value=statuses
         )
-        check_empty(
+        context.check_empty(
             ctx=ctx,
             this_data=by_statuses,
             prev_data=by_names,
             value_type="statuses",
-            value=[format(x) for x in statuses],
+            value=statuses,
+            objtype="adapters",
+            known_cb=ctx.obj.adapters.get_known,
+            known_cb_key="adapters",
         )
 
         by_cnx_count = client.adapters.filter_by_cnx_count(
             adapters=by_names, value=cnx_count
         )
-        check_empty(
+        context.check_empty(
             ctx=ctx,
             this_data=by_cnx_count,
             prev_data=by_statuses,
             value_type="connection count",
             value=cnx_count,
+            objtype="adapters",
+            known_cb=ctx.obj.adapters.get_known,
+            known_cb_key="adapters",
         )
 
-    formatters = {"json": to_json, "csv": to_csv}
+    formatters = {"json": context.to_json, "csv": to_csv}
     ctx.handle_export(
         raw_data=by_cnx_count,
         formatters=formatters,
@@ -151,39 +160,6 @@ def cmd(
         export_overwrite=export_overwrite,
         include_settings=include_settings,
     )
-
-
-def check_empty(ctx, this_data, prev_data, value_type, value):
-    """Pass."""
-    if value not in tools.EMPTY:
-
-        value = tools.join_comma(value)
-        if not this_data:
-            msg = "Valid adapters:{valid}\n"
-            msg = msg.format(
-                valid=tools.join_cr(ctx.obj.adapters.get_known(adapters=prev_data))
-            )
-            ctx.echo_error(msg, abort=False)
-
-            msg = "No adapters found when searching by {value_type}: {value}"
-            msg = msg.format(value_type=value_type, value=value)
-            ctx.echo_error(msg)
-
-        msg = "Found {cnt} adapters by {value_type}: {value}"
-        msg = msg.format(cnt=len(this_data), value_type=value_type, value=value)
-        ctx.echo_ok(msg)
-
-
-def kv_join(obj):
-    """Pass."""
-    kv_tmpl = "{}: {}".format
-    items = [kv_tmpl(v["title"], v["value"]) for k, v in obj.items()]
-    return join_cr(items)
-
-
-def join_cr(obj):
-    """Pass."""
-    return tools.join_cr(obj=obj, pre=False, post=False, indent="")
 
 
 def to_csv(ctx, raw_data, include_settings=True, **kwargs):
@@ -212,20 +188,15 @@ def to_csv(ctx, raw_data, include_settings=True, **kwargs):
             ]
 
             row[cnx_tmpl(idx=idx, t="id")] = cnx["id"]
-            row[cnx_tmpl(idx=idx, t="status")] = join_cr(status)
+            row[cnx_tmpl(idx=idx, t="status")] = context.join_cr(status)
 
             if include_settings:
-                row[cnx_tmpl(idx=idx, t="settings")] = kv_join(cnx["config"])
+                row[cnx_tmpl(idx=idx, t="settings")] = context.join_kv(cnx["config"])
 
         if include_settings:
-            row["adapter_settings"] = kv_join(adapter["settings"])
-            row["advanced_settings"] = kv_join(adapter["adv_settings"])
+            row["adapter_settings"] = context.join_kv(adapter["settings"])
+            row["advanced_settings"] = context.join_kv(adapter["adv_settings"])
 
         rows.append(row)
 
     return context.dictwriter(rows=rows)
-
-
-def to_json(ctx, raw_data, **kwargs):
-    """Pass."""
-    return tools.json_dump(obj=raw_data)

@@ -9,7 +9,7 @@ import pytest
 import axonius_api_client as axonapi
 from axonius_api_client import exceptions, tools
 
-from . import utils
+from .. import utils
 
 LINUX_QUERY = 'specific_data.data.os.type == "Linux"'
 SHELL_ACTION_NAME = "Badwolf Shell Action"

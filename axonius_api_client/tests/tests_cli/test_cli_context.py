@@ -3,19 +3,224 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import os
-import pdb  # noqa
 
 import pytest
 from click.testing import CliRunner
 
 from axonius_api_client import cli, connect, tools
 
-from . import utils
+from .. import utils
+
+
+def badwolf_cb(x, **kwargs):
+    """Pass."""
+    return ["a", "b"]
 
 
 def to_json(ctx, raw_data, **kwargs):
     """Pass."""
     return tools.json_dump(obj=raw_data, **kwargs)
+
+
+class TestJoinKv(object):
+    """Pass."""
+
+    def test_default(self):
+        """Pass."""
+        x = cli.context.join_kv(
+            {"a": {"title": "a", "value": 1}, "b": {"title": "b", "value": 2}}
+        )
+        assert x == "a: 1\nb: 2"
+
+
+class TestJoinCr(object):
+    """Pass."""
+
+    def test_default(self):
+        """Pass."""
+        x = cli.context.join_cr(["a", "b"])
+        assert x == "a\nb"
+
+
+class TestToJson(object):
+    """Pass."""
+
+    def test_default(self):
+        """Pass."""
+        x = cli.context.to_json(ctx=None, raw_data=[])
+        assert x == "[]"
+
+
+class TestCheckEmpty(object):
+    """Pass."""
+
+    @pytest.mark.parametrize("value", tools.EMPTY, scope="class")
+    def test_empty_value(self, value):
+        """Pass."""
+        cli.context.check_empty(
+            ctx=None,
+            this_data=[],
+            prev_data=[],
+            value_type="badwolf",
+            value=value,
+            objtype="wolves",
+            known_cb=None,
+            known_cb_key="bad",
+        )
+
+    def test_empty_data(self, capsys):
+        """Pass."""
+        ctx = cli.context.Context()
+
+        with pytest.raises(SystemExit):
+            cli.context.check_empty(
+                ctx=ctx,
+                this_data=[],
+                prev_data=[{"a": "1", "b": "2"}],
+                value_type="badwolf",
+                value=["d", "e"],
+                objtype="wolves",
+                known_cb=badwolf_cb,
+                known_cb_key="x",
+            )
+
+        captured = capsys.readouterr()
+
+        stderr = captured.err.splitlines()
+        assert len(stderr) == 5
+
+        stdout = captured.out.splitlines()
+        assert not stdout
+
+        assert stderr[0] == "** ERROR: Valid wolves:"
+        assert stderr[1] == "  a"
+        assert stderr[2] == "  b"
+        assert stderr[3] == ""
+        assert stderr[4] == "** ERROR: No wolves found when searching by badwolf: d, e"
+
+    def test_not_empty(self, capsys):
+        """Pass."""
+        ctx = cli.context.Context()
+
+        cli.context.check_empty(
+            ctx=ctx,
+            this_data=[{"a": "1"}],
+            prev_data=[{"a": "1", "b": "2"}],
+            value_type="badwolf",
+            value=["a"],
+            objtype="wolves",
+            known_cb=badwolf_cb,
+            known_cb_key="x",
+        )
+
+        captured = capsys.readouterr()
+
+        stderr = captured.err.splitlines()
+        assert len(stderr) == 1
+
+        stdout = captured.out.splitlines()
+        assert not stdout
+
+        assert stderr[0] == "** Found 1 wolves by badwolf: a"
+
+
+class TestCliJsonFromStream(object):
+    """Pass."""
+
+    def test_stdin_empty(self, monkeypatch, capsys):
+        """Pass."""
+        ctx = cli.context.Context()
+        stream = tools.six.StringIO()
+        stream.name = "<stdin>"
+        monkeypatch.setattr(stream, "isatty", lambda: True)
+        with pytest.raises(SystemExit):
+            cli.context.json_from_stream(ctx=ctx, stream=stream, src="--badwolf")
+
+        captured = capsys.readouterr()
+
+        stderr = captured.err.splitlines()
+        assert len(stderr) == 1
+
+        stdout = captured.out.splitlines()
+        assert not stdout
+
+        exp0 = "** ERROR: No input provided on <stdin> for --badwolf"
+        assert stderr[0] == exp0
+
+    def test_file_empty(self, monkeypatch, capsys):
+        """Pass."""
+        ctx = cli.context.Context()
+        stream = tools.six.StringIO()
+        stream.name = "/bad/wolf"
+        monkeypatch.setattr(stream, "isatty", lambda: False)
+        content = ""
+        stream.write(content)
+        stream.seek(0)
+        with pytest.raises(SystemExit):
+            cli.context.json_from_stream(ctx=ctx, stream=stream, src="--badwolf")
+
+        captured = capsys.readouterr()
+
+        stderr = captured.err.splitlines()
+        assert len(stderr) == 2
+
+        stdout = captured.out.splitlines()
+        assert not stdout
+
+        exp0 = "** Read {} bytes from /bad/wolf for --badwolf".format(len(content))
+        exp1 = "** ERROR: Empty content supplied in /bad/wolf for --badwolf"
+        assert stderr[0] == exp0
+        assert stderr[1] == exp1
+
+    def test_json_error(self, monkeypatch, capsys):
+        """Pass."""
+        ctx = cli.context.Context()
+        stream = tools.six.StringIO()
+        stream.name = "/bad/wolf"
+        monkeypatch.setattr(stream, "isatty", lambda: False)
+        content = "{{{}}}}"
+        stream.write(content)
+        stream.seek(0)
+        with pytest.raises(SystemExit):
+            cli.context.json_from_stream(ctx=ctx, stream=stream, src="--badwolf")
+
+        captured = capsys.readouterr()
+
+        stderr = captured.err.splitlines()
+        assert len(stderr) == 3
+
+        stdout = captured.out.splitlines()
+        assert not stdout
+
+        exp0 = "** Read {} bytes from /bad/wolf for --badwolf".format(len(content))
+        exp1 = "** ERROR: WRAPPED EXCEPTION: json.decoder.JSONDecodeError"
+        exp2 = "Expecting property name enclosed in double quotes: line 1 column 2 (char 1)"  # noqa
+        assert stderr[0] == exp0
+        assert stderr[1] == exp1
+        assert stderr[2] == exp2
+
+    def test_json_success(self, monkeypatch, capsys):
+        """Pass."""
+        ctx = cli.context.Context()
+        stream = tools.six.StringIO()
+        stream.name = "/bad/wolf"
+        monkeypatch.setattr(stream, "isatty", lambda: False)
+        content = '[{"x": "v"}]'
+        stream.write(content)
+        stream.seek(0)
+        cli.context.json_from_stream(ctx=ctx, stream=stream, src="--badwolf")
+
+        captured = capsys.readouterr()
+
+        stderr = captured.err.splitlines()
+        assert len(stderr) == 2
+
+        stdout = captured.out.splitlines()
+        assert not stdout
+
+        exp0 = "** Read {} bytes from /bad/wolf for --badwolf".format(len(content))
+        assert stderr[0] == exp0
+        assert stderr[1].startswith("** Loaded JSON content from")
 
 
 class TestCliDictwriter(object):

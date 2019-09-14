@@ -4,8 +4,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 from . import tools
 
-# TODO: all tests
-
 
 class AxonError(Exception):
     """Parent exception for all package errors."""

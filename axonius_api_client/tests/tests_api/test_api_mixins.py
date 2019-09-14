@@ -8,7 +8,7 @@ import requests
 import axonius_api_client as axonapi
 from axonius_api_client import exceptions, tools
 
-from . import utils
+from .. import utils
 
 
 @pytest.fixture(scope="module")

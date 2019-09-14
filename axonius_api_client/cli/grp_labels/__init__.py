@@ -4,16 +4,17 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import click
 
-from .. import context, grp_cnx
-from . import cmd_get
+from .. import context
+from . import cmd_add, cmd_get, cmd_remove
 
 
 @click.group()
 @context.pass_context
-def adapters(ctx):
-    """Work with adapter connections."""
+def labels(ctx):
+    """Work with device assets."""
     return ctx
 
 
-adapters.add_command(cmd_get.cmd)
-adapters.add_command(grp_cnx.cnx)
+labels.add_command(cmd_get.cmd)
+labels.add_command(cmd_add.cmd)
+labels.add_command(cmd_remove.cmd)

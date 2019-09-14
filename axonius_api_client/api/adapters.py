@@ -190,7 +190,7 @@ class Adapters(mixins.Model, mixins.Mixins):
 
         for adapter in adapters:
             if isinstance(value, tools.LIST):
-                if adapter["status"] not in value:
+                if value and adapter["status"] not in value:
                     continue
             elif adapter["status"] != value:
                 continue
@@ -642,7 +642,7 @@ class Cnx(mixins.Child):
             "About to delete connection in {s} seconds using args: {a}",
         ]
         lsmsg = tools.join_cr(obj=lsmsg).format(cnxinfo=cnxinfo, s=sleep, a=dargs)
-        self._log.info(lsmsg)
+        self._log.warning(lsmsg)
 
         time.sleep(sleep)
 
@@ -734,9 +734,9 @@ class Cnx(mixins.Child):
 
         for cnx in cnxs:
             if isinstance(value, tools.LIST):
-                if cnx["status"] not in value:
+                if value and cnx["status"] not in value:
                     continue
-            elif cnx["status"] != value:
+            elif value is not None and cnx["status"] != value:
                 continue
 
             if cnx not in matches:
@@ -753,7 +753,7 @@ class Cnx(mixins.Child):
 
         return matches
 
-    def get(self, adapter, node="master"):
+    def get(self, adapter=None, node=None):
         """Get all connections for an adapter."""
         if isinstance(adapter, tools.LIST):
             all_adapters = self._parent.get()
@@ -765,7 +765,7 @@ class Cnx(mixins.Child):
             )
             return [c for a in all_adapters for c in a["cnx"]]
 
-        if adapter is None:
+        if not adapter:
             all_adapters = self._parent.get()
             all_adapters = self._parent.filter_by_nodes(
                 adapters=all_adapters, value=node
@@ -1005,7 +1005,7 @@ class ParserCnxConfig(mixins.Parser):
         if uuid and filename:
             return {"uuid": uuid, "filename": filename}
 
-        # TODO: try here
+        # FUTURE: try here
         if filepath:
             uploaded = self._parent._parent.upload_file_path(
                 field=name,

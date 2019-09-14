@@ -4,7 +4,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import click
 
-from ... import tools
 from .. import context
 
 
@@ -12,37 +11,42 @@ from .. import context
 @context.connect_options
 @context.export_options
 @click.option(
-    "--name",
-    help="Only clients for adapters matching this regex.",
+    "--adapters",
+    help="The output from 'adapters get' supplied as a file or via stdin.",
+    default="-",
+    type=click.File(mode="r"),
+    show_envvar=True,
+    show_default=True,
+)
+@click.option(
+    "--id",
+    "ids",
+    help="Only include connections with matching IDs.",
     multiple=True,
     show_envvar=True,
     show_default=True,
 )
 @click.option(
-    "--node",
-    help="Only clients for adapters on nodes matching this regex.",
-    multiple=True,
+    "--working/--no-working",
+    help="Include connections that are working.",
+    default=True,
+    is_flag=True,
     show_envvar=True,
     show_default=True,
 )
 @click.option(
-    "--status",
-    help="Only clients with a success if True or error if False.",
-    type=click.BOOL,
+    "--broken/--no-broken",
+    help="Include connections that are broken.",
+    default=True,
+    is_flag=True,
     show_envvar=True,
     show_default=True,
 )
 @click.option(
-    "--within",
-    help="Only clients fetched in past N minutes.",
-    type=click.INT,
-    show_envvar=True,
-    show_default=True,
-)
-@click.option(
-    "--not-within",
-    help="Only clients NOT fetched in past N minutes.",
-    type=click.INT,
+    "--include-settings/--no-include-settings",
+    help="Include connection settings in CSV export.",
+    default=False,
+    is_flag=True,
     show_envvar=True,
     show_default=True,
 )
@@ -56,75 +60,85 @@ def cmd(
     export_file,
     export_path,
     export_overwrite,
-    status,
-    name,
-    node,
-    within,
-    not_within,
+    adapters,
+    ids,
+    working,
+    broken,
+    include_settings,
 ):
     """Get all adapters with clients that have errors."""
     client = ctx.start_client(url=url, key=key, secret=secret)
+    content = context.json_from_stream(ctx=ctx, stream=adapters, src="--adapters")
 
-    try:
-        raw_data = client.adapters.clients.get(
-            names=name or None,
-            nodes=node or None,
-            status=status,
-            within=within,
-            not_within=not_within,
+    cnxs = []
+    for adapter in content:
+        if "cnx" not in adapter:
+            msg = "No 'cnx' key found in adapter with keys: {k}"
+            msg = msg.format(k=list(adapter))
+            ctx.echo_error(msg)
+        cnxs += adapter["cnx"]
+
+    msg = "Loaded {nc} connections from {na} adapters"
+    msg = msg.format(nc=len(cnxs), na=len(content))
+    ctx.echo_ok(msg)
+
+    statuses = []
+
+    if working:
+        statuses.append(True)
+
+    if broken:
+        statuses.append(False)
+
+    with context.exc_wrap(wraperror=ctx.wraperror):
+        by_statuses = client.adapters.cnx.filter_by_status(cnxs=cnxs, value=statuses)
+        context.check_empty(
+            ctx=ctx,
+            this_data=by_statuses,
+            prev_data=cnxs,
+            value_type="connection statuses",
+            value=statuses,
+            objtype="connections",
+            known_cb=ctx.obj.adapters.cnx.get_known,
+            known_cb_key="cnxs",
         )
-    except Exception as exc:
-        if ctx.wraperror:
-            ctx.echo_error(format(exc))
-        raise
 
-    formatters = {"json": ctx.to_json, "csv": to_csv}
+        by_ids = client.adapters.cnx.filter_by_ids(cnxs=by_statuses, value=ids)
+        context.check_empty(
+            ctx=ctx,
+            this_data=by_ids,
+            prev_data=by_statuses,
+            value_type="connection ids",
+            value=ids,
+            objtype="connections",
+            known_cb=ctx.obj.adapters.cnx.get_known,
+            known_cb_key="cnxs",
+        )
+
+    formatters = {"json": context.to_json, "csv": to_csv}
+
     ctx.handle_export(
-        raw_data=raw_data,
+        raw_data=by_ids,
         formatters=formatters,
         export_format=export_format,
         export_file=export_file,
         export_path=export_path,
         export_overwrite=export_overwrite,
+        include_settings=include_settings,
     )
 
-    return ctx
 
-
-def to_csv(ctx, raw_data, **kwargs):
+def to_csv(ctx, raw_data, include_settings=True, **kwargs):
     """Pass."""
-    headers = [
-        "adapter",
-        "adapter_features",
-        "adapter_status",
-        "status",
-        "status_bool",
-        "node_name",
-        "node_id",
-        "client_id",
-        "uuid",
-        "date_fetched",
-    ]
+    rows = []
 
-    end = ["error", "settings"]
+    simples = ["adapter_name", "node_name", "id", "uuid", "status_raw", "error"]
 
-    found = []
+    for cnx in raw_data:
+        row = {k: cnx[k] for k in simples}
+        if include_settings:
+            row["settings"] = context.join_kv(cnx["config"])
 
-    stmpl = "{} = {}".format
+        rows.append(row)
 
-    for client in raw_data:
-        settings = client.get("settings", []) or []
-        settings = [stmpl(k, v["value"]) for k, v in settings.items()]
-        client["settings"] = settings
-
-        for k, v in client.items():
-            found.append(k)
-
-            v = tools.join.cr(tools.listify(v, otype=None, itype=None), pre=False)
-            client[k] = v
-
-            if k not in headers + end:
-                headers.append(k)
-
-    headers = [x for x in headers + end if x in found]
-    return tools.csv.cereal(rows=raw_data, headers=headers)
+    return context.dictwriter(rows=rows)
