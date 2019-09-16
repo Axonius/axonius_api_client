@@ -1,16 +1,36 @@
 # -*- coding: utf-8 -*-
 """Axonius API Client package."""
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, print_function, unicode_literals
 
-from . import api
-from . import constants
-from . import http
-from . import auth
-from . import exceptions
-from . import version
-from . import tools
+from . import api, auth, cli, constants, exceptions, http, logs, tools, version
+from .api import Adapters, Devices, Enforcements, Users
+from .auth import ApiKey
+from .connect import Connect
+from .http import Http
 
-__all__ = ("api", "constants", "http", "auth", "exceptions", "version", "tools")
+__version__ = version.__version__
+LOG = logs.LOG
+
+__all__ = (
+    # Connection handler
+    "Connect",
+    # http client
+    "Http",
+    # authentication
+    "ApiKey",
+    # api
+    "Users",
+    "Devices",
+    "Adapters",
+    "Enforcements",
+    # modules
+    "api",
+    "auth",
+    "http",
+    "exceptions",
+    "version",
+    "tools",
+    "constants",
+    "cli",
+    "logs",
+)

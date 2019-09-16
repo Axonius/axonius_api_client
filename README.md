@@ -8,6 +8,8 @@ Installing axonius_api_client via [pip](https://pypi.org/project/pip/) or [pipen
 
 ## Documentation
 
+**With the 2.0 release the docs are in the midst of an overhaul.**
+
 Found [here](https://axonius-api-client.readthedocs.io/en/latest/?)
 
 ## Examples

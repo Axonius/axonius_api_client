@@ -1,0 +1,43 @@
+# venv
+pip_install_tools       install requirements-pkg.txt into site-packages
+pipenv_install_dev      install requirements-dev.txt into venv
+pipenv_install_lint     install requirements-lint.txt into venv
+pipenv_install_build    install requirements-build.txt into venv
+pipenv_install_docs     install docs/requirements.txt into venv
+pipenv_init             build a venv using pipenv
+pipenv_clean            remove the venv built by pipenv
+pyenv_init              setup pyenv with python 3.7.3, 3.6.8, 2.7.16
+
+# docs
+docs                    run docs/make html and rebuild ALL docs
+docs_dev                run docs/make html and only rebuild changed docs
+docs_coverage           run docs/make coverage
+docs_linkcheck          run docs/make linkcheck
+docs_open               open the html docs in a browser
+docs_clean              make pipenv_install_docs, run docs/make clean
+
+# git fun
+git_check               check that the repo is clean and a tag exists for current version
+git_tag                 make a tag for current version and push it
+
+# packaging
+pkg_build               make clean, make pipenv_install_build, build the package
+pkg_publish             make lint, make pkg_build, make git_check, publish the package to pypi
+pkg_clean               clean up build folders/files
+
+# testing
+lint                    run black, isort, pydocstyle, flake8, and bandit
+test                    run pytest with coverage reports
+test_dev                run pytest with logging at debug
+test_cov_open           open the test coverage html docs in a browser
+test_clean              clean up test folders/files
+
+# clean up
+files_clean             clean up a bunch of files
+clean                   make files_clean, make pkg_clean, make test_clean, make docs_clean, make pipenv_clean
+
+# other
+help                    this...
+
+# call me first
+init                    make pip_install_tools, make clean, make py_env, make pipenv_init, make pipenv_install_*

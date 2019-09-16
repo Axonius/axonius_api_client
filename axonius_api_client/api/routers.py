@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
 """Constants for this package."""
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, print_function, unicode_literals
+
+from .. import tools
 
 
 class Router(object):
@@ -20,11 +19,11 @@ class Router(object):
         self._version = version
         self._base = base
         self._object_type = object_type
-        self.root = "{base}/{object_type}".format(base=base, object_type=object_type)
+        self.root = tools.join_url(base, object_type)
         self._routes = ["root"]
         for k, v in routes.items():
             self._routes.append(k)
-            setattr(self, k, "{root}/{route}".format(root=self.root, route=v))
+            setattr(self, k, tools.join_url(self.root, v))
 
     def __str__(self):
         """Show object info.
@@ -88,7 +87,8 @@ class ApiV1(object):
         object_type="adapters",
         base=base,
         version=version,
-        clients="{adapter_name}/clients",
+        cnxs="{adapter_name}/clients",
+        cnxs_uuid="{adapter_name}/clients/{cnx_uuid}",
         upload_file="{adapter_name}/{node_id}/upload_file",
     )
 

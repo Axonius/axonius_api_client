@@ -1,16 +1,15 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """Package setup."""
+import codecs
 import os
 
-import codecs
+from setuptools import find_packages, setup
 
-from setuptools import setup
-from setuptools import find_packages
-
-
+PROJECT = "axonius_api_client"
+SHELL_CMD = "axonshell"
 HERE = os.path.abspath(os.path.dirname(__file__))
-VERSION_PATH = os.path.join(HERE, "axonius_api_client", "version.py")
+VERSION_PATH = os.path.join(HERE, PROJECT, "version.py")
 
 
 ABOUT = {}
@@ -36,7 +35,12 @@ setup(
     package_data={"": ["LICENSE"]},
     include_package_data=True,
     python_requires=">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*",
-    install_requires=["requests[security,socks]"],
+    install_requires=[
+        "requests[security,socks]",
+        "click",
+        "python-dotenv",
+        "python-dateutil",
+    ],
     keywords=["Axonius", "API Library"],
     tests_require=["pytest", "pytest-cov", "pytest-httpbin", "coverage"],
     license=ABOUT["__license__"],
@@ -53,4 +57,5 @@ setup(
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.7",
     ],
+    entry_points={"console_scripts": ["{}={}.cli:cli".format(SHELL_CMD, PROJECT)]},
 )

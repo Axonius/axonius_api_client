@@ -13,11 +13,17 @@ Installation
 
 This library is actively maintained on GitHub, where the code is `always available <https://github.com/Axonius/axonius_api_client>`_.
 
-Supported & Tested Python versions
+Supported Python versions
 ==========================================================
 
-* 3.7.3, 3.6.8, 2.7.16
+* 3.7.4, 2.7.16
 * Windows, OSX, Linux
+
+Test Python versions
+==========================================================
+
+* 3.7.4
+* OSX
 
 Install into the system site-packages using pip
 ============================================================
@@ -61,7 +67,7 @@ Table of Contents
    root/release_strategy.rst
    root/changelog.rst
    root/todo.rst
-   root/api_ref/toc.rst
+   api_ref/modules.rst
 
 Indices and tables
 ###############################################
