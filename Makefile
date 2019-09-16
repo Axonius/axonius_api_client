@@ -59,6 +59,13 @@ cov_open:
 docs:
 	(cd docs && pipenv run make html SPHINXOPTS="-Wna" && cd ..)
 
+docs_dev:
+	(cd docs && pipenv run make html SPHINXOPTS="-na" && cd ..)
+
+docs_apigen:
+	rm -rf docs/api_ref
+	pipenv run sphinx-apidoc -e -P -M -f -t docs/_templates -o docs/api_ref $(PACKAGE) $(PACKAGE)/tests $(PACKAGE)/cli
+
 docs_open:
 	open docs/_build/html/index.html
 

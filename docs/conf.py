@@ -44,6 +44,7 @@ release = pkg.version.__version__
 pkg_project = pkg.version.__project__
 pkg_title = pkg.version.__title__
 
+keep_warnings = True
 # -- General configuration ---------------------------------------------------
 
 # If your documentation needs a minimal Sphinx version, state it here.
@@ -304,7 +305,10 @@ autodoc_default_options = {
     # by member type (value 'groupwise')
     # by source order (value 'bysource')
     # The default is alphabetical.
-    "member-order": "bysource"
+    "member-order": "bysource",
+    "special-members": "__init__, __call__",
+    "private-members": None,
+    "members": None,
 }
 
 # -- Options for intersphinx extension ---------------------------------------
@@ -312,7 +316,6 @@ autodoc_default_options = {
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {
     "python": ("http://docs.python.org/3", None),
-    # FUTURE: requests doc site down for now, re-enable later
     "requests": ("https://2.python-requests.org//en/master/", None),
     "urllib3": ("https://urllib3.readthedocs.io/en/latest/", None),
 }

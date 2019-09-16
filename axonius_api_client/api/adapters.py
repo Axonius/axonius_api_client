@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Axonius API Client package."""
+"""Axonius API module for working with adapters."""
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import time
@@ -13,14 +13,14 @@ class Adapters(mixins.Model, mixins.Mixins):
     """Adapter related API methods."""
 
     def _init(self, auth, **kwargs):
-        """Pass."""
-        # children
+        """Post init constructor."""
         self.cnx = Cnx(parent=self)
+        """:obj:`Cnx`: Child object for working with connections."""
 
         super(Adapters, self)._init(auth=auth, **kwargs)
 
     def _get(self):
-        """Get all adapters.
+        """Private direct API method for getting all adapters.
 
         Returns:
             :obj:`dict`
@@ -48,7 +48,32 @@ class Adapters(mixins.Model, mixins.Mixins):
         content_type=None,
         headers=None,
     ):
-        """Pass."""
+        """Private direct API method for uploading a file for an adapter.
+
+        Args:
+            adapter_name (:obj:`str`):
+                Name of adapter to upload file to.
+            node_id (:obj:`str`):
+                ID of node running adapter_name.
+            name (:obj:`str`):
+                Name of file to upload.
+            field (:obj:`str`):
+                Field to associate with this file.
+            content (:obj:`str` or :obj:`bytes`):
+                Contents of file to upload.
+            content_type (:obj:`str`, optional):
+                Mime type of content.
+
+                Defaults to: None.
+            headers (:obj:`dict`, optional):
+                Mime headers for content.
+
+                Defaults to: None.
+
+        Returns:
+            dict
+
+        """
         data = {"field_name": field}
         files = {"userfile": (name, content, content_type, headers)}
 

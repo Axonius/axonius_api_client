@@ -8,12 +8,10 @@ from .enforcements import Enforcements
 from .users_devices import Devices, Users
 
 __all__ = (
-    # apis
     "Users",
     "Devices",
     "Adapters",
     "Enforcements",
-    # modules
     "routers",
     "users_devices",
     "adapters",
