@@ -7,6 +7,7 @@ import click
 from .. import constants, version
 from . import cmd_shell, context, grp_adapters, grp_objects
 
+
 # FUTURE: grp_enforcements
 # FUTURE: wrap json datasets with objtype info
 # FUTURE: --verbose/--no-verbose to silence echo_ok

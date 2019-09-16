@@ -5,7 +5,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import click
 
 from .. import context
-from . import cmd_get, cmd_add, cmd_delete, cmd_check, cmd_discover
+from . import cmd_add, cmd_check, cmd_delete, cmd_discover, cmd_get
 
 
 @click.group()

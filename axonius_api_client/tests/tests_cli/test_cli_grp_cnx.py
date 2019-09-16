@@ -2,11 +2,11 @@
 """Test suite for axonius_api_client.tools."""
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-# import pytest
-
 from axonius_api_client import cli, tools  # , exceptions
 
 from .. import utils
+
+# import pytest
 
 
 class TestGrpCnx(object):
