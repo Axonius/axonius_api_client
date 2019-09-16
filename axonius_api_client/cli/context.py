@@ -24,6 +24,11 @@ CONTEXT_SETTINGS = {"auto_envvar_prefix": "AX"}
 REASON = "Export format {ef!r} is unsupported!  Must be one of: {sf}"
 QUOTING = csv.QUOTE_NONNUMERIC
 
+KV_TMPL = "{}: {}".format
+
+MAX_LEN = 30000
+MAX_STR = "...TRIMMED - {} items over max cell length {}".format
+
 
 def load_dotenv():
     """Pass."""
@@ -42,6 +47,7 @@ def connect_options(func):
     #
     @click.option(
         "--url",
+        "-u",
         required=True,
         help="URL of Axonius instance.",
         metavar="URL",
@@ -50,6 +56,7 @@ def connect_options(func):
     )
     @click.option(
         "--key",
+        "-k",
         required=True,
         help="API Key of user in Axonius instance.",
         metavar="KEY",
@@ -59,6 +66,7 @@ def connect_options(func):
     )
     @click.option(
         "--secret",
+        "-s",
         required=True,
         help="API Secret of user in Axonius instance.",
         metavar="SECRET",
@@ -79,6 +87,7 @@ def export_options(func):
     # FUTURE: error if os.path.sep in value
     @click.option(
         "--export-file",
+        "-xf",
         default="",
         help="Export to a file in export-path instead of printing to STDOUT.",
         show_envvar=True,
@@ -86,6 +95,7 @@ def export_options(func):
     )
     @click.option(
         "--export-path",
+        "-xp",
         default=format(tools.path(obj=os.getcwd())),
         help="Path to create --export-file in.",
         type=click.Path(exists=False, resolve_path=True),
@@ -94,6 +104,7 @@ def export_options(func):
     )
     @click.option(
         "--export-format",
+        "-xt",
         default="json",
         help="Format to use for STDOUT or export-file.",
         type=click.Choice(["csv", "json"]),
@@ -102,6 +113,7 @@ def export_options(func):
     )
     @click.option(
         "--export-overwrite/--no-export-overwrite",
+        "-xo/-nxo",
         default=False,
         help="Overwrite export-file if exists.",
         is_flag=True,
@@ -113,6 +125,23 @@ def export_options(func):
         return func(*args, **kwargs)
 
     return wrapper
+
+
+class SplitEquals(click.ParamType):
+    """Pass."""
+
+    name = "split_equals"
+
+    def convert(self, value, param, ctx):
+        """Pass."""
+        split = value.split("=", 1)
+
+        if len(split) != 2:
+            msg = "Need an '=' in --{p} with value {v!r}"
+            msg = msg.format(p=param.name, v=value)
+            self.fail(msg, param, ctx)
+
+        return [x.strip() for x in split]
 
 
 class exc_wrap(object):
@@ -274,15 +303,16 @@ def check_empty(
     ctx.echo_ok(msg)
 
 
-def join_kv(obj):
+def join_kv(obj, indent="  "):
     """Pass."""
-    kv_tmpl = "{}: {}".format
-    items = [kv_tmpl(v["title"], v["value"]) for k, v in obj.items()]
+    items = [KV_TMPL(k, v) for k, v in obj.items()]
+    return tools.join_cr(obj=items, indent=indent)
+
+
+def join_tv(obj):
+    """Pass."""
+    items = [KV_TMPL(v["title"], v["value"]) for k, v in obj.items()]
     return join_cr(items)
-
-
-MAX_LEN = 30000
-MAX_STR = "...TRIMMED - {} items over max cell length {}".format
 
 
 def join_cr(obj, is_cell=False):
@@ -478,7 +508,7 @@ class Context(object):
         export_overwrite,
         ctx=None,
         reason=REASON,
-        **kwargs
+        **kwargs,
     ):
         """Pass."""
         if export_format not in formatters:

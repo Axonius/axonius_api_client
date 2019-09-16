@@ -10,14 +10,14 @@ from .. import utils
 
 
 @pytest.mark.parametrize("cmd", ["devices", "users"])
-class TestCliGrpObjectsCmdCount(object):
+class TestCmdCount(object):
     """Pass."""
 
     def test_json(self, request, monkeypatch, cmd):
         """Pass."""
         runner = utils.load_clirunner(request, monkeypatch)
 
-        args = [
+        args1 = [
             cmd,
             "count",
             "--query",
@@ -26,98 +26,209 @@ class TestCliGrpObjectsCmdCount(object):
             "json",
         ]
 
-        result = runner.invoke(cli=cli.cli, args=args)
+        result1 = runner.invoke(cli=cli.cli, args=args1)
 
-        assert result.exit_code == 0
+        exit_code1 = result1.exit_code
+        stdout1 = result1.stdout
+        stderr1 = result1.stderr
 
-        json_stdout = tools.json_load(result.stdout)
-        assert isinstance(json_stdout, tools.INT)
+        assert stdout1
+        assert stderr1
+        assert exit_code1 == 0
+
+        json1 = tools.json_load(result1.stdout)
+        assert isinstance(json1, tools.INT)
 
 
 @pytest.mark.parametrize("cmd", ["devices", "users"])
-class TestCliGrpObjectCmdFields(object):
+class TestCmdCountBySQ(object):
     """Pass."""
 
     def test_json(self, request, monkeypatch, cmd):
         """Pass."""
         runner = utils.load_clirunner(request, monkeypatch)
 
-        result = runner.invoke(
-            cli=cli.cli, args=[cmd, "fields", "--export-format", "json"]
-        )
+        args1 = [cmd, "saved-query", "get"]
+        result1 = runner.invoke(cli.cli, args=args1)
 
-        assert result.exit_code == 0
+        exit_code1 = result1.exit_code
+        stdout1 = result1.stdout
+        stderr1 = result1.stderr
 
-        json_reloaded = tools.json_load(result.stdout)
-        assert isinstance(json_reloaded, dict)
+        assert stdout1
+        assert stderr1
+        assert exit_code1 == 0
+
+        json1 = tools.json_load(stdout1)
+        assert isinstance(json1, tools.LIST)
+
+        name = json1[0]["name"]
+
+        args2 = [cmd, "count-by-saved-query", "--name", name, "--export-format", "json"]
+
+        result2 = runner.invoke(cli=cli.cli, args=args2)
+
+        exit_code2 = result2.exit_code
+        stdout2 = result2.stdout
+        stderr2 = result2.stderr
+
+        assert stdout2
+        assert stderr2
+        assert exit_code2 == 0
+
+        json2 = tools.json_load(stdout2)
+        assert isinstance(json2, tools.INT)
+
+
+@pytest.mark.parametrize("cmd", ["devices", "users"])
+class TestCmdGetBySQ(object):
+    """Pass."""
+
+    def test_json(self, request, monkeypatch, cmd):
+        """Pass."""
+        runner = utils.load_clirunner(request, monkeypatch)
+
+        args1 = [cmd, "saved-query", "get"]
+        result1 = runner.invoke(cli.cli, args=args1)
+
+        exit_code1 = result1.exit_code
+        stdout1 = result1.stdout
+        stderr1 = result1.stderr
+
+        assert stdout1
+        assert stderr1
+        assert exit_code1 == 0
+
+        json1 = tools.json_load(stdout1)
+
+        assert isinstance(json1, tools.LIST)
+        name = json1[0]["name"]
+
+        args2 = [cmd, "get-by-saved-query", "--name", name, "--max-rows", "1"]
+
+        result2 = runner.invoke(cli=cli.cli, args=args2)
+
+        exit_code2 = result2.exit_code
+        stdout2 = result2.stdout
+        stderr2 = result2.stderr
+
+        assert stdout2
+        assert stderr2
+        assert exit_code2 == 0
+
+        json2 = tools.json_load(stdout2)
+        assert isinstance(json2, tools.LIST)
+
+
+@pytest.mark.parametrize("cmd", ["devices", "users"])
+class TestCmdFields(object):
+    """Pass."""
+
+    def test_json(self, request, monkeypatch, cmd):
+        """Pass."""
+        runner = utils.load_clirunner(request, monkeypatch)
+
+        args1 = [cmd, "fields", "--export-format", "json"]
+        result1 = runner.invoke(cli=cli.cli, args=args1)
+
+        exit_code1 = result1.exit_code
+        stdout1 = result1.stdout
+        stderr1 = result1.stderr
+
+        assert stdout1
+        assert stderr1
+        assert exit_code1 == 0
+
+        json1 = tools.json_load(stdout1)
+        assert isinstance(json1, dict)
 
     def test_csv(self, request, monkeypatch, cmd):
         """Pass."""
         runner = utils.load_clirunner(request, monkeypatch)
 
-        result = runner.invoke(
-            cli=cli.cli, args=[cmd, "fields", "--export-format", "csv"]
-        )
+        args1 = [cmd, "fields", "--export-format", "csv"]
+        result1 = runner.invoke(cli=cli.cli, args=args1)
 
-        assert result.exit_code == 0
-        utils.check_csv_cols(result.stdout, ["generic"])
+        exit_code1 = result1.exit_code
+        stdout1 = result1.stdout
+        stderr1 = result1.stderr
+
+        assert stdout1
+        assert stderr1
+        assert exit_code1 == 0
+
+        utils.check_csv_cols(stdout1, ["generic"])
 
     def test_get_exc_wrap(self, request, monkeypatch, cmd):
         """Pass."""
         runner = utils.load_clirunner(request, monkeypatch)
         monkeypatch.setattr(api.users_devices.Fields, "get", utils.mock_failure)
 
-        result = runner.invoke(cli=cli.cli, args=[cmd, "fields"])
+        args1 = [cmd, "fields"]
+        result1 = runner.invoke(cli=cli.cli, args=args1)
 
-        assert result.exit_code != 0
-        stderr = result.stderr.splitlines()
-        assert len(stderr) == 4
+        exit_code1 = result1.exit_code
+        stdout1 = result1.stdout
+        stderr1 = result1.stderr
+
+        assert not stdout1
+        assert stderr1
+        assert exit_code1 != 0
+
+        errlines1 = stderr1.splitlines()
+        assert len(errlines1) == 4
         assert (
-            stderr[-2]
+            errlines1[-2]
             == "** ERROR: WRAPPED EXCEPTION: axonius_api_client.tests.utils.MockError"
         )
-        assert stderr[-1] == "badwolf"
+        assert errlines1[-1] == "badwolf"
 
     def test_get_exc_nowrap(self, request, monkeypatch, cmd):
         """Pass."""
         runner = utils.load_clirunner(request, monkeypatch)
         monkeypatch.setattr(api.users_devices.Fields, "get", utils.mock_failure)
-
+        args1 = ["--no-wraperror", cmd, "fields"]
         with pytest.raises(utils.MockError):
-            runner.invoke(
-                cli=cli.cli,
-                args=["--no-wraperror", cmd, "fields"],
-                catch_exceptions=False,
-            )
+            runner.invoke(cli=cli.cli, args=args1, catch_exceptions=False)
 
     def test_adapter_re(self, request, monkeypatch, cmd):
         """Pass."""
         runner = utils.load_clirunner(request, monkeypatch)
 
-        result = runner.invoke(
-            cli=cli.cli, args=[cmd, "fields", "--adapter-re", "generic"]
-        )
+        args1 = [cmd, "fields", "--adapter-re", "generic"]
+        result1 = runner.invoke(cli=cli.cli, args=args1)
 
-        assert result.exit_code == 0
+        exit_code1 = result1.exit_code
+        stdout1 = result1.stdout
+        stderr1 = result1.stderr
 
-        json_reloaded = tools.json_load(result.stdout)
-        assert isinstance(json_reloaded, dict)
-        assert list(json_reloaded) == ["generic"]
+        assert stdout1
+        assert stderr1
+        assert exit_code1 == 0
+
+        json1 = tools.json_load(stdout1)
+        assert isinstance(json1, dict)
+        assert list(json1) == ["generic"]
 
     def test_adapter_fields_re(self, request, monkeypatch, cmd):
         """Pass."""
         runner = utils.load_clirunner(request, monkeypatch)
 
-        result = runner.invoke(
-            cli=cli.cli,
-            args=[cmd, "fields", "--adapter-re", "generic", "--field-re", "name"],
-        )
+        args1 = [cmd, "fields", "--adapter-re", "generic", "--field-re", "name"]
 
-        assert result.exit_code == 0, result.stderr
+        result1 = runner.invoke(cli=cli.cli, args=args1)
 
-        json_reloaded = tools.json_load(result.stdout)
-        assert isinstance(json_reloaded, dict)
-        for k, v in json_reloaded.items():
+        exit_code1 = result1.exit_code
+        stdout1 = result1.stdout
+        stderr1 = result1.stderr
+
+        assert stdout1
+        assert stderr1
+        assert exit_code1 == 0
+
+        json1 = tools.json_load(stdout1)
+        assert isinstance(json1, dict)
+        for k, v in json1.items():
             assert k == "generic"
             for i in v:
                 assert "name" in i
@@ -126,24 +237,30 @@ class TestCliGrpObjectCmdFields(object):
         """Pass."""
         runner = utils.load_clirunner(request, monkeypatch)
 
-        result = runner.invoke(
-            cli=cli.cli,
-            args=[cmd, "fields", "--adapter-re", "generic", "--field-re", "badwolf"],
-        )
-        assert result.exit_code != 0
-        stderr = result.stderr.splitlines()
-        assert stderr[-1].startswith("** ERROR: No fields found matching ")
+        args1 = [cmd, "fields", "--adapter-re", "generic", "--field-re", "badwolf"]
+        result1 = runner.invoke(cli=cli.cli, args=args1)
+
+        exit_code1 = result1.exit_code
+        stdout1 = result1.stdout
+        stderr1 = result1.stderr
+
+        assert not stdout1
+        assert stderr1
+        assert exit_code1 != 0
+
+        errlines1 = stderr1.splitlines()
+        assert errlines1[-1].startswith("** ERROR: No fields found matching ")
 
 
 @pytest.mark.parametrize("cmd", ["devices", "users"])
-class TestCliGrpObjectsCmdGet(object):
+class TestCmdGet(object):
     """Pass."""
 
     def test_json(self, request, monkeypatch, cmd):
         """Pass."""
         runner = utils.load_clirunner(request, monkeypatch)
 
-        args = [
+        args1 = [
             cmd,
             "get",
             "--query",
@@ -154,19 +271,25 @@ class TestCliGrpObjectsCmdGet(object):
             "1",
         ]
 
-        result = runner.invoke(cli=cli.cli, args=args)
+        result1 = runner.invoke(cli=cli.cli, args=args1)
 
-        assert result.exit_code == 0
+        exit_code1 = result1.exit_code
+        stdout1 = result1.stdout
+        stderr1 = result1.stderr
 
-        json_stdout = tools.json_load(result.stdout)
-        assert isinstance(json_stdout, tools.LIST)
+        assert stdout1
+        assert stderr1
+        assert exit_code1 == 0
+
+        json1 = tools.json_load(stdout1)
+        assert isinstance(json1, tools.LIST)
 
     def test_csv(self, request, monkeypatch, cmd):
         """Pass."""
         runner = utils.load_clirunner(request, monkeypatch)
 
         if cmd == "devices":
-            args = [
+            args1 = [
                 cmd,
                 "get",
                 "--query",
@@ -179,7 +302,7 @@ class TestCliGrpObjectsCmdGet(object):
                 "1",
             ]
         else:
-            args = [
+            args1 = [
                 cmd,
                 "get",
                 "--query",
@@ -190,16 +313,23 @@ class TestCliGrpObjectsCmdGet(object):
                 "1",
             ]
 
-        result = runner.invoke(cli=cli.cli, args=args)
+        result1 = runner.invoke(cli=cli.cli, args=args1)
 
-        assert result.exit_code == 0
+        exit_code1 = result1.exit_code
+        stdout1 = result1.stdout
+        stderr1 = result1.stderr
 
-        utils.check_csv_cols(result.stdout, ["internal_axon_id"])
+        assert stdout1
+        assert stderr1
+        assert exit_code1 == 0
+
+        csv_cols1 = ["internal_axon_id"]
+        utils.check_csv_cols(stdout1, csv_cols1)
 
     def test_csv_complex(self, request, monkeypatch, cmd):
         """Pass."""
         runner = utils.load_clirunner(request, monkeypatch)
-        args = [
+        args1 = [
             cmd,
             "get",
             "--query",
@@ -212,25 +342,28 @@ class TestCliGrpObjectsCmdGet(object):
             "1",
         ]
 
-        result = runner.invoke(cli=cli.cli, args=args)
+        result1 = runner.invoke(cli=cli.cli, args=args1)
 
-        stderr = result.stderr
-        stdout = result.stdout
-        exit_code = result.exit_code
+        exit_code1 = result1.exit_code
+        stdout1 = result1.stdout
+        stderr1 = result1.stderr
 
-        assert exit_code == 0, stderr
+        assert stdout1
+        assert stderr1
+        assert exit_code1 == 0
 
-        utils.check_csv_cols(stdout, ["internal_axon_id"])
+        csv_cols1 = ["internal_axon_id"]
+        utils.check_csv_cols(stdout1, csv_cols1)
 
 
-class TestCliGrpObjectsCmdGetBySubnet(object):
+class TestCmdGetBySubnet(object):
     """Pass."""
 
     def test_json(self, request, monkeypatch):
         """Pass."""
         runner = utils.load_clirunner(request, monkeypatch)
 
-        args = [
+        args1 = [
             "devices",
             "get-by-subnet",
             "--value",
@@ -241,18 +374,24 @@ class TestCliGrpObjectsCmdGetBySubnet(object):
             "1",
         ]
 
-        result = runner.invoke(cli=cli.cli, args=args)
+        result1 = runner.invoke(cli=cli.cli, args=args1)
 
-        assert result.exit_code == 0
+        exit_code1 = result1.exit_code
+        stdout1 = result1.stdout
+        stderr1 = result1.stderr
 
-        json_stdout = tools.json_load(result.stdout)
-        assert isinstance(json_stdout, tools.LIST)
+        assert stdout1
+        assert stderr1
+        assert exit_code1 == 0
+
+        json1 = tools.json_load(stdout1)
+        assert isinstance(json1, tools.LIST)
 
     def test_csv(self, request, monkeypatch):
         """Pass."""
         runner = utils.load_clirunner(request, monkeypatch)
 
-        args = [
+        args1 = [
             "devices",
             "get-by-subnet",
             "--value",
@@ -263,22 +402,29 @@ class TestCliGrpObjectsCmdGetBySubnet(object):
             "1",
         ]
 
-        result = runner.invoke(cli=cli.cli, args=args)
+        result1 = runner.invoke(cli=cli.cli, args=args1)
 
-        assert result.exit_code == 0
+        exit_code1 = result1.exit_code
+        stdout1 = result1.stdout
+        stderr1 = result1.stderr
 
-        utils.check_csv_cols(result.stdout, ["internal_axon_id"])
+        assert stdout1
+        assert stderr1
+        assert exit_code1 == 0
+
+        csv_cols1 = ["internal_axon_id"]
+        utils.check_csv_cols(stdout1, csv_cols1)
 
 
 @pytest.mark.parametrize("get_by", ["get-by-hostname", "get-by-ip", "get-by-mac"])
-class TestCliGrpObjectsCmdGetByDevices(object):
+class TestCmdGetByDevices(object):
     """Pass."""
 
     def test_json(self, request, monkeypatch, get_by):
         """Pass."""
         runner = utils.load_clirunner(request, monkeypatch)
 
-        args = [
+        args1 = [
             "devices",
             get_by,
             "--value",
@@ -289,18 +435,24 @@ class TestCliGrpObjectsCmdGetByDevices(object):
             "1",
         ]
 
-        result = runner.invoke(cli=cli.cli, args=args)
+        result1 = runner.invoke(cli=cli.cli, args=args1)
 
-        assert result.exit_code == 0
+        exit_code1 = result1.exit_code
+        stdout1 = result1.stdout
+        stderr1 = result1.stderr
 
-        json_stdout = tools.json_load(result.stdout)
-        assert isinstance(json_stdout, tools.LIST)
+        assert stdout1
+        assert stderr1
+        assert exit_code1 == 0
+
+        json1 = tools.json_load(stdout1)
+        assert isinstance(json1, tools.LIST)
 
     def test_csv(self, request, monkeypatch, get_by):
         """Pass."""
         runner = utils.load_clirunner(request, monkeypatch)
 
-        args = [
+        args1 = [
             "devices",
             get_by,
             "--value",
@@ -311,22 +463,29 @@ class TestCliGrpObjectsCmdGetByDevices(object):
             "1",
         ]
 
-        result = runner.invoke(cli=cli.cli, args=args)
+        result1 = runner.invoke(cli=cli.cli, args=args1)
 
-        assert result.exit_code == 0
+        exit_code1 = result1.exit_code
+        stdout1 = result1.stdout
+        stderr1 = result1.stderr
 
-        utils.check_csv_cols(result.stdout, ["internal_axon_id"])
+        assert stdout1
+        assert stderr1
+        assert exit_code1 == 0
+
+        csv_cols1 = ["internal_axon_id"]
+        utils.check_csv_cols(stdout1, csv_cols1)
 
 
 @pytest.mark.parametrize("get_by", ["get-by-mail", "get-by-username"])
-class TestCliGrpObjectsCmdGetByUsers(object):
+class TestCmdGetByUsers(object):
     """Pass."""
 
     def test_json(self, request, monkeypatch, get_by):
         """Pass."""
         runner = utils.load_clirunner(request, monkeypatch)
 
-        args = [
+        args1 = [
             "users",
             get_by,
             "--value",
@@ -337,18 +496,24 @@ class TestCliGrpObjectsCmdGetByUsers(object):
             "1",
         ]
 
-        result = runner.invoke(cli=cli.cli, args=args)
+        result1 = runner.invoke(cli=cli.cli, args=args1)
 
-        assert result.exit_code == 0
+        exit_code1 = result1.exit_code
+        stdout1 = result1.stdout
+        stderr1 = result1.stderr
 
-        json_stdout = tools.json_load(result.stdout)
-        assert isinstance(json_stdout, tools.LIST)
+        assert stdout1
+        assert stderr1
+        assert exit_code1 == 0
+
+        json1 = tools.json_load(stdout1)
+        assert isinstance(json1, tools.LIST)
 
     def test_csv(self, request, monkeypatch, get_by):
         """Pass."""
         runner = utils.load_clirunner(request, monkeypatch)
 
-        args = [
+        args1 = [
             "users",
             get_by,
             "--value",
@@ -359,8 +524,15 @@ class TestCliGrpObjectsCmdGetByUsers(object):
             "1",
         ]
 
-        result = runner.invoke(cli=cli.cli, args=args)
+        result1 = runner.invoke(cli=cli.cli, args=args1)
 
-        assert result.exit_code == 0
+        exit_code1 = result1.exit_code
+        stdout1 = result1.stdout
+        stderr1 = result1.stderr
 
-        utils.check_csv_cols(result.stdout, ["internal_axon_id"])
+        assert stdout1
+        assert stderr1
+        assert exit_code1 == 0
+
+        csv_cols1 = ["internal_axon_id"]
+        utils.check_csv_cols(stdout1, csv_cols1)

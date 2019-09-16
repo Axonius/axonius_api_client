@@ -14,6 +14,7 @@ def get_by_opts(func):
     #
     @click.option(
         "--value",
+        "-v",
         help="Values to search for.",
         required=True,
         multiple=True,
@@ -22,6 +23,7 @@ def get_by_opts(func):
     )
     @click.option(
         "--query",
+        "-q",
         help="Query to add to the end of the query built to search for --value.",
         default="",
         metavar="QUERY",
@@ -30,6 +32,7 @@ def get_by_opts(func):
     )
     @click.option(
         "--field",
+        "-f",
         help="Columns to include in the format of adapter:field.",
         metavar="ADAPTER:FIELD",
         multiple=True,
@@ -38,6 +41,7 @@ def get_by_opts(func):
     )
     @click.option(
         "--fields-default/--no-fields-default",
+        "-fd/-nfd",
         default=True,
         help="Include default columns for this object type.",
         is_flag=True,
@@ -45,7 +49,11 @@ def get_by_opts(func):
         show_default=True,
     )
     @click.option(
-        "--max-rows", help="Only return this many rows.", type=click.INT, hidden=True
+        "--max-rows",
+        "-mr",
+        help="Only return this many rows.",
+        type=click.INT,
+        hidden=True,
     )
     @functools.wraps(func)
     def wrapper(*args, **kwargs):

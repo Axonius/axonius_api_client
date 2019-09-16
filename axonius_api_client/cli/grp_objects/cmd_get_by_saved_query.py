@@ -12,13 +12,14 @@ from .. import context
 @context.export_options
 @click.option(
     "--name",
+    "-n",
     help="Name of saved query to get assets from.",
     required=True,
     show_envvar=True,
     show_default=True,
 )
 @click.option(
-    "--max-rows", help="Only return this many rows.", type=click.INT, hidden=True
+    "--max-rows", "-mr", help="Only return this many rows.", type=click.INT, hidden=True
 )
 @context.pass_context
 @click.pass_context

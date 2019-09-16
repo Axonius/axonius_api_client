@@ -12,7 +12,7 @@ from . import grp_common
 @context.connect_options
 @context.export_options
 @click.option(
-    "--max-rows", help="Only return this many rows.", type=click.INT, hidden=True
+    "--max-rows", "-mr", help="Only return this many rows.", type=click.INT, hidden=True
 )
 @context.pass_context
 @click.pass_context

@@ -12,6 +12,7 @@ from .. import context
 @context.export_options
 @click.option(
     "--query",
+    "-q",
     help="Query built from Query Wizard to return count of objects.",
     metavar="QUERY",
     show_envvar=True,

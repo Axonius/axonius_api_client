@@ -922,6 +922,17 @@ class TestParserCnxConfig(object):
 
         assert parsed_config == dict(test1=["test1"])
 
+    def test_array_comma(self, apiobj, csv_adapter):
+        """Pass."""
+        fake_settings = dict(test1=dict(name="test1", type="array", required=True))
+
+        config = dict(test1="test1,test2,test3")
+
+        parser = axonapi.api.adapters.ParserCnxConfig(raw=config, parent=apiobj.cnx)
+        parsed_config = parser.parse(adapter=csv_adapter, settings=fake_settings)
+
+        assert parsed_config == dict(test1=["test1", "test2", "test3"])
+
     def test_array_invalidtype(self, apiobj, csv_adapter):
         """Pass."""
         fake_settings = dict(test1=dict(name="test1", type="array", required=True))
@@ -959,7 +970,7 @@ class TestParserCnxConfig(object):
         """Pass."""
         fake_settings = dict(test1=dict(name="test1", type="file", required=True))
 
-        config = dict(test1="X")
+        config = dict(test1=["X"])
 
         parser = axonapi.api.adapters.ParserCnxConfig(raw=config, parent=apiobj.cnx)
 
@@ -1021,6 +1032,27 @@ class TestParserCnxConfig(object):
         test_path.write_text(CSV_FILECONTENT_STR)
 
         config = dict(test1={"filepath": test_path})
+
+        parser = axonapi.api.adapters.ParserCnxConfig(raw=config, parent=apiobj.cnx)
+        parsed_config = parser.parse(adapter=csv_adapter, settings=fake_settings)
+
+        assert parsed_config == dict(test1={"uuid": "x", "filename": CSV_FILENAME})
+
+    def test_filepath_str(self, apiobj, csv_adapter, monkeypatch, tmp_path):
+        """Pass."""
+        #
+        def mock_upload_file(**kwargs):
+            """Pass."""
+            return {"uuid": "x", "filename": CSV_FILENAME}
+
+        monkeypatch.setattr(apiobj, "_upload_file", mock_upload_file)
+
+        fake_settings = dict(test1=dict(name="test1", type="file", required=True))
+
+        test_path = tmp_path / CSV_FILENAME
+        test_path.write_text(CSV_FILECONTENT_STR)
+
+        config = dict(test1=format(test_path))
 
         parser = axonapi.api.adapters.ParserCnxConfig(raw=config, parent=apiobj.cnx)
         parsed_config = parser.parse(adapter=csv_adapter, settings=fake_settings)

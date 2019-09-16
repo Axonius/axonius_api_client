@@ -46,5 +46,5 @@ def cmd(
         field=field,
         fields_default=fields_default,
         max_rows=max_rows,
-        method="find_by_mail",
+        method="get_by_mail",
     )

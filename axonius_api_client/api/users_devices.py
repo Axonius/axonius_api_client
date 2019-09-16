@@ -125,81 +125,8 @@ class UserDeviceMixin(mixins.ModelUserDevice, mixins.Mixins):
             :obj:`int`
 
         """
-        sq = self.saved_query.find_by_name(value=name, match_count=1, match_error=True)
+        sq = self.saved_query.get_by_name(value=name, match_count=1, match_error=True)
         return self._count(query=sq["view"]["query"]["filter"], use_post=use_post)
-
-    # FUTURE: include outdated and/or query_pre?
-    def find_by_value(
-        self,
-        value,
-        field,
-        query_post="",
-        match_count=None,
-        match_error=True,
-        eq_single=True,
-        fields=None,
-        fields_default=True,
-        fields_error=True,
-        max_rows=None,
-        max_pages=None,
-        page_size=None,
-        use_post=False,
-        all_fields=None,
-    ):
-        """Build query to perform equals or regex search."""
-        all_fields = all_fields or self.fields.get()
-
-        field = self.fields.find_single(field=field, all_fields=all_fields)
-
-        not_flag = ""
-
-        if isinstance(value, tools.LIST):
-            if any([x.startswith("NOT:") for x in value]):
-                value = [tools.strip_left(obj=x, fix="NOT:").strip() for x in value]
-                not_flag = "not "
-        elif value.startswith("NOT:"):
-            value = tools.strip_left(obj=value, fix="NOT:").strip()
-            not_flag = "not "
-
-        if isinstance(value, tools.LIST):
-            value = tools.strip_left(obj=value, fix="RE:")
-            value = ", ".join(["'{}'".format(v.strip()) for v in value])
-            query = "{not_flag}{field} in [{value}]"
-        elif value.startswith("RE:"):
-            value = tools.strip_left(obj=value, fix="RE:").strip()
-            query = '{not_flag}{field} == regex("{value}", "i")'
-        else:
-            query = '{not_flag}{field} == "{value}"'
-            value = value.strip()
-
-            if eq_single and (not query_post and not not_flag):
-                max_rows = 1
-                match_count = 1
-                match_error = True
-
-        query = query.format(not_flag=not_flag, field=field, value=value) + query_post
-
-        rows = self.get(
-            query=query,
-            fields=fields,
-            fields_default=fields_default,
-            fields_error=fields_error,
-            max_rows=max_rows,
-            max_pages=max_pages,
-            page_size=page_size,
-            use_post=use_post,
-            all_fields=all_fields,
-        )
-
-        if (match_count and len(rows) != match_count) and match_error:
-            value_msg = "{o} by field {f!r} value {v!r}"
-            value_msg = value_msg.format(o=self._router._object_type, f=field, v=value)
-            raise exceptions.ValueNotFound(value=query, value_msg=value_msg)
-
-        if match_count == 1 and len(rows) == 1:
-            return rows[0]
-
-        return rows
 
     def get(
         self,
@@ -332,7 +259,7 @@ class UserDeviceMixin(mixins.ModelUserDevice, mixins.Mixins):
         self, name, max_rows=None, max_pages=None, page_size=None, use_post=False
     ):
         """Pass."""
-        sq = self.saved_query.find_by_name(value=name, match_count=1, match_error=True)
+        sq = self.saved_query.get_by_name(value=name, match_count=1, match_error=True)
 
         return self.get(
             query=sq["view"]["query"]["filter"],
@@ -342,6 +269,79 @@ class UserDeviceMixin(mixins.ModelUserDevice, mixins.Mixins):
             page_size=page_size,
             use_post=use_post,
         )
+
+    # FUTURE: include outdated and/or query_pre?
+    def get_by_value(
+        self,
+        value,
+        field,
+        query_post="",
+        match_count=None,
+        match_error=True,
+        eq_single=True,
+        fields=None,
+        fields_default=True,
+        fields_error=True,
+        max_rows=None,
+        max_pages=None,
+        page_size=None,
+        use_post=False,
+        all_fields=None,
+    ):
+        """Build query to perform equals or regex search."""
+        all_fields = all_fields or self.fields.get()
+
+        field = self.fields.find_single(field=field, all_fields=all_fields)
+
+        not_flag = ""
+
+        if isinstance(value, tools.LIST):
+            if any([x.startswith("NOT:") for x in value]):
+                value = [tools.strip_left(obj=x, fix="NOT:").strip() for x in value]
+                not_flag = "not "
+        elif value.startswith("NOT:"):
+            value = tools.strip_left(obj=value, fix="NOT:").strip()
+            not_flag = "not "
+
+        if isinstance(value, tools.LIST):
+            value = tools.strip_left(obj=value, fix="RE:")
+            value = ", ".join(["'{}'".format(v.strip()) for v in value])
+            query = "{not_flag}{field} in [{value}]"
+        elif value.startswith("RE:"):
+            value = tools.strip_left(obj=value, fix="RE:").strip()
+            query = '{not_flag}{field} == regex("{value}", "i")'
+        else:
+            query = '{not_flag}{field} == "{value}"'
+            value = value.strip()
+
+            if eq_single and (not query_post and not not_flag):
+                max_rows = 1
+                match_count = 1
+                match_error = True
+
+        query = query.format(not_flag=not_flag, field=field, value=value) + query_post
+
+        rows = self.get(
+            query=query,
+            fields=fields,
+            fields_default=fields_default,
+            fields_error=fields_error,
+            max_rows=max_rows,
+            max_pages=max_pages,
+            page_size=page_size,
+            use_post=use_post,
+            all_fields=all_fields,
+        )
+
+        if (match_count and len(rows) != match_count) and match_error:
+            value_msg = "{o} by field {f!r} value {v!r}"
+            value_msg = value_msg.format(o=self._router._object_type, f=field, v=value)
+            raise exceptions.ValueNotFound(value=query, value_msg=value_msg)
+
+        if match_count == 1 and len(rows) == 1:
+            return rows[0]
+
+        return rows
 
 
 class Users(UserDeviceMixin):
@@ -367,45 +367,44 @@ class Users(UserDeviceMixin):
         """
         return [
             "labels",
+            "adapters",
             "specific_data.data.id",
             "specific_data.data.fetch_time",
             "specific_data.data.username",
             "specific_data.data.mail",
         ]
 
-    def find_by_username(self, value, **kwargs):
+    def get_by_username(self, value, **kwargs):
         """Get objects by name using paging.
 
         Args:
             value (:obj:`int`):
                 Value to find using field "username".
-            **kwargs: Passed thru to :meth:`UserDeviceModel.find_by_value`
+            **kwargs: Passed thru to :meth:`UserDeviceModel.get_by_value`
 
         Returns:
             :obj:`list` of :obj:`dict`: Each row matching name or :obj:`dict` if only1.
 
         """
         kwargs.pop("field", None)
-        return self.find_by_value(
+        return self.get_by_value(
             value=value, field="specific_data.data.username", **kwargs
         )
 
-    def find_by_mail(self, value, **kwargs):
+    def get_by_mail(self, value, **kwargs):
         """Get objects by email using paging.
 
         Args:
             value (:obj:`int`):
                 Value to find using field "mail".
-            **kwargs: Passed thru to :meth:`UserDeviceModel.find_by_value`
+            **kwargs: Passed thru to :meth:`UserDeviceModel.get_by_value`
 
         Returns:
             :obj:`list` of :obj:`dict`: Each row matching email or :obj:`dict` if only1.
 
         """
         kwargs.pop("field", None)
-        return self.find_by_value(
-            value=value, field="specific_data.data.mail", **kwargs
-        )
+        return self.get_by_value(value=value, field="specific_data.data.mail", **kwargs)
 
 
 class Devices(UserDeviceMixin):
@@ -431,70 +430,71 @@ class Devices(UserDeviceMixin):
         """
         return [
             "labels",
+            "adapters",
             "specific_data.data.id",
             "specific_data.data.fetch_time",
             "specific_data.data.hostname",
             "specific_data.data.network_interfaces.ips",
         ]
 
-    def find_by_hostname(self, value, **kwargs):
+    def get_by_hostname(self, value, **kwargs):
         """Get objects by name using paging.
 
         Args:
             value (:obj:`int`):
                 Value to find using field "username".
-            **kwargs: Passed thru to :meth:`UserDeviceModel.find_by_value`
+            **kwargs: Passed thru to :meth:`UserDeviceModel.get_by_value`
 
         Returns:
             :obj:`list` of :obj:`dict`: Each row matching name or :obj:`dict` if only1.
 
         """
         kwargs.pop("field", None)
-        return self.find_by_value(
+        return self.get_by_value(
             value=value, field="specific_data.data.hostname", **kwargs
         )
 
-    def find_by_mac(self, value, **kwargs):
+    def get_by_mac(self, value, **kwargs):
         """Get objects by MAC using paging.
 
         Args:
             value (:obj:`int`):
                 Value to find using field "network_interfaces.mac".
-            **kwargs: Passed thru to :meth:`UserDeviceModel.find_by_value`
+            **kwargs: Passed thru to :meth:`UserDeviceModel.get_by_value`
 
         Returns:
             :obj:`list` of :obj:`dict`: Each row matching email or :obj:`dict` if only1.
 
         """
         kwargs.pop("field", None)
-        return self.find_by_value(
+        return self.get_by_value(
             value=value, field="specific_data.data.network_interfaces.mac", **kwargs
         )
 
-    def find_by_ip(self, value, **kwargs):
+    def get_by_ip(self, value, **kwargs):
         """Get objects by MAC using paging.
 
         Args:
             value (:obj:`int`):
                 Value to find using field "network_interfaces.mac".
-            **kwargs: Passed thru to :meth:`UserDeviceModel.find_by_value`
+            **kwargs: Passed thru to :meth:`UserDeviceModel.get_by_value`
 
         Returns:
             :obj:`list` of :obj:`dict`: Each row matching email or :obj:`dict` if only1.
 
         """
         kwargs.pop("field", None)
-        return self.find_by_value(
+        return self.get_by_value(
             value=value, field="specific_data.data.network_interfaces.ips", **kwargs
         )
 
-    def find_by_subnet(self, value, query_post="", **kwargs):
+    def get_by_subnet(self, value, query_post="", **kwargs):
         """Get objects by MAC using paging.
 
         Args:
             value (:obj:`int`):
                 Value to find using field "network_interfaces.mac".
-            **kwargs: Passed thru to :meth:`UserDeviceModel.find_by_value`
+            **kwargs: Passed thru to :meth:`UserDeviceModel.get_by_value`
 
         Returns:
             :obj:`list` of :obj:`dict`: Each row matching email or :obj:`dict` if only1.
@@ -724,7 +724,7 @@ class SavedQuery(mixins.Child):
             gui_page_size=gui_page_size,
         )
 
-        return self.find_by_id(value=added)
+        return self.get_by_id(value=added)
 
     def delete(self, rows):
         """Delete a saved query by name.
@@ -845,7 +845,7 @@ class SavedQuery(mixins.Child):
 
         return rows
 
-    def find_by_id(
+    def get_by_id(
         self, value, match_error=True, max_rows=None, max_pages=None, page_size=None
     ):
         """Get saved queries using paging."""
@@ -866,7 +866,7 @@ class SavedQuery(mixins.Child):
 
         return None
 
-    def find_by_name(
+    def get_by_name(
         self,
         value,
         match_count=None,

@@ -14,6 +14,7 @@ from .. import context
 @context.connect_options
 @click.option(
     "--rows",
+    "-r",
     help="JSON rows returned by any get command for saved queries of this object type.",
     default="-",
     type=click.File(mode="r"),
@@ -22,6 +23,7 @@ from .. import context
 )
 @click.option(
     "--wait",
+    "-w",
     help="Wait this many seconds before deleting",
     default=30,
     type=click.INT,
@@ -42,6 +44,7 @@ def cmd(clickctx, ctx, url, key, secret, rows, wait):
     ctx.echo_warn(msg)
 
     time.sleep(wait)
+
     api = getattr(client, clickctx.parent.parent.command.name)
 
     with context.exc_wrap(wraperror=ctx.wraperror):

@@ -9,6 +9,37 @@ import pytest
 from axonius_api_client import exceptions, tools
 
 
+class TestCoerce(object):
+    """Test axonius_api_client.tools.join_url."""
+
+    def test_int(self):
+        """Pass."""
+        with pytest.raises(exceptions.ToolsError):
+            tools.coerce_int("badwolf")
+
+        assert tools.coerce_int("456") == 456
+
+    def test_bool(self):
+        """Pass."""
+        with pytest.raises(exceptions.ToolsError):
+            tools.coerce_bool("badwolf")
+
+        assert tools.coerce_bool("y") is True
+        assert tools.coerce_bool("yes") is True
+        assert tools.coerce_bool("true") is True
+        assert tools.coerce_bool("1") is True
+        assert tools.coerce_bool(1) is True
+        assert tools.coerce_bool("t") is True
+        assert tools.coerce_bool(True) is True
+        assert tools.coerce_bool("n") is False
+        assert tools.coerce_bool("no") is False
+        assert tools.coerce_bool("false") is False
+        assert tools.coerce_bool("0") is False
+        assert tools.coerce_bool(0) is False
+        assert tools.coerce_bool("f") is False
+        assert tools.coerce_bool(False) is False
+
+
 class TestJoinUrl(object):
     """Test axonius_api_client.tools.join_url."""
 

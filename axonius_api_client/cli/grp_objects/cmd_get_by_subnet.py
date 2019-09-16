@@ -13,6 +13,7 @@ from . import grp_common
 @context.export_options
 @click.option(
     "--value",
+    "-v",
     help="Value to search for.",
     required=True,
     show_envvar=True,
@@ -20,6 +21,7 @@ from . import grp_common
 )
 @click.option(
     "--query",
+    "-q",
     help="Query to add to the end of the query built to search for --value.",
     default="",
     metavar="QUERY",
@@ -28,6 +30,7 @@ from . import grp_common
 )
 @click.option(
     "--field",
+    "-f",
     help="Columns to include in the format of adapter:field.",
     metavar="ADAPTER:FIELD",
     multiple=True,
@@ -36,6 +39,7 @@ from . import grp_common
 )
 @click.option(
     "--fields-default/--no-fields-default",
+    "-fd/-nfd",
     default=True,
     help="Include default columns for this object type.",
     is_flag=True,
@@ -43,7 +47,7 @@ from . import grp_common
     show_default=True,
 )
 @click.option(
-    "--max-rows", help="Only return this many rows.", type=click.INT, hidden=True
+    "--max-rows", "-mr", help="Only return this many rows.", type=click.INT, hidden=True
 )
 @context.pass_context
 @click.pass_context
@@ -79,5 +83,5 @@ def cmd(
         field=field,
         fields_default=fields_default,
         max_rows=max_rows,
-        method="find_by_subnet",
+        method="get_by_subnet",
     )

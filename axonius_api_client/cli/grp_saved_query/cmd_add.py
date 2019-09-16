@@ -4,16 +4,17 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import click
 
-from ... import constants, tools
+from ... import constants
 from .. import context
-
-# TODO: Custom parameter type for key=value
+from . import grp_common
 
 
 @click.command("add", context_settings=context.CONTEXT_SETTINGS)
 @context.connect_options
+@context.export_options
 @click.option(
     "--name",
+    "-n",
     help="Name of saved query to create.",
     required=True,
     show_envvar=True,
@@ -21,6 +22,7 @@ from .. import context
 )
 @click.option(
     "--query",
+    "-q",
     help="Query built from Query Wizard.",
     required=True,
     metavar="QUERY",
@@ -29,6 +31,7 @@ from .. import context
 )
 @click.option(
     "--field",
+    "-f",
     help="Columns to include in the format of adapter:field.",
     metavar="ADAPTER:FIELD",
     multiple=True,
@@ -37,6 +40,7 @@ from .. import context
 )
 @click.option(
     "--fields-default/--no-fields-default",
+    "-fd/-nfd",
     default=True,
     help="Include default fields for this object type.",
     is_flag=True,
@@ -45,6 +49,7 @@ from .. import context
 )
 @click.option(
     "--sort-field",
+    "-sf",
     help="Column to sort data on.",
     metavar="ADAPTER:FIELD",
     show_envvar=True,
@@ -52,6 +57,7 @@ from .. import context
 )
 @click.option(
     "--sort-descending/--no-sort-descending",
+    "-sd",
     default=True,
     help="Sort --sort-field descending.",
     is_flag=True,
@@ -60,14 +66,17 @@ from .. import context
 )
 @click.option(
     "--column-filter",
+    "-cf",
     help="Columns to filter in the format of adapter:field=value.",
     metavar="ADAPTER:FIELD=value",
+    type=context.SplitEquals(),
     multiple=True,
     show_envvar=True,
     show_default=True,
 )
 @click.option(
     "--gui-page-size",
+    "-gps",
     default=format(constants.GUI_PAGE_SIZES[0]),
     help="Number of rows to show per page in GUI.",
     type=click.Choice([format(x) for x in constants.GUI_PAGE_SIZES]),
@@ -82,6 +91,10 @@ def cmd(
     url,
     key,
     secret,
+    export_format,
+    export_file,
+    export_path,
+    export_overwrite,
     name,
     query,
     field,
@@ -95,17 +108,7 @@ def cmd(
     client = ctx.start_client(url=url, key=key, secret=secret)
     api = getattr(client, clickctx.parent.parent.command.name)
 
-    column_filters = {}
-
-    for cf in tools.listify(column_filter):
-        split = cf.split("=")
-
-        if len(split) != 2:
-            msg = "Need an '=' in --column-filter {}"
-            msg = msg.format(cf)
-            ctx.echo_error(msg)
-
-        column_filters[split[0]] = split[1]
+    column_filters = dict(column_filter)
 
     with context.exc_wrap(wraperror=ctx.wraperror):
         raw_data = api.saved_query.add(
@@ -122,3 +125,14 @@ def cmd(
     msg = "Successfully created saved query: {n}"
     msg = msg.format(n=raw_data["name"])
     ctx.echo_ok(msg)
+
+    formatters = {"json": context.to_json, "csv": grp_common.to_csv}
+
+    ctx.handle_export(
+        raw_data=raw_data,
+        formatters=formatters,
+        export_format=export_format,
+        export_file=export_file,
+        export_path=export_path,
+        export_overwrite=export_overwrite,
+    )

@@ -5,13 +5,15 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import click
 
 from .. import context
+from . import grp_common
 
 
 @click.command("get", context_settings=context.CONTEXT_SETTINGS)
 @context.connect_options
 @context.export_options
 @click.option(
-    "--adapters",
+    "--rows",
+    "-r",
     help="The output from 'adapters get' supplied as a file or via stdin.",
     default="-",
     type=click.File(mode="r"),
@@ -20,6 +22,7 @@ from .. import context
 )
 @click.option(
     "--id",
+    "-i",
     "ids",
     help="Only include connections with matching IDs.",
     multiple=True,
@@ -28,6 +31,7 @@ from .. import context
 )
 @click.option(
     "--working/--no-working",
+    "-w/-nw",
     help="Include connections that are working.",
     default=True,
     is_flag=True,
@@ -36,6 +40,7 @@ from .. import context
 )
 @click.option(
     "--broken/--no-broken",
+    "-b/-nb",
     help="Include connections that are broken.",
     default=True,
     is_flag=True,
@@ -44,6 +49,7 @@ from .. import context
 )
 @click.option(
     "--include-settings/--no-include-settings",
+    "-is/-nis",
     help="Include connection settings in CSV export.",
     default=False,
     is_flag=True,
@@ -60,7 +66,7 @@ def cmd(
     export_file,
     export_path,
     export_overwrite,
-    adapters,
+    rows,
     ids,
     working,
     broken,
@@ -68,7 +74,7 @@ def cmd(
 ):
     """Get all adapters with clients that have errors."""
     client = ctx.start_client(url=url, key=key, secret=secret)
-    content = context.json_from_stream(ctx=ctx, stream=adapters, src="--adapters")
+    content = context.json_from_stream(ctx=ctx, stream=rows, src="--rows")
 
     cnxs = []
     for adapter in content:
@@ -115,7 +121,7 @@ def cmd(
             known_cb_key="cnxs",
         )
 
-    formatters = {"json": context.to_json, "csv": to_csv}
+    formatters = {"json": context.to_json, "csv": grp_common.to_csv}
 
     ctx.handle_export(
         raw_data=by_ids,
@@ -126,19 +132,3 @@ def cmd(
         export_overwrite=export_overwrite,
         include_settings=include_settings,
     )
-
-
-def to_csv(ctx, raw_data, include_settings=True, **kwargs):
-    """Pass."""
-    rows = []
-
-    simples = ["adapter_name", "node_name", "id", "uuid", "status_raw", "error"]
-
-    for cnx in raw_data:
-        row = {k: cnx[k] for k in simples}
-        if include_settings:
-            row["settings"] = context.join_kv(cnx["config"])
-
-        rows.append(row)
-
-    return context.dictwriter(rows=rows)

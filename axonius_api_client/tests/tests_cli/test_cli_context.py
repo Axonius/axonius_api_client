@@ -22,21 +22,22 @@ def to_json(ctx, raw_data, **kwargs):
     return tools.json_dump(obj=raw_data, **kwargs)
 
 
-class TestJoinKv(object):
+class TestJoin(object):
     """Pass."""
 
-    def test_default(self):
+    def test_kv(self):
         """Pass."""
-        x = cli.context.join_kv(
+        x = cli.context.join_kv({"a": "b", "c": "d"})
+        assert x == "\n  a: b\n  c: d"
+
+    def test_tv(self):
+        """Pass."""
+        x = cli.context.join_tv(
             {"a": {"title": "a", "value": 1}, "b": {"title": "b", "value": 2}}
         )
         assert x == "a: 1\nb: 2"
 
-
-class TestJoinCr(object):
-    """Pass."""
-
-    def test_default(self):
+    def test_cr(self):
         """Pass."""
         x = cli.context.join_cr(["a", "b"])
         assert x == "a\nb"

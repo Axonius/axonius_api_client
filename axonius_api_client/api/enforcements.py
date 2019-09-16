@@ -368,7 +368,7 @@ class Enforcements(mixins.Model, mixins.Mixins):
 
         return rows
 
-    def find_by_id(
+    def get_by_id(
         self, value, match_error=True, max_rows=None, max_pages=None, page_size=None
     ):
         """Get EC using paging."""
@@ -389,8 +389,8 @@ class Enforcements(mixins.Model, mixins.Mixins):
 
         return None
 
-    # FUTURE: Shares code with SavedQuery.find_by_name
-    def find_by_name(
+    # FUTURE: Shares code with SavedQuery.get_by_name
+    def get_by_name(
         self,
         value,
         match_count=None,

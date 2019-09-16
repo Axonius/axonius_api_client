@@ -327,7 +327,7 @@ class TestBoth(Base):
         data = apiobj.get_by_saved_query(name=sq_name, max_rows=1)
         assert isinstance(data, tools.LIST)
 
-    def test_find_by_field_value(self, apiobj):
+    def test_get_by_field_value(self, apiobj):
         """Pass."""
         asset = self.get_single_asset(apiobj=apiobj, fields=apiobj._default_fields)
         assert isinstance(asset, dict)
@@ -335,12 +335,12 @@ class TestBoth(Base):
         value = asset[field]
 
         assert value
-        found = apiobj.find_by_value(
+        found = apiobj.get_by_value(
             value=value, field=field, fields=apiobj._default_fields, match_count=1
         )
         assert found[field] == value
 
-    def test_find_by_field_value_list(self, apiobj):
+    def test_get_by_field_value_list(self, apiobj):
         """Pass."""
         asset = self.get_single_asset(apiobj=apiobj, fields=apiobj._default_fields)
         assert isinstance(asset, dict)
@@ -348,18 +348,18 @@ class TestBoth(Base):
         value = asset[field]
         value_list = tools.listify(value)
         assert value
-        found = apiobj.find_by_value(
+        found = apiobj.get_by_value(
             value=value_list, field=field, fields=apiobj._default_fields, match_count=1
         )
         found_value = found[field]
 
         assert tools.listify(found_value) == value_list
 
-    def test_find_by_field_value_regex(self, apiobj):
+    def test_get_by_field_value_regex(self, apiobj):
         """Pass."""
         field = apiobj.TEST_DATA["single_field"]["exp"]
         value_re = "[a-zA-Z]"
-        found = apiobj.find_by_value(
+        found = apiobj.get_by_value(
             value="RE:{}".format(value_re), field=field, match_count=1, max_rows=1
         )
         assert isinstance(found, dict)
@@ -370,7 +370,7 @@ class TestBoth(Base):
             ]
         )
 
-    def test_find_by_field_value_not(self, apiobj):
+    def test_get_by_field_value_not(self, apiobj):
         """Pass."""
         count = apiobj.count()
         asset = self.get_single_asset(apiobj=apiobj, fields=apiobj._default_fields)
@@ -382,17 +382,17 @@ class TestBoth(Base):
             value = ["NOT:{}".format(x) for x in asset_value]
         else:
             value = "NOT:{}".format(asset_value)
-        found = apiobj.find_by_value(
+        found = apiobj.get_by_value(
             value=value, field=field, fields=apiobj._default_fields, match_error=False
         )
         assert isinstance(found, tools.LIST)
         assert len(found) == count - 1
 
-    def test_find_by_field_value_match_error(self, apiobj):
+    def test_get_by_field_value_match_error(self, apiobj):
         """Pass."""
         field = apiobj.TEST_DATA["single_field"]["exp"]
         with pytest.raises(exceptions.ValueNotFound):
-            apiobj.find_by_value(
+            apiobj.get_by_value(
                 value="BaDWoLf_8675309",
                 field=field,
                 match_count=1,
@@ -404,7 +404,7 @@ class TestBoth(Base):
 class Single(Base):
     """Pass."""
 
-    def find_by_specifics(self, apiobj, specfield, specmethod):
+    def get_by_specifics(self, apiobj, specfield, specmethod):
         """Pass."""
         asset = self.get_single_asset(apiobj=apiobj, fields=specfield)
         asset_value = asset[specfield]
@@ -425,16 +425,14 @@ class TestUsers(Single):
     @pytest.mark.parametrize(
         "specfield,specmethod",
         [
-            ["specific_data.data.username", "find_by_username"],
-            ["specific_data.data.mail", "find_by_mail"],
+            ["specific_data.data.username", "get_by_username"],
+            ["specific_data.data.mail", "get_by_mail"],
         ],
         scope="class",
     )
-    def test_find_by_specifics(self, apiobj, specfield, specmethod):
+    def test_get_by_specifics(self, apiobj, specfield, specmethod):
         """Pass."""
-        self.find_by_specifics(
-            apiobj=apiobj, specfield=specfield, specmethod=specmethod
-        )
+        self.get_by_specifics(apiobj=apiobj, specfield=specfield, specmethod=specmethod)
 
 
 @pytest.mark.parametrize("apicls", [axonapi.api.Devices], scope="class")
@@ -444,19 +442,17 @@ class TestDevices(Single):
     @pytest.mark.parametrize(
         "specfield,specmethod",
         [
-            ["specific_data.data.hostname", "find_by_hostname"],
-            ["specific_data.data.network_interfaces.mac", "find_by_mac"],
-            ["specific_data.data.network_interfaces.ips", "find_by_ip"],
+            ["specific_data.data.hostname", "get_by_hostname"],
+            ["specific_data.data.network_interfaces.mac", "get_by_mac"],
+            ["specific_data.data.network_interfaces.ips", "get_by_ip"],
         ],
         scope="class",
     )
-    def test_find_by_specifics(self, apiobj, specfield, specmethod):
+    def test_get_by_specifics(self, apiobj, specfield, specmethod):
         """Pass."""
-        self.find_by_specifics(
-            apiobj=apiobj, specfield=specfield, specmethod=specmethod
-        )
+        self.get_by_specifics(apiobj=apiobj, specfield=specfield, specmethod=specmethod)
 
-    def test_find_by_subnet(self, apiobj):
+    def test_get_by_subnet(self, apiobj):
         """Pass."""
         specfield = "specific_data.data.network_interfaces.subnets"
         findfield = "specific_data.data.network_interfaces.ips"
@@ -469,7 +465,7 @@ class TestDevices(Single):
 
         value = tools.listify(obj=asset_value)[0]
 
-        found = apiobj.find_by_subnet(
+        found = apiobj.get_by_subnet(
             value=value,
             max_rows=1,
             fields=findfield,
@@ -481,7 +477,7 @@ class TestDevices(Single):
         found_value = tools.listify(obj=found[0][findfield])[0]
         assert found_value == tools.listify(obj=asset[findfield], dictkeys=False)[0]
 
-    def test_find_by_subnet_not(self, apiobj):
+    def test_get_by_subnet_not(self, apiobj):
         """Pass."""
         specfield = "specific_data.data.network_interfaces.subnets"
         findfield = "specific_data.data.network_interfaces.ips"
@@ -494,7 +490,7 @@ class TestDevices(Single):
 
         value = tools.listify(obj=asset_value)[0]
 
-        found = apiobj.find_by_subnet(
+        found = apiobj.get_by_subnet(
             value="NOT:{}".format(value),
             max_rows=1,
             fields=findfield,
@@ -965,38 +961,38 @@ class TestSavedQuery(Base):
         assert isinstance(data, tools.LIST)
         assert not data
 
-    def test_find_by_id(self, apiobj):
+    def test_get_by_id(self, apiobj):
         """Pass."""
         data = apiobj.saved_query.get()
-        found = apiobj.saved_query.find_by_id(value=data[0]["uuid"])
+        found = apiobj.saved_query.get_by_id(value=data[0]["uuid"])
         assert isinstance(found, dict)
 
-    def test_find_by_id_notfound_noerr(self, apiobj):
+    def test_get_by_id_notfound_noerr(self, apiobj):
         """Pass."""
-        found = apiobj.saved_query.find_by_id(value="badwolf", match_error=False)
+        found = apiobj.saved_query.get_by_id(value="badwolf", match_error=False)
         assert found is None
 
-    def test_find_by_id_notfound(self, apiobj):
+    def test_get_by_id_notfound(self, apiobj):
         """Pass."""
         with pytest.raises(exceptions.ValueNotFound):
-            apiobj.saved_query.find_by_id(value="badwolf")
+            apiobj.saved_query.get_by_id(value="badwolf")
 
-    def test_find_by_name(self, apiobj):
+    def test_get_by_name(self, apiobj):
         """Pass."""
         data = apiobj.saved_query.get()
-        found = apiobj.saved_query.find_by_name(value=data[0]["name"])
+        found = apiobj.saved_query.get_by_name(value=data[0]["name"])
         assert isinstance(found, dict)
 
-    def test_find_by_name_regex(self, apiobj):
+    def test_get_by_name_regex(self, apiobj):
         """Pass."""
-        found = apiobj.saved_query.find_by_name(value="RE:.*")
+        found = apiobj.saved_query.get_by_name(value="RE:.*")
         assert isinstance(found, tools.LIST)
         assert len(found) >= 1
 
-    def test_find_by_name_notflag(self, apiobj):
+    def test_get_by_name_notflag(self, apiobj):
         """Pass."""
         data = apiobj.saved_query.get()
-        found = apiobj.saved_query.find_by_name(value="NOT:{}".format(data[0]["name"]))
+        found = apiobj.saved_query.get_by_name(value="NOT:{}".format(data[0]["name"]))
         assert isinstance(found, tools.LIST)
         assert len(found) == len(data) - 1
 
@@ -1044,7 +1040,7 @@ class TestSavedQuery(Base):
         assert not deleted
 
         with pytest.raises(exceptions.ValueNotFound):
-            apiobj.saved_query.find_by_name(name)
+            apiobj.saved_query.get_by_name(name)
 
     def test_add_delete_sort(self, apiobj):
         """Pass."""
@@ -1066,7 +1062,7 @@ class TestSavedQuery(Base):
         assert not deleted
 
         with pytest.raises(exceptions.ValueNotFound):
-            apiobj.saved_query.find_by_name(name)
+            apiobj.saved_query.get_by_name(name)
 
     def test_add_delete_colfilter(self, apiobj):
         """Pass."""
@@ -1091,7 +1087,7 @@ class TestSavedQuery(Base):
         assert not deleted
 
         with pytest.raises(exceptions.ValueNotFound):
-            apiobj.saved_query.find_by_name(name)
+            apiobj.saved_query.get_by_name(name)
 
 
 @pytest.mark.parametrize(

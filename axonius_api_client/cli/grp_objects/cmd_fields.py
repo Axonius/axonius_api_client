@@ -14,6 +14,7 @@ from .. import context
 @context.export_options
 @click.option(
     "--adapter-re",
+    "-ar",
     default=".*",
     help="Only fetch fields for adapters matching this regex.",
     metavar="REGEX",
@@ -22,6 +23,7 @@ from .. import context
 )
 @click.option(
     "--field-re",
+    "-fr",
     default=".*",
     help="Only fetch fields matching this regex.",
     metavar="REGEX",

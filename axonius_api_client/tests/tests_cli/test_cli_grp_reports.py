@@ -10,14 +10,14 @@ from .. import utils
 
 
 @pytest.mark.parametrize("cmd", ["devices", "users"])
-class TestCliGrpObjectsCmdMissingAdapters(object):
+class TestCmdMissingAdapters(object):
     """Pass."""
 
     def test_json(self, request, monkeypatch, cmd):
         """Pass."""
         runner = utils.load_clirunner(request, monkeypatch)
 
-        args = [
+        args1 = [
             cmd,
             "get",
             "--query",
@@ -28,38 +28,44 @@ class TestCliGrpObjectsCmdMissingAdapters(object):
             "1",
         ]
 
-        result1 = runner.invoke(cli=cli.cli, args=args)
+        result1 = runner.invoke(cli=cli.cli, args=args1)
 
-        assert result1.exit_code == 0
+        exit_code1 = result1.exit_code
+        stdout1 = result1.stdout
+        stderr1 = result1.stderr
 
-        result2 = runner.invoke(
-            cli=cli.cli,
-            args=[
-                cmd,
-                "reports",
-                "missing-adapters",
-                "--rows",
-                "-",
-                "--export-format",
-                "json",
-            ],
-            input=result1.stdout,
-        )
+        assert stdout1
+        assert stderr1
+        assert exit_code1 == 0
 
-        stderr2 = result2.stderr
-        stdout2 = result2.stdout
+        args2 = [
+            cmd,
+            "reports",
+            "missing-adapters",
+            "--rows",
+            "-",
+            "--export-format",
+            "json",
+        ]
+
+        result2 = runner.invoke(cli=cli.cli, args=args2, input=result1.stdout)
+
         exit_code2 = result2.exit_code
+        stdout2 = result2.stdout
+        stderr2 = result2.stderr
 
-        assert exit_code2 == 0, stderr2
+        assert stdout2
+        assert stderr2
+        assert exit_code2 == 0
 
-        json_stdout = tools.json_load(stdout2)
-        assert isinstance(json_stdout, tools.LIST)
+        json2 = tools.json_load(stdout2)
+        assert isinstance(json2, tools.LIST)
 
     def test_csv(self, request, monkeypatch, cmd):
         """Pass."""
         runner = utils.load_clirunner(request, monkeypatch)
 
-        args = [
+        args1 = [
             cmd,
             "get",
             "--query",
@@ -70,28 +76,34 @@ class TestCliGrpObjectsCmdMissingAdapters(object):
             "1",
         ]
 
-        result1 = runner.invoke(cli=cli.cli, args=args)
+        result1 = runner.invoke(cli=cli.cli, args=args1)
 
-        assert result1.exit_code == 0
+        exit_code1 = result1.exit_code
+        stdout1 = result1.stdout
+        stderr1 = result1.stderr
 
-        result2 = runner.invoke(
-            cli=cli.cli,
-            args=[
-                cmd,
-                "reports",
-                "missing-adapters",
-                "--rows",
-                "-",
-                "--export-format",
-                "csv",
-            ],
-            input=result1.stdout,
-        )
+        assert stdout1
+        assert stderr1
+        assert exit_code1 == 0
 
-        stderr2 = result2.stderr
-        stdout2 = result2.stdout
+        args2 = [
+            cmd,
+            "reports",
+            "missing-adapters",
+            "--rows",
+            "-",
+            "--export-format",
+            "csv",
+        ]
+        result2 = runner.invoke(cli=cli.cli, args=args2, input=result1.stdout)
+
         exit_code2 = result2.exit_code
+        stdout2 = result2.stdout
+        stderr2 = result2.stderr
 
-        assert exit_code2 == 0, stderr2
+        assert stdout2
+        assert stderr2
+        assert exit_code2 == 0
 
-        utils.check_csv_cols(stdout2, ["missing", "missing_nocnx", "adapters"])
+        csv_cols2 = ["missing", "missing_nocnx", "adapters"]
+        utils.check_csv_cols(stdout2, csv_cols2)

@@ -12,6 +12,7 @@ from .. import context
 @context.export_options
 @click.option(
     "--rows",
+    "-r",
     help="The JSON data of rows returned by any get command for this object type.",
     default="-",
     type=click.File(mode="r"),

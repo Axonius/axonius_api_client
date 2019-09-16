@@ -5,7 +5,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import click
 
 from .. import context
-from . import cmd_get
+from . import cmd_get, cmd_add, cmd_delete, cmd_check, cmd_discover
 
 
 @click.group()
@@ -16,3 +16,7 @@ def cnx(ctx):
 
 
 cnx.add_command(cmd_get.cmd)
+cnx.add_command(cmd_add.cmd)
+cnx.add_command(cmd_delete.cmd)
+cnx.add_command(cmd_check.cmd)
+cnx.add_command(cmd_discover.cmd)

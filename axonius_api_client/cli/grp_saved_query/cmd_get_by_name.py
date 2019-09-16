@@ -13,13 +13,14 @@ from . import grp_common
 @context.export_options
 @click.option(
     "--name",
+    "-n",
     help="Name of saved query to get.",
     required=True,
     show_envvar=True,
     show_default=True,
 )
 @click.option(
-    "--max-rows", help="Only return this many rows.", type=click.INT, hidden=True
+    "--max-rows", "-mr", help="Only return this many rows.", type=click.INT, hidden=True
 )
 @context.pass_context
 @click.pass_context
@@ -42,7 +43,7 @@ def cmd(
     api = getattr(client, clickctx.parent.parent.command.name)
 
     with context.exc_wrap(wraperror=ctx.wraperror):
-        raw_data = api.saved_query.find_by_name(value=name, max_rows=max_rows)
+        raw_data = api.saved_query.get_by_name(value=name, max_rows=max_rows)
 
     formatters = {"json": context.to_json, "csv": grp_common.to_csv}
 

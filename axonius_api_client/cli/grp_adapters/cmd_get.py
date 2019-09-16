@@ -12,6 +12,7 @@ from .. import context
 @context.export_options
 @click.option(
     "--name",
+    "-n",
     help="Only include adapters with matching names.",
     multiple=True,
     show_envvar=True,
@@ -19,6 +20,7 @@ from .. import context
 )
 @click.option(
     "--node",
+    "-no",
     help="Only include adapters with matching node names.",
     multiple=True,
     show_envvar=True,
@@ -26,6 +28,7 @@ from .. import context
 )
 @click.option(
     "--cnx-working/--no-cnx-working",
+    "-cw/-ncw",
     help="Include/Exclude adapters with working connections.",
     is_flag=True,
     default=True,
@@ -34,6 +37,7 @@ from .. import context
 )
 @click.option(
     "--cnx-broken/--no-cnx-broken",
+    "-cb/-ncb",
     help="Include/Exclude adapters with broken connections.",
     is_flag=True,
     default=True,
@@ -42,6 +46,7 @@ from .. import context
 )
 @click.option(
     "--cnx-none/--no-cnx-none",
+    "-cn/-ncn",
     help="Include/Exclude adapters with no connections.",
     default=True,
     is_flag=True,
@@ -50,6 +55,7 @@ from .. import context
 )
 @click.option(
     "--cnx-count",
+    "-c",
     help="Only include adapters with this number of connections.",
     type=click.INT,
     show_envvar=True,
@@ -57,6 +63,7 @@ from .. import context
 )
 @click.option(
     "--include-settings/--no-include-settings",
+    "-is/-nis",
     help="Include connection, adapter, and advanced settings in CSV export.",
     default=False,
     is_flag=True,
@@ -191,11 +198,11 @@ def to_csv(ctx, raw_data, include_settings=True, **kwargs):
             row[cnx_tmpl(idx=idx, t="status")] = context.join_cr(status)
 
             if include_settings:
-                row[cnx_tmpl(idx=idx, t="settings")] = context.join_kv(cnx["config"])
+                row[cnx_tmpl(idx=idx, t="settings")] = context.join_tv(cnx["config"])
 
         if include_settings:
-            row["adapter_settings"] = context.join_kv(adapter["settings"])
-            row["advanced_settings"] = context.join_kv(adapter["adv_settings"])
+            row["adapter_settings"] = context.join_tv(adapter["settings"])
+            row["advanced_settings"] = context.join_tv(adapter["adv_settings"])
 
         rows.append(row)
 

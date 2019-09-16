@@ -57,12 +57,24 @@ class TestCliHelp(object):
             ["adapters", "get"],
             ["adapters", "cnx"],
             ["adapters", "cnx", "get"],
+            ["adapters", "cnx", "add"],
+            ["adapters", "cnx", "delete"],
+            ["adapters", "cnx", "check"],
+            ["adapters", "cnx", "discover"],
             ["shell"],
         ],
     )
     def test_cli_help(self, cmd):
         """Pass."""
-        runner = CliRunner()
+        runner = CliRunner(mix_stderr=False)
 
-        result = runner.invoke(cli=cli.cli, args=cmd + ["--help"])
-        assert result.exit_code == 0, cmd
+        args1 = cmd + ["--help"]
+        result1 = runner.invoke(cli=cli.cli, args=args1)
+
+        exit_code1 = result1.exit_code
+        stdout1 = result1.stdout
+        # stderr1 = result1.stderr
+
+        assert stdout1
+        # assert stderr1
+        assert exit_code1 == 0

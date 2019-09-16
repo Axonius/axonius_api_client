@@ -904,62 +904,6 @@ class Cnx(mixins.Child):
 class ParserCnxConfig(mixins.Parser):
     """Pass."""
 
-    def check_value(self, name, value, schema, adapter):
-        """Pass."""
-        type_str = schema["type"]
-        enum = schema.get("enum", [])
-
-        if value == constants.SETTING_UNCHANGED:
-            return value
-
-        if enum and value not in enum:
-            raise exceptions.CnxSettingInvalidChoice(
-                name=name, value=value, schema=schema, enum=enum, adapter=adapter
-            )
-
-        if type_str == "file":
-            if not isinstance(value, dict):
-                raise exceptions.CnxSettingInvalidType(
-                    name=name,
-                    value=value,
-                    schema=schema,
-                    mustbe="dict",
-                    adapter=adapter,
-                )
-
-            return self.parse_file(
-                name=name, value=value, schema=schema, adapter=adapter
-            )
-
-        if type_str == "bool":
-            if isinstance(value, bool):
-                return value
-        elif type_str in ["number", "integer"]:
-            if tools.is_int(obj=value, digit=True):
-                return int(value)
-        elif type_str == "array":
-            if (
-                isinstance(value, tools.LIST)
-                and value
-                and all([isinstance(x, tools.STR) for x in value])
-            ):
-                return value
-        elif type_str == "string":
-            if isinstance(value, tools.STR):
-                return value
-        else:
-            raise exceptions.CnxSettingUnknownType(
-                name=name,
-                value=value,
-                schema=schema,
-                type_str=type_str,
-                adapter=adapter,
-            )
-
-        raise exceptions.CnxSettingInvalidType(
-            name=name, value=value, schema=schema, adapter=adapter, mustbe=type_str
-        )
-
     def parse(self, adapter, settings):
         """Pass."""
         new_config = {}
@@ -994,8 +938,68 @@ class ParserCnxConfig(mixins.Parser):
 
         return new_config
 
-    def parse_file(self, name, value, schema, adapter):
+    def check_value(self, name, value, schema, adapter):
         """Pass."""
+        type_str = schema["type"]
+        enum = schema.get("enum", [])
+
+        if value == constants.SETTING_UNCHANGED:
+            return value
+
+        if enum and value not in enum:
+            raise exceptions.CnxSettingInvalidChoice(
+                name=name, value=value, schema=schema, enum=enum, adapter=adapter
+            )
+
+        if type_str == "file":
+            return self.check_file(
+                name=name, value=value, schema=schema, adapter=adapter
+            )
+        elif type_str == "bool":
+            return tools.coerce_bool(obj=value)
+        elif type_str in ["number", "integer"]:
+            return tools.coerce_int(obj=value)
+        elif type_str == "array":
+            if isinstance(value, tools.STR):
+                value = [x.strip() for x in value.split(",")]
+            if isinstance(value, tools.LIST) and all(
+                [isinstance(x, tools.STR) for x in value]
+            ):
+                return value
+        elif type_str == "string":
+            if isinstance(value, tools.STR):
+                return value
+        else:
+            raise exceptions.CnxSettingUnknownType(
+                name=name,
+                value=value,
+                schema=schema,
+                type_str=type_str,
+                adapter=adapter,
+            )
+
+        raise exceptions.CnxSettingInvalidType(
+            name=name, value=value, schema=schema, adapter=adapter, mustbe=type_str
+        )
+
+    def check_file(self, name, value, schema, adapter):
+        """Pass."""
+        is_str = isinstance(value, tools.STR)
+        is_dict = isinstance(value, dict)
+        is_path = isinstance(value, tools.pathlib.Path)
+
+        if not any([is_dict, is_str, is_path]):
+            raise exceptions.CnxSettingInvalidType(
+                name=name,
+                value=value,
+                schema=schema,
+                mustbe="dict or str",
+                adapter=adapter,
+            )
+
+        if is_str or is_path:
+            value = {"filepath": format(value)}
+
         uuid = value.get("uuid", None)
         filename = value.get("filename", None)
         filepath = value.get("filepath", None)

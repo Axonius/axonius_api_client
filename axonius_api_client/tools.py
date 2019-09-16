@@ -26,7 +26,9 @@ STR = six.string_types
 INT = six.integer_types
 BYTES = six.binary_type
 SIMPLE = tuple(list(STR) + [int, bool, float])
-SIMPLE_NONE = tuple(list(STR) + [int, bool, float, None])
+SIMPLE_NONE = tuple(list(SIMPLE) + [None])
+YES = [True, 1, "1", "true", "t", "yes", "y"]
+NO = [False, 0, "0", "false", "f", "no", "n"]
 
 
 def listify(obj, dictkeys=False):
@@ -94,6 +96,36 @@ def values_match(checks, values, ignore_case=True):
                 return True
 
     return False
+
+
+# TODO: test
+def coerce_int(obj):
+    """Pass."""
+    try:
+        return int(obj)
+    except Exception:
+        msg = "Supplied value {o!r} is not an integer."
+        msg = msg.format(o=obj)
+        raise exceptions.ToolsError(msg)
+
+
+# TODO: test
+def coerce_bool(obj):
+    """Pass."""
+    coerce_obj = obj
+
+    if isinstance(obj, STR):
+        coerce_obj.lower().strip()
+
+    if coerce_obj in YES:
+        return True
+
+    if coerce_obj in NO:
+        return False
+
+    msg = "Supplied value {o!r} is not one of {y} for true or {n} for false."
+    msg = msg.format(o=coerce_obj, y=YES, n=NO)
+    raise exceptions.ToolsError(msg)
 
 
 def is_int(obj, digit=False):

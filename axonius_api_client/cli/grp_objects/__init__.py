@@ -13,10 +13,10 @@ from . import (
     cmd_get_by_hostname,
     cmd_get_by_ip,
     cmd_get_by_mac,
-    cmd_get_by_mail,
     cmd_get_by_saved_query,
     cmd_get_by_subnet,
     cmd_get_by_username,
+    cmd_get_by_mail,
 )
 
 

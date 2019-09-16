@@ -12,6 +12,7 @@ from .. import context
 @context.export_options
 @click.option(
     "--name",
+    "-n",
     help="Name of saved query to get count of assets from.",
     required=True,
     show_envvar=True,

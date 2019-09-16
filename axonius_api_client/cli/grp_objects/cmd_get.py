@@ -12,6 +12,7 @@ from .. import context
 @context.export_options
 @click.option(
     "--query",
+    "-q",
     help="Query built from Query Wizard to filter objects (empty returns all).",
     metavar="QUERY",
     show_envvar=True,
@@ -19,6 +20,7 @@ from .. import context
 )
 @click.option(
     "--field",
+    "-f",
     help="Columns to include in the format of adapter:field.",
     metavar="ADAPTER:FIELD",
     multiple=True,
@@ -27,6 +29,7 @@ from .. import context
 )
 @click.option(
     "--fields-default/--no-fields-default",
+    "-fd/-nfd",
     default=True,
     help="Include default fields for this object type.",
     is_flag=True,
@@ -34,7 +37,7 @@ from .. import context
     show_default=True,
 )
 @click.option(
-    "--max-rows", help="Only return this many rows.", type=click.INT, hidden=True
+    "--max-rows", "-mr", help="Only return this many rows.", type=click.INT, hidden=True
 )
 @context.pass_context
 @click.pass_context

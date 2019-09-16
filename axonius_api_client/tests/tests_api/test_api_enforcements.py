@@ -100,7 +100,7 @@ class TestEnforcements(object):
 
     def test_create_get_delete(self, apiobj):
         """Pass."""
-        old_found = apiobj.find_by_name(CREATE_EC_NAME, eq_single=False)
+        old_found = apiobj.get_by_name(CREATE_EC_NAME, eq_single=False)
         if old_found:
             msg = "Enforcement named {} already exists from previous test, deleting: {}"
             msg = msg.format(CREATE_EC_NAME, old_found)
@@ -115,7 +115,7 @@ class TestEnforcements(object):
         )
         assert isinstance(created, tools.STR)
 
-        found = apiobj.find_by_name(CREATE_EC_NAME)
+        found = apiobj.get_by_name(CREATE_EC_NAME)
         """
         {
             "actions.main": "Badwolf Create Notification",
@@ -138,7 +138,7 @@ class TestEnforcements(object):
         assert "triggers.times_triggered" in found
         assert found["triggers.view.name"] == CREATE_EC_TRIGGERS[0]["view"]["name"]
 
-        found_by_id = apiobj.find_by_id(found["uuid"])
+        found_by_id = apiobj.get_by_id(found["uuid"])
         assert isinstance(found_by_id, dict)
 
         deleted = apiobj.delete(rows=found_by_id)
@@ -147,22 +147,22 @@ class TestEnforcements(object):
         assert deleted["deleted"] == 1
 
         with pytest.raises(exceptions.ValueNotFound):
-            apiobj.find_by_id(found["uuid"])
+            apiobj.get_by_id(found["uuid"])
 
         with pytest.raises(exceptions.ValueNotFound):
-            apiobj.find_by_name(found["name"])
+            apiobj.get_by_name(found["name"])
 
-        notfound = apiobj.find_by_id(found["uuid"], match_error=False)
+        notfound = apiobj.get_by_id(found["uuid"], match_error=False)
         assert notfound is None
 
-        notmatches = apiobj.find_by_name("NOT:{}".format(found["name"]))
+        notmatches = apiobj.get_by_name("NOT:{}".format(found["name"]))
         assert not any([x["name"] == found["name"] for x in notmatches])
 
         allobjs = apiobj.get()
         if allobjs:
             name = allobjs[0]["name"]
             onere = "RE:{}".format(name[0])
-            rematches = apiobj.find_by_name(onere)
+            rematches = apiobj.get_by_name(onere)
             assert any([x["name"] == name for x in rematches])
 
 

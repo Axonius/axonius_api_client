@@ -30,7 +30,7 @@ def to_csv(ctx, raw_data, **kwargs):
         row["query"] = query.get("filter", None)
         row["fields"] = context.join_cr(fields, is_cell=True)
         row["column_filters"] = context.join_cr(colfilters, is_cell=True)
-        row["sort_descending"] = sort.get("desc")
+        row["sort_descending"] = format(sort.get("desc"))
         row["sort_field"] = sort.get("field")
 
     return context.dictwriter(rows=rows)
