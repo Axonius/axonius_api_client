@@ -3,6 +3,7 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 __version__ = "2.0.0"
+VERSION = __version__
 """:obj:`str`: Version of package."""
 
 __url__ = "https://github.com/Axonius/axonius_api_client"
