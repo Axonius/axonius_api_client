@@ -34,27 +34,31 @@ pipenv_install_docs:
 pipenv_init:
 	pipenv install --dev --skip-lock
 
+pipenv_clean:
+	pipenv --rm || true
+
 pyenv_init:
 	pyenv install 3.7.4 -s || true
 	pyenv local 3.7.4 || true
 
 lint:
 	pipenv run isort -rc -y $(PACKAGE) setup.py axonshell*.py
-	pipenv run which black && black $(PACKAGE) setup.py axonshell*.py
+	pipenv run which black && pipenv run black $(PACKAGE) setup.py axonshell*.py
 	pipenv run pydocstyle $(PACKAGE) setup.py axonshell*.py
 	pipenv run flake8 --max-line-length 89 $(PACKAGE) setup.py axonshell*.py
 	pipenv run bandit --skip B101 -r $(PACKAGE)
 
 test:
-	# --cov-report=term --log-cli-level=INFO --verbose -rA
 	pipenv run pytest -ra --verbose --junitxml=junit-report.xml --cov-config=.coveragerc --cov-report xml --cov-report=html:cov_html --cov=$(PACKAGE) --showlocals  --exitfirst $(PACKAGE)/tests
 
-test_debug:
-# 	pipenv run pytest -rA --capture=no --showlocals --log-cli-level=DEBUG --verbose --exitfirst $(PACKAGE)/tests
-	pipenv run pytest --showlocals --exitfirst $(PACKAGE)/tests
+test_dev:
+	pipenv run pytest -vv --log-cli-level=DEBUG --showlocals --exitfirst $(PACKAGE)/tests
 
-cov_open:
+test_cov_open:
 	open cov_html/index.html
+
+test_clean:
+	rm -rf .egg .eggs junit-report.xml cov_html .tox .pytest_cache .coverage coverage.xml
 
 docs:
 	(cd docs && pipenv run make html SPHINXOPTS="-Wna" && cd ..)
@@ -77,6 +81,9 @@ docs_linkcheck:
 	(cd docs && pipenv run make linkcheck && cd ..)
 	cat docs/_build/linkcheck/output.txt
 
+docs_clean:
+	rm -rf docs/_build
+
 git_check:
 	@git diff-index --quiet HEAD && echo "*** REPO IS CLEAN" || (echo "!!! REPO IS DIRTY"; false)
 	@git tag | grep "$(VERSION)" && echo "*** FOUND TAG: $(VERSION)" || (echo "!!! NO TAG FOUND: $(VERSION)"; false)
@@ -88,14 +95,13 @@ git_tag:
 
 pkg_publish:
 	# FUTURE: add check that only master branch can publish / git tag
-	# FUTURE: add cov_publish
 	$(MAKE) lint
 	$(MAKE) pkg_build
 	$(MAKE) git_check
 	pipenv run twine upload dist/*
 
 pkg_build:
-	$(MAKE) clean_build
+	$(MAKE) pkg_clean
 
 	@echo "*** Building Source and Wheel (universal) distribution"
 	pipenv run python setup.py sdist bdist_wheel --universal
@@ -103,26 +109,19 @@ pkg_build:
 	@echo "*** Checking package with twine"
 	pipenv run twine check dist/*
 
-clean_build:
+pkg_clean:
 	rm -rf build dist *.egg-info
 
-clean_files:
+files_clean:
 	find . -type d -name "__pycache__" | xargs rm -rf
 	find . -type f -name ".DS_Store" | xargs rm -f
 	find . -type f -name "*.pyc" | xargs rm -f
 
-clean_tests:
-	rm -rf .egg .eggs junit-report.xml cov_html .tox .pytest_cache .coverage
-
-clean_docs:
-	rm -rf docs/_build
-
-clean_pipenv:
-	pipenv --rm || true
-
 clean:
-	$(MAKE) clean_files
-	$(MAKE) clean_build
-	$(MAKE) clean_tests
-	$(MAKE) clean_docs
-	$(MAKE) clean_pipenv
+	$(MAKE) files_clean
+	$(MAKE) pkg_clean
+	$(MAKE) test_clean
+	$(MAKE) docs_clean
+	$(MAKE) pipenv_clean
+
+# FUTURE: add cov_publish
