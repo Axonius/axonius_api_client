@@ -45,14 +45,9 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
 html_theme = "sphinx_rtd_theme"
 html_theme_options = {
-    "canonical_url": "",
-    # 'analytics_id': 'UA-XXXXXXX-1', #  Provided by Google in your dashboard
     "logo_only": True,
     "display_version": False,
     "prev_next_buttons_location": "both",
-    # "style_external_links": True,
-    # "vcs_pageview_mode": "blob",
-    # "style_nav_header_background": "#FF671F",
     "collapse_navigation": False,
     "sticky_navigation": True,
     "navigation_depth": 5,
@@ -61,15 +56,7 @@ html_theme_options = {
 }
 html_logo = "_static/axlogofull.png"
 html_static_path = ["_static"]
-# html_context = {
-#     "display_github": True,  # Integrate GitHub
-#     "github_user": "Axonius",  # Username
-#     "github_repo": "axonius-api-client",  # Repo name
-#     "github_version": "master",  # Version
-#     "conf_py_path": "/docs/",  # Path in the checkout to the docs root
-# }
 html_css_files = ["custom.css"]
-
 html_show_sourcelink = True
 html_show_sphinx = False
 html_show_copyright = True
