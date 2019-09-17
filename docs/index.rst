@@ -1,4 +1,3 @@
-.. include:: .special.rst
 |MIT license|
 |made-with-python|
 |code-black|
@@ -15,10 +14,10 @@ Table of Contents
    :maxdepth: 3
    :numbered:
 
-   install.rst
-   support.rst
-   releases.rst
-   api_ref.rst
+   main/install.rst
+   main/support.rst
+   main/releases.rst
+   main/api/axonius_api_client.rst
 
 Indices and tables
 ###############################################

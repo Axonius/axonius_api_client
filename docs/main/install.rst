@@ -30,10 +30,7 @@ Clone the axonius_api_client repository using git
 Directly from GitHub
 ============================================================
 
-This library is actively maintained `on GitHub`_. The master branch will always be the most recent stable version, and the develop branch will have the next version that is being actively developed.
-
-* 3.7.4
-* OSX
+This library is actively maintained `on GitHub`_. The master branch will always be the most recent stable version.
 
 .. _pipenv: https://pipenv.readthedocs.io/en/latest/
 .. _pip: https://pypi.org/project/pip/

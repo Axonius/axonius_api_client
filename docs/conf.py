@@ -6,12 +6,7 @@ import axonius_api_client as pkg  # noqa
 
 import sphinx_rtd_theme
 
-
-def strip(t):  # noqa
-    return t.replace(" ", "").replace("_", "").strip()
-
-
-# -- Project information -----------------------------------------------------
+# -- Project information -------------------------------------------
 
 project = pkg.version.__project__
 copyright = pkg.version.__copyright__.replace("Copyright", "").strip()
@@ -19,9 +14,11 @@ author = pkg.version.__author__
 version = pkg.version.__version__
 release = pkg.version.__version__
 pkg_project = pkg.version.__project__
+pkg_project_strip = pkg_project.replace(" ", "").replace("_", "").strip()
 pkg_title = pkg.version.__title__
+pkg_title_strip = pkg_title.replace(" ", "").replace("_", "").strip()
 
-# -- General configuration ---------------------------------------------------
+# -- General configuration -----------------------------------------
 
 extensions = [
     "sphinx.ext.autodoc",
@@ -33,6 +30,7 @@ extensions = [
     "sphinx.ext.viewcode",
     "sphinx.ext.githubpages",
     "sphinx.ext.napoleon",
+    "sphinx_search.extension",
 ]
 
 templates_path = ["_templates"]
@@ -42,7 +40,7 @@ language = "en"
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 pygments_style = "monokai"
 
-# -- Options for HTML output -------------------------------------------------
+# -- Options for HTML  ---------------------------------------------
 
 html_theme = "sphinx_rtd_theme"
 html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
@@ -63,42 +61,38 @@ html_show_sourcelink = True
 html_show_sphinx = False
 html_show_copyright = True
 
-# -- Options for HTMLHelp output ---------------------------------------------
-htmlhelp_basename = "{}doc".format(strip(pkg_project))
+# -- Options for HTMLHelp ------------------------------------------
+htmlhelp_basename = "{}doc".format(pkg_project_strip)
 
-# -- Options for LaTeX output ------------------------------------------------
+# -- Options for LaTeX ---------------------------------------------
 
 latex_elements = {}
-latex_documents = [
-    (
-        master_doc,
-        "{}.tex".format(strip(pkg_project)),
-        "{} Documentation".format(pkg_project),
-        author,
-        "manual",
-    )
-]
+latex_file = "{}.tex".format(pkg_project_strip)
+latex_title = "{} Documentation".format(pkg_project)
+latex_documents = [(master_doc, latex_file, latex_title, author, "manual")]
 
-# -- Options for manual page output ------------------------------------------
-man_pages = [
-    (master_doc, strip(pkg_title), "{} Documentation".format(pkg_project), [author], 1)
-]
+# -- Options for manpages ------------------------------------------
+man_title = "{} Documentation".format(pkg_project)
+man_pages = [(master_doc, pkg_title_strip, man_title, [author], 1)]
 
-# -- Options for Texinfo output ----------------------------------------------
+# -- Options for texinfo -------------------------------------------
 
+texinfo_title = "{} Documentation".format(pkg_project)
+texinfo_desc = pkg.version.__description__
+texinfo_other = "Miscellaneous"
 texinfo_documents = [
     (
         master_doc,
-        strip(pkg_project),
-        "{} Documentation".format(pkg_project),
+        pkg_project_strip,
+        texinfo_title,
         author,
-        strip(pkg_project),
-        pkg.version.__description__,
-        "Miscellaneous",
+        pkg_project_strip,
+        texinfo_desc,
+        texinfo_other,
     )
 ]
 
-# -- Options for Epub output -------------------------------------------------
+# -- Options for epub ----------------------------------------------
 
 epub_title = project
 epub_author = author
@@ -106,7 +100,7 @@ epub_publisher = author
 epub_copyright = copyright
 epub_exclude_files = ["search.html"]
 
-# -- Options for intersphinx extension ---------------------------------------
+# -- Options for intersphinx ---------------------------------------
 
 intersphinx_mapping = {
     "python": ("http://docs.python.org/3", None),
@@ -114,11 +108,11 @@ intersphinx_mapping = {
     "urllib3": ("https://urllib3.readthedocs.io/en/latest/", None),
 }
 
-# -- Options for todo extension ----------------------------------------------
+# -- Options for todo ----------------------------------------------
 
 todo_include_todos = True
 
-# -- Options for Napoleon -------------------------------------------------
+# -- Options for napoleon ------------------------------------------
 
 napoleon_google_docstring = True
 napoleon_numpy_docstring = False
@@ -132,5 +126,7 @@ napoleon_use_ivar = False
 napoleon_use_param = True
 napoleon_use_keyword = True
 napoleon_use_rtype = True
+
+# -- Options for autosectionlabel ----------------------------------
 
 autosectionlabel_prefix_document = True
