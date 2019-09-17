@@ -1,5 +1,5 @@
-axonius\_api\_client.api.mixins module
-======================================
+api.mixins module
+=================
 
 .. automodule:: axonius_api_client.api.mixins
     :members:

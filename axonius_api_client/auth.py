@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Axonius API authentication module."""
+"""API authentication module."""
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import abc
@@ -72,6 +72,7 @@ class Mixins(object):
         """
         log_level = kwargs.get("log_level", constants.LOG_LEVEL_AUTH)
         self._log = logs.get_obj_log(obj=self, level=log_level)
+        """:obj:`logging.Logger`: Logger for this object."""
 
         self._http = http
         """:obj:`axonius_api_client.http.Http`: HTTP Client."""

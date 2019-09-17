@@ -54,6 +54,8 @@ def cmd(
     include_settings,
 ):
     """Get all adapters with clients that have errors."""
+    # FUTURE: Add ability to take in output from adapters get
+    #         as well as adapters cnx get
     client = ctx.start_client(url=url, key=key, secret=secret)
     content = context.json_from_stream(ctx=ctx, stream=rows, src="--rows")
 

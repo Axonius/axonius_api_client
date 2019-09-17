@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Axonius API Client package."""
+"""Python API Client for Axonius."""
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 from . import api, auth, cli, constants, exceptions, http, logs, tools, version

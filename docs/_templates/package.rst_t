@@ -3,6 +3,13 @@
     :no-members:
 {%- endmacro %}
 
+
+{%- if pkgname.split(".")|length > 1 %}
+    {%- set shortname = pkgname.split(".")[1:] | join(".") -%}
+{%- else %}
+    {%- set shortname = pkgname -%}
+{% endif %}
+
 {%- macro toctree(docnames) -%}
 .. toctree::
 {% for docname in docnames %}
@@ -11,9 +18,9 @@
 {%- endmacro %}
 
 {%- if is_namespace %}
-{{- [pkgname, "namespace"] | join(" ") | e | heading }}
+{{- [shortname, "namespace"] | join(" ") | e | heading }}
 {% else %}
-{{- [pkgname, "package"] | join(" ") | e | heading }}
+{{- [shortname, "package"] | join(" ") | e | heading }}
 {% endif %}
 
 {%- if modulefirst and not is_namespace %}

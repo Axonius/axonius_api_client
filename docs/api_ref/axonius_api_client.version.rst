@@ -1,5 +1,5 @@
-axonius\_api\_client.version module
-===================================
+version module
+==============
 
 .. automodule:: axonius_api_client.version
     :members:

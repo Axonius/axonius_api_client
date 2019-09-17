@@ -1,5 +1,5 @@
-axonius\_api\_client.api.routers module
-=======================================
+api.routers module
+==================
 
 .. automodule:: axonius_api_client.api.routers
     :members:

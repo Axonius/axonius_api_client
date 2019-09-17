@@ -35,3 +35,4 @@
 .. role:: center
 .. role:: left
 .. role:: right
+.. role:: axon

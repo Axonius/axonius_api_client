@@ -1,5 +1,5 @@
-axonius\_api\_client.exceptions module
-======================================
+exceptions module
+=================
 
 .. automodule:: axonius_api_client.exceptions
     :members:

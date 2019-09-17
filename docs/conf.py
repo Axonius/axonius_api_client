@@ -65,7 +65,7 @@ extensions = [
     "sphinx.ext.githubpages",
     "sphinx.ext.napoleon",
     # https://github.com/OddBloke/sphinx-git
-    "sphinx_git",
+    # "sphinx_git",
     # only used for doc dev
     # https://pypi.org/project/sphinxcontrib-spelling/
     # "sphinxcontrib.spelling",
@@ -103,21 +103,41 @@ language = "en"
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
 # The name of the Pygments (syntax highlighting) style to use.
-pygments_style = None
+# pygments_style = None
 
 # Add a small piece of rST text in the prolog/epilog of EVERY file
 rst_epilog = ""
 
 # -- Options for HTML output -------------------------------------------------
 
-import sphinx_bootstrap_theme  # noqa
+# import sphinx_bootstrap_theme  # noqa
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
 # html_theme = 'alabaster'
+html_theme = "sphinx_rtd_theme"
+
+html_theme_options = {
+    "canonical_url": "",
+    # 'analytics_id': 'UA-XXXXXXX-1', #  Provided by Google in your dashboard
+    "logo_only": True,
+    "display_version": False,
+    "prev_next_buttons_location": "both",
+    # "style_external_links": True,
+    # "vcs_pageview_mode": "blob",
+    # "style_nav_header_background": "#FF671F",
+    "collapse_navigation": False,
+    "sticky_navigation": True,
+    "navigation_depth": 5,
+    "includehidden": True,
+    "titles_only": False,
+}
+html_logo = "_static/axlogofull.png"
+"""
 html_theme = "bootstrap"
 html_theme_path = sphinx_bootstrap_theme.get_html_theme_path()
+
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
@@ -184,12 +204,21 @@ html_theme_options = {
     # Values: "3" (default) or "2" (in quotes)
     "bootstrap_version": "3",
 }
+"""
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ["_static"]
-
+html_context = {
+    "display_github": True,  # Integrate GitHub
+    "github_user": "Axonius",  # Username
+    "github_repo": "axonius-api-client",  # Repo name
+    "github_version": "master",  # Version
+    "conf_py_path": "/docs/",  # Path in the checkout to the docs root
+}
+html_css_files = ["custom.css"]
+# html_style = "theme.css"
 # Custom sidebar templates, must be a dictionary that maps document names
 # to template names.
 #
@@ -202,7 +231,7 @@ html_static_path = ["_static"]
 # html_sidebars = {'**': ['csidebar.html', 'searchbox.html']}
 
 # If true, links to the reST sources are added to the pages.
-html_show_sourcelink = False
+html_show_sourcelink = True
 
 # If true, "Created using Sphinx" is shown in the HTML footer. Default is True.
 html_show_sphinx = False
@@ -299,6 +328,7 @@ epub_exclude_files = ["search.html"]
 
 # -- Options for autodoc extension -------------------------------------------
 
+"""
 autodoc_default_options = {
     # This value selects if automatically documented members are sorted:
     # by alphabetical (value 'alphabetical')
@@ -306,10 +336,11 @@ autodoc_default_options = {
     # by source order (value 'bysource')
     # The default is alphabetical.
     "member-order": "bysource",
-    "special-members": "__init__, __call__",
+    # "special-members": "__init__, __call__",
     "private-members": None,
     "members": None,
 }
+"""
 
 # -- Options for intersphinx extension ---------------------------------------
 

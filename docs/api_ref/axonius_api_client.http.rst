@@ -1,5 +1,5 @@
-axonius\_api\_client.http module
-================================
+http module
+===========
 
 .. automodule:: axonius_api_client.http
     :members:
