@@ -13,8 +13,6 @@ python:
     - requirements: requirements.txt
     - method: pip
       path: .
-    - method: setuptools
-      path: .
 
 sphinx:
   builder: html
