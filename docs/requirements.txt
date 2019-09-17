@@ -1,3 +1,2 @@
 docutils
 sphinx
--e git+https://github.com/readthedocs/sphinx_rtd_theme.git#egg=sphinx_rtd_theme
