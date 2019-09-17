@@ -14,7 +14,7 @@ python:
     - method: pip
       path: .
     - method: setuptools
-      path: axonius-api-client
+      path: .
 
 sphinx:
   builder: html
