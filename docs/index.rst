@@ -30,8 +30,8 @@ Indices and tables
 
 .. _Axonius: https://www.axonius.com
 
-.. |Downloads| image:: https://pepy.tech/project/axonius-api-client
-   :target: https://pepy.tech/badge/axonius-api-client
+.. |Downloads| image:: https://pepy.tech/badge/axonius-api-client
+   :target: https://pepy.tech/project/axonius-api-client
 
 .. |MIT license| image:: https://img.shields.io/badge/License-MIT-blue.svg
    :target: https://lbesson.mit-license.org/
