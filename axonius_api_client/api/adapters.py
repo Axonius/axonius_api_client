@@ -12,88 +12,32 @@ from . import mixins, routers
 class Adapters(mixins.Model, mixins.Mixins):
     """Adapter related API methods."""
 
-    def _init(self, auth, **kwargs):
-        """Post init constructor."""
-        self.cnx = Cnx(parent=self)
-        """:obj:`Cnx`: Child object for working with connections."""
-
-        super(Adapters, self)._init(auth=auth, **kwargs)
-
-    def _get(self):
-        """Private direct API method for getting all adapters.
-
-        Returns:
-            :obj:`dict`
-
-        """
-        return self._request(method="get", path=self._router.root)
-
-    @property
-    def _router(self):
-        """Router for this API client.
-
-        Returns:
-            :obj:`axonius_api_client.api.routers.Router`
-
-        """
-        return routers.ApiV1.adapters
-
-    def _upload_file(
-        self,
-        adapter_name,
-        node_id,
-        name,
-        field,
-        content,
-        content_type=None,
-        headers=None,
-    ):
-        """Private direct API method for uploading a file for an adapter.
-
-        Args:
-            adapter_name (:obj:`str`):
-                Name of adapter to upload file to.
-            node_id (:obj:`str`):
-                ID of node running adapter_name.
-            name (:obj:`str`):
-                Name of file to upload.
-            field (:obj:`str`):
-                Field to associate with this file.
-            content (:obj:`str` or :obj:`bytes`):
-                Contents of file to upload.
-            content_type (:obj:`str`, optional):
-                Mime type of content.
-
-                Defaults to: None.
-            headers (:obj:`dict`, optional):
-                Mime headers for content.
-
-                Defaults to: None.
-
-        Returns:
-            dict
-
-        """
-        data = {"field_name": field}
-        files = {"userfile": (name, content, content_type, headers)}
-
-        path = self._router.upload_file.format(
-            adapter_name=adapter_name, node_id=node_id
-        )
-
-        ret = self._request(method="post", path=path, data=data, files=files)
-        ret["filename"] = name
-        return ret
-
     def get(self):
-        """Pass."""
+        """Get the metadata for all adapters.
+
+        Returns:
+            :obj:`list` of :obj:`dict`
+
+        """
         raw = self._get()
         parser = ParserAdapters(raw=raw, parent=self)
         adapters = parser.parse()
         return adapters
 
     def get_known(self, **kwargs):
-        """Pass."""
+        """Get the name, node name, cnx count, and status of all adapters.
+
+        Args:
+            **kwargs:
+                adapters: :obj:`list` of :obj:`dict`:
+                    List of adapters known to the system.
+
+                    Defaults to: Output of :meth:`get`
+
+        Returns:
+            :obj:`list` of :obj:`str`
+
+        """
         adapters = kwargs.get("adapters") or self.get()
         tmpl = [
             "name: {name!r}",
@@ -105,7 +49,17 @@ class Adapters(mixins.Model, mixins.Mixins):
         return [tmpl(**a) for a in adapters]
 
     def get_single(self, adapter, node="master"):
-        """Pass."""
+        """Get the metadata for a single adapter.
+
+        Args:
+            adapter (:obj:`str` or :obj:`dict`):
+                * As str: The name of an adapter to find
+                * As dict: The dictionary of an adapter already found.
+
+        Returns:
+            :obj:`dict`
+
+        """
         if isinstance(adapter, dict):
             return adapter
 
@@ -266,132 +220,82 @@ class Adapters(mixins.Model, mixins.Mixins):
             content_type=content_type,
         )
 
+    def _init(self, auth, **kwargs):
+        """Post init constructor."""
+        self.cnx = Cnx(parent=self)
+        """:obj:`Cnx`: Child object for working with connections."""
+
+        super(Adapters, self)._init(auth=auth, **kwargs)
+
+    def _get(self):
+        """Private direct API method for getting all adapters.
+
+        Returns:
+            :obj:`dict`
+
+        """
+        return self._request(method="get", path=self._router.root)
+
+    @property
+    def _router(self):
+        """Router for this API client.
+
+        Returns:
+            :obj:`axonius_api_client.api.routers.Router`
+
+        """
+        return routers.ApiV1.adapters
+
+    def _upload_file(
+        self,
+        adapter_name,
+        node_id,
+        name,
+        field,
+        content,
+        content_type=None,
+        headers=None,
+    ):
+        """Private direct API method for uploading a file for an adapter.
+
+        Args:
+            adapter_name (:obj:`str`):
+                Name of adapter to upload file to.
+            node_id (:obj:`str`):
+                ID of node running adapter_name.
+            name (:obj:`str`):
+                Name of file to upload.
+            field (:obj:`str`):
+                Field to associate with this file.
+            content (:obj:`str` or :obj:`bytes`):
+                Contents of file to upload.
+            content_type (:obj:`str`, optional):
+                Mime type of content.
+
+                Defaults to: None.
+            headers (:obj:`dict`, optional):
+                Mime headers for content.
+
+                Defaults to: None.
+
+        Returns:
+            :obj:`dict`
+
+        """
+        data = {"field_name": field}
+        files = {"userfile": (name, content, content_type, headers)}
+
+        path = self._router.upload_file.format(
+            adapter_name=adapter_name, node_id=node_id
+        )
+
+        ret = self._request(method="post", path=path, data=data, files=files)
+        ret["filename"] = name
+        return ret
+
 
 class Cnx(mixins.Child):
     """Pass."""
-
-    def _add(self, adapter_name, node_id, config):
-        """Add a connection to an adapter.
-
-        Args:
-            adapter (:obj:`str`):
-                Name of adapter to add connection to.
-            config (:obj:`dict`):
-                Client configuration.
-            node_id (:obj:`str`):
-                Node ID.
-
-        Returns:
-            :obj:`object`
-
-        """
-        data = {}
-        data.update(config)
-        data["instanceName"] = node_id
-
-        path = self._parent._router.cnxs.format(adapter_name=adapter_name)
-
-        return self._parent._request(
-            method="put",
-            path=path,
-            json=data,
-            error_json_bad_status=False,
-            error_status=False,
-        )
-
-    def _check(self, adapter_name, node_id, config):
-        """Test an adapter connection.
-
-        Args:
-            name (:obj:`str`):
-                Name of adapter to test connection of.
-            config (:obj:`dict`):
-                Connection configuration.
-            node_id (:obj:`str`):
-                Node ID.
-
-        Returns:
-            :obj:`object`
-
-        """
-        data = {}
-        data.update(config)
-        data["instanceName"] = node_id
-        data["oldInstanceName"] = node_id
-
-        path = self._parent._router.cnxs.format(adapter_name=adapter_name)
-
-        return self._parent._request(
-            method="post",
-            path=path,
-            json=data,
-            error_json_bad_status=False,
-            error_status=False,
-        )
-
-    def _delete(self, adapter_name, node_id, cnx_uuid, delete_entities=False):
-        """Delete a connection from an adapter.
-
-        Args:
-            name (:obj:`str`):
-                Name of adapter to delete connection from.
-            id (:obj:`str`):
-                ID of connection to remove.
-            node_id (:obj:`str`):
-                Node ID.
-
-        Returns:
-            :obj:`object`
-
-        """
-        data = {}
-        data["instanceName"] = node_id
-
-        params = {"deleteEntities": delete_entities}
-
-        path = self._parent._router.cnxs_uuid.format(
-            adapter_name=adapter_name, cnx_uuid=cnx_uuid
-        )
-
-        return self._parent._request(
-            method="delete",
-            path=path,
-            json=data,
-            params=params,
-            error_json_bad_status=False,
-            error_status=False,
-        )
-
-    def _update(self, adapter_name, node_id, config, cnx_uuid):
-        """Add a connection to an adapter.
-
-        Args:
-            adapter (:obj:`str`):
-                Name of adapter to add connection to.
-            config (:obj:`dict`):
-                Client configuration.
-            node_id (:obj:`str`):
-                Node ID.
-
-        Returns:
-            :obj:`object`
-
-        """
-        data = {}
-        data.update(config)
-        data["instanceName"] = node_id
-        data["oldInstanceName"] = node_id
-
-        path = self._parent._router.cnxs_uuid.format(
-            adapter_name=adapter_name, cnx_uuid=cnx_uuid
-        )
-        return self._parent._request(
-            method="put",
-            path=path,
-            json=data,
-            error_json_bad_status=False,
-            error_status=False,
-        )
 
     def add(
         self,
@@ -925,6 +829,129 @@ class Cnx(mixins.Child):
 
         return refetched
 
+    def _add(self, adapter_name, node_id, config):
+        """Add a connection to an adapter.
+
+        Args:
+            adapter (:obj:`str`):
+                Name of adapter to add connection to.
+            config (:obj:`dict`):
+                Client configuration.
+            node_id (:obj:`str`):
+                Node ID.
+
+        Returns:
+            :obj:`object`
+
+        """
+        data = {}
+        data.update(config)
+        data["instanceName"] = node_id
+
+        path = self._parent._router.cnxs.format(adapter_name=adapter_name)
+
+        return self._parent._request(
+            method="put",
+            path=path,
+            json=data,
+            error_json_bad_status=False,
+            error_status=False,
+        )
+
+    def _check(self, adapter_name, node_id, config):
+        """Test an adapter connection.
+
+        Args:
+            name (:obj:`str`):
+                Name of adapter to test connection of.
+            config (:obj:`dict`):
+                Connection configuration.
+            node_id (:obj:`str`):
+                Node ID.
+
+        Returns:
+            :obj:`object`
+
+        """
+        data = {}
+        data.update(config)
+        data["instanceName"] = node_id
+        data["oldInstanceName"] = node_id
+
+        path = self._parent._router.cnxs.format(adapter_name=adapter_name)
+
+        return self._parent._request(
+            method="post",
+            path=path,
+            json=data,
+            error_json_bad_status=False,
+            error_status=False,
+        )
+
+    def _delete(self, adapter_name, node_id, cnx_uuid, delete_entities=False):
+        """Delete a connection from an adapter.
+
+        Args:
+            name (:obj:`str`):
+                Name of adapter to delete connection from.
+            id (:obj:`str`):
+                ID of connection to remove.
+            node_id (:obj:`str`):
+                Node ID.
+
+        Returns:
+            :obj:`object`
+
+        """
+        data = {}
+        data["instanceName"] = node_id
+
+        params = {"deleteEntities": delete_entities}
+
+        path = self._parent._router.cnxs_uuid.format(
+            adapter_name=adapter_name, cnx_uuid=cnx_uuid
+        )
+
+        return self._parent._request(
+            method="delete",
+            path=path,
+            json=data,
+            params=params,
+            error_json_bad_status=False,
+            error_status=False,
+        )
+
+    def _update(self, adapter_name, node_id, config, cnx_uuid):
+        """Add a connection to an adapter.
+
+        Args:
+            adapter (:obj:`str`):
+                Name of adapter to add connection to.
+            config (:obj:`dict`):
+                Client configuration.
+            node_id (:obj:`str`):
+                Node ID.
+
+        Returns:
+            :obj:`object`
+
+        """
+        data = {}
+        data.update(config)
+        data["instanceName"] = node_id
+        data["oldInstanceName"] = node_id
+
+        path = self._parent._router.cnxs_uuid.format(
+            adapter_name=adapter_name, cnx_uuid=cnx_uuid
+        )
+        return self._parent._request(
+            method="put",
+            path=path,
+            json=data,
+            error_json_bad_status=False,
+            error_status=False,
+        )
+
 
 class ParserCnxConfig(mixins.Parser):
     """Pass."""
@@ -1063,6 +1090,17 @@ class ParserCnxConfig(mixins.Parser):
 class ParserAdapters(mixins.Parser):
     """Pass."""
 
+    def parse(self):
+        """Pass."""
+        parsed = []
+
+        for name, raw_adapters in self._raw.items():
+            for raw in raw_adapters:
+                adapter = self._adapter(name=name, raw=raw)
+                parsed.append(adapter)
+
+        return parsed
+
     def _adapter(self, name, raw):
         """Pass."""
         parsed = {
@@ -1173,17 +1211,6 @@ class ParserAdapters(mixins.Parser):
             cnx.append(pcnx)
 
         return cnx
-
-    def parse(self):
-        """Pass."""
-        parsed = []
-
-        for name, raw_adapters in self._raw.items():
-            for raw in raw_adapters:
-                adapter = self._adapter(name=name, raw=raw)
-                parsed.append(adapter)
-
-        return parsed
 
 
 def validate_csv(name, content, is_users=False, is_installed_sw=False):

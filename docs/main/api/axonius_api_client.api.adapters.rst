@@ -1,5 +1,5 @@
-axonius\_api\_client.api.adapters module
-========================================
+api.adapters module
+===================
 
 .. automodule:: axonius_api_client.api.adapters
     :members:

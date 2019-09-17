@@ -1,5 +1,5 @@
-axonius\_api\_client.api.enforcements module
-============================================
+api.enforcements module
+=======================
 
 .. automodule:: axonius_api_client.api.enforcements
     :members:

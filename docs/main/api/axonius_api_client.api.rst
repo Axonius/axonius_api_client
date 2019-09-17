@@ -1,5 +1,5 @@
-axonius\_api\_client.api package
-================================
+api package
+===========
 
 .. automodule:: axonius_api_client.api
     :no-members:

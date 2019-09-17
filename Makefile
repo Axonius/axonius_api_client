@@ -68,7 +68,7 @@ docs_dev:
 
 docs_apigen:
 	rm -rf docs/api_ref
-	pipenv run sphinx-apidoc -e -P -M -f -t docs/_templates -o docs/api_ref $(PACKAGE) $(PACKAGE)/tests $(PACKAGE)/cli
+	pipenv run sphinx-apidoc -e -P -M -f -T -t docs/_templates -o docs/api_ref $(PACKAGE) $(PACKAGE)/tests $(PACKAGE)/cli
 
 docs_open:
 	open docs/_build/html/index.html

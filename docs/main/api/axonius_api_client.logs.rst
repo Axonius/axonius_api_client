@@ -1,5 +1,5 @@
-axonius\_api\_client.logs module
-================================
+logs module
+===========
 
 .. automodule:: axonius_api_client.logs
     :members:

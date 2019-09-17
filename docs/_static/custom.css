@@ -1,0 +1,182 @@
+a {
+  color: #ff671f;
+}
+
+
+a:visited {
+  color: #ff671f;
+}
+
+.wy-side-nav-search, .wy-nav-top {
+  color: black;
+  background: white;
+}
+
+.wy-nav-side {
+  color: black;
+  /*background: white;*/
+}
+
+.wy-menu-vertical li.current>a,
+  .wy-menu-vertical li.on a {
+  color: dimgray;
+  background: white;
+}
+
+
+.wy-menu-vertical li.toctree-l2 a,
+  .wy-menu-vertical li.toctree-l3 a,
+  .wy-menu-vertical li.toctree-l4 a {
+  color: dimgray;
+  background: white;
+}
+
+/*.wy-menu-vertical li.toctree-l2.current li.toctree-l3>a {
+  color: dimgray;
+  background: white;
+}
+*/
+
+
+.wy-menu-vertical li.toctree-l2.current li.toctree-l3.current>a {
+  color: white;
+  background: #ff6633;
+}
+
+.wy-menu-vertical li.toctree-l2.current li.toctree-l3.current>a,
+.wy-menu-vertical li.toctree-l2.current li.toctree-l3.current li.toctree-l4.current>a,
+.wy-menu-vertical li.toctree-l1.current>a,
+.wy-menu-vertical li.toctree-l2.current>a,
+  .wy-menu-vertical li.toctree-l3.current>a,
+  .wy-menu-vertical li.toctree-l4.current>a {
+  color: white;
+  background: #ff6633;
+}
+
+.axon {
+  color: #ff6633;
+}
+.black {
+  color: black;
+}
+
+.gray {
+  color: gray;
+}
+
+.grey {
+  color: gray;
+}
+
+.silver {
+  color: silver;
+}
+
+.white {
+  color: white;
+}
+
+.maroon {
+  color: maroon;
+}
+
+.red {
+  color: red;
+}
+
+.magenta {
+  color: magenta;
+}
+
+.fuchsia {
+  color: fuchsia;
+}
+
+.pink {
+  color: pink;
+}
+
+.orange {
+  color: orange;
+}
+
+.yellow {
+  color: yellow;
+}
+
+.lime {
+  color: lime;
+}
+
+.green {
+  color: green;
+}
+
+.olive {
+  color: olive;
+}
+
+.teal {
+  color: teal;
+}
+
+.cyan {
+  color: cyan;
+}
+
+.aqua {
+  color: aqua;
+}
+
+.blue {
+  color: blue;
+}
+
+.navy {
+  color: navy;
+}
+
+.purple {
+  color: purple;
+}
+
+.under {
+  text-decoration: underline;
+}
+
+.over {
+  text-decoration: overline;
+}
+
+.blink {
+  text-decoration: blink;
+}
+
+.line {
+  text-decoration: line-through;
+}
+
+.strike {
+  text-decoration: line-through;
+}
+
+.it {
+  font-style: italic;
+}
+
+.ob {
+  font-style: oblique;
+}
+
+.small {
+  font-size: small;
+}
+
+.large {
+  font-size: large;
+}
+
+.smallpar {
+  font-size: small;
+}
+

@@ -1,5 +1,5 @@
-axonius\_api\_client.tools module
-=================================
+tools module
+============
 
 .. automodule:: axonius_api_client.tools
     :members:

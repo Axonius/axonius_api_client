@@ -1,5 +1,5 @@
-axonius\_api\_client.connect module
-===================================
+connect module
+==============
 
 .. automodule:: axonius_api_client.connect
     :members:

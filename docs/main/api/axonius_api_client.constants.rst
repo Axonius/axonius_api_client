@@ -1,5 +1,5 @@
-axonius\_api\_client.constants module
-=====================================
+constants module
+================
 
 .. automodule:: axonius_api_client.constants
     :members:

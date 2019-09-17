@@ -1,5 +1,12 @@
+{%- if basename.split(".")|length > 1 %}
+    {%- set shortname = basename.split(".")[1:] | join(".") -%}
+{%- else %}
+    {%- set shortname = basename -%}
+{% endif %}
+
+
 {%- if show_headings %}
-{{- [basename, "module"] | join(' ') | e | heading }}
+{{- [shortname, "module"] | join(' ') | e | heading }}
 
 {% endif -%}
 .. automodule:: {{ qualname }}
