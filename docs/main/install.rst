@@ -20,7 +20,7 @@ Install into a virtual environment using pipenv
 
 Read more about `pipenv`_
 
-Clone the axonius_api_client repository using git
+Clone using git
 ============================================================
 
    .. code-block:: console
