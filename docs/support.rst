@@ -1,3 +1,4 @@
+.. include:: .special.rst
 Support Information
 #########################################################
 

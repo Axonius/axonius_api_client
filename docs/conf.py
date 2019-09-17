@@ -4,6 +4,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import axonius_api_client as pkg  # noqa
 
+import sphinx_rtd_theme
+
 
 def strip(t):  # noqa
     return t.replace(" ", "").replace("_", "").strip()
@@ -36,7 +38,7 @@ extensions = [
 templates_path = ["_templates"]
 source_suffix = ".rst"
 master_doc = "index"
-language = "en"
+# language = "en"
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 # pygments_style = None
 # rst_epilog = ""
@@ -44,6 +46,7 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 # -- Options for HTML output -------------------------------------------------
 
 html_theme = "sphinx_rtd_theme"
+html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
 html_theme_options = {
     "logo_only": True,
     "display_version": False,

@@ -1,4 +1,4 @@
-.. include:: /root/.special.rst
+.. include:: .special.rst
 |MIT license|
 |made-with-python|
 |code-black|
@@ -15,10 +15,10 @@ Table of Contents
    :maxdepth: 3
    :numbered:
 
-   root/install.rst
-   root/support.rst
-   root/releases.rst
-   root/api_ref.rst
+   install.rst
+   support.rst
+   releases.rst
+   api_ref.rst
 
 Indices and tables
 ###############################################
@@ -26,6 +26,8 @@ Indices and tables
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
+
+
 
 .. _Axonius: https://www.axonius.com
 .. |MIT license| image:: https://img.shields.io/badge/License-MIT-blue.svg
