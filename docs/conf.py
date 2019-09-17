@@ -38,10 +38,9 @@ extensions = [
 templates_path = ["_templates"]
 source_suffix = ".rst"
 master_doc = "index"
-# language = "en"
+language = "en"
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
-# pygments_style = None
-# rst_epilog = ""
+pygments_style = "monokai"
 
 # -- Options for HTML output -------------------------------------------------
 
@@ -133,3 +132,5 @@ napoleon_use_ivar = False
 napoleon_use_param = True
 napoleon_use_keyword = True
 napoleon_use_rtype = True
+
+autosectionlabel_prefix_document = True
