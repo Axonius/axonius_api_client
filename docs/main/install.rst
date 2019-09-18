@@ -2,36 +2,33 @@
 Installation
 #########################
 
-Install into the system site-packages using pip
+Using `pip`_
 ============================================================
 
    .. code-block:: console
 
       $ pip install axonius_api_client
 
-Read more about `pip`_
-
-Install into a virtual environment using pipenv
+Using `pipenv`_
 ============================================================
 
    .. code-block:: console
 
       $ pipenv install axonius_api_client
 
-Read more about `pipenv`_
-
-Clone using git
+Using `git`_
 ============================================================
 
    .. code-block:: console
 
       $ git clone git://github.com/Axonius/axonius_api_client.git
 
-Directly from GitHub
+From `GitHub`_
 ============================================================
 
-This library is actively maintained `on GitHub`_. The master branch will always be the most recent stable version.
+The master branch will always be the most recent stable version.
 
+.. _git: https://git-scm.com/
 .. _pipenv: https://pipenv.readthedocs.io/en/latest/
 .. _pip: https://pypi.org/project/pip/
-.. _on GitHub: https://github.com/Axonius/axonius_api_client
+.. _GitHub: https://github.com/Axonius/axonius_api_client
