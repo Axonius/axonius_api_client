@@ -11,7 +11,7 @@ from . import cmd_get
 @click.group()
 @context.pass_context
 def adapters(ctx):
-    """Work with adapter connections."""
+    """Work with adapters and adapter connections."""
     return ctx
 
 

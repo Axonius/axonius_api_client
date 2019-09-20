@@ -8,21 +8,12 @@ from .. import context
 
 
 @click.command("get", context_settings=context.CONTEXT_SETTINGS)
-@context.connect_options
-@context.export_options
+@context.OPT_URL
+@context.OPT_KEY
+@context.OPT_SECRET
 @context.pass_context
 @click.pass_context
-def cmd(
-    clickctx,
-    ctx,
-    url,
-    key,
-    secret,
-    export_format,
-    export_file,
-    export_path,
-    export_overwrite,
-):
+def cmd(clickctx, ctx, url, key, secret):
     """Get a report of adapters for objects in query."""
     client = ctx.start_client(url=url, key=key, secret=secret)
 
@@ -31,13 +22,4 @@ def cmd(
     with context.exc_wrap(wraperror=ctx.wraperror):
         raw_data = api.labels.get()
 
-    formatters = {"json": context.to_json}
-
-    ctx.handle_export(
-        raw_data=raw_data,
-        formatters=formatters,
-        export_format=export_format,
-        export_file=export_file,
-        export_path=export_path,
-        export_overwrite=export_overwrite,
-    )
+    print(context.to_json(raw_data))

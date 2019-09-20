@@ -9,11 +9,18 @@ from . import grp_common
 
 
 @click.command("get", context_settings=context.CONTEXT_SETTINGS)
-@context.connect_options
-@context.export_options
+@context.OPT_URL
+@context.OPT_KEY
+@context.OPT_SECRET
+@context.OPT_EXPORT_FILE
+@context.OPT_EXPORT_PATH
+@context.OPT_EXPORT_FORMAT
+@context.OPT_EXPORT_OVERWRITE
+@context.OPT_INCLUDE_SETTINGS
 @click.option(
     "--rows",
     "-r",
+    "rows",
     help="The output from 'adapters get' supplied as a file or via stdin.",
     default="-",
     type=click.File(mode="r"),
@@ -27,34 +34,24 @@ from . import grp_common
     help="Only include connections with matching IDs.",
     multiple=True,
     show_envvar=True,
-    show_default=True,
 )
 @click.option(
-    "--working/--no-working",
-    "-w/-nw",
-    help="Include connections that are working.",
+    "--no-working",
+    "-nw",
+    "working",
+    help="Exclude connections that are working.",
     default=True,
     is_flag=True,
     show_envvar=True,
-    show_default=True,
 )
 @click.option(
-    "--broken/--no-broken",
-    "-b/-nb",
+    "--no-broken",
+    "-nb",
+    "broken",
     help="Include connections that are broken.",
     default=True,
     is_flag=True,
     show_envvar=True,
-    show_default=True,
-)
-@click.option(
-    "--include-settings/--no-include-settings",
-    "-is/-nis",
-    help="Include connection settings in CSV export.",
-    default=False,
-    is_flag=True,
-    show_envvar=True,
-    show_default=True,
 )
 @context.pass_context
 def cmd(

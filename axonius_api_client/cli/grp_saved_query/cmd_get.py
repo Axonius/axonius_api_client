@@ -9,11 +9,14 @@ from . import grp_common
 
 
 @click.command("get", context_settings=context.CONTEXT_SETTINGS)
-@context.connect_options
-@context.export_options
-@click.option(
-    "--max-rows", "-mr", help="Only return this many rows.", type=click.INT, hidden=True
-)
+@context.OPT_URL
+@context.OPT_KEY
+@context.OPT_SECRET
+@context.OPT_EXPORT_FILE
+@context.OPT_EXPORT_PATH
+@context.OPT_EXPORT_FORMAT
+@context.OPT_EXPORT_OVERWRITE
+@context.OPT_MAX_ROWS
 @context.pass_context
 @click.pass_context
 def cmd(

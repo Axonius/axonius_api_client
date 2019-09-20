@@ -10,25 +10,30 @@ from .. import context
 
 
 @click.command("fields", context_settings=context.CONTEXT_SETTINGS)
-@context.connect_options
-@context.export_options
+@context.OPT_URL
+@context.OPT_KEY
+@context.OPT_SECRET
+@context.OPT_EXPORT_FILE
+@context.OPT_EXPORT_PATH
+@context.OPT_EXPORT_FORMAT
+@context.OPT_EXPORT_OVERWRITE
 @click.option(
     "--adapter-re",
     "-ar",
+    "adapter_re",
     default=".*",
     help="Only fetch fields for adapters matching this regex.",
     metavar="REGEX",
     show_envvar=True,
-    show_default=True,
 )
 @click.option(
     "--field-re",
     "-fr",
+    "field_re",
     default=".*",
     help="Only fetch fields matching this regex.",
     metavar="REGEX",
     show_envvar=True,
-    show_default=True,
 )
 @context.pass_context
 @click.pass_context

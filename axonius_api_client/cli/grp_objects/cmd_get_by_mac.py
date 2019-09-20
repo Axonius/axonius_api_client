@@ -9,9 +9,19 @@ from . import grp_common
 
 
 @click.command("get-by-mac", context_settings=context.CONTEXT_SETTINGS)
-@context.connect_options
-@context.export_options
-@grp_common.get_by_opts
+@context.OPT_URL
+@context.OPT_KEY
+@context.OPT_SECRET
+@context.OPT_EXPORT_FILE
+@context.OPT_EXPORT_PATH
+@context.OPT_EXPORT_FORMAT
+@context.OPT_EXPORT_OVERWRITE
+@context.OPT_QUERY
+@context.OPT_FIELDS
+@context.OPT_FIELDS_DEFAULT
+@context.OPT_MAX_ROWS
+@context.OPT_GET_BY_VALUES
+@context.OPT_GET_BY_POST_QUERY
 @context.pass_context
 @click.pass_context
 def cmd(
@@ -24,9 +34,9 @@ def cmd(
     export_file,
     export_path,
     export_overwrite,
-    value,
+    values,
     query,
-    field,
+    fields,
     fields_default,
     max_rows,
 ):
@@ -41,9 +51,9 @@ def cmd(
         export_file=export_file,
         export_path=export_path,
         export_overwrite=export_overwrite,
-        value=value,
+        values=values,
         query=query,
-        field=field,
+        fields=fields,
         fields_default=fields_default,
         max_rows=max_rows,
         method="get_by_mac",

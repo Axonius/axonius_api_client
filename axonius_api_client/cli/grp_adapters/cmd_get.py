@@ -7,12 +7,19 @@ import click
 from .. import context
 
 
-@click.command("get", context_settings=context.CONTEXT_SETTINGS)
-@context.connect_options
-@context.export_options
+@click.command(name="get", context_settings=context.CONTEXT_SETTINGS)
+@context.OPT_URL
+@context.OPT_KEY
+@context.OPT_SECRET
+@context.OPT_EXPORT_FILE
+@context.OPT_EXPORT_PATH
+@context.OPT_EXPORT_FORMAT
+@context.OPT_EXPORT_OVERWRITE
+@context.OPT_INCLUDE_SETTINGS
 @click.option(
     "--name",
     "-n",
+    "names",
     help="Only include adapters with matching names.",
     multiple=True,
     show_envvar=True,
@@ -21,33 +28,37 @@ from .. import context
 @click.option(
     "--node",
     "-no",
+    "nodes",
     help="Only include adapters with matching node names.",
     multiple=True,
     show_envvar=True,
     show_default=True,
 )
 @click.option(
-    "--cnx-working/--no-cnx-working",
-    "-cw/-ncw",
-    help="Include/Exclude adapters with working connections.",
+    "--no-cnx-working",
+    "-ncw",
+    "cnx_working",
+    help="Exclude adapters with working connections.",
     is_flag=True,
     default=True,
     show_envvar=True,
     show_default=True,
 )
 @click.option(
-    "--cnx-broken/--no-cnx-broken",
-    "-cb/-ncb",
-    help="Include/Exclude adapters with broken connections.",
+    "--no-cnx-broken",
+    "-ncb",
+    "cnx_broken",
+    help="Exclude adapters with broken connections.",
     is_flag=True,
     default=True,
     show_envvar=True,
     show_default=True,
 )
 @click.option(
-    "--cnx-none/--no-cnx-none",
-    "-cn/-ncn",
-    help="Include/Exclude adapters with no connections.",
+    "--no-cnx-none",
+    "-ncn",
+    "cnx_none",
+    help="Exclude adapters with no connections.",
     default=True,
     is_flag=True,
     show_envvar=True,
@@ -56,17 +67,9 @@ from .. import context
 @click.option(
     "--cnx-count",
     "-c",
+    "cnx_count",
     help="Only include adapters with this number of connections.",
     type=click.INT,
-    show_envvar=True,
-    show_default=True,
-)
-@click.option(
-    "--include-settings/--no-include-settings",
-    "-is/-nis",
-    help="Include connection, adapter, and advanced settings in CSV export.",
-    default=False,
-    is_flag=True,
     show_envvar=True,
     show_default=True,
 )
@@ -80,15 +83,15 @@ def cmd(
     export_file,
     export_path,
     export_overwrite,
-    name,
-    node,
+    names,
+    nodes,
     cnx_working,
     cnx_broken,
     cnx_none,
     cnx_count,
     include_settings,
 ):
-    """Get all adapters with clients that have errors."""
+    """Get adapters based on name, node name, and connection status or count."""
     client = ctx.start_client(url=url, key=key, secret=secret)
 
     statuses = []
@@ -105,25 +108,25 @@ def cmd(
     with context.exc_wrap(wraperror=ctx.wraperror):
         all_adapters = client.adapters.get()
 
-        by_nodes = client.adapters.filter_by_nodes(adapters=all_adapters, value=node)
+        by_nodes = client.adapters.filter_by_nodes(adapters=all_adapters, value=nodes)
         context.check_empty(
             ctx=ctx,
             this_data=by_nodes,
             prev_data=all_adapters,
             value_type="node names",
-            value=node,
+            value=nodes,
             objtype="adapters",
             known_cb=ctx.obj.adapters.get_known,
             known_cb_key="adapters",
         )
 
-        by_names = client.adapters.filter_by_names(adapters=by_nodes, value=name)
+        by_names = client.adapters.filter_by_names(adapters=by_nodes, value=names)
         context.check_empty(
             ctx=ctx,
             this_data=by_names,
             prev_data=by_nodes,
             value_type="names",
-            value=name,
+            value=names,
             objtype="adapters",
             known_cb=ctx.obj.adapters.get_known,
             known_cb_key="adapters",

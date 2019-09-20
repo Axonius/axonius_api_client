@@ -9,45 +9,24 @@ from . import grp_common
 
 
 @click.command("get-by-subnet", context_settings=context.CONTEXT_SETTINGS)
-@context.connect_options
-@context.export_options
+@context.OPT_URL
+@context.OPT_KEY
+@context.OPT_SECRET
+@context.OPT_EXPORT_FILE
+@context.OPT_EXPORT_PATH
+@context.OPT_EXPORT_FORMAT
+@context.OPT_EXPORT_OVERWRITE
+@context.OPT_FIELDS
+@context.OPT_FIELDS_DEFAULT
+@context.OPT_MAX_ROWS
+@context.OPT_GET_BY_POST_QUERY
 @click.option(
     "--value",
     "-v",
+    "value",
     help="Value to search for.",
     required=True,
     show_envvar=True,
-    show_default=True,
-)
-@click.option(
-    "--query",
-    "-q",
-    help="Query to add to the end of the query built to search for --value.",
-    default="",
-    metavar="QUERY",
-    show_envvar=True,
-    show_default=True,
-)
-@click.option(
-    "--field",
-    "-f",
-    help="Columns to include in the format of adapter:field.",
-    metavar="ADAPTER:FIELD",
-    multiple=True,
-    show_envvar=True,
-    show_default=True,
-)
-@click.option(
-    "--fields-default/--no-fields-default",
-    "-fd/-nfd",
-    default=True,
-    help="Include default columns for this object type.",
-    is_flag=True,
-    show_envvar=True,
-    show_default=True,
-)
-@click.option(
-    "--max-rows", "-mr", help="Only return this many rows.", type=click.INT, hidden=True
 )
 @context.pass_context
 @click.pass_context
@@ -63,7 +42,7 @@ def cmd(
     export_overwrite,
     value,
     query,
-    field,
+    fields,
     fields_default,
     max_rows,
 ):
@@ -80,7 +59,7 @@ def cmd(
         export_overwrite=export_overwrite,
         value=value,
         query=query,
-        field=field,
+        fields=fields,
         fields_default=fields_default,
         max_rows=max_rows,
         method="get_by_subnet",

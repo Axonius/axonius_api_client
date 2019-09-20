@@ -6,19 +6,33 @@
 Axonius API Client
 ##################################################################
 
-This package provides a Python API library for `Axonius`_.
+This python package provides an API client for `Axonius`_.
+
+For python developers: API Usage.
+
+For command line users: CLI Usage.
 
 Table of Contents
 ###############################################
 
 .. toctree::
-   :maxdepth: 3
+   :maxdepth: 2
    :numbered:
 
    main/install.rst
+   main/usage/usage.rst
    main/support.rst
    main/releases.rst
    main/api/axonius_api_client.rst
+
+
+MOO
+
+.. click:: axonius_api_client.cli:cli
+   :prog: axonshell
+
+FOO
+
 
 Indices and tables
 ###############################################

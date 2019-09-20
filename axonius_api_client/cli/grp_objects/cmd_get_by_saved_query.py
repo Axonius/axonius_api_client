@@ -8,18 +8,23 @@ from .. import context
 
 
 @click.command("get-by-saved-query", context_settings=context.CONTEXT_SETTINGS)
-@context.connect_options
-@context.export_options
+@context.OPT_URL
+@context.OPT_KEY
+@context.OPT_SECRET
+@context.OPT_EXPORT_FILE
+@context.OPT_EXPORT_PATH
+@context.OPT_EXPORT_FORMAT
+@context.OPT_EXPORT_OVERWRITE
+@context.OPT_QUERY
+@context.OPT_FIELDS
+@context.OPT_FIELDS_DEFAULT
+@context.OPT_MAX_ROWS
 @click.option(
     "--name",
     "-n",
     help="Name of saved query to get assets from.",
     required=True,
     show_envvar=True,
-    show_default=True,
-)
-@click.option(
-    "--max-rows", "-mr", help="Only return this many rows.", type=click.INT, hidden=True
 )
 @context.pass_context
 @click.pass_context

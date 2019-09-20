@@ -9,6 +9,8 @@ import click
 from ... import tools
 from .. import context
 
+HIDDEN = ["secret", "key", "password"]
+
 
 def to_csv(ctx, raw_data, include_settings=True, **kwargs):
     """Pass."""

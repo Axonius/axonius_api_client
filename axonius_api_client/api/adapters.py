@@ -10,7 +10,7 @@ from . import mixins, routers
 
 
 class Adapters(mixins.Model, mixins.Mixins):
-    """Adapter related API methods.
+    """Adapter API.
 
     Attributes:
         cnx (Cnx): Child object for working with adapter connections.
@@ -34,7 +34,9 @@ class Adapters(mixins.Model, mixins.Mixins):
 
         Args:
             adapters ((list) of (dict), optional): List of adapters to include in
-                return.  Defaults to: Return from :meth:`get`.
+                return.
+
+                Defaults to: Return from :meth:`get`.
 
         Returns:
             (list) of (str): List of human readable strings representing each adapter.
@@ -54,16 +56,26 @@ class Adapters(mixins.Model, mixins.Mixins):
         """Get the metadata for a single adapter.
 
         Args:
-            adapter ((str) or (dict)): If str, the name of the adapter to get the
-                metadata for. If dict, the metadata for a single adapter from
-                :meth:`get`, :meth:`get_single`, :meth:`filter_by_names`,
-                :meth:`filter_by_nodes`, :meth:`filter_by_status`, or
-                :meth:`filter_by_cnx_count`.
-            node (str, optional): If ``adapter`` is str, the name of the node running
-                the ``adapter`` to find. Defaults to: "master".
+            adapter ((str) or (dict)): Adapter to find.
+
+                * If str, the name of the adapter to get the
+                metadata for.
+                * If dict, the metadata for a single adapter returned from
+                  :meth:`get`, :meth:`filter_by_names`,
+                  :meth:`filter_by_nodes`, :meth:`filter_by_status`, or
+                  :meth:`filter_by_cnx_count`.
+
+            node (str, optional):
+                If ``adapter`` is str, the name of the node running the ``adapter``
+                to find.
+
+                Defaults to: "master".
 
         Raises:
-            exceptions.ValueNotFound: If not exactly one match found.
+            exceptions.ValueNotFound:
+                If searching for ``node`` using :meth:`filter_by_nodes` and
+                ``adapter`` using :meth:`filter_by_names` does not return exactly
+                one match.
 
         Returns:
             dict: The metadata of a single adapter.
@@ -101,19 +113,30 @@ class Adapters(mixins.Model, mixins.Mixins):
                 :meth:`filter_by_nodes`, :meth:`filter_by_status`, or
                 :meth:`filter_by_cnx_count`.
             value ((list) of (str) or (str), optional): The names to match in
-                ``adapters``. If value is None, the list of adapters will be returned as
-                is. Any string value starting with "RE:" will be treated as a regex.
+                ``adapters``.
+
+                * If value is None, the list of adapters will be returned as
+                  is.
+                * Any string value starting with "RE:" will be treated as a regex.
+
                 Defaults to: None.
-            ignore_case (bool, optional): Ignore case when checking value against
-                each adapter name. Defaults to: True.
+            ignore_case (bool, optional): Ignore case when checking ``value`` against
+                each adapter name.
+
+                Defaults to: True.
             match_count (int, optional): The number of matches that should be found
-                for ``value``. Defaults to: None.
+                for ``value``.
+
+                Defaults to: None.
             match_error (bool, optional): Raise error if the number of matches does not
-                equal ``match_count``. Defaults to: True.
+                equal ``match_count``.
+
+                Defaults to: True.
 
         Raises:
-            exceptions.ValueNotFound: If ``match_count`` does not equal the number of
-                matches found and ``match_error`` is True.
+            exceptions.ValueNotFound:
+                If ``match_count`` does not equal the number of matches found and
+                ``match_error`` is True.
 
         Returns:
             (list) of (dict): List of matching adapters.
@@ -255,7 +278,6 @@ class Adapters(mixins.Model, mixins.Mixins):
                 :meth:`filter_by_cnx_count`.
             value (((list) of (bool) or (None)) or ((bool) or (None)), optional):
                 The status or statuses to match against each adapter.
-                If value is None, the list of adapters will be returned as is.
 
                 * True: All connections for an adapter are working.
                 * False: At least one of the connections for an adapter is broken.
@@ -425,9 +447,8 @@ class Adapters(mixins.Model, mixins.Mixins):
 
 
 class Cnx(mixins.Child):
-    """Pass."""
+    """Adapter connections API."""
 
-    # TODO: DOCS HERE
     def add(
         self,
         adapter,
@@ -442,8 +463,8 @@ class Cnx(mixins.Child):
 
         Args:
             adapter ((str) or (dict)): If str, name of adapter to add connection to.
-                If dict, metadata of single adapter already fetched from
-                :meth:`Adapters.get_single`.
+                If dict, an adapters metadata returned from :meth:`Adapters.get_single`
+                or a single adapter returned from :meth:Adapt
             config (dict): Configuration of connection to add.
             parse_config (bool, optional): Check the supplied ``config`` using
                 :meth:`ParserCnxConfig.parse`. Defaults to: True.

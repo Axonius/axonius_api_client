@@ -4,7 +4,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import atexit
 import csv
-import functools
 import os
 import readline
 import rlcompleter
@@ -18,6 +17,18 @@ import requests
 from .. import connect, tools
 from ..tools import json_reload as jdump
 
+
+AX_ENV = os.environ.get("AX_ENV", "")
+
+if AX_ENV:
+    AX_ENV_PATH = tools.path(obj=AX_ENV)
+else:
+    AX_ENV_PATH = tools.path(obj=os.getcwd()) / ".env"
+
+dotenv.load_dotenv(format(AX_ENV_PATH))
+
+AX_SHOW_HIDDEN = not bool(os.environ.get("AX_SHOW_HIDDEN", ""))
+
 HISTPATH = os.path.expanduser("~")
 HISTFILE = ".python_history"
 CONTEXT_SETTINGS = {"auto_envvar_prefix": "AX"}
@@ -30,102 +41,148 @@ MAX_LEN = 30000
 MAX_STR = "...TRIMMED - {} items over max cell length {}".format
 
 
-def load_dotenv():
-    """Pass."""
-    ax_env = os.environ.get("AX_ENV", "")
-
-    if ax_env:
-        path = tools.path(obj=ax_env)
-    else:
-        path = tools.path(obj=os.getcwd()) / ".env"
-
-    dotenv.load_dotenv(format(path))
-
-
-def connect_options(func):
-    """Combine commonly appearing @click.option decorators."""
-    #
-    @click.option(
-        "--url",
-        "-u",
-        required=True,
-        help="URL of Axonius instance.",
-        metavar="URL",
-        prompt="URL of Axonius instance",
-        show_envvar=True,
-    )
-    @click.option(
-        "--key",
-        "-k",
-        required=True,
-        help="API Key of user in Axonius instance.",
-        metavar="KEY",
-        prompt="API Key of user in Axonius instance",
-        hide_input=True,
-        show_envvar=True,
-    )
-    @click.option(
-        "--secret",
-        "-s",
-        required=True,
-        help="API Secret of user in Axonius instance.",
-        metavar="SECRET",
-        prompt="API Secret of user in Axonius instance",
-        hide_input=True,
-        show_envvar=True,
-    )
-    @functools.wraps(func)
-    def wrapper(*args, **kwargs):
-        return func(*args, **kwargs)
-
-    return wrapper
-
-
-def export_options(func):
-    """Combine commonly appearing @click.option decorators."""
-    #
-    # FUTURE: error if os.path.sep in value
-    @click.option(
-        "--export-file",
-        "-xf",
-        default="",
-        help="Export to a file in export-path instead of printing to STDOUT.",
-        show_envvar=True,
-        show_default=True,
-    )
-    @click.option(
-        "--export-path",
-        "-xp",
-        default=format(tools.path(obj=os.getcwd())),
-        help="Path to create --export-file in.",
-        type=click.Path(exists=False, resolve_path=True),
-        show_envvar=True,
-        show_default=True,
-    )
-    @click.option(
-        "--export-format",
-        "-xt",
-        default="json",
-        help="Format to use for STDOUT or export-file.",
-        type=click.Choice(["csv", "json"]),
-        show_envvar=True,
-        show_default=True,
-    )
-    @click.option(
-        "--export-overwrite/--no-export-overwrite",
-        "-xo/-nxo",
-        default=False,
-        help="Overwrite export-file if exists.",
-        is_flag=True,
-        show_envvar=True,
-        show_default=True,
-    )
-    @functools.wraps(func)
-    def wrapper(*args, **kwargs):
-        return func(*args, **kwargs)
-
-    return wrapper
-
+OPT_URL = click.option(
+    "--url",
+    "-u",
+    "url",
+    required=True,
+    help="URL of Axonius instance.",
+    metavar="URL",
+    prompt="URL of Axonius instance",
+    show_envvar=True,
+)
+OPT_KEY = click.option(
+    "--key",
+    "-k",
+    "key",
+    required=True,
+    help="API Key of user in Axonius instance.",
+    metavar="KEY",
+    prompt="API Key of user in Axonius instance",
+    hide_input=True,
+    show_envvar=True,
+)
+OPT_SECRET = click.option(
+    "--secret",
+    "-s",
+    "secret",
+    required=True,
+    help="API Secret of user in Axonius instance.",
+    metavar="SECRET",
+    prompt="API Secret of user in Axonius instance",
+    hide_input=True,
+    show_envvar=True,
+)
+# FUTURE: error if os.path.sep in value
+OPT_EXPORT_FILE = click.option(
+    "--export-file",
+    "-xf",
+    "export_file",
+    default="",
+    help="Export to a file in export-path instead of printing to STDOUT.",
+    show_envvar=True,
+    show_default=True,
+)
+OPT_EXPORT_PATH = click.option(
+    "--export-path",
+    "-xp",
+    "export_path",
+    default=format(tools.path(obj=os.getcwd())),
+    help="Path to create --export-file in.",
+    type=click.Path(exists=False, resolve_path=True),
+    show_envvar=True,
+    show_default=True,
+)
+OPT_EXPORT_FORMAT = click.option(
+    "--export-format",
+    "-xt",
+    "export_format",
+    default="json",
+    help="Format to use for STDOUT or export-file.",
+    type=click.Choice(["csv", "json"]),
+    show_envvar=True,
+    show_default=True,
+)
+OPT_EXPORT_OVERWRITE = click.option(
+    "--export-overwrite",
+    "-xo",
+    "export_overwrite",
+    default=False,
+    help="Overwrite export-file if exists.",
+    is_flag=True,
+    show_envvar=True,
+)
+OPT_INCLUDE_SETTINGS = click.option(
+    "--include-settings",
+    "-is",
+    "include_settings",
+    help="Include settings in CSV export.",
+    default=False,
+    is_flag=True,
+    show_envvar=True,
+)
+OPT_NO_ERROR = click.option(
+    "--no-error",
+    "-ne",
+    "error",
+    help="Return the object even if an error happens.",
+    default=True,
+    is_flag=True,
+    show_envvar=True,
+)
+OPT_QUERY = click.option(
+    "--query",
+    "-q",
+    "query",
+    help="Query built from Query Wizard to filter objects (empty returns all).",
+    metavar="QUERY",
+    show_envvar=True,
+)
+OPT_FIELDS = click.option(
+    "--field",
+    "-f",
+    "fields",
+    help="Columns to include in the format of adapter:field.",
+    metavar="ADAPTER:FIELD",
+    multiple=True,
+    show_envvar=True,
+)
+OPT_FIELDS_DEFAULT = click.option(
+    "--no-fields-default",
+    "-nfd",
+    "fields_default",
+    default=True,
+    help="Exclude default fields for this object type.",
+    is_flag=True,
+    show_envvar=True,
+)
+OPT_MAX_ROWS = click.option(
+    "--max-rows",
+    "-mr",
+    "max_rows",
+    help="Only return this many rows.",
+    type=click.INT,
+    hidden=AX_SHOW_HIDDEN
+)
+OPT_GET_BY_VALUES = click.option(
+    "--value",
+    "-v",
+    "values",
+    help="Values to search for.",
+    required=True,
+    multiple=True,
+    show_envvar=True,
+)
+OPT_GET_BY_POST_QUERY = click.option(
+    "--query",
+    "-q",
+    "query",
+    help="Query to add to the end of the query built to search for --value.",
+    default="",
+    metavar="QUERY",
+    show_envvar=True,
+    show_default=True,
+)
 
 class SplitEquals(click.ParamType):
     """Pass."""

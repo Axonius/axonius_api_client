@@ -8,30 +8,20 @@ from .. import context
 
 
 @click.command("count-by-saved-query", context_settings=context.CONTEXT_SETTINGS)
-@context.connect_options
-@context.export_options
+@context.OPT_URL
+@context.OPT_KEY
+@context.OPT_SECRET
 @click.option(
     "--name",
     "-n",
+    "name",
     help="Name of saved query to get count of assets from.",
     required=True,
     show_envvar=True,
-    show_default=True,
 )
 @context.pass_context
 @click.pass_context
-def cmd(
-    clickctx,
-    ctx,
-    url,
-    key,
-    secret,
-    export_format,
-    export_file,
-    export_path,
-    export_overwrite,
-    name,
-):
+def cmd(clickctx, ctx, url, key, secret, name):
     """Get all objects matching a query."""
     client = ctx.start_client(url=url, key=key, secret=secret)
 
@@ -40,13 +30,4 @@ def cmd(
     with context.exc_wrap(wraperror=ctx.wraperror):
         raw_data = api.count_by_saved_query(name=name)
 
-    formatters = {"json": context.to_json}
-
-    ctx.handle_export(
-        raw_data=raw_data,
-        formatters=formatters,
-        export_format=export_format,
-        export_file=export_file,
-        export_path=export_path,
-        export_overwrite=export_overwrite,
-    )
+    print(context.to_json(raw_data))

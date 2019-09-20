@@ -7,23 +7,29 @@ import click
 from .. import context
 from . import grp_common
 
-HIDDEN = ["secret", "key", "password"]
-
 
 @click.command("add", context_settings=context.CONTEXT_SETTINGS)
-@context.connect_options
-@context.export_options
+@context.OPT_URL
+@context.OPT_KEY
+@context.OPT_SECRET
+@context.OPT_EXPORT_FILE
+@context.OPT_EXPORT_PATH
+@context.OPT_EXPORT_FORMAT
+@context.OPT_EXPORT_OVERWRITE
+@context.OPT_INCLUDE_SETTINGS
+@context.OPT_NO_ERROR
 @click.option(
     "--adapter",
     "-a",
+    "adapter",
     help="The name of the adapter to add the connection to.",
     required=True,
     show_envvar=True,
-    show_default=True,
 )
 @click.option(
     "--node",
     "-n",
+    "node",
     help="The name of the node running --adapter to add the connection to.",
     default="master",
     show_envvar=True,
@@ -32,11 +38,11 @@ HIDDEN = ["secret", "key", "password"]
 @click.option(
     "--config",
     "-c",
+    "config",
     help="Configuration keys in the form of key=value.",
     type=context.SplitEquals(),
     multiple=True,
     show_envvar=True,
-    show_default=True,
 )
 @click.option(
     "--skip",
@@ -45,43 +51,24 @@ HIDDEN = ["secret", "key", "password"]
     help="Configuration keys to not prompt for.",
     multiple=True,
     show_envvar=True,
-    show_default=True,
 )
 @click.option(
     "--hidden",
     "hiddens",
     help="List of configuration items to hide input when prompting.",
-    default=HIDDEN,
+    default=grp_common.HIDDEN,
     multiple=True,
     show_envvar=True,
     show_default=True,
 )
 @click.option(
-    "--prompt-opt/--no-prompt-opt",
-    "-po/-npo",
+    "--no-prompt-opt",
+    "-npo",
+    "prompt_opt",
     help="Prompt for optional items that are not supplied.",
     is_flag=True,
     default=True,
     show_envvar=True,
-    show_default=True,
-)
-@click.option(
-    "--include-settings/--no-include-settings",
-    "-is/-nis",
-    help="Include connection settings in CSV export.",
-    default=False,
-    is_flag=True,
-    show_envvar=True,
-    show_default=True,
-)
-@click.option(
-    "--error/--no-error",
-    "-e/-ne",
-    help="Return the new connection object even if an error happens.",
-    default=True,
-    is_flag=True,
-    show_envvar=True,
-    show_default=True,
 )
 @context.pass_context
 def cmd(

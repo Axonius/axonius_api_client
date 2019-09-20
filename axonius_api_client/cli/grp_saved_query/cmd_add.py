@@ -10,69 +10,51 @@ from . import grp_common
 
 
 @click.command("add", context_settings=context.CONTEXT_SETTINGS)
-@context.connect_options
-@context.export_options
+@context.OPT_URL
+@context.OPT_KEY
+@context.OPT_SECRET
+@context.OPT_EXPORT_FILE
+@context.OPT_EXPORT_PATH
+@context.OPT_EXPORT_FORMAT
+@context.OPT_EXPORT_OVERWRITE
+@context.OPT_QUERY
+@context.OPT_FIELDS
+@context.OPT_FIELDS_DEFAULT
 @click.option(
     "--name",
     "-n",
+    "name",
     help="Name of saved query to create.",
     required=True,
     show_envvar=True,
-    show_default=True,
-)
-@click.option(
-    "--query",
-    "-q",
-    help="Query built from Query Wizard.",
-    required=True,
-    metavar="QUERY",
-    show_envvar=True,
-    show_default=True,
-)
-@click.option(
-    "--field",
-    "-f",
-    help="Columns to include in the format of adapter:field.",
-    metavar="ADAPTER:FIELD",
-    multiple=True,
-    show_envvar=True,
-    show_default=True,
-)
-@click.option(
-    "--fields-default/--no-fields-default",
-    "-fd/-nfd",
-    default=True,
-    help="Include default fields for this object type.",
-    is_flag=True,
-    show_envvar=True,
-    show_default=True,
 )
 @click.option(
     "--sort-field",
     "-sf",
+    "sort_field",
     help="Column to sort data on.",
     metavar="ADAPTER:FIELD",
     show_envvar=True,
     show_default=True,
 )
 @click.option(
-    "--sort-descending/--no-sort-descending",
+    "--sort-ascending",
     "-sd",
+    "sort_descending",
     default=True,
-    help="Sort --sort-field descending.",
+    help="Sort --sort-field ascending.",
     is_flag=True,
     show_envvar=True,
-    show_default=True,
 )
 @click.option(
     "--column-filter",
     "-cf",
+    "column_filters",
     help="Columns to filter in the format of adapter:field=value.",
     metavar="ADAPTER:FIELD=value",
     type=context.SplitEquals(),
     multiple=True,
     show_envvar=True,
-    show_default=True,
 )
 @click.option(
     "--gui-page-size",
@@ -97,24 +79,24 @@ def cmd(
     export_overwrite,
     name,
     query,
-    field,
+    fields,
     fields_default,
     sort_field,
     sort_descending,
-    column_filter,
+    column_filters,
     gui_page_size,
 ):
     """Get a report of adapters for objects in query."""
     client = ctx.start_client(url=url, key=key, secret=secret)
     api = getattr(client, clickctx.parent.parent.command.name)
 
-    column_filters = dict(column_filter)
+    column_filters = dict(column_filters)
 
     with context.exc_wrap(wraperror=ctx.wraperror):
         raw_data = api.saved_query.add(
             name=name,
             query=query,
-            fields=field,
+            fields=fields,
             fields_default=fields_default,
             sort=sort_field,
             sort_descending=sort_descending,

@@ -8,16 +8,21 @@ from .. import context
 
 
 @click.command("missing-adapters", context_settings=context.CONTEXT_SETTINGS)
-@context.connect_options
-@context.export_options
+@context.OPT_URL
+@context.OPT_KEY
+@context.OPT_SECRET
+@context.OPT_EXPORT_FILE
+@context.OPT_EXPORT_PATH
+@context.OPT_EXPORT_FORMAT
+@context.OPT_EXPORT_OVERWRITE
 @click.option(
     "--rows",
     "-r",
+    "rows",
     help="The JSON data of rows returned by any get command for this object type.",
     default="-",
     type=click.File(mode="r"),
     show_envvar=True,
-    show_default=True,
 )
 @context.pass_context
 @click.pass_context

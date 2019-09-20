@@ -11,10 +11,13 @@ from .. import context
 
 
 @click.command("delete", context_settings=context.CONTEXT_SETTINGS)
-@context.connect_options
+@context.OPT_URL
+@context.OPT_KEY
+@context.OPT_SECRET
 @click.option(
     "--rows",
     "-r",
+    "rows",
     help="JSON rows returned by any get command for saved queries of this object type.",
     default="-",
     type=click.File(mode="r"),
@@ -24,6 +27,7 @@ from .. import context
 @click.option(
     "--wait",
     "-w",
+    "wait",
     help="Wait this many seconds before deleting",
     default=30,
     type=click.INT,

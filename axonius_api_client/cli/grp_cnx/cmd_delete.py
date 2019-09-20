@@ -10,11 +10,18 @@ from . import grp_common
 
 
 @click.command("delete", context_settings=context.CONTEXT_SETTINGS)
-@context.connect_options
-@context.export_options
+@context.OPT_URL
+@context.OPT_KEY
+@context.OPT_SECRET
+@context.OPT_EXPORT_FILE
+@context.OPT_EXPORT_PATH
+@context.OPT_EXPORT_FORMAT
+@context.OPT_EXPORT_OVERWRITE
+@context.OPT_INCLUDE_SETTINGS
 @click.option(
     "--rows",
     "-r",
+    "rows",
     help="The output from 'cnx get' supplied as a file or via stdin.",
     default="-",
     type=click.File(mode="r"),
@@ -22,17 +29,18 @@ from . import grp_common
     show_default=True,
 )
 @click.option(
-    "--delete-entities/--no-delete-entities",
-    "-de/-nde",
+    "--delete-entities",
+    "-de",
+    "delete_entities",
     help="Delete information for this connection from associated assets.",
     default=False,
     is_flag=True,
     show_envvar=True,
-    show_default=True,
 )
 @click.option(
     "--wait",
     "-w",
+    "wait",
     help="Wait this many seconds before deleting",
     default=30,
     type=click.INT,
@@ -40,31 +48,22 @@ from . import grp_common
     show_default=True,
 )
 @click.option(
-    "--error/--no-error",
-    "-e/-ne",
-    help="Stop deleting connections on error.",
+    "--no-error",
+    "-ne",
+    "error",
+    help="Continue deleting connections on error.",
     default=True,
     is_flag=True,
     show_envvar=True,
-    show_default=True,
 )
 @click.option(
-    "--force/--no-force",
-    "-f/-nf",
+    "--force",
+    "-f",
+    "force",
     help="Actually delete the connections.",
     default=False,
     is_flag=True,
     show_envvar=True,
-    show_default=True,
-)
-@click.option(
-    "--include-settings/--no-include-settings",
-    "-is/-nis",
-    help="Include connection settings in CSV export.",
-    default=False,
-    is_flag=True,
-    show_envvar=True,
-    show_default=True,
 )
 @context.pass_context
 def cmd(

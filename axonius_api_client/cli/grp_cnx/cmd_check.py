@@ -10,34 +10,23 @@ from . import grp_common
 
 
 @click.command("check", context_settings=context.CONTEXT_SETTINGS)
-@context.connect_options
-@context.export_options
+@context.OPT_URL
+@context.OPT_KEY
+@context.OPT_SECRET
+@context.OPT_EXPORT_FILE
+@context.OPT_EXPORT_PATH
+@context.OPT_EXPORT_FORMAT
+@context.OPT_EXPORT_OVERWRITE
+@context.OPT_INCLUDE_SETTINGS
+@context.OPT_NO_ERROR
 @click.option(
     "--rows",
     "-r",
+    "rows",
     help="The output from 'cnx get' supplied as a file or via stdin.",
     default="-",
     type=click.File(mode="r"),
     show_envvar=True,
-    show_default=True,
-)
-@click.option(
-    "--error/--no-error",
-    "-e/-ne",
-    help="Stop checking connections on error.",
-    default=True,
-    is_flag=True,
-    show_envvar=True,
-    show_default=True,
-)
-@click.option(
-    "--include-settings/--no-include-settings",
-    "-is/-nis",
-    help="Include connection settings in CSV export.",
-    default=False,
-    is_flag=True,
-    show_envvar=True,
-    show_default=True,
 )
 @context.pass_context
 def cmd(

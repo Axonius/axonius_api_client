@@ -8,30 +8,13 @@ from .. import context
 
 
 @click.command("count", context_settings=context.CONTEXT_SETTINGS)
-@context.connect_options
-@context.export_options
-@click.option(
-    "--query",
-    "-q",
-    help="Query built from Query Wizard to return count of objects.",
-    metavar="QUERY",
-    show_envvar=True,
-    show_default=True,
-)
+@context.OPT_URL
+@context.OPT_KEY
+@context.OPT_SECRET
+@context.OPT_QUERY
 @context.pass_context
 @click.pass_context
-def cmd(
-    clickctx,
-    ctx,
-    url,
-    key,
-    secret,
-    export_format,
-    export_file,
-    export_path,
-    export_overwrite,
-    query,
-):
+def cmd(clickctx, ctx, url, key, secret, query):
     """Get all objects matching a query."""
     client = ctx.start_client(url=url, key=key, secret=secret)
 
@@ -40,13 +23,4 @@ def cmd(
     with context.exc_wrap(wraperror=ctx.wraperror):
         raw_data = api.count(query=query)
 
-    formatters = {"json": context.to_json}
-
-    ctx.handle_export(
-        raw_data=raw_data,
-        formatters=formatters,
-        export_format=export_format,
-        export_file=export_file,
-        export_path=export_path,
-        export_overwrite=export_overwrite,
-    )
+    print(context.to_json(raw_data))

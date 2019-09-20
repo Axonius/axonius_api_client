@@ -67,8 +67,9 @@ docs_dev:
 	(cd docs && pipenv run make html SPHINXOPTS="-na" && cd ..)
 
 docs_apigen:
-	rm -rf docs/api_ref
-	pipenv run sphinx-apidoc -e -P -M -f -T -t docs/_templates -o docs/api_ref $(PACKAGE) $(PACKAGE)/tests $(PACKAGE)/cli
+	pip install sphinx -t /tmp/sphinx-latest --quiet --upgrade
+	rm -rf docs/main/api
+	PYTHONPATH=/tmp/sphinx-latest /tmp/sphinx-latest/bin/sphinx-apidoc -e -P -M -f -T -t docs/_templates -o docs/main/api $(PACKAGE) $(PACKAGE)/tests $(PACKAGE)/cli
 
 docs_open:
 	open docs/_build/html/index.html
