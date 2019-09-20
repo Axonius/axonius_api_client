@@ -7,7 +7,7 @@ import click
 from .. import context
 
 
-@click.command("get", context_settings=context.CONTEXT_SETTINGS)
+@click.command(name="get", context_settings=context.CONTEXT_SETTINGS)
 @context.OPT_URL
 @context.OPT_KEY
 @context.OPT_SECRET
@@ -22,4 +22,4 @@ def cmd(clickctx, ctx, url, key, secret):
     with context.exc_wrap(wraperror=ctx.wraperror):
         raw_data = api.labels.get()
 
-    print(context.to_json(raw_data))
+    print(context.jdump(raw_data))

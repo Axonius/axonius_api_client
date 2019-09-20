@@ -7,7 +7,7 @@ import click
 from .. import context
 
 
-@click.command("missing-adapters", context_settings=context.CONTEXT_SETTINGS)
+@click.command(name="missing-adapters", context_settings=context.CONTEXT_SETTINGS)
 @context.OPT_URL
 @context.OPT_KEY
 @context.OPT_SECRET

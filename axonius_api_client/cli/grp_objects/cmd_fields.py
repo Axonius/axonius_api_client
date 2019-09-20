@@ -9,7 +9,7 @@ import click
 from .. import context
 
 
-@click.command("fields", context_settings=context.CONTEXT_SETTINGS)
+@click.command(name="fields", context_settings=context.CONTEXT_SETTINGS)
 @context.OPT_URL
 @context.OPT_KEY
 @context.OPT_SECRET

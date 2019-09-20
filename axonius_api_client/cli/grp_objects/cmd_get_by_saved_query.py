@@ -7,7 +7,7 @@ import click
 from .. import context
 
 
-@click.command("get-by-saved-query", context_settings=context.CONTEXT_SETTINGS)
+@click.command(name="get-by-saved-query", context_settings=context.CONTEXT_SETTINGS)
 @context.OPT_URL
 @context.OPT_KEY
 @context.OPT_SECRET
@@ -15,7 +15,6 @@ from .. import context
 @context.OPT_EXPORT_PATH
 @context.OPT_EXPORT_FORMAT
 @context.OPT_EXPORT_OVERWRITE
-@context.OPT_QUERY
 @context.OPT_FIELDS
 @context.OPT_FIELDS_DEFAULT
 @context.OPT_MAX_ROWS

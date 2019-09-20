@@ -18,14 +18,19 @@ from .. import connect, tools
 from ..tools import json_reload as jdump
 
 
-AX_ENV = os.environ.get("AX_ENV", "")
+def load_dotenv():
+    """Pass."""
+    AX_ENV = os.environ.get("AX_ENV", "")
 
-if AX_ENV:
-    AX_ENV_PATH = tools.path(obj=AX_ENV)
-else:
-    AX_ENV_PATH = tools.path(obj=os.getcwd()) / ".env"
+    if AX_ENV:
+        path = tools.path(obj=AX_ENV)
+    else:
+        path = tools.path(obj=os.getcwd()) / ".env"
 
-dotenv.load_dotenv(format(AX_ENV_PATH))
+    dotenv.load_dotenv(format(path))
+
+
+load_dotenv()
 
 AX_SHOW_HIDDEN = not bool(os.environ.get("AX_SHOW_HIDDEN", ""))
 
@@ -162,7 +167,7 @@ OPT_MAX_ROWS = click.option(
     "max_rows",
     help="Only return this many rows.",
     type=click.INT,
-    hidden=AX_SHOW_HIDDEN
+    hidden=AX_SHOW_HIDDEN,
 )
 OPT_GET_BY_VALUES = click.option(
     "--value",
@@ -183,6 +188,7 @@ OPT_GET_BY_POST_QUERY = click.option(
     show_envvar=True,
     show_default=True,
 )
+
 
 class SplitEquals(click.ParamType):
     """Pass."""

@@ -7,7 +7,7 @@ import click
 from .. import context
 
 
-@click.command("count-by-saved-query", context_settings=context.CONTEXT_SETTINGS)
+@click.command(name="count-by-saved-query", context_settings=context.CONTEXT_SETTINGS)
 @context.OPT_URL
 @context.OPT_KEY
 @context.OPT_SECRET
@@ -30,4 +30,4 @@ def cmd(clickctx, ctx, url, key, secret, name):
     with context.exc_wrap(wraperror=ctx.wraperror):
         raw_data = api.count_by_saved_query(name=name)
 
-    print(context.to_json(raw_data))
+    print(context.jdump(raw_data))

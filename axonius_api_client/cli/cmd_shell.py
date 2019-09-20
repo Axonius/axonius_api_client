@@ -7,7 +7,7 @@ import click
 from . import context
 
 
-@click.command("shell", context_settings=context.CONTEXT_SETTINGS)
+@click.command(name="shell", context_settings=context.CONTEXT_SETTINGS)
 @context.OPT_URL
 @context.OPT_KEY
 @context.OPT_SECRET

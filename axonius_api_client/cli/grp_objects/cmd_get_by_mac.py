@@ -8,7 +8,7 @@ from .. import context
 from . import grp_common
 
 
-@click.command("get-by-mac", context_settings=context.CONTEXT_SETTINGS)
+@click.command(name="get-by-mac", context_settings=context.CONTEXT_SETTINGS)
 @context.OPT_URL
 @context.OPT_KEY
 @context.OPT_SECRET

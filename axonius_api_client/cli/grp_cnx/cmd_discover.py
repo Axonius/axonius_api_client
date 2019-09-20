@@ -9,7 +9,7 @@ from .. import context
 from . import grp_common
 
 
-@click.command("discover", context_settings=context.CONTEXT_SETTINGS)
+@click.command(name="discover", context_settings=context.CONTEXT_SETTINGS)
 @context.OPT_URL
 @context.OPT_KEY
 @context.OPT_SECRET
