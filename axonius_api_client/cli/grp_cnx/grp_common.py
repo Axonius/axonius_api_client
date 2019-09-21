@@ -7,9 +7,7 @@ import re
 import click
 
 from ... import tools
-from .. import context
-
-HIDDEN = ["secret", "key", "password"]
+from .. import cli_constants, serial
 
 
 def to_csv(ctx, raw_data, include_settings=True, **kwargs):
@@ -19,16 +17,14 @@ def to_csv(ctx, raw_data, include_settings=True, **kwargs):
     simples = ["adapter_name", "node_name", "id", "uuid", "status_raw", "error"]
 
     for cnx in raw_data:
-        if "cnx" in cnx:
-            cnx = cnx["cnx"]
-
+        cnx = cnx["cnx"] if "cnx" in cnx else cnx
         row = {k: cnx[k] for k in simples}
         if include_settings:
-            row["settings"] = context.join_tv(cnx["config"])
+            row["settings"] = serial.join_tv(obj=cnx["config"])
 
         rows.append(row)
 
-    return context.dictwriter(rows=rows)
+    return serial.dictwriter(rows=rows)
 
 
 def handle_schema(config, schema, hiddens, prompt_opt, skips):
@@ -40,18 +36,18 @@ def handle_schema(config, schema, hiddens, prompt_opt, skips):
     schema["hide_input"] = hide_input = any([re.search(x, name) for x in hiddens])
 
     smsg = "\n{s}\n  Configuration item schema:{it}"
-    smsg = smsg.format(s="*" * 40, it=context.join_kv(obj=schema, indent=" " * 4))
+    smsg = smsg.format(s="*" * 40, it=serial.join_kv(obj=schema, indent=" " * 4))
     click.secho(message=smsg, fg="blue", err=True)
 
     if config.get(name):
-        hasmsg = "\nSkipping item, was provided via '--config {}=...'\n"
-        hasmsg = hasmsg.format(name)
+        hasmsg = "\nSkipping item, was provided via '--config {v}=...'\n"
+        hasmsg = hasmsg.format(v=name)
         click.secho(message=hasmsg, fg="cyan", err=True)
         raise SkipItem()
 
     if not required and any([re.search(x, name) for x in skips]):
-        skipmsg = "\nSkipping item, was provided via '--skip {}'\n"
-        skipmsg = skipmsg.format(name)
+        skipmsg = "\nSkipping item, was provided via '--skip {v}'\n"
+        skipmsg = skipmsg.format(v=name)
         click.secho(message=skipmsg, fg="cyan", err=True)
         raise SkipItem()
 
@@ -78,23 +74,6 @@ def handle_schema(config, schema, hiddens, prompt_opt, skips):
     return value
 
 
-TYPE_MAP = {
-    "bool": click.BOOL,
-    "integer": click.INT,
-    "number": click.INT,
-    "file": click.Path(
-        exists=True,
-        file_okay=True,
-        dir_okay=False,
-        writable=False,
-        readable=True,
-        resolve_path=True,
-        allow_dash=False,
-        path_type=None,
-    ),
-}
-
-
 def determine_type(schema):
     """Pass."""
     type_str = schema["type"]
@@ -105,8 +84,8 @@ def determine_type(schema):
 
     if type_str == "string" and has_enum and isinstance(enum, tools.LIST) and enum:
         ptype = click.Choice(choices=enum, case_sensitive=True)
-    elif type_str in TYPE_MAP:
-        ptype = TYPE_MAP[type_str]
+    elif type_str in cli_constants.SETTING_TYPE_MAP:
+        ptype = cli_constants.SETTING_TYPE_MAP[type_str]
 
     return ptype
 
@@ -115,27 +94,115 @@ class SkipItem(Exception):
     """Pass."""
 
 
-def handle_response(cnx, action):
+def handle_response(ctx, cnx, action, cnx_error=True):
     """Pass."""
+    had_cnx_error = bool(cnx["cnx"]["error"])
     had_error = cnx["response_had_error"]
     response = cnx["response"]
 
     info_keys = ["adapter_name", "node_name", "id", "uuid", "status", "error"]
     cnxinfo = {k: cnx["cnx"][k] for k in info_keys}
 
-    color = "red" if had_error else "green"
+    color = "red" if had_error or had_cnx_error else "green"
 
     msg = [
-        "",
-        "Finished {a} connection",
+        "\nFINISHED {a} CONNECTION",
         "Had error: {he}",
-        "response:\n{r}",
+        "response: {resp}",
         "connection:{ci}\n",
     ]
-    msg = tools.join_cr(obj=msg, pre=False, indent="").format(
-        a=action,
-        he=had_error,
-        r=tools.json_dump(response),
-        ci=context.join_kv(obj=cnxinfo, indent=" " * 2),
+    msg = tools.join_cr(obj=msg, pre=False, indent="  ").format(
+        a=action.upper(),
+        he=had_error or (had_cnx_error and cnx_error),
+        resp=tools.json_dump(response).strip(),
+        ci=serial.join_kv(obj=cnxinfo, indent="   "),
     )
     click.secho(message=msg, fg=color, err=True)
+
+    return had_error, had_cnx_error
+
+
+def get_sources(ctx, only_parent=False):
+    """Pass."""
+    pp_grp = ctx.parent.parent.command.name
+    p_grp = ctx.parent.command.name
+
+    if only_parent:
+        src_cmds = ["{pp} get"]
+    else:
+        src_cmds = [
+            "{pp} {p} add",
+            "{pp} {p} check",
+            "{pp} {p} discover",
+            "{pp} {p} get",
+            "{pp} get",
+        ]
+    src_cmds = [x.format(pp=pp_grp, p=p_grp) for x in src_cmds]
+    return src_cmds
+
+
+def get_rows(ctx, rows, only_parent=False):
+    """Pass."""
+    pp_grp = ctx.parent.parent.command.name
+    p_grp = ctx.parent.command.name
+    grp = ctx.command.name
+
+    this_grp = "{pp} {p} {g}".format(pp=pp_grp, p=p_grp, g=grp)
+    this_cmd = "{tg} --rows".format(tg=this_grp)
+
+    src_cmds = get_sources(ctx=ctx, only_parent=only_parent)
+    rows = serial.json_to_rows(
+        ctx=ctx, stream=rows, this_cmd=this_cmd, src_cmds=src_cmds
+    )
+
+    serial.check_rows_type(
+        ctx=ctx, rows=rows, this_cmd=this_cmd, src_cmds=src_cmds, all_items=True
+    )
+
+    rows = serial.collapse_rows(rows=rows, key="cnx")
+
+    serial.ensure_keys(
+        ctx=ctx,
+        rows=rows,
+        this_cmd=this_cmd,
+        src_cmds=src_cmds,
+        keys=[
+            "adapter_name",
+            "adapter_name_raw",
+            "config_raw",
+            "node_id",
+            "node_name",
+            "id",
+            "uuid",
+            "status",
+            "error",
+        ],
+        all_items=True,
+    )
+    return rows
+
+
+def check_empty(
+    ctx, this_data, prev_data, value_type, value, objtype, known_cb, known_cb_key
+):
+    """Pass."""
+    if value in tools.EMPTY:
+        return
+
+    value = tools.join_comma(obj=value, empty=False)
+
+    if not this_data:
+        valid = tools.join_cr(obj=known_cb(**{known_cb_key: prev_data}))
+        msg = "Valid {objtype}:{valid}\n"
+        msg = msg.format(valid=valid, objtype=objtype)
+        ctx.obj.echo_error(msg, abort=False)
+
+        msg = "No {objtype} found when searching by {value_type}: {value}"
+        msg = msg.format(objtype=objtype, value_type=value_type, value=value)
+        ctx.obj.echo_error(msg)
+
+    msg = "Found {cnt} {objtype} by {value_type}: {value}"
+    msg = msg.format(
+        objtype=objtype, cnt=len(this_data), value_type=value_type, value=value
+    )
+    ctx.obj.echo_ok(msg)

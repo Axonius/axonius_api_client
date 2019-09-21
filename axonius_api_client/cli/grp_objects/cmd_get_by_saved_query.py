@@ -4,20 +4,20 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import click
 
-from .. import context
+from .. import cli_constants, options, serial
 
 
-@click.command(name="get-by-saved-query", context_settings=context.CONTEXT_SETTINGS)
-@context.OPT_URL
-@context.OPT_KEY
-@context.OPT_SECRET
-@context.OPT_EXPORT_FILE
-@context.OPT_EXPORT_PATH
-@context.OPT_EXPORT_FORMAT
-@context.OPT_EXPORT_OVERWRITE
-@context.OPT_FIELDS
-@context.OPT_FIELDS_DEFAULT
-@context.OPT_MAX_ROWS
+@click.command(
+    name="get-by-saved-query", context_settings=cli_constants.CONTEXT_SETTINGS
+)
+@options.OPT_URL
+@options.OPT_KEY
+@options.OPT_SECRET
+@options.OPT_EXPORT_FILE
+@options.OPT_EXPORT_PATH
+@options.OPT_EXPORT_FORMAT
+@options.OPT_EXPORT_OVERWRITE
+@options.OPT_MAX_ROWS
 @click.option(
     "--name",
     "-n",
@@ -25,10 +25,8 @@ from .. import context
     required=True,
     show_envvar=True,
 )
-@context.pass_context
 @click.pass_context
 def cmd(
-    clickctx,
     ctx,
     url,
     key,
@@ -40,17 +38,18 @@ def cmd(
     name,
     max_rows,
 ):
-    """Get all objects matching a query."""
-    client = ctx.start_client(url=url, key=key, secret=secret)
+    """Get assets from a saved query."""
+    p_grp = ctx.parent.command.name
 
-    api = getattr(client, clickctx.parent.command.name)
+    client = ctx.obj.start_client(url=url, key=key, secret=secret)
+    api = getattr(client, p_grp)
 
-    with context.exc_wrap(wraperror=ctx.wraperror):
+    with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
         raw_data = api.get_by_saved_query(name=name, max_rows=max_rows)
 
-    formatters = {"json": context.to_json, "csv": context.obj_to_csv}
+    formatters = {"json": serial.to_json, "csv": serial.obj_to_csv}
 
-    ctx.handle_export(
+    ctx.obj.handle_export(
         raw_data=raw_data,
         formatters=formatters,
         export_format=export_format,

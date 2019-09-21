@@ -87,7 +87,6 @@ def load_clirunner(request, monkeypatch):
     monkeypatch.setenv("AX_URL", url)
     monkeypatch.setenv("AX_KEY", key)
     monkeypatch.setenv("AX_SECRET", secret)
-    monkeypatch.setattr(cli.context, "load_dotenv", mock_load_dotenv)
     return runner
 
 
@@ -102,18 +101,24 @@ def check_stderr_lines(result):
     assert stderr[1].startswith("** Connected to "), stderr
 
 
-def mock_load_dotenv():
-    """Pass."""
-    pass
-
-
 class MockError(Exception):
+    """Pass."""
+
+
+class MockCtx(object):
     """Pass."""
 
 
 def mock_failure(*args, **kwargs):
     """Pass."""
     raise MockError("badwolf")
+
+
+def get_mockctx():
+    """Pass."""
+    ctx = MockCtx()
+    ctx.obj = cli.context.Context()
+    return ctx
 
 
 def check_csv_cols(content, cols):

@@ -4,15 +4,13 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import click
 
-from .. import context
+from .. import click_ext
 from . import cmd_missing_adapters
 
 
-@click.group()
-@context.pass_context
-def reports(ctx):
-    """Work with device assets."""
-    return ctx
+@click.group(cls=click_ext.AliasedGroup)
+def reports():
+    """Group: Work with reports for assets."""
 
 
 reports.add_command(cmd_missing_adapters.cmd)

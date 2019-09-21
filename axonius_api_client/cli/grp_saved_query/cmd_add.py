@@ -5,21 +5,21 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import click
 
 from ... import constants
-from .. import context
+from .. import cli_constants, click_ext, options, serial
 from . import grp_common
 
 
-@click.command(name="add", context_settings=context.CONTEXT_SETTINGS)
-@context.OPT_URL
-@context.OPT_KEY
-@context.OPT_SECRET
-@context.OPT_EXPORT_FILE
-@context.OPT_EXPORT_PATH
-@context.OPT_EXPORT_FORMAT
-@context.OPT_EXPORT_OVERWRITE
-@context.OPT_QUERY
-@context.OPT_FIELDS
-@context.OPT_FIELDS_DEFAULT
+@click.command(name="add", context_settings=cli_constants.CONTEXT_SETTINGS)
+@options.OPT_URL
+@options.OPT_KEY
+@options.OPT_SECRET
+@options.OPT_EXPORT_FILE
+@options.OPT_EXPORT_PATH
+@options.OPT_EXPORT_FORMAT
+@options.OPT_EXPORT_OVERWRITE
+@options.OPT_QUERY
+@options.OPT_FIELDS
+@options.OPT_FIELDS_DEFAULT
 @click.option(
     "--name",
     "-n",
@@ -52,7 +52,7 @@ from . import grp_common
     "column_filters",
     help="Columns to filter in the format of adapter:field=value.",
     metavar="ADAPTER:FIELD=value",
-    type=context.SplitEquals(),
+    type=click_ext.SplitEquals(),
     multiple=True,
     show_envvar=True,
 )
@@ -65,10 +65,8 @@ from . import grp_common
     show_envvar=True,
     show_default=True,
 )
-@context.pass_context
 @click.pass_context
 def cmd(
-    clickctx,
     ctx,
     url,
     key,
@@ -86,13 +84,14 @@ def cmd(
     column_filters,
     gui_page_size,
 ):
-    """Get a report of adapters for objects in query."""
-    client = ctx.start_client(url=url, key=key, secret=secret)
-    api = getattr(client, clickctx.parent.parent.command.name)
-
+    """Add a saved query."""
     column_filters = dict(column_filters)
 
-    with context.exc_wrap(wraperror=ctx.wraperror):
+    pp_grp = ctx.parent.parent.command.name
+    client = ctx.obj.start_client(url=url, key=key, secret=secret)
+    api = getattr(client, pp_grp)
+
+    with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
         raw_data = api.saved_query.add(
             name=name,
             query=query,
@@ -106,11 +105,11 @@ def cmd(
 
     msg = "Successfully created saved query: {n}"
     msg = msg.format(n=raw_data["name"])
-    ctx.echo_ok(msg)
+    ctx.obj.echo_ok(msg)
 
-    formatters = {"json": context.to_json, "csv": grp_common.to_csv}
+    formatters = {"json": serial.to_json, "csv": grp_common.to_csv}
 
-    ctx.handle_export(
+    ctx.obj.handle_export(
         raw_data=raw_data,
         formatters=formatters,
         export_format=export_format,

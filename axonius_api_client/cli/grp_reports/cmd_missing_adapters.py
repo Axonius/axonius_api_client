@@ -4,30 +4,20 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import click
 
-from .. import context
+from .. import cli_constants, grp_objects, options, serial
 
 
-@click.command(name="missing-adapters", context_settings=context.CONTEXT_SETTINGS)
-@context.OPT_URL
-@context.OPT_KEY
-@context.OPT_SECRET
-@context.OPT_EXPORT_FILE
-@context.OPT_EXPORT_PATH
-@context.OPT_EXPORT_FORMAT
-@context.OPT_EXPORT_OVERWRITE
-@click.option(
-    "--rows",
-    "-r",
-    "rows",
-    help="The JSON data of rows returned by any get command for this object type.",
-    default="-",
-    type=click.File(mode="r"),
-    show_envvar=True,
-)
-@context.pass_context
+@click.command(name="missing-adapters", context_settings=cli_constants.CONTEXT_SETTINGS)
+@options.OPT_URL
+@options.OPT_KEY
+@options.OPT_SECRET
+@options.OPT_EXPORT_FILE
+@options.OPT_EXPORT_PATH
+@options.OPT_EXPORT_FORMAT
+@options.OPT_EXPORT_OVERWRITE
+@options.OPT_ROWS
 @click.pass_context
 def cmd(
-    clickctx,
     ctx,
     url,
     key,
@@ -38,18 +28,20 @@ def cmd(
     export_overwrite,
     rows,
 ):
-    """Get a report of adapters for objects in query."""
-    client = ctx.start_client(url=url, key=key, secret=secret)
-    content = context.json_from_stream(ctx=ctx, stream=rows, src="--rows")
+    """Get a report of missing adapters for assets."""
+    rows = grp_objects.grp_common.get_rows(ctx=ctx, rows=rows)
 
-    api = getattr(client, clickctx.parent.parent.command.name)
+    client = ctx.obj.start_client(url=url, key=key, secret=secret)
 
-    with context.exc_wrap(wraperror=ctx.wraperror):
-        raw_data = api.reports.missing_adapters(rows=content)
+    pp_grp = ctx.parent.parent.command.name
+    api = getattr(client, pp_grp)
 
-    formatters = {"json": context.to_json, "csv": context.obj_to_csv}
+    with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
+        raw_data = api.reports.missing_adapters(rows=rows)
 
-    ctx.handle_export(
+    formatters = {"json": serial.to_json, "csv": serial.obj_to_csv}
+
+    ctx.obj.handle_export(
         raw_data=raw_data,
         formatters=formatters,
         export_format=export_format,

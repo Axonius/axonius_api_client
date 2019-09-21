@@ -27,8 +27,8 @@ INT = six.integer_types
 BYTES = six.binary_type
 SIMPLE = tuple(list(STR) + [int, bool, float])
 SIMPLE_NONE = tuple(list(SIMPLE) + [None])
-YES = [True, 1, "1", "true", "t", "yes", "y"]
-NO = [False, 0, "0", "false", "f", "no", "n"]
+YES = [True, 1, "1", "true", "t", "yes", "y", "yas"]
+NO = [False, 0, "0", "false", "f", "no", "n", "noes"]
 
 
 def listify(obj, dictkeys=False):

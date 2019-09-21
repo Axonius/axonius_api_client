@@ -4,15 +4,13 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import click
 
-from .. import context
+from .. import click_ext
 from . import cmd_add, cmd_get, cmd_remove
 
 
-@click.group()
-@context.pass_context
-def labels(ctx):
-    """Work with device assets."""
-    return ctx
+@click.group(cls=click_ext.AliasedGroup)
+def labels():  # noqa:D402
+    """Group: Work with labels (tags) for assets."""
 
 
 labels.add_command(cmd_get.cmd)

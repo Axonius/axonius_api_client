@@ -3,7 +3,7 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 from ... import tools
-from .. import context
+from .. import serial
 
 
 def to_csv(ctx, raw_data, **kwargs):
@@ -14,9 +14,9 @@ def to_csv(ctx, raw_data, **kwargs):
 
     for raw_row in tools.listify(raw_data, dictkeys=False):
         row = {
-            k: context.join_cr(v, is_cell=True)
+            k: serial.join_cr(v, is_cell=True)
             for k, v in raw_row.items()
-            if context.is_los(v)
+            if serial.is_los(v)
         }
         rows.append(row)
 
@@ -28,9 +28,9 @@ def to_csv(ctx, raw_data, **kwargs):
         sort = view.get("sort", {})
 
         row["query"] = query.get("filter", None)
-        row["fields"] = context.join_cr(fields, is_cell=True)
-        row["column_filters"] = context.join_cr(colfilters, is_cell=True)
+        row["fields"] = serial.join_cr(fields, is_cell=True)
+        row["column_filters"] = serial.join_cr(colfilters, is_cell=True)
         row["sort_descending"] = format(sort.get("desc"))
         row["sort_field"] = sort.get("field")
 
-    return context.dictwriter(rows=rows)
+    return serial.dictwriter(rows=rows)

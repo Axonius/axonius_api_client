@@ -4,42 +4,26 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import click
 
-from .. import context
+from .. import cli_constants, grp_objects, options, serial
 
 
-@click.command(name="remove", context_settings=context.CONTEXT_SETTINGS)
-@context.OPT_URL
-@context.OPT_KEY
-@context.OPT_SECRET
-@click.option(
-    "--rows",
-    "-r",
-    "rows",
-    help="The JSON data of rows returned by any get command for this object type.",
-    default="-",
-    type=click.File(mode="r"),
-    show_envvar=True,
-    show_default=True,
-)
-@click.option(
-    "--label",
-    "-l",
-    "labels",
-    help="Labels to add to rows.",
-    required=True,
-    multiple=True,
-    show_envvar=True,
-)
-@context.pass_context
+@click.command(name="remove", context_settings=cli_constants.CONTEXT_SETTINGS)
+@options.OPT_URL
+@options.OPT_KEY
+@options.OPT_SECRET
+@options.OPT_ROWS
+@options.OPT_LABELS
 @click.pass_context
-def cmd(clickctx, ctx, url, key, secret, rows, labels):
-    """Get a report of adapters for objects in query."""
-    client = ctx.start_client(url=url, key=key, secret=secret)
-    content = context.json_from_stream(ctx=ctx, stream=rows, src="--rows")
+def cmd(ctx, url, key, secret, rows, labels):
+    """Remove labels (tags) from assets."""
+    rows = grp_objects.grp_common.get_rows(ctx=ctx, rows=rows)
 
-    api = getattr(client, clickctx.parent.parent.command.name)
+    client = ctx.obj.start_client(url=url, key=key, secret=secret)
 
-    with context.exc_wrap(wraperror=ctx.wraperror):
-        raw_data = api.labels.remove(rows=content, labels=labels)
+    pp_grp = ctx.parent.parent.command.name
+    api = getattr(client, pp_grp)
 
-    print(context.jdump(raw_data))
+    with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
+        raw_data = api.labels.remove(rows=rows, labels=labels)
+
+    print(serial.to_json(ctx=ctx, raw_data=raw_data))

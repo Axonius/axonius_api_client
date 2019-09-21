@@ -4,22 +4,22 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import click
 
-from .. import context
+from .. import cli_constants, options
 from . import grp_common
 
 
-@click.command(name="get-by-subnet", context_settings=context.CONTEXT_SETTINGS)
-@context.OPT_URL
-@context.OPT_KEY
-@context.OPT_SECRET
-@context.OPT_EXPORT_FILE
-@context.OPT_EXPORT_PATH
-@context.OPT_EXPORT_FORMAT
-@context.OPT_EXPORT_OVERWRITE
-@context.OPT_FIELDS
-@context.OPT_FIELDS_DEFAULT
-@context.OPT_MAX_ROWS
-@context.OPT_GET_BY_POST_QUERY
+@click.command(name="get-by-subnet", context_settings=cli_constants.CONTEXT_SETTINGS)
+@options.OPT_URL
+@options.OPT_KEY
+@options.OPT_SECRET
+@options.OPT_EXPORT_FILE
+@options.OPT_EXPORT_PATH
+@options.OPT_EXPORT_FORMAT
+@options.OPT_EXPORT_OVERWRITE
+@options.OPT_FIELDS
+@options.OPT_FIELDS_DEFAULT
+@options.OPT_MAX_ROWS
+@options.OPT_GET_BY_POST_QUERY
 @click.option(
     "--value",
     "-v",
@@ -28,10 +28,8 @@ from . import grp_common
     required=True,
     show_envvar=True,
 )
-@context.pass_context
 @click.pass_context
 def cmd(
-    clickctx,
     ctx,
     url,
     key,
@@ -46,9 +44,8 @@ def cmd(
     fields_default,
     max_rows,
 ):
-    """Get all objects matching a query."""
+    """Get assets with in a subnet."""
     grp_common.get_by_cmd(
-        clickctx=clickctx,
         ctx=ctx,
         url=url,
         key=key,
@@ -57,7 +54,7 @@ def cmd(
         export_file=export_file,
         export_path=export_path,
         export_overwrite=export_overwrite,
-        value=value,
+        values=value,
         query=query,
         fields=fields,
         fields_default=fields_default,

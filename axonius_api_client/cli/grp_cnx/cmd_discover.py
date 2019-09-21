@@ -4,32 +4,22 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import click
 
-from ... import tools
-from .. import context
+from .. import cli_constants, options, serial
 from . import grp_common
 
 
-@click.command(name="discover", context_settings=context.CONTEXT_SETTINGS)
-@context.OPT_URL
-@context.OPT_KEY
-@context.OPT_SECRET
-@context.OPT_EXPORT_FILE
-@context.OPT_EXPORT_PATH
-@context.OPT_EXPORT_FORMAT
-@context.OPT_EXPORT_OVERWRITE
-@context.OPT_INCLUDE_SETTINGS
-@context.OPT_NO_ERROR
-@click.option(
-    "--rows",
-    "-r",
-    "rows",
-    help="The output from 'cnx get' supplied as a file or via stdin.",
-    default="-",
-    type=click.File(mode="r"),
-    show_envvar=True,
-    show_default=True,
-)
-@context.pass_context
+@click.command(name="discover", context_settings=cli_constants.CONTEXT_SETTINGS)
+@options.OPT_URL
+@options.OPT_KEY
+@options.OPT_SECRET
+@options.OPT_EXPORT_FILE
+@options.OPT_EXPORT_PATH
+@options.OPT_EXPORT_FORMAT
+@options.OPT_EXPORT_OVERWRITE
+@options.OPT_INCLUDE_SETTINGS
+@options.OPT_NO_ERROR
+@options.OPT_ROWS
+@click.pass_context
 def cmd(
     ctx,
     url,
@@ -43,32 +33,34 @@ def cmd(
     error,
     include_settings,
 ):
-    """Get all adapters with clients that have errors."""
-    # FUTURE: Add ability to take in output from adapters get
-    #         as well as adapters cnx get
-    client = ctx.start_client(url=url, key=key, secret=secret)
-    content = context.json_from_stream(ctx=ctx, stream=rows, src="--rows")
-
-    cnxs = tools.listify(obj=content, dictkeys=False)
-
-    msg = "Loaded {nc} connections from --rows"
-    msg = msg.format(nc=len(cnxs))
-    ctx.echo_ok(msg)
+    """Start a discovery (fetch) for an adapter connection."""
+    rows = grp_common.get_rows(ctx=ctx, rows=rows)
 
     processed = []
 
-    with context.exc_wrap(wraperror=ctx.wraperror):
-        for cnx in cnxs:
-            if "cnx" in cnx:
-                cnx = cnx["cnx"]
+    client = ctx.obj.start_client(url=url, key=key, secret=secret)
 
-            raw_data = client.adapters.cnx.update(cnx=cnx, error=error)
-            grp_common.handle_response(cnx=raw_data, action="discovering")
+    found_error = False
+
+    with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
+        for cnx in rows:
+            raw_data = client.adapters.cnx.update(cnx=cnx, error=False)
+
+            action = "discovering"
+            had_error, had_cnx_error = grp_common.handle_response(
+                ctx=ctx, cnx=raw_data, action=action, cnx_error=True
+            )
+
             processed.append(raw_data)
 
-    formatters = {"json": context.to_json, "csv": grp_common.to_csv}
+            if had_error or had_cnx_error:
+                found_error = True
+                if error:
+                    break
 
-    ctx.handle_export(
+    formatters = {"json": serial.to_json, "csv": grp_common.to_csv}
+
+    ctx.obj.handle_export(
         raw_data=processed,
         formatters=formatters,
         export_format=export_format,
@@ -77,3 +69,5 @@ def cmd(
         export_overwrite=export_overwrite,
         include_settings=include_settings,
     )
+
+    ctx.exit(int(found_error))

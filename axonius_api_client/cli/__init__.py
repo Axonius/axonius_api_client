@@ -5,9 +5,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import click
 
 from .. import constants, version
-from . import cmd_shell, context, grp_adapters, grp_objects
+from . import cli_constants, click_ext, context, grp_adapters, grp_objects, grp_tools
 
-# TODO: add type checking to json_load_from_stream
 # TODO: add "write-config" shell cmd
 # FUTURE: grp_enforcements
 # FUTURE: wrap json datasets with objtype info
@@ -17,7 +16,11 @@ from . import cmd_shell, context, grp_adapters, grp_objects
 # FUTURE: add cert_human logic
 # FUTURE: prompt does not use CR when re-prompting on empty var with hide_input=False
 # FUTURE: add doc links
-@click.group(context_settings=context.CONTEXT_SETTINGS)
+
+
+@click.group(
+    cls=click_ext.AliasedGroup, context_settings=cli_constants.CONTEXT_SETTINGS
+)
 @click.option(
     "--log-level-package",
     "-lvlpkg",
@@ -35,7 +38,6 @@ from . import cmd_shell, context, grp_adapters, grp_objects
     default=constants.LOG_LEVEL_HTTP,
     help="Logging level to use for http client.",
     type=click.Choice(constants.LOG_LEVELS_STR),
-    hidden=context.AX_SHOW_HIDDEN,
     show_envvar=True,
     show_default=True,
 )
@@ -46,7 +48,6 @@ from . import cmd_shell, context, grp_adapters, grp_objects
     default=constants.LOG_LEVEL_AUTH,
     help="Logging level to use for auth client.",
     type=click.Choice(constants.LOG_LEVELS_STR),
-    hidden=context.AX_SHOW_HIDDEN,
     show_envvar=True,
     show_default=True,
 )
@@ -57,7 +58,6 @@ from . import cmd_shell, context, grp_adapters, grp_objects
     default=constants.LOG_LEVEL_API,
     help="Logging level to use for api clients.",
     type=click.Choice(constants.LOG_LEVELS_STR),
-    hidden=context.AX_SHOW_HIDDEN,
     show_envvar=True,
     show_default=True,
 )
@@ -68,7 +68,6 @@ from . import cmd_shell, context, grp_adapters, grp_objects
     default=constants.LOG_LEVEL_CONSOLE,
     help="Logging level to use for console output.",
     type=click.Choice(constants.LOG_LEVELS_STR),
-    hidden=context.AX_SHOW_HIDDEN,
     show_envvar=True,
     show_default=True,
 )
@@ -79,7 +78,6 @@ from . import cmd_shell, context, grp_adapters, grp_objects
     default=constants.LOG_LEVEL_FILE,
     help="Logging level to use for file output.",
     type=click.Choice(constants.LOG_LEVELS_STR),
-    hidden=context.AX_SHOW_HIDDEN,
     show_envvar=True,
     show_default=True,
 )
@@ -107,7 +105,6 @@ from . import cmd_shell, context, grp_adapters, grp_objects
     "log_request_attrs",
     default=None,
     help="Log http client verbose or brief request attributes.",
-    hidden=context.AX_SHOW_HIDDEN,
     is_flag=True,
     show_envvar=True,
 )
@@ -118,7 +115,6 @@ from . import cmd_shell, context, grp_adapters, grp_objects
     default=None,
     help="Log http client verbose or brief response attributes.",
     is_flag=True,
-    hidden=context.AX_SHOW_HIDDEN,
     show_envvar=True,
 )
 @click.option(
@@ -127,7 +123,6 @@ from . import cmd_shell, context, grp_adapters, grp_objects
     "log_request_body",
     default=False,
     help="Log http client request body.",
-    hidden=context.AX_SHOW_HIDDEN,
     is_flag=True,
     show_envvar=True,
 )
@@ -136,7 +131,6 @@ from . import cmd_shell, context, grp_adapters, grp_objects
     "-respbody",
     "log_response_body",
     help="Log http client response body.",
-    hidden=context.AX_SHOW_HIDDEN,
     default=False,
     is_flag=True,
     show_envvar=True,
@@ -167,7 +161,6 @@ from . import cmd_shell, context, grp_adapters, grp_objects
     "log_file_max_mb",
     default=constants.LOG_FILE_MAX_MB,
     help="Rollover -fn at this many megabytes.",
-    hidden=context.AX_SHOW_HIDDEN,
     type=click.INT,
     show_envvar=True,
     show_default=True,
@@ -178,7 +171,6 @@ from . import cmd_shell, context, grp_adapters, grp_objects
     "log_file_max_files",
     default=constants.LOG_FILE_MAX_FILES,
     help="Keep this many rollover logs.",
-    hidden=context.AX_SHOW_HIDDEN,
     type=click.INT,
     show_envvar=True,
     show_default=True,
@@ -281,10 +273,9 @@ def cli(
     ctx._connect_args["certverify"] = certverify
     ctx._connect_args["certwarn"] = certwarn
     ctx._connect_args["wraperror"] = wraperror
-    return ctx
 
 
-cli.add_command(cmd_shell.cmd)
+cli.add_command(grp_adapters.adapters)
 cli.add_command(grp_objects.devices)
 cli.add_command(grp_objects.users)
-cli.add_command(grp_adapters.adapters)
+cli.add_command(grp_tools.tools)

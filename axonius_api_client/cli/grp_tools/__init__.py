@@ -4,14 +4,13 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import click
 
-from .. import click_ext, grp_cnx
-from . import cmd_get
+from .. import click_ext
+from . import cmd_shell
 
 
 @click.group(cls=click_ext.AliasedGroup)
-def adapters():
-    """Group: Work with adapters and adapter connections."""
+def tools():
+    """Group: CLI tools."""
 
 
-adapters.add_command(cmd_get.cmd)
-adapters.add_command(grp_cnx.cnx)
+tools.add_command(cmd_shell.cmd)

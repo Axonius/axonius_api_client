@@ -4,13 +4,15 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import click
 
-from .. import context
+from .. import cli_constants, options, serial
 
 
-@click.command(name="count-by-saved-query", context_settings=context.CONTEXT_SETTINGS)
-@context.OPT_URL
-@context.OPT_KEY
-@context.OPT_SECRET
+@click.command(
+    name="count-by-saved-query", context_settings=cli_constants.CONTEXT_SETTINGS
+)
+@options.OPT_URL
+@options.OPT_KEY
+@options.OPT_SECRET
 @click.option(
     "--name",
     "-n",
@@ -19,15 +21,15 @@ from .. import context
     required=True,
     show_envvar=True,
 )
-@context.pass_context
 @click.pass_context
-def cmd(clickctx, ctx, url, key, secret, name):
-    """Get all objects matching a query."""
-    client = ctx.start_client(url=url, key=key, secret=secret)
+def cmd(ctx, url, key, secret, name):
+    """Get the count of assets from a saved query."""
+    client = ctx.obj.start_client(url=url, key=key, secret=secret)
 
-    api = getattr(client, clickctx.parent.command.name)
+    p_grp = ctx.parent.command.name
+    api = getattr(client, p_grp)
 
-    with context.exc_wrap(wraperror=ctx.wraperror):
+    with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
         raw_data = api.count_by_saved_query(name=name)
 
-    print(context.jdump(raw_data))
+    print(serial.to_json(ctx=ctx, raw_data=raw_data))
