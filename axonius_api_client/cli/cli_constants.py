@@ -11,17 +11,23 @@ import requests
 
 from .. import tools
 
+AX_ENV = os.environ.get("AX_ENV", "").strip() or os.getcwd()
 
-def load_dotenv():
+
+def load_dotenv(ax_env=AX_ENV, reenv=False, verbose=False):
     """Pass."""
-    AX_ENV = os.environ.get("AX_ENV", "")
+    if reenv:
+        ax_env = os.environ.get("AX_ENV", "").strip() or os.getcwd()
 
-    if AX_ENV:
-        path = tools.path(obj=AX_ENV)
-    else:
-        path = tools.path(obj=os.getcwd()) / ".env"
+    ax_env_path = tools.path(obj=ax_env)
 
-    dotenv.load_dotenv(format(path))
+    if ax_env_path.is_dir():
+        ax_env_path = ax_env_path / ".env"
+
+    return (
+        dotenv.load_dotenv(dotenv_path=format(ax_env_path), verbose=verbose),
+        ax_env_path,
+    )
 
 
 load_dotenv()

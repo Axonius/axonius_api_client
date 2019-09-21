@@ -2,6 +2,8 @@
 """Command line interface for Axonius API Client."""
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+import click
+
 from .. import serial
 
 
@@ -49,6 +51,29 @@ def get_by_cmd(
     )
 
 
+def get_sources(ctx):
+    """Pass."""
+    pp_grp = ctx.parent.parent.command.name
+    src_cmds = [x for x in ctx.parent.parent.command.commands if x.startswith("get")]
+    return ["{pp} {c}".format(pp=pp_grp, c=c) for c in src_cmds]
+
+
+def show_sources(ctx, param=None, value=None):
+    """Pass."""
+    if value:
+        pp_grp = ctx.parent.parent.command.name
+        p_grp = ctx.parent.command.name
+        grp = ctx.command.name
+
+        this_grp = "{pp} {p} {g}".format(pp=pp_grp, p=p_grp, g=grp)
+        this_cmd = "{tg} --rows".format(tg=this_grp)
+
+        src_cmds = get_sources(ctx=ctx)
+        msg = serial.ensure_srcs_msg(this_cmd=this_cmd, src_cmds=src_cmds)
+        click.secho(message=msg, err=True, fg="green")
+        ctx.exit(0)
+
+
 def get_rows(ctx, rows):
     """Pass."""
     pp_grp = ctx.parent.parent.command.name
@@ -58,10 +83,7 @@ def get_rows(ctx, rows):
     this_grp = "{pp} {p} {g}".format(pp=pp_grp, p=p_grp, g=grp)
     this_cmd = "{tg} --rows".format(tg=this_grp)
 
-    # clickctx.parent.parent.command.commands
-    src_cmds = [x for x in ctx.parent.parent.command.commands if x.startswith("get")]
-    src_cmds = ["{pp} {c}".format(pp=pp_grp, c=c) for c in src_cmds]
-    # src_cmds = serial.ensure_srcs(ctx=ctx, this_cmd=this_cmd, src_cmds=src_cmds)
+    src_cmds = get_sources(ctx=ctx)
 
     rows = serial.json_to_rows(
         ctx=ctx, stream=rows, this_cmd=this_cmd, src_cmds=src_cmds

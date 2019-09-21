@@ -17,7 +17,6 @@ from . import grp_common
 @options.OPT_EXPORT_FORMAT
 @options.OPT_EXPORT_OVERWRITE
 @options.OPT_INCLUDE_SETTINGS
-@options.OPT_ROWS
 @click.option(
     "--id",
     "-i",
@@ -44,6 +43,17 @@ from . import grp_common
     is_flag=True,
     show_envvar=True,
 )
+@click.option(
+    "--show-sources",
+    "-ss",
+    help="Print the source commands that can be supplied as valid input to -r/--rows.",
+    default=False,
+    is_flag=True,
+    is_eager=True,
+    callback=grp_common.show_sources_parent,
+    expose_value=False,
+)
+@options.OPT_ROWS
 @click.pass_context
 def cmd(
     ctx,

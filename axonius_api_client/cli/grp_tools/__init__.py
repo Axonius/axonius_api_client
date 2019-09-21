@@ -5,7 +5,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import click
 
 from .. import click_ext
-from . import cmd_shell
+from . import cmd_shell, cmd_write_config
 
 
 @click.group(cls=click_ext.AliasedGroup)
@@ -14,3 +14,4 @@ def tools():
 
 
 tools.add_command(cmd_shell.cmd)
+tools.add_command(cmd_write_config.cmd)

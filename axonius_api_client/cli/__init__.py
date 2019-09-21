@@ -19,7 +19,11 @@ from . import cli_constants, click_ext, context, grp_adapters, grp_objects, grp_
 
 
 @click.group(
-    cls=click_ext.AliasedGroup, context_settings=cli_constants.CONTEXT_SETTINGS
+    cls=click_ext.AliasedGroup,
+    context_settings=cli_constants.CONTEXT_SETTINGS,
+    epilog="""
+All of the options listed above must be supplied BEFORE any commands or groups.
+""",
 )
 @click.option(
     "--log-level-package",

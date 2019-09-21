@@ -162,3 +162,33 @@ class TestCliSpawnShell(object):
 
             with pytest.raises(SystemExit):
                 cli.grp_tools.cmd_shell.spawn_shell()
+
+
+class TestCmdWriteConfig(object):
+    """Pass."""
+
+    def test_prompt(self, request, monkeypatch):
+        """Pass."""
+        runner = CliRunner(mix_stderr=False)
+
+        url = request.config.getoption("--ax-url")
+        key = request.config.getoption("--ax-key")
+        secret = request.config.getoption("--ax-secret")
+
+        prompt_input = "\n".join([url, key, secret])
+
+        args = ["tools", "write-config"]
+
+        with runner.isolated_filesystem():
+            path = tools.pathlib.Path(os.getcwd())
+            envfile = path / ".env"
+            result1 = runner.invoke(cli=cli.cli, args=args, input=prompt_input)
+            assert envfile.is_file()
+
+        exit_code1 = result1.exit_code
+        stdout1 = result1.stdout
+        stderr1 = result1.stderr
+
+        assert stdout1
+        assert stderr1
+        assert exit_code1 == 0

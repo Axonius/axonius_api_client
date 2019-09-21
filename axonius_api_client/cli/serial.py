@@ -13,7 +13,7 @@ def ensure_keys(ctx, rows, this_cmd, src_cmds, keys, all_items=True):
     for idx, row in enumerate(rows):
         for key in keys:
             if key not in row:
-                ensure_srcs_err(ctx=ctx, this_cmd=this_cmd, src_cmds=src_cmds)
+                ensure_srcs(ctx=ctx, this_cmd=this_cmd, src_cmds=src_cmds)
 
                 msg = [
                     "",
@@ -31,19 +31,25 @@ def ensure_keys(ctx, rows, this_cmd, src_cmds, keys, all_items=True):
             break
 
 
-def ensure_srcs_err(ctx, this_cmd, src_cmds):
+def ensure_srcs_msg(this_cmd, src_cmds):
     """Pass."""
     psrc = "The input for {tc!r} must be the JSON output from one of these commands:"
     srcs = ["", psrc.format(tc=this_cmd), ""] + src_cmds + [""]
-    msg = tools.join_cr(obj=srcs)
-    ctx.obj.echo_error(msg=msg, abort=False)
+    return tools.join_cr(obj=srcs)
+
+
+def ensure_srcs(ctx, this_cmd, src_cmds, err=True):
+    """Pass."""
+    msg = ensure_srcs_msg(this_cmd=this_cmd, src_cmds=src_cmds)
+    echo = ctx.obj.echo_error if err else ctx.obj.echo_ok
+    echo(msg=msg, abort=False)
 
 
 def check_rows_type(ctx, rows, this_cmd, src_cmds, all_items=True):
     """Pass."""
     for idx, row in enumerate(rows):
         if not isinstance(row, dict):
-            ensure_srcs_err(ctx=ctx, this_cmd=this_cmd, src_cmds=src_cmds)
+            ensure_srcs(ctx=ctx, this_cmd=this_cmd, src_cmds=src_cmds)
 
             msg = "Item #{i} in input to {tc!r} is type {t}, must be a dictionary!"
             msg = msg.format(i=idx + 1, tc=this_cmd, t=type(row).__name__)
@@ -59,7 +65,7 @@ def json_to_rows(ctx, stream, this_cmd, src_cmds):
 
     if stream.isatty():
         # its STDIN with no input
-        ensure_srcs_err(ctx=ctx, this_cmd=this_cmd, src_cmds=src_cmds)
+        ensure_srcs(ctx=ctx, this_cmd=this_cmd, src_cmds=src_cmds)
 
         msg = "No input provided on {s!r} for {tc!r}"
         msg = msg.format(s=stream_name, tc=this_cmd)
@@ -74,7 +80,7 @@ def json_to_rows(ctx, stream, this_cmd, src_cmds):
     content = content.strip()
 
     if not content:
-        ensure_srcs_err(ctx=ctx, this_cmd=this_cmd, src_cmds=src_cmds)
+        ensure_srcs(ctx=ctx, this_cmd=this_cmd, src_cmds=src_cmds)
 
         msg = "Empty content supplied in {s!r} for {tc!r}"
         msg = msg.format(s=stream_name, tc=this_cmd)

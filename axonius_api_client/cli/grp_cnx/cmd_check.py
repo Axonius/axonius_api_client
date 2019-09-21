@@ -18,6 +18,16 @@ from . import grp_common
 @options.OPT_EXPORT_OVERWRITE
 @options.OPT_INCLUDE_SETTINGS
 @options.OPT_NO_ERROR
+@click.option(
+    "--show-sources",
+    "-ss",
+    help="Print the source commands that can be supplied as valid input to -r/--rows.",
+    default=False,
+    is_flag=True,
+    is_eager=True,
+    callback=grp_common.show_sources,
+    expose_value=False,
+)
 @options.OPT_ROWS
 @click.pass_context
 def cmd(
@@ -34,7 +44,7 @@ def cmd(
     include_settings,
 ):
     """Perform a reachability check of an adapters connection."""
-    rows = grp_common.get_rows(ctx=ctx, rows=rows)
+    rows = grp_common.get_rows(ctx=ctx, rows=rows, only_parent=False)
 
     processed = []
 

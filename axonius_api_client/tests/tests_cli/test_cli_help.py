@@ -44,6 +44,7 @@ class TestCliHelp(object):
             ["devices", "saved-query", "get-by-name"],
             ["devices", "saved-query"],
             ["devices"],
+            ["tools", "write-config"],
             ["tools", "shell"],
             ["tools"],
             ["u"],
@@ -78,8 +79,36 @@ class TestCliHelp(object):
 
         exit_code1 = result1.exit_code
         stdout1 = result1.stdout
-        # stderr1 = result1.stderr
 
         assert stdout1
-        # assert stderr1
+        assert exit_code1 == 0
+
+    @pytest.mark.parametrize(
+        "cmd",
+        [
+            ["adapters", "cnx", "check"],
+            ["adapters", "cnx", "delete"],
+            ["adapters", "cnx", "discover"],
+            ["adapters", "cnx", "get"],
+            ["devices", "labels", "add"],
+            ["devices", "labels", "remove"],
+            ["devices", "reports", "missing-adapters"],
+            ["users", "labels", "add"],
+            ["users", "labels", "remove"],
+            ["users", "reports", "missing-adapters"],
+        ],
+    )
+    def test_show_sources(self, cmd):
+        """Pass."""
+        runner = CliRunner(mix_stderr=False)
+
+        args1 = cmd + ["-ss"]
+        result1 = runner.invoke(cli=cli.cli, args=args1)
+
+        exit_code1 = result1.exit_code
+        stdout1 = result1.stdout
+        stderr1 = result1.stderr
+
+        assert not stdout1
+        assert stderr1
         assert exit_code1 == 0

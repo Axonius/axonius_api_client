@@ -20,7 +20,7 @@ class TestCliLoadEnv(object):
                 f.write("AX_TEST=badwolf1\n")
             monkeypatch.delenv("AX_TEST", raising=False)
             monkeypatch.setenv("AX_ENV", "test.env")
-            cli.cli_constants.load_dotenv()
+            cli.cli_constants.load_dotenv(reenv=True)
             assert os.environ["AX_TEST"] == "badwolf1"
 
     def test_default(self, monkeypatch):
@@ -31,5 +31,5 @@ class TestCliLoadEnv(object):
                 f.write("AX_TEST=badwolf2\n")
             monkeypatch.delenv("AX_TEST", raising=False)
             monkeypatch.delenv("AX_ENV", raising=False)
-            cli.cli_constants.load_dotenv()
+            cli.cli_constants.load_dotenv(reenv=True)
             assert os.environ["AX_TEST"] == "badwolf2"

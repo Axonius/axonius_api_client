@@ -141,6 +141,27 @@ def get_sources(ctx, only_parent=False):
     return src_cmds
 
 
+def show_sources_parent(ctx, param=None, value=None):
+    """Pass."""
+    show_sources(ctx=ctx, param=param, value=value, only_parent=True)
+
+
+def show_sources(ctx, param=None, value=None, only_parent=False):
+    """Pass."""
+    if value:
+        pp_grp = ctx.parent.parent.command.name
+        p_grp = ctx.parent.command.name
+        grp = ctx.command.name
+
+        this_grp = "{pp} {p} {g}".format(pp=pp_grp, p=p_grp, g=grp)
+        this_cmd = "{tg} --rows".format(tg=this_grp)
+
+        src_cmds = get_sources(ctx=ctx, only_parent=only_parent)
+        msg = serial.ensure_srcs_msg(this_cmd=this_cmd, src_cmds=src_cmds)
+        click.secho(message=msg, err=True, fg="green")
+        ctx.exit(0)
+
+
 def get_rows(ctx, rows, only_parent=False):
     """Pass."""
     pp_grp = ctx.parent.parent.command.name

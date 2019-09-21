@@ -26,14 +26,6 @@ Table of Contents
    main/api/axonius_api_client.rst
 
 
-MOO
-
-.. click:: axonius_api_client.cli:cli
-   :prog: axonshell
-
-FOO
-
-
 Indices and tables
 ###############################################
 

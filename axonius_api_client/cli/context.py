@@ -91,12 +91,12 @@ class Context(object):
         self.echo_ok(msg)
 
     @staticmethod
-    def echo_ok(msg):
+    def echo_ok(msg, **kwargs):
         """Pass."""
         click.secho(cli_constants.OK_TMPL.format(msg=msg), **cli_constants.OK_ARGS)
 
     @staticmethod
-    def echo_error(msg, abort=True):
+    def echo_error(msg, abort=True, **kwargs):
         """Pass."""
         click.secho(
             cli_constants.ERROR_TMPL.format(msg=msg), **cli_constants.ERROR_ARGS
@@ -105,7 +105,7 @@ class Context(object):
             sys.exit(1)
 
     @staticmethod
-    def echo_warn(msg):
+    def echo_warn(msg, **kwargs):
         """Pass."""
         click.secho(cli_constants.WARN_TMPL.format(msg=msg), **cli_constants.WARN_ARGS)
 
