@@ -53,8 +53,6 @@ class TestCmdShell(object):
         assert outlines1[1] == "API Key of user in Axonius instance: "
         assert outlines1[2] == "API Secret of user in Axonius instance: "
 
-        utils.check_stderr_lines(result1)
-
     def test_no_prompt(self, request, monkeypatch):
         """Pass."""
         runner = utils.load_clirunner(request, monkeypatch)
@@ -80,8 +78,6 @@ class TestCmdShell(object):
         assert exit_code1 == 0
 
         assert exit_code1 == 0
-
-        utils.check_stderr_lines(result1)
 
 
 class TestCliWriteHistFile(object):

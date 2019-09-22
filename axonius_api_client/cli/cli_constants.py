@@ -76,10 +76,16 @@ ERROR_ARGS = {"fg": "red", "bold": True, "err": True}
 
 ERROR_TMPL = "** ERROR: {msg}"
 
-SSLWARN_MSG = (
-    "Unverified HTTPS request! Set AX_CERT environment variable or "
-    "--cert option to the path of a CA bundle!"
-)
+SSLWARN_MSG = """Unverified HTTPS request!
+
+To enable certificate validation:
+  * Set the variable: AX_CERTPATH=/path/to/cert_or_ca_bundle
+  * Supply the option: -cp/--cert-path /path/to/cert_or_ca_bundle
+
+To silence this message:
+  * Set the variable: AX_CERTWARN=n
+  * Supply the option: -ncw/--no-cert-warn
+"""
 
 SSLWARN_CLS = requests.urllib3.exceptions.InsecureRequestWarning
 

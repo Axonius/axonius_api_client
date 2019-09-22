@@ -169,7 +169,7 @@ class TestCmdFields(object):
         assert exit_code1 != 0
 
         errlines1 = stderr1.splitlines()
-        assert len(errlines1) == 4
+
         assert (
             errlines1[-2]
             == "** ERROR: WRAPPED EXCEPTION: axonius_api_client.tests.utils.MockError"

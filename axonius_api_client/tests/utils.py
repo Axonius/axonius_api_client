@@ -94,10 +94,7 @@ def check_stderr_lines(result):
     """Pass."""
     stderr = result.stderr.splitlines()
 
-    assert stderr[0] == (
-        "** WARNING: Unverified HTTPS request! Set AX_CERT environment variable "
-        "or --cert option to the path of a CA bundle!"
-    ), stderr
+    assert stderr[0].startswith("** WARNING: Unverified HTTPS request!")
     assert stderr[1].startswith("** Connected to "), stderr
 
 

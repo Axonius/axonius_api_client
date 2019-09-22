@@ -145,7 +145,7 @@ All of the options listed above must be supplied BEFORE any commands or groups.
     "log_file_name",
     metavar="FILENAME",
     default=constants.LOG_FILE_NAME,
-    help="Send file logging to this file in -fp.",
+    help="Log file to save logs to if -f/--log-file supplied.",
     show_envvar=True,
     show_default=True,
 )
@@ -155,16 +155,15 @@ All of the options listed above must be supplied BEFORE any commands or groups.
     "log_file_path",
     metavar="PATH",
     default=constants.LOG_FILE_PATH,
-    help="Send file logging to -fn in this directory.",
+    help="Directory to use for -fn/--log-file-name (Defaults to CWD).",
     show_envvar=True,
-    show_default=True,
 )
 @click.option(
     "--log-file-max-mb",
     "-fmb",
     "log_file_max_mb",
     default=constants.LOG_FILE_MAX_MB,
-    help="Rollover -fn at this many megabytes.",
+    help="Rollover -fn/--log-file-name at this many megabytes.",
     type=click.INT,
     show_envvar=True,
     show_default=True,
@@ -184,7 +183,7 @@ All of the options listed above must be supplied BEFORE any commands or groups.
     "-p",
     "proxy",
     default="",
-    help="Proxy to use to connect to Axonius instance.",
+    help="Proxy to use to connect to Axonius.",
     metavar="PROXY",
     show_envvar=True,
     show_default=True,
@@ -194,7 +193,7 @@ All of the options listed above must be supplied BEFORE any commands or groups.
     "-cp",
     "certpath",
     type=click.Path(exists=True, resolve_path=True),
-    help="Path to SSL certificate.",
+    help="Path to SSL certificate for verifying the certificate offered by Axonius.",
     metavar="PATH",
     show_envvar=True,
     show_default=True,
@@ -204,7 +203,10 @@ All of the options listed above must be supplied BEFORE any commands or groups.
     "-cv",
     "certverify",
     default=False,
-    help="Perform SSL Certificate Verification.",
+    help=(
+        "Perform SSL Certificate Verification (will fail if cert is self-signed"
+        " or not signed by a system CA)."
+    ),
     is_flag=True,
     show_envvar=True,
 )
