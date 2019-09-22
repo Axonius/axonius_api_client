@@ -16,7 +16,6 @@ from . import grp_common
 @options.OPT_EXPORT_PATH
 @options.OPT_EXPORT_FORMAT
 @options.OPT_EXPORT_OVERWRITE
-@options.OPT_QUERY
 @options.OPT_FIELDS
 @options.OPT_FIELDS_DEFAULT
 @options.OPT_MAX_ROWS

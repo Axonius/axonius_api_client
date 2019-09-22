@@ -47,7 +47,7 @@ from . import grp_common
 )
 @click.option(
     "--skip",
-    "-s",
+    "-sk",
     "skips",
     help="Regexes of configuration keys to not prompt for.",
     multiple=True,
