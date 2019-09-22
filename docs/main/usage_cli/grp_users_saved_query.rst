@@ -8,6 +8,11 @@ This is a sub-command group under :doc:`grp_users`
 Commands
 ===============================================
 
+* :doc:`grp_users_saved_query_cmds/cmd_add`
+* :doc:`grp_users_saved_query_cmds/cmd_delete`
+* :doc:`grp_users_saved_query_cmds/cmd_get`
+* :doc:`grp_users_saved_query_cmds/cmd_get_by_name`
+
 Help Page
 ===============================================
 

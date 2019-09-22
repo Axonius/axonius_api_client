@@ -8,6 +8,10 @@ This is a sub-command group under :doc:`grp_devices`
 Commands
 ===============================================
 
+* :doc:`grp_devices_labels_cmds/cmd_add`
+* :doc:`grp_devices_labels_cmds/cmd_get`
+* :doc:`grp_devices_labels_cmds/cmd_remove`
+
 Help Page
 ===============================================
 

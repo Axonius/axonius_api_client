@@ -5,13 +5,11 @@ tools
 
 This is a command group under the main :doc:`root`
 
-Sub Command Groups
-===============================================
-
-This command group has the following sub command groups:
-
 Commands
 ===============================================
+
+* :doc:`grp_tools_cmds/cmd_shell`
+* :doc:`grp_tools_cmds/cmd_write_config`
 
 Help Page
 ===============================================

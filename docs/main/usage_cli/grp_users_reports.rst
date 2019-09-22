@@ -8,6 +8,8 @@ This is a sub-command group under :doc:`grp_users`
 Commands
 ===============================================
 
+* :doc:`grp_users_reports_cmds/cmd_missing_adapters`
+
 Help Page
 ===============================================
 

@@ -8,14 +8,23 @@ This is a command group under :doc:`root`
 Sub Command Groups
 ===============================================
 
-This command group has the following sub command groups:
-
-* :doc:`grp_users_labels`: Commands to work with labels (tags) on user assets.
-* :doc:`grp_users_reports`: Commands to generate reports on user assets.
-* :doc:`grp_users_saved_query`: Commands to work with saved queries for user assets.
+* :doc:`grp_users_labels`
+* :doc:`grp_users_reports`
+* :doc:`grp_users_saved_query`
 
 Commands
 ===============================================
+
+* :doc:`grp_users_cmds/cmd_count`
+* :doc:`grp_users_cmds/cmd_count_by_saved_query`
+* :doc:`grp_users_cmds/cmd_fields`
+* :doc:`grp_users_cmds/cmd_get`
+* :doc:`grp_users_cmds/cmd_get_by_hostname`
+* :doc:`grp_users_cmds/cmd_get_by_ip`
+* :doc:`grp_users_cmds/cmd_get_by_mac`
+* :doc:`grp_users_cmds/cmd_get_by_saved_query`
+* :doc:`grp_users_cmds/cmd_get_by_subnet`
+
 
 Help Page
 ===============================================

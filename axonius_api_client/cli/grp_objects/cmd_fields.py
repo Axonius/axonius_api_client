@@ -48,7 +48,7 @@ def cmd(
     adapter_re,
     field_re,
 ):
-    """Get the fields (columns) for adapters."""
+    """Get the available fields (columns) for assets."""
     p_grp = ctx.parent.command.name
 
     client = ctx.obj.start_client(url=url, key=key, secret=secret)

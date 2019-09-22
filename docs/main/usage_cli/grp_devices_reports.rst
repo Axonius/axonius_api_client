@@ -8,6 +8,8 @@ This is a sub-command group under :doc:`grp_devices`
 Commands
 ===============================================
 
+* :doc:`grp_devices_reports_cmds/cmd_missing_adapters`
+
 Help Page
 ===============================================
 
