@@ -1,6 +1,6 @@
 .. include:: /main/.special.rst
 
-Required Options For All Commands
+Required Options
 ###############################################
 
 .. todo::

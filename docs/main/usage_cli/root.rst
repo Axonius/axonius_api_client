@@ -1,7 +1,22 @@
 .. include:: /main/.special.rst
 
-Options
+root
 ###############################################
+
+This is the root group of axonshell (aka running the script with no arguments).
+
+Command Groups
+===============================================
+
+The entry point for axonshell has the following command groups:
+
+* :doc:`grp_adapters` Commands to work with adapters and connections.
+* :doc:`grp_devices`: Commands to work with device assets.
+* :doc:`grp_tools`: Commands that provide extra functionality for the CLI.
+* :doc:`grp_users`: Commands to work with user assets.
+
+Options
+===============================================
 
 The entry point for the command line interface provides a number of options, all of
 which must be supplied before any other arguments.
@@ -19,7 +34,7 @@ Example of improper ordering:
     $ axonshell devices get --proxy "https://proxy:443"
 
 SSL Certificate Validation Options
-===============================================
+------------------------------------------------
 
 * Define a certificate file or CA bundle to use to verify the SSL certicate offered
   by the Axonius instance:
@@ -40,7 +55,7 @@ SSL Certificate Validation Options
    use --no-certwarn.
 
 Proxy Options
-===============================================
+------------------------------------------------
 
 * Define a proxy to use when connecting to the Axonius instance:
   :option:`axonshell -p / --proxy PROXY <axonshell --proxy>`
@@ -63,10 +78,10 @@ Proxy Options
        $ axonshell --proxy socks5://username:password@host:port
 
 Logging Options
-===============================================
+------------------------------------------------
 
 Logging to the Console
------------------------------------------------
+************************************************
 
 * Enable logging to the console using STDERR:
   :option:`axonshell -c / --log-console <axonshell --log-console>`
@@ -86,7 +101,7 @@ Logging to the Console
      $ axonshell --log-console --log-level-console info --log-level-package debug
 
 Logging to a File
------------------------------------------------
+************************************************
 
 * Enable logging to a file:
   :option:`axonshell -f / --log-file <axonshell --log-file>`
@@ -171,7 +186,7 @@ These options are useful for debugging purposes.
    By default, attributes or bodies for requests or responses are logged.
 
 Controlling Error Wrapping
-===============================================
+----------------------------------------------
 
 * Disable the error wrapping performed by the CLI by default:
   :option:`axonshell -nw / --no-wraperror <axonshell --no-wraperror>`
@@ -181,4 +196,13 @@ Controlling Error Wrapping
    This is useful for debugging as it allows you to see the full traceback of the
    exception, instead of just the string representation of the exception.
 
+Help Page
+==============================================
+
+.. click:: axonius_api_client.cli:cli
+   :prog: axonshell
+
+
 .. _requests documentation: https://2.python-requests.org/en/master/user/advanced/#proxies
+
+

@@ -98,7 +98,6 @@ def values_match(checks, values, ignore_case=True):
     return False
 
 
-# TODO: test
 def coerce_int(obj):
     """Pass."""
     try:
@@ -109,7 +108,6 @@ def coerce_int(obj):
         raise exceptions.ToolsError(msg)
 
 
-# TODO: test
 def coerce_bool(obj):
     """Pass."""
     coerce_obj = obj
