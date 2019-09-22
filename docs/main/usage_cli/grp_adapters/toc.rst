@@ -1,10 +1,11 @@
 .. include:: /main/.special.rst
 
-CLI Usage
+axonshell adapters
 ###############################################
 
 .. toctree::
    :maxdepth: 2
 
-   usage_cli/toc.rst
-   usage_cli/grp_adapters/toc.rst
+   command_groups.rst
+   commands.rst
+   help.rst

@@ -1,10 +1,9 @@
 .. include:: /main/.special.rst
 
-CLI Usage
+Commands
 ###############################################
 
 .. toctree::
-   :maxdepth: 2
 
-   usage_cli/toc.rst
-   usage_cli/grp_adapters/toc.rst
+   cmd_get/toc.rst
+

@@ -86,24 +86,6 @@ All of the options listed above must be supplied BEFORE any commands or groups.
     show_default=True,
 )
 @click.option(
-    "--log-console",
-    "-c",
-    "log_console",
-    default=False,
-    help="Enable logging to STDERR.",
-    is_flag=True,
-    show_envvar=True,
-)
-@click.option(
-    "--log-file",
-    "-f",
-    "log_file",
-    default=False,
-    help="Enable logging to -fn in -fp.",
-    is_flag=True,
-    show_envvar=True,
-)
-@click.option(
     "--log-request-attrs-verbose/--log-request-attrs-brief",
     "-reqv/-reqb",
     "log_request_attrs",
@@ -136,6 +118,24 @@ All of the options listed above must be supplied BEFORE any commands or groups.
     "log_response_body",
     help="Log http client response body.",
     default=False,
+    is_flag=True,
+    show_envvar=True,
+)
+@click.option(
+    "--log-console",
+    "-c",
+    "log_console",
+    default=False,
+    help="Enable logging to STDERR.",
+    is_flag=True,
+    show_envvar=True,
+)
+@click.option(
+    "--log-file",
+    "-f",
+    "log_file",
+    default=False,
+    help="Enable logging to -fn/--log-file-name in -fp/--log-file-path.",
     is_flag=True,
     show_envvar=True,
 )
