@@ -113,6 +113,10 @@ pkg_build:
 	@echo "*** Checking package with twine"
 	pipenv run twine check dist/*
 
+pkg_install:
+	$(MAKE) pkg_build
+	pip install dist/*.whl --upgrade
+
 pkg_clean:
 	rm -rf build dist *.egg-info
 
