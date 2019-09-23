@@ -109,8 +109,9 @@ def spawn_shell(shellvars=None):
     shellvars = shellvars or {}
     register_readline(shellvars)
 
-    code.interact(
-        local=shellvars,
-        banner=cli_constants.SHELL_BANNER,
-        exitmsg=cli_constants.SHELL_EXIT,
-    )
+    args = {"local": shellvars, "banner": cli_constants.SHELL_BANNER}
+
+    if tools.six.PY3:
+        args["exitmsg"] = cli_constants.SHELL_EXIT
+
+    code.interact(**args)
