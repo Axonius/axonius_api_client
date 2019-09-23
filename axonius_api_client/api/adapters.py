@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Axonius API module for working with adapters."""
+"""API module for working with adapters."""
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import time
@@ -10,13 +10,18 @@ from . import mixins, routers
 
 
 class Adapters(mixins.Model, mixins.Mixins):
-    """Adapter related API methods."""
+    """Adapter API.
+
+    Attributes:
+        cnx (Cnx): Child object for working with adapter connections.
+
+    """
 
     def get(self):
         """Get the metadata for all adapters.
 
         Returns:
-            :obj:`list` of :obj:`dict`
+            (list) of (dict): List of parsed metadata for all adapters.
 
         """
         raw = self._get()
@@ -24,21 +29,20 @@ class Adapters(mixins.Model, mixins.Mixins):
         adapters = parser.parse()
         return adapters
 
-    def get_known(self, **kwargs):
+    def get_known(self, adapters=None, **kwargs):
         """Get the name, node name, cnx count, and status of all adapters.
 
         Args:
-            **kwargs:
-                adapters: :obj:`list` of :obj:`dict`:
-                    List of adapters known to the system.
+            adapters ((list) of (dict), optional): List of adapters to include in
+                return.
 
-                    Defaults to: Output of :meth:`get`
+                Defaults to: Return from :meth:`get`.
 
         Returns:
-            :obj:`list` of :obj:`str`
+            (list) of (str): List of human readable strings representing each adapter.
 
         """
-        adapters = kwargs.get("adapters") or self.get()
+        adapters = adapters or self.get()
         tmpl = [
             "name: {name!r}",
             "node name: {node_name!r}",
@@ -52,12 +56,29 @@ class Adapters(mixins.Model, mixins.Mixins):
         """Get the metadata for a single adapter.
 
         Args:
-            adapter (:obj:`str` or :obj:`dict`):
-                * As str: The name of an adapter to find
-                * As dict: The dictionary of an adapter already found.
+            adapter ((str) or (dict)): Adapter to find.
+
+                * If str, the name of the adapter to get the
+                metadata for.
+                * If dict, the metadata for a single adapter returned from
+                  :meth:`get`, :meth:`filter_by_names`,
+                  :meth:`filter_by_nodes`, :meth:`filter_by_status`, or
+                  :meth:`filter_by_cnx_count`.
+
+            node (str, optional):
+                If ``adapter`` is str, the name of the node running the ``adapter``
+                to find.
+
+                Defaults to: "master".
+
+        Raises:
+            exceptions.ValueNotFound:
+                If searching for ``node`` using :meth:`filter_by_nodes` and
+                ``adapter`` using :meth:`filter_by_names` does not return exactly
+                one match.
 
         Returns:
-            :obj:`dict`
+            dict: The metadata of a single adapter.
 
         """
         if isinstance(adapter, dict):
@@ -84,7 +105,43 @@ class Adapters(mixins.Model, mixins.Mixins):
     def filter_by_names(
         self, adapters, value=None, ignore_case=True, match_count=None, match_error=True
     ):
-        """Pass."""
+        """Filter adapters with matching adapter names.
+
+        Args:
+            adapters (list) of (dict): The list of metadata for adapters to filter on
+                returned from :meth:`get`, :meth:`filter_by_names`,
+                :meth:`filter_by_nodes`, :meth:`filter_by_status`, or
+                :meth:`filter_by_cnx_count`.
+            value ((list) of (str) or (str), optional): The names to match in
+                ``adapters``.
+
+                * If value is None, the list of adapters will be returned as
+                  is.
+                * Any string value starting with "RE:" will be treated as a regex.
+
+                Defaults to: None.
+            ignore_case (bool, optional): Ignore case when checking ``value`` against
+                each adapter name.
+
+                Defaults to: True.
+            match_count (int, optional): The number of matches that should be found
+                for ``value``.
+
+                Defaults to: None.
+            match_error (bool, optional): Raise error if the number of matches does not
+                equal ``match_count``.
+
+                Defaults to: True.
+
+        Raises:
+            exceptions.ValueNotFound:
+                If ``match_count`` does not equal the number of matches found and
+                ``match_error`` is True.
+
+        Returns:
+            (list) of (dict): List of matching adapters.
+
+        """
         value = [
             tools.strip_right(obj=name, fix="_adapter")
             for name in tools.listify(obj=value, dictkeys=True)
@@ -114,7 +171,33 @@ class Adapters(mixins.Model, mixins.Mixins):
     def filter_by_nodes(
         self, adapters, value=None, ignore_case=True, match_count=None, match_error=True
     ):
-        """Pass."""
+        """Filter adapters with matching node names.
+
+        Args:
+            adapters (list) of (dict): The list of metadata for adapters to filter on
+                returned from :meth:`get`, :meth:`filter_by_names`,
+                :meth:`filter_by_nodes`, :meth:`filter_by_status`, or
+                :meth:`filter_by_cnx_count`.
+            value ((list) of (str) or (str), optional): The node names to match in
+                ``adapters``. If value is None, the list of adapters will be returned as
+                is. Any string value starting with "RE:" will be treated as a regex.
+                Defaults to: None.
+                Any string value starting with "RE:" will be treated as a regex.
+            ignore_case (bool, optional): Ignore case when checking value against
+                each node name. Defaults to: True.
+            match_count (int, optional): The number of matches that should be found
+                for ``value``. Defaults to: None.
+            match_error (bool, optional): Raise error if the number of matches does not
+                equal ``match_count``. Defaults to: True.
+
+        Raises:
+            exceptions.ValueNotFound: If ``match_count`` does not equal the number of
+                matches found and ``match_error`` is True.
+
+        Returns:
+            (list) of (dict): List of matching adapters.
+
+        """
         matches = []
 
         for adapter in adapters:
@@ -139,7 +222,29 @@ class Adapters(mixins.Model, mixins.Mixins):
     def filter_by_cnx_count(
         self, adapters, value=None, match_count=None, match_error=True
     ):
-        """Pass."""
+        """Filter adapters with matching connection counts.
+
+        Args:
+            adapters (list) of (dict): The list of metadata for adapters to filter on
+                returned from :meth:`get`, :meth:`filter_by_names`,
+                :meth:`filter_by_nodes`, :meth:`filter_by_status`, or
+                :meth:`filter_by_cnx_count`.
+            value (int, optional): The number of connections to
+                match in ``adapters``. If value is None, the list of adapters will be
+                returned as is. Defaults to: None.
+            match_count (int, optional): The number of matches that should be found
+                for ``value``. Defaults to: None.
+            match_error (bool, optional): Raise error if the number of matches does not
+                equal ``match_count``. Defaults to: True.
+
+        Raises:
+            exceptions.ValueNotFound: If ``match_count`` does not equal the number of
+                matches found and ``match_error`` is True.
+
+        Returns:
+            (list) of (dict): List of matching adapters.
+
+        """
         matches = []
 
         for adapter in adapters:
@@ -164,7 +269,34 @@ class Adapters(mixins.Model, mixins.Mixins):
     def filter_by_status(
         self, adapters, value=None, match_count=None, match_error=True
     ):
-        """Pass."""
+        """Filter adapters with matching statuses.
+
+        Args:
+            adapters (list) of (dict): The list of metadata for adapters to filter on
+                returned from :meth:`get`, :meth:`filter_by_names`,
+                :meth:`filter_by_nodes`, :meth:`filter_by_status`, or
+                :meth:`filter_by_cnx_count`.
+            value (((list) of (bool) or (None)) or ((bool) or (None)), optional):
+                The status or statuses to match against each adapter.
+
+                * True: All connections for an adapter are working.
+                * False: At least one of the connections for an adapter is broken.
+                * None: No connections exist on an adapter.
+
+                Defaults to: None.
+            match_count (int, optional): The number of matches that should be found
+                for ``value``. Defaults to: None.
+            match_error (bool, optional): Raise error if the number of matches does not
+                equal ``match_count``. Defaults to: True.
+
+        Raises:
+            exceptions.ValueNotFound: If ``match_count`` does not equal the number of
+                matches found and ``match_error`` is True.
+
+        Returns:
+            (list) of (dict): List of matching adapters.
+
+        """
         matches = []
 
         for adapter in adapters:
@@ -191,7 +323,22 @@ class Adapters(mixins.Model, mixins.Mixins):
     def upload_file_str(
         self, adapter, field, name, content, node="master", content_type=None
     ):
-        """Pass."""
+        """Upload a string to an adapter on a node.
+
+        Args:
+            adapter (str): Name of adapter to upload to.
+            field (str): Name of field to store data in.
+            name (str): Filename to use when uploading file.
+            content ((str) or (bytes)): Content to upload.
+            node (str, optional): Node name running ``adapter``. Defaults to: "master"
+            content_type (str, optional): Mime type of ``content``. Defaults to: None.
+
+        Returns:
+            dict: Example:
+
+                  {"uuid": "UUID of file", "filename": "name of file"}
+
+        """
         adapter = self.get_single(adapter=adapter, node=node)
 
         return self._upload_file(
@@ -204,7 +351,20 @@ class Adapters(mixins.Model, mixins.Mixins):
         )
 
     def upload_file_path(self, adapter, field, path, node="master", content_type=None):
-        """Pass."""
+        """Upload the contents of a file to an adapter on a node.
+
+        Args:
+            adapter (str): Name of adapter to upload file to.
+            field (str): Name of field to store data in.
+            path ((str) or (pathlib.Path)): File to upload contents of.
+            node (str, optional): Node name running ``adapter``. Defaults to: "master"
+            content_type (str, optional): Mime type of ``path`` contents.
+                Defaults to: None.
+
+        Returns:
+            dict: Output from :meth:`upload_file_str`
+
+        """
         adapter = self.get_single(adapter=adapter, node=node)
 
         path, content = tools.path_read(obj=path, binary=True, is_json=False)
@@ -221,17 +381,20 @@ class Adapters(mixins.Model, mixins.Mixins):
         )
 
     def _init(self, auth, **kwargs):
-        """Post init constructor."""
-        self.cnx = Cnx(parent=self)
-        """:obj:`Cnx`: Child object for working with connections."""
+        """Post init setup.
 
+        Args:
+            auth (axonius_api_client.auth.Model): Authentication object.
+
+        """
+        self.cnx = Cnx(parent=self)
         super(Adapters, self)._init(auth=auth, **kwargs)
 
     def _get(self):
-        """Private direct API method for getting all adapters.
+        """Direct API method to get all adapters.
 
         Returns:
-            :obj:`dict`
+            dict: The raw metadata for all adapters.
 
         """
         return self._request(method="get", path=self._router.root)
@@ -241,7 +404,7 @@ class Adapters(mixins.Model, mixins.Mixins):
         """Router for this API client.
 
         Returns:
-            :obj:`axonius_api_client.api.routers.Router`
+            routers.Router: The object holding the REST API routes for this object type.
 
         """
         return routers.ApiV1.adapters
@@ -256,30 +419,19 @@ class Adapters(mixins.Model, mixins.Mixins):
         content_type=None,
         headers=None,
     ):
-        """Private direct API method for uploading a file for an adapter.
+        """Direct API method to upload a file to an adapter instance on a node.
 
         Args:
-            adapter_name (:obj:`str`):
-                Name of adapter to upload file to.
-            node_id (:obj:`str`):
-                ID of node running adapter_name.
-            name (:obj:`str`):
-                Name of file to upload.
-            field (:obj:`str`):
-                Field to associate with this file.
-            content (:obj:`str` or :obj:`bytes`):
-                Contents of file to upload.
-            content_type (:obj:`str`, optional):
-                Mime type of content.
-
-                Defaults to: None.
-            headers (:obj:`dict`, optional):
-                Mime headers for content.
-
-                Defaults to: None.
+            adapter_name (str): Name of adapter to upload file to.
+            node_id (str): ID of node running ``adapter_name``.
+            name (str): Name of file to upload.
+            field (str): Field to associate with this file.
+            content ((str) or (bytes)): Contents of file to upload.
+            content_type (str, optional): Mime type of ``content``. Defaults to: None.
+            headers (dict, optional): Mime headers for ``content``. Defaults to: None.
 
         Returns:
-            :obj:`dict`
+            dict: UUID and filename of uploaded file.
 
         """
         data = {"field_name": field}
@@ -295,7 +447,7 @@ class Adapters(mixins.Model, mixins.Mixins):
 
 
 class Cnx(mixins.Child):
-    """Pass."""
+    """Adapter connections API."""
 
     def add(
         self,
@@ -310,15 +462,29 @@ class Cnx(mixins.Child):
         """Add a connection to an adapter.
 
         Args:
-            name (:obj:`str`):
-                Name of adapter to add connection to.
-            config (:obj:`dict`):
-                Client configuration.
-            node_id (:obj:`str`):
-                Node ID.
+            adapter ((str) or (dict)): If str, name of adapter to add connection to.
+                If dict, an adapters metadata returned from :meth:`Adapters.get_single`
+                or a single adapter returned from :meth:Adapt
+            config (dict): Configuration of connection to add.
+            parse_config (bool, optional): Check the supplied ``config`` using
+                :meth:`ParserCnxConfig.parse`. Defaults to: True.
+            node (str, optional): Name of node running ``adapter``.
+                Defaults to: "master".
+            retry (int, optional): Number of times to retry fetching the newly added
+                connection. Defaults to: 15.
+            sleep (int, optional): Number of seconds to wait in between each fetch
+                retry. Defaults to: 15.
+            error (bool, optional): Raise an error if the newly added configuration
+                returns an error from connecting to the product for the adapter.
+                The connection will always be added even if it has an error connecting.
+                Defaults to: True.
+
+        Raises:
+            exceptions.CnxConnectFailure: If the newly added connection fails to
+                connect to the product for the adapter and ``error`` is True.
 
         Returns:
-            :obj:`object`
+            dict: The metadata for the newly added configuration.
 
         """
         adapter = self._parent.get_single(adapter=adapter, node=node)
@@ -365,7 +531,34 @@ class Cnx(mixins.Child):
         sleep=15,
         error=True,
     ):
-        """Pass."""
+        """Add a connection for the CSV adapter using str contents.
+
+        Args:
+            name (str): Name to use for the uploaded CSV file.
+            content ((str) or (bytes)): CSV contents to upload.
+            field (str): Field to store connection in.
+            node (str, optional): Node name running CSV adapter to add connection to.
+                Defaults to: "master".
+            is_users (bool, optional): ``content`` is for users. Defaults to: False.
+            is_installed_sw (bool, optional): ``content`` is for installed software for
+                devices. Defaults to: False.
+            retry (int, optional): Number of times to retry fetching the newly added
+                connection. Defaults to: 15.
+            sleep (int, optional): Number of seconds to wait in between each fetch
+                retry. Defaults to: 15.
+            error (bool, optional): Raise an error if the newly added configuration
+                returns an error from connecting to the product for the adapter.
+                The connection will always be added even if it has an error connecting.
+                Defaults to: True.
+
+        Notes:
+            If ``is_users`` and ``is_installed_sw`` is False, the ``content`` is
+            for devices.
+
+        Returns:
+            dict: The output of :meth:`add`.
+
+        """
         adapter = self._parent.get_single(adapter="csv", node=node)
 
         validate_csv(
@@ -405,7 +598,34 @@ class Cnx(mixins.Child):
         sleep=15,
         error=True,
     ):
-        """Pass."""
+        """Add a connection for the CSV adapter using file contents.
+
+        Args:
+            name (str): Name to use for the uploaded CSV file.
+            path ((str) or (pathlib.Path)): Path to file with CSV contents to upload.
+            field (str): Field to store connection in.
+            node (str, optional): Node name running CSV adapter to add connection to.
+                Defaults to: "master".
+            is_users (bool, optional): ``content`` is for users. Defaults to: False.
+            is_installed_sw (bool, optional): ``content`` is for installed software for
+                devices. Defaults to: False.
+            retry (int, optional): Number of times to retry fetching the newly added
+                connection. Defaults to: 15.
+            sleep (int, optional): Number of seconds to wait in between each fetch
+                retry. Defaults to: 15.
+            error (bool, optional): Raise an error if the newly added configuration
+                returns an error from connecting to the product for the adapter.
+                The connection will always be added even if it has an error connecting.
+                Defaults to: True.
+
+        Notes:
+            If ``is_users`` and ``is_installed_sw`` is False, the ``content`` is
+            for devices.
+
+        Returns:
+            dict: The output of :meth:`add`.
+
+        """
         adapter = self._parent.get_single(adapter="csv", node=node)
 
         path, content = tools.path_read(obj=path, binary=True, is_json=False)
@@ -449,7 +669,34 @@ class Cnx(mixins.Child):
         sleep=15,
         error=True,
     ):
-        """Pass."""
+        """Add a connection for the CSV adapter that reads from a URL.
+
+        Args:
+            name (str): Name to use for the uploaded CSV file.
+            url (str): URL to file with CSV contents to load on each fetch.
+            field (str): Field to store connection in.
+            node (str, optional): Node name running CSV adapter to add connection to.
+                Defaults to: "master".
+            is_users (bool, optional): ``content`` is for users. Defaults to: False.
+            is_installed_sw (bool, optional): ``content`` is for installed software for
+                devices. Defaults to: False.
+            retry (int, optional): Number of times to retry fetching the newly added
+                connection. Defaults to: 15.
+            sleep (int, optional): Number of seconds to wait in between each fetch
+                retry. Defaults to: 15.
+            error (bool, optional): Raise an error if the newly added configuration
+                returns an error from connecting to the product for the adapter.
+                The connection will always be added even if it has an error connecting.
+                Defaults to: True.
+
+        Notes:
+            If ``is_users`` and ``is_installed_sw`` is False, the ``content`` is
+            for devices.
+
+        Returns:
+            dict: The output of :meth:`add`.
+
+        """
         adapter = self._parent.get_single(adapter="csv", node=node)
 
         config = {}
@@ -481,7 +728,38 @@ class Cnx(mixins.Child):
         sleep=15,
         error=True,
     ):
-        """Pass."""
+        """Add a connection for the CSV adapter that reads from a SMB share.
+
+        Args:
+            name (str): Name to use for the uploaded CSV file.
+            share (str): SMB path to file with CSV contents to load on each fetch.
+            field (str): Field to store connection in.
+            node (str, optional): Node name running CSV adapter to add connection to.
+                Defaults to: "master".
+            is_users (bool, optional): ``content`` is for users. Defaults to: False.
+            is_installed_sw (bool, optional): ``content`` is for installed software for
+                devices. Defaults to: False.
+            username (str, optional): Username to use when accessing ``share``.
+                Defaults to: None.
+            password (str, optional): Password to use when accessing ``share``.
+                Defaults to: None.
+            retry (int, optional): Number of times to retry fetching the newly added
+                connection. Defaults to: 15.
+            sleep (int, optional): Number of seconds to wait in between each fetch
+                retry. Defaults to: 15.
+            error (bool, optional): Raise an error if the newly added configuration
+                returns an error from connecting to the product for the adapter.
+                The connection will always be added even if it has an error connecting.
+                Defaults to: True.
+
+        Notes:
+            If ``is_users`` and ``is_installed_sw`` is False, the ``content`` is
+            for devices.
+
+        Returns:
+            dict: The output of :meth:`add`.
+
+        """
         adapter = self._parent.get_single(adapter="csv", node=node)
 
         config = {}
@@ -504,7 +782,29 @@ class Cnx(mixins.Child):
         )
 
     def check(self, cnx, retry=15, sleep=15, error=True):
-        """Pass."""
+        """Pass.
+
+        Args:
+            cnx (dict): The metadata of a single connection returned from :meth:`get`.
+            retry (int, optional): Number of times to retry fetching the connection after
+                checking. Defaults to: 15.
+            sleep (int, optional): Number of seconds to wait in between each fetch
+                retry. Defaults to: 15.
+            error (bool, optional): Raise an error if the connection returns an error
+                from connecting to the product for the adapter. Defaults to: True.
+
+        Notes:
+            Checking a connection changes the UUID, so we refetch it after
+            checking to return the metadata with the new UUID.
+
+        Raises:
+            exceptions.CnxConnectFailure: If the connection fails to
+                connect to the product for the adapter and ``error`` is True.
+
+        Returns:
+            dict: The metadata with the new UUID for the checked configuration.
+
+        """
         response = self._check(
             adapter_name=cnx["adapter_name_raw"],
             config=cnx["config_raw"],
@@ -542,7 +842,17 @@ class Cnx(mixins.Child):
         error=True,
         sleep=15,
     ):
-        """Pass."""
+        """Pass.
+
+        Args:
+            cnx (TYPE): Description
+            delete_entities (bool, optional): Description
+            force (bool, optional): Description
+            warning (bool, optional): Description
+            error (bool, optional): Description
+            sleep (int, optional): Description
+
+        """
         cnxinfo = [
             "Adapter name: {adapter_name}",
             "Node name: {node_name}",
@@ -610,7 +920,16 @@ class Cnx(mixins.Child):
     def filter_by_ids(
         self, cnxs, value=None, ignore_case=True, match_count=None, match_error=True
     ):
-        """Get all connections for all adapters."""
+        """Get all connections for all adapters.
+
+        Args:
+            cnxs (TYPE): Description
+            value (None, optional): Description
+            ignore_case (bool, optional): Description
+            match_count (None, optional): Description
+            match_error (bool, optional): Description
+
+        """
         matches = []
 
         for cnx in cnxs:
@@ -635,7 +954,16 @@ class Cnx(mixins.Child):
     def filter_by_uuids(
         self, cnxs, value=None, ignore_case=True, match_count=None, match_error=True
     ):
-        """Get all connections for all adapters."""
+        """Get all connections for all adapters.
+
+        Args:
+            cnxs (TYPE): Description
+            value (None, optional): Description
+            ignore_case (bool, optional): Description
+            match_count (None, optional): Description
+            match_error (bool, optional): Description
+
+        """
         matches = []
 
         for cnx in cnxs:
@@ -658,7 +986,21 @@ class Cnx(mixins.Child):
         return matches
 
     def filter_by_status(self, cnxs, value=None, match_count=None, match_error=True):
-        """Get all connections for all adapters."""
+        """Get all connections for all adapters.
+
+        Args:
+            cnxs (TYPE): Description
+            value (None, optional): Description
+            match_count (None, optional): Description
+            match_error (bool, optional): Description
+
+        Returns:
+            TYPE: Description
+
+        Raises:
+            exceptions.ValueNotFound: Description
+
+        """
         matches = []
 
         for cnx in cnxs:
@@ -683,7 +1025,16 @@ class Cnx(mixins.Child):
         return matches
 
     def get(self, adapter=None, node=None):
-        """Get all connections for an adapter."""
+        """Get all connections for an adapter.
+
+        Args:
+            adapter (None, optional): Description
+            node (None, optional): Description
+
+        Returns:
+            TYPE: Description
+
+        """
         if isinstance(adapter, tools.LIST):
             all_adapters = self._parent.get()
             all_adapters = self._parent.filter_by_names(
@@ -705,7 +1056,15 @@ class Cnx(mixins.Child):
         return adapter["cnx"]
 
     def get_known(self, **kwargs):
-        """Pass."""
+        """Pass.
+
+        Args:
+            **kwargs: Description
+
+        Returns:
+            TYPE: Description
+
+        """
         cnxs = kwargs.get("cnxs") or self.get()
         tmpl = [
             "Adapter: {adapter_name!r}",
@@ -727,7 +1086,18 @@ class Cnx(mixins.Child):
         retry=15,
         sleep=15,
     ):
-        """Pass."""
+        """Pass.
+
+        Args:
+            adapter_name (TYPE): Description
+            node_name (TYPE): Description
+            response (TYPE): Description
+            filter_method (TYPE): Description
+            filter_value (TYPE): Description
+            retry (int, optional): Description
+            sleep (int, optional): Description
+
+        """
         count = 0
         retry = retry or 1
 
@@ -782,7 +1152,17 @@ class Cnx(mixins.Child):
     def update(
         self, cnx, new_config=None, parse_config=True, retry=15, sleep=15, error=True
     ):
-        """Pass."""
+        """Pass.
+
+        Args:
+            cnx (TYPE): Description
+            new_config (None, optional): Description
+            parse_config (bool, optional): Description
+            retry (int, optional): Description
+            sleep (int, optional): Description
+            error (bool, optional): Description
+
+        """
         if parse_config and new_config:
             adapter = self._parent.get_single(adapter=cnx["adapter_name"])
             parser = ParserCnxConfig(raw=new_config, parent=self)
@@ -833,15 +1213,15 @@ class Cnx(mixins.Child):
         """Add a connection to an adapter.
 
         Args:
-            adapter (:obj:`str`):
-                Name of adapter to add connection to.
-            config (:obj:`dict`):
-                Client configuration.
-            node_id (:obj:`str`):
-                Node ID.
+            adapter_name (TYPE): Description
+            node_id (:obj:`str`): Node ID.
+            config (:obj:`dict`): Client configuration.
 
         Returns:
-            :obj:`object`
+            :obj: `object`
+
+        Deleted Parameters:
+            adapter (:obj:`str`): Name of adapter to add connection to.
 
         """
         data = {}
@@ -862,15 +1242,15 @@ class Cnx(mixins.Child):
         """Test an adapter connection.
 
         Args:
-            name (:obj:`str`):
-                Name of adapter to test connection of.
-            config (:obj:`dict`):
-                Connection configuration.
-            node_id (:obj:`str`):
-                Node ID.
+            adapter_name (TYPE): Description
+            node_id (:obj:`str`): Node ID.
+            config (:obj:`dict`): Connection configuration.
 
         Returns:
-            :obj:`object`
+            :obj: `object`
+
+        Deleted Parameters:
+            name (:obj:`str`): Name of adapter to test connection of.
 
         """
         data = {}
@@ -892,15 +1272,17 @@ class Cnx(mixins.Child):
         """Delete a connection from an adapter.
 
         Args:
-            name (:obj:`str`):
-                Name of adapter to delete connection from.
-            id (:obj:`str`):
-                ID of connection to remove.
-            node_id (:obj:`str`):
-                Node ID.
+            adapter_name (TYPE): Description
+            node_id (:obj:`str`): Node ID.
+            cnx_uuid (TYPE): Description
+            delete_entities (bool, optional): Description
 
         Returns:
-            :obj:`object`
+            :obj: `object`
+
+        Deleted Parameters:
+            name (:obj:`str`): Name of adapter to delete connection from.
+            id (:obj:`str`): ID of connection to remove.
 
         """
         data = {}
@@ -925,15 +1307,16 @@ class Cnx(mixins.Child):
         """Add a connection to an adapter.
 
         Args:
-            adapter (:obj:`str`):
-                Name of adapter to add connection to.
-            config (:obj:`dict`):
-                Client configuration.
-            node_id (:obj:`str`):
-                Node ID.
+            adapter_name (TYPE): Description
+            node_id (:obj:`str`): Node ID.
+            config (:obj:`dict`): Client configuration.
+            cnx_uuid (TYPE): Description
 
         Returns:
-            :obj:`object`
+            :obj: `object`
+
+        Deleted Parameters:
+            adapter (:obj:`str`): Name of adapter to add connection to.
 
         """
         data = {}
@@ -957,7 +1340,19 @@ class ParserCnxConfig(mixins.Parser):
     """Pass."""
 
     def parse(self, adapter, settings):
-        """Pass."""
+        """Pass.
+
+        Args:
+            adapter (TYPE): Description
+            settings (TYPE): Description
+
+        Returns:
+            TYPE: Description
+
+        Raises:
+            exceptions.CnxSettingMissing: Description
+
+        """
         new_config = {}
 
         for name, schema in settings.items():
@@ -991,7 +1386,23 @@ class ParserCnxConfig(mixins.Parser):
         return new_config
 
     def check_value(self, name, value, schema, adapter):
-        """Pass."""
+        """Pass.
+
+        Args:
+            name (TYPE): Description
+            value (TYPE): Description
+            schema (TYPE): Description
+            adapter (TYPE): Description
+
+        Returns:
+            TYPE: Description
+
+        Raises:
+            exceptions.CnxSettingInvalidChoice: Description
+            exceptions.CnxSettingInvalidType: Description
+            exceptions.CnxSettingUnknownType: Description
+
+        """
         type_str = schema["type"]
         enum = schema.get("enum", [])
 
@@ -1035,7 +1446,22 @@ class ParserCnxConfig(mixins.Parser):
         )
 
     def check_file(self, name, value, schema, adapter):
-        """Pass."""
+        """Pass.
+
+        Args:
+            name (TYPE): Description
+            value (TYPE): Description
+            schema (TYPE): Description
+            adapter (TYPE): Description
+
+        Returns:
+            TYPE: Description
+
+        Raises:
+            exceptions.CnxSettingFileMissing: Description
+            exceptions.CnxSettingInvalidType: Description
+
+        """
         is_str = isinstance(value, tools.STR)
         is_dict = isinstance(value, dict)
         is_path = isinstance(value, tools.pathlib.Path)
@@ -1091,7 +1517,12 @@ class ParserAdapters(mixins.Parser):
     """Pass."""
 
     def parse(self):
-        """Pass."""
+        """Pass.
+
+        Returns:
+            TYPE: Description
+
+        """
         parsed = []
 
         for name, raw_adapters in self._raw.items():
@@ -1102,7 +1533,16 @@ class ParserAdapters(mixins.Parser):
         return parsed
 
     def _adapter(self, name, raw):
-        """Pass."""
+        """Pass.
+
+        Args:
+            name (TYPE): Description
+            raw (TYPE): Description
+
+        Returns:
+            TYPE: Description
+
+        """
         parsed = {
             "name": tools.strip_right(obj=name, fix="_adapter"),
             "name_raw": name,
@@ -1137,7 +1577,16 @@ class ParserAdapters(mixins.Parser):
         return parsed
 
     def _adapter_settings(self, raw, base=True):
-        """Pass."""
+        """Pass.
+
+        Args:
+            raw (TYPE): Description
+            base (bool, optional): Description
+
+        Returns:
+            TYPE: Description
+
+        """
         settings = {}
 
         for raw_name, raw_settings in raw["config"].items():
@@ -1158,7 +1607,15 @@ class ParserAdapters(mixins.Parser):
         return settings
 
     def _cnx_settings(self, raw):
-        """Pass."""
+        """Pass.
+
+        Args:
+            raw (TYPE): Description
+
+        Returns:
+            TYPE: Description
+
+        """
         settings = {}
 
         schema = raw["schema"]
@@ -1173,7 +1630,16 @@ class ParserAdapters(mixins.Parser):
         return settings
 
     def _cnx(self, raw, parent):
-        """Pass."""
+        """Pass.
+
+        Args:
+            raw (TYPE): Description
+            parent (TYPE): Description
+
+        Returns:
+            TYPE: Description
+
+        """
         cnx = []
 
         cnx_settings = self._cnx_settings(raw=raw)
@@ -1214,7 +1680,15 @@ class ParserAdapters(mixins.Parser):
 
 
 def validate_csv(name, content, is_users=False, is_installed_sw=False):
-    """Pass."""
+    """Pass.
+
+    Args:
+        name (TYPE): Description
+        content (TYPE): Description
+        is_users (bool, optional): Description
+        is_installed_sw (bool, optional): Description
+
+    """
     if is_users:
         ids = constants.CSV_FIELDS["user"]
         ids_type = "user"

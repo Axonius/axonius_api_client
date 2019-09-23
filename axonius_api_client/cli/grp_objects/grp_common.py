@@ -2,68 +2,12 @@
 """Command line interface for Axonius API Client."""
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-import functools
-
 import click
 
-from .. import context
-
-
-def get_by_opts(func):
-    """Combine commonly appearing @click.option decorators."""
-    #
-    @click.option(
-        "--value",
-        "-v",
-        help="Values to search for.",
-        required=True,
-        multiple=True,
-        show_envvar=True,
-        show_default=True,
-    )
-    @click.option(
-        "--query",
-        "-q",
-        help="Query to add to the end of the query built to search for --value.",
-        default="",
-        metavar="QUERY",
-        show_envvar=True,
-        show_default=True,
-    )
-    @click.option(
-        "--field",
-        "-f",
-        help="Columns to include in the format of adapter:field.",
-        metavar="ADAPTER:FIELD",
-        multiple=True,
-        show_envvar=True,
-        show_default=True,
-    )
-    @click.option(
-        "--fields-default/--no-fields-default",
-        "-fd/-nfd",
-        default=True,
-        help="Include default columns for this object type.",
-        is_flag=True,
-        show_envvar=True,
-        show_default=True,
-    )
-    @click.option(
-        "--max-rows",
-        "-mr",
-        help="Only return this many rows.",
-        type=click.INT,
-        hidden=True,
-    )
-    @functools.wraps(func)
-    def wrapper(*args, **kwargs):
-        return func(*args, **kwargs)
-
-    return wrapper
+from .. import serial
 
 
 def get_by_cmd(
-    clickctx,
     ctx,
     url,
     key,
@@ -72,32 +16,32 @@ def get_by_cmd(
     export_file,
     export_path,
     export_overwrite,
-    value,
+    values,
     query,
-    field,
+    fields,
     fields_default,
     max_rows,
     method,
 ):
     """Pass."""
-    client = ctx.start_client(url=url, key=key, secret=secret)
+    p_grp = ctx.parent.command.name
 
-    api = getattr(client, clickctx.parent.command.name)
-
+    client = ctx.obj.start_client(url=url, key=key, secret=secret)
+    api = getattr(client, p_grp)
     apimethod = getattr(api, method)
 
-    with context.exc_wrap(wraperror=ctx.wraperror):
+    with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
         raw_data = apimethod(
-            value=value[0] if context.is_list(value) and len(value) == 1 else value,
+            value=values[0] if serial.is_list(values) and len(values) == 1 else values,
             query_post=query,
-            fields=field,
+            fields=fields,
             fields_default=fields_default,
             max_rows=max_rows,
         )
 
-    formatters = {"json": context.to_json, "csv": context.obj_to_csv}
+    formatters = {"json": serial.to_json, "csv": serial.obj_to_csv}
 
-    ctx.handle_export(
+    ctx.obj.handle_export(
         raw_data=raw_data,
         formatters=formatters,
         export_format=export_format,
@@ -105,3 +49,56 @@ def get_by_cmd(
         export_path=export_path,
         export_overwrite=export_overwrite,
     )
+
+
+def get_sources(ctx):
+    """Pass."""
+    pp_grp = ctx.parent.parent.command.name
+    src_cmds = [x for x in ctx.parent.parent.command.commands if x.startswith("get")]
+    return ["{pp} {c}".format(pp=pp_grp, c=c) for c in src_cmds]
+
+
+def show_sources(ctx, param=None, value=None):
+    """Pass."""
+    if value:
+        pp_grp = ctx.parent.parent.command.name
+        p_grp = ctx.parent.command.name
+        grp = ctx.command.name
+
+        this_grp = "{pp} {p} {g}".format(pp=pp_grp, p=p_grp, g=grp)
+        this_cmd = "{tg} --rows".format(tg=this_grp)
+
+        src_cmds = get_sources(ctx=ctx)
+        msg = serial.ensure_srcs_msg(this_cmd=this_cmd, src_cmds=src_cmds)
+        click.secho(message=msg, err=True, fg="green")
+        ctx.exit(0)
+
+
+def get_rows(ctx, rows):
+    """Pass."""
+    pp_grp = ctx.parent.parent.command.name
+    p_grp = ctx.parent.command.name
+    grp = ctx.command.name
+
+    this_grp = "{pp} {p} {g}".format(pp=pp_grp, p=p_grp, g=grp)
+    this_cmd = "{tg} --rows".format(tg=this_grp)
+
+    src_cmds = get_sources(ctx=ctx)
+
+    rows = serial.json_to_rows(
+        ctx=ctx, stream=rows, this_cmd=this_cmd, src_cmds=src_cmds
+    )
+
+    serial.check_rows_type(
+        ctx=ctx, rows=rows, this_cmd=this_cmd, src_cmds=src_cmds, all_items=False
+    )
+
+    serial.ensure_keys(
+        ctx=ctx,
+        rows=rows,
+        this_cmd=this_cmd,
+        src_cmds=src_cmds,
+        keys=["internal_axon_id", "adapters"],
+        all_items=False,
+    )
+    return rows

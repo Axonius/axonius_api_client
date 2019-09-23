@@ -6,34 +6,37 @@ import re
 
 import click
 
-from .. import context
+from .. import cli_constants, options, serial
 
 
-@click.command("fields", context_settings=context.CONTEXT_SETTINGS)
-@context.connect_options
-@context.export_options
+@click.command(name="fields", context_settings=cli_constants.CONTEXT_SETTINGS)
+@options.OPT_URL
+@options.OPT_KEY
+@options.OPT_SECRET
+@options.OPT_EXPORT_FILE
+@options.OPT_EXPORT_PATH
+@options.OPT_EXPORT_FORMAT
+@options.OPT_EXPORT_OVERWRITE
 @click.option(
     "--adapter-re",
     "-ar",
+    "adapter_re",
     default=".*",
     help="Only fetch fields for adapters matching this regex.",
     metavar="REGEX",
     show_envvar=True,
-    show_default=True,
 )
 @click.option(
     "--field-re",
     "-fr",
+    "field_re",
     default=".*",
     help="Only fetch fields matching this regex.",
     metavar="REGEX",
     show_envvar=True,
-    show_default=True,
 )
-@context.pass_context
 @click.pass_context
 def cmd(
-    clickctx,
     ctx,
     url,
     key,
@@ -45,17 +48,18 @@ def cmd(
     adapter_re,
     field_re,
 ):
-    """Get the fields/columns for all adapters."""
-    client = ctx.start_client(url=url, key=key, secret=secret)
+    """Get the available fields (columns) for assets."""
+    p_grp = ctx.parent.command.name
 
-    api = getattr(client, clickctx.parent.command.name)
+    client = ctx.obj.start_client(url=url, key=key, secret=secret)
+    api = getattr(client, p_grp)
 
     adapter_rec = re.compile(adapter_re, re.I)
     field_rec = re.compile(field_re, re.I)
 
     raw_data = {}
 
-    with context.exc_wrap(wraperror=ctx.wraperror):
+    with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
         raw_fields = api.fields.get()
 
         for adapter, adapter_fields in raw_fields.items():
@@ -71,11 +75,11 @@ def cmd(
     if not raw_data:
         msg = "No fields found matching adapter regex {are!r} and field regex {fre!r}"
         msg = msg.format(are=adapter_re, fre=field_re)
-        ctx.echo_error(msg)
+        ctx.obj.echo_error(msg)
 
-    formatters = {"json": context.to_json, "csv": to_csv}
+    formatters = {"json": serial.to_json, "csv": to_csv}
 
-    ctx.handle_export(
+    ctx.obj.handle_export(
         raw_data=raw_data,
         formatters=formatters,
         export_format=export_format,
@@ -97,4 +101,4 @@ def to_csv(ctx, raw_data, **kwargs):
             row_data = {adapter: field}
             rows[idx].update(row_data)
 
-    return context.dictwriter(rows=rows, headers=headers)
+    return serial.dictwriter(rows=rows, headers=headers)

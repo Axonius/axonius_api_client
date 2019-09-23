@@ -4,40 +4,22 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import click
 
-from .. import context
+from .. import cli_constants, options, serial
 
 
-@click.command("get", context_settings=context.CONTEXT_SETTINGS)
-@context.connect_options
-@context.export_options
-@context.pass_context
+@click.command(name="get", context_settings=cli_constants.CONTEXT_SETTINGS)
+@options.OPT_URL
+@options.OPT_KEY
+@options.OPT_SECRET
 @click.pass_context
-def cmd(
-    clickctx,
-    ctx,
-    url,
-    key,
-    secret,
-    export_format,
-    export_file,
-    export_path,
-    export_overwrite,
-):
-    """Get a report of adapters for objects in query."""
-    client = ctx.start_client(url=url, key=key, secret=secret)
+def cmd(ctx, url, key, secret):
+    """Get all labels (tags) that exist in the system."""
+    client = ctx.obj.start_client(url=url, key=key, secret=secret)
 
-    api = getattr(client, clickctx.parent.parent.command.name)
+    pp_grp = ctx.parent.parent.command.name
+    api = getattr(client, pp_grp)
 
-    with context.exc_wrap(wraperror=ctx.wraperror):
+    with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
         raw_data = api.labels.get()
 
-    formatters = {"json": context.to_json}
-
-    ctx.handle_export(
-        raw_data=raw_data,
-        formatters=formatters,
-        export_format=export_format,
-        export_file=export_file,
-        export_path=export_path,
-        export_overwrite=export_overwrite,
-    )
+    print(serial.to_json(ctx=ctx, raw_data=raw_data))

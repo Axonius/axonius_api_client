@@ -4,15 +4,13 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import click
 
-from .. import context, grp_cnx
+from .. import click_ext, grp_cnx
 from . import cmd_get
 
 
-@click.group()
-@context.pass_context
-def adapters(ctx):
-    """Work with adapter connections."""
-    return ctx
+@click.group(cls=click_ext.AliasedGroup)
+def adapters():
+    """Group: Work with adapters and adapter connections."""
 
 
 adapters.add_command(cmd_get.cmd)

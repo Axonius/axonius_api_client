@@ -17,7 +17,7 @@ class TestCmdGet(object):
         """Pass."""
         runner = utils.load_clirunner(request, monkeypatch)
 
-        args1 = [cmd, "labels", "get", "--export-format", "json"]
+        args1 = [cmd, "labels", "get"]
         result1 = runner.invoke(cli=cli.cli, args=args1)
 
         stderr1 = result1.stderr
@@ -55,16 +55,7 @@ class TestCmdAddRemove(object):
         """Pass."""
         runner = utils.load_clirunner(request, monkeypatch)
 
-        args1 = [
-            cmd,
-            "get",
-            "--query",
-            "(adapters > size(0))",
-            "--export-format",
-            "json",
-            "--max-rows",
-            "1",
-        ]
+        args1 = [cmd, "get", "--query", "(adapters > size(0))", "--max-rows", "1"]
 
         result1 = runner.invoke(cli=cli.cli, args=args1)
 
@@ -76,17 +67,7 @@ class TestCmdAddRemove(object):
         assert stderr1
         assert exit_code1 == 0
 
-        args2 = [
-            cmd,
-            "labels",
-            "add",
-            "--label",
-            "badwolf1",
-            "--label",
-            "badwolf2",
-            "--export-format",
-            "json",
-        ]
+        args2 = [cmd, "labels", "add", "--label", "badwolf1", "--label", "badwolf2"]
         result2 = runner.invoke(cli=cli.cli, args=args2, input=result1.stdout)
 
         stderr2 = result2.stderr
@@ -101,17 +82,7 @@ class TestCmdAddRemove(object):
         assert isinstance(json2, tools.INT)
         assert json2 == 1
 
-        args3 = [
-            cmd,
-            "labels",
-            "remove",
-            "--label",
-            "badwolf1",
-            "--label",
-            "badwolf2",
-            "--export-format",
-            "json",
-        ]
+        args3 = [cmd, "labels", "remove", "--label", "badwolf1", "--label", "badwolf2"]
         result3 = runner.invoke(cli=cli.cli, args=args3, input=result1.stdout)
 
         stderr3 = result3.stderr

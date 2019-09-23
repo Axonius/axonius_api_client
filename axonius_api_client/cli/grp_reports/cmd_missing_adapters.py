@@ -4,25 +4,31 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import click
 
-from .. import context
+from .. import cli_constants, options, serial
+from ..grp_objects import grp_common as grp_obj_common
 
 
-@click.command("missing-adapters", context_settings=context.CONTEXT_SETTINGS)
-@context.connect_options
-@context.export_options
+@click.command(name="missing-adapters", context_settings=cli_constants.CONTEXT_SETTINGS)
+@options.OPT_URL
+@options.OPT_KEY
+@options.OPT_SECRET
+@options.OPT_EXPORT_FILE
+@options.OPT_EXPORT_PATH
+@options.OPT_EXPORT_FORMAT
+@options.OPT_EXPORT_OVERWRITE
 @click.option(
-    "--rows",
-    "-r",
-    help="The JSON data of rows returned by any get command for this object type.",
-    default="-",
-    type=click.File(mode="r"),
-    show_envvar=True,
-    show_default=True,
+    "--show-sources",
+    "-ss",
+    help="Print the source commands that can be supplied as valid input to -r/--rows.",
+    default=False,
+    is_flag=True,
+    is_eager=True,
+    callback=grp_obj_common.show_sources,
+    expose_value=False,
 )
-@context.pass_context
+@options.OPT_ROWS
 @click.pass_context
 def cmd(
-    clickctx,
     ctx,
     url,
     key,
@@ -33,18 +39,20 @@ def cmd(
     export_overwrite,
     rows,
 ):
-    """Get a report of adapters for objects in query."""
-    client = ctx.start_client(url=url, key=key, secret=secret)
-    content = context.json_from_stream(ctx=ctx, stream=rows, src="--rows")
+    """Get a report of missing adapters for assets."""
+    rows = grp_obj_common.get_rows(ctx=ctx, rows=rows)
 
-    api = getattr(client, clickctx.parent.parent.command.name)
+    client = ctx.obj.start_client(url=url, key=key, secret=secret)
 
-    with context.exc_wrap(wraperror=ctx.wraperror):
-        raw_data = api.reports.missing_adapters(rows=content)
+    pp_grp = ctx.parent.parent.command.name
+    api = getattr(client, pp_grp)
 
-    formatters = {"json": context.to_json, "csv": context.obj_to_csv}
+    with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
+        raw_data = api.reports.missing_adapters(rows=rows)
 
-    ctx.handle_export(
+    formatters = {"json": serial.to_json, "csv": serial.obj_to_csv}
+
+    ctx.obj.handle_export(
         raw_data=raw_data,
         formatters=formatters,
         export_format=export_format,

@@ -4,55 +4,32 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import click
 
-from .. import context
+from .. import cli_constants, options
 from . import grp_common
 
 
-@click.command("get-by-subnet", context_settings=context.CONTEXT_SETTINGS)
-@context.connect_options
-@context.export_options
+@click.command(name="get-by-subnet", context_settings=cli_constants.CONTEXT_SETTINGS)
+@options.OPT_URL
+@options.OPT_KEY
+@options.OPT_SECRET
+@options.OPT_EXPORT_FILE
+@options.OPT_EXPORT_PATH
+@options.OPT_EXPORT_FORMAT
+@options.OPT_EXPORT_OVERWRITE
+@options.OPT_FIELDS
+@options.OPT_FIELDS_DEFAULT
+@options.OPT_MAX_ROWS
+@options.OPT_GET_BY_POST_QUERY
 @click.option(
     "--value",
     "-v",
+    "value",
     help="Value to search for.",
     required=True,
     show_envvar=True,
-    show_default=True,
 )
-@click.option(
-    "--query",
-    "-q",
-    help="Query to add to the end of the query built to search for --value.",
-    default="",
-    metavar="QUERY",
-    show_envvar=True,
-    show_default=True,
-)
-@click.option(
-    "--field",
-    "-f",
-    help="Columns to include in the format of adapter:field.",
-    metavar="ADAPTER:FIELD",
-    multiple=True,
-    show_envvar=True,
-    show_default=True,
-)
-@click.option(
-    "--fields-default/--no-fields-default",
-    "-fd/-nfd",
-    default=True,
-    help="Include default columns for this object type.",
-    is_flag=True,
-    show_envvar=True,
-    show_default=True,
-)
-@click.option(
-    "--max-rows", "-mr", help="Only return this many rows.", type=click.INT, hidden=True
-)
-@context.pass_context
 @click.pass_context
 def cmd(
-    clickctx,
     ctx,
     url,
     key,
@@ -63,13 +40,12 @@ def cmd(
     export_overwrite,
     value,
     query,
-    field,
+    fields,
     fields_default,
     max_rows,
 ):
-    """Get all objects matching a query."""
+    """Get assets with in a subnet."""
     grp_common.get_by_cmd(
-        clickctx=clickctx,
         ctx=ctx,
         url=url,
         key=key,
@@ -78,9 +54,9 @@ def cmd(
         export_file=export_file,
         export_path=export_path,
         export_overwrite=export_overwrite,
-        value=value,
+        values=value,
         query=query,
-        field=field,
+        fields=fields,
         fields_default=fields_default,
         max_rows=max_rows,
         method="get_by_subnet",

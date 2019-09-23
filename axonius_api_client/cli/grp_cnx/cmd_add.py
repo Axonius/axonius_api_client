@@ -4,26 +4,33 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import click
 
-from .. import context
+from .. import cli_constants, click_ext, options, serial
 from . import grp_common
 
-HIDDEN = ["secret", "key", "password"]
+# FUTURE: accept ini based conf file?
 
 
-@click.command("add", context_settings=context.CONTEXT_SETTINGS)
-@context.connect_options
-@context.export_options
+@click.command(name="add", context_settings=cli_constants.CONTEXT_SETTINGS)
+@options.OPT_URL
+@options.OPT_KEY
+@options.OPT_SECRET
+@options.OPT_EXPORT_FILE
+@options.OPT_EXPORT_PATH
+@options.OPT_EXPORT_FORMAT
+@options.OPT_EXPORT_OVERWRITE
+@options.OPT_INCLUDE_SETTINGS
 @click.option(
     "--adapter",
     "-a",
+    "adapter",
     help="The name of the adapter to add the connection to.",
     required=True,
     show_envvar=True,
-    show_default=True,
 )
 @click.option(
     "--node",
     "-n",
+    "node",
     help="The name of the node running --adapter to add the connection to.",
     default="master",
     show_envvar=True,
@@ -32,58 +39,39 @@ HIDDEN = ["secret", "key", "password"]
 @click.option(
     "--config",
     "-c",
+    "config",
     help="Configuration keys in the form of key=value.",
-    type=context.SplitEquals(),
+    type=click_ext.SplitEquals(),
     multiple=True,
     show_envvar=True,
-    show_default=True,
 )
 @click.option(
     "--skip",
-    "-s",
+    "-sk",
     "skips",
-    help="Configuration keys to not prompt for.",
+    help="Regexes of configuration keys to not prompt for.",
     multiple=True,
     show_envvar=True,
-    show_default=True,
 )
 @click.option(
     "--hidden",
     "hiddens",
-    help="List of configuration items to hide input when prompting.",
-    default=HIDDEN,
+    help="Regexes of configuration keys to hide input of when prompting.",
+    default=cli_constants.HIDDEN,
     multiple=True,
     show_envvar=True,
     show_default=True,
 )
 @click.option(
-    "--prompt-opt/--no-prompt-opt",
-    "-po/-npo",
+    "--no-prompt-opt",
+    "-npo",
+    "prompt_opt",
     help="Prompt for optional items that are not supplied.",
     is_flag=True,
     default=True,
     show_envvar=True,
-    show_default=True,
 )
-@click.option(
-    "--include-settings/--no-include-settings",
-    "-is/-nis",
-    help="Include connection settings in CSV export.",
-    default=False,
-    is_flag=True,
-    show_envvar=True,
-    show_default=True,
-)
-@click.option(
-    "--error/--no-error",
-    "-e/-ne",
-    help="Return the new connection object even if an error happens.",
-    default=True,
-    is_flag=True,
-    show_envvar=True,
-    show_default=True,
-)
-@context.pass_context
+@click.pass_context
 def cmd(
     ctx,
     url,
@@ -99,13 +87,12 @@ def cmd(
     skips,
     hiddens,
     prompt_opt,
-    error,
     include_settings,
 ):
-    """Get all adapters with clients that have errors."""
-    client = ctx.start_client(url=url, key=key, secret=secret)
+    """Add an adapter connection."""
+    client = ctx.obj.start_client(url=url, key=key, secret=secret)
 
-    with context.exc_wrap(wraperror=ctx.wraperror):
+    with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
         adapter = client.adapters.get_single(adapter=adapter, node=node)
 
     config = dict(config)
@@ -118,6 +105,7 @@ def cmd(
     for schema in schemas:
         try:
             config[schema["name"]] = grp_common.handle_schema(
+                ctx=ctx,
                 config=config,
                 schema=schema,
                 hiddens=hiddens,
@@ -127,14 +115,17 @@ def cmd(
         except grp_common.SkipItem:
             continue
 
-    with context.exc_wrap(wraperror=ctx.wraperror):
-        cnx = client.adapters.cnx.add(adapter=adapter, config=config, error=error)
+    with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
+        cnx = client.adapters.cnx.add(adapter=adapter, config=config, error=False)
 
-    grp_common.handle_response(cnx=cnx, action="adding")
+    action = "adding"
+    had_error, had_cnx_error = grp_common.handle_response(
+        ctx=ctx, cnx=cnx, action=action, cnx_error=True
+    )
 
-    formatters = {"json": context.to_json, "csv": grp_common.to_csv}
+    formatters = {"json": serial.to_json, "csv": grp_common.to_csv}
 
-    ctx.handle_export(
+    ctx.obj.handle_export(
         raw_data=cnx,
         formatters=formatters,
         export_format=export_format,
@@ -143,3 +134,5 @@ def cmd(
         export_overwrite=export_overwrite,
         include_settings=include_settings,
     )
+
+    ctx.exit(int(had_error or had_cnx_error))

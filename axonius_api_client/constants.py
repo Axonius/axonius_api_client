@@ -55,11 +55,11 @@ LOG_FMT_FILE = "%(asctime)s %(levelname)-8s [%(name)s:%(funcName)s()] %(message)
 LOG_DATEFMT_CONSOLE = "%m/%d/%Y %I:%M:%S %p"
 LOG_DATEFMT_FILE = "%m/%d/%Y %I:%M:%S %p"
 
-LOG_LEVEL_CONSOLE = "info"
-LOG_LEVEL_FILE = "info"
-LOG_LEVEL_HTTP = "info"
-LOG_LEVEL_AUTH = "info"
-LOG_LEVEL_API = "info"
+LOG_LEVEL_CONSOLE = "debug"
+LOG_LEVEL_FILE = "debug"
+LOG_LEVEL_HTTP = "debug"
+LOG_LEVEL_AUTH = "debug"
+LOG_LEVEL_API = "debug"
 LOG_LEVEL_PACKAGE = "debug"
 
 LOG_LEVELS_STR = ["debug", "info", "warning", "error", "fatal"]

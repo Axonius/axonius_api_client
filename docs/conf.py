@@ -30,6 +30,7 @@ extensions = [
     "sphinx.ext.viewcode",
     "sphinx.ext.githubpages",
     "sphinx.ext.napoleon",
+    "sphinx_click.ext",
 ]
 
 templates_path = ["_templates"]
@@ -49,7 +50,7 @@ html_theme_options = {
     "prev_next_buttons_location": "both",
     "collapse_navigation": False,
     "sticky_navigation": True,
-    "navigation_depth": 5,
+    "navigation_depth": 4,
     "includehidden": True,
     "titles_only": False,
 }

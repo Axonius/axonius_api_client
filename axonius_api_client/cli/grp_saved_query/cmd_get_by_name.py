@@ -4,28 +4,28 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import click
 
-from .. import context
+from .. import cli_constants, options, serial
 from . import grp_common
 
 
-@click.command("get-by-name", context_settings=context.CONTEXT_SETTINGS)
-@context.connect_options
-@context.export_options
+@click.command(name="get-by-name", context_settings=cli_constants.CONTEXT_SETTINGS)
+@options.OPT_URL
+@options.OPT_KEY
+@options.OPT_SECRET
+@options.OPT_EXPORT_FILE
+@options.OPT_EXPORT_PATH
+@options.OPT_EXPORT_FORMAT
+@options.OPT_EXPORT_OVERWRITE
 @click.option(
     "--name",
     "-n",
+    "name",
     help="Name of saved query to get.",
     required=True,
     show_envvar=True,
-    show_default=True,
 )
-@click.option(
-    "--max-rows", "-mr", help="Only return this many rows.", type=click.INT, hidden=True
-)
-@context.pass_context
 @click.pass_context
 def cmd(
-    clickctx,
     ctx,
     url,
     key,
@@ -35,19 +35,19 @@ def cmd(
     export_path,
     export_overwrite,
     name,
-    max_rows,
 ):
-    """Get a report of adapters for objects in query."""
-    client = ctx.start_client(url=url, key=key, secret=secret)
+    """Get a saved query by name."""
+    client = ctx.obj.start_client(url=url, key=key, secret=secret)
 
-    api = getattr(client, clickctx.parent.parent.command.name)
+    pp_grp = ctx.parent.parent.command.name
+    api = getattr(client, pp_grp)
 
-    with context.exc_wrap(wraperror=ctx.wraperror):
-        raw_data = api.saved_query.get_by_name(value=name, max_rows=max_rows)
+    with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
+        raw_data = api.saved_query.get_by_name(value=name)
 
-    formatters = {"json": context.to_json, "csv": grp_common.to_csv}
+    formatters = {"json": serial.to_json, "csv": grp_common.to_csv}
 
-    ctx.handle_export(
+    ctx.obj.handle_export(
         raw_data=raw_data,
         formatters=formatters,
         export_format=export_format,

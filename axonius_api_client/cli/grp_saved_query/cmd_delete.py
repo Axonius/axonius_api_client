@@ -6,50 +6,49 @@ import time
 
 import click
 
-from ... import tools
-from .. import context
+from .. import cli_constants, options
 
 
-@click.command("delete", context_settings=context.CONTEXT_SETTINGS)
-@context.connect_options
+@click.command(name="delete", context_settings=cli_constants.CONTEXT_SETTINGS)
+@options.OPT_URL
+@options.OPT_KEY
+@options.OPT_SECRET
+@options.OPT_WAIT_DELETE
 @click.option(
-    "--rows",
-    "-r",
-    help="JSON rows returned by any get command for saved queries of this object type.",
-    default="-",
-    type=click.File(mode="r"),
+    "--name",
+    "-n",
+    "names",
+    help="Name of saved query to delete.",
+    multiple=True,
+    required=True,
     show_envvar=True,
-    show_default=True,
 )
-@click.option(
-    "--wait",
-    "-w",
-    help="Wait this many seconds before deleting",
-    default=30,
-    type=click.INT,
-    show_envvar=True,
-    show_default=True,
-)
-@context.pass_context
 @click.pass_context
-def cmd(clickctx, ctx, url, key, secret, rows, wait):
-    """Get a report of adapters for objects in query."""
-    client = ctx.start_client(url=url, key=key, secret=secret)
-    content = context.json_from_stream(ctx=ctx, stream=rows, src="--rows")
-    content = tools.listify(obj=content, dictkeys=False)
-    names = tools.join_comma([x["name"] for x in content])
+def cmd(ctx, url, key, secret, names, wait):
+    """Delete a saved query."""
+    client = ctx.obj.start_client(url=url, key=key, secret=secret)
+
+    pp_grp = ctx.parent.parent.command.name
+    api = getattr(client, pp_grp)
+
+    rows = []
+    for name in names:
+        rows.append(api.saved_query.get_by_name(value=name))
+
+    row_names = [x["name"] for x in rows]
 
     msg = "In {s} second will delete saved queries: {n}"
-    msg = msg.format(s=wait, n=names)
-    ctx.echo_warn(msg)
+    msg = msg.format(s=wait, n=row_names)
+    ctx.obj.echo_warn(msg)
 
     time.sleep(wait)
 
-    api = getattr(client, clickctx.parent.parent.command.name)
+    client = ctx.obj.start_client(url=url, key=key, secret=secret)
+    api = getattr(client, pp_grp)
 
-    with context.exc_wrap(wraperror=ctx.wraperror):
-        api.saved_query.delete(rows=content)
+    with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
+        api.saved_query.delete(rows=rows)
 
     msg = "Successfully deleted saved queries: {n}"
-    msg = msg.format(n=names)
-    ctx.echo_ok(msg)
+    msg = msg.format(n=row_names)
+    ctx.obj.echo_ok(msg)

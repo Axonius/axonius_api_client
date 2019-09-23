@@ -17,14 +17,7 @@ class TestCmdCount(object):
         """Pass."""
         runner = utils.load_clirunner(request, monkeypatch)
 
-        args1 = [
-            cmd,
-            "count",
-            "--query",
-            "(adapters > size(0))",
-            "--export-format",
-            "json",
-        ]
+        args1 = [cmd, "count", "--query", "(adapters > size(0))"]
 
         result1 = runner.invoke(cli=cli.cli, args=args1)
 
@@ -64,7 +57,7 @@ class TestCmdCountBySQ(object):
 
         name = json1[0]["name"]
 
-        args2 = [cmd, "count-by-saved-query", "--name", name, "--export-format", "json"]
+        args2 = [cmd, "count-by-saved-query", "--name", name]
 
         result2 = runner.invoke(cli=cli.cli, args=args2)
 
@@ -176,7 +169,7 @@ class TestCmdFields(object):
         assert exit_code1 != 0
 
         errlines1 = stderr1.splitlines()
-        assert len(errlines1) == 4
+
         assert (
             errlines1[-2]
             == "** ERROR: WRAPPED EXCEPTION: axonius_api_client.tests.utils.MockError"

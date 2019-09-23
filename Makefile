@@ -67,8 +67,9 @@ docs_dev:
 	(cd docs && pipenv run make html SPHINXOPTS="-na" && cd ..)
 
 docs_apigen:
-	rm -rf docs/api_ref
-	pipenv run sphinx-apidoc -e -P -M -f -T -t docs/_templates -o docs/api_ref $(PACKAGE) $(PACKAGE)/tests $(PACKAGE)/cli
+	pip install sphinx -t /tmp/sphinx-latest --quiet --upgrade
+	rm -rf docs/main/api
+	PYTHONPATH=/tmp/sphinx-latest /tmp/sphinx-latest/bin/sphinx-apidoc -e -P -M -f -T -t docs/_templates -o docs/main/api $(PACKAGE) $(PACKAGE)/tests $(PACKAGE)/cli
 
 docs_open:
 	open docs/_build/html/index.html
@@ -83,6 +84,9 @@ docs_linkcheck:
 
 docs_clean:
 	rm -rf docs/_build
+
+docs_dumprefs:
+	pipenv run python -m sphinx.ext.intersphinx docs/_build/html/objects.inv
 
 git_check:
 	@git diff-index --quiet HEAD && echo "*** REPO IS CLEAN" || (echo "!!! REPO IS DIRTY"; false)
@@ -108,6 +112,10 @@ pkg_build:
 
 	@echo "*** Checking package with twine"
 	pipenv run twine check dist/*
+
+pkg_install:
+	$(MAKE) pkg_build
+	pip install dist/*.whl --upgrade
 
 pkg_clean:
 	rm -rf build dist *.egg-info

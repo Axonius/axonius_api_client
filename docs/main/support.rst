@@ -1,4 +1,5 @@
-.. include:: .special.rst
+.. include:: /main/.special.rst
+
 Support Information
 #########################################################
 
