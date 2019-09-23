@@ -3,3 +3,4 @@ python-dotenv
 python-dateutil
 click
 pyreadline ; platform_system == "Windows"
+pathlib2 ; python_version < '3.0'

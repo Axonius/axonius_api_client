@@ -41,6 +41,7 @@ setup(
         "python-dotenv",
         "python-dateutil",
         'pyreadline ; platform_system == "Windows"',
+        "pathlib2 ; python_version < '3.0'",
     ],
     keywords=["Axonius", "API Library"],
     tests_require=["pytest", "pytest-cov", "pytest-httpbin", "coverage"],
