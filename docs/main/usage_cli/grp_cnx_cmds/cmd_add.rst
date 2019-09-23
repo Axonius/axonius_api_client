@@ -6,7 +6,7 @@ adapters cnx add
 Output feeds
 ===============================================
 
-The ouput from this command is able to be supplied as input to these commands:
+The output from this command is able to be supplied as input to these commands:
 
 * :doc:`../grp_cnx_cmds/cmd_check`
 * :doc:`../grp_cnx_cmds/cmd_delete`

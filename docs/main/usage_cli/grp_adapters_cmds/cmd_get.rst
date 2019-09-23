@@ -42,7 +42,7 @@ Each dictionary represents an instance of an adapter on a node and has the keys:
 Output feeds
 ===============================================
 
-The ouput from this command is able to be supplied as input to these commands:
+The output from this command is able to be supplied as input to these commands:
 
 * :doc:`../grp_cnx_cmds/cmd_check`
 * :doc:`../grp_cnx_cmds/cmd_delete`
