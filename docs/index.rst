@@ -8,7 +8,7 @@
 Axonius API Client
 ##################################################################
 
-This is python package that provides an API client for `Axonius`_.
+This is a python package that provides an API client for `Axonius`_.
 
 :doc:`Installation <main/install>` is simple using a number of methods.
 

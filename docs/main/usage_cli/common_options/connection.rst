@@ -1,6 +1,6 @@
 .. include:: /main/.special.rst
 
-.. _common_connection_options:
+.. _connection_options:
 
 Connection Options
 ###############################################
@@ -35,7 +35,8 @@ instance of Axonius:
 Using .env
 ===============================================
 
-This is the preferred method for supplying these options.
+This is the preferred method for supplying these options. There is even a
+:ref:`tools_write_config` command that writes this file for you.
 
 Since axonshell uses the `dotenv`_ package, if a :magenta:`.env` file exists in the
 current working directory, axonshell will load that file and treat the

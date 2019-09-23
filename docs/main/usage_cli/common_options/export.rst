@@ -1,16 +1,19 @@
 .. include:: /main/.special.rst
 
-.. _common_export_options:
+.. _export_options:
 
 Export Options
 ###############################################
 
 Commands return their data to STDOUT in JSON format by default. You can redirect
-this STDOUT to a file to save it:
+ STDOUT to a file in order to save the data:
 
 .. code::
 
     $ axonshell adapters get > /tmp/example.json
+
+    $ # or pipe the STDOUT to another command
+    $ axonshell adapters get | jq '. | length'
 
 However, almost all commands have a set of common options for controlling
 the export format and output of the data returned:
@@ -23,9 +26,15 @@ the export format and output of the data returned:
 
    Send the output to this file instead of STDERR.
 
-   If you supply just a filename, it will be created in the directory supplied to -ep / --export-path.
+   .. note::
+      If you supply just a filename, it will be created in the directory supplied
+      to -ep / --export-path.
 
-   You can also supply an absolute path to the file and ignore the -xp / --export-path option.
+      Relative paths to a file will be resolved to an absolute path under
+      -xp / --export-path.
+
+      You can also supply an absolute path to the file here and ignore the
+      -xp / --export-path option entirely.
 
 .. option:: -xp <FILEPATH>, --export-path <FILEPATH>
 

@@ -8,18 +8,18 @@ Common Options
 
 .. toctree::
    :maxdepth: 1
+   :glob:
 
-   usage_cli/common_options/connection.rst
-   usage_cli/common_options/export.rst
+   usage_cli/common_options/*
 
 Features
 ==============================================
 
 .. toctree::
    :maxdepth: 1
+   :glob:
 
-   usage_cli/features/aliases.rst
-   usage_cli/features/autocomplete.rst
+   usage_cli/features/*
 
 Groups
 ==============================================

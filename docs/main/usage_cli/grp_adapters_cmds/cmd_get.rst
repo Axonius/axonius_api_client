@@ -15,12 +15,12 @@ The ouput from this command is able to be supplied as input to these commands:
 Common Options
 ===============================================
 
-* :ref:`common_connection_options`
-* :ref:`common_export_options`
-
+* :ref:`connection_options`
+* :ref:`export_options`
 
 Examples
 ===============================================
+
 
 Help Page
 ===============================================

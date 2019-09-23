@@ -5,6 +5,14 @@ root
 
 This is the root group of axonshell (aka running the script with no arguments).
 
+.. note::
+
+   All prompts and info/warning/error messages will go to STDERR.
+
+   All --help outpout goes to STDOUT.
+
+   All exported data goes to STDOUT by default, unless -xf / --export-file in :ref:`export_options` is supplied.
+
 Command Groups
 ===============================================
 
