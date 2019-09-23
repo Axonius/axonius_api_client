@@ -2,3 +2,4 @@ requests[security,socks]
 python-dotenv
 python-dateutil
 click
+pyreadline ; platform_system == "Windows"

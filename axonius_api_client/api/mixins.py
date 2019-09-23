@@ -96,7 +96,9 @@ class Mixins(object):
         error_status=True,
         error_json_bad_status=True,
         error_json_invalid=True,
+        # fmt: off
         **kwargs
+        # fmt: on
     ):
         """Perform a REST API request.
 

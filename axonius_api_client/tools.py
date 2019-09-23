@@ -341,7 +341,9 @@ def path_write(
     make_parent=True,
     protect_file=0o600,
     protect_parent=0o700,
+    # fmt: off
     **kwargs
+    # fmt: on
 ):
     """Pass."""
     obj = path(obj=obj)

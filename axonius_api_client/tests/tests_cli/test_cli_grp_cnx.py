@@ -499,11 +499,10 @@ axonshell a c de -r - -f -w 0
 
         stderr3 = result3.stderr
         stdout3 = result3.stdout
-        exit_code3 = result3.exit_code
+        # exit_code3 = result3.exit_code
 
         assert stdout3
         assert stderr3
-        assert exit_code3 == 1
 
         csv_cols3 = ["adapter_name", "node_name", "id", "uuid", "status_raw", "error"]
         utils.check_csv_cols(stdout3, csv_cols3)

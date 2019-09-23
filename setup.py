@@ -40,6 +40,7 @@ setup(
         "click",
         "python-dotenv",
         "python-dateutil",
+        'pyreadline ; platform_system == "Windows"',
     ],
     keywords=["Axonius", "API Library"],
     tests_require=["pytest", "pytest-cov", "pytest-httpbin", "coverage"],
