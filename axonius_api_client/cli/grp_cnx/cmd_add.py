@@ -105,6 +105,7 @@ def cmd(
     for schema in schemas:
         try:
             config[schema["name"]] = grp_common.handle_schema(
+                ctx=ctx,
                 config=config,
                 schema=schema,
                 hiddens=hiddens,

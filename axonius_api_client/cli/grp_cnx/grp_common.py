@@ -27,7 +27,7 @@ def to_csv(ctx, raw_data, include_settings=True, **kwargs):
     return serial.dictwriter(rows=rows)
 
 
-def handle_schema(config, schema, hiddens, prompt_opt, skips):
+def handle_schema(ctx, config, schema, hiddens, prompt_opt, skips):
     """Pass."""
     name = schema["name"]
     required = schema["required"]
@@ -40,25 +40,28 @@ def handle_schema(config, schema, hiddens, prompt_opt, skips):
     click.secho(message=smsg, fg="blue", err=True)
 
     if config.get(name):
-        hasmsg = "\nSkipping item, was provided via '--config {v}=...'\n"
+        hasmsg = "\nSkipping item, was provided via '--config {v!r}=...'\n"
         hasmsg = hasmsg.format(v=name)
         click.secho(message=hasmsg, fg="cyan", err=True)
         raise SkipItem()
 
     if not required and any([re.search(x, name) for x in skips]):
-        skipmsg = "\nSkipping item, was provided via '--skip {v}'\n"
+        skipmsg = "\nSkipping item, was provided via '--skip {v!r}'\n"
         skipmsg = skipmsg.format(v=name)
         click.secho(message=skipmsg, fg="cyan", err=True)
         raise SkipItem()
 
     if not required and not prompt_opt:
-        skipmsg = "\nSkipping optional item due to --no-prompt-opt\n"
-        skipmsg = skipmsg.format(name)
+        skipmsg = "\nSkipping optional item {v!r} due to --no-prompt-opt\n"
+        skipmsg = skipmsg.format(v=name)
         click.secho(message=skipmsg, fg="cyan", err=True)
         raise SkipItem()
 
     ptype = determine_type(schema=schema)
-    ptext = "\nProvide value for item"
+    skippable = not required and ptype is None
+
+    ptext = "\nProvide value for item{sk}"
+    ptext = ptext.format(sk=" (SKIP to skip)" if skippable else "")
     ptext = click.style(text=ptext, fg="bright_blue")
 
     value = click.prompt(
@@ -70,6 +73,13 @@ def handle_schema(config, schema, hiddens, prompt_opt, skips):
         show_default=True,
         show_choices=True,
     )
+
+    # FUTURE: figure out better way to handle this, maybe customer click type?
+    if format(value).upper() == "SKIP":  # pragma: no cover
+        skipmsg = "\nSkipping item {v!r} due to value 'SKIP'\n"
+        skipmsg = skipmsg.format(v=name)
+        click.secho(message=skipmsg, fg="cyan", err=True)
+        raise SkipItem()
 
     return value
 
