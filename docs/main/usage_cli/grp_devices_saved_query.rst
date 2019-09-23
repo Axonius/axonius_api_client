@@ -3,15 +3,15 @@
 devices saved_query
 ###############################################
 
-This is a sub-command group under :doc:`grp_devices`
+This is a sub-command group under :doc:`grp_devices`.
 
 Commands
 ===============================================
 
-* :doc:`grp_devices_saved_query_cmds/cmd_add`
-* :doc:`grp_devices_saved_query_cmds/cmd_delete`
-* :doc:`grp_devices_saved_query_cmds/cmd_get`
-* :doc:`grp_devices_saved_query_cmds/cmd_get_by_name`
+* :doc:`grp_objects_saved_query_cmds/cmd_add`
+* :doc:`grp_objects_saved_query_cmds/cmd_delete`
+* :doc:`grp_objects_saved_query_cmds/cmd_get`
+* :doc:`grp_objects_saved_query_cmds/cmd_get_by_name`
 
 Help Page
 ===============================================

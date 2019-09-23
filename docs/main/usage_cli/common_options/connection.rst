@@ -1,21 +1,16 @@
 .. include:: /main/.special.rst
 
-Required Options
+.. _common_connection_options:
+
+Connection Options
 ###############################################
 
-.. todo::
-
-    Refer to axonshell tools write-config
-
-.. todo::
-
-    Create page for getting key and secret
-
-All commands of all command groups have a standard set of required options:
+All commands have a standard set of required options for connecting to an
+instance of Axonius:
 
 .. envvar:: AX_URL="<URL>"
 
-   The URL of the axonius instance set as an environment variable.
+   The URL of the Axonius instance set as an environment variable.
 
 .. envvar:: AX_KEY="<KEY>"
 
@@ -27,7 +22,7 @@ All commands of all command groups have a standard set of required options:
 
 .. option:: -u <URL>, --url <URL>
 
-   The URL of the axonius instance supplied as command line arguments.
+   The URL of the Axonius instance supplied as command line arguments.
 
 .. option:: -k <KEY>, --key <KEY>
 

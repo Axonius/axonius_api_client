@@ -1,16 +1,13 @@
 .. include:: /main/.special.rst
 
-devices count
+devices/users saved-query get
 ###############################################
 
 Examples
 ===============================================
 
-Options
-===============================================
-
 Help Page
 ===============================================
 
-.. click:: axonius_api_client.cli.grp_objects.cmd_count:cmd
-   :prog: axonshell devices count
+.. click:: axonius_api_client.cli.grp_saved_query.cmd_get:cmd
+   :prog: axonshell devices/users saved-query get

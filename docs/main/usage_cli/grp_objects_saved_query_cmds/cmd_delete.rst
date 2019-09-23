@@ -1,16 +1,13 @@
 .. include:: /main/.special.rst
 
-users labels add
+devices/users saved-query delete
 ###############################################
 
 Examples
 ===============================================
 
-Options
-===============================================
-
 Help Page
 ===============================================
 
-.. click:: axonius_api_client.cli.grp_labels.cmd_add:cmd
-   :prog: axonshell users labels add
+.. click:: axonius_api_client.cli.grp_saved_query.cmd_delete:cmd
+   :prog: axonshell devices/users saved-query delete

@@ -1,16 +1,13 @@
 .. include:: /main/.special.rst
 
-devices labels add
+devices/users saved-query add
 ###############################################
 
 Examples
 ===============================================
 
-Options
-===============================================
-
 Help Page
 ===============================================
 
-.. click:: axonius_api_client.cli.grp_labels.cmd_add:cmd
-   :prog: axonshell devices labels add
+.. click:: axonius_api_client.cli.grp_saved_query.cmd_add:cmd
+   :prog: axonshell devices/users saved-query add

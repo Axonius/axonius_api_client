@@ -1,16 +1,13 @@
 .. include:: /main/.special.rst
 
-users saved-query get
+users get-by-username
 ###############################################
 
 Examples
 ===============================================
 
-Options
-===============================================
-
 Help Page
 ===============================================
 
-.. click:: axonius_api_client.cli.grp_saved_query.cmd_get:cmd
-   :prog: axonshell users saved-query get
+.. click:: axonius_api_client.cli.grp_objects.cmd_get_by_username:cmd
+   :prog: axonshell users get-by-username

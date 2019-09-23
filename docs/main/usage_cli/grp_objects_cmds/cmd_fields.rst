@@ -1,16 +1,13 @@
 .. include:: /main/.special.rst
 
-devices labels get
+devices/users fields
 ###############################################
 
 Examples
 ===============================================
 
-Options
-===============================================
-
 Help Page
 ===============================================
 
-.. click:: axonius_api_client.cli.grp_labels.cmd_get:cmd
-   :prog: axonshell devices labels get
+.. click:: axonius_api_client.cli.grp_objects.cmd_fields:cmd
+   :prog: axonshell devices/users fields

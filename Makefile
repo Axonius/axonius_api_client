@@ -85,6 +85,9 @@ docs_linkcheck:
 docs_clean:
 	rm -rf docs/_build
 
+docs_dumprefs:
+	pipenv run python -m sphinx.ext.intersphinx docs/_build/html/objects.inv
+
 git_check:
 	@git diff-index --quiet HEAD && echo "*** REPO IS CLEAN" || (echo "!!! REPO IS DIRTY"; false)
 	@git tag | grep "$(VERSION)" && echo "*** FOUND TAG: $(VERSION)" || (echo "!!! NO TAG FOUND: $(VERSION)"; false)

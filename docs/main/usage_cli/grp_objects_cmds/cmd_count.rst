@@ -1,16 +1,13 @@
 .. include:: /main/.special.rst
 
-users get
+devices/users count
 ###############################################
 
 Examples
 ===============================================
 
-Options
-===============================================
-
 Help Page
 ===============================================
 
-.. click:: axonius_api_client.cli.grp_objects.cmd_get:cmd
-   :prog: axonshell users get
+.. click:: axonius_api_client.cli.grp_objects.cmd_count:cmd
+   :prog: axonshell users/devices count

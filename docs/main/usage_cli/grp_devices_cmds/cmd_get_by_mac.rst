@@ -1,16 +1,13 @@
 .. include:: /main/.special.rst
 
-devices get-by-subnet
+devices get-by-mac
 ###############################################
 
 Examples
 ===============================================
 
-Options
-===============================================
-
 Help Page
 ===============================================
 
-.. click:: axonius_api_client.cli.grp_objects.cmd_get_by_subnet:cmd
-   :prog: axonshell devices get-by-subnet
+.. click:: axonius_api_client.cli.grp_objects.cmd_get_by_mac:cmd
+   :prog: axonshell devices get-by-mac

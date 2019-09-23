@@ -1,16 +1,13 @@
 .. include:: /main/.special.rst
 
-users get-by-mac
+devices/users labels add
 ###############################################
 
 Examples
 ===============================================
 
-Options
-===============================================
-
 Help Page
 ===============================================
 
-.. click:: axonius_api_client.cli.grp_objects.cmd_get_by_mac:cmd
-   :prog: axonshell users get-by-mac
+.. click:: axonius_api_client.cli.grp_labels.cmd_add:cmd
+   :prog: axonshell devices/users labels add

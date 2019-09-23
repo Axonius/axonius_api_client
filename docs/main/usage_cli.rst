@@ -3,21 +3,29 @@
 CLI Usage
 ###############################################
 
-Instructions
+Common Options
 ==============================================
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
 
-   usage_cli/required_options.rst
-   usage_cli/aliases.rst
-   usage_cli/autocomplete.rst
+   usage_cli/common_options/connection.rst
+   usage_cli/common_options/export.rst
+
+Features
+==============================================
+
+.. toctree::
+   :maxdepth: 1
+
+   usage_cli/features/aliases.rst
+   usage_cli/features/autocomplete.rst
 
 Groups
 ==============================================
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
    :glob:
 
    usage_cli/root.rst
@@ -27,7 +35,7 @@ Commands
 ==============================================
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
    :glob:
 
    usage_cli/grp_*_cmds/cmd_*
