@@ -2,8 +2,6 @@
 """Parent exception and warnings for this package."""
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-from . import tools
-
 
 class AxonError(Exception):
     """Parent exception for all package errors."""
@@ -67,6 +65,8 @@ class CnxDeleteForce(CnxError):
                 Defaults to: None.
 
         """
+        from . import tools
+
         msg = [
             "Connection info: {cnxinfo}",
             "Will not delete connection unless force=True!!",
@@ -80,6 +80,8 @@ class CnxDeleteFailed(CnxError):
 
     def __init__(self, cnxinfo, response):
         """Constructor."""
+        from . import tools
+
         self.cnxinfo = cnxinfo
         self.response = response
 
@@ -100,6 +102,8 @@ class CnxDeleteWarning(CnxWarning):
 
     def __init__(self, cnxinfo, sleep):
         """Constructor."""
+        from . import tools
+
         msg = ["Connection info: {cnxinfo}", "Will delete connection in {s} seconds!!"]
         msg = tools.join_cr(obj=msg).format(s=sleep, cnxinfo=cnxinfo)
 
@@ -111,6 +115,8 @@ class CnxDeleteFailedWarning(CnxWarning):
 
     def __init__(self, cnxinfo, response):
         """Constructor."""
+        from . import tools
+
         self.cnxinfo = cnxinfo
         self.response = response
 
@@ -141,6 +147,8 @@ class CnxRefetchFailure(CnxError):
                 Defaults to: None.
 
         """
+        from . import tools
+
         self.response = response
         self.adapter = adapter
         self.node = node
@@ -190,6 +198,8 @@ class CnxConnectFailure(CnxError):
                 Defaults to: None.
 
         """
+        from . import tools
+
         self.response = response
         self.adapter = adapter
         self.node = node
@@ -207,6 +217,8 @@ class CnxSettingError(CnxError):
 
     def __init__(self, name, value, schema, adapter, error):
         """Pass."""
+        from . import tools
+
         self.name = name
         self.value = value
         self.schema = schema
@@ -252,6 +264,8 @@ class CnxSettingFileMissing(CnxSettingError):
 
     def __init__(self, name, value, schema, adapter):
         """Pass."""
+        from . import tools
+
         examples = [
             {
                 name: {
@@ -351,6 +365,8 @@ class ResponseError(ApiError):
                 Defaults to: True.
 
         """
+        from . import tools
+
         self.response = response
         """:obj:`requests.Response`: Response error was thrown for."""
 
@@ -434,6 +450,8 @@ class JsonError(ResponseError):
                 Defaults to: None.
 
         """
+        from . import tools
+
         if isinstance(data, dict):
             data = ["{}: {}".format(k, v) for k, v in data.items()]
             data = tools.join_cr(obj=data, indent="    ")
@@ -457,9 +475,13 @@ class ValueNotFound(ApiError):
         known_msg=None,
         exc=None,
         match_type="equals",
+        # fmt: off
         **kwargs
+        # fmt: on
     ):
         """Constructor."""
+        from . import tools
+
         self.value = value
         self.known = known
         self.kwargs = kwargs

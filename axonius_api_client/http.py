@@ -34,7 +34,9 @@ class Http(object):
         https_proxy=None,
         save_last=True,
         save_history=False,
+        # fmt: off
         **kwargs
+        # fmt: on
     ):
         """Constructor.
 
@@ -196,7 +198,9 @@ class Http(object):
         headers=None,
         json=None,
         files=None,
+        # fmt: off
         **kwargs
+        # fmt: on
     ):
         """Create, prepare, and then send a request using :attr:`session`.
 

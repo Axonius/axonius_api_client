@@ -71,7 +71,11 @@ def write_hist_file():
 
 def register_readline(shellvars=None):
     """Pass."""
-    import readline
+    try:
+        import readline
+    except Exception:  # pragma: no cover
+        import pyreadline as readline
+
     import rlcompleter
 
     shellvars = shellvars or {}

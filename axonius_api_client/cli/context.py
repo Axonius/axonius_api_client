@@ -154,7 +154,9 @@ class Context(object):
         export_overwrite,
         ctx=None,
         reason=cli_constants.REASON,
-        **kwargs,
+        # fmt: off
+        **kwargs
+        # fmt: on
     ):
         """Pass."""
         if export_format not in formatters:
