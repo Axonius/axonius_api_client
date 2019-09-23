@@ -59,14 +59,6 @@ from .. import cli_constants, grp_cnx, options, serial
     is_flag=True,
     show_envvar=True,
 )
-@click.option(
-    "--cnx-count",
-    "-c",
-    "cnx_count",
-    help="Only include adapters with this number of connections.",
-    type=click.INT,
-    show_envvar=True,
-)
 @click.pass_context
 def cmd(
     ctx,
@@ -82,7 +74,6 @@ def cmd(
     cnx_working,
     cnx_broken,
     cnx_none,
-    cnx_count,
     include_settings,
 ):
     """Get adapters based on name, node, cnx status, and cnx count."""
@@ -140,23 +131,9 @@ def cmd(
             known_cb_key="adapters",
         )
 
-        by_cnx_count = client.adapters.filter_by_cnx_count(
-            adapters=by_names, value=cnx_count
-        )
-        grp_cnx.grp_common.check_empty(
-            ctx=ctx,
-            this_data=by_cnx_count,
-            prev_data=by_statuses,
-            value_type="connection count",
-            value=cnx_count,
-            objtype="adapters",
-            known_cb=client.adapters.get_known,
-            known_cb_key="adapters",
-        )
-
     formatters = {"json": serial.to_json, "csv": to_csv}
     ctx.obj.handle_export(
-        raw_data=by_cnx_count,
+        raw_data=by_statuses,
         formatters=formatters,
         export_format=export_format,
         export_file=export_file,
