@@ -7,7 +7,7 @@ import re
 import pytest
 
 import axonius_api_client as axonapi
-from axonius_api_client import constants, exceptions, tools
+from axonius_api_client import exceptions, tools
 
 from .. import utils
 
@@ -264,13 +264,12 @@ class TestBoth(Base):
         assert isinstance(data, dict)
         assert isinstance(data["assets"], tools.LIST)
 
-        total = data["page"]["totalResources"]
-
-        # FUTURE: overcome use_post ignoring limit
-        if total < constants.MAX_PAGE_SIZE:
-            assert len(data["assets"]) == total
-        else:
-            assert len(data["assets"]) == constants.MAX_PAGE_SIZE
+        # 2.10 fixed use_post being ignored
+        # total = data["page"]["totalResources"]
+        # if total < constants.MAX_PAGE_SIZE:
+        #     assert len(data["assets"]) == total
+        # else:
+        #     assert len(data["assets"]) == constants.MAX_PAGE_SIZE
 
         response = apiobj._auth._http._LAST_RESPONSE
         assert response.request.method == "POST"
@@ -898,6 +897,11 @@ class TestSavedQuery(Base):
                 nesteds = qexpr.pop("nested", [])
                 fieldtype = qexpr.pop("fieldType", "")
 
+                # new in 2.10, unsure of
+                # if not None, dict with keys: clearAll, selectAll, selectedValues
+                filtered_adapters = qexpr.pop("filteredAdapters", {})
+
+                assert isinstance(filtered_adapters, dict) or filtered_adapters is None
                 assert isinstance(compop, tools.STR)
                 assert isinstance(field, tools.STR)
                 assert isinstance(idx, tools.INT)
@@ -913,6 +917,13 @@ class TestSavedQuery(Base):
                 for nested in nesteds:
                     assert isinstance(nested, dict)
 
+                    # new in 2.10, unsure of
+                    # if not None, dict with keys: clearAll, selectAll, selectedValues
+                    nfiltered_adapters = nested.pop("filteredAdapters", {})
+                    assert (
+                        isinstance(nfiltered_adapters, dict)
+                        or nfiltered_adapters is None
+                    )
                     ncondition = nested.pop("condition")
                     assert isinstance(ncondition, tools.STR)
 
