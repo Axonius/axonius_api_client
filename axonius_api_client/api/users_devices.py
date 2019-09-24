@@ -263,6 +263,7 @@ class UserDeviceMixin(mixins.ModelUserDevice, mixins.Mixins):
         return self.get(
             query=sq["view"]["query"]["filter"],
             fields={"manual": sq["view"]["fields"]},
+            fields_default=False,
             max_rows=max_rows,
             max_pages=max_pages,
             page_size=page_size,
@@ -1186,7 +1187,11 @@ class Fields(mixins.Child):
 
     def validate(self, fields=None, default=True, error=True, all_fields=None):
         """Validate provided fields."""
-        fields = tools.listify(fields)
+        # 2.0.5: add manual override for fields from get_by_saved_query
+        if isinstance(fields, dict) and "manual" in fields:
+            return tools.listify(obj=fields["manual"])
+
+        fields = tools.listify(obj=fields)
         all_fields = all_fields or self.get()
 
         if default:

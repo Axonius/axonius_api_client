@@ -323,7 +323,11 @@ class TestBoth(Base):
         sqs = apiobj.saved_query.get()
         sq = sqs[0]
         sq_name = sq["name"]
+        sq_fields = sq["view"]["fields"]
         data = apiobj.get_by_saved_query(name=sq_name, max_rows=1)
+        last_get = apiobj._LAST_GET
+        # 2.0.5: make sure the fields in sq are the ones that got supplied to the get
+        assert last_get["fields"] == ",".join(sq_fields)
         assert isinstance(data, tools.LIST)
 
     def test_get_by_field_value(self, apiobj):
