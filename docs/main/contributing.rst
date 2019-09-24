@@ -44,11 +44,11 @@ All patches should be submitted as pull requests on the `GitHub project`_.
 
 .. code-block:: shell
 
-    $ isort -rc -y axonius_api_client setup.py axonshell*.py
-    $ black axonius_api_client setup.py axonshell*.py
-    $ pydocstyle axonius_api_client setup.py axonshell*.py
-    $ flake8 --max-line-length 89 axonius_api_client setup.py axonshell*.py
-    $ bandit --skip B101 -r axonius_api_client
+   $ isort -rc -y axonius_api_client setup.py axonshell*.py
+   $ black axonius_api_client setup.py axonshell*.py
+   $ pydocstyle axonius_api_client setup.py axonshell*.py
+   $ flake8 --max-line-length 89 axonius_api_client setup.py axonshell*.py
+   $ bandit --skip B101 -r axonius_api_client
 
 .. _testing-suite:
 
@@ -57,28 +57,34 @@ Testing Suite
 
 `axonius-api-client` uses `pytest`_ as it's test suite.
 
-To run all tests, create a .env file with the connection information:
+To run the tests, create a .env file with the connection information:
 
 .. code-block:: shell
 
-    $ echo 'AX_URL=x' >> .env
-    $ echo 'AX_KEY=x' >> .env
-    $ echo 'AX_SECRET=x' >> .env
+   $ echo 'AX_URL=x' >> .env
+   $ echo 'AX_KEY=x' >> .env
+   $ echo 'AX_SECRET=x' >> .env
 
-Then run pytest to run the full test suite and generate test coverage in html format
+You can also supply the connection information as arguments to pytest ala:
+
+.. code-block:: shell
+
+   $ pytest --ax-url=x --ax-key=x --ax-secret=x ...
+
+Then run the full test suite and generate test coverage in html format
 to `cov_html/index.html`:
 
 .. code-block:: shell
 
-    $ pytest \
-      -ra \
-      --verbose \
-      --cov-config=.coveragerc \
-      --cov-report=html:cov_html \
-      --cov=axonius_api_client \
-      --showlocals  \
-      --exitfirst \
-      axonius_api_client/tests
+   $ pytest \
+     -ra \
+     --verbose \
+     --cov-config=.coveragerc \
+     --cov-report=html:cov_html \
+     --cov=axonius_api_client \
+     --showlocals  \
+     --exitfirst \
+     axonius_api_client/tests
 
 Supported Python versions
 ----------------------------------------------------------
