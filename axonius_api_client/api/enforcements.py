@@ -346,7 +346,8 @@ class Enforcements(mixins.Model, mixins.Mixins):
                 self._log.debug(msg)
                 break
 
-            if max_pages and page_num >= max_pages:
+            # add tests later once out of beta
+            if max_pages and page_num >= max_pages:  # pragma: no cover
                 msg = "Stopped fetch loop, hit max_pages={mp}"
                 msg = msg.format(mp=max_pages)
                 self._log.debug(msg)
@@ -407,7 +408,8 @@ class Enforcements(mixins.Model, mixins.Mixins):
             value = tools.strip_left(obj=value, fix="NOT:").strip()
             not_flag = "not "
 
-        if value.startswith("RE:"):
+        # add tests later once out of beta
+        if value.startswith("RE:"):  # pragma: no cover
             value = tools.strip_left(obj=value, fix="RE:").strip()
             query = '{not_flag}name == regex("{value}", "i")'
         else:

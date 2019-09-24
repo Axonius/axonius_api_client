@@ -13,6 +13,12 @@ It provides:
 * A fully modeled :doc:`python API library <main/usage_api>` that makes using
   the Axonius REST API easy.
 
+Resources:
+
+* `Documentation`_
+* `PyPi package listing`_
+* `GitHub repository`_
+
 .. note::
 
    This documentation is still in the midst of being re-worked to match the 2.0 release.
@@ -39,6 +45,9 @@ Indices and tables
 * :ref:`search`
 
 .. _Axonius: https://www.axonius.com
+.. _Documentation: https://axonius-api-client.readthedocs.io/
+.. _GitHub repository: https://github.com/Axonius/axonius_api_client
+.. _PyPi package listing: https://pypi.org/project/axonius-api-client/
 .. |Downloads| image:: https://pepy.tech/badge/axonius-api-client
    :target: https://pepy.tech/project/axonius-api-client
 .. |MIT license| image:: https://img.shields.io/badge/License-MIT-blue.svg

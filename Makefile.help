@@ -14,6 +14,10 @@ docs_dev                run docs/make html and only rebuild changed docs
 docs_coverage           run docs/make coverage
 docs_linkcheck          run docs/make linkcheck
 docs_open               open the html docs in a browser
+docs_apigen             install the latest version of sphinx into tmp folder and run
+                        sphinx-apidoc with custom templates to generate the API reference
+                        docs
+docs_dumprefs           dump all of the sphinx targets found in objects.inv
 docs_clean              make pipenv_install_docs, run docs/make clean
 
 # git fun
@@ -26,18 +30,20 @@ pkg_publish             make lint, make pkg_build, make git_check, publish the p
 pkg_clean               clean up build folders/files
 
 # testing
-lint                    run black, isort, pydocstyle, flake8, and bandit
+lint                    run isort, black, pydocstyle, flake8, and bandit
 test                    run pytest with coverage reports
-test_dev                run pytest with logging at debug
+test_dev                run pytest with no coverage reports and resume from last failure
 test_cov_open           open the test coverage html docs in a browser
 test_clean              clean up test folders/files
 
 # clean up
 files_clean             clean up a bunch of files
-clean                   make files_clean, make pkg_clean, make test_clean, make docs_clean, make pipenv_clean
+clean                   make files_clean, make pkg_clean, make test_clean,
+                        make docs_clean, make pipenv_clean
 
 # other
 help                    this...
 
 # call me first
-init                    make pip_install_tools, make clean, make py_env, make pipenv_init, make pipenv_install_*
+init                    make pip_install_tools, make clean, make py_env,
+                        make pipenv_init, make pipenv_install_*
