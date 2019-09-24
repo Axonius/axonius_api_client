@@ -6,8 +6,6 @@ adapters cnx check
 Input feeds
 ===============================================
 
-See :ref:`rows_option` for examples of working with input feeds.
-
 The input to this command as --rows must be from one of these commands:
 
 * :doc:`../grp_adapters_cmds/cmd_get`: Supplying input from this command will check ALL of the connections for ALL of the adapters returned from this command.
@@ -19,6 +17,10 @@ much sense to use because a check is already performed by the API:
 * :doc:`../grp_cnx_cmds/cmd_add`:
 * :doc:`../grp_cnx_cmds/cmd_check`:
 * :doc:`../grp_cnx_cmds/cmd_discover`
+
+.. seealso::
+
+   :ref:`rows_option` for examples of working with input feeds.
 
 Output feeds
 ===============================================
