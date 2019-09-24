@@ -43,7 +43,7 @@ pyenv_init:
 
 lint:
 	pipenv run isort -rc -y $(PACKAGE) setup.py axonshell*.py
-	pipenv run which black && pipenv run black $(PACKAGE) setup.py axonshell*.py
+	pipenv run pipenv run black $(PACKAGE) setup.py axonshell*.py
 	pipenv run pydocstyle $(PACKAGE) setup.py axonshell*.py
 	pipenv run flake8 --max-line-length 89 $(PACKAGE) setup.py axonshell*.py
 	pipenv run bandit --skip B101 -r $(PACKAGE)
@@ -52,7 +52,7 @@ test:
 	pipenv run pytest -ra --verbose --junitxml=junit-report.xml --cov-config=.coveragerc --cov-report xml --cov-report=html:cov_html --cov=$(PACKAGE) --showlocals  --exitfirst $(PACKAGE)/tests
 
 test_dev:
-	pipenv run pytest -vv --log-cli-level=DEBUG --showlocals --exitfirst $(PACKAGE)/tests
+	pipenv run pytest -vv --showlocals --exitfirst --last-failed $(PACKAGE)/tests
 
 test_cov_open:
 	open cov_html/index.html
