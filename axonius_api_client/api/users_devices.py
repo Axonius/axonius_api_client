@@ -38,7 +38,6 @@ class UserDeviceMixin(mixins.ModelUserDevice, mixins.Mixins):
         else:
             return self._request(method="get", path=self._router.count, params=params)
 
-    # FUTURE: BR for use_post, defaults to limit == 2000
     def _get(self, query=None, fields=None, row_start=0, page_size=0, use_post=False):
         """Get a page for a given query.
 
