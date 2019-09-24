@@ -101,7 +101,7 @@ pkg_publish:
 	# FUTURE: add check that only master branch can publish / git tag
 	$(MAKE) pkg_build
 	$(MAKE) git_check
-# 	pipenv run twine upload dist/*
+	pipenv run twine upload dist/*
 
 pkg_build:
 	$(MAKE) pkg_clean
