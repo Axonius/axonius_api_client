@@ -9,7 +9,7 @@ if __name__ == "__main__":
     import axonius_api_client as axonapi
 
     tools = axonapi.tools
-    axonapi.cli.context.load_dotenv()
+    axonapi.cli.cli_constants.load_dotenv()
 
     AX_URL = os.environ["AX_URL"]
     AX_KEY = os.environ["AX_KEY"]
@@ -29,5 +29,8 @@ if __name__ == "__main__":
         log_console=True,
     )
 
-    with axonapi.cli.context.exc_wrap(wraperror=True):
-        ctx.start()
+    ctx.start()
+
+    devices = ctx.devices
+    users = ctx.users
+    adapters = ctx.adapters

@@ -1,35 +1,35 @@
 .. include:: /main/.special.rst
 
-|MIT license|
-|made-with-python|
-|code-black|
-|Downloads|
+|MIT license| |made-with-python| |PyPi| |github| |doc-status| |Downloads|
 
 Axonius API Client
 ##################################################################
 
-This is a python package that provides an API client for `Axonius`_.
+axonius-api-client is an API client for `Axonius`_. You can :doc:`Install it <main/install>` today!
+It provides:
 
-:doc:`Installation <main/install>` is simple using a number of methods.
+* A powerful :doc:`command line interface <main/usage_cli>` that exposes most of the
+  functionality of the underlying python library.
+* A fully modeled :doc:`python API library <main/usage_api>` that makes using
+  the Axonius REST API easy.
 
-Usage and examples are available for the :doc:`command line interface <main/usage_cli>` and the :doc:`Python API <main/usage_api>`.
+.. note::
+
+   This documentation is still in the midst of being re-worked to match the 2.0 release.
+   Additional usage examples and other updates should come just about every day.
 
 Table of Contents
 ###############################################
 
 .. toctree::
-   :maxdepth: 4
+   :maxdepth: 2
    :numbered:
 
    main/install.rst
    main/usage_cli.rst
    main/usage_api.rst
-   main/support.rst
+   main/contributing.rst
    main/releases.rst
-
-.. todo::
-
-   Finish API reference docstrings
 
 Indices and tables
 ###############################################
@@ -45,5 +45,12 @@ Indices and tables
    :target: https://lbesson.mit-license.org/
 .. |made-with-python| image:: https://img.shields.io/badge/Made%20with-Python-1f425f.svg
    :target: https://www.python.org/
-.. |code-black| image:: https://img.shields.io/badge/code%20style-black-000000.svg
-   :target: https://github.com/python/black
+.. |PyPi| image:: https://badge.fury.io/py/axonius-api-client.svg
+   :target: https://pypi.org/project/axonius-api-client/
+   :alt: PyPi listing
+.. |github| image:: https://badge.fury.io/gh/Axonius%2Faxonius_api_client.svg
+   :target: https://github.com/Axonius/axonius_api_client
+   :alt: GitHub repository
+.. |doc-status| image:: https://readthedocs.org/projects/axonius-api-client/badge/?version=latest
+   :target: https://axonius-api-client.readthedocs.io/en/latest/?badge=latest
+   :alt: Documentation Status
