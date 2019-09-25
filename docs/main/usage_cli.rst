@@ -26,7 +26,7 @@ CLI Features
 
    usage_cli/features/*
 
-CLI Groups
+CLI Command Groups
 ==============================================
 
 .. toctree::
