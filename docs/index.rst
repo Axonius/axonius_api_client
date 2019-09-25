@@ -32,6 +32,7 @@ Table of Contents
    :numbered:
 
    main/install.rst
+   main/axtokens.rst
    main/usage_cli.rst
    main/usage_api.rst
    main/contributing.rst

@@ -13,7 +13,9 @@ Install the package
 
    $ pip install axonius-api-client
 
-See :ref:`Installation` for more details.
+.. seealso::
+
+   :ref:`Installation` for more details.
 
 Setup connection information
 ----------------------------------------------
@@ -25,7 +27,11 @@ Setup connection information
     $ echo "AX_SECRET=x" >> .env
     $ chmod 600 .env
 
-See :ref:`connection_options` for more details.
+.. seealso::
+
+   :ref:`axtokens` to get the values for AX_KEY and AX_SECRET.
+
+   :ref:`connection_options` for more details.
 
 Use the axonshell CLI
 ----------------------------------------------
@@ -58,7 +64,11 @@ Also include the columns for AWS device type and OS Type:
      --field aws:aws_device_type \
      --field os.type
 
-See :ref:`main/usage_cli:cli commands` for all of the available commands and :ref:`main/usage_cli:cli groups` for all of the command groups.
+.. seealso::
+
+   :ref:`main/usage_cli:cli commands` for the list of all commands across all command groups.
+
+   :ref:`main/usage_cli:cli groups` for the list of all command groups.
 
 CLI Common Options
 ==============================================

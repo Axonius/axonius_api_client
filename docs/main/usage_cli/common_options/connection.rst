@@ -32,6 +32,10 @@ instance of Axonius:
 
    The API secret of an Axonius user supplied as command line arguments.
 
+.. seealso::
+
+   :ref:`axtokens` to get the values for AX_KEY and AX_SECRET.
+
 Using .env
 ===============================================
 
