@@ -70,5 +70,5 @@ Also include the columns for AWS device type and OS Type:
 
    :ref:`main/usage_cli:cli commands` for the list of all commands across all command groups.
 
-   :ref:`main/usage_cli:cli groups` for the list of all command groups.
+   :ref:`main/usage_cli:cli command groups` for the list of all command groups.
 
