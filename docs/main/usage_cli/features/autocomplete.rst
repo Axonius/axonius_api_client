@@ -1,6 +1,6 @@
 .. include:: /main/.special.rst
 
-Setting Up Autocomplete
+Autocompletion
 ###############################################
 
 Since axonshell is built using `click`_, there is automatic support for bash and zsh `autocompletion`_.
