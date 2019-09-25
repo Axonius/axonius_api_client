@@ -61,6 +61,10 @@ Examples
 No filters, json and csv exports
 -----------------------------------------------
 
+.. code:: shell
+
+   $ axonshell adapters get
+
 .. raw:: html
 
     <script id="asciicast-270350" src="https://asciinema.org/a/270350.js" async></script>
@@ -68,12 +72,32 @@ No filters, json and csv exports
 Filtering on adapter name and/or node name
 -----------------------------------------------
 
+.. code:: shell
+
+   $ # this will fail and print a list of valid adapters and nodes
+   $ axonshell adapters get --name awsx
+
+   $ # this will fail and print a list of valid adapters and nodes
+   $ axonshell adapters get --name aws --node x
+
+   $ # these will both work because aws is a valid adapter on master node
+   $ axonshell adapters get --name aws --node master
+   $ axonshell adapters get --name aws
+
 .. raw:: html
 
    <script id="asciicast-270351" src="https://asciinema.org/a/270351.js" async></script>
 
 Filtering on adapter status
 -----------------------------------------------
+
+.. code:: shell
+
+   $ # filter out adapters with no connections
+   $ axonshell adapters get --name awsx --no-cnx-none
+
+   $ # only show adapters with broken connections
+   $ axonshell adapters get --name awsx --no-cnx-none --no-cnx-working
 
 .. raw:: html
 

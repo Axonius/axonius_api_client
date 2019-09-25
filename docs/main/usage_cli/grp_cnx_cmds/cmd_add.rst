@@ -30,6 +30,10 @@ will prompt for the value of each setting for connections of the supplied adapte
 
 This example adds a new connection for the CSV adapter.
 
+.. code:: shell
+
+   $ axonshell adapters cnx add --adapter csv --export-file cnxadded.json
+
 .. raw:: html
 
    <script id="asciicast-270375" src="https://asciinema.org/a/270375.js" async></script>
@@ -49,6 +53,14 @@ We can solve for that by supplying those items on the command line using
 "-c / --config setting=value".
 
 We also supply "-npo / --no-prompt-opt" to not be prompted for all of the other settings. We could use "-sk / --skip setting_name_regex" instead to skip specific settings.
+
+.. code:: shell
+
+   $ axonshell adapters cnx add --adapter csv \
+     --export-file cnxadded.json \
+     --config user_id=dvcs_from_axonshell \
+     --config csv=dvc.csv \
+     --no-prompt-opt
 
 .. raw:: html
 
