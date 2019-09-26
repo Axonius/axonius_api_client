@@ -1,6 +1,8 @@
 .. include:: /main/.special.rst
 
-JSON data structure
+.. _cnx_structure:
+
+Connecton Metadata JSON Data Structure
 ==============================================
 
 The JSON format returns a list of dictionaries.
@@ -42,3 +44,8 @@ and has the keys:
   the last time this connection was updated and saved.
 * error: If not empty, the error the connection had when connection to the product
   associated with this connections adapter.
+
+.. seealso::
+
+   :ref:`adapter_structure`: The JSON structure of adapter metadata that holds
+   connection metadata.

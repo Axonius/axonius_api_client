@@ -1,6 +1,8 @@
 .. include:: /main/.special.rst
 
-JSON data structure
+.. _adapter_structure:
+
+Adapter Metadata JSON Data Structure
 ###############################################
 
 The JSON format returns a list of dictionaries.
@@ -27,9 +29,14 @@ Each dictionary represents an instance of an adapter on a node and has the keys:
 * cnx_count: The count of all connections for this adapter.
 * cnx_ok: The count of all working connections for this adapter.
 * cnx_bad: The count of all broken connections for this adapter.
-* cnx: A list of dictionaries for all connections of this adapter. (TODO cnx ref for cnx metadata)
-* cnx_ok: A list of dictionaries for all working connections of this adapter. (TODO cnx ref for cnx metadata)
-* cnx_bad: A list of dictionaries for all broken connections of this adapter. (TODO cnx ref for cnx metadata)
+* cnx: A list of dictionaries for all connections of this adapter.
+* cnx_ok: A list of dictionaries for all working connections of this adapter.
+* cnx_bad: A list of dictionaries for all broken connections of this adapter.
 * cnx_settings: A dictionary describing each of the settings that can be supplied when creating a new connection for this adapter.
 * settings: A dictionary showing the metadata and values for each adapter specific setting, if the adapter has specific settings under Advanced Settings in the GUI.
 * adv_settings: A dictionary showing the metadata and values for each setting in Advanced Settings in the GUI.
+
+.. seealso::
+
+   :ref:`cnx_structure`: The JSON structure of connection metadata found in `cnx`,
+   `cnx_bad`, and `cnx_ok`.
