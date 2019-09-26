@@ -8,6 +8,26 @@ CLI Usage
 
    usage_cli/quickstart.rst
 
+CLI Commands
+==============================================
+
+.. toctree::
+   :maxdepth: 1
+   :glob:
+
+   usage_cli/grp_*_cmds/cmd_*
+
+
+CLI Command Groups
+==============================================
+
+.. toctree::
+   :maxdepth: 1
+   :glob:
+
+   usage_cli/root.rst
+   usage_cli/grp_*
+
 CLI Common Options
 ==============================================
 
@@ -25,23 +45,3 @@ CLI Features
    :glob:
 
    usage_cli/features/*
-
-CLI Command Groups
-==============================================
-
-.. toctree::
-   :maxdepth: 1
-   :glob:
-
-   usage_cli/root.rst
-   usage_cli/grp_*
-
-CLI Commands
-==============================================
-
-.. toctree::
-   :maxdepth: 1
-   :glob:
-
-   usage_cli/grp_*_cmds/cmd_*
-
