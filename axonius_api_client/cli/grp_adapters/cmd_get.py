@@ -76,7 +76,7 @@ def cmd(
     cnx_none,
     include_settings,
 ):
-    """Get adapters based on name, node, cnx status, and cnx count."""
+    """Get adapters based on name, node, or cnx status."""
     statuses = []
 
     if cnx_working:

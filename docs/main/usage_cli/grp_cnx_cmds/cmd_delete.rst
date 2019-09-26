@@ -3,6 +3,8 @@
 adapters cnx delete
 ###############################################
 
+This command will delete a connection from an adapter on a node.
+
 Input feeds
 ===============================================
 
@@ -30,60 +32,11 @@ Common Options
 Examples
 ===============================================
 
-Delete with no options
---------------------------------------------------
+.. toctree::
+   :maxdepth: 1
+   :glob:
 
-This will throw an error because we didn't supply --force.
-
-.. code:: shell
-
-   $ # add a csv connection that we can delete
-   $ axonshell a c a -a csv -c user_id=dvcs_from_axonshell -c csv=/demo/dvc.csv -npo
-
-   $ axonshell adapters get --name csv | \
-     axonshell adapters cnx get --id dvcs_from_axonshell | \
-     axonshell adapters cnx delete
-
-.. raw:: html
-
-   <script id="asciicast-270864" src="https://asciinema.org/a/270864.js" async></script>
-
-Delete with --force
---------------------------------------------------
-
-This will delete a connection in --wait seconds (30 by default).
-
-.. code:: shell
-
-   $ # add a csv connection that we can delete
-   $ axonshell a c a -a csv -c user_id=dvcs_from_axonshell -c csv=/demo/dvc.csv -npo
-
-   $ axonshell adapters get --name csv | \
-     axonshell adapters cnx get --id dvcs_from_axonshell | \
-     axonshell adapters cnx delete --force
-
-
-.. raw:: html
-
-  <script id="asciicast-270865" src="https://asciinema.org/a/270865.js" async></script>
-
-Delete with --force --wait 0 --delete-entities
---------------------------------------------------
-
-This will delete a connection and all of its associated entities in 0 seconds.
-
-.. code:: shell
-
-   $ # add a csv connection that we can delete
-   $ axonshell a c a -a csv -c user_id=dvcs_from_axonshell -c csv=/demo/dvc.csv -npo
-
-   $ axonshell adapters get --name csv | \
-     axonshell adapters cnx get --id dvcs_from_axonshell | \
-     axonshell adapters cnx delete --force --wait 0 --delete-entities
-
-.. raw:: html
-
-   <script id="asciicast-270866" src="https://asciinema.org/a/270866.js" async></script>
+   cmd_delete_examples/*
 
 Help Page
 ===============================================
