@@ -3,7 +3,7 @@
 adapters cnx discover
 ###############################################
 
-This command will trigger a discover (aka fetch) for a connection.
+This command will trigger a discover (aka fetch) for a connection of an adapter on a node.
 
 Input feeds
 ===============================================
@@ -32,30 +32,11 @@ Common Options
 Examples
 ===============================================
 
-Discover all connections on an adapter
---------------------------------------------------
+.. toctree::
+   :maxdepth: 1
+   :glob:
 
-.. code:: shell
-
-   $ axonshell adapters get --name aws | \
-     axonshell adapters cnx discover --no-error
-
-.. raw:: html
-
-   <script id="asciicast-270868" src="https://asciinema.org/a/270868.js" async></script>
-
-Discover a single connection on an adapter
--------------------------------------------------
-
-.. code:: shell
-
-   $ axonshell adapters get --name aws | \
-     axonshell adapters cnx get --id ***REMOVED*** | \
-     axonshell adapters cnx discover --no-error
-
-.. raw:: html
-
-   <script id="asciicast-270870" src="https://asciinema.org/a/270870.js" async></script>
+   cmd_discover_examples/*
 
 Help Page
 ===============================================
