@@ -3,6 +3,9 @@
 adapters cnx check
 ###############################################
 
+This command will add a perform a connectivity test for a connection for an adapter on
+a node.
+
 Input feeds
 ===============================================
 
@@ -20,15 +23,6 @@ The input to this command as --rows must be from one of these commands:
    :doc:`../grp_cnx_cmds/cmd_get` for examples of filtering connections using
    `axonshell adapters get | axonshell adapters cnx get`.
 
-Output feeds
-===============================================
-
-The output from this command is able to be supplied as input to these commands:
-
-* :doc:`../grp_cnx_cmds/cmd_delete`
-* :doc:`../grp_cnx_cmds/cmd_discover`
-* :doc:`../grp_cnx_cmds/cmd_get`
-
 Common Options
 ===============================================
 
@@ -39,42 +33,11 @@ Common Options
 Examples
 ===============================================
 
-Check only working connections for the AWS adapter
---------------------------------------------------
+.. toctree::
+   :maxdepth: 1
+   :glob:
 
-This does the following:
-
-* Get the AWS adapter on the master node
-* Get only the working connections from the AWS adapter metadata
-* Check that the working connections can reach their endpoints.
-
-.. code:: shell
-
-   $ axonshell adapters get --name aws | \
-     axonshell adapters cnx get --no-broken | \
-     axonshell adapters cnx check -xf check.json
-
-.. raw:: html
-
-   <script id="asciicast-270380" src="https://asciinema.org/a/270380.js" async></script>
-
-Check all connections for the AWS adapter
---------------------------------------------------
-
-This does the following:
-
-* Get the AWS adapter on the master node
-* Check all of the connections listed in the AWS adapter metadata but do not
-  stop when a connection test fails.
-
-.. code:: shell
-
-   $ axonshell adapters get --name aws | \
-     axonshell adapters cnx check --no-error -xf check.json
-
-.. raw:: html
-
-   <script id="asciicast-270387" src="https://asciinema.org/a/270387.js" async></script>
+   cmd_check_examples/*
 
 Help Page
 ===============================================
