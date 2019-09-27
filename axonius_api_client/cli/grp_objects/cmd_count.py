@@ -12,9 +12,13 @@ from .. import cli_constants, options, serial
 @options.OPT_KEY
 @options.OPT_SECRET
 @options.OPT_QUERY
+@options.OPT_QUERY_FILE
 @click.pass_context
-def cmd(ctx, url, key, secret, query):
+def cmd(ctx, url, key, secret, query, query_file):
     """Get the count of assets from a query."""
+    if query_file:
+        query = query_file.read()
+
     client = ctx.obj.start_client(url=url, key=key, secret=secret)
 
     p_grp = ctx.parent.command.name
