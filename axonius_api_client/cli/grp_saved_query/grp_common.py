@@ -6,7 +6,7 @@ from ... import tools
 from .. import serial
 
 
-def to_csv(ctx, raw_data, **kwargs):
+def to_csv(ctx, raw_data, joiner="\n", **kwargs):
     """Pass."""
     rows = []
 
@@ -14,7 +14,7 @@ def to_csv(ctx, raw_data, **kwargs):
 
     for raw_row in tools.listify(raw_data, dictkeys=False):
         row = {
-            k: serial.join_cr(v, is_cell=True)
+            k: serial.join_cr(v, is_cell=True, joiner=joiner)
             for k, v in raw_row.items()
             if serial.is_los(v)
         }
@@ -28,8 +28,8 @@ def to_csv(ctx, raw_data, **kwargs):
         sort = view.get("sort", {})
 
         row["query"] = query.get("filter", None)
-        row["fields"] = serial.join_cr(fields, is_cell=True)
-        row["column_filters"] = serial.join_cr(colfilters, is_cell=True)
+        row["fields"] = serial.join_cr(fields, is_cell=True, joiner=joiner)
+        row["column_filters"] = serial.join_cr(colfilters, is_cell=True, joiner=joiner)
         row["sort_descending"] = format(sort.get("desc"))
         row["sort_field"] = sort.get("field")
 

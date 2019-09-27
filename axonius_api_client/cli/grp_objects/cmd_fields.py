@@ -17,6 +17,7 @@ from .. import cli_constants, options, serial
 @options.OPT_EXPORT_PATH
 @options.OPT_EXPORT_FORMAT
 @options.OPT_EXPORT_OVERWRITE
+@options.OPT_EXPORT_DELIM
 @click.option(
     "--adapter-re",
     "-ar",
@@ -45,6 +46,7 @@ def cmd(
     export_file,
     export_path,
     export_overwrite,
+    export_delim,
     adapter_re,
     field_re,
 ):
@@ -86,6 +88,7 @@ def cmd(
         export_file=export_file,
         export_path=export_path,
         export_overwrite=export_overwrite,
+        joiner=export_delim,
     )
 
 

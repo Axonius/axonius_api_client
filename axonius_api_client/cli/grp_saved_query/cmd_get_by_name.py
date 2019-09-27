@@ -16,6 +16,7 @@ from . import grp_common
 @options.OPT_EXPORT_PATH
 @options.OPT_EXPORT_FORMAT
 @options.OPT_EXPORT_OVERWRITE
+@options.OPT_EXPORT_DELIM
 @click.option(
     "--name",
     "-n",
@@ -34,6 +35,7 @@ def cmd(
     export_file,
     export_path,
     export_overwrite,
+    export_delim,
     name,
 ):
     """Get a saved query by name."""
@@ -54,4 +56,5 @@ def cmd(
         export_file=export_file,
         export_path=export_path,
         export_overwrite=export_overwrite,
+        joiner=export_delim,
     )

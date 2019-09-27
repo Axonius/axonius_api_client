@@ -78,6 +78,14 @@ OPT_EXPORT_OVERWRITE = click.option(
     is_flag=True,
     show_envvar=True,
 )
+OPT_EXPORT_DELIM = click.option(
+    "--export-delim",
+    "-xd",
+    "export_delim",
+    default="\n",
+    help="Change the cell delimiter for CSV format from the default of carriage return.",
+    show_envvar=True,
+)
 OPT_INCLUDE_SETTINGS = click.option(
     "--include-settings",
     "-is",

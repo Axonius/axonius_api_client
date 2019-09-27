@@ -17,6 +17,7 @@ from .. import cli_constants, options, serial
 @options.OPT_EXPORT_PATH
 @options.OPT_EXPORT_FORMAT
 @options.OPT_EXPORT_OVERWRITE
+@options.OPT_EXPORT_DELIM
 @options.OPT_MAX_ROWS
 @click.option(
     "--name",
@@ -35,6 +36,7 @@ def cmd(
     export_file,
     export_path,
     export_overwrite,
+    export_delim,
     name,
     max_rows,
 ):
@@ -56,4 +58,5 @@ def cmd(
         export_file=export_file,
         export_path=export_path,
         export_overwrite=export_overwrite,
+        joiner=export_delim,
     )
