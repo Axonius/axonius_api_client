@@ -15,6 +15,7 @@ from .. import cli_constants, options, serial
 @options.OPT_EXPORT_PATH
 @options.OPT_EXPORT_FORMAT
 @options.OPT_EXPORT_OVERWRITE
+@options.OPT_EXPORT_DELIM
 @options.OPT_QUERY
 @options.OPT_FIELDS
 @options.OPT_FIELDS_DEFAULT
@@ -29,6 +30,7 @@ def cmd(
     export_file,
     export_path,
     export_overwrite,
+    export_delim,
     query,
     fields,
     fields_default,
@@ -54,4 +56,5 @@ def cmd(
         export_file=export_file,
         export_path=export_path,
         export_overwrite=export_overwrite,
+        joiner=export_delim,
     )

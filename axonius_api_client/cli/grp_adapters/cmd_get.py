@@ -15,6 +15,7 @@ from .. import cli_constants, grp_cnx, options, serial
 @options.OPT_EXPORT_PATH
 @options.OPT_EXPORT_FORMAT
 @options.OPT_EXPORT_OVERWRITE
+@options.OPT_EXPORT_DELIM
 @options.OPT_INCLUDE_SETTINGS
 @click.option(
     "--name",
@@ -69,6 +70,7 @@ def cmd(
     export_file,
     export_path,
     export_overwrite,
+    export_delim,
     names,
     nodes,
     cnx_working,
@@ -139,11 +141,12 @@ def cmd(
         export_file=export_file,
         export_path=export_path,
         export_overwrite=export_overwrite,
+        joiner=export_delim,
         include_settings=include_settings,
     )
 
 
-def to_csv(ctx, raw_data, include_settings=True, **kwargs):
+def to_csv(ctx, raw_data, include_settings=True, joiner="\n", **kwargs):
     """Pass."""
     rows = []
 
@@ -169,14 +172,22 @@ def to_csv(ctx, raw_data, include_settings=True, **kwargs):
             ]
 
             row[cnx_tmpl(idx=idx, t="id")] = cnx["id"]
-            row[cnx_tmpl(idx=idx, t="status")] = serial.join_cr(status)
+            row[cnx_tmpl(idx=idx, t="status")] = serial.join_cr(
+                obj=status, joiner=joiner
+            )
 
             if include_settings:
-                row[cnx_tmpl(idx=idx, t="settings")] = serial.join_tv(cnx["config"])
+                row[cnx_tmpl(idx=idx, t="settings")] = serial.join_tv(
+                    obj=cnx["config"], joiner=joiner
+                )
 
         if include_settings:
-            row["adapter_settings"] = serial.join_tv(adapter["settings"])
-            row["advanced_settings"] = serial.join_tv(adapter["adv_settings"])
+            row["adapter_settings"] = serial.join_tv(
+                obj=adapter["settings"], joiner=joiner
+            )
+            row["advanced_settings"] = serial.join_tv(
+                obj=adapter["adv_settings"], joiner=joiner
+            )
 
         rows.append(row)
 
