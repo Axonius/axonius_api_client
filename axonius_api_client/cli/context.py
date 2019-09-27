@@ -83,7 +83,9 @@ class Context(object):
 
         full_path.touch(mode=0o600)
 
-        with full_path.open(mode="w", newline="") as fh:
+        data = data.encode("utf-8")
+
+        with full_path.open(mode="wb") as fh:
             fh.write(data)
 
         msg = "Exported file {p!r} {mode}!"
