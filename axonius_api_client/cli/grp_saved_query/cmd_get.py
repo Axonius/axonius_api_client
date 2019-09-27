@@ -16,6 +16,7 @@ from . import grp_common
 @options.OPT_EXPORT_PATH
 @options.OPT_EXPORT_FORMAT
 @options.OPT_EXPORT_OVERWRITE
+@options.OPT_EXPORT_DELIM
 @options.OPT_MAX_ROWS
 @click.pass_context
 def cmd(
@@ -27,6 +28,7 @@ def cmd(
     export_file,
     export_path,
     export_overwrite,
+    export_delim,
     max_rows,
 ):
     """Get saved queries."""
@@ -47,4 +49,5 @@ def cmd(
         export_file=export_file,
         export_path=export_path,
         export_overwrite=export_overwrite,
+        joiner=export_delim,
     )

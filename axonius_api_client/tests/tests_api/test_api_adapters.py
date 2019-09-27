@@ -5,6 +5,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import warnings
 
 import pytest
+import requests
 
 import axonius_api_client as axonapi
 from axonius_api_client import constants, exceptions, tools
@@ -389,13 +390,16 @@ class TestCnx(object):
             apiobj, csv_adapter, name="badwolf_private_add_check_delete"
         )
 
-        checked = apiobj.cnx._check(
+        response = apiobj.cnx._check(
             adapter_name=csv_adapter["name_raw"],
             node_id=csv_adapter["node_id"],
             config=config,
         )
 
-        assert isinstance(checked, dict)
+        assert isinstance(response, requests.Response)
+
+        checked = response.json()
+
         assert isinstance(checked["message"], tools.STR)
         assert checked["status"] == "error"
         assert checked["type"] == "NotImplementedError"
@@ -620,21 +624,19 @@ class TestCnx(object):
 
     def test_check_failure(self, apiobj):
         """Pass."""
-        cnxs = apiobj.cnx.get(adapter=None)
-        cnxs = apiobj.cnx.filter_by_status(cnxs=cnxs, value=False)
+        new_config = {
+            "domain": "https:/172.254.254.254:9999",
+            "username": "x",
+            "password": "x",
+            "verify_ssl": False,
+        }
 
-        if not cnxs:
-            reason = "No broken connections found!"
-            pytest.skip(reason)
+        cnx = apiobj.cnx.add(adapter="tanium", config=new_config, error=False)
 
-        for cnx in cnxs:
-            checked = apiobj.cnx.check(cnx=cnx, error=False)
+        with pytest.raises(exceptions.CnxConnectFailure):
+            apiobj.cnx.check(cnx=cnx, error=True)
 
-            if checked["response_had_error"]:
-                with pytest.raises(exceptions.CnxConnectFailure):
-                    apiobj.cnx.check(cnx=cnx, error=True)
-
-                return
+        apiobj.cnx.delete(cnx=cnx, force=True, warning=False, error=False, sleep=0)
 
     def test_add_delete_csv_str(self, apiobj):
         """Pass."""

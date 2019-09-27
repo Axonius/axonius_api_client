@@ -16,6 +16,7 @@ from . import grp_common
 @options.OPT_EXPORT_PATH
 @options.OPT_EXPORT_FORMAT
 @options.OPT_EXPORT_OVERWRITE
+@options.OPT_EXPORT_DELIM
 @options.OPT_INCLUDE_SETTINGS
 @options.OPT_NO_ERROR
 @click.option(
@@ -39,6 +40,7 @@ def cmd(
     export_file,
     export_path,
     export_overwrite,
+    export_delim,
     rows,
     error,
     include_settings,
@@ -77,6 +79,7 @@ def cmd(
         export_file=export_file,
         export_path=export_path,
         export_overwrite=export_overwrite,
+        joiner=export_delim,
         include_settings=include_settings,
     )
 

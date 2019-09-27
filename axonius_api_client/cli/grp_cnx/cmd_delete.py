@@ -16,6 +16,7 @@ from . import grp_common
 @options.OPT_EXPORT_PATH
 @options.OPT_EXPORT_FORMAT
 @options.OPT_EXPORT_OVERWRITE
+@options.OPT_EXPORT_DELIM
 @options.OPT_INCLUDE_SETTINGS
 @options.OPT_NO_ERROR
 @options.OPT_WAIT_DELETE
@@ -58,6 +59,7 @@ def cmd(
     export_file,
     export_path,
     export_overwrite,
+    export_delim,
     rows,
     delete_entities,
     wait,
@@ -113,6 +115,7 @@ def cmd(
         export_file=export_file,
         export_path=export_path,
         export_overwrite=export_overwrite,
+        joiner=export_delim,
         include_settings=include_settings,
     )
 
