@@ -46,3 +46,9 @@ the export format and output of the data returned:
    Overwrite -xf / --export-file if it exists.
 
    If a file exists and this flag is not supplied, the CLI will not overwrite the file and exit with an error.
+
+.. option:: -xd , --export-delim
+
+   When using -xt / --export-format ``csv``, change the default delimiter used for multi-value cells.
+
+   The default delimiter for multi-value cells is ``\n``.
