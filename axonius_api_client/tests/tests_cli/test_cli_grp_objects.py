@@ -13,6 +13,32 @@ from .. import utils
 class TestCmdCount(object):
     """Pass."""
 
+    def test_query_file(self, request, monkeypatch, cmd):
+        """Pass."""
+        runner = utils.load_clirunner(request, monkeypatch)
+
+        qf_contents = '(adapters == "aws_adapter")'
+        qf_file = "qf.txt"
+
+        args1 = [cmd, "count", "--query-file", qf_file]
+
+        with runner.isolated_filesystem():
+            with open(qf_file, "w") as f:
+                f.write(qf_contents)
+
+            result1 = runner.invoke(cli=cli.cli, args=args1)
+
+        exit_code1 = result1.exit_code
+        stdout1 = result1.stdout
+        stderr1 = result1.stderr
+
+        assert stdout1
+        assert stderr1
+        assert exit_code1 == 0
+
+        json1 = tools.json_load(result1.stdout)
+        assert isinstance(json1, tools.INT)
+
     def test_json(self, request, monkeypatch, cmd):
         """Pass."""
         runner = utils.load_clirunner(request, monkeypatch)
@@ -248,6 +274,41 @@ class TestCmdFields(object):
 @pytest.mark.parametrize("cmd", ["devices", "users"])
 class TestCmdGet(object):
     """Pass."""
+
+    def test_query_file(self, request, monkeypatch, cmd):
+        """Pass."""
+        runner = utils.load_clirunner(request, monkeypatch)
+
+        qf_contents = '(adapters == "aws_adapter")'
+        qf_file = "qf.txt"
+
+        args1 = [
+            cmd,
+            "get",
+            "--query-file",
+            qf_file,
+            "--export-format",
+            "json",
+            "--max-rows",
+            "1",
+        ]
+
+        with runner.isolated_filesystem():
+            with open(qf_file, "w") as f:
+                f.write(qf_contents)
+
+            result1 = runner.invoke(cli=cli.cli, args=args1)
+
+        exit_code1 = result1.exit_code
+        stdout1 = result1.stdout
+        stderr1 = result1.stderr
+
+        assert stdout1
+        assert stderr1
+        assert exit_code1 == 0
+
+        json1 = tools.json_load(stdout1)
+        assert isinstance(json1, tools.LIST)
 
     def test_json(self, request, monkeypatch, cmd):
         """Pass."""
