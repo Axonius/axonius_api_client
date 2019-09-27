@@ -503,10 +503,9 @@ class Cnx(mixins.Child):
                 response=response, adapter=adapter["name"], node=adapter["node_name"]
             )
 
-        refetched = {}
-        refetched["response_had_error"] = had_error
-        refetched["response"] = response
-        refetched["cnx"] = self.refetch(
+        # we refetch the CNX by ID; add call doesnt return the full cnx obj
+        # TODO: should refetch by UUID???
+        refetched_cnx = self.refetch(
             adapter_name=adapter["name"],
             node_name=adapter["node_name"],
             response=response,
@@ -516,7 +515,12 @@ class Cnx(mixins.Child):
             filter_value=response["id"],
         )
 
-        return refetched
+        ret = {}
+        ret["response_had_error"] = had_error
+        ret["response"] = response
+        ret["cnx"] = refetched_cnx
+
+        return ret
 
     def add_csv_str(
         self,
@@ -793,10 +797,6 @@ class Cnx(mixins.Child):
             error (bool, optional): Raise an error if the connection returns an error
                 from connecting to the product for the adapter. Defaults to: True.
 
-        Notes:
-            Checking a connection changes the UUID, so we refetch it after
-            checking to return the metadata with the new UUID.
-
         Raises:
             exceptions.CnxConnectFailure: If the connection fails to
                 connect to the product for the adapter and ``error`` is True.
@@ -805,33 +805,31 @@ class Cnx(mixins.Child):
             dict: The metadata with the new UUID for the checked configuration.
 
         """
+        cnx = cnx.get("cnx", cnx)
+
         response = self._check(
             adapter_name=cnx["adapter_name_raw"],
             config=cnx["config_raw"],
             node_id=cnx["node_id"],
         )
 
-        had_error = bool(response)
+        response_text = (response.text or "").strip()
+        response_json = response.json() if response_text else {}
+
+        had_error = not response.ok or bool(response_text)
 
         if had_error and error:
+            # FUTURE: also supply cnx info
             raise exceptions.CnxConnectFailure(
                 response=response, adapter=cnx["adapter_name"], node=cnx["node_name"]
             )
 
-        refetched = {}
-        refetched["response_had_error"] = had_error
-        refetched["response"] = response
-        refetched["cnx"] = self.refetch(
-            adapter_name=cnx["adapter_name"],
-            node_name=cnx["node_name"],
-            response=response,
-            retry=retry,
-            sleep=sleep,
-            filter_method=self.filter_by_ids,
-            filter_value=cnx["id"],
-        )
+        ret = {}
+        ret["response_had_error"] = had_error
+        ret["response"] = response_json
+        ret["cnx"] = cnx
 
-        return refetched
+        return ret
 
     def delete(
         self,
@@ -853,6 +851,8 @@ class Cnx(mixins.Child):
             sleep (int, optional): Description
 
         """
+        cnx = cnx.get("cnx", cnx)
+
         cnxinfo = [
             "Adapter name: {adapter_name}",
             "Node name: {node_name}",
@@ -1163,6 +1163,8 @@ class Cnx(mixins.Child):
             error (bool, optional): Description
 
         """
+        cnx = cnx.get("cnx", cnx)
+
         if parse_config and new_config:
             adapter = self._parent.get_single(adapter=cnx["adapter_name"])
             parser = ParserCnxConfig(raw=new_config, parent=self)
@@ -1194,10 +1196,8 @@ class Cnx(mixins.Child):
                 response=response, adapter=cnx["adapter_name"], node=cnx["node_name"]
             )
 
-        refetched = {}
-        refetched["response_had_error"] = had_error
-        refetched["response"] = response
-        refetched["cnx"] = self.refetch(
+        # we refetch the CNX by ID; update call changes the UUID
+        refetched_cnx = self.refetch(
             adapter_name=cnx["adapter_name"],
             node_name=cnx["node_name"],
             response=response,
@@ -1207,7 +1207,12 @@ class Cnx(mixins.Child):
             filter_value=response["id"],
         )
 
-        return refetched
+        ret = {}
+        ret["response_had_error"] = had_error
+        ret["response"] = response
+        ret["cnx"] = refetched_cnx
+
+        return ret
 
     def _add(self, adapter_name, node_id, config):
         """Add a connection to an adapter.
@@ -1260,13 +1265,7 @@ class Cnx(mixins.Child):
 
         path = self._parent._router.cnxs.format(adapter_name=adapter_name)
 
-        return self._parent._request(
-            method="post",
-            path=path,
-            json=data,
-            error_json_bad_status=False,
-            error_status=False,
-        )
+        return self._parent._request(method="post", path=path, json=data, raw=True)
 
     def _delete(self, adapter_name, node_id, cnx_uuid, delete_entities=False):
         """Delete a connection from an adapter.
