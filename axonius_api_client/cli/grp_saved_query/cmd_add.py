@@ -19,6 +19,7 @@ from . import grp_common
 @options.OPT_EXPORT_OVERWRITE
 @options.OPT_EXPORT_DELIM
 @options.OPT_QUERY
+@options.OPT_QUERY_FILE
 @options.OPT_FIELDS
 @options.OPT_FIELDS_DEFAULT
 @click.option(
@@ -79,6 +80,7 @@ def cmd(
     export_delim,
     name,
     query,
+    query_file,
     fields,
     fields_default,
     sort_field,
@@ -87,6 +89,9 @@ def cmd(
     gui_page_size,
 ):
     """Add a saved query."""
+    if query_file:
+        query = query_file.read()
+
     column_filters = dict(column_filters)
 
     pp_grp = ctx.parent.parent.command.name

@@ -112,6 +112,18 @@ OPT_QUERY = click.option(
     metavar="QUERY",
     show_envvar=True,
 )
+OPT_QUERY_FILE = click.option(
+    "--query-file",
+    "-qf",
+    "query_file",
+    help=(
+        "File containing query built from Query Wizard to "
+        "filter objects (empty returns all) (will override --query)."
+    ),
+    type=click.File(),
+    metavar="QUERY_FILE",
+    show_envvar=True,
+)
 OPT_FIELDS = click.option(
     "--field",
     "-f",
