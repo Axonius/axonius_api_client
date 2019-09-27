@@ -107,23 +107,23 @@ def collapse_rows(rows, key):
     return new_rows
 
 
-def join_kv(obj, indent="  "):
+def join_kv(obj, indent="  ", joiner="\n"):
     """Pass."""
     items = [cli_constants.KV_TMPL.format(k=k, v=v) for k, v in obj.items()]
-    return tools.join_cr(obj=items, indent=indent)
+    return tools.join_cr(obj=items, indent=indent, joiner=joiner)
 
 
-def join_tv(obj):
+def join_tv(obj, joiner="\n"):
     """Pass."""
     items = [
         cli_constants.KV_TMPL.format(k=v["title"], v=v["value"]) for k, v in obj.items()
     ]
-    return join_cr(items)
+    return join_cr(obj=items, joiner=joiner)
 
 
-def join_cr(obj, is_cell=False):
+def join_cr(obj, is_cell=False, joiner="\n"):
     """Pass."""
-    str_obj = tools.join_cr(obj=obj, pre=False, post=False, indent="")
+    str_obj = tools.join_cr(obj=obj, pre=False, post=False, indent="", joiner=joiner)
     max_len = cli_constants.MAX_LEN
 
     if is_cell and len(str_obj) >= max_len:
@@ -181,7 +181,7 @@ def is_dos(o):
     return isinstance(o, dict) and all([is_los(v) for v in o.values()])
 
 
-def obj_to_csv(ctx, raw_data, **kwargs):
+def obj_to_csv(ctx, raw_data, joiner="\n", **kwargs):
     """Pass."""
     raw_data = tools.listify(obj=raw_data, dictkeys=False)
     rows = []
@@ -192,7 +192,7 @@ def obj_to_csv(ctx, raw_data, **kwargs):
         for raw_key, raw_value in raw_row.items():
 
             if is_los(raw_value):
-                row[raw_key] = join_cr(raw_value, is_cell=True)
+                row[raw_key] = join_cr(raw_value, is_cell=True, joiner=joiner)
                 continue
 
             if is_list(raw_value) and all([is_dos(x) for x in raw_value]):
@@ -207,7 +207,7 @@ def obj_to_csv(ctx, raw_data, **kwargs):
                         values[new_key] += tools.listify(v, dictkeys=False)
 
                 for k, v in values.items():
-                    row[k] = join_cr(v, is_cell=True)
+                    row[k] = join_cr(v, is_cell=True, joiner=joiner)
 
                 continue
 

@@ -10,7 +10,7 @@ from ... import tools
 from .. import cli_constants, serial
 
 
-def to_csv(ctx, raw_data, include_settings=True, **kwargs):
+def to_csv(ctx, raw_data, include_settings=True, joiner="\n", **kwargs):
     """Pass."""
     rows = []
 
@@ -20,7 +20,7 @@ def to_csv(ctx, raw_data, include_settings=True, **kwargs):
         cnx = cnx["cnx"] if "cnx" in cnx else cnx
         row = {k: cnx[k] for k in simples}
         if include_settings:
-            row["settings"] = serial.join_tv(obj=cnx["config"])
+            row["settings"] = serial.join_tv(obj=cnx["config"], joiner=joiner)
 
         rows.append(row)
 
@@ -74,7 +74,7 @@ def handle_schema(ctx, config, schema, hiddens, prompt_opt, skips):
         show_choices=True,
     )
 
-    # FUTURE: figure out better way to handle this, maybe customer click type?
+    # FUTURE: figure out better way to handle this, maybe custom click type?
     if format(value).upper() == "SKIP":  # pragma: no cover
         skipmsg = "\nSkipping item {v!r} due to value 'SKIP'\n"
         skipmsg = skipmsg.format(v=name)
@@ -186,6 +186,7 @@ def get_rows(ctx, rows, only_parent=False):
         ctx=ctx, stream=rows, this_cmd=this_cmd, src_cmds=src_cmds
     )
 
+    # TODO: should just take input sources from adapters get and adapters cnx get
     serial.check_rows_type(
         ctx=ctx, rows=rows, this_cmd=this_cmd, src_cmds=src_cmds, all_items=True
     )

@@ -58,7 +58,14 @@ class TestCmdGet(object):
         """Pass."""
         runner = utils.load_clirunner(request, monkeypatch)
 
-        args1 = ["adapters", "get", "--include-settings", "--export-format", "csv"]
+        args1 = [
+            "-nw",
+            "adapters",
+            "get",
+            "--include-settings",
+            "--export-format",
+            "csv",
+        ]
         result1 = runner.invoke(cli=cli.cli, args=args1)
 
         stderr1 = result1.stderr

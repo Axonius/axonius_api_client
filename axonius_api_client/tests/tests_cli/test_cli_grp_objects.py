@@ -319,6 +319,39 @@ class TestCmdGet(object):
         csv_cols1 = ["internal_axon_id"]
         utils.check_csv_cols(stdout1, csv_cols1)
 
+    def test_csv_delim(self, request, monkeypatch, cmd):
+        """Pass."""
+        runner = utils.load_clirunner(request, monkeypatch)
+        args1 = [
+            cmd,
+            "get",
+            "--query",
+            "(adapters > size(2))",
+            "--export-format",
+            "csv",
+            "--max-rows",
+            "1",
+            "--export-delim",
+            ",",
+        ]
+
+        result1 = runner.invoke(cli=cli.cli, args=args1)
+
+        exit_code1 = result1.exit_code
+        stdout1 = result1.stdout
+        stderr1 = result1.stderr
+
+        assert stdout1
+        assert stderr1
+        assert exit_code1 == 0
+
+        csv_cols1 = ["internal_axon_id"]
+        rows = utils.check_csv_cols(stdout1, csv_cols1)
+        row1 = rows[0]
+        row1_adapters = row1["adapters"]
+        assert len(row1_adapters.splitlines()) == 1
+        assert len(row1_adapters.split(",")) > 2
+
     def test_csv_complex(self, request, monkeypatch, cmd):
         """Pass."""
         runner = utils.load_clirunner(request, monkeypatch)

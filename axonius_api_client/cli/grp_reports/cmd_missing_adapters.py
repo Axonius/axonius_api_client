@@ -16,6 +16,7 @@ from ..grp_objects import grp_common as grp_obj_common
 @options.OPT_EXPORT_PATH
 @options.OPT_EXPORT_FORMAT
 @options.OPT_EXPORT_OVERWRITE
+@options.OPT_EXPORT_DELIM
 @click.option(
     "--show-sources",
     "-ss",
@@ -37,6 +38,7 @@ def cmd(
     export_file,
     export_path,
     export_overwrite,
+    export_delim,
     rows,
 ):
     """Get a report of missing adapters for assets."""
@@ -59,4 +61,5 @@ def cmd(
         export_file=export_file,
         export_path=export_path,
         export_overwrite=export_overwrite,
+        joiner=export_delim,
     )

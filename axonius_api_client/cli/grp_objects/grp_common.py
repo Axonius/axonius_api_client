@@ -16,6 +16,7 @@ def get_by_cmd(
     export_file,
     export_path,
     export_overwrite,
+    joiner,
     values,
     query,
     fields,
@@ -48,6 +49,7 @@ def get_by_cmd(
         export_file=export_file,
         export_path=export_path,
         export_overwrite=export_overwrite,
+        joiner=joiner,
     )
 
 
