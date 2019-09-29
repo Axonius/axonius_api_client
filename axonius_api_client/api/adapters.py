@@ -2,6 +2,7 @@
 """API module for working with adapters."""
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+import re
 import time
 import warnings
 
@@ -86,13 +87,13 @@ class Adapters(mixins.Model, mixins.Mixins):
 
         all_adapters = self.get()
 
-        adapters = self.filter_by_nodes(value=node, adapters=all_adapters)
+        by_nodes = self.filter_by_nodes(value=node, adapters=all_adapters)
+        by_names = self.filter_by_names(value=adapter, adapters=by_nodes)
 
-        adapters = self.filter_by_names(value=adapter, adapters=adapters)
-
-        if len(adapters) != 1:
+        if len(by_names) != 1:
+            value = "name {a!r} and node name {n!r}".format(a=adapter, n=node)
             raise exceptions.ValueNotFound(
-                value="name {} and node name {}".format(adapter, node),
+                value=value,
                 value_msg="Adapters by name and node name",
                 known=self.get_known,
                 known_msg="Adapters",
@@ -100,10 +101,16 @@ class Adapters(mixins.Model, mixins.Mixins):
                 adapters=all_adapters,
             )
 
-        return adapters[0]
+        return by_names[0]
 
     def filter_by_names(
-        self, adapters, value=None, ignore_case=True, match_count=None, match_error=True
+        self,
+        adapters,
+        value=None,
+        value_regex=False,
+        value_ignore_case=True,
+        match_count=None,
+        match_error=True,
     ):
         """Filter adapters with matching adapter names.
 
@@ -142,20 +149,31 @@ class Adapters(mixins.Model, mixins.Mixins):
             (list) of (dict): List of matching adapters.
 
         """
-        value = [
-            tools.strip_right(obj=name, fix="_adapter")
-            for name in tools.listify(obj=value, dictkeys=True)
-        ]
+        checks = tools.strip_right(obj=tools.listify(obj=value), fix="_adapter")
+        matches = [] if checks else adapters
 
-        matches = []
+        for check in checks:
+            re_flags = re.I if value_ignore_case else 0
 
-        for adapter in adapters:
-            match = tools.values_match(
-                checks=value, values=adapter["name"], ignore_case=ignore_case
-            )
+            if value_regex:
+                re_pattern = check
+                re_method = re.search
+            else:
+                re_pattern = "^{}$".format(check)
+                re_method = re.match
 
-            if match and adapter not in matches:
-                matches.append(adapter)
+            for adapter in adapters:
+                string = adapter["name"]
+                is_match = re_method(
+                    pattern=re_pattern.strip(), string=string, flags=re_flags
+                )
+
+                msg = "Matched adapter by name {s!r} using {p!r}: {r}"
+                msg = msg.format(s=string, p=re_pattern, r=bool(is_match))
+                self._log.debug(msg)
+
+                if is_match and adapter not in matches:
+                    matches.append(adapter)
 
         if (match_count and len(matches) != match_count) and match_error:
             raise exceptions.ValueNotFound(
@@ -169,7 +187,13 @@ class Adapters(mixins.Model, mixins.Mixins):
         return matches
 
     def filter_by_nodes(
-        self, adapters, value=None, ignore_case=True, match_count=None, match_error=True
+        self,
+        adapters,
+        value=None,
+        value_regex=False,
+        value_ignore_case=True,
+        match_count=None,
+        match_error=True,
     ):
         """Filter adapters with matching node names.
 
@@ -198,15 +222,31 @@ class Adapters(mixins.Model, mixins.Mixins):
             (list) of (dict): List of matching adapters.
 
         """
-        matches = []
+        checks = tools.listify(obj=value)
+        matches = [] if checks else adapters
 
-        for adapter in adapters:
-            match = tools.values_match(
-                checks=value, values=adapter["node_name"], ignore_case=ignore_case
-            )
+        for check in checks:
+            re_flags = re.I if value_ignore_case else 0
 
-            if match and adapter not in matches:
-                matches.append(adapter)
+            if value_regex:
+                re_pattern = check
+                re_method = re.search
+            else:
+                re_pattern = "^{}$".format(check)
+                re_method = re.match
+
+            for adapter in adapters:
+                string = adapter["node_name"]
+                is_match = re_method(
+                    pattern=re_pattern.strip(), string=string, flags=re_flags
+                )
+
+                msg = "Matched adapter by node name {s!r} using {p!r}: {r}"
+                msg = msg.format(s=string, p=re_pattern, r=bool(is_match))
+                self._log.debug(msg)
+
+                if is_match and adapter not in matches:
+                    matches.append(adapter)
 
         if (match_count and len(matches) != match_count) and match_error:
             raise exceptions.ValueNotFound(
@@ -220,7 +260,12 @@ class Adapters(mixins.Model, mixins.Mixins):
         return matches
 
     def filter_by_cnx_count(
-        self, adapters, value=None, match_count=None, match_error=True
+        self,
+        adapters,
+        min_value=None,
+        max_value=None,
+        match_count=None,
+        match_error=True,
     ):
         """Filter adapters with matching connection counts.
 
@@ -248,13 +293,19 @@ class Adapters(mixins.Model, mixins.Mixins):
         matches = []
 
         for adapter in adapters:
-            if value is not None and adapter["cnx_count"] != value:
+            cnx_count = adapter["cnx_count"]
+
+            if min_value is not None and cnx_count < min_value:
+                continue
+
+            if max_value is not None and cnx_count > max_value:
                 continue
 
             if adapter not in matches:
                 matches.append(adapter)
 
         if (match_count and len(matches) != match_count) and match_error:
+            value = "min_value {} and max_value {}".format(min_value, max_value)
             raise exceptions.ValueNotFound(
                 value=value,
                 value_msg="Adapters by connection count",
@@ -300,10 +351,11 @@ class Adapters(mixins.Model, mixins.Mixins):
         matches = []
 
         for adapter in adapters:
+            status = adapter["status"]
             if isinstance(value, tools.LIST):
-                if value and adapter["status"] not in value:
+                if value and status not in value:
                     continue
-            elif adapter["status"] != value:
+            elif value is not None and status != value:
                 continue
 
             if adapter not in matches:
@@ -503,8 +555,16 @@ class Cnx(mixins.Child):
                 response=response, adapter=adapter["name"], node=adapter["node_name"]
             )
 
-        # we refetch the CNX by ID; add call doesnt return the full cnx obj
-        # TODO: should refetch by UUID???
+        """
+        add call returns:
+        {
+            "client_id": "", # client ID
+            "error": "",
+            "id": "",  # UUID
+            "status": "",
+        }
+        """
+        # we refetch the CNX by UUID; add call doesnt return the full cnx obj
         refetched_cnx = self.refetch(
             adapter_name=adapter["name"],
             node_name=adapter["node_name"],
@@ -819,7 +879,6 @@ class Cnx(mixins.Child):
         had_error = not response.ok or bool(response_text)
 
         if had_error and error:
-            # FUTURE: also supply cnx info
             raise exceptions.CnxConnectFailure(
                 response=response, adapter=cnx["adapter_name"], node=cnx["node_name"]
             )
@@ -918,7 +977,13 @@ class Cnx(mixins.Child):
         return ret
 
     def filter_by_ids(
-        self, cnxs, value=None, ignore_case=True, match_count=None, match_error=True
+        self,
+        cnxs,
+        value=None,
+        value_regex=False,
+        value_ignore_case=True,
+        match_count=None,
+        match_error=True,
     ):
         """Get all connections for all adapters.
 
@@ -930,15 +995,28 @@ class Cnx(mixins.Child):
             match_error (bool, optional): Description
 
         """
-        matches = []
+        checks = tools.listify(obj=value)
+        matches = [] if checks else cnxs
 
-        for cnx in cnxs:
-            match = tools.values_match(
-                checks=value, values=cnx["id"], ignore_case=ignore_case
-            )
+        for check in checks:
+            re_flags = re.I if value_ignore_case else 0
 
-            if match and cnx not in matches:
-                matches.append(cnx)
+            if value_regex:
+                re_pattern = check
+                re_method = re.search
+            else:
+                re_pattern = "^{}$".format(check)
+                re_method = re.match
+
+            for cnx in cnxs:
+                string = cnx["id"]
+
+                is_match = re_method(
+                    pattern=re_pattern.strip(), string=string, flags=re_flags
+                )
+
+                if is_match and cnx not in matches:
+                    matches.append(cnx)
 
         if (match_count and len(matches) != match_count) and match_error:
             raise exceptions.ValueNotFound(
@@ -952,7 +1030,13 @@ class Cnx(mixins.Child):
         return matches
 
     def filter_by_uuids(
-        self, cnxs, value=None, ignore_case=True, match_count=None, match_error=True
+        self,
+        cnxs,
+        value=None,
+        value_regex=False,
+        value_ignore_case=True,
+        match_count=None,
+        match_error=True,
     ):
         """Get all connections for all adapters.
 
@@ -964,15 +1048,28 @@ class Cnx(mixins.Child):
             match_error (bool, optional): Description
 
         """
-        matches = []
+        checks = tools.listify(obj=value)
+        matches = [] if checks else cnxs
 
-        for cnx in cnxs:
-            match = tools.values_match(
-                checks=value, values=cnx["uuid"], ignore_case=ignore_case
-            )
+        for check in checks:
+            re_flags = re.I if value_ignore_case else 0
 
-            if match and cnx not in matches:
-                matches.append(cnx)
+            if value_regex:
+                re_pattern = check
+                re_method = re.search
+            else:
+                re_pattern = "^{}$".format(check)
+                re_method = re.match
+
+            for cnx in cnxs:
+                string = cnx["uuid"]
+
+                is_match = re_method(
+                    pattern=re_pattern.strip(), string=string, flags=re_flags
+                )
+
+                if is_match and cnx not in matches:
+                    matches.append(cnx)
 
         if (match_count and len(matches) != match_count) and match_error:
             raise exceptions.ValueNotFound(
@@ -1004,10 +1101,12 @@ class Cnx(mixins.Child):
         matches = []
 
         for cnx in cnxs:
+            status = cnx["status"]
+
             if isinstance(value, tools.LIST):
-                if value and cnx["status"] not in value:
+                if value and status not in value:
                     continue
-            elif value is not None and cnx["status"] != value:
+            elif value is not None and status != value:
                 continue
 
             if cnx not in matches:
@@ -1486,7 +1585,6 @@ class ParserCnxConfig(mixins.Parser):
         if uuid and filename:
             return {"uuid": uuid, "filename": filename}
 
-        # FUTURE: try here
         if filepath:
             uploaded = self._parent._parent.upload_file_path(
                 field=name,
@@ -1713,7 +1811,7 @@ def validate_csv(name, content, is_users=False, is_installed_sw=False):
         )
 
 
-# FUTURE: public REST API does not support setting advanced settings
+# REST API FR: public REST API does not support setting advanced settings
 """
 # advanced settings
 method=POST
@@ -1745,9 +1843,8 @@ body={"fetch_deregistred":false}
     wrap around service.py: plugins_configs_set()
 """
 
-# FUTURE: date_fetched for client seems to be only for
+# REST API FR: date_fetched for client seems to be only for
 # when fetch has been triggered from "save" in adapters>client page??
-# need to submit BR
 """
 date_fetched = client["date_fetched"]
 minutes_ago = tools.dt.minutes_ago(date_fetched)

@@ -46,7 +46,7 @@ def cmd(
     include_settings,
 ):
     """Start a discovery (fetch) for an adapter connection."""
-    rows = grp_common.get_rows(ctx=ctx, rows=rows, only_parent=False)
+    rows = grp_common.get_rows(ctx=ctx, rows=rows)
 
     processed = []
 

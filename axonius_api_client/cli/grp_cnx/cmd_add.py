@@ -7,8 +7,6 @@ import click
 from .. import cli_constants, click_ext, options, serial
 from . import grp_common
 
-# FUTURE: accept ini based conf file?
-
 
 @click.command(name="add", context_settings=cli_constants.CONTEXT_SETTINGS)
 @options.OPT_URL
