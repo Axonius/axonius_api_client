@@ -363,7 +363,7 @@ class TestBoth(Base):
         field = apiobj.TEST_DATA["single_field"]["exp"]
         value_re = "[a-zA-Z]"
         found = apiobj.get_by_value(
-            value="RE:{}".format(value_re), field=field, match_count=1, max_rows=1
+            value=value_re, value_regex=True, field=field, match_count=1, max_rows=1
         )
         assert isinstance(found, dict)
         assert any(
@@ -381,12 +381,12 @@ class TestBoth(Base):
         field = apiobj.TEST_DATA["single_field"]["exp"]
 
         asset_value = asset[field]
-        if isinstance(asset_value, tools.LIST):
-            value = ["NOT:{}".format(x) for x in asset_value]
-        else:
-            value = "NOT:{}".format(asset_value)
         found = apiobj.get_by_value(
-            value=value, field=field, fields=apiobj._default_fields, match_error=False
+            value=asset_value,
+            value_not=True,
+            field=field,
+            fields=apiobj._default_fields,
+            match_error=False,
         )
         assert isinstance(found, tools.LIST)
         assert len(found) == count - 1
@@ -494,7 +494,8 @@ class TestDevices(Single):
         value = tools.listify(obj=asset_value)[0]
 
         found = apiobj.get_by_subnet(
-            value="NOT:{}".format(value),
+            value=value,
+            value_not=True,
             max_rows=1,
             fields=findfield,
             query_post=" and {}".format(QUERY_FIELD_EXISTS(field=findfield)),
@@ -1000,14 +1001,14 @@ class TestSavedQuery(Base):
 
     def test_get_by_name_regex(self, apiobj):
         """Pass."""
-        found = apiobj.saved_query.get_by_name(value="RE:.*")
+        found = apiobj.saved_query.get_by_name(value=".*", value_regex=True)
         assert isinstance(found, tools.LIST)
         assert len(found) >= 1
 
     def test_get_by_name_notflag(self, apiobj):
         """Pass."""
         data = apiobj.saved_query.get()
-        found = apiobj.saved_query.get_by_name(value="NOT:{}".format(data[0]["name"]))
+        found = apiobj.saved_query.get_by_name(value=data[0]["name"], value_not=True)
         assert isinstance(found, tools.LIST)
         assert len(found) == len(data) - 1
 

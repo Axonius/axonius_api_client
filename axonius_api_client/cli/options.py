@@ -40,7 +40,6 @@ OPT_SECRET = click.option(
     hide_input=True,
     show_envvar=True,
 )
-# FUTURE: error if os.path.sep in value
 OPT_EXPORT_FILE = click.option(
     "--export-file",
     "-xf",
@@ -118,7 +117,7 @@ OPT_QUERY_FILE = click.option(
     "query_file",
     help=(
         "File containing query built from Query Wizard to "
-        "filter objects (empty returns all) (will override --query)."
+        "filter objects (overrides --query, '-' to read from STDIN)."
     ),
     type=click.File(),
     metavar="QUERY_FILE",
@@ -155,14 +154,42 @@ OPT_GET_BY_VALUES = click.option(
     show_envvar=True,
 )
 OPT_GET_BY_POST_QUERY = click.option(
-    "--query",
-    "-q",
-    "query",
+    "--query-post",
+    "-qpost",
+    "query_post",
     help="Query to add to the end of the query built to search for -v/--value.",
     default="",
     metavar="QUERY",
     show_envvar=True,
     show_default=True,
+)
+OPT_GET_BY_PRE_QUERY = click.option(
+    "--query-pre",
+    "-qpre",
+    "query_pre",
+    help="Query to add to the begginning of the query built to search for -v/--value.",
+    default="",
+    metavar="QUERY",
+    show_envvar=True,
+    show_default=True,
+)
+OPT_GET_BY_VALUE_REGEX = click.option(
+    "--value-regex",
+    "-vx",
+    "value_regex",
+    help="Consider --value values as regular expressions.",
+    is_flag=True,
+    default=False,
+    show_envvar=True,
+)
+OPT_GET_BY_VALUE_NOT = click.option(
+    "--value-not",
+    "-vn",
+    "value_not",
+    help="Search for NOT --value.",
+    is_flag=True,
+    default=False,
+    show_envvar=True,
 )
 OPT_ROWS = click.option(
     "--rows",

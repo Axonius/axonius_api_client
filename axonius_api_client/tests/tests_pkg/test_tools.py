@@ -244,7 +244,7 @@ class TestPathWrite(object):
         assert ret_path.read_text() == data
         assert format(ret_path) == format(path)
         assert ret_write == len(data)
-        # FUTURE: unsure if these are same on windows
+        # FUTURE: not the same octal on windows
         assert ret_path.stat().st_mode == 33152
         assert ret_path.parent.stat().st_mode == 16832
 
@@ -518,72 +518,6 @@ class TestNestDepth(object):
         """Simple test."""
         x = tools.nest_depth(obj=["1", ["a", {}]])
         assert x == 3
-
-
-class TestValuesMatch(object):
-    """Test tools.values_match."""
-
-    def test_no_case_no_regex(self):
-        """Simple test."""
-        x = tools.values_match(checks="x", values="x", ignore_case=False)
-        assert x
-        x = tools.values_match(checks="x", values="X", ignore_case=False)
-        assert not x
-        x = tools.values_match(checks="x", values=["X"], ignore_case=False)
-        assert not x
-        x = tools.values_match(checks="x", values=["X", "x"], ignore_case=False)
-        assert x
-        x = tools.values_match(checks="x", values=["X", "y"], ignore_case=False)
-        assert not x
-
-    def test_case_no_regex(self):
-        """Simple test."""
-        x = tools.values_match(checks="x", values="X", ignore_case=True)
-        assert x
-        x = tools.values_match(checks="x", values="x", ignore_case=True)
-        assert x
-        x = tools.values_match(checks="x", values="xxxxx", ignore_case=True)
-        assert not x
-        x = tools.values_match(checks="x", values=["X"], ignore_case=True)
-        assert x
-        x = tools.values_match(checks="x", values=["X", "x"], ignore_case=True)
-        assert x
-        x = tools.values_match(checks="x", values=["A", "a"], ignore_case=True)
-        assert not x
-
-    def test_case_regex(self):
-        """Simple test."""
-        x = tools.values_match(checks="RE:x", values="X", ignore_case=True)
-        assert x
-        x = tools.values_match(checks="RE:.*", values="X", ignore_case=True)
-        assert x
-        x = tools.values_match(checks="RE:x", values="x", ignore_case=True)
-        assert x
-        x = tools.values_match(checks="RE:x", values="xxxxx", ignore_case=True)
-        assert x
-        x = tools.values_match(checks="RE:x", values=["X"], ignore_case=True)
-        assert x
-        x = tools.values_match(checks="RE:x", values=["X", "x"], ignore_case=True)
-        assert x
-        x = tools.values_match(checks="RE:x", values=["A", "a"], ignore_case=True)
-        assert not x
-
-    def test_no_case_regex(self):
-        """Simple test."""
-        x = tools.values_match(checks="RE:x", values="X", ignore_case=False)
-        assert not x
-        x = tools.values_match(checks="RE:.*", values="X", ignore_case=False)
-        assert x
-        x = tools.values_match(checks="RE:x", values="x", ignore_case=False)
-        assert x
-        x = tools.values_match(checks="RE:x", values="xxxxx", ignore_case=False)
-        assert x
-        x = tools.values_match(checks="RE:x", values=["X"], ignore_case=False)
-        assert not x
-        x = tools.values_match(checks="RE:x", values=["X", "x"], ignore_case=False)
-        assert x
-        x = tools.values_match(checks="RE:x", values=["A", "a"], ignore_case=False)
-        assert not x
 
 
 class TestListify(object):

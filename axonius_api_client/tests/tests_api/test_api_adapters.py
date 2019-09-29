@@ -12,7 +12,7 @@ from axonius_api_client import constants, exceptions, tools
 
 from .. import utils
 
-# FUTURE: BR: adding cnx with parsed config instead of raw config breaks adapters._get()
+# REST API BR: adding cnx with parsed config instead of raw config breaks adapters._get()
 # FUTURE: add atexit to verify no badwolf cnxs?
 
 CSV_FILENAME = "badwolf.csv"
@@ -46,7 +46,7 @@ FAKE_ADAPTER_CNXS_OK = {
     "name": "fluff1",
     "name_raw": "fluff1_adapter",
     "node_name": "master",
-    "cnx_count": 2,
+    "cnx_count": 1,
     "status": True,
 }
 FAKE_ADAPTER_CNXS_BAD = {
@@ -180,12 +180,14 @@ class TestAdapters(object):
 
     def test_filter_by_names_regex(self, apiobj):
         """Pass."""
-        data = apiobj.filter_by_names(value="RE:.*", adapters=FAKE_ADAPTERS)
+        data = apiobj.filter_by_names(
+            value=".*", value_regex=True, adapters=FAKE_ADAPTERS
+        )
         assert isinstance(data, tools.LIST)
         assert len(data) >= 1
 
         data = apiobj.filter_by_names(
-            value="RE:{}".format(FAKE_ADAPTER_CNXS_OK["name"]), adapters=FAKE_ADAPTERS
+            value=FAKE_ADAPTER_CNXS_OK["name"], value_regex=True, adapters=FAKE_ADAPTERS
         )
         assert isinstance(data, tools.LIST)
         assert len(data) == 1
@@ -203,22 +205,34 @@ class TestAdapters(object):
 
         with pytest.raises(exceptions.ValueNotFound):
             apiobj.filter_by_names(
-                value="RE:.*", match_count=1, match_error=True, adapters=FAKE_ADAPTERS
+                value=".*",
+                value_regex=True,
+                match_count=1,
+                match_error=True,
+                adapters=FAKE_ADAPTERS,
             )
 
         data = apiobj.filter_by_names(
-            value="RE:.*", match_count=1, match_error=False, adapters=FAKE_ADAPTERS
+            value=".*",
+            value_regex=True,
+            match_count=1,
+            match_error=False,
+            adapters=FAKE_ADAPTERS,
         )
         assert isinstance(data, tools.LIST)
         assert len(data) == 3
 
     def test_filter_by_nodes_regex(self, apiobj):
         """Pass."""
-        data = apiobj.filter_by_nodes(value="RE:master", adapters=FAKE_ADAPTERS)
+        data = apiobj.filter_by_nodes(
+            value="master", value_regex=True, adapters=FAKE_ADAPTERS
+        )
         assert isinstance(data, tools.LIST)
         assert len(data) >= 1
 
-        data = apiobj.filter_by_nodes(value="RE:master", adapters=FAKE_ADAPTERS)
+        data = apiobj.filter_by_nodes(
+            value="master", value_regex=True, adapters=FAKE_ADAPTERS
+        )
         assert isinstance(data, tools.LIST)
         assert len(data) >= 1
 
@@ -237,11 +251,19 @@ class TestAdapters(object):
 
         with pytest.raises(exceptions.ValueNotFound):
             apiobj.filter_by_nodes(
-                value="RE:.*", match_count=1, match_error=True, adapters=FAKE_ADAPTERS
+                value=".*",
+                value_regex=True,
+                match_count=1,
+                match_error=True,
+                adapters=FAKE_ADAPTERS,
             )
 
         data = apiobj.filter_by_nodes(
-            value="RE:.*", match_count=1, match_error=False, adapters=FAKE_ADAPTERS
+            value=".*",
+            value_regex=True,
+            match_count=1,
+            match_error=False,
+            adapters=FAKE_ADAPTERS,
         )
         assert isinstance(data, tools.LIST)
         assert len(data) == 3
@@ -250,19 +272,25 @@ class TestAdapters(object):
         """Pass."""
         with pytest.raises(exceptions.ValueNotFound):
             apiobj.filter_by_cnx_count(
-                value=9999, match_count=1, match_error=True, adapters=FAKE_ADAPTERS
+                min_value=9999, match_count=1, match_error=True, adapters=FAKE_ADAPTERS
             )
 
         data = apiobj.filter_by_cnx_count(adapters=FAKE_ADAPTERS)
         assert isinstance(data, tools.LIST)
         assert len(data) == 3
 
-        data = apiobj.filter_by_cnx_count(value=2, adapters=FAKE_ADAPTERS)
+        data = apiobj.filter_by_cnx_count(max_value=1, adapters=FAKE_ADAPTERS)
         assert isinstance(data, tools.LIST)
         assert len(data) == 2
 
         data = apiobj.filter_by_cnx_count(
-            value=9999, match_count=1, match_error=False, adapters=FAKE_ADAPTERS
+            min_value=2, max_value=2, adapters=FAKE_ADAPTERS
+        )
+        assert isinstance(data, tools.LIST)
+        assert len(data) == 1
+
+        data = apiobj.filter_by_cnx_count(
+            min_value=9999, match_count=1, match_error=False, adapters=FAKE_ADAPTERS
         )
         assert isinstance(data, tools.LIST)
         assert len(data) == 0
@@ -279,7 +307,7 @@ class TestAdapters(object):
         for x in data:
             assert x["status"] is False
 
-        data = apiobj.filter_by_status(value=None, adapters=FAKE_ADAPTERS)
+        data = apiobj.filter_by_status(value=[None], adapters=FAKE_ADAPTERS)
         assert isinstance(data, tools.LIST)
         for x in data:
             assert x["status"] is None
@@ -501,13 +529,13 @@ class TestCnx(object):
     def test_filter_by_ids(self, apiobj):
         """Pass."""
         just1re = apiobj.cnx.filter_by_ids(
-            cnxs=FAKE_CNXS, value="RE:{}".format(FAKE_CNXS[0]["id"])
+            cnxs=FAKE_CNXS, value=FAKE_CNXS[0]["id"], value_regex=True
         )
         assert isinstance(just1re, tools.LIST)
         assert just1re == [FAKE_CNXS[0]]
 
         just1 = apiobj.cnx.filter_by_ids(
-            cnxs=FAKE_CNXS, value="RE:{}".format(FAKE_CNXS[0]["id"]), match_count=1
+            cnxs=FAKE_CNXS, value=FAKE_CNXS[0]["id"], value_regex=True, match_count=1
         )
         assert just1 == [FAKE_CNXS[0]]
 
@@ -519,7 +547,7 @@ class TestCnx(object):
     def test_filter_by_uuids(self, apiobj):
         """Pass."""
         just1re = apiobj.cnx.filter_by_uuids(
-            cnxs=FAKE_CNXS, value="RE:{}".format(FAKE_CNXS[0]["uuid"])
+            cnxs=FAKE_CNXS, value=FAKE_CNXS[0]["uuid"], value_regex=True
         )
         assert isinstance(just1re, tools.LIST)
         assert just1re == [FAKE_CNXS[0]]

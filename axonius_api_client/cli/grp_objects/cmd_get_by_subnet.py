@@ -20,7 +20,9 @@ from . import grp_common
 @options.OPT_FIELDS
 @options.OPT_FIELDS_DEFAULT
 @options.OPT_MAX_ROWS
+@options.OPT_GET_BY_PRE_QUERY
 @options.OPT_GET_BY_POST_QUERY
+@options.OPT_GET_BY_VALUE_NOT
 @click.option(
     "--value",
     "-v",
@@ -41,7 +43,9 @@ def cmd(
     export_overwrite,
     export_delim,
     value,
-    query,
+    value_not,
+    query_pre,
+    query_post,
     fields,
     fields_default,
     max_rows,
@@ -58,7 +62,10 @@ def cmd(
         export_overwrite=export_overwrite,
         joiner=export_delim,
         values=value,
-        query=query,
+        value_regex=False,
+        value_not=value_not,
+        query_pre=query_pre,
+        query_post=query_post,
         fields=fields,
         fields_default=fields_default,
         max_rows=max_rows,

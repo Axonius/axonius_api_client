@@ -156,14 +156,13 @@ class TestEnforcements(object):
         notfound = apiobj.get_by_id(found["uuid"], match_error=False)
         assert notfound is None
 
-        notmatches = apiobj.get_by_name("NOT:{}".format(found["name"]))
+        notmatches = apiobj.get_by_name(value=found["name"], value_not=True)
         assert not any([x["name"] == found["name"] for x in notmatches])
 
         allobjs = apiobj.get()
         if allobjs:
             name = allobjs[0]["name"]
-            onere = "RE:{}".format(name[0])
-            rematches = apiobj.get_by_name(onere)
+            rematches = apiobj.get_by_name(value=name[0], value_regex=True)
             assert any([x["name"] == name for x in rematches])
 
 

@@ -3,7 +3,6 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import json
-import re
 from datetime import datetime, timedelta
 
 import dateutil.parser
@@ -67,35 +66,6 @@ def nest_depth(obj):
             return 1 + max(calcs)
         return 1
     return 0
-
-
-def values_match(checks, values, ignore_case=True):
-    """Pass."""
-    if ignore_case:
-        re_flags = re.I
-    else:
-        re_flags = 0
-
-    checks = listify(obj=checks, dictkeys=False)
-    if checks in EMPTY:
-        return True
-
-    for check in checks:
-        check = format(check)
-        if check.startswith("RE:"):
-            re_text = strip_left(obj=check, fix="RE:").strip()
-            re_pattern = re.compile(re_text, re_flags)
-            re_method = re_pattern.search
-        else:
-            re_text = "^{}$".format(check)
-            re_pattern = re.compile(re_text, re_flags)
-            re_method = re_pattern.match
-
-        for value in listify(obj=values, dictkeys=False):
-            if re_method(value):
-                return True
-
-    return False
 
 
 def coerce_int(obj):

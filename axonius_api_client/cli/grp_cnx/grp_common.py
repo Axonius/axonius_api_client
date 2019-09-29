@@ -74,7 +74,6 @@ def handle_schema(ctx, config, schema, hiddens, prompt_opt, skips):
         show_choices=True,
     )
 
-    # FUTURE: figure out better way to handle this, maybe custom click type?
     if format(value).upper() == "SKIP":  # pragma: no cover
         skipmsg = "\nSkipping item {v!r} due to value 'SKIP'\n"
         skipmsg = skipmsg.format(v=name)
@@ -132,31 +131,17 @@ def handle_response(ctx, cnx, action, cnx_error=True):
     return had_error, had_cnx_error
 
 
-def get_sources(ctx, only_parent=False):
+def get_sources(ctx):
     """Pass."""
     pp_grp = ctx.parent.parent.command.name
     p_grp = ctx.parent.command.name
 
-    if only_parent:
-        src_cmds = ["{pp} get"]
-    else:
-        src_cmds = [
-            "{pp} {p} add",
-            "{pp} {p} check",
-            "{pp} {p} discover",
-            "{pp} {p} get",
-            "{pp} get",
-        ]
+    src_cmds = ["{pp} {p} get", "{pp} get"]
     src_cmds = [x.format(pp=pp_grp, p=p_grp) for x in src_cmds]
     return src_cmds
 
 
-def show_sources_parent(ctx, param=None, value=None):
-    """Pass."""
-    show_sources(ctx=ctx, param=param, value=value, only_parent=True)
-
-
-def show_sources(ctx, param=None, value=None, only_parent=False):
+def show_sources(ctx, param=None, value=None):
     """Pass."""
     if value:
         pp_grp = ctx.parent.parent.command.name
@@ -166,13 +151,13 @@ def show_sources(ctx, param=None, value=None, only_parent=False):
         this_grp = "{pp} {p} {g}".format(pp=pp_grp, p=p_grp, g=grp)
         this_cmd = "{tg} --rows".format(tg=this_grp)
 
-        src_cmds = get_sources(ctx=ctx, only_parent=only_parent)
+        src_cmds = get_sources(ctx=ctx)
         msg = serial.ensure_srcs_msg(this_cmd=this_cmd, src_cmds=src_cmds)
         click.secho(message=msg, err=True, fg="green")
         ctx.exit(0)
 
 
-def get_rows(ctx, rows, only_parent=False):
+def get_rows(ctx, rows):
     """Pass."""
     pp_grp = ctx.parent.parent.command.name
     p_grp = ctx.parent.command.name
@@ -181,12 +166,11 @@ def get_rows(ctx, rows, only_parent=False):
     this_grp = "{pp} {p} {g}".format(pp=pp_grp, p=p_grp, g=grp)
     this_cmd = "{tg} --rows".format(tg=this_grp)
 
-    src_cmds = get_sources(ctx=ctx, only_parent=only_parent)
+    src_cmds = get_sources(ctx=ctx)
     rows = serial.json_to_rows(
         ctx=ctx, stream=rows, this_cmd=this_cmd, src_cmds=src_cmds
     )
 
-    # TODO: should just take input sources from adapters get and adapters cnx get
     serial.check_rows_type(
         ctx=ctx, rows=rows, this_cmd=this_cmd, src_cmds=src_cmds, all_items=True
     )
