@@ -270,11 +270,13 @@ class UserDeviceMixin(mixins.ModelUserDevice, mixins.Mixins):
             use_post=use_post,
         )
 
-    # FUTURE: include outdated and/or query_pre?
     def get_by_value(
         self,
         value,
         field,
+        value_regex=False,
+        value_not=False,
+        query_pre="",
         query_post="",
         match_count=None,
         match_error=True,
@@ -293,33 +295,29 @@ class UserDeviceMixin(mixins.ModelUserDevice, mixins.Mixins):
 
         field = self.fields.find_single(field=field, all_fields=all_fields)
 
-        not_flag = ""
-
         if isinstance(value, tools.LIST):
-            if any([x.startswith("NOT:") for x in value]):
-                value = [tools.strip_left(obj=x, fix="NOT:").strip() for x in value]
-                not_flag = "not "
-        elif value.startswith("NOT:"):
-            value = tools.strip_left(obj=value, fix="NOT:").strip()
-            not_flag = "not "
-
-        if isinstance(value, tools.LIST):
-            value = tools.strip_left(obj=value, fix="RE:")
             value = ", ".join(["'{}'".format(v.strip()) for v in value])
-            query = "{not_flag}{field} in [{value}]"
-        elif value.startswith("RE:"):
-            value = tools.strip_left(obj=value, fix="RE:").strip()
-            query = '{not_flag}{field} == regex("{value}", "i")'
+            search = "in [{}]".format(value)
         else:
-            query = '{not_flag}{field} == "{value}"'
-            value = value.strip()
+            if value_regex:
+                search = '== regex("{}", "i")'.format(value)
+            else:
+                search = '== "{}"'.format(value)
 
-            if eq_single and (not query_post and not not_flag):
-                max_rows = 1
-                match_count = 1
-                match_error = True
+                if eq_single and (not query_post and not value_not):
+                    max_rows = 1
+                    match_count = 1
+                    match_error = True
 
-        query = query.format(not_flag=not_flag, field=field, value=value) + query_post
+        not_flag = "not " if value_not else ""
+        query = "{query_pre} {not_flag}{field} {search} {query_post}"
+        query = query.format(
+            not_flag=not_flag,
+            field=field,
+            search=search,
+            query_pre=query_pre,
+            query_post=query_post,
+        ).strip()
 
         rows = self.get(
             query=query,
@@ -488,7 +486,9 @@ class Devices(UserDeviceMixin):
             value=value, field="specific_data.data.network_interfaces.ips", **kwargs
         )
 
-    def get_by_subnet(self, value, query_post="", **kwargs):
+    def get_by_subnet(
+        self, value, value_not=False, query_pre="", query_post="", **kwargs
+    ):
         """Get objects by MAC using paging.
 
         Args:
@@ -500,31 +500,28 @@ class Devices(UserDeviceMixin):
             :obj:`list` of :obj:`dict`: Each row matching email or :obj:`dict` if only1.
 
         """
-        not_flag = ""
-
-        if value.startswith("NOT:"):
-            value = tools.strip_left(obj=value, fix="NOT:").strip()
-            not_flag = "not "
-
         network = ipaddress.ip_network(value)
 
         begin = int(network.network_address)
         end = int(network.broadcast_address)
 
-        match_field = "specific_data.data.network_interfaces.ips_raw"
+        field = "specific_data.data.network_interfaces.ips_raw"
 
-        match = 'match({{"$gte": {begin}, "$lte": {end}}})'
-        match = match.format(begin=begin, end=end)
+        search = '== match({{"$gte": {begin}, "$lte": {end}}})'
+        search = search.format(begin=begin, end=end)
 
-        query = "{not_flag}{match_field} == {match}{query_post}"
+        not_flag = "not " if value_not else ""
+        query = "{query_pre} {not_flag}{field} {search} {query_post}"
         query = query.format(
             not_flag=not_flag,
-            match_field=match_field,
-            match=match,
+            field=field,
+            search=search,
+            query_pre=query_pre,
             query_post=query_post,
-        )
+        ).strip()
 
         kwargs.pop("query", None)
+        kwargs.pop("value_regex", None)
         return self.get(query=query, **kwargs)
 
 
@@ -652,7 +649,7 @@ class SavedQuery(mixins.Child):
 
         return self._parent._request(method="get", path=path, params=params)
 
-    # FUTURE: FR: Have backend process expressions on add if none supplied
+    # REST API FR: Have backend process expressions on add if none supplied
     def add(
         self,
         name,
@@ -869,6 +866,8 @@ class SavedQuery(mixins.Child):
     def get_by_name(
         self,
         value,
+        value_regex=False,
+        value_not=False,
         match_count=None,
         match_error=True,
         eq_single=True,
@@ -894,24 +893,20 @@ class SavedQuery(mixins.Child):
             :obj:`list` of :obj:`dict`: Each row matching name or :obj:`dict` if only1.
 
         """
-        not_flag = ""
-
-        if value.startswith("NOT:"):
-            value = tools.strip_left(obj=value, fix="NOT:").strip()
-            not_flag = "not "
-
-        if value.startswith("RE:"):
-            value = tools.strip_left(obj=value, fix="RE:")
-            query = '{not_flag}name == regex("{value}", "i")'
+        if value_regex:
+            search = '== regex("{}", "i")'.format(value)
         else:
-            query = '{not_flag}name == "{value}"'
+            search = '== "{}"'.format(value)
 
-            if eq_single and not not_flag:
+            if eq_single and not value_not:
                 max_rows = 1
                 match_count = 1
                 match_error = True
 
-        query = query.format(not_flag=not_flag, value=value)
+        field = "name"
+        not_flag = "not " if value_not else ""
+        query = "{not_flag}{field} {search}"
+        query = query.format(not_flag=not_flag, field=field, search=search).strip()
 
         rows = self.get(
             query=query, max_rows=max_rows, max_pages=max_pages, page_size=page_size
@@ -1209,7 +1204,7 @@ class Fields(mixins.Child):
 class Reports(mixins.Child):
     """Pass."""
 
-    # FUTURE:
+    # FUTURE: OTHER REPORTS:
     """
     get all users
     for each device

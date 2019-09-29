@@ -26,11 +26,45 @@ from .. import cli_constants, grp_cnx, options, serial
     show_envvar=True,
 )
 @click.option(
+    "--name-regex",
+    "-nax",
+    "name_regex",
+    help="Consider --name values as regular expressions.",
+    is_flag=True,
+    default=False,
+    show_envvar=True,
+)
+@click.option(
     "--node",
     "-no",
     "nodes",
     help="Only include adapters with matching node names.",
     multiple=True,
+    show_envvar=True,
+)
+@click.option(
+    "--node-regex",
+    "-nox",
+    "node_regex",
+    help="Consider --node values as regular expressions.",
+    default=False,
+    is_flag=True,
+    show_envvar=True,
+)
+@click.option(
+    "--min-count",
+    "-min",
+    "min_value",
+    help="Only include adapters with at least this many connections.",
+    type=click.INT,
+    show_envvar=True,
+)
+@click.option(
+    "--max-count",
+    "-max",
+    "max_value",
+    help="Only include adapters with at most this many connections.",
+    type=click.INT,
     show_envvar=True,
 )
 @click.option(
@@ -72,7 +106,11 @@ def cmd(
     export_overwrite,
     export_delim,
     names,
+    name_regex,
     nodes,
+    node_regex,
+    min_value,
+    max_value,
     cnx_working,
     cnx_broken,
     cnx_none,
@@ -95,23 +133,13 @@ def cmd(
     with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
         all_adapters = client.adapters.get()
 
-        by_nodes = client.adapters.filter_by_nodes(adapters=all_adapters, value=nodes)
-        grp_cnx.grp_common.check_empty(
-            ctx=ctx,
-            this_data=by_nodes,
-            prev_data=all_adapters,
-            value_type="node names",
-            value=nodes,
-            objtype="adapters",
-            known_cb=client.adapters.get_known,
-            known_cb_key="adapters",
+        filter1 = client.adapters.filter_by_names(
+            adapters=all_adapters, value=names, value_regex=name_regex
         )
-
-        by_names = client.adapters.filter_by_names(adapters=by_nodes, value=names)
         grp_cnx.grp_common.check_empty(
             ctx=ctx,
-            this_data=by_names,
-            prev_data=by_nodes,
+            this_data=filter1,
+            prev_data=all_adapters,
             value_type="names",
             value=names,
             objtype="adapters",
@@ -119,13 +147,39 @@ def cmd(
             known_cb_key="adapters",
         )
 
-        by_statuses = client.adapters.filter_by_status(
-            adapters=by_names, value=statuses
+        filter2 = client.adapters.filter_by_nodes(
+            adapters=filter1, value=nodes, value_regex=node_regex
         )
         grp_cnx.grp_common.check_empty(
             ctx=ctx,
-            this_data=by_statuses,
-            prev_data=by_names,
+            this_data=filter2,
+            prev_data=filter1,
+            value_type="node names",
+            value=nodes,
+            objtype="adapters",
+            known_cb=client.adapters.get_known,
+            known_cb_key="adapters",
+        )
+
+        filter3 = client.adapters.filter_by_cnx_count(
+            adapters=filter2, min_value=min_value, max_value=max_value
+        )
+        grp_cnx.grp_common.check_empty(
+            ctx=ctx,
+            this_data=filter3,
+            prev_data=filter2,
+            value_type="connection counts",
+            value="min_value {} and max_value {}".format(min_value, max_value),
+            objtype="adapters",
+            known_cb=client.adapters.get_known,
+            known_cb_key="adapters",
+        )
+
+        filter4 = client.adapters.filter_by_status(adapters=filter3, value=statuses)
+        grp_cnx.grp_common.check_empty(
+            ctx=ctx,
+            this_data=filter4,
+            prev_data=filter3,
             value_type="statuses",
             value=statuses,
             objtype="adapters",
@@ -135,7 +189,7 @@ def cmd(
 
     formatters = {"json": serial.to_json, "csv": to_csv}
     ctx.obj.handle_export(
-        raw_data=by_statuses,
+        raw_data=filter4,
         formatters=formatters,
         export_format=export_format,
         export_file=export_file,

@@ -55,7 +55,7 @@ class TestCmdAddGetDelete(object):
         assert isinstance(json1, dict)
         assert json1["name"] == name
 
-        args2 = [cmd, "saved-query", "get-by-name", "--name", name]
+        args2 = [cmd, "saved-query", "get-by-name", "--value", name]
 
         result2 = runner.invoke(cli=cli.cli, args=args2)
 
@@ -120,7 +120,7 @@ class TestCmdAddGetDelete(object):
         assert isinstance(json1, dict)
         assert json1["name"] == name
 
-        args2 = [cmd, "saved-query", "get-by-name", "--name", name]
+        args2 = [cmd, "saved-query", "get-by-name", "--value", name]
 
         result2 = runner.invoke(cli=cli.cli, args=args2)
 
@@ -182,7 +182,7 @@ class TestCmdAddGetDelete(object):
         assert isinstance(json1, dict)
         assert json1["name"] == name
 
-        args2 = [cmd, "saved-query", "get-by-name", "--name", name]
+        args2 = [cmd, "saved-query", "get-by-name", "--value", name]
 
         result2 = runner.invoke(cli=cli.cli, args=args2)
 
