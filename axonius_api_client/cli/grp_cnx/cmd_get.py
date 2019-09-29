@@ -27,6 +27,32 @@ from . import grp_common
     show_envvar=True,
 )
 @click.option(
+    "--id-regex",
+    "-ix",
+    "id_regex",
+    help="Consider --id values as regular expressions.",
+    is_flag=True,
+    default=False,
+    show_envvar=True,
+)
+@click.option(
+    "--uuid",
+    "-ui",
+    "uuids",
+    help="Only include connections with matching UUIDs.",
+    multiple=True,
+    show_envvar=True,
+)
+@click.option(
+    "--uuid-regex",
+    "-ux",
+    "uuid_regex",
+    help="Consider --uuid values as regular expressions.",
+    is_flag=True,
+    default=False,
+    show_envvar=True,
+)
+@click.option(
     "--no-working",
     "-nw",
     "working",
@@ -51,7 +77,7 @@ from . import grp_common
     default=False,
     is_flag=True,
     is_eager=True,
-    callback=grp_common.show_sources_parent,
+    callback=grp_common.show_sources,
     expose_value=False,
 )
 @options.OPT_ROWS
@@ -68,12 +94,15 @@ def cmd(
     export_delim,
     rows,
     ids,
+    id_regex,
+    uuids,
+    uuid_regex,
     working,
     broken,
     include_settings,
 ):
     """Get connections from adapters based on id or status."""
-    rows = grp_common.get_rows(ctx=ctx, rows=rows, only_parent=True)
+    rows = grp_common.get_rows(ctx=ctx, rows=rows)
 
     statuses = []
 
@@ -86,10 +115,10 @@ def cmd(
     client = ctx.obj.start_client(url=url, key=key, secret=secret)
 
     with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
-        by_statuses = client.adapters.cnx.filter_by_status(cnxs=rows, value=statuses)
+        filter1 = client.adapters.cnx.filter_by_status(cnxs=rows, value=statuses)
         grp_common.check_empty(
             ctx=ctx,
-            this_data=by_statuses,
+            this_data=filter1,
             prev_data=rows,
             value_type="connection statuses",
             value=statuses,
@@ -98,13 +127,29 @@ def cmd(
             known_cb_key="cnxs",
         )
 
-        by_ids = client.adapters.cnx.filter_by_ids(cnxs=by_statuses, value=ids)
+        filter2 = client.adapters.cnx.filter_by_ids(
+            cnxs=filter1, value=ids, value_regex=id_regex
+        )
         grp_common.check_empty(
             ctx=ctx,
-            this_data=by_ids,
-            prev_data=by_statuses,
+            this_data=filter2,
+            prev_data=filter1,
             value_type="connection ids",
             value=ids,
+            objtype="connections",
+            known_cb=client.adapters.cnx.get_known,
+            known_cb_key="cnxs",
+        )
+
+        filter3 = client.adapters.cnx.filter_by_uuids(
+            cnxs=filter1, value=uuids, value_regex=uuid_regex
+        )
+        grp_common.check_empty(
+            ctx=ctx,
+            this_data=filter3,
+            prev_data=filter2,
+            value_type="connection uuids",
+            value=uuids,
             objtype="connections",
             known_cb=client.adapters.cnx.get_known,
             known_cb_key="cnxs",
@@ -113,7 +158,7 @@ def cmd(
     formatters = {"json": serial.to_json, "csv": grp_common.to_csv}
 
     ctx.obj.handle_export(
-        raw_data=by_ids,
+        raw_data=filter3,
         formatters=formatters,
         export_format=export_format,
         export_file=export_file,

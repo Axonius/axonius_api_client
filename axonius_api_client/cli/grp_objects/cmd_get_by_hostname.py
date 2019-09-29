@@ -20,8 +20,11 @@ from . import grp_common
 @options.OPT_FIELDS
 @options.OPT_FIELDS_DEFAULT
 @options.OPT_MAX_ROWS
-@options.OPT_GET_BY_VALUES
+@options.OPT_GET_BY_PRE_QUERY
 @options.OPT_GET_BY_POST_QUERY
+@options.OPT_GET_BY_VALUE_NOT
+@options.OPT_GET_BY_VALUE_REGEX
+@options.OPT_GET_BY_VALUES
 @click.pass_context
 def cmd(
     ctx,
@@ -34,7 +37,10 @@ def cmd(
     export_overwrite,
     export_delim,
     values,
-    query,
+    value_regex,
+    value_not,
+    query_pre,
+    query_post,
     fields,
     fields_default,
     max_rows,
@@ -51,7 +57,10 @@ def cmd(
         export_overwrite=export_overwrite,
         joiner=export_delim,
         values=values,
-        query=query,
+        value_regex=value_regex,
+        value_not=value_not,
+        query_pre=query_pre,
+        query_post=query_post,
         fields=fields,
         fields_default=fields_default,
         max_rows=max_rows,

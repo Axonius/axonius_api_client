@@ -39,7 +39,6 @@ class RunAction(mixins.Child):
 
         return self._parent._request(method="get", path=path)
 
-    # FUTURE: public method
     def _deploy(self, action_name, ids, file_uuid, file_name, params=None):
         """Deploy an action.
 
@@ -71,7 +70,6 @@ class RunAction(mixins.Child):
 
         return self._parent._request(method="post", path=path, json=data)
 
-    # FUTURE: public method
     def _shell(self, action_name, ids, command):
         """Run an action.
 
@@ -96,7 +94,6 @@ class RunAction(mixins.Child):
 
         return self._parent._request(method="post", path=path, json=data)
 
-    # FUTURE: public method
     def _upload_file(self, name, content, content_type=None, headers=None):
         """Upload a file to the system for use in deployment.
 
@@ -167,7 +164,6 @@ class Enforcements(mixins.Model, mixins.Mixins):
 
         return self._request(method="delete", path=path, json=ids)
 
-    # FUTURE: public method
     def _create(self, name, main, success=None, failure=None, post=None, triggers=None):
         """Create an enforcement.
 
@@ -216,8 +212,6 @@ class Enforcements(mixins.Model, mixins.Mixins):
         path = self._router.root
         return self._request(method="put", path=path, json=data, is_json=False)
 
-    # FUTURE: Shares code with SavedQuery.delete
-    # FUTURE: old sdk had fields arg
     def _get(self, query=None, row_start=0, page_size=0):
         """Get a page for a given query.
 
@@ -260,7 +254,6 @@ class Enforcements(mixins.Model, mixins.Mixins):
 
         return self._request(method="get", path=path, params=params)
 
-    # FUTURE: Shares code with SavedQuery.delete
     def delete(self, rows):
         """Delete an enforcement by name.
 
@@ -284,7 +277,6 @@ class Enforcements(mixins.Model, mixins.Mixins):
             ids=[x["uuid"] for x in tools.listify(obj=rows, dictkeys=False)]
         )
 
-    # FUTURE: Shares code with SavedQuery.get and UsersDevicesMixins.get (sorta)
     def get(self, query=None, max_rows=None, max_pages=None, page_size=None):
         """Get enforcements."""
         if not page_size or page_size > constants.MAX_PAGE_SIZE:
@@ -390,10 +382,11 @@ class Enforcements(mixins.Model, mixins.Mixins):
 
         return None
 
-    # FUTURE: Shares code with SavedQuery.get_by_name
     def get_by_name(
         self,
         value,
+        value_regex=False,
+        value_not=False,
         match_count=None,
         match_error=True,
         eq_single=True,
@@ -402,25 +395,20 @@ class Enforcements(mixins.Model, mixins.Mixins):
         page_size=None,
     ):
         """Find actions by name."""
-        not_flag = ""
-
-        if value.startswith("NOT:"):
-            value = tools.strip_left(obj=value, fix="NOT:").strip()
-            not_flag = "not "
-
-        # add tests later once out of beta
-        if value.startswith("RE:"):  # pragma: no cover
-            value = tools.strip_left(obj=value, fix="RE:").strip()
-            query = '{not_flag}name == regex("{value}", "i")'
+        if value_regex:  # pragma: no cover
+            search = '== regex("{}", "i")'.format(value)
         else:
-            query = '{not_flag}name == "{value}"'
+            search = '== "{}"'.format(value)
 
-            if eq_single and not not_flag:
+            if eq_single and not value_not:
                 max_rows = 1
                 match_count = 1
                 match_error = True
 
-        query = query.format(not_flag=not_flag, value=value)
+        field = "name"
+        not_flag = "not " if value_not else ""
+        query = "{not_flag}{field} {search}"
+        query = query.format(not_flag=not_flag, field=field, search=search).strip()
 
         rows = self.get(
             query=query, max_rows=max_rows, max_pages=max_pages, page_size=page_size

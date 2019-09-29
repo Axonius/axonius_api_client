@@ -18,7 +18,10 @@ def get_by_cmd(
     export_overwrite,
     joiner,
     values,
-    query,
+    value_regex,
+    value_not,
+    query_pre,
+    query_post,
     fields,
     fields_default,
     max_rows,
@@ -34,7 +37,10 @@ def get_by_cmd(
     with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
         raw_data = apimethod(
             value=values[0] if serial.is_list(values) and len(values) == 1 else values,
-            query_post=query,
+            value_regex=value_regex,
+            value_not=value_not,
+            query_pre=query_pre,
+            query_post=query_post,
             fields=fields,
             fields_default=fields_default,
             max_rows=max_rows,

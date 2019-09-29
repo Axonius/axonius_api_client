@@ -46,7 +46,7 @@ def cmd(
     include_settings,
 ):
     """Perform a reachability check of an adapters connection."""
-    rows = grp_common.get_rows(ctx=ctx, rows=rows, only_parent=False)
+    rows = grp_common.get_rows(ctx=ctx, rows=rows)
 
     processed = []
 

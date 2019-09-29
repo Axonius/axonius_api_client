@@ -17,10 +17,12 @@ from . import grp_common
 @options.OPT_EXPORT_FORMAT
 @options.OPT_EXPORT_OVERWRITE
 @options.OPT_EXPORT_DELIM
+@options.OPT_GET_BY_VALUE_NOT
+@options.OPT_GET_BY_VALUE_REGEX
 @click.option(
-    "--name",
-    "-n",
-    "name",
+    "--value",
+    "-v",
+    "value",
     help="Name of saved query to get.",
     required=True,
     show_envvar=True,
@@ -36,7 +38,9 @@ def cmd(
     export_path,
     export_overwrite,
     export_delim,
-    name,
+    value,
+    value_not,
+    value_regex,
 ):
     """Get a saved query by name."""
     client = ctx.obj.start_client(url=url, key=key, secret=secret)
@@ -45,7 +49,9 @@ def cmd(
     api = getattr(client, pp_grp)
 
     with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
-        raw_data = api.saved_query.get_by_name(value=name)
+        raw_data = api.saved_query.get_by_name(
+            value=value, value_regex=value_regex, value_not=value_not
+        )
 
     formatters = {"json": serial.to_json, "csv": grp_common.to_csv}
 
