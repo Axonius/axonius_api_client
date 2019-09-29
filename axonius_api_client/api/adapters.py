@@ -549,21 +549,33 @@ class Cnx(mixins.Child):
             adapter_name=adapter["name_raw"], node_id=adapter["node_id"], config=config
         )
 
-        had_error = response["status"] == "error" or response["error"]
-        if had_error and error:
+        had_error = response.get("status", "") == "error" or response.get("error", "")
+        has_uuid = "id" in response
+        has_id = "client_id" in response
+
+        if (had_error and error) or (not has_uuid or not has_id):
             raise exceptions.CnxConnectFailure(
                 response=response, adapter=adapter["name"], node=adapter["node_name"]
             )
 
         """
-        add call returns:
+        add call return when cnx added:
         {
             "client_id": "", # client ID
-            "error": "",
+            "error": "",  # will not be empty when connection to adapter product fails
             "id": "",  # UUID
-            "status": "",
+            "status": "",  # will be "error" when error not blank, or "success" when ok
         }
+
+        add call return when... REST API breaks???
+        {
+            "status": "error",
+            "type": "AttributeError",
+            "message": "",
+        }
+
         """
+
         # we refetch the CNX by UUID; add call doesnt return the full cnx obj
         refetched_cnx = self.refetch(
             adapter_name=adapter["name"],

@@ -61,7 +61,7 @@ Also include the columns for AWS device type and OS Type:
 
 .. code::
 
-   $ axonshell devices \
+   $ axonshell devices get \
      --query '(specific_data.data.last_seen >= date("NOW - 3d"))' \
      --field aws:aws_device_type \
      --field os.type
