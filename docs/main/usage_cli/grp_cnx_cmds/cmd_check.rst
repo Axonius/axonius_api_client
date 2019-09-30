@@ -18,17 +18,15 @@ The input to this command as --rows must be from one of these commands:
 
 .. seealso::
 
-   :ref:`rows_option` for examples of working with input feeds.
-
    :doc:`../grp_cnx_cmds/cmd_get` for examples of filtering connections using
    `axonshell adapters get | axonshell adapters cnx get`.
 
 Common Options
 ===============================================
 
-* :ref:`connection_options`
-* :ref:`export_options`
-* :ref:`rows_option`
+* :ref:`connection_options` for examples of supplying the Axonius credentials and URL.
+* :ref:`export_options` for examples of exporting data in different formats and outputs.
+* :ref:`rows_option` for examples of working with input feeds.
 
 Examples
 ===============================================

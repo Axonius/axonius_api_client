@@ -32,8 +32,9 @@ def cmd(ctx, url, key, secret, names, wait):
     api = getattr(client, pp_grp)
 
     rows = []
-    for name in names:
-        rows.append(api.saved_query.get_by_name(value=name))
+    with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
+        for name in names:
+            rows.append(api.saved_query.get_by_name(value=name))
 
     row_names = [x["name"] for x in rows]
 
@@ -42,9 +43,6 @@ def cmd(ctx, url, key, secret, names, wait):
     ctx.obj.echo_warn(msg)
 
     time.sleep(wait)
-
-    client = ctx.obj.start_client(url=url, key=key, secret=secret)
-    api = getattr(client, pp_grp)
 
     with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
         api.saved_query.delete(rows=rows)

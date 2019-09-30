@@ -878,7 +878,7 @@ class TestSavedQuery(Base):
             assert isinstance(query, dict)
 
             qfilter = query.pop("filter")
-            assert isinstance(qfilter, tools.STR)
+            assert isinstance(qfilter, tools.STR) or qfilter is None
 
             qexprs = query.pop("expressions", [])
             assert isinstance(qexprs, tools.LIST)

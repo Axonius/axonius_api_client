@@ -34,3 +34,8 @@ def to_csv(ctx, raw_data, joiner="\n", **kwargs):
         row["sort_field"] = sort.get("field")
 
     return serial.dictwriter(rows=rows)
+
+
+def echo_response(ctx, raw_data, api):
+    """Pass."""
+    ctx.obj.echo_ok("Returned {} rows".format(len(raw_data)))
