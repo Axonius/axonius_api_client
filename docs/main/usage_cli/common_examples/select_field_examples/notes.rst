@@ -1,6 +1,6 @@
 .. include:: /main/.special.rst
 
-Selecting Field Notes
+Notes
 ==========================================
 
 .. note::

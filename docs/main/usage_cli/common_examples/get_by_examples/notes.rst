@@ -1,6 +1,6 @@
 .. include:: /main/.special.rst
 
-Get By Command Notes
+Notes
 ==========================================
 
 .. note::

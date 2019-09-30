@@ -3,11 +3,23 @@
 devices/users count
 ###############################################
 
-This command will get the count of assets that a query would return for users or devices.
+This command will get the count of assets that a query would return for users or devices
+and could be used as part of a script to do something based on the number returned.
 
-.. todo::
+Common Options
+===============================================
 
-   This has not been done yet.
+* :ref:`connection_options`
+* There are no export options for this command since it only returns a number.
+
+Examples
+===============================================
+
+.. toctree::
+   :maxdepth: 1
+   :glob:
+
+   cmd_count_examples/ex*
 
 Help Page
 ===============================================
