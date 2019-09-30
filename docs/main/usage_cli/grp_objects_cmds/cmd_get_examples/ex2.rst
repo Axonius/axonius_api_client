@@ -1,6 +1,6 @@
 .. include:: /main/.special.rst
 
-Get with query
+With Query
 ###############################################
 
 This does the following:
