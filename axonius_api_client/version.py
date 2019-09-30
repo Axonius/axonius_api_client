@@ -2,7 +2,7 @@
 """Version information for this package."""
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-__version__ = "2.1.1"
+__version__ = "2.1.2"
 VERSION = __version__
 """:obj:`str`: Version of package."""
 

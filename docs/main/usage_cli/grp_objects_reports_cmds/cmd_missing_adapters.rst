@@ -3,8 +3,11 @@
 devices/users reports missing-adapters
 ###############################################
 
-Examples
-===============================================
+This command will produce a report of all adapters missing from assets.
+
+.. todo::
+
+   This has not been done yet.
 
 Help Page
 ===============================================

@@ -3,8 +3,11 @@
 devices/users count
 ###############################################
 
-Examples
-===============================================
+This command will get the count of assets that a query would return for users or devices.
+
+.. todo::
+
+   This has not been done yet.
 
 Help Page
 ===============================================

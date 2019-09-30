@@ -3,8 +3,11 @@
 devices/users saved-query delete
 ###############################################
 
-Examples
-===============================================
+This command will delete a saved query by name for users or devices.
+
+.. todo::
+
+   This has not been done yet.
 
 Help Page
 ===============================================
