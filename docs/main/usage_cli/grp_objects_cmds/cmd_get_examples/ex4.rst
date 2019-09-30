@@ -1,6 +1,6 @@
 .. include:: /main/.special.rst
 
-Get with query file and include ALL fields
+With Query File And All Fields
 ###############################################
 
 This does the following:

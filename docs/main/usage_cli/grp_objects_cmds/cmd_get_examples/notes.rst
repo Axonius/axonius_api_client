@@ -1,12 +1,11 @@
 .. include:: /main/.special.rst
 
-Get Notes
+Notes
 ==========================================
 
 .. note::
 
-   This example works the same for both the ``devices get`` command and the
-   ``users get`` command.
+   This example works the same for both the ``devices get`` and ``users get`` commands.
 
 .. note::
 

@@ -1,6 +1,6 @@
 .. include:: /main/.special.rst
 
-Get with no query
+With No Query
 ###############################################
 
 This does the following:

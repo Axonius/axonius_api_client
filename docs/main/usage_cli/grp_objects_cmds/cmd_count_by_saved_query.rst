@@ -3,10 +3,24 @@
 devices/users count-by-saved-query
 ###############################################
 
-This command will get the count of assets that a saved query would return for users or devices.
-.. todo::
+This command will get the count of assets that a saved query would return
+for users or devices and could be used as part of a script to do something based on
+the number returned.
 
-   This has not been done yet.
+Common Options
+===============================================
+
+* :ref:`connection_options`
+* There are no export options for this command since it only returns a number.
+
+Examples
+===============================================
+
+.. toctree::
+   :maxdepth: 1
+   :glob:
+
+   cmd_count_by_saved_query_examples/ex*
 
 Help Page
 ===============================================
