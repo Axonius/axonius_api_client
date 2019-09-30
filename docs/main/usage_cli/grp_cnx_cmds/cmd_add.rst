@@ -8,8 +8,8 @@ This command will add a new connection for an adapter on a node.
 Common Options
 ===============================================
 
-* :ref:`connection_options`
-* :ref:`export_options`
+* :ref:`connection_options` for examples of supplying the Axonius credentials and URL.
+* :ref:`export_options` for examples of exporting data in different formats and outputs.
 
 Examples
 ===============================================

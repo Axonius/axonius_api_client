@@ -11,12 +11,11 @@ working directory.
 Examples
 ===============================================
 
-Prompt for connection info, test connection, write .env file
---------------------------------------------------------------------
+.. toctree::
+   :maxdepth: 1
+   :glob:
 
-.. raw:: html
-
-   <script id="asciicast-270345" src="https://asciinema.org/a/270345.js" async></script>
+   cmd_write_config_examples/ex*
 
 Help Page
 ===============================================
