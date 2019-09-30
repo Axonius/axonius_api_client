@@ -3,7 +3,7 @@
 devices get-by-hostname
 ###############################################
 
-This command lets you search for devices by hostname.
+This command lets you search for devices by hostname and export the data to CSV or JSON.
 
 Common Options
 ===============================================
@@ -11,14 +11,11 @@ Common Options
 * :ref:`connection_options`
 * :ref:`export_options`
 
-Examples
+Common Examples
 ===============================================
 
-.. toctree::
-   :maxdepth: 1
-   :glob:
-
-   cmd_get_by_hostname_examples/*
+* :ref:`get_by_ex`
+* :ref:`select_fields_ex`
 
 Help Page
 ===============================================

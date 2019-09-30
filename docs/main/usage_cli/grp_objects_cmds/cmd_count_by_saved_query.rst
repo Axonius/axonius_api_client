@@ -3,8 +3,10 @@
 devices/users count-by-saved-query
 ###############################################
 
-Examples
-===============================================
+This command will get the count of assets that a saved query would return for users or devices.
+.. todo::
+
+   This has not been done yet.
 
 Help Page
 ===============================================

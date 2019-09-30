@@ -5,6 +5,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import click
 
 from .. import cli_constants, options, serial
+from . import grp_common
 
 
 @click.command(name="get", context_settings=cli_constants.CONTEXT_SETTINGS)
@@ -51,6 +52,8 @@ def cmd(
         raw_data = api.get(
             query=query, fields=fields, fields_default=fields_default, max_rows=max_rows
         )
+
+    grp_common.echo_response(ctx=ctx, raw_data=raw_data, api=api)
 
     formatters = {"json": serial.to_json, "csv": serial.obj_to_csv}
 
