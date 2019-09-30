@@ -6,7 +6,7 @@ Export Options
 ###############################################
 
 Commands return their data to STDOUT in JSON format by default. You can redirect
- STDOUT to a file in order to save the data:
+STDOUT to a file in order to save the data.
 
 .. code::
 
@@ -24,7 +24,7 @@ the export format and output of the data returned:
 
 .. option:: -xf <FILENAME>, --export-file <FILENAME>
 
-   Send the output to this file instead of STDERR.
+   Send the output to this file instead of STDOUT.
 
    .. note::
       If you supply just a filename, it will be created in the directory supplied

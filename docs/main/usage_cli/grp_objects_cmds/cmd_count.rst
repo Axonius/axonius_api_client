@@ -9,7 +9,7 @@ and could be used as part of a script to do something based on the number return
 Common Options
 ===============================================
 
-* :ref:`connection_options`
+* :ref:`connection_options` for examples of supplying the Axonius credentials and URL.
 * There are no export options for this command since it only returns a number.
 
 Examples
