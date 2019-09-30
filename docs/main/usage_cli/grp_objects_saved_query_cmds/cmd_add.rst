@@ -5,9 +5,26 @@ devices/users saved-query add
 
 This command will add a saved query for users or devices.
 
-.. todo::
+Common Options
+===============================================
 
-   This has not been done yet.
+* :ref:`connection_options` for examples of supplying the Axonius credentials and URL.
+* :ref:`export_options` for examples of exporting data in different formats and outputs.
+
+Common Examples
+===============================================
+
+* :ref:`select_fields_ex` for examples of selecting which fields (columns) to include
+  in the saved query for sort column, columns displayed, and column filters.
+
+Examples
+===============================================
+
+.. toctree::
+   :maxdepth: 1
+   :glob:
+
+   cmd_add_examples/ex*
 
 Help Page
 ===============================================

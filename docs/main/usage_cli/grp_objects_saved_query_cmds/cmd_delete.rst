@@ -5,9 +5,20 @@ devices/users saved-query delete
 
 This command will delete a saved query by name for users or devices.
 
-.. todo::
+Common Options
+===============================================
 
-   This has not been done yet.
+* :ref:`connection_options` for examples of supplying the Axonius credentials and URL.
+* :ref:`export_options` for examples of exporting data in different formats and outputs.
+
+Examples
+===============================================
+
+.. toctree::
+   :maxdepth: 1
+   :glob:
+
+   cmd_delete_examples/ex*
 
 Help Page
 ===============================================

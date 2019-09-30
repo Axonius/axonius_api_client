@@ -53,6 +53,8 @@ def cmd(
             value=value, value_regex=value_regex, value_not=value_not
         )
 
+    grp_common.echo_response(ctx=ctx, raw_data=raw_data, api=api)
+
     formatters = {"json": serial.to_json, "csv": grp_common.to_csv}
 
     ctx.obj.handle_export(

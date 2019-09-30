@@ -40,6 +40,8 @@ def cmd(
     with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
         raw_data = api.saved_query.get(max_rows=max_rows)
 
+    grp_common.echo_response(ctx=ctx, raw_data=raw_data, api=api)
+
     formatters = {"json": serial.to_json, "csv": grp_common.to_csv}
 
     ctx.obj.handle_export(

@@ -3,25 +3,35 @@
 users
 ###############################################
 
-This is a command group under :doc:`root`
+This is a command group under the main :doc:`root` that has commands for getting
+user assets using queries built by the Query Wizard in the GUI, saved queries, and
+queries built for you by various ``get-by..`` commands.
 
 Sub Command Groups
 ===============================================
 
-* :doc:`grp_users_labels`
-* :doc:`grp_users_reports`
-* :doc:`grp_users_saved_query`
+* :doc:`grp_users_labels` has commands to get, add, or remove labels from user assets.
+* :doc:`grp_users_reports` has commands to produce reports for user assets.
+* :doc:`grp_users_saved_query` has commands to add, delete, or get saved queries for
+  user assets.
 
 Commands
 ===============================================
 
-* :doc:`grp_objects_cmds/cmd_count`
-* :doc:`grp_objects_cmds/cmd_count_by_saved_query`
-* :doc:`grp_objects_cmds/cmd_fields`
-* :doc:`grp_objects_cmds/cmd_get`
-* :doc:`grp_objects_cmds/cmd_get_by_saved_query`
-* :doc:`grp_users_cmds/cmd_get_by_mail`
-* :doc:`grp_users_cmds/cmd_get_by_username`
+* :doc:`grp_objects_cmds/cmd_count` to get the count of user assets that would be returned
+  from a query built by the Query Wizard in the GUI.
+* :doc:`grp_objects_cmds/cmd_count_by_saved_query` to get the count of user assets that
+  would be returned from a saved query.
+* :doc:`grp_objects_cmds/cmd_fields` to get the fields (columns) that are available
+  for user assets from all adapters.
+* :doc:`grp_objects_cmds/cmd_get` to get user assets using a query built by
+  the Query Wizard in the GUI.
+* :doc:`grp_objects_cmds/cmd_get_by_saved_query` to get user assets using a
+  saved query.
+* :doc:`grp_users_cmds/cmd_get_by_mail` to build a query for you that gets
+  user assets by email address.
+* :doc:`grp_users_cmds/cmd_get_by_username` to build a query for you that gets
+  user assets by username.
 
 
 Help Page
