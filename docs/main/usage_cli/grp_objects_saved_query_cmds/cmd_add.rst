@@ -3,8 +3,11 @@
 devices/users saved-query add
 ###############################################
 
-Examples
-===============================================
+This command will add a saved query for users or devices.
+
+.. todo::
+
+   This has not been done yet.
 
 Help Page
 ===============================================

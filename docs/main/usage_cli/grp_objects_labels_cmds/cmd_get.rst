@@ -3,8 +3,11 @@
 devices/users labels get
 ###############################################
 
-Examples
-===============================================
+This command will get all of the labels known by the system for users or devices.
+
+.. todo::
+
+   This has not been done yet.
 
 Help Page
 ===============================================

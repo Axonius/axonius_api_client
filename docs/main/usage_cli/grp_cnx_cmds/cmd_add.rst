@@ -18,7 +18,7 @@ Examples
    :maxdepth: 1
    :glob:
 
-   cmd_add_examples/*
+   cmd_add_examples/ex*
 
 Help Page
 ===============================================

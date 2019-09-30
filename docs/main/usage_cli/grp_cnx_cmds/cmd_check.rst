@@ -37,7 +37,7 @@ Examples
    :maxdepth: 1
    :glob:
 
-   cmd_check_examples/*
+   cmd_check_examples/ex*
 
 Help Page
 ===============================================

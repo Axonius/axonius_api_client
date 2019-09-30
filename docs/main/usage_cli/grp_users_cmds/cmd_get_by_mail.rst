@@ -3,8 +3,19 @@
 users get-by-mail
 ###############################################
 
-Examples
+This command lets you search for users by email address and export the data to CSV or JSON.
+
+Common Options
 ===============================================
+
+* :ref:`connection_options`
+* :ref:`export_options`
+
+Common Examples
+===============================================
+
+* :ref:`get_by_ex`
+* :ref:`select_fields_ex`
 
 Help Page
 ===============================================

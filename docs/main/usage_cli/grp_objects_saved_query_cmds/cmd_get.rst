@@ -3,8 +3,11 @@
 devices/users saved-query get
 ###############################################
 
-Examples
-===============================================
+This command will get all saved queries for users or devices.
+
+.. todo::
+
+   This has not been done yet.
 
 Help Page
 ===============================================

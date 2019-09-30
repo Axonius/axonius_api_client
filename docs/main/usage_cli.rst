@@ -37,6 +37,15 @@ CLI Common Options
 
    usage_cli/common_options/*
 
+CLI Common Examples
+==============================================
+
+.. toctree::
+   :maxdepth: 1
+   :glob:
+
+   usage_cli/common_examples/*
+
 CLI Features
 ==============================================
 

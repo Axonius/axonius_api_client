@@ -3,8 +3,11 @@
 devices/users labels add
 ###############################################
 
-Examples
-===============================================
+This command will add labels (tags) to users or devices.
+
+.. todo::
+
+   This has not been done yet.
 
 Help Page
 ===============================================

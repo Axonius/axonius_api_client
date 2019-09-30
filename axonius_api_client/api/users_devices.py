@@ -310,7 +310,7 @@ class UserDeviceMixin(mixins.ModelUserDevice, mixins.Mixins):
                     match_error = True
 
         not_flag = "not " if value_not else ""
-        query = "{query_pre} {not_flag}{field} {search} {query_post}"
+        query = "{query_pre} {not_flag}({field} {search}) {query_post}"
         query = query.format(
             not_flag=not_flag,
             field=field,
@@ -1098,7 +1098,7 @@ class Fields(mixins.Child):
     def find(self, field, error=True, all_fields=None):
         """Find a field for a given adapter."""
         if field.startswith("MANUAL:"):
-            return tools.strip_left(obj=field, fix="MANUAL:").strip()
+            return [tools.strip_left(obj=field, fix="MANUAL:").strip()]
 
         all_fields = all_fields or self.get()
 
@@ -1292,12 +1292,13 @@ class ParserFields(mixins.Parser):
                 "type": "array",
                 "adapter_prefix": prefix,
             },
-            "raw": {
-                "name": "{}.raw".format(prefix),
-                "title": "All raw data for {} adapter".format(prefix),
-                "type": "array",
-                "adapter_prefix": prefix,
-            },
+            # this does not work any more as of 2.1.2 - unsure why
+            # "raw": {
+            #     "name": "{}.raw".format(prefix),
+            #     "title": "All raw data for {} adapter".format(prefix),
+            #     "type": "array",
+            #     "adapter_prefix": prefix,
+            # },
         }
 
         for field in raw_fields:
