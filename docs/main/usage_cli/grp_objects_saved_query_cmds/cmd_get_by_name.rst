@@ -3,8 +3,11 @@
 devices/users saved-query get-by-name
 ###############################################
 
-Examples
-===============================================
+This command will get a saved query by name for users or devices.
+
+.. todo::
+
+   This has not been done yet.
 
 Help Page
 ===============================================

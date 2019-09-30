@@ -3,8 +3,11 @@
 devices/users fields
 ###############################################
 
-Examples
-===============================================
+This command will produce a report of all fields for users or devices.
+
+.. todo::
+
+   This has not been done yet.
 
 Help Page
 ===============================================

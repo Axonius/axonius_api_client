@@ -3,8 +3,11 @@
 devices/users get-by-saved-query
 ###############################################
 
-Examples
-===============================================
+This command will get assets returned from a saved query for users or devices.
+
+.. todo::
+
+   This has not been done yet.
 
 Help Page
 ===============================================

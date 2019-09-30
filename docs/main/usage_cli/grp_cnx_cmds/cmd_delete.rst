@@ -36,7 +36,7 @@ Examples
    :maxdepth: 1
    :glob:
 
-   cmd_delete_examples/*
+   cmd_delete_examples/ex*
 
 Help Page
 ===============================================

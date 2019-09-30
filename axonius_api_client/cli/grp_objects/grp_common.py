@@ -46,6 +46,8 @@ def get_by_cmd(
             max_rows=max_rows,
         )
 
+    echo_response(ctx=ctx, raw_data=raw_data, api=api)
+
     formatters = {"json": serial.to_json, "csv": serial.obj_to_csv}
 
     ctx.obj.handle_export(
@@ -57,6 +59,17 @@ def get_by_cmd(
         export_overwrite=export_overwrite,
         joiner=joiner,
     )
+
+
+def echo_response(ctx, raw_data, api):
+    """Pass."""
+    last_get = getattr(api, "_LAST_GET", {})
+    last_filter = last_get.get("filter", "")
+    last_fields = "\n  ".join(last_get.get("fields", "").split(","))
+
+    ctx.obj.echo_ok("Returned {} rows".format(len(raw_data)))
+    ctx.obj.echo_ok("Query: {!r}".format(last_filter))
+    ctx.obj.echo_ok("Fields:\n  {}".format(last_fields))
 
 
 def get_sources(ctx):
