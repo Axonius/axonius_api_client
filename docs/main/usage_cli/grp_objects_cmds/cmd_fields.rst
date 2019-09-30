@@ -5,9 +5,20 @@ devices/users fields
 
 This command will produce a report of all fields for users or devices.
 
-.. todo::
+Common Options
+===============================================
 
-   This has not been done yet.
+* :ref:`connection_options`
+* :ref:`export_options`
+
+Examples
+===============================================
+
+.. toctree::
+   :maxdepth: 1
+   :glob:
+
+   cmd_fields_examples/ex*
 
 Help Page
 ===============================================

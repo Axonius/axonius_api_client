@@ -5,6 +5,15 @@ devices get-by-subnet
 
 This command lets you search for devices that are in a given subnet and export the data to CSV or JSON.
 
+Output feeds
+===============================================
+
+The output from this command is able to be supplied as input to these commands:
+
+* :doc:`../grp_objects_reports_cmds/cmd_missing_adapters`
+* :doc:`../grp_objects_labels_cmds/cmd_add`
+* :doc:`../grp_objects_labels_cmds/cmd_remove`
+
 Common Options
 ===============================================
 
