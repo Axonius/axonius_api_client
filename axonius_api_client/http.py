@@ -38,7 +38,7 @@ class Http(object):
         **kwargs
         # fmt: on
     ):
-        """Constructor.
+        """HTTP client for sending requests usings :obj:`requests.Session`.
 
         Args:
             url (:obj:`str` or :obj:`axonius_api_client.http.parser.ParserUrl`):
@@ -352,7 +352,7 @@ class ParserUrl(object):
     """Parse a URL and ensure it has the neccessary bits."""
 
     def __init__(self, url, default_scheme="https"):
-        """Constructor.
+        """Parse a URL and ensure it has the neccessary bits.
 
         Args:
             url (:obj:`str`):

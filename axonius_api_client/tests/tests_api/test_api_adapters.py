@@ -445,9 +445,7 @@ class TestCnx(object):
         adapter = apiobj.get_single("active_directory")
 
         with pytest.raises(exceptions.CnxConnectFailure) as exc:
-            apiobj.cnx.add(
-                adapter=adapter, config=config, parse_config=True, error=True
-            )
+            apiobj.cnx.add(adapter=adapter, config=config, parse_config=True, error=True)
 
         refetched = apiobj.cnx.refetch(
             adapter_name=adapter["name"],

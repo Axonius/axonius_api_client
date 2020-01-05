@@ -130,9 +130,7 @@ class TestHttp(object):
 
         http()
 
-    @pytest.mark.skipif(
-        sys.version_info < (3, 6), reason="requires python3.6 or higher"
-    )
+    @pytest.mark.skipif(sys.version_info < (3, 6), reason="requires python3.6 or higher")
     def test_verify_ca_bundle(self, request, httpbin_secure, httpbin_ca_bundle):
         """Test quiet_urllib=False no warning from urllib3 when using ca bundle."""
         url = httpbin_secure.url

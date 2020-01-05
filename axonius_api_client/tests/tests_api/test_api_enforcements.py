@@ -52,9 +52,7 @@ def apiobj(request):
 
     utils.check_apiobj(authobj=auth, apiobj=api)
 
-    utils.check_apiobj_children(
-        apiobj=api, runaction=axonapi.api.enforcements.RunAction
-    )
+    utils.check_apiobj_children(apiobj=api, runaction=axonapi.api.enforcements.RunAction)
 
     utils.check_apiobj_xref(
         apiobj=api,
