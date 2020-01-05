@@ -8,20 +8,6 @@ from .. import constants, version
 from . import cli_constants, click_ext, context, grp_adapters, grp_objects, grp_tools
 
 
-"""
-FUTURE:
-* accept ini based config for adapters cnx add
-* better way to handle adapters cnx skips in prompts - maybe custom click type?
-* grp_enforcements
-* wrap json datasets with objtype info
-* --verbose/--no-verbose to silence echo_ok
-* way to only import cli stuffs so package doesnt see unless needed
-* add cert_human logic
-* prompt does not use CR when re-prompting on empty var with hide_input=False
-* add doc links
-"""
-
-
 @click.group(
     cls=click_ext.AliasedGroup,
     context_settings=cli_constants.CONTEXT_SETTINGS,
