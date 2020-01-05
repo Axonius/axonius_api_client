@@ -1,10 +1,42 @@
 # API client todos
 
+## NOW
+
+axonius_api_client/tests/tests_cli/test_cli_grp_cnx.py:
+stalling, figure out why
+
+axonius_api_client/tests/tests_api/test_api_users_devices.py:
+4 F's, figure out why
+
 ## DOCS
 
 ### need to doc proxy and cert
 
 ### All docstrings re-done
+
+## Tests package
+
+### Make client config automatically determine adapter config
+
+Solve for changing schemas.
+
+### Test subclassing/strings/etc of all exceptions
+
+In tests_pkg/test_exceptions.py
+
+### add atexit to verify no badwolf leftovers
+
+Actions leftover, need to determine how to clean up
+
+### Permissions check not the same octal on windows
+
+In tests_pkg/test_tools.py:test_simple_pathlib
+
+### SQ keys unknown value unknown
+
+in tests_api/test_api_users_devices.py:TestSavedQuery.test__get
+
+"historical" and "filteredAdapters" in expressions
 
 ## CLI package
 
@@ -66,6 +98,11 @@ In adapters cnx add. Maybe custom click type?
 For mutual TLS. AX-5789 & PROD-797
 
 ## API package
+
+## enforcements.py: Needs work, awaiting REST API updates
+
+Will need something like a public build_trigger method
+public create will need to get sq!
 
 ### users_devices.py:UserDeviceMixin.get_by_saved_query: Need filters
 
@@ -144,6 +181,18 @@ Right now shows all nodes grouped
 
 ## REST API
 
+### Schema's are defining required items that dont exist in items
+
+In tests_api/test_api_adapters.py
+
+### Some connection configs have empty client ID's
+
+In tests_api/test_api_adapters.py
+
+### adding cnx with parsed config instead of raw config breaks stuff
+
+check if this is fixed.
+
 ### Add adapter description to adapter metadata
 
 Currently only stored in:
@@ -208,3 +257,5 @@ if not_within is not None:
 Currently, if you add a SQ via API without expressions, the query wizard will
 be empty for that SQ due to no expressions. This would possibly mean moving
 query wizard parsing from front end JS to API?
+
+### Enforcements API needs love

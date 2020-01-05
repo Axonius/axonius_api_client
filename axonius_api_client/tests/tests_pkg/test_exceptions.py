@@ -4,8 +4,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 from axonius_api_client import exceptions, tools
 
-# FUTURE: Test subclassing/strings/etc
-
 
 class TestKnownCb(object):
     """Test axonius_api_client.tools.join_url."""

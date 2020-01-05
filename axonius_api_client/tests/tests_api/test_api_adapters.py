@@ -12,9 +12,6 @@ from axonius_api_client import constants, exceptions, tools
 
 from .. import utils
 
-# REST API BR: adding cnx with parsed config instead of raw config breaks adapters._get()
-# FUTURE: add atexit to verify no badwolf cnxs?
-
 CSV_FILENAME = "badwolf.csv"
 CSV_FIELDS = ["mac_address", "field1"]
 CSV_ROW = ["01:37:53:9E:82:7C", "e"]
@@ -1289,7 +1286,6 @@ class TestRawAdapters(object):
             assert isinstance(req, tools.STR)
             item_names = [x["name"] for x in items]
 
-            # FUTURE: schema's are defining required items that dont exist in items
             if req not in item_names:
                 msg = "Schema for {} has required item {!r} not in defined items {}"
                 msg = msg.format(name, req, item_names)
