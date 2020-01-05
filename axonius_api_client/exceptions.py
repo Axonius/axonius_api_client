@@ -23,7 +23,7 @@ class BetaWarning(AxonWarning):
     """Pass."""
 
     def __init__(self, obj):
-        """Constructor."""
+        """Pass."""
         msg = "Object {obj} is considered **BETA** status! Here be dragons..."
         msg = msg.format(obj=obj)
 
@@ -54,7 +54,7 @@ class CnxDeleteForce(CnxError):
     """Pass."""
 
     def __init__(self, cnxinfo):
-        """Constructor.
+        """Pass.
 
         Args:
             added (:obj:`requests.Response`):
@@ -79,7 +79,7 @@ class CnxDeleteFailed(CnxError):
     """Pass."""
 
     def __init__(self, cnxinfo, response):
-        """Constructor."""
+        """Pass."""
         from . import tools
 
         self.cnxinfo = cnxinfo
@@ -101,7 +101,7 @@ class CnxDeleteWarning(CnxWarning):
     """Pass."""
 
     def __init__(self, cnxinfo, sleep):
-        """Constructor."""
+        """Pass."""
         from . import tools
 
         msg = ["Connection info: {cnxinfo}", "Will delete connection in {s} seconds!!"]
@@ -114,7 +114,7 @@ class CnxDeleteFailedWarning(CnxWarning):
     """Pass."""
 
     def __init__(self, cnxinfo, response):
-        """Constructor."""
+        """Pass."""
         from . import tools
 
         self.cnxinfo = cnxinfo
@@ -136,7 +136,7 @@ class CnxRefetchFailure(CnxError):
     def __init__(
         self, response, adapter, node, filter_value, filter_method, known=None, **kwargs
     ):
-        """Constructor.
+        """Pass.
 
         Args:
             response (:obj:`requests.Response`):
@@ -176,7 +176,7 @@ class CnxCsvWarning(CnxWarning):
     """Pass."""
 
     def __init__(self, ids_type, ids, name, headers):
-        """Constructor."""
+        """Pass."""
         msg = "No {ids_type} identifiers {ids} found in CSV file {name} headers {h}"
         msg = msg.format(ids_type=ids_type, ids=ids, name=name, h=headers)
 
@@ -187,7 +187,7 @@ class CnxConnectFailure(CnxError):
     """Error when response has error key in JSON."""
 
     def __init__(self, response, adapter, node):
-        """Constructor.
+        """Pass.
 
         Args:
             response (:obj:`requests.Response`):
@@ -346,7 +346,7 @@ class ResponseError(ApiError):
     """Parent exception for any response error."""
 
     def __init__(self, response, error="", exc=None, details=True, bodies=True):
-        """Constructor.
+        """Pass.
 
         Args:
             response (:obj:`requests.Response`):
@@ -418,7 +418,7 @@ class JsonInvalid(ResponseError):
     """Error when response has invalid JSON."""
 
     def __init__(self, response, exc=None, details=True, bodies=True):
-        """Constructor.
+        """Pass.
 
         Args:
             response (:obj:`requests.Response`):
@@ -439,7 +439,7 @@ class JsonError(ResponseError):
     """Error when response has error key in JSON."""
 
     def __init__(self, response, data, exc=None, details=True, bodies=False):
-        """Constructor.
+        """Pass.
 
         Args:
             response (:obj:`requests.Response`):
@@ -479,7 +479,7 @@ class ValueNotFound(ApiError):
         **kwargs
         # fmt: on
     ):
-        """Constructor."""
+        """Pass."""
         from . import tools
 
         self.value = value
@@ -514,7 +514,7 @@ class InvalidCredentials(AuthError):
     """Error on failed login."""
 
     def __init__(self, auth, exc=None):
-        """Constructor.
+        """Pass.
 
         Args:
             auth (:obj:`axonius_api_client.models.AuthModel`):
@@ -540,7 +540,7 @@ class NotLoggedIn(AuthError):
     """Error when not logged in."""
 
     def __init__(self, auth):
-        """Constructor.
+        """Pass.
 
         Args:
             auth (:obj:`axonius_api_client.models.AuthModel`):
@@ -559,7 +559,7 @@ class AlreadyLoggedIn(AuthError):
     """Error when already logged in."""
 
     def __init__(self, auth):
-        """Constructor.
+        """Pass.
 
         Args:
             auth (:obj:`axonius_api_client.models.AuthModel`):

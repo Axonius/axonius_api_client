@@ -100,9 +100,7 @@ class Context(object):
     @staticmethod
     def echo_error(msg, abort=True, **kwargs):
         """Pass."""
-        click.secho(
-            cli_constants.ERROR_TMPL.format(msg=msg), **cli_constants.ERROR_ARGS
-        )
+        click.secho(cli_constants.ERROR_TMPL.format(msg=msg), **cli_constants.ERROR_ARGS)
         if abort:
             sys.exit(1)
 

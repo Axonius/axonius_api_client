@@ -134,9 +134,7 @@ def join_cr(obj, is_cell=False, joiner="\n"):
     return str_obj
 
 
-def dictwriter(
-    rows, stream=None, headers=None, quoting=cli_constants.QUOTING, **kwargs
-):
+def dictwriter(rows, stream=None, headers=None, quoting=cli_constants.QUOTING, **kwargs):
     """Pass."""
     fh = stream or tools.six.StringIO()
 
