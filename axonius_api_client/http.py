@@ -291,9 +291,7 @@ class Http(object):
 
         if self._LOG_REQUEST_BODY:
             msg = "request body:\n{body}"
-            msg = msg.format(
-                body=tools.json_dump(obj=prepped_request.body, error=False)
-            )
+            msg = msg.format(body=tools.json_dump(obj=prepped_request.body, error=False))
             self._log.debug(msg)
 
         response = self.session.send(**send_args)

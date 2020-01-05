@@ -186,7 +186,6 @@ class UserDeviceMixin(mixins.ModelUserDevice, mixins.Mixins):
                 "use_post={}".format(use_post),
             ]
             self._log.debug(tools.join_comma(obj=msg))
-
             page = self._get(
                 query=query,
                 fields=fields,
@@ -649,7 +648,6 @@ class SavedQuery(mixins.Child):
 
         return self._parent._request(method="get", path=path, params=params)
 
-    # REST API FR: Have backend process expressions on add if none supplied
     def add(
         self,
         name,
@@ -1203,14 +1201,6 @@ class Fields(mixins.Child):
 
 class Reports(mixins.Child):
     """Pass."""
-
-    # FUTURE: OTHER REPORTS:
-    """
-    get all users
-    for each device
-        find any users whose username matches last logged in user
-        device[users] = found_users
-    """
 
     def missing_adapters(self, rows, adapters=None, fields=None):
         """Pass."""
