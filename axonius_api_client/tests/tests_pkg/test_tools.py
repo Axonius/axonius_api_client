@@ -244,7 +244,6 @@ class TestPathWrite(object):
         assert ret_path.read_text() == data
         assert format(ret_path) == format(path)
         assert ret_write == len(data)
-        # FUTURE: not the same octal on windows
         assert ret_path.stat().st_mode == 33152
         assert ret_path.parent.stat().st_mode == 16832
 

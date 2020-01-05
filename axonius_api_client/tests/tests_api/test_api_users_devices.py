@@ -2,6 +2,7 @@
 """Test suite for axonapi.api.users_devices."""
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+import json
 import re
 
 import pytest
@@ -412,9 +413,9 @@ class Single(Base):
         asset = self.get_single_asset(apiobj=apiobj, fields=specfield)
         asset_value = asset[specfield]
         value = tools.listify(obj=asset_value)[0]
-        query_post = "and {}".format(QUERY_FIELD_EXISTS(field=specfield))
+        query_pre = "{} and ".format(QUERY_FIELD_EXISTS(field=specfield))
         found = getattr(apiobj, specmethod)(
-            value=value, query_post=query_post, match_count=1, fields=specfield
+            value=value, query_pre=query_pre, match_count=1, fields=specfield
         )
         assert isinstance(found, dict)
         found_value = found[specfield]
@@ -467,12 +468,10 @@ class TestDevices(Single):
         asset_value = asset[specfield]
 
         value = tools.listify(obj=asset_value)[0]
+        query_pre = "{} and ".format(QUERY_FIELD_EXISTS(field=findfield))
 
         found = apiobj.get_by_subnet(
-            value=value,
-            max_rows=1,
-            fields=findfield,
-            query_post=" and {}".format(QUERY_FIELD_EXISTS(field=findfield)),
+            value=value, max_rows=1, fields=findfield, query_pre=query_pre,
         )
 
         assert isinstance(found, tools.LIST)
@@ -492,13 +491,14 @@ class TestDevices(Single):
         asset_value = asset[specfield]
 
         value = tools.listify(obj=asset_value)[0]
+        query_pre = "{} and ".format(QUERY_FIELD_EXISTS(field=findfield))
 
         found = apiobj.get_by_subnet(
             value=value,
             value_not=True,
             max_rows=1,
             fields=findfield,
-            query_post=" and {}".format(QUERY_FIELD_EXISTS(field=findfield)),
+            query_pre=query_pre,
         )
         # could do value checking here, but we'd have to get every asset
         # lets not do that...
@@ -822,18 +822,39 @@ class TestSavedQuery(Base):
             assert asset["query_type"] in ["saved"]
 
             str_keys = [
-                "associated_user_name",
                 "date_fetched",
+                "description",
+                "last_updated",
                 "name",
                 "query_type",
                 "timestamp",
                 "user_id",
                 "uuid",
             ]
-
             for str_key in str_keys:
                 val = asset.pop(str_key)
                 assert isinstance(val, tools.STR)
+
+            updated_by_str = asset.pop("updated_by")
+            assert isinstance(updated_by_str, tools.STR)
+
+            updated_by = json.loads(updated_by_str)
+            assert isinstance(updated_by, dict)
+
+            updated_by_deleted = updated_by.pop("deleted")
+            assert isinstance(updated_by_deleted, bool)
+
+            updated_str_keys = ["username", "source", "first_name", "last_name"]
+            for updated_str_key in updated_str_keys:
+                val = updated_by.pop(updated_str_key)
+                assert isinstance(val, tools.STR)
+
+            assert not updated_by
+
+            tags = asset.pop("tags", [])
+            assert isinstance(tags, tools.LIST)
+            for tag in tags:
+                assert isinstance(tag, tools.STR)
 
             predefined = asset.pop("predefined", False)
             assert isinstance(predefined, bool)
@@ -885,7 +906,6 @@ class TestSavedQuery(Base):
 
             historical = view.pop("historical", None)
             assert historical is None or isinstance(historical, tools.SIMPLE)
-            # FUTURE: what else besides None?? bool?
 
             for qexpr in qexprs:
                 assert isinstance(qexpr, dict)
@@ -902,8 +922,6 @@ class TestSavedQuery(Base):
                 nesteds = qexpr.pop("nested", [])
                 fieldtype = qexpr.pop("fieldType", "")
 
-                # new in 2.10, unsure of
-                # if not None, dict with keys: clearAll, selectAll, selectedValues
                 filtered_adapters = qexpr.pop("filteredAdapters", {})
 
                 assert isinstance(filtered_adapters, dict) or filtered_adapters is None
