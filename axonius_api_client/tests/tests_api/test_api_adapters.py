@@ -66,6 +66,13 @@ FAKE_ADAPTER_NOCLIENTS = {
     "status": None,
 }
 FAKE_ADAPTERS = [FAKE_ADAPTER_CNXS_BAD, FAKE_ADAPTER_CNXS_OK, FAKE_ADAPTER_NOCLIENTS]
+AD_CONFIG_SCHEMA = dict(
+    user=CSV_FILENAME,
+    password=CSV_FILENAME,
+    do_not_fetch_users=False,
+    fetch_disabled_devices=True,
+    fetch_disabled_users=True,
+)
 
 
 @pytest.fixture(scope="module")
@@ -436,11 +443,8 @@ class TestCnx(object):
 
     def test_add_delete(self, apiobj, csv_adapter):
         """Pass."""
-        config = dict(
-            dc_name="badwolf_public_add_delete",
-            user=CSV_FILENAME,
-            password=CSV_FILENAME,
-        )
+        config = dict(dc_name="badwolf_public_add_delete")
+        config.update(AD_CONFIG_SCHEMA)
 
         adapter = apiobj.get_single("active_directory")
 
@@ -578,11 +582,8 @@ class TestCnx(object):
 
     def test_update_failure(self, apiobj):
         """Pass."""
-        config = dict(
-            dc_name="badwolf_public_update_failure",
-            user=CSV_FILENAME,
-            password=CSV_FILENAME,
-        )
+        config = dict(dc_name="badwolf_public_update_failure")
+        config.update(AD_CONFIG_SCHEMA)
 
         cnx = apiobj.cnx.add(
             adapter="active_directory", config=config, parse_config=True, error=False
@@ -604,11 +605,9 @@ class TestCnx(object):
 
     def test_update_parse(self, apiobj):
         """Pass."""
-        config = dict(
-            dc_name="badwolf_public_update_parse",
-            user=CSV_FILENAME,
-            password=CSV_FILENAME,
-        )
+        config = dict(dc_name="badwolf_public_update_parse")
+        config.update(AD_CONFIG_SCHEMA)
+
         cnx = apiobj.cnx.add(
             adapter="active_directory", config=config, parse_config=True, error=False
         )
