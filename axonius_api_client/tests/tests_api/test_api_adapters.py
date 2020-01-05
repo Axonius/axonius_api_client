@@ -649,14 +649,10 @@ class TestCnx(object):
 
     def test_check_failure(self, apiobj):
         """Pass."""
-        new_config = {
-            "domain": "https:/172.254.254.254:9999",
-            "username": "x",
-            "password": "x",
-            "verify_ssl": False,
-        }
+        config = dict(dc_name="badwolf_check_failure")
+        config.update(AD_CONFIG_SCHEMA)
 
-        cnx = apiobj.cnx.add(adapter="tanium", config=new_config, error=False)
+        cnx = apiobj.cnx.add(adapter="active_directory", config=config, error=False)
 
         with pytest.raises(exceptions.CnxConnectFailure):
             apiobj.cnx.check(cnx=cnx, error=True)
