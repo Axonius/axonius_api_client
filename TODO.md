@@ -4,6 +4,8 @@
 
 ### need to doc proxy and cert
 
+### All docstrings re-done
+
 ## CLI package
 
 ### Add flatten option for export
