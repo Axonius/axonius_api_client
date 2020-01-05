@@ -1305,6 +1305,7 @@ class TestRawAdapters(object):
             item_enum = item.pop("enum", [])
             item_default = item.pop("default", "")
             item_items = item.pop("items", {})
+            item_req = item.pop("required", False)
 
             assert isinstance(item_name, tools.STR) and item_name
             assert isinstance(item_type, tools.STR) and item_type
@@ -1316,6 +1317,7 @@ class TestRawAdapters(object):
                 assert isinstance(x, tools.STR)
             assert isinstance(item_format, tools.STR)
             assert isinstance(item_description, tools.STR)
+            assert isinstance(item_req, bool)
             assert item_type in ["number", "integer", "string", "bool", "array", "file"]
             assert not item
 
