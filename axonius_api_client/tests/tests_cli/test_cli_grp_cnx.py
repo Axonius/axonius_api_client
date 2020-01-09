@@ -2,6 +2,7 @@
 """Test suite for axonius_api_client.tools."""
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+import click
 import pytest
 
 from axonius_api_client import cli, tools  # , exceptions
@@ -16,6 +17,19 @@ def badwolf_cb(x, **kwargs):
 
 class TestGrpCnx(object):
     """Pass."""
+
+    @pytest.mark.parametrize(
+        "schema,ptype",
+        [
+            [{"type": "string", "enum": ["x", "a"]}, click.Choice],
+            [{"type": "badwolf"}, type(None)],
+            [{"type": "bool"}, click.BOOL.__class__],
+        ],
+    )
+    def test_determine_type(self, schema, ptype):
+        """Pass."""
+        ret = cli.grp_cnx.grp_common.determine_type(schema)
+        assert isinstance(ret, ptype), "{!r} {!r}".format(schema, ptype)
 
     def test_get_json(self, request, monkeypatch):
         """Pass."""
@@ -151,6 +165,41 @@ class TestGrpCnx(object):
 
         exp = "  Item must have keys:"
         assert errlines1[-2].startswith(exp)
+
+    def test_add_show_config_json(self, request, monkeypatch):
+        """Pass."""
+        runner = utils.load_clirunner(request, monkeypatch)
+
+        args1 = ["adapters", "cnx", "add", "--adapter", "csv", "--show-config", "json"]
+        result1 = runner.invoke(cli=cli.cli, args=args1)
+
+        stderr1 = result1.stderr
+        stdout1 = result1.stdout
+        exit_code1 = result1.exit_code
+
+        assert stdout1
+        assert stderr1
+        assert exit_code1 == 0
+
+        json1 = tools.json_load(stdout1)
+        assert isinstance(json1, tools.LIST)
+        for x in json1:
+            assert isinstance(x, dict)
+
+    def test_add_show_config_text(self, request, monkeypatch):
+        """Pass."""
+        runner = utils.load_clirunner(request, monkeypatch)
+
+        args1 = ["adapters", "cnx", "add", "--adapter", "csv", "--show-config", "text"]
+        result1 = runner.invoke(cli=cli.cli, args=args1)
+
+        stderr1 = result1.stderr
+        stdout1 = result1.stdout
+        exit_code1 = result1.exit_code
+
+        assert stdout1
+        assert stderr1
+        assert exit_code1 == 0
 
     def test_add_check_discover_delete_csv(self, request, monkeypatch):
         """Pass."""
