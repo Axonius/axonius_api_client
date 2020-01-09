@@ -27,17 +27,32 @@ def to_csv(ctx, raw_data, include_settings=True, joiner="\n", **kwargs):
     return serial.dictwriter(rows=rows)
 
 
+def fixup_schema(schema, hiddens):
+    """Pass."""
+    if "enum" in schema:
+        schema["valid_choices"] = schema.pop("enum")
+
+    schema["hide_input"] = any([re.search(x, schema["name"]) for x in hiddens])
+
+    schema = {k: schema[k] for k in sorted(schema.keys())}
+    return schema
+
+
+def show_schema(ctx, schema, hiddens, err=True):
+    """Pass."""
+    smsg = "\n{s}\n  Configuration item schema:{it}"
+    smsg = smsg.format(s="*" * 40, it=serial.join_kv(obj=schema, indent=" " * 4))
+    click.secho(message=smsg, fg="blue", err=err)
+
+
 def handle_schema(ctx, config, schema, hiddens, prompt_opt, skips):
     """Pass."""
     name = schema["name"]
     required = schema["required"]
     default = schema.get("default", None)
 
-    schema["hide_input"] = hide_input = any([re.search(x, name) for x in hiddens])
-
-    smsg = "\n{s}\n  Configuration item schema:{it}"
-    smsg = smsg.format(s="*" * 40, it=serial.join_kv(obj=schema, indent=" " * 4))
-    click.secho(message=smsg, fg="blue", err=True)
+    show_schema(ctx=ctx, schema=schema, hiddens=hiddens, err=True)
+    hide_input = schema["hide_input"]
 
     if config.get(name):
         hasmsg = "\nSkipping item, was provided via '--config {v!r}=...'\n"
