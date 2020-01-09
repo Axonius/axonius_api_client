@@ -2,6 +2,7 @@
 """Test suite for axonapi.api.users_devices."""
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+import datetime
 import json
 import re
 
@@ -1054,7 +1055,7 @@ class TestSavedQuery(Base):
 
     def test__add_get_delete(self, apiobj):
         """Pass."""
-        name = "badwolf_test__add_get_delete"
+        name = "badwolf_test__add_get_delete {}".format(datetime.datetime.now())
 
         asset = self.get_single_asset(apiobj=apiobj, query=None, refetch=None)
 
@@ -1081,7 +1082,7 @@ class TestSavedQuery(Base):
 
     def test_add_delete(self, apiobj):
         """Pass."""
-        name = "badwolf_test_add_delete"
+        name = "badwolf_test_add_get_delete {}".format(datetime.datetime.now())
 
         asset = self.get_single_asset(apiobj=apiobj, query=None, refetch=None)
 
@@ -1100,7 +1101,7 @@ class TestSavedQuery(Base):
 
     def test_add_delete_sort(self, apiobj):
         """Pass."""
-        name = "badwolf_test_add_delete_sort"
+        name = "badwolf_test_add_delete_sort {}".format(datetime.datetime.now())
         single_field = apiobj.TEST_DATA["single_field"]
         asset = self.get_single_asset(apiobj=apiobj, query=None, refetch=None)
 
@@ -1122,7 +1123,7 @@ class TestSavedQuery(Base):
 
     def test_add_delete_colfilter(self, apiobj):
         """Pass."""
-        name = "badwolf_test_add_delete_colfilter"
+        name = "badwolf_test_add_delete_colfilter {}".format(datetime.datetime.now())
         single_field = apiobj.TEST_DATA["single_field"]
         asset = self.get_single_asset(apiobj=apiobj, query=None, refetch=None)
 
@@ -1259,7 +1260,7 @@ class TestParsedFields(Base):
         if format:
             assert format in FIELD_FORMATS, format
 
-        val_items(aname=aname, items=items)
+        val_items(aname="{}:{}".format(aname, fname), items=items)
 
 
 @pytest.mark.parametrize(
@@ -1365,7 +1366,7 @@ class TestRawFields(Base):
             for enum in enums:
                 assert isinstance(enum, tools.STR) or tools.is_int(enum)
 
-            val_items(aname=aname, items=items)
+            val_items(aname="{}:{}".format(aname, name), items=items)
 
 
 def val_items(aname, items):
@@ -1381,20 +1382,35 @@ def val_items(aname, items):
 
         # uncommon
         enums = items.pop("enum", [])
-        format = items.pop("format", "")
+        fformat = items.pop("format", "")
         iitems = items.pop("items", [])
         name = items.pop("name", "")
         title = items.pop("title", "")
         description = items.pop("description", "")
         branched = items.pop("branched", False)
         dynamic = items.pop("dynamic", False)
+        source = items.pop("source", {})
+        assert isinstance(source, dict)
 
-        if format:
-            assert format in SCHEMA_FIELD_FORMATS, format
+        if source:
+            source_key = source.pop("key")
+            assert isinstance(source_key, tools.STR)
+
+            source_options = source.pop("options")
+            assert isinstance(source_options, dict)
+
+            options_allow = source_options.pop("allow-custom-option")
+            assert isinstance(options_allow, bool)
+
+            assert not source, source
+            assert not source_options, source_options
+
+        if fformat:
+            assert fformat in SCHEMA_FIELD_FORMATS, fformat
 
         assert isinstance(enums, tools.LIST)
         assert isinstance(iitems, tools.LIST) or isinstance(iitems, dict)
-        assert isinstance(format, tools.STR)
+        assert isinstance(fformat, tools.STR)
         assert isinstance(name, tools.STR)
         assert isinstance(title, tools.STR)
         assert isinstance(description, tools.STR)
