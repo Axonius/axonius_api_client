@@ -20,6 +20,7 @@ from . import grp_common
 @options.OPT_QUERY
 @options.OPT_QUERY_FILE
 @options.OPT_FIELDS
+@options.OPT_FIELDS_REGEX
 @options.OPT_FIELDS_DEFAULT
 @options.OPT_MAX_ROWS
 @click.pass_context
@@ -36,6 +37,7 @@ def cmd(
     query,
     query_file,
     fields,
+    fields_regex,
     fields_default,
     max_rows,
 ):
@@ -50,7 +52,11 @@ def cmd(
 
     with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
         raw_data = api.get(
-            query=query, fields=fields, fields_default=fields_default, max_rows=max_rows
+            query=query,
+            fields=fields,
+            fields_regex=fields_regex,
+            fields_default=fields_default,
+            max_rows=max_rows,
         )
 
     grp_common.echo_response(ctx=ctx, raw_data=raw_data, api=api)
