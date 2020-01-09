@@ -4,7 +4,7 @@
 
 ### add --show-config to cnx add
 
-ADD TEST & DOC
+ADD DOC
 
 ### users_devices.py:Fields.find: add ability to specify fields using regex
 
@@ -27,10 +27,6 @@ all
 ### Add client side cert support
 
 For mutual TLS. AX-5789 & PROD-797
-
-### Filter by client id for cnx not working
-
-fix it
 
 ## DOCS
 
