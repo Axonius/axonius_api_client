@@ -83,7 +83,7 @@ def coerce_bool(obj):
     coerce_obj = obj
 
     if isinstance(obj, STR):
-        coerce_obj.lower().strip()
+        coerce_obj = coerce_obj.lower().strip()
 
     if coerce_obj in YES:
         return True
