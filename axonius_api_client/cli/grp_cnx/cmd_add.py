@@ -5,6 +5,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import click
 
 from .. import cli_constants, click_ext, options, serial
+from ... import tools
 from . import grp_common
 
 
@@ -70,6 +71,15 @@ from . import grp_common
     default=True,
     show_envvar=True,
 )
+@click.option(
+    "--show-config",
+    "-sc",
+    "show_config",
+    help="Print the configuration items and exit.",
+    type=click.Choice(["text", "json"]),
+    default=None,
+    show_envvar=True,
+)
 @click.pass_context
 def cmd(
     ctx,
@@ -88,6 +98,7 @@ def cmd(
     hiddens,
     prompt_opt,
     include_settings,
+    show_config,
 ):
     """Add an adapter connection."""
     client = ctx.obj.start_client(url=url, key=key, secret=secret)
@@ -101,6 +112,20 @@ def cmd(
 
     schemas = adapter["cnx_settings"].values()
     schemas = sorted(schemas, key=lambda x: x["required"], reverse=True)
+
+    schemas = [
+        grp_common.fixup_schema(schema=schema, hiddens=hiddens) for schema in schemas
+    ]
+
+    if show_config:
+        if show_config == "text":
+            for schema in schemas:
+                grp_common.show_schema(
+                    ctx=ctx, schema=schema, hiddens=hiddens, err=False,
+                )
+        elif show_config == "json":
+            click.secho(message=tools.json_dump(schemas), err=False)
+        ctx.exit(0)
 
     for schema in schemas:
         try:
