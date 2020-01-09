@@ -48,10 +48,7 @@ USERS_TEST_DATA = {
         {"search": "active_directory_adapter", "exp": "active_directory"},
         {"search": "active_directory", "exp": "active_directory"},
     ],
-    "single_field": {
-        "search": "generic:username",
-        "exp": "specific_data.data.username",
-    },
+    "single_field": {"search": "username", "exp": "specific_data.data.username"},
     "fields": [
         {"search": "username", "exp": ["specific_data.data.username"]},
         {"search": "generic:username", "exp": ["specific_data.data.username"]},
@@ -92,10 +89,7 @@ DEVICES_TEST_DATA = {
         {"search": "active_directory_adapter", "exp": "active_directory"},
         {"search": "active_directory", "exp": "active_directory"},
     ],
-    "single_field": {
-        "search": "generic:hostname",
-        "exp": "specific_data.data.hostname",
-    },
+    "single_field": {"search": "hostname", "exp": "specific_data.data.hostname"},
     "fields": [
         {
             "search": "network_interfaces.ips",
@@ -585,6 +579,29 @@ class TestFields(Base):
         assert name is None
         assert fields == {}
 
+    def test_find_re(self, apiobj):
+        """Pass."""
+        single = apiobj.TEST_DATA["single_field"]["search"]
+        found = apiobj.fields.find_regex(field=single, all_fields=apiobj.ALL_FIELDS)
+        assert found
+        assert isinstance(found, tools.LIST)
+        assert all([single in x for x in found])
+
+        found = apiobj.fields.find_regex(
+            field=".:" + single, all_fields=apiobj.ALL_FIELDS
+        )
+        assert found
+        assert isinstance(found, tools.LIST)
+        assert all([single in x for x in found])
+
+        found = apiobj.fields.find_regex(
+            field="generic:" + single, all_fields=apiobj.ALL_FIELDS
+        )
+        assert found
+        assert isinstance(found, tools.LIST)
+        assert all([single in x for x in found])
+        assert all(["specific_data.data" in x for x in found])
+
     def test_find(self, apiobj):
         """Pass."""
         for info in apiobj.TEST_DATA["fields"]:
@@ -656,6 +673,22 @@ class TestFields(Base):
                     iexp.append(x)
 
             assert sorted(found) == sorted(iexp)
+
+    def test_validateregex(self, apiobj):
+        """Pass."""
+        single = apiobj.TEST_DATA["single_field"]["search"]
+        for info in apiobj.TEST_DATA["val_fields"]:
+            isearch = info["search"]
+            iexp = info["exp"]
+            found = apiobj.fields.validate(
+                fields=isearch,
+                fields_regex=single,
+                all_fields=apiobj.ALL_FIELDS,
+                default=False,
+            )
+            assert isinstance(found, tools.LIST)
+            for x in iexp:
+                assert x in found
 
     def test_validate_ignores(self, apiobj):
         """Pass."""

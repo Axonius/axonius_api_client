@@ -2,6 +2,8 @@
 """Axonius API Client package."""
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+import re
+
 import ipaddress
 
 from .. import constants, exceptions, tools
@@ -131,6 +133,8 @@ class UserDeviceMixin(mixins.ModelUserDevice, mixins.Mixins):
         self,
         query=None,
         fields=None,
+        fields_manual=None,
+        fields_regex=None,
         fields_default=True,
         fields_error=True,
         max_rows=None,
@@ -142,6 +146,8 @@ class UserDeviceMixin(mixins.ModelUserDevice, mixins.Mixins):
         """Get objects for a given query using paging."""
         fields = self.fields.validate(
             fields=fields,
+            fields_manual=fields_manual,
+            fields_regex=fields_regex,
             error=fields_error,
             default=fields_default,
             all_fields=all_fields,
@@ -254,15 +260,25 @@ class UserDeviceMixin(mixins.ModelUserDevice, mixins.Mixins):
             raise exceptions.ValueNotFound(value=id, value_msg=msg, exc=exc)
 
     def get_by_saved_query(
-        self, name, max_rows=None, max_pages=None, page_size=None, use_post=False
+        self,
+        name,
+        fields=None,
+        fields_regex=None,
+        fields_default=False,
+        max_rows=None,
+        max_pages=None,
+        page_size=None,
+        use_post=False,
     ):
         """Pass."""
         sq = self.saved_query.get_by_name(value=name, match_count=1, match_error=True)
 
         return self.get(
             query=sq["view"]["query"]["filter"],
-            fields={"manual": sq["view"]["fields"]},
-            fields_default=False,
+            fields_manual=sq["view"]["fields"],
+            fields=fields,
+            fields_regex=fields_regex,
+            fields_default=fields_default,
             max_rows=max_rows,
             max_pages=max_pages,
             page_size=page_size,
@@ -281,6 +297,8 @@ class UserDeviceMixin(mixins.ModelUserDevice, mixins.Mixins):
         match_error=True,
         eq_single=True,
         fields=None,
+        fields_manual=None,
+        fields_regex=None,
         fields_default=True,
         fields_error=True,
         max_rows=None,
@@ -321,6 +339,8 @@ class UserDeviceMixin(mixins.ModelUserDevice, mixins.Mixins):
         rows = self.get(
             query=query,
             fields=fields,
+            fields_manual=fields_manual,
+            fields_regex=fields_regex,
             fields_default=fields_default,
             fields_error=fields_error,
             max_rows=max_rows,
@@ -653,6 +673,8 @@ class SavedQuery(mixins.Child):
         name,
         query,
         fields=None,
+        fields_regex=None,
+        fields_manual=None,
         fields_default=True,
         fields_error=True,
         sort=None,
@@ -693,6 +715,8 @@ class SavedQuery(mixins.Child):
 
         fields = self._parent.fields.validate(
             fields=fields,
+            fields_manual=fields_manual,
+            fields_regex=fields_regex,
             default=fields_default,
             error=fields_error,
             all_fields=all_fields,
@@ -1172,29 +1196,81 @@ class Fields(mixins.Child):
 
         return found
 
+    def find_regex(self, field, all_fields=None):
+        """Find a field for a given adapter using regexes."""
+        all_fields = all_fields or self.get()
+
+        check = field.strip()
+
+        if ":" in check:
+            search_adapter, search_fields = check.split(":", 1)
+        else:
+            search_adapter, search_fields = (".", check)
+
+        search_adapter_fix = tools.strip_right(
+            obj=search_adapter.lower().strip(), fix="_adapter"
+        )
+
+        search_adapter_re = re.compile(search_adapter_fix, re.I)
+        found_adapters = {
+            k: v for k, v in all_fields.items() if search_adapter_re.search(k)
+        }
+
+        search_fields_re = [
+            re.compile(x.strip().lower(), re.I)
+            for x in search_fields.split(",")
+            if x.strip()
+        ]
+
+        found_fields = []
+
+        for field_re in search_fields_re:
+            for adapter, adapter_fields in found_adapters.items():
+                for adapter_field, adapter_field_info in adapter_fields.items():
+                    if field_re.search(adapter_field):
+                        found_fields.append(adapter_field_info["name"])
+
+        return found_fields
+
     def get(self):
         """Pass."""
         raw = self._get()
         parser = ParserFields(raw=raw, parent=self)
         return parser.parse()
 
-    def validate(self, fields=None, default=True, error=True, all_fields=None):
+    def validate(
+        self,
+        fields=None,
+        fields_regex=None,
+        fields_manual=None,
+        default=True,
+        error=True,
+        all_fields=None,
+    ):
         """Validate provided fields."""
-        # 2.0.5: add manual override for fields from get_by_saved_query
-        if isinstance(fields, dict) and "manual" in fields:
-            return tools.listify(obj=fields["manual"])
 
-        fields = tools.listify(obj=fields)
+        def listify(obj):
+            return [x for x in tools.listify(obj=obj) if isinstance(x, tools.STR) and x]
+
+        fields = listify(obj=fields)
+        fields_manual = listify(obj=fields_manual)
+        fields_regex = listify(obj=fields_regex)
         all_fields = all_fields or self.get()
 
-        if default:
-            val_fields = self._parent._default_fields
-        else:
-            val_fields = []
+        val_fields = []
 
-        for field in [x for x in fields if isinstance(x, tools.STR) and x]:
+        if default:
+            val_fields += self._parent._default_fields
+
+        val_fields += fields_manual
+
+        for field in fields:
             found = self.find(field=field, all_fields=all_fields, error=error)
             val_fields += [x for x in found if x not in val_fields]
+
+        for field_re in fields_regex:
+            found_re = self.find_regex(field=field_re, all_fields=all_fields)
+            val_fields += [x for x in found_re if x not in val_fields]
 
         return val_fields
 

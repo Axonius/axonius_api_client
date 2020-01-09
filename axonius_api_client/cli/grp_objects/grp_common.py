@@ -23,6 +23,7 @@ def get_by_cmd(
     query_pre,
     query_post,
     fields,
+    fields_regex,
     fields_default,
     max_rows,
     method,
@@ -42,6 +43,7 @@ def get_by_cmd(
             query_pre=query_pre,
             query_post=query_post,
             fields=fields,
+            fields_regex=fields_regex,
             fields_default=fields_default,
             max_rows=max_rows,
         )

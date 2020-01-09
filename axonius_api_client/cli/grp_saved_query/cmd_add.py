@@ -21,6 +21,7 @@ from . import grp_common
 @options.OPT_QUERY
 @options.OPT_QUERY_FILE
 @options.OPT_FIELDS
+@options.OPT_FIELDS_REGEX
 @options.OPT_FIELDS_DEFAULT
 @click.option(
     "--name",
@@ -82,6 +83,7 @@ def cmd(
     query,
     query_file,
     fields,
+    fields_regex,
     fields_default,
     sort_field,
     sort_descending,
@@ -103,6 +105,7 @@ def cmd(
             name=name,
             query=query,
             fields=fields,
+            fields_regex=fields_regex,
             fields_default=fields_default,
             sort=sort_field,
             sort_descending=sort_descending,

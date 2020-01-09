@@ -2,27 +2,17 @@
 
 ## 2.1.4
 
+### Add support for fields + sq fields in SQ get
+
+DONE, ADD EXAMPLES TO DOCS
+
 ### add --show-config to cnx add
 
-ADD DOC
+DONE, ADD EXAMPLES TO DOCS
 
 ### users_devices.py:Fields.find: add ability to specify fields using regex
 
-generic:hostname
-or hostname
-or tanium:hostname, crowdstrike:hostname
-
-```text
-
-general
-generic
-all
-*
-
-*:hostname
-*:*host*
-
-```
+DONE, ADD EXAMPLES TO DOCS
 
 ### Add client side cert support
 
