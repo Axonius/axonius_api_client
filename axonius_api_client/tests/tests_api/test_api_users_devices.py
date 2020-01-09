@@ -808,6 +808,28 @@ class TestLabels(Base):
 class TestSavedQuery(Base):
     """Pass."""
 
+    def test_add_delete_readd(self, apiobj):
+        """Pass."""
+        # TODO: test that add SQ, delete SQ, and re-add SQ with same name
+        # does not show up in get all SQ
+        # When fixed in REST API, re-work this test to not expect an exception
+        name = "badwolf_test_add_get_delete_readd {}".format(datetime.datetime.now())
+
+        asset = self.get_single_asset(apiobj=apiobj, query=None, refetch=None)
+
+        query = QUERY_ID(**asset)
+
+        added = apiobj.saved_query.add(name=name, query=query)
+        assert isinstance(added, dict)
+        assert added["name"] == name
+        assert added["view"]["query"]["filter"] == query
+
+        deleted = apiobj.saved_query.delete(rows=added)
+        assert not deleted
+
+        with pytest.raises(exceptions.ValueNotFound):
+            apiobj.saved_query.add(name=name, query=query)
+
     def test__get(self, apiobj):
         """Pass."""
         data = apiobj.saved_query._get()
