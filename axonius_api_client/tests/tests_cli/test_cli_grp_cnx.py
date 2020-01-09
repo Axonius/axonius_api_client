@@ -63,6 +63,80 @@ class TestGrpCnx(object):
         json2 = tools.json_load(stdout2)
         assert isinstance(json2, tools.LIST)
 
+    def test_get_cnx_by_uuid(self, request, monkeypatch):
+        """Pass."""
+        runner = utils.load_clirunner(request, monkeypatch)
+
+        args1 = ["adapters", "get"]
+        result1 = runner.invoke(cli=cli.cli, args=args1)
+
+        stderr1 = result1.stderr
+        stdout1 = result1.stdout
+        exit_code1 = result1.exit_code
+
+        assert stdout1
+        assert stderr1
+        assert exit_code1 == 0
+
+        json1 = tools.json_load(stdout1)
+        assert isinstance(json1, tools.LIST)
+        cnxs = [x["cnx"] for x in json1 if x["cnx"]]
+        cnx1_id = cnxs[0][0]["uuid"]
+
+        args2 = ["adapters", "cnx", "get", "--rows", "-", "--uuid", cnx1_id]
+        result2 = runner.invoke(cli=cli.cli, args=args2, input=stdout1)
+        del stdout1
+
+        stderr2 = result2.stderr
+        stdout2 = result2.stdout
+        exit_code2 = result2.exit_code
+
+        assert stdout2
+        assert stderr2
+        assert exit_code2 == 0
+
+        json2 = tools.json_load(stdout2)
+        assert isinstance(json2, tools.LIST)
+        assert json2[0]["uuid"] == cnx1_id
+        assert len(json2) == 1
+
+    def test_get_cnx_by_id(self, request, monkeypatch):
+        """Pass."""
+        runner = utils.load_clirunner(request, monkeypatch)
+
+        args1 = ["adapters", "get"]
+        result1 = runner.invoke(cli=cli.cli, args=args1)
+
+        stderr1 = result1.stderr
+        stdout1 = result1.stdout
+        exit_code1 = result1.exit_code
+
+        assert stdout1
+        assert stderr1
+        assert exit_code1 == 0
+
+        json1 = tools.json_load(stdout1)
+        assert isinstance(json1, tools.LIST)
+        cnxs = [x["cnx"] for x in json1 if x["cnx"]]
+        cnx1_id = cnxs[0][0]["id"]
+
+        args2 = ["adapters", "cnx", "get", "--rows", "-", "--id", cnx1_id]
+        result2 = runner.invoke(cli=cli.cli, args=args2, input=stdout1)
+        del stdout1
+
+        stderr2 = result2.stderr
+        stdout2 = result2.stdout
+        exit_code2 = result2.exit_code
+
+        assert stdout2
+        assert stderr2
+        assert exit_code2 == 0
+
+        json2 = tools.json_load(stdout2)
+        assert isinstance(json2, tools.LIST)
+        assert json2[0]["id"] == cnx1_id
+        assert len(json2) == 1
+
     def test_get_csv(self, request, monkeypatch):
         """Pass."""
         runner = utils.load_clirunner(request, monkeypatch)
