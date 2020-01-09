@@ -179,6 +179,10 @@ axonshell a c de -r - -f -w 0
                 "--config",
                 "user_id={}".format(csv_file),
                 "--config",
+                "is_users_csv=False",
+                "--config",
+                "is_installed_sw=False",
+                "--config",
                 "csv={}".format(csv_path),
                 "--no-prompt-opt",
             ]
@@ -263,6 +267,10 @@ axonshell a c de -r - -f -w 0
                 "csv",
                 "--config",
                 "user_id={}".format(csv_file),
+                "--config",
+                "is_users_csv=False",
+                "--config",
+                "is_installed_sw=False",
                 "--config",
                 "csv={}".format(csv_path),
                 "--no-prompt-opt",
@@ -370,10 +378,11 @@ axonshell a c de -r - -f -w 0
             "ca_file": csv_file,
             "cert_file": csv_file,
             "private_key": csv_file,
-            "fetch_disabled_devices": "y",
-            "fetch_disabled_users": "y",
             "is_ad_gc": "y",
             "ldap_ou_whitelist": "badwolf1,badwolf2",
+            "do_not_fetch_users": "false",
+            "fetch_disabled_devices": "true",
+            "fetch_disabled_users": "true",
         }
 
         with runner.isolated_filesystem():
@@ -418,18 +427,30 @@ axonshell a c de -r - -f -w 0
 
         skips = ["ca_file", "cert_file", "private_key"]
 
+        """
+        dc_name
+        user
+        password
+        do_not_fetch_users
+        fetch_disabled_devices
+        fetch_disabled_users
+        dns_server_address
+        alternative_dns_suffix
+        use_ssl
+        ca_file
+        is_ad_gc
+        ldap_ou_whitelist
+        """
         configs = [
             "badwolf",  # dc_name
             "badwolf",  # user
             "badwolf",  # password
+            "n",  # do_not_fetch_users
+            "y",  # fetch_disabled_devices
+            "y",  # fetch_disabled_users
             "badwolf",  # dns_server_address
             "badwolf",  # alternative_dns_suffix
             "Unencrypted",  # use_ssl
-            # csv_file,  # ca_file
-            # csv_file,  # cert_file
-            # csv_file,  # private_key
-            "y",  # fetch_disabled_devices
-            "y",  # fetch_disabled_users
             "y",  # is_ad_gc
             "badwolf1,badwolf2",  # ldap_ou_whitelist
         ]

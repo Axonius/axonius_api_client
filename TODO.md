@@ -1,12 +1,36 @@
 # API client todos
 
-## NOW
+## 2.1.4
 
-axonius_api_client/tests/tests_cli/test_cli_grp_cnx.py:
-stalling, figure out why
+### add --show-config to cnx add
 
-axonius_api_client/tests/tests_api/test_api_users_devices.py:
-4 F's, figure out why
+ADD TEST & DOC
+
+### users_devices.py:Fields.find: add ability to specify fields using regex
+
+generic:hostname
+or hostname
+or tanium:hostname, crowdstrike:hostname
+
+```text
+
+general
+generic
+all
+*
+
+*:hostname
+*:*host*
+
+```
+
+### Add client side cert support
+
+For mutual TLS. AX-5789 & PROD-797
+
+### Filter by client id for cnx not working
+
+fix it
 
 ## DOCS
 
@@ -93,10 +117,6 @@ In adapters cnx add. Maybe custom click type?
 
 ## HTTP package
 
-### Add client side cert support
-
-For mutual TLS. AX-5789 & PROD-797
-
 ## API package
 
 ## enforcements.py: Needs work, awaiting REST API updates
@@ -124,8 +144,6 @@ Concept:
 
 This may no longer be necessary? Re-check.
 
-### users_devices.py:Fields.find: add ability to specify fields using regex
-
 ### users_devices.py:Reports: new reports
 
 #### Majority rule concept
@@ -150,6 +168,7 @@ Concept:
 ```text
 --field-weight hostname:aws=10,bluecat=1
 # (score aws as the heaviest)
+
 ```
 
 #### User to Device correlation
@@ -200,6 +219,12 @@ Currently only stored in:
 ```text
 cortex/plugins/gui/frontend/src/constants/plugin_meta.js
 ```
+
+### Add support for user add/delete/modify
+
+### Add support for lifecycle endpoint
+
+### Add support for discover phase
 
 ### add support for setting advanced settings
 
@@ -259,3 +284,31 @@ be empty for that SQ due to no expressions. This would possibly mean moving
 query wizard parsing from front end JS to API?
 
 ### Enforcements API needs love
+
+### create SQ with two underscores in name fails
+
+Works:
+
+```text
+z=users.saved_query._add(
+        name='badwolf_test_add_get_delete',
+        query='(internal_axon_id == "f7895a5487d6eda9b2d6573680159a7c")',
+        fields=["specific_data.data.username"]
+)
+```
+
+Doesn't:
+
+```text
+z=users.saved_query._add(
+    name='badwolf_test__add_get_delete',
+    query='(internal_axon_id == "f7895a5487d6eda9b2d6573680159a7c")',
+    fields=["specific_data.data.username"]
+)
+```
+
+TestSavedQuery.test__add_get_delete[Users] still failing. wtf
+
+### Add lifecycle from private API to public API
+
+Allow for conditional "stuffs"
