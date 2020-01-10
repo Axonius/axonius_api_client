@@ -161,18 +161,18 @@ class Http(object):
 
         if cert_client_both:
             tools.path_read(obj=cert_client_both)
-            self.session.cert = cert_client_both
+            self.session.cert = format(cert_client_both)
         elif cert_client_cert or cert_client_key:
-            if not cert_client_cert and cert_client_key:
+            if not all([cert_client_cert, cert_client_key]):
                 error = (
-                    "You must supply both a cert_client_cert and cert_client_key"
-                    "or use cert_client_both!"
+                    "You must supply both a 'cert_client_cert' and 'cert_client_key'"
+                    " or use 'cert_client_both'!"
                 )
                 raise exceptions.HttpError(error)
 
             tools.path_read(obj=cert_client_cert)
             tools.path_read(obj=cert_client_key)
-            self.session.cert = (cert_client_cert, cert_client_key)
+            self.session.cert = (format(cert_client_cert), format(cert_client_key))
 
         self._LOG_REQUEST_BODY = kwargs.get("log_request_body", False)
         """:obj:`bool`: Log the full request body."""

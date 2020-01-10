@@ -16,8 +16,9 @@ DONE, ADD EXAMPLES TO DOCS
 
 ### Add client side cert support
 
-For mutual TLS. AX-5789 & PROD-797
-NEED TESTS
+DONE, ADD EXAMPLES TO DOCS
+
+### Add export format: SQL dump
 
 ## DOCS
 
@@ -77,8 +78,6 @@ axonshell devices get \
     -f installed_software.name \
     --field-flatten installed_software
 ```
-
-### Add export format: SQL dump
 
 ### Add export format: word
 
