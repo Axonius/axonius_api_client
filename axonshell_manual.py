@@ -14,6 +14,9 @@ if __name__ == "__main__":
     AX_URL = os.environ["AX_URL"]
     AX_KEY = os.environ["AX_KEY"]
     AX_SECRET = os.environ["AX_SECRET"]
+    AX_CLIENT_CERT_BOTH = os.environ.get("AX_CLIENT_CERT_BOTH", None) or None
+    AX_CLIENT_CERT_CERT = os.environ.get("AX_CLIENT_CERT_CERT", None) or None
+    AX_CLIENT_CERT_KEY = os.environ.get("AX_CLIENT_CERT_KEY", None) or None
 
     def jdump(obj, **kwargs):
         """JSON dump utility."""
@@ -24,6 +27,9 @@ if __name__ == "__main__":
         key=AX_KEY,
         secret=AX_SECRET,
         certwarn=False,
+        cert_client_both=AX_CLIENT_CERT_BOTH,
+        cert_client_cert=AX_CLIENT_CERT_CERT,
+        cert_client_key=AX_CLIENT_CERT_KEY,
         log_level_console="debug",
         log_level_api="debug",
         log_console=True,
