@@ -179,6 +179,36 @@ All of the options listed above must be supplied BEFORE any commands or groups.
     show_default=True,
 )
 @click.option(
+    "--cert-client-both",
+    "-ccb",
+    "cert_client_both",
+    type=click.Path(exists=True, resolve_path=True),
+    help="Path to client SSL certificate and private key in one file for mutual TLS.",
+    metavar="PATH",
+    show_envvar=True,
+    show_default=True,
+)
+@click.option(
+    "--cert-client-cert",
+    "-ccc",
+    "cert_client_cert",
+    type=click.Path(exists=True, resolve_path=True),
+    help="Path to client SSL certificate for mutual TLS.",
+    metavar="PATH",
+    show_envvar=True,
+    show_default=True,
+)
+@click.option(
+    "--cert-client-key",
+    "-cck",
+    "cert_client_key",
+    type=click.Path(exists=True, resolve_path=True),
+    help="Path to client SSL private key for mutual TLS",
+    metavar="PATH",
+    show_envvar=True,
+    show_default=True,
+)
+@click.option(
     "--certpath",
     "-cp",
     "certpath",
@@ -240,6 +270,9 @@ def cli(
     log_file_path,
     log_file_max_mb,
     log_file_max_files,
+    cert_client_cert,
+    cert_client_key,
+    cert_client_both,
     proxy,
     certpath,
     certverify,
@@ -265,6 +298,9 @@ def cli(
     ctx._connect_args["log_file_max_mb"] = log_file_max_mb
     ctx._connect_args["log_file_max_files"] = log_file_max_files
     ctx._connect_args["proxy"] = proxy
+    ctx._connect_args["cert_client_cert"] = cert_client_cert
+    ctx._connect_args["cert_client_key"] = cert_client_key
+    ctx._connect_args["cert_client_both"] = cert_client_both
     ctx._connect_args["certpath"] = certpath
     ctx._connect_args["certverify"] = certverify
     ctx._connect_args["certwarn"] = certwarn

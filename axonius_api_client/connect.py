@@ -45,6 +45,9 @@ class Connect(object):
         certpath = kwargs.get("certpath", "")
         certverify = kwargs.get("certverify", False)
         certwarn = kwargs.get("certwarn", True)
+        cert_client_both = kwargs.get("cert_client_both", None)
+        cert_client_cert = kwargs.get("cert_client_cert", None)
+        cert_client_key = kwargs.get("cert_client_key", None)
         save_history = kwargs.get("save_history", False)
         log_request_attrs = kwargs.get("log_request_attrs", False)
         log_response_attrs = kwargs.get("log_response_attrs", False)
@@ -94,6 +97,9 @@ class Connect(object):
             "certpath": certpath,
             "certwarn": certwarn,
             "certverify": certverify,
+            "cert_client_both": cert_client_both,
+            "cert_client_cert": cert_client_cert,
+            "cert_client_key": cert_client_key,
             "log_level": log_level_http,
             "log_request_attrs": log_request_attrs,
             "log_response_attrs": log_response_attrs,

@@ -30,6 +30,9 @@ class Http(object):
         certpath=None,
         certwarn=True,
         certverify=False,
+        cert_client_both=None,
+        cert_client_cert=None,
+        cert_client_key=None,
         http_proxy=None,
         https_proxy=None,
         save_last=True,
@@ -155,6 +158,21 @@ class Http(object):
         self.session.proxies = {}
         self.session.proxies["https"] = https_proxy
         self.session.proxies["http"] = http_proxy
+
+        if cert_client_both:
+            tools.path_read(obj=cert_client_both)
+            self.session.cert = cert_client_both
+        elif cert_client_cert or cert_client_key:
+            if not cert_client_cert and cert_client_key:
+                error = (
+                    "You must supply both a cert_client_cert and cert_client_key"
+                    "or use cert_client_both!"
+                )
+                raise exceptions.HttpError(error)
+
+            tools.path_read(obj=cert_client_cert)
+            tools.path_read(obj=cert_client_key)
+            self.session.cert = (cert_client_cert, cert_client_key)
 
         self._LOG_REQUEST_BODY = kwargs.get("log_request_body", False)
         """:obj:`bool`: Log the full request body."""
