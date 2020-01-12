@@ -18,6 +18,7 @@ from . import grp_common
 @options.OPT_EXPORT_OVERWRITE
 @options.OPT_EXPORT_DELIM
 @options.OPT_FIELDS
+@options.OPT_FIELDS_REGEX
 @options.OPT_FIELDS_DEFAULT
 @options.OPT_MAX_ROWS
 @options.OPT_GET_BY_PRE_QUERY
@@ -42,6 +43,7 @@ def cmd(
     query_pre,
     query_post,
     fields,
+    fields_regex,
     fields_default,
     max_rows,
 ):
@@ -62,6 +64,7 @@ def cmd(
         query_pre=query_pre,
         query_post=query_post,
         fields=fields,
+        fields_regex=fields_regex,
         fields_default=fields_default,
         max_rows=max_rows,
         method="get_by_mac",

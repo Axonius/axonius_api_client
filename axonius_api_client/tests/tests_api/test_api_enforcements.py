@@ -2,6 +2,7 @@
 """Test suite for axonapi.api.users_devices."""
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+import time
 import warnings
 
 import pytest
@@ -19,25 +20,20 @@ DEPLOY_FILE_NAME = "badwolf.sh"
 DEPLOY_FILE_CONTENTS = b"#!/bin/bash\necho badwolf!"
 
 CREATE_EC_NAME = "Badwolf EC Example"
-CREATE_EC_TRIGGERS = [
-    {
-        "name": "Trigger",
-        "view": {
-            "name": "Users Created in Last 30 Days",
-            "entity": "users",
-        },  # FUTURE: public create will need to get sq!
-        "conditions": {
-            "new_entities": False,
-            "previous_entities": False,
-            "above": 1,
-            "below": 0,
-        },  # FUTURE: need public build_trigger method
-        "period": "never",
-        "run_on": "AllEntities",
-    }
-]
+CREATE_EC_TRIGGER1 = {
+    "name": "Trigger",
+    "conditions": {
+        "new_entities": False,
+        "previous_entities": False,
+        "above": 1,
+        "below": 0,
+    },
+    "period": "never",
+    "run_on": "AllEntities",
+}
+
 CREATE_EC_ACTION_MAIN = {
-    "name": "Badwolf Create Notification",
+    "name": "Badwolf Create Notification {}".format(time.time()),
     "action": {"action_name": "create_notification", "config": {}},
 }
 
@@ -52,9 +48,7 @@ def apiobj(request):
 
     utils.check_apiobj(authobj=auth, apiobj=api)
 
-    utils.check_apiobj_children(
-        apiobj=api, runaction=axonapi.api.enforcements.RunAction
-    )
+    utils.check_apiobj_children(apiobj=api, runaction=axonapi.api.enforcements.RunAction)
 
     utils.check_apiobj_xref(
         apiobj=api,
@@ -111,8 +105,12 @@ class TestEnforcements(object):
             assert isinstance(deleted["deleted"], tools.INT)
             assert deleted["deleted"] == 1
 
+        trigger_name = apiobj.users.saved_query.get()[0]["name"]
+        trigger = {"view": {"name": trigger_name, "entity": "users"}}
+        trigger.update(CREATE_EC_TRIGGER1)
+
         created = apiobj._create(
-            name=CREATE_EC_NAME, main=CREATE_EC_ACTION_MAIN, triggers=CREATE_EC_TRIGGERS
+            name=CREATE_EC_NAME, main=CREATE_EC_ACTION_MAIN, triggers=[trigger]
         )
         assert isinstance(created, tools.STR)
 
@@ -137,7 +135,7 @@ class TestEnforcements(object):
         assert isinstance(found["last_updated"], tools.STR)
         assert "triggers.last_triggered" in found
         assert "triggers.times_triggered" in found
-        assert found["triggers.view.name"] == CREATE_EC_TRIGGERS[0]["view"]["name"]
+        assert found["triggers.view.name"] == trigger_name
 
         found_by_id = apiobj.get_by_id(found["uuid"])
         assert isinstance(found_by_id, dict)
@@ -175,7 +173,6 @@ class TestRunActions(object):
         for i in ["deploy", "shell", "upload_file"]:
             assert i in data
 
-    # FUTURE:
     # this returns nothing...
     # AND no action shows up in GUI for dvc
     # AND no task shows up in EC
@@ -205,7 +202,7 @@ class TestRunActions(object):
         assert data["filename"] == DEPLOY_FILE_NAME
         return data
 
-    # FUTURE: returns nadda
+    # returns nadda
     def test__upload_deploy(self, apiobj, uploaded_file):
         """Pass."""
         devices = apiobj.devices._get(query=LINUX_QUERY, page_size=1, row_start=0)

@@ -387,7 +387,7 @@ class TestCmdGet(object):
             cmd,
             "get",
             "--query",
-            "(adapters > size(2))",
+            "(adapters > size(1))",
             "--export-format",
             "csv",
             "--max-rows",
@@ -411,7 +411,7 @@ class TestCmdGet(object):
         row1 = rows[0]
         row1_adapters = row1["adapters"]
         assert len(row1_adapters.splitlines()) == 1
-        assert len(row1_adapters.split(",")) > 2
+        assert len(row1_adapters.split(",")) >= 2
 
     def test_csv_complex(self, request, monkeypatch, cmd):
         """Pass."""

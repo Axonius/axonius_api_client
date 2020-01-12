@@ -10,4 +10,6 @@ API Usage
 
 .. todo::
 
-   The API reference docs are not done yet. The CLI usage docs will be finished first.
+   The API library documentation and examples need to be flushed out, but time
+   constraints have not allowed for this to happen. If help is needed in utilizing this
+   API library, please contact apiclient@axonius.com.

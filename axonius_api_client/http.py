@@ -30,6 +30,9 @@ class Http(object):
         certpath=None,
         certwarn=True,
         certverify=False,
+        cert_client_both=None,
+        cert_client_cert=None,
+        cert_client_key=None,
         http_proxy=None,
         https_proxy=None,
         save_last=True,
@@ -38,7 +41,7 @@ class Http(object):
         **kwargs
         # fmt: on
     ):
-        """Constructor.
+        """HTTP client for sending requests usings :obj:`requests.Session`.
 
         Args:
             url (:obj:`str` or :obj:`axonius_api_client.http.parser.ParserUrl`):
@@ -155,6 +158,21 @@ class Http(object):
         self.session.proxies = {}
         self.session.proxies["https"] = https_proxy
         self.session.proxies["http"] = http_proxy
+
+        if cert_client_both:
+            tools.path_read(obj=cert_client_both)
+            self.session.cert = format(cert_client_both)
+        elif cert_client_cert or cert_client_key:
+            if not all([cert_client_cert, cert_client_key]):
+                error = (
+                    "You must supply both a 'cert_client_cert' and 'cert_client_key'"
+                    " or use 'cert_client_both'!"
+                )
+                raise exceptions.HttpError(error)
+
+            tools.path_read(obj=cert_client_cert)
+            tools.path_read(obj=cert_client_key)
+            self.session.cert = (format(cert_client_cert), format(cert_client_key))
 
         self._LOG_REQUEST_BODY = kwargs.get("log_request_body", False)
         """:obj:`bool`: Log the full request body."""
@@ -291,9 +309,7 @@ class Http(object):
 
         if self._LOG_REQUEST_BODY:
             msg = "request body:\n{body}"
-            msg = msg.format(
-                body=tools.json_dump(obj=prepped_request.body, error=False)
-            )
+            msg = msg.format(body=tools.json_dump(obj=prepped_request.body, error=False))
             self._log.debug(msg)
 
         response = self.session.send(**send_args)
@@ -354,7 +370,7 @@ class ParserUrl(object):
     """Parse a URL and ensure it has the neccessary bits."""
 
     def __init__(self, url, default_scheme="https"):
-        """Constructor.
+        """Parse a URL and ensure it has the neccessary bits.
 
         Args:
             url (:obj:`str`):

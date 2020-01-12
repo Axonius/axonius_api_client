@@ -43,7 +43,7 @@ class Mixins(object):
     """API client for Axonius REST API."""
 
     def __init__(self, auth, **kwargs):
-        """Constructor.
+        """Client for Axonius REST API.
 
         Args:
             auth (:obj:`AuthModel`):

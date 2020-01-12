@@ -132,6 +132,15 @@ OPT_FIELDS = click.option(
     multiple=True,
     show_envvar=True,
 )
+OPT_FIELDS_REGEX = click.option(
+    "--field-regex",
+    "-fr",
+    "fields_regex",
+    help="Fields (columns) to include in the format of adapter:field (regex).",
+    metavar="ADAPTER:FIELD",
+    multiple=True,
+    show_envvar=True,
+)
 OPT_FIELDS_DEFAULT = click.option(
     "--no-fields-default",
     "-nfd",

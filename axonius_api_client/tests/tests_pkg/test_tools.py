@@ -27,6 +27,7 @@ class TestCoerce(object):
         assert tools.coerce_bool("y") is True
         assert tools.coerce_bool("yes") is True
         assert tools.coerce_bool("true") is True
+        assert tools.coerce_bool("True") is True
         assert tools.coerce_bool("1") is True
         assert tools.coerce_bool(1) is True
         assert tools.coerce_bool("t") is True
@@ -34,6 +35,7 @@ class TestCoerce(object):
         assert tools.coerce_bool("n") is False
         assert tools.coerce_bool("no") is False
         assert tools.coerce_bool("false") is False
+        assert tools.coerce_bool("False") is False
         assert tools.coerce_bool("0") is False
         assert tools.coerce_bool(0) is False
         assert tools.coerce_bool("f") is False
@@ -244,7 +246,6 @@ class TestPathWrite(object):
         assert ret_path.read_text() == data
         assert format(ret_path) == format(path)
         assert ret_write == len(data)
-        # FUTURE: not the same octal on windows
         assert ret_path.stat().st_mode == 33152
         assert ret_path.parent.stat().st_mode == 16832
 

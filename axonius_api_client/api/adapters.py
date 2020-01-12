@@ -317,9 +317,7 @@ class Adapters(mixins.Model, mixins.Mixins):
 
         return matches
 
-    def filter_by_status(
-        self, adapters, value=None, match_count=None, match_error=True
-    ):
+    def filter_by_status(self, adapters, value=None, match_count=None, match_error=True):
         """Filter adapters with matching statuses.
 
         Args:
@@ -974,9 +972,7 @@ class Cnx(mixins.Child):
         if had_error:
             if warning and not error:
                 warnings.warn(
-                    exceptions.CnxDeleteFailedWarning(
-                        cnxinfo=cnxinfo, response=response
-                    )
+                    exceptions.CnxDeleteFailedWarning(cnxinfo=cnxinfo, response=response)
                 )
             elif error:
                 raise exceptions.CnxDeleteFailed(cnxinfo=cnxinfo, response=response)
@@ -1821,51 +1817,3 @@ def validate_csv(name, content, is_users=False, is_installed_sw=False):
                 ids_type=ids_type, ids=ids, name=name, headers=headers
             )
         )
-
-
-# REST API FR: public REST API does not support setting advanced settings
-"""
-# advanced settings
-method=POST
-path=/api/plugins/configs/carbonblack_defense_adapter/AdapterBase
-body=
-{
-    "connect_client_timeout": 300,
-    "fetching_timeout": 5400,
-    "last_fetched_threshold_hours": 49,
-    "last_seen_prioritized": false,
-    "last_seen_threshold_hours": 43800,
-    "minimum_time_until_next_fetch": null,
-    "realtime_adapter": false,
-    "user_last_fetched_threshold_hours": null,
-    "user_last_seen_threshold_hours": null
-}
-"""
-
-"""
-# adapter specific advanced settings
-method=POST
-path=/api/plugins/configs/carbonblack_defense_adapter/CarbonblackDefenseAdapter
-body={"fetch_deregistred":false}
-"""
-
-"""
-# rule to add to api.py
-@api_add_rule('plugins/configs/<plugin_name>/<config_name>', methods=['POST', 'GET'],
-    wrap around service.py: plugins_configs_set()
-"""
-
-# REST API FR: date_fetched for client seems to be only for
-# when fetch has been triggered from "save" in adapters>client page??
-"""
-date_fetched = client["date_fetched"]
-minutes_ago = tools.dt.minutes_ago(date_fetched)
-
-if within is not None:
-    if minutes_ago >= within:
-        continue
-
-if not_within is not None:
-    if minutes_ago <= not_within:
-        continue
-"""

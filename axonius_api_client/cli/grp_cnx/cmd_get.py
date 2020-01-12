@@ -142,7 +142,7 @@ def cmd(
         )
 
         filter3 = client.adapters.cnx.filter_by_uuids(
-            cnxs=filter1, value=uuids, value_regex=uuid_regex
+            cnxs=filter2, value=uuids, value_regex=uuid_regex
         )
         grp_common.check_empty(
             ctx=ctx,

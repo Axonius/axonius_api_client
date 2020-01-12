@@ -2,6 +2,8 @@
 """Test suite for axonius_api_client.tools."""
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+import datetime
+
 import pytest
 
 from axonius_api_client import cli, tools
@@ -16,7 +18,7 @@ class TestCmdAddGetDelete(object):
     def test_query_file(self, request, monkeypatch, cmd):
         """Pass."""
         runner = utils.load_clirunner(request, monkeypatch)
-        name = "badwolf"
+        name = "badwolf {}".format(datetime.datetime.now())
         field = "labels"
         cfilter = "generic:{}=a".format(field)
 
@@ -87,7 +89,7 @@ class TestCmdAddGetDelete(object):
     def test_json_cf(self, request, monkeypatch, cmd):
         """Pass."""
         runner = utils.load_clirunner(request, monkeypatch)
-        name = "badwolf"
+        name = "badwolf {}".format(datetime.datetime.now())
         query = "(adapters > size(0))"
         field = "labels"
         cfilter = "generic:{}=a".format(field)
@@ -152,7 +154,7 @@ class TestCmdAddGetDelete(object):
     def test_json_no_cf(self, request, monkeypatch, cmd):
         """Pass."""
         runner = utils.load_clirunner(request, monkeypatch)
-        name = "badwolf"
+        name = "badwolf {}".format(datetime.datetime.now())
         query = "(adapters > size(0))"
         field = "labels"
 
@@ -214,7 +216,7 @@ class TestCmdAddGetDelete(object):
     def test_bad_cf(self, request, monkeypatch, cmd):
         """Pass."""
         runner = utils.load_clirunner(request, monkeypatch)
-        name = "badwolf"
+        name = "badwolf {}".format(datetime.datetime.now())
         query = "(adapters > size(0))"
         field = "labels"
         cfilter = "generic:{}".format(field)
