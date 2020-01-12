@@ -1,25 +1,5 @@
 # API client todos
 
-## 2.1.4
-
-### Add support for fields + sq fields in SQ get
-
-DONE, ADD EXAMPLES TO DOCS
-
-### add --show-config to cnx add
-
-DONE, ADD EXAMPLES TO DOCS
-
-### users_devices.py:Fields.find: add ability to specify fields using regex
-
-DONE, ADD EXAMPLES TO DOCS
-
-### Add client side cert support
-
-DONE, ADD EXAMPLES TO DOCS
-
-### Add export format: SQL dump
-
 ## DOCS
 
 ### need to doc proxy and cert
@@ -79,6 +59,8 @@ axonshell devices get \
     --field-flatten installed_software
 ```
 
+### Add export format: SQL dump
+
 ### Add export format: word
 
 Would need to add optional package requirements.
@@ -117,13 +99,13 @@ Just like GUI. GUI processes it client side, so we have to do the same.
 Concept:
 
 ```text
-    --field-filter-eq "installed_software.name=Google Chrome||Google Chrome Installer"
-    --field-filter-re "installed_software.name=.*google.*"
-    --field-filter-in "installed_software.name=google"
-    --field-filter-lt "installed_software.version=77"
-    --field-filter-lte
-    --field-filter-gt
-    --field-filter-gte
+    --field-filter "eq:installed_software.name=Google Chrome||Google Chrome Installer"
+    --field-filter "re:installed_software.name=.*google.*"
+    --field-filter "in:installed_software.name=google"
+    --field-filter "not:eq:installed_software.version=77"
+    --field-filter "lte:2:installed_software.name"
+    --field-filter "gt:2"
+    --field-filter "gte:2"
 ```
 
 ### users_devices.py:UserDeviceMixin.get: Add logging for page rows fetched
@@ -152,9 +134,9 @@ This may no longer be necessary? Re-check.
 Concept:
 
 ```text
---field-weight hostname:aws=10,bluecat=1
+--field-weight hostname:aws=10,sccm=10,solwarinds=10,jamf=9,ad=9,bluecat=1
 # (score aws as the heaviest)
-
+weighted.hostname
 ```
 
 #### User to Device correlation
@@ -270,30 +252,6 @@ be empty for that SQ due to no expressions. This would possibly mean moving
 query wizard parsing from front end JS to API?
 
 ### Enforcements API needs love
-
-### create SQ with two underscores in name fails
-
-Works:
-
-```text
-z=users.saved_query._add(
-        name='badwolf_test_add_get_delete',
-        query='(internal_axon_id == "f7895a5487d6eda9b2d6573680159a7c")',
-        fields=["specific_data.data.username"]
-)
-```
-
-Doesn't:
-
-```text
-z=users.saved_query._add(
-    name='badwolf_test__add_get_delete',
-    query='(internal_axon_id == "f7895a5487d6eda9b2d6573680159a7c")',
-    fields=["specific_data.data.username"]
-)
-```
-
-TestSavedQuery.test__add_get_delete[Users] still failing. wtf
 
 ### Add lifecycle from private API to public API
 

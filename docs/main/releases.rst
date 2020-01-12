@@ -19,31 +19,23 @@ Minor releases: 1.x.0:
 Major releases: x.0.0:
     A major release is only done for architectural and model changes to the API client library.
 
-    Any scripts that utilize this API library will probably not work with new major releases.
-
-Todo
-==================================================
-
-2.0.1
---------------------------------------------------
-* :green:`docs`: Finish re-doing all command line interface docstrings.
-* :green:`docs`: Add rough command line interface examples.
-* :green:`docs`: Add rough API examples.
-
-2.0.2
---------------------------------------------------
-* :green:`docs`: Flush out the rest of the command line interface examples.
-* :green:`docs`: Flush out the rest of the API examples.
-* :green:`docs`: Finish re-doing all doc strings.
-
-
-2.1.0
---------------------------------------------------
-* :blue:`api`: api.Enforcements flush out.
-* :blue:`rest_api`: Flush out enforcement routes in REST API server.
+    Any scripts that utilize this API library might not work with new major releases.
 
 Changelog
 ==================================================
+
+`2.1.4`_ (2020-01-12)
+--------------------------------------------------
+* :red:`bugfix`: Fixed a minor issue with text string 'False' not being recognized as an alternative for boolean False.
+* :red:`bugfix`: Fixed a minor issue with selecting an adapter connection by ID.
+* :blue:`enhancement`: You can now specify fields to fetch in addition to the fields defined in a saved-query. References:
+  * :ref:`fr_214_5`
+* :blue:`enhancement`: You can now specify fields using regular expressions whereever fields can be specified. References:
+  * :ref:`fr_214_3`
+  * :ref:`fr_214_4`
+* :blue:`enhancement`: You can use show-config when adding new connections to see the configuration without being prompted. References:
+  * :ref:`fr_214_1`
+  * :ref:`fr_214_2`
 
 `2.0.0`_ (2019-09-16)
 --------------------------------------------------
@@ -58,3 +50,4 @@ Changelog
 
 .. _1.0.0: https://github.com/Axonius/axonius_api_client/releases/tag/1.0.0
 .. _2.0.0: https://github.com/Axonius/axonius_api_client/releases/tag/2.0.0
+.. _2.1.4: https://github.com/Axonius/axonius_api_client/releases/tag/2.1.4
