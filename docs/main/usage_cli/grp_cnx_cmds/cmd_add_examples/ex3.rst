@@ -5,6 +5,9 @@
 Show the settings needed for a connection in text format
 ########################################################
 
+.. note::
+   :blue:`added in 2.1.4`
+
 This can be used to show the connection settings needed so you can build a command line
 that contains all the necessary settings using ``--config setting_name=setting_value``
 

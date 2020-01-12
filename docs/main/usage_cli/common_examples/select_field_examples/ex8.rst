@@ -5,6 +5,9 @@
 Select Fields: Using Regular Expressions Case 2
 ###############################################
 
+.. note::
+   :blue:`added in 2.1.4`
+
 This does the following:
 
 * Get device assets and include the generic field ``os.type``. Also include all fields
