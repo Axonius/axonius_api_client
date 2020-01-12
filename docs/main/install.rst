@@ -17,7 +17,7 @@ the PATH after you install it.
 
 .. note::
 
-   While 2.7 is supported, using it is not recommended due to the `pending EOL on January 1st 2020 <pyeol>`_.
+   While 2.7 is supported, using it is not recommended due to the `EOL on January 1st 2020 <pyeol>`_.
 
 Install the package using `pip`_
 ============================================================
