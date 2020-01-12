@@ -29,11 +29,16 @@ Changelog
 * :red:`bugfix`: Fixed a minor issue with text string 'False' not being recognized as an alternative for boolean False.
 * :red:`bugfix`: Fixed a minor issue with selecting an adapter connection by ID.
 * :blue:`enhancement`: You can now specify fields to fetch in addition to the fields defined in a saved-query. References:
+
   * :ref:`fr_214_5`
+
 * :blue:`enhancement`: You can now specify fields using regular expressions whereever fields can be specified. References:
+
   * :ref:`fr_214_3`
   * :ref:`fr_214_4`
+
 * :blue:`enhancement`: You can use show-config when adding new connections to see the configuration without being prompted. References:
+
   * :ref:`fr_214_1`
   * :ref:`fr_214_2`
 
