@@ -61,7 +61,7 @@ class Mixins(object):
     """:obj:`bool`: Attribute checked by :meth:`is_logged_in`."""
 
     def __init__(self, http, creds, **kwargs):
-        """Constructor.
+        """Mixins for Model.
 
         Args:
             http (:obj:`axonius_api_client.http.Http`):
@@ -176,7 +176,7 @@ class ApiKey(Mixins, Model):
     """Authentication method using API key & API secret."""
 
     def __init__(self, http, key, secret, **kwargs):
-        """Constructor.
+        """Authenticate using API key & API secret.
 
         Args:
             http (:obj:`axonius_api_client.http.Http`):

@@ -19,6 +19,8 @@ from . import grp_common
 @options.OPT_EXPORT_FORMAT
 @options.OPT_EXPORT_OVERWRITE
 @options.OPT_EXPORT_DELIM
+@options.OPT_FIELDS
+@options.OPT_FIELDS_REGEX
 @options.OPT_MAX_ROWS
 @click.option(
     "--name",
@@ -38,6 +40,8 @@ def cmd(
     export_path,
     export_overwrite,
     export_delim,
+    fields,
+    fields_regex,
     name,
     max_rows,
 ):
@@ -48,7 +52,9 @@ def cmd(
     api = getattr(client, p_grp)
 
     with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
-        raw_data = api.get_by_saved_query(name=name, max_rows=max_rows)
+        raw_data = api.get_by_saved_query(
+            name=name, fields=fields, fields_regex=fields_regex, max_rows=max_rows
+        )
 
     grp_common.echo_response(ctx=ctx, raw_data=raw_data, api=api)
 

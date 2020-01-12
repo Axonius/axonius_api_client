@@ -1,10 +1,11 @@
 #!/usr/bin/env python -i
 # -*- coding: utf-8 -*-
-"""Utilities for this package."""
+"""Example of getting devices by a saved query."""
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 if __name__ == "__main__":
     import os
+    import json
 
     import axonius_api_client as axonapi
 
@@ -14,9 +15,8 @@ if __name__ == "__main__":
     AX_URL = os.environ["AX_URL"]
     AX_KEY = os.environ["AX_KEY"]
     AX_SECRET = os.environ["AX_SECRET"]
-    AX_CLIENT_CERT_BOTH = os.environ.get("AX_CLIENT_CERT_BOTH", None) or None
-    AX_CLIENT_CERT_CERT = os.environ.get("AX_CLIENT_CERT_CERT", None) or None
-    AX_CLIENT_CERT_KEY = os.environ.get("AX_CLIENT_CERT_KEY", None) or None
+    SQ_NAME = os.environ.get("AX_SQ_NAME", "Managed Devices")
+    FORMAT = os.environ.get("AX_FORMAT", "json")
 
     def jdump(obj, **kwargs):
         """JSON dump utility."""
@@ -27,9 +27,6 @@ if __name__ == "__main__":
         key=AX_KEY,
         secret=AX_SECRET,
         certwarn=False,
-        cert_client_both=AX_CLIENT_CERT_BOTH,
-        cert_client_cert=AX_CLIENT_CERT_CERT,
-        cert_client_key=AX_CLIENT_CERT_KEY,
         log_level_console="debug",
         log_level_api="debug",
         log_console=True,
@@ -40,3 +37,17 @@ if __name__ == "__main__":
     devices = ctx.devices
     users = ctx.users
     adapters = ctx.adapters
+
+    results = devices.get_by_saved_query(name=SQ_NAME)
+
+    if FORMAT.lower() == "json":
+        export_results = json.dumps(results, indent=4)
+    elif FORMAT.lower() == "csv":
+        joiner = "\n"  # join multiple items in inner cell with this character
+        export_results = axonapi.cli.serial.obj_to_csv(
+            ctx=None, raw_data=results, joiner=joiner,
+        )
+
+    else:
+        msg = "Invalid format {}, must be one of 'json' or 'csv'".format(FORMAT)
+        raise Exception(msg)

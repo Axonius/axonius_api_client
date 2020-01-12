@@ -19,11 +19,6 @@ Resources:
 * `PyPi package listing`_
 * `GitHub repository`_
 
-.. note::
-
-   This documentation is still in the midst of being re-worked to match the 2.0 release.
-   Additional usage examples and other updates should come just about every day.
-
 Table of Contents
 ###############################################
 

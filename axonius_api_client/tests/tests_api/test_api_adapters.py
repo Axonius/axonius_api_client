@@ -12,9 +12,6 @@ from axonius_api_client import constants, exceptions, tools
 
 from .. import utils
 
-# REST API BR: adding cnx with parsed config instead of raw config breaks adapters._get()
-# FUTURE: add atexit to verify no badwolf cnxs?
-
 CSV_FILENAME = "badwolf.csv"
 CSV_FIELDS = ["mac_address", "field1"]
 CSV_ROW = ["01:37:53:9E:82:7C", "e"]
@@ -66,6 +63,13 @@ FAKE_ADAPTER_NOCLIENTS = {
     "status": None,
 }
 FAKE_ADAPTERS = [FAKE_ADAPTER_CNXS_BAD, FAKE_ADAPTER_CNXS_OK, FAKE_ADAPTER_NOCLIENTS]
+AD_CONFIG_SCHEMA = dict(
+    user=CSV_FILENAME,
+    password=CSV_FILENAME,
+    do_not_fetch_users=False,
+    fetch_disabled_devices=True,
+    fetch_disabled_users=True,
+)
 
 
 @pytest.fixture(scope="module")
@@ -436,18 +440,13 @@ class TestCnx(object):
 
     def test_add_delete(self, apiobj, csv_adapter):
         """Pass."""
-        config = dict(
-            dc_name="badwolf_public_add_delete",
-            user=CSV_FILENAME,
-            password=CSV_FILENAME,
-        )
+        config = dict(dc_name="badwolf_public_add_delete")
+        config.update(AD_CONFIG_SCHEMA)
 
         adapter = apiobj.get_single("active_directory")
 
         with pytest.raises(exceptions.CnxConnectFailure) as exc:
-            apiobj.cnx.add(
-                adapter=adapter, config=config, parse_config=True, error=True
-            )
+            apiobj.cnx.add(adapter=adapter, config=config, parse_config=True, error=True)
 
         refetched = apiobj.cnx.refetch(
             adapter_name=adapter["name"],
@@ -580,11 +579,8 @@ class TestCnx(object):
 
     def test_update_failure(self, apiobj):
         """Pass."""
-        config = dict(
-            dc_name="badwolf_public_update_failure",
-            user=CSV_FILENAME,
-            password=CSV_FILENAME,
-        )
+        config = dict(dc_name="badwolf_public_update_failure")
+        config.update(AD_CONFIG_SCHEMA)
 
         cnx = apiobj.cnx.add(
             adapter="active_directory", config=config, parse_config=True, error=False
@@ -606,11 +602,9 @@ class TestCnx(object):
 
     def test_update_parse(self, apiobj):
         """Pass."""
-        config = dict(
-            dc_name="badwolf_public_update_parse",
-            user=CSV_FILENAME,
-            password=CSV_FILENAME,
-        )
+        config = dict(dc_name="badwolf_public_update_parse")
+        config.update(AD_CONFIG_SCHEMA)
+
         cnx = apiobj.cnx.add(
             adapter="active_directory", config=config, parse_config=True, error=False
         )
@@ -652,14 +646,10 @@ class TestCnx(object):
 
     def test_check_failure(self, apiobj):
         """Pass."""
-        new_config = {
-            "domain": "https:/172.254.254.254:9999",
-            "username": "x",
-            "password": "x",
-            "verify_ssl": False,
-        }
+        config = dict(dc_name="badwolf_check_failure")
+        config.update(AD_CONFIG_SCHEMA)
 
-        cnx = apiobj.cnx.add(adapter="tanium", config=new_config, error=False)
+        cnx = apiobj.cnx.add(adapter="active_directory", config=config, error=False)
 
         with pytest.raises(exceptions.CnxConnectFailure):
             apiobj.cnx.check(cnx=cnx, error=True)
@@ -1296,7 +1286,6 @@ class TestRawAdapters(object):
             assert isinstance(req, tools.STR)
             item_names = [x["name"] for x in items]
 
-            # FUTURE: schema's are defining required items that dont exist in items
             if req not in item_names:
                 msg = "Schema for {} has required item {!r} not in defined items {}"
                 msg = msg.format(name, req, item_names)
@@ -1312,6 +1301,7 @@ class TestRawAdapters(object):
             item_enum = item.pop("enum", [])
             item_default = item.pop("default", "")
             item_items = item.pop("items", {})
+            item_req = item.pop("required", False)
 
             assert isinstance(item_name, tools.STR) and item_name
             assert isinstance(item_type, tools.STR) and item_type
@@ -1323,6 +1313,7 @@ class TestRawAdapters(object):
                 assert isinstance(x, tools.STR)
             assert isinstance(item_format, tools.STR)
             assert isinstance(item_description, tools.STR)
+            assert isinstance(item_req, bool)
             assert item_type in ["number", "integer", "string", "bool", "array", "file"]
             assert not item
 

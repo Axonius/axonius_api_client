@@ -2,6 +2,7 @@
 """Test suite for axonius_api_client.tools."""
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+import click
 import pytest
 
 from axonius_api_client import cli, tools  # , exceptions
@@ -16,6 +17,19 @@ def badwolf_cb(x, **kwargs):
 
 class TestGrpCnx(object):
     """Pass."""
+
+    @pytest.mark.parametrize(
+        "schema,ptype",
+        [
+            [{"type": "string", "enum": ["x", "a"]}, click.Choice],
+            [{"type": "badwolf"}, type(None)],
+            [{"type": "bool"}, click.BOOL.__class__],
+        ],
+    )
+    def test_determine_type(self, schema, ptype):
+        """Pass."""
+        ret = cli.grp_cnx.grp_common.determine_type(schema)
+        assert isinstance(ret, ptype), "{!r} {!r}".format(schema, ptype)
 
     def test_get_json(self, request, monkeypatch):
         """Pass."""
@@ -48,6 +62,80 @@ class TestGrpCnx(object):
 
         json2 = tools.json_load(stdout2)
         assert isinstance(json2, tools.LIST)
+
+    def test_get_cnx_by_uuid(self, request, monkeypatch):
+        """Pass."""
+        runner = utils.load_clirunner(request, monkeypatch)
+
+        args1 = ["adapters", "get"]
+        result1 = runner.invoke(cli=cli.cli, args=args1)
+
+        stderr1 = result1.stderr
+        stdout1 = result1.stdout
+        exit_code1 = result1.exit_code
+
+        assert stdout1
+        assert stderr1
+        assert exit_code1 == 0
+
+        json1 = tools.json_load(stdout1)
+        assert isinstance(json1, tools.LIST)
+        cnxs = [x["cnx"] for x in json1 if x["cnx"]]
+        cnx1_id = cnxs[0][0]["uuid"]
+
+        args2 = ["adapters", "cnx", "get", "--rows", "-", "--uuid", cnx1_id]
+        result2 = runner.invoke(cli=cli.cli, args=args2, input=stdout1)
+        del stdout1
+
+        stderr2 = result2.stderr
+        stdout2 = result2.stdout
+        exit_code2 = result2.exit_code
+
+        assert stdout2
+        assert stderr2
+        assert exit_code2 == 0
+
+        json2 = tools.json_load(stdout2)
+        assert isinstance(json2, tools.LIST)
+        assert json2[0]["uuid"] == cnx1_id
+        assert len(json2) == 1
+
+    def test_get_cnx_by_id(self, request, monkeypatch):
+        """Pass."""
+        runner = utils.load_clirunner(request, monkeypatch)
+
+        args1 = ["adapters", "get"]
+        result1 = runner.invoke(cli=cli.cli, args=args1)
+
+        stderr1 = result1.stderr
+        stdout1 = result1.stdout
+        exit_code1 = result1.exit_code
+
+        assert stdout1
+        assert stderr1
+        assert exit_code1 == 0
+
+        json1 = tools.json_load(stdout1)
+        assert isinstance(json1, tools.LIST)
+        cnxs = [x["cnx"] for x in json1 if x["cnx"]]
+        cnx1_id = cnxs[0][0]["id"]
+
+        args2 = ["adapters", "cnx", "get", "--rows", "-", "--id", cnx1_id]
+        result2 = runner.invoke(cli=cli.cli, args=args2, input=stdout1)
+        del stdout1
+
+        stderr2 = result2.stderr
+        stdout2 = result2.stdout
+        exit_code2 = result2.exit_code
+
+        assert stdout2
+        assert stderr2
+        assert exit_code2 == 0
+
+        json2 = tools.json_load(stdout2)
+        assert isinstance(json2, tools.LIST)
+        assert json2[0]["id"] == cnx1_id
+        assert len(json2) == 1
 
     def test_get_csv(self, request, monkeypatch):
         """Pass."""
@@ -152,6 +240,41 @@ class TestGrpCnx(object):
         exp = "  Item must have keys:"
         assert errlines1[-2].startswith(exp)
 
+    def test_add_show_config_json(self, request, monkeypatch):
+        """Pass."""
+        runner = utils.load_clirunner(request, monkeypatch)
+
+        args1 = ["adapters", "cnx", "add", "--adapter", "csv", "--show-config", "json"]
+        result1 = runner.invoke(cli=cli.cli, args=args1)
+
+        stderr1 = result1.stderr
+        stdout1 = result1.stdout
+        exit_code1 = result1.exit_code
+
+        assert stdout1
+        assert stderr1
+        assert exit_code1 == 0
+
+        json1 = tools.json_load(stdout1)
+        assert isinstance(json1, tools.LIST)
+        for x in json1:
+            assert isinstance(x, dict)
+
+    def test_add_show_config_text(self, request, monkeypatch):
+        """Pass."""
+        runner = utils.load_clirunner(request, monkeypatch)
+
+        args1 = ["adapters", "cnx", "add", "--adapter", "csv", "--show-config", "text"]
+        result1 = runner.invoke(cli=cli.cli, args=args1)
+
+        stderr1 = result1.stderr
+        stdout1 = result1.stdout
+        exit_code1 = result1.exit_code
+
+        assert stdout1
+        assert stderr1
+        assert exit_code1 == 0
+
     def test_add_check_discover_delete_csv(self, request, monkeypatch):
         """Pass."""
         runner = utils.load_clirunner(request, monkeypatch)
@@ -178,6 +301,10 @@ axonshell a c de -r - -f -w 0
                 "csv",
                 "--config",
                 "user_id={}".format(csv_file),
+                "--config",
+                "is_users_csv=False",
+                "--config",
+                "is_installed_sw=False",
                 "--config",
                 "csv={}".format(csv_path),
                 "--no-prompt-opt",
@@ -263,6 +390,10 @@ axonshell a c de -r - -f -w 0
                 "csv",
                 "--config",
                 "user_id={}".format(csv_file),
+                "--config",
+                "is_users_csv=False",
+                "--config",
+                "is_installed_sw=False",
                 "--config",
                 "csv={}".format(csv_path),
                 "--no-prompt-opt",
@@ -370,10 +501,11 @@ axonshell a c de -r - -f -w 0
             "ca_file": csv_file,
             "cert_file": csv_file,
             "private_key": csv_file,
-            "fetch_disabled_devices": "y",
-            "fetch_disabled_users": "y",
             "is_ad_gc": "y",
             "ldap_ou_whitelist": "badwolf1,badwolf2",
+            "do_not_fetch_users": "false",
+            "fetch_disabled_devices": "true",
+            "fetch_disabled_users": "true",
         }
 
         with runner.isolated_filesystem():
@@ -418,18 +550,30 @@ axonshell a c de -r - -f -w 0
 
         skips = ["ca_file", "cert_file", "private_key"]
 
+        """
+        dc_name
+        user
+        password
+        do_not_fetch_users
+        fetch_disabled_devices
+        fetch_disabled_users
+        dns_server_address
+        alternative_dns_suffix
+        use_ssl
+        ca_file
+        is_ad_gc
+        ldap_ou_whitelist
+        """
         configs = [
             "badwolf",  # dc_name
             "badwolf",  # user
             "badwolf",  # password
+            "n",  # do_not_fetch_users
+            "y",  # fetch_disabled_devices
+            "y",  # fetch_disabled_users
             "badwolf",  # dns_server_address
             "badwolf",  # alternative_dns_suffix
             "Unencrypted",  # use_ssl
-            # csv_file,  # ca_file
-            # csv_file,  # cert_file
-            # csv_file,  # private_key
-            "y",  # fetch_disabled_devices
-            "y",  # fetch_disabled_users
             "y",  # is_ad_gc
             "badwolf1,badwolf2",  # ldap_ou_whitelist
         ]

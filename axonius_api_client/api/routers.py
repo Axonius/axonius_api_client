@@ -9,7 +9,7 @@ class Router(object):
     """Simple object store for REST API routes."""
 
     def __init__(self, object_type, base, version, **routes):
-        """Constructor.
+        """Object store for REST API routes.
 
         Args:
             object_type (:obj:`str`):
