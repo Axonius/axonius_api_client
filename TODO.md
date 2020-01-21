@@ -59,6 +59,8 @@ axonshell devices get \
     --field-flatten installed_software
 ```
 
+### Add ability to use normalized field names instead of internal field names
+
 ### Add export format: SQL dump
 
 ### Add export format: word
@@ -120,6 +122,10 @@ This may no longer be necessary? Re-check.
 - get the values of hostname from ALL adapters in system
 - find the value that is the MOST common value and add that as a value for a
   key majority_hostname
+
+#### Field excludes
+
+- both --field-exclude and --field-regex-exclude
 
 #### Weighting concept
 
