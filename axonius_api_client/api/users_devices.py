@@ -26,21 +26,15 @@ class UserDeviceMixin(mixins.ModelUserDevice, mixins.Mixins):
 
         super(UserDeviceMixin, self)._init(auth=auth, **kwargs)
 
-    def _count(self, query=None, use_post=False):
+    def _count(self, query=None):
         """Pass."""
         params = {}
         if query:
             params["filter"] = query
 
-            if len(query) >= constants.QUERY_USE_POST_LENGTH:
-                use_post = True
+        return self._request(method="post", path=self._router.count, json=params)
 
-        if use_post:
-            return self._request(method="post", path=self._router.count, json=params)
-        else:
-            return self._request(method="get", path=self._router.count, params=params)
-
-    def _get(self, query=None, fields=None, row_start=0, page_size=0, use_post=False):
+    def _get(self, query=None, fields=None, row_start=0, page_size=0):
         """Get a page for a given query.
 
         Args:
@@ -79,9 +73,6 @@ class UserDeviceMixin(mixins.ModelUserDevice, mixins.Mixins):
         params["limit"] = page_size
 
         if query:
-            if len(query) >= constants.QUERY_USE_POST_LENGTH:
-                use_post = True
-
             params["filter"] = query
 
         if fields:
@@ -92,17 +83,14 @@ class UserDeviceMixin(mixins.ModelUserDevice, mixins.Mixins):
 
         self._LAST_GET = params
 
-        if use_post:
-            return self._request(method="post", path=self._router.root, json=params)
-        else:
-            return self._request(method="get", path=self._router.root, params=params)
+        return self._request(method="post", path=self._router.root, json=params)
 
     def _get_by_id(self, id):
         """Pass."""
         path = self._router.by_id.format(id=id)
         return self._request(method="get", path=path)
 
-    def count(self, query=None, use_post=False):
+    def count(self, query=None):
         """Get the number of matches for a given query.
 
         Args:
@@ -113,9 +101,9 @@ class UserDeviceMixin(mixins.ModelUserDevice, mixins.Mixins):
             :obj:`int`
 
         """
-        return self._count(query=query, use_post=use_post)
+        return self._count(query=query)
 
-    def count_by_saved_query(self, name, use_post=False):
+    def count_by_saved_query(self, name):
         """Get the number of matches for a given query.
 
         Args:
@@ -127,7 +115,7 @@ class UserDeviceMixin(mixins.ModelUserDevice, mixins.Mixins):
 
         """
         sq = self.saved_query.get_by_name(value=name, match_count=1, match_error=True)
-        return self._count(query=sq["view"]["query"]["filter"], use_post=use_post)
+        return self._count(query=sq["view"]["query"]["filter"])
 
     def get(
         self,
@@ -140,7 +128,6 @@ class UserDeviceMixin(mixins.ModelUserDevice, mixins.Mixins):
         max_rows=None,
         max_pages=None,
         page_size=None,
-        use_post=False,
         all_fields=None,
     ):
         """Get objects for a given query using paging."""
@@ -189,15 +176,10 @@ class UserDeviceMixin(mixins.ModelUserDevice, mixins.Mixins):
                 "Fetching page_num={}".format(page_num),
                 "page_size={}".format(page_size),
                 "rows_fetched={}".format(rows_fetched),
-                "use_post={}".format(use_post),
             ]
             self._log.debug(tools.join_comma(obj=msg))
             page = self._get(
-                query=query,
-                fields=fields,
-                row_start=rows_fetched,
-                page_size=page_size,
-                use_post=use_post,
+                query=query, fields=fields, row_start=rows_fetched, page_size=page_size,
             )
 
             assets = page["assets"]
@@ -268,7 +250,6 @@ class UserDeviceMixin(mixins.ModelUserDevice, mixins.Mixins):
         max_rows=None,
         max_pages=None,
         page_size=None,
-        use_post=False,
     ):
         """Pass."""
         sq = self.saved_query.get_by_name(value=name, match_count=1, match_error=True)
@@ -282,7 +263,6 @@ class UserDeviceMixin(mixins.ModelUserDevice, mixins.Mixins):
             max_rows=max_rows,
             max_pages=max_pages,
             page_size=page_size,
-            use_post=use_post,
         )
 
     def get_by_value(
@@ -304,7 +284,6 @@ class UserDeviceMixin(mixins.ModelUserDevice, mixins.Mixins):
         max_rows=None,
         max_pages=None,
         page_size=None,
-        use_post=False,
         all_fields=None,
     ):
         """Build query to perform equals or regex search."""
@@ -346,7 +325,6 @@ class UserDeviceMixin(mixins.ModelUserDevice, mixins.Mixins):
             max_rows=max_rows,
             max_pages=max_pages,
             page_size=page_size,
-            use_post=use_post,
             all_fields=all_fields,
         )
 

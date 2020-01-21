@@ -1246,7 +1246,9 @@ class TestRawAdapters(object):
         node_id = client.pop("node_id")
         status = client.pop("status")
         date_fetched = client.pop("date_fetched")
+        adapter_name = client.pop("adapter_name")
 
+        assert isinstance(adapter_name, tools.STR)
         assert isinstance(client_config, dict) and client_config
         assert isinstance(client_id, tools.STR)
         assert isinstance(date_fetched, tools.STR)
