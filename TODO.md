@@ -172,7 +172,7 @@ Similar to missing patches.
 
 Right now shows all nodes grouped
 
-## REST API
+## REST API ISSUES
 
 ### Schema's are defining required items that dont exist in items
 
@@ -193,6 +193,8 @@ Currently only stored in:
 ```text
 cortex/plugins/gui/frontend/src/constants/plugin_meta.js
 ```
+
+## REST API
 
 ### Add support for user add/delete/modify
 
