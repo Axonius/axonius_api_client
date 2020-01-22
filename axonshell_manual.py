@@ -8,6 +8,8 @@ if __name__ == "__main__":
 
     import axonius_api_client as axonapi
 
+    import tabulate
+
     tools = axonapi.tools
     axonapi.cli.cli_constants.load_dotenv()
 
@@ -40,3 +42,9 @@ if __name__ == "__main__":
     devices = ctx.devices
     users = ctx.users
     adapters = ctx.adapters
+
+    compress_rows = axonapi.cli.serial.compress_rows
+    rows = devices.get(max_rows=2, fields_default=False, fields=["hostname"])
+    compressed = compress_rows(ctx=None, raw_data=rows)
+    table = tabulate.tabulate(compressed, showindex=False, headers="keys")
+    print(table)

@@ -5,6 +5,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import os
 
 import click
+import tabulate
 
 from .. import tools
 
@@ -64,7 +65,17 @@ OPT_EXPORT_FORMAT = click.option(
     "export_format",
     default="json",
     help="Format to use for STDOUT (or -xf/--export-file if supplied).",
-    type=click.Choice(["csv", "json"]),
+    type=click.Choice(["csv", "json", "table"]),
+    show_envvar=True,
+    show_default=True,
+)
+OPT_EXPORT_TABLE_FORMAT = click.option(
+    "--export-table-format",
+    "-xtf",
+    "export_table_format",
+    default="simple",
+    help="Format to use for --export-format 'table'.",
+    type=click.Choice(tabulate.tabulate_formats),
     show_envvar=True,
     show_default=True,
 )
