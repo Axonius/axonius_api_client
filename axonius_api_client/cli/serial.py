@@ -3,9 +3,10 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import csv
+import tabulate
 
 from .. import tools
-from . import cli_constants
+from . import cli_constants, context
 
 
 def ensure_keys(ctx, rows, this_cmd, src_cmds, keys, all_items=True):
@@ -25,7 +26,7 @@ def ensure_keys(ctx, rows, this_cmd, src_cmds, keys, all_items=True):
                 msg = tools.join_cr(obj=msg).format(
                     i=idx + 1, tc=this_cmd, k=key, ks=keys, hks=list(row)
                 )
-                ctx.obj.echo_error(msg=msg, abort=True)
+                context.click_echo_error(msg=msg, abort=True)
 
         if not all_items:
             break
@@ -41,7 +42,7 @@ def ensure_srcs_msg(this_cmd, src_cmds):
 def ensure_srcs(ctx, this_cmd, src_cmds, err=True):
     """Pass."""
     msg = ensure_srcs_msg(this_cmd=this_cmd, src_cmds=src_cmds)
-    echo = ctx.obj.echo_error if err else ctx.obj.echo_ok
+    echo = context.click_echo_error if err else context.click_echo_ok
     echo(msg=msg, abort=False)
 
 
@@ -53,7 +54,7 @@ def check_rows_type(ctx, rows, this_cmd, src_cmds, all_items=True):
 
             msg = "Item #{i} in input to {tc!r} is type {t}, must be a dictionary!"
             msg = msg.format(i=idx + 1, tc=this_cmd, t=type(row).__name__)
-            ctx.obj.echo_error(msg=msg, abort=True)
+            context.click_echo_error(msg=msg, abort=True)
 
         if not all_items:
             break
@@ -69,13 +70,13 @@ def json_to_rows(ctx, stream, this_cmd, src_cmds):
 
         msg = "No input provided on {s!r} for {tc!r}"
         msg = msg.format(s=stream_name, tc=this_cmd)
-        ctx.obj.echo_error(msg=msg, abort=True)
+        context.click_echo_error(msg=msg, abort=True)
 
     # its STDIN with input or a file
     content = stream.read()
     msg = "Read {n} bytes from {s!r} for {tc!r}"
     msg = msg.format(n=len(content), s=stream_name, tc=this_cmd)
-    ctx.obj.echo_ok(msg=msg)
+    context.click_echo_ok(msg=msg)
 
     content = content.strip()
 
@@ -84,14 +85,14 @@ def json_to_rows(ctx, stream, this_cmd, src_cmds):
 
         msg = "Empty content supplied in {s!r} for {tc!r}"
         msg = msg.format(s=stream_name, tc=this_cmd)
-        ctx.obj.echo_error(msg=msg, abort=True)
+        context.click_echo_error(msg=msg, abort=True)
 
     with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
         rows = tools.json_load(obj=content)
 
     msg = "Loaded JSON rows as {t} with length of {n} for {tc!r}"
     msg = msg.format(t=type(rows).__name__, tc=this_cmd, n=len(rows))
-    ctx.obj.echo_ok(msg=msg)
+    context.click_echo_ok(msg=msg)
 
     return tools.listify(obj=rows, dictkeys=False)
 
@@ -179,7 +180,7 @@ def is_dos(o):
     return isinstance(o, dict) and all([is_los(v) for v in o.values()])
 
 
-def obj_to_csv(ctx, raw_data, joiner="\n", **kwargs):
+def compress_rows(ctx, raw_data, joiner="\n", **kwargs):
     """Pass."""
     raw_data = tools.listify(obj=raw_data, dictkeys=False)
     rows = []
@@ -209,8 +210,30 @@ def obj_to_csv(ctx, raw_data, joiner="\n", **kwargs):
 
                 continue
 
-            msg = "Data of type {t} is too complex for CSV format"
+            msg = "Data of type {t} is too complex for this export format"
             msg = msg.format(t=type(raw_value).__name__)
             row[raw_key] = msg
+    return rows
 
-    return dictwriter(rows=rows)
+
+def obj_to_csv(ctx, raw_data, joiner="\n", **kwargs):
+    """Pass."""
+    rows = compress_rows(ctx=ctx, raw_data=raw_data, joiner=joiner, **kwargs)
+    data = dictwriter(rows=rows)
+    return data
+
+
+def obj_to_table(ctx, raw_data, joiner="\n", table_format="simple", **kwargs):
+    """Pass."""
+    if table_format not in tabulate.tabulate_formats:
+        msg = "{tf!r} is not a valid table format, must be one of {tfs}"
+        msg = msg.format(
+            tf=table_format, tfs=tools.join_comma(obj=tabulate.tabulate_formats)
+        )
+        context.click_echo_error(msg=msg, abort=True)
+
+    rows = compress_rows(ctx=ctx, raw_data=raw_data, joiner=joiner, **kwargs)
+    data = tabulate.tabulate(
+        tabular_data=rows, tablefmt=table_format, showindex=False, headers="keys"
+    )
+    return data

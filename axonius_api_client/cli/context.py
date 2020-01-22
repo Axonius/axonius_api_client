@@ -12,6 +12,23 @@ from .. import connect, tools
 from . import cli_constants
 
 
+def click_echo_ok(msg, **kwargs):
+    """Pass."""
+    click.secho(cli_constants.OK_TMPL.format(msg=msg), **cli_constants.OK_ARGS)
+
+
+def click_echo_warn(msg, **kwargs):
+    """Pass."""
+    click.secho(cli_constants.WARN_TMPL.format(msg=msg), **cli_constants.WARN_ARGS)
+
+
+def click_echo_error(msg, abort=True, **kwargs):
+    """Pass."""
+    click.secho(cli_constants.ERROR_TMPL.format(msg=msg), **cli_constants.ERROR_ARGS)
+    if abort:
+        sys.exit(1)
+
+
 class exc_wrapper(object):
     """Pass."""
 
@@ -95,19 +112,17 @@ class Context(object):
     @staticmethod
     def echo_ok(msg, **kwargs):
         """Pass."""
-        click.secho(cli_constants.OK_TMPL.format(msg=msg), **cli_constants.OK_ARGS)
+        click_echo_ok(msg=msg, **kwargs)
 
     @staticmethod
     def echo_error(msg, abort=True, **kwargs):
         """Pass."""
-        click.secho(cli_constants.ERROR_TMPL.format(msg=msg), **cli_constants.ERROR_ARGS)
-        if abort:
-            sys.exit(1)
+        click_echo_error(msg=msg, abort=abort, **kwargs)
 
     @staticmethod
     def echo_warn(msg, **kwargs):
         """Pass."""
-        click.secho(cli_constants.WARN_TMPL.format(msg=msg), **cli_constants.WARN_ARGS)
+        click_echo_warn(msg=msg, **kwargs)
 
     @property
     def wraperror(self):
