@@ -219,7 +219,7 @@ class TestCliObjToCsv(object):
         x = cli.serial.obj_to_csv(ctx=ctx, raw_data=rows)
         exp = (
             '"cnx.id","id","cnx"\r\n"1","",""\r\n"","2",""\r\n"","","Data'
-            ' of type dict is too complex for CSV format"\r\n'
+            ' of type dict is too complex for this export format"\r\n'
         )
 
         assert x == exp

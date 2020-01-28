@@ -38,6 +38,6 @@ __license__ = "MIT"
 LICENSE = __license__
 """:obj:`str`: License of package."""
 
-__copyright__ = "Copyright Axonius 2019"
+__copyright__ = "Copyright Axonius 2020"
 COPYRIGHT = __copyright__
 """:obj:`str`: Copyright of package."""
