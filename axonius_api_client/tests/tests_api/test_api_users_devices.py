@@ -846,7 +846,11 @@ class TestSavedQuery(Base):
         filtered_adapters = qexpr.pop("filteredAdapters", {})
         context = qexpr.pop("context", "")  # new in 2.15
         timestamp = qexpr.pop("timestamp", "")
+        brackweight = qexpr.pop("bracketWeight", 0)
+        qfilter = qexpr.pop("filter", "")
 
+        assert isinstance(qfilter, tools.STR)
+        assert isinstance(brackweight, tools.INT)
         assert isinstance(timestamp, tools.STR)
         assert isinstance(context, tools.STR)
         assert isinstance(filtered_adapters, dict) or filtered_adapters is None
@@ -981,6 +985,15 @@ class TestSavedQuery(Base):
 
         qexprs = query.pop("expressions", [])
         assert isinstance(qexprs, tools.LIST)
+
+        qmeta = query.pop("meta", {})
+        assert isinstance(qmeta, dict)
+
+        qonlyexprfilter = query.pop("onlyExpressionsFilter", "")
+        assert isinstance(qonlyexprfilter, tools.STR)
+
+        qsearch = query.pop("search", None)
+        assert isinstance(qsearch, type(None))
 
         historical = view.pop("historical", None)
         assert historical is None or isinstance(historical, tools.SIMPLE)
@@ -1219,10 +1232,12 @@ class TestParsedFields(Base):
                 # graw = afields.pop("raw")
                 # assert isinstance(graw, dict)
                 # assert graw["name"].endswith(".raw")
-
                 gall = afields.pop("all")
                 assert isinstance(gall, dict)
-                assert gall["name"] == "adapters_data.{}_adapter".format(aname)
+                assert gall["name"] in [
+                    "adapters_data.{}_adapter".format(aname),
+                    "adapters_data.{}".format(aname),
+                ]
 
             for fname, finfo in afields.items():
                 self.val_field(fname, finfo, aname)
