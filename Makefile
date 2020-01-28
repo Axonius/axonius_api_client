@@ -1,5 +1,6 @@
 PACKAGE := axonius_api_client
 VERSION := $(shell grep "^__version__" $(PACKAGE)/version.py | cut -d\" -f2)
+PYVER := $(cat .python_version)
 
 .PHONY: build docs
 
@@ -38,8 +39,8 @@ pipenv_clean:
 	pipenv --rm || true
 
 pyenv_init:
-	pyenv install 3.7.4 -s || true
-	pyenv local 3.7.4 || true
+	pyenv install $(PYVER) -s || true
+	pyenv local $(PYVER) || true
 
 lint:
 	pipenv run isort -rc -y $(PACKAGE) setup.py axonshell*.py
