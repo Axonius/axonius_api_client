@@ -38,7 +38,8 @@ access to the internet, there are a few hoops to jump through.
 
 .. note::
     On Windows, each system should have should the
-    `PATH variable updated <pythonwinenv>`_ to include the Python directories:
+    `PATH variable updated`_ to include the Python directories:
+
     * C:\Program Files\Python38
     * C:\Program Files\Python38\Scripts
 
@@ -88,4 +89,4 @@ The master branch will always be the most recent stable version.
 .. _pypi: https://pypi.org/project/axonius-api-client/
 .. _python: https://www.python.org/downloads/
 .. _pyeol: https://python3statement.org
-.. _pythonwinenv: https://projects.raspberrypi.org/en/projects/using-pip-on-windows/5
+.. _PATH variable updated: https://projects.raspberrypi.org/en/projects/using-pip-on-windows/5
