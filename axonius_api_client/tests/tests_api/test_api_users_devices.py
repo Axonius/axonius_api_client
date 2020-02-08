@@ -7,135 +7,12 @@ import json
 import re
 
 import pytest
+import six
 
 import axonius_api_client as axonapi
 from axonius_api_client import exceptions, tools
 
-from .. import utils
-
-FIELD_FORMATS = ["discrete", "image", "date-time", "table", "ip", "subnet", "version"]
-SCHEMA_FIELD_FORMATS = [
-    "image",
-    "date-time",
-    "table",
-    "logo",
-    "tag",
-    "ip",
-    "subnet",
-    "version",
-]
-FIELD_TYPES = ["string", "bool", "array", "integer", "number"]
-
-QUERY_ID = '((internal_axon_id == "{internal_axon_id}"))'.format
-QUERY_EQ = '(({f} == "{v}"))'.format
-QUERY_FIELD_EXISTS = '(({field} == ({{"$exists":true,"$ne": ""}})))'.format
-"""
-# multi
-((internal_axon_id == ({"$exists":true,"$ne":""})))
-    and
-((specific_data.data.username == ({"$exists":true,"$ne":""})))
-    and
-((specific_data.data.mail == ({"$exists":true,"$ne":""})))
-
-# single
-((internal_axon_id == ({"$exists":true,"$ne":""})))
-
-"""
-
-USERS_TEST_DATA = {
-    "adapters": [
-        {"search": "generic", "exp": "generic"},
-        {"search": "active_directory_adapter", "exp": "active_directory"},
-        {"search": "active_directory", "exp": "active_directory"},
-    ],
-    "single_field": {"search": "username", "exp": "specific_data.data.username"},
-    "fields": [
-        {"search": "username", "exp": ["specific_data.data.username"]},
-        {"search": "generic:username", "exp": ["specific_data.data.username"]},
-        {"search": "mail", "exp": ["specific_data.data.mail"]},
-        {"search": "generic:mail", "exp": ["specific_data.data.mail"]},
-        {
-            "search": "generic:mail,username",
-            "exp": ["specific_data.data.mail", "specific_data.data.username"],
-        },
-        {
-            "search": "active_directory:username",
-            "exp": ["adapters_data.active_directory_adapter.username"],
-        },
-        {
-            "search": "adapters_data.active_directory_adapter.username",
-            "exp": ["adapters_data.active_directory_adapter.username"],
-        },
-        {
-            "search": "*,*,username",
-            "exp": ["specific_data", "specific_data.data.username"],
-        },
-    ],
-    "val_fields": [
-        {
-            "search": ["active_directory:username", "generic:username", "mail"],
-            "exp": [
-                "adapters_data.active_directory_adapter.username",
-                "specific_data.data.username",
-                "specific_data.data.mail",
-            ],
-        }
-    ],
-}
-
-DEVICES_TEST_DATA = {
-    "adapters": [
-        {"search": "generic", "exp": "generic"},
-        {"search": "active_directory_adapter", "exp": "active_directory"},
-        {"search": "active_directory", "exp": "active_directory"},
-    ],
-    "single_field": {"search": "hostname", "exp": "specific_data.data.hostname"},
-    "fields": [
-        {
-            "search": "network_interfaces.ips",
-            "exp": ["specific_data.data.network_interfaces.ips"],
-        },
-        {
-            "search": "generic:network_interfaces.ips",
-            "exp": ["specific_data.data.network_interfaces.ips"],
-        },
-        {"search": "hostname", "exp": ["specific_data.data.hostname"]},
-        {"search": "generic:hostname", "exp": ["specific_data.data.hostname"]},
-        {
-            "search": "generic:hostname,network_interfaces.ips",
-            "exp": [
-                "specific_data.data.hostname",
-                "specific_data.data.network_interfaces.ips",
-            ],
-        },
-        {
-            "search": "active_directory:hostname",
-            "exp": ["adapters_data.active_directory_adapter.hostname"],
-        },
-        {
-            "search": "adapters_data.active_directory_adapter.hostname",
-            "exp": ["adapters_data.active_directory_adapter.hostname"],
-        },
-        {
-            "search": "*,*,hostname",
-            "exp": ["specific_data", "specific_data.data.hostname"],
-        },
-    ],
-    "val_fields": [
-        {
-            "search": [
-                "active_directory:hostname",
-                "generic:hostname",
-                "network_interfaces.ips",
-            ],
-            "exp": [
-                "adapters_data.active_directory_adapter.hostname",
-                "specific_data.data.hostname",
-                "specific_data.data.network_interfaces.ips",
-            ],
-        }
-    ],
-}
+from .. import utils, meta
 
 
 class Base(object):
@@ -165,9 +42,9 @@ class Base(object):
         api_type = api._router._object_type
 
         if api_type == "users":
-            api.TEST_DATA = USERS_TEST_DATA
+            api.TEST_DATA = meta.objects.USERS_TEST_DATA
         else:
-            api.TEST_DATA = DEVICES_TEST_DATA
+            api.TEST_DATA = meta.objects.DEVICES_TEST_DATA
 
         api.ALL_FIELDS = api.fields.get()
 
@@ -178,7 +55,7 @@ class Base(object):
     ):
         """Pass."""
         if not query and refetch:
-            query = QUERY_ID(**refetch)
+            query = meta.objects.QUERY_ID(**refetch)
 
         if not query:
             if not with_fields:
@@ -186,7 +63,9 @@ class Base(object):
 
             query_fields = tools.listify(with_fields)
             query_fields = [x for x in query_fields if x not in ["labels"]]
-            query_lines = [QUERY_FIELD_EXISTS(field=x) for x in query_fields]
+            query_lines = [
+                meta.objects.QUERY_FIELD_EXISTS(field=x) for x in query_fields
+            ]
             query = " and ".join(query_lines)
 
         if not fields:
@@ -226,7 +105,8 @@ class TestBoth(Base):
         assert isinstance(data["assets"], tools.LIST)
 
         response = apiobj._auth._http._LAST_RESPONSE
-        request_json = json.loads(response.request.body)
+        request_body = six.ensure_text(response.request.body)
+        request_json = json.loads(request_body)
         assert request_json["limit"] == 2000
 
     def test__get_by_id(self, apiobj):
@@ -367,7 +247,7 @@ class Single(Base):
         asset = self.get_single_asset(apiobj=apiobj, fields=specfield)
         asset_value = asset[specfield]
         value = tools.listify(obj=asset_value)[0]
-        query_pre = "{} and ".format(QUERY_FIELD_EXISTS(field=specfield))
+        query_pre = "{} and ".format(meta.objects.QUERY_FIELD_EXISTS(field=specfield))
         found = getattr(apiobj, specmethod)(
             value=value, query_pre=query_pre, match_count=1, fields=specfield
         )
@@ -422,7 +302,7 @@ class TestDevices(Single):
         asset_value = asset[specfield]
 
         value = tools.listify(obj=asset_value)[0]
-        query_pre = "{} and ".format(QUERY_FIELD_EXISTS(field=findfield))
+        query_pre = "{} and ".format(meta.objects.QUERY_FIELD_EXISTS(field=findfield))
 
         found = apiobj.get_by_subnet(
             value=value, max_rows=1, fields=findfield, query_pre=query_pre,
@@ -445,7 +325,7 @@ class TestDevices(Single):
         asset_value = asset[specfield]
 
         value = tools.listify(obj=asset_value)[0]
-        query_pre = "{} and ".format(QUERY_FIELD_EXISTS(field=findfield))
+        query_pre = "{} and ".format(meta.objects.QUERY_FIELD_EXISTS(field=findfield))
 
         found = apiobj.get_by_subnet(
             value=value,
@@ -813,7 +693,7 @@ class TestSavedQuery(Base):
 
         asset = self.get_single_asset(apiobj=apiobj, query=None, refetch=None)
 
-        query = QUERY_ID(**asset)
+        query = meta.objects.QUERY_ID(**asset)
 
         added = apiobj.saved_query.add(name=name, query=query)
         assert isinstance(added, dict)
@@ -898,18 +778,26 @@ class TestSavedQuery(Base):
         """Pass."""
         assert asset["query_type"] in ["saved"]
 
-        str_keys = [
-            "date_fetched",
-            "description",
-            "last_updated",
-            "name",
-            "query_type",
-            "user_id",
-            "uuid",
-        ]
-        for str_key in str_keys:
-            val = asset.pop(str_key)
-            assert isinstance(val, tools.STR)
+        date_fetched = asset.pop("date_fetched")
+        assert isinstance(date_fetched, tools.STR)
+
+        last_updated = asset.pop("last_updated")
+        assert isinstance(last_updated, tools.STR)
+
+        name = asset.pop("name")
+        assert isinstance(name, tools.STR)
+
+        query_type = asset.pop("query_type")
+        assert isinstance(query_type, tools.STR)
+
+        user_id = asset.pop("user_id")
+        assert isinstance(user_id, tools.STR)
+
+        uuid = asset.pop("uuid")
+        assert isinstance(uuid, tools.STR)
+
+        description = asset.pop("description")
+        assert isinstance(description, tools.STR) or description is None
 
         timestamp = asset.pop("timestamp", "")
         assert isinstance(timestamp, tools.STR)
@@ -1089,7 +977,7 @@ class TestSavedQuery(Base):
 
         asset = self.get_single_asset(apiobj=apiobj, query=None, refetch=None)
 
-        query = QUERY_ID(**asset)
+        query = meta.objects.QUERY_ID(**asset)
 
         fields = [apiobj.TEST_DATA["single_field"]["exp"]]
 
@@ -1116,7 +1004,7 @@ class TestSavedQuery(Base):
 
         asset = self.get_single_asset(apiobj=apiobj, query=None, refetch=None)
 
-        query = QUERY_ID(**asset)
+        query = meta.objects.QUERY_ID(**asset)
 
         added = apiobj.saved_query.add(name=name, query=query)
         assert isinstance(added, dict)
@@ -1135,7 +1023,7 @@ class TestSavedQuery(Base):
         single_field = apiobj.TEST_DATA["single_field"]
         asset = self.get_single_asset(apiobj=apiobj, query=None, refetch=None)
 
-        query = QUERY_ID(**asset)
+        query = meta.objects.QUERY_ID(**asset)
 
         added = apiobj.saved_query.add(
             name=name, query=query, sort=single_field["search"]
@@ -1160,7 +1048,7 @@ class TestSavedQuery(Base):
         column_filters = {single_field["search"]: "a"}
         exp_column_filters = {single_field["exp"]: "a"}
 
-        query = QUERY_ID(**asset)
+        query = meta.objects.QUERY_ID(**asset)
 
         added = apiobj.saved_query.add(
             name=name, query=query, column_filters=column_filters
@@ -1278,7 +1166,7 @@ class TestParsedFields(Base):
 
         assert not finfo, list(finfo)
 
-        assert type in FIELD_TYPES, type
+        assert type in meta.objects.FIELD_TYPES, type
 
         if name not in ["labels", "adapters", "internal_axon_id"]:
             if aname == "generic":
@@ -1290,7 +1178,7 @@ class TestParsedFields(Base):
             assert isinstance(enum, tools.STR) or tools.is_int(enum)
 
         if format:
-            assert format in FIELD_FORMATS, format
+            assert format in meta.objects.FIELD_FORMATS, format
 
         val_items(aname="{}:{}".format(aname, fname), items=items)
 
@@ -1410,7 +1298,7 @@ def val_items(aname, items):
         type = items.pop("type")
 
         assert isinstance(type, tools.STR) and type
-        assert type in FIELD_TYPES, type
+        assert type in meta.objects.FIELD_TYPES, type
 
         # uncommon
         enums = items.pop("enum", [])
@@ -1438,7 +1326,7 @@ def val_items(aname, items):
             assert not source_options, source_options
 
         if fformat:
-            assert fformat in SCHEMA_FIELD_FORMATS, fformat
+            assert fformat in meta.objects.SCHEMA_FIELD_FORMATS, fformat
 
         assert isinstance(enums, tools.LIST)
         assert isinstance(iitems, tools.LIST) or isinstance(iitems, dict)
