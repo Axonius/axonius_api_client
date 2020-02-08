@@ -90,20 +90,23 @@ Supported Python versions
 ----------------------------------------------------------
 
 * Latest versions of 3.7 and 3.8
-* Windows, macOS, Linux
+* Microsoft Windows, macOS, Linux
 
 Tested Python versions
 ----------------------------------------------------------
 
 * macOS 10.15.3 (Catalina)
-  * 3.7.6 64 bit: 02/08/2020
-  * 3.8.1 64 bit : 02/08/2020
+  * Python 3.7.6 64 bit: 02/08/2020
+  * Python 3.8.1 64 bit : 02/08/2020
 * Ubuntu Linux 18.04.03 LTS 64 bit
-  * 3.7.6 64 bit: 02/08/2020
-  * 3.8.1 64 bit: 02/08/2020
-* Windows 10 Pro x64
-  * 3.8.1 64 bit: 02/08/2020
-
+  * Python 3.7.6 64 bit: 02/08/2020
+  * Python 3.8.1 64 bit: 02/08/2020
+* Microsoft Windows 10 Pro x64 (Version 1909, Build 18363.592)
+  * Python 3.8.1 64 bit: 02/08/2020
+* Microsoft Windows Server 2012 R2 x64 (Version 6.3, Build 9600)
+  * Python 3.8.1 64 bit: 02/08/2020
+* Microsoft Windows Server 2019 x64 (Version 1809, Build 17763.1012)
+  * Python 3.8.1 64 bit: 02/08/2020
 
 .. note::
 
