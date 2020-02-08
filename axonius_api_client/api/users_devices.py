@@ -129,6 +129,38 @@ class UserDeviceMixin(mixins.ModelUserDevice, mixins.Mixins):
         max_pages=None,
         page_size=None,
         all_fields=None,
+        generator=False,
+    ):
+        """Get objects for a given query using paging."""
+        gen = self.get_generator(
+            query=query,
+            fields=fields,
+            fields_manual=fields_manual,
+            fields_regex=fields_regex,
+            fields_default=fields_default,
+            fields_error=fields_error,
+            max_rows=max_rows,
+            max_pages=max_pages,
+            page_size=page_size,
+            all_fields=all_fields,
+        )
+        if generator:
+            return gen
+        else:
+            return list(gen)
+
+    def get_generator(
+        self,
+        query=None,
+        fields=None,
+        fields_manual=None,
+        fields_regex=None,
+        fields_default=True,
+        fields_error=True,
+        max_rows=None,
+        max_pages=None,
+        page_size=None,
+        all_fields=None,
     ):
         """Get objects for a given query using paging."""
         fields = self.fields.validate(
@@ -185,8 +217,8 @@ class UserDeviceMixin(mixins.ModelUserDevice, mixins.Mixins):
             assets = page["assets"]
             page_info = page["page"]
 
-            rows += assets
-            rows_fetched += len(assets)
+            this_rows_fetched = len(assets)
+            rows_fetched += this_rows_fetched
 
             msg = [
                 "Fetched page_num={}".format(page_num),
@@ -195,6 +227,9 @@ class UserDeviceMixin(mixins.ModelUserDevice, mixins.Mixins):
                 "page_info={}".format(page_info),
             ]
             self._log.debug(tools.join_comma(obj=msg))
+
+            for asset in assets:
+                yield asset
 
             if not assets:
                 msg = "Stopped fetch loop, page with no assets returned"
@@ -207,7 +242,7 @@ class UserDeviceMixin(mixins.ModelUserDevice, mixins.Mixins):
                 self._log.debug(msg)
                 break
 
-            if max_rows and len(rows) >= max_rows:
+            if max_rows and rows_fetched >= max_rows:
                 msg = "Stopped fetch loop, hit max_rows={mr} with rows_fetched={rf}"
                 msg = msg.format(mr=max_rows, rf=rows_fetched)
                 self._log.debug(msg)
@@ -221,8 +256,6 @@ class UserDeviceMixin(mixins.ModelUserDevice, mixins.Mixins):
             "fields={!r}".format(fields),
         ]
         self._log.debug(tools.join_comma(obj=msg))
-
-        return rows
 
     def get_by_id(self, id):
         """Get an object by internal_axon_id.
@@ -250,6 +283,7 @@ class UserDeviceMixin(mixins.ModelUserDevice, mixins.Mixins):
         max_rows=None,
         max_pages=None,
         page_size=None,
+        generator=False,
     ):
         """Pass."""
         sq = self.saved_query.get_by_name(value=name, match_count=1, match_error=True)
@@ -263,6 +297,7 @@ class UserDeviceMixin(mixins.ModelUserDevice, mixins.Mixins):
             max_rows=max_rows,
             max_pages=max_pages,
             page_size=page_size,
+            generator=generator,
         )
 
     def get_by_value(
