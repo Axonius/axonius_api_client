@@ -111,7 +111,7 @@ def spawn_shell(shellvars=None):
 
     args = {"local": shellvars, "banner": cli_constants.SHELL_BANNER}
 
-    if tools.six.PY3:
+    if tools.PY36:
         args["exitmsg"] = cli_constants.SHELL_EXIT
 
     code.interact(**args)
