@@ -8,16 +8,12 @@ Installation
 Install Python
 ============================================================
 
-Download and install the latest 3.8 version of `python`_ for your platform.
+Download and install the a `supported version <supported_version>`_ of `python`_ for your platform.
 
 If installing on Windows, make sure you check the option to add Python to the PATH.
 This will ensure that not only the `python` and `pip` binaries are on the path,
 but that the `axonshell` CLI script that comes with this package will be available on
 the PATH after you install it.
-
-.. note::
-
-   While 2.7 is supported, using it is not recommended due to the `EOL on January 1st 2020 <pyeol>`_.
 
 Install the package using `pip`_
 ============================================================
