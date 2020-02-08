@@ -9,7 +9,7 @@ import pytest
 import axonius_api_client as axonapi
 from axonius_api_client import exceptions, tools
 
-from .. import utils, meta
+from .. import meta, utils
 
 
 @pytest.fixture(scope="module")

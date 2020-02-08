@@ -7,7 +7,6 @@ import os
 
 import axonius_api_client as axonapi
 
-
 if __name__ == "__main__":
     axonapi.cli.cli_constants.load_dotenv()
 
