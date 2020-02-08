@@ -87,6 +87,7 @@ to `cov_html/index.html`:
      axonius_api_client/tests
 
 .. _fr_220_4:
+.. _supported_versions:
 
 Supported Python versions
 ----------------------------------------------------------
