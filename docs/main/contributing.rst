@@ -89,20 +89,19 @@ to `cov_html/index.html`:
 Supported Python versions
 ----------------------------------------------------------
 
-* Latest versions of 3.7 and 2.7
-* Windows, OSX, Linux
+* Latest versions of 3.7 and 3.8
+* Windows, macOS, Linux
 
 Tested Python versions
 ----------------------------------------------------------
 
-* 3.7.4 and 2.7.16 on OSX
-* 3.7.4 and 2.7.16 on Windows
+* 3.8.1 on macOS 10.15.3 (Catalina)
+* 3.8.1 on Windows 10
+* 3.8.1 on Ubuntu Linux 18.04
 
 .. note::
 
-   As Python 2.7 is nearing it's end-of-life on 01/01/2020, 2.7 is not part of the
-   normal QA tests performed before releasing a new version. Please switch over to using
-   Python 3.7 as soon as possible!
+   Python 2.7 reached its end-of-life on 01/01/2020, and therefore is no longer supported.
 
 .. _issue tracker: https://github.com/Axonius/axonius_api_client/issues
 .. _GitHub project: https://github.com/Axonius/axonius_api_client
