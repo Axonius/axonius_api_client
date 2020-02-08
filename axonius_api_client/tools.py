@@ -3,6 +3,7 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import json
+import sys
 from datetime import datetime, timedelta
 
 import dateutil.parser
@@ -12,7 +13,9 @@ import six
 
 from . import exceptions
 
-if six.PY2:
+PY37 = sys.version_info[0:2] >= (3, 7)
+
+if not PY37:
     import pathlib2 as pathlib  # pragma: no cover
 else:
     import pathlib
@@ -274,7 +277,10 @@ def dt_within_min(obj, n=None):
 
 def path(obj):
     """Pass."""
-    return pathlib.Path(obj).expanduser().resolve(strict=False)
+    args = {}
+    # if not PY35:
+    args["strict"] = False
+    return pathlib.Path(obj).expanduser().resolve(**args)
 
 
 def path_read(obj, binary=False, is_json=False, **kwargs):
