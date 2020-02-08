@@ -1,5 +1,5 @@
 PACKAGE := axonius_api_client
-VERSION := $(shell grep "^__version__" $(PACKAGE)/version.py | cut -d\" -f2)
+VERSION := $(shell python get_version.py)
 PYVER := $(cat .python_version)
 
 .PHONY: build docs
@@ -8,6 +8,7 @@ help:
 	@cat Makefile.help
 
 init:
+	@echo ">>>>>>>> INITIALIZING FOR VERSION: $(VERSION)"
 	$(MAKE) pip_install_tools
 	$(MAKE) clean
 	$(MAKE) pyenv_init
