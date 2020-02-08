@@ -122,9 +122,19 @@ class TestBoth(Base):
 
     def test_get(self, apiobj):
         """Pass."""
-        data = apiobj.get(max_rows=1)
+        data = apiobj.get(generator=False, max_rows=1)
         assert isinstance(data, tools.LIST)
+        assert not data.__class__.__name__ == "generator"
         assert len(data) == 1
+
+    def test_get_generator(self, apiobj):
+        """Pass."""
+        data = apiobj.get(generator=True, max_rows=1)
+        assert not isinstance(data, tools.LIST)
+        assert data.__class__.__name__ == "generator"
+        data2 = [x for x in data]
+        assert isinstance(data2, tools.LIST)
+        assert len(data2) == 1
 
     def test_get_maxpages(self, apiobj):
         """Pass."""
