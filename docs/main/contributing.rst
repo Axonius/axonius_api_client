@@ -95,9 +95,15 @@ Supported Python versions
 Tested Python versions
 ----------------------------------------------------------
 
-* 3.8.1 on macOS 10.15.3 (Catalina)
-* 3.8.1 on Windows 10
-* 3.8.1 on Ubuntu Linux 18.04
+* macOS 10.15.3 (Catalina)
+  * 3.7.6
+  * 3.8.1
+* Windows 10
+  * 3.7.6
+  * 3.8.1
+* Ubuntu Linux 18.04.03 64 bit
+  * 3.7.6
+  * 3.8.1
 
 .. note::
 

@@ -558,7 +558,8 @@ class ParserUrl(object):
             )
             """
             netloc, path = path, netloc
-            if ":" in netloc:
+            if ":" in netloc:  # pragma: no cover
+                # can't get this to trigger anymore, ignore test coverage
                 host, port = netloc.split(":", 1)
                 netloc = ":".join([host, port]) if port else host
             else:
