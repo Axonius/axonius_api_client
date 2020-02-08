@@ -8,7 +8,7 @@ Installation
 Install Python
 ============================================================
 
-Download and install the a `supported version <supported_version>`_ of `python`_ for your platform.
+Download and install a :ref:`supported version<supported_versions>` of `python`_ for your platform.
 
 If installing on Windows, make sure you check the option to add Python to the PATH.
 This will ensure that not only the `python` and `pip` binaries are on the path,
