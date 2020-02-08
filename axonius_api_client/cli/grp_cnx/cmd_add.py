@@ -111,6 +111,10 @@ def cmd(
     hiddens = [x.lower().strip() for x in hiddens]
 
     schemas = adapter["cnx_settings"].values()
+
+    # solve 3.5/2.x no dictionary sort
+    schemas = sorted(schemas, key=lambda x: x["idx"])
+
     schemas = sorted(schemas, key=lambda x: x["required"], reverse=True)
 
     schemas = [
