@@ -13,6 +13,7 @@ import six
 
 from . import exceptions
 
+PY36 = sys.version_info[0:2] >= (3, 6)
 PY37 = sys.version_info[0:2] >= (3, 7)
 
 if not PY37:
