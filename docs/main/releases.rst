@@ -24,6 +24,31 @@ Major releases: x.0.0:
 Changelog
 ==================================================
 
+`2.2.0`_ (2020-02-08)
+--------------------------------------------------
+
+* :blue:`enhancement`: Added ``table`` as a new choice for --export-format on all ``get*`` commands for devices and users. References:
+
+  * :ref:`fr_220_1`
+
+* :blue:`enhancement`: Added --export-table-format on all ``get*`` commands for devices and users. References:
+
+  * :ref:`fr_220_2`
+
+* :blue:`enhancement`: API: Added boolean argument ``generator`` (default: False) to all ``get*`` methods for devices and user objects.
+
+* :green:`docs`: Added offline install instructions. References:
+
+  * :ref:`fr_220_3`
+
+* :cyan:`arch`: Re-tested against all supported operating systems, removed 2.7.x from supported versions, and added 3.8.1 to supported versions. References:
+
+  * :ref:`fr_220_4`
+
+* :cyan:`arch`: API: Fixed code paths that were not compatible with 3.5.x.
+
+* :cyan:`arch`: API: Always use post instead of get for retrieving assets.
+
 `2.1.4`_ (2020-01-12)
 --------------------------------------------------
 * :red:`bugfix`: Fixed a minor issue with text string 'False' not being recognized as an alternative for boolean False.
@@ -56,3 +81,4 @@ Changelog
 .. _1.0.0: https://github.com/Axonius/axonius_api_client/releases/tag/1.0.0
 .. _2.0.0: https://github.com/Axonius/axonius_api_client/releases/tag/2.0.0
 .. _2.1.4: https://github.com/Axonius/axonius_api_client/releases/tag/2.1.4
+.. _2.2.0: https://github.com/Axonius/axonius_api_client/releases/tag/2.2.0

@@ -1,5 +1,23 @@
 # Release notes
 
+## 2.2.0
+
+Release date: 2020-02-08
+
+### Enhancements
+
+* Added `table` as a new choice for --export-format on all `get\*` commands for devices and users. References:
+  * [Export Options](https://axonius-api-client.readthedocs.io/en/latest/main/usage_cli/common_options/export.html#fr-220-1)
+* Added --export-table-format on all `get*` commands for devices and users. References:
+  * [Export Options](https://axonius-api-client.readthedocs.io/en/latest/main/usage_cli/common_options/export.html#fr-220-2)
+* Added offline install instructions. References:
+  * [Offline installs using pip](https://axonius-api-client.readthedocs.io/en/latest/main/install.html#fr-220-3)
+* Re-tested against all supported operating systems, removed 2.7.x from supported versions, and added 3.8.1 to supported versions. References:
+  * [Supported Python versions](https://axonius-api-client.readthedocs.io/en/latest/main/contributing.html#fr-220-4)
+*  Always use post instead of get for retrieving assets.
+*  Fixed code paths that were not compatible with 3.5.x.
+*  Added boolean argument `generator` (default: False) to all `get*` methods for devices and user objects.
+
 ## 2.1.4
 
 Release date: 2020-01-12

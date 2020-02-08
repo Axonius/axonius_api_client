@@ -73,7 +73,7 @@ OPT_EXPORT_TABLE_FORMAT = click.option(
     "--export-table-format",
     "-xtf",
     "export_table_format",
-    default="simple",
+    default="fancy_grid",
     help="Format to use for --export-format 'table'.",
     type=click.Choice(tabulate.tabulate_formats),
     show_envvar=True,
