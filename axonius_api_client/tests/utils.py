@@ -11,7 +11,6 @@ from click.testing import CliRunner
 import axonius_api_client as axonapi
 from axonius_api_client import cli, tools
 
-
 IS_WINDOWS = sys.platform == "win32"
 IS_LINUX = sys.platform == "linux"
 IS_MAC = sys.platform == "darwin"

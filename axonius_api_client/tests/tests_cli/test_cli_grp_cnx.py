@@ -7,7 +7,7 @@ import pytest
 
 from axonius_api_client import cli, tools  # , exceptions
 
-from .. import utils, meta
+from .. import meta, utils
 
 
 def badwolf_cb(x, **kwargs):

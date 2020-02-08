@@ -2,9 +2,8 @@
 """Axonius API Client package."""
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-import re
-
 import ipaddress
+import re
 
 from .. import constants, exceptions, tools
 from . import adapters, mixins, routers
