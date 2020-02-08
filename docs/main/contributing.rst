@@ -86,6 +86,8 @@ to `cov_html/index.html`:
      --exitfirst \
      axonius_api_client/tests
 
+.. _fr_220_4:
+
 Supported Python versions
 ----------------------------------------------------------
 

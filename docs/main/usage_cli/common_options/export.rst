@@ -1,6 +1,8 @@
 .. include:: /main/.special.rst
 
 .. _export_options:
+.. _fr_220_1:
+.. _fr_220_2:
 
 Export Options
 ###############################################
@@ -18,9 +20,54 @@ STDOUT to a file in order to save the data.
 However, almost all commands have a set of common options for controlling
 the export format and output of the data returned:
 
-.. option:: -xt <csv|json>, --export-format <csv|json>
+.. option:: -xt <csv|json|table>, --export-format <csv|json|table>
 
-   Set the output format to JSON (the default) or CSV.
+   Set the output format to JSON (the default), CSV or table.
+
+   .. note::
+
+      Only user/devices commands starting with ``get`` support table format.
+
+   .. note::
+      :blue:`added table as an option in 2.2.0`
+
+.. option:: -xtf, --export-table-format
+
+   .. note::
+      :blue:`added in 2.2.0`
+
+  When using -xt / --export-format ``table``, this controls the type of table that is
+  produced.
+
+  The default table format is ``fancy_grid``, but the `tabulate`_ package that provides
+  this functionality exposes many different table formats:
+
+  * fancy_grid
+  * github
+  * grid
+  * html
+  * jira
+  * latex
+  * latex_booktabs
+  * latex_raw
+  * mediawiki
+  * moinmoin
+  * orgtbl
+  * pipe
+  * plain
+  * presto
+  * psql
+  * rst
+  * simple
+  * textile
+  * tsv
+  * youtrack
+
+  Quick example:
+
+  .. code:: console
+
+     $ axonshell devices get --export-format table --export-table-format html
 
 .. option:: -xf <FILENAME>, --export-file <FILENAME>
 
@@ -43,12 +90,15 @@ the export format and output of the data returned:
 
 .. option:: -xo , --export-overwrite
 
-   Overwrite -xf / --export-file if it exists.
+   When using -xf / --export-file, overwrite the file if it exists.
 
    If a file exists and this flag is not supplied, the CLI will not overwrite the file and exit with an error.
 
 .. option:: -xd , --export-delim
 
-   When using -xt / --export-format ``csv``, change the default delimiter used for multi-value cells.
+   When using -xt / --export-format ``csv`` or ``table``, change the default delimiter
+   used for joining multi-value cells.
 
    The default delimiter for multi-value cells is ``\n``.
+
+.. _tabulate: https://github.com/astanin/python-tabulate

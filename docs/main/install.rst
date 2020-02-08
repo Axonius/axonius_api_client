@@ -29,16 +29,22 @@ platform that has python installed.
 
   $ pip install axonius_api_client
 
-Performing offline / airgapped installs on Windows using `pip`_
+.. _fr_220_3:
+
+Offline installs using `pip`_
 ============================================================
 
 If you need to install axonius-api-client to a system that doesn't have
 access to the internet, there are a few hoops to jump through.
 
-You will need to install `python`_ on both systems, and each system should have
-should the `PATH variable updated <pythonwinenv>`_ include the Python directories:
-* C:\Program Files\Python38
-* C:\Program Files\Python38\Scripts
+.. note::
+    You will need to install `python`_ on both systems,
+
+.. note::
+    On Windows, each system should have should the
+    `PATH variable updated <pythonwinenv>`_ to include the Python directories:
+    * C:\Program Files\Python38
+    * C:\Program Files\Python38\Scripts
 
 On the system that does have internet access, use the following command to download
 all of the requirements as wheel packages:
