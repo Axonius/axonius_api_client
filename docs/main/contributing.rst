@@ -96,18 +96,19 @@ Tested Python versions
 ----------------------------------------------------------
 
 * macOS 10.15.3 (Catalina)
-  * 3.7.6
-  * 3.8.1
-* Windows 10
-  * 3.7.6
-  * 3.8.1
-* Ubuntu Linux 18.04.03 64 bit
-  * 3.7.6
-  * 3.8.1
+  * 3.7.6 64 bit: 02/08/2020
+  * 3.8.1 64 bit : 02/08/2020
+* Ubuntu Linux 18.04.03 LTS 64 bit
+  * 3.7.6 64 bit: 02/08/2020
+  * 3.8.1 64 bit: 02/08/2020
+* Windows 10 Pro x64
+  * 3.8.1 64 bit: 02/08/2020
+
 
 .. note::
 
-   Python 2.7 reached its end-of-life on 01/01/2020, and therefore is no longer supported.
+   Python 2.7 reached its end-of-life on 01/01/2020, and
+   therefore is no longer supported as of 2.2.0.
 
 .. _issue tracker: https://github.com/Axonius/axonius_api_client/issues
 .. _GitHub project: https://github.com/Axonius/axonius_api_client

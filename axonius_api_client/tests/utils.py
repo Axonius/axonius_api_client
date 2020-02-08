@@ -4,11 +4,17 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import csv
 import re
+import sys
 
 from click.testing import CliRunner
 
 import axonius_api_client as axonapi
 from axonius_api_client import cli, tools
+
+
+IS_WINDOWS = sys.platform == "win32"
+IS_LINUX = sys.platform == "linux"
+IS_MAC = sys.platform == "darwin"
 
 
 def log_check(caplog, entries):
