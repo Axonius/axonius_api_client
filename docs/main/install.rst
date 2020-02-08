@@ -8,7 +8,7 @@ Installation
 Install Python
 ============================================================
 
-Download and install the latest 3.7 version of `python`_ for your platform.
+Download and install the latest 3.8 version of `python`_ for your platform.
 
 If installing on Windows, make sure you check the option to add Python to the PATH.
 This will ensure that not only the `python` and `pip` binaries are on the path,
@@ -29,6 +29,31 @@ platform that has python installed.
 
   $ pip install axonius_api_client
 
+Performing offline / airgapped installs on Windows using `pip`_
+============================================================
+
+If you need to install axonius-api-client to a system that doesn't have
+access to the internet, there are a few hoops to jump through.
+
+You will need to install `python`_ on both systems, and each system should have
+should the `PATH variable updated <pythonwinenv>`_ include the Python directories:
+* C:\Program Files\Python38
+* C:\Program Files\Python38\Scripts
+
+On the system that does have internet access, use the following command to download
+all of the requirements as wheel packages:
+
+.. code-block:: console
+
+   $ pip download -d d:\axonshell_pkg axonius-api-client
+
+Copy the contents of d:\axonshell_pkg to the destination server, and then on the
+destination server run:
+
+.. code-block:: console
+
+   $ pip install --no-index --find-links d:\axonshell_pkg --target d:\axonshell axonius-api-client
+
 Install the package Using `pipenv`_
 ============================================================
 
@@ -48,6 +73,7 @@ you can install the package after cloning the repository using ``python setup.py
 
   $ git clone git://github.com/Axonius/axonius_api_client.git
 
+
 Browse the repository on `GitHub`_
 ============================================================
 
@@ -60,3 +86,4 @@ The master branch will always be the most recent stable version.
 .. _pypi: https://pypi.org/project/axonius-api-client/
 .. _python: https://www.python.org/downloads/
 .. _pyeol: https://python3statement.org
+.. _pythonwinenv: https://projects.raspberrypi.org/en/projects/using-pip-on-windows/5
