@@ -42,6 +42,8 @@ setup(
         "python-dateutil",
         'pyreadline ; platform_system == "Windows"',
         "pathlib2 ; python_version < '3.0'",
+        "tabulate",
+        "six>=1.14.0",
     ],
     keywords=["Axonius", "API Library"],
     tests_require=["pytest", "pytest-cov", "pytest-httpbin", "coverage"],

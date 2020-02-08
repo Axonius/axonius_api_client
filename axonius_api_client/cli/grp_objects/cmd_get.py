@@ -4,7 +4,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import click
 
-from .. import cli_constants, options, serial
+from .. import cli_constants, options
 from . import grp_common
 
 
@@ -17,6 +17,7 @@ from . import grp_common
 @options.OPT_EXPORT_FORMAT
 @options.OPT_EXPORT_OVERWRITE
 @options.OPT_EXPORT_DELIM
+@options.OPT_EXPORT_TABLE_FORMAT
 @options.OPT_QUERY
 @options.OPT_QUERY_FILE
 @options.OPT_FIELDS
@@ -34,6 +35,7 @@ def cmd(
     export_path,
     export_overwrite,
     export_delim,
+    export_table_format,
     query,
     query_file,
     fields,
@@ -61,7 +63,7 @@ def cmd(
 
     grp_common.echo_response(ctx=ctx, raw_data=raw_data, api=api)
 
-    formatters = {"json": serial.to_json, "csv": serial.obj_to_csv}
+    formatters = grp_common.FORMATTERS
 
     ctx.obj.handle_export(
         raw_data=raw_data,
@@ -70,5 +72,6 @@ def cmd(
         export_file=export_file,
         export_path=export_path,
         export_overwrite=export_overwrite,
+        table_format=export_table_format,
         joiner=export_delim,
     )

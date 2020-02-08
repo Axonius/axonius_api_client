@@ -7,135 +7,12 @@ import json
 import re
 
 import pytest
+import six
 
 import axonius_api_client as axonapi
 from axonius_api_client import exceptions, tools
 
-from .. import utils
-
-FIELD_FORMATS = ["discrete", "image", "date-time", "table", "ip", "subnet", "version"]
-SCHEMA_FIELD_FORMATS = [
-    "image",
-    "date-time",
-    "table",
-    "logo",
-    "tag",
-    "ip",
-    "subnet",
-    "version",
-]
-FIELD_TYPES = ["string", "bool", "array", "integer", "number"]
-
-QUERY_ID = '((internal_axon_id == "{internal_axon_id}"))'.format
-QUERY_EQ = '(({f} == "{v}"))'.format
-QUERY_FIELD_EXISTS = '(({field} == ({{"$exists":true,"$ne": ""}})))'.format
-"""
-# multi
-((internal_axon_id == ({"$exists":true,"$ne":""})))
-    and
-((specific_data.data.username == ({"$exists":true,"$ne":""})))
-    and
-((specific_data.data.mail == ({"$exists":true,"$ne":""})))
-
-# single
-((internal_axon_id == ({"$exists":true,"$ne":""})))
-
-"""
-
-USERS_TEST_DATA = {
-    "adapters": [
-        {"search": "generic", "exp": "generic"},
-        {"search": "active_directory_adapter", "exp": "active_directory"},
-        {"search": "active_directory", "exp": "active_directory"},
-    ],
-    "single_field": {"search": "username", "exp": "specific_data.data.username"},
-    "fields": [
-        {"search": "username", "exp": ["specific_data.data.username"]},
-        {"search": "generic:username", "exp": ["specific_data.data.username"]},
-        {"search": "mail", "exp": ["specific_data.data.mail"]},
-        {"search": "generic:mail", "exp": ["specific_data.data.mail"]},
-        {
-            "search": "generic:mail,username",
-            "exp": ["specific_data.data.mail", "specific_data.data.username"],
-        },
-        {
-            "search": "active_directory:username",
-            "exp": ["adapters_data.active_directory_adapter.username"],
-        },
-        {
-            "search": "adapters_data.active_directory_adapter.username",
-            "exp": ["adapters_data.active_directory_adapter.username"],
-        },
-        {
-            "search": "*,*,username",
-            "exp": ["specific_data", "specific_data.data.username"],
-        },
-    ],
-    "val_fields": [
-        {
-            "search": ["active_directory:username", "generic:username", "mail"],
-            "exp": [
-                "adapters_data.active_directory_adapter.username",
-                "specific_data.data.username",
-                "specific_data.data.mail",
-            ],
-        }
-    ],
-}
-
-DEVICES_TEST_DATA = {
-    "adapters": [
-        {"search": "generic", "exp": "generic"},
-        {"search": "active_directory_adapter", "exp": "active_directory"},
-        {"search": "active_directory", "exp": "active_directory"},
-    ],
-    "single_field": {"search": "hostname", "exp": "specific_data.data.hostname"},
-    "fields": [
-        {
-            "search": "network_interfaces.ips",
-            "exp": ["specific_data.data.network_interfaces.ips"],
-        },
-        {
-            "search": "generic:network_interfaces.ips",
-            "exp": ["specific_data.data.network_interfaces.ips"],
-        },
-        {"search": "hostname", "exp": ["specific_data.data.hostname"]},
-        {"search": "generic:hostname", "exp": ["specific_data.data.hostname"]},
-        {
-            "search": "generic:hostname,network_interfaces.ips",
-            "exp": [
-                "specific_data.data.hostname",
-                "specific_data.data.network_interfaces.ips",
-            ],
-        },
-        {
-            "search": "active_directory:hostname",
-            "exp": ["adapters_data.active_directory_adapter.hostname"],
-        },
-        {
-            "search": "adapters_data.active_directory_adapter.hostname",
-            "exp": ["adapters_data.active_directory_adapter.hostname"],
-        },
-        {
-            "search": "*,*,hostname",
-            "exp": ["specific_data", "specific_data.data.hostname"],
-        },
-    ],
-    "val_fields": [
-        {
-            "search": [
-                "active_directory:hostname",
-                "generic:hostname",
-                "network_interfaces.ips",
-            ],
-            "exp": [
-                "adapters_data.active_directory_adapter.hostname",
-                "specific_data.data.hostname",
-                "specific_data.data.network_interfaces.ips",
-            ],
-        }
-    ],
-}
+from .. import meta, utils
 
 
 class Base(object):
@@ -165,9 +42,9 @@ class Base(object):
         api_type = api._router._object_type
 
         if api_type == "users":
-            api.TEST_DATA = USERS_TEST_DATA
+            api.TEST_DATA = meta.objects.USERS_TEST_DATA
         else:
-            api.TEST_DATA = DEVICES_TEST_DATA
+            api.TEST_DATA = meta.objects.DEVICES_TEST_DATA
 
         api.ALL_FIELDS = api.fields.get()
 
@@ -178,7 +55,7 @@ class Base(object):
     ):
         """Pass."""
         if not query and refetch:
-            query = QUERY_ID(**refetch)
+            query = meta.objects.QUERY_ID(**refetch)
 
         if not query:
             if not with_fields:
@@ -186,7 +63,9 @@ class Base(object):
 
             query_fields = tools.listify(with_fields)
             query_fields = [x for x in query_fields if x not in ["labels"]]
-            query_lines = [QUERY_FIELD_EXISTS(field=x) for x in query_fields]
+            query_lines = [
+                meta.objects.QUERY_FIELD_EXISTS(field=x) for x in query_fields
+            ]
             query = " and ".join(query_lines)
 
         if not fields:
@@ -219,56 +98,16 @@ class Base(object):
 class TestBoth(Base):
     """Pass."""
 
-    def test__count_post_false(self, apiobj):
-        """Pass."""
-        data = apiobj._count(use_post=False)
-        assert isinstance(data, tools.INT)
-
-    def test__count_query_len_forces_post(self, apiobj):
-        """Pass."""
-        long_query = self.build_long_query(apiobj)
-
-        data = apiobj._count(query=long_query, use_post=False)
-        assert isinstance(data, tools.INT)
-
-        response = apiobj._auth._http._LAST_RESPONSE
-        assert response.request.method == "POST"
-
-    def test__get_post_false(self, apiobj):
-        """Pass."""
-        data = apiobj._get(page_size=1, use_post=False)
-        assert isinstance(data, dict)
-        assert isinstance(data["assets"], tools.LIST)
-        assert len(data["assets"]) == 1
-        assert isinstance(data["assets"][0], dict)
-
     def test__get_page_size_over_max(self, apiobj):
         """Pass."""
-        data = apiobj._get(page_size=3000, use_post=False)
+        data = apiobj._get(page_size=3000)
         assert isinstance(data, dict)
         assert isinstance(data["assets"], tools.LIST)
 
         response = apiobj._auth._http._LAST_RESPONSE
-        assert "limit=2000" in response.request.url
-
-    def test__get_query_len_forces_post(self, apiobj):
-        """Pass."""
-        long_query = self.build_long_query(apiobj)
-        fields = [apiobj.TEST_DATA["single_field"]["exp"]]
-
-        data = apiobj._get(query=long_query, fields=fields, page_size=1, use_post=False)
-        assert isinstance(data, dict)
-        assert isinstance(data["assets"], tools.LIST)
-
-        # 2.10 fixed use_post being ignored
-        # total = data["page"]["totalResources"]
-        # if total < constants.MAX_PAGE_SIZE:
-        #     assert len(data["assets"]) == total
-        # else:
-        #     assert len(data["assets"]) == constants.MAX_PAGE_SIZE
-
-        response = apiobj._auth._http._LAST_RESPONSE
-        assert response.request.method == "POST"
+        request_body = six.ensure_text(response.request.body)
+        request_json = json.loads(request_body)
+        assert request_json["limit"] == 2000
 
     def test__get_by_id(self, apiobj):
         """Pass."""
@@ -283,9 +122,19 @@ class TestBoth(Base):
 
     def test_get(self, apiobj):
         """Pass."""
-        data = apiobj.get(max_rows=1)
+        data = apiobj.get(generator=False, max_rows=1)
         assert isinstance(data, tools.LIST)
+        assert not data.__class__.__name__ == "generator"
         assert len(data) == 1
+
+    def test_get_generator(self, apiobj):
+        """Pass."""
+        data = apiobj.get(generator=True, max_rows=1)
+        assert not isinstance(data, tools.LIST)
+        assert data.__class__.__name__ == "generator"
+        data2 = [x for x in data]
+        assert isinstance(data2, tools.LIST)
+        assert len(data2) == 1
 
     def test_get_maxpages(self, apiobj):
         """Pass."""
@@ -408,7 +257,7 @@ class Single(Base):
         asset = self.get_single_asset(apiobj=apiobj, fields=specfield)
         asset_value = asset[specfield]
         value = tools.listify(obj=asset_value)[0]
-        query_pre = "{} and ".format(QUERY_FIELD_EXISTS(field=specfield))
+        query_pre = "{} and ".format(meta.objects.QUERY_FIELD_EXISTS(field=specfield))
         found = getattr(apiobj, specmethod)(
             value=value, query_pre=query_pre, match_count=1, fields=specfield
         )
@@ -463,7 +312,7 @@ class TestDevices(Single):
         asset_value = asset[specfield]
 
         value = tools.listify(obj=asset_value)[0]
-        query_pre = "{} and ".format(QUERY_FIELD_EXISTS(field=findfield))
+        query_pre = "{} and ".format(meta.objects.QUERY_FIELD_EXISTS(field=findfield))
 
         found = apiobj.get_by_subnet(
             value=value, max_rows=1, fields=findfield, query_pre=query_pre,
@@ -486,7 +335,7 @@ class TestDevices(Single):
         asset_value = asset[specfield]
 
         value = tools.listify(obj=asset_value)[0]
-        query_pre = "{} and ".format(QUERY_FIELD_EXISTS(field=findfield))
+        query_pre = "{} and ".format(meta.objects.QUERY_FIELD_EXISTS(field=findfield))
 
         found = apiobj.get_by_subnet(
             value=value,
@@ -842,16 +691,19 @@ class TestLabels(Base):
 class TestSavedQuery(Base):
     """Pass."""
 
+    '''
     def test_add_delete_readd(self, apiobj):
         """Pass."""
-        # TODO: test that add SQ, delete SQ, and re-add SQ with same name
+        # this used to test that:
+        # add SQ, delete SQ, and re-add SQ with same name
         # does not show up in get all SQ
-        # When fixed in REST API, re-work this test to not expect an exception
+        # was fixed in 2.15
+
         name = "badwolf_test_add_get_delete_readd {}".format(datetime.datetime.now())
 
         asset = self.get_single_asset(apiobj=apiobj, query=None, refetch=None)
 
-        query = QUERY_ID(**asset)
+        query = meta.objects.QUERY_ID(**asset)
 
         added = apiobj.saved_query.add(name=name, query=query)
         assert isinstance(added, dict)
@@ -863,6 +715,194 @@ class TestSavedQuery(Base):
 
         with pytest.raises(exceptions.ValueNotFound):
             apiobj.saved_query.add(name=name, query=query)
+    '''
+
+    def validate_qexpr(self, qexpr, asset):
+        """Pass."""
+        assert isinstance(qexpr, dict)
+
+        compop = qexpr.pop("compOp")
+        field = qexpr.pop("field")
+        idx = qexpr.pop("i", 0)
+        leftbracket = qexpr.pop("leftBracket")
+        rightbracket = qexpr.pop("rightBracket")
+        logicop = qexpr.pop("logicOp")
+        notflag = qexpr.pop("not")
+        value = qexpr.pop("value")
+        obj = qexpr.pop("obj", False)
+        nesteds = qexpr.pop("nested", [])
+        fieldtype = qexpr.pop("fieldType", "")
+        children = qexpr.pop("children", [])  # new in 2.15
+        filtered_adapters = qexpr.pop("filteredAdapters", {})
+        context = qexpr.pop("context", "")  # new in 2.15
+        timestamp = qexpr.pop("timestamp", "")
+        brackweight = qexpr.pop("bracketWeight", 0)
+        qfilter = qexpr.pop("filter", "")
+
+        assert isinstance(qfilter, tools.STR)
+        assert isinstance(brackweight, tools.INT)
+        assert isinstance(timestamp, tools.STR)
+        assert isinstance(context, tools.STR)
+        assert isinstance(filtered_adapters, dict) or filtered_adapters is None
+        assert isinstance(compop, tools.STR)
+        assert isinstance(field, tools.STR)
+        assert isinstance(idx, tools.INT)
+        assert isinstance(leftbracket, bool)
+        assert isinstance(rightbracket, bool)
+        assert isinstance(logicop, tools.STR)
+        assert isinstance(notflag, bool)
+        assert isinstance(value, tools.SIMPLE) or value is None
+        assert isinstance(obj, bool)
+        assert isinstance(nesteds, tools.LIST)
+        assert isinstance(children, tools.LIST)  # new in 2.15
+        assert isinstance(fieldtype, tools.STR)
+
+        for nested in nesteds:
+            self.validate_nested(nested, asset)
+
+        for child in children:
+            self.validate_nested(child, asset)
+
+        assert not qexpr, list(qexpr)
+
+    def validate_nested(self, nested, asset):
+        """Pass."""
+        assert isinstance(nested, dict)
+
+        # new in 2.10, unsure of
+        # if not None, dict with keys: clearAll, selectAll, selectedValues
+        nfiltered_adapters = nested.pop("filteredAdapters", {})
+        assert isinstance(nfiltered_adapters, dict) or nfiltered_adapters is None
+        ncondition = nested.pop("condition")
+        assert isinstance(ncondition, tools.STR)
+
+        nexpr = nested.pop("expression")
+        assert isinstance(nexpr, dict)
+
+        nidx = nested.pop("i")
+        assert isinstance(nidx, tools.INT)
+
+        assert not nested, list(nested)
+
+    def validate_sq(self, asset):
+        """Pass."""
+        assert asset["query_type"] in ["saved"]
+
+        date_fetched = asset.pop("date_fetched")
+        assert isinstance(date_fetched, tools.STR)
+
+        last_updated = asset.pop("last_updated")
+        assert isinstance(last_updated, tools.STR)
+
+        name = asset.pop("name")
+        assert isinstance(name, tools.STR)
+
+        query_type = asset.pop("query_type")
+        assert isinstance(query_type, tools.STR)
+
+        user_id = asset.pop("user_id")
+        assert isinstance(user_id, tools.STR)
+
+        uuid = asset.pop("uuid")
+        assert isinstance(uuid, tools.STR)
+
+        description = asset.pop("description")
+        assert isinstance(description, tools.STR) or description is None
+
+        timestamp = asset.pop("timestamp", "")
+        assert isinstance(timestamp, tools.STR)
+
+        archived = asset.pop("archived", False)  # added in 2.15
+        assert isinstance(archived, bool)
+
+        updated_by_str = asset.pop("updated_by")
+        assert isinstance(updated_by_str, tools.STR)
+
+        updated_by = json.loads(updated_by_str)
+        assert isinstance(updated_by, dict)
+
+        updated_by_deleted = updated_by.pop("deleted")
+        assert isinstance(updated_by_deleted, bool)
+
+        updated_str_keys = ["username", "source", "first_name", "last_name"]
+        for updated_str_key in updated_str_keys:
+            val = updated_by.pop(updated_str_key)
+            assert isinstance(val, tools.STR)
+
+        assert not updated_by
+
+        tags = asset.pop("tags", [])
+        assert isinstance(tags, tools.LIST)
+        for tag in tags:
+            assert isinstance(tag, tools.STR)
+
+        predefined = asset.pop("predefined", False)
+        assert isinstance(predefined, bool)
+
+        view = asset.pop("view")
+        assert isinstance(view, dict)
+
+        colsizes = view.pop("coloumnSizes", [])
+        assert isinstance(colsizes, tools.LIST)
+
+        colfilters = view.pop("colFilters", {})
+        assert isinstance(colfilters, dict)
+        for k, v in colfilters.items():
+            assert isinstance(k, tools.STR)
+            assert isinstance(v, tools.STR)
+
+        for x in colsizes:
+            assert isinstance(x, tools.INT)
+
+        fields = view.pop("fields")
+        assert isinstance(fields, tools.LIST)
+
+        for x in fields:
+            assert isinstance(x, tools.STR)
+
+        page = view.pop("page", 0)
+        assert isinstance(page, tools.INT)
+
+        pagesize = view.pop("pageSize", 0)
+        assert isinstance(pagesize, tools.INT)
+
+        sort = view.pop("sort")
+        assert isinstance(sort, dict)
+
+        sort_desc = sort.pop("desc")
+        assert isinstance(sort_desc, bool)
+
+        sort_field = sort.pop("field")
+        assert isinstance(sort_field, tools.STR)
+
+        query = view.pop("query")
+        assert isinstance(query, dict)
+
+        qfilter = query.pop("filter")
+        assert isinstance(qfilter, tools.STR) or qfilter is None
+
+        qexprs = query.pop("expressions", [])
+        assert isinstance(qexprs, tools.LIST)
+
+        qmeta = query.pop("meta", {})
+        assert isinstance(qmeta, dict)
+
+        qonlyexprfilter = query.pop("onlyExpressionsFilter", "")
+        assert isinstance(qonlyexprfilter, tools.STR)
+
+        qsearch = query.pop("search", None)
+        assert isinstance(qsearch, type(None))
+
+        historical = view.pop("historical", None)
+        assert historical is None or isinstance(historical, tools.SIMPLE)
+
+        for qexpr in qexprs:
+            self.validate_qexpr(qexpr, asset)
+
+        assert not query, list(query)
+        assert not sort, list(sort)
+        assert not view, list(view)
+        assert not asset, list(asset)
 
     def test__get(self, apiobj):
         """Pass."""
@@ -874,152 +914,7 @@ class TestSavedQuery(Base):
 
         for asset in assets:
             assert isinstance(asset, dict)
-
-            assert asset["query_type"] in ["saved"]
-
-            str_keys = [
-                "date_fetched",
-                "description",
-                "last_updated",
-                "name",
-                "query_type",
-                "timestamp",
-                "user_id",
-                "uuid",
-            ]
-            for str_key in str_keys:
-                val = asset.pop(str_key)
-                assert isinstance(val, tools.STR)
-
-            updated_by_str = asset.pop("updated_by")
-            assert isinstance(updated_by_str, tools.STR)
-
-            updated_by = json.loads(updated_by_str)
-            assert isinstance(updated_by, dict)
-
-            updated_by_deleted = updated_by.pop("deleted")
-            assert isinstance(updated_by_deleted, bool)
-
-            updated_str_keys = ["username", "source", "first_name", "last_name"]
-            for updated_str_key in updated_str_keys:
-                val = updated_by.pop(updated_str_key)
-                assert isinstance(val, tools.STR)
-
-            assert not updated_by
-
-            tags = asset.pop("tags", [])
-            assert isinstance(tags, tools.LIST)
-            for tag in tags:
-                assert isinstance(tag, tools.STR)
-
-            predefined = asset.pop("predefined", False)
-            assert isinstance(predefined, bool)
-
-            view = asset.pop("view")
-            assert isinstance(view, dict)
-
-            colsizes = view.pop("coloumnSizes", [])
-            assert isinstance(colsizes, tools.LIST)
-
-            colfilters = view.pop("colFilters", {})
-            assert isinstance(colfilters, dict)
-            for k, v in colfilters.items():
-                assert isinstance(k, tools.STR)
-                assert isinstance(v, tools.STR)
-
-            for x in colsizes:
-                assert isinstance(x, tools.INT)
-
-            fields = view.pop("fields")
-            assert isinstance(fields, tools.LIST)
-
-            for x in fields:
-                assert isinstance(x, tools.STR)
-
-            page = view.pop("page", 0)
-            assert isinstance(page, tools.INT)
-
-            pagesize = view.pop("pageSize", 0)
-            assert isinstance(pagesize, tools.INT)
-
-            sort = view.pop("sort")
-            assert isinstance(sort, dict)
-
-            sort_desc = sort.pop("desc")
-            assert isinstance(sort_desc, bool)
-
-            sort_field = sort.pop("field")
-            assert isinstance(sort_field, tools.STR)
-
-            query = view.pop("query")
-            assert isinstance(query, dict)
-
-            qfilter = query.pop("filter")
-            assert isinstance(qfilter, tools.STR) or qfilter is None
-
-            qexprs = query.pop("expressions", [])
-            assert isinstance(qexprs, tools.LIST)
-
-            historical = view.pop("historical", None)
-            assert historical is None or isinstance(historical, tools.SIMPLE)
-
-            for qexpr in qexprs:
-                assert isinstance(qexpr, dict)
-
-                compop = qexpr.pop("compOp")
-                field = qexpr.pop("field")
-                idx = qexpr.pop("i", 0)
-                leftbracket = qexpr.pop("leftBracket")
-                rightbracket = qexpr.pop("rightBracket")
-                logicop = qexpr.pop("logicOp")
-                notflag = qexpr.pop("not")
-                value = qexpr.pop("value")
-                obj = qexpr.pop("obj", False)
-                nesteds = qexpr.pop("nested", [])
-                fieldtype = qexpr.pop("fieldType", "")
-
-                filtered_adapters = qexpr.pop("filteredAdapters", {})
-
-                assert isinstance(filtered_adapters, dict) or filtered_adapters is None
-                assert isinstance(compop, tools.STR)
-                assert isinstance(field, tools.STR)
-                assert isinstance(idx, tools.INT)
-                assert isinstance(leftbracket, bool)
-                assert isinstance(rightbracket, bool)
-                assert isinstance(logicop, tools.STR)
-                assert isinstance(notflag, bool)
-                assert isinstance(value, tools.SIMPLE) or value is None
-                assert isinstance(obj, bool)
-                assert isinstance(nesteds, tools.LIST)
-                assert isinstance(fieldtype, tools.STR)
-
-                for nested in nesteds:
-                    assert isinstance(nested, dict)
-
-                    # new in 2.10, unsure of
-                    # if not None, dict with keys: clearAll, selectAll, selectedValues
-                    nfiltered_adapters = nested.pop("filteredAdapters", {})
-                    assert (
-                        isinstance(nfiltered_adapters, dict)
-                        or nfiltered_adapters is None
-                    )
-                    ncondition = nested.pop("condition")
-                    assert isinstance(ncondition, tools.STR)
-
-                    nexpr = nested.pop("expression")
-                    assert isinstance(nexpr, dict)
-
-                    nidx = nested.pop("i")
-                    assert isinstance(nidx, tools.INT)
-
-                    assert not nested, list(nested)
-
-                assert not qexpr, list(qexpr)
-
-            assert not query, list(query)
-            assert not sort, list(sort)
-            assert not view, list(view)
-            assert not asset, list(asset)
+            self.validate_sq(asset)
 
     def test__get_query(self, apiobj):
         """Pass."""
@@ -1092,7 +987,7 @@ class TestSavedQuery(Base):
 
         asset = self.get_single_asset(apiobj=apiobj, query=None, refetch=None)
 
-        query = QUERY_ID(**asset)
+        query = meta.objects.QUERY_ID(**asset)
 
         fields = [apiobj.TEST_DATA["single_field"]["exp"]]
 
@@ -1119,7 +1014,7 @@ class TestSavedQuery(Base):
 
         asset = self.get_single_asset(apiobj=apiobj, query=None, refetch=None)
 
-        query = QUERY_ID(**asset)
+        query = meta.objects.QUERY_ID(**asset)
 
         added = apiobj.saved_query.add(name=name, query=query)
         assert isinstance(added, dict)
@@ -1138,7 +1033,7 @@ class TestSavedQuery(Base):
         single_field = apiobj.TEST_DATA["single_field"]
         asset = self.get_single_asset(apiobj=apiobj, query=None, refetch=None)
 
-        query = QUERY_ID(**asset)
+        query = meta.objects.QUERY_ID(**asset)
 
         added = apiobj.saved_query.add(
             name=name, query=query, sort=single_field["search"]
@@ -1163,7 +1058,7 @@ class TestSavedQuery(Base):
         column_filters = {single_field["search"]: "a"}
         exp_column_filters = {single_field["exp"]: "a"}
 
-        query = QUERY_ID(**asset)
+        query = meta.objects.QUERY_ID(**asset)
 
         added = apiobj.saved_query.add(
             name=name, query=query, column_filters=column_filters
@@ -1235,10 +1130,12 @@ class TestParsedFields(Base):
                 # graw = afields.pop("raw")
                 # assert isinstance(graw, dict)
                 # assert graw["name"].endswith(".raw")
-
                 gall = afields.pop("all")
                 assert isinstance(gall, dict)
-                assert gall["name"] == "adapters_data.{}_adapter".format(aname)
+                assert gall["name"] in [
+                    "adapters_data.{}_adapter".format(aname),
+                    "adapters_data.{}".format(aname),
+                ]
 
             for fname, finfo in afields.items():
                 self.val_field(fname, finfo, aname)
@@ -1279,7 +1176,7 @@ class TestParsedFields(Base):
 
         assert not finfo, list(finfo)
 
-        assert type in FIELD_TYPES, type
+        assert type in meta.objects.FIELD_TYPES, type
 
         if name not in ["labels", "adapters", "internal_axon_id"]:
             if aname == "generic":
@@ -1291,7 +1188,7 @@ class TestParsedFields(Base):
             assert isinstance(enum, tools.STR) or tools.is_int(enum)
 
         if format:
-            assert format in FIELD_FORMATS, format
+            assert format in meta.objects.FIELD_FORMATS, format
 
         val_items(aname="{}:{}".format(aname, fname), items=items)
 
@@ -1411,7 +1308,7 @@ def val_items(aname, items):
         type = items.pop("type")
 
         assert isinstance(type, tools.STR) and type
-        assert type in FIELD_TYPES, type
+        assert type in meta.objects.FIELD_TYPES, type
 
         # uncommon
         enums = items.pop("enum", [])
@@ -1439,7 +1336,7 @@ def val_items(aname, items):
             assert not source_options, source_options
 
         if fformat:
-            assert fformat in SCHEMA_FIELD_FORMATS, fformat
+            assert fformat in meta.objects.SCHEMA_FIELD_FORMATS, fformat
 
         assert isinstance(enums, tools.LIST)
         assert isinstance(iitems, tools.LIST) or isinstance(iitems, dict)

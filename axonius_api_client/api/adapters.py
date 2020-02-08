@@ -1631,8 +1631,9 @@ class ParserAdapters(mixins.Parser):
         parsed = []
 
         for name, raw_adapters in self._raw.items():
-            for raw in raw_adapters:
+            for idx, raw in enumerate(raw_adapters):
                 adapter = self._adapter(name=name, raw=raw)
+                adapter["idx"] = idx
                 parsed.append(adapter)
 
         return parsed
@@ -1702,11 +1703,12 @@ class ParserAdapters(mixins.Parser):
                 required = schema["required"]
                 config = raw_settings["config"]
 
-                for item in items:
+                for idx, item in enumerate(items):
                     setting_name = item["name"]
                     parsed_settings = {k: v for k, v in item.items()}
                     parsed_settings["required"] = setting_name in required
                     parsed_settings["value"] = config.get(setting_name, None)
+                    parsed_settings["idx"] = idx
                     settings[setting_name] = parsed_settings
 
         return settings
@@ -1727,10 +1729,11 @@ class ParserAdapters(mixins.Parser):
         items = schema["items"]
         required = schema["required"]
 
-        for item in items:
+        for idx, item in enumerate(items):
             setting_name = item["name"]
             settings[setting_name] = {k: v for k, v in item.items()}
             settings[setting_name]["required"] = setting_name in required
+            settings[setting_name]["idx"] = idx
 
         return settings
 
@@ -1749,7 +1752,7 @@ class ParserAdapters(mixins.Parser):
 
         cnx_settings = self._cnx_settings(raw=raw)
 
-        for raw_cnx in raw["clients"]:
+        for idx, raw_cnx in enumerate(raw["clients"]):
             raw_config = raw_cnx["client_config"]
             parsed_settings = {}
 
@@ -1779,6 +1782,7 @@ class ParserAdapters(mixins.Parser):
             pcnx["uuid"] = raw_cnx["uuid"]
             pcnx["date_fetched"] = raw_cnx["date_fetched"]
             pcnx["error"] = raw_cnx["error"]
+            pcnx["idx"] = idx
             cnx.append(pcnx)
 
         return cnx

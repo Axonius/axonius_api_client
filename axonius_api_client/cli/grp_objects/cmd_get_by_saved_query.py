@@ -19,6 +19,7 @@ from . import grp_common
 @options.OPT_EXPORT_FORMAT
 @options.OPT_EXPORT_OVERWRITE
 @options.OPT_EXPORT_DELIM
+@options.OPT_EXPORT_TABLE_FORMAT
 @options.OPT_FIELDS
 @options.OPT_FIELDS_REGEX
 @options.OPT_MAX_ROWS
@@ -40,6 +41,7 @@ def cmd(
     export_path,
     export_overwrite,
     export_delim,
+    export_table_format,
     fields,
     fields_regex,
     name,
@@ -67,5 +69,6 @@ def cmd(
         export_file=export_file,
         export_path=export_path,
         export_overwrite=export_overwrite,
+        export_table_format=export_table_format,
         joiner=export_delim,
     )

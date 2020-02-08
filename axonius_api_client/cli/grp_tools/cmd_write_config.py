@@ -58,6 +58,7 @@ def cmd(ctx, url, key, secret):
         path.touch()
         path.chmod(0o600)
 
+    path = format(path)
     msg = "Setting AX_URL, AX_KEY, and AX_SECRET in {!r}".format(format(path))
     click.secho(message=msg, err=True, fg="green")
     dotenv.set_key(dotenv_path=path, key_to_set="AX_URL", value_to_set=url)

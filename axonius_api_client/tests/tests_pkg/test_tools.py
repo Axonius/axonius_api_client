@@ -8,6 +8,8 @@ import pytest
 
 from axonius_api_client import exceptions, tools
 
+from .. import utils
+
 
 class TestCoerce(object):
     """Test axonius_api_client.tools.join_url."""
@@ -219,7 +221,10 @@ class TestPath(object):
         """Test resolve with a string."""
         r = tools.path(obj="/../badwolf")
         assert isinstance(r, tools.pathlib.Path)
-        assert format(r) == format("/badwolf")
+        if utils.IS_WINDOWS:
+            assert format(r).endswith("badwolf")
+        else:
+            assert format(r) == format("/badwolf")
 
     def test_pathlib(self):
         """Test resolve with a pathlib.Path."""
@@ -246,8 +251,12 @@ class TestPathWrite(object):
         assert ret_path.read_text() == data
         assert format(ret_path) == format(path)
         assert ret_write == len(data)
-        assert ret_path.stat().st_mode == 33152
-        assert ret_path.parent.stat().st_mode == 16832
+        if utils.IS_WINDOWS:
+            assert ret_path.stat().st_mode == 33206
+            assert ret_path.parent.stat().st_mode == 16895
+        else:
+            assert ret_path.stat().st_mode == 33152
+            assert ret_path.parent.stat().st_mode == 16832
 
     def test_simple_str(self, tmp_path):
         """Test simple write with path as str."""
@@ -304,8 +313,11 @@ class TestPathWrite(object):
         path = sub2 / "file.txt"
         data = "abc\n123\n"
         ret_path, ret_write = tools.path_write(obj=path, data=data, binary=True)
-        assert ret_path.read_text() == data
-        assert ret_path.read_bytes() == data.encode()
+        assert ret_path.read_text() == "abc\n123\n"
+        if utils.IS_WINDOWS:
+            assert ret_path.read_bytes() == b"abc\n123\n"
+        else:
+            assert ret_path.read_bytes() == b"abc\n123\n"
 
     def test_binary_true_binary(self, tmp_path):
         """Test binary=True with binary data."""
@@ -314,8 +326,11 @@ class TestPathWrite(object):
         path = sub2 / "file.txt"
         data = b"abc\n123\n"
         ret_path, ret_write = tools.path_write(obj=path, data=data, binary=True)
-        assert ret_path.read_text() == data.decode()
-        assert ret_path.read_bytes() == data
+        assert ret_path.read_text() == "abc\n123\n"
+        if utils.IS_WINDOWS:
+            assert ret_path.read_bytes() == b"abc\n123\n"
+        else:
+            assert ret_path.read_bytes() == b"abc\n123\n"
 
     def test_binary_false_nonbinary(self, tmp_path):
         """Test binary=False with nonbinary data."""
@@ -324,8 +339,11 @@ class TestPathWrite(object):
         path = sub2 / "file.txt"
         data = "abc\n123\n"
         ret_path, ret_write = tools.path_write(obj=path, data=data, binary=False)
-        assert ret_path.read_text() == data
-        assert ret_path.read_bytes() == data.encode()
+        assert ret_path.read_text() == "abc\n123\n"
+        if utils.IS_WINDOWS:
+            assert ret_path.read_bytes() == b"abc\r\n123\r\n"
+        else:
+            assert ret_path.read_bytes() == b"abc\n123\n"
 
     def test_binary_false_binary(self, tmp_path):
         """Test binary=False with binary data."""
@@ -334,8 +352,11 @@ class TestPathWrite(object):
         path = sub2 / "file.txt"
         data = b"abc\n123\n"
         ret_path, ret_write = tools.path_write(obj=path, data=data, binary=False)
-        assert ret_path.read_text() == data.decode()
-        assert ret_path.read_bytes() == data
+        assert ret_path.read_text() == "abc\n123\n"
+        if utils.IS_WINDOWS:
+            assert ret_path.read_bytes() == b"abc\r\n123\r\n"
+        else:
+            assert ret_path.read_bytes() == b"abc\n123\n"
 
     def test_is_json_false_dotjson_nonjson(self, tmp_path):
         """Test is_json=False with .json in filename and invalid json data."""
@@ -408,7 +429,10 @@ class TestPathRead(object):
         wret_path, ret_write = tools.path_write(obj=path, data=data)
         rret_path, ret_read = tools.path_read(obj=format(path), binary=True)
         assert wret_path == rret_path
-        assert ret_read == data.encode()
+        if utils.IS_WINDOWS:
+            assert ret_read == b"abc\r\n123\r\n"
+        else:
+            assert ret_read == b"abc\n123\n"
 
     def test_binary_false(self, tmp_path):
         """Test binary=False."""

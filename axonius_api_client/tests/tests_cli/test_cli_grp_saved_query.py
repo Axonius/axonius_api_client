@@ -285,5 +285,5 @@ class TestCmdGet(object):
         assert stderr1
         assert exit_code1 == 0
 
-        csv_cols1 = ["name", "date_fetched", "timestamp"]
+        csv_cols1 = ["name", "date_fetched"]
         utils.check_csv_cols(stdout1, csv_cols1)

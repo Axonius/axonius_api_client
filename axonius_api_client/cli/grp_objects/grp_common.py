@@ -6,6 +6,12 @@ import click
 
 from .. import serial
 
+FORMATTERS = {
+    "json": serial.to_json,
+    "csv": serial.obj_to_csv,
+    "table": serial.obj_to_table,
+}
+
 
 def get_by_cmd(
     ctx,
@@ -16,6 +22,7 @@ def get_by_cmd(
     export_file,
     export_path,
     export_overwrite,
+    export_table_format,
     joiner,
     values,
     value_regex,
@@ -50,15 +57,14 @@ def get_by_cmd(
 
     echo_response(ctx=ctx, raw_data=raw_data, api=api)
 
-    formatters = {"json": serial.to_json, "csv": serial.obj_to_csv}
-
     ctx.obj.handle_export(
         raw_data=raw_data,
-        formatters=formatters,
+        formatters=FORMATTERS,
         export_format=export_format,
         export_file=export_file,
         export_path=export_path,
         export_overwrite=export_overwrite,
+        table_format=export_table_format,
         joiner=joiner,
     )
 

@@ -13,8 +13,6 @@ MAX_PAGE_SIZE = 2000
 GUI_PAGE_SIZES = [25, 50, 100]
 """:obj:`list` of :obj:`int`: Valid page sizes for GUI paging."""
 
-QUERY_USE_POST_LENGTH = 1000
-
 LOG_REQUEST_ATTRS_BRIEF = [
     "request to {request.url!r}",
     "method={request.method!r}",
@@ -76,7 +74,6 @@ LOG_FILE_MAX_FILES = 5
 LOG_NAME_STDERR = "handler_stderr"
 LOG_NAME_STDOUT = "handler_stdout"
 LOG_NAME_FILE = "handler_file"
-
 
 CSV_FIELDS = {
     "device": ["id", "serial", "mac_address", "hostname", "name"],
