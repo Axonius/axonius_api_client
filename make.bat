@@ -1,4 +1,5 @@
 @ECHO OFF
+SET PATH=%PATH%;C:\Program Files\Python38;C:\Program Files\Python38\scripts
 
 FOR /F "tokens=* USEBACKQ" %%F IN (`python get_version.py`) do (
     SET VERSION=%%F
@@ -18,26 +19,27 @@ if "%1" == "help" (
     :help
     echo.Please use `make ^<target^>` where ^<target^> is one of
     echo.   init        to get things going
+    echo.   test        run the test suite
     goto end
 )
 
 if "%1" == "pip_install_tools" (
     :pip_install_tools
-    pip install --quiet --upgrade --requirement requirements-pkg.txt
+    python -m pip install --quiet --upgrade --requirement requirements-pkg.txt
     echo.Packaging requirements installed
     goto end
 )
 
 if "%1" == "pip_install_dev" (
     :pip_install_dev
-    pip install --quiet --upgrade --requirement requirements-dev.txt
+    python -m pip install --quiet --upgrade --requirement requirements-dev.txt
     echo.Developement requirements installed
     goto end
 )
 
 if "%1" == "pip_install" (
     :pip_install
-    pip install --quiet --upgrade --requirement requirements.txt
+    python -m pip install --quiet --upgrade --requirement requirements.txt
     echo.Package requirements installed
     goto end
 )
