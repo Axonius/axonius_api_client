@@ -2,7 +2,6 @@
 """Test suite for axonius_api_client.tools."""
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-import sys
 import logging
 
 import pytest
@@ -82,7 +81,7 @@ class TestConnect(object):
         with pytest.raises(exceptions.ConnectError) as exc:
             c.start()
 
-        if sys.platform == "linux":
+        if utils.IS_LINUX:
             assert isinstance(
                 exc.value.exc, axonapi.http.requests.exceptions.ConnectionError
             )

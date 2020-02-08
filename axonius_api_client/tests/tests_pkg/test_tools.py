@@ -8,6 +8,8 @@ import pytest
 
 from axonius_api_client import exceptions, tools
 
+from .. import utils
+
 
 class TestCoerce(object):
     """Test axonius_api_client.tools.join_url."""
@@ -219,7 +221,10 @@ class TestPath(object):
         """Test resolve with a string."""
         r = tools.path(obj="/../badwolf")
         assert isinstance(r, tools.pathlib.Path)
-        assert format(r) == format("/badwolf")
+        if utils.IS_WINDOWS:
+            assert format(r).endswith("badwolf")
+        else:
+            assert format(r) == format("/badwolf")
 
     def test_pathlib(self):
         """Test resolve with a pathlib.Path."""
