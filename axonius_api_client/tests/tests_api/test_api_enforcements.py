@@ -2,7 +2,6 @@
 """Test suite for axonapi.api.users_devices."""
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-import time
 import warnings
 
 import pytest
@@ -10,32 +9,7 @@ import pytest
 import axonius_api_client as axonapi
 from axonius_api_client import exceptions, tools
 
-from .. import utils
-
-LINUX_QUERY = 'specific_data.data.os.type == "Linux"'
-SHELL_ACTION_NAME = "Badwolf Shell Action"
-SHELL_ACTION_CMD = "echo 'Badwolf' > /tmp/badwolf.txt"
-DEPLOY_ACTION_NAME = "Badwolf Deploy Action"
-DEPLOY_FILE_NAME = "badwolf.sh"
-DEPLOY_FILE_CONTENTS = b"#!/bin/bash\necho badwolf!"
-
-CREATE_EC_NAME = "Badwolf EC Example"
-CREATE_EC_TRIGGER1 = {
-    "name": "Trigger",
-    "conditions": {
-        "new_entities": False,
-        "previous_entities": False,
-        "above": 1,
-        "below": 0,
-    },
-    "period": "never",
-    "run_on": "AllEntities",
-}
-
-CREATE_EC_ACTION_MAIN = {
-    "name": "Badwolf Create Notification {}".format(time.time()),
-    "action": {"action_name": "create_notification", "config": {}},
-}
+from .. import meta, utils
 
 
 @pytest.fixture(scope="module")
@@ -95,10 +69,10 @@ class TestEnforcements(object):
 
     def test_create_get_delete(self, apiobj):
         """Pass."""
-        old_found = apiobj.get_by_name(CREATE_EC_NAME, eq_single=False)
+        old_found = apiobj.get_by_name(meta.enforcements.CREATE_EC_NAME, eq_single=False)
         if old_found:
             msg = "Enforcement named {} already exists from previous test, deleting: {}"
-            msg = msg.format(CREATE_EC_NAME, old_found)
+            msg = msg.format(meta.enforcements.CREATE_EC_NAME, old_found)
             warnings.warn(msg)
             deleted = apiobj.delete(rows=old_found)
             assert isinstance(deleted, dict)
@@ -107,14 +81,16 @@ class TestEnforcements(object):
 
         trigger_name = apiobj.users.saved_query.get()[0]["name"]
         trigger = {"view": {"name": trigger_name, "entity": "users"}}
-        trigger.update(CREATE_EC_TRIGGER1)
+        trigger.update(meta.enforcements.CREATE_EC_TRIGGER1)
 
         created = apiobj._create(
-            name=CREATE_EC_NAME, main=CREATE_EC_ACTION_MAIN, triggers=[trigger]
+            name=meta.enforcements.CREATE_EC_NAME,
+            main=meta.enforcements.CREATE_EC_ACTION_MAIN,
+            triggers=[trigger],
         )
         assert isinstance(created, tools.STR)
 
-        found = apiobj.get_by_name(CREATE_EC_NAME)
+        found = apiobj.get_by_name(meta.enforcements.CREATE_EC_NAME)
         """
         {
             "actions.main": "Badwolf Create Notification",
@@ -129,8 +105,8 @@ class TestEnforcements(object):
         """
         assert isinstance(found, dict)
         assert found["uuid"] == created
-        assert found["actions.main"] == CREATE_EC_ACTION_MAIN["name"]
-        assert found["name"] == CREATE_EC_NAME
+        assert found["actions.main"] == meta.enforcements.CREATE_EC_ACTION_MAIN["name"]
+        assert found["name"] == meta.enforcements.CREATE_EC_NAME
         assert isinstance(found["date_fetched"], tools.STR)
         assert isinstance(found["last_updated"], tools.STR)
         assert "triggers.last_triggered" in found
@@ -179,7 +155,9 @@ class TestRunActions(object):
     # BUT: Extended Data Tab shows stuff, but i dont know how to query for that yet
     def test__shell(self, apiobj):
         """Pass."""
-        devices = apiobj.devices._get(query=LINUX_QUERY, page_size=1, row_start=0)
+        devices = apiobj.devices._get(
+            query=meta.enforcements.LINUX_QUERY, page_size=1, row_start=0
+        )
         ids = [x["internal_axon_id"] for x in devices["assets"]]
 
         if not ids:
@@ -187,7 +165,9 @@ class TestRunActions(object):
             pytest.skip(reason)
 
         data = apiobj.runaction._shell(
-            action_name=SHELL_ACTION_NAME, ids=ids, command=SHELL_ACTION_CMD
+            action_name=meta.enforcements.SHELL_ACTION_NAME,
+            ids=ids,
+            command=meta.enforcements.SHELL_ACTION_CMD,
         )
         assert not data
 
@@ -195,17 +175,20 @@ class TestRunActions(object):
     def uploaded_file(self, apiobj):
         """Pass."""
         data = apiobj.runaction._upload_file(
-            name=DEPLOY_FILE_NAME, content=DEPLOY_FILE_CONTENTS
+            name=meta.enforcements.DEPLOY_FILE_NAME,
+            content=meta.enforcements.DEPLOY_FILE_CONTENTS,
         )
         assert isinstance(data, dict)
         assert isinstance(data["uuid"], tools.STR)
-        assert data["filename"] == DEPLOY_FILE_NAME
+        assert data["filename"] == meta.enforcements.DEPLOY_FILE_NAME
         return data
 
     # returns nadda
     def test__upload_deploy(self, apiobj, uploaded_file):
         """Pass."""
-        devices = apiobj.devices._get(query=LINUX_QUERY, page_size=1, row_start=0)
+        devices = apiobj.devices._get(
+            query=meta.enforcements.LINUX_QUERY, page_size=1, row_start=0
+        )
         ids = [x["internal_axon_id"] for x in devices["assets"]]
 
         if not ids:
@@ -213,7 +196,7 @@ class TestRunActions(object):
             pytest.skip(reason)
 
         data = apiobj.runaction._deploy(
-            action_name=DEPLOY_ACTION_NAME,
+            action_name=meta.enforcements.DEPLOY_ACTION_NAME,
             ids=ids,
             file_uuid=uploaded_file["uuid"],
             file_name=uploaded_file["filename"],

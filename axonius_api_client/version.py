@@ -2,7 +2,7 @@
 """Version information for this package."""
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-__version__ = "2.1.4"
+__version__ = "2.2.0"
 VERSION = __version__
 """:obj:`str`: Version of package."""
 
@@ -38,6 +38,6 @@ __license__ = "MIT"
 LICENSE = __license__
 """:obj:`str`: License of package."""
 
-__copyright__ = "Copyright Axonius 2019"
+__copyright__ = "Copyright Axonius 2020"
 COPYRIGHT = __copyright__
 """:obj:`str`: Copyright of package."""

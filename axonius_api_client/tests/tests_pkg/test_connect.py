@@ -81,7 +81,14 @@ class TestConnect(object):
         with pytest.raises(exceptions.ConnectError) as exc:
             c.start()
 
-        assert isinstance(exc.value.exc, axonapi.http.requests.exceptions.ConnectTimeout)
+        if utils.IS_LINUX:
+            assert isinstance(
+                exc.value.exc, axonapi.http.requests.exceptions.ConnectionError
+            )
+        else:
+            assert isinstance(
+                exc.value.exc, axonapi.http.requests.exceptions.ConnectTimeout
+            )
 
     def test_connect_error(self):
         """Pass."""

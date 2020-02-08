@@ -86,23 +86,34 @@ to `cov_html/index.html`:
      --exitfirst \
      axonius_api_client/tests
 
+.. _fr_220_4:
+
 Supported Python versions
 ----------------------------------------------------------
 
-* Latest versions of 3.7 and 2.7
-* Windows, OSX, Linux
+* Latest versions of 3.7 and 3.8
+* Microsoft Windows, macOS, Linux
 
 Tested Python versions
 ----------------------------------------------------------
 
-* 3.7.4 and 2.7.16 on OSX
-* 3.7.4 and 2.7.16 on Windows
+* macOS 10.15.3 (Catalina)
+  * Python 3.7.6 64 bit: 02/08/2020
+  * Python 3.8.1 64 bit : 02/08/2020
+* Ubuntu Linux 18.04.03 LTS 64 bit
+  * Python 3.7.6 64 bit: 02/08/2020
+  * Python 3.8.1 64 bit: 02/08/2020
+* Microsoft Windows 10 Pro x64 (Version 1909, Build 18363.592)
+  * Python 3.8.1 64 bit: 02/08/2020
+* Microsoft Windows Server 2012 R2 x64 (Version 6.3, Build 9600)
+  * Python 3.8.1 64 bit: 02/08/2020
+* Microsoft Windows Server 2019 x64 (Version 1809, Build 17763.1012)
+  * Python 3.8.1 64 bit: 02/08/2020
 
 .. note::
 
-   As Python 2.7 is nearing it's end-of-life on 01/01/2020, 2.7 is not part of the
-   normal QA tests performed before releasing a new version. Please switch over to using
-   Python 3.7 as soon as possible!
+   Python 2.7 reached its end-of-life on 01/01/2020, and
+   therefore is no longer supported as of 2.2.0.
 
 .. _issue tracker: https://github.com/Axonius/axonius_api_client/issues
 .. _GitHub project: https://github.com/Axonius/axonius_api_client

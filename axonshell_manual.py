@@ -3,12 +3,11 @@
 """Utilities for this package."""
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+import os
+
+import axonius_api_client as axonapi
+
 if __name__ == "__main__":
-    import os
-
-    import axonius_api_client as axonapi
-
-    tools = axonapi.tools
     axonapi.cli.cli_constants.load_dotenv()
 
     AX_URL = os.environ["AX_URL"]

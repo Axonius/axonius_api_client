@@ -219,10 +219,29 @@ class TestCliObjToCsv(object):
         x = cli.serial.obj_to_csv(ctx=ctx, raw_data=rows)
         exp = (
             '"cnx.id","id","cnx"\r\n"1","",""\r\n"","2",""\r\n"","","Data'
-            ' of type dict is too complex for CSV format"\r\n'
+            ' of type dict is too complex for this export format"\r\n'
         )
 
         assert x == exp
+
+
+class TestCliObjToTable(object):
+    """Pass."""
+
+    def test_default(self):
+        """Pass."""
+        ctx = utils.get_mockctx()
+        rows = [{"cnx": [{"id": "1"}]}, {"id": "2"}, {"cnx": [{"id": ["3", "4"]}]}]
+        x = cli.serial.obj_to_table(ctx=ctx, raw_data=rows)
+        exp = "cnx.id      id\n--------  ----\n1\n             2\n3\n4"
+        assert x == exp
+
+    def test_invalid(self):
+        """Pass."""
+        ctx = utils.get_mockctx()
+        rows = [{"cnx": [{"id": "1"}]}, {"id": "2"}, {"cnx": [{"id": ["3", "4"]}]}]
+        with pytest.raises(SystemExit):
+            cli.serial.obj_to_table(ctx=ctx, raw_data=rows, table_format="x")
 
 
 class TestCliEnsureKeys(object):

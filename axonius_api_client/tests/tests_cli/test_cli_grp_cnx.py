@@ -7,7 +7,7 @@ import pytest
 
 from axonius_api_client import cli, tools  # , exceptions
 
-from .. import utils
+from .. import meta, utils
 
 
 def badwolf_cb(x, **kwargs):
@@ -487,33 +487,12 @@ axonshell a c de -r - -f -w 0
         """Pass."""
         runner = utils.load_clirunner(request, monkeypatch)
 
-        csv_file = "badwolf.csv"
-        csv_contents = "id,hostname\nbadwolf9131,badwolf\n"
-
-        #
-        configs = {
-            "dc_name": "badwolf",
-            "user": "badwolf",
-            "password": "badwolf",
-            "dns_server_address": "badwolf",
-            "alternative_dns_suffix": "badwolf",
-            "use_ssl": "Unencrypted",
-            "ca_file": csv_file,
-            "cert_file": csv_file,
-            "private_key": csv_file,
-            "is_ad_gc": "y",
-            "ldap_ou_whitelist": "badwolf1,badwolf2",
-            "do_not_fetch_users": "false",
-            "fetch_disabled_devices": "true",
-            "fetch_disabled_users": "true",
-        }
-
         with runner.isolated_filesystem():
-            with open(csv_file, "w") as f:
-                f.write(csv_contents)
+            with open(meta.adapters.FAKE_FILE, "w") as f:
+                f.write(meta.adapters.FAKE_FILE_CONTENTS)
 
             args1 = ["adapters", "cnx", "add", "--adapter", "active_directory"]
-            for k, v in configs.items():
+            for k, v in meta.adapters.AD_CONFIG_SCHEMA_LIST:
                 args1.append("--config")
                 args1.append("{}={}".format(k, v))
 
@@ -548,36 +527,12 @@ axonshell a c de -r - -f -w 0
         """Pass."""
         runner = utils.load_clirunner(request, monkeypatch)
 
-        skips = ["ca_file", "cert_file", "private_key"]
-
-        """
-        dc_name
-        user
-        password
-        do_not_fetch_users
-        fetch_disabled_devices
-        fetch_disabled_users
-        dns_server_address
-        alternative_dns_suffix
-        use_ssl
-        ca_file
-        is_ad_gc
-        ldap_ou_whitelist
-        """
+        skips = ["ca_file"]
         configs = [
-            "badwolf",  # dc_name
-            "badwolf",  # user
-            "badwolf",  # password
-            "n",  # do_not_fetch_users
-            "y",  # fetch_disabled_devices
-            "y",  # fetch_disabled_users
-            "badwolf",  # dns_server_address
-            "badwolf",  # alternative_dns_suffix
-            "Unencrypted",  # use_ssl
-            "y",  # is_ad_gc
-            "badwolf1,badwolf2",  # ldap_ou_whitelist
+            format(x[1])
+            for x in meta.adapters.AD_CONFIG_SCHEMA_LIST
+            if x[0] not in skips
         ]
-
         args1 = ["adapters", "cnx", "add", "--adapter", "active_directory"]
         for s in skips:
             args1 += ["--skip", s]
