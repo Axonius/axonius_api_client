@@ -105,6 +105,20 @@ class TestParserUrl(object):
         assert u.port == 443
         assert u.scheme == "https"
 
+    def test_justhost(self):
+        """Test schema added for just host."""
+        u = axonapi.http.ParserUrl("host")
+        assert u.hostname == "host"
+        assert u.port == 443
+        assert u.scheme == "https"
+
+    def test_justhostport(self):
+        """Test schema added for just host and port."""
+        u = axonapi.http.ParserUrl("host:443")
+        assert u.hostname == "host"
+        assert u.port == 443
+        assert u.scheme == "https"
+
     def test_host_noschemeport(self):
         """Test exc when no port or scheme in URL."""
         exc = exceptions.HttpError
