@@ -1,4 +1,5 @@
 """Metadata for adapters."""
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 CSV_FILENAME = "badwolf.csv"
 CSV_FIELDS = ["mac_address", "field1"]
