@@ -1,4 +1,6 @@
 """Metadata for enforcements."""
+from __future__ import absolute_import, division, print_function, unicode_literals
+
 import time
 
 LINUX_QUERY = 'specific_data.data.os.type == "Linux"'
