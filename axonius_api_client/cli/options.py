@@ -8,6 +8,7 @@ import click
 import tabulate
 
 from .. import tools
+from . import cli_constants
 
 OPT_URL = click.option(
     "--url",
@@ -65,7 +66,7 @@ OPT_EXPORT_FORMAT = click.option(
     "export_format",
     default="json",
     help="Format to use for STDOUT (or -xf/--export-file if supplied).",
-    type=click.Choice(["csv", "json", "table"]),
+    type=click.Choice(cli_constants.EXPORT_FORMATS),
     show_envvar=True,
     show_default=True,
 )
