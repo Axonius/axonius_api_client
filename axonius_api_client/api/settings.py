@@ -16,22 +16,40 @@ class Settings(mixins.Model, mixins.Mixins):
         self.core = Core(parent=self)
         self.gui = Gui(parent=self)
         self.lifecycle = Lifecycle(parent=self)
+        self.meta = Meta(parent=self)
         super(Settings, self)._init(auth=auth, **kwargs)
         warnings.warn(exceptions.BetaWarning(obj=self))
-
-    def _about(self):
-        """Pass."""
-        path = self._router.about
-        return self._request(method="get", path=path)
 
     @property
     def _router(self):
         """Router for this API client."""
         return routers.ApiV1.settings
 
+
+class Meta(mixins.Child):
+    """Meta information."""
+
+    def _init(self, parent):
+        """Post init setup."""
+        super(Meta, self)._init(parent=parent)
+
+    def _about(self):
+        """Pass."""
+        path = self._parent._router.about
+        return self._parent._request(method="get", path=path)
+
+    def _historical_sizes(self):
+        """Pass."""
+        path = self._parent._router.historical_sizes
+        return self._parent._request(method="get", path=path)
+
     def about(self):
         """Pass."""
         return self._about()
+
+    def historical_sizes(self):
+        """Pass."""
+        return self._historical_sizes()
 
 
 class Core(mixins.Child):
