@@ -93,3 +93,4 @@ CSV_KEYS_META = {
     "csv_share_password": "password",
 }
 CSV_ADAPTER = "csv"
+DEBUG_MATCHES = False

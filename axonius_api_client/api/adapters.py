@@ -168,9 +168,10 @@ class Adapters(mixins.Model, mixins.Mixins):
                     pattern=re_pattern.strip(), string=string, flags=re_flags
                 )
 
-                msg = "Matched adapter by name {s!r} using {p!r}: {r}"
-                msg = msg.format(s=string, p=re_pattern, r=bool(is_match))
-                self._log.debug(msg)
+                if constants.DEBUG_MATCHES:
+                    msg = "Matched adapter by name {s!r} using {p!r}: {r}"
+                    msg = msg.format(s=string, p=re_pattern, r=bool(is_match))
+                    self._log.debug(msg)
 
                 if is_match and adapter not in matches:
                     matches.append(adapter)
@@ -241,9 +242,10 @@ class Adapters(mixins.Model, mixins.Mixins):
                     pattern=re_pattern.strip(), string=string, flags=re_flags
                 )
 
-                msg = "Matched adapter by node name {s!r} using {p!r}: {r}"
-                msg = msg.format(s=string, p=re_pattern, r=bool(is_match))
-                self._log.debug(msg)
+                if constants.DEBUG_MATCHES:
+                    msg = "Matched adapter by node name {s!r} using {p!r}: {r}"
+                    msg = msg.format(s=string, p=re_pattern, r=bool(is_match))
+                    self._log.debug(msg)
 
                 if is_match and adapter not in matches:
                     matches.append(adapter)
