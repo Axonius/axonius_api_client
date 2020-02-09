@@ -81,3 +81,15 @@ CSV_FIELDS = {
     "sw": ["hostname", "installed_sw_name"],
 }
 SETTING_UNCHANGED = ["unchanged"]
+DEFAULT_NODE = "master"
+CSV_KEYS_META = {
+    "file": "file_path",
+    "is_users_csv": "is_users",
+    "is_installed_sw": "is_installed_sw",
+    "id": "user_id",
+    "csv_http": "resource_path",
+    "csv_share": "resource_path",
+    "csv_share_username": "username",
+    "csv_share_password": "password",
+}
+CSV_ADAPTER = "csv"

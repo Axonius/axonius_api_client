@@ -5,7 +5,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import click
 import pytest
 
-from axonius_api_client import cli, tools  # , exceptions
+from axonius_api_client import cli, tools, constants  # , exceptions
 
 from .. import meta, utils
 
@@ -244,7 +244,15 @@ class TestGrpCnx(object):
         """Pass."""
         runner = utils.load_clirunner(request, monkeypatch)
 
-        args1 = ["adapters", "cnx", "add", "--adapter", "csv", "--show-config", "json"]
+        args1 = [
+            "adapters",
+            "cnx",
+            "add",
+            "--adapter",
+            constants.CSV_ADAPTER,
+            "--show-config",
+            "json",
+        ]
         result1 = runner.invoke(cli=cli.cli, args=args1)
 
         stderr1 = result1.stderr
@@ -264,7 +272,15 @@ class TestGrpCnx(object):
         """Pass."""
         runner = utils.load_clirunner(request, monkeypatch)
 
-        args1 = ["adapters", "cnx", "add", "--adapter", "csv", "--show-config", "text"]
+        args1 = [
+            "adapters",
+            "cnx",
+            "add",
+            "--adapter",
+            constants.CSV_ADAPTER,
+            "--show-config",
+            "text",
+        ]
         result1 = runner.invoke(cli=cli.cli, args=args1)
 
         stderr1 = result1.stderr
@@ -298,7 +314,7 @@ axonshell a c de -r - -f -w 0
                 "cnx",
                 "add",
                 "--adapter",
-                "csv",
+                constants.CSV_ADAPTER,
                 "--config",
                 "user_id={}".format(csv_file),
                 "--config",
@@ -387,7 +403,7 @@ axonshell a c de -r - -f -w 0
                 "cnx",
                 "add",
                 "--adapter",
-                "csv",
+                constants.CSV_ADAPTER,
                 "--config",
                 "user_id={}".format(csv_file),
                 "--config",

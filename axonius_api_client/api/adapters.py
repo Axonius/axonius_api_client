@@ -53,7 +53,7 @@ class Adapters(mixins.Model, mixins.Mixins):
         tmpl = tools.join_comma(obj=tmpl).format
         return [tmpl(**a) for a in adapters]
 
-    def get_single(self, adapter, node="master"):
+    def get_single(self, adapter, node=constants.DEFAULT_NODE):
         """Get the metadata for a single adapter.
 
         Args:
@@ -70,7 +70,7 @@ class Adapters(mixins.Model, mixins.Mixins):
                 If ``adapter`` is str, the name of the node running the ``adapter``
                 to find.
 
-                Defaults to: "master".
+                Defaults to: constants.DEFAULT_NODE.
 
         Raises:
             exceptions.ValueNotFound:
@@ -371,7 +371,13 @@ class Adapters(mixins.Model, mixins.Mixins):
         return matches
 
     def upload_file_str(
-        self, adapter, field, name, content, node="master", content_type=None
+        self,
+        adapter,
+        field,
+        name,
+        content,
+        node=constants.DEFAULT_NODE,
+        content_type=None,
     ):
         """Upload a string to an adapter on a node.
 
@@ -380,7 +386,8 @@ class Adapters(mixins.Model, mixins.Mixins):
             field (str): Name of field to store data in.
             name (str): Filename to use when uploading file.
             content ((str) or (bytes)): Content to upload.
-            node (str, optional): Node name running ``adapter``. Defaults to: "master"
+            node (str, optional): Node name running ``adapter``.
+                Defaults to: constants.DEFAULT_NODE
             content_type (str, optional): Mime type of ``content``. Defaults to: None.
 
         Returns:
@@ -400,14 +407,17 @@ class Adapters(mixins.Model, mixins.Mixins):
             content_type=content_type,
         )
 
-    def upload_file_path(self, adapter, field, path, node="master", content_type=None):
+    def upload_file_path(
+        self, adapter, field, path, node=constants.DEFAULT_NODE, content_type=None
+    ):
         """Upload the contents of a file to an adapter on a node.
 
         Args:
             adapter (str): Name of adapter to upload file to.
             field (str): Name of field to store data in.
             path ((str) or (pathlib.Path)): File to upload contents of.
-            node (str, optional): Node name running ``adapter``. Defaults to: "master"
+            node (str, optional): Node name running ``adapter``.
+                Defaults to: constants.DEFAULT_NODE
             content_type (str, optional): Mime type of ``path`` contents.
                 Defaults to: None.
 
@@ -504,7 +514,7 @@ class Cnx(mixins.Child):
         adapter,
         config,
         parse_config=True,
-        node="master",
+        node=constants.DEFAULT_NODE,
         retry=15,
         sleep=15,
         error=True,
@@ -519,7 +529,7 @@ class Cnx(mixins.Child):
             parse_config (bool, optional): Check the supplied ``config`` using
                 :meth:`ParserCnxConfig.parse`. Defaults to: True.
             node (str, optional): Name of node running ``adapter``.
-                Defaults to: "master".
+                Defaults to: constants.DEFAULT_NODE.
             retry (int, optional): Number of times to retry fetching the newly added
                 connection. Defaults to: 15.
             sleep (int, optional): Number of seconds to wait in between each fetch
@@ -597,7 +607,7 @@ class Cnx(mixins.Child):
         name,
         content,
         field,
-        node="master",
+        node=constants.DEFAULT_NODE,
         is_users=False,
         is_installed_sw=False,
         parse_config=True,
@@ -605,35 +615,8 @@ class Cnx(mixins.Child):
         sleep=15,
         error=True,
     ):
-        """Add a connection for the CSV adapter using str contents.
-
-        Args:
-            name (str): Name to use for the uploaded CSV file.
-            content ((str) or (bytes)): CSV contents to upload.
-            field (str): Field to store connection in.
-            node (str, optional): Node name running CSV adapter to add connection to.
-                Defaults to: "master".
-            is_users (bool, optional): ``content`` is for users. Defaults to: False.
-            is_installed_sw (bool, optional): ``content`` is for installed software for
-                devices. Defaults to: False.
-            retry (int, optional): Number of times to retry fetching the newly added
-                connection. Defaults to: 15.
-            sleep (int, optional): Number of seconds to wait in between each fetch
-                retry. Defaults to: 15.
-            error (bool, optional): Raise an error if the newly added configuration
-                returns an error from connecting to the product for the adapter.
-                The connection will always be added even if it has an error connecting.
-                Defaults to: True.
-
-        Notes:
-            If ``is_users`` and ``is_installed_sw`` is False, the ``content`` is
-            for devices.
-
-        Returns:
-            dict: The output of :meth:`add`.
-
-        """
-        adapter = self._parent.get_single(adapter="csv", node=node)
+        """Add a connection for the CSV adapter using str contents."""
+        adapter = self._parent.get_single(adapter=constants.CSV_ADAPTER, node=node)
 
         validate_csv(
             name=name,
@@ -641,15 +624,15 @@ class Cnx(mixins.Child):
             is_users=is_users,
             is_installed_sw=is_installed_sw,
         )
-
+        meta_keys = constants.CSV_KEYS_META
         config = {}
-        config["is_users_csv"] = is_users
-        config["is_installed_sw"] = is_installed_sw
-        config["user_id"] = field
-        config["csv"] = {}
-        config["csv"]["filename"] = name
-        config["csv"]["filecontent"] = content
-        config["csv"]["filecontent_type"] = "text/csv"
+        config[meta_keys["is_users_csv"]] = is_users
+        config[meta_keys["is_installed_sw"]] = is_installed_sw
+        config[meta_keys["id"]] = field
+        config[meta_keys["file"]] = {}
+        config[meta_keys["file"]]["filename"] = name
+        config[meta_keys["file"]]["filecontent"] = content
+        config[meta_keys["file"]]["filecontent_type"] = "text/csv"
 
         return self.add(
             adapter=adapter,
@@ -664,7 +647,7 @@ class Cnx(mixins.Child):
         self,
         path,
         field,
-        node="master",
+        node=constants.DEFAULT_NODE,
         is_users=False,
         is_installed_sw=False,
         parse_config=True,
@@ -672,70 +655,27 @@ class Cnx(mixins.Child):
         sleep=15,
         error=True,
     ):
-        """Add a connection for the CSV adapter using file contents.
-
-        Args:
-            name (str): Name to use for the uploaded CSV file.
-            path ((str) or (pathlib.Path)): Path to file with CSV contents to upload.
-            field (str): Field to store connection in.
-            node (str, optional): Node name running CSV adapter to add connection to.
-                Defaults to: "master".
-            is_users (bool, optional): ``content`` is for users. Defaults to: False.
-            is_installed_sw (bool, optional): ``content`` is for installed software for
-                devices. Defaults to: False.
-            retry (int, optional): Number of times to retry fetching the newly added
-                connection. Defaults to: 15.
-            sleep (int, optional): Number of seconds to wait in between each fetch
-                retry. Defaults to: 15.
-            error (bool, optional): Raise an error if the newly added configuration
-                returns an error from connecting to the product for the adapter.
-                The connection will always be added even if it has an error connecting.
-                Defaults to: True.
-
-        Notes:
-            If ``is_users`` and ``is_installed_sw`` is False, the ``content`` is
-            for devices.
-
-        Returns:
-            dict: The output of :meth:`add`.
-
-        """
-        adapter = self._parent.get_single(adapter="csv", node=node)
-
+        """Add a connection for the CSV adapter using file contents."""
         path, content = tools.path_read(obj=path, binary=True, is_json=False)
 
-        name = path.name
-
-        validate_csv(
-            name=name,
+        return self.add_csv_str(
+            name=path.name,
             content=content,
+            field=field,
+            node=node,
             is_users=is_users,
             is_installed_sw=is_installed_sw,
-        )
-
-        config = {}
-        config["is_users_csv"] = is_users
-        config["is_installed_sw"] = is_installed_sw
-        config["user_id"] = field
-        config["csv"] = {}
-        config["csv"]["filename"] = name
-        config["csv"]["filecontent"] = content
-        config["csv"]["filecontent_type"] = "text/csv"
-
-        return self.add(
-            adapter=adapter,
-            config=config,
             parse_config=parse_config,
             retry=retry,
             sleep=sleep,
-            error=error,
+            error=True,
         )
 
     def add_csv_url(
         self,
         url,
         field,
-        node="master",
+        node=constants.DEFAULT_NODE,
         is_users=False,
         is_installed_sw=False,
         parse_config=True,
@@ -750,7 +690,7 @@ class Cnx(mixins.Child):
             url (str): URL to file with CSV contents to load on each fetch.
             field (str): Field to store connection in.
             node (str, optional): Node name running CSV adapter to add connection to.
-                Defaults to: "master".
+                Defaults to: constants.DEFAULT_NODE.
             is_users (bool, optional): ``content`` is for users. Defaults to: False.
             is_installed_sw (bool, optional): ``content`` is for installed software for
                 devices. Defaults to: False.
@@ -771,13 +711,14 @@ class Cnx(mixins.Child):
             dict: The output of :meth:`add`.
 
         """
-        adapter = self._parent.get_single(adapter="csv", node=node)
+        adapter = self._parent.get_single(adapter=constants.CSV_ADAPTER, node=node)
 
+        meta_keys = constants.CSV_KEYS_META
         config = {}
-        config["is_users_csv"] = is_users
-        config["is_installed_sw"] = is_installed_sw
-        config["user_id"] = field
-        config["csv_http"] = url
+        config[meta_keys["id"]] = field
+        config[meta_keys["is_users_csv"]] = is_users
+        config[meta_keys["is_installed_sw"]] = is_installed_sw
+        config[meta_keys["csv_http"]] = url
 
         return self.add(
             adapter=adapter,
@@ -792,7 +733,7 @@ class Cnx(mixins.Child):
         self,
         share,
         field,
-        node="master",
+        node=constants.DEFAULT_NODE,
         is_users=False,
         is_installed_sw=False,
         username=None,
@@ -809,7 +750,7 @@ class Cnx(mixins.Child):
             share (str): SMB path to file with CSV contents to load on each fetch.
             field (str): Field to store connection in.
             node (str, optional): Node name running CSV adapter to add connection to.
-                Defaults to: "master".
+                Defaults to: constants.DEFAULT_NODE.
             is_users (bool, optional): ``content`` is for users. Defaults to: False.
             is_installed_sw (bool, optional): ``content`` is for installed software for
                 devices. Defaults to: False.
@@ -834,17 +775,19 @@ class Cnx(mixins.Child):
             dict: The output of :meth:`add`.
 
         """
-        adapter = self._parent.get_single(adapter="csv", node=node)
+        adapter = self._parent.get_single(adapter=constants.CSV_ADAPTER, node=node)
 
+        meta_keys = constants.CSV_KEYS_META
         config = {}
-        config["is_users_csv"] = is_users
-        config["is_installed_sw"] = is_installed_sw
-        config["user_id"] = field
-        config["csv_share"] = share
+        config[meta_keys["id"]] = field
+        config[meta_keys["is_users_csv"]] = is_users
+        config[meta_keys["is_installed_sw"]] = is_installed_sw
+        config[meta_keys["csv_share"]] = share
+
         if username:
-            config["csv_share_username"] = username
+            config[meta_keys["csv_share_username"]] = username
         if password:
-            config["csv_share_password"] = password
+            config[meta_keys["csv_share_password"]] = password
 
         return self.add(
             adapter=adapter,
