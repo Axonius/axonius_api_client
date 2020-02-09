@@ -39,3 +39,6 @@ if __name__ == "__main__":
     devices = ctx.devices
     users = ctx.users
     adapters = ctx.adapters
+    enforcements = ctx.enforcements
+    discover = ctx.discover
+    system = ctx.system

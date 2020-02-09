@@ -148,6 +148,22 @@ class Connect(object):
             self._enforcements = api.Enforcements(**self._api_args)
         return self._enforcements
 
+    @property
+    def system(self):
+        """Pass."""
+        self.start()
+        if not hasattr(self, "_system"):
+            self._system = api.System(**self._api_args)
+        return self._system
+
+    @property
+    def discover(self):
+        """Pass."""
+        self.start()
+        if not hasattr(self, "_discover"):
+            self._discover = api.Discover(**self._api_args)
+        return self._discover
+
     def start(self):
         """Pass."""
         if not self._started:
