@@ -94,4 +94,15 @@ class ApiV1(object):
 
     alerts = Router(object_type="alerts", base=base, version=version)
 
-    all_objects = [users, devices, actions, adapters, alerts]
+    discover = Router(
+        object_type="discover",
+        base=base,
+        version=version,
+        lifecycle="lifecycle",
+        start="start",
+        stop="stop",
+    )
+
+    system = Router(object_type="system", base=base, version=version)
+
+    all_objects = [users, devices, actions, adapters, alerts, discover, system]
