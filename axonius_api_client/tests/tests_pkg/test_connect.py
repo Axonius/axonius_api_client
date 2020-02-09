@@ -53,9 +53,14 @@ class TestConnect(object):
         assert "Connected" in repr(c)
         with pytest.warns(exceptions.BetaWarning):
             format(c.enforcements)
+
+        with pytest.warns(exceptions.BetaWarning):
+            format(c.settings)
+
         format(c.users)
         format(c.devices)
         format(c.adapters)
+        format(c.discover)
 
     def test_invalid_creds(self, request):
         """Pass."""

@@ -39,7 +39,7 @@ def val_type(value, types):
     if not isinstance(value, types):
         msg = "Invalid type for value {value!r}, must be one of {types!r}"
         msg = msg.format(value=value, types=types)
-        raise exceptions.ApiError(msg)
+        raise exceptions.ToolsError(msg)
 
 
 def listify(obj, dictkeys=False):

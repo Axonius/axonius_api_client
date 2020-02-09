@@ -24,16 +24,16 @@ def apiobj(request):
 class TestDiscover(object):
     """Pass."""
 
-    def test_get_lifecycle(self, apiobj):
+    def test_lifecycle(self, apiobj):
         """Pass."""
         lifecycle = apiobj.lifecycle()
         assert isinstance(lifecycle, dict)
         assert "status" in lifecycle
         assert lifecycle["status"] in ["starting", "running", "done"]
 
-    def test_get__lifecycle(self, apiobj):
+    def test__lifecycle(self, apiobj):
         """Pass."""
-        lifecycle = apiobj.lifecycle()
+        lifecycle = apiobj._lifecycle()
         assert isinstance(lifecycle, dict)
         assert "status" in lifecycle
         assert lifecycle["status"] in ["starting", "running", "done"]
@@ -47,7 +47,7 @@ class TestDiscover(object):
 
         started = apiobj.start()
         assert isinstance(started, dict)
-        assert started["status"] in ["starting", "done"]
+        assert started["status"] in ["starting", "running"]
 
         re_stopped = apiobj.stop()
         assert isinstance(re_stopped, dict)

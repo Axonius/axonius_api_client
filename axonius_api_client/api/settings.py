@@ -15,7 +15,7 @@ class Settings(mixins.Model, mixins.Mixins):
         """Post init setup."""
         self.core = Core(parent=self)
         self.gui = Gui(parent=self)
-        self.lifecyle = Lifecycle(parent=self)
+        self.lifecycle = Lifecycle(parent=self)
         super(Settings, self)._init(auth=auth, **kwargs)
         warnings.warn(exceptions.BetaWarning(obj=self))
 
@@ -107,9 +107,14 @@ class Lifecycle(mixins.Child):
 class Aggregation(mixins.Child):
     """Aggregation settings under Global Settings in Administrative settings."""
 
+    @property
+    def _subkey(self):
+        """Pass."""
+        return "aggregation_settings"
+
     def get(self):
         """Pass."""
-        return self._parent.get()["aggregation_settings"]
+        return self._parent.get()[self._subkey]
 
     def max_workers(self, value):
         """Update Maximum adapters to execute asynchronously.
@@ -125,9 +130,8 @@ class Aggregation(mixins.Child):
         """
         tools.val_type(value=value, types=tools.INT)
         settings = self._parent.get()
-        config = settings["config"]
-        config["aggregation_settings"]["max_workers"] = value
-        self._parent.update(config=config)
+        settings[self._subkey]["max_workers"] = value
+        self._parent.update(config=settings)
         return self.get()
 
     def socket_read_timeout(self, value):
@@ -144,7 +148,6 @@ class Aggregation(mixins.Child):
         """
         tools.val_type(value=value, types=tools.INT)
         settings = self._parent.get()
-        config = settings["config"]
-        config["aggregation_settings"]["max_workers"] = value
-        self._parent.update(config=config)
+        settings[self._subkey]["socket_read_timeout"] = value
+        self._parent.update(config=settings)
         return self.get()
