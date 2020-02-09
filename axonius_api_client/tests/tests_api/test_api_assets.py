@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Test suite for axonapi.api.users_devices."""
+"""Test suite for axonapi.api.assets."""
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import datetime
@@ -31,10 +31,10 @@ class Base(object):
 
         utils.check_apiobj_children(
             apiobj=api,
-            labels=axonapi.api.users_devices.Labels,
-            saved_query=axonapi.api.users_devices.SavedQuery,
-            fields=axonapi.api.users_devices.Fields,
-            reports=axonapi.api.users_devices.Reports,
+            labels=axonapi.api.assets.Labels,
+            saved_query=axonapi.api.assets.SavedQuery,
+            fields=axonapi.api.assets.Fields,
+            reports=axonapi.api.assets.Reports,
         )
 
         utils.check_apiobj_xref(apiobj=api, adapters=axonapi.api.adapters.Adapters)
@@ -791,7 +791,7 @@ class TestSavedQuery(Base):
         date_fetched = asset.pop("date_fetched")
         assert isinstance(date_fetched, tools.STR)
 
-        last_updated = asset.pop("last_updated")
+        last_updated = asset.pop("last_updated", "")
         assert isinstance(last_updated, tools.STR)
 
         name = asset.pop("name")
@@ -1084,7 +1084,7 @@ class TestParsedFields(Base):
     def test_fields(self, apiobj):
         """Pass."""
         raw = apiobj.fields._get()
-        parser = axonapi.api.users_devices.ParserFields(raw=raw, parent=apiobj)
+        parser = axonapi.api.assets.ParserFields(raw=raw, parent=apiobj)
         fields = parser.parse()
 
         with pytest.raises(exceptions.ApiError):

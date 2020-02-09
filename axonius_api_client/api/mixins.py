@@ -25,7 +25,7 @@ class Model(object):
 
 
 @six.add_metaclass(abc.ABCMeta)
-class ModelUserDevice(Model):
+class ModelAsset(Model):
     """API client for Axonius REST API."""
 
     @abc.abstractproperty
@@ -199,6 +199,11 @@ class Child(object):
         """Pass."""
         self._parent = parent
         self._log = parent._log.getChild(self.__class__.__name__)
+        self._init(parent=parent)
+
+    def _init(self, parent):
+        """Pass."""
+        pass
 
     def __str__(self):
         """Pass."""

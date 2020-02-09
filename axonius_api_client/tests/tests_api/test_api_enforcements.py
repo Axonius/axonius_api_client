@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Test suite for axonapi.api.users_devices."""
+"""Test suite for axonapi.api.enforcements."""
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import warnings
@@ -25,9 +25,7 @@ def apiobj(request):
     utils.check_apiobj_children(apiobj=api, runaction=axonapi.api.enforcements.RunAction)
 
     utils.check_apiobj_xref(
-        apiobj=api,
-        users=axonapi.api.users_devices.Users,
-        devices=axonapi.api.users_devices.Devices,
+        apiobj=api, users=axonapi.api.assets.Users, devices=axonapi.api.assets.Devices,
     )
 
     return api

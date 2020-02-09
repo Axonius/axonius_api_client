@@ -41,4 +41,4 @@ if __name__ == "__main__":
     adapters = ctx.adapters
     enforcements = ctx.enforcements
     discover = ctx.discover
-    system = ctx.system
+    settings = ctx.settings

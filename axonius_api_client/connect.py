@@ -149,12 +149,12 @@ class Connect(object):
         return self._enforcements
 
     @property
-    def system(self):
+    def settings(self):
         """Pass."""
         self.start()
-        if not hasattr(self, "_system"):
-            self._system = api.System(**self._api_args)
-        return self._system
+        if not hasattr(self, "_settings"):
+            self._settings = api.Settings(**self._api_args)
+        return self._settings
 
     @property
     def discover(self):
