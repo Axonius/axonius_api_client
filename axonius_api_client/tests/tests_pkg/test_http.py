@@ -104,7 +104,7 @@ class TestHttp(object):
 
     def test_str_repr(self, request):
         """Test str/repr has URL."""
-        ax_url = utils.get_url(request).rstrip("/")
+        ax_url = utils.get_url(request)
 
         http = axonapi.Http(url=ax_url)
 
