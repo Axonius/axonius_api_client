@@ -19,10 +19,19 @@ class Settings(mixins.Model, mixins.Mixins):
         super(Settings, self)._init(auth=auth, **kwargs)
         warnings.warn(exceptions.BetaWarning(obj=self))
 
+    def _about(self):
+        """Pass."""
+        path = self._router.about
+        return self._request(method="get", path=path)
+
     @property
     def _router(self):
         """Router for this API client."""
         return routers.ApiV1.settings
+
+    def about(self):
+        """Pass."""
+        return self._about()
 
 
 class Core(mixins.Child):
