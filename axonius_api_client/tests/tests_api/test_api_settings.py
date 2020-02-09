@@ -27,6 +27,38 @@ def apiobj(request):
     return api
 
 
+class TestSetting(object):
+    """Pass."""
+
+    def test_about(self, apiobj):
+        """Pass."""
+        about = apiobj.about()
+        assert isinstance(about, dict)
+
+        keys = ["Build Date", "Commit Date", "Commit Hash", "Version"]
+        empty_ok = ["Version"]
+
+        for key in keys:
+            assert key in about
+            assert isinstance(about[key], tools.STR)
+            if key not in empty_ok:
+                assert about[key]
+
+    def test__about(self, apiobj):
+        """Pass."""
+        about = apiobj._about()
+        assert isinstance(about, dict)
+
+        keys = ["Build Date", "Commit Date", "Commit Hash", "Version"]
+        empty_ok = ["Version"]
+
+        for key in keys:
+            assert key in about
+            assert isinstance(about[key], tools.STR)
+            if key not in empty_ok:
+                assert about[key]
+
+
 class SettingChild(object):
     """Pass."""
 

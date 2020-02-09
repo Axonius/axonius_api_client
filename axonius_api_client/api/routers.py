@@ -110,6 +110,7 @@ class ApiV1(object):
         lifecycle="lifecycle",
         gui="gui",
         core="core",
+        about="about",
     )
 
     all_objects = [users, devices, actions, adapters, alerts, discover, settings]
