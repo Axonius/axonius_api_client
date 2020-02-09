@@ -2,6 +2,9 @@
 """API module for working with system configuration."""
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+import warnings
+
+from .. import exceptions
 from . import mixins, routers
 
 '''
@@ -45,6 +48,7 @@ class System(mixins.Model, mixins.Mixins):
         admin.user - CHILD
         """
         super(System, self)._init(auth=auth, **kwargs)
+        warnings.warn(exceptions.BetaWarning(obj=self))
 
     @property
     def _router(self):
