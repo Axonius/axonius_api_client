@@ -11,6 +11,19 @@ from axonius_api_client import exceptions, tools
 from .. import utils
 
 
+class TestValType(object):
+    """Test axonius_api_client.tools.val_type."""
+
+    def test_good(self):
+        """Pass."""
+        tools.val_type(1, tools.INT)
+
+    def test_bad(self):
+        """Pass."""
+        with pytest.raises(exceptions.ToolsError):
+            tools.val_type("", tools.INT)
+
+
 class TestCoerce(object):
     """Test axonius_api_client.tools.join_url."""
 
