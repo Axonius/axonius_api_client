@@ -103,6 +103,13 @@ class ApiV1(object):
         stop="stop",
     )
 
-    system = Router(object_type="system", base=base, version=version)
+    settings = Router(
+        object_type="settings",
+        base=base,
+        version=version,
+        lifecycle="lifecycle",
+        gui="gui",
+        core="core",
+    )
 
-    all_objects = [users, devices, actions, adapters, alerts, discover, system]
+    all_objects = [users, devices, actions, adapters, alerts, discover, settings]

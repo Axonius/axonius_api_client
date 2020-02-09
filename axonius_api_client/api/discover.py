@@ -2,9 +2,6 @@
 """API module for working with discover cycles."""
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-import warnings
-
-from .. import exceptions
 from . import mixins, routers
 
 
@@ -14,7 +11,6 @@ class Discover(mixins.Model, mixins.Mixins):
     def _init(self, auth, **kwargs):
         """Post init setup."""
         super(Discover, self)._init(auth=auth, **kwargs)
-        warnings.warn(exceptions.BetaWarning(obj=self))
 
     def _lifecycle(self):
         """Pass."""

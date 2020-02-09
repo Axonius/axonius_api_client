@@ -34,6 +34,14 @@ YES = [True, 1, "1", "true", "t", "yes", "y", "yas"]
 NO = [False, 0, "0", "false", "f", "no", "n", "noes"]
 
 
+def val_type(value, types):
+    """Pass."""
+    if not isinstance(value, types):
+        msg = "Invalid type for value {value!r}, must be one of {types!r}"
+        msg = msg.format(value=value, types=types)
+        raise exceptions.ApiError(msg)
+
+
 def listify(obj, dictkeys=False):
     """Pass."""
     if isinstance(obj, tuple):

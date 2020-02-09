@@ -2,11 +2,11 @@
 """Axonius API Client package."""
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-from . import adapters, enforcements, mixins, routers, users_devices, system, discover
+from . import adapters, enforcements, mixins, routers, assets, settings, discover
 from .adapters import Adapters
 from .enforcements import Enforcements
-from .users_devices import Devices, Users
-from .system import System
+from .assets import Devices, Users
+from .settings import Settings
 from .discover import Discover
 
 __all__ = (
@@ -14,13 +14,13 @@ __all__ = (
     "Devices",
     "Adapters",
     "Enforcements",
-    "System",
+    "Settings",
     "Discover",
     "routers",
-    "users_devices",
+    "assets",
     "adapters",
     "enforcements",
     "mixins",
-    "system",
+    "settings",
     "discover",
 )

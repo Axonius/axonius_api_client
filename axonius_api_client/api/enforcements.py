@@ -5,7 +5,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import warnings
 
 from .. import constants, exceptions, tools
-from . import mixins, routers, users_devices
+from . import mixins, routers, assets
 
 
 class RunAction(mixins.Child):
@@ -129,8 +129,8 @@ class Enforcements(mixins.Model, mixins.Mixins):
     def _init(self, auth, **kwargs):
         """Pass."""
         # cross ref
-        self.users = users_devices.Users(auth=auth, **kwargs)
-        self.devices = users_devices.Devices(auth=auth, **kwargs)
+        self.users = assets.Users(auth=auth, **kwargs)
+        self.devices = assets.Devices(auth=auth, **kwargs)
 
         # children
         self.runaction = RunAction(parent=self)

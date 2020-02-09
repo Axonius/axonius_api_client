@@ -5,7 +5,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import pytest
 
 import axonius_api_client as axonapi
-from axonius_api_client import exceptions
 
 from .. import utils
 
@@ -15,8 +14,7 @@ def apiobj(request):
     """Pass."""
     auth = utils.get_auth(request)
 
-    with pytest.warns(exceptions.BetaWarning):
-        api = axonapi.Discover(auth=auth)
+    api = axonapi.Discover(auth=auth)
 
     utils.check_apiobj(authobj=auth, apiobj=api)
 
