@@ -111,6 +111,7 @@ class ApiV1(object):
         gui="gui",
         core="core",
         about="about",
+        historical_sizes="historical_sizes",
     )
 
     all_objects = [users, devices, actions, adapters, alerts, discover, settings]
