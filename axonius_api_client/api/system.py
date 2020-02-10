@@ -448,7 +448,7 @@ class Roles(mixins.Child):
             "Users": users,
         }
         self._add(name=name, permissions=permissions)
-        return self.get()
+        return self.get(name=name)
 
     def update(
         self,
@@ -516,10 +516,10 @@ class Users(mixins.Child):
         path = self._router.users
         return self._request(method="get", path=path, params=data)
 
-    def _add(self, username, password, firstname="", lastname="", role=""):
+    def _add(self, name, password, firstname="", lastname="", role=""):
         """Pass."""
         data = {
-            "user_name": username,
+            "user_name": name,
             "password": password,
             "first_name": firstname,
             "last_name": lastname,
@@ -547,32 +547,33 @@ class Users(mixins.Child):
             method="post", path=path, json=data, error_json_invalid=False
         )
 
-    def add(self, username, password, firstname="", lastname="", role=""):
+    def add(self, name, password, firstname="", lastname="", role=""):
         """Pass."""
         names = self.get_names()
-        if username in names:
+        if name in names:
             msg = "User named {n!r} already exists"
-            msg = msg.format(n=username)
+            msg = msg.format(n=name)
             raise exceptions.ApiError(msg)
 
-        return self._add(
-            username=username,
+        self._add(
+            name=name,
             password=password,
             firstname=firstname,
             lastname=lastname,
             role=role,
         )
+        return self.get(name=name)
 
-    def get(self, username=None):
+    def get(self, name=None):
         """Pass."""
         users = self._get()
-        if username:
-            user_names = self.get_names(users=users)
-            if username not in user_names:
+        if name:
+            names = self.get_names(users=users)
+            if name not in names:
                 msg = "User not found {n!r}, valid users: {vr}"
-                msg = msg.format(n=username, vr=", ".join(user_names))
+                msg = msg.format(n=name, vr=", ".join(names))
                 raise exceptions.ApiError(msg)
-            return [x for x in users if x["user_name"] == username][0]
+            return [x for x in users if x["user_name"] == name][0]
         return users
 
     def get_names(self, users=None):
@@ -580,20 +581,20 @@ class Users(mixins.Child):
         users = users if users else self.get()
         return [x["user_name"] for x in users]
 
-    def update(self, username, firstname=None, lastname=None, password=None):
+    def update(self, name, firstname=None, lastname=None, password=None):
         """Pass."""
         if not any([firstname, lastname, password]):
             msg = "Must supply at least one of: {req!r}"
             msg = msg.format(req=", ".format("firstname", "lastname", "password"))
             raise exceptions.ApiError(msg)
-        user = self.get(username=username)
+        user = self.get(name=name)
         self._update(
             uuid=user["uuid"], firstname=firstname, lastname=lastname, password=password,
         )
-        return self.get(username=username)
+        return self.get(name=name)
 
-    def delete(self, username):
+    def delete(self, name):
         """Pass."""
-        user = self.get(username=username)
+        user = self.get(name=name)
         self._delete(uuid=user["uuid"])
         return self.get()

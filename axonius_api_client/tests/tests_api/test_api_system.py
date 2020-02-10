@@ -7,7 +7,7 @@ import pytest
 import axonius_api_client as axonapi
 from axonius_api_client import exceptions, tools
 
-from .. import utils
+from .. import utils, meta
 
 
 @pytest.fixture(scope="module")
@@ -27,6 +27,12 @@ def apiobj(request):
     # META
     utils.check_apiobj_children(apiobj=api, meta=axonapi.api.system.Meta)
 
+    # USERS
+    utils.check_apiobj_children(apiobj=api, users=axonapi.api.system.Users)
+
+    # ROLES
+    utils.check_apiobj_children(apiobj=api, roles=axonapi.api.system.Roles)
+
     # SETTINGS
     with pytest.warns(exceptions.BetaWarning):
         utils.check_apiobj_children(apiobj=api, settings=axonapi.api.system.Settings)
@@ -44,7 +50,7 @@ def apiobj(request):
     return api
 
 
-class TestDiscover(object):
+class TestSystemDiscover(object):
     """Pass."""
 
     @pytest.fixture(scope="class")
@@ -82,7 +88,7 @@ class TestDiscover(object):
         assert re_stopped["status"] == "done"
 
 
-class TestMeta(object):
+class TestSystemMeta(object):
     """Pass."""
 
     @pytest.fixture(scope="class")
@@ -185,7 +191,7 @@ class SettingChild(object):
         assert not ret
 
 
-class TestSettingsGui(SettingChild):
+class TestSystemSettingsGui(SettingChild):
     """Pass."""
 
     @pytest.fixture(scope="class")
@@ -194,7 +200,7 @@ class TestSettingsGui(SettingChild):
         return apiobj.settings.gui
 
 
-class TestSettingsLifecycle(SettingChild):
+class TestSystemSettingsLifecycle(SettingChild):
     """Pass."""
 
     @pytest.fixture(scope="class")
@@ -203,7 +209,7 @@ class TestSettingsLifecycle(SettingChild):
         return apiobj.settings.lifecycle
 
 
-class TestSettingsCore(SettingChild):
+class TestSystemSettingsCore(SettingChild):
     """Pass."""
 
     @pytest.fixture(scope="class")
@@ -212,7 +218,7 @@ class TestSettingsCore(SettingChild):
         return apiobj.settings.core
 
 
-class TestAggregation(object):
+class TestSystemAggregation(object):
     """Pass."""
 
     @pytest.fixture(scope="class")
@@ -238,7 +244,7 @@ class TestAggregation(object):
         assert settings["socket_read_timeout"] == 5
 
 
-class TestInstances(object):
+class TestSystemInstances(object):
     """Pass."""
 
     @pytest.fixture(scope="class")
@@ -250,3 +256,152 @@ class TestInstances(object):
         """Pass."""
         data = childobj.get()
         assert isinstance(data, dict)
+
+
+class TestSystemRoles(object):
+    """Pass."""
+
+    @pytest.fixture(scope="class")
+    def childobj(self, apiobj):
+        """Pass."""
+        return apiobj.roles
+
+    def test__get(self, childobj):
+        """Pass."""
+        data = childobj._get()
+        assert isinstance(data, tools.LIST)
+        for x in data:
+            assert isinstance(x, dict)
+
+    def test_get_set_default(self, childobj):
+        """Pass."""
+        roles = childobj.get()
+        current_role = childobj.get_default()
+        assert isinstance(current_role, dict)
+
+        new_roles = [x for x in roles if x["name"] != current_role["name"]]
+        if new_roles:
+            new_role = new_roles[0]["name"]
+            updated_role = childobj.set_default(new_role)
+            assert isinstance(updated_role, dict)
+            assert updated_role["name"] == new_role
+
+    def test_add_invalid_perm(self, childobj):
+        """Pass."""
+        with pytest.raises(exceptions.ApiError):
+            childobj.add("x", "badwolf_itai")
+
+    def test_add_get_update_delete(self, childobj):
+        """Pass."""
+        try:
+            childobj.get(name=meta.system.TEST_USER)
+        except exceptions.ApiError:
+            pass
+        else:
+            childobj.delete(name=meta.system.TEST_USER)
+
+        added = childobj.add(name=meta.system.TEST_USER)
+        assert isinstance(added, dict)
+        assert added["name"] == meta.system.TEST_USER
+        assert isinstance(added["permissions"], dict)
+
+        with pytest.raises(exceptions.ApiError):
+            childobj.add(name=meta.system.TEST_USER)
+
+        added_permissions = added["permissions"]
+        update_permissions = {}
+
+        for k, v in added_permissions.items():
+            assert v == axonapi.constants.DEFAULT_PERM
+            update_permissions[k.lower()] = meta.system.TEST_PERM
+
+        updated = childobj.update(name=meta.system.TEST_USER, **update_permissions)
+        assert isinstance(updated, dict)
+
+        updated_permissions = updated["permissions"]
+        for k, v in updated_permissions.items():
+            assert v == meta.system.TEST_PERM
+
+        deleted = childobj.delete(name=meta.system.TEST_USER)
+        assert isinstance(deleted, tools.LIST)
+        assert not [x for x in deleted if x["name"] == added["name"]]
+
+        with pytest.raises(exceptions.ApiError):
+            childobj.update(name=meta.system.TEST_USER)
+
+        with pytest.raises(exceptions.ApiError):
+            childobj.get(name=meta.system.TEST_USER)
+
+
+class TestSystemUsers(object):
+    """Pass."""
+
+    @pytest.fixture(scope="class")
+    def childobj(self, apiobj):
+        """Pass."""
+        return apiobj.users
+
+    def test__get(self, childobj):
+        """Pass."""
+        data = childobj._get()
+        assert isinstance(data, tools.LIST)
+        for x in data:
+            assert isinstance(x, dict)
+
+    def test__get_limit(self, childobj):
+        """Pass."""
+        data = childobj._get(limit=1)
+        assert isinstance(data, tools.LIST)
+        for x in data:
+            assert isinstance(x, dict)
+        assert len(data) == 1
+
+    def test__get_limit_skip(self, childobj):
+        """Pass."""
+        all_data = childobj._get()
+        data = childobj._get(limit=1, skip=1)
+        assert isinstance(data, tools.LIST)
+        for x in data:
+            assert isinstance(x, dict)
+        assert len(data) == len(all_data[:1])
+
+    def test_add_get_update_delete(self, childobj):
+        """Pass."""
+        try:
+            childobj.get(name=meta.system.TEST_USER)
+        except exceptions.ApiError:
+            pass
+        else:
+            childobj.delete(name=meta.system.TEST_USER)
+
+        added = childobj.add(name=meta.system.TEST_USER, password=meta.system.TEST_USER)
+        assert isinstance(added, dict)
+        assert added["user_name"] == meta.system.TEST_USER
+        assert not added["first_name"]
+        assert not added["last_name"]
+        assert added["password"] == ["unchanged"]
+
+        with pytest.raises(exceptions.ApiError):
+            childobj.add(name=meta.system.TEST_USER, password=meta.system.TEST_USER)
+
+        updated = childobj.update(
+            name=meta.system.TEST_USER,
+            firstname=meta.system.TEST_USER,
+            lastname=meta.system.TEST_USER,
+            password=meta.system.TEST_USER,
+        )
+        assert isinstance(updated, dict)
+        assert updated["user_name"] == meta.system.TEST_USER
+        assert updated["first_name"] == meta.system.TEST_USER
+        assert updated["last_name"] == meta.system.TEST_USER
+        assert updated["password"] == ["unchanged"]
+
+        deleted = childobj.delete(name=meta.system.TEST_USER)
+        assert isinstance(deleted, tools.LIST)
+        assert not [x for x in deleted if x["uuid"] == added["uuid"]]
+
+        with pytest.raises(exceptions.ApiError):
+            childobj.update(name=meta.system.TEST_USER)
+
+        with pytest.raises(exceptions.ApiError):
+            childobj.get(name=meta.system.TEST_USER)
