@@ -54,13 +54,22 @@ class TestConnect(object):
         with pytest.warns(exceptions.BetaWarning):
             format(c.enforcements)
 
+        format(c.system)
         with pytest.warns(exceptions.BetaWarning):
-            format(c.settings)
+            format(c.system.settings)
+
+        with pytest.warns(exceptions.BetaWarning):
+            format(c.system.instances)
+
+        format(c.system.settings.lifecycle)
+        format(c.system.settings.gui)
+        format(c.system.settings.core)
+        format(c.system.discover)
+        format(c.system.meta)
 
         format(c.users)
         format(c.devices)
         format(c.adapters)
-        format(c.discover)
 
     def test_invalid_creds(self, request):
         """Pass."""
