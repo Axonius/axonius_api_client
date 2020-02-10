@@ -94,24 +94,26 @@ class ApiV1(object):
 
     alerts = Router(object_type="alerts", base=base, version=version)
 
-    discover = Router(
-        object_type="discover",
+    system = Router(
+        object_type="system",
         base=base,
         version=version,
-        lifecycle="lifecycle",
-        start="start",
-        stop="stop",
+        instances="instances",
+        meta_about="meta/about",
+        meta_historical_sizes="meta/historical_sizes",
+        settings_lifecycle="settings/lifecycle",
+        settings_gui="settings/gui",
+        settings_core="settings/core",
+        discover_lifecycle="discover/lifecycle",
+        discover_start="discover/start",
+        discover_stop="discover/stop",
     )
 
-    settings = Router(
-        object_type="settings",
-        base=base,
-        version=version,
-        lifecycle="lifecycle",
-        gui="gui",
-        core="core",
-        about="about",
-        historical_sizes="historical_sizes",
-    )
-
-    all_objects = [users, devices, actions, adapters, alerts, discover, settings]
+    all_objects = [
+        users,
+        devices,
+        actions,
+        adapters,
+        alerts,
+        system,
+    ]

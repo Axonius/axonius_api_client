@@ -205,6 +205,14 @@ class Child(object):
         """Pass."""
         pass
 
+    def _request(self, **kwargs):
+        """Pass."""
+        return self._parent._request(**kwargs)
+
+    @property
+    def _router(self):
+        return self._parent._router
+
     def __str__(self):
         """Pass."""
         return "{} for {}".format(self.__class__.__name__, self._parent)
@@ -215,7 +223,7 @@ class Child(object):
 
 
 @six.add_metaclass(abc.ABCMeta)
-class Parser(Child):
+class Parser(object):
     """Pass."""
 
     def __init__(self, raw, parent, **kwargs):
@@ -223,8 +231,21 @@ class Parser(Child):
         self._parent = parent
         self._raw = raw
         self._log = parent._log.getChild(self.__class__.__name__)
+        self._init(parent=parent)
+
+    def _init(self, parent):
+        """Pass."""
+        pass
 
     @abc.abstractmethod
     def parse(self):
         """Pass."""
         raise NotImplementedError  # pragma: no cover
+
+    def __str__(self):
+        """Pass."""
+        return "{} for {}".format(self.__class__.__name__, self._parent)
+
+    def __repr__(self):
+        """Pass."""
+        return self.__str__()
