@@ -94,3 +94,7 @@ CSV_KEYS_META = {
 }
 CSV_ADAPTER = "csv"
 DEBUG_MATCHES = False
+
+DEFAULT_PERM = "ReadOnly"
+
+VALID_PERMS = ["Restricted", "ReadWrite", "ReadOnly"]

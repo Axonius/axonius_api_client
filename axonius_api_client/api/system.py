@@ -4,7 +4,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import warnings
 
-from .. import exceptions, tools
+from .. import exceptions, tools, constants
 from . import mixins, routers
 
 
@@ -43,6 +43,20 @@ class System(mixins.Model, mixins.Mixins):
         if not hasattr(self, "_discover"):
             self._discover = Discover(parent=self)
         return self._discover
+
+    @property
+    def users(self):
+        """Pass."""
+        if not hasattr(self, "_users"):
+            self._users = Users(parent=self)
+        return self._users
+
+    @property
+    def roles(self):
+        """Pass."""
+        if not hasattr(self, "_roles"):
+            self._roles = Roles(parent=self)
+        return self._roles
 
 
 class Discover(mixins.Child):
@@ -316,4 +330,270 @@ class Aggregation(mixins.Child):
         settings = self._parent.get()
         settings[self._subkey]["socket_read_timeout"] = value
         self._parent.update(config=settings)
+        return self.get()
+
+
+class Roles(mixins.Child):
+    """Role controls."""
+
+    def _get_default(self):
+        """Pass."""
+        path = self._router.roles_default
+        return self._request(method="get", path=path, error_json_invalid=False)
+
+    def _set_default(self, name):
+        """Pass."""
+        data = {"name": name}
+        path = self._router.roles_default
+        return self._request(method="post", path=path, json=data)
+
+    def _get(self):
+        """Pass."""
+        path = self._router.roles
+        return self._request(method="get", path=path)
+
+    def _add(self, name, permissions):
+        """Pass."""
+        data = {"name": name, "permissions": permissions}
+        path = self._router.roles
+        return self._request(method="put", path=path, json=data)
+
+    def _update(self, name, permissions):
+        """Pass."""
+        data = {"name": name, "permissions": permissions}
+        path = self._router.roles
+        return self._request(
+            method="post", path=path, json=data, error_json_invalid=False
+        )
+
+    def _delete(self, name):
+        """Pass."""
+        data = {"name": name}
+        path = self._router.roles
+        return self._request(
+            method="delete", path=path, json=data, error_json_invalid=False
+        )
+
+    def set_default(self, name):
+        """Pass."""
+        self._set_default(name=name)
+        return self.get(name=name)
+
+    def get_default(self):
+        """Pass."""
+        name = self._get_default()
+        return self.get(name=name)
+
+    def get(self, name=None):
+        """Pass."""
+        roles = self._get()
+        if name:
+            role_names = self.get_names(roles=roles)
+            if name not in role_names:
+                msg = "Role not found {n!r}, valid roles: {vr}"
+                msg = msg.format(n=name, vr=", ".join(role_names))
+                raise exceptions.ApiError(msg)
+            return [x for x in roles if x["name"] == name][0]
+        return roles
+
+    def get_names(self, roles=None):
+        """Pass."""
+        roles = roles if roles else self.get()
+        return [x["name"] for x in roles]
+
+    def _check_valid_perm(self, name, value):
+        """Pass."""
+        if value not in constants.VALID_PERMS:
+            msg = "Invalid permission {p!r} for {n!r} - Must be one of {vp}"
+            msg = msg.format(p=value, n=name, vp=", ".join(constants.VALID_PERMS))
+            raise exceptions.ApiError(msg)
+
+    def add(
+        self,
+        name,
+        adapters=constants.DEFAULT_PERM,
+        dashboard=constants.DEFAULT_PERM,
+        devices=constants.DEFAULT_PERM,
+        enforcements=constants.DEFAULT_PERM,
+        instances=constants.DEFAULT_PERM,
+        reports=constants.DEFAULT_PERM,
+        settings=constants.DEFAULT_PERM,
+        users=constants.DEFAULT_PERM,
+    ):
+        """Pass."""
+        names = self.get_names()
+        if name in names:
+            msg = "Role named {n!r} already exists"
+            msg = msg.format(n=name)
+            raise exceptions.ApiError(msg)
+
+        self._check_valid_perm(name="adapters", value=adapters)
+        self._check_valid_perm(name="adapters", value=adapters)
+        self._check_valid_perm(name="dashboard", value=dashboard)
+        self._check_valid_perm(name="devices", value=devices)
+        self._check_valid_perm(name="enforcements", value=enforcements)
+        self._check_valid_perm(name="instances", value=instances)
+        self._check_valid_perm(name="reports", value=reports)
+        self._check_valid_perm(name="settings", value=settings)
+        self._check_valid_perm(name="users", value=users)
+
+        permissions = {
+            "Adapters": adapters,
+            "Dashboard": dashboard,
+            "Devices": devices,
+            "Enforcements": enforcements,
+            "Instances": instances,
+            "Reports": reports,
+            "Settings": settings,
+            "Users": users,
+        }
+        self._add(name=name, permissions=permissions)
+        return self.get()
+
+    def update(
+        self,
+        name,
+        adapters=constants.DEFAULT_PERM,
+        dashboard=constants.DEFAULT_PERM,
+        devices=constants.DEFAULT_PERM,
+        enforcements=constants.DEFAULT_PERM,
+        instances=constants.DEFAULT_PERM,
+        reports=constants.DEFAULT_PERM,
+        settings=constants.DEFAULT_PERM,
+        users=constants.DEFAULT_PERM,
+    ):
+        """Pass."""
+        names = self.get_names()
+        if name not in names:
+            msg = "Role named {n!r} does not exist"
+            msg = msg.format(n=name)
+            raise exceptions.ApiError(msg)
+
+        self._check_valid_perm(name="adapters", value=adapters)
+        self._check_valid_perm(name="adapters", value=adapters)
+        self._check_valid_perm(name="dashboard", value=dashboard)
+        self._check_valid_perm(name="devices", value=devices)
+        self._check_valid_perm(name="enforcements", value=enforcements)
+        self._check_valid_perm(name="instances", value=instances)
+        self._check_valid_perm(name="reports", value=reports)
+        self._check_valid_perm(name="settings", value=settings)
+        self._check_valid_perm(name="users", value=users)
+
+        permissions = {
+            "Adapters": adapters,
+            "Dashboard": dashboard,
+            "Devices": devices,
+            "Enforcements": enforcements,
+            "Instances": instances,
+            "Reports": reports,
+            "Settings": settings,
+            "Users": users,
+        }
+        self._update(name=name, permissions=permissions)
+        return self.get(name=name)
+
+    def delete(self, name):
+        """Pass."""
+        names = self.get_names()
+        if name not in names:
+            msg = "Role named {n!r} does not exist"
+            msg = msg.format(n=name)
+            raise exceptions.ApiError(msg)
+        self._delete(name=name)
+        return self.get()
+
+
+class Users(mixins.Child):
+    """User Role controls."""
+
+    def _get(self, limit=None, skip=None):
+        """Pass."""
+        data = {}
+        if limit is not None:
+            data["limit"] = limit
+        if skip is not None:
+            data["skip"] = skip
+        path = self._router.users
+        return self._request(method="get", path=path, params=data)
+
+    def _add(self, username, password, firstname="", lastname="", role=""):
+        """Pass."""
+        data = {
+            "user_name": username,
+            "password": password,
+            "first_name": firstname,
+            "last_name": lastname,
+            "role": role,
+        }
+        path = self._router.users
+        return self._request(method="put", path=path, json=data)
+
+    def _delete(self, uuid):
+        """Pass."""
+        path = self._router.user.format(uuid=uuid)
+        return self._request(method="delete", path=path)
+
+    def _update(self, uuid, firstname, lastname, password):
+        """Pass."""
+        data = {}
+        if firstname:
+            data["first_name"] = firstname
+        if lastname:
+            data["last_name"] = lastname
+        if password:
+            data["password"] = password
+        path = self._router.user.format(uuid=uuid)
+        return self._request(
+            method="post", path=path, json=data, error_json_invalid=False
+        )
+
+    def add(self, username, password, firstname="", lastname="", role=""):
+        """Pass."""
+        names = self.get_names()
+        if username in names:
+            msg = "User named {n!r} already exists"
+            msg = msg.format(n=username)
+            raise exceptions.ApiError(msg)
+
+        return self._add(
+            username=username,
+            password=password,
+            firstname=firstname,
+            lastname=lastname,
+            role=role,
+        )
+
+    def get(self, username=None):
+        """Pass."""
+        users = self._get()
+        if username:
+            user_names = self.get_names(users=users)
+            if username not in user_names:
+                msg = "User not found {n!r}, valid users: {vr}"
+                msg = msg.format(n=username, vr=", ".join(user_names))
+                raise exceptions.ApiError(msg)
+            return [x for x in users if x["user_name"] == username][0]
+        return users
+
+    def get_names(self, users=None):
+        """Pass."""
+        users = users if users else self.get()
+        return [x["user_name"] for x in users]
+
+    def update(self, username, firstname=None, lastname=None, password=None):
+        """Pass."""
+        if not any([firstname, lastname, password]):
+            msg = "Must supply at least one of: {req!r}"
+            msg = msg.format(req=", ".format("firstname", "lastname", "password"))
+            raise exceptions.ApiError(msg)
+        user = self.get(username=username)
+        self._update(
+            uuid=user["uuid"], firstname=firstname, lastname=lastname, password=password,
+        )
+        return self.get(username=username)
+
+    def delete(self, username):
+        """Pass."""
+        user = self.get(username=username)
+        self._delete(uuid=user["uuid"])
         return self.get()
