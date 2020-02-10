@@ -107,6 +107,10 @@ class ApiV1(object):
         discover_lifecycle="discover/lifecycle",
         discover_start="discover/start",
         discover_stop="discover/stop",
+        roles_default="roles/default",
+        roles="roles",
+        users="users",
+        user="users/{uuid}",
     )
 
     all_objects = [
