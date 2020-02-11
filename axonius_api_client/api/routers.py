@@ -90,6 +90,7 @@ class ApiV1(object):
         cnxs="{adapter_name}/clients",
         cnxs_uuid="{adapter_name}/clients/{cnx_uuid}",
         upload_file="{adapter_name}/{node_id}/upload_file",
+        config="{adapter_name}/config/{config_name}",
     )
 
     alerts = Router(object_type="alerts", base=base, version=version)
@@ -111,6 +112,7 @@ class ApiV1(object):
         roles="roles",
         users="users",
         user="users/{uuid}",
+        user_role="users/{uuid}/access",
     )
 
     all_objects = [
