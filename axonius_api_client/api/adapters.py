@@ -457,7 +457,24 @@ class Adapters(mixins.Model, mixins.Mixins):
             dict: The raw metadata for all adapters.
 
         """
-        return self._request(method="get", path=self._router.root)
+        path = self._router.root
+        return self._request(method="get", path=path)
+
+    def _set_config(self, adapter_name, config_name, config):
+        """Pass."""
+        path = self._router.config.format(
+            adapter_name=adapter_name, config_name=config_name
+        )
+        return self._request(
+            method="post", path=path, json=config, error_json_invalid=False
+        )
+
+    def _get_config(self, adapter_name, config_name):
+        """Pass."""
+        path = self._router.config.format(
+            adapter_name=adapter_name, config_name=config_name
+        )
+        return self._request(method="get", path=path,)
 
     @property
     def _router(self):

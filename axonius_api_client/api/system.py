@@ -376,8 +376,9 @@ class Roles(mixins.Child):
 
     def set_default(self, name):
         """Pass."""
+        role = self.get(name=name)
         self._set_default(name=name)
-        return self.get(name=name)
+        return role
 
     def get_default(self):
         """Pass."""
@@ -408,6 +409,38 @@ class Roles(mixins.Child):
             msg = msg.format(p=value, n=name, vp=", ".join(constants.VALID_PERMS))
             raise exceptions.ApiError(msg)
 
+    def _check_valid_perms(
+        self,
+        adapters,
+        dashboard,
+        devices,
+        enforcements,
+        instances,
+        reports,
+        settings,
+        users,
+    ):
+        """Pass."""
+        self._check_valid_perm(name="adapters", value=adapters)
+        self._check_valid_perm(name="dashboard", value=dashboard)
+        self._check_valid_perm(name="devices", value=devices)
+        self._check_valid_perm(name="enforcements", value=enforcements)
+        self._check_valid_perm(name="instances", value=instances)
+        self._check_valid_perm(name="reports", value=reports)
+        self._check_valid_perm(name="settings", value=settings)
+        self._check_valid_perm(name="users", value=users)
+
+        return {
+            "Adapters": adapters,
+            "Dashboard": dashboard,
+            "Devices": devices,
+            "Enforcements": enforcements,
+            "Instances": instances,
+            "Reports": reports,
+            "Settings": settings,
+            "Users": users,
+        }
+
     def add(
         self,
         name,
@@ -427,26 +460,16 @@ class Roles(mixins.Child):
             msg = msg.format(n=name)
             raise exceptions.ApiError(msg)
 
-        self._check_valid_perm(name="adapters", value=adapters)
-        self._check_valid_perm(name="adapters", value=adapters)
-        self._check_valid_perm(name="dashboard", value=dashboard)
-        self._check_valid_perm(name="devices", value=devices)
-        self._check_valid_perm(name="enforcements", value=enforcements)
-        self._check_valid_perm(name="instances", value=instances)
-        self._check_valid_perm(name="reports", value=reports)
-        self._check_valid_perm(name="settings", value=settings)
-        self._check_valid_perm(name="users", value=users)
-
-        permissions = {
-            "Adapters": adapters,
-            "Dashboard": dashboard,
-            "Devices": devices,
-            "Enforcements": enforcements,
-            "Instances": instances,
-            "Reports": reports,
-            "Settings": settings,
-            "Users": users,
-        }
+        permissions = self._check_valid_perms(
+            adapters=adapters,
+            dashboard=dashboard,
+            devices=devices,
+            enforcements=enforcements,
+            instances=instances,
+            reports=reports,
+            settings=settings,
+            users=users,
+        )
         self._add(name=name, permissions=permissions)
         return self.get(name=name)
 
@@ -469,26 +492,16 @@ class Roles(mixins.Child):
             msg = msg.format(n=name)
             raise exceptions.ApiError(msg)
 
-        self._check_valid_perm(name="adapters", value=adapters)
-        self._check_valid_perm(name="adapters", value=adapters)
-        self._check_valid_perm(name="dashboard", value=dashboard)
-        self._check_valid_perm(name="devices", value=devices)
-        self._check_valid_perm(name="enforcements", value=enforcements)
-        self._check_valid_perm(name="instances", value=instances)
-        self._check_valid_perm(name="reports", value=reports)
-        self._check_valid_perm(name="settings", value=settings)
-        self._check_valid_perm(name="users", value=users)
-
-        permissions = {
-            "Adapters": adapters,
-            "Dashboard": dashboard,
-            "Devices": devices,
-            "Enforcements": enforcements,
-            "Instances": instances,
-            "Reports": reports,
-            "Settings": settings,
-            "Users": users,
-        }
+        permissions = self._check_valid_perms(
+            adapters=adapters,
+            dashboard=dashboard,
+            devices=devices,
+            enforcements=enforcements,
+            instances=instances,
+            reports=reports,
+            settings=settings,
+            users=users,
+        )
         self._update(name=name, permissions=permissions)
         return self.get(name=name)
 
@@ -516,14 +529,14 @@ class Users(mixins.Child):
         path = self._router.users
         return self._request(method="get", path=path, params=data)
 
-    def _add(self, name, password, firstname="", lastname="", role=""):
+    def _add(self, name, password, firstname="", lastname="", rolename=""):
         """Pass."""
         data = {
             "user_name": name,
             "password": password,
             "first_name": firstname,
             "last_name": lastname,
-            "role": role,
+            "role_name": rolename,
         }
         path = self._router.users
         return self._request(method="put", path=path, json=data)
@@ -547,8 +560,21 @@ class Users(mixins.Child):
             method="post", path=path, json=data, error_json_invalid=False
         )
 
-    def add(self, name, password, firstname="", lastname="", role=""):
+    def _update_role(self, uuid, rolename, permissions):
         """Pass."""
+        data = {}
+        data["role_name"] = rolename
+        data["permissions"] = permissions
+        path = self._router.user_role.format(uuid=uuid)
+        return self._request(
+            method="post", path=path, json=data, error_json_invalid=False
+        )
+
+    def add(self, name, password, firstname="", lastname="", rolename=""):
+        """Pass."""
+        if rolename:
+            self._parent.roles.get(name=rolename)
+
         names = self.get_names()
         if name in names:
             msg = "User named {n!r} already exists"
@@ -560,7 +586,7 @@ class Users(mixins.Child):
             password=password,
             firstname=firstname,
             lastname=lastname,
-            role=role,
+            rolename=rolename,
         )
         return self.get(name=name)
 
@@ -587,10 +613,25 @@ class Users(mixins.Child):
             msg = "Must supply at least one of: {req!r}"
             msg = msg.format(req=", ".format("firstname", "lastname", "password"))
             raise exceptions.ApiError(msg)
+
         user = self.get(name=name)
+        uuid = user["uuid"]
+
         self._update(
-            uuid=user["uuid"], firstname=firstname, lastname=lastname, password=password,
+            uuid=uuid, firstname=firstname, lastname=lastname, password=password,
         )
+        return self.get(name=name)
+
+    def update_role(self, name, rolename):
+        """Pass."""
+        user = self.get(name=name)
+        role = self._parent.roles.get(name=rolename)
+
+        uuid = user["uuid"]
+        rolename = role["name"]
+        permissions = role["permissions"]
+
+        self._update_role(uuid=uuid, rolename=rolename, permissions=permissions)
         return self.get(name=name)
 
     def delete(self, name):
