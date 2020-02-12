@@ -1,6 +1,8 @@
 """Metadata for adapters."""
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+DEFAULT_NODE = "master"
+
 CSV_FILENAME = "badwolf.csv"
 CSV_FIELDS = ["mac_address", "field1"]
 CSV_ROW = ["01:37:53:9E:82:7C", "e"]
@@ -31,7 +33,7 @@ FAKE_ADAPTER_CNXS_OK = {
     "cnx": [FAKE_CNX_OK],
     "name": "fluff1",
     "name_raw": "fluff1_adapter",
-    "node_name": "master",
+    "node_name": DEFAULT_NODE,
     "cnx_count": 1,
     "status": True,
 }
@@ -39,7 +41,7 @@ FAKE_ADAPTER_CNXS_BAD = {
     "cnx": FAKE_CNXS,
     "name": "fluff2",
     "name_raw": "fluff2_adapter",
-    "node_name": "master",
+    "node_name": DEFAULT_NODE,
     "cnx_count": 2,
     "status": False,
 }
@@ -47,7 +49,7 @@ FAKE_ADAPTER_NOCLIENTS = {
     "cnx": [],
     "name": "fluff3",
     "name_raw": "fluff3_adapter",
-    "node_name": "master",
+    "node_name": DEFAULT_NODE,
     "cnx_count": 0,
     "status": None,
 }

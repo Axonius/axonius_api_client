@@ -181,7 +181,7 @@ class TestCmdFields(object):
     def test_get_exc_wrap(self, request, monkeypatch, cmd):
         """Pass."""
         runner = utils.load_clirunner(request, monkeypatch)
-        monkeypatch.setattr(api.users_devices.Fields, "get", utils.mock_failure)
+        monkeypatch.setattr(api.assets.Fields, "get", utils.mock_failure)
 
         args1 = [cmd, "fields"]
         result1 = runner.invoke(cli=cli.cli, args=args1)
@@ -205,7 +205,7 @@ class TestCmdFields(object):
     def test_get_exc_nowrap(self, request, monkeypatch, cmd):
         """Pass."""
         runner = utils.load_clirunner(request, monkeypatch)
-        monkeypatch.setattr(api.users_devices.Fields, "get", utils.mock_failure)
+        monkeypatch.setattr(api.assets.Fields, "get", utils.mock_failure)
         args1 = ["--no-wraperror", cmd, "fields"]
         with pytest.raises(utils.MockError):
             runner.invoke(cli=cli.cli, args=args1, catch_exceptions=False)

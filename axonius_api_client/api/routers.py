@@ -90,8 +90,36 @@ class ApiV1(object):
         cnxs="{adapter_name}/clients",
         cnxs_uuid="{adapter_name}/clients/{cnx_uuid}",
         upload_file="{adapter_name}/{node_id}/upload_file",
+        config="{adapter_name}/config/{config_name}",
     )
 
     alerts = Router(object_type="alerts", base=base, version=version)
 
-    all_objects = [users, devices, actions, adapters, alerts]
+    system = Router(
+        object_type="system",
+        base=base,
+        version=version,
+        instances="instances",
+        meta_about="meta/about",
+        meta_historical_sizes="meta/historical_sizes",
+        settings_lifecycle="settings/lifecycle",
+        settings_gui="settings/gui",
+        settings_core="settings/core",
+        discover_lifecycle="discover/lifecycle",
+        discover_start="discover/start",
+        discover_stop="discover/stop",
+        roles_default="roles/default",
+        roles="roles",
+        users="users",
+        user="users/{uuid}",
+        user_role="users/{uuid}/access",
+    )
+
+    all_objects = [
+        users,
+        devices,
+        actions,
+        adapters,
+        alerts,
+        system,
+    ]

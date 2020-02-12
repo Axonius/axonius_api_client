@@ -5,9 +5,18 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import click
 import pytest
 
-from axonius_api_client import cli, tools  # , exceptions
+from axonius_api_client import cli, tools, constants  # , LOG  # , exceptions
 
 from .. import meta, utils
+
+
+def dump_args_str(args, file=None):
+    """Pass."""
+    args_str = " ".join(args)
+    print(">>>>>>>>>>>>> ARGS STRING {!r}".format(args_str))
+    if file:
+        print(">>>>>>>>>>>>> FILE CONTENTS\n{}".format(file))
+    return args_str
 
 
 def badwolf_cb(x, **kwargs):
@@ -36,6 +45,7 @@ class TestGrpCnx(object):
         runner = utils.load_clirunner(request, monkeypatch)
 
         args1 = ["adapters", "get"]
+        dump_args_str(args1)
         result1 = runner.invoke(cli=cli.cli, args=args1)
 
         stderr1 = result1.stderr
@@ -50,6 +60,7 @@ class TestGrpCnx(object):
         assert isinstance(json1, tools.LIST)
 
         args2 = ["adapters", "cnx", "get", "--rows", "-", "--export-format", "json"]
+        dump_args_str(args2)
         result2 = runner.invoke(cli=cli.cli, args=args2, input=stdout1)
 
         stderr2 = result2.stderr
@@ -68,6 +79,7 @@ class TestGrpCnx(object):
         runner = utils.load_clirunner(request, monkeypatch)
 
         args1 = ["adapters", "get"]
+        dump_args_str(args1)
         result1 = runner.invoke(cli=cli.cli, args=args1)
 
         stderr1 = result1.stderr
@@ -84,6 +96,7 @@ class TestGrpCnx(object):
         cnx1_id = cnxs[0][0]["uuid"]
 
         args2 = ["adapters", "cnx", "get", "--rows", "-", "--uuid", cnx1_id]
+        dump_args_str(args2)
         result2 = runner.invoke(cli=cli.cli, args=args2, input=stdout1)
         del stdout1
 
@@ -105,6 +118,7 @@ class TestGrpCnx(object):
         runner = utils.load_clirunner(request, monkeypatch)
 
         args1 = ["adapters", "get"]
+        dump_args_str(args1)
         result1 = runner.invoke(cli=cli.cli, args=args1)
 
         stderr1 = result1.stderr
@@ -121,6 +135,7 @@ class TestGrpCnx(object):
         cnx1_id = cnxs[0][0]["id"]
 
         args2 = ["adapters", "cnx", "get", "--rows", "-", "--id", cnx1_id]
+        dump_args_str(args2)
         result2 = runner.invoke(cli=cli.cli, args=args2, input=stdout1)
         del stdout1
 
@@ -142,6 +157,7 @@ class TestGrpCnx(object):
         runner = utils.load_clirunner(request, monkeypatch)
 
         args1 = ["adapters", "get"]
+        dump_args_str(args1)
         result1 = runner.invoke(cli=cli.cli, args=args1)
 
         stderr1 = result1.stderr
@@ -156,6 +172,7 @@ class TestGrpCnx(object):
         assert isinstance(json1, tools.LIST)
 
         args2 = ["adapters", "cnx", "get", "--rows", "-", "--export-format", "csv"]
+        dump_args_str(args2)
         result2 = runner.invoke(cli=cli.cli, args=args2, input=stdout1)
 
         stderr2 = result2.stderr
@@ -174,6 +191,7 @@ class TestGrpCnx(object):
         runner = utils.load_clirunner(request, monkeypatch)
 
         args1 = ["adapters", "get"]
+        dump_args_str(args1)
         result1 = runner.invoke(cli=cli.cli, args=args1)
 
         stderr1 = result1.stderr
@@ -197,6 +215,7 @@ class TestGrpCnx(object):
             "csv",
             "--include-settings",
         ]
+        dump_args_str(args2)
         result2 = runner.invoke(cli=cli.cli, args=args2, input=result1.stdout)
 
         stderr2 = result2.stderr
@@ -225,6 +244,7 @@ class TestGrpCnx(object):
         content = [{"x": "a"}]
 
         args1 = ["adapters", "cnx", "get", "--rows", "-"]
+        dump_args_str(args1)
         result1 = runner.invoke(cli=cli.cli, args=args1, input=tools.json_dump(content))
 
         stderr1 = result1.stderr
@@ -244,7 +264,16 @@ class TestGrpCnx(object):
         """Pass."""
         runner = utils.load_clirunner(request, monkeypatch)
 
-        args1 = ["adapters", "cnx", "add", "--adapter", "csv", "--show-config", "json"]
+        args1 = [
+            "adapters",
+            "cnx",
+            "add",
+            "--adapter",
+            constants.CSV_ADAPTER,
+            "--show-config",
+            "json",
+        ]
+        dump_args_str(args1)
         result1 = runner.invoke(cli=cli.cli, args=args1)
 
         stderr1 = result1.stderr
@@ -264,7 +293,16 @@ class TestGrpCnx(object):
         """Pass."""
         runner = utils.load_clirunner(request, monkeypatch)
 
-        args1 = ["adapters", "cnx", "add", "--adapter", "csv", "--show-config", "text"]
+        args1 = [
+            "adapters",
+            "cnx",
+            "add",
+            "--adapter",
+            constants.CSV_ADAPTER,
+            "--show-config",
+            "text",
+        ]
+        dump_args_str(args1)
         result1 = runner.invoke(cli=cli.cli, args=args1)
 
         stderr1 = result1.stderr
@@ -288,6 +326,7 @@ axonshell a c c -r - -ne | \
 axonshell a c di -r - -ne | \
 axonshell a c de -r - -f -w 0
         """
+        meta_keys = constants.CSV_KEYS_META
         with runner.isolated_filesystem():
             with open(csv_file, "w") as f:
                 f.write(csv_contents)
@@ -298,17 +337,35 @@ axonshell a c de -r - -f -w 0
                 "cnx",
                 "add",
                 "--adapter",
-                "csv",
+                constants.CSV_ADAPTER,
                 "--config",
-                "user_id={}".format(csv_file),
+                "{}={}".format(meta_keys["id"], csv_file),
                 "--config",
-                "is_users_csv=False",
+                "{}=False".format(meta_keys["is_users_csv"]),
                 "--config",
-                "is_installed_sw=False",
+                "{}=False".format(meta_keys["is_installed_sw"]),
                 "--config",
-                "csv={}".format(csv_path),
+                "{}={}".format(meta_keys["file"], csv_path),
                 "--no-prompt-opt",
             ]
+            dump_args_str(args1, csv_contents)
+
+            # args1 = [
+            #     "adapters",
+            #     "cnx",
+            #     "add",
+            #     "--adapter",
+            #     constants.CSV_ADAPTER,
+            #     "--config",
+            #     "user_id={}".format(csv_file),
+            #     "--config",
+            #     "is_users_csv=False",
+            #     "--config",
+            #     "is_installed_sw=False",
+            #     "--config",
+            #     "csv={}".format(csv_path),
+            #     "--no-prompt-opt",
+            # ]
             result1 = runner.invoke(cli=cli.cli, args=args1)
 
         stderr1 = result1.stderr
@@ -323,6 +380,7 @@ axonshell a c de -r - -f -w 0
         assert isinstance(json1, dict)
 
         args2 = ["adapters", "cnx", "check", "--rows", "-"]
+        dump_args_str(args2)
         result2 = runner.invoke(cli=cli.cli, args=args2, input=stdout1)
 
         stderr2 = result2.stderr
@@ -331,12 +389,13 @@ axonshell a c de -r - -f -w 0
 
         assert stdout2
         assert stderr2
-        assert exit_code2 == 1
+        assert exit_code2 == 0
 
         json2 = tools.json_load(stdout2)
         assert isinstance(json2, tools.LIST)
 
         args3 = ["adapters", "cnx", "discover", "--rows", "-"]
+        dump_args_str(args3)
         result3 = runner.invoke(cli=cli.cli, args=args3, input=stdout2)
 
         stderr3 = result3.stderr
@@ -351,6 +410,7 @@ axonshell a c de -r - -f -w 0
         assert isinstance(json3, tools.LIST)
 
         args4 = ["adapters", "cnx", "delete", "--rows", "-", "--force", "--wait", "0"]
+        dump_args_str(args4)
         result4 = runner.invoke(cli=cli.cli, args=args4, input=stdout3)
 
         stderr4 = result4.stderr
@@ -377,6 +437,7 @@ axonshell a c c -r - -ne | \
 axonshell a c di -r - -ne | \
 axonshell a c de -r - -f -w 0
         """
+        meta_keys = constants.CSV_KEYS_META
         with runner.isolated_filesystem():
             with open(csv_file, "w") as f:
                 f.write(csv_contents)
@@ -387,17 +448,18 @@ axonshell a c de -r - -f -w 0
                 "cnx",
                 "add",
                 "--adapter",
-                "csv",
+                constants.CSV_ADAPTER,
                 "--config",
-                "user_id={}".format(csv_file),
+                "{}={}".format(meta_keys["id"], csv_file),
                 "--config",
-                "is_users_csv=False",
+                "{}=False".format(meta_keys["is_users_csv"]),
                 "--config",
-                "is_installed_sw=False",
+                "{}=False".format(meta_keys["is_installed_sw"]),
                 "--config",
-                "csv={}".format(csv_path),
+                "{}={}".format(meta_keys["file"], csv_path),
                 "--no-prompt-opt",
             ]
+            dump_args_str(args1, csv_contents)
             result1 = runner.invoke(cli=cli.cli, args=args1)
 
         stderr1 = result1.stderr
@@ -412,6 +474,7 @@ axonshell a c de -r - -f -w 0
         assert isinstance(json1, dict)
 
         args2 = ["adapters", "cnx", "check", "--rows", "-"]
+        dump_args_str(args2)
         result2 = runner.invoke(cli=cli.cli, args=args2, input=stdout1)
 
         stderr2 = result2.stderr
@@ -426,6 +489,7 @@ axonshell a c de -r - -f -w 0
         assert isinstance(json2, tools.LIST)
 
         args3 = ["adapters", "cnx", "discover", "--rows", "-"]
+        dump_args_str(args3)
         result3 = runner.invoke(cli=cli.cli, args=args3, input=stdout2)
 
         stderr3 = result3.stderr
@@ -440,6 +504,7 @@ axonshell a c de -r - -f -w 0
         assert isinstance(json3, tools.LIST)
 
         args4 = ["adapters", "cnx", "delete", "--rows", "-", "--force", "--wait", "0"]
+        dump_args_str(args4)
         result4 = runner.invoke(cli=cli.cli, args=args4, input=stdout3)
 
         stderr4 = result4.stderr
@@ -469,6 +534,7 @@ axonshell a c de -r - -f -w 0
         runner = utils.load_clirunner(request, monkeypatch)
 
         args1 = ["adapters", "cnx", "delete", "--rows", "-", "--force", "--wait", "0"]
+        dump_args_str(args1)
         result1 = runner.invoke(
             cli=cli.cli, args=args1, input=tools.json_dump(delete_me)
         )
@@ -492,6 +558,7 @@ axonshell a c de -r - -f -w 0
                 f.write(meta.adapters.FAKE_FILE_CONTENTS)
 
             args1 = ["adapters", "cnx", "add", "--adapter", "active_directory"]
+            dump_args_str(args1, meta.adapters.FAKE_FILE_CONTENTS)
             for k, v in meta.adapters.AD_CONFIG_SCHEMA_LIST:
                 args1.append("--config")
                 args1.append("{}={}".format(k, v))
@@ -510,6 +577,7 @@ axonshell a c de -r - -f -w 0
         assert isinstance(json1, dict)
 
         args2 = ["adapters", "cnx", "delete", "--rows", "-", "--force", "--wait", "0"]
+        dump_args_str(args2)
         result2 = runner.invoke(cli=cli.cli, args=args2, input=stdout1)
 
         stderr2 = result2.stderr
@@ -537,6 +605,7 @@ axonshell a c de -r - -f -w 0
         for s in skips:
             args1 += ["--skip", s]
 
+        dump_args_str(args1)
         result1 = runner.invoke(cli=cli.cli, args=args1, input="\n".join(configs))
 
         stderr1 = result1.stderr
@@ -564,6 +633,7 @@ axonshell a c de -r - -f -w 0
             "0",
             "--no-error",
         ]
+        dump_args_str(args2)
         result2 = runner.invoke(cli=cli.cli, args=args2, input=stdout1_stripped)
 
         stderr2 = result2.stderr
@@ -582,6 +652,7 @@ axonshell a c de -r - -f -w 0
         runner = utils.load_clirunner(request, monkeypatch)
 
         args1 = ["adapters", "get", "-n", "active_directory"]
+        dump_args_str(args1)
         result1 = runner.invoke(cli=cli.cli, args=args1)
 
         stderr1 = result1.stderr
@@ -594,6 +665,7 @@ axonshell a c de -r - -f -w 0
         assert isinstance(tools.json_load(result1.stdout), tools.LIST)
 
         args3 = ["-nw", "adapters", "cnx", "check", "-r", "-", "-ne", "-xt", "csv"]
+        dump_args_str(args3)
         result3 = runner.invoke(cli=cli.cli, args=args3, input=result1.stdout)
 
         stderr3 = result3.stderr

@@ -30,6 +30,14 @@ class BetaWarning(AxonWarning):
         super(AxonWarning, self).__init__(msg)
 
 
+class DiscoverError(AxonError):
+    """Parent exception for all Discover errors."""
+
+
+class DiscoverWarning(AxonWarning):
+    """Parent exception for all Discover errors."""
+
+
 class ToolsError(AxonError):
     """Parent exception for all tools errors."""
 

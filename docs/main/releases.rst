@@ -24,6 +24,25 @@ Major releases: x.0.0:
 Changelog
 ==================================================
 
+`2.3.0`_ (2020-02-12)
+--------------------------------------------------
+
+### Enhancements
+
+* API Additions (CLI support coming in 2.4.0)
+
+  * :blue:`enhancement`: Get the discover status
+  * :blue:`enhancement`: Start a discover
+  * :blue:`enhancement`: Stop a discover
+  * :blue:`enhancement`: Get System Settings > About tab
+  * :blue:`enhancement`: Get and update System Settings > Lifecycle Settings tab
+  * :blue:`enhancement`: Get and update System Settings > GUI Settings tab
+  * :blue:`enhancement`: Get and update System Settings > Global Settings tab
+  * :blue:`enhancement`: Get, create, update, and remove System Settings > Users
+  * :blue:`enhancement`: Get, create, update, and remove System Settings > Roles
+  * :blue:`enhancement`: Get and update Adapter > Advanced Settings
+  * :blue:`enhancement`: Get, update, and remove Instances
+
 `2.2.0`_ (2020-02-08)
 --------------------------------------------------
 
@@ -82,3 +101,4 @@ Changelog
 .. _2.0.0: https://github.com/Axonius/axonius_api_client/releases/tag/2.0.0
 .. _2.1.4: https://github.com/Axonius/axonius_api_client/releases/tag/2.1.4
 .. _2.2.0: https://github.com/Axonius/axonius_api_client/releases/tag/2.2.0
+.. _2.3.0: https://github.com/Axonius/axonius_api_client/releases/tag/2.3.0
