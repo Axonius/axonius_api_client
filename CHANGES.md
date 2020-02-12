@@ -1,5 +1,24 @@
 # Release notes
 
+## 2.3.0
+
+Release date: 2020-02-12
+
+### Enhancements
+
+* API Additions (CLI support coming in 2.4.0)
+  * Get the discover status
+  * Start a discover
+  * Stop a discover
+  * Get System Settings > About tab
+  * Get and update System Settings > Lifecycle Settings tab
+  * Get and update System Settings > GUI Settings tab
+  * Get and update System Settings > Global Settings tab
+  * Get, create, update, and remove System Settings > Users
+  * Get, create, update, and remove System Settings > Roles
+  * Get and update Adapter > Advanced Settings
+  * Get, update, and remove Instances
+
 ## 2.2.0
 
 Release date: 2020-02-08
