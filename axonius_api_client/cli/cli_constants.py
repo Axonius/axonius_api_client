@@ -105,3 +105,5 @@ SETTING_TYPE_MAP = {
         path_type=None,
     ),
 }
+
+EXPORT_FORMATS = ["csv", "json", "table"]

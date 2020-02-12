@@ -29,7 +29,9 @@ def apiobj(request):
 @pytest.fixture(scope="module")
 def csv_adapter(apiobj):
     """Pass."""
-    return apiobj.get_single(adapter="csv", node="master")
+    return apiobj.get_single(
+        adapter=constants.CSV_ADAPTER, node=meta.adapters.DEFAULT_NODE
+    )
 
 
 class TestAdapters(object):
@@ -51,11 +53,11 @@ class TestAdapters(object):
             apiobj.get_single(adapter="badwolf")
 
         with pytest.raises(exceptions.ValueNotFound):
-            apiobj.get_single(adapter="csv", node="badwolf")
+            apiobj.get_single(adapter=constants.CSV_ADAPTER, node="badwolf")
 
-        data = apiobj.get_single(adapter="csv")
+        data = apiobj.get_single(adapter=constants.CSV_ADAPTER)
         assert isinstance(data, dict)
-        assert data["name"] == "csv"
+        assert data["name"] == constants.CSV_ADAPTER
 
         data1 = apiobj.get_single(adapter=data)
         assert data1 == data
@@ -65,7 +67,7 @@ class TestAdapters(object):
         data = apiobj._upload_file(
             adapter_name=csv_adapter["name_raw"],
             node_id=csv_adapter["node_id"],
-            field="csv",
+            field=constants.CSV_ADAPTER,
             name=meta.adapters.CSV_FILENAME,
             content=meta.adapters.CSV_FILECONTENT_BYTES,
         )
@@ -76,7 +78,7 @@ class TestAdapters(object):
         data = apiobj._upload_file(
             adapter_name=csv_adapter["name_raw"],
             node_id=csv_adapter["node_id"],
-            field="csv",
+            field=constants.CSV_ADAPTER,
             name=meta.adapters.CSV_FILENAME,
             content=meta.adapters.CSV_FILECONTENT_STR,
         )
@@ -88,7 +90,7 @@ class TestAdapters(object):
         """Pass."""
         data = apiobj.upload_file_str(
             adapter=csv_adapter,
-            field="csv",
+            field=constants.CSV_ADAPTER,
             name=meta.adapters.CSV_FILENAME,
             content=meta.adapters.CSV_FILECONTENT_BYTES,
         )
@@ -98,7 +100,7 @@ class TestAdapters(object):
 
         data = apiobj.upload_file_str(
             adapter=csv_adapter,
-            field="csv",
+            field=constants.CSV_ADAPTER,
             name=meta.adapters.CSV_FILENAME,
             content=meta.adapters.CSV_FILECONTENT_STR,
         )
@@ -111,14 +113,18 @@ class TestAdapters(object):
         test_path = tmp_path / meta.adapters.CSV_FILENAME
         test_path.write_text(meta.adapters.CSV_FILECONTENT_STR)
 
-        data = apiobj.upload_file_path(adapter=csv_adapter, field="csv", path=test_path)
+        data = apiobj.upload_file_path(
+            adapter=csv_adapter, field=constants.CSV_ADAPTER, path=test_path
+        )
         assert isinstance(data, dict)
         assert isinstance(data["uuid"], tools.STR)
         assert data["filename"] == meta.adapters.CSV_FILENAME
 
         test_path.write_bytes(meta.adapters.CSV_FILECONTENT_BYTES)
 
-        data = apiobj.upload_file_path(adapter=csv_adapter, field="csv", path=test_path)
+        data = apiobj.upload_file_path(
+            adapter=csv_adapter, field=constants.CSV_ADAPTER, path=test_path
+        )
         assert isinstance(data, dict)
         assert isinstance(data["uuid"], tools.STR)
         assert data["filename"] == meta.adapters.CSV_FILENAME
@@ -177,13 +183,17 @@ class TestAdapters(object):
     def test_filter_by_nodes_regex(self, apiobj):
         """Pass."""
         data = apiobj.filter_by_nodes(
-            value="master", value_regex=True, adapters=meta.adapters.FAKE_ADAPTERS
+            value=meta.adapters.DEFAULT_NODE,
+            value_regex=True,
+            adapters=meta.adapters.FAKE_ADAPTERS,
         )
         assert isinstance(data, tools.LIST)
         assert len(data) >= 1
 
         data = apiobj.filter_by_nodes(
-            value="master", value_regex=True, adapters=meta.adapters.FAKE_ADAPTERS
+            value=meta.adapters.DEFAULT_NODE,
+            value_regex=True,
+            adapters=meta.adapters.FAKE_ADAPTERS,
         )
         assert isinstance(data, tools.LIST)
         assert len(data) >= 1
@@ -303,17 +313,19 @@ class TestCnx(object):
         """Pass."""
         uploaded = apiobj.upload_file_str(
             adapter=csv_adapter,
-            field="csv",
+            field=constants.CSV_ADAPTER,
             name=name,
             content=meta.adapters.CSV_FILECONTENT_BYTES,
             content_type="text/csv",
         )
 
+        meta_keys = constants.CSV_KEYS_META
+
         config = {}
-        config["is_users_csv"] = False
-        config["is_installed_sw"] = False
-        config["user_id"] = "private_create_csv"
-        config["csv"] = uploaded
+        config[meta_keys["is_users_csv"]] = False
+        config[meta_keys["is_installed_sw"]] = False
+        config[meta_keys["id"]] = "private_create_csv"
+        config[meta_keys["file"]] = uploaded
 
         added = apiobj.cnx._add(
             adapter_name=csv_adapter["name_raw"],
@@ -399,11 +411,12 @@ class TestCnx(object):
 
         assert isinstance(response, requests.Response)
 
-        checked = response.json()
+        assert not response.text
+        # checked = response.json()
 
-        assert isinstance(checked["message"], tools.STR)
-        assert checked["status"] == "error"
-        assert checked["type"] == "NotImplementedError"
+        # assert isinstance(checked["message"], tools.STR)
+        # assert checked["status"] == "error"
+        # assert checked["type"] == "NotImplementedError"
 
         self._delete_csv(apiobj, csv_adapter, added)
 
@@ -462,21 +475,21 @@ class TestCnx(object):
         cnxs = apiobj.cnx.get(adapter=csv_adapter)
         assert isinstance(cnxs, tools.LIST)
         for x in cnxs:
-            assert x["adapter_name"] == "csv"
+            assert x["adapter_name"] == constants.CSV_ADAPTER
 
     def test_get_str(self, apiobj):
         """Pass."""
-        cnxs = apiobj.cnx.get(adapter="csv")
+        cnxs = apiobj.cnx.get(adapter=constants.CSV_ADAPTER)
         assert isinstance(cnxs, tools.LIST)
         for x in cnxs:
-            assert x["adapter_name"] == "csv"
+            assert x["adapter_name"] == constants.CSV_ADAPTER
 
     def test_get_list(self, apiobj):
         """Pass."""
-        cnxs = apiobj.cnx.get(adapter=["csv", "active_directory"])
+        cnxs = apiobj.cnx.get(adapter=[constants.CSV_ADAPTER, "active_directory"])
         assert isinstance(cnxs, tools.LIST)
         for x in cnxs:
-            assert x["adapter_name"] in ["csv", "active_directory"]
+            assert x["adapter_name"] in [constants.CSV_ADAPTER, "active_directory"]
 
     def test_get_none(self, apiobj):
         """Pass."""

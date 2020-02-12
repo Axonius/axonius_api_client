@@ -28,7 +28,7 @@ def log_check(caplog, entries):
 
 def get_url(request):
     """Pass."""
-    return request.config.getoption("--ax-url")
+    return request.config.getoption("--ax-url").rstrip("/")
 
 
 def get_key_creds(request):

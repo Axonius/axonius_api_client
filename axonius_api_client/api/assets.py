@@ -9,7 +9,7 @@ from .. import constants, exceptions, tools
 from . import adapters, mixins, routers
 
 
-class UserDeviceMixin(mixins.ModelUserDevice, mixins.Mixins):
+class AssetMixin(mixins.ModelAsset, mixins.Mixins):
     """Mixins for User & Device models."""
 
     def _init(self, auth, **kwargs):
@@ -23,7 +23,7 @@ class UserDeviceMixin(mixins.ModelUserDevice, mixins.Mixins):
         self.fields = Fields(parent=self)
         self.reports = Reports(parent=self)
 
-        super(UserDeviceMixin, self)._init(auth=auth, **kwargs)
+        super(AssetMixin, self)._init(auth=auth, **kwargs)
 
     def _count(self, query=None):
         """Pass."""
@@ -373,7 +373,7 @@ class UserDeviceMixin(mixins.ModelUserDevice, mixins.Mixins):
         return rows
 
 
-class Users(UserDeviceMixin):
+class Users(AssetMixin):
     """User related API methods."""
 
     @property
@@ -436,7 +436,7 @@ class Users(UserDeviceMixin):
         return self.get_by_value(value=value, field="specific_data.data.mail", **kwargs)
 
 
-class Devices(UserDeviceMixin):
+class Devices(AssetMixin):
     """Device related API methods."""
 
     @property

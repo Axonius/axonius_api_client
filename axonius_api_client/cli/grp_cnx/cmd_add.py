@@ -4,7 +4,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import click
 
-from ... import tools
+from ... import tools, constants
 from .. import cli_constants, click_ext, options, serial
 from . import grp_common
 
@@ -32,7 +32,7 @@ from . import grp_common
     "-n",
     "node",
     help="The name of the node running --adapter to add the connection to.",
-    default="master",
+    default=constants.DEFAULT_NODE,
     show_envvar=True,
     show_default=True,
 )
