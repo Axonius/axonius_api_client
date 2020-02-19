@@ -56,6 +56,7 @@ class AssetMixin(mixins.ModelAsset, mixins.Mixins):
 
                 Defaults to: 0.
 
+
         Returns:
             :obj:`dict`
 
