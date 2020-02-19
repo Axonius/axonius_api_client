@@ -4,6 +4,7 @@
 
 Release date: 2020-02-12
 
+
 ### Enhancements
 
 * API Additions (CLI support coming in 2.4.0)
