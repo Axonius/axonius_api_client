@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 """Test suite for axonapi.api.users_devices."""
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
 import warnings
 
+import axonius_api_client as axonapi
 import pytest
 import requests
-
-import axonius_api_client as axonapi
 from axonius_api_client import constants, exceptions, tools
 
 from .. import meta, utils
@@ -1153,7 +1153,7 @@ class TestParserAdapters(object):
 
         assert not cnx
 
-    def validate_settings(self, settings, check_value):
+    def validate_settings(self, name, settings, check_value):
         """Pass."""
         for name, item in settings.items():
             item_name = item.pop("name")
@@ -1182,7 +1182,11 @@ class TestParserAdapters(object):
             assert isinstance(item_format, tools.STR)
             assert isinstance(item_description, tools.STR)
             assert isinstance(item_required, bool)
-            assert item_type in ["number", "integer", "string", "bool", "array", "file"]
+            if item_type not in meta.adapters.SCHEMA_TYPES:
+                msg = "Setting for adapter {!r} has an unexpected item_type {!r}"
+                msg = msg.format(name, item_type)
+                warnings.warn(msg)
+
             assert isinstance(item_idx, tools.INT)
             assert not item
 
@@ -1227,9 +1231,9 @@ class TestParserAdapters(object):
         assert isinstance(adv_settings, dict)
         assert isinstance(idx, tools.INT)
 
-        self.validate_settings(settings, True)
-        self.validate_settings(adv_settings, True)
-        self.validate_settings(cnx_settings, False)
+        self.validate_settings(name, settings, True)
+        self.validate_settings(name, adv_settings, True)
+        self.validate_settings(name, cnx_settings, False)
 
         for cnxs in [cnx, cnx_ok, cnx_bad]:
             assert isinstance(cnxs, tools.LIST)
@@ -1342,7 +1346,10 @@ class TestRawAdapters(object):
             assert isinstance(item_format, tools.STR)
             assert isinstance(item_description, tools.STR)
             assert isinstance(item_req, bool)
-            assert item_type in ["number", "integer", "string", "bool", "array", "file"]
+            if item_type not in meta.adapters.SCHEMA_TYPES:
+                msg = "Setting for adapter {!r} has an unexpected item_type {!r}"
+                msg = msg.format(name, item_type)
+                warnings.warn(msg)
             assert not item
 
         assert not schema

@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Command line interface for Axonius API Client."""
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
 import atexit
 
@@ -51,6 +52,8 @@ def cmd(ctx, url, key, secret):  # noqa: D301
         "a": client.adapters,
         "jdump": jdump,
         "j": jdump,
+        "s": client.system,
+        "system": client.system,
     }
 
     spawn_shell(shellvars)

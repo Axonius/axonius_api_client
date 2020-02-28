@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 """Test suite for axonapi.api.users_devices."""
-from __future__ import absolute_import, division, print_function, unicode_literals
-
-import pytest
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
 import axonius_api_client as axonapi
+import pytest
 from axonius_api_client import exceptions, tools
 
-from .. import utils, meta
+from .. import meta, utils
 
 
 @pytest.fixture(scope="module")
@@ -363,7 +363,10 @@ class TestSystemUsers(object):
         assert isinstance(data, tools.LIST)
         for x in data:
             assert isinstance(x, dict)
-        assert len(data) == len(all_data[:1])
+        if len(all_data) == 1:
+            assert len(data) == 0
+        else:
+            assert len(data) == 1
 
     def test_add_get_update_delete(self, childobj):
         """Pass."""
