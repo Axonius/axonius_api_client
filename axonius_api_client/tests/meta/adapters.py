@@ -1,5 +1,8 @@
 """Metadata for adapters."""
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
+
+SCHEMA_TYPES = ["number", "integer", "string", "bool", "array", "file"]
 
 DEFAULT_NODE = "master"
 

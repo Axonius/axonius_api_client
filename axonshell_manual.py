@@ -31,7 +31,7 @@ if __name__ == "__main__":
         cert_client_key=AX_CLIENT_CERT_KEY,
         log_level_console="debug",
         log_level_api="debug",
-        log_console=True,
+        # log_console=True,
     )
 
     ctx.start()

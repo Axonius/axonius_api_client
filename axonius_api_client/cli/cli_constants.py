@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Command line interface for Axonius API Client."""
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
 import csv
 import os
@@ -54,10 +55,13 @@ SHELL_BANNER = """Welcome human. We have some refreshments available for you:
 
     - ctx: Click context object
     - client/c: Instance of axonius_api_client.connect.Connect
+    - jdump/j: Helper function to pretty print python objects
+
+API Objects:
+    - adapters/a: Instance of axonius_api_client.api.Adapters
     - devices/d: Instance of axonius_api_client.api.Devices
     - users/u: Instance of axonius_api_client.api.Users
-    - adapters/a: Instance of axonius_api_client.api.Adapters
-    - jdump/j: Helper function to pretty print python objects
+    - system/s: Instance of axonius_api_client.api.System
 """
 
 SHELL_EXIT = """Goodbye human. We hope you enjoyed your stay."""
