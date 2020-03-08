@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 """Sphinx config."""
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
 import axonius_api_client as pkg  # noqa
-
 import sphinx_rtd_theme
 
 # -- Project information -------------------------------------------
