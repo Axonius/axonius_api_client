@@ -1,15 +1,15 @@
 # -*- coding: utf-8 -*-
 """Test suite for axonapi.api.assets."""
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
 import datetime
 import json
 import re
 
+import axonius_api_client as axonapi
 import pytest
 import six
-
-import axonius_api_client as axonapi
 from axonius_api_client import exceptions, tools
 
 from .. import meta, utils
@@ -1319,6 +1319,10 @@ def val_items(aname, items):
         description = items.pop("description", "")
         branched = items.pop("branched", False)
         dynamic = items.pop("dynamic", False)
+
+        hidden = items.pop("hidden", None)
+        assert isinstance(hidden, bool) or hidden is None
+
         source = items.pop("source", {})
         assert isinstance(source, dict)
 

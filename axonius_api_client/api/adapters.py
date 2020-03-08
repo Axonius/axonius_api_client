@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """API module for working with adapters."""
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
 import re
 import time
@@ -470,11 +471,14 @@ class Adapters(mixins.Model, mixins.Mixins):
         )
 
     def _get_config(self, adapter_name, config_name):
-        """Pass."""
+        """Pass.
+
+        adapter_name is the unique_plugin_name, ala tanium_sq_adapter_0
+        """
         path = self._router.config.format(
             adapter_name=adapter_name, config_name=config_name
         )
-        return self._request(method="get", path=path,)
+        return self._request(method="get", path=path)
 
     @property
     def _router(self):
@@ -485,6 +489,15 @@ class Adapters(mixins.Model, mixins.Mixins):
 
         """
         return routers.ApiV1.adapters
+
+    def _download_file(self, adapter_name, node_id, cnx_id, schema_key):
+        """Pass."""
+        data = {"uuid": cnx_id, "schema_key": schema_key}
+        path = self._router.download_file.format(
+            adapter_name=adapter_name, node_id=node_id
+        )
+        ret = self._request(method="post", path=path, json=data, raw=True)
+        return ret
 
     def _upload_file(
         self,

@@ -1,7 +1,8 @@
 #!/usr/bin/env python -i
 # -*- coding: utf-8 -*-
 """Utilities for this package."""
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
 import os
 
@@ -31,7 +32,7 @@ if __name__ == "__main__":
         cert_client_key=AX_CLIENT_CERT_KEY,
         log_level_console="debug",
         log_level_api="debug",
-        log_console=True,
+        # log_console=True,
     )
 
     ctx.start()
@@ -41,3 +42,12 @@ if __name__ == "__main__":
     adapters = ctx.adapters
     enforcements = ctx.enforcements
     system = ctx.system
+
+# WIP CODE FOR _download_file
+# csv = adapters.get_single("csv")
+# adapter_name = csv["name_raw"]
+# node_id = csv["node_id"]
+# cnx = csv["cnx"][0]
+# cnx_uuid = cnx["uuid"]
+
+# ret = adapters._download_file(adapter_name, node_id, cnx_uuid, "file_path")

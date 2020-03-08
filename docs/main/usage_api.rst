@@ -8,6 +8,8 @@ API Usage
 
    usage_api/quickstart.rst
 
+New!!  `OpenAPI Specification <../_static/api_oas.html>`_
+
 .. todo::
 
    The API library documentation and examples need to be flushed out, but time
