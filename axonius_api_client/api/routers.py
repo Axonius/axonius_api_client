@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Constants for this package."""
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
 from .. import tools
 
@@ -90,6 +91,7 @@ class ApiV1(object):
         cnxs="{adapter_name}/clients",
         cnxs_uuid="{adapter_name}/clients/{cnx_uuid}",
         upload_file="{adapter_name}/{node_id}/upload_file",
+        download_file="{adapter_name}/{node_id}/download_file",
         config="{adapter_name}/config/{config_name}",
     )
 
