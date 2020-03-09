@@ -13,10 +13,9 @@ info:
   version: 1.0.0
 servers:
   - url: /api/V1
-  - url: 'https://10.20.0.18/api/V1'
 security:
   - api_key: []
-  - api_secret: []
+    api_secret: []
 tags:
   - name: Devices
     description: Endpoints for device assets
