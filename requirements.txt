@@ -3,6 +3,6 @@ python-dotenv
 python-dateutil
 click
 pyreadline ; platform_system == "Windows"
-pathlib2 ; python_version < '3.0'
+pathlib2 ; python_version < '3.7'
 tabulate
 six>=1.14.0
