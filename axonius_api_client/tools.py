@@ -30,7 +30,7 @@ def val_type(value, types):
     Args:
         value (:obj:`object`) -
             Object to check type of
-        types (:obj:`tuple` of :obj:`type`) -
+        types (:obj:`tuple` of :class:`type`) -
             Tuple of types
 
     Raises:
@@ -418,13 +418,19 @@ def json_dump(obj, indent=2, sort_keys=False, error=True, **kwargs):
         obj (:obj:`object`) -
             Object to serialize into str format
         indent (:obj:`int`, optional) -
-            * Make json pretty with this many indents
+            Make json pretty with this many indents
+
+            Defaults to: ``2``
         sort_keys (:obj:`bool`, optional) -
             * True: Sort keys of dicts
             * False: Leave keys of dicts sorted as is
+
+            Defaults to: ``False``
         error (:obj:`bool`, optional) -
             * True: If json error happens, raise it
             * False: If json error happens, return original obj as is
+
+            Defaults to: ``True``
         **kwargs: Passed to :func:`json.dumps`
 
     Returns:
@@ -449,6 +455,8 @@ def json_load(obj, error=True, **kwargs):
         error (:obj:`bool`, optional) -
             * True: If json error happens, raise it
             * False: If json error happens, return original obj as is
+
+            Defaults to: ``True``
         **kwargs: Passed to :func:`json.loads`
 
     Returns:
@@ -471,6 +479,8 @@ def json_reload(obj, error=False, **kwargs):
         error (:obj:`bool`, optional) -
             * True: If json error happens, raise it
             * False: If json error happens, return original obj as is
+
+            Defaults to: ``False``
         **kwargs: Passed to :func:`json_dump`
 
     Returns:
@@ -488,7 +498,20 @@ def json_reload(obj, error=False, **kwargs):
 
 
 def dt_parse(obj):
-    """Pass."""
+    """Parse a str, datetime, or timedelta into a datetime object.
+
+    Args:
+        obj (:obj:`str` or :obj:`datetime.datetime` or :obj:`datetime.timedelta`) -
+            object or list of objects, will be parsed using
+            meth:`dateutil.parser.parse` as follows:
+
+            * str: will be parsed into datetime obj
+            * timedelta: will be parsed into datetime obj as now - timedelta
+            * datetime: will be re-parsed into datetime obj
+
+    Returns:
+        :obj:`datetime.datetime`
+    """
     if isinstance(obj, constants.LIST) and all(
         [isinstance(x, constants.STR) for x in obj]
     ):
@@ -504,7 +527,21 @@ def dt_parse(obj):
 
 
 def dt_now(delta=None, tz=dateutil.tz.tzutc()):
-    """Pass."""
+    """Get the current datetime in for a specific tz.
+
+    Args:
+        delta (:obj:`datetime.timedelta`, optional) -
+            return the current datetime - supplied timedelta
+
+            Defaults to: ``None``
+        tz (:obj:`datetime.timezone`, optional) -
+            return the current datetime for a specific timezone
+
+            Defaults to: :obj:`dateutil.tz.tzutc`
+
+    Returns:
+        :obj:`datetime.datetime`
+    """
     if isinstance(delta, timedelta):
         return dt_parse(obj=delta)
 
@@ -512,19 +549,47 @@ def dt_now(delta=None, tz=dateutil.tz.tzutc()):
 
 
 def dt_sec_ago(obj):
-    """Pass."""
+    """Get number of seconds ago a given datetime was.
+
+    Args:
+        obj (:obj:`object`) -
+            will be parsed by :meth:`dt_parse` into a datetime obj
+
+    Returns:
+        :obj:`int`
+    """
     obj = dt_parse(obj=obj)
     now = dt_now(tz=obj.tzinfo)
     return round((now - obj).total_seconds())
 
 
 def dt_min_ago(obj):
-    """Pass."""
+    """Get number of minutes ago a given datetime was.
+
+    Args:
+        obj (:obj:`object`) -
+            will be parsed by :meth:`dt_sec_ago` into seconds ago
+
+    Returns:
+        :obj:`int`
+    """
     return round(dt_sec_ago(obj=obj) / 60)
 
 
 def dt_within_min(obj, n=None):
-    """Pass."""
+    """Check if given datetime is within the past n minutes.
+
+    Args:
+        obj (:obj:`object`) -
+            will be parsed by :meth:`dt_min_ago` into minutes ago
+        n (:obj:`int` or :obj:`str`, optional) -
+            int of dt_min_ago(obj) should be greater than or equal to
+
+            Defaults to: ``None``
+
+    Returns:
+        :obj:`bool`
+    """
     if not is_int(obj=n, digit=True):
         return False
 
@@ -532,7 +597,15 @@ def dt_within_min(obj, n=None):
 
 
 def path(obj):
-    """Pass."""
+    """Convert a str into a fully resolved & expanded Path object.
+
+    Args:
+        obj (:obj:`str` or :obj:`pathlib.Path`) -
+            Will convert into expanded and resolved absolute Path obj
+
+    Returns:
+        :obj:`pathlib.Path`
+    """
     args = {}
     # if not PY35:
     args["strict"] = False
@@ -540,7 +613,32 @@ def path(obj):
 
 
 def path_read(obj, binary=False, is_json=False, **kwargs):
-    """Pass."""
+    """Read data from a file.
+
+    If path filename ends with ".json", deserializes data using :meth:`json_load`.
+
+    Args:
+        obj (:obj:`str` or :obj:`pathlib.Path`) -
+            path to open - will be parsed by :meth:`path`
+        binary (:obj:`bool`, optional) -
+            * True: read the data as binary
+            * False: read the data as str
+
+            Defaults to: ``False``
+        is_json (:obj:`bool`, optional) -
+            * True: deserialize data using :meth:`json_load`
+            * False: do not deserialize data
+
+            Defaults to: ``False``
+        **kwargs: Passed to :meth:`json_load`
+
+    Returns:
+        :obj:`tuple` of (:obj:`pathlib.Path`, :obj:`object`)
+
+    Raises:
+        :exc:`exceptions.ToolsError`:
+            If path does not exist as file
+    """
     robj = path(obj=obj)
 
     if not robj.is_file():
@@ -577,18 +675,71 @@ def path_write(
     **kwargs
     # fmt: on
 ):
-    """Pass."""
+    """Write data to a file.
+
+    If obj filename ends with ".json", serializes data using :meth:`json_dump`.
+
+    Args:
+        obj (:obj:`str` or :obj:`pathlib.Path`) -
+            path to open - will be parsed by :meth:`path`
+        data (:obj:`str` or :obj:`bytes` or :obj:`object`) -
+            data to write to obj
+        overwrite (:obj:`bool`, optional) -
+            * True: overwrite obj
+            * False: do not overwrite obj, raise exception if it already exists
+
+            Defaults to: ``False``
+        binary (:obj:`bool`, optional) -
+            * True: write the data as binary
+            * False: write the data as str
+
+            Defaults to: ``False``
+        binary_encoding (:obj:`str`, optional):
+            encoding to use when switching from str/bytes
+
+            Defaults to: ``"utf-8"``
+        is_json (:obj:`bool`, optional) -
+            * True: Serialize data using :meth:`json_load` before writing
+            * False: Do not serialize data before writing
+
+            Defaults to: ``False``
+        make_parent (:obj:`bool`, optional) -
+            * True: If the parent directory does not exist, create it
+            * False: If the parent directory does not exist, raise exception
+
+            Defaults to: ``True``
+        protect_file (:obj:`oct`) -
+            octal mode of permissions to set on file
+
+            Defaults to: ``0o600`` (read/write to owner only)
+        protect_dir (:obj:`oct`) -
+            octal mode of permissions to set on parent directory when creating
+
+            Defaults to: ``0o700`` (read/write/execute to owner only)
+        **kwargs: Passed to :meth:`json_dump`
+
+    Returns:
+        :obj:`tuple` of (:obj:`pathlib.Path`, method):
+            tuple of (resolved path obj, method used to write data to file)
+
+    Raises:
+        :exc:`exceptions.ToolsError`:
+            If path exists as file and overwrite is False or if
+            parent path does not exist and make_parent is False
+    """
     obj = path(obj=obj)
 
     if is_json:
         data = json_dump(obj=data, **kwargs)
 
-    if obj.suffix == ".json" and not isinstance(data, constants.STR):
+    if obj.suffix == ".json" and not (
+        isinstance(data, constants.STR) or isinstance(data, constants.BYTES)
+    ):
         kwargs.setdefault("error", False)
         data = json_dump(obj=data, **kwargs)
 
     if binary:
-        if not isinstance(data, constants.BYTES):
+        if isinstance(data, constants.STR):
             data = data.encode(binary_encoding)
         method = obj.write_bytes
     else:

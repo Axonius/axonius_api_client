@@ -106,6 +106,7 @@ intersphinx_mapping = {
     "python": ("http://docs.python.org/3", None),
     "requests": ("https://requests.readthedocs.io/en/master/", None),
     "urllib3": ("https://urllib3.readthedocs.io/en/latest/", None),
+    "dateutil": ("https://dateutil.readthedocs.io/en/latest/", None),
 }
 
 # -- Options for todo ----------------------------------------------
