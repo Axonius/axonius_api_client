@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Axonius API Client utility tools module."""
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
 import logging
 import logging.handlers
@@ -58,7 +59,7 @@ def str_level(level):
         if hasattr(logging, level_mapped):
             return level_mapped
 
-    if isinstance(level, tools.STR):
+    if isinstance(level, constants.STR):
         if hasattr(logging, level.upper()):
             return level.upper()
 

@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 """API module for working with system configuration."""
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
 import warnings
 
-from .. import exceptions, tools, constants
+from .. import constants, exceptions, tools
 from . import mixins, routers
 
 
@@ -318,7 +319,7 @@ class Aggregation(mixins.Child):
         Returns:
             dict: aggregation settings with updated value
         """
-        tools.val_type(value=value, types=tools.INT)
+        tools.val_type(value=value, types=constants.INT)
         settings = self._parent.get()
         settings[self._subkey]["max_workers"] = value
         self._parent.update(config=settings)
@@ -336,7 +337,7 @@ class Aggregation(mixins.Child):
         Returns:
             dict: aggregation settings with updated value
         """
-        tools.val_type(value=value, types=tools.INT)
+        tools.val_type(value=value, types=constants.INT)
         settings = self._parent.get()
         settings[self._subkey]["socket_read_timeout"] = value
         self._parent.update(config=settings)

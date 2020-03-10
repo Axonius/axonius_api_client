@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 """Test suite for axonius_api_client.tools."""
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
 import os
 
 import pytest
-from click.testing import CliRunner
-
 from axonius_api_client import cli, connect, tools
+from click.testing import CliRunner
 
 from .. import utils
 

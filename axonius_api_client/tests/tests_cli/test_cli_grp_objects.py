@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 """Test suite for axonius_api_client.tools."""
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
 import pytest
-
-from axonius_api_client import api, cli, tools
+from axonius_api_client import api, cli, constants, tools
 
 from .. import utils
 
@@ -37,7 +37,7 @@ class TestCmdCount(object):
         assert exit_code1 == 0
 
         json1 = tools.json_load(result1.stdout)
-        assert isinstance(json1, tools.INT)
+        assert isinstance(json1, constants.INT)
 
     def test_json(self, request, monkeypatch, cmd):
         """Pass."""
@@ -56,7 +56,7 @@ class TestCmdCount(object):
         assert exit_code1 == 0
 
         json1 = tools.json_load(result1.stdout)
-        assert isinstance(json1, tools.INT)
+        assert isinstance(json1, constants.INT)
 
 
 @pytest.mark.parametrize("cmd", ["devices", "users"])
@@ -79,7 +79,7 @@ class TestCmdCountBySQ(object):
         assert exit_code1 == 0
 
         json1 = tools.json_load(stdout1)
-        assert isinstance(json1, tools.LIST)
+        assert isinstance(json1, constants.LIST)
 
         name = json1[0]["name"]
 
@@ -96,7 +96,7 @@ class TestCmdCountBySQ(object):
         assert exit_code2 == 0
 
         json2 = tools.json_load(stdout2)
-        assert isinstance(json2, tools.INT)
+        assert isinstance(json2, constants.INT)
 
 
 @pytest.mark.parametrize("cmd", ["devices", "users"])
@@ -120,7 +120,7 @@ class TestCmdGetBySQ(object):
 
         json1 = tools.json_load(stdout1)
 
-        assert isinstance(json1, tools.LIST)
+        assert isinstance(json1, constants.LIST)
         name = json1[0]["name"]
 
         args2 = [cmd, "get-by-saved-query", "--name", name, "--max-rows", "1"]
@@ -136,7 +136,7 @@ class TestCmdGetBySQ(object):
         assert exit_code2 == 0
 
         json2 = tools.json_load(stdout2)
-        assert isinstance(json2, tools.LIST)
+        assert isinstance(json2, constants.LIST)
 
 
 @pytest.mark.parametrize("cmd", ["devices", "users"])
@@ -308,7 +308,7 @@ class TestCmdGet(object):
         assert exit_code1 == 0
 
         json1 = tools.json_load(stdout1)
-        assert isinstance(json1, tools.LIST)
+        assert isinstance(json1, constants.LIST)
 
     def test_json(self, request, monkeypatch, cmd):
         """Pass."""
@@ -336,7 +336,7 @@ class TestCmdGet(object):
         assert exit_code1 == 0
 
         json1 = tools.json_load(stdout1)
-        assert isinstance(json1, tools.LIST)
+        assert isinstance(json1, constants.LIST)
 
     def test_csv(self, request, monkeypatch, cmd):
         """Pass."""
@@ -472,7 +472,7 @@ class TestCmdGetBySubnet(object):
         assert exit_code1 == 0
 
         json1 = tools.json_load(stdout1)
-        assert isinstance(json1, tools.LIST)
+        assert isinstance(json1, constants.LIST)
 
     def test_csv(self, request, monkeypatch):
         """Pass."""
@@ -534,7 +534,7 @@ class TestCmdGetByDevices(object):
         assert exit_code1 == 0
 
         json1 = tools.json_load(stdout1)
-        assert isinstance(json1, tools.LIST)
+        assert isinstance(json1, constants.LIST)
 
     def test_csv(self, request, monkeypatch, get_by):
         """Pass."""
@@ -597,7 +597,7 @@ class TestCmdGetByUsers(object):
         assert exit_code1 == 0
 
         json1 = tools.json_load(stdout1)
-        assert isinstance(json1, tools.LIST)
+        assert isinstance(json1, constants.LIST)
 
     def test_csv(self, request, monkeypatch, get_by):
         """Pass."""

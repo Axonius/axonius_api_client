@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 """Test suite for axonius_api_client.tools."""
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
-from axonius_api_client import exceptions, tools
+from axonius_api_client import constants, exceptions
 
 
 class TestKnownCb(object):
@@ -19,7 +20,7 @@ class TestKnownCb(object):
     def test_known_cb_error(self):
         """Pass."""
         x = exceptions.known_cb(known=self.known_cb_error)
-        assert isinstance(x, tools.LIST)
+        assert isinstance(x, constants.LIST)
         assert len(x) == 1
         assert "failed with exception" in x[0]
         assert format(self.known_cb_error) in x[0]

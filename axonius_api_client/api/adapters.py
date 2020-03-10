@@ -351,7 +351,7 @@ class Adapters(mixins.Model, mixins.Mixins):
 
         for adapter in adapters:
             status = adapter["status"]
-            if isinstance(value, tools.LIST):
+            if isinstance(value, constants.LIST):
                 if value and status not in value:
                     continue
             elif value is not None and status != value:
@@ -1084,7 +1084,7 @@ class Cnx(mixins.Child):
         for cnx in cnxs:
             status = cnx["status"]
 
-            if isinstance(value, tools.LIST):
+            if isinstance(value, constants.LIST):
                 if value and status not in value:
                     continue
             elif value is not None and status != value:
@@ -1115,7 +1115,7 @@ class Cnx(mixins.Child):
             TYPE: Description
 
         """
-        if isinstance(adapter, tools.LIST):
+        if isinstance(adapter, constants.LIST):
             all_adapters = self._parent.get()
             all_adapters = self._parent.filter_by_names(
                 adapters=all_adapters, value=adapter
@@ -1502,14 +1502,14 @@ class ParserCnxConfig(mixins.Parser):
         elif type_str in ["number", "integer"]:
             return tools.coerce_int(obj=value)
         elif type_str == "array":
-            if isinstance(value, tools.STR):
+            if isinstance(value, constants.STR):
                 value = [x.strip() for x in value.split(",")]
-            if isinstance(value, tools.LIST) and all(
-                [isinstance(x, tools.STR) for x in value]
+            if isinstance(value, constants.LIST) and all(
+                [isinstance(x, constants.STR) for x in value]
             ):
                 return value
         elif type_str == "string":
-            if isinstance(value, tools.STR):
+            if isinstance(value, constants.STR):
                 return value
         else:
             raise exceptions.CnxSettingUnknownType(
@@ -1541,7 +1541,7 @@ class ParserCnxConfig(mixins.Parser):
             exceptions.CnxSettingInvalidType: Description
 
         """
-        is_str = isinstance(value, tools.STR)
+        is_str = isinstance(value, constants.STR)
         is_dict = isinstance(value, dict)
         is_path = isinstance(value, tools.pathlib.Path)
 
@@ -1782,7 +1782,7 @@ def validate_csv(name, content, is_users=False, is_installed_sw=False):
         ids_type = "device"
 
     headers_content = content
-    if isinstance(headers_content, tools.BYTES):
+    if isinstance(headers_content, constants.BYTES):
         headers_content = headers_content.decode()
 
     headers = headers_content.splitlines()[0].lower().split(",")

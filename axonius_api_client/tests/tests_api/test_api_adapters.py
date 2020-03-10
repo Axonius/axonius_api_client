@@ -8,7 +8,7 @@ import warnings
 import axonius_api_client as axonapi
 import pytest
 import requests
-from axonius_api_client import constants, exceptions, tools
+from axonius_api_client import constants, exceptions
 
 from .. import meta, utils
 
@@ -45,7 +45,7 @@ class TestAdapters(object):
     def test_get(self, apiobj):
         """Pass."""
         adapters = apiobj.get()
-        assert isinstance(adapters, tools.LIST)
+        assert isinstance(adapters, constants.LIST)
 
     def test_get_single(self, apiobj):
         """Pass."""
@@ -117,7 +117,7 @@ class TestAdapters(object):
             adapter=csv_adapter, field=constants.CSV_ADAPTER, path=test_path
         )
         assert isinstance(data, dict)
-        assert isinstance(data["uuid"], tools.STR)
+        assert isinstance(data["uuid"], constants.STR)
         assert data["filename"] == meta.adapters.CSV_FILENAME
 
         test_path.write_bytes(meta.adapters.CSV_FILECONTENT_BYTES)
@@ -126,7 +126,7 @@ class TestAdapters(object):
             adapter=csv_adapter, field=constants.CSV_ADAPTER, path=test_path
         )
         assert isinstance(data, dict)
-        assert isinstance(data["uuid"], tools.STR)
+        assert isinstance(data["uuid"], constants.STR)
         assert data["filename"] == meta.adapters.CSV_FILENAME
 
     def test_filter_by_names_regex(self, apiobj):
@@ -134,7 +134,7 @@ class TestAdapters(object):
         data = apiobj.filter_by_names(
             value=".*", value_regex=True, adapters=meta.adapters.FAKE_ADAPTERS
         )
-        assert isinstance(data, tools.LIST)
+        assert isinstance(data, constants.LIST)
         assert len(data) >= 1
 
         data = apiobj.filter_by_names(
@@ -142,7 +142,7 @@ class TestAdapters(object):
             value_regex=True,
             adapters=meta.adapters.FAKE_ADAPTERS,
         )
-        assert isinstance(data, tools.LIST)
+        assert isinstance(data, constants.LIST)
         assert len(data) == 1
 
     def test_filter_by_names_counts(self, apiobj):
@@ -158,7 +158,7 @@ class TestAdapters(object):
             match_error=False,
             adapters=meta.adapters.FAKE_ADAPTERS,
         )
-        assert isinstance(data, tools.LIST)
+        assert isinstance(data, constants.LIST)
         assert len(data) == 0
 
         with pytest.raises(exceptions.ValueNotFound):
@@ -177,7 +177,7 @@ class TestAdapters(object):
             match_error=False,
             adapters=meta.adapters.FAKE_ADAPTERS,
         )
-        assert isinstance(data, tools.LIST)
+        assert isinstance(data, constants.LIST)
         assert len(data) == 3
 
     def test_filter_by_nodes_regex(self, apiobj):
@@ -187,7 +187,7 @@ class TestAdapters(object):
             value_regex=True,
             adapters=meta.adapters.FAKE_ADAPTERS,
         )
-        assert isinstance(data, tools.LIST)
+        assert isinstance(data, constants.LIST)
         assert len(data) >= 1
 
         data = apiobj.filter_by_nodes(
@@ -195,7 +195,7 @@ class TestAdapters(object):
             value_regex=True,
             adapters=meta.adapters.FAKE_ADAPTERS,
         )
-        assert isinstance(data, tools.LIST)
+        assert isinstance(data, constants.LIST)
         assert len(data) >= 1
 
     def test_filter_by_nodes_counts(self, apiobj):
@@ -214,7 +214,7 @@ class TestAdapters(object):
             match_error=False,
             adapters=meta.adapters.FAKE_ADAPTERS,
         )
-        assert isinstance(data, tools.LIST)
+        assert isinstance(data, constants.LIST)
         assert len(data) == 0
 
         with pytest.raises(exceptions.ValueNotFound):
@@ -233,7 +233,7 @@ class TestAdapters(object):
             match_error=False,
             adapters=meta.adapters.FAKE_ADAPTERS,
         )
-        assert isinstance(data, tools.LIST)
+        assert isinstance(data, constants.LIST)
         assert len(data) == 3
 
     def test_filter_by_cnx_count(self, apiobj):
@@ -247,19 +247,19 @@ class TestAdapters(object):
             )
 
         data = apiobj.filter_by_cnx_count(adapters=meta.adapters.FAKE_ADAPTERS)
-        assert isinstance(data, tools.LIST)
+        assert isinstance(data, constants.LIST)
         assert len(data) == 3
 
         data = apiobj.filter_by_cnx_count(
             max_value=1, adapters=meta.adapters.FAKE_ADAPTERS
         )
-        assert isinstance(data, tools.LIST)
+        assert isinstance(data, constants.LIST)
         assert len(data) == 2
 
         data = apiobj.filter_by_cnx_count(
             min_value=2, max_value=2, adapters=meta.adapters.FAKE_ADAPTERS
         )
-        assert isinstance(data, tools.LIST)
+        assert isinstance(data, constants.LIST)
         assert len(data) == 1
 
         data = apiobj.filter_by_cnx_count(
@@ -268,32 +268,32 @@ class TestAdapters(object):
             match_error=False,
             adapters=meta.adapters.FAKE_ADAPTERS,
         )
-        assert isinstance(data, tools.LIST)
+        assert isinstance(data, constants.LIST)
         assert len(data) == 0
 
     def test_filter_by_status(self, apiobj):
         """Pass."""
         data = apiobj.filter_by_status(value=True, adapters=meta.adapters.FAKE_ADAPTERS)
-        assert isinstance(data, tools.LIST)
+        assert isinstance(data, constants.LIST)
         for x in data:
             assert x["status"] is True
 
         data = apiobj.filter_by_status(value=False, adapters=meta.adapters.FAKE_ADAPTERS)
-        assert isinstance(data, tools.LIST)
+        assert isinstance(data, constants.LIST)
         for x in data:
             assert x["status"] is False
 
         data = apiobj.filter_by_status(
             value=[None], adapters=meta.adapters.FAKE_ADAPTERS
         )
-        assert isinstance(data, tools.LIST)
+        assert isinstance(data, constants.LIST)
         for x in data:
             assert x["status"] is None
 
         data = apiobj.filter_by_status(
             value=[False, True], adapters=meta.adapters.FAKE_ADAPTERS
         )
-        assert isinstance(data, tools.LIST)
+        assert isinstance(data, constants.LIST)
         for x in data:
             assert x["status"] in [False, True]
 
@@ -333,12 +333,12 @@ class TestCnx(object):
             config=config,
         )
         assert isinstance(added, dict)
-        assert isinstance(added["id"], tools.STR)
+        assert isinstance(added["id"], constants.STR)
 
         assert added["error"] is None
         assert added["status"] == "success"
         assert added["client_id"] == "private_create_csv"
-        assert isinstance(added["id"], tools.STR) and added["id"]
+        assert isinstance(added["id"], constants.STR) and added["id"]
         return added, config
 
     def _delete_csv(self, apiobj, csv_adapter, added):
@@ -361,9 +361,9 @@ class TestCnx(object):
     #     """Pass."""
     #     cnxs = apiobj.cnx.get(adapter=csv_adapter)
     #     known = apiobj.cnx._build_known(cnxs)
-    #     assert isinstance(known, tools.LIST)
+    #     assert isinstance(known, constants.LIST)
     #     for x in known:
-    #         assert isinstance(x, tools.STR)
+    #         assert isinstance(x, constants.STR)
 
     def test_refetch(self, apiobj, csv_adapter):
         """Pass."""
@@ -414,7 +414,7 @@ class TestCnx(object):
         assert not response.text
         # checked = response.json()
 
-        # assert isinstance(checked["message"], tools.STR)
+        # assert isinstance(checked["message"], constants.STR)
         # assert checked["status"] == "error"
         # assert checked["type"] == "NotImplementedError"
 
@@ -473,21 +473,21 @@ class TestCnx(object):
     def test_get_adapter(self, apiobj, csv_adapter):
         """Pass."""
         cnxs = apiobj.cnx.get(adapter=csv_adapter)
-        assert isinstance(cnxs, tools.LIST)
+        assert isinstance(cnxs, constants.LIST)
         for x in cnxs:
             assert x["adapter_name"] == constants.CSV_ADAPTER
 
     def test_get_str(self, apiobj):
         """Pass."""
         cnxs = apiobj.cnx.get(adapter=constants.CSV_ADAPTER)
-        assert isinstance(cnxs, tools.LIST)
+        assert isinstance(cnxs, constants.LIST)
         for x in cnxs:
             assert x["adapter_name"] == constants.CSV_ADAPTER
 
     def test_get_list(self, apiobj):
         """Pass."""
         cnxs = apiobj.cnx.get(adapter=[constants.CSV_ADAPTER, "active_directory"])
-        assert isinstance(cnxs, tools.LIST)
+        assert isinstance(cnxs, constants.LIST)
         for x in cnxs:
             assert x["adapter_name"] in [constants.CSV_ADAPTER, "active_directory"]
 
@@ -496,7 +496,7 @@ class TestCnx(object):
         all_adapters = apiobj.get()
         ok_adapters = apiobj.filter_by_status(adapters=all_adapters, value=True)
         cnxs = apiobj.cnx.get(adapter=None)
-        assert isinstance(cnxs, tools.LIST)
+        assert isinstance(cnxs, constants.LIST)
         for cnx in cnxs:
             assert isinstance(cnx, dict)
         assert len(cnxs) >= len(ok_adapters)
@@ -529,7 +529,7 @@ class TestCnx(object):
             value=meta.adapters.FAKE_CNXS[0]["id"],
             value_regex=True,
         )
-        assert isinstance(just1re, tools.LIST)
+        assert isinstance(just1re, constants.LIST)
         assert just1re == [meta.adapters.FAKE_CNXS[0]]
 
         just1 = apiobj.cnx.filter_by_ids(
@@ -552,7 +552,7 @@ class TestCnx(object):
             value=meta.adapters.FAKE_CNXS[0]["uuid"],
             value_regex=True,
         )
-        assert isinstance(just1re, tools.LIST)
+        assert isinstance(just1re, constants.LIST)
         assert just1re == [meta.adapters.FAKE_CNXS[0]]
 
         just1 = apiobj.cnx.filter_by_uuids(
@@ -1108,7 +1108,7 @@ class TestParserAdapters(object):
         raw = apiobj._get()
         parser = axonapi.api.adapters.ParserAdapters(raw=raw, parent=apiobj)
         adapters = parser.parse()
-        assert isinstance(adapters, tools.LIST)
+        assert isinstance(adapters, constants.LIST)
         for adapter in adapters:
             self.validate_adapter(adapter)
 
@@ -1135,15 +1135,15 @@ class TestParserAdapters(object):
         assert adapter_status == astatus
         assert isinstance(config, dict) and config
         assert isinstance(config_raw, dict) and config_raw
-        assert isinstance(date_fetched, tools.STR)
-        assert isinstance(error, tools.STR) or error is None
-        assert isinstance(cid, tools.STR)
+        assert isinstance(date_fetched, constants.STR)
+        assert isinstance(error, constants.STR) or error is None
+        assert isinstance(cid, constants.STR)
         assert node_id == anid
         assert node_name == anname
         assert isinstance(status, bool)
-        assert isinstance(status_raw, tools.STR)
-        assert isinstance(uuid, tools.STR)
-        assert isinstance(idx, tools.INT)
+        assert isinstance(status_raw, constants.STR)
+        assert isinstance(uuid, constants.STR)
+        assert isinstance(idx, constants.INT)
 
         if status is False:
             assert astatus is False
@@ -1169,25 +1169,31 @@ class TestParserAdapters(object):
 
             if check_value:
                 item_value = item.pop("value")
-                assert isinstance(item_value, tools.SIMPLE) or item_value in [None, []]
+                assert isinstance(item_value, constants.SIMPLE) or item_value in [
+                    None,
+                    [],
+                ]
 
-            assert isinstance(item_name, tools.STR) and item_name
-            assert isinstance(item_type, tools.STR) and item_type
-            assert isinstance(item_title, tools.STR) and item_title
+            assert isinstance(item_name, constants.STR) and item_name
+            assert isinstance(item_type, constants.STR) and item_type
+            assert isinstance(item_title, constants.STR) and item_title
             assert isinstance(item_items, dict)
-            assert isinstance(item_default, tools.SIMPLE) or item_default in [None, []]
-            assert isinstance(item_enum, tools.LIST)
+            assert isinstance(item_default, constants.SIMPLE) or item_default in [
+                None,
+                [],
+            ]
+            assert isinstance(item_enum, constants.LIST)
             for x in item_enum:
-                assert isinstance(x, tools.STR)
-            assert isinstance(item_format, tools.STR)
-            assert isinstance(item_description, tools.STR)
+                assert isinstance(x, constants.STR)
+            assert isinstance(item_format, constants.STR)
+            assert isinstance(item_description, constants.STR)
             assert isinstance(item_required, bool)
             if item_type not in meta.adapters.SCHEMA_TYPES:
                 msg = "Setting for adapter {!r} has an unexpected item_type {!r}"
                 msg = msg.format(name, item_type)
                 warnings.warn(msg)
 
-            assert isinstance(item_idx, tools.INT)
+            assert isinstance(item_idx, constants.INT)
             assert not item
 
     def validate_adapter(self, adapter):
@@ -1213,30 +1219,30 @@ class TestParserAdapters(object):
         status_raw = adapter.pop("status_raw")
         idx = adapter.pop("idx")
 
-        assert isinstance(name, tools.STR)
-        assert isinstance(name_raw, tools.STR)
-        assert isinstance(name_plugin, tools.STR)
-        assert isinstance(node_name, tools.STR)
-        assert isinstance(node_id, tools.STR)
-        assert isinstance(status_raw, tools.STR)
-        assert isinstance(features, tools.LIST)
+        assert isinstance(name, constants.STR)
+        assert isinstance(name_raw, constants.STR)
+        assert isinstance(name_plugin, constants.STR)
+        assert isinstance(node_name, constants.STR)
+        assert isinstance(node_id, constants.STR)
+        assert isinstance(status_raw, constants.STR)
+        assert isinstance(features, constants.LIST)
         for x in features:
-            assert isinstance(x, tools.STR)
-        assert isinstance(cnx_count, tools.INT)
-        assert isinstance(cnx_count_ok, tools.INT)
-        assert isinstance(cnx_count_bad, tools.INT)
+            assert isinstance(x, constants.STR)
+        assert isinstance(cnx_count, constants.INT)
+        assert isinstance(cnx_count_ok, constants.INT)
+        assert isinstance(cnx_count_bad, constants.INT)
         assert isinstance(status, bool) or status is None
         assert isinstance(cnx_settings, dict)
         assert isinstance(settings, dict)
         assert isinstance(adv_settings, dict)
-        assert isinstance(idx, tools.INT)
+        assert isinstance(idx, constants.INT)
 
         self.validate_settings(name, settings, True)
         self.validate_settings(name, adv_settings, True)
         self.validate_settings(name, cnx_settings, False)
 
         for cnxs in [cnx, cnx_ok, cnx_bad]:
-            assert isinstance(cnxs, tools.LIST)
+            assert isinstance(cnxs, constants.LIST)
             for connection in [x for x in cnxs if x]:
                 self.validate_cnx(
                     aname=name,
@@ -1260,7 +1266,7 @@ class TestRawAdapters(object):
 
         for name, instances in adapters.items():
             assert name.endswith("_adapter")
-            assert isinstance(instances, tools.LIST)
+            assert isinstance(instances, constants.LIST)
 
             for instance in instances:
                 self.validate_instance(name, instance)
@@ -1278,20 +1284,20 @@ class TestRawAdapters(object):
         date_fetched = client.pop("date_fetched")
         adapter_name = client.pop("adapter_name")
 
-        assert isinstance(adapter_name, tools.STR)
+        assert isinstance(adapter_name, constants.STR)
         assert isinstance(client_config, dict) and client_config
-        assert isinstance(client_id, tools.STR)
-        assert isinstance(date_fetched, tools.STR)
-        assert isinstance(uuid, tools.STR) and uuid
+        assert isinstance(client_id, constants.STR)
+        assert isinstance(date_fetched, constants.STR)
+        assert isinstance(uuid, constants.STR) and uuid
 
         if not client_id:
             msg = "Client for {} has an empty client_id {}"
             msg = msg.format(name, client_id)
             warnings.warn(msg)
 
-        assert isinstance(error, tools.STR) or error is None
-        assert isinstance(node_id, tools.STR) and node_id
-        assert isinstance(status, tools.STR) and status in [
+        assert isinstance(error, constants.STR) or error is None
+        assert isinstance(node_id, constants.STR) and node_id
+        assert isinstance(status, constants.STR) and status in [
             "warning",
             "error",
             "success",
@@ -1310,12 +1316,12 @@ class TestRawAdapters(object):
         required = schema.pop("required")
         schema_type = schema.pop("type")
 
-        assert isinstance(items, tools.LIST) and items
-        assert isinstance(required, tools.LIST)
+        assert isinstance(items, constants.LIST) and items
+        assert isinstance(required, constants.LIST)
         assert schema_type == "array"
 
         for req in required:
-            assert isinstance(req, tools.STR)
+            assert isinstance(req, constants.STR)
             item_names = [x["name"] for x in items]
 
             if req not in item_names:
@@ -1335,16 +1341,16 @@ class TestRawAdapters(object):
             item_items = item.pop("items", {})
             item_req = item.pop("required", False)
 
-            assert isinstance(item_name, tools.STR) and item_name
-            assert isinstance(item_type, tools.STR) and item_type
-            assert isinstance(item_title, tools.STR) and item_title
+            assert isinstance(item_name, constants.STR) and item_name
+            assert isinstance(item_type, constants.STR) and item_type
+            assert isinstance(item_title, constants.STR) and item_title
             assert isinstance(item_items, dict)
-            assert isinstance(item_default, tools.SIMPLE) or item_default is None
-            assert isinstance(item_enum, tools.LIST)
+            assert isinstance(item_default, constants.SIMPLE) or item_default is None
+            assert isinstance(item_enum, constants.LIST)
             for x in item_enum:
-                assert isinstance(x, tools.STR)
-            assert isinstance(item_format, tools.STR)
-            assert isinstance(item_description, tools.STR)
+                assert isinstance(x, constants.STR)
+            assert isinstance(item_format, constants.STR)
+            assert isinstance(item_description, constants.STR)
             assert isinstance(item_req, bool)
             if item_type not in meta.adapters.SCHEMA_TYPES:
                 msg = "Setting for adapter {!r} has an unexpected item_type {!r}"
@@ -1367,14 +1373,14 @@ class TestRawAdapters(object):
 
         assert not instance
 
-        assert isinstance(node_id, tools.STR) and node_id
-        assert isinstance(unique_plugin_name, tools.STR) and unique_plugin_name
-        assert isinstance(node_name, tools.STR) and node_name
+        assert isinstance(node_id, constants.STR) and node_id
+        assert isinstance(unique_plugin_name, constants.STR) and unique_plugin_name
+        assert isinstance(node_name, constants.STR) and node_name
         assert status in ["warning", "success", None, ""]
-        assert isinstance(supported_features, tools.LIST)
+        assert isinstance(supported_features, constants.LIST)
         for x in supported_features:
-            assert isinstance(x, tools.STR)
-        assert isinstance(clients, tools.LIST)
+            assert isinstance(x, constants.STR)
+        assert isinstance(clients, constants.LIST)
         assert isinstance(config, dict) and config
         assert isinstance(schema, dict) and schema
 
@@ -1389,7 +1395,7 @@ class TestRawAdapters(object):
             item_pretty_name = item_schema.pop("pretty_name")
 
             assert isinstance(item_config, dict) and item_config
-            assert isinstance(item_pretty_name, tools.STR) and item_pretty_name
+            assert isinstance(item_pretty_name, constants.STR) and item_pretty_name
             assert isinstance(item_schema, dict) and item_schema
 
             self.validate_schema(name, item_schema)
