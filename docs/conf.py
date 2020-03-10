@@ -40,6 +40,14 @@ language = "en"
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 pygments_style = "monokai"
 
+autodoc_default_options = {
+    "member-order": "bysource",
+    "special-members": "__init__,__call__",
+    "undoc-members": True,
+    "show-inheritance": True,
+    "exclude-members": "__weakref__,__str__,__repr__",
+}
+
 # -- Options for HTML  ---------------------------------------------
 
 html_theme = "sphinx_rtd_theme"

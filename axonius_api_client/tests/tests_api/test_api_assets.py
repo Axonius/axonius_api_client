@@ -104,7 +104,7 @@ class TestBoth(Base):
         assert isinstance(data, dict)
         assert isinstance(data["assets"], constants.LIST)
 
-        response = apiobj._auth._http._LAST_RESPONSE
+        response = apiobj._auth._http.LAST_RESPONSE
         request_body = six.ensure_text(response.request.body)
         request_json = json.loads(request_body)
         assert request_json["limit"] == 2000

@@ -1,8 +1,8 @@
-requests[security,socks]
-python-dotenv
-python-dateutil
-click
-pyreadline ; platform_system == "Windows"
-pathlib2 ; python_version < '3.7'
-tabulate
+requests[security,socks]>=2.23.0
+python-dotenv>=2.8.1
+python-dateutil>=2.8.1
+click>=7.1
+pyreadline>=2.1 ; platform_system == "Windows"
+pathlib2>=2.3.5 ; python_version < '3.7'
+tabulate>=0.8.6
 six>=1.14.0
