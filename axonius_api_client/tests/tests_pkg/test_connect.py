@@ -77,7 +77,7 @@ class TestConnect(object):
 
         c = connect.Connect(url=ax_url, key=BAD_CRED, secret=BAD_CRED, certwarn=False)
 
-        c._http._CONNECT_TIMEOUT = 1
+        c._http.CONNECT_TIMEOUT = 1
 
         with pytest.raises(exceptions.ConnectError) as exc:
             c.start()
@@ -90,7 +90,7 @@ class TestConnect(object):
             url="127.0.0.99", key=BAD_CRED, secret=BAD_CRED, certwarn=False
         )
 
-        c._http._CONNECT_TIMEOUT = 1
+        c._http.CONNECT_TIMEOUT = 1
 
         with pytest.raises(exceptions.ConnectError) as exc:
             c.start()
@@ -110,7 +110,7 @@ class TestConnect(object):
             url="https://127.0.0.1:3919", key=BAD_CRED, secret=BAD_CRED, certwarn=False
         )
 
-        c._http._CONNECT_TIMEOUT = 1
+        c._http.CONNECT_TIMEOUT = 1
 
         with pytest.raises(exceptions.ConnectError) as exc:
             c.start()
@@ -126,7 +126,7 @@ class TestConnect(object):
             url=ax_url, key=BAD_CRED, secret=BAD_CRED, certwarn=False, wraperror=False
         )
 
-        c._http._CONNECT_TIMEOUT = 1
+        c._http.CONNECT_TIMEOUT = 1
 
         with pytest.raises(exceptions.InvalidCredentials):
             c.start()
@@ -137,7 +137,7 @@ class TestConnect(object):
             url="127.0.0.1", key=BAD_CRED, secret=BAD_CRED, certwarn=False
         )
 
-        c._http._CONNECT_TIMEOUT = 1
+        c._http.CONNECT_TIMEOUT = 1
         c._auth._creds = None
 
         with pytest.raises(exceptions.ConnectError):
