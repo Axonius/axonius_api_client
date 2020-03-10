@@ -7,7 +7,7 @@ import atexit
 
 import click
 
-from ... import tools
+from ... import constants, tools
 from .. import cli_constants, context, options
 
 
@@ -114,7 +114,7 @@ def spawn_shell(shellvars=None):
 
     args = {"local": shellvars, "banner": cli_constants.SHELL_BANNER}
 
-    if tools.PY36:
+    if constants.PY36:
         args["exitmsg"] = cli_constants.SHELL_EXIT
 
     code.interact(**args)

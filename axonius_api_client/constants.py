@@ -1,9 +1,13 @@
 # -*- coding: utf-8 -*-
 """Constants for this package."""
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
 import logging
 import os
+import sys
+
+import six
 
 from . import __package__ as PACKAGE_ROOT
 
@@ -98,3 +102,43 @@ DEBUG_MATCHES = False
 DEFAULT_PERM = "ReadOnly"
 
 VALID_PERMS = ["Restricted", "ReadWrite", "ReadOnly"]
+
+COMPLEX = (dict, list, tuple)
+""":obj:`tuple` of :obj:`type` -
+A set of types that are considered as complex.
+"""
+EMPTY = [None, "", [], {}, ()]
+""":obj:`list` of :obj:`type` -
+Values that should be considered as empty.
+"""
+LIST = (tuple, list)
+""":obj:`tuple` of :obj:`type` -
+Types that are considered as lists.
+"""
+STR = six.string_types
+""":obj:`tuple` of :obj:`type` -
+Types that are considered as strings.
+"""
+INT = six.integer_types
+""":obj:`tuple` of :obj:`type` -
+Types that are considered as integers.
+"""
+BYTES = six.binary_type
+SIMPLE = tuple(list(STR) + [int, bool, float])
+""":obj:`tuple` of :obj:`type` -
+Types that are considered as simple.
+"""
+SIMPLE_NONE = tuple(list(SIMPLE) + [None])
+""":obj:`tuple` of :obj:`type` -
+Types that are considered as simple or None.
+"""
+YES = [True, 1, "1", "true", "t", "yes", "y", "yas"]
+""":obj:`list` of :obj:`type` -
+Values that should be considered as truthy.
+"""
+NO = [False, 0, "0", "false", "f", "no", "n", "noes"]
+""":obj:`list` of :obj:`type` -
+Values that should be considered as falsey.
+"""
+PY36 = sys.version_info[0:2] >= (3, 6)
+PY37 = sys.version_info[0:2] >= (3, 7)

@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 """Test suite for axonius_api_client.tools."""
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
 import tempfile
 
 import pytest
-
-from axonius_api_client import exceptions, tools
+from axonius_api_client import constants, exceptions, tools
 
 from .. import utils
 
@@ -16,12 +16,12 @@ class TestValType(object):
 
     def test_good(self):
         """Pass."""
-        tools.val_type(1, tools.INT)
+        tools.val_type(1, constants.INT)
 
     def test_bad(self):
         """Pass."""
         with pytest.raises(exceptions.ToolsError):
-            tools.val_type("", tools.INT)
+            tools.val_type("", constants.INT)
 
 
 class TestCoerce(object):
@@ -790,7 +790,7 @@ class TestDtParse(object):
         """Pass."""
         now = [format(tools.dt_now())]
         now = tools.dt_parse(obj=now)
-        assert isinstance(now, tools.LIST)
+        assert isinstance(now, constants.LIST)
         assert [isinstance(x, tools.datetime) for x in now]
 
 

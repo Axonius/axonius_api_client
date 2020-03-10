@@ -1,9 +1,12 @@
 # -*- coding: utf-8 -*-
-"""Axonius API Client utility tools module."""
-from __future__ import absolute_import, division, print_function, unicode_literals
+"""Utility tool belt.
+
+Handy wrappers/tools used throughout this package.
+"""
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
 import json
-import sys
 from datetime import datetime, timedelta
 
 import dateutil.parser
@@ -11,31 +14,30 @@ import dateutil.relativedelta
 import dateutil.tz
 import six
 
-from . import exceptions
+from . import constants, exceptions
 
-PY36 = sys.version_info[0:2] >= (3, 6)
-PY37 = sys.version_info[0:2] >= (3, 7)
-
-if not PY37:
+if not constants.PY37:
     import pathlib2 as pathlib  # pragma: no cover
 else:
     import pathlib
 
 
-COMPLEX = (dict, list, tuple)
-EMPTY = [None, "", [], {}, ()]
-LIST = (tuple, list)
-STR = six.string_types
-INT = six.integer_types
-BYTES = six.binary_type
-SIMPLE = tuple(list(STR) + [int, bool, float])
-SIMPLE_NONE = tuple(list(SIMPLE) + [None])
-YES = [True, 1, "1", "true", "t", "yes", "y", "yas"]
-NO = [False, 0, "0", "false", "f", "no", "n", "noes"]
-
-
 def val_type(value, types):
-    """Pass."""
+    """Check that value is one of types.
+
+    This is just a handy wrapper for isinstance to throw a wrapped exception.
+
+    Args:
+        value (:obj:`object`) -
+            Object to check type of
+        types (:obj:`tuple` of :obj:`type`) -
+            Tuple of types
+
+    Raises:
+        :exc:`exceptions.ToolsError` -
+            When value is not a type of types
+
+    """
     if not isinstance(value, types):
         msg = "Invalid type for value {value!r}, must be one of {types!r}"
         msg = msg.format(value=value, types=types)
@@ -43,14 +45,43 @@ def val_type(value, types):
 
 
 def listify(obj, dictkeys=False):
-    """Pass."""
+    """Force an object into a list.
+
+    Args:
+        obj (:obj:`object`): Object to turn into a list, if object is:
+
+            * :obj:`list` -
+                returns as is
+            * :obj:`tuple` -
+                convert to list
+            * :obj:`None` -
+                returns as an empty list
+            * any of :attr:`axonius_api_client.constants.SIMPLE` -
+                return as a list of obj
+            * :obj:`dict` -
+                * dictkeys is False, returns as a list of obj
+                * dictkeys is True, return as a list of keys of obj
+        dictkeys (:obj:`bool`, optional) -
+                If obj is a dict:
+
+                * True: return obj as a list of keys of obj
+                * False: return obj as a list of obj
+
+                Defaults to: ``False``
+
+    Returns:
+        :obj:`list`
+    """
+    if isinstance(obj, list):
+        return obj
+
     if isinstance(obj, tuple):
         return list(obj)
 
     if obj is None:
         return []
 
-    if isinstance(obj, SIMPLE):
+    if isinstance(obj, constants.SIMPLE):
         return [obj]
 
     if isinstance(obj, dict):
@@ -63,17 +94,48 @@ def listify(obj, dictkeys=False):
 
 
 def grouper(iterable, n, fillvalue=None):
-    """Chunk up iterables."""
+    """Split an iterable into chunks.
+
+    Args:
+        iterable (:obj:`typing.Iterable`) -
+            Iterable to split into chunks of size n
+        n (int) -
+            Length to split iterable into
+        fillvalue (:obj:`None`, optional) -
+            Value to fill last chunk with if iterable is not the exact length of n
+
+            Defaults to: ``None``
+
+    Returns:
+        :obj:`typing.Iterator`:
+            an iterator that returns chunks of length n of the original iterable
+    """
     return six.moves.zip_longest(*([iter(iterable)] * n), fillvalue=fillvalue)
 
 
 def nest_depth(obj):
-    """Pass."""
+    """Get the nesting depth of an object.
+
+    This will check to see if how many complex sub-objects a complex object has.
+
+    Examples:
+        * A dictionary with any list or dict values would be 1.
+        * A list with a dictionary where values are all simple would be 1.
+        * A list of lists with simple values would be two.
+
+    Args:
+        obj (:obj:`object`) -
+            Object to get the nesting depth of.
+
+    Returns:
+        :obj:`int`:
+            The complexity level of obj
+    """
     if isinstance(obj, dict):
         obj = list(obj.values())
 
-    if isinstance(obj, LIST):
-        calcs = [nest_depth(obj=x) for x in obj if isinstance(obj, COMPLEX)]
+    if isinstance(obj, constants.LIST):
+        calcs = [nest_depth(obj=x) for x in obj if isinstance(obj, constants.COMPLEX)]
         if calcs:
             return 1 + max(calcs)
         return 1
@@ -81,7 +143,19 @@ def nest_depth(obj):
 
 
 def coerce_int(obj):
-    """Pass."""
+    """Convert an object into int.
+
+    Args:
+        obj (:obj:`object`) -
+            Object to convert to int
+
+    Returns:
+        :obj:`int`
+
+    Raises:
+        :exc:`exceptions.ToolsError`:
+            If obj is not able to be converted to int
+    """
     try:
         return int(obj)
     except Exception:
@@ -91,45 +165,77 @@ def coerce_int(obj):
 
 
 def coerce_bool(obj):
-    """Pass."""
+    """Convert an object into bool.
+
+    If obj is a string, will check against constants.YES and constants.NO.
+
+    Args:
+        obj (:obj:`object`) -
+            Object to convert to bool
+
+    Returns:
+        :obj:`bool`
+
+    Raises:
+        :exc:`exceptions.ToolsError`:
+            If obj is not able to be converted to bool
+    """
     coerce_obj = obj
 
-    if isinstance(obj, STR):
+    if isinstance(obj, constants.STR):
         coerce_obj = coerce_obj.lower().strip()
 
-    if coerce_obj in YES:
+    if coerce_obj in constants.YES:
         return True
 
-    if coerce_obj in NO:
+    if coerce_obj in constants.NO:
         return False
 
     msg = "Supplied value {o!r} is not one of {y} for true or {n} for false."
-    msg = msg.format(o=coerce_obj, y=YES, n=NO)
+    msg = msg.format(o=coerce_obj, y=constants.YES, n=constants.NO)
     raise exceptions.ToolsError(msg)
 
 
 def is_int(obj, digit=False):
-    """Pass."""
+    """Check if obj is int typeable.
+
+    Args:
+        obj (:obj:`object`) -
+            Object to check
+        digit (:obj:`bool`, optional) -
+            Allow string that is digit to return True
+
+            * True: obj must be (str/bytes where isdigit is True) or int
+            * False: obj must be int
+
+            Defaults to: ``False``
+
+    Returns:
+        :obj:`bool`
+
+    """
     if digit:
-        if isinstance(obj, STR) and obj.isdigit():
+        if isinstance(obj, constants.STR) and obj.isdigit():
             return True
 
-        if isinstance(obj, BYTES) and obj.isdigit():
+        if isinstance(obj, constants.BYTES) and obj.isdigit():
             return True
 
-    return not isinstance(obj, bool) and isinstance(obj, INT)
+    return not isinstance(obj, bool) and isinstance(obj, constants.INT)
 
 
 def join_url(url, *parts):
     """Join a URL to any number of parts.
 
     Args:
-        url (:obj:`str`):
-            URL to add parts to.
-        *parts: Strings to append to URL.
+        url (:obj:`str`) -
+            URL to add parts to
+        *parts (:obj:`str`) -
+            Strings to append to url
 
     Returns:
-        :obj:`str`
+        :obj:`str`:
+            The url with parts appended
 
     """
     url = url.rstrip("/") + "/"
@@ -143,17 +249,63 @@ def join_url(url, *parts):
 
 
 def join_dot(obj, empty=False, joiner="."):
-    """Pass."""
+    """Join a string using periods.
+
+    Args:
+        obj (:obj:`object` or :obj:`list` of :obj:`object`) -
+            Objects(s) to convert to str and join. Will be coerced into a list.
+        empty (:obj:`bool`, optional) -
+            Values in constants.EMPTY should not be removed before joining
+
+            * True: Leave values in constants.EMPTY in place
+            * False: Remove values in constants.EMPTY
+
+            Defaults to: ``False``
+        joiner (:obj:`str`, optional) -
+            Value to use when joining obj
+
+            Defaults to: ``"."``
+
+    Returns:
+        :obj:`str`
+    """
     obj = listify(obj=obj, dictkeys=True)
 
     if not empty:
-        obj = [x for x in obj if x not in EMPTY and format(x)]
+        obj = [x for x in obj if x not in constants.EMPTY and format(x)]
 
     return joiner.join([format(x) for x in obj])
 
 
 def join_cr(obj, pre=True, post=False, indent="  ", joiner="\n"):
-    """Pass."""
+    r"""Create str of elements joined by carriage return.
+
+    Args:
+        obj (:obj:`object` or :obj:`list` of :obj:`object`) -
+            Objects(s) to convert to str and join. Will be coerced into a list,
+            and if obj is dict, keys of dict will be used as obj
+        pre (:obj:`bool`, optional) -
+            * True: add joiner to the beginning of the joined str
+            * False: Do not add joiner to the beginning of the joined str
+
+            Defaults to: ``True``
+        post (:obj:`bool`, optional) -
+            * True: add joiner to the end of the joined str
+            * False: Do not add joiner to the end of the joined str
+
+            Defaults to: ``False``
+        indent (:obj:`str`, optional) -
+            Value to prefix joiner with before joining str
+
+            Defaults to: ``"  "``
+        joiner (:obj:`str`, optional) -
+            Value to use when joining obj
+
+            Defaults to: ``"\n"``
+
+    Returns:
+        :obj:`str`
+    """
     obj = listify(obj=obj, dictkeys=True)
 
     if indent:
@@ -171,11 +323,35 @@ def join_cr(obj, pre=True, post=False, indent="  ", joiner="\n"):
 
 
 def join_comma(obj, empty=False, indent=" ", joiner=","):
-    """Pass."""
+    """Create str of elements joined by comma.
+
+    Args:
+        obj (:obj:`object` or :obj:`list` of :obj:`object`) -
+            Objects(s) to convert to str and join. Will be coerced into a list,
+            and if obj is dict, keys of dict will be used as obj
+        empty (:obj:`bool`, optional) -
+            Values in constants.EMPTY should not be removed before joining
+
+            * True: Leave values in constants.EMPTY in place
+            * False: Remove values in constants.EMPTY
+
+            Defaults to: ``False``
+        indent (:obj:`str`, optional) -
+            Value to prefix joiner with before joining str
+
+            Defaults to: ``" "``
+        joiner (:obj:`str`, optional) -
+            Value to use when joining obj
+
+            Defaults to: ``","``
+
+    Returns:
+        :obj:`str`
+    """
     obj = listify(obj=obj, dictkeys=True)
 
     if not empty:
-        obj = [x for x in obj if x not in EMPTY and format(x)]
+        obj = [x for x in obj if x not in constants.EMPTY and format(x)]
 
     if indent:
         joiner = "{}{}".format(joiner, indent)
@@ -184,11 +360,23 @@ def join_comma(obj, empty=False, indent=" ", joiner=","):
 
 
 def strip_right(obj, fix):
-    """Pass."""
-    if isinstance(obj, LIST) and all([isinstance(x, STR) for x in obj]):
+    """Strip text from the right side of obj.
+
+    Args:
+        obj (:obj:`str`) or (:obj:`list` of :obj:`str`) -
+            str(s) to strip fix from right side of.
+        fix (:obj:`str`) -
+            str to remove from obj(s)
+
+    Returns:
+        (:obj:`str`) or (:obj:`list` of :obj:`str`)
+    """
+    if isinstance(obj, constants.LIST) and all(
+        [isinstance(x, constants.STR) for x in obj]
+    ):
         return [strip_right(obj=x, fix=fix) for x in obj]
 
-    if isinstance(obj, STR):
+    if isinstance(obj, constants.STR):
         plen = len(fix)
 
         if obj.endswith(fix):
@@ -198,11 +386,23 @@ def strip_right(obj, fix):
 
 
 def strip_left(obj, fix):
-    """Pass."""
-    if isinstance(obj, LIST) and all([isinstance(x, STR) for x in obj]):
+    """Strip text from the left side of obj.
+
+    Args:
+        obj (:obj:`str`) or (:obj:`list` of :obj:`str`) -
+            str(s) to strip fix from left side of.
+        fix (:obj:`str`) -
+            str to remove from obj(s)
+
+    Returns:
+        (:obj:`str`) or (:obj:`list` of :obj:`str`)
+    """
+    if isinstance(obj, constants.LIST) and all(
+        [isinstance(x, constants.STR) for x in obj]
+    ):
         return [strip_left(obj=x, fix=fix) for x in obj]
 
-    if isinstance(obj, STR):
+    if isinstance(obj, constants.STR):
         plen = len(fix)
 
         if obj.startswith(fix):
@@ -212,7 +412,26 @@ def strip_left(obj, fix):
 
 
 def json_dump(obj, indent=2, sort_keys=False, error=True, **kwargs):
-    """Pass."""
+    """Serialize an object into json str.
+
+    Args:
+        obj (:obj:`object`) -
+            Object to serialize into str format
+        indent (:obj:`int`, optional) -
+            * Make json pretty with this many indents
+        sort_keys (:obj:`bool`, optional) -
+            * True: Sort keys of dicts
+            * False: Leave keys of dicts sorted as is
+        error (:obj:`bool`, optional) -
+            * True: If json error happens, raise it
+            * False: If json error happens, return original obj as is
+        **kwargs: Passed to :func:`json.dumps`
+
+    Returns:
+        (:obj:`str`) or (:obj:`object`):
+            * object: if json error happens and error is false
+            * str: if no json error happens
+    """
     try:
         return json.dumps(obj, indent=indent, sort_keys=sort_keys, **kwargs)
     except Exception:
@@ -222,7 +441,19 @@ def json_dump(obj, indent=2, sort_keys=False, error=True, **kwargs):
 
 
 def json_load(obj, error=True, **kwargs):
-    """Pass."""
+    """Deserialize a json str into an object.
+
+    Args:
+        obj (:obj:`object`) -
+            str to deserialize into obj
+        error (:obj:`bool`, optional) -
+            * True: If json error happens, raise it
+            * False: If json error happens, return original obj as is
+        **kwargs: Passed to :func:`json.loads`
+
+    Returns:
+        :obj:`object`
+    """
     try:
         return json.loads(obj, **kwargs)
     except Exception:
@@ -232,19 +463,35 @@ def json_load(obj, error=True, **kwargs):
 
 
 def json_reload(obj, error=False, **kwargs):
-    """Pass."""
+    """Re-serialize a json str into a pretty json str.
+
+    Args:
+        obj (:obj:`object`) -
+            str to deserialize into obj and then re-serialize back into str
+        error (:obj:`bool`, optional) -
+            * True: If json error happens, raise it
+            * False: If json error happens, return original obj as is
+        **kwargs: Passed to :func:`json_dump`
+
+    Returns:
+        (:obj:`str`) or (:obj:`object`):
+            * object: if json error happens and error is false
+            * str: if no json error happens
+    """
     obj = json_load(obj=obj, error=error)
-    if not isinstance(obj, STR):
+    if not isinstance(obj, constants.STR):
         obj = json_dump(obj=obj, error=error, **kwargs)
     obj = obj or ""
-    if isinstance(obj, STR):
+    if isinstance(obj, constants.STR):
         obj = obj.strip()
     return obj
 
 
 def dt_parse(obj):
     """Pass."""
-    if isinstance(obj, LIST) and all([isinstance(x, STR) for x in obj]):
+    if isinstance(obj, constants.LIST) and all(
+        [isinstance(x, constants.STR) for x in obj]
+    ):
         return [dt_parse(obj=x) for x in obj]
 
     if isinstance(obj, datetime):
@@ -309,7 +556,7 @@ def path_read(obj, binary=False, is_json=False, **kwargs):
     if is_json:
         data = json_load(obj=data, **kwargs)
 
-    if robj.suffix == ".json" and isinstance(data, STR):
+    if robj.suffix == ".json" and isinstance(data, constants.STR):
         kwargs.setdefault("error", False)
         data = json_load(obj=data, **kwargs)
 
@@ -336,16 +583,16 @@ def path_write(
     if is_json:
         data = json_dump(obj=data, **kwargs)
 
-    if obj.suffix == ".json" and not isinstance(data, STR):
+    if obj.suffix == ".json" and not isinstance(data, constants.STR):
         kwargs.setdefault("error", False)
         data = json_dump(obj=data, **kwargs)
 
     if binary:
-        if not isinstance(data, BYTES):
+        if not isinstance(data, constants.BYTES):
             data = data.encode(binary_encoding)
         method = obj.write_bytes
     else:
-        if isinstance(data, BYTES):
+        if isinstance(data, constants.BYTES):
             data = data.decode(binary_encoding)
         method = obj.write_text
 

@@ -76,7 +76,7 @@ class AssetMixin(mixins.ModelAsset, mixins.Mixins):
             params["filter"] = query
 
         if fields:
-            if isinstance(fields, tools.LIST):
+            if isinstance(fields, constants.LIST):
                 fields = ",".join(fields)
 
             params["fields"] = fields
@@ -326,7 +326,7 @@ class AssetMixin(mixins.ModelAsset, mixins.Mixins):
 
         field = self.fields.find_single(field=field, all_fields=all_fields)
 
-        if isinstance(value, tools.LIST):
+        if isinstance(value, constants.LIST):
             value = ", ".join(["'{}'".format(v.strip()) for v in value])
             search = "in [{}]".format(value)
         else:
@@ -1263,7 +1263,9 @@ class Fields(mixins.Child):
         """Validate provided fields."""
 
         def listify(obj):
-            return [x for x in tools.listify(obj=obj) if isinstance(x, tools.STR) and x]
+            return [
+                x for x in tools.listify(obj=obj) if isinstance(x, constants.STR) and x
+            ]
 
         fields = listify(obj=fields)
         fields_manual = listify(obj=fields_manual)

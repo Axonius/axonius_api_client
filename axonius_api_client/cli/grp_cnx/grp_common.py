@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 """Command line interface for Axonius API Client."""
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
 import re
 
 import click
 
-from ... import tools
+from ... import constants, tools
 from .. import cli_constants, serial
 
 
@@ -106,7 +107,7 @@ def determine_type(schema):
 
     ptype = None
 
-    if type_str == "string" and has_enum and isinstance(enum, tools.LIST) and enum:
+    if type_str == "string" and has_enum and isinstance(enum, constants.LIST) and enum:
         ptype = click.Choice(choices=enum, case_sensitive=True)
     elif type_str in cli_constants.SETTING_TYPE_MAP:
         ptype = cli_constants.SETTING_TYPE_MAP[type_str]
@@ -217,7 +218,7 @@ def check_empty(
     ctx, this_data, prev_data, value_type, value, objtype, known_cb, known_cb_key
 ):
     """Pass."""
-    if value in tools.EMPTY:
+    if value in constants.EMPTY:
         return
 
     value = tools.join_comma(obj=value, empty=False)

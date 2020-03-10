@@ -10,7 +10,7 @@ import re
 import axonius_api_client as axonapi
 import pytest
 import six
-from axonius_api_client import exceptions, tools
+from axonius_api_client import constants, exceptions, tools
 
 from .. import meta, utils
 
@@ -25,7 +25,7 @@ class Base(object):
 
         api = apicls(auth=auth)
 
-        assert isinstance(api._default_fields, tools.LIST)
+        assert isinstance(api._default_fields, constants.LIST)
 
         utils.check_apiobj(authobj=auth, apiobj=api)
 
@@ -77,7 +77,7 @@ class Base(object):
         assets = data["assets"]
         assert len(assets) == 1
 
-        assert isinstance(assets, tools.LIST)
+        assert isinstance(assets, constants.LIST)
         asset = assets[0]
 
         return asset
@@ -102,7 +102,7 @@ class TestBoth(Base):
         """Pass."""
         data = apiobj._get(page_size=3000)
         assert isinstance(data, dict)
-        assert isinstance(data["assets"], tools.LIST)
+        assert isinstance(data["assets"], constants.LIST)
 
         response = apiobj._auth._http._LAST_RESPONSE
         request_body = six.ensure_text(response.request.body)
@@ -118,28 +118,28 @@ class TestBoth(Base):
     def test_count(self, apiobj):
         """Pass."""
         data = apiobj.count()
-        assert isinstance(data, tools.INT)
+        assert isinstance(data, constants.INT)
 
     def test_get(self, apiobj):
         """Pass."""
         data = apiobj.get(generator=False, max_rows=1)
-        assert isinstance(data, tools.LIST)
+        assert isinstance(data, constants.LIST)
         assert not data.__class__.__name__ == "generator"
         assert len(data) == 1
 
     def test_get_generator(self, apiobj):
         """Pass."""
         data = apiobj.get(generator=True, max_rows=1)
-        assert not isinstance(data, tools.LIST)
+        assert not isinstance(data, constants.LIST)
         assert data.__class__.__name__ == "generator"
         data2 = [x for x in data]
-        assert isinstance(data2, tools.LIST)
+        assert isinstance(data2, constants.LIST)
         assert len(data2) == 1
 
     def test_get_maxpages(self, apiobj):
         """Pass."""
         data = apiobj.get(max_rows=22, max_pages=1)
-        assert isinstance(data, tools.LIST)
+        assert isinstance(data, constants.LIST)
         assert len(data) == 22
 
     def test_get_id(self, apiobj):
@@ -161,7 +161,7 @@ class TestBoth(Base):
         sq = sqs[0]
         sq_name = sq["name"]
         data = apiobj.count_by_saved_query(name=sq_name)
-        assert isinstance(data, tools.INT)
+        assert isinstance(data, constants.INT)
 
     def test_get_by_saved_query(self, apiobj):
         """Pass."""
@@ -173,7 +173,7 @@ class TestBoth(Base):
         last_get = apiobj._LAST_GET
         # 2.0.5: make sure the fields in sq are the ones that got supplied to the get
         assert last_get["fields"] == ",".join(sq_fields)
-        assert isinstance(data, tools.LIST)
+        assert isinstance(data, constants.LIST)
 
     def test_get_by_field_value(self, apiobj):
         """Pass."""
@@ -233,7 +233,7 @@ class TestBoth(Base):
             fields=apiobj._default_fields,
             match_error=False,
         )
-        assert isinstance(found, tools.LIST)
+        assert isinstance(found, constants.LIST)
         assert len(found) == count - 1
 
     def test_get_by_field_value_match_error(self, apiobj):
@@ -318,7 +318,7 @@ class TestDevices(Single):
             value=value, max_rows=1, fields=findfield, query_pre=query_pre,
         )
 
-        assert isinstance(found, tools.LIST)
+        assert isinstance(found, constants.LIST)
 
         found_value = tools.listify(obj=found[0][findfield])[0]
         assert found_value == tools.listify(obj=asset[findfield], dictkeys=False)[0]
@@ -346,7 +346,7 @@ class TestDevices(Single):
         )
         # could do value checking here, but we'd have to get every asset
         # lets not do that...
-        assert isinstance(found, tools.LIST)
+        assert isinstance(found, constants.LIST)
 
 
 @pytest.mark.parametrize("apicls", [axonapi.api.Users, axonapi.Devices], scope="class")
@@ -357,18 +357,18 @@ class TestReports(Base):
     def report_data(self, apiobj):
         """Pass."""
         rows = apiobj.get(max_rows=20)
-        assert isinstance(rows, tools.LIST)
+        assert isinstance(rows, constants.LIST)
         assert len(rows) == 20
         return rows
 
     def test_missing_adapters(self, apiobj, report_data):
         """Pass."""
         report = apiobj.reports.missing_adapters(rows=report_data)
-        assert isinstance(report, tools.LIST)
+        assert isinstance(report, constants.LIST)
         for item in report:
             assert isinstance(item, dict)
-            assert isinstance(item["missing"], tools.LIST)
-            assert isinstance(item["missing_nocnx"], tools.LIST)
+            assert isinstance(item["missing"], constants.LIST)
+            assert isinstance(item["missing_nocnx"], constants.LIST)
 
 
 @pytest.mark.parametrize("apicls", [axonapi.api.Users, axonapi.Devices], scope="class")
@@ -379,7 +379,7 @@ class TestFields(Base):
         """Pass."""
         fields = apiobj.fields._get()
         assert isinstance(fields, dict)
-        assert isinstance(fields["generic"], tools.LIST)
+        assert isinstance(fields["generic"], constants.LIST)
         assert isinstance(fields["specific"], dict)
         assert isinstance(fields["schema"], dict)
 
@@ -409,7 +409,7 @@ class TestFields(Base):
                 name, obj_fields = apiobj.fields.find_adapter(
                     adapter=search, all_fields=apiobj.ALL_FIELDS
                 )
-                assert isinstance(name, tools.STR)
+                assert isinstance(name, constants.STR)
                 assert isinstance(obj_fields, dict)
                 assert name == info["exp"]
 
@@ -433,21 +433,21 @@ class TestFields(Base):
         single = apiobj.TEST_DATA["single_field"]["search"]
         found = apiobj.fields.find_regex(field=single, all_fields=apiobj.ALL_FIELDS)
         assert found
-        assert isinstance(found, tools.LIST)
+        assert isinstance(found, constants.LIST)
         assert all([single in x for x in found])
 
         found = apiobj.fields.find_regex(
             field=".:" + single, all_fields=apiobj.ALL_FIELDS
         )
         assert found
-        assert isinstance(found, tools.LIST)
+        assert isinstance(found, constants.LIST)
         assert all([single in x for x in found])
 
         found = apiobj.fields.find_regex(
             field="generic:" + single, all_fields=apiobj.ALL_FIELDS
         )
         assert found
-        assert isinstance(found, tools.LIST)
+        assert isinstance(found, constants.LIST)
         assert all([single in x for x in found])
         assert all(["specific_data.data" in x for x in found])
 
@@ -458,9 +458,9 @@ class TestFields(Base):
             searches = [isearch, isearch.upper(), re.sub(":", " : ", isearch)]
             for search in searches:
                 found = apiobj.fields.find(field=search, all_fields=apiobj.ALL_FIELDS)
-                assert isinstance(found, tools.LIST)
+                assert isinstance(found, constants.LIST)
                 for x in found:
-                    assert isinstance(x, tools.STR)
+                    assert isinstance(x, constants.STR)
                 assert found == info["exp"]
 
     def test_find_manual(self, apiobj):
@@ -478,7 +478,7 @@ class TestFields(Base):
         found = apiobj.fields.find(
             field="badwolf:badwolf", all_fields=apiobj.ALL_FIELDS, error=False
         )
-        assert isinstance(found, tools.LIST)
+        assert isinstance(found, constants.LIST)
         assert not found
 
     def test_find_bad_field(self, apiobj):
@@ -491,7 +491,7 @@ class TestFields(Base):
         found = apiobj.fields.find(
             field="generic:badwolf", all_fields=apiobj.ALL_FIELDS, error=False
         )
-        assert isinstance(found, tools.LIST)
+        assert isinstance(found, constants.LIST)
         assert not found
 
     def test_validatedefault_false(self, apiobj):
@@ -502,7 +502,7 @@ class TestFields(Base):
             found = apiobj.fields.validate(
                 fields=isearch, all_fields=apiobj.ALL_FIELDS, default=False
             )
-            assert isinstance(found, tools.LIST)
+            assert isinstance(found, constants.LIST)
             assert found == iexp
 
     def test_validatedefault_true(self, apiobj):
@@ -515,7 +515,7 @@ class TestFields(Base):
             found = apiobj.fields.validate(
                 fields=isearch, all_fields=apiobj.ALL_FIELDS, default=True
             )
-            assert isinstance(found, tools.LIST)
+            assert isinstance(found, constants.LIST)
 
             for x in apifields:
                 if x not in iexp:
@@ -535,7 +535,7 @@ class TestFields(Base):
                 all_fields=apiobj.ALL_FIELDS,
                 default=False,
             )
-            assert isinstance(found, tools.LIST)
+            assert isinstance(found, constants.LIST)
             for x in iexp:
                 assert x in found
 
@@ -544,19 +544,19 @@ class TestFields(Base):
         found = apiobj.fields.validate(
             fields=[None, {}, [], ""], all_fields=apiobj.ALL_FIELDS, default=False
         )
-        assert isinstance(found, tools.LIST)
+        assert isinstance(found, constants.LIST)
         assert not found
 
     def test_validate_nofields_default_false(self, apiobj):
         """Pass."""
         found = apiobj.fields.validate(all_fields=apiobj.ALL_FIELDS, default=False)
-        assert isinstance(found, tools.LIST)
+        assert isinstance(found, constants.LIST)
         assert not found
 
     def test_validate_nofields_default_true(self, apiobj):
         """Pass."""
         found = apiobj.fields.validate(all_fields=apiobj.ALL_FIELDS, default=True)
-        assert isinstance(found, tools.LIST)
+        assert isinstance(found, constants.LIST)
         assert found == apiobj._default_fields
 
 
@@ -567,16 +567,16 @@ class TestLabels(Base):
     def test__get(self, apiobj):
         """Pass."""
         fields = apiobj.labels._get()
-        assert isinstance(fields, tools.LIST)
+        assert isinstance(fields, constants.LIST)
         for x in fields:
-            assert isinstance(x, tools.STR)
+            assert isinstance(x, constants.STR)
 
     def test_get(self, apiobj):
         """Pass."""
         fields = apiobj.labels._get()
-        assert isinstance(fields, tools.LIST)
+        assert isinstance(fields, constants.LIST)
         for x in fields:
-            assert isinstance(x, tools.STR)
+            assert isinstance(x, constants.STR)
 
     def test__add_get_remove(self, apiobj):
         """Pass."""
@@ -589,7 +589,7 @@ class TestLabels(Base):
         )
 
         id_tolabel = asset_tolabel["internal_axon_id"]
-        assert isinstance(id_tolabel, tools.STR)
+        assert isinstance(id_tolabel, constants.STR)
 
         # add the label to the asset
         result_tolabel = apiobj.labels._add(labels=labels, ids=[id_tolabel])
@@ -601,17 +601,17 @@ class TestLabels(Base):
         )
 
         id_haslabel = asset_haslabel["internal_axon_id"]
-        assert isinstance(id_haslabel, tools.STR)
+        assert isinstance(id_haslabel, constants.STR)
 
         for label in labels:
             assert label in asset_haslabel["labels"]
 
         # check that the label is in all the labels on the system
         alllabels = apiobj.labels._get()
-        assert isinstance(alllabels, tools.LIST)
+        assert isinstance(alllabels, constants.LIST)
 
         for label in alllabels:
-            assert isinstance(label, tools.STR)
+            assert isinstance(label, constants.STR)
 
         for label in labels:
             assert label in alllabels
@@ -625,7 +625,7 @@ class TestLabels(Base):
             apiobj=apiobj, fields=fields, query=None, refetch=asset_haslabel
         )
         id_nolabel = asset_nolabel["internal_axon_id"]
-        assert isinstance(id_nolabel, tools.STR)
+        assert isinstance(id_nolabel, constants.STR)
 
         assert id_tolabel == id_nolabel == id_haslabel
 
@@ -643,7 +643,7 @@ class TestLabels(Base):
         )
 
         id_tolabel = asset_tolabel["internal_axon_id"]
-        assert isinstance(id_tolabel, tools.STR)
+        assert isinstance(id_tolabel, constants.STR)
 
         # add the label to the asset
         result_tolabel = apiobj.labels.add(labels=labels, rows=[asset_tolabel])
@@ -655,17 +655,17 @@ class TestLabels(Base):
         )
 
         id_haslabel = asset_haslabel["internal_axon_id"]
-        assert isinstance(id_haslabel, tools.STR)
+        assert isinstance(id_haslabel, constants.STR)
 
         for label in labels:
             assert label in asset_haslabel["labels"]
 
         # check that the label is in all the labels on the system
         alllabels = apiobj.labels.get()
-        assert isinstance(alllabels, tools.LIST)
+        assert isinstance(alllabels, constants.LIST)
 
         for label in alllabels:
-            assert isinstance(label, tools.STR)
+            assert isinstance(label, constants.STR)
 
         for label in labels:
             assert label in alllabels
@@ -679,7 +679,7 @@ class TestLabels(Base):
             apiobj=apiobj, fields=fields, query=None, refetch=asset_haslabel
         )
         id_nolabel = asset_nolabel["internal_axon_id"]
-        assert isinstance(id_nolabel, tools.STR)
+        assert isinstance(id_nolabel, constants.STR)
 
         assert id_tolabel == id_nolabel == id_haslabel
 
@@ -739,23 +739,23 @@ class TestSavedQuery(Base):
         brackweight = qexpr.pop("bracketWeight", 0)
         qfilter = qexpr.pop("filter", "")
 
-        assert isinstance(qfilter, tools.STR)
-        assert isinstance(brackweight, tools.INT)
-        assert isinstance(timestamp, tools.STR)
-        assert isinstance(context, tools.STR)
+        assert isinstance(qfilter, constants.STR)
+        assert isinstance(brackweight, constants.INT)
+        assert isinstance(timestamp, constants.STR)
+        assert isinstance(context, constants.STR)
         assert isinstance(filtered_adapters, dict) or filtered_adapters is None
-        assert isinstance(compop, tools.STR)
-        assert isinstance(field, tools.STR)
-        assert isinstance(idx, tools.INT)
+        assert isinstance(compop, constants.STR)
+        assert isinstance(field, constants.STR)
+        assert isinstance(idx, constants.INT)
         assert isinstance(leftbracket, bool)
         assert isinstance(rightbracket, bool)
-        assert isinstance(logicop, tools.STR)
+        assert isinstance(logicop, constants.STR)
         assert isinstance(notflag, bool)
-        assert isinstance(value, tools.SIMPLE) or value is None
+        assert isinstance(value, constants.SIMPLE) or value is None
         assert isinstance(obj, bool)
-        assert isinstance(nesteds, tools.LIST)
-        assert isinstance(children, tools.LIST)  # new in 2.15
-        assert isinstance(fieldtype, tools.STR)
+        assert isinstance(nesteds, constants.LIST)
+        assert isinstance(children, constants.LIST)  # new in 2.15
+        assert isinstance(fieldtype, constants.STR)
 
         for nested in nesteds:
             self.validate_nested(nested, asset)
@@ -774,13 +774,13 @@ class TestSavedQuery(Base):
         nfiltered_adapters = nested.pop("filteredAdapters", {})
         assert isinstance(nfiltered_adapters, dict) or nfiltered_adapters is None
         ncondition = nested.pop("condition")
-        assert isinstance(ncondition, tools.STR)
+        assert isinstance(ncondition, constants.STR)
 
         nexpr = nested.pop("expression")
         assert isinstance(nexpr, dict)
 
         nidx = nested.pop("i")
-        assert isinstance(nidx, tools.INT)
+        assert isinstance(nidx, constants.INT)
 
         assert not nested, list(nested)
 
@@ -789,34 +789,34 @@ class TestSavedQuery(Base):
         assert asset["query_type"] in ["saved"]
 
         date_fetched = asset.pop("date_fetched")
-        assert isinstance(date_fetched, tools.STR)
+        assert isinstance(date_fetched, constants.STR)
 
         last_updated = asset.pop("last_updated", "")
-        assert isinstance(last_updated, tools.STR)
+        assert isinstance(last_updated, constants.STR)
 
         name = asset.pop("name")
-        assert isinstance(name, tools.STR)
+        assert isinstance(name, constants.STR)
 
         query_type = asset.pop("query_type")
-        assert isinstance(query_type, tools.STR)
+        assert isinstance(query_type, constants.STR)
 
         user_id = asset.pop("user_id")
-        assert isinstance(user_id, tools.STR)
+        assert isinstance(user_id, constants.STR)
 
         uuid = asset.pop("uuid")
-        assert isinstance(uuid, tools.STR)
+        assert isinstance(uuid, constants.STR)
 
         description = asset.pop("description")
-        assert isinstance(description, tools.STR) or description is None
+        assert isinstance(description, constants.STR) or description is None
 
         timestamp = asset.pop("timestamp", "")
-        assert isinstance(timestamp, tools.STR)
+        assert isinstance(timestamp, constants.STR)
 
         archived = asset.pop("archived", False)  # added in 2.15
         assert isinstance(archived, bool)
 
         updated_by_str = asset.pop("updated_by")
-        assert isinstance(updated_by_str, tools.STR)
+        assert isinstance(updated_by_str, constants.STR)
 
         updated_by = json.loads(updated_by_str)
         assert isinstance(updated_by, dict)
@@ -827,14 +827,14 @@ class TestSavedQuery(Base):
         updated_str_keys = ["username", "source", "first_name", "last_name"]
         for updated_str_key in updated_str_keys:
             val = updated_by.pop(updated_str_key)
-            assert isinstance(val, tools.STR)
+            assert isinstance(val, constants.STR)
 
         assert not updated_by
 
         tags = asset.pop("tags", [])
-        assert isinstance(tags, tools.LIST)
+        assert isinstance(tags, constants.LIST)
         for tag in tags:
-            assert isinstance(tag, tools.STR)
+            assert isinstance(tag, constants.STR)
 
         predefined = asset.pop("predefined", False)
         assert isinstance(predefined, bool)
@@ -843,28 +843,28 @@ class TestSavedQuery(Base):
         assert isinstance(view, dict)
 
         colsizes = view.pop("coloumnSizes", [])
-        assert isinstance(colsizes, tools.LIST)
+        assert isinstance(colsizes, constants.LIST)
 
         colfilters = view.pop("colFilters", {})
         assert isinstance(colfilters, dict)
         for k, v in colfilters.items():
-            assert isinstance(k, tools.STR)
-            assert isinstance(v, tools.STR)
+            assert isinstance(k, constants.STR)
+            assert isinstance(v, constants.STR)
 
         for x in colsizes:
-            assert isinstance(x, tools.INT)
+            assert isinstance(x, constants.INT)
 
         fields = view.pop("fields")
-        assert isinstance(fields, tools.LIST)
+        assert isinstance(fields, constants.LIST)
 
         for x in fields:
-            assert isinstance(x, tools.STR)
+            assert isinstance(x, constants.STR)
 
         page = view.pop("page", 0)
-        assert isinstance(page, tools.INT)
+        assert isinstance(page, constants.INT)
 
         pagesize = view.pop("pageSize", 0)
-        assert isinstance(pagesize, tools.INT)
+        assert isinstance(pagesize, constants.INT)
 
         sort = view.pop("sort")
         assert isinstance(sort, dict)
@@ -873,28 +873,28 @@ class TestSavedQuery(Base):
         assert isinstance(sort_desc, bool)
 
         sort_field = sort.pop("field")
-        assert isinstance(sort_field, tools.STR)
+        assert isinstance(sort_field, constants.STR)
 
         query = view.pop("query")
         assert isinstance(query, dict)
 
         qfilter = query.pop("filter")
-        assert isinstance(qfilter, tools.STR) or qfilter is None
+        assert isinstance(qfilter, constants.STR) or qfilter is None
 
         qexprs = query.pop("expressions", [])
-        assert isinstance(qexprs, tools.LIST)
+        assert isinstance(qexprs, constants.LIST)
 
         qmeta = query.pop("meta", {})
         assert isinstance(qmeta, dict)
 
         qonlyexprfilter = query.pop("onlyExpressionsFilter", "")
-        assert isinstance(qonlyexprfilter, tools.STR)
+        assert isinstance(qonlyexprfilter, constants.STR)
 
         qsearch = query.pop("search", None)
         assert isinstance(qsearch, type(None))
 
         historical = view.pop("historical", None)
-        assert historical is None or isinstance(historical, tools.SIMPLE)
+        assert historical is None or isinstance(historical, constants.SIMPLE)
 
         for qexpr in qexprs:
             self.validate_qexpr(qexpr, asset)
@@ -910,7 +910,7 @@ class TestSavedQuery(Base):
         assert isinstance(data, dict)
 
         assets = data["assets"]
-        assert isinstance(assets, tools.LIST)
+        assert isinstance(assets, constants.LIST)
 
         for asset in assets:
             assert isinstance(asset, dict)
@@ -923,27 +923,27 @@ class TestSavedQuery(Base):
         assert isinstance(data, dict)
 
         assets = data["assets"]
-        assert isinstance(assets, tools.LIST)
+        assert isinstance(assets, constants.LIST)
         assert len(data["assets"]) == data["page"]["totalResources"]
 
     def test_get(self, apiobj):
         """Pass."""
         rows = apiobj.saved_query.get()
-        assert isinstance(rows, tools.LIST)
+        assert isinstance(rows, constants.LIST)
         for row in rows:
             assert isinstance(row, dict)
 
     def test_get_maxpages(self, apiobj):
         """Pass."""
         data = apiobj.saved_query.get(max_pages=1, max_rows=1)
-        assert isinstance(data, tools.LIST)
+        assert isinstance(data, constants.LIST)
         assert len(data) == 1
 
     def test_get_empty(self, apiobj):
         """Pass."""
         query = 'name == "badwolf_notfound"'
         data = apiobj.saved_query.get(query=query)
-        assert isinstance(data, tools.LIST)
+        assert isinstance(data, constants.LIST)
         assert not data
 
     def test_get_by_id(self, apiobj):
@@ -971,14 +971,14 @@ class TestSavedQuery(Base):
     def test_get_by_name_regex(self, apiobj):
         """Pass."""
         found = apiobj.saved_query.get_by_name(value=".*", value_regex=True)
-        assert isinstance(found, tools.LIST)
+        assert isinstance(found, constants.LIST)
         assert len(found) >= 1
 
     def test_get_by_name_notflag(self, apiobj):
         """Pass."""
         data = apiobj.saved_query.get()
         found = apiobj.saved_query.get_by_name(value=data[0]["name"], value_not=True)
-        assert isinstance(found, tools.LIST)
+        assert isinstance(found, constants.LIST)
         assert len(found) == len(data) - 1
 
     def test__add_get_delete(self, apiobj):
@@ -992,11 +992,11 @@ class TestSavedQuery(Base):
         fields = [apiobj.TEST_DATA["single_field"]["exp"]]
 
         added = apiobj.saved_query._add(name=name, query=query, fields=fields)
-        assert isinstance(added, tools.STR)
+        assert isinstance(added, constants.STR)
 
         got = apiobj.saved_query._get(query='name == "{}"'.format(name))
         assert isinstance(got, dict)
-        assert isinstance(got["assets"], tools.LIST)
+        assert isinstance(got["assets"], constants.LIST)
         assert len(got["assets"]) == 1
         assert isinstance(got["assets"][0], dict)
 
@@ -1005,7 +1005,7 @@ class TestSavedQuery(Base):
 
         re_got = apiobj.saved_query._get(query='name == "{}"'.format(name))
         assert isinstance(re_got, dict)
-        assert isinstance(re_got["assets"], tools.LIST)
+        assert isinstance(re_got["assets"], constants.LIST)
         assert len(re_got["assets"]) == 0
 
     def test_add_delete(self, apiobj):
@@ -1150,10 +1150,10 @@ class TestParsedFields(Base):
         prefix = finfo.pop("adapter_prefix")
         title = finfo.pop("title")
 
-        assert isinstance(name, tools.STR) and name
-        assert isinstance(title, tools.STR) and title
-        assert isinstance(prefix, tools.STR) and prefix
-        assert isinstance(type, tools.STR) and type
+        assert isinstance(name, constants.STR) and name
+        assert isinstance(title, constants.STR) and title
+        assert isinstance(prefix, constants.STR) and prefix
+        assert isinstance(type, constants.STR) and type
 
         # uncommon
         items = finfo.pop("items", {})
@@ -1169,23 +1169,23 @@ class TestParsedFields(Base):
         assert isinstance(sort, bool)
         assert isinstance(unique, bool)
         assert isinstance(branched, bool)
-        assert isinstance(enums, tools.LIST)
-        assert isinstance(description, tools.STR)
+        assert isinstance(enums, constants.LIST)
+        assert isinstance(description, constants.STR)
         assert isinstance(dynamic, bool)
-        assert isinstance(format, tools.STR)
+        assert isinstance(format, constants.STR)
 
         assert not finfo, list(finfo)
 
         assert type in meta.objects.FIELD_TYPES, type
 
-        if name not in ["labels", "adapters", "internal_axon_id"]:
+        if name not in ["labels", "adapters", "adapter_list_length", "internal_axon_id"]:
             if aname == "generic":
                 assert name.startswith("specific_data")
             else:
                 assert name.startswith(prefix)
 
         for enum in enums:
-            assert isinstance(enum, tools.STR) or tools.is_int(enum)
+            assert isinstance(enum, constants.STR) or tools.is_int(enum)
 
         if format:
             assert format in meta.objects.FIELD_FORMATS, format
@@ -1210,7 +1210,7 @@ class TestRawFields(Base):
 
         assert not raw, list(raw)
         assert isinstance(schema, dict)
-        assert isinstance(generic, tools.LIST)
+        assert isinstance(generic, constants.LIST)
         assert isinstance(specific, dict)
 
         generic_schema = schema.pop("generic")
@@ -1245,12 +1245,12 @@ class TestRawFields(Base):
 
         assert not schema, list(schema)
 
-        assert isinstance(items, tools.LIST)
-        assert isinstance(required, tools.LIST)
+        assert isinstance(items, constants.LIST)
+        assert isinstance(required, constants.LIST)
         assert type == "array"
 
         for req in required:
-            assert isinstance(req, tools.STR)
+            assert isinstance(req, constants.STR)
 
         for item in items:
             assert item
@@ -1258,7 +1258,7 @@ class TestRawFields(Base):
 
     def val_fields(self, aname, afields):
         """Pass."""
-        assert isinstance(afields, tools.LIST)
+        assert isinstance(afields, constants.LIST)
 
         for field in afields:
             # common
@@ -1266,9 +1266,9 @@ class TestRawFields(Base):
             title = field.pop("title")
             type = field.pop("type")
 
-            assert isinstance(name, tools.STR) and name
-            assert isinstance(title, tools.STR) and title
-            assert isinstance(type, tools.STR) and type
+            assert isinstance(name, constants.STR) and name
+            assert isinstance(title, constants.STR) and title
+            assert isinstance(type, constants.STR) and type
 
             assert type in ["array", "string", "integer", "number", "bool"]
 
@@ -1283,9 +1283,9 @@ class TestRawFields(Base):
             dynamic = field.pop("dynamic", False)
 
             assert isinstance(branched, bool)
-            assert isinstance(description, tools.STR)
-            assert isinstance(enums, tools.LIST)
-            assert isinstance(format, tools.STR)
+            assert isinstance(description, constants.STR)
+            assert isinstance(enums, constants.LIST)
+            assert isinstance(format, constants.STR)
             assert isinstance(items, dict)
             assert isinstance(sort, bool)
             assert isinstance(unique, bool)
@@ -1294,7 +1294,7 @@ class TestRawFields(Base):
             assert not field, list(field)
 
             for enum in enums:
-                assert isinstance(enum, tools.STR) or tools.is_int(enum)
+                assert isinstance(enum, constants.STR) or tools.is_int(enum)
 
             val_items(aname="{}:{}".format(aname, name), items=items)
 
@@ -1307,7 +1307,7 @@ def val_items(aname, items):
         # common
         type = items.pop("type")
 
-        assert isinstance(type, tools.STR) and type
+        assert isinstance(type, constants.STR) and type
         assert type in meta.objects.FIELD_TYPES, type
 
         # uncommon
@@ -1328,7 +1328,7 @@ def val_items(aname, items):
 
         if source:
             source_key = source.pop("key")
-            assert isinstance(source_key, tools.STR)
+            assert isinstance(source_key, constants.STR)
 
             source_options = source.pop("options")
             assert isinstance(source_options, dict)
@@ -1342,19 +1342,19 @@ def val_items(aname, items):
         if fformat:
             assert fformat in meta.objects.SCHEMA_FIELD_FORMATS, fformat
 
-        assert isinstance(enums, tools.LIST)
-        assert isinstance(iitems, tools.LIST) or isinstance(iitems, dict)
-        assert isinstance(fformat, tools.STR)
-        assert isinstance(name, tools.STR)
-        assert isinstance(title, tools.STR)
-        assert isinstance(description, tools.STR)
+        assert isinstance(enums, constants.LIST)
+        assert isinstance(iitems, constants.LIST) or isinstance(iitems, dict)
+        assert isinstance(fformat, constants.STR)
+        assert isinstance(name, constants.STR)
+        assert isinstance(title, constants.STR)
+        assert isinstance(description, constants.STR)
         assert isinstance(branched, bool)
         assert isinstance(dynamic, bool)
 
         assert not items, list(items)
 
         for enum in enums:
-            assert isinstance(enum, tools.STR) or tools.is_int(enum)
+            assert isinstance(enum, constants.STR) or tools.is_int(enum)
 
         if isinstance(iitems, dict):
             val_items(aname=aname, items=iitems)
