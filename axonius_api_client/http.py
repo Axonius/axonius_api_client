@@ -32,9 +32,12 @@ class Http(object):
         https_proxy=None,
         save_last=True,
         save_history=False,
-        # fmt: off
-        **kwargs
-        # fmt: on
+        log_level=constants.LOG_LEVEL_HTTP,
+        log_level_urllib="warning",
+        log_request_attrs=None,
+        log_response_attrs=None,
+        log_request_body=False,
+        log_response_body=False,
     ):
         """HTTP client wrapper around :obj:`requests.Session`.
 
@@ -86,38 +89,37 @@ class Http(object):
 
                 * if ``True`` append responses to :attr:`HISTORY`
                 * if ``False`` do not append responses to :attr:`HISTORY`
-            **kwargs:
-                * log_level (:obj:`str`):
-                  default :data:`axonius_api_client.constants.LOG_LEVEL_HTTP` -
-                  logging level to use for this objects logger
-                * log_level_urllib (:obj:`str`): default ``"warning"`` -
-                  logging level to use for this urllib logger
-                * log_request_attrs (:obj:`bool`): default ``None`` - control logging
-                  of request attributes:
+            log_level (:obj:`str`):
+              default :data:`axonius_api_client.constants.LOG_LEVEL_HTTP` -
+              logging level to use for this objects logger
+            log_level_urllib (:obj:`str`): default ``"warning"`` -
+              logging level to use for this urllib logger
+            log_request_attrs (:obj:`bool`): default ``None`` - control logging
+              of request attributes:
 
-                  * if ``True``, log request attributes in
-                    :data:`axonius_api_client.constants.LOG_REQUEST_ATTRS_VERBOSE`
-                  * if ``False``, log request attributes in
-                    :data:`axonius_api_client.constants.LOG_REQUEST_ATTRS_BRIEF`
-                  * if ``True``, do not log any request attributes
-                * log_response_attrs (:obj:`bool`): default ``None`` - control logging
-                  of response attributes:
+              * if ``True``, log request attributes defined in
+                :data:`axonius_api_client.constants.LOG_REQUEST_ATTRS_VERBOSE`
+              * if ``False``, log request attributes defined in
+                :data:`axonius_api_client.constants.LOG_REQUEST_ATTRS_BRIEF`
+              * if ``None``, do not log any request attributes
+            log_response_attrs (:obj:`bool`): default ``None`` - control logging
+              of response attributes:
 
-                  * if ``True``, log response attributes in
-                    :data:`axonius_api_client.constants.LOG_RESPONSE_ATTRS_VERBOSE`
-                  * if ``False``, log response attributes in
-                    :data:`axonius_api_client.constants.LOG_RESPONSE_ATTRS_BRIEF`
-                  * if ``True``, do not log any response attributes
-                * log_request_body (:obj:`bool`): default ``False`` - control logging
-                  of request body:
+              * if ``True``, log response attributes defined in
+                :data:`axonius_api_client.constants.LOG_RESPONSE_ATTRS_VERBOSE`
+              * if ``False``, log response attributes defined in
+                :data:`axonius_api_client.constants.LOG_RESPONSE_ATTRS_BRIEF`
+              * if ``None``, do not log any response attributes
+            log_request_body (:obj:`bool`): default ``False`` - control logging
+              of request bodies:
 
-                  * if ``True``, log request body
-                  * if ``False``, do not log request body
-                * log_response_body (:obj:`bool`): default ``False`` - control logging
-                  of response body:
+              * if ``True``, log request bodies
+              * if ``False``, do not log request bodies
+            log_response_body (:obj:`bool`): default ``False`` - control logging
+              of response bodies:
 
-                  * if ``True``, log response body
-                  * if ``False``, do not log response body
+              * if ``True``, log response bodies
+              * if ``False``, do not log response bodies
 
         Raises:
             :exc:`exceptions.HttpError`: if either cert_client_cert or cert_client_key
@@ -127,7 +129,6 @@ class Http(object):
                 cert_client_key, or cert_client_both are supplied and the file does
                 not exist
         """
-        log_level = kwargs.get("log_level", constants.LOG_LEVEL_HTTP)
         self._log = logs.get_obj_log(obj=self, level=log_level)
         """:obj:`logging.Logger`: Logger for this object."""
 
@@ -164,6 +165,18 @@ class Http(object):
         self.session = requests.Session()
         """:obj:`requests.Session`: session object to use"""
 
+        self.LOG_REQUEST_BODY = log_request_body
+        """:obj:`bool`: Log the full request body."""
+
+        self.LOG_RESPONSE_BODY = log_response_body
+        """:obj:`bool`: Log the full response body."""
+
+        self.LOG_RESPONSE_ATTRS = []
+        """:obj:`list` of :obj:`str`: Request attributes to log."""
+
+        self.LOG_REQUEST_ATTRS = []
+        """:obj:`list` of :obj:`str`: Response attributes to log."""
+
         self.session.proxies = {}
         self.session.proxies["https"] = https_proxy
         self.session.proxies["http"] = http_proxy
@@ -189,25 +202,13 @@ class Http(object):
             tools.path_read(obj=cert_client_key)
             self.session.cert = (format(cert_client_cert), format(cert_client_key))
 
-        self.LOG_REQUEST_BODY = kwargs.get("log_request_body", False)
-        """:obj:`bool`: Log the full request body."""
-
-        self.LOG_RESPONSE_BODY = kwargs.get("log_response_body", False)
-        """:obj:`bool`: Log the full response body."""
-
-        self.LOG_RESPONSE_ATTRS = []
-        """:obj:`list` of :obj:`str`: Request attributes to log."""
-
-        self.LOG_REQUEST_ATTRS = []
-        """:obj:`list` of :obj:`str`: Response attributes to log."""
-
-        log_response_attrs = kwargs.get("log_response_attrs", None)
+        log_response_attrs = log_response_attrs
         if log_response_attrs is True:
             self.LOG_RESPONSE_ATTRS = constants.LOG_RESPONSE_ATTRS_VERBOSE
         elif log_response_attrs is False:
             self.LOG_RESPONSE_ATTRS = constants.LOG_RESPONSE_ATTRS_BRIEF
 
-        log_request_attrs = kwargs.get("log_request_attrs", None)
+        log_request_attrs = log_request_attrs
         if log_request_attrs is True:
             self.LOG_REQUEST_ATTRS = constants.LOG_REQUEST_ATTRS_VERBOSE
         elif log_request_attrs is False:
@@ -219,7 +220,7 @@ class Http(object):
             warnings.simplefilter("ignore", InsecureRequestWarning)
 
         urllog = logging.getLogger("urllib3.connectionpool")
-        logs.set_level(obj=urllog, level=kwargs.get("log_level_urllib", "warning"))
+        logs.set_level(obj=urllog, level=log_level_urllib)
 
     def __call__(
         self,
