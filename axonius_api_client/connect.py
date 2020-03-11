@@ -9,6 +9,8 @@ import requests
 
 from . import api, auth, constants, exceptions, http, logs, tools
 
+# TODO examples
+
 
 class Connect(object):
     """Easy all-in-one connection handler."""
