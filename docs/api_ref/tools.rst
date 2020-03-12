@@ -1,4 +1,4 @@
-axonius_api_client.tools
+tools
 =================================
 
 .. automodule:: axonius_api_client.tools

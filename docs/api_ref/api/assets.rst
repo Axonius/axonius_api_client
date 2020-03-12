@@ -1,4 +1,4 @@
-axonius_api_client.api.assets
+api.assets
 ======================================
 
 .. automodule:: axonius_api_client.api.assets
