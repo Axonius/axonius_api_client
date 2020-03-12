@@ -5,7 +5,12 @@ axonius_api_client
    :no-members:
 
 .. toctree::
-    api/package.rst
+    api/adapters
+    api/assets
+    api/enforcements
+    api/mixins
+    api/routers
+    api/system
     auth
     connect
     constants

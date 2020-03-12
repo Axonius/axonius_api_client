@@ -1,4 +1,4 @@
-axonius_api_client.connect
+connect
 ===================================
 
 .. automodule:: axonius_api_client.connect

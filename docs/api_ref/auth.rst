@@ -1,4 +1,4 @@
-axonius_api_client.auth
+auth
 ================================
 
 .. automodule:: axonius_api_client.auth

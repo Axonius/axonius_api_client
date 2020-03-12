@@ -1,4 +1,4 @@
-axonius_api_client.api.adapters
+api.adapters
 ========================================
 
 .. automodule:: axonius_api_client.api.adapters

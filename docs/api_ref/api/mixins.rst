@@ -1,4 +1,4 @@
-axonius_api_client.mixins
+api.mixins
 ======================================
 
 .. automodule:: axonius_api_client.api.mixins

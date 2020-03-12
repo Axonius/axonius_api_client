@@ -1,4 +1,4 @@
-axonius_api_client.api.system
+api.system
 ======================================
 
 .. automodule:: axonius_api_client.api.system

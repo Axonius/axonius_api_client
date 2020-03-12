@@ -1,4 +1,4 @@
-axonius_api_client.api.enforcements
+api.enforcements
 ============================================
 
 .. automodule:: axonius_api_client.api.enforcements

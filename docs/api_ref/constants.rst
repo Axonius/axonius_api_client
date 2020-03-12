@@ -1,4 +1,4 @@
-axonius_api_client.constants
+constants
 =====================================
 
 .. automodule:: axonius_api_client.constants

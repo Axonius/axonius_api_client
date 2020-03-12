@@ -1,4 +1,4 @@
-axonius_api_client.version
+version
 ===================================
 
 .. automodule:: axonius_api_client.version

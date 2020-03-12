@@ -1,4 +1,4 @@
-axonius_api_client.api.routers
+api.routers
 =======================================
 
 .. automodule:: axonius_api_client.api.routers

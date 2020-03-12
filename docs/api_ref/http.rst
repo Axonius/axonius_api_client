@@ -1,4 +1,4 @@
-axonius_api_client.http
+http
 ================================
 
 .. automodule:: axonius_api_client.http

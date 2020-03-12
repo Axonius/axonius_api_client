@@ -1,4 +1,4 @@
-axonius_api_client.exceptions
+exceptions
 ======================================
 
 .. automodule:: axonius_api_client.exceptions
