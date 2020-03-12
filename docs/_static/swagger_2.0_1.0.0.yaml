@@ -1,0 +1,2038 @@
+swagger: '2.0'
+info:
+  contact:
+    email: apiclient@axonius.com
+    name: Axonius
+    url: 'https://axonius.com'
+  description: API for Axonius
+  license:
+    name: Apache 2.0
+    url: 'http://www.apache.org/licenses/LICENSE-2.0.html'
+  termsOfService: 'http://swagger.io/terms/'
+  title: Axonius REST API
+  version: 1.0.0
+basePath: /api/V1
+paths:
+  /adapters:
+    get:
+      produces:
+        - application/json
+      parameters: []
+      responses:
+        '200':
+          description: Response from getting adapters metadata
+          schema:
+            $ref: '#/definitions/ResponseAdaptersGet'
+        '401':
+          description: errors that come back with 401 codes
+          schema:
+            $ref: '#/definitions/ResponseError'
+      tags:
+        - Adapters
+      operationId: AdaptersGetOperation
+      summary: Get metadata for all adapters
+  '/adapters/{adapter_name}/clients':
+    post:
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - description: internal name of adapter
+          in: path
+          name: adapter_name
+          required: true
+          type: string
+          x-example: aws_adapter
+        - description: Request body for adding a connection
+          in: body
+          name: body
+          schema:
+            $ref: '#/definitions/RequestConnectionAdd'
+      responses:
+        '200':
+          description: Response from adding a connection
+          schema:
+            $ref: '#/definitions/ResponseClientAdd'
+        '400':
+          description: various errors for missing/invalid properties
+          schema:
+            $ref: '#/definitions/ResponseError'
+        '401':
+          description: errors that come back with 401 codes
+          schema:
+            $ref: '#/definitions/ResponseError'
+        '500':
+          description: errors when adding or testing a connection
+          schema:
+            $ref: '#/definitions/ResponseError'
+      tags:
+        - Adapter Connections
+      operationId: AdapterConnectionAddOperation
+      summary: Create a connection for an adapter
+    put:
+      consumes:
+        - application/json
+      parameters:
+        - description: internal name of adapter
+          in: path
+          name: adapter_name
+          required: true
+          type: string
+          x-example: aws_adapter
+        - description: Request body for testing a connection
+          in: body
+          name: body
+          schema:
+            $ref: '#/definitions/RequestConnectionTest'
+      responses:
+        '200':
+          description: When no response is returned
+        '400':
+          description: various errors for missing/invalid properties
+          schema:
+            $ref: '#/definitions/ResponseError'
+        '401':
+          description: errors that come back with 401 codes
+          schema:
+            $ref: '#/definitions/ResponseError'
+        '500':
+          description: errors when adding or testing a connection
+          schema:
+            $ref: '#/definitions/ResponseError'
+      tags:
+        - Adapter Connections
+      operationId: AdapterConnectionTestOperation
+      summary: >-
+        Test connectivity for a connection for an adapter. Empty 200 response
+        means the host/ip/domain:port is reachable. This does not check
+        permissions, it only does a port check
+  '/adapters/{adapter_name}/{node_id}/upload_file':
+    post:
+      consumes:
+        - multipart/form-data
+      produces:
+        - application/json
+      parameters:
+        - description: internal name of adapter
+          in: path
+          name: adapter_name
+          required: true
+          type: string
+          x-example: aws_adapter
+        - description: UUID of a specific node
+          in: path
+          name: node_id
+          required: true
+          type: string
+          x-example: 2cc965f491b3440e86ced9772faed245
+        - description: the name of the field to store this file as in mongo
+          in: formData
+          name: field_name
+          type: string
+        - description: the file name and contents to upload
+          format: binary
+          in: formData
+          name: userfile
+          type: string
+      responses:
+        '200':
+          description: Response from uploading a file to an adapter on a node
+          schema:
+            $ref: '#/definitions/ResponseAdapterUploadFile'
+        '400':
+          description: various errors for missing/invalid properties
+          schema:
+            $ref: '#/definitions/ResponseError'
+        '401':
+          description: errors that come back with 401 codes
+          schema:
+            $ref: '#/definitions/ResponseError'
+        '500':
+          description: errors when adding or testing a connection
+          schema:
+            $ref: '#/definitions/ResponseError'
+      tags:
+        - Adapters
+      operationId: AdapterUploadFileOperation
+      summary: Upload a file to an adapter on a node
+  '/adapters/{adapter_unique_name}/config/{config_name}':
+    get:
+      produces:
+        - application/json
+      parameters:
+        - description: >-
+            unique internal name of adapter (aka what designates an adapter on a
+            specific node)
+          in: path
+          name: adapter_unique_name
+          required: true
+          type: string
+        - description: >-
+            name of advanced configuration settings to get/set. Use AdapterBase
+            for generic advanced settings available to every adapter. Use
+            NameAdapter (replace Name with title cased name of Adapter) for
+            adapter specific advanced settings, if the adapter has any.
+          in: path
+          name: config_name
+          required: true
+          type: string
+      responses:
+        '200':
+          description: Response from getting adapters advanced settings
+          schema: {}
+        '400':
+          description: various errors for missing/invalid properties
+          schema:
+            $ref: '#/definitions/ResponseError'
+        '401':
+          description: errors that come back with 401 codes
+          schema:
+            $ref: '#/definitions/ResponseError'
+        '500':
+          description: errors when adding or testing a connection
+          schema:
+            $ref: '#/definitions/ResponseError'
+      tags:
+        - Adapters
+      operationId: AdapterAdvancedSettingsGetOperation
+      summary: Get the advanced settings for an adapter
+    post:
+      consumes:
+        - application/json
+      parameters:
+        - description: >-
+            unique internal name of adapter (aka what designates an adapter on a
+            specific node)
+          in: path
+          name: adapter_unique_name
+          required: true
+          type: string
+        - description: >-
+            name of advanced configuration settings to get/set. Use AdapterBase
+            for generic advanced settings available to every adapter. Use
+            NameAdapter (replace Name with title cased name of Adapter) for
+            adapter specific advanced settings, if the adapter has any.
+          in: path
+          name: config_name
+          required: true
+          type: string
+        - description: Request for setting advanced settings for adapters
+          in: body
+          name: body
+          schema: {}
+      responses:
+        '200':
+          description: When no response is returned
+        '400':
+          description: various errors for missing/invalid properties
+          schema:
+            $ref: '#/definitions/ResponseError'
+        '401':
+          description: errors that come back with 401 codes
+          schema:
+            $ref: '#/definitions/ResponseError'
+        '500':
+          description: errors when adding or testing a connection
+          schema:
+            $ref: '#/definitions/ResponseError'
+      tags:
+        - Adapters
+      operationId: AdapterAdvancedSettingsSetOperation
+      summary: Set the advanced settings for an adapter
+  /devices:
+    post:
+      parameters: []
+      responses:
+        '200':
+          description: >-
+            Response from getting device or user assets with optional filter
+            (query in GUI) and fields (columns in GUI) using paging
+          schema:
+            $ref: '#/definitions/ResponseAssetPage'
+        '400':
+          description: Error when mongo query is malformed
+          schema:
+            $ref: '#/definitions/ResponseError'
+        '401':
+          description: errors that come back with 401 codes
+          schema:
+            $ref: '#/definitions/ResponseError'
+      tags:
+        - Devices
+      operationId: AssetsDeviceOperation
+      summary: >-
+        Get device assets using paging with optional fields (columns in GUI) and
+        filter (query in GUI)
+  /devices/count:
+    post:
+      parameters: []
+      responses:
+        '200':
+          description: >-
+            Response from getting count of device or user assets with optional
+            filter (query in GUI)
+          schema:
+            description: Count of assets matching query
+            example: 323
+            type: integer
+        '400':
+          description: Error when mongo query is malformed
+          schema:
+            $ref: '#/definitions/ResponseError'
+        '401':
+          description: errors that come back with 401 codes
+          schema:
+            $ref: '#/definitions/ResponseError'
+      tags:
+        - Devices
+      operationId: AssetCountDeviceOperation
+      summary: Get count of device assets using optional filter (query in GUI)
+  /devices/fields:
+    get:
+      parameters: []
+      responses:
+        '200':
+          description: Response from getting fields for device or user assets
+          schema:
+            $ref: '#/definitions/ResponseAssetFields'
+        '401':
+          description: errors that come back with 401 codes
+          schema:
+            $ref: '#/definitions/ResponseError'
+      tags:
+        - Devices
+      operationId: AssetFieldsDeviceOperation
+      summary: Get all fields defined for device assets
+  /devices/labels:
+    delete:
+      parameters: []
+      responses:
+        '200':
+          description: >-
+            Response from adding or removing labels (tags in GUI) to device or
+            user assets
+          schema:
+            description: Number of assets labels (tags in GUI) were added to
+            example: 323
+            type: integer
+        '400':
+          description: Error when request is missing entities or labels properties
+          schema:
+            $ref: '#/definitions/ResponseError'
+        '401':
+          description: errors that come back with 401 codes
+          schema:
+            $ref: '#/definitions/ResponseError'
+      tags:
+        - Devices
+      operationId: AssetLabelDeviceRemoveOperation
+      summary: Remove labels (tags in GUI) from device assets
+    get:
+      parameters: []
+      responses:
+        '200':
+          description: >-
+            Response from getting all known labels (tags in GUI) for device or
+            user assets
+          examples:
+            application/json:
+              - tag1
+              - tag2
+              - tag3
+          schema:
+            $ref: '#/definitions/ResponseArrayLabels'
+        '401':
+          description: errors that come back with 401 codes
+          schema:
+            $ref: '#/definitions/ResponseError'
+      tags:
+        - Devices
+      operationId: AssetLabelDeviceGetOperation
+      summary: Get all labels (tags in GUI) assigned to device assets
+    post:
+      parameters: []
+      responses:
+        '200':
+          description: >-
+            Response from adding or removing labels (tags in GUI) to device or
+            user assets
+          schema:
+            description: Number of assets labels (tags in GUI) were added to
+            example: 323
+            type: integer
+        '400':
+          description: Error when request is missing entities or labels properties
+          schema:
+            $ref: '#/definitions/ResponseError'
+        '401':
+          description: errors that come back with 401 codes
+          schema:
+            $ref: '#/definitions/ResponseError'
+      tags:
+        - Devices
+      operationId: AssetLabelDeviceAddOperation
+      summary: Add labels (tags in GUI) to device assets
+  /devices/views:
+    delete:
+      parameters: []
+      responses:
+        '200':
+          description: When no response is returned
+        '401':
+          description: errors that come back with 401 codes
+          schema:
+            $ref: '#/definitions/ResponseError'
+      tags:
+        - Devices
+      operationId: SavedQueryDeviceDeleteOperation
+      summary: Delete a saved query for devices
+    get:
+      produces:
+        - application/json
+      parameters:
+        - description: |
+            Filter to use when searching for saved queries
+
+            * Regex example `name = regex("example", "i")`
+            * Equals example `name == "example"`
+            * Not Equals Example `not name == "example"`
+          in: query
+          name: filter
+          required: false
+          type: string
+        - description: How many rows to skip (0 to start at first row)
+          in: query
+          minimum: 0
+          name: skip
+          required: true
+          type: integer
+        - description: How many rows to return in a page
+          in: query
+          maximum: 2000
+          minimum: 1
+          name: limit
+          required: true
+          type: integer
+      responses:
+        '200':
+          description: Response from getting Saved Queries for devices using paging
+          schema:
+            $ref: '#/definitions/ResponseSavedQueryGet'
+        '400':
+          description: Error when mongo query is malformed
+          schema:
+            $ref: '#/definitions/ResponseError'
+        '401':
+          description: errors that come back with 401 codes
+          schema:
+            $ref: '#/definitions/ResponseError'
+      tags:
+        - Devices
+      operationId: SavedQueryDeviceGetOperation
+      summary: Get saved queries for devices using paging with optional filter
+    post:
+      produces:
+        - text/plain
+      parameters: []
+      responses:
+        '200':
+          description: Response from creating a Saved Query for devices
+          schema:
+            description: UUID of created saved query
+            example: 5e62b8eaeb81e7d9094e7557
+            type: string
+        '400':
+          description: Error when request is missing entities or labels properties
+          schema:
+            $ref: '#/definitions/ResponseError'
+        '401':
+          description: errors that come back with 401 codes
+          schema:
+            $ref: '#/definitions/ResponseError'
+      tags:
+        - Devices
+      operationId: SavedQueryDeviceCreateOperation
+      summary: Create or overwrite a saved query for devices
+  '/devices/{id}':
+    get:
+      parameters:
+        - description: internal_axon_id of an asset
+          in: path
+          name: id
+          required: true
+          type: string
+          x-example: 48349f81c2f12d74ab1fc79d483a92b5
+      responses:
+        '200':
+          description: Response from getting a device or user asset by internal_axon_id
+          schema:
+            $ref: '#/definitions/ObjectAsset'
+        '401':
+          description: errors that come back with 401 codes
+          schema:
+            $ref: '#/definitions/ResponseError'
+        '404':
+          description: Error when asset ID is not found
+          schema:
+            $ref: '#/definitions/ResponseError'
+      tags:
+        - Devices
+      operationId: AssetByIdDeviceOperation
+      summary: Get all adapter keys and values for a device by internal_axon_id
+  /users:
+    post:
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - description: >-
+            Request body for getting user or device assets with optional fields
+            (columns in GUI) and optional filter (query in GUI) using paging
+          in: body
+          name: body
+          schema:
+            $ref: '#/definitions/RequestAssets'
+      responses:
+        '200':
+          description: >-
+            Response from getting device or user assets with optional filter
+            (query in GUI) and fields (columns in GUI) using paging
+          schema:
+            $ref: '#/definitions/ResponseAssetPage'
+        '400':
+          description: Error when mongo query is malformed
+          schema:
+            $ref: '#/definitions/ResponseError'
+        '401':
+          description: errors that come back with 401 codes
+          schema:
+            $ref: '#/definitions/ResponseError'
+      tags:
+        - Users
+      operationId: AssetsUserOperation
+      summary: >-
+        Get user assets using paging with optional fields (columns in GUI) and
+        filter (query in GUI)
+  /users/count:
+    post:
+      consumes:
+        - application/json
+      produces:
+        - text/plain
+      parameters:
+        - description: >-
+            Request body for getting count of user or device assets with
+            optional filter (query in GUI)
+          in: body
+          name: body
+          schema:
+            $ref: '#/definitions/RequestAssetCount'
+      responses:
+        '200':
+          description: >-
+            Response from getting count of device or user assets with optional
+            filter (query in GUI)
+          schema:
+            description: Count of assets matching query
+            example: 323
+            type: integer
+        '400':
+          description: Error when mongo query is malformed
+          schema:
+            $ref: '#/definitions/ResponseError'
+        '401':
+          description: errors that come back with 401 codes
+          schema:
+            $ref: '#/definitions/ResponseError'
+      tags:
+        - Users
+      operationId: AssetCountUserOperation
+      summary: Get count of user assets matching a filter (query in GUI)
+  /users/fields:
+    get:
+      produces:
+        - application/json
+      parameters: []
+      responses:
+        '200':
+          description: Response from getting fields for device or user assets
+          schema:
+            $ref: '#/definitions/ResponseAssetFields'
+        '401':
+          description: errors that come back with 401 codes
+          schema:
+            $ref: '#/definitions/ResponseError'
+      tags:
+        - Users
+      operationId: AssetFieldsUserOperation
+      summary: Get all fields defined for user assets
+  /users/labels:
+    delete:
+      parameters: []
+      responses:
+        '200':
+          description: >-
+            Response from adding or removing labels (tags in GUI) to device or
+            user assets
+          schema:
+            description: Number of assets labels (tags in GUI) were added to
+            example: 323
+            type: integer
+        '400':
+          description: Error when request is missing entities or labels properties
+          schema:
+            $ref: '#/definitions/ResponseError'
+        '401':
+          description: errors that come back with 401 codes
+          schema:
+            $ref: '#/definitions/ResponseError'
+      tags:
+        - Users
+      operationId: AssetLabelUserRemoveOperation
+      summary: Remove labels (tags in GUI) from user assets
+    get:
+      produces:
+        - application/json
+      parameters: []
+      responses:
+        '200':
+          description: >-
+            Response from getting all known labels (tags in GUI) for device or
+            user assets
+          examples:
+            application/json:
+              - tag1
+              - tag2
+              - tag3
+          schema:
+            $ref: '#/definitions/ResponseArrayLabels'
+        '401':
+          description: errors that come back with 401 codes
+          schema:
+            $ref: '#/definitions/ResponseError'
+      tags:
+        - Users
+      operationId: AssetLabelUserAddOperation
+      summary: Get all labels (tags in GUI) assigned to user assets
+    post:
+      consumes:
+        - application/json
+      produces:
+        - text/plain
+        - application/json
+      parameters:
+        - description: >-
+            Request body for adding or removing labels (tags in GUI) from user
+            or device assets
+          in: body
+          name: body
+          schema:
+            $ref: '#/definitions/RequestAssetLabelAddRemove'
+      responses:
+        '200':
+          description: >-
+            Response from adding or removing labels (tags in GUI) to device or
+            user assets
+          schema:
+            description: Number of assets labels (tags in GUI) were added to
+            example: 323
+            type: integer
+        '400':
+          description: Error when request is missing entities or labels properties
+          schema:
+            $ref: '#/definitions/ResponseError'
+        '401':
+          description: errors that come back with 401 codes
+          schema:
+            $ref: '#/definitions/ResponseError'
+      tags:
+        - Users
+      operationId: AssetLabelUserGetOperation
+      summary: Add labels (tags in GUI) to user assets
+  /users/views:
+    delete:
+      consumes:
+        - application/json
+      parameters:
+        - description: >-
+            Request body for deleting a list of saved queries for user or device
+            assets
+          in: body
+          name: body
+          schema:
+            $ref: '#/definitions/RequestSavedQueryDelete'
+      responses:
+        '200':
+          description: When no response is returned
+        '401':
+          description: errors that come back with 401 codes
+          schema:
+            $ref: '#/definitions/ResponseError'
+      tags:
+        - Users
+      operationId: SavedQueryUserDeleteOperation
+      summary: Delete a saved query for users
+    get:
+      produces:
+        - application/json
+      parameters:
+        - description: |
+            Filter to use when searching for saved queries
+
+            * Regex example `name = regex("example", "i")`
+            * Equals example `name == "example"`
+            * Not Equals Example `not name == "example"`
+          in: query
+          name: filter
+          required: false
+          type: string
+        - description: How many rows to skip (0 to start at first row)
+          in: query
+          minimum: 0
+          name: skip
+          required: true
+          type: integer
+        - description: How many rows to return in a page
+          in: query
+          maximum: 2000
+          minimum: 1
+          name: limit
+          required: true
+          type: integer
+      responses:
+        '200':
+          description: Response from getting Saved Queries for users using paging
+          schema:
+            $ref: '#/definitions/ResponseSavedQueryGet'
+        '400':
+          description: Error when mongo query is malformed
+          schema:
+            $ref: '#/definitions/ResponseError'
+        '401':
+          description: errors that come back with 401 codes
+          schema:
+            $ref: '#/definitions/ResponseError'
+      tags:
+        - Users
+      operationId: SavedQueryUserGetOperation
+      summary: Get saved queries for users using paging with optional filter
+    post:
+      consumes:
+        - application/json
+      produces:
+        - text/plain
+        - application/json
+      parameters:
+        - description: Request body for creating a Saved Query for user or device assets
+          in: body
+          name: body
+          schema:
+            $ref: '#/definitions/ObjectSavedQuery'
+      responses:
+        '200':
+          description: Response from creating a Saved Query for users
+          schema:
+            description: UUID of created saved query
+            example: 5e62b8eaeb81e7d9094e7557
+            type: string
+        '400':
+          description: Error when request is missing entities or labels properties
+          schema:
+            $ref: '#/definitions/ResponseError'
+        '401':
+          description: errors that come back with 401 codes
+          schema:
+            $ref: '#/definitions/ResponseError'
+      tags:
+        - Users
+      operationId: SavedQueryUserCreateOperation
+      summary: Create or overwrite a saved query for users
+  '/users/{id}':
+    get:
+      produces:
+        - application/json
+      parameters:
+        - description: internal_axon_id of an asset
+          in: path
+          name: id
+          required: true
+          type: string
+          x-example: 48349f81c2f12d74ab1fc79d483a92b5
+      responses:
+        '200':
+          description: Response from getting a device or user asset by internal_axon_id
+          schema:
+            $ref: '#/definitions/ObjectAsset'
+        '401':
+          description: errors that come back with 401 codes
+          schema:
+            $ref: '#/definitions/ResponseError'
+        '404':
+          description: Error when asset ID is not found
+          schema:
+            $ref: '#/definitions/ResponseError'
+      tags:
+        - Users
+      operationId: AssetByIdUserOperation
+      summary: Get all adapter keys and values for a user by internal_axon_id
+definitions:
+  ArrayAdapter:
+    description: list of adapter metadata per node
+    items:
+      $ref: '#/definitions/ObjectAdapter'
+    type: array
+  ArrayFieldItems:
+    items:
+      properties:
+        branched:
+          type: boolean
+        description:
+          type: string
+        dynamic:
+          type: boolean
+        enum:
+          items:
+            type: string
+          type: array
+        format:
+          $ref: '#/definitions/StringCommonFormats'
+        items:
+          $ref: '#/definitions/ObjectFieldItems'
+        name:
+          example: specific_data.data.hostname
+          type: string
+        sort:
+          type: boolean
+        title:
+          example: Host Name
+          type: string
+        type:
+          $ref: '#/definitions/StringCommonTypes'
+        unique:
+          type: boolean
+      required:
+        - name
+        - title
+        - type
+      type: object
+    type: array
+  ObjectAdapter:
+    description: adapter metadata on a specific node
+    properties:
+      clients:
+        description: a list of all connections for an adapter on a given node
+        items:
+          $ref: '#/definitions/ObjectAdapterClient'
+        type: array
+      config:
+        $ref: '#/definitions/ObjectAdapterSchema'
+      node_id:
+        description: UUID of node adapter is running on
+        example: 2cc965f491b3440e86ced9772faed245
+        type: string
+      node_name:
+        description: Name of node adapter is running on
+        example: Master
+        type: string
+      schema:
+        $ref: '#/definitions/ObjectAdapterClientConfigSchema'
+      status:
+        description: >-
+          Overall status of clients (connections) for this adapter.
+
+          * If clients exist and any clients are broken, status will be
+          "warning" * If no clients exist, status will be "" * If clients exist
+          and all clients are ok, status will be "success"
+        enum:
+          - ''
+          - warning
+          - status
+        example: success
+        type: string
+      supported_features:
+        description: list of features supported by this adapter
+        example:
+          - Adapter
+          - Agent
+          - Plugin
+        items:
+          enum:
+            - Adapter
+            - Agent
+            - Assets
+            - Cloud_Provider
+            - Endpoint_Protection_Platform
+            - Firewall
+            - Manager
+            - MDM
+            - Network
+            - Plugin
+            - Triggerable
+            - UserManagement
+            - Virtualization
+            - Vulnerability_Assessment
+          type: string
+        type: array
+      unique_plugin_name:
+        description: The unique name of this adapter & node combo
+        example: opswat_adapter_0
+        type: string
+    required:
+      - node_id
+      - node_name
+      - clients
+      - config
+      - status
+      - supported_features
+      - unique_plugin_name
+    type: object
+  ObjectAdapterAdvancedGenericConfig:
+    description: >-
+      The current values for an adapters generic advanced settings - these are
+      likely to change on each release!
+    properties:
+      connect_client_timeout:
+        example: 300
+        type: integer
+      fetching_timeout:
+        example: 43200
+        type: integer
+      last_fetched_threshold_hours:
+        example: 48
+        type: integer
+      last_seen_prioritized:
+        example: true
+        type: boolean
+      last_seen_threshold_hours:
+        example: null
+        type: integer
+      minimum_time_until_next_fetch:
+        example: null
+        type: integer
+      realtime_adapter:
+        example: false
+        type: boolean
+      user_last_fetched_threshold_hours:
+        example: 48
+        type: integer
+      user_last_seen_threshold_hours:
+        example: 43800
+        type: integer
+    type: object
+  ObjectAdapterAdvancedSpecificConfig:
+    description: >-
+      The values for an adapters adapter specific advanced settings - these are
+      dynamic and unable to be pre-defined and they are likely to change on each
+      release!
+    type: object
+  ObjectAdapterClient:
+    description: The metadata for a client on an adapter on a node
+    properties:
+      adapter_name:
+        description: internal name of adapter for this connection
+        example: claroty_adapter
+        type: string
+      client_config:
+        description: >-
+          * this is per-adapter specific and changes almost constantly as new
+          features are added! * if a key is defined as type "password" in the
+          schema, the return value will be `["unchanged"]`. Supplying this value
+          back when updating a connection will re-use the existing encrypted
+          password.
+        example:
+          domain: '18.194.38.90:5000'
+          password:
+            - unchanged
+          username: admin
+          verify_ssl: false
+        type: object
+      client_id:
+        description: the resolved ID for this connection - adapter dependent implementation
+        example: '18.194.38.90:5000'
+        type: string
+      date_fetched:
+        description: the last time the "Save and Connect" button was pressed
+        example: '2020-03-05 23:25:13+00:00'
+        format: date-time
+        type: string
+      error:
+        description: 'if this is not empty, the connection is broken'
+        example: >-
+          HTTPSConnectionPool(host='18.194.38.90', port=5000): Max retries
+          exceeded with url: /auth/authenticate (Caused by
+          ConnectTimeoutError(<urllib3.connection.VerifiedHTTPSConnection object
+          at 0x7ff0dec26470>, 'Connection to 18.194.38.90 timed out. (connect
+          timeout=5)'))
+        type: string
+      node_id:
+        description: the node this adapter connection lives on
+        example: 2cc965f491b3440e86ced9772faed245
+        type: string
+      status:
+        description: >-
+          if this is "error", the connection is broken. if it is "success", the
+          connection is working
+        enum:
+          - error
+          - success
+        example: error
+        type: string
+    required:
+      - adapter_name
+      - client_config
+      - client_id
+      - date_fetched
+      - error
+      - node_id
+      - status
+      - uuid
+    type: object
+  ObjectAdapterClientConfigSchema:
+    description: schema definition of settings for adapter clients (connections)
+    properties:
+      items:
+        description: Client configuration schema definitions
+        items:
+          $ref: '#/definitions/ObjectSchemaItem'
+        type: array
+      required:
+        description: list of 'name' keys in 'items' property that are required
+        example:
+          - domain
+          - client_id
+          - client_secret
+          - verify_ssl
+        items:
+          type: string
+        type: array
+      type:
+        description: should always be array
+        enum:
+          - array
+        type: string
+    required:
+      - items
+      - required
+      - type
+    type: object
+  ObjectAdapterConfigSchema:
+    description: >-
+      schema definition for adapter generic advanced settings (AdapterBase) and
+      adapter specific advanced settings (i.e. ZscalerAdapter)
+    properties:
+      items:
+        description: Adapter advanced settings schema definitions
+        items:
+          $ref: '#/definitions/ObjectSchemaItem'
+        type: array
+      pretty_name:
+        description: Name shown in GUI in advanced settings tab
+        type: string
+      required:
+        description: list of 'name' keys in 'items' property that are required
+        example:
+          - domain
+          - client_id
+          - client_secret
+          - verify_ssl
+        items:
+          type: string
+        type: array
+      type:
+        description: should always be array
+        enum:
+          - array
+        type: string
+    required:
+      - items
+      - required
+      - type
+      - pretty_name
+    type: object
+  ObjectAdapterSchema:
+    description: adapter advanced settings schema
+    properties:
+      AdapterBase:
+        description: generic advanced settings used by all adapters
+        properties:
+          config:
+            $ref: '#/definitions/ObjectAdapterAdvancedGenericConfig'
+          schema:
+            $ref: '#/definitions/ObjectAdapterConfigSchema'
+        required:
+          - config
+          - schema
+        type: object
+      NameAdapter:
+        description: >-
+          adapter specific advanced settings, if the adapter has any. Name will
+          be the name of the adapter if this exists
+        properties:
+          config:
+            $ref: '#/definitions/ObjectAdapterAdvancedSpecificConfig'
+          schema:
+            $ref: '#/definitions/ObjectAdapterConfigSchema'
+        required:
+          - config
+          - schema
+        type: object
+    required:
+      - items
+      - required
+      - type
+    type: object
+  ObjectAsset:
+    description: >-
+      This returns keys based on the fields (columns in GUI) supplied in the
+      original request
+    properties:
+      adapter_list_length:
+        example: 9
+        minimum: 1
+        type: integer
+      adapters:
+        example:
+          - active_directory_adapter
+          - aws_adapter
+          - deep_security_adapter
+          - crowd_strike_adapter
+          - solarwinds_orion_adapter
+          - tanium_adapter
+          - tanium_asset_adapter
+          - tanium_discover_adapter
+          - preempt_adapter
+        items:
+          type: string
+        type: array
+      internal_axon_id:
+        example: 48349f81c2f12d74ab1fc79d483a92b5
+        type: string
+    required:
+      - adapters
+      - internal_axon_id
+      - adapter_list_length
+    type: object
+  ObjectExpression:
+    properties:
+      bracketWeight:
+        type: integer
+      children:
+        items:
+          $ref: '#/definitions/ObjectExpression'
+        type: array
+      compOp:
+        example: days
+        type: string
+      field:
+        example: specific_data.data.last_seen
+        type: string
+      fieldType:
+        example: axonius
+        type: string
+      filter:
+        example: (specific_data.data.last_seen >= date("NOW - 1d"))
+        type: string
+      filteredAdapters:
+        properties:
+          clearAll:
+            type: boolean
+          selectAll:
+            type: boolean
+          selectedValus:
+            description: >-
+              the keys for this object need to be the names of all adapters,
+              with the values being boolean to enable or disable an adapter from
+              being evaluated for field
+            example: '{"aruba_adapter": false}'
+            type: object
+        type: object
+      i:
+        example: 0
+        minimum: 0
+        type: integer
+      leftBracket:
+        example: false
+        type: boolean
+      not:
+        example: false
+        type: boolean
+      rightBracket:
+        example: false
+        type: boolean
+      value:
+        example: 1
+        type: object
+    required:
+      - filter
+    type: object
+  ObjectField:
+    properties:
+      branched:
+        type: boolean
+      description:
+        type: string
+      dynamic:
+        type: boolean
+      enum:
+        items:
+          type: string
+        type: array
+      format:
+        enum:
+          - date-time
+          - discrete
+          - image
+          - ip
+          - subnet
+          - table
+          - version
+        example: version
+        type: string
+      items:
+        $ref: '#/definitions/ObjectFieldItems'
+      name:
+        example: specific_data.data.hostname
+        type: string
+      sort:
+        type: boolean
+      title:
+        example: Host Name
+        type: string
+      type:
+        enum:
+          - array
+          - bool
+          - integer
+          - number
+          - string
+        example: string
+        type: string
+      unique:
+        type: boolean
+    required:
+      - name
+      - title
+      - type
+    type: object
+  ObjectFieldItems:
+    properties:
+      branched:
+        type: boolean
+      description:
+        type: string
+      dynamic:
+        type: boolean
+      enum:
+        items:
+          type: string
+        type: array
+      format:
+        $ref: '#/definitions/StringCommonFormats'
+      items:
+        $ref: '#/definitions/ArrayFieldItems'
+      name:
+        example: specific_data.data.hostname
+        type: string
+      sort:
+        type: boolean
+      title:
+        example: Host Name
+        type: string
+      type:
+        $ref: '#/definitions/StringCommonTypes'
+      unique:
+        type: boolean
+    required:
+      - type
+    type: object
+  ObjectPageInfo:
+    properties:
+      number:
+        description: current page number being returned
+        type: integer
+      size:
+        description: number of assets returned in this page
+        type: integer
+      totalPages:
+        description: >-
+          total number of pages based on totalResources divided by supplied
+          limit
+        type: integer
+      totalResources:
+        description: total number of assets that match the supplied filter
+        type: integer
+    type: object
+  ObjectSavedQuery:
+    properties:
+      tags:
+        example:
+          - tag1
+          - tag2
+        items:
+          type: string
+        type: array
+      archived:
+        readOnly: true
+        type: boolean
+      date_fetched:
+        example: '2020-03-06T20:56:10.000Z'
+        format: date-time
+        readOnly: true
+        type: string
+      description:
+        type: string
+      last_updated:
+        example: 'Fri, 06 Mar 2020 20:56:10 GMT'
+        format: date-time
+        readOnly: true
+        type: string
+      name:
+        type: string
+      query_type:
+        default: saved
+        enum:
+          - saved
+        type: string
+      updated_by:
+        example: >-
+          {"username": "admin", "source": "internal", "first_name":
+          "administrator", "last_name": "", "deleted": false}
+        readOnly: true
+        type: string
+      user_id:
+        example: '2020-03-05T02:35:14.000Z'
+        readOnly: true
+        type: string
+      uuid:
+        example: 5e62b8eaeb81e7d9094e7557
+        readOnly: true
+        type: string
+      view:
+        properties:
+          colFilters:
+            example:
+              specific_data.data.hostname: internal
+              specific_data.data.name: windows
+            properties: {}
+            type: object
+          fields:
+            example:
+              - adapters
+              - specific_data.data.name
+              - specific_data.data.hostname
+              - specific_data.data.last_seen
+              - specific_data.data.network_interfaces.mac
+              - specific_data.data.network_interfaces.ips
+              - specific_data.data.os.type
+              - labels
+            items:
+              type: string
+            type: array
+          query:
+            properties:
+              expressions:
+                items:
+                  $ref: '#/definitions/ObjectExpression'
+                type: array
+              filter:
+                example: >-
+                  (specific_data == match([plugin_name not in ['aruba_adapter']
+                  and data.last_seen >= date("NOW - 1d")]))
+                type: string
+            required:
+              - filter
+            type: object
+          sort:
+            properties:
+              desc:
+                description: sort descending
+                type: boolean
+              field:
+                description: field to sort on
+                example: specific_data.data.last_seen
+                type: string
+            type: object
+        required:
+          - query
+          - fields
+          - sort
+        type: object
+    required:
+      - name
+      - query_type
+      - view
+    type: object
+  ObjectSchemaItem:
+    properties:
+      default:
+        description: optional default for configuration item
+        example: '55000'
+        type: object
+      description:
+        description: description for configuration item (displayed in GUI)
+        example: The binary contents of the csv
+        type: string
+      enum:
+        description: valid values for supplied value
+        example:
+          - Unencrypted
+          - Verified
+          - Unverified
+        items:
+          type: string
+        type: array
+      format:
+        description: formatter for supplied value
+        enum:
+          - password
+          - port
+        example: password
+        type: string
+      items:
+        description: >-
+          if configuration item type is 'array', the supplied value is supposed
+          to be a list of items
+        items:
+          properties:
+            type:
+              example: string
+              type: string
+          required:
+            - type
+          type: object
+        type: array
+      name:
+        description: name of this configuration item
+        example: domain
+        type: string
+      title:
+        description: human friendly name of this configuration item (displayed in GUI)
+        example: Hostname or IP Address
+        type: string
+      type:
+        description: expected type of value for this configuration item
+        enum:
+          - array
+          - bool
+          - file
+          - integer
+          - number
+          - string
+        example: string
+        type: string
+    required:
+      - name
+      - type
+      - title
+    type: object
+  RequestAssetCount:
+    properties:
+      filter:
+        description: >-
+          Filter built using Query Wizard to use when counting assets. If not
+          supplied, will count all assets
+        example: (specific_data.data.last_seen >= date("NOW - 1d"))
+        type: string
+    type: object
+  RequestAssetLabelAddRemove:
+    properties:
+      entities:
+        properties:
+          ids:
+            description: internal_axon_id of assets to add labels (tags) to
+            example:
+              - 5e62e88deb81e7d909558444
+              - 5e62e88deb81e7d90955853d
+            items:
+              type: string
+            type: array
+        required:
+          - ids
+        type: object
+      labels:
+        description: labels (tags) to add to entities.ids
+        items:
+          type: string
+        type: array
+    required:
+      - entities
+      - labels
+    type: object
+  RequestAssets:
+    properties:
+      fields:
+        description: >-
+          Fields to include in asssets that are returned. If not supplied, will
+          include very minimal information
+        example: >-
+          labels,adapters,specific_data.data.id,specific_data.data.fetch_time,specific_data.data.hostname,specific_data.data.network_interfaces.ips
+        format: csv
+        type: string
+      filter:
+        description: >-
+          Filter built using Query Wizard to use when searching for assets. If
+          not supplied, will return all assets
+        example: (specific_data.data.last_seen >= date("NOW - 1d"))
+        type: string
+      limit:
+        description: How many rows to return in a page
+        maximum: 2000
+        minimum: 1
+        type: integer
+      skip:
+        description: How many rows to skip (0 to start at first row)
+        minimum: 0
+        type: integer
+    required:
+      - limit
+      - skip
+    type: object
+  RequestConnectionAdd:
+    description: >-
+      Adding a connection for an adapter requires knowing the client schema for
+      the adapter. The properties marked as required in the client schema MUST
+      be supplied.
+    properties:
+      domain:
+        description: >-
+          most (but not all) adapters use this property name to store the
+          hostname or IP address of the server to connect to for connections for
+          this adapter
+        example: 10.0.2.32
+        type: string
+      instanceName:
+        description: the ID of the node to add the new connection for this adapter
+        example: 2cc965f491b3440e86ced9772faed245
+        type: string
+      password:
+        description: >-
+          most (but not all) adapters use this property name to store the
+          password to authenticate with for connections for this adapter
+        example: password
+        type: string
+      username:
+        description: >-
+          most (but not all) adapters use this property name to store the
+          username to authenticate with for connections for this adapter
+        example: username
+        type: string
+    required:
+      - instanceName
+    type: object
+  RequestConnectionTest:
+    description: >-
+      Testing a connection for an adapter requires knowing the client schema for
+      the adapter. For some adapters, you only need to supply the node id as
+      instanceName, for others you must specify domain and/or port.
+    properties:
+      domain:
+        description: >-
+          most (but not all) adapters use this property name to store the
+          hostname or IP address of the server to connect to for connections for
+          this adapter
+        example: 10.0.2.32
+        type: string
+      instanceName:
+        description: the ID of the node to add the new connection for this adapter
+        example: 2cc965f491b3440e86ced9772faed245
+        type: string
+    required:
+      - instanceName
+    type: object
+  RequestSavedQueryDelete:
+    properties:
+      ids:
+        description: UUID's of saved queries to delete
+        items:
+          type: string
+        type: array
+    required:
+      - ids
+    type: object
+  ResponseAdapterUploadFile:
+    description: response from uploading a file to an adapter on a node
+    properties:
+      filename:
+        description: the name of the file that was uploaded
+        type: string
+      uuid:
+        description: the UUID of the file that was uploaded
+        type: string
+    required:
+      - uuid
+      - filename
+    type: object
+  ResponseAdaptersGet:
+    description: keyed on adapter name for every configured adapter
+    properties:
+      adapter_name:
+        $ref: '#/definitions/ArrayAdapter'
+    type: object
+  ResponseArrayLabels:
+    items:
+      type: string
+    type: array
+  ResponseAssetFields:
+    description: This returns variable information based on the configured adapters
+    properties:
+      generic:
+        items:
+          $ref: '#/definitions/ObjectField'
+        type: array
+      schema:
+        properties:
+          generic:
+            items:
+              $ref: '#/definitions/ObjectField'
+            type: array
+          specific:
+            description: keyed on adapter name for every configured adapter
+            properties:
+              adapter_name:
+                items:
+                  $ref: '#/definitions/ObjectField'
+                type: array
+            type: object
+        type: object
+      specific:
+        description: keyed on adapter name for every configured adapter
+        properties:
+          adapter_name:
+            items:
+              $ref: '#/definitions/ObjectField'
+            type: array
+        type: object
+    type: object
+  ResponseAssetPage:
+    properties:
+      assets:
+        items:
+          $ref: '#/definitions/ObjectAsset'
+        type: array
+      page:
+        $ref: '#/definitions/ObjectPageInfo'
+    required:
+      - assets
+      - page
+    type: object
+  ResponseClientAdd:
+    description: >-
+      response from adding a connection - even if an error happens while adding,
+      the connection still gets added
+    properties:
+      client_id:
+        description: 'the generated client id, adapter specific implementation'
+        type: string
+      error:
+        description: 'if not empty, an error happened while adding this connection'
+        type: string
+      id:
+        description: the UUID of the newly added connection
+        type: string
+      status:
+        description: whether or not an error happened while adding connection
+        enum:
+          - success
+          - error
+        type: string
+    required:
+      - client_id
+      - error
+      - id
+      - status
+    type: object
+  ResponseError:
+    properties:
+      additional_data:
+        type: string
+      message:
+        type: string
+      status:
+        type: string
+      tpe:
+        type: string
+    required:
+      - message
+      - status
+    type: object
+  ResponseSavedQueryGet:
+    properties:
+      assets:
+        items:
+          $ref: '#/definitions/ObjectSavedQuery'
+        type: array
+      page:
+        $ref: '#/definitions/ObjectPageInfo'
+    required:
+      - assets
+      - page
+    type: object
+  StringCommonFormats:
+    enum:
+      - date-time
+      - ip
+      - logo
+      - subnet
+      - tag
+      - version
+    example: version
+    type: string
+  StringCommonTypes:
+    enum:
+      - array
+      - bool
+      - integer
+      - number
+      - string
+    example: string
+    type: string
+securityDefinitions:
+  api_key:
+    description: Get this from account settings in Axonius
+    in: header
+    name: api-key
+    type: apiKey
+  api_secret:
+    description: Get this from account settings in Axonius
+    in: header
+    name: api-secret
+    type: apiKey
+security:
+  - api_key: []
+    api_secret: []
+tags:
+  - description: Endpoints for device assets
+    name: Devices
+  - description: Endpoints for user assets
+    name: Users
+  - description: Endpoints for adapters
+    name: Adapters
+  - description: Endpoints for adapter connections
+    name: Adapter Connections
+  - description: Endpoints for system settings
+    name: System Settings
+externalDocs:
+  description: Axonius API Client in Python
+  url: 'https://axonius-api-client.readthedocs.io/en/latest/'
+x-components:
+  parameters:
+    adapter_name_parameter:
+      description: internal name of adapter
+      in: path
+      name: adapter_name
+      required: true
+      type: string
+      x-example: aws_adapter
+    adapter_unique_name_parameter:
+      description: >-
+        unique internal name of adapter (aka what designates an adapter on a
+        specific node)
+      examples:
+        AdapterNode1:
+          description: The first instance of the AWS adapter is usually 0
+          value: aws_adapter_0
+      in: path
+      name: adapter_unique_name
+      required: true
+      type: string
+    asset_id_parameter:
+      description: internal_axon_id of an asset
+      in: path
+      name: id
+      required: true
+      type: string
+      x-example: 48349f81c2f12d74ab1fc79d483a92b5
+    config_name_parameter:
+      description: >-
+        name of advanced configuration settings to get/set. Use AdapterBase for
+        generic advanced settings available to every adapter. Use NameAdapter
+        (replace Name with title cased name of Adapter) for adapter specific
+        advanced settings, if the adapter has any.
+      examples:
+        AdapterBase:
+          description: to get/set the generic advanced settings for adapter_unique_name
+          value: AdapterBase
+        AwsAdapter:
+          description: >-
+            to get/set the adapter specific advanced settings for
+            adapter_unique_name
+          value: AwsAdapter
+      in: path
+      name: config_name
+      required: true
+      type: string
+    node_id_parameter:
+      description: UUID of a specific node
+      in: path
+      name: node_id
+      required: true
+      type: string
+      x-example: 2cc965f491b3440e86ced9772faed245
+    page_limit_parameter:
+      description: How many rows to return in a page
+      in: query
+      maximum: 2000
+      minimum: 1
+      name: limit
+      required: true
+      type: integer
+    page_skip_parameter:
+      description: How many rows to skip (0 to start at first row)
+      in: query
+      minimum: 0
+      name: skip
+      required: true
+      type: integer
+    saved_query_filter_parameter:
+      description: |
+        Filter to use when searching for saved queries
+
+        * Regex example `name = regex("example", "i")`
+        * Equals example `name == "example"`
+        * Not Equals Example `not name == "example"`
+      in: query
+      name: filter
+      required: false
+      type: string
+  responses:
+    AdapterAdvancedSettingsGetResponse:
+      description: Response from getting adapters advanced settings
+      schema: {}
+    AdapterUploadFileResponse:
+      description: Response from uploading a file to an adapter on a node
+      schema:
+        $ref: '#/definitions/ResponseAdapterUploadFile'
+    AdaptersGetResponse:
+      description: Response from getting adapters metadata
+      schema:
+        $ref: '#/definitions/ResponseAdaptersGet'
+    AssetByIdResponse:
+      description: Response from getting a device or user asset by internal_axon_id
+      schema:
+        $ref: '#/definitions/ObjectAsset'
+    AssetCountResponse:
+      description: >-
+        Response from getting count of device or user assets with optional
+        filter (query in GUI)
+      schema:
+        description: Count of assets matching query
+        example: 323
+        type: integer
+    AssetFieldsResponse:
+      description: Response from getting fields for device or user assets
+      schema:
+        $ref: '#/definitions/ResponseAssetFields'
+    AssetLabelAddRemoveResponse:
+      description: >-
+        Response from adding or removing labels (tags in GUI) to device or user
+        assets
+      schema:
+        description: Number of assets labels (tags in GUI) were added to
+        example: 323
+        type: integer
+    AssetLabelGetResponse:
+      description: >-
+        Response from getting all known labels (tags in GUI) for device or user
+        assets
+      examples:
+        application/json:
+          - tag1
+          - tag2
+          - tag3
+      schema:
+        $ref: '#/definitions/ResponseArrayLabels'
+    AssetsResponse:
+      description: >-
+        Response from getting device or user assets with optional filter (query
+        in GUI) and fields (columns in GUI) using paging
+      schema:
+        $ref: '#/definitions/ResponseAssetPage'
+    ConnectionAddResponse:
+      description: Response from adding a connection
+      schema:
+        $ref: '#/definitions/ResponseClientAdd'
+    EmptyResponse:
+      description: When no response is returned
+    ErrorConnectionMalformedResponse:
+      description: errors when adding or testing a connection
+      schema:
+        $ref: '#/definitions/ResponseError'
+    ErrorInvalidPropertyResponse:
+      description: various errors for missing/invalid properties
+      schema:
+        $ref: '#/definitions/ResponseError'
+    ErrorMalformedLabelAddRemoveResponse:
+      description: Error when request is missing entities or labels properties
+      schema:
+        $ref: '#/definitions/ResponseError'
+    ErrorMalformedQueryResponse:
+      description: Error when mongo query is malformed
+      schema:
+        $ref: '#/definitions/ResponseError'
+    ErrorMalformedSavedQueryUserCreateResponse:
+      description: Error when request is missing entities or labels properties
+      schema:
+        $ref: '#/definitions/ResponseError'
+    ErrorNotFoundByIdResponse:
+      description: Error when asset ID is not found
+      schema:
+        $ref: '#/definitions/ResponseError'
+    ErrorUnauthorizedResponse:
+      description: errors that come back with 401 codes
+      schema:
+        $ref: '#/definitions/ResponseError'
+    SavedQueryDeviceCreateResponse:
+      description: Response from creating a Saved Query for devices
+      links:
+        SavedQueryDeviceDeleteFromCreate:
+          $ref: '#/x-components/links/SavedQueryDeviceDeleteFromCreate'
+      schema:
+        description: UUID of created saved query
+        example: 5e62b8eaeb81e7d9094e7557
+        type: string
+    SavedQueryDeviceGetResponse:
+      description: Response from getting Saved Queries for devices using paging
+      links:
+        SavedQueryDeviceCreateFromGet:
+          $ref: '#/x-components/links/SavedQueryDeviceCreateFromGet'
+        SavedQueryDeviceDeleteFromGet:
+          $ref: '#/x-components/links/SavedQueryDeviceDeleteFromGet'
+      schema:
+        $ref: '#/definitions/ResponseSavedQueryGet'
+    SavedQueryUserCreateResponse:
+      description: Response from creating a Saved Query for users
+      links:
+        SavedQueryUserDeleteFromCreate:
+          $ref: '#/x-components/links/SavedQueryUserDeleteFromCreate'
+      schema:
+        description: UUID of created saved query
+        example: 5e62b8eaeb81e7d9094e7557
+        type: string
+    SavedQueryUserGetResponse:
+      description: Response from getting Saved Queries for users using paging
+      links:
+        SavedQueryUserCreateFromGet:
+          $ref: '#/x-components/links/SavedQueryUserCreateFromGet'
+        SavedQueryUserDeleteFromGet:
+          $ref: '#/x-components/links/SavedQueryUserDeleteFromGet'
+      schema:
+        $ref: '#/definitions/ResponseSavedQueryGet'
+  links:
+    SavedQueryDeviceCreateFromGet:
+      description: >-
+        Saved Queries can be re-created from the return one of the assets
+        returned from `GET /devices/views`, as long as the readOnly items are
+        not included
+      operationId: SavedQueryDeviceCreateOperation
+      requestBody: '$response.body#/assets/0'
+    SavedQueryDeviceDeleteFromCreate:
+      parameters:
+        ids:
+          - $response.body
+      description: >-
+        The text value returned in the response can be used as the `ids`
+        parameter in POST body to `DELETE /devices/views`
+      operationId: SavedQueryDeviceDeleteOperation
+    SavedQueryDeviceDeleteFromGet:
+      parameters:
+        ids:
+          - '$response.body#/assets/0/uuid'
+      description: >-
+        Saved Queries can be deleted via uuid attribute from any row returned
+        from `GET /users/views`
+      operationId: SavedQueryDeviceDeleteOperation
+    SavedQueryUserCreateFromGet:
+      description: >-
+        Saved Queries can be re-created from the return of one of the assets
+        returned from `GET /users/views`, as long as the readOnly items are not
+        included
+      operationId: SavedQueryUserCreateOperation
+      requestBody: '$response.body#/assets/0'
+    SavedQueryUserDeleteFromCreate:
+      parameters:
+        ids:
+          - $response.body
+      description: >-
+        The text value returned in the response can be used as the `ids`
+        parameter in POST body to `DELETE /users/views`
+      operationId: SavedQueryUserDeleteOperation
+    SavedQueryUserDeleteFromGet:
+      parameters:
+        ids:
+          - '$response.body#/assets/0/uuid'
+      description: >-
+        Saved Queries can be deleted via uuid attribute from any row returned
+        from `GET /users/views`
+      operationId: SavedQueryUserDeleteOperation
+  requestBodies:
+    AdapterAdvancedSettingsSetRequest:
+      description: Request for setting advanced settings for adapters
+      in: body
+      name: body
+      schema: {}
+    AdapterUploadFileRequest:
+      description: Request body for uploading a file to an adapter on a specific node
+      in: formData
+      name: body
+      schema:
+        properties:
+          field_name:
+            description: the name of the field to store this file as in mongo
+            type: string
+          userfile:
+            description: the file name and contents to upload
+            format: binary
+            type: string
+        type: object
+    AssetCountRequest:
+      description: >-
+        Request body for getting count of user or device assets with optional
+        filter (query in GUI)
+      in: body
+      name: body
+      schema:
+        $ref: '#/definitions/RequestAssetCount'
+    AssetLabelAddRemoveRequest:
+      description: >-
+        Request body for adding or removing labels (tags in GUI) from user or
+        device assets
+      in: body
+      name: body
+      schema:
+        $ref: '#/definitions/RequestAssetLabelAddRemove'
+    AssetsRequest:
+      description: >-
+        Request body for getting user or device assets with optional fields
+        (columns in GUI) and optional filter (query in GUI) using paging
+      in: body
+      name: body
+      schema:
+        $ref: '#/definitions/RequestAssets'
+    ConnectionAddRequest:
+      description: Request body for adding a connection
+      in: body
+      name: body
+      schema:
+        $ref: '#/definitions/RequestConnectionAdd'
+    ConnectionTestRequest:
+      description: Request body for testing a connection
+      in: body
+      name: body
+      schema:
+        $ref: '#/definitions/RequestConnectionTest'
+    SavedQueryCreateRequest:
+      description: Request body for creating a Saved Query for user or device assets
+      in: body
+      name: body
+      schema:
+        $ref: '#/definitions/ObjectSavedQuery'
+    SavedQueryDeleteRequest:
+      description: >-
+        Request body for deleting a list of saved queries for user or device
+        assets
+      in: body
+      name: body
+      schema:
+        $ref: '#/definitions/RequestSavedQueryDelete'
