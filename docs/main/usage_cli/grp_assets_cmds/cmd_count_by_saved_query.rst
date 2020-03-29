@@ -1,10 +1,11 @@
 .. include:: /main/.special.rst
 
-devices/users count
+devices/users count-by-saved-query
 ###############################################
 
-This command will get the count of assets that a query would return for users or devices
-and could be used as part of a script to do something based on the number returned.
+This command will get the count of assets that a saved query would return
+for users or devices and could be used as part of a script to do something based on
+the number returned.
 
 Common Options
 ===============================================
@@ -19,10 +20,10 @@ Examples
    :maxdepth: 1
    :glob:
 
-   cmd_count_examples/ex*
+   cmd_count_by_saved_query_examples/ex*
 
 Help Page
 ===============================================
 
-.. click:: axonius_api_client.cli.grp_objects.cmd_count:cmd
-   :prog: axonshell users/devices count
+.. click:: axonius_api_client.cli.grp_assets.cmd_count_by_saved_query:cmd
+   :prog: axonshell devices/users count-by-saved-query

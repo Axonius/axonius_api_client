@@ -23,7 +23,7 @@ __project__ = "axonius_api_client"
 PROJECT = __project__
 """:obj:`str`: Name of package."""
 
-__author_email__ = "apiclient@axonius.com"
+__author_email__ = "support@axonius.com"
 AUTHOR_EMAIL = __author_email__
 """:obj:`str`: Author email of package."""
 

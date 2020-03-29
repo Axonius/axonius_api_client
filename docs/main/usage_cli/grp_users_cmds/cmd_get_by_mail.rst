@@ -10,11 +10,11 @@ Output feeds
 
 The output from this command is able to be supplied as input to these commands:
 
-* :doc:`../grp_objects_reports_cmds/cmd_missing_adapters` to build a report of
+* :doc:`../grp_assets_reports_cmds/cmd_missing_adapters` to build a report of
   missing adapters for all assets returned from this command.
-* :doc:`../grp_objects_labels_cmds/cmd_add` to add labels to all assets returned from
+* :doc:`../grp_assets_labels_cmds/cmd_add` to add labels to all assets returned from
   this command.
-* :doc:`../grp_objects_labels_cmds/cmd_remove` to remove labels from all assets returned
+* :doc:`../grp_assets_labels_cmds/cmd_remove` to remove labels from all assets returned
   from this command.
 
 Common Options
@@ -33,5 +33,5 @@ Common Examples
 Help Page
 ===============================================
 
-.. click:: axonius_api_client.cli.grp_objects.cmd_get_by_mail:cmd
+.. click:: axonius_api_client.cli.grp_assets.cmd_get_by_mail:cmd
    :prog: axonshell users get-by-mail

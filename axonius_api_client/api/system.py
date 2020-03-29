@@ -87,16 +87,6 @@ class System(mixins.Model, mixins.Mixins):
             self._roles = Roles(parent=self)
         return self._roles
 
-    # TODO
-    """
-    def _request, self._has_system_about(), super()
-    def _has_system_about():
-        try:
-            self.meta.about()
-        except:
-            raise "Ask apiclient@axonius.com to enable support for this method!"
-    """
-
 
 class Discover(mixins.Child):
     """Child API model for working with discovery cycles."""

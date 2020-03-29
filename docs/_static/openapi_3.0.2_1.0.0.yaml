@@ -4,7 +4,7 @@ info:
   description: API for Axonius
   termsOfService: 'http://swagger.io/terms/'
   contact:
-    email: apiclient@axonius.com
+    email: support@axonius.com
     name: Axonius
     url: 'https://axonius.com'
   license:

@@ -11,7 +11,7 @@ Support
 For any support requests, bug reports, or feature requests you can:
 
 * Open an issue in the `issue tracker`_
-* Send an email apiclient@axonius.com
+* Send an email support@axonius.com
 
 Reporting Issues
 ===================================================
