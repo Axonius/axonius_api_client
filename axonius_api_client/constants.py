@@ -51,6 +51,12 @@ LOG_RESPONSE_ATTRS_VERBOSE = [
 ]
 """:obj:`list` of :obj:`str`: response attributes to log when verbose=True"""
 
+TIMEOUT_CONNECT = 5
+""":obj:`int`: seconds to wait for connection to API."""
+
+TIMEOUT_RESPONSE = 900
+""":obj:`int`: seconds to wait for response from API."""
+
 LOG_FMT_CONSOLE = "%(levelname)-8s [%(name)s] %(message)s"
 """:obj:`str`: default logging format to use for console logs"""
 

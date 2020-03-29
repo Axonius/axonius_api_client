@@ -28,6 +28,8 @@ class Connect(object):
         key,
         secret,
         wraperror=True,
+        timeout_connect=constants.TIMEOUT_CONNECT,
+        timeout_response=constants.TIMEOUT_RESPONSE,
         certpath=None,
         certverify=False,
         certwarn=True,
@@ -60,6 +62,12 @@ class Connect(object):
             url (:obj:`str`): URL, hostname, or IP address of Axonius instance
             key (:obj:`str`): API Key from account page in Axonius instance
             secret (:obj:`str`): API Secret from account page in Axonius instance
+            timeout_connect (:obj:`int`, optional):
+                default :data:`constants.TIMEOUT_CONNECT` - seconds to
+                wait for connections to open to :attr:`url`
+            timeout_response (:obj:`int`, optional):
+                default :data:`constants.TIMEOUT_RESPONSE` - seconds to
+                wait for responses from :attr:`url`
             wraperror (:obj:`bool`, optional): default ``True``
 
                 * if ``True`` wrap exceptions so that they are more user friendly
@@ -205,6 +213,8 @@ class Connect(object):
             "log_request_body": log_request_body,
             "log_response_body": log_response_body,
             "save_history": save_history,
+            "connect_timeout": timeout_connect,
+            "response_timeout": timeout_response,
         }
 
         self._auth_args = {"key": key, "secret": secret, "log_level": log_level_auth}
