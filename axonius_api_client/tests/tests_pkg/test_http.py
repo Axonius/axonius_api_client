@@ -1,17 +1,17 @@
 # -*- coding: utf-8 -*-
 """Test suite for axonius_api_client.http."""
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
 import logging
 import sys
 
+import axonius_api_client as axonapi
 import pytest
 import requests
-
-import axonius_api_client as axonapi
 from axonius_api_client import exceptions
 
-from .. import utils, meta
+from .. import meta, utils
 
 InsecureRequestWarning = requests.urllib3.exceptions.InsecureRequestWarning
 
@@ -158,8 +158,8 @@ class TestHttp(object):
 
         http = axonapi.Http(url=ax_url, save_last=True, certwarn=False)
         response = http()
-        assert response == http._LAST_RESPONSE
-        assert response.request == http._LAST_REQUEST
+        assert response == http.LAST_RESPONSE
+        assert response.request == http.LAST_REQUEST
 
     def test_save_last_false(self, request):
         """Test last req/resp with save_last=False."""
@@ -169,8 +169,8 @@ class TestHttp(object):
 
         http()
 
-        assert not http._LAST_RESPONSE
-        assert not http._LAST_REQUEST
+        assert not http.LAST_RESPONSE
+        assert not http.LAST_REQUEST
 
     def test_save_history(self, request):
         """Test last resp added to history with save_history=True."""
@@ -180,7 +180,7 @@ class TestHttp(object):
 
         response = http()
 
-        assert response in http._HISTORY
+        assert response in http.HISTORY
 
     def test_client_cert_missing_one(self, request, tmp_path):
         """Test cert or key supplied, but not the other."""

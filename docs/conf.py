@@ -40,6 +40,14 @@ language = "en"
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 pygments_style = "monokai"
 
+# autodoc_default_options = {
+#     "member-order": "bysource",
+#     "special-members": "__init__,__call__",
+#     "undoc-members": True,
+#     "show-inheritance": True,
+#     "exclude-members": "__weakref__,__str__,__repr__",
+# }
+
 # -- Options for HTML  ---------------------------------------------
 
 html_theme = "sphinx_rtd_theme"
@@ -106,6 +114,7 @@ intersphinx_mapping = {
     "python": ("http://docs.python.org/3", None),
     "requests": ("https://requests.readthedocs.io/en/master/", None),
     "urllib3": ("https://urllib3.readthedocs.io/en/latest/", None),
+    "dateutil": ("https://dateutil.readthedocs.io/en/latest/", None),
 }
 
 # -- Options for todo ----------------------------------------------

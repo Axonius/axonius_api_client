@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
 """Test suite for axonius_api_client.tools."""
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
 import logging
 import time
 
-import pytest
-
 import axonius_api_client as axonapi
-from axonius_api_client import exceptions, logs, tools
+import pytest
+from axonius_api_client import constants, exceptions, logs, tools
 
 
 class TestLogs(object):
@@ -60,7 +60,7 @@ class TestLogs(object):
         dh = logs.del_stderr(obj=logs.LOG)
         assert isinstance(dh, dict)
         assert logs.LOG.name in dh
-        assert isinstance(dh[logs.LOG.name], tools.LIST)
+        assert isinstance(dh[logs.LOG.name], constants.LIST)
         assert h in dh[logs.LOG.name]
         assert h not in logs.LOG.handlers
 
@@ -77,7 +77,7 @@ class TestLogs(object):
         dh = logs.del_stdout(obj=logs.LOG)
         assert isinstance(dh, dict)
         assert logs.LOG.name in dh
-        assert isinstance(dh[logs.LOG.name], tools.LIST)
+        assert isinstance(dh[logs.LOG.name], constants.LIST)
         assert h in dh[logs.LOG.name]
         assert h not in logs.LOG.handlers
 
@@ -95,7 +95,7 @@ class TestLogs(object):
         dh = logs.del_null(obj=logs.LOG)
 
         assert isinstance(dh, dict)
-        assert isinstance(dh[logs.LOG.name], tools.LIST)
+        assert isinstance(dh[logs.LOG.name], constants.LIST)
 
         assert logs.LOG.name in dh
         f = dh.pop(logs.LOG.name)
@@ -117,6 +117,6 @@ class TestLogs(object):
         dh = logs.del_file(logs.LOG)
         assert isinstance(dh, dict)
         assert logs.LOG.name in dh
-        assert isinstance(dh[logs.LOG.name], tools.LIST)
+        assert isinstance(dh[logs.LOG.name], constants.LIST)
         assert h in dh[logs.LOG.name]
         assert h not in logs.LOG.handlers

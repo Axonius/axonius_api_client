@@ -1,18 +1,12 @@
 # -*- coding: utf-8 -*-
-"""Axonius API Client package."""
-from __future__ import absolute_import, division, print_function, unicode_literals
+"""API models package."""
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
-from . import (
-    adapters,
-    enforcements,
-    mixins,
-    routers,
-    assets,
-    system,
-)
+from . import adapters, assets, enforcements, mixins, routers, system
 from .adapters import Adapters
-from .enforcements import Enforcements
 from .assets import Devices, Users
+from .enforcements import Enforcements
 from .system import System
 
 __all__ = (

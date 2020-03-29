@@ -1,62 +1,53 @@
 # -*- coding: utf-8 -*-
-"""Axonius API Client package."""
-from __future__ import absolute_import, division, print_function, unicode_literals
+"""API models for working with Enforcement Center."""
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
 import warnings
 
 from .. import constants, exceptions, tools
-from . import mixins, routers, assets
+from . import assets, mixins, routers
 
 
 class RunAction(mixins.Child):
-    """Action related API methods.
+    """Child API model for working with actions.
 
     Notes:
         The REST API will need to be updated to allow more power in this library.
         Until then, this class should be considered **BETA**.
-
     """
 
     @property
     def _router(self):
-        """Router for this API client.
+        """Router for this API model.
 
         Returns:
-            :obj:`axonius_api_client.api.routers.Router`
-
+            :obj:`.routers.Router`: REST API route defs
         """
         return routers.ApiV1.actions
 
     # sort of pointless
     def _get(self):
-        """Get all actions.
+        """Direct API method to get all actions.
 
         Returns:
-            :obj:`list` of :obj:`str`
-
+            :obj:`list` of :obj:`str`: all actions known to system
         """
         path = self._router.root
-
         return self._parent._request(method="get", path=path)
 
     def _deploy(self, action_name, ids, file_uuid, file_name, params=None):
         """Deploy an action.
 
         Args:
-            name (:obj:`str`):
-                Name of action to deploy.
-            ids (:obj:`list` of :obj:`str`):
-                Internal axonius IDs of device to deploy action against.
-            uuid (:obj:`str`):
-                UUID of binary to use in deployment.
-            filename (:obj:`str`):
-                Filename of binary to use in deployment.
-            params (:obj:`str`, optional):
-                Defaults to: None.
+            name (:obj:`str`): name of action to deploy
+            ids (:obj:`list` of :obj:`str`): internal_axon_ids of devices to process
+            uuid (:obj:`str`): UUID of binary to use in deployment
+            filename (:obj:`str`): filename of binary to use in deployment
+            params (:obj:`str`, optional): parameters to pass to action
 
         Returns:
-            :obj:`object`
-
+            :obj:`object`: response from deploying action
         """
         data = {}
         data["action_name"] = action_name
@@ -74,16 +65,12 @@ class RunAction(mixins.Child):
         """Run an action.
 
         Args:
-            action_name (:obj:`str`):
-                Name of action to run.
-            ids (:obj:`list` of :obj:`str`):
-                Internal axonius IDs of device to run action against.
-            command (:obj:`str`):
-                Command to run.
+            action_name (:obj:`str`): name of action to run
+            ids (:obj:`list` of :obj:`str`): internal_axon_ids of devices to process
+            command (:obj:`str`): command to run
 
         Returns:
-            :obj:`object`
-
+            :obj:`object`: response from running action
         """
         data = {}
         data["action_name"] = action_name
@@ -91,21 +78,17 @@ class RunAction(mixins.Child):
         data["command"] = command
 
         path = self._router.shell
-
         return self._parent._request(method="post", path=path, json=data)
 
     def _upload_file(self, name, content, content_type=None, headers=None):
         """Upload a file to the system for use in deployment.
 
         Args:
-            binary (:obj:`io.BytesIO`):
-                Binary bits of file to upload.
-            filename (:obj:`str`):
-                Name of file to upload.
+            binary (:obj:`io.BytesIO`): binary bits of file to upload
+            filename (:obj:`str`): name of file to upload
 
         Returns:
             :obj:`str`: UUID of uploaded file.
-
         """
         data = {"field_name": "binary"}
         files = {"userfile": (name, content, content_type, headers)}
@@ -118,16 +101,19 @@ class RunAction(mixins.Child):
 
 
 class Enforcements(mixins.Model, mixins.Mixins):
-    """Enforcement related API methods.
+    """API model for working with enforcement center.
 
     Notes:
         The REST API will need to be updated to allow more power in this library.
         Until then, this class should be considered **BETA**.
-
     """
 
     def _init(self, auth, **kwargs):
-        """Pass."""
+        """Post init method for subclasses to use for extra setup.
+
+        Args:
+            auth (:obj:`.auth.Model`): object to use for auth and sending API requests
+        """
         # cross ref
         self.users = assets.Users(auth=auth, **kwargs)
         self.devices = assets.Devices(auth=auth, **kwargs)
@@ -141,11 +127,10 @@ class Enforcements(mixins.Model, mixins.Mixins):
 
     @property
     def _router(self):
-        """Router for this API client.
+        """Router for this API model.
 
         Returns:
-            :obj:`axonius_api_client.api.routers.Router`
-
+            :obj:`.routers.Router`: REST API route defs
         """
         return routers.ApiV1.alerts
 
@@ -153,41 +138,22 @@ class Enforcements(mixins.Model, mixins.Mixins):
         """Delete objects by internal axonius IDs.
 
         Args:
-            ids (:obj:`list` of :obj:`str`):
-                List of internal axonius IDs of objects to delete.
-
-        Returns:
-            None
-
+            ids (:obj:`list` of :obj:`str`): internal_axon_ids of devices to process
         """
         path = self._router.root
 
         return self._request(method="delete", path=path, json=ids)
 
     def _create(self, name, main, success=None, failure=None, post=None, triggers=None):
-        """Create an enforcement.
+        """Create an enforcement set.
 
         Args:
-            name (:obj:`str`):
-                Name of new enforcement to create.
-            main (:obj:`dict`):
-                Main action to run for this enforcement.
-            success (:obj:`list` of :obj:`dict`, optional):
-                Actions to run on success.
-
-                Defaults to: None.
-            failure (:obj:`list` of :obj:`dict`, optional):
-                Actions to run on failure.
-
-                Defaults to: None.
-            post (:obj:`list` of :obj:`dict`, optional):
-                Actions to run on post.
-
-                Defaults to: None.
-            triggers (:obj:`list` of :obj:`dict`, optional):
-                Triggers for this enforcement.
-
-                Defaults to: None.
+            name (:obj:`str`): name of enforcement to create
+            main (:obj:`dict`): main action
+            success (:obj:`list` of :obj:`dict`, optional): success actions
+            failure (:obj:`list` of :obj:`dict`, optional): failure actions
+            post (:obj:`list` of :obj:`dict`, optional): post actions
+            triggers (:obj:`list` of :obj:`dict`, optional): saved query trigger
 
         Notes:
             This will get a public create method once the REST API server has been
@@ -195,8 +161,7 @@ class Enforcements(mixins.Model, mixins.Mixins):
             and others.
 
         Returns:
-            :obj:`str`: ID of newly created object.
-
+            :obj:`str`: ID of created enforcement set.
         """
         data = {}
         data["name"] = name
@@ -213,29 +178,7 @@ class Enforcements(mixins.Model, mixins.Mixins):
         return self._request(method="put", path=path, json=data, is_json=False)
 
     def _get(self, query=None, row_start=0, page_size=0):
-        """Get a page for a given query.
-
-        Args:
-            query (:obj:`str`, optional):
-                Query to filter rows to return. This is NOT a query built by
-                the Query Wizard in the GUI. This is something else. See
-                :meth:`get_by_name` for an example query. Empty
-                query will return all rows.
-
-                Defaults to: None.
-            row_start (:obj:`int`, optional):
-                If not 0, skip N rows in the return.
-
-                Defaults to: 0.
-            page_size (:obj:`int`, optional):
-                If not 0, include N rows in the return.
-
-                Defaults to: 0.
-
-        Returns:
-            :obj:`dict`
-
-        """
+        """Get a page for a given query."""
         if not page_size or page_size > constants.MAX_PAGE_SIZE:
             msg = "Changed page size from {ps} to max page size {mps}"
             msg = msg.format(ps=page_size, mps=constants.MAX_PAGE_SIZE)
@@ -255,24 +198,7 @@ class Enforcements(mixins.Model, mixins.Mixins):
         return self._request(method="get", path=path, params=params)
 
     def delete(self, rows):
-        """Delete an enforcement by name.
-
-        Args:
-            name (:obj:`str`):
-                Name of object to delete.
-            regex (:obj:`bool`, optional):
-                Search for name using regex.
-
-                Defaults to: False.
-            only1 (:obj:`bool`, optional):
-                Only allow one match to name.
-
-                Defaults to: True.
-
-        Returns:
-            :obj:`str`: empty string
-
-        """
+        """Delete an enforcement by name."""
         return self._delete(
             ids=[x["uuid"] for x in tools.listify(obj=rows, dictkeys=False)]
         )

@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 """Command line interface for Axonius API Client."""
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
 import csv
 
 import tabulate
+from axonius_api_client import constants
 
 from .. import tools
 from . import cli_constants, context
@@ -163,12 +165,12 @@ def to_json(ctx, raw_data, **kwargs):
 
 def is_simple(o):
     """Is simple."""
-    return isinstance(o, tools.SIMPLE) or o is None
+    return isinstance(o, constants.SIMPLE) or o is None
 
 
 def is_list(o):
     """Is simple."""
-    return isinstance(o, tools.LIST)
+    return isinstance(o, constants.LIST)
 
 
 def is_los(o):
