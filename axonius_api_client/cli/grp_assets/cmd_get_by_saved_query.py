@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Command line interface for Axonius API Client."""
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
 import click
 
@@ -23,6 +24,8 @@ from . import grp_common
 @options.OPT_FIELDS
 @options.OPT_FIELDS_REGEX
 @options.OPT_MAX_ROWS
+@options.OPT_PAGE_START
+@options.OPT_PAGE_SIZE
 @click.option(
     "--name",
     "-n",
@@ -46,6 +49,8 @@ def cmd(
     fields_regex,
     name,
     max_rows,
+    page_size,
+    page_start,
 ):
     """Get assets from a saved query."""
     p_grp = ctx.parent.command.name
@@ -55,7 +60,12 @@ def cmd(
 
     with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
         raw_data = api.get_by_saved_query(
-            name=name, fields=fields, fields_regex=fields_regex, max_rows=max_rows
+            name=name,
+            fields=fields,
+            fields_regex=fields_regex,
+            max_rows=max_rows,
+            page_size=page_size,
+            page_start=page_start,
         )
 
     grp_common.echo_response(ctx=ctx, raw_data=raw_data, api=api)

@@ -152,11 +152,13 @@ class AssetMixin(mixins.ModelAsset, mixins.Mixins):
         Returns:
             :obj:`list` of :obj:`dict`: assets matching **query** if generator is False
         """
+        kwargs.setdefault("all_fields", self.fields.get())
         gen = self.get_generator(**kwargs)
+
         if generator:
             return gen
-        else:
-            return list(gen)
+
+        return list(gen)
 
     def get_generator(
         self,
@@ -168,7 +170,8 @@ class AssetMixin(mixins.ModelAsset, mixins.Mixins):
         fields_error=True,
         max_rows=None,
         max_pages=None,
-        page_size=None,
+        page_size=constants.MAX_PAGE_SIZE,
+        page_start=0,
         all_fields=None,
     ):
         """Get an iterator of objects for a given query using paging.
@@ -196,7 +199,10 @@ class AssetMixin(mixins.ModelAsset, mixins.Mixins):
                 :meth:`Fields.validate`
             max_rows (:obj:`int`, optional): default ``None`` - return N assets
             max_pages (:obj:`int`, optional): default ``None`` - return N pages of assets
-            page_size (:obj:`int`, optional): default ``None`` - return N assets per page
+            page_size (:obj:`int`, optional):
+                default default :data:`constants.MAX_PAGE_SIZE` -
+                return N assets per page
+            page_start (:obj:`int`, optional): default ``0`` - start at page N
             all_fields (:obj:`list` of :obj:`dict`, optional): default ``None`` -
                 fields to validate against in :meth:`Fields.validate`.
                 If not supplied, will use return of :meth:`Fields.get`
@@ -223,6 +229,7 @@ class AssetMixin(mixins.ModelAsset, mixins.Mixins):
         page_info = {}
         page_num = 0
         rows_fetched = 0
+        row_start = page_start * page_size
         rows = []
         fetch_start = tools.dt_now()
 
@@ -252,7 +259,7 @@ class AssetMixin(mixins.ModelAsset, mixins.Mixins):
             ]
             self._log.debug(tools.join_comma(obj=msg))
             page = self._get(
-                query=query, fields=fields, row_start=rows_fetched, page_size=page_size,
+                query=query, fields=fields, row_start=row_start, page_size=page_size,
             )
 
             assets = page["assets"]
@@ -260,6 +267,7 @@ class AssetMixin(mixins.ModelAsset, mixins.Mixins):
 
             this_rows_fetched = len(assets)
             rows_fetched += this_rows_fetched
+            row_start += this_rows_fetched
 
             msg = [
                 "Fetched page_num={}".format(page_num),

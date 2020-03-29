@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Command line interface for Axonius API Client."""
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
 import click
 
@@ -33,6 +34,8 @@ def get_by_cmd(
     fields_regex,
     fields_default,
     max_rows,
+    page_size,
+    page_start,
     method,
 ):
     """Pass."""
@@ -52,6 +55,8 @@ def get_by_cmd(
             fields=fields,
             fields_regex=fields_regex,
             fields_default=fields_default,
+            page_size=page_size,
+            page_start=page_start,
             max_rows=max_rows,
         )
 
