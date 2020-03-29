@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
-"""API module for working with system configuration."""
-from __future__ import absolute_import, division, print_function, unicode_literals
+"""API model for working with system configuration."""
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
 import warnings
 
-from .. import exceptions, tools, constants
+from .. import constants, exceptions
 from . import mixins, routers
 
 
@@ -13,47 +14,75 @@ class System(mixins.Model, mixins.Mixins):
 
     @property
     def _router(self):
-        """Router for this API client."""
+        """Router for this API model.
+
+        Returns:
+            :obj:`.routers.Router`: REST API route defs
+        """
         return routers.ApiV1.system
 
     @property
     def instances(self):
-        """Pass."""
+        """Get instances child object.
+
+        Returns:
+            :obj:`Instances`
+        """
         if not hasattr(self, "_instances"):
             self._instances = Instances(parent=self)
         return self._instances
 
     @property
     def settings(self):
-        """Pass."""
+        """Get settings child object.
+
+        Returns:
+            :obj:`Settings`
+        """
         if not hasattr(self, "_settings"):
             self._settings = Settings(parent=self)
         return self._settings
 
     @property
     def meta(self):
-        """Pass."""
+        """Get meta child object.
+
+        Returns:
+            :obj:`Meta`
+        """
         if not hasattr(self, "_meta"):
             self._meta = Meta(parent=self)
         return self._meta
 
     @property
     def discover(self):
-        """Pass."""
+        """Get discover child object.
+
+        Returns:
+            :obj:`Discover`
+        """
         if not hasattr(self, "_discover"):
             self._discover = Discover(parent=self)
         return self._discover
 
     @property
     def users(self):
-        """Pass."""
+        """Get users child object.
+
+        Returns:
+            :obj:`Users`
+        """
         if not hasattr(self, "_users"):
             self._users = Users(parent=self)
         return self._users
 
     @property
     def roles(self):
-        """Pass."""
+        """Get roles child object.
+
+        Returns:
+            :obj:`Roles`
+        """
         if not hasattr(self, "_roles"):
             self._roles = Roles(parent=self)
         return self._roles
@@ -70,54 +99,88 @@ class System(mixins.Model, mixins.Mixins):
 
 
 class Discover(mixins.Child):
-    """Discover related API methods."""
+    """Child API model for working with discovery cycles."""
 
     def _lifecycle(self):
-        """Pass."""
+        """Direct API method to get discovery cycle metadata.
+
+        Returns:
+            :obj:`dict`: discovery cycle metadata
+        """
         path = self._router.discover_lifecycle
         return self._request(method="get", path=path)
 
     def _start(self):
+        """Direct API method to start a discovery cycle."""
         path = self._router.discover_start
         return self._request(method="post", path=path)
 
     def _stop(self):
+        """Direct API method to stop a discovery cycle.
+
+        Returns:
+            :obj:`dict`: discovery cycle metadata
+        """
         path = self._router.discover_stop
         return self._request(method="post", path=path)
 
     def lifecycle(self):
-        """Pass."""
+        """Get lifecycle metadata.
+
+        Returns:
+            :obj:`dict`: discovery cycle metadata
+        """
         return self._lifecycle()
 
     @property
     def is_running(self):
-        """Pass."""
+        """Check if discovery cycle is running.
+
+        Returns:
+            :obj:`bool`: if discovery cycle is running
+        """
         return not self.lifecycle()["status"] == "done"
 
     def start(self):
-        """Pass."""
+        """Start a discovery cycle if one is not running.
+
+        Returns:
+            :obj:`dict`: discovery cycle metadata
+        """
         if not self.is_running:
             self._start()
         return self.lifecycle()
 
     def stop(self):
-        """Pass."""
+        """Stop a discovery cycle if one is running.
+
+        Returns:
+            :obj:`dict`: discovery cycle metadata
+        """
         if self.is_running:
             self._stop()
         return self.lifecycle()
 
 
 class Instances(mixins.Child):
-    """Instance methods."""
+    """Child API model for working with instances."""
 
     def _init(self, parent):
-        """Post init setup."""
+        """Post init method for subclasses to use for extra setup.
+
+        Args:
+            parent (:obj:`.api.mixins.Model`): parent API model of this child
+        """
         super(Instances, self)._init(parent=parent)
         warnings.warn(exceptions.BetaWarning(obj=self))
 
     def _get(self):
-        """Pass.
+        """Direct API method to get instances.
 
+        Returns:
+            :obj:`dict`: instances
+        """
+        """Example return
         {
             "connection_data": {
                 "host": "<axonius-hostname>",
@@ -148,7 +211,17 @@ class Instances(mixins.Child):
         return self._request(method="delete", path=path, json=data)
 
     def _update(self, node_id, node_name, hostname):  # pragma: no cover
-        """Pass.
+        """Direct API method to update an instance.
+
+        Args:
+            node_id (:obj:`str`): node id of instance
+            node_name (:obj:`str`): node name of instance
+            hostname (:obj:`str`): hostname of instance
+
+        Returns:
+            :obj:`dict`: updated instance
+        """
+        """Example return
 
         {
             "nodeIds": "a7afe3af5d05428dbecc55704fc7e3ea",
@@ -161,139 +234,181 @@ class Instances(mixins.Child):
         return self._request(method="update", path=path, json=data)
 
     def get(self):
-        """Pass."""
+        """Get instances.
+
+        Returns:
+            :obj:`dict`: instances
+        """
         return self._get()
 
 
 class Meta(mixins.Child):
-    """Meta information."""
+    """Child API model for working with instance metadata."""
 
     def _init(self, parent):
-        """Post init setup."""
+        """Post init method for subclasses to use for extra setup.
+
+        Args:
+            parent (:obj:`.api.mixins.Model`): parent API model of this child
+        """
         super(Meta, self)._init(parent=parent)
 
     def _about(self):
-        """Pass."""
+        """Direct API method to get the About page.
+
+        Returns:
+            :obj:`dict`: about page metadata
+        """
         path = self._router.meta_about
         return self._request(method="get", path=path)
 
     def _historical_sizes(self):
-        """Pass."""
+        """Direct API method to get the metadata about disk usage.
+
+        Returns:
+            :obj:`dict`: disk usage metadata
+        """
         path = self._router.meta_historical_sizes
         return self._request(method="get", path=path)
 
     def about(self):
-        """Pass."""
+        """Get about page metadata.
+
+        Returns:
+            :obj:`dict`: about page metadata
+        """
         return self._about()
 
     def historical_sizes(self):
-        """Pass."""
+        """Get disk usage metadata.
+
+        Returns:
+            :obj:`dict`: disk usage metadata
+        """
         return self._historical_sizes()
 
 
 class Settings(mixins.Child):
-    """Administrative settings."""
+    """Child API model for working with system settings."""
 
     def _init(self, parent):
-        """Post init setup."""
+        """Post init method for subclasses to use for extra setup.
+
+        Args:
+            parent (:obj:`.api.mixins.Model`): parent API model of this child
+        """
         super(Settings, self)._init(parent=parent)
         warnings.warn(exceptions.BetaWarning(obj=self))
 
     @property
     def core(self):
-        """Pass."""
+        """Get SettingsCore child object.
+
+        Returns:
+            :obj:`SettingsCore`
+        """
         if not hasattr(self, "_settings_core"):
             self._settings_core = SettingsCore(parent=self)
         return self._settings_core
 
     @property
     def gui(self):
-        """Pass."""
+        """Get SettingsGui child object.
+
+        Returns:
+            :obj:`SettingsGui`
+        """
         if not hasattr(self, "_settings_gui"):
             self._settings_gui = SettingsGui(parent=self)
         return self._settings_gui
 
     @property
     def lifecycle(self):
-        """Pass."""
+        """Get SettingsLifecycle child object.
+
+        Returns:
+            :obj:`SettingsLifecycle`
+        """
         if not hasattr(self, "_settings_lifecycle"):
             self._settings_lifecycle = SettingsLifecycle(parent=self)
         return self._settings_lifecycle
 
 
-class SettingsCore(mixins.Child):
-    """Global settings under Administrative settings."""
+class SettingsChild(mixins.Child):
+    """Child API object to work with system settings."""
+
+    def _get(self):
+        """Direct API method to get the current system settings.
+
+        Returns:
+            :obj:`dict`: current system settings
+        """
+        return self._request(method="get", path=self._router_path)
+
+    def _update(self, config):
+        """Direct API method to update the system settings."""
+        return self._request(method="post", path=self._router_path, json=config)
+
+    def get(self):
+        """Get the current system settings.
+
+        Returns:
+            :obj:`dict`: current system settings
+        """
+        return self._get()["config"]
+
+    def update(self, config):
+        """Update the system settings.
+
+        Returns:
+            :obj:`dict`: updated system settings
+        """
+        self._update(config=config)
+        return self.get()
+
+
+class SettingsCore(SettingsChild):
+    """Child API object to work with System Global Settings."""
 
     @property
+    def _router_path(self):
+        """Route path for this setting object."""
+        return self._parent._router.settings_core
+
+    '''
+    @property
     def aggregation(self):
-        """Pass."""
+        """Get Aggregation child object.
+
+        Returns:
+            :obj:`Aggregation`
+        """
         if not hasattr(self, "_aggregation"):
             self._aggregation = Aggregation(parent=self)
         return self._aggregation
 
-    def _get(self):
-        """Pass."""
-        path = self._router.settings_core
-        return self._request(method="get", path=path)
-
-    def _update(self, config):
-        path = self._router.settings_core
-        return self._request(method="post", path=path, json=config)
-
-    def get(self):
-        """Pass."""
-        return self._get()["config"]
-
-    def update(self, config):
-        """Pass."""
-        self._update(config=config)
-        return self.get()
+    '''
 
 
-class SettingsGui(mixins.Child):
-    """GUI settings under Administrative settings."""
+class SettingsGui(SettingsChild):
+    """Child API object to work with GUI Global Settings."""
 
-    def _get(self):
-        """Pass."""
-        path = self._router.settings_gui
-        return self._request(method="get", path=path)
-
-    def _update(self, config):
-        path = self._router.settings_gui
-        return self._request(method="post", path=path, json=config)
-
-    def get(self):
-        """Pass."""
-        return self._get()["config"]
-
-    def update(self, config):
-        """Pass."""
-        self._update(config=config)
-        return self.get()
+    @property
+    def _router_path(self):
+        """Route path for this setting object."""
+        return self._parent._router.settings_gui
 
 
-class SettingsLifecycle(mixins.Child):
-    """Lifecycle settings under Administrative settings."""
+class SettingsLifecycle(SettingsChild):
+    """Child API object to work with Lifecycle Global Settings."""
 
-    def _get(self):
-        """Pass."""
-        path = self._router.settings_lifecycle
-        return self._request(method="get", path=path)
-
-    def _update(self, config):
-        path = self._router.settings_lifecycle
-        return self._request(method="post", path=path, json=config)
-
-    def get(self):
-        """Pass."""
-        return self._get()["config"]
-
-    def update(self, config):
-        """Pass."""
-        self._update(config=config)
-        return self.get()
+    @property
+    def _router_path(self):
+        """Route path for this setting object."""
+        return self._parent._router.settings_lifecycle
 
 
+'''
 class Aggregation(mixins.Child):
     """Aggregation settings under Global Settings in Administrative settings."""
 
@@ -318,7 +433,7 @@ class Aggregation(mixins.Child):
         Returns:
             dict: aggregation settings with updated value
         """
-        tools.val_type(value=value, types=tools.INT)
+        tools.val_type(value=value, types=constants.INT)
         settings = self._parent.get()
         settings[self._subkey]["max_workers"] = value
         self._parent.update(config=settings)
@@ -336,40 +451,63 @@ class Aggregation(mixins.Child):
         Returns:
             dict: aggregation settings with updated value
         """
-        tools.val_type(value=value, types=tools.INT)
+        tools.val_type(value=value, types=constants.INT)
         settings = self._parent.get()
         settings[self._subkey]["socket_read_timeout"] = value
         self._parent.update(config=settings)
         return self.get()
+'''
 
 
 class Roles(mixins.Child):
-    """Role controls."""
+    """Child API object to work with Roles."""
 
     def _get_default(self):
-        """Pass."""
+        """Direct API method to get the current default role for external users.
+
+        Returns:
+            :obj:`str`: current default role for external users
+        """
         path = self._router.roles_default
         return self._request(method="get", path=path, error_json_invalid=False)
 
     def _set_default(self, name):
-        """Pass."""
+        """Direct API method to set the default role for external users.
+
+        Args:
+            name (:obj:`str`): name of role to set as the default role for external users
+        """
         data = {"name": name}
         path = self._router.roles_default
         return self._request(method="post", path=path, json=data)
 
     def _get(self):
-        """Pass."""
+        """Direct API method to get known roles.
+
+        Returns:
+            :obj:`list` of :obj:`str`: known roles
+        """
         path = self._router.roles
         return self._request(method="get", path=path)
 
     def _add(self, name, permissions):
-        """Pass."""
+        """Direct API method to add a role.
+
+        Args:
+            name (:obj:`str`): name of new role
+            permissions (:obj:`dict`): permissions for new role
+        """
         data = {"name": name, "permissions": permissions}
         path = self._router.roles
         return self._request(method="put", path=path, json=data)
 
     def _update(self, name, permissions):
-        """Pass."""
+        """Direct API method to update a roles permissions.
+
+        Args:
+            name (:obj:`str`): name of role to update
+            permissions (:obj:`dict`): permissions to update on new role
+        """
         data = {"name": name, "permissions": permissions}
         path = self._router.roles
         return self._request(
@@ -377,7 +515,11 @@ class Roles(mixins.Child):
         )
 
     def _delete(self, name):
-        """Pass."""
+        """Direct API method to delete a role.
+
+        Args:
+            name (:obj:`str`): name of role to delete
+        """
         data = {"name": name}
         path = self._router.roles
         return self._request(
@@ -385,18 +527,29 @@ class Roles(mixins.Child):
         )
 
     def set_default(self, name):
-        """Pass."""
+        """Set the default role for external users.
+
+        Args:
+            name (:obj:`str`): name of role to set as the default role for external users
+
+        Returns:
+            :obj:`dict`: metadata of default role that was set as new default
+        """
         role = self.get(name=name)
         self._set_default(name=name)
         return role
 
     def get_default(self):
-        """Pass."""
+        """Get the default role for external users.
+
+        Returns:
+            :obj:`dict`: metadata of default role
+        """
         name = self._get_default()
         return self.get(name=name)
 
     def get(self, name=None):
-        """Pass."""
+        """Pass."""  # XXX
         roles = self._get()
         if name:
             role_names = self.get_names(roles=roles)

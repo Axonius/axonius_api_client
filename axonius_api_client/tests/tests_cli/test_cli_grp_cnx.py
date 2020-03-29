@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 """Test suite for axonius_api_client.tools."""
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
 import click
 import pytest
-
-from axonius_api_client import cli, tools, constants  # , LOG  # , exceptions
+from axonius_api_client import cli, constants, tools  # , LOG  # , exceptions
 
 from .. import meta, utils
 
@@ -57,7 +57,7 @@ class TestGrpCnx(object):
         assert exit_code1 == 0
 
         json1 = tools.json_load(stdout1)
-        assert isinstance(json1, tools.LIST)
+        assert isinstance(json1, constants.LIST)
 
         args2 = ["adapters", "cnx", "get", "--rows", "-", "--export-format", "json"]
         dump_args_str(args2)
@@ -72,7 +72,7 @@ class TestGrpCnx(object):
         assert exit_code2 == 0
 
         json2 = tools.json_load(stdout2)
-        assert isinstance(json2, tools.LIST)
+        assert isinstance(json2, constants.LIST)
 
     def test_get_cnx_by_uuid(self, request, monkeypatch):
         """Pass."""
@@ -91,7 +91,7 @@ class TestGrpCnx(object):
         assert exit_code1 == 0
 
         json1 = tools.json_load(stdout1)
-        assert isinstance(json1, tools.LIST)
+        assert isinstance(json1, constants.LIST)
         cnxs = [x["cnx"] for x in json1 if x["cnx"]]
         cnx1_id = cnxs[0][0]["uuid"]
 
@@ -109,7 +109,7 @@ class TestGrpCnx(object):
         assert exit_code2 == 0
 
         json2 = tools.json_load(stdout2)
-        assert isinstance(json2, tools.LIST)
+        assert isinstance(json2, constants.LIST)
         assert json2[0]["uuid"] == cnx1_id
         assert len(json2) == 1
 
@@ -130,7 +130,7 @@ class TestGrpCnx(object):
         assert exit_code1 == 0
 
         json1 = tools.json_load(stdout1)
-        assert isinstance(json1, tools.LIST)
+        assert isinstance(json1, constants.LIST)
         cnxs = [x["cnx"] for x in json1 if x["cnx"]]
         cnx1_id = cnxs[0][0]["id"]
 
@@ -148,7 +148,7 @@ class TestGrpCnx(object):
         assert exit_code2 == 0
 
         json2 = tools.json_load(stdout2)
-        assert isinstance(json2, tools.LIST)
+        assert isinstance(json2, constants.LIST)
         assert json2[0]["id"] == cnx1_id
         assert len(json2) == 1
 
@@ -169,7 +169,7 @@ class TestGrpCnx(object):
         assert exit_code1 == 0
 
         json1 = tools.json_load(stdout1)
-        assert isinstance(json1, tools.LIST)
+        assert isinstance(json1, constants.LIST)
 
         args2 = ["adapters", "cnx", "get", "--rows", "-", "--export-format", "csv"]
         dump_args_str(args2)
@@ -203,7 +203,7 @@ class TestGrpCnx(object):
         assert exit_code1 == 0
 
         json1 = tools.json_load(stdout1)
-        assert isinstance(json1, tools.LIST)
+        assert isinstance(json1, constants.LIST)
 
         args2 = [
             "adapters",
@@ -285,7 +285,7 @@ class TestGrpCnx(object):
         assert exit_code1 == 0
 
         json1 = tools.json_load(stdout1)
-        assert isinstance(json1, tools.LIST)
+        assert isinstance(json1, constants.LIST)
         for x in json1:
             assert isinstance(x, dict)
 
@@ -392,7 +392,7 @@ axonshell a c de -r - -f -w 0
         assert exit_code2 == 0
 
         json2 = tools.json_load(stdout2)
-        assert isinstance(json2, tools.LIST)
+        assert isinstance(json2, constants.LIST)
 
         args3 = ["adapters", "cnx", "discover", "--rows", "-"]
         dump_args_str(args3)
@@ -407,7 +407,7 @@ axonshell a c de -r - -f -w 0
         assert exit_code3 == 0
 
         json3 = tools.json_load(stdout3)
-        assert isinstance(json3, tools.LIST)
+        assert isinstance(json3, constants.LIST)
 
         args4 = ["adapters", "cnx", "delete", "--rows", "-", "--force", "--wait", "0"]
         dump_args_str(args4)
@@ -422,7 +422,7 @@ axonshell a c de -r - -f -w 0
         assert exit_code4 == 0
 
         json4 = tools.json_load(stdout4)
-        assert isinstance(json4, tools.LIST)
+        assert isinstance(json4, constants.LIST)
 
     def test_add_check_discover_delete_csv_err(self, request, monkeypatch):
         """Pass."""
@@ -486,7 +486,7 @@ axonshell a c de -r - -f -w 0
         assert exit_code2 == 1
 
         json2 = tools.json_load(stdout2)
-        assert isinstance(json2, tools.LIST)
+        assert isinstance(json2, constants.LIST)
 
         args3 = ["adapters", "cnx", "discover", "--rows", "-"]
         dump_args_str(args3)
@@ -501,7 +501,7 @@ axonshell a c de -r - -f -w 0
         assert exit_code3 == 1
 
         json3 = tools.json_load(stdout3)
-        assert isinstance(json3, tools.LIST)
+        assert isinstance(json3, constants.LIST)
 
         args4 = ["adapters", "cnx", "delete", "--rows", "-", "--force", "--wait", "0"]
         dump_args_str(args4)
@@ -516,7 +516,7 @@ axonshell a c de -r - -f -w 0
         assert exit_code4 == 0
 
         json4 = tools.json_load(stdout4)
-        assert isinstance(json4, tools.LIST)
+        assert isinstance(json4, constants.LIST)
 
     def test_delete_error(self, request, monkeypatch):
         """Pass."""
@@ -547,7 +547,7 @@ axonshell a c de -r - -f -w 0
         assert exit_code1 == 1
 
         json1 = tools.json_load(stdout1)
-        assert isinstance(json1, tools.LIST)
+        assert isinstance(json1, constants.LIST)
 
     def test_add_delete_ad_config_args(self, request, monkeypatch):
         """Pass."""
@@ -589,7 +589,7 @@ axonshell a c de -r - -f -w 0
         assert exit_code2 == 0
 
         json2 = tools.json_load(stdout2)
-        assert isinstance(json2, tools.LIST)
+        assert isinstance(json2, constants.LIST)
 
     def test_add_delete_ad_config_prompt_skips(self, request, monkeypatch):
         """Pass."""
@@ -645,7 +645,7 @@ axonshell a c de -r - -f -w 0
         assert exit_code2 == 0
 
         json2 = tools.json_load(stdout2)
-        assert isinstance(json2, tools.LIST)
+        assert isinstance(json2, constants.LIST)
 
     def test_check_csv(self, request, monkeypatch):
         """Pass."""
@@ -662,7 +662,7 @@ axonshell a c de -r - -f -w 0
         assert stderr1
         assert exit_code1 == 0
 
-        assert isinstance(tools.json_load(result1.stdout), tools.LIST)
+        assert isinstance(tools.json_load(result1.stdout), constants.LIST)
 
         args3 = ["-nw", "adapters", "cnx", "check", "-r", "-", "-ne", "-xt", "csv"]
         dump_args_str(args3)
@@ -682,7 +682,7 @@ axonshell a c de -r - -f -w 0
 class TestCheckEmpty(object):
     """Pass."""
 
-    @pytest.mark.parametrize("value", tools.EMPTY, scope="class")
+    @pytest.mark.parametrize("value", constants.EMPTY, scope="class")
     def test_empty_value(self, value):
         """Pass."""
         ctx = utils.get_mockctx()

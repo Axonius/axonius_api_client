@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 """Test suite for axonapi.api.enforcements."""
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
 import warnings
 
-import pytest
-
 import axonius_api_client as axonapi
-from axonius_api_client import exceptions, tools
+import pytest
+from axonius_api_client import constants, exceptions
 
 from .. import meta, utils
 
@@ -40,7 +40,7 @@ class TestEnforcements(object):
         assert isinstance(data, dict)
 
         assets = data["assets"]
-        assert isinstance(assets, tools.LIST)
+        assert isinstance(assets, constants.LIST)
 
         for asset in assets:
             assert isinstance(asset, dict)
@@ -50,11 +50,11 @@ class TestEnforcements(object):
         data = apiobj.get()
         assert isinstance(data, list)
         for found in data:
-            assert isinstance(found["uuid"], tools.STR)
-            assert isinstance(found["actions.main"], tools.STR)
-            assert isinstance(found["name"], tools.STR)
-            assert isinstance(found["date_fetched"], tools.STR)
-            assert isinstance(found["last_updated"], tools.STR)
+            assert isinstance(found["uuid"], constants.STR)
+            assert isinstance(found["actions.main"], constants.STR)
+            assert isinstance(found["name"], constants.STR)
+            assert isinstance(found["date_fetched"], constants.STR)
+            assert isinstance(found["last_updated"], constants.STR)
             assert "triggers.last_triggered" in found
             assert "triggers.times_triggered" in found
 
@@ -74,7 +74,7 @@ class TestEnforcements(object):
             warnings.warn(msg)
             deleted = apiobj.delete(rows=old_found)
             assert isinstance(deleted, dict)
-            assert isinstance(deleted["deleted"], tools.INT)
+            assert isinstance(deleted["deleted"], constants.INT)
             assert deleted["deleted"] == 1
 
         trigger_name = apiobj.users.saved_query.get()[0]["name"]
@@ -86,7 +86,7 @@ class TestEnforcements(object):
             main=meta.enforcements.CREATE_EC_ACTION_MAIN,
             triggers=[trigger],
         )
-        assert isinstance(created, tools.STR)
+        assert isinstance(created, constants.STR)
 
         found = apiobj.get_by_name(meta.enforcements.CREATE_EC_NAME)
         """
@@ -105,8 +105,8 @@ class TestEnforcements(object):
         assert found["uuid"] == created
         assert found["actions.main"] == meta.enforcements.CREATE_EC_ACTION_MAIN["name"]
         assert found["name"] == meta.enforcements.CREATE_EC_NAME
-        assert isinstance(found["date_fetched"], tools.STR)
-        assert isinstance(found["last_updated"], tools.STR)
+        assert isinstance(found["date_fetched"], constants.STR)
+        assert isinstance(found["last_updated"], constants.STR)
         assert "triggers.last_triggered" in found
         assert "triggers.times_triggered" in found
         assert found["triggers.view.name"] == trigger_name
@@ -116,7 +116,7 @@ class TestEnforcements(object):
 
         deleted = apiobj.delete(rows=found_by_id)
         assert isinstance(deleted, dict)
-        assert isinstance(deleted["deleted"], tools.INT)
+        assert isinstance(deleted["deleted"], constants.INT)
         assert deleted["deleted"] == 1
 
         with pytest.raises(exceptions.ValueNotFound):
@@ -177,7 +177,7 @@ class TestRunActions(object):
             content=meta.enforcements.DEPLOY_FILE_CONTENTS,
         )
         assert isinstance(data, dict)
-        assert isinstance(data["uuid"], tools.STR)
+        assert isinstance(data["uuid"], constants.STR)
         assert data["filename"] == meta.enforcements.DEPLOY_FILE_NAME
         return data
 

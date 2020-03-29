@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 """Test suite for axonius_api_client.tools."""
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
-from axonius_api_client import cli, tools
+from axonius_api_client import cli, constants, tools
 
 from .. import utils
 
@@ -26,7 +27,7 @@ class TestCmdGet(object):
         assert exit_code1 == 0
 
         json1 = tools.json_load(stdout1)
-        assert isinstance(json1, tools.LIST)
+        assert isinstance(json1, constants.LIST)
 
     def test_csv(self, request, monkeypatch):
         """Pass."""

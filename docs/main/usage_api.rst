@@ -7,12 +7,7 @@ API Usage
    :maxdepth: 1
 
    usage_api/quickstart.rst
-
-.. todo::
-
-   The API library documentation and examples need to be flushed out, but time
-   constraints have not allowed for this to happen. If help is needed in utilizing this API library, please contact apiclient@axonius.com.
-
+   usage_api/openapi.rst
 
 OpenAPI Specification 3.0.2
 ---------------------------

@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
-"""Axonius API Client package."""
-from __future__ import absolute_import, division, print_function, unicode_literals
+"""API model base classes and mixins."""
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
 import abc
 
@@ -11,67 +12,63 @@ from .. import constants, exceptions, logs
 
 @six.add_metaclass(abc.ABCMeta)
 class Model(object):
-    """API client for Axonius REST API."""
+    """API model base class."""
 
     @abc.abstractproperty
     def _router(self):
-        """Router for this API client.
+        """Router for this API model.
 
         Returns:
-            :obj:`axonius_api_client.api.routers.Router`
-
+            :obj:`.routers.Router`: REST API route defs
         """
         raise NotImplementedError  # pragma: no cover
 
 
 @six.add_metaclass(abc.ABCMeta)
 class ModelAsset(Model):
-    """API client for Axonius REST API."""
+    """API model base class for asset types."""
 
     @abc.abstractproperty
     def _default_fields(self):
-        """Fields to set as default for methods with fields as kwargs.
+        """Fields to add to all get calls for this asset type.
 
         Returns:
-            :obj:`dict`
-
+            :obj:`list` of :obj:`dict`: fields to add to
         """
         raise NotImplementedError  # pragma: no cover
 
 
 class Mixins(object):
-    """API client for Axonius REST API."""
+    """Mixins for :obj:`Model` objects."""
 
     def __init__(self, auth, **kwargs):
-        """Client for Axonius REST API.
+        """Mixins for :obj:`Model` objects.
 
         Args:
-            auth (:obj:`AuthModel`):
-                Authentication object.
-
+            auth (:obj:`.auth.Model`): object to use for auth and sending API requests
+            **kwargs: passed to :meth:`Mixins._init`
         """
         log_level = kwargs.get("log_level", constants.LOG_LEVEL_API)
         self._log = logs.get_obj_log(obj=self, level=log_level)
         """:obj:`logging.Logger`: Logger for this object."""
 
         self._auth = auth
-        """:obj:`AuthModel`: Authentication object."""
+        """:obj:`.auth.Model`: object to use for auth and sending API requests."""
 
         self._init(auth=auth, **kwargs)
 
         auth.check_login()
 
     def _init(self, auth, **kwargs):
-        """Pass."""
+        """Post init method for subclasses to use for extra setup.
+
+        Args:
+            auth (:obj:`.auth.Model`): object to use for auth and sending API requests
+        """
         pass
 
     def __str__(self):
-        """Show object info.
-
-        Returns:
-            :obj:`str`
-
-        """
+        """Show info for this model object."""
         return "{c.__module__}.{c.__name__}(auth={auth!r}, url={url!r})".format(
             c=self.__class__,
             auth=self._auth.__class__.__name__,
@@ -79,12 +76,7 @@ class Mixins(object):
         )
 
     def __repr__(self):
-        """Show object info.
-
-        Returns:
-            :obj:`str`
-
-        """
+        """Show info for this model object."""
         return self.__str__()
 
     def _request(
@@ -100,34 +92,33 @@ class Mixins(object):
         **kwargs
         # fmt: on
     ):
-        """Perform a REST API request.
+        """Send a REST API request using :attr:`.auth.Mixins.http`.
 
         Args:
-            path (:obj:`str`):
-                Path to use in request.
-            method (:obj:`str`, optional):
-                HTTP method to use in request.
+            path (:obj:`str`): path to use in request
+            method (:obj:`str`, optional): default ``get`` - method to use in request
+            raw (:obj:`bool`, optional): default ``False`` -
 
-                Defaults to: "get".
-            raw (:obj:`bool`, optional):
-                Return the raw response. If False, return response text or json.
+                * if ``True`` return the raw :obj:`requests.Response` object
+                * if ``False`` return the text or json of the response based on is_json
+            is_json (:obj:`bool`, optional): default ``True`` - if raw is False:
 
-                Defaults to: False.
-            is_json (:obj:`bool`, optional):
-                Response should have JSON data.
+                * if ``True`` return the decoded json of the response text body
+                * if ``False`` return the text body of the response
+            error_status (:obj:`bool`, optional): default ``True`` -
 
-                Defaults to: True.
-            error_status (:obj:`bool`, optional):
-                Call :meth:`_check_response_code`.
-
-                Defaults to: True.
+                * if ``True`` check response status code
+                  with :meth:`_check_response_code`
+                * if ``False`` do not check response status code
             **kwargs:
-                Passed to :meth:`axonius_api_client.http.client.HttpClient.__call__`
+                Passed to :meth:`.http.Http.__call__`
 
         Returns:
-            :obj:`object` if is_json, or :obj:`str` if not is_json, or
-            :obj:`requests.Response` if raw
+            :obj:`requests.Response` or :obj:`object` or :obj:`str`:
 
+                * :obj:`requests.Response`: if raw is True
+                * :obj:`object`: if raw is False and is_json is True
+                * :obj:`str`: if raw is False and is_json is False
         """
         sargs = {}
         sargs.update(kwargs)
@@ -152,11 +143,18 @@ class Mixins(object):
         return data
 
     def _check_response_code(self, response, error_status=True):
-        """Check response status code.
+        """Check the status code of a response.
+
+        Args:
+            response (:obj:`requests.Response`): response object to check
+            error_status (:obj:`bool`, optional): default ``True`` -
+
+                * if ``True`` throw exc if response status code is bad
+                * if ``False`` silently ignore bad response status codes
 
         Raises:
-            :exc:`exceptions.ResponseError`
-
+            :exc:`.exceptions.ResponseNotOk`:
+                if response has a status code that is an error and error_status is True
         """
         if error_status:
             try:
@@ -169,11 +167,33 @@ class Mixins(object):
     def _check_response_json(
         self, response, error_json_bad_status=True, error_json_invalid=True
     ):
-        """Check response is JSON.
+        """Check the text body of a response is JSON.
+
+        Args:
+            response (:obj:`requests.Response`): response object to check
+            error_json_bad_status (:obj:`bool`, optional): default ``True`` -
+
+                * if ``True`` throw an exc if response is a json dict that
+                  has a non-empty error key or a status key that == error
+                * if ``False`` ignore error and status keys in response json dicts
+            error_json_invalid (:obj:`bool`, optional): default ``True`` -
+
+                * if ``True`` throw an exc if response is invalid json
+                * if ``False`` return the text of response if response is invalid json
 
         Raises:
-            :exc:`exceptions.InvalidJson`
+            :exc:`.exceptions.JsonInvalid`: if error_json_invalid is True and
+                response has invalid json
 
+            :exc:`.exceptions.JsonError`: if error_json_bad_status is True and
+                response is a json dict that has a non-empty error key or a
+                status key that == error
+
+        Returns:
+            :obj:`object` or :obj:`str`:
+
+                * :obj:`object` if response has json data
+                * :obj:`str` if response has invalid json data
         """
         try:
             data = response.json()
@@ -193,59 +213,90 @@ class Mixins(object):
 
 
 class Child(object):
-    """Pass."""
+    """Mixins model for children of :obj:`Model`."""
 
     def __init__(self, parent):
-        """Pass."""
+        """Mixins model for children of :obj:`Model`.
+
+        Args:
+            parent (:obj:`Model`): parent API model of this child
+        """
         self._parent = parent
         self._log = parent._log.getChild(self.__class__.__name__)
         self._init(parent=parent)
 
     def _init(self, parent):
-        """Pass."""
+        """Post init method for subclasses to use for extra setup.
+
+        Args:
+            parent (:obj:`Model`): parent API model of this child
+        """
         pass
 
     def _request(self, **kwargs):
-        """Pass."""
+        """Get the response of parents :obj:`Mixins._request`.
+
+        Args:
+            **kwargs: passed to :obj:`Mixins._request`
+
+        Returns:
+            :obj:`object`: response from :obj:`Mixins._request`
+        """
         return self._parent._request(**kwargs)
 
     @property
     def _router(self):
+        """Get the parents :attr:`Model._router`.
+
+        Returns:
+            :obj:`.routers.Router`: parents REST API route defs
+        """
         return self._parent._router
 
     def __str__(self):
-        """Pass."""
+        """Show info for this model object."""
         return "{} for {}".format(self.__class__.__name__, self._parent)
 
     def __repr__(self):
-        """Pass."""
+        """Show info for this model object."""
         return self.__str__()
 
 
 @six.add_metaclass(abc.ABCMeta)
 class Parser(object):
-    """Pass."""
+    """Parser base class."""
 
     def __init__(self, raw, parent, **kwargs):
-        """Pass."""
+        """Parser base class.
+
+        Args:
+            raw (:obj:`object`): raw unparsed object
+            parent (:obj:`Model` or :obj:`Child`):
+                parent that called this parser
+        """
         self._parent = parent
         self._raw = raw
         self._log = parent._log.getChild(self.__class__.__name__)
         self._init(parent=parent)
 
     def _init(self, parent):
-        """Pass."""
+        """Post init method for subclasses to use for extra setup.
+
+        Args:
+            parent (:obj:`Model` or :obj:`Child`):
+                parent that called this parser
+        """
         pass
 
     @abc.abstractmethod
     def parse(self):
-        """Pass."""
+        """Get the parsed object supplied to init."""
         raise NotImplementedError  # pragma: no cover
 
     def __str__(self):
-        """Pass."""
+        """Show info for this parser object."""
         return "{} for {}".format(self.__class__.__name__, self._parent)
 
     def __repr__(self):
-        """Pass."""
+        """Show info for this parser object."""
         return self.__str__()

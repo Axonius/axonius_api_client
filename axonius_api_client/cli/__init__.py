@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
 """Command line interface for Axonius API Client."""
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
 import click
 
 from .. import constants, version
-from . import cli_constants, click_ext, context, grp_adapters, grp_objects, grp_tools
+from . import (cli_constants, click_ext, context, grp_adapters, grp_assets,
+               grp_tools)
 
 
 @click.group(
@@ -308,6 +310,6 @@ def cli(
 
 
 cli.add_command(grp_adapters.adapters)
-cli.add_command(grp_objects.devices)
-cli.add_command(grp_objects.users)
+cli.add_command(grp_assets.devices)
+cli.add_command(grp_assets.users)
 cli.add_command(grp_tools.tools)

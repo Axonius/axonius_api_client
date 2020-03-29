@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Constants for this package."""
+"""REST API route definitions."""
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
@@ -13,9 +13,10 @@ class Router(object):
         """Object store for REST API routes.
 
         Args:
-            object_type (:obj:`str`):
-                Object type.
-
+            object_type (:obj:`str`): object type for this set of routes
+            base (:obj:`str`): base path for this set of routes
+            version (:obj:`int`): api version for this set of routes
+            **routes: routes for this object_type
         """
         self._version = version
         self._base = base

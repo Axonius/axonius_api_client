@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 """Test suite for axonapi.api.mixins."""
-from __future__ import absolute_import, division, print_function, unicode_literals
-
-import pytest
-import requests
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
 import axonius_api_client as axonapi
-from axonius_api_client import exceptions, tools
+import pytest
+import requests
+from axonius_api_client import constants, exceptions
 
 from .. import utils
 
@@ -66,7 +66,7 @@ class TestMixins(object):
             is_json=False,
             error_status=True,
         )
-        assert isinstance(response, tools.STR)
+        assert isinstance(response, constants.STR)
 
     def test_json_error(self, apiobj):
         """Test exc thrown when json has error status."""
@@ -93,7 +93,7 @@ class TestMixins(object):
     def test_json_invalid_text(self, apiobj):
         """Test that str is returned when is_json=True and error_json_invalid=False."""
         response = apiobj._request(path="", method="get", error_json_invalid=False)
-        assert isinstance(response, tools.STR)
+        assert isinstance(response, constants.STR)
 
     def test_child(self, apiobj):
         """Pass."""

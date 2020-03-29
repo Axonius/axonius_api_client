@@ -5,7 +5,7 @@ from __future__ import (absolute_import, division, print_function,
 
 import axonius_api_client as axonapi
 import pytest
-from axonius_api_client import exceptions, tools
+from axonius_api_client import constants, exceptions
 
 from .. import meta, utils
 
@@ -99,22 +99,22 @@ class TestSystemMeta(object):
     def val_entity_sizes(self, data):
         """Pass."""
         avg_document_size = data("avg_document_size")
-        assert isinstance(avg_document_size, tools.INT)
+        assert isinstance(avg_document_size, constants.INT)
         capped = data("capped")
-        assert isinstance(capped, tools.INT)
+        assert isinstance(capped, constants.INT)
         entities_last_point = data("entities_last_point")
-        assert isinstance(entities_last_point, tools.INT)
+        assert isinstance(entities_last_point, constants.INT)
         size = data("size")
-        assert isinstance(size, tools.INT)
+        assert isinstance(size, constants.INT)
         assert not data
 
     def val_historical_sizes(self, data):
         """Pass."""
         disk_free = data.pop("disk_free")
-        assert isinstance(disk_free, tools.INT) and disk_free
+        assert isinstance(disk_free, constants.INT) and disk_free
 
         disk_used = data.pop("disk_used")
-        assert isinstance(disk_used, tools.INT) and disk_used
+        assert isinstance(disk_used, constants.INT) and disk_used
 
         entity_sizes = data.pop("entity_sizes")
         assert isinstance(entity_sizes, dict) and entity_sizes
@@ -131,12 +131,12 @@ class TestSystemMeta(object):
         """Pass."""
         assert isinstance(data, dict)
 
-        keys = ["Build Date", "Commit Date", "Commit Hash", "Version"]
-        empty_ok = ["Version"]
+        keys = meta.system.ABOUT_KEYS
+        empty_ok = meta.system.ABOUT_KEYS_EMPTY_OK
 
         for key in keys:
             assert key in data
-            assert isinstance(data[key], tools.STR)
+            assert isinstance(data[key], constants.STR)
             if key not in empty_ok:
                 assert data[key]
 
@@ -218,32 +218,6 @@ class TestSystemSettingsCore(SettingChild):
         return apiobj.settings.core
 
 
-class TestSystemAggregation(object):
-    """Pass."""
-
-    @pytest.fixture(scope="class")
-    def childobj(self, apiobj):
-        """Pass."""
-        return apiobj.settings.core.aggregation
-
-    def test_get(self, childobj):
-        """Pass."""
-        settings = childobj.get()
-        assert isinstance(settings.pop("max_workers"), tools.INT)
-        assert isinstance(settings.pop("socket_read_timeout"), tools.INT)
-        assert not settings
-
-    def test_max_workers(self, childobj):
-        """Pass."""
-        settings = childobj.max_workers(value=20)
-        assert settings["max_workers"] == 20
-
-    def test_socket_read_timeout(self, childobj):
-        """Pass."""
-        settings = childobj.socket_read_timeout(value=5)
-        assert settings["socket_read_timeout"] == 5
-
-
 class TestSystemInstances(object):
     """Pass."""
 
@@ -269,7 +243,7 @@ class TestSystemRoles(object):
     def test__get(self, childobj):
         """Pass."""
         data = childobj._get()
-        assert isinstance(data, tools.LIST)
+        assert isinstance(data, constants.LIST)
         for x in data:
             assert isinstance(x, dict)
 
@@ -323,7 +297,7 @@ class TestSystemRoles(object):
             assert v == meta.system.TEST_PERM
 
         deleted = childobj.delete(name=meta.system.TEST_USER)
-        assert isinstance(deleted, tools.LIST)
+        assert isinstance(deleted, constants.LIST)
         assert not [x for x in deleted if x["name"] == added["name"]]
 
         with pytest.raises(exceptions.ApiError):
@@ -344,14 +318,14 @@ class TestSystemUsers(object):
     def test__get(self, childobj):
         """Pass."""
         data = childobj._get()
-        assert isinstance(data, tools.LIST)
+        assert isinstance(data, constants.LIST)
         for x in data:
             assert isinstance(x, dict)
 
     def test__get_limit(self, childobj):
         """Pass."""
         data = childobj._get(limit=1)
-        assert isinstance(data, tools.LIST)
+        assert isinstance(data, constants.LIST)
         for x in data:
             assert isinstance(x, dict)
         assert len(data) == 1
@@ -360,7 +334,7 @@ class TestSystemUsers(object):
         """Pass."""
         all_data = childobj._get()
         data = childobj._get(limit=1, skip=1)
-        assert isinstance(data, tools.LIST)
+        assert isinstance(data, constants.LIST)
         for x in data:
             assert isinstance(x, dict)
         if len(all_data) == 1:
@@ -400,7 +374,7 @@ class TestSystemUsers(object):
         assert updated["password"] == ["unchanged"]
 
         deleted = childobj.delete(name=meta.system.TEST_USER)
-        assert isinstance(deleted, tools.LIST)
+        assert isinstance(deleted, constants.LIST)
         assert not [x for x in deleted if x["uuid"] == added["uuid"]]
 
         with pytest.raises(exceptions.ApiError):

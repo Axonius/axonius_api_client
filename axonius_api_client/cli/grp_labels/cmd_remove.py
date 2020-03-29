@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 """Command line interface for Axonius API Client."""
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
 import click
 
 from .. import cli_constants, options, serial
-from ..grp_objects import grp_common as grp_obj_common
+from ..grp_assets import grp_common as grp_obj_common
 
 
 @click.command(name="remove", context_settings=cli_constants.CONTEXT_SETTINGS)
