@@ -42,9 +42,9 @@ class Base(object):
         api_type = api._router._object_type
 
         if api_type == "users":
-            api.TEST_DATA = meta.objects.USERS_TEST_DATA
+            api.TEST_DATA = meta.assets.USERS_TEST_DATA
         else:
-            api.TEST_DATA = meta.objects.DEVICES_TEST_DATA
+            api.TEST_DATA = meta.assets.DEVICES_TEST_DATA
 
         api.ALL_FIELDS = api.fields.get()
 
@@ -55,7 +55,7 @@ class Base(object):
     ):
         """Pass."""
         if not query and refetch:
-            query = meta.objects.QUERY_ID(**refetch)
+            query = meta.assets.QUERY_ID(**refetch)
 
         if not query:
             if not with_fields:
@@ -63,9 +63,7 @@ class Base(object):
 
             query_fields = tools.listify(with_fields)
             query_fields = [x for x in query_fields if x not in ["labels"]]
-            query_lines = [
-                meta.objects.QUERY_FIELD_EXISTS(field=x) for x in query_fields
-            ]
+            query_lines = [meta.assets.QUERY_FIELD_EXISTS(field=x) for x in query_fields]
             query = " and ".join(query_lines)
 
         if not fields:
@@ -171,8 +169,8 @@ class TestBoth(Base):
         sq_fields = sq["view"]["fields"]
         data = apiobj.get_by_saved_query(name=sq_name, max_rows=1)
         last_get = apiobj._LAST_GET
-        # 2.0.5: make sure the fields in sq are the ones that got supplied to the get
-        assert last_get["fields"] == ",".join(sq_fields)
+        last_fields = last_get["fields"].split(",")
+        assert sq_fields == last_fields
         assert isinstance(data, constants.LIST)
 
     def test_get_by_field_value(self, apiobj):
@@ -257,7 +255,7 @@ class Single(Base):
         asset = self.get_single_asset(apiobj=apiobj, fields=specfield)
         asset_value = asset[specfield]
         value = tools.listify(obj=asset_value)[0]
-        query_pre = "{} and ".format(meta.objects.QUERY_FIELD_EXISTS(field=specfield))
+        query_pre = "{} and ".format(meta.assets.QUERY_FIELD_EXISTS(field=specfield))
         found = getattr(apiobj, specmethod)(
             value=value, query_pre=query_pre, match_count=1, fields=specfield
         )
@@ -312,7 +310,7 @@ class TestDevices(Single):
         asset_value = asset[specfield]
 
         value = tools.listify(obj=asset_value)[0]
-        query_pre = "{} and ".format(meta.objects.QUERY_FIELD_EXISTS(field=findfield))
+        query_pre = "{} and ".format(meta.assets.QUERY_FIELD_EXISTS(field=findfield))
 
         found = apiobj.get_by_subnet(
             value=value, max_rows=1, fields=findfield, query_pre=query_pre,
@@ -335,7 +333,7 @@ class TestDevices(Single):
         asset_value = asset[specfield]
 
         value = tools.listify(obj=asset_value)[0]
-        query_pre = "{} and ".format(meta.objects.QUERY_FIELD_EXISTS(field=findfield))
+        query_pre = "{} and ".format(meta.assets.QUERY_FIELD_EXISTS(field=findfield))
 
         found = apiobj.get_by_subnet(
             value=value,
@@ -703,7 +701,7 @@ class TestSavedQuery(Base):
 
         asset = self.get_single_asset(apiobj=apiobj, query=None, refetch=None)
 
-        query = meta.objects.QUERY_ID(**asset)
+        query = meta.assets.QUERY_ID(**asset)
 
         added = apiobj.saved_query.add(name=name, query=query)
         assert isinstance(added, dict)
@@ -987,7 +985,7 @@ class TestSavedQuery(Base):
 
         asset = self.get_single_asset(apiobj=apiobj, query=None, refetch=None)
 
-        query = meta.objects.QUERY_ID(**asset)
+        query = meta.assets.QUERY_ID(**asset)
 
         fields = [apiobj.TEST_DATA["single_field"]["exp"]]
 
@@ -1014,7 +1012,7 @@ class TestSavedQuery(Base):
 
         asset = self.get_single_asset(apiobj=apiobj, query=None, refetch=None)
 
-        query = meta.objects.QUERY_ID(**asset)
+        query = meta.assets.QUERY_ID(**asset)
 
         added = apiobj.saved_query.add(name=name, query=query)
         assert isinstance(added, dict)
@@ -1033,7 +1031,7 @@ class TestSavedQuery(Base):
         single_field = apiobj.TEST_DATA["single_field"]
         asset = self.get_single_asset(apiobj=apiobj, query=None, refetch=None)
 
-        query = meta.objects.QUERY_ID(**asset)
+        query = meta.assets.QUERY_ID(**asset)
 
         added = apiobj.saved_query.add(
             name=name, query=query, sort=single_field["search"]
@@ -1058,7 +1056,7 @@ class TestSavedQuery(Base):
         column_filters = {single_field["search"]: "a"}
         exp_column_filters = {single_field["exp"]: "a"}
 
-        query = meta.objects.QUERY_ID(**asset)
+        query = meta.assets.QUERY_ID(**asset)
 
         added = apiobj.saved_query.add(
             name=name, query=query, column_filters=column_filters
@@ -1176,7 +1174,7 @@ class TestParsedFields(Base):
 
         assert not finfo, list(finfo)
 
-        assert type in meta.objects.FIELD_TYPES, type
+        assert type in meta.assets.FIELD_TYPES, type
 
         if name not in ["labels", "adapters", "adapter_list_length", "internal_axon_id"]:
             if aname == "generic":
@@ -1188,7 +1186,7 @@ class TestParsedFields(Base):
             assert isinstance(enum, constants.STR) or tools.is_int(enum)
 
         if format:
-            assert format in meta.objects.FIELD_FORMATS, format
+            assert format in meta.assets.FIELD_FORMATS, format
 
         val_items(aname="{}:{}".format(aname, fname), items=items)
 
@@ -1308,7 +1306,7 @@ def val_items(aname, items):
         type = items.pop("type")
 
         assert isinstance(type, constants.STR) and type
-        assert type in meta.objects.FIELD_TYPES, type
+        assert type in meta.assets.FIELD_TYPES, type
 
         # uncommon
         enums = items.pop("enum", [])
@@ -1340,7 +1338,7 @@ def val_items(aname, items):
             assert not source_options, source_options
 
         if fformat:
-            assert fformat in meta.objects.SCHEMA_FIELD_FORMATS, fformat
+            assert fformat in meta.assets.SCHEMA_FIELD_FORMATS, fformat
 
         assert isinstance(enums, constants.LIST)
         assert isinstance(iitems, constants.LIST) or isinstance(iitems, dict)

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Axonius API Client package."""
+"""API models for working with device and user assets."""
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
@@ -11,10 +11,14 @@ from . import adapters, mixins, routers
 
 
 class AssetMixin(mixins.ModelAsset, mixins.Mixins):
-    """Mixins for User & Device models."""
+    """API model for working with user and device assets."""
 
     def _init(self, auth, **kwargs):
-        """Pass."""
+        """Post init method for subclasses to use for extra setup.
+
+        Args:
+            auth (:obj:`.auth.Model`): object to use for auth and sending API requests
+        """
         # cross reference
         self.adapters = adapters.Adapters(auth=auth, **kwargs)
 
@@ -27,7 +31,18 @@ class AssetMixin(mixins.ModelAsset, mixins.Mixins):
         super(AssetMixin, self)._init(auth=auth, **kwargs)
 
     def _count(self, query=None):
-        """Pass."""
+        """Direct API method to get the count of assets.
+
+        Args:
+            query (:obj:`str`, optional): default ``None`` -
+
+                * if ``None`` return the count of all assets
+                * if :obj:`str` return the count of assets that match a
+                  query built by the GUI query wizard
+
+        Returns:
+            :obj:`int`: count of assets matching query
+        """
         params = {}
         if query:
             params["filter"] = query
@@ -35,31 +50,26 @@ class AssetMixin(mixins.ModelAsset, mixins.Mixins):
         return self._request(method="post", path=self._router.count, json=params)
 
     def _get(self, query=None, fields=None, row_start=0, page_size=0):
-        """Get a page for a given query.
+        """Direct API method to get a page of assets.
 
         Args:
-            query (:obj:`str`, optional):
-                Query built from Query Wizard in GUI to select rows to return.
+            query (:obj:`str`, optional): default ``None`` -
 
-                Defaults to: None.
-            fields (:obj:`list` of :obj:`str` or :obj:`str`):
-                List of fields to include in return.
-                If str, CSV seperated list of fields.
-                If list, strs of fields.
+                * if ``None`` return all assets
+                * if :obj:`str` return the assets that match a query built
+                  by the GUI query wizard
+            fields (:obj:`list` of :obj:`str` or :obj:`str`): default ``None`` -
 
-                Defaults to: None.
-            row_start (:obj:`int`, optional):
-                If not 0, skip N rows in the return.
-
-                Defaults to: 0.
-            page_size (:obj:`int`, optional):
-                If not 0, include N rows in the return.
-
-                Defaults to: 0.
+                * if :obj:`str` CSV seperated list of fields (columns) to include in
+                  return
+                * if :obj:`list` of :obj:`str` the strs of fields (columns) to include
+                  in return
+            row_start (:obj:`int`, optional): default ``0`` - for paging, skip N rows
+            page_size (:obj:`int`, optional): default ``0`` - for paging, return N rows
 
         Returns:
-            :obj:`dict`
-
+            :obj:`list` of :obj:`dict`: assets matching **query** with key/value pairs
+                requested as per **fields**
         """
         if not page_size or page_size > constants.MAX_PAGE_SIZE:
             msg = "Changed page size from {ps} to max page size {mps}"
@@ -86,64 +96,63 @@ class AssetMixin(mixins.ModelAsset, mixins.Mixins):
         return self._request(method="post", path=self._router.root, json=params)
 
     def _get_by_id(self, id):
-        """Pass."""
+        """Direct API method to get the full metadata of all adapters for a single asset.
+
+        Args:
+            id (:obj:`str`): internal_axon_id of asset to get all metadata for
+
+        Returns:
+            :obj:`dict`: dict with all metadata for all adapters for asset with
+                **id** of internal_axon_id
+        """
         path = self._router.by_id.format(id=id)
         return self._request(method="get", path=path)
 
     def count(self, query=None):
-        """Get the number of matches for a given query.
+        """Get the count of assets.
 
         Args:
-            query (:obj:`str`, optional):
-                Query built from Query Wizard in GUI.
+            query (:obj:`str`, optional): default ``None`` -
+
+                * if ``None`` return the count of all assets
+                * if :obj:`str` return the count of assets that match a
+                  query built by the GUI query wizard
 
         Returns:
-            :obj:`int`
-
+            :obj:`int`: count of assets matching query
         """
         return self._count(query=query)
 
     def count_by_saved_query(self, name):
-        """Get the number of matches for a given query.
+        """Get the count of assets that would be returned by a saved query.
 
         Args:
-            query (:obj:`str`, optional):
-                Query built from Query Wizard in GUI.
+            name (:obj:`str`): name of saved query to get count of assets from
 
         Returns:
-            :obj:`int`
-
+            :obj:`int`: count of assets matching query in saved query
         """
         sq = self.saved_query.get_by_name(value=name, match_count=1, match_error=True)
         return self._count(query=sq["view"]["query"]["filter"])
 
-    def get(
-        self,
-        query=None,
-        fields=None,
-        fields_manual=None,
-        fields_regex=None,
-        fields_default=True,
-        fields_error=True,
-        max_rows=None,
-        max_pages=None,
-        page_size=None,
-        all_fields=None,
-        generator=False,
-    ):
-        """Get objects for a given query using paging."""
-        gen = self.get_generator(
-            query=query,
-            fields=fields,
-            fields_manual=fields_manual,
-            fields_regex=fields_regex,
-            fields_default=fields_default,
-            fields_error=fields_error,
-            max_rows=max_rows,
-            max_pages=max_pages,
-            page_size=page_size,
-            all_fields=all_fields,
-        )
+    def get(self, generator=False, **kwargs):
+        """Get objects for a given query using paging.
+
+        Args:
+            generator (:obj:`bool`, optional): default ``False`` -
+
+                * True: return an iterator for assets that will yield assets
+                  as they are fetched
+                * False: return a list of assets after all assets have been fetched
+            **kwargs: passed to :meth:`get_generator`
+
+        Yields:
+            :obj:`dict`: asset matching **query** if generator is True
+
+        Returns:
+            :obj:`list` of :obj:`dict`: assets matching **query** if generator is False
+        """
+        gen = self.get_generator(**kwargs)
         if generator:
             return gen
         else:
@@ -162,7 +171,39 @@ class AssetMixin(mixins.ModelAsset, mixins.Mixins):
         page_size=None,
         all_fields=None,
     ):
-        """Get objects for a given query using paging."""
+        """Get an iterator of objects for a given query using paging.
+
+        Args:
+            query (:obj:`str`, optional): default ``None`` -
+
+                * if ``None`` return all assets
+                * if :obj:`str` return the assets that match a query built
+                  by the GUI query wizard
+            fields (:obj:`list` of :obj:`str`, optional): default ``None`` -
+                the fields to include for each asset, will be validated and
+                processed into their fully qualified name using
+                :meth:`Fields.validate`
+            fields_manual (:obj:`list` of :obj:`str`, optional): default ``None`` -
+                list of fully qualified fields to include for each asset
+            fields_regex (:obj:`list` of :obj:`str`, optional): default ``None`` -
+                list of fields to add using regular expression matches, will be
+                validated and process into the matching fully qualified names using
+                :meth:`Fields.validate`
+            fields_default (:obj:`bool`, optional): default ``True`` -
+                Include the fields in _default_fields
+            fields_error (:obj:`bool`, optional): default ``True`` -
+                throw an exception if fields fail to be validated by
+                :meth:`Fields.validate`
+            max_rows (:obj:`int`, optional): default ``None`` - return N assets
+            max_pages (:obj:`int`, optional): default ``None`` - return N pages of assets
+            page_size (:obj:`int`, optional): default ``None`` - return N assets per page
+            all_fields (:obj:`list` of :obj:`dict`, optional): default ``None`` -
+                fields to validate against in :meth:`Fields.validate`.
+                If not supplied, will use return of :meth:`Fields.get`
+
+        Yields:
+            :obj:`dict`: asset matching **query**
+        """
         fields = self.fields.validate(
             fields=fields,
             fields_manual=fields_manual,
@@ -258,15 +299,17 @@ class AssetMixin(mixins.ModelAsset, mixins.Mixins):
         self._log.debug(tools.join_comma(obj=msg))
 
     def get_by_id(self, id):
-        """Get an object by internal_axon_id.
+        """Get the full metadata of all adapters for a single asset.
 
         Args:
-           id (:obj:`str`):
-               internal_axon_id of object to get.
+            id (:obj:`str`): internal_axon_id of asset to get all metadata for
+
+        Raises:
+            :exc:`exceptions.ValueNotFound`: if asset is not found with supplied **id**
 
         Returns:
-           :obj:`dict`
-
+            :obj:`dict`: dict with all metadata for all adapters for asset with
+                **id** of internal_axon_id
         """
         try:
             return self._get_by_id(id=id)
@@ -274,31 +317,24 @@ class AssetMixin(mixins.ModelAsset, mixins.Mixins):
             msg = "Axonius ID for {t}".format(t=self._router._object_type)
             raise exceptions.ValueNotFound(value=id, value_msg=msg, exc=exc)
 
-    def get_by_saved_query(
-        self,
-        name,
-        fields=None,
-        fields_regex=None,
-        fields_default=False,
-        max_rows=None,
-        max_pages=None,
-        page_size=None,
-        generator=False,
-    ):
-        """Pass."""
-        sq = self.saved_query.get_by_name(value=name, match_count=1, match_error=True)
+    def get_by_saved_query(self, name, **kwargs):
+        """Get assets that would be returned by a saved query.
 
-        return self.get(
-            query=sq["view"]["query"]["filter"],
-            fields_manual=sq["view"]["fields"],
-            fields=fields,
-            fields_regex=fields_regex,
-            fields_default=fields_default,
-            max_rows=max_rows,
-            max_pages=max_pages,
-            page_size=page_size,
-            generator=generator,
-        )
+        Args:
+            name (:obj:`str`): name of saved query to get count of assets from
+            **kwargs: passed to :meth:`get`
+
+        Yields:
+            :obj:`dict`: asset matching **query** if generator is True
+
+        Returns:
+            :obj:`list` of :obj:`dict`: assets matching **query** if generator is False
+        """
+        sq = self.saved_query.get_by_name(value=name, match_count=1, match_error=True)
+        kwargs["query"] = sq["view"]["query"]["filter"]
+        kwargs["fields_manual"] = sq["view"]["fields"]
+        kwargs["fields_default"] = False
+        return self.get(**kwargs)
 
     def get_by_value(
         self,
@@ -311,18 +347,46 @@ class AssetMixin(mixins.ModelAsset, mixins.Mixins):
         match_count=None,
         match_error=True,
         eq_single=True,
-        fields=None,
-        fields_manual=None,
-        fields_regex=None,
-        fields_default=True,
-        fields_error=True,
-        max_rows=None,
-        max_pages=None,
-        page_size=None,
-        all_fields=None,
+        **kwargs
     ):
-        """Build query to perform equals or regex search."""
-        all_fields = all_fields or self.fields.get()
+        """Build query to get an asset by field value.
+
+        Args:
+            value (:obj:`str` or :obj:`list` of :obj:`str`): value of **field** to
+                build query for
+            field (:obj:`str`): field to build query for
+            value_regex (:obj:`bool`, optional): default ``False`` - build a query
+                that uses a regular expression to find **field** matching **value**
+            value_not (:obj:`bool`, optional): default ``False`` - build a query
+                where **field** does NOT match **value**
+            query_pre (:obj:`str`, optional): default ``True`` - str to prefix to query
+                that is built
+            query_post (:obj:`str`, optional): default ``True`` - str to postfix to
+                query that is built
+            match_count (:obj:`int`, optional): default ``True`` - number of assets
+                that are expected to be returned
+            match_error (:obj:`bool`, optional): default ``True`` - throw error if
+                **match_count** is supplied and number of assets returned is not
+                equal to supplied value
+            eq_single (:obj:`bool`, optional): default ``True`` - if **value_regex**
+                is False and **value_not** is False and value is str and query_post
+                is not supplied, set **max_rows** to 1, **match_count** to 1,
+                and match_error to True
+            **kwargs: passed to :meth:`get`
+
+        Raises:
+            :exc:`exceptions.ValueNotFound`: if **match_count** is supplied and
+                **match_error** is True and the number of matches does not equal
+                **match_count**
+
+        Yields:
+            :obj:`dict`: asset matching query that is built if generator is True
+
+        Returns:
+            :obj:`list` of :obj:`dict`: assets matching query that is built
+                if generator is False
+        """
+        all_fields = kwargs.get("all_fields") or self.fields.get()
 
         field = self.fields.find_single(field=field, all_fields=all_fields)
 
@@ -336,7 +400,7 @@ class AssetMixin(mixins.ModelAsset, mixins.Mixins):
                 search = '== "{}"'.format(value)
 
                 if eq_single and (not query_post and not value_not):
-                    max_rows = 1
+                    kwargs["max_rows"] = 1
                     match_count = 1
                     match_error = True
 
@@ -350,18 +414,9 @@ class AssetMixin(mixins.ModelAsset, mixins.Mixins):
             query_post=query_post,
         ).strip()
 
-        rows = self.get(
-            query=query,
-            fields=fields,
-            fields_manual=fields_manual,
-            fields_regex=fields_regex,
-            fields_default=fields_default,
-            fields_error=fields_error,
-            max_rows=max_rows,
-            max_pages=max_pages,
-            page_size=page_size,
-            all_fields=all_fields,
-        )
+        kwargs["query"] = query
+        kwargs["all_fields"] = all_fields
+        rows = self.get(**kwargs)
 
         if (match_count and len(rows) != match_count) and match_error:
             value_msg = "{o} by field {f!r} value {v!r}"
@@ -379,21 +434,20 @@ class Users(AssetMixin):
 
     @property
     def _router(self):
-        """Router for this API client.
+        """Router for this API model.
 
         Returns:
-            :obj:`axonius_api_client.api.routers.Router`
-
+            :obj:`.routers.Router`: REST API route defs
         """
         return routers.ApiV1.users
 
     @property
     def _default_fields(self):
-        """Fields to set as default for methods with fields as kwargs.
+        """Fields to add to **fields** arg for :meth:`get_generator`.
 
         Returns:
-            :obj:`dict`
-
+            :obj:`list` of :obj:`dict`: Fields to add to **fields** arg for
+                :meth:`get_generator`
         """
         return [
             "labels",
@@ -405,16 +459,18 @@ class Users(AssetMixin):
         ]
 
     def get_by_username(self, value, **kwargs):
-        """Get objects by name using paging.
+        """Build a query to get assets by value of field ``name``.
 
         Args:
-            value (:obj:`int`):
-                Value to find using field "username".
-            **kwargs: Passed thru to :meth:`UserDeviceModel.get_by_value`
+            value (:obj:`str`): value to that must match field "username"
+            **kwargs: passed to :meth:`AssetMixin.get_by_value`
+
+        Yields:
+            :obj:`dict`: asset matching query that is built if generator is True
 
         Returns:
-            :obj:`list` of :obj:`dict`: Each row matching name or :obj:`dict` if only1.
-
+            :obj:`list` of :obj:`dict`: assets matching query that is built
+                if generator is False
         """
         kwargs.pop("field", None)
         return self.get_by_value(
@@ -422,16 +478,18 @@ class Users(AssetMixin):
         )
 
     def get_by_mail(self, value, **kwargs):
-        """Get objects by email using paging.
+        """Build a query to get assets by value of field ``mail``.
 
         Args:
-            value (:obj:`int`):
-                Value to find using field "mail".
-            **kwargs: Passed thru to :meth:`UserDeviceModel.get_by_value`
+            value (:obj:`str`): value to that must match field "mail"
+            **kwargs: passed to :meth:`AssetMixin.get_by_value`
+
+        Yields:
+            :obj:`dict`: asset matching query that is built if generator is True
 
         Returns:
-            :obj:`list` of :obj:`dict`: Each row matching email or :obj:`dict` if only1.
-
+            :obj:`list` of :obj:`dict`: assets matching query that is built
+                if generator is False
         """
         kwargs.pop("field", None)
         return self.get_by_value(value=value, field="specific_data.data.mail", **kwargs)
@@ -442,21 +500,20 @@ class Devices(AssetMixin):
 
     @property
     def _router(self):
-        """Router for this API client.
+        """Router for this API model.
 
         Returns:
-            :obj:`axonius_api_client.api.routers.Router`
-
+            :obj:`.routers.Router`: REST API route defs
         """
         return routers.ApiV1.devices
 
     @property
     def _default_fields(self):
-        """Fields to set as default for methods with fields as kwargs.
+        """Fields to add to **fields** arg for :meth:`get_generator`.
 
         Returns:
-            :obj:`dict`
-
+            :obj:`list` of :obj:`dict`: Fields to add to **fields** arg for
+                :meth:`get_generator`
         """
         return [
             "labels",
@@ -468,16 +525,18 @@ class Devices(AssetMixin):
         ]
 
     def get_by_hostname(self, value, **kwargs):
-        """Get objects by name using paging.
+        """Build a query to get assets by value of field ``hostname``.
 
         Args:
-            value (:obj:`int`):
-                Value to find using field "username".
-            **kwargs: Passed thru to :meth:`UserDeviceModel.get_by_value`
+            value (:obj:`str`): value to that must match field "hostname"
+            **kwargs: passed to :meth:`AssetMixin.get_by_value`
+
+        Yields:
+            :obj:`dict`: asset matching query that is built if generator is True
 
         Returns:
-            :obj:`list` of :obj:`dict`: Each row matching name or :obj:`dict` if only1.
-
+            :obj:`list` of :obj:`dict`: assets matching query that is built
+                if generator is False
         """
         kwargs.pop("field", None)
         return self.get_by_value(
@@ -485,16 +544,18 @@ class Devices(AssetMixin):
         )
 
     def get_by_mac(self, value, **kwargs):
-        """Get objects by MAC using paging.
+        """Build a query to get assets by value of field ``network_interfaces.mac``.
 
         Args:
-            value (:obj:`int`):
-                Value to find using field "network_interfaces.mac".
-            **kwargs: Passed thru to :meth:`UserDeviceModel.get_by_value`
+            value (:obj:`str`): value to that must match field "network_interfaces.mac"
+            **kwargs: passed to :meth:`AssetMixin.get_by_value`
+
+        Yields:
+            :obj:`dict`: asset matching query that is built if generator is True
 
         Returns:
-            :obj:`list` of :obj:`dict`: Each row matching email or :obj:`dict` if only1.
-
+            :obj:`list` of :obj:`dict`: assets matching query that is built
+                if generator is False
         """
         kwargs.pop("field", None)
         return self.get_by_value(
@@ -502,16 +563,18 @@ class Devices(AssetMixin):
         )
 
     def get_by_ip(self, value, **kwargs):
-        """Get objects by MAC using paging.
+        """Build a query to get assets by value of field ``network_interfaces.ips``.
 
         Args:
-            value (:obj:`int`):
-                Value to find using field "network_interfaces.mac".
-            **kwargs: Passed thru to :meth:`UserDeviceModel.get_by_value`
+            value (:obj:`str`): value to that must match field "network_interfaces.ips"
+            **kwargs: passed to :meth:`AssetMixin.get_by_value`
+
+        Yields:
+            :obj:`dict`: asset matching query that is built if generator is True
 
         Returns:
-            :obj:`list` of :obj:`dict`: Each row matching email or :obj:`dict` if only1.
-
+            :obj:`list` of :obj:`dict`: assets matching query that is built
+                if generator is False
         """
         kwargs.pop("field", None)
         return self.get_by_value(
@@ -521,16 +584,19 @@ class Devices(AssetMixin):
     def get_by_subnet(
         self, value, value_not=False, query_pre="", query_post="", **kwargs
     ):
-        """Get objects by MAC using paging.
+        """Build a query to get assets by value of field ``network_interfaces.ips_raw``.
 
         Args:
-            value (:obj:`int`):
-                Value to find using field "network_interfaces.mac".
-            **kwargs: Passed thru to :meth:`UserDeviceModel.get_by_value`
+            value (:obj:`str`): value to that must match field
+                "network_interfaces.ips_raw"
+            **kwargs: passed to :meth:`AssetMixin.get`
+
+        Yields:
+            :obj:`dict`: asset matching query that is built if generator is True
 
         Returns:
-            :obj:`list` of :obj:`dict`: Each row matching email or :obj:`dict` if only1.
-
+            :obj:`list` of :obj:`dict`: assets matching query that is built
+                if generator is False
         """
         network = ipaddress.ip_network(value)
 
@@ -558,7 +624,7 @@ class Devices(AssetMixin):
 
 
 class SavedQuery(mixins.Child):
-    """Pass."""
+    """Child API model for working with saved queries for the parent asset type."""
 
     def _add(
         self,
@@ -570,34 +636,26 @@ class SavedQuery(mixins.Child):
         column_filters=None,
         gui_page_size=None,
     ):
-        """Create a saved query.
+        """Direct API method to create a saved query.
+
+        Warning:
+            Queries created with this method will NOT show the filters in the
+            query wizard!
 
         Args:
-            name (:obj:`str`):
-                Name of saved query to create.
-            query (:obj:`str`):
-                Query built from Query Wizard in GUI to use in saved query.
-            page_size (:obj:`int`, optional):
-                Number of rows to show in each page in GUI.
-
-                Defaults to: first item in
-                :data:`axonius_api_client.constants.GUI_PAGE_SIZES`.
-            sort (:obj:`str`, optional):
-                Name of field to sort results on.
-
-                Defaults to: "".
-            sort_descending (:obj:`bool`, optional):
-                Sort sort descending.
-
-                Defaults to: True.
-            sort_adapter (:obj:`str`, optional):
-                Name of adapter sort is from.
-
-                Defaults to: "generic".
+            name (:obj:`str`): name of saved query to create
+            query (:obj:`str`): query built by GUI query wizard
+            fields (:obj:`object`): fields/columns
+            sort (:obj:`str`, optional): default ``None`` - field to sort results on
+            sort_descending (:obj:`bool`, optional): default ``True`` - sort on
+                **field** in descending order
+            column_filters (:obj:`dict`, optional): default ``None`` - column
+                filters keyed as field_name:value
+            gui_page_size (:obj:`int`, optional): default ``None`` -
+                show N rows per page in GUI
 
         Returns:
-            :obj:`str`: The ID of the new saved query.
-
+            :obj:`str`: ID of the saved query that was created
         """
         if gui_page_size not in constants.GUI_PAGE_SIZES:
             gui_page_size = constants.GUI_PAGE_SIZES[0]
@@ -623,15 +681,13 @@ class SavedQuery(mixins.Child):
         return self._parent._request(method="post", path=path, json=data)
 
     def _delete(self, ids):
-        """Delete saved queries by ids.
+        """Direct API method to delete saved queries.
 
         Args:
-            ids (:obj:`list` of :obj:`str`):
-                List of UUID's of saved queries to delete.
+            ids (:obj:`list` of :obj:`str`): list of saved query uuid's to delete
 
         Returns:
             :obj:`str`: empty string
-
         """
         data = {"ids": tools.listify(ids)}
 
@@ -640,28 +696,17 @@ class SavedQuery(mixins.Child):
         return self._parent._request(method="delete", path=path, json=data)
 
     def _get(self, query=None, row_start=0, page_size=None):
-        """Get device saved queries.
+        """Direct API method to get saved queries.
 
         Args:
-            query (:obj:`str`, optional):
-                Query to filter rows to return. This is NOT a query built by
-                the Query Wizard in the GUI. This is something else. See
-                :meth:`find_saved_query_by_name` for an example query. Empty
-                query will return all rows.
+            query (:obj:`str`, optional): default ``None`` - filter rows to return
 
-                Defaults to: None.
-            row_start (:obj:`int`, optional):
-                If not 0, skip N rows in the return.
-
-                Defaults to: 0.
-            page_size (:obj:`int`, optional):
-                If not 0, include N rows in the return.
-
-                Defaults to: 0.
+                This is NOT a query built by the query wizard!
+            row_start (:obj:`int`, optional): default ``0`` - for paging, skip N rows
+            page_size (:obj:`int`, optional): default ``0`` - for paging, return N rows
 
         Returns:
-            :obj:`dict`
-
+            :obj:`list` of :obj:`dict`: list of saved query metadata
         """
         if not page_size or page_size > constants.MAX_PAGE_SIZE:
             msg = "Changed page size from {ps} to max page size {mps}"
@@ -697,32 +742,35 @@ class SavedQuery(mixins.Child):
     ):
         """Create a saved query.
 
+        Warning:
+            Queries created with this method will NOT show the filters in the
+            query wizard!
+
         Args:
-            name (:obj:`str`):
-                Name of saved query to create.
-            query (:obj:`str`):
-                Query built from Query Wizard in GUI to use in saved query.
-            page_size (:obj:`int`, optional):
-                Number of rows to show in each page in GUI.
-
-                Defaults to: first item in
-                :data:`axonius_api_client.constants.GUI_PAGE_SIZES`.
-            sort (:obj:`str`, optional):
-                Name of field to sort results on.
-
-                Defaults to: "".
-            sort_descending (:obj:`bool`, optional):
-                Sort sort descending.
-
-                Defaults to: True.
-            sort_adapter (:obj:`str`, optional):
-                Name of adapter sort is from.
-
-                Defaults to: "generic".
+            name (:obj:`str`): name of saved query to create
+            query (:obj:`str`): query built by GUI query wizard
+            fields (:obj:`object`): fields/columns
+            fields_manual (:obj:`list` of :obj:`str`, optional): default ``None`` -
+                list of fully qualified fields to include for each asset
+            fields_regex (:obj:`list` of :obj:`str`, optional): default ``None`` -
+                list of fields to add using regular expression matches, will be
+                validated and process into the matching fully qualified names using
+                :meth:`Fields.validate`
+            fields_default (:obj:`bool`, optional): default ``True`` -
+                Include the fields in _default_fields
+            fields_error (:obj:`bool`, optional): default ``True`` -
+                throw an exception if fields fail to be validated by
+                :meth:`Fields.validate`
+            sort (:obj:`str`, optional): default ``None`` - field to sort results on
+            sort_descending (:obj:`bool`, optional): default ``True`` - sort on
+                **field** in descending order
+            column_filters (:obj:`dict`, optional): default ``None`` - column
+                filters keyed as field_name:value
+            gui_page_size (:obj:`int`, optional): default ``None`` -
+                show N rows per page in GUI
 
         Returns:
-            :obj:`str`: The ID of the new saved query.
-
+            :obj:`dict`: metadata of saved query that was created
         """
         all_fields = self._parent.fields.get()
 
@@ -762,12 +810,10 @@ class SavedQuery(mixins.Child):
         """Delete a saved query by name.
 
         Args:
-            name (:obj:`str`):
-                Name of saved query to delete.
+            rows (:obj:`list` of :obj:`dict`): metadata of saved queries to delete
 
         Returns:
             :obj:`str`: empty string
-
         """
         return self._delete(
             ids=[x["uuid"] for x in tools.listify(obj=rows, dictkeys=False)]
@@ -777,24 +823,14 @@ class SavedQuery(mixins.Child):
         """Get saved queries using paging.
 
         Args:
-            query (:obj:`str`, optional):
-                Query to filter rows to return. This is NOT a query built by
-                the Query Wizard in the GUI. This is something else. See
-                :meth:`get` for an example query.
+            query (:obj:`str`, optional): default ``None`` - filter rows to return
 
-                Defaults to: None.
-            page_size (:obj:`int`, optional):
-                Get N rows per page.
+                This is NOT a query built by the query wizard!
+            page_size (:obj:`int`, optional): default ``0`` - for paging, return N rows
+            max_rows (:obj:`int`, optional): default ``None`` - return N assets
 
-                Defaults to: :data:`axonius_api_client.constants.DEFAULT_PAGE_SIZE`.
-            max_rows (:obj:`int`, optional):
-                If not 0, only return up to N rows.
-
-                Defaults to: 0.
-
-        Yields:
-            :obj:`dict`: Each row found in 'assets' from return.
-
+        Returns:
+            :obj:`list` of :obj:`dict`: list of saved query metadata
         """
         if not page_size or page_size > constants.MAX_PAGE_SIZE:
             msg = "Changed page_size={ps} to max_page_size={mps}"
@@ -877,11 +913,23 @@ class SavedQuery(mixins.Child):
 
         return rows
 
-    def get_by_id(
-        self, value, match_error=True, max_rows=None, max_pages=None, page_size=None
-    ):
-        """Get saved queries using paging."""
-        rows = self.get(max_rows=max_rows, max_pages=max_pages, page_size=page_size)
+    def get_by_id(self, value, match_error=True, **kwargs):
+        """Get a saved query by ID.
+
+        Args:
+            value (:obj:`str`): id of saved query to get
+            match_error (:obj:`bool`, optional): default ``True`` - throw exc
+                if match count is not 1
+            **kwargs: passed to :meth:`get`
+
+        Returns:
+            :obj:`dict`: metadata for saved query with matching id of **value**
+
+        Raises:
+            :exc:`exceptions.ValueNotFound`: if **match_error** is True and the
+                number of matches does not equal 1
+        """
+        rows = self.get(**kwargs)
 
         for row in rows:
             if row["uuid"] == value:
@@ -906,27 +954,28 @@ class SavedQuery(mixins.Child):
         match_count=None,
         match_error=True,
         eq_single=True,
-        max_rows=None,
-        max_pages=None,
-        page_size=None,
+        **kwargs
     ):
         """Get saved queries using paging.
 
         Args:
-            name (:obj:`str`):
-                Name of saved query to get.
-            use_regex (:obj:`bool`, optional):
-                Search for name using regex.
-
-                Defaults to: True.
-            only1 (:obj:`bool`, optional):
-                Only allow one match to name.
-
-                Defaults to: True.
+            value (:obj:`str`): name of saved query to get
+            value_regex (:obj:`bool`, optional): default ``False`` - build a query
+                that uses a regular expression to find name equals **value**
+            value_not (:obj:`bool`, optional): default ``False`` - build a query
+                where name does NOT match **value**
+            match_count (:obj:`int`, optional): default ``True`` - number of assets
+                that are expected to be returned
+            match_error (:obj:`bool`, optional): default ``True`` - throw error if
+                **match_count** is supplied and number of assets returned is not
+                equal to supplied value
+            eq_single (:obj:`bool`, optional): default ``True`` - if **value_regex**
+                is False and **value_not** is False, set **max_rows** to 1,
+                **match_count** to 1, and match_error to True
+            **kwargs: passed to :meth:`get`
 
         Returns:
-            :obj:`list` of :obj:`dict`: Each row matching name or :obj:`dict` if only1.
-
+            :obj:`list` of :obj:`dict` or :obj:`dict`: object(s) matching query
         """
         if value_regex:
             search = '== regex("{}", "i")'.format(value)
@@ -934,7 +983,7 @@ class SavedQuery(mixins.Child):
             search = '== "{}"'.format(value)
 
             if eq_single and not value_not:
-                max_rows = 1
+                kwargs["max_rows"] = 1
                 match_count = 1
                 match_error = True
 
@@ -942,10 +991,9 @@ class SavedQuery(mixins.Child):
         not_flag = "not " if value_not else ""
         query = "{not_flag}{field} {search}"
         query = query.format(not_flag=not_flag, field=field, search=search).strip()
+        kwargs["query"] = query
 
-        rows = self.get(
-            query=query, max_rows=max_rows, max_pages=max_pages, page_size=page_size
-        )
+        rows = self.get(**kwargs)
 
         if (match_count and len(rows) != match_count) and match_error:
             ktmpl = "name: {name!r}, uuid: {uuid!r}".format
@@ -963,20 +1011,17 @@ class SavedQuery(mixins.Child):
 
 
 class Labels(mixins.Child):
-    """Pass."""
+    """Child API model for working with labels/tags for the parent asset type."""
 
     def _add(self, labels, ids):
-        """Add labels to object IDs.
+        """Direct API method to add labels/tags to assets.
 
         Args:
-            labels (:obj:`list` of `str`):
-                Labels to add to ids.
-            ids (:obj:`list` of `str`):
-                Axonius internal object IDs to add to labels.
+            labels (:obj:`list` of `str`): labels to process
+            ids (:obj:`list` of `str`): internal_axon_id of assets to add **labels** to
 
         Returns:
-            :obj:`int`: Number of objects that had labels added
-
+            :obj:`int`: number of labels processed
         """
         data = {}
         data["entities"] = {}
@@ -984,32 +1029,27 @@ class Labels(mixins.Child):
         data["labels"] = labels
 
         path = self._parent._router.labels
-
         return self._parent._request(method="post", path=path, json=data)
 
     def _get(self):
-        """Get the labels.
+        """Direct API method to get all known labels/tags.
 
         Returns:
-            :obj:`list` of :obj:`str`
-
+            :obj:`list` of :obj:`str`: all labels that exist in Axonius
         """
         path = self._parent._router.labels
-
         return self._parent._request(method="get", path=path)
 
     def _remove(self, labels, ids):
-        """Delete labels from object IDs.
+        """Direct API method to remove labels/tags from assets.
 
         Args:
-            labels (:obj:`list` of `str`):
-                Labels to delete from ids.
-            ids (:obj:`list` of `str`):
-                Axonius internal object IDs to delete from labels.
+            labels (:obj:`list` of `str`): labels to process
+            ids (:obj:`list` of `str`): internal_axon_id of assets to remove
+                **labels** from
 
         Returns:
-            :obj:`int`: Number of objects that had labels deleted.
-
+            :obj:`int`: number of labels processed
         """
         data = {}
         data["entities"] = {}
@@ -1021,17 +1061,15 @@ class Labels(mixins.Child):
         return self._parent._request(method="delete", path=path, json=data)
 
     def add(self, rows, labels):
-        """Add labels to objects using rows returned from :meth:`get`.
+        """Add labels/tags to assets.
 
         Args:
-            rows (:obj:`list` of :obj:`dict`):
-                Rows returned from :meth:`get`
-            labels (:obj:`list` of `str`):
-                Labels to add to rows.
+            rows (:obj:`list` of :obj:`dict`): assets returned from :meth:`get`
+                to process
+            labels (:obj:`list` of `str`): labels to process
 
         Returns:
-            :obj:`int`: Number of objects that had labels added
-
+            :obj:`int`: number of labels processed
         """
         ids = [row["internal_axon_id"] for row in rows]
 
@@ -1046,26 +1084,23 @@ class Labels(mixins.Child):
         return processed
 
     def get(self):
-        """Get the labels.
+        """Get all known labels/tags.
 
         Returns:
-            :obj:`list` of :obj:`str`
-
+            :obj:`list` of :obj:`str`: all labels that exist in Axonius
         """
         return self._get()
 
     def remove(self, rows, labels):
-        """Delete labels from objects using rows returned from :meth:`get`.
+        """Remove labels/tags from assets.
 
         Args:
-            rows (:obj:`list` of :obj:`dict`):
-                Rows returned from :meth:`get`
-            labels (:obj:`list` of `str`):
-                Labels to delete from rows.
+            rows (:obj:`list` of :obj:`dict`): assets returned from :meth:`get`
+                to process
+            labels (:obj:`list` of `str`): labels to process
 
         Returns:
-            :obj:`int`: Number of objects that had labels deleted.
-
+            :obj:`int`: number of labels processed
         """
         ids = [row["internal_axon_id"] for row in rows]
 
@@ -1081,22 +1116,39 @@ class Labels(mixins.Child):
 
 
 class Fields(mixins.Child):
-    """Pass."""
+    """Child API model for working with fields for the parent asset type."""
 
-    _GENERIC_ALTS = ["generic", "general", "specific"]
+    _GENERIC_ALTS = ["generic", "general", "specific", "agg", "aggregated"]
+    """:obj:`list` of :obj:`str`: list of alternatives for 'generic' adapter."""
     _ALL_ALTS = ["all", "*", "specific_data"]
+    """:obj:`list` of :obj:`str`: list of alternatives for getting 'all' fields."""
 
     def _get(self):
-        """Get the fields.
+        """Direct API method to get the schema of all fields.
 
         Returns:
-            :obj:`dict`
-
+            :obj:`dict`: schema of all fields
         """
         return self._parent._request(method="get", path=self._parent._router.fields)
 
     def find_adapter(self, adapter, error=True, all_fields=None):
-        """Find an adapter by name."""
+        """Find an adapter by name.
+
+        Args:
+            adapter (:obj:`str`): Description
+            error (:obj:`bool`, optional): default ``True`` - throw exc if no
+                matches found for **adapter**
+            all_fields (:obj:`list` of :obj:`dict`, optional): default ``None`` -
+                if not supplied, will use return of :meth:`get`
+
+        Returns:
+            :obj:`tuple` of (:obj:`str`, :obj:`dict`):
+                fully qualified name of adapter and its field schemas
+
+        Raises:
+            exceptions.ValueNotFound: if **adapter** does not match the name keys
+                of any keys in **all_fields**
+        """
         all_fields = all_fields or self.get()
 
         check = tools.strip_right(obj=adapter.lower().strip(), fix="_adapter")
@@ -1126,12 +1178,36 @@ class Fields(mixins.Child):
         return None, {}
 
     def find_single(self, field, all_fields=None):
-        """Find a single field."""
+        """Find a single field.
+
+        Args:
+            field (:obj:`str`): name of field to find
+            all_fields (:obj:`list` of :obj:`dict`, optional): default ``None`` -
+                if not supplied, will use return of :meth:`get`
+
+        Returns:
+            :obj:`str`: validated and processed field
+        """
         found = self.find(field=field, error=True, all_fields=all_fields)
         return found[0]
 
     def find(self, field, error=True, all_fields=None):
-        """Find a field for a given adapter."""
+        """Find a field for a given adapter.
+
+        Args:
+            field (:obj:`str` or :obj:`list` of :obj:`str`): name(s) of fields
+                to find
+            error (:obj:`bool`, optional): default ``True`` - throw exc if field
+                can not be found
+            all_fields (:obj:`list` of :obj:`dict`, optional): default ``None`` -
+                if not supplied, will use return of :meth:`get`
+
+        Returns:
+            :obj:`list` of :obj:`str`: validated and processed fields
+
+        Raises:
+            :exc:`exceptions.ValueNotFound`: if **field** not found and **error** is True
+        """
         if field.startswith("MANUAL:"):
             return [tools.strip_left(obj=field, fix="MANUAL:").strip()]
 
@@ -1210,7 +1286,17 @@ class Fields(mixins.Child):
         return found
 
     def find_regex(self, field, all_fields=None):
-        """Find a field for a given adapter using regexes."""
+        """Find a field for a given adapter using regexes.
+
+        Args:
+            field (:obj:`str` or :obj:`list` of :obj:`str`): regex(es) of fields
+                to find
+            all_fields (:obj:`list` of :obj:`dict`, optional): default ``None`` -
+                if not supplied, will use return of :meth:`get`
+
+        Returns:
+            :obj:`list` of :obj:`str`: validated and processed fields
+        """
         all_fields = all_fields or self.get()
 
         check = field.strip()
@@ -1246,7 +1332,11 @@ class Fields(mixins.Child):
         return found_fields
 
     def get(self):
-        """Pass."""
+        """Direct API method to get the schema of all fields.
+
+        Returns:
+            :obj:`dict`: parsed output from :meth:`ParserFields.parse`
+        """
         raw = self._get()
         parser = ParserFields(raw=raw, parent=self)
         return parser.parse()
@@ -1260,7 +1350,26 @@ class Fields(mixins.Child):
         error=True,
         all_fields=None,
     ):
-        """Validate provided fields."""
+        """Validate provided fields.
+
+        Args:
+            fields (:obj:`list` of :obj:`str`, optional): default ``None`` -
+                fields to parse, find, and add
+            fields_regex (:obj:`list` of :obj:`str`, optional): default ``None`` -
+                list of fields to find and add using regular expression matches
+            fields_manual (:obj:`list` of :obj:`str`, optional): default ``None`` -
+                list of fully qualified fields to add
+            fields_default (:obj:`bool`, optional): default ``True`` -
+                add the fields in _default_fields from the parent asset object
+            error (:obj:`bool`, optional): default ``True`` - throw exc if field
+                can not be found
+            all_fields (:obj:`list` of :obj:`dict`, optional): default ``None`` -
+                if not supplied, will use return of :meth:`get`
+
+        Returns:
+            :obj:`list` of :obj:`str`: fields that have been parsed, fully qualified,
+                and validated
+        """
 
         def listify(obj):
             return [
@@ -1291,10 +1400,28 @@ class Fields(mixins.Child):
 
 
 class Reports(mixins.Child):
-    """Pass."""
+    """Child API model that provides special reports for the parent asset type."""
 
     def missing_adapters(self, rows, adapters=None, fields=None):
-        """Pass."""
+        """Report on assets that do not have data from configured adapters.
+
+        Args:
+            rows (:obj:`list` of :obj:`dict`): assets to add fields
+
+                * 'missing' - adapters that have a connection and have fetched
+                  at least one other asset yet are missing from an asset
+                * 'missing_nocnx' - all adapters that do not have a connection and
+                  as such are missing from an asset
+            adapters (:obj:`dict`, optional): default ``None`` - previously fetched
+                metadata for all adapters. will use
+                :meth:`.adapters.Adapters.get` if not provided
+            fields (:obj:`dict`, optional): default ``None`` - previously fetched
+                fields for all adapters. will use :meth:`Fields.get` if not provided
+
+        Returns:
+            (:obj:`list` of :obj:`dict`): assets with 'missing' and 'missing_nocnx'
+                fields added
+        """
         adapters = adapters or self._parent.adapters.get()
         fields = fields or self._parent.fields.get()
         new_rows = []
@@ -1324,17 +1451,30 @@ class Reports(mixins.Child):
 
 
 class ParserFields(mixins.Parser):
-    """Pass."""
+    """Parser to make the raw fields returned by the API into a more usable format."""
 
     def _exists(self, item, source, desc):
-        """Pass."""
+        """Sanity check to make sure an item is not duplicated during parsing.
+
+        Args:
+            item (:obj:`str`): name of item
+            source (:obj:`list` of :obj:`str`): obj to check if item already exists in
+            desc (:obj:`str`): description of item
+
+        Raises:
+            :exc:`exceptions.ApiError`: if item already exists in source
+        """
         if item in source:
             msg = "{d} {i!r} already exists, duplicate??"
             msg = msg.format(d=desc, i=item)
             raise exceptions.ApiError(msg)
 
     def _generic(self):
-        """Pass."""
+        """Parse generic/aggregated fields.
+
+        Returns:
+            :obj:`dict`: parsed generic/aggregated fields
+        """
         fields = {
             "all_data": {
                 "name": "specific_data.data",
@@ -1361,6 +1501,15 @@ class ParserFields(mixins.Parser):
         return fields
 
     def _adapter(self, name, raw_fields):
+        """Parse adapter specific fields.
+
+        Args:
+            name (:obj:`str`): adapter name
+            raw_fields (:obj:`list` of :obj:`dict`): the raw unparsed fields for name
+
+        Returns:
+            :obj:`dict`: parsed adapter specific fields
+        """
         short_name = tools.strip_right(obj=name, fix="_adapter")
 
         prefix = "adapters_data.{adapter_name}"
@@ -1391,7 +1540,11 @@ class ParserFields(mixins.Parser):
         return short_name, fields
 
     def parse(self):
-        """Pass."""
+        """Parse all generic and adapter specific fields.
+
+        Returns:
+            :obj:`dict`: parsed generic and adapter specific fields
+        """
         ret = {}
         ret["generic"] = self._generic()
 

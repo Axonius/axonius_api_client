@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""HTTP client for this package."""
+"""HTTP client."""
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 

@@ -1,78 +1,129 @@
 # -*- coding: utf-8 -*-
-"""Exceptions and warnings for this package."""
+"""Exceptions and warnings."""
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
-
-class AxonError(Exception):
-    """Parent exception for all package errors."""
+# WARNINGS
 
 
 class AxonWarning(Warning):
-    """Pass."""
-
-
-class ApiError(AxonError):
-    """Parent exception for all API errors."""
+    """Warnings for :mod:`axonius_api_client`."""
 
 
 class ApiWarning(AxonWarning):
-    """Parent exception for all API errors."""
+    """Warnings for :mod:`.api`."""
 
 
 class BetaWarning(AxonWarning):
-    """Pass."""
+    """Warn that an object is in BETA status."""
 
     def __init__(self, obj):
-        """Pass."""
+        """Throw a warning that an object is in BETA status.
+
+        Args:
+            obj (:obj:`object`): object to include str of in warning msg
+        """
         msg = "Object {obj} is considered **BETA** status! Here be dragons..."
         msg = msg.format(obj=obj)
 
         super(AxonWarning, self).__init__(msg)
 
 
-class DiscoverError(AxonError):
-    """Parent exception for all Discover errors."""
+class CsvIdentifierWarning(ApiWarning):
+    """Warn when CSV has no strong identifier columns."""
+
+    def __init__(self, ids_type, ids, name, headers):
+        """Warn when CSV has no strong identifier columns.
+
+        Args:
+            ids_type (:obj:`str`): type of csv being checked
+            ids (:obj:`list` of :obj:`str`): list of strong identifiers for this type of
+                csv
+            name (:obj:`str`): name of csv file
+            headers (:obj:`object`): columns in csv
+        """
+        msg = "No {ids_type} identifiers {ids} found in CSV file {name} headers {h}"
+        msg = msg.format(ids_type=ids_type, ids=ids, name=name, h=headers)
+
+        super(CsvIdentifierWarning, self).__init__(msg)
 
 
-class DiscoverWarning(AxonWarning):
-    """Parent exception for all Discover errors."""
+class CnxDeleteWarning(ApiWarning):
+    """Warn that a connection is about to be deleted."""
+
+    def __init__(self, cnxinfo, sleep):
+        """Warn that a connection is about to be deleted.
+
+        Args:
+            cnxinfo (:obj:`str`): info about connection
+            sleep (:obj:`int`): how long until the connection will be deleted
+        """
+        from . import tools
+
+        msg = ["Connection info: {cnxinfo}", "Will delete connection in {s} seconds!!"]
+        msg = tools.join_cr(obj=msg).format(s=sleep, cnxinfo=cnxinfo)
+
+        super(CnxDeleteWarning, self).__init__(msg)
+
+
+class CnxDeleteFailedWarning(ApiWarning):
+    """Warn when deleting a connection had an error and error=False."""
+
+    def __init__(self, cnxinfo, response):
+        """Warn when deleting a connection had an error and error=False.
+
+        Args:
+            cnxinfo (:obj:`str`): info about connection
+            response (:obj:`str`): text returned from request to delete the connection
+        """
+        from . import tools
+
+        self.cnxinfo = cnxinfo
+        self.response = response
+
+        msg = [
+            "Connection info: {cnxinfo}",
+            "Failed to delete connection!!",
+            "Response: {response}",
+        ]
+        msg = tools.join_cr(obj=msg).format(cnxinfo=cnxinfo, response=response)
+
+        super(CnxDeleteFailedWarning, self).__init__(msg)
+
+
+# EXCEPTIONS
+class AxonError(Exception):
+    """Errors for :mod:`axonius_api_client`."""
+
+
+class ApiError(AxonError):
+    """Errors for :mod:`.api`."""
 
 
 class ToolsError(AxonError):
-    """Parent exception for all tools errors."""
+    """Errors for :mod:`.tools`."""
 
 
 class AuthError(AxonError):
-    """Parent exception for all Authentication errors."""
+    """Errors for :mod:`.auth`."""
 
 
 class HttpError(AxonError):
-    """Parent exception for all Authentication errors."""
+    """Errors for :mod:`.http`."""
 
 
 class CnxError(ApiError):
-    """Pass."""
-
-
-class CnxWarning(ApiWarning):
-    """Pass."""
+    """Errors for :obj:`.api.adapters.Cnx`."""
 
 
 class CnxDeleteForce(CnxError):
-    """Pass."""
+    """Error when deleting a connection and force=False."""
 
     def __init__(self, cnxinfo):
-        """Pass.
+        """Error when deleting a connection and force=False.
 
         Args:
-            added (:obj:`requests.Response`):
-                Response error was thrown for.
-            exc (:obj:`Exception`, optional):
-                Original exception thrown.
-
-                Defaults to: None.
-
+            cnxinfo (:obj:`str`): info about connection
         """
         from . import tools
 
@@ -85,10 +136,15 @@ class CnxDeleteForce(CnxError):
 
 
 class CnxDeleteFailed(CnxError):
-    """Pass."""
+    """Error when deleting a connection had an error and error=True."""
 
     def __init__(self, cnxinfo, response):
-        """Pass."""
+        """Error when deleting a connection had an error and error=True.
+
+        Args:
+            cnxinfo (:obj:`str`): info about connection
+            response (:obj:`str`): text returned from request to delete the connection
+        """
         from . import tools
 
         self.cnxinfo = cnxinfo
@@ -106,55 +162,22 @@ class CnxDeleteFailed(CnxError):
         super(CnxDeleteFailed, self).__init__(msg)
 
 
-class CnxDeleteWarning(CnxWarning):
-    """Pass."""
-
-    def __init__(self, cnxinfo, sleep):
-        """Pass."""
-        from . import tools
-
-        msg = ["Connection info: {cnxinfo}", "Will delete connection in {s} seconds!!"]
-        msg = tools.join_cr(obj=msg).format(s=sleep, cnxinfo=cnxinfo)
-
-        super(CnxDeleteWarning, self).__init__(msg)
-
-
-class CnxDeleteFailedWarning(CnxWarning):
-    """Pass."""
-
-    def __init__(self, cnxinfo, response):
-        """Pass."""
-        from . import tools
-
-        self.cnxinfo = cnxinfo
-        self.response = response
-
-        msg = [
-            "Connection info: {cnxinfo}",
-            "Failed to delete connection!!",
-            "Response: {response}",
-        ]
-        msg = tools.join_cr(obj=msg).format(cnxinfo=cnxinfo, response=response)
-
-        super(CnxDeleteFailedWarning, self).__init__(msg)
-
-
 class CnxRefetchFailure(CnxError):
-    """Pass."""
+    """Error when an updated connection can not be re-fetched."""
 
     def __init__(
         self, response, adapter, node, filter_value, filter_method, known=None, **kwargs
     ):
-        """Pass.
+        """Error when an updated connection can not be re-fetched.
 
         Args:
-            response (:obj:`requests.Response`):
-                Response error was thrown for.
-            exc (:obj:`Exception`, optional):
-                Original exception thrown.
-
-                Defaults to: None.
-
+            response (:obj:`requests.Response`): response from last refetch attempt
+            adapter (:obj:`str`): name of adapter for refetch
+            node (:obj:`str`): node name of adapter for refetch
+            filter_value (:obj:`str`): value being passed to filter method
+            filter_method (:obj:`object`): method being used to find connection
+            known (:obj:`object`, optional): callback method to get known connections
+            **kwargs: passed to known
         """
         from . import tools
 
@@ -181,31 +204,16 @@ class CnxRefetchFailure(CnxError):
         super(CnxRefetchFailure, self).__init__(msg)
 
 
-class CnxCsvWarning(CnxWarning):
-    """Pass."""
-
-    def __init__(self, ids_type, ids, name, headers):
-        """Pass."""
-        msg = "No {ids_type} identifiers {ids} found in CSV file {name} headers {h}"
-        msg = msg.format(ids_type=ids_type, ids=ids, name=name, h=headers)
-
-        super(CnxCsvWarning, self).__init__(msg)
-
-
 class CnxConnectFailure(CnxError):
-    """Error when response has error key in JSON."""
+    """Error when adding/updating/checking a connection fails the connection test."""
 
     def __init__(self, response, adapter, node):
-        """Pass.
+        """Error when adding/updating/checking a connection fails the connection test.
 
         Args:
-            response (:obj:`requests.Response`):
-                Response error was thrown for.
-            exc (:obj:`Exception`, optional):
-                Original exception thrown.
-
-                Defaults to: None.
-
+            response (:obj:`str`): text from response
+            adapter (:obj:`str`): name of adapter
+            node (:obj:`str`): node name of adapter
         """
         from . import tools
 
@@ -222,10 +230,18 @@ class CnxConnectFailure(CnxError):
 
 
 class CnxSettingError(CnxError):
-    """Pass."""
+    """Errors when parsing settings."""
 
     def __init__(self, name, value, schema, adapter, error):
-        """Pass."""
+        """Errors when parsing settings.
+
+        Args:
+            name (:obj:`str`): setting name
+            value (:obj:`object`): value supplied for setting
+            schema (:obj:`dict`): metadata for this setting
+            adapter (:obj:`dict`): metadata of adapter for this connection
+            error (:obj:`str`): error message from subclassed exception
+        """
         from . import tools
 
         self.name = name
@@ -256,10 +272,17 @@ class CnxSettingError(CnxError):
 
 
 class CnxSettingMissing(CnxSettingError):
-    """Pass."""
+    """Error when no value supplied for a required setting."""
 
     def __init__(self, name, value, schema, adapter):
-        """Pass."""
+        """Error when no value supplied for a required setting.
+
+        Args:
+            name (:obj:`str`): setting name
+            value (:obj:`object`): value supplied for setting
+            schema (:obj:`dict`): metadata for this setting
+            adapter (:obj:`dict`): metadata of adapter for this connection
+        """
         error = "Setting {n!r} was not supplied and no default value defined"
         error = error.format(n=name)
 
@@ -269,10 +292,17 @@ class CnxSettingMissing(CnxSettingError):
 
 
 class CnxSettingFileMissing(CnxSettingError):
-    """Pass."""
+    """Error when supplied value is invalid for a file-type setting."""
 
     def __init__(self, name, value, schema, adapter):
-        """Pass."""
+        """Error when supplied value is invalid for a file-type setting.
+
+        Args:
+            name (:obj:`str`): setting name
+            value (:obj:`object`): value supplied for setting
+            schema (:obj:`dict`): metadata for this setting
+            adapter (:obj:`dict`): metadata of adapter for this connection
+        """
         from . import tools
 
         examples = [
@@ -307,10 +337,18 @@ class CnxSettingFileMissing(CnxSettingError):
 
 
 class CnxSettingInvalidType(CnxSettingError):
-    """Pass."""
+    """Error when supplied value is the wrong type for a setting."""
 
     def __init__(self, name, value, schema, mustbe, adapter):
-        """Pass."""
+        """Error when supplied value is the wrong type for a setting.
+
+        Args:
+            name (:obj:`str`): setting name
+            value (:obj:`object`): value supplied for setting
+            schema (:obj:`dict`): metadata for this setting
+            mustbe (:obj:`object`): the type the value should be
+            adapter (:obj:`dict`): metadata of adapter for this connection
+        """
         self.mustbe = mustbe
 
         error = "Invalid type supplied {t!r}, must be type {mt!r}"
@@ -322,10 +360,18 @@ class CnxSettingInvalidType(CnxSettingError):
 
 
 class CnxSettingInvalidChoice(CnxSettingError):
-    """Pass."""
+    """Error when supplied value is not a valid choice for an enum-type setting."""
 
     def __init__(self, name, value, enum, schema, adapter):
-        """Pass."""
+        """Error when supplied value is not a valid choice for an enum-type setting.
+
+        Args:
+            name (:obj:`str`): setting name
+            value (:obj:`object`): value supplied for setting
+            schema (:obj:`dict`): metadata for this setting
+            enum (:obj:`list` of :obj:`str`): valid values
+            adapter (:obj:`dict`): metadata of adapter for this connection
+        """
         self.enum = enum
 
         error = "Invalid value {v!r}, must be one of {e}"
@@ -337,13 +383,21 @@ class CnxSettingInvalidChoice(CnxSettingError):
 
 
 class CnxSettingUnknownType(CnxSettingError):
-    """Pass."""
+    """Error when a schema for a setting has a type that is not known."""
 
     def __init__(self, name, value, type_str, schema, adapter):
-        """Pass."""
+        """Error when a schema for a setting has a type that is not known.
+
+        Args:
+            name (:obj:`str`): setting name
+            value (:obj:`object`): value supplied for setting
+            type_str (:obj:`str`): the type that was not known
+            schema (:obj:`dict`): metadata for this setting
+            adapter (:obj:`dict`): metadata of adapter for this connection
+        """
         self.type_str = type_str
 
-        error = "Unknown connection setting type {t!r} in schema"
+        error = "Unknown setting type {t!r} in schema"
         error = error.format(t=type_str)
 
         super(CnxSettingUnknownType, self).__init__(
@@ -352,27 +406,24 @@ class CnxSettingUnknownType(CnxSettingError):
 
 
 class ResponseError(ApiError):
-    """Parent exception for any response error."""
+    """Errors when checking responses."""
 
     def __init__(self, response, error="", exc=None, details=True, bodies=True):
-        """Pass.
+        """Errors when checking responses.
 
         Args:
-            response (:obj:`requests.Response`):
-                Response error was thrown for.
-            error (:obj:`str`, optional):
-                Error message.
+            response (:obj:`requests.Response`): response obj error was thrown for
+            error (:obj:`str`, optional): default ``""`` - error message from
+                subclassed exception
+            exc (:obj:`Exception`, optional): default ``None`` - original exc thrown
+            details (:obj:`bool`, optional): default ``True`` -
 
-                Defaults to: "".
-            exc (:obj:`Exception`, optional):
-                Original exception thrown.
+                * if ``True`` include bodie in exc str
+                * if ``False`` do not include bodies  in exc str
+            bodies (:obj:`bool`, optional): default ``True`` -
 
-                Defaults to: None.
-            bodies (:obj:`bool`, optional):
-                Show request and response bodies.
-
-                Defaults to: True.
-
+                * if ``True`` include response details in exc str
+                * if ``False`` do not include response details in exc str
         """
         from . import tools
 
@@ -420,23 +471,26 @@ class ResponseError(ApiError):
 
 
 class ResponseNotOk(ResponseError):
-    """Error when response has invalid JSON."""
+    """Error if response has a status code that is an error and error_status is True."""
 
 
 class JsonInvalid(ResponseError):
     """Error when response has invalid JSON."""
 
     def __init__(self, response, exc=None, details=True, bodies=True):
-        """Pass.
+        """Error when response has invalid JSON.
 
         Args:
-            response (:obj:`requests.Response`):
-                Response error was thrown for.
-            exc (:obj:`Exception`, optional):
-                Original exception thrown.
+            response (:obj:`requests.Response`): response obj error was thrown for
+            exc (:obj:`Exception`, optional): default ``None`` - original exc thrown
+            details (:obj:`bool`, optional): default ``True`` -
 
-                Defaults to: None.
+                * if ``True`` include bodie in exc str
+                * if ``False`` do not include bodies  in exc str
+            bodies (:obj:`bool`, optional): default ``True`` -
 
+                * if ``True`` include response details in exc str
+                * if ``False`` do not include response details in exc str
         """
         error = "JSON is not valid in response"
         super(JsonInvalid, self).__init__(
@@ -445,19 +499,23 @@ class JsonInvalid(ResponseError):
 
 
 class JsonError(ResponseError):
-    """Error when response has error key in JSON."""
+    """Error when JSON has key:error that is not empty or key:status=error."""
 
     def __init__(self, response, data, exc=None, details=True, bodies=False):
-        """Pass.
+        """Error when JSON has key:error that is not empty or key:status=error.
 
         Args:
-            response (:obj:`requests.Response`):
-                Response error was thrown for.
-            exc (:obj:`Exception`, optional):
-                Original exception thrown.
+            response (:obj:`requests.Response`): response obj error was thrown for
+            data (:obj:`object`): JSON object from response
+            exc (:obj:`Exception`, optional): default ``None`` - original exc thrown
+            details (:obj:`bool`, optional): default ``True`` -
 
-                Defaults to: None.
+                * if ``True`` include bodie in exc str
+                * if ``False`` do not include bodies  in exc str
+            bodies (:obj:`bool`, optional): default ``True`` -
 
+                * if ``True`` include response details in exc str
+                * if ``False`` do not include response details in exc str
         """
         from . import tools
 
@@ -474,7 +532,7 @@ class JsonError(ResponseError):
 
 
 class ValueNotFound(ApiError):
-    """Pass."""
+    """Error when a value is not found."""
 
     def __init__(
         self,
@@ -484,11 +542,23 @@ class ValueNotFound(ApiError):
         known_msg=None,
         exc=None,
         match_type="equals",
-        # fmt: off
         **kwargs
-        # fmt: on
     ):
-        """Pass."""
+        """Error when a value is not found.
+
+        Args:
+            value (:obj:`object`): value that is being searched for
+            value_msg (:obj:`str`): explanation of what is being searched for
+            known (:obj:`object`, optional): default ``None`` -
+                callback method to get known values
+            known_msg (:obj:`str`, optional): default ``None`` -
+                explanation of what known values are
+            exc (:obj:`Exception`, optional): default ``None`` -
+                original exc thrown
+            match_type (:obj:`str`, optional): default ``"equals"`` -
+                operator being used in search
+            **kwargs: passed to known callback
+        """
         from . import tools
 
         self.value = value
@@ -520,22 +590,17 @@ class ValueNotFound(ApiError):
 
 
 class InvalidCredentials(AuthError):
-    """Error on failed login."""
+    """Error when credentials are invalid."""
 
     def __init__(self, auth, exc=None):
-        """Pass.
+        """Error when credentials are invalid.
 
         Args:
-            auth (:obj:`axonius_api_client.models.AuthModel`):
-                Authentication method.
-            exc (:obj:`Exception`, optional):
-                Original Exception, if any.
-
-                Defaults to: None.
-
+            auth (:obj:`.auth.Model`): auth method
+            exc (:obj:`Exception`, optional): default ``None`` - original exc thrown
         """
         self.auth = auth
-        """:obj:`axonius_api_client.models.AuthModel`: Authentication method."""
+        """:obj:`.auth.Model`: auth method"""
 
         self.exc = exc
         """:obj:`Exception`: Original Exception, if any."""
@@ -549,15 +614,13 @@ class NotLoggedIn(AuthError):
     """Error when not logged in."""
 
     def __init__(self, auth):
-        """Pass.
+        """Error when not logged in.
 
         Args:
-            auth (:obj:`axonius_api_client.models.AuthModel`):
-                Authentication method.
-
+            auth (:obj:`.auth.Model`): auth method
         """
         self.auth = auth
-        """:obj:`axonius_api_client.models.AuthModel`: Authentication method."""
+        """:obj:`.auth.Model`: auth method"""
 
         msg = "Must call login() on {auth}"
         msg = msg.format(auth=auth)
@@ -568,15 +631,13 @@ class AlreadyLoggedIn(AuthError):
     """Error when already logged in."""
 
     def __init__(self, auth):
-        """Pass.
+        """Error when already logged in.
 
         Args:
-            auth (:obj:`axonius_api_client.models.AuthModel`):
-                Authentication method.
-
+            auth (:obj:`.auth.Model`): auth method
         """
         self.auth = auth
-        """:obj:`axonius_api_client.models.AuthModel`: Authentication method."""
+        """:obj:`.auth.Model`: auth method"""
 
         msg = "Already logged in on {auth}"
         msg = msg.format(auth=auth)
@@ -584,17 +645,30 @@ class AlreadyLoggedIn(AuthError):
 
 
 class ConnectError(AxonError):
-    """Pass."""
+    """Error in :obj:`.connect.Connect`."""
 
     def __init__(self, msg, exc):
-        """Pass."""
+        """Error in :obj:`.connect.Connect`.
+
+        Args:
+            msg (:obj:`str`): msg to include in exc
+            exc (:exc:`Exception`): original exc thrown
+        """
         self.msg = msg
         self.exc = exc
         super(ConnectError, self).__init__(msg)
 
 
 def known_cb(known, kwargs=None):
-    """Pass."""
+    """Run a callback to get a list of known values.
+
+    Args:
+        known (:obj:`object`): callback to run
+        kwargs (:obj:`dict`, optional): default ``None`` - kwargs to pass to known
+
+    Returns:
+        :obj:`list` of :obj:`str`: known values returned from callback
+    """
     kwargs = kwargs or {}
 
     if callable(known):

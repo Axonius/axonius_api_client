@@ -8,6 +8,10 @@ import os
 
 import axonius_api_client as axonapi
 
+# NO TRIM csv
+# FLATTENING FOR ONE COMPLEX FIELD
+
+
 if __name__ == "__main__":
     axonapi.cli.cli_constants.load_dotenv()
 

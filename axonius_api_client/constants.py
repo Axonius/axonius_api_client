@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Constants for this package."""
+"""Constants."""
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
