@@ -256,7 +256,7 @@ All of the options listed above must be supplied BEFORE any commands or groups.
     "timeout_connect",
     default=constants.TIMEOUT_CONNECT,
     help="Seconds to wait for connections to API",
-    type=int,
+    type=click.INT,
     show_envvar=True,
     show_default=True,
 )
@@ -266,7 +266,7 @@ All of the options listed above must be supplied BEFORE any commands or groups.
     "timeout_response",
     default=constants.TIMEOUT_RESPONSE,
     help="Seconds to wait for responses from API",
-    type=int,
+    type=click.INT,
     show_default=True,
 )
 @click.version_option(version.__version__)

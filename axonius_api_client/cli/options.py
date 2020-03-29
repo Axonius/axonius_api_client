@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
 """Command line interface for Axonius API Client."""
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
 import os
 
 import click
 import tabulate
 
-from .. import tools
+from .. import constants, tools
 from . import cli_constants
 
 OPT_URL = click.option(
@@ -163,7 +164,31 @@ OPT_FIELDS_DEFAULT = click.option(
     show_envvar=True,
 )
 OPT_MAX_ROWS = click.option(
-    "--max-rows", "-mr", "max_rows", help="Only return this many rows.", type=click.INT
+    "--max-rows",
+    "-mr",
+    "max_rows",
+    help="Only return this many rows.",
+    type=click.INT,
+    show_envvar=True,
+    show_default=True,
+)
+OPT_PAGE_SIZE = click.option(
+    "--page-size",
+    "page_size",
+    help="Number of rows to fetch per page.",
+    default=constants.MAX_PAGE_SIZE,
+    type=click.INT,
+    show_envvar=True,
+    show_default=True,
+)
+OPT_PAGE_START = click.option(
+    "--page-start",
+    "page_start",
+    help="Start at this page.",
+    default=0,
+    type=click.INT,
+    show_envvar=True,
+    show_default=True,
 )
 OPT_GET_BY_VALUES = click.option(
     "--value",

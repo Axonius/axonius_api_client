@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Command line interface for Axonius API Client."""
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
 import click
 
@@ -22,6 +23,8 @@ from . import grp_common
 @options.OPT_FIELDS_REGEX
 @options.OPT_FIELDS_DEFAULT
 @options.OPT_MAX_ROWS
+@options.OPT_PAGE_START
+@options.OPT_PAGE_SIZE
 @options.OPT_GET_BY_PRE_QUERY
 @options.OPT_GET_BY_POST_QUERY
 @options.OPT_GET_BY_VALUE_NOT
@@ -53,6 +56,8 @@ def cmd(
     fields_regex,
     fields_default,
     max_rows,
+    page_size,
+    page_start,
 ):
     """Get assets with in a subnet."""
     grp_common.get_by_cmd(
@@ -75,5 +80,7 @@ def cmd(
         fields_regex=fields_regex,
         fields_default=fields_default,
         max_rows=max_rows,
+        page_size=page_size,
+        page_start=page_start,
         method="get_by_subnet",
     )
