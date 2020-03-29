@@ -10,9 +10,9 @@ Input feeds
 
 The input to this command as --rows must be from one of these commands:
 
-* :doc:`../grp_objects_cmds/cmd_get`: To remove labels from all device or user
+* :doc:`../grp_assets_cmds/cmd_get`: To remove labels from all device or user
   assets returned from the query provided to the get command.
-* :doc:`../grp_objects_cmds/cmd_get_by_saved_query`: To remove labels from all device or user
+* :doc:`../grp_assets_cmds/cmd_get_by_saved_query`: To remove labels from all device or user
   assets returned from the query defined in the saved query.
 * :doc:`../grp_devices_cmds/cmd_get_by_hostname`: To remove labels from all device assets returned
   from the query built by the get_by command.
