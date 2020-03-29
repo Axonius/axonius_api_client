@@ -218,32 +218,6 @@ class TestSystemSettingsCore(SettingChild):
         return apiobj.settings.core
 
 
-class TestSystemAggregation(object):
-    """Pass."""
-
-    @pytest.fixture(scope="class")
-    def childobj(self, apiobj):
-        """Pass."""
-        return apiobj.settings.core.aggregation
-
-    def test_get(self, childobj):
-        """Pass."""
-        settings = childobj.get()
-        assert isinstance(settings.pop("max_workers"), constants.INT)
-        assert isinstance(settings.pop("socket_read_timeout"), constants.INT)
-        assert not settings
-
-    def test_max_workers(self, childobj):
-        """Pass."""
-        settings = childobj.max_workers(value=20)
-        assert settings["max_workers"] == 20
-
-    def test_socket_read_timeout(self, childobj):
-        """Pass."""
-        settings = childobj.socket_read_timeout(value=5)
-        assert settings["socket_read_timeout"] == 5
-
-
 class TestSystemInstances(object):
     """Pass."""
 

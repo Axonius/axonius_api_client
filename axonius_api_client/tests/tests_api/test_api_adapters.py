@@ -693,35 +693,6 @@ class TestCnx(object):
             cnx=added["cnx"], force=True, error=False, warning=False, sleep=0
         )
 
-    def test_add_delete_csv_url(self, apiobj):
-        """Pass."""
-        added = apiobj.cnx.add_csv_url(
-            url="https://localhost/badwolf_add_csv_url.csv",
-            field="badwolf_add_csv_url",
-            error=False,
-        )
-        assert isinstance(added, dict)
-
-        apiobj.cnx.delete(
-            cnx=added["cnx"], force=True, error=False, warning=False, sleep=0
-        )
-
-    def test_add_delete_csv_share(self, apiobj):
-        """Pass."""
-        moo = "moo"
-        added = apiobj.cnx.add_csv_share(
-            share="smb://localhost/badwolf_add_csv_share.csv",
-            username=moo,
-            password=moo,
-            field="badwolf_add_csv_share",
-            error=False,
-        )
-        assert isinstance(added, dict)
-
-        apiobj.cnx.delete(
-            cnx=added["cnx"], force=True, error=False, warning=False, sleep=0
-        )
-
 
 class TestValidateCsv(object):
     """Pass."""
@@ -752,7 +723,7 @@ class TestValidateCsv(object):
         """Pass."""
         content = "test2,test1\nabc,def\n"
 
-        with pytest.warns(exceptions.CnxCsvWarning) as record:
+        with pytest.warns(exceptions.CsvIdentifierWarning) as record:
             axonapi.api.adapters.validate_csv(
                 name=meta.adapters.CSV_FILENAME, content=content
             )
@@ -774,7 +745,7 @@ class TestValidateCsv(object):
         """Pass."""
         content = "test2,test1\nabc,def\n"
 
-        with pytest.warns(exceptions.CnxCsvWarning) as record:
+        with pytest.warns(exceptions.CsvIdentifierWarning) as record:
             axonapi.api.adapters.validate_csv(
                 name=meta.adapters.CSV_FILENAME, content=content, is_users=True
             )
@@ -796,7 +767,7 @@ class TestValidateCsv(object):
         """Pass."""
         content = "test2,test1\nabc,def\n"
 
-        with pytest.warns(exceptions.CnxCsvWarning) as record:
+        with pytest.warns(exceptions.CsvIdentifierWarning) as record:
             axonapi.api.adapters.validate_csv(
                 name=meta.adapters.CSV_FILENAME, content=content, is_installed_sw=True
             )

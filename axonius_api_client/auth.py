@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Authentication methods for Axonius."""
+"""Authentication methods."""
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
@@ -39,7 +39,7 @@ class Model(object):
         """Get HttpClient object.
 
         Returns:
-            :obj:`axonius_api_client.http.Http`
+            :obj:`.http.Http`
 
         """
         raise NotImplementedError  # pragma: no cover
@@ -65,7 +65,7 @@ class Mixins(object):
         """Mixins for Model.
 
         Args:
-            http (:obj:`axonius_api_client.http.Http`):
+            http (:obj:`.http.Http`):
                 HTTP client to use to send requests.
             creds:
                 Credentials used by this Auth method.
@@ -76,7 +76,7 @@ class Mixins(object):
         """:obj:`logging.Logger`: Logger for this object."""
 
         self._http = http
-        """:obj:`axonius_api_client.http.Http`: HTTP Client."""
+        """:obj:`.http.Http`: HTTP Client."""
 
         self._creds = creds
         """:obj:`dict`: Credential store."""
@@ -112,7 +112,7 @@ class Mixins(object):
         """Get HttpClient object.
 
         Returns:
-            :obj:`axonius_api_client.http.Http`
+            :obj:`.http.Http`
 
         """
         return self._http
@@ -180,7 +180,7 @@ class ApiKey(Mixins, Model):
         """Authenticate using API key & API secret.
 
         Args:
-            http (:obj:`axonius_api_client.http.Http`):
+            http (:obj:`.http.Http`):
                 HTTP client to use to send requests.
             key (:obj:`str`):
                 API key to use in credentials.

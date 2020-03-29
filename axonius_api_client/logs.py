@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Logging utilities for this package."""
+"""Logging utilities."""
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Utilities and tools for this package."""
+"""Utilities and tools."""
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
