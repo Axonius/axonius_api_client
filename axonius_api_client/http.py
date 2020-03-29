@@ -20,8 +20,8 @@ class Http(object):
     def __init__(
         self,
         url,
-        connect_timeout=5,
-        response_timeout=60,
+        connect_timeout=constants.TIMEOUT_CONNECT,
+        response_timeout=constants.TIMEOUT_RESPONSE,
         certpath=None,
         certwarn=True,
         certverify=False,
@@ -48,9 +48,11 @@ class Http(object):
 
         Args:
             url (:obj:`str` or :obj:`ParserUrl`): URL to connect to
-            connect_timeout (:obj:`int`, optional): default ``5`` - seconds to
+            connect_timeout (:obj:`int`, optional):
+                default :data:`constants.TIMEOUT_CONNECT` - seconds to
                 wait for connections to open to :attr:`url`
-            response_timeout (:obj:`int`, optional): default ``60`` - seconds to
+            response_timeout (:obj:`int`, optional):
+                default :data:`constants.TIMEOUT_RESPONSE` - seconds to
                 wait for responses from :attr:`url`
             certpath (:obj:`str` or :obj:`pathlib.Path`, optional): default ``None`` -
                 path to CA bundle file to use when verifing certs offered by :attr:`url`

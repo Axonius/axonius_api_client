@@ -250,6 +250,25 @@ All of the options listed above must be supplied BEFORE any commands or groups.
     is_flag=True,
     show_envvar=True,
 )
+@click.option(
+    "--timeout-connect",
+    "-tc",
+    "timeout_connect",
+    default=constants.TIMEOUT_CONNECT,
+    help="Seconds to wait for connections to API",
+    type=int,
+    show_envvar=True,
+    show_default=True,
+)
+@click.option(
+    "--timeout-response",
+    "-tr",
+    "timeout_response",
+    default=constants.TIMEOUT_RESPONSE,
+    help="Seconds to wait for responses from API",
+    type=int,
+    show_default=True,
+)
 @click.version_option(version.__version__)
 @context.pass_context
 @click.pass_context
@@ -280,6 +299,8 @@ def cli(
     certverify,
     certwarn,
     wraperror,
+    timeout_connect,
+    timeout_response,
 ):
     """Command line interface for the Axonius API Client."""
     ctx._click_ctx = click_ctx
@@ -307,6 +328,8 @@ def cli(
     ctx._connect_args["certverify"] = certverify
     ctx._connect_args["certwarn"] = certwarn
     ctx._connect_args["wraperror"] = wraperror
+    ctx._connect_args["timeout_connect"] = timeout_connect
+    ctx._connect_args["timeout_response"] = timeout_response
 
 
 cli.add_command(grp_adapters.adapters)
