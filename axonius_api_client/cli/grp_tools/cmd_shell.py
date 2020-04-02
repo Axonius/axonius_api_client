@@ -5,6 +5,7 @@ from __future__ import (absolute_import, division, print_function,
 
 import atexit
 
+import axonius_api_client as axonapi
 import click
 
 from ... import constants, tools
@@ -33,6 +34,8 @@ def cmd(ctx, url, key, secret):  # noqa: D301
         - devices/d: Instance of axonius_api_client.api.Devices
         - users/u: Instance of axonius_api_client.api.Users
         - adapters/a: Instance of axonius_api_client.api.Adapters
+        - system/s: Instance of axonius_api_client.api.System
+        - axonapi: API Client package itself
         - jdump/j: Helper function to pretty print python objects
 
     """
@@ -54,6 +57,7 @@ def cmd(ctx, url, key, secret):  # noqa: D301
         "j": jdump,
         "s": client.system,
         "system": client.system,
+        "axonapi": axonapi,
     }
 
     spawn_shell(shellvars)

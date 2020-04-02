@@ -15,7 +15,7 @@ from . import grp_common
 @options.OPT_SECRET
 @options.OPT_EXPORT_FILE
 @options.OPT_EXPORT_PATH
-@options.OPT_EXPORT_FORMAT
+@options.OPT_EXPORT_FORMAT_ASSETS
 @options.OPT_EXPORT_OVERWRITE
 @options.OPT_EXPORT_DELIM
 @options.OPT_EXPORT_TABLE_FORMAT
@@ -27,58 +27,26 @@ from . import grp_common
 @options.OPT_MAX_ROWS
 @options.OPT_PAGE_START
 @options.OPT_PAGE_SIZE
+@options.OPT_FIELD_NULLS
+@options.OPT_FIELD_EXCLUDES
+@options.OPT_LOG_FIRST_PAGE
 @click.pass_context
-def cmd(
-    ctx,
-    url,
-    key,
-    secret,
-    export_format,
-    export_file,
-    export_path,
-    export_overwrite,
-    export_delim,
-    export_table_format,
-    query,
-    query_file,
-    fields,
-    fields_regex,
-    fields_default,
-    max_rows,
-    page_size,
-    page_start,
-):
+def cmd(ctx, url, key, secret, **kwargs):
     """Get assets from a query."""
-    if query_file:
-        query = query_file.read()
+    if kwargs.get("query_file"):
+        kwargs["query"] = kwargs["query_file"].read().strip()
 
     p_grp = ctx.parent.command.name
 
     client = ctx.obj.start_client(url=url, key=key, secret=secret)
     api = getattr(client, p_grp)
 
+    kwargs = grp_common.handle_kwargs(**kwargs)
+
     with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
-        raw_data = api.get(
-            query=query,
-            fields=fields,
-            fields_regex=fields_regex,
-            fields_default=fields_default,
-            max_rows=max_rows,
-            page_size=page_size,
-            page_start=page_start,
-        )
+        assets = api.get(**kwargs)
+        len(assets)
 
-    grp_common.echo_response(ctx=ctx, raw_data=raw_data, api=api)
-
-    formatters = grp_common.FORMATTERS
-
-    ctx.obj.handle_export(
-        raw_data=raw_data,
-        formatters=formatters,
-        export_format=export_format,
-        export_file=export_file,
-        export_path=export_path,
-        export_overwrite=export_overwrite,
-        table_format=export_table_format,
-        joiner=export_delim,
-    )
+        finish = kwargs.get("finish", None)
+        if callable(finish):
+            finish(assets=assets, **kwargs)

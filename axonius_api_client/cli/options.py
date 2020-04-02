@@ -9,7 +9,6 @@ import click
 import tabulate
 
 from .. import constants, tools
-from . import cli_constants
 
 OPT_URL = click.option(
     "--url",
@@ -20,6 +19,7 @@ OPT_URL = click.option(
     metavar="URL",
     prompt="URL of Axonius instance",
     show_envvar=True,
+    show_default=True,
 )
 OPT_KEY = click.option(
     "--key",
@@ -31,6 +31,7 @@ OPT_KEY = click.option(
     prompt="API Key of user in Axonius instance",
     hide_input=True,
     show_envvar=True,
+    show_default=True,
 )
 OPT_SECRET = click.option(
     "--secret",
@@ -42,6 +43,7 @@ OPT_SECRET = click.option(
     prompt="API Secret of user in Axonius instance",
     hide_input=True,
     show_envvar=True,
+    show_default=True,
 )
 OPT_EXPORT_FILE = click.option(
     "--export-file",
@@ -60,6 +62,7 @@ OPT_EXPORT_PATH = click.option(
     help="Path to create -xf/--export-file in (default is current working directory).",
     type=click.Path(exists=False, resolve_path=True),
     show_envvar=True,
+    show_default=True,
 )
 OPT_EXPORT_FORMAT = click.option(
     "--export-format",
@@ -67,7 +70,17 @@ OPT_EXPORT_FORMAT = click.option(
     "export_format",
     default="json",
     help="Format to use for STDOUT (or -xf/--export-file if supplied).",
-    type=click.Choice(cli_constants.EXPORT_FORMATS),
+    type=click.Choice(["csv", "json"]),
+    show_envvar=True,
+    show_default=True,
+)
+OPT_EXPORT_FORMAT_ASSETS = click.option(
+    "--export-format",
+    "-xt",
+    "export_format",
+    default="json",
+    help="Format to use for STDOUT (or -xf/--export-file if supplied).",
+    type=click.Choice(["csv", "json", "table"]),
     show_envvar=True,
     show_default=True,
 )
@@ -89,6 +102,7 @@ OPT_EXPORT_OVERWRITE = click.option(
     help="Overwrite -xf/--export-file if exists.",
     is_flag=True,
     show_envvar=True,
+    show_default=True,
 )
 OPT_EXPORT_DELIM = click.option(
     "--export-delim",
@@ -97,6 +111,7 @@ OPT_EXPORT_DELIM = click.option(
     default="\n",
     help="Change the cell delimiter for CSV format from the default of carriage return.",
     show_envvar=True,
+    show_default=True,
 )
 OPT_INCLUDE_SETTINGS = click.option(
     "--include-settings",
@@ -106,6 +121,7 @@ OPT_INCLUDE_SETTINGS = click.option(
     default=False,
     is_flag=True,
     show_envvar=True,
+    show_default=True,
 )
 OPT_NO_ERROR = click.option(
     "--no-error",
@@ -115,6 +131,7 @@ OPT_NO_ERROR = click.option(
     default=True,
     is_flag=True,
     show_envvar=True,
+    show_default=True,
 )
 OPT_QUERY = click.option(
     "--query",
@@ -123,6 +140,7 @@ OPT_QUERY = click.option(
     help="Query built from Query Wizard to filter objects (empty returns all).",
     metavar="QUERY",
     show_envvar=True,
+    show_default=True,
 )
 OPT_QUERY_FILE = click.option(
     "--query-file",
@@ -135,6 +153,7 @@ OPT_QUERY_FILE = click.option(
     type=click.File(),
     metavar="QUERY_FILE",
     show_envvar=True,
+    show_default=True,
 )
 OPT_FIELDS = click.option(
     "--field",
@@ -144,6 +163,7 @@ OPT_FIELDS = click.option(
     metavar="ADAPTER:FIELD",
     multiple=True,
     show_envvar=True,
+    show_default=True,
 )
 OPT_FIELDS_REGEX = click.option(
     "--field-regex",
@@ -153,6 +173,7 @@ OPT_FIELDS_REGEX = click.option(
     metavar="ADAPTER:FIELD",
     multiple=True,
     show_envvar=True,
+    show_default=True,
 )
 OPT_FIELDS_DEFAULT = click.option(
     "--no-fields-default",
@@ -162,6 +183,17 @@ OPT_FIELDS_DEFAULT = click.option(
     help="Exclude default fields for this object type.",
     is_flag=True,
     show_envvar=True,
+    show_default=True,
+)
+OPT_FIELD_EXCLUDES = click.option(
+    "--field-exclude",
+    "-fx",
+    "field_excludes",
+    help="Fields (columns) to exclude for each asset (regex of fully qualified field).",
+    metavar="fully_qualified_field",
+    multiple=True,
+    show_envvar=True,
+    show_default=True,
 )
 OPT_MAX_ROWS = click.option(
     "--max-rows",
@@ -190,6 +222,15 @@ OPT_PAGE_START = click.option(
     show_envvar=True,
     show_default=True,
 )
+OPT_FIELD_NULLS = click.option(
+    "--field-nulls",
+    "field_nulls",
+    help="Add null values for each selected field not returned for an asset",
+    default=False,
+    is_flag=True,
+    show_envvar=True,
+    show_default=True,
+)
 OPT_GET_BY_VALUES = click.option(
     "--value",
     "-v",
@@ -198,6 +239,7 @@ OPT_GET_BY_VALUES = click.option(
     required=True,
     multiple=True,
     show_envvar=True,
+    show_default=True,
 )
 OPT_GET_BY_POST_QUERY = click.option(
     "--query-post",
@@ -227,6 +269,7 @@ OPT_GET_BY_VALUE_REGEX = click.option(
     is_flag=True,
     default=False,
     show_envvar=True,
+    show_default=True,
 )
 OPT_GET_BY_VALUE_NOT = click.option(
     "--value-not",
@@ -236,6 +279,7 @@ OPT_GET_BY_VALUE_NOT = click.option(
     is_flag=True,
     default=False,
     show_envvar=True,
+    show_default=True,
 )
 OPT_ROWS = click.option(
     "--rows",
@@ -265,4 +309,24 @@ OPT_LABELS = click.option(
     required=True,
     multiple=True,
     show_envvar=True,
+    show_default=True,
+)
+OPT_LOG_FIRST_PAGE = click.option(
+    "--no-log-first-page",
+    "-nlfp",
+    "log_first_page",
+    default=True,
+    help="Print info about first page to STDERR.",
+    is_flag=True,
+    show_envvar=True,
+    show_default=True,
+)
+OPT_LOG_PAGE_SLEEP = click.option(
+    "--page-sleep",
+    "page_sleep",
+    default=0,
+    type=click.INT,
+    help="Seconds to wait in between each fetch of a page",
+    show_envvar=True,
+    show_default=True,
 )

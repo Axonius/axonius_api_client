@@ -4,8 +4,10 @@ from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
 import click
+import tabulate
 
-from .. import serial
+from ... import api, tools
+from .. import cli_constants, context, serial
 
 FORMATTERS = {
     "json": serial.to_json,
@@ -14,30 +16,7 @@ FORMATTERS = {
 }
 
 
-def get_by_cmd(
-    ctx,
-    url,
-    key,
-    secret,
-    export_format,
-    export_file,
-    export_path,
-    export_overwrite,
-    export_table_format,
-    joiner,
-    values,
-    value_regex,
-    value_not,
-    query_pre,
-    query_post,
-    fields,
-    fields_regex,
-    fields_default,
-    max_rows,
-    page_size,
-    page_start,
-    method,
-):
+def get_by_cmd(ctx, url, key, secret, method, values, **kwargs):
     """Pass."""
     p_grp = ctx.parent.command.name
 
@@ -45,33 +24,13 @@ def get_by_cmd(
     api = getattr(client, p_grp)
     apimethod = getattr(api, method)
 
+    kwargs = handle_kwargs(**kwargs)
+
+    get_first = serial.is_list(values) and len(values) == 1
+    kwargs["value"] = values[0] if get_first else values
+
     with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
-        raw_data = apimethod(
-            value=values[0] if serial.is_list(values) and len(values) == 1 else values,
-            value_regex=value_regex,
-            value_not=value_not,
-            query_pre=query_pre,
-            query_post=query_post,
-            fields=fields,
-            fields_regex=fields_regex,
-            fields_default=fields_default,
-            page_size=page_size,
-            page_start=page_start,
-            max_rows=max_rows,
-        )
-
-    echo_response(ctx=ctx, raw_data=raw_data, api=api)
-
-    ctx.obj.handle_export(
-        raw_data=raw_data,
-        formatters=FORMATTERS,
-        export_format=export_format,
-        export_file=export_file,
-        export_path=export_path,
-        export_overwrite=export_overwrite,
-        table_format=export_table_format,
-        joiner=joiner,
-    )
+        apimethod(**kwargs)
 
 
 def echo_response(ctx, raw_data, api):
@@ -136,3 +95,65 @@ def get_rows(ctx, rows):
         all_items=False,
     )
     return rows
+
+
+def assets_to_table(assets, **kwargs):
+    """Pass."""
+    tablfmt = kwargs.get("export_table_format", cli_constants.EXPORT_TABLE_FORMAT)
+    data = tabulate.tabulate(
+        tabular_data=assets, tablefmt=tablfmt, showindex=False, headers="keys"
+    )
+    print(data)
+    return data
+
+
+def handle_kwargs(**kwargs):
+    """Pass."""
+    kwargs["callbacks"] = []
+    kwargs["finish"] = None
+
+    if kwargs.get("query_file"):
+        kwargs["query"] = kwargs["query_file"].read().strip()
+
+    if kwargs.get("log_first_page", True):
+        kwargs["callbacks"].append(api.assets.cb_firstpage)
+
+    if kwargs.get("field_nulls", False):
+        kwargs["callbacks"].append(api.assets.cb_nulls)
+
+    if kwargs.get("field_excludes", []):
+        kwargs["callbacks"].append(api.assets.cb_excludes)
+
+    if kwargs.get("field_flatten", False):
+        kwargs["callbacks"].append(api.assets.cb_flatten)
+
+    if kwargs.get("field_join", False):
+        kwargs["callbacks"].append(api.assets.cb_joiner)
+
+    export_format = kwargs.get("export_format", "")
+
+    if export_format == "json":
+        kwargs["callbacks"].append(api.assets.cb_jsonstream)
+    elif export_format == "table":
+        kwargs["export_table_format"] = tablefmt = kwargs.get(
+            "export_table_format", cli_constants.EXPORT_TABLE_FORMAT
+        )
+
+        if tablefmt not in tabulate.tabulate_formats:
+            tablefmts = tools.join_comma(obj=tabulate.tabulate_formats)
+            msg = "{tf!r} is not a valid table format, must be one of {tfs}"
+            msg = msg.format(tf=tablefmt, tfs=tablefmts)
+            context.click_echo_error(msg=msg, abort=True)
+
+        if api.assets.cb_nulls not in kwargs["callbacks"]:
+            kwargs["callbacks"].append(api.assets.cb_nulls)
+
+        if api.assets.cb_flatten not in kwargs["callbacks"]:
+            kwargs["callbacks"].append(api.assets.cb_flatten)
+
+        if api.assets.cb_joiner not in kwargs["callbacks"]:
+            kwargs["callbacks"].append(api.assets.cb_joiner)
+
+        kwargs["finish"] = assets_to_table
+
+    return kwargs

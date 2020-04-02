@@ -4,20 +4,24 @@ from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
 import csv
+import json
+import os
+import sys
 
 import tabulate
 from axonius_api_client import constants
 
 from .. import tools
+from ..libext import jsonstreams
 from . import cli_constants, context
 
 
-def ensure_keys(ctx, rows, this_cmd, src_cmds, keys, all_items=True):
+def ensure_keys(rows, this_cmd, src_cmds, keys, all_items=True):
     """Pass."""
     for idx, row in enumerate(rows):
         for key in keys:
             if key not in row:
-                ensure_srcs(ctx=ctx, this_cmd=this_cmd, src_cmds=src_cmds)
+                ensure_srcs(this_cmd=this_cmd, src_cmds=src_cmds)
 
                 msg = [
                     "",
@@ -42,18 +46,18 @@ def ensure_srcs_msg(this_cmd, src_cmds):
     return tools.join_cr(obj=srcs)
 
 
-def ensure_srcs(ctx, this_cmd, src_cmds, err=True):
+def ensure_srcs(this_cmd, src_cmds, err=True):
     """Pass."""
     msg = ensure_srcs_msg(this_cmd=this_cmd, src_cmds=src_cmds)
     echo = context.click_echo_error if err else context.click_echo_ok
     echo(msg=msg, abort=False)
 
 
-def check_rows_type(ctx, rows, this_cmd, src_cmds, all_items=True):
+def check_rows_type(rows, this_cmd, src_cmds, all_items=True):
     """Pass."""
     for idx, row in enumerate(rows):
         if not isinstance(row, dict):
-            ensure_srcs(ctx=ctx, this_cmd=this_cmd, src_cmds=src_cmds)
+            ensure_srcs(this_cmd=this_cmd, src_cmds=src_cmds)
 
             msg = "Item #{i} in input to {tc!r} is type {t}, must be a dictionary!"
             msg = msg.format(i=idx + 1, tc=this_cmd, t=type(row).__name__)
@@ -69,7 +73,7 @@ def json_to_rows(ctx, stream, this_cmd, src_cmds):
 
     if stream.isatty():
         # its STDIN with no input
-        ensure_srcs(ctx=ctx, this_cmd=this_cmd, src_cmds=src_cmds)
+        ensure_srcs(this_cmd=this_cmd, src_cmds=src_cmds)
 
         msg = "No input provided on {s!r} for {tc!r}"
         msg = msg.format(s=stream_name, tc=this_cmd)
@@ -84,7 +88,7 @@ def json_to_rows(ctx, stream, this_cmd, src_cmds):
     content = content.strip()
 
     if not content:
-        ensure_srcs(ctx=ctx, this_cmd=this_cmd, src_cmds=src_cmds)
+        ensure_srcs(this_cmd=this_cmd, src_cmds=src_cmds)
 
         msg = "Empty content supplied in {s!r} for {tc!r}"
         msg = msg.format(s=stream_name, tc=this_cmd)
@@ -158,7 +162,7 @@ def dictwriter(rows, stream=None, headers=None, quoting=cli_constants.QUOTING, *
     return fh.getvalue()
 
 
-def to_json(ctx, raw_data, **kwargs):
+def to_json(raw_data, **kwargs):
     """Pass."""
     return tools.json_dump(obj=raw_data)
 
@@ -183,7 +187,7 @@ def is_dos(o):
     return isinstance(o, dict) and all([is_los(v) for v in o.values()])
 
 
-def compress_rows(ctx, raw_data, joiner="\n", **kwargs):
+def compress_rows(raw_data, joiner="\n", **kwargs):
     """Pass."""
     raw_data = tools.listify(obj=raw_data, dictkeys=False)
     rows = []
@@ -219,24 +223,102 @@ def compress_rows(ctx, raw_data, joiner="\n", **kwargs):
     return rows
 
 
-def obj_to_csv(ctx, raw_data, joiner="\n", **kwargs):
+def obj_to_csv(raw_data, **kwargs):
     """Pass."""
-    rows = compress_rows(ctx=ctx, raw_data=raw_data, joiner=joiner, **kwargs)
+    joiner = kwargs.get("export_delim", cli_constants.EXPORT_DELIM)
+    rows = compress_rows(raw_data=raw_data, joiner=joiner, **kwargs)
     data = dictwriter(rows=rows)
     return data
 
 
-def obj_to_table(ctx, raw_data, joiner="\n", table_format="simple", **kwargs):
+def obj_to_table(raw_data, **kwargs):
     """Pass."""
-    if table_format not in tabulate.tabulate_formats:
+    tablfmt = kwargs.get("export_table_format", cli_constants.EXPORT_TABLE_FORMAT)
+    joiner = kwargs.get("export_delim", cli_constants.EXPORT_DELIM)
+
+    if tablfmt not in tabulate.tabulate_formats:
         msg = "{tf!r} is not a valid table format, must be one of {tfs}"
-        msg = msg.format(
-            tf=table_format, tfs=tools.join_comma(obj=tabulate.tabulate_formats)
-        )
+        msg = msg.format(tf=tablfmt, tfs=tools.join_comma(obj=tabulate.tabulate_formats))
         context.click_echo_error(msg=msg, abort=True)
 
-    rows = compress_rows(ctx=ctx, raw_data=raw_data, joiner=joiner, **kwargs)
+    rows = compress_rows(raw_data=raw_data, joiner=joiner, **kwargs)
     data = tabulate.tabulate(
-        tabular_data=rows, tablefmt=table_format, showindex=False, headers="keys"
+        tabular_data=rows, tablefmt=tablfmt, showindex=False, headers="keys"
     )
     return data
+
+
+class JsonStream(object):
+    """Wrap jsonstreams.Stream object."""
+
+    def __init__(self, **kwargs):
+        """Wrap jsonstreams.Stream object."""
+        self._kwargs = kwargs
+        self._export_file = kwargs.get("export_file", None)
+        self._export_path = kwargs.get("export_path", None)
+        self._export_overwrite = kwargs.get("export_overwrite", False)
+        self._full_path = None
+
+        if "fd" in kwargs:
+            self._fd_close = kwargs.get("fd_close", True)
+            self.__fd = kwargs["fd"]
+        elif self._export_file:
+            self._export_path = self._export_path or os.getcwd()
+            path = tools.path(obj=self._export_path)
+            path.mkdir(mode=0o700, parents=True, exist_ok=True)
+            self._full_path = path / self._export_file
+            self._mode = "overwrote" if self._full_path.exists() else "created"
+
+            if self._full_path.exists() and not self._export_overwrite:
+                msg = "Export file {p} already exists and export-overwite is False!"
+                msg = msg.format(p=self._full_path)
+                context.click_echo_error(msg)
+
+            self._full_path.touch(mode=0o600)
+            self._fd_close = True
+            self.__fd = self._full_path.open(mode="w")
+        else:
+            self._fd_close = False
+            self.__fd = sys.stdout
+
+        encoder = kwargs.get("encoder", json.JSONEncoder)
+        indent = kwargs.get("indent", 2)
+
+        self.__inst = jsonstreams.Array(
+            fd=self.__fd,
+            indent=indent,
+            baseindent=0,
+            encoder=encoder(indent=indent),
+            pretty=kwargs.get("pretty", True),
+        )
+
+        self.subobject = self.__inst.subobject
+        self.subarray = self.__inst.subarray
+
+    def close(self):
+        """Close the root element and print a message."""
+        self.__inst.close()
+
+        if self._fd_close:
+            self.__fd.close()
+
+        if self._full_path:
+            msg = "Exported assets to path {!r} ({} file)"
+            msg = msg.format(format(self._full_path), self._mode)
+            context.click_echo_ok(msg)
+
+    def write(self, *args, **kwargs):
+        """Write values into the stream."""
+        self.__inst.write(*args, **kwargs)
+
+    def iterwrite(self, *args, **kwargs):
+        """Write values into the streams from an iterator."""
+        self.__inst.iterwrite(*args, **kwargs)
+
+    def __enter__(self):
+        """Start context manager."""
+        return self
+
+    def __exit__(self, etype, evalue, traceback):
+        """Exit context manager."""
+        self.close()

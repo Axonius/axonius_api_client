@@ -8,10 +8,6 @@ import os
 
 import axonius_api_client as axonapi
 
-# NO TRIM csv
-# FLATTENING FOR ONE COMPLEX FIELD
-
-
 if __name__ == "__main__":
     axonapi.cli.cli_constants.load_dotenv()
 
@@ -46,6 +42,39 @@ if __name__ == "__main__":
     adapters = ctx.adapters
     enforcements = ctx.enforcements
     system = ctx.system
+
+    # import jsonstreams
+    # import sys
+
+    # import pathlib
+
+    callbacks = [
+        axonapi.api.assets.cb_firstpage,
+        axonapi.api.assets.cb_nulls,
+        axonapi.api.assets.cb_flatten,
+        axonapi.api.assets.cb_jsonstream,
+    ]
+
+    z = devices.get(
+        callbacks=callbacks,
+        fields=["network_interfaces", "open_ports"],
+        # export_file="blah.json",
+        export_overwrite=True,
+    )
+    # stdout_orig = sys.__stdout__
+    # fd_stdout = os.fdopen(os.dup(stdout_orig.fileno()), stdout_orig.mode)
+    # fd_file = open("test.json", "w")
+    # callbacks = {
+    #     "asset": [axonapi.api.assets.cb_firstpage, axonapi.api.assets.cb_jsonstream]
+    # }
+    # with jsonstreams.Stream(
+    #     jsonstreams.Type.array, fd=fd_file, indent=2, pretty=True
+    # ) as stream:
+    #     devices.get(
+    #         callbacks=callbacks,
+    #         stream=stream,
+    #         echo_method=axonapi.cli.context.Context.echo_ok,
+    #     )
 
 # WIP CODE FOR _download_file
 # csv = adapters.get_single("csv")

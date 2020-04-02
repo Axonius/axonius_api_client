@@ -14,7 +14,10 @@ import six
 from . import constants, exceptions
 
 if not constants.PY37:
-    import pathlib2 as pathlib  # pragma: no cover
+    try:
+        import pathlib2 as pathlib  # pragma: no cover
+    except Exception:  # pragma: no cover
+        import pathlib
 else:
     import pathlib
 
@@ -687,3 +690,23 @@ def path_write(
         obj.chmod(protect_file)
 
     return obj, method(data)
+
+
+def is_simple(obj):
+    """Is simple."""
+    return isinstance(obj, constants.SIMPLE) or o is None
+
+
+def is_list(obj):
+    """Is simple."""
+    return isinstance(obj, constants.LIST)
+
+
+def is_los(o):
+    """Is simple or list of simples."""
+    return is_simple(o) or (is_list(o) and all([is_simple(x) for x in o]))
+
+
+def is_dos(o):
+    """Is dict with simple or list of simple values."""
+    return isinstance(o, dict) and all([is_los(v) for v in o.values()])

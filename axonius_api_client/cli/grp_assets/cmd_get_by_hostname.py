@@ -30,52 +30,9 @@ from . import grp_common
 @options.OPT_GET_BY_VALUE_NOT
 @options.OPT_GET_BY_VALUE_REGEX
 @options.OPT_GET_BY_VALUES
+@options.OPT_FIELD_NULLS
+@options.OPT_FIELD_EXCLUDES
 @click.pass_context
-def cmd(
-    ctx,
-    url,
-    key,
-    secret,
-    export_format,
-    export_file,
-    export_path,
-    export_overwrite,
-    export_delim,
-    export_table_format,
-    values,
-    value_regex,
-    value_not,
-    query_pre,
-    query_post,
-    fields,
-    fields_regex,
-    fields_default,
-    max_rows,
-    page_size,
-    page_start,
-):
+def cmd(ctx, **kwargs):
     """Get assets with matching hostnames."""
-    grp_common.get_by_cmd(
-        ctx=ctx,
-        url=url,
-        key=key,
-        secret=secret,
-        export_format=export_format,
-        export_file=export_file,
-        export_path=export_path,
-        export_overwrite=export_overwrite,
-        export_table_format=export_table_format,
-        joiner=export_delim,
-        values=values,
-        value_regex=value_regex,
-        value_not=value_not,
-        query_pre=query_pre,
-        query_post=query_post,
-        fields=fields,
-        fields_regex=fields_regex,
-        fields_default=fields_default,
-        max_rows=max_rows,
-        page_size=page_size,
-        page_start=page_start,
-        method="get_by_hostname",
-    )
+    grp_common.get_by_cmd(ctx=ctx, method="get_by_hostname", **kwargs)
