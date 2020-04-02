@@ -659,6 +659,10 @@ class ConnectError(AxonError):
         super(ConnectError, self).__init__(msg)
 
 
+class StopPaging(AxonError):
+    """Exception thrown when paging should be stopped."""
+
+
 def known_cb(known, kwargs=None):
     """Run a callback to get a list of known values.
 

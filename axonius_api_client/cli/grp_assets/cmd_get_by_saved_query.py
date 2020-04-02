@@ -5,7 +5,7 @@ from __future__ import (absolute_import, division, print_function,
 
 import click
 
-from .. import cli_constants, options, serial
+from .. import cli_constants, options
 from . import grp_common
 
 
@@ -26,6 +26,8 @@ from . import grp_common
 @options.OPT_MAX_ROWS
 @options.OPT_PAGE_START
 @options.OPT_PAGE_SIZE
+@options.OPT_FIELD_NULLS
+@options.OPT_FIELD_EXCLUDES
 @click.option(
     "--name",
     "-n",
@@ -34,51 +36,20 @@ from . import grp_common
     show_envvar=True,
 )
 @click.pass_context
-def cmd(
-    ctx,
-    url,
-    key,
-    secret,
-    export_format,
-    export_file,
-    export_path,
-    export_overwrite,
-    export_delim,
-    export_table_format,
-    fields,
-    fields_regex,
-    name,
-    max_rows,
-    page_size,
-    page_start,
-):
+def cmd(ctx, url, key, secret, **kwargs):
     """Get assets from a saved query."""
     p_grp = ctx.parent.command.name
 
     client = ctx.obj.start_client(url=url, key=key, secret=secret)
     api = getattr(client, p_grp)
 
+    kwargs["callbacks"] = grp_common.handle_callbacks(**kwargs)
+
     with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
-        raw_data = api.get_by_saved_query(
-            name=name,
-            fields=fields,
-            fields_regex=fields_regex,
-            max_rows=max_rows,
-            page_size=page_size,
-            page_start=page_start,
-        )
+        raw_data = api.get_by_saved_query(**kwargs)
 
     grp_common.echo_response(ctx=ctx, raw_data=raw_data, api=api)
 
-    formatters = {"json": serial.to_json, "csv": serial.obj_to_csv}
-
-    ctx.obj.handle_export(
-        raw_data=raw_data,
-        formatters=formatters,
-        export_format=export_format,
-        export_file=export_file,
-        export_path=export_path,
-        export_overwrite=export_overwrite,
-        export_table_format=export_table_format,
-        joiner=export_delim,
-    )
+    kwargs["formatters"] = grp_common.FORMATTERS
+    kwargs["raw_data"] = raw_data
+    ctx.obj.handle_export(**kwargs)

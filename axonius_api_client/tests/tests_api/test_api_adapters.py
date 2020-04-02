@@ -1137,6 +1137,7 @@ class TestParserAdapters(object):
             item_items = item.pop("items", {})
             item_required = item.pop("required")
             item_idx = item.pop("idx")
+            item_report_id = item.pop("report_id", "")
 
             if check_value:
                 item_value = item.pop("value")
@@ -1145,6 +1146,7 @@ class TestParserAdapters(object):
                     [],
                 ]
 
+            assert isinstance(item_report_id, constants.STR)
             assert isinstance(item_name, constants.STR) and item_name
             assert isinstance(item_type, constants.STR) and item_type
             assert isinstance(item_title, constants.STR) and item_title
@@ -1311,7 +1313,9 @@ class TestRawAdapters(object):
             item_default = item.pop("default", "")
             item_items = item.pop("items", {})
             item_req = item.pop("required", False)
+            item_report_id = item.pop("report_id", "")
 
+            assert isinstance(item_report_id, constants.STR)
             assert isinstance(item_name, constants.STR) and item_name
             assert isinstance(item_type, constants.STR) and item_type
             assert isinstance(item_title, constants.STR) and item_title

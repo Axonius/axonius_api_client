@@ -47,15 +47,16 @@ SCRIPT = "axonshell"
 
 KV_TMPL = "{k}: {v}"
 
-MAX_LEN = 30000
+# MAX_LEN = 30000
 
-MAX_STR = "...TRIMMED - {c} items over max cell length {mc}"
+# MAX_STR = "...TRIMMED - {c} items over max cell length {mc}"
 
 SHELL_BANNER = """Welcome human. We have some refreshments available for you:
 
     - ctx: Click context object
     - client/c: Instance of axonius_api_client.connect.Connect
     - jdump/j: Helper function to pretty print python objects
+    - axonapi: API client package itself
 
 API Objects:
     - adapters/a: Instance of axonius_api_client.api.Adapters
@@ -111,3 +112,5 @@ SETTING_TYPE_MAP = {
 }
 
 EXPORT_FORMATS = ["csv", "json", "table"]
+EXPORT_TABLE_FORMAT = "fancy_grid"
+# EXPORT_DELIM = "\n"

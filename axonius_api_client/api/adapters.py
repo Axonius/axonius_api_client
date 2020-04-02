@@ -716,6 +716,7 @@ class Cnx(mixins.Child):
         config = {}
         config[meta_keys["is_users_csv"]] = is_users
         config[meta_keys["is_installed_sw"]] = is_installed_sw
+        config["s3_use_ec2_attached_instance_profile"] = False
         config[meta_keys["id"]] = field
         config[meta_keys["file"]] = {}
         config[meta_keys["file"]]["filename"] = name

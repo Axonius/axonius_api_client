@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
 """Python API Client for Axonius."""
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
-from . import api, auth, cli, constants, exceptions, http, logs, tools, version
-from .api import Adapters, Devices, Enforcements, Users, System
+from . import (api, auth, cli, constants, exceptions, http, libext, logs,
+               tools, version)
+from .api import Adapters, Devices, Enforcements, System, Users
 from .auth import ApiKey
 from .connect import Connect
 from .http import Http
@@ -34,4 +36,5 @@ __all__ = (
     "constants",
     "cli",
     "logs",
+    "libext",
 )

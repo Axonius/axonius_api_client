@@ -117,13 +117,13 @@ class TestSystemMeta(object):
         assert isinstance(disk_used, constants.INT) and disk_used
 
         entity_sizes = data.pop("entity_sizes")
-        assert isinstance(entity_sizes, dict) and entity_sizes
+        assert isinstance(entity_sizes, dict)
 
-        users = entity_sizes.pop("Users")
-        assert isinstance(users, dict) and users
+        users = entity_sizes.pop("Users", {})
+        assert isinstance(users, dict)
 
-        devices = entity_sizes.pop("Devices")
-        assert isinstance(devices, dict) and devices
+        devices = entity_sizes.pop("Devices", {})
+        assert isinstance(devices, dict)
         assert not entity_sizes
         assert not data
 

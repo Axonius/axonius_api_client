@@ -346,6 +346,8 @@ axonshell a c de -r - -f -w 0
                 "{}=False".format(meta_keys["is_installed_sw"]),
                 "--config",
                 "{}={}".format(meta_keys["file"], csv_path),
+                "--config",
+                "s3_use_ec2_attached_instance_profile=False",
                 "--no-prompt-opt",
             ]
             dump_args_str(args1, csv_contents)
@@ -457,6 +459,8 @@ axonshell a c de -r - -f -w 0
                 "{}=False".format(meta_keys["is_installed_sw"]),
                 "--config",
                 "{}={}".format(meta_keys["file"], csv_path),
+                "--config",
+                "s3_use_ec2_attached_instance_profile=False",
                 "--no-prompt-opt",
             ]
             dump_args_str(args1, csv_contents)

@@ -195,3 +195,8 @@ PY36 = sys.version_info[0:2] >= (3, 6)
 
 PY37 = sys.version_info[0:2] >= (3, 7)
 """:obj:`bool`: python version is 3.7 or higher"""
+
+CELL_MAX_LEN = 30000
+CELL_MAX_STR = "...TRIMMED - {{c}} characters over max cell length {mc}"
+CELL_MAX_STR = CELL_MAX_STR.format(mc=CELL_MAX_LEN)
+CELL_JOINER = "\n"
