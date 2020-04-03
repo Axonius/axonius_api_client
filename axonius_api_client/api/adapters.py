@@ -1500,9 +1500,6 @@ class ParserCnxConfig(mixins.Parser):
         type_str = schema["type"]
         enum = schema.get("enum", [])
 
-        if value == constants.SETTING_UNCHANGED:
-            return value
-
         if enum and value not in enum:
             raise exceptions.CnxSettingInvalidChoice(
                 name=name, value=value, schema=schema, enum=enum, adapter=adapter
@@ -1524,7 +1521,18 @@ class ParserCnxConfig(mixins.Parser):
             ):
                 return value
         elif type_str == "string":
-            if isinstance(value, constants.STR):
+            fmt_str = schema.get("format", "")
+            unchanged = constants.SETTING_UNCHANGED
+
+            if fmt_str == "password":
+                if isinstance(value, tools.LIST) and value == unchanged:
+                    return unchanged
+                if value in ["_UNCHANGED_"]:
+                    return unchanged
+                if tools.json_load(obj=value, error=False) == unchanged:
+                    return unchanged
+
+            if isinstance(value, tools.STR):
                 return value
         else:
             raise exceptions.CnxSettingUnknownType(
