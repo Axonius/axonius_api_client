@@ -7,12 +7,56 @@ import logging
 import os
 import sys
 
-import six
-
 from . import __package__ as PACKAGE_ROOT
+
+PY2 = sys.version_info[0] == 2
+PY3 = sys.version_info[0] == 3
+
+PY36 = sys.version_info[0:2] >= (3, 6)
+""":obj:`bool`: python version is 3.6 or higher"""
+
+PY37 = sys.version_info[0:2] >= (3, 7)
+""":obj:`bool`: python version is 3.7 or higher"""
+
+COMPLEX = (dict, list, tuple)
+""":obj:`tuple` of :obj:`type`: types that are considered as complex."""
+
+EMPTY = [None, "", [], {}, ()]
+""":obj:`list` of :obj:`type`: values that should be considered as empty"""
+
+LIST = (tuple, list)
+""":obj:`tuple` of :obj:`type`: types that are considered as lists"""
+
+if PY3:
+    STR = (str,)
+    INT = (int,)
+    TEXT = str
+    BYTES = bytes
+else:
+    STR = (basestring,)  # noqa
+    INT = (int, long)  # noqa
+    TEXT = unicode  # noqa
+    BYTES = str
+
+
+SIMPLE = tuple(list(STR) + [int, bool, float])
+""":obj:`tuple` of :obj:`type`: types that are considered as simple"""
+
+SIMPLE_NONE = tuple(list(SIMPLE) + [None])
+""":obj:`tuple` of :obj:`type`: types that are considered as simple or None"""
+
+YES = [True, 1, "1", "true", "t", "yes", "y", "yas"]
+""":obj:`list` of :obj:`type`: values that should be considered as truthy"""
+
+NO = [False, 0, "0", "false", "f", "no", "n", "noes"]
+""":obj:`list` of :obj:`type`: values that should be considered as falsey"""
 
 MAX_PAGE_SIZE = 2000
 """:obj:`int`: maximum page size that REST API allows"""
+
+PAGE_SIZE = MAX_PAGE_SIZE
+PAGE_SLEEP = 0
+PAGE_CACHE = False
 
 GUI_PAGE_SIZES = [25, 50, 100]
 """:obj:`list` of :obj:`int`: valid page sizes for GUI paging"""
@@ -24,32 +68,22 @@ LOG_REQUEST_ATTRS_BRIEF = [
 ]
 """:obj:`list` of :obj:`str`: request attributes to log when verbose=False"""
 
-LOG_REQUEST_ATTRS_VERBOSE = [
-    "request to {request.url!r}",
-    "method={request.method!r}",
-    "headers={request.headers}",
-    "size={size}",
-]
-""":obj:`list` of :obj:`str`: request attributes to log when verbose=True"""
+RESPONSE_ATTR_MAP = {
+    "url": "{response.url!r}",
+    "size": "{response.body_size}",
+    "method": "{response.request.method!r}",
+    "status": "{response.status_code!r}",
+    "reason": "{response.reason!r}",
+    "elapsed": "{response.elapsed}",
+    "headers": "{response.headers}",
+}
 
-LOG_RESPONSE_ATTRS_BRIEF = [
-    "response from {response.url!r}",
-    "method={response.request.method!r}",
-    "status={response.status_code!r}",
-    "size={size}",
-]
-""":obj:`list` of :obj:`str`: response attributes to log when verbose=False"""
-
-LOG_RESPONSE_ATTRS_VERBOSE = [
-    "response from {response.url!r}",
-    "method={response.request.method!r}",
-    "headers={response.headers}",
-    "status={response.status_code!r}",
-    "reason={response.reason!r}",
-    "elapsed={response.elapsed}",
-    "size={size}",
-]
-""":obj:`list` of :obj:`str`: response attributes to log when verbose=True"""
+REQUEST_ATTR_MAP = {
+    "url": "{request.url!r}",
+    "size": "{request.body_size}",
+    "method": "{request.method!r}",
+    "headers": "{request.headers}",
+}
 
 TIMEOUT_CONNECT = 5
 """:obj:`int`: seconds to wait for connection to API."""
@@ -57,10 +91,16 @@ TIMEOUT_CONNECT = 5
 TIMEOUT_RESPONSE = 900
 """:obj:`int`: seconds to wait for response from API."""
 
-LOG_FMT_CONSOLE = "%(levelname)-8s [%(name)s] %(message)s"
+LOG_FMT_VERBOSE = "%(asctime)s %(levelname)-8s [%(name)s:%(funcName)s()] %(message)s"
+LOG_FMT_BRIEF = "%(levelname)-8s [%(name)s] %(message)s"
+
+DEBUG = os.environ.get("AX_DEBUG", "").lower().strip()
+DEBUG = any([DEBUG == x for x in YES])
+
+LOG_FMT_CONSOLE = LOG_FMT_VERBOSE if DEBUG else LOG_FMT_BRIEF
 """:obj:`str`: default logging format to use for console logs"""
 
-LOG_FMT_FILE = "%(asctime)s %(levelname)-8s [%(name)s:%(funcName)s()] %(message)s"
+LOG_FMT_FILE = LOG_FMT_VERBOSE
 """:obj:`str`: default logging format to use for file logs"""
 
 LOG_DATEFMT_CONSOLE = "%m/%d/%Y %I:%M:%S %p"
@@ -162,41 +202,6 @@ DEFAULT_PERM = "ReadOnly"
 VALID_PERMS = ["Restricted", "ReadWrite", "ReadOnly"]
 """:obj:`list` of :obj:`str`: valid user permissions"""
 
-COMPLEX = (dict, list, tuple)
-""":obj:`tuple` of :obj:`type`: types that are considered as complex."""
-
-EMPTY = [None, "", [], {}, ()]
-""":obj:`list` of :obj:`type`: values that should be considered as empty"""
-
-LIST = (tuple, list)
-""":obj:`tuple` of :obj:`type`: types that are considered as lists"""
-
-STR = six.string_types
-""":obj:`tuple` of :obj:`type`: types that are considered as strings"""
-
-INT = six.integer_types
-""":obj:`tuple` of :obj:`type`: types that are considered as integers"""
-BYTES = six.binary_type
-
-SIMPLE = tuple(list(STR) + [int, bool, float])
-""":obj:`tuple` of :obj:`type`: types that are considered as simple"""
-
-SIMPLE_NONE = tuple(list(SIMPLE) + [None])
-""":obj:`tuple` of :obj:`type`: types that are considered as simple or None"""
-
-YES = [True, 1, "1", "true", "t", "yes", "y", "yas"]
-""":obj:`list` of :obj:`type`: values that should be considered as truthy"""
-
-NO = [False, 0, "0", "false", "f", "no", "n", "noes"]
-""":obj:`list` of :obj:`type`: values that should be considered as falsey"""
-
-PY36 = sys.version_info[0:2] >= (3, 6)
-""":obj:`bool`: python version is 3.6 or higher"""
-
-PY37 = sys.version_info[0:2] >= (3, 7)
-""":obj:`bool`: python version is 3.7 or higher"""
-
-CELL_MAX_LEN = 30000
-CELL_MAX_STR = "...TRIMMED - {{c}} characters over max cell length {mc}"
-CELL_MAX_STR = CELL_MAX_STR.format(mc=CELL_MAX_LEN)
-CELL_JOINER = "\n"
+FIELD_TRIM_LEN = 30000
+FIELD_TRIM_STR = "...TRIMMED - {field_len} characters over {trim_len}"
+FIELD_JOINER = "\n"

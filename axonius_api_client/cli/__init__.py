@@ -9,6 +9,25 @@ from .. import constants, version
 from . import (cli_constants, click_ext, context, grp_adapters, grp_assets,
                grp_tools)
 
+# @click.option(
+#     "--log-request-attrs-verbose/--log-request-attrs-brief",
+#     "-reqv/-reqb",
+#     "log_request_attrs",
+#     default=None,
+#     help="Log http client verbose or brief request attributes.",
+#     is_flag=True,
+#     show_envvar=True,
+# )
+# @click.option(
+#     "--log-response-attrs-verbose/--log-response-attrs-brief",
+#     "-respv/-respb",
+#     "log_response_attrs",
+#     default=None,
+#     help="Log http client verbose or brief response attributes.",
+#     is_flag=True,
+#     show_envvar=True,
+# )
+
 
 @click.group(
     cls=click_ext.AliasedGroup,
@@ -78,21 +97,21 @@ All of the options listed above must be supplied BEFORE any commands or groups.
     show_default=True,
 )
 @click.option(
-    "--log-request-attrs-verbose/--log-request-attrs-brief",
-    "-reqv/-reqb",
+    "--log-request-attrs",
+    "-reqattr",
     "log_request_attrs",
-    default=None,
-    help="Log http client verbose or brief request attributes.",
-    is_flag=True,
+    help="Log http client request attributes.",
+    multiple=True,
+    type=click.Choice(list(constants.REQUEST_ATTR_MAP) + ["all"]),
     show_envvar=True,
 )
 @click.option(
-    "--log-response-attrs-verbose/--log-response-attrs-brief",
-    "-respv/-respb",
+    "--log-response-attrs",
+    "-respattr",
     "log_response_attrs",
-    default=None,
-    help="Log http client verbose or brief response attributes.",
-    is_flag=True,
+    help="Log http client response attributes.",
+    multiple=True,
+    type=click.Choice(list(constants.RESPONSE_ATTR_MAP) + ["all"]),
     show_envvar=True,
 )
 @click.option(

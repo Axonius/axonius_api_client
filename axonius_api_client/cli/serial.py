@@ -8,11 +8,11 @@ import json
 import os
 import sys
 
+import jsonstreams
 import tabulate
 from axonius_api_client import constants
 
 from .. import tools
-from ..libext import jsonstreams
 from . import cli_constants, context
 
 
@@ -251,35 +251,9 @@ def obj_to_table(raw_data, **kwargs):
 class JsonStream(object):
     """Wrap jsonstreams.Stream object."""
 
-    def __init__(self, **kwargs):
+    def __init__(self, fd, **kwargs):
         """Wrap jsonstreams.Stream object."""
-        self._kwargs = kwargs
-        self._export_file = kwargs.get("export_file", None)
-        self._export_path = kwargs.get("export_path", None)
-        self._export_overwrite = kwargs.get("export_overwrite", False)
-        self._full_path = None
-
-        if "fd" in kwargs:
-            self._fd_close = kwargs.get("fd_close", True)
-            self.__fd = kwargs["fd"]
-        elif self._export_file:
-            self._export_path = self._export_path or os.getcwd()
-            path = tools.path(obj=self._export_path)
-            path.mkdir(mode=0o700, parents=True, exist_ok=True)
-            self._full_path = path / self._export_file
-            self._mode = "overwrote" if self._full_path.exists() else "created"
-
-            if self._full_path.exists() and not self._export_overwrite:
-                msg = "Export file {p} already exists and export-overwite is False!"
-                msg = msg.format(p=self._full_path)
-                context.click_echo_error(msg)
-
-            self._full_path.touch(mode=0o600)
-            self._fd_close = True
-            self.__fd = self._full_path.open(mode="w")
-        else:
-            self._fd_close = False
-            self.__fd = sys.stdout
+        self.__fd = fd
 
         encoder = kwargs.get("encoder", json.JSONEncoder)
         indent = kwargs.get("indent", 2)
@@ -298,14 +272,6 @@ class JsonStream(object):
     def close(self):
         """Close the root element and print a message."""
         self.__inst.close()
-
-        if self._fd_close:
-            self.__fd.close()
-
-        if self._full_path:
-            msg = "Exported assets to path {!r} ({} file)"
-            msg = msg.format(format(self._full_path), self._mode)
-            context.click_echo_ok(msg)
 
     def write(self, *args, **kwargs):
         """Write values into the stream."""

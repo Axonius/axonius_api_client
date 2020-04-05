@@ -9,10 +9,10 @@ from datetime import datetime, timedelta
 import dateutil.parser
 import dateutil.relativedelta
 import dateutil.tz
-import six
 
 from . import constants, exceptions
 
+# pathlib in python lower than 3.7 does not support args we use
 if not constants.PY37:
     try:
         import pathlib2 as pathlib  # pragma: no cover
@@ -20,6 +20,13 @@ if not constants.PY37:
         import pathlib
 else:
     import pathlib
+
+if constants.PY3:
+    from itertools import zip_longest
+    from urllib.parse import urljoin
+else:
+    from itertools import izip_longest as zip_longest
+    from urlparse import urljoin
 
 
 def val_type(value, types):
@@ -96,7 +103,7 @@ def grouper(iterable, n, fillvalue=None):
     Returns:
         :obj:`typing.Iterator`: an iterator with chunks of length n
     """
-    return six.moves.zip_longest(*([iter(iterable)] * n), fillvalue=fillvalue)
+    return zip_longest(*([iter(iterable)] * n), fillvalue=fillvalue)
 
 
 def nest_depth(obj):
@@ -214,7 +221,7 @@ def join_url(url, *parts):
             continue
         url = url.rstrip("/") + "/"
         part = part.lstrip("/")
-        url = six.moves.urllib.parse.urljoin(url, part)
+        url = urljoin(url, part)
     return url
 
 
@@ -692,21 +699,59 @@ def path_write(
     return obj, method(data)
 
 
-def is_simple(obj):
-    """Is simple."""
-    return isinstance(obj, constants.SIMPLE) or o is None
+# def is_simple(obj):
+#     """Is simple."""
+#     return isinstance(obj, constants.SIMPLE) or o is None
 
 
-def is_list(obj):
-    """Is simple."""
-    return isinstance(obj, constants.LIST)
+# def is_list(obj):
+#     """Is simple."""
+#     return isinstance(obj, constants.LIST)
 
 
-def is_los(o):
-    """Is simple or list of simples."""
-    return is_simple(o) or (is_list(o) and all([is_simple(x) for x in o]))
+# def is_los(o):
+#     """Is simple or list of simples."""
+#     return is_simple(o) or (is_list(o) and all([is_simple(x) for x in o]))
 
 
-def is_dos(o):
-    """Is dict with simple or list of simple values."""
-    return isinstance(o, dict) and all([is_los(v) for v in o.values()])
+# def is_dos(o):
+#     """Is dict with simple or list of simple values."""
+#     return isinstance(o, dict) and all([is_los(v) for v in o.values()])
+
+
+def kwdump(obj, join=", ", pre=""):
+    """Pass."""
+    return pre + join.join(["{}:{!r}".format(k, v) for k, v in obj.items()])
+
+
+def longest_str(obj):
+    """Badwolf."""
+    return round(max([len(x) + 5 for x in obj]), -1)
+
+
+def split_str(obj, split=",", strip=None, do_strip=True, lower=True, empty=False):
+    """Split a string or list of strings into a list of strings."""
+    if isinstance(obj, constants.LIST):
+        return [
+            y
+            for x in obj
+            for y in split_str(
+                obj=x,
+                split=split,
+                strip=strip,
+                do_strip=do_strip,
+                lower=lower,
+                empty=empty,
+            )
+        ]
+
+    ret = []
+    for x in obj.split(split):
+        if lower:
+            x = x.lower()
+        if do_strip:
+            x = x.strip(strip)
+        if not empty and not x:
+            continue
+        ret.append(x)
+    return ret

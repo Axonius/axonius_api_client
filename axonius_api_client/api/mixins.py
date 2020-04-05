@@ -5,12 +5,9 @@ from __future__ import (absolute_import, division, print_function,
 
 import abc
 
-import six
-
 from .. import constants, exceptions, logs
 
 
-@six.add_metaclass(abc.ABCMeta)
 class Model(object):
     """API model base class."""
 
@@ -24,7 +21,6 @@ class Model(object):
         raise NotImplementedError  # pragma: no cover
 
 
-@six.add_metaclass(abc.ABCMeta)
 class ModelAsset(Model):
     """API model base class for asset types."""
 
@@ -262,7 +258,6 @@ class Child(object):
         return self.__str__()
 
 
-@six.add_metaclass(abc.ABCMeta)
 class Parser(object):
     """Parser base class."""
 

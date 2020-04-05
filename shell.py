@@ -32,7 +32,9 @@ if __name__ == "__main__":
         cert_client_key=AX_CLIENT_CERT_KEY,
         log_level_console="debug",
         log_level_api="debug",
-        # log_console=True,
+        log_level_http="info",
+        log_request_attrs=["url", "size"],
+        log_console=True,
     )
 
     ctx.start()
@@ -49,17 +51,30 @@ if __name__ == "__main__":
     # import pathlib
 
     callbacks = [
-        axonapi.api.assets.cb_firstpage,
-        axonapi.api.assets.cb_nulls,
-        axonapi.api.assets.cb_flatten,
-        axonapi.api.assets.cb_jsonstream,
+        # "first_page",
+        # "field_excludes",
+        # "field_nulls",
+        # "field_flatten",
+        "field_titles",
+        # "field_joiner",
+        # "export_json",
+        "export_csv",
     ]
 
     z = devices.get(
         callbacks=callbacks,
-        fields=["network_interfaces", "open_ports"],
+        fields=["network_interfaces", "hostname_preferred"],
+        fields_default=False,
         # export_file="blah.json",
+        export_file="blah.csv",
         export_overwrite=True,
+        explode_field="network_interfaces",
+        # max_rows=2,
+        # field_excludes=["internal_axon_id"],
+        log_once=True,
+        # joiner="!!",
+        # joiner_trim_len=60,
+        # null_value="AAAAA",
     )
     # stdout_orig = sys.__stdout__
     # fd_stdout = os.fdopen(os.dup(stdout_orig.fileno()), stdout_orig.mode)
