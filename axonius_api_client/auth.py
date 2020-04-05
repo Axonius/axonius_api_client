@@ -5,12 +5,9 @@ from __future__ import (absolute_import, division, print_function,
 
 import abc
 
-import six
-
 from . import api, constants, exceptions, logs
 
 
-@six.add_metaclass(abc.ABCMeta)
 class Model(object):
     """Abstract base class for all Authentication methods."""
 

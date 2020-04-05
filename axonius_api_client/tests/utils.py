@@ -1,19 +1,24 @@
 # -*- coding: utf-8 -*-
 """Test suite."""
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
 import csv
 import re
 import sys
 
-from click.testing import CliRunner
-
 import axonius_api_client as axonapi
-from axonius_api_client import cli, tools
+from axonius_api_client import cli, constants
+from click.testing import CliRunner
 
 IS_WINDOWS = sys.platform == "win32"
 IS_LINUX = sys.platform == "linux"
 IS_MAC = sys.platform == "darwin"
+
+if constants.PY3:
+    from io import StringIO
+else:
+    from StringIO import StringIO
 
 
 def log_check(caplog, entries):
@@ -126,7 +131,7 @@ def get_mockctx():
 def check_csv_cols(content, cols):
     """Pass."""
     QUOTING = csv.QUOTE_NONNUMERIC
-    fh = tools.six.StringIO()
+    fh = StringIO()
     fh.write(content)
     fh.seek(0)
     reader = csv.DictReader(fh, quoting=QUOTING)

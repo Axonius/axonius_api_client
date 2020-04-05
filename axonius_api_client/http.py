@@ -7,9 +7,16 @@ import logging
 import warnings
 
 import requests
-import six
 
 from . import constants, exceptions, logs, tools, version
+
+if constants.PY3:
+    from urllib.parse import urlparse
+    from urllib.parse import urlunparse
+else:
+    from urlparse import urlparse as urlparse
+    from urlparse import urlparse as urlunparse
+
 
 InsecureRequestWarning = requests.urllib3.exceptions.InsecureRequestWarning
 
@@ -173,11 +180,8 @@ class Http(object):
         self.LOG_RESPONSE_BODY = log_response_body
         """:obj:`bool`: Log the full response body."""
 
-        self.LOG_RESPONSE_ATTRS = []
-        """:obj:`list` of :obj:`str`: Request attributes to log."""
-
-        self.LOG_REQUEST_ATTRS = []
-        """:obj:`list` of :obj:`str`: Response attributes to log."""
+        self.log_request_attrs = log_request_attrs
+        self.log_response_attrs = log_response_attrs
 
         self.session.proxies = {}
         self.session.proxies["https"] = https_proxy
@@ -203,18 +207,6 @@ class Http(object):
             tools.path_read(obj=cert_client_cert)
             tools.path_read(obj=cert_client_key)
             self.session.cert = (format(cert_client_cert), format(cert_client_key))
-
-        log_response_attrs = log_response_attrs
-        if log_response_attrs is True:
-            self.LOG_RESPONSE_ATTRS = constants.LOG_RESPONSE_ATTRS_VERBOSE
-        elif log_response_attrs is False:
-            self.LOG_RESPONSE_ATTRS = constants.LOG_RESPONSE_ATTRS_BRIEF
-
-        log_request_attrs = log_request_attrs
-        if log_request_attrs is True:
-            self.LOG_REQUEST_ATTRS = constants.LOG_REQUEST_ATTRS_VERBOSE
-        elif log_request_attrs is False:
-            self.LOG_REQUEST_ATTRS = constants.LOG_REQUEST_ATTRS_BRIEF
 
         if certwarn is True:
             warnings.simplefilter("once", InsecureRequestWarning)
@@ -286,15 +278,14 @@ class Http(object):
             files=files or [],
         )
         prepped_request = self.session.prepare_request(request=request)
+        prepped_request.body_size = len(prepped_request.body or "")
 
         if self.SAVE_LAST:
             self.LAST_REQUEST = prepped_request
 
-        if self.LOG_REQUEST_ATTRS:
-            msg = ", ".join(self.LOG_REQUEST_ATTRS)
-            msg = msg.format(
-                request=prepped_request, size=len(prepped_request.body or "")
-            )
+        if self.log_request_attrs:
+            msg = "REQUEST ATTRS: {}".format(", ".join(self.log_request_attrs))
+            msg = msg.format(request=prepped_request)
             self._log.debug(msg)
 
         send_args = self.session.merge_environment_settings(
@@ -312,11 +303,12 @@ class Http(object):
         )
 
         if self.LOG_REQUEST_BODY:
-            msg = "request body:\n{body}"
+            msg = "REQUEST BODY:\n{body}"
             msg = msg.format(body=tools.json_dump(obj=prepped_request.body, error=False))
             self._log.debug(msg)
 
         response = self.session.send(**send_args)
+        response.body_size = len(response.text or "")
 
         if self.SAVE_LAST:
             self.LAST_RESPONSE = response
@@ -324,13 +316,13 @@ class Http(object):
         if self.SAVEHISTORY:
             self.HISTORY.append(response)
 
-        if self.LOG_RESPONSE_ATTRS:
-            msg = ", ".join(self.LOG_RESPONSE_ATTRS)
-            msg = msg.format(response=response, size=len(response.text or ""))
+        if self.log_response_attrs:
+            msg = "RESPONSE ATTRS: {}".format(", ".join(self.log_response_attrs))
+            msg = msg.format(response=response)
             self._log.debug(msg)
 
         if self.LOG_RESPONSE_BODY:
-            msg = "response body:\n{body}"
+            msg = "RESPONSE BODY:\n{body}"
             msg = msg.format(body=tools.json_dump(obj=response.text, error=False))
             self._log.debug(msg)
 
@@ -366,6 +358,62 @@ class Http(object):
             name=__name__, clsname=self.__class__.__name__, ver=version.__version__
         )
 
+    @property
+    def log_request_attrs(self):
+        """Get the request attributes that should be logged."""
+        return self._get_log_attrs("request")
+
+    @log_request_attrs.setter
+    def log_request_attrs(self, value):
+        """Set the request attributes that should be logged."""
+        attr_map = constants.REQUEST_ATTR_MAP
+        attr_type = "request"
+        self._set_log_attrs(attr_map=attr_map, attr_type=attr_type, value=value)
+
+    @property
+    def log_response_attrs(self):
+        """Get the response attributes that should be logged."""
+        return self._get_log_attrs("response")
+
+    @log_response_attrs.setter
+    def log_response_attrs(self, value):
+        """Set the response attributes that should be logged."""
+        attr_map = constants.RESPONSE_ATTR_MAP
+        attr_type = "response"
+        self._set_log_attrs(attr_map=attr_map, attr_type=attr_type, value=value)
+
+    def _get_log_attrs(self, attr_type):
+        return getattr(self, "_LOG_ATTRS", {}).get(attr_type, [])
+
+    def _set_log_attrs(self, attr_map, attr_type, value):
+        if not hasattr(self, "_LOG_ATTRS"):
+            self._LOG_ATTRS = {"response": [], "request": []}
+
+        value = [x.lower().strip() for x in tools.listify(value)]
+
+        tmpl = "{}={}".format
+
+        if not value:
+            self._LOG_ATTRS[attr_type] = []
+            return
+
+        log_attrs = self._LOG_ATTRS[attr_type]
+
+        if "all" in value:
+            for k, v in attr_map.items():
+                entry = tmpl(k, v)
+                if entry not in log_attrs:
+                    log_attrs.append(entry)
+            return
+
+        for item in value:
+            if item not in attr_map:
+                continue
+
+            entry = tmpl(item, attr_map[item])
+            if entry not in log_attrs:
+                log_attrs.append(entry)
+
 
 class ParserUrl(object):
     """Parse a URL and ensure it has the neccessary bits."""
@@ -389,7 +437,7 @@ class ParserUrl(object):
         self._init_scheme = default_scheme
         """:obj:`str`: default scheme provided"""
 
-        self._init_parsed = six.moves.urllib.parse.urlparse(url)
+        self._init_parsed = urlparse(url)
         """:obj:`urllib.parse.ParseResult`: first pass of parsing URL"""
 
         self.parsed = self.reparse(
@@ -562,10 +610,8 @@ class ParserUrl(object):
             elif scheme == "http":
                 netloc = self.make_netloc(host, "80")
 
-        pass2 = six.moves.urllib.parse.urlunparse(
-            (scheme, netloc, path, params, query, fragment)
-        )
-        return six.moves.urllib.parse.urlparse(pass2)
+        pass2 = urlunparse((scheme, netloc, path, params, query, fragment))
+        return urlparse(pass2)
 
     def unparse_base(self, parsed_result):
         """Unparse a parsed URL into just the scheme, hostname, and port parts.
@@ -578,7 +624,7 @@ class ParserUrl(object):
         """
         # only unparse self.parsed into url with scheme and netloc
         bits = (parsed_result.scheme, parsed_result.netloc, "", "", "", "")
-        return six.moves.urllib.parse.urlunparse(bits)
+        return urlunparse(bits)
 
     def unparse_all(self, parsed_result):
         """Unparse a parsed URL with all the parts.
@@ -589,4 +635,4 @@ class ParserUrl(object):
         Returns:
             :obj:`str`: unparsed url
         """
-        return six.moves.urllib.parse.urlunparse(parsed_result)
+        return urlunparse(parsed_result)

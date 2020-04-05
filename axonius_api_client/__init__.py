@@ -3,8 +3,7 @@
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
-from . import (api, auth, cli, constants, exceptions, http, libext, logs,
-               tools, version)
+from . import api, auth, cli, constants, exceptions, http, logs, tools, version
 from .api import Adapters, Devices, Enforcements, System, Users
 from .auth import ApiKey
 from .connect import Connect
@@ -36,5 +35,4 @@ __all__ = (
     "constants",
     "cli",
     "logs",
-    "libext",
 )
