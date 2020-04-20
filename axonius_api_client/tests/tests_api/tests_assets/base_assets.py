@@ -2,15 +2,10 @@
 """Test suite for assets."""
 import pytest
 import requests
-
 from axonius_api_client.api import mixins
 from axonius_api_client.constants import MAX_PAGE_SIZE
-from axonius_api_client.exceptions import (
-    JsonError,
-    JsonInvalid,
-    NotFoundError,
-    ResponseNotOk,
-)
+from axonius_api_client.exceptions import (JsonError, JsonInvalid,
+                                           NotFoundError, ResponseNotOk)
 from axonius_api_client.tools import listify
 
 from ...meta import QUERIES
@@ -385,7 +380,7 @@ class AssetsPublic:
         for value in values:
             assert value not in rows_values
 
-    def test_get_by_value_re(self, apiobj):
+    def test_get_by_value_regex(self, apiobj):
         """Pass."""
         field = apiobj.TEST_DATA["field_main"]
 
@@ -393,7 +388,7 @@ class AssetsPublic:
         value = values[0]
         regex_value = value[0:5]
 
-        rows = apiobj.get_by_value_re(
+        rows = apiobj.get_by_value_regex(
             value=regex_value, field=field, fields_map=apiobj.TEST_DATA["fields_map"],
         )
         check_assets(rows)
@@ -401,7 +396,7 @@ class AssetsPublic:
         rows_values = get_field_values(rows=rows, field=field)
         assert value in rows_values
 
-    def test_get_by_value_re_not(self, apiobj):
+    def test_get_by_value_regex_not(self, apiobj):
         """Pass."""
         field = apiobj.TEST_DATA["field_main"]
 
@@ -409,7 +404,7 @@ class AssetsPublic:
         value = values[0]
         regex_value = value[0:5]
 
-        rows = apiobj.get_by_value_re(
+        rows = apiobj.get_by_value_regex(
             value=regex_value,
             field=field,
             not_flag=True,

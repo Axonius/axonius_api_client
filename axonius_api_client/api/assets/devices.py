@@ -42,7 +42,7 @@ class Devices(AssetMixin):
         kwargs["field"] = self.FIELD_HOSTNAME
         kwargs["field_manual"] = True
         kwargs["value"] = value
-        return self.get_by_value_re(**kwargs)
+        return self.get_by_value_regex(**kwargs)
 
     def get_by_hostname(self, value, **kwargs):
         """Build a query to get assets where hostname == value."""
@@ -63,7 +63,7 @@ class Devices(AssetMixin):
         kwargs["field"] = self.FIELD_MAC
         kwargs["field_manual"] = True
         kwargs["value"] = value
-        return self.get_by_value_re(**kwargs)
+        return self.get_by_value_regex(**kwargs)
 
     def get_by_mac(self, value, **kwargs):
         """Build a query to get assets where mac == value."""
@@ -84,7 +84,7 @@ class Devices(AssetMixin):
         kwargs["field"] = self.FIELD_IP
         kwargs["field_manual"] = True
         kwargs["value"] = value
-        return self.get_by_value_re(**kwargs)
+        return self.get_by_value_regex(**kwargs)
 
     def get_by_ip(self, value, **kwargs):
         """Build a query to get assets where ip == value."""
@@ -93,7 +93,7 @@ class Devices(AssetMixin):
         kwargs["value"] = value
         return self.get_by_value(**kwargs)
 
-    def get_by_in_subnet(self, value, not_flag=False, pre="", post="", **kwargs):
+    def get_by_subnet(self, value, not_flag=False, pre="", post="", **kwargs):
         """Build a query to get assets where ip in subnet.
 
         Args:

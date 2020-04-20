@@ -8,8 +8,10 @@ import tabulate
 from ...constants import KEY_MAP_ADAPTER, KEY_MAP_CNX, KEY_MAP_SCHEMA
 
 
-def tablize(value, err=None, fmt="simple", footer=True):
+def tablize(value, err=None, fmt="simple", footer=True, **kwargs):
     """Pass."""
+    # value = wrapper(value=value, **kwargs)
+
     table = tabulate.tabulate(value, tablefmt=fmt, headers="keys")
 
     if footer:

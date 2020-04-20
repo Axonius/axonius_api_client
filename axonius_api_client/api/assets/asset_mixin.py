@@ -203,9 +203,9 @@ class AssetMixin(ModelMixins, PagingMixins):
         """
         try:
             return self._get_by_id(id=id)
-        except JsonError as exc:
+        except JsonError:
             otype = self.router._object_type
-            msg = f"Failed to find internal_axon_id {id} for {otype}, error: {exc}"
+            msg = f"Failed to find internal_axon_id {id!r} for {otype}"
             raise NotFoundError(msg)
 
     def get_by_saved_query(self, name, **kwargs):
@@ -258,7 +258,7 @@ class AssetMixin(ModelMixins, PagingMixins):
 
         return self.get(fields_map=fields_map, **kwargs)
 
-    def get_by_value_re(
+    def get_by_value_regex(
         self,
         value,
         field,
