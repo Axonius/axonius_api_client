@@ -1,7 +1,6 @@
 #!/usr/bin/env python -i
 # -*- coding: utf-8 -*-
 """Example of getting devices by a saved query."""
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 if __name__ == "__main__":
     import os

@@ -9,7 +9,7 @@ reports for device assets.
 Commands
 ===============================================
 
-* :doc:`grp_objects_reports_cmds/cmd_missing_adapters` to create a report that shows
+* :doc:`grp_assets_reports_cmds/cmd_missing_adapters` to create a report that shows
   the adapters that are missing from device assets that are fed into the input
   of this command.
 

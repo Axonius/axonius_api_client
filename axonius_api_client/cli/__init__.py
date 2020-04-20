@@ -1,16 +1,14 @@
 # -*- coding: utf-8 -*-
 """Command line interface for Axonius API Client."""
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 import click
 
 from .. import constants, version
-from . import cli_constants, click_ext, context, grp_adapters, grp_objects, grp_tools
+from . import context, grp_adapters, grp_assets, grp_tools
 
 
 @click.group(
-    cls=click_ext.AliasedGroup,
-    context_settings=cli_constants.CONTEXT_SETTINGS,
+    cls=context.AliasedGroup,
+    context_settings=context.CONTEXT_SETTINGS,
     epilog="""
 All of the options listed above must be supplied BEFORE any commands or groups.
 """,
@@ -76,21 +74,21 @@ All of the options listed above must be supplied BEFORE any commands or groups.
     show_default=True,
 )
 @click.option(
-    "--log-request-attrs-verbose/--log-request-attrs-brief",
-    "-reqv/-reqb",
+    "--log-request-attrs",
+    "-reqattr",
     "log_request_attrs",
-    default=None,
-    help="Log http client verbose or brief request attributes.",
-    is_flag=True,
+    help="Log http client request attributes.",
+    multiple=True,
+    type=click.Choice(list(constants.REQUEST_ATTR_MAP) + ["all"]),
     show_envvar=True,
 )
 @click.option(
-    "--log-response-attrs-verbose/--log-response-attrs-brief",
-    "-respv/-respb",
+    "--log-response-attrs",
+    "-respattr",
     "log_response_attrs",
-    default=None,
-    help="Log http client verbose or brief response attributes.",
-    is_flag=True,
+    help="Log http client response attributes.",
+    multiple=True,
+    type=click.Choice(list(constants.RESPONSE_ATTR_MAP) + ["all"]),
     show_envvar=True,
 )
 @click.option(
@@ -248,6 +246,25 @@ All of the options listed above must be supplied BEFORE any commands or groups.
     is_flag=True,
     show_envvar=True,
 )
+@click.option(
+    "--timeout-connect",
+    "-tc",
+    "timeout_connect",
+    default=constants.TIMEOUT_CONNECT,
+    help="Seconds to wait for connections to API",
+    type=click.INT,
+    show_envvar=True,
+    show_default=True,
+)
+@click.option(
+    "--timeout-response",
+    "-tr",
+    "timeout_response",
+    default=constants.TIMEOUT_RESPONSE,
+    help="Seconds to wait for responses from API",
+    type=click.INT,
+    show_default=True,
+)
 @click.version_option(version.__version__)
 @context.pass_context
 @click.pass_context
@@ -278,6 +295,8 @@ def cli(
     certverify,
     certwarn,
     wraperror,
+    timeout_connect,
+    timeout_response,
 ):
     """Command line interface for the Axonius API Client."""
     ctx._click_ctx = click_ctx
@@ -305,9 +324,11 @@ def cli(
     ctx._connect_args["certverify"] = certverify
     ctx._connect_args["certwarn"] = certwarn
     ctx._connect_args["wraperror"] = wraperror
+    ctx._connect_args["timeout_connect"] = timeout_connect
+    ctx._connect_args["timeout_response"] = timeout_response
 
 
 cli.add_command(grp_adapters.adapters)
-cli.add_command(grp_objects.devices)
-cli.add_command(grp_objects.users)
+cli.add_command(grp_assets.devices)
+cli.add_command(grp_assets.users)
 cli.add_command(grp_tools.tools)

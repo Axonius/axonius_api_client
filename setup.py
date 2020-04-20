@@ -22,6 +22,16 @@ with codecs.open("README.md", "r", "utf-8") as f:
     README = f.read()
 
 
+install_requires = [
+    "requests[security,socks]>=2.23.0",
+    "python-dotenv>=0.12.0",
+    "python-dateutil>=2.8.1",
+    "click>=7.1.1",
+    "pyreadline>=2.1 ; platform_system == 'Windows'",
+    "tabulate>=0.8.7",
+    "jsonstreams>=0.4.2",
+]
+
 setup(
     name=ABOUT["__title__"],
     version=ABOUT["__version__"],
@@ -34,17 +44,8 @@ setup(
     packages=find_packages(),
     package_data={"": ["LICENSE"]},
     include_package_data=True,
-    python_requires=">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*",
-    install_requires=[
-        "requests[security,socks]",
-        "click",
-        "python-dotenv",
-        "python-dateutil",
-        'pyreadline ; platform_system == "Windows"',
-        "pathlib2 ; python_version < '3.0'",
-        "tabulate",
-        "six>=1.14.0",
-    ],
+    python_requires=">=3.5",
+    install_requires=install_requires,
     keywords=["Axonius", "API Library"],
     tests_require=["pytest", "pytest-cov", "pytest-httpbin", "coverage"],
     license=ABOUT["__license__"],
@@ -56,10 +57,8 @@ setup(
         "License :: OSI Approved :: MIT License",
         "Topic :: Software Development :: Libraries :: Python Modules",
         "Programming Language :: Python",
-        "Programming Language :: Python :: 2",
-        "Programming Language :: Python :: 2.7",
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.7",
     ],
-    entry_points={"console_scripts": ["{}={}.cli:cli".format(SHELL_CMD, PROJECT)]},
+    entry_points={"console_scripts": [f"{SHELL_CMD}={PROJECT}.cli:cli"]},
 )

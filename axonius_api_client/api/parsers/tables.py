@@ -1,0 +1,103 @@
+# -*- coding: utf-8 -*-
+"""API models for working with adapters and connections."""
+import copy
+import textwrap
+
+import tabulate
+
+from ...constants import KEY_MAP_ADAPTER, KEY_MAP_CNX, KEY_MAP_SCHEMA
+
+
+def tablize(value, err=None, fmt="simple", footer=True):
+    """Pass."""
+    table = tabulate.tabulate(value, tablefmt=fmt, headers="keys")
+
+    if footer:
+        if fmt == "simple":
+            header = "\n" + "\n".join(reversed(table.splitlines()[0:2]))
+            table += header
+
+    if err:
+        pre = err + "\n"
+        post = "\n" + err
+    else:
+        pre = "\n"
+        post = "\n"
+
+    return "\n".join([pre, table, post])
+
+
+def tablize_schemas(
+    schemas, err=None, fmt="simple", footer=True, orig=True, orig_width=20
+):
+    """Pass."""
+    values = []
+
+    if isinstance(schemas, dict):
+        schemas = list(schemas.values())
+
+    for schema in sorted(schemas, key=lambda x: [x["required"], x["name"]]):
+        value = tab_map(
+            value=schema, key_map=KEY_MAP_SCHEMA, orig=orig, orig_width=orig_width
+        )
+        values.append(value)
+
+    return tablize(value=values, err=err, fmt=fmt, footer=footer)
+
+
+def tablize_adapters(adapters, err=None, fmt="simple", footer=True):
+    """Pass."""
+    values = []
+
+    for adapter in adapters:
+        value = tab_map(value=adapter, key_map=KEY_MAP_ADAPTER, orig=False)
+        # value["Connection IDs"] = "\n".join([x["id"] for x in adapter["cnx"]])
+        values.append(value)
+
+    return tablize(value=values, err=err, fmt=fmt, footer=footer)
+
+
+def tablize_cnxs(cnxs, err=None, fmt="simple", footer=True):
+    """Pass."""
+    values = []
+    for cnx in cnxs:
+        cnx["label"] = cnx["config"].get("connection_label")
+        value = tab_map(value=cnx, key_map=KEY_MAP_CNX, orig=False)
+        values.append(value)
+
+    return tablize(value=values, err=err, fmt=fmt, footer=footer)
+
+
+def tab_map(value, key_map, orig=False, orig_width=20):
+    """Pass."""
+    orig_value = copy.deepcopy(value)
+
+    new_value = {}
+
+    for key, name, width in key_map:
+        if key in orig_value and name:
+
+            key_value = orig_value.pop(key)
+
+            if isinstance(key_value, list):
+                key_value = "\n".join([str(x) for x in key_value])
+
+            if isinstance(key_value, str) and key_value and width:
+                key_value = textwrap.fill(key_value, width=width)
+
+            new_value[name] = key_value
+
+    if orig:
+        for orig_key, orig_key_value in orig_value.items():
+            if isinstance(orig_key_value, dict):
+                continue
+
+            if isinstance(orig_key_value, list):
+                new_value[orig_key] = "\n".join([str(x) for x in orig_key_value])
+
+            elif isinstance(orig_key_value, str) and orig_key_value and orig_width:
+                new_value[orig_key] = textwrap.fill(orig_key_value, width=orig_width)
+            else:
+                new_value[orig_key] = orig_key_value
+
+    return new_value

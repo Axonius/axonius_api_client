@@ -1,23 +1,27 @@
 # -*- coding: utf-8 -*-
 """Test suite for axonius_api_client.tools."""
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 import pytest
 
-import axonius_api_client as axonapi
-from axonius_api_client import exceptions
+from axonius_api_client.auth import ApiKey
+from axonius_api_client.exceptions import (
+    AlreadyLoggedIn,
+    AuthError,
+    InvalidCredentials,
+    NotLoggedIn,
+)
+from axonius_api_client.http import Http
 
-from .. import utils
+from ..utils import get_key_creds, get_url
 
 
-class TestApiKey(object):
+class TestApiKey:
     """Test axonius_api_client.auth."""
 
     def test_valid_creds(self, request):
         """Test str/repr has URL."""
-        http = axonapi.Http(url=utils.get_url(request), certwarn=False)
+        http = Http(url=get_url(request), certwarn=False)
 
-        auth = axonapi.ApiKey(http=http, **utils.get_key_creds(request))
+        auth = ApiKey(http=http, **get_key_creds(request))
 
         auth.login()
 
@@ -27,9 +31,9 @@ class TestApiKey(object):
 
     def test_logout(self, request):
         """Test no exc when logout() after login()."""
-        http = axonapi.Http(url=utils.get_url(request), certwarn=False)
+        http = Http(url=get_url(request), certwarn=False)
 
-        auth = axonapi.ApiKey(http=http, **utils.get_key_creds(request))
+        auth = ApiKey(http=http, **get_key_creds(request))
 
         auth.login()
 
@@ -41,42 +45,42 @@ class TestApiKey(object):
 
     def test_login_already_logged_in(self, request):
         """Test exc thrown when login() and login() already called."""
-        http = axonapi.Http(url=utils.get_url(request), certwarn=False)
+        http = Http(url=get_url(request), certwarn=False)
 
-        auth = axonapi.ApiKey(http=http, **utils.get_key_creds(request))
+        auth = ApiKey(http=http, **get_key_creds(request))
 
         auth.login()
 
-        with pytest.raises(exceptions.AlreadyLoggedIn):
+        with pytest.raises(AlreadyLoggedIn):
             auth.login()
 
     def test_logout_not_logged_in(self, request):
         """Test exc thrown when logout() but login() not called."""
-        http = axonapi.Http(url=utils.get_url(request), certwarn=False)
+        http = Http(url=get_url(request), certwarn=False)
 
-        auth = axonapi.ApiKey(http=http, **utils.get_key_creds(request))
+        auth = ApiKey(http=http, **get_key_creds(request))
 
-        with pytest.raises(exceptions.NotLoggedIn):
+        with pytest.raises(NotLoggedIn):
             auth.logout()
 
     def test_invalid_creds(self, request):
         """Test str/repr has URL."""
-        http = axonapi.Http(url=utils.get_url(request), certwarn=False)
+        http = Http(url=get_url(request), certwarn=False)
 
         bad = "badwolf"
 
-        auth = axonapi.ApiKey(http=http, key=bad, secret=bad)
+        auth = ApiKey(http=http, key=bad, secret=bad)
 
-        with pytest.raises(exceptions.InvalidCredentials):
+        with pytest.raises(InvalidCredentials):
             auth.login()
 
     def test_http_lock_fail(self, request):
         """Test using an http client from another authmethod throws exc."""
-        http = axonapi.Http(url=utils.get_url(request), certwarn=False)
+        http = Http(url=get_url(request), certwarn=False)
 
-        auth = axonapi.ApiKey(http=http, **utils.get_key_creds(request))
+        auth = ApiKey(http=http, **get_key_creds(request))
 
         assert auth.http._auth_lock
 
-        with pytest.raises(exceptions.AuthError):
-            auth = axonapi.ApiKey(http=http, **utils.get_key_creds(request))
+        with pytest.raises(AuthError):
+            auth = ApiKey(http=http, **get_key_creds(request))
