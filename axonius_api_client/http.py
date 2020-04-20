@@ -1,32 +1,35 @@
 # -*- coding: utf-8 -*-
-"""Axonius API HTTP client module."""
-from __future__ import absolute_import, division, print_function, unicode_literals
-
+"""HTTP client."""
 import logging
 import warnings
+from urllib.parse import urlparse, urlunparse
 
 import requests
-import six
 
-from . import constants, exceptions, logs, tools, version
+from .constants import (
+    LOG_LEVEL_HTTP,
+    MAX_BODY_LEN,
+    REQUEST_ATTR_MAP,
+    RESPONSE_ATTR_MAP,
+    TIMEOUT_CONNECT,
+    TIMEOUT_RESPONSE,
+)
+from .exceptions import HttpError
+from .logs import get_obj_log, set_log_level
+from .tools import join_url, json_reload, listify, path_read
+from .version import __version__
 
 InsecureRequestWarning = requests.urllib3.exceptions.InsecureRequestWarning
 
 
-class Http(object):
-    """HTTP client for sending requests usings :obj:`requests.Session`.
-
-    Attributes:
-        session (:obj:`requests.Session`): Session object for sending requests.
-        url (:obj:`str`): URL of Axonius instance.
-
-    """
+class Http:
+    """HTTP client wrapper around :obj:`requests.Session`."""
 
     def __init__(
         self,
         url,
-        connect_timeout=5,
-        response_timeout=60,
+        connect_timeout=TIMEOUT_CONNECT,
+        response_timeout=TIMEOUT_RESPONSE,
         certpath=None,
         certwarn=True,
         certverify=False,
@@ -37,166 +40,174 @@ class Http(object):
         https_proxy=None,
         save_last=True,
         save_history=False,
-        # fmt: off
-        **kwargs
-        # fmt: on
+        log_level=LOG_LEVEL_HTTP,
+        log_level_urllib="warning",
+        log_request_attrs=None,
+        log_response_attrs=None,
+        log_request_body=False,
+        log_response_body=False,
     ):
-        """HTTP client for sending requests usings :obj:`requests.Session`.
+        """HTTP client wrapper around :obj:`requests.Session`.
+
+        Notes:
+            * If certpath is supplied, certverify is ignored
+            * private key supplied to cert_client_key or cert_client_both
+              can **NOT** be password encrypted
 
         Args:
-            url (:obj:`str` or :obj:`axonius_api_client.http.parser.ParserUrl`):
-                Axonius API URL.
+            url (:obj:`str` or :obj:`ParserUrl`): URL to connect to
             connect_timeout (:obj:`int`, optional):
-                Seconds to wait for connection to url to open.
-
-                Defaults to: 5.
+                default :data:`TIMEOUT_CONNECT` - seconds to
+                wait for connections to open to :attr:`url`
             response_timeout (:obj:`int`, optional):
-                Seconds to wait for response from url.
+                default :data:`TIMEOUT_RESPONSE` - seconds to
+                wait for responses from :attr:`url`
+            certpath (:obj:`str` or :obj:`pathlib.Path`, optional): default ``None`` -
+                path to CA bundle file to use when verifing certs offered by :attr:`url`
+                instead of the system CA bundle
+            certwarn (:obj:`bool`, optional): default ``True`` - show warnings from
+                requests about certs offered by :attr:`url` that are self signed:
 
-                Defaults to: 60.
-            certpath (:obj:`str`, optional):
-                Enable validation using a path to CA bundle instead of the system CA
-                bundle.
+                * if ``True`` show warning only the first time it happens
+                * if ``False`` never show warning
+                * if ``None`` show warning every time it happens
+            certverify (:obj:`bool`, optional): default ``False`` - control
+                validation of certs offered by :attr:`url`:
 
-                Defaults to: None.
-            certwarn (:obj:`bool`, optional):
-                Show InsecureRequestWarning.
-                * True = Show warning just once.
-                * False = Never show warning.
-                * None = Show warning always.
+                * if ``True`` raise exception if cert is invalid/self-signed
+                * if ``False`` only raise exception if cert is invalid
+            cert_client_both (:obj:`str` or :obj:`pathlib.Path`, optional):
+                default ``None`` - path to cert file containing both the private key and
+                cert to offer to :attr:`url`
+            cert_client_cert (:obj:`str` or :obj:`pathlib.Path`, optional):
+                default ``None`` - path to cert file to offer to :attr:`url`
+                (*must also supply cert_client_key*)
+            cert_client_key (:obj:`str` or :obj:`pathlib.Path`, optional):
+                default ``None`` - path to private key file for cert_client_cert to
+                offer to :attr:`url` (*must also supply cert_client_cert*)
+            http_proxy (:obj:`str`, optional): default ``None`` - proxy to use
+                when making http requests to :attr:`url`
+            https_proxy (:obj:`str`, optional): default ``None`` - proxy to use
+                when making https requests to :attr:`url`
+            save_last (:obj:`bool`, optional): default ``True`` -
 
-                Defaults to: True.
-            certverify (:obj:`bool`, optional):
-                If certpath is empty, control SSL certification validation.
-                * True = Throw errors if SSL certificate is invalid.
-                * False = Throw warnings if SSL certificate is invalid.
+                * if ``True`` save request to :attr:`LAST_REQUEST` and
+                  response to :attr:`LAST_RESPONSE`
+                * if ``False`` do not save request to :attr:`LAST_REQUEST` and
+                  response to :attr:`LAST_RESPONSE`
+            save_history (:obj:`bool`, optional): default ``True`` -
 
-                Defaults to: False.
-            http_proxy (:obj:`str`, optional):
-                HTTP proxy to use when connecting to url.
+                * if ``True`` append responses to :attr:`HISTORY`
+                * if ``False`` do not append responses to :attr:`HISTORY`
+            log_level (:obj:`str`):
+              default :data:`axonius_api_client.LOG_LEVEL_HTTP` -
+              logging level to use for this objects logger
+            log_level_urllib (:obj:`str`): default ``"warning"`` -
+              logging level to use for this urllib logger
+            log_request_attrs (:obj:`bool`): default ``None`` - control logging
+              of request attributes:
 
-                Defaults to: None.
-            https_proxy (:obj:`str`, optional):
-                HTTPS proxy to use when connecting to url.
+              * if ``True``, log request attributes defined in
+                :data:`axonius_api_client.LOG_REQUEST_ATTRS_VERBOSE`
+              * if ``False``, log request attributes defined in
+                :data:`axonius_api_client.LOG_REQUEST_ATTRS_BRIEF`
+              * if ``None``, do not log any request attributes
+            log_response_attrs (:obj:`bool`): default ``None`` - control logging
+              of response attributes:
 
-                Defaults to: None.
-            save_last (:obj:`bool`, optional):
-                Save last request & response to :attr:`_LAST_REQUEST` and
-                :attr:`_LAST_RESPONSE`.
+              * if ``True``, log response attributes defined in
+                :data:`axonius_api_client.LOG_RESPONSE_ATTRS_VERBOSE`
+              * if ``False``, log response attributes defined in
+                :data:`axonius_api_client.LOG_RESPONSE_ATTRS_BRIEF`
+              * if ``None``, do not log any response attributes
+            log_request_body (:obj:`bool`): default ``False`` - control logging
+              of request bodies:
 
-                Defaults to: True.
-            save_history (:obj:`bool`, optional):
-                Add last response to :attr:`_HISTORY`.
+              * if ``True``, log request bodies
+              * if ``False``, do not log request bodies
+            log_response_body (:obj:`bool`): default ``False`` - control logging
+              of response bodies:
 
-                Defaults to: False.
-            kwargs:
-                log_level (:obj:`str`):
-                    Control logging level of object.
+              * if ``True``, log response bodies
+              * if ``False``, do not log response bodies
 
-                    Defaults to: :attr:`constants.LOG_LEVEL_HTTP`.
-                log_level_urllib (:obj:`str`):
-                    Control logging level of urllib.
+        Raises:
+            :exc:`HttpError`: if either cert_client_cert or cert_client_key
+                are supplied, and the other is not supplied
 
-                    Defaults to: "warning".
-                log_request_attrs (:obj:`bool`):
-                    Control request attr logging.
-                    True = verbose, False = brief, None = none
-
-                    Defaults to: None.
-                log_response_attrs (:obj:`bool`):
-                    Control response attr logging.
-                    True = verbose, False = brief, None = none
-
-                    Defaults to: None.
-                log_request_body (:obj:`bool`):
-                    Control request body logging.
-
-                    Defaults to: False.
-                log_response_body (:obj:`bool`):
-                    Control response body logging.
-
-                    Defaults to: False.
-
+            :exc:`HttpError`: if any of cert_path, cert_client_cert,
+                cert_client_key, or cert_client_both are supplied and the file does
+                not exist
         """
-        log_level = kwargs.get("log_level", constants.LOG_LEVEL_HTTP)
-        self._log = logs.get_obj_log(obj=self, level=log_level)
+        self.LOG = get_obj_log(obj=self, level=log_level)
         """:obj:`logging.Logger`: Logger for this object."""
 
         if isinstance(url, ParserUrl):
-            self._URLPARSED = url
+            self.URLPARSED = url
         else:
-            self._URLPARSED = ParserUrl(url=url, default_scheme="https")
+            self.URLPARSED = ParserUrl(url=url, default_scheme="https")
 
-        self.url = self._URLPARSED.url
-        """:obj:`str`: URL of Axonius API."""
+        self.url = self.URLPARSED.url
+        """:obj:`str`: URL to connect to"""
 
-        self._LAST_REQUEST = None
-        """:obj:`requests.PreparedRequest`: Last request sent."""
+        self.LAST_REQUEST = None
+        """:obj:`requests.PreparedRequest`: last request sent"""
 
-        self._LAST_RESPONSE = None
-        """:obj:`requests.Response`: Last response received."""
+        self.LAST_RESPONSE = None
+        """:obj:`requests.Response`: last response received"""
 
-        self._SAVE_LAST = save_last
-        """:obj:`bool`: Save requests to last_request and responses to last_response."""
+        self.HISTORY = []
+        """:obj:`list` of :obj:`requests.Response`: all responses received."""
 
-        self._HISTORY = []
-        """:obj:`list` of :obj:`requests.Response`: History of responses."""
+        self.SAVE_LAST = save_last
+        """:obj:`bool`: save requests to :attr:`LAST_REQUEST` and responses
+        to :attr:`LAST_RESPONSE`"""
 
-        self._SAVE_HISTORY = save_history
-        """:obj:`bool`: Append all responses to history."""
+        self.SAVEHISTORY = save_history
+        """:obj:`bool`: Append all responses to :attr:`HISTORY`"""
 
-        self._CONNECT_TIMEOUT = connect_timeout
-        """:obj:`int`: Seconds to wait for connection to url to open."""
+        self.CONNECT_TIMEOUT = connect_timeout
+        """:obj:`int`: seconds to wait for connections to open to :attr:`url`"""
 
-        self._RESPONSE_TIMEOUT = response_timeout
-        """:obj:`int`: Seconds to wait for response from url."""
+        self.RESPONSE_TIMEOUT = response_timeout
+        """:obj:`int`: seconds to wait for responses from :attr:`url`"""
 
         self.session = requests.Session()
-        """:obj:`requests.Session`: Session object to use."""
+        """:obj:`requests.Session`: session object to use"""
 
-        self.session.verify = certpath if certpath else certverify
+        self.LOG_REQUEST_BODY = log_request_body
+        """:obj:`bool`: Log the full request body."""
+
+        self.LOG_RESPONSE_BODY = log_response_body
+        """:obj:`bool`: Log the full response body."""
+
+        self.log_request_attrs = log_request_attrs
+        self.log_response_attrs = log_response_attrs
+
         self.session.proxies = {}
         self.session.proxies["https"] = https_proxy
         self.session.proxies["http"] = http_proxy
 
+        if certpath:
+            path_read(obj=certpath)
+            self.session.verify = certpath
+        else:
+            self.session.verify = certverify
+
         if cert_client_both:
-            tools.path_read(obj=cert_client_both)
-            self.session.cert = format(cert_client_both)
+            path_read(obj=cert_client_both)
+            self.session.cert = str(cert_client_both)
         elif cert_client_cert or cert_client_key:
             if not all([cert_client_cert, cert_client_key]):
                 error = (
                     "You must supply both a 'cert_client_cert' and 'cert_client_key'"
                     " or use 'cert_client_both'!"
                 )
-                raise exceptions.HttpError(error)
+                raise HttpError(error)
 
-            tools.path_read(obj=cert_client_cert)
-            tools.path_read(obj=cert_client_key)
-            self.session.cert = (format(cert_client_cert), format(cert_client_key))
-
-        self._LOG_REQUEST_BODY = kwargs.get("log_request_body", False)
-        """:obj:`bool`: Log the full request body."""
-
-        self._LOG_RESPONSE_BODY = kwargs.get("log_response_body", False)
-        """:obj:`bool`: Log the full response body."""
-
-        self._LOG_RESPONSE_ATTRS = []
-        """:obj:`list` of :obj:`str`: Request attributes to log."""
-
-        self._LOG_REQUEST_ATTRS = []
-        """:obj:`list` of :obj:`str`: Response attributes to log."""
-
-        log_response_attrs = kwargs.get("log_response_attrs", None)
-        if log_response_attrs is True:
-            self._LOG_RESPONSE_ATTRS = constants.LOG_RESPONSE_ATTRS_VERBOSE
-        elif log_response_attrs is False:
-            self._LOG_RESPONSE_ATTRS = constants.LOG_RESPONSE_ATTRS_BRIEF
-
-        log_request_attrs = kwargs.get("log_request_attrs", None)
-        if log_request_attrs is True:
-            self._LOG_REQUEST_ATTRS = constants.LOG_REQUEST_ATTRS_VERBOSE
-        elif log_request_attrs is False:
-            self._LOG_REQUEST_ATTRS = constants.LOG_REQUEST_ATTRS_BRIEF
+            path_read(obj=cert_client_cert)
+            path_read(obj=cert_client_key)
+            self.session.cert = (str(cert_client_cert), str(cert_client_key))
 
         if certwarn is True:
             warnings.simplefilter("once", InsecureRequestWarning)
@@ -204,7 +215,7 @@ class Http(object):
             warnings.simplefilter("ignore", InsecureRequestWarning)
 
         urllog = logging.getLogger("urllib3.connectionpool")
-        logs.set_level(obj=urllog, level=kwargs.get("log_level_urllib", "warning"))
+        set_log_level(obj=urllog, level=log_level_urllib)
 
     def __call__(
         self,
@@ -223,51 +234,37 @@ class Http(object):
         """Create, prepare, and then send a request using :attr:`session`.
 
         Args:
-            path (:obj:`str`, optional):
-                Path to append to :attr:`url` for this request.
+            path (:obj:`str`, optional): default ``None`` - path to append to
+                :attr:`url`
+            route (:obj:`str`, optional): default ``None`` - route to append to
+                :attr:`url`
+            method (:obj:`str`, optional): default ``"get"`` - method to use
+            data (:obj:`str`, optional): default ``None`` - body to send
+            params (:obj:`dict`, optional): default ``None`` - parameters to url encode
+            headers (:obj:`dict`, optional): default ``None`` - headers to send
+            json (:obj:`dict`, optional): default ``None`` - obj to encode as json
+            files (:obj:`tuple` of :obj:`tuple`, optional): default ``None`` - files to
+                send
+            **kwargs:
+                overrides for object attributes
 
-                Defaults to: None.
-            route (:obj:`str`, optional):
-                Route to append to path for this request.
-
-                Defaults to: None.
-            method (:obj:`str`, optional):
-                Method to use.
-
-                Defaults to: "get".
-            data (:obj:`str`, optional):
-                Data to send in request body.
-
-                Defaults to: None.
-            params (:obj:`dict`, optional):
-                Parameters to encode in URL.
-
-                Defaults to: None.
-            headers (:obj:`dict`, optional):
-                Headers to send in request.
-
-                Defaults to: None.
-            json (:obj:`dict`, optional):
-                Dictionary to encode as JSON string and send in request.
-
-                Defaults to: None.
-            files (:obj:`tuple` of :obj:`tuple`, optional):
-                Files to attach to request.
-
-                Defaults to: None.
-            kwargs:
-                connect_timeout (:obj:`int`): Override object connect timeout.
-                response_timeout (:obj:`int`): Override object response timeout.
-                proxies (:obj:`dict`): Override object proxies.
-                verify (:obj:`bool` or :obj:`str`): Override object verify.
-                stream (:obj:`object`): See requests docs.
-                cert (:obj:`str`): See requests docs.
+                * connect_timeout (:obj:`int`): default :attr:`CONNECT_TIMEOUT` -
+                  seconds to wait for connection to open to :attr:`url`
+                * response_timeout (:obj:`int`): default :attr:`RESPONSE_TIMEOUT` -
+                  seconds to wait for for response from :attr:`url`
+                * proxies (:obj:`dict`): default ``None`` -
+                  use custom proxies instead of proxies defined in :attr:`session`
+                * verify (:obj:`bool` or :obj:`str`): default ``None`` - use custom
+                  verification of cert offered by :attr:`url` instead of verification
+                  defined in :attr:`session`
+                * cert (:obj:`str`): default ``None`` - use custom
+                  client cert to offer to :attr:`url` cert defined in :attr:`session`
 
         Returns:
-            :obj:`requests.Response`
+            :obj:`requests.Response`: raw response object
 
         """
-        url = tools.join_url(self.url, path, route)
+        url = join_url(self.url, path, route)
 
         headers = headers or {}
         headers.setdefault("User-Agent", self.user_agent)
@@ -282,16 +279,14 @@ class Http(object):
             files=files or [],
         )
         prepped_request = self.session.prepare_request(request=request)
+        prepped_request.body_size = len(prepped_request.body or "")
 
-        if self._SAVE_LAST:
-            self._LAST_REQUEST = prepped_request
+        if self.SAVE_LAST:
+            self.LAST_REQUEST = prepped_request
 
-        if self._LOG_REQUEST_ATTRS:
-            msg = ", ".join(self._LOG_REQUEST_ATTRS)
-            msg = msg.format(
-                request=prepped_request, size=len(prepped_request.body or "")
-            )
-            self._log.debug(msg)
+        if self.log_request_attrs:
+            lattrs = ", ".join(self.log_request_attrs).format(request=prepped_request)
+            self.LOG.debug(f"REQUEST ATTRS: {lattrs}")
 
         send_args = self.session.merge_environment_settings(
             url=prepped_request.url,
@@ -303,32 +298,28 @@ class Http(object):
 
         send_args["request"] = prepped_request
         send_args["timeout"] = (
-            kwargs.get("connect_timeout", self._CONNECT_TIMEOUT),
-            kwargs.get("response_timeout", self._RESPONSE_TIMEOUT),
+            kwargs.get("connect_timeout", self.CONNECT_TIMEOUT),
+            kwargs.get("response_timeout", self.RESPONSE_TIMEOUT),
         )
 
-        if self._LOG_REQUEST_BODY:
-            msg = "request body:\n{body}"
-            msg = msg.format(body=tools.json_dump(obj=prepped_request.body, error=False))
-            self._log.debug(msg)
+        if self.LOG_REQUEST_BODY:
+            self.log_body(body=prepped_request.body, body_type="REQUEST")
 
         response = self.session.send(**send_args)
+        response.body_size = len(response.text or "")
 
-        if self._SAVE_LAST:
-            self._LAST_RESPONSE = response
+        if self.SAVE_LAST:
+            self.LAST_RESPONSE = response
 
-        if self._SAVE_HISTORY:
-            self._HISTORY.append(response)
+        if self.SAVEHISTORY:
+            self.HISTORY.append(response)
 
-        if self._LOG_RESPONSE_ATTRS:
-            msg = ", ".join(self._LOG_RESPONSE_ATTRS)
-            msg = msg.format(response=response, size=len(response.text or ""))
-            self._log.debug(msg)
+        if self.log_response_attrs:
+            lattrs = ", ".join(self.log_response_attrs).format(response=response)
+            self.LOG.debug(f"RESPONSE ATTRS: {lattrs}")
 
-        if self._LOG_RESPONSE_BODY:
-            msg = "response body:\n{body}"
-            msg = msg.format(body=tools.json_dump(obj=response.text, error=False))
-            self._log.debug(msg)
+        if self.LOG_RESPONSE_BODY:
+            self.log_body(body=response.text, body_type="RESPONSE")
 
         return response
 
@@ -337,7 +328,6 @@ class Http(object):
 
         Returns:
             :obj:`str`
-
         """
         return "{c.__module__}.{c.__name__}(url={url!r})".format(
             c=self.__class__, url=self.url
@@ -348,81 +338,130 @@ class Http(object):
 
         Returns:
             :obj:`str`
-
         """
         return self.__str__()
 
     @property
     def user_agent(self):
-        """Build a user agent string for use in User-Agent header.
+        """Value to use in User-Agent header.
 
         Returns:
-            :obj:`str`
-
+            :obj:`str`: user agent string
         """
-        msg = "{name}.{clsname}/{ver}"
-        return msg.format(
-            name=__name__, clsname=self.__class__.__name__, ver=version.__version__
-        )
+        return f"{__name__}.{self.__class__.__name__}/{__version__}"
+
+    @property
+    def log_request_attrs(self):
+        """Get the request attributes that should be logged."""
+        return self._get_log_attrs("request")
+
+    @log_request_attrs.setter
+    def log_request_attrs(self, value):
+        """Set the request attributes that should be logged."""
+        attr_map = REQUEST_ATTR_MAP
+        attr_type = "request"
+        self._set_log_attrs(attr_map=attr_map, attr_type=attr_type, value=value)
+
+    @property
+    def log_response_attrs(self):
+        """Get the response attributes that should be logged."""
+        return self._get_log_attrs("response")
+
+    @log_response_attrs.setter
+    def log_response_attrs(self, value):
+        """Set the response attributes that should be logged."""
+        attr_map = RESPONSE_ATTR_MAP
+        attr_type = "response"
+        self._set_log_attrs(attr_map=attr_map, attr_type=attr_type, value=value)
+
+    def _get_log_attrs(self, attr_type):
+        return getattr(self, "_LOG_ATTRS", {}).get(attr_type, [])
+
+    def _set_log_attrs(self, attr_map, attr_type, value):
+        if not hasattr(self, "_LOG_ATTRS"):
+            self._LOG_ATTRS = {"response": [], "request": []}
+
+        value = [x.lower().strip() for x in listify(value)]
+
+        if not value:
+            self._LOG_ATTRS[attr_type] = []
+            return
+
+        log_attrs = self._LOG_ATTRS[attr_type]
+
+        if "all" in value:
+            for k, v in attr_map.items():
+                entry = f"{k}={v}"
+                if entry not in log_attrs:
+                    log_attrs.append(entry)
+            return
+
+        for item in value:
+            if item in attr_map:
+                value = attr_map[item]
+                entry = f"{item}={value}"
+                if entry not in log_attrs:
+                    log_attrs.append(entry)
+
+    def log_body(self, body, body_type):
+        """Pass."""
+        body = body or ""
+        body = json_reload(obj=body, error=False, trim=MAX_BODY_LEN)
+        self.LOG.debug(f"{body_type} BODY:\n{body}")
 
 
-class ParserUrl(object):
+class ParserUrl:
     """Parse a URL and ensure it has the neccessary bits."""
 
     def __init__(self, url, default_scheme="https"):
         """Parse a URL and ensure it has the neccessary bits.
 
         Args:
-            url (:obj:`str`):
-                URL to parse
-            default_scheme (:obj:`str`, optional):
-                If no scheme in URL, use this.
-
-                Defaults to: "https"
+            url (:obj:`str`): URL to parse
+            default_scheme (:obj:`str`, optional): default ``"https"`` - default
+                scheme to use if url does not contain a scheme
 
         Raises:
-            :exc:`exceptions.HttpError`:
-                If parsed URL winds up without a hostname, port, or scheme.
+            :exc:`HttpError`:
+                if parsed URL winds up without a hostname, port, or scheme.
 
         """
         self._init_url = url
-        """:obj:`str`: Initial URL provided."""
+        """:obj:`str`: initial URL provided"""
 
         self._init_scheme = default_scheme
-        """:obj:`str`: Default scheme provided."""
+        """:obj:`str`: default scheme provided"""
 
-        self._init_parsed = six.moves.urllib.parse.urlparse(url)
-        """:obj:`urllib.parse.ParseResult`: First pass of parsing URL."""
+        self._init_parsed = urlparse(url)
+        """:obj:`urllib.parse.ParseResult`: first pass of parsing URL"""
 
         self.parsed = self.reparse(
             parsed=self._init_parsed, default_scheme=default_scheme
         )
-        """:obj:`urllib.parse.ParseResult`: Second pass of parsing URL."""
+        """:obj:`urllib.parse.ParseResult`: second pass of parsing URL"""
 
         for part in ["hostname", "port", "scheme"]:
             if not getattr(self.parsed, part, None):
                 error = (
-                    "Parsed URL into {pstr!r} and no {part!r} provided in URL {url!r}"
+                    f"Parsed URL into {self.parsed_str!r} and no {part!r} provided"
+                    f" in URL {url!r}"
                 )
-                error = error.format(part=part, url=url, pstr=self.parsed_str)
-                raise exceptions.HttpError(error)
+                raise HttpError(error)
 
     def __str__(self):
         """Show object info.
 
         Returns:
             :obj:`str`
-
         """
-        msg = "{c.__module__}.{c.__name__}({parsed})".format
-        return msg(c=self.__class__, parsed=self.parsed_str)
+        cls = self.__class__
+        return f"{cls.__module__}.{cls.__name__}({self.parsed_str})"
 
     def __repr__(self):
         """Show object info.
 
         Returns:
             :obj:`str`
-
         """
         return self.__str__()
 
@@ -431,8 +470,7 @@ class ParserUrl(object):
         """Hostname part from :attr:`ParserUrl.parsed`.
 
         Returns:
-            :obj:`str`
-
+            :obj:`str`: hostname value
         """
         return self.parsed.hostname
 
@@ -441,8 +479,7 @@ class ParserUrl(object):
         """Port part from :attr:`ParserUrl.parsed`.
 
         Returns
-            :obj:`int`
-
+            :obj:`int`: port value
         """
         return int(self.parsed.port)
 
@@ -451,8 +488,7 @@ class ParserUrl(object):
         """Scheme part from :attr:`ParserUrl.parsed`.
 
         Returns:
-            :obj:`str`
-
+            :obj:`str`: scheme value
         """
         return self.parsed.scheme
 
@@ -461,8 +497,7 @@ class ParserUrl(object):
         """Get scheme, hostname, and port from :attr:`ParserUrl.parsed`.
 
         Returns:
-            :obj:`str`
-
+            :obj:`str`: schema, hostname, and port unparsed values
         """
         return self.unparse_base(parsed_result=self.parsed)
 
@@ -471,18 +506,16 @@ class ParserUrl(object):
         """Get full URL from :attr:`ParserUrl.parsed`.
 
         Returns:
-            :obj:`str`
-
+            :obj:`str`: full unparsed url
         """
         return self.unparse_all(parsed_result=self.parsed)
 
     @property
     def parsed_str(self):
-        """Create string of :attr:`ParserUrl.parsed`.
+        """Get a str value of :attr:`ParserUrl.parsed`.
 
         Returns:
-            :obj:`str`
-
+            :obj:`str`: str value of :attr:`ParserUrl.parsed`
         """
         parsed = getattr(self, "parsed", None)
         attrs = [
@@ -503,31 +536,25 @@ class ParserUrl(object):
         """Create netloc from host and port.
 
         Args:
-            host (:obj:`str`):
-                Host part to use in netloc.
-            port (:obj:`str`):
-                Port part to use in netloc.
+            host (:obj:`str`): host part to use in netloc
+            port (:obj:`str`): port part to use in netloc
 
         Returns:
-            :obj:`str`
+            :obj:`str`: host and port values joined by :
 
         """
-        return ":".join([host, port]) if port else host
+        return ":".join([x for x in [host, port] if x])
 
     def reparse(self, parsed, default_scheme=""):
         """Reparse a parsed URL into a parsed URL with values fixed.
 
         Args:
-            parsed (:obj:`urllib.parse.ParseResult`):
-                Parsed URL to reparse.
-            default_scheme (:obj:`str`, optional):
-                If no scheme in URL, use this.
-
-                Defaults to: ""
+            parsed (:obj:`urllib.parse.ParseResult`): parsed URL to reparse
+            default_scheme (:obj:`str`, optional): default ``""`` -
+                default scheme to use if URL does not contain a scheme
 
         Returns:
-            :obj:`urllib.parse.ParseResult`
-
+            :obj:`urllib.parse.ParseResult`: reparsed result
         """
         scheme, netloc, path, params, query, fragment = parsed
         host = parsed.hostname
@@ -578,35 +605,29 @@ class ParserUrl(object):
             elif scheme == "http":
                 netloc = self.make_netloc(host, "80")
 
-        pass2 = six.moves.urllib.parse.urlunparse(
-            (scheme, netloc, path, params, query, fragment)
-        )
-        return six.moves.urllib.parse.urlparse(pass2)
+        pass2 = urlunparse((scheme, netloc, path, params, query, fragment))
+        return urlparse(pass2)
 
     def unparse_base(self, parsed_result):
         """Unparse a parsed URL into just the scheme, hostname, and port parts.
 
         Args:
-            parsed_result (:obj:`urllib.parse.ParseResult`):
-                Parsed URL to unparse.
+            parsed (:obj:`urllib.parse.ParseResult`): parsed URL to unparse
 
         Returns:
-            :obj:`str`
-
+            :obj:`str`: unparsed url
         """
         # only unparse self.parsed into url with scheme and netloc
         bits = (parsed_result.scheme, parsed_result.netloc, "", "", "", "")
-        return six.moves.urllib.parse.urlunparse(bits)
+        return urlunparse(bits)
 
     def unparse_all(self, parsed_result):
         """Unparse a parsed URL with all the parts.
 
         Args:
-            parsed_result (:obj:`urllib.parse.ParseResult`):
-                Parsed URL to unparse.
+            parsed (:obj:`urllib.parse.ParseResult`): parsed URL to unparse
 
         Returns:
-            :obj:`str`
-
+            :obj:`str`: unparsed url
         """
-        return six.moves.urllib.parse.urlunparse(parsed_result)
+        return urlunparse(parsed_result)

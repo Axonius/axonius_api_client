@@ -1,45 +1,16 @@
 # -*- coding: utf-8 -*-
 """Command line interface for Axonius API Client."""
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 import os
 
 import click
 import dotenv
 
-from ... import tools
+from ...tools import get_path
+from ..options import AUTH, add_options
 
 
 @click.command(name="write-config")
-@click.option(
-    "--url",
-    "-u",
-    "url",
-    required=True,
-    help="URL of Axonius instance.",
-    metavar="URL",
-    prompt="URL of Axonius instance",
-)
-@click.option(
-    "--key",
-    "-k",
-    "key",
-    required=True,
-    help="API Key of user in Axonius instance.",
-    metavar="KEY",
-    prompt="API Key of user in Axonius instance",
-    hide_input=True,
-)
-@click.option(
-    "--secret",
-    "-s",
-    "secret",
-    required=True,
-    help="API Secret of user in Axonius instance.",
-    metavar="SECRET",
-    prompt="API Secret of user in Axonius instance",
-    hide_input=True,
-)
+@add_options(AUTH)
 @click.pass_context
 def cmd(ctx, url, key, secret):
     """Create/Update a '.env' file with url, key, and secret.
@@ -49,7 +20,7 @@ def cmd(ctx, url, key, secret):
     ctx.obj.start_client(url=url, key=key, secret=secret)
 
     cwd = os.getcwd()
-    path = tools.path(cwd) / ".env"
+    path = get_path(cwd) / ".env"
 
     if not path.is_file():
         msg = "Creating file {!r}".format(format(path))

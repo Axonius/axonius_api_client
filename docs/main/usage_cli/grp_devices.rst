@@ -18,15 +18,15 @@ Sub Command Groups
 Commands
 ===============================================
 
-* :doc:`grp_objects_cmds/cmd_count` to get the count of device assets that would be returned
+* :doc:`grp_assets_cmds/cmd_count` to get the count of device assets that would be returned
   from a query built by the Query Wizard in the GUI.
-* :doc:`grp_objects_cmds/cmd_count_by_saved_query` to get the count of device assets that
+* :doc:`grp_assets_cmds/cmd_count_by_saved_query` to get the count of device assets that
   would be returned from a saved query.
-* :doc:`grp_objects_cmds/cmd_fields` to get the fields (columns) that are available
+* :doc:`grp_assets_cmds/cmd_fields` to get the fields (columns) that are available
   for device assets from all adapters.
-* :doc:`grp_objects_cmds/cmd_get` to get device assets using a query built by
+* :doc:`grp_assets_cmds/cmd_get` to get device assets using a query built by
   the Query Wizard in the GUI.
-* :doc:`grp_objects_cmds/cmd_get_by_saved_query` to get device assets using a
+* :doc:`grp_assets_cmds/cmd_get_by_saved_query` to get device assets using a
   saved query.
 * :doc:`grp_devices_cmds/cmd_get_by_hostname` to build a query for you that gets
   device assets by hostname.
@@ -40,5 +40,5 @@ Commands
 Help Page
 ===============================================
 
-.. click:: axonius_api_client.cli.grp_objects:devices
+.. click:: axonius_api_client.cli.grp_assets:devices
    :prog: axonshell devices

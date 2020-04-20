@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 """Version information for this package."""
-from __future__ import absolute_import, division, print_function, unicode_literals
-
-__version__ = "2.3.0"
+__version__ = "3.0.0b"
 VERSION = __version__
 """:obj:`str`: Version of package."""
 
@@ -22,7 +20,7 @@ __project__ = "axonius_api_client"
 PROJECT = __project__
 """:obj:`str`: Name of package."""
 
-__author_email__ = "apiclient@axonius.com"
+__author_email__ = "support@axonius.com"
 AUTHOR_EMAIL = __author_email__
 """:obj:`str`: Author email of package."""
 
@@ -30,7 +28,7 @@ __description__ = "Axonius API client for Python"
 DESCRIPTION = __description__
 """:obj:`str`: Description of package."""
 
-__docs__ = "https://axonius-api-client.readthedocs.io/en/latest/?"
+__docs__ = "https://axonius-api-client.readthedocs.io/en/latest/"
 DOCS = __docs__
 """:obj:`str`: Link to the documentation for this package."""
 

@@ -9,9 +9,9 @@ you add, remove, or get labels (tags) for user assets.
 Commands
 ===============================================
 
-* :doc:`grp_objects_labels_cmds/cmd_add` to add labels to device assets.
-* :doc:`grp_objects_labels_cmds/cmd_get` to get all labels defined for device assets.
-* :doc:`grp_objects_labels_cmds/cmd_remove` to remove labels from device assets.
+* :doc:`grp_assets_labels_cmds/cmd_add` to add labels to device assets.
+* :doc:`grp_assets_labels_cmds/cmd_get` to get all labels defined for device assets.
+* :doc:`grp_assets_labels_cmds/cmd_remove` to remove labels from device assets.
 
 
 Help Page

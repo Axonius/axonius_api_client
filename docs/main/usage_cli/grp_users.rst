@@ -18,15 +18,15 @@ Sub Command Groups
 Commands
 ===============================================
 
-* :doc:`grp_objects_cmds/cmd_count` to get the count of user assets that would be returned
+* :doc:`grp_assets_cmds/cmd_count` to get the count of user assets that would be returned
   from a query built by the Query Wizard in the GUI.
-* :doc:`grp_objects_cmds/cmd_count_by_saved_query` to get the count of user assets that
+* :doc:`grp_assets_cmds/cmd_count_by_saved_query` to get the count of user assets that
   would be returned from a saved query.
-* :doc:`grp_objects_cmds/cmd_fields` to get the fields (columns) that are available
+* :doc:`grp_assets_cmds/cmd_fields` to get the fields (columns) that are available
   for user assets from all adapters.
-* :doc:`grp_objects_cmds/cmd_get` to get user assets using a query built by
+* :doc:`grp_assets_cmds/cmd_get` to get user assets using a query built by
   the Query Wizard in the GUI.
-* :doc:`grp_objects_cmds/cmd_get_by_saved_query` to get user assets using a
+* :doc:`grp_assets_cmds/cmd_get_by_saved_query` to get user assets using a
   saved query.
 * :doc:`grp_users_cmds/cmd_get_by_mail` to build a query for you that gets
   user assets by email address.
@@ -37,5 +37,5 @@ Commands
 Help Page
 ===============================================
 
-.. click:: axonius_api_client.cli.grp_objects:users
+.. click:: axonius_api_client.cli.grp_assets:users
    :prog: axonshell users
