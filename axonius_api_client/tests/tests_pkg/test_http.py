@@ -1,27 +1,32 @@
 # -*- coding: utf-8 -*-
 """Test suite for axonius_api_client.http."""
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
-
 import logging
 import sys
 
-import axonius_api_client as axonapi
 import pytest
 import requests
-from axonius_api_client import exceptions
 
-from .. import meta, utils
+from axonius_api_client.exceptions import HttpError
+from axonius_api_client.http import Http, ParserUrl
+from axonius_api_client.version import __version__
+
+from ..meta import (
+    TEST_CLIENT_CERT,
+    TEST_CLIENT_CERT_NAME,
+    TEST_CLIENT_KEY,
+    TEST_CLIENT_KEY_NAME,
+)
+from ..utils import get_url, log_check
 
 InsecureRequestWarning = requests.urllib3.exceptions.InsecureRequestWarning
 
 
-class TestParserUrl(object):
-    """Test axonapi.http.ParserUrl."""
+class TestParserUrl:
+    """Test ParserUrl."""
 
     def test_schemehostport443(self):
         """Test a proper URL gets parsed the same."""
-        u = axonapi.http.ParserUrl("https://host:443/blah")
+        u = ParserUrl("https://host:443/blah")
         assert u.hostname == "host"
         assert u.port == 443
         assert u.scheme == "https"
@@ -31,108 +36,108 @@ class TestParserUrl(object):
 
     def test_str_repr(self):
         """Test str/repr has URL path."""
-        u = axonapi.http.ParserUrl("https://host:443/blah")
+        u = ParserUrl("https://host:443/blah")
         assert u.parsed.path in format(u)
         assert u.parsed.path in repr(u)
 
     def test_schemehost_noport443(self):
         """Test port gets added for https scheme."""
-        u = axonapi.http.ParserUrl("https://host")
+        u = ParserUrl("https://host")
         assert u.hostname == "host"
         assert u.port == 443
         assert u.scheme == "https"
 
     def test_justhost(self):
         """Test schema added for just host."""
-        u = axonapi.http.ParserUrl("host")
+        u = ParserUrl("host")
         assert u.hostname == "host"
         assert u.port == 443
         assert u.scheme == "https"
 
     def test_justhostport(self):
         """Test schema added for just host and port."""
-        u = axonapi.http.ParserUrl("host:443")
+        u = ParserUrl("host:443")
         assert u.hostname == "host"
         assert u.port == 443
         assert u.scheme == "https"
 
     def test_host_noschemeport(self):
         """Test exc when no port or scheme in URL."""
-        exc = exceptions.HttpError
+        exc = HttpError
         match = "no.*'port'"
         with pytest.raises(exc, match=match):
-            axonapi.http.ParserUrl("host", default_scheme="")
+            ParserUrl("host", default_scheme="")
 
     def test_unknownschemehost_noport(self):
         """Test exc when no port and non http/https scheme."""
-        exc = exceptions.HttpError
+        exc = HttpError
         match = "no.*'port'"
         with pytest.raises(exc, match=match):
-            axonapi.http.ParserUrl("httpx://host")
+            ParserUrl("httpx://host")
 
     def test_hostport443_withslash(self):
         """Test scheme added with port 443 and no scheme in URL."""
-        u = axonapi.http.ParserUrl("host:443/")
+        u = ParserUrl("host:443/")
         assert u.hostname == "host"
         assert u.port == 443
         assert u.scheme == "https"
 
     def test_hostport443_noscheme(self):
         """Test scheme added with port 443 and no scheme in URL."""
-        u = axonapi.http.ParserUrl("host:443", default_scheme="")
+        u = ParserUrl("host:443", default_scheme="")
         assert u.hostname == "host"
         assert u.port == 443
         assert u.scheme == "https"
 
     def test_hostport80_noscheme(self):
         """Test scheme added with port 80 and no scheme in URL."""
-        u = axonapi.http.ParserUrl("host:80", default_scheme="")
+        u = ParserUrl("host:80", default_scheme="")
         assert u.hostname == "host"
         assert u.port == 80
         assert u.scheme == "http"
 
     def test_schemehost_noport80(self):
         """Test port added with no port and http scheme in URL."""
-        u = axonapi.http.ParserUrl("http://host")
+        u = ParserUrl("http://host")
         assert u.hostname == "host"
         assert u.port == 80
         assert u.scheme == "http"
 
 
-class TestHttp(object):
-    """Test axonapi.http.Http."""
+class TestHttp:
+    """Test Http."""
 
     def test_str_repr(self, request):
         """Test str/repr has URL."""
-        ax_url = utils.get_url(request)
+        ax_url = get_url(request)
 
-        http = axonapi.Http(url=ax_url)
+        http = Http(url=ax_url)
 
         assert ax_url in format(http)
         assert ax_url in repr(http)
 
     def test_parsed_url(self, request):
         """Test url=ParserUrl() works."""
-        ax_url = utils.get_url(request)
+        ax_url = get_url(request)
 
-        parsed_url = axonapi.http.ParserUrl(url=ax_url, default_scheme="https")
+        parsed_url = ParserUrl(url=ax_url, default_scheme="https")
 
-        http = axonapi.Http(url=parsed_url)
+        http = Http(url=parsed_url)
 
         assert ax_url in format(http)
         assert ax_url in repr(http)
 
     def test_user_agent(self, request):
         """Test user_agent has version in it."""
-        ax_url = utils.get_url(request)
+        ax_url = get_url(request)
 
-        http = axonapi.Http(url=ax_url)
-        assert axonapi.version.__version__ in http.user_agent
+        http = Http(url=ax_url)
+        assert __version__ in http.user_agent
 
     def test_certwarn_true(self, request, httpbin_secure):
         """Test quiet_urllib=False shows warning from urllib3."""
         url = httpbin_secure.url
-        http = axonapi.Http(url=url, certwarn=True, save_history=True)
+        http = Http(url=url, certwarn=True, save_history=True)
 
         with pytest.warns(InsecureRequestWarning):
             http()
@@ -140,7 +145,7 @@ class TestHttp(object):
     def test_certwarn_false(self, request, httpbin_secure):
         """Test quiet_urllib=False shows warning from urllib3."""
         url = httpbin_secure.url
-        http = axonapi.Http(url=url, certwarn=False)
+        http = Http(url=url, certwarn=False)
 
         http()
 
@@ -148,24 +153,24 @@ class TestHttp(object):
     def test_verify_ca_bundle(self, request, httpbin_secure, httpbin_ca_bundle):
         """Test quiet_urllib=False no warning from urllib3 when using ca bundle."""
         url = httpbin_secure.url
-        http = axonapi.Http(url=url, certwarn=False)
+        http = Http(url=url, certwarn=False)
         response = http()
         assert response.status_code == 200
 
     def test_save_last_true(self, request):
         """Test last req/resp with save_last=True."""
-        ax_url = utils.get_url(request)
+        ax_url = get_url(request)
 
-        http = axonapi.Http(url=ax_url, save_last=True, certwarn=False)
+        http = Http(url=ax_url, save_last=True, certwarn=False)
         response = http()
         assert response == http.LAST_RESPONSE
         assert response.request == http.LAST_REQUEST
 
     def test_save_last_false(self, request):
         """Test last req/resp with save_last=False."""
-        ax_url = utils.get_url(request)
+        ax_url = get_url(request)
 
-        http = axonapi.Http(url=ax_url, save_last=False, certwarn=False)
+        http = Http(url=ax_url, save_last=False, certwarn=False)
 
         http()
 
@@ -174,9 +179,9 @@ class TestHttp(object):
 
     def test_save_history(self, request):
         """Test last resp added to history with save_history=True."""
-        ax_url = utils.get_url(request)
+        ax_url = get_url(request)
 
-        http = axonapi.Http(url=ax_url, save_history=True, certwarn=False)
+        http = Http(url=ax_url, save_history=True, certwarn=False)
 
         response = http()
 
@@ -184,25 +189,25 @@ class TestHttp(object):
 
     def test_client_cert_missing_one(self, request, tmp_path):
         """Test cert or key supplied, but not the other."""
-        ax_url = utils.get_url(request)
-        test_path = tmp_path / meta.http.TEST_CLIENT_CERT_NAME
-        test_path.write_text(meta.http.TEST_CLIENT_CERT)
+        ax_url = get_url(request)
+        test_path = tmp_path / TEST_CLIENT_CERT_NAME
+        test_path.write_text(TEST_CLIENT_CERT)
 
-        with pytest.raises(exceptions.HttpError):
-            axonapi.Http(url=ax_url, cert_client_cert=test_path, certwarn=False)
+        with pytest.raises(HttpError):
+            Http(url=ax_url, cert_client_cert=test_path, certwarn=False)
 
-        with pytest.raises(exceptions.HttpError):
-            axonapi.Http(url=ax_url, cert_client_key=test_path, certwarn=False)
+        with pytest.raises(HttpError):
+            Http(url=ax_url, cert_client_key=test_path, certwarn=False)
 
     def test_client_cert_seperate(self, request, tmp_path):
         """Test cert or key supplied, but not the other."""
-        ax_url = utils.get_url(request)
-        cert_path = tmp_path / meta.http.TEST_CLIENT_CERT_NAME
-        cert_path.write_text(meta.http.TEST_CLIENT_CERT)
-        key_path = tmp_path / meta.http.TEST_CLIENT_KEY_NAME
-        key_path.write_text(meta.http.TEST_CLIENT_KEY)
+        ax_url = get_url(request)
+        cert_path = tmp_path / TEST_CLIENT_CERT_NAME
+        cert_path.write_text(TEST_CLIENT_CERT)
+        key_path = tmp_path / TEST_CLIENT_KEY_NAME
+        key_path.write_text(TEST_CLIENT_KEY)
 
-        http = axonapi.Http(
+        http = Http(
             url=ax_url,
             cert_client_cert=cert_path,
             cert_client_key=key_path,
@@ -213,14 +218,12 @@ class TestHttp(object):
 
     def test_client_cert_both(self, request, tmp_path):
         """Test cert or key supplied, but not the other."""
-        ax_url = utils.get_url(request)
-        both_path = tmp_path / meta.http.TEST_CLIENT_CERT_NAME
-        both_cert = "{}\n{}\n".format(
-            meta.http.TEST_CLIENT_CERT, meta.http.TEST_CLIENT_KEY
-        )
+        ax_url = get_url(request)
+        both_path = tmp_path / TEST_CLIENT_CERT_NAME
+        both_cert = "{}\n{}\n".format(TEST_CLIENT_CERT, TEST_CLIENT_KEY)
         both_path.write_text(both_cert)
 
-        http = axonapi.Http(url=ax_url, cert_client_both=both_path, certwarn=False)
+        http = Http(url=ax_url, cert_client_both=both_path, certwarn=False)
 
         http()
 
@@ -228,43 +231,29 @@ class TestHttp(object):
         """Test verbose logging of request attrs when log_request_attrs=True."""
         caplog.set_level(logging.DEBUG)
 
-        ax_url = utils.get_url(request)
+        ax_url = get_url(request)
 
-        http = axonapi.Http(
-            url=ax_url, log_request_attrs=True, certwarn=False, log_level="debug"
+        http = Http(
+            url=ax_url,
+            log_request_attrs=["url", "headers"],
+            certwarn=False,
+            log_level="debug",
         )
 
         http()
 
         assert len(caplog.records) == 1
 
-        entries = ["request.*{}.*headers".format(http.url)]
-        utils.log_check(caplog, entries)
-
-    def test_log_req_attrs_false(self, request, caplog):
-        """Test brief logging of request attrs when log_request_attrs=False."""
-        caplog.set_level(logging.DEBUG)
-
-        ax_url = utils.get_url(request)
-
-        http = axonapi.Http(
-            url=ax_url, log_request_attrs=False, certwarn=False, log_level="debug"
-        )
-
-        http()
-
-        assert len(caplog.records) == 1
-
-        entries = ["request.*{}".format(http.url)]
-        utils.log_check(caplog, entries)
+        entries = ["REQUEST ATTRS:.*{}.*headers".format(http.url)]
+        log_check(caplog, entries)
 
     def test_log_req_attrs_none(self, request, caplog):
         """Test no logging of request attrs when log_request_attrs=None."""
         caplog.set_level(logging.DEBUG)
 
-        ax_url = utils.get_url(request)
+        ax_url = get_url(request)
 
-        http = axonapi.Http(
+        http = Http(
             url=ax_url, log_request_attrs=None, certwarn=False, log_level="debug"
         )
 
@@ -276,42 +265,43 @@ class TestHttp(object):
         """Test verbose logging of response attrs when log_response_attrs=True."""
         caplog.set_level(logging.DEBUG)
 
-        ax_url = utils.get_url(request)
+        ax_url = get_url(request)
 
-        http = axonapi.Http(
-            url=ax_url, log_response_attrs=True, certwarn=False, log_level="debug"
+        http = Http(
+            url=ax_url,
+            log_response_attrs=["url", "headers"],
+            certwarn=False,
+            log_level="debug",
         )
 
         http()
 
         assert len(caplog.records) == 1
 
-        entries = ["response.*{}.*headers".format(http.url)]
-        utils.log_check(caplog, entries)
+        entries = ["RESPONSE ATTRS:.*{}.*headers".format(http.url)]
+        log_check(caplog, entries)
 
-    def test_log_resp_attrs_false(self, request, caplog):
-        """Test brief logging of response attrs when log_response_attrs=False."""
+    def test_log_response_attrs_all(self, request, caplog):
+        """Test no logging of response attrs when log_response_attrs=None."""
         caplog.set_level(logging.DEBUG)
 
-        ax_url = utils.get_url(request)
+        ax_url = get_url(request)
 
-        http = axonapi.Http(
-            url=ax_url, log_response_attrs=False, certwarn=False, log_level="debug"
+        http = Http(
+            url=ax_url, log_response_attrs="all", certwarn=False, log_level="debug"
         )
+
         http()
 
-        assert len(caplog.records) == 1
-
-        entries = ["response.*{}".format(http.url)]
-        utils.log_check(caplog, entries)
+        assert caplog.records
 
     def test_log_response_attrs_none(self, request, caplog):
         """Test no logging of response attrs when log_response_attrs=None."""
         caplog.set_level(logging.DEBUG)
 
-        ax_url = utils.get_url(request)
+        ax_url = get_url(request)
 
-        http = axonapi.Http(
+        http = Http(
             url=ax_url, log_response_attrs=None, certwarn=False, log_level="debug"
         )
 
@@ -323,9 +313,9 @@ class TestHttp(object):
         """Test logging of response body when log_response_body=True."""
         caplog.set_level(logging.DEBUG)
 
-        ax_url = utils.get_url(request)
+        ax_url = get_url(request)
 
-        http = axonapi.Http(
+        http = Http(
             url=ax_url, log_response_body=True, certwarn=False, log_level="debug"
         )
 
@@ -333,16 +323,16 @@ class TestHttp(object):
 
         assert len(caplog.records) == 1
 
-        entries = ["response body:.*"]
-        utils.log_check(caplog, entries)
+        entries = ["RESPONSE BODY:.*"]
+        log_check(caplog, entries)
 
     def test_log_resp_body_false(self, request, caplog):
         """Test no logging of response body when log_response_body=False."""
         caplog.set_level(logging.DEBUG)
 
-        ax_url = utils.get_url(request)
+        ax_url = get_url(request)
 
-        http = axonapi.Http(
+        http = Http(
             url=ax_url, log_response_body=False, certwarn=False, log_level="debug"
         )
 
@@ -354,26 +344,24 @@ class TestHttp(object):
         """Test logging of request body when log_request_body=True."""
         caplog.set_level(logging.DEBUG)
 
-        ax_url = utils.get_url(request)
+        ax_url = get_url(request)
 
-        http = axonapi.Http(
-            url=ax_url, log_request_body=True, certwarn=False, log_level="debug"
-        )
+        http = Http(url=ax_url, log_request_body=True, certwarn=False, log_level="debug")
 
         http()
 
         assert len(caplog.records) == 1
 
-        entries = ["request body:.*"]
-        utils.log_check(caplog, entries)
+        entries = ["REQUEST BODY:.*"]
+        log_check(caplog, entries)
 
     def test_log_req_body_false(self, request, caplog):
         """Test no logging of request body when log_request_body=False."""
         caplog.set_level(logging.DEBUG)
 
-        ax_url = utils.get_url(request)
+        ax_url = get_url(request)
 
-        http = axonapi.Http(
+        http = Http(
             url=ax_url, log_request_body=False, certwarn=False, log_level="debug"
         )
 

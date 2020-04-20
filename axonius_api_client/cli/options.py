@@ -1,332 +1,301 @@
 # -*- coding: utf-8 -*-
 """Command line interface for Axonius API Client."""
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
-
-import os
-
 import click
-import tabulate
 
-from .. import constants, tools
+from ..constants import DEFAULT_NODE, DEFAULT_PATH, MAX_PAGE_SIZE
+from ..tools import coerce_int
+from . import context
+from .helps import HELPSTRS
 
-OPT_URL = click.option(
-    "--url",
-    "-u",
-    "url",
-    required=True,
-    help="URL of Axonius instance.",
-    metavar="URL",
-    prompt="URL of Axonius instance",
-    show_envvar=True,
-    show_default=True,
-)
-OPT_KEY = click.option(
-    "--key",
-    "-k",
-    "key",
-    required=True,
-    help="API Key of user in Axonius instance.",
-    metavar="KEY",
-    prompt="API Key of user in Axonius instance",
-    hide_input=True,
-    show_envvar=True,
-    show_default=True,
-)
-OPT_SECRET = click.option(
-    "--secret",
-    "-s",
-    "secret",
-    required=True,
-    help="API Secret of user in Axonius instance.",
-    metavar="SECRET",
-    prompt="API Secret of user in Axonius instance",
-    hide_input=True,
-    show_envvar=True,
-    show_default=True,
-)
-OPT_EXPORT_FILE = click.option(
-    "--export-file",
-    "-xf",
-    "export_file",
-    default="",
-    help="Export to a file in export-path instead of printing to STDOUT.",
-    show_envvar=True,
-    show_default=True,
-)
-OPT_EXPORT_PATH = click.option(
-    "--export-path",
-    "-xp",
-    "export_path",
-    default=format(tools.path(obj=os.getcwd())),
-    help="Path to create -xf/--export-file in (default is current working directory).",
-    type=click.Path(exists=False, resolve_path=True),
-    show_envvar=True,
-    show_default=True,
-)
-OPT_EXPORT_FORMAT = click.option(
-    "--export-format",
-    "-xt",
-    "export_format",
-    default="json",
-    help="Format to use for STDOUT (or -xf/--export-file if supplied).",
-    type=click.Choice(["csv", "json"]),
-    show_envvar=True,
-    show_default=True,
-)
-OPT_EXPORT_FORMAT_ASSETS = click.option(
-    "--export-format",
-    "-xt",
-    "export_format",
-    default="json",
-    help="Format to use for STDOUT (or -xf/--export-file if supplied).",
-    type=click.Choice(["csv", "json", "table"]),
-    show_envvar=True,
-    show_default=True,
-)
-OPT_EXPORT_TABLE_FORMAT = click.option(
-    "--export-table-format",
-    "-xtf",
-    "export_table_format",
-    default="fancy_grid",
-    help="Format to use for --export-format 'table'.",
-    type=click.Choice(tabulate.tabulate_formats),
-    show_envvar=True,
-    show_default=True,
-)
-OPT_EXPORT_OVERWRITE = click.option(
-    "--export-overwrite",
-    "-xo",
-    "export_overwrite",
-    default=False,
-    help="Overwrite -xf/--export-file if exists.",
-    is_flag=True,
-    show_envvar=True,
-    show_default=True,
-)
-OPT_EXPORT_DELIM = click.option(
-    "--export-delim",
-    "-xd",
-    "export_delim",
-    default="\n",
-    help="Change the cell delimiter for CSV format from the default of carriage return.",
-    show_envvar=True,
-    show_default=True,
-)
-OPT_INCLUDE_SETTINGS = click.option(
-    "--include-settings",
-    "-is",
-    "include_settings",
-    help="Include settings in CSV export.",
-    default=False,
-    is_flag=True,
-    show_envvar=True,
-    show_default=True,
-)
-OPT_NO_ERROR = click.option(
-    "--no-error",
-    "-ne",
-    "error",
-    help="Continue processing rows even if an error happens.",
-    default=True,
-    is_flag=True,
-    show_envvar=True,
-    show_default=True,
-)
-OPT_QUERY = click.option(
-    "--query",
-    "-q",
-    "query",
-    help="Query built from Query Wizard to filter objects (empty returns all).",
-    metavar="QUERY",
-    show_envvar=True,
-    show_default=True,
-)
-OPT_QUERY_FILE = click.option(
-    "--query-file",
-    "-qf",
-    "query_file",
-    help=(
-        "File containing query built from Query Wizard to "
-        "filter objects (overrides --query, '-' to read from STDIN)."
+
+def add_options(options):
+    """Pass."""
+
+    def _add_options(func):
+        for option in reversed(options):
+            func = option(func)
+        return func
+
+    return _add_options
+
+
+def int_callback(ctx, param, value):
+    """Pass."""
+    return coerce_int(value)
+
+
+def help_callback(ctx, param, value):
+    """Pass."""
+    if value:
+        helpstr = HELPSTRS[value]
+        click.secho(helpstr, err=True, fg="blue")
+        ctx.exit(0)
+
+
+def get_option_help(choices):
+    """Pass."""
+    return click.option(
+        "--help-detailed",
+        "help_detailed",
+        help="Show detailed help and exit.",
+        type=click.Choice(choices),
+        callback=help_callback,
+        is_eager=True,
+    )
+
+
+def get_option_fields_default(default=True):
+    """Pass."""
+    return click.option(
+        "--fields-default/--no-fields-default",
+        "-fd/-nfd",
+        "fields_default",
+        default=default,
+        help="Include the default fields defined in the API library",
+        is_flag=True,
+        show_envvar=True,
+        show_default=True,
+    )
+
+
+AUTH = [
+    click.option(
+        "--url",
+        "-u",
+        "url",
+        required=True,
+        help="""URL of an Axonius instance""",
+        metavar="URL",
+        prompt="URL",
+        show_envvar=True,
+        show_default=True,
     ),
-    type=click.File(),
-    metavar="QUERY_FILE",
-    show_envvar=True,
-    show_default=True,
-)
-OPT_FIELDS = click.option(
-    "--field",
-    "-f",
-    "fields",
-    help="Fields (columns) to include in the format of adapter:field.",
-    metavar="ADAPTER:FIELD",
-    multiple=True,
-    show_envvar=True,
-    show_default=True,
-)
-OPT_FIELDS_REGEX = click.option(
-    "--field-regex",
-    "-fr",
-    "fields_regex",
-    help="Fields (columns) to include in the format of adapter:field (regex).",
-    metavar="ADAPTER:FIELD",
-    multiple=True,
-    show_envvar=True,
-    show_default=True,
-)
-OPT_FIELDS_DEFAULT = click.option(
-    "--no-fields-default",
-    "-nfd",
-    "fields_default",
-    default=True,
-    help="Exclude default fields for this object type.",
-    is_flag=True,
-    show_envvar=True,
-    show_default=True,
-)
-OPT_FIELD_EXCLUDES = click.option(
-    "--field-exclude",
-    "-fx",
-    "field_excludes",
-    help="Fields (columns) to exclude for each asset (regex of fully qualified field).",
-    metavar="fully_qualified_field",
-    multiple=True,
-    show_envvar=True,
-    show_default=True,
-)
-OPT_MAX_ROWS = click.option(
-    "--max-rows",
-    "-mr",
-    "max_rows",
-    help="Only return this many rows.",
-    type=click.INT,
-    show_envvar=True,
-    show_default=True,
-)
-OPT_PAGE_SIZE = click.option(
-    "--page-size",
-    "page_size",
-    help="Number of rows to fetch per page.",
-    default=constants.MAX_PAGE_SIZE,
-    type=click.INT,
-    show_envvar=True,
-    show_default=True,
-)
-OPT_PAGE_START = click.option(
-    "--page-start",
-    "page_start",
-    help="Start at this page.",
-    default=0,
-    type=click.INT,
-    show_envvar=True,
-    show_default=True,
-)
-OPT_FIELD_NULLS = click.option(
-    "--field-nulls",
-    "field_nulls",
-    help="Add null values for each selected field not returned for an asset",
-    default=False,
-    is_flag=True,
-    show_envvar=True,
-    show_default=True,
-)
-OPT_GET_BY_VALUES = click.option(
-    "--value",
-    "-v",
-    "values",
-    help="Values to search for.",
+    click.option(
+        "--key",
+        "-k",
+        "key",
+        required=True,
+        help="""API Key of user in an Axonius instance""",
+        metavar="KEY",
+        prompt="API Key of user",
+        hide_input=True,
+        show_envvar=True,
+        show_default=True,
+    ),
+    click.option(
+        "--secret",
+        "-s",
+        "secret",
+        required=True,
+        help="""API Secret of user in an Axonius instance""",
+        metavar="SECRET",
+        prompt="API Secret of user",
+        hide_input=True,
+        show_envvar=True,
+        show_default=True,
+    ),
+]
+
+SQ_NAME = click.option(
+    "--name",
+    "-n",
+    "name",
+    help="Name of saved query.",
     required=True,
+    show_envvar=True,
+    show_default=True,
+)
+
+QUERY = [
+    click.option(
+        "--query",
+        "-q",
+        "query",
+        help="Query built from the Query wizard in the GUI",
+        metavar="QUERY",
+        show_envvar=True,
+        show_default=True,
+    ),
+    click.option(
+        "--query-file",
+        "-qf",
+        "query_file",
+        help="Path to a file to override --query",
+        type=click.File(),
+        metavar="QUERY_FILE",
+        show_envvar=True,
+        show_default=True,
+    ),
+]
+
+FIELDS_SELECT = [
+    click.option(
+        "--field",
+        "-f",
+        "fields",
+        help="Fields to include in the format of adapter:field",
+        metavar="ADAPTER:FIELD",
+        multiple=True,
+        show_envvar=True,
+        show_default=True,
+    ),
+    click.option(
+        "--field-regex",
+        "-fr",
+        "fields_regex",
+        help="Regular expressions of fields to include",
+        metavar="ADAPTER:FIELD",
+        multiple=True,
+        show_envvar=True,
+        show_default=True,
+    ),
+]
+
+EXPORT = [
+    click.option(
+        "--export-file",
+        "-xf",
+        "export_file",
+        default="",
+        help="File to send data to",
+        show_envvar=True,
+        show_default=True,
+        metavar="PATH",
+    ),
+    click.option(
+        "--export-path",
+        "-xp",
+        "export_path",
+        default=DEFAULT_PATH,
+        help="If --export-file supplied, the directory to write --export_file to",
+        type=click.Path(exists=False, resolve_path=True),
+        show_envvar=True,
+        show_default=True,
+    ),
+    click.option(
+        "--export-overwrite/--no-export-overwrite",
+        "-xo/-nxo",
+        "export_overwrite",
+        default=False,
+        help="If --export-file supplied and it exists, overwrite it",
+        is_flag=True,
+        show_envvar=True,
+        show_default=True,
+    ),
+]
+
+PAGING = [
+    click.option(
+        "--max-rows",
+        "-mr",
+        "max_rows",
+        help="Stop fetching assets after this many rows have been received",
+        type=click.INT,
+        show_envvar=True,
+        show_default=True,
+    ),
+    click.option(
+        "--page-size",
+        "page_size",
+        help="Number of assets to fetch per page",
+        default=MAX_PAGE_SIZE,
+        type=click.INT,
+        show_envvar=True,
+        show_default=True,
+    ),
+    click.option(
+        "--page-start",
+        "page_start",
+        help="Start fetching from page N of --page-size",
+        default=0,
+        type=click.INT,
+        show_envvar=True,
+        show_default=True,
+    ),
+    click.option(
+        "--page-sleep",
+        "page_sleep",
+        default=0,
+        type=click.INT,
+        help="Seconds to wait in between each fetch of a page",
+        show_envvar=True,
+        show_default=True,
+    ),
+]
+
+SPLIT_CONFIG_OPT = click.option(
+    "--config",
+    "-c",
+    "config",
+    help="Configuration keys in the form of key=value.",
+    type=context.SplitEquals(),
     multiple=True,
     show_envvar=True,
     show_default=True,
+    required=False,
 )
-OPT_GET_BY_POST_QUERY = click.option(
-    "--query-post",
-    "-qpost",
-    "query_post",
-    help="Query to add to the end of the query built to search for -v/--value.",
-    default="",
-    metavar="QUERY",
+
+SPLIT_CONFIG_REQ = click.option(
+    "--config",
+    "-c",
+    "config",
+    help="Configuration keys in the form of key=value.",
+    type=context.SplitEquals(),
+    multiple=True,
     show_envvar=True,
     show_default=True,
+    required=True,
 )
-OPT_GET_BY_PRE_QUERY = click.option(
-    "--query-pre",
-    "-qpre",
-    "query_pre",
-    help="Query to add to the begginning of the query built to search for -v/--value.",
-    default="",
-    metavar="QUERY",
-    show_envvar=True,
-    show_default=True,
-)
-OPT_GET_BY_VALUE_REGEX = click.option(
-    "--value-regex",
-    "-vx",
-    "value_regex",
-    help="Consider --value values as regular expressions.",
-    is_flag=True,
-    default=False,
-    show_envvar=True,
-    show_default=True,
-)
-OPT_GET_BY_VALUE_NOT = click.option(
-    "--value-not",
-    "-vn",
-    "value_not",
-    help="Search for NOT --value.",
-    is_flag=True,
-    default=False,
-    show_envvar=True,
-    show_default=True,
-)
-OPT_ROWS = click.option(
-    "--rows",
-    "-r",
-    "rows",
-    help="The rows in JSON format to process as a file or via stdin.",
+
+CONTENTS = click.option(
+    "--contents",
+    "-c",
+    "stream",
+    help="JSON contents to read from file or STDIN",
     default="-",
     type=click.File(mode="r"),
     show_envvar=True,
     show_default=True,
 )
-OPT_WAIT_DELETE = click.option(
-    "--wait",
-    "-w",
-    "wait",
-    help="Wait this many seconds before deleting",
-    default=30,
-    type=click.INT,
-    show_envvar=True,
-    show_default=True,
-)
-OPT_LABELS = click.option(
-    "--label",
-    "-l",
-    "labels",
-    help="Labels to process.",
-    required=True,
-    multiple=True,
-    show_envvar=True,
-    show_default=True,
-)
-OPT_LOG_FIRST_PAGE = click.option(
-    "--no-log-first-page",
-    "-nlfp",
-    "log_first_page",
-    default=True,
-    help="Print info about first page to STDERR.",
-    is_flag=True,
-    show_envvar=True,
-    show_default=True,
-)
-OPT_LOG_PAGE_SLEEP = click.option(
-    "--page-sleep",
-    "page_sleep",
-    default=0,
-    type=click.INT,
-    help="Seconds to wait in between each fetch of a page",
-    show_envvar=True,
-    show_default=True,
-)
+NODE = [
+    click.option(
+        "--node-name",
+        "-nn",
+        "node",
+        default=DEFAULT_NODE,
+        show_envvar=True,
+        show_default=True,
+        help="Node name",
+    ),
+    click.option(
+        "--name",
+        "-n",
+        "name",
+        required=True,
+        show_envvar=True,
+        show_default=True,
+        help="Adapter name",
+    ),
+]
+
+
+NODE_CNX = [
+    click.option(
+        "--node-name",
+        "-nn",
+        "adapter_node",
+        default=DEFAULT_NODE,
+        show_envvar=True,
+        show_default=True,
+        help="Node name",
+    ),
+    click.option(
+        "--name",
+        "-n",
+        "adapter_name",
+        required=True,
+        show_envvar=True,
+        show_default=True,
+        help="Adapter name",
+    ),
+]

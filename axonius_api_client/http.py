@@ -1,34 +1,35 @@
 # -*- coding: utf-8 -*-
 """HTTP client."""
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
-
 import logging
 import warnings
+from urllib.parse import urlparse, urlunparse
 
 import requests
 
-from . import constants, exceptions, logs, tools, version
-
-if constants.PY3:
-    from urllib.parse import urlparse
-    from urllib.parse import urlunparse
-else:
-    from urlparse import urlparse as urlparse
-    from urlparse import urlparse as urlunparse
-
+from .constants import (
+    LOG_LEVEL_HTTP,
+    MAX_BODY_LEN,
+    REQUEST_ATTR_MAP,
+    RESPONSE_ATTR_MAP,
+    TIMEOUT_CONNECT,
+    TIMEOUT_RESPONSE,
+)
+from .exceptions import HttpError
+from .logs import get_obj_log, set_log_level
+from .tools import join_url, json_reload, listify, path_read
+from .version import __version__
 
 InsecureRequestWarning = requests.urllib3.exceptions.InsecureRequestWarning
 
 
-class Http(object):
+class Http:
     """HTTP client wrapper around :obj:`requests.Session`."""
 
     def __init__(
         self,
         url,
-        connect_timeout=constants.TIMEOUT_CONNECT,
-        response_timeout=constants.TIMEOUT_RESPONSE,
+        connect_timeout=TIMEOUT_CONNECT,
+        response_timeout=TIMEOUT_RESPONSE,
         certpath=None,
         certwarn=True,
         certverify=False,
@@ -39,7 +40,7 @@ class Http(object):
         https_proxy=None,
         save_last=True,
         save_history=False,
-        log_level=constants.LOG_LEVEL_HTTP,
+        log_level=LOG_LEVEL_HTTP,
         log_level_urllib="warning",
         log_request_attrs=None,
         log_response_attrs=None,
@@ -56,10 +57,10 @@ class Http(object):
         Args:
             url (:obj:`str` or :obj:`ParserUrl`): URL to connect to
             connect_timeout (:obj:`int`, optional):
-                default :data:`constants.TIMEOUT_CONNECT` - seconds to
+                default :data:`TIMEOUT_CONNECT` - seconds to
                 wait for connections to open to :attr:`url`
             response_timeout (:obj:`int`, optional):
-                default :data:`constants.TIMEOUT_RESPONSE` - seconds to
+                default :data:`TIMEOUT_RESPONSE` - seconds to
                 wait for responses from :attr:`url`
             certpath (:obj:`str` or :obj:`pathlib.Path`, optional): default ``None`` -
                 path to CA bundle file to use when verifing certs offered by :attr:`url`
@@ -99,7 +100,7 @@ class Http(object):
                 * if ``True`` append responses to :attr:`HISTORY`
                 * if ``False`` do not append responses to :attr:`HISTORY`
             log_level (:obj:`str`):
-              default :data:`axonius_api_client.constants.LOG_LEVEL_HTTP` -
+              default :data:`axonius_api_client.LOG_LEVEL_HTTP` -
               logging level to use for this objects logger
             log_level_urllib (:obj:`str`): default ``"warning"`` -
               logging level to use for this urllib logger
@@ -107,17 +108,17 @@ class Http(object):
               of request attributes:
 
               * if ``True``, log request attributes defined in
-                :data:`axonius_api_client.constants.LOG_REQUEST_ATTRS_VERBOSE`
+                :data:`axonius_api_client.LOG_REQUEST_ATTRS_VERBOSE`
               * if ``False``, log request attributes defined in
-                :data:`axonius_api_client.constants.LOG_REQUEST_ATTRS_BRIEF`
+                :data:`axonius_api_client.LOG_REQUEST_ATTRS_BRIEF`
               * if ``None``, do not log any request attributes
             log_response_attrs (:obj:`bool`): default ``None`` - control logging
               of response attributes:
 
               * if ``True``, log response attributes defined in
-                :data:`axonius_api_client.constants.LOG_RESPONSE_ATTRS_VERBOSE`
+                :data:`axonius_api_client.LOG_RESPONSE_ATTRS_VERBOSE`
               * if ``False``, log response attributes defined in
-                :data:`axonius_api_client.constants.LOG_RESPONSE_ATTRS_BRIEF`
+                :data:`axonius_api_client.LOG_RESPONSE_ATTRS_BRIEF`
               * if ``None``, do not log any response attributes
             log_request_body (:obj:`bool`): default ``False`` - control logging
               of request bodies:
@@ -131,14 +132,14 @@ class Http(object):
               * if ``False``, do not log response bodies
 
         Raises:
-            :exc:`exceptions.HttpError`: if either cert_client_cert or cert_client_key
+            :exc:`HttpError`: if either cert_client_cert or cert_client_key
                 are supplied, and the other is not supplied
 
-            :exc:`exceptions.HttpError`: if any of cert_path, cert_client_cert,
+            :exc:`HttpError`: if any of cert_path, cert_client_cert,
                 cert_client_key, or cert_client_both are supplied and the file does
                 not exist
         """
-        self._log = logs.get_obj_log(obj=self, level=log_level)
+        self.LOG = get_obj_log(obj=self, level=log_level)
         """:obj:`logging.Logger`: Logger for this object."""
 
         if isinstance(url, ParserUrl):
@@ -188,25 +189,25 @@ class Http(object):
         self.session.proxies["http"] = http_proxy
 
         if certpath:
-            tools.path_read(obj=certpath)
+            path_read(obj=certpath)
             self.session.verify = certpath
         else:
             self.session.verify = certverify
 
         if cert_client_both:
-            tools.path_read(obj=cert_client_both)
-            self.session.cert = format(cert_client_both)
+            path_read(obj=cert_client_both)
+            self.session.cert = str(cert_client_both)
         elif cert_client_cert or cert_client_key:
             if not all([cert_client_cert, cert_client_key]):
                 error = (
                     "You must supply both a 'cert_client_cert' and 'cert_client_key'"
                     " or use 'cert_client_both'!"
                 )
-                raise exceptions.HttpError(error)
+                raise HttpError(error)
 
-            tools.path_read(obj=cert_client_cert)
-            tools.path_read(obj=cert_client_key)
-            self.session.cert = (format(cert_client_cert), format(cert_client_key))
+            path_read(obj=cert_client_cert)
+            path_read(obj=cert_client_key)
+            self.session.cert = (str(cert_client_cert), str(cert_client_key))
 
         if certwarn is True:
             warnings.simplefilter("once", InsecureRequestWarning)
@@ -214,7 +215,7 @@ class Http(object):
             warnings.simplefilter("ignore", InsecureRequestWarning)
 
         urllog = logging.getLogger("urllib3.connectionpool")
-        logs.set_level(obj=urllog, level=log_level_urllib)
+        set_log_level(obj=urllog, level=log_level_urllib)
 
     def __call__(
         self,
@@ -263,7 +264,7 @@ class Http(object):
             :obj:`requests.Response`: raw response object
 
         """
-        url = tools.join_url(self.url, path, route)
+        url = join_url(self.url, path, route)
 
         headers = headers or {}
         headers.setdefault("User-Agent", self.user_agent)
@@ -284,9 +285,8 @@ class Http(object):
             self.LAST_REQUEST = prepped_request
 
         if self.log_request_attrs:
-            msg = "REQUEST ATTRS: {}".format(", ".join(self.log_request_attrs))
-            msg = msg.format(request=prepped_request)
-            self._log.debug(msg)
+            lattrs = ", ".join(self.log_request_attrs).format(request=prepped_request)
+            self.LOG.debug(f"REQUEST ATTRS: {lattrs}")
 
         send_args = self.session.merge_environment_settings(
             url=prepped_request.url,
@@ -303,9 +303,7 @@ class Http(object):
         )
 
         if self.LOG_REQUEST_BODY:
-            msg = "REQUEST BODY:\n{body}"
-            msg = msg.format(body=tools.json_dump(obj=prepped_request.body, error=False))
-            self._log.debug(msg)
+            self.log_body(body=prepped_request.body, body_type="REQUEST")
 
         response = self.session.send(**send_args)
         response.body_size = len(response.text or "")
@@ -317,14 +315,11 @@ class Http(object):
             self.HISTORY.append(response)
 
         if self.log_response_attrs:
-            msg = "RESPONSE ATTRS: {}".format(", ".join(self.log_response_attrs))
-            msg = msg.format(response=response)
-            self._log.debug(msg)
+            lattrs = ", ".join(self.log_response_attrs).format(response=response)
+            self.LOG.debug(f"RESPONSE ATTRS: {lattrs}")
 
         if self.LOG_RESPONSE_BODY:
-            msg = "RESPONSE BODY:\n{body}"
-            msg = msg.format(body=tools.json_dump(obj=response.text, error=False))
-            self._log.debug(msg)
+            self.log_body(body=response.text, body_type="RESPONSE")
 
         return response
 
@@ -353,10 +348,7 @@ class Http(object):
         Returns:
             :obj:`str`: user agent string
         """
-        msg = "{name}.{clsname}/{ver}"
-        return msg.format(
-            name=__name__, clsname=self.__class__.__name__, ver=version.__version__
-        )
+        return f"{__name__}.{self.__class__.__name__}/{__version__}"
 
     @property
     def log_request_attrs(self):
@@ -366,7 +358,7 @@ class Http(object):
     @log_request_attrs.setter
     def log_request_attrs(self, value):
         """Set the request attributes that should be logged."""
-        attr_map = constants.REQUEST_ATTR_MAP
+        attr_map = REQUEST_ATTR_MAP
         attr_type = "request"
         self._set_log_attrs(attr_map=attr_map, attr_type=attr_type, value=value)
 
@@ -378,7 +370,7 @@ class Http(object):
     @log_response_attrs.setter
     def log_response_attrs(self, value):
         """Set the response attributes that should be logged."""
-        attr_map = constants.RESPONSE_ATTR_MAP
+        attr_map = RESPONSE_ATTR_MAP
         attr_type = "response"
         self._set_log_attrs(attr_map=attr_map, attr_type=attr_type, value=value)
 
@@ -389,9 +381,7 @@ class Http(object):
         if not hasattr(self, "_LOG_ATTRS"):
             self._LOG_ATTRS = {"response": [], "request": []}
 
-        value = [x.lower().strip() for x in tools.listify(value)]
-
-        tmpl = "{}={}".format
+        value = [x.lower().strip() for x in listify(value)]
 
         if not value:
             self._LOG_ATTRS[attr_type] = []
@@ -401,21 +391,26 @@ class Http(object):
 
         if "all" in value:
             for k, v in attr_map.items():
-                entry = tmpl(k, v)
+                entry = f"{k}={v}"
                 if entry not in log_attrs:
                     log_attrs.append(entry)
             return
 
         for item in value:
-            if item not in attr_map:
-                continue
+            if item in attr_map:
+                value = attr_map[item]
+                entry = f"{item}={value}"
+                if entry not in log_attrs:
+                    log_attrs.append(entry)
 
-            entry = tmpl(item, attr_map[item])
-            if entry not in log_attrs:
-                log_attrs.append(entry)
+    def log_body(self, body, body_type):
+        """Pass."""
+        body = body or ""
+        body = json_reload(obj=body, error=False, trim=MAX_BODY_LEN)
+        self.LOG.debug(f"{body_type} BODY:\n{body}")
 
 
-class ParserUrl(object):
+class ParserUrl:
     """Parse a URL and ensure it has the neccessary bits."""
 
     def __init__(self, url, default_scheme="https"):
@@ -427,7 +422,7 @@ class ParserUrl(object):
                 scheme to use if url does not contain a scheme
 
         Raises:
-            :exc:`exceptions.HttpError`:
+            :exc:`HttpError`:
                 if parsed URL winds up without a hostname, port, or scheme.
 
         """
@@ -448,10 +443,10 @@ class ParserUrl(object):
         for part in ["hostname", "port", "scheme"]:
             if not getattr(self.parsed, part, None):
                 error = (
-                    "Parsed URL into {pstr!r} and no {part!r} provided in URL {url!r}"
+                    f"Parsed URL into {self.parsed_str!r} and no {part!r} provided"
+                    f" in URL {url!r}"
                 )
-                error = error.format(part=part, url=url, pstr=self.parsed_str)
-                raise exceptions.HttpError(error)
+                raise HttpError(error)
 
     def __str__(self):
         """Show object info.
@@ -459,8 +454,8 @@ class ParserUrl(object):
         Returns:
             :obj:`str`
         """
-        msg = "{c.__module__}.{c.__name__}({parsed})".format
-        return msg(c=self.__class__, parsed=self.parsed_str)
+        cls = self.__class__
+        return f"{cls.__module__}.{cls.__name__}({self.parsed_str})"
 
     def __repr__(self):
         """Show object info.

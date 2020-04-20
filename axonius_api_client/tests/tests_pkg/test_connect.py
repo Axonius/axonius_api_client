@@ -1,27 +1,26 @@
 # -*- coding: utf-8 -*-
 """Test suite for axonius_api_client.tools."""
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
-
 import logging
 
-import axonius_api_client as axonapi
 import pytest
-from axonius_api_client import connect, exceptions
 
-from .. import utils
+from axonius_api_client.connect import Connect
+from axonius_api_client.exceptions import ConnectError, InvalidCredentials
+from axonius_api_client.http import requests
+
+from ..utils import IS_LINUX, get_key_creds, get_url
 
 BAD_CRED = "tardis"
 
 
-class TestConnect(object):
+class TestConnect:
     """Pass."""
 
     def test_no_start(self, request):
         """Pass."""
-        ax_url = utils.get_url(request)
+        ax_url = get_url(request)
 
-        c = connect.Connect(url=ax_url, key=BAD_CRED, secret=BAD_CRED)
+        c = Connect(url=ax_url, key=BAD_CRED, secret=BAD_CRED)
 
         assert "Not connected" in format(c)
         assert "Not connected" in repr(c)
@@ -30,9 +29,9 @@ class TestConnect(object):
 
     def test_no_start_logs(self, request):
         """Pass."""
-        ax_url = utils.get_url(request)
+        ax_url = get_url(request)
 
-        c = connect.Connect(
+        c = Connect(
             url=ax_url, key=BAD_CRED, secret=BAD_CRED, log_console=True, log_file=True
         )
 
@@ -43,110 +42,94 @@ class TestConnect(object):
 
     def test_start(self, request):
         """Pass."""
-        ax_url = utils.get_url(request)
+        ax_url = get_url(request)
 
-        c = connect.Connect(url=ax_url, certwarn=False, **utils.get_key_creds(request))
+        c = Connect(url=ax_url, certwarn=False, **get_key_creds(request))
 
         c.start()
 
         assert "Connected" in format(c)
         assert "Connected" in repr(c)
-        with pytest.warns(exceptions.BetaWarning):
-            format(c.enforcements)
 
-        format(c.system)
-        with pytest.warns(exceptions.BetaWarning):
-            format(c.system.settings)
-
-        with pytest.warns(exceptions.BetaWarning):
-            format(c.system.instances)
-
-        format(c.system.settings.lifecycle)
-        format(c.system.settings.gui)
-        format(c.system.settings.core)
+        format(c.system.settings_lifecycle)
+        format(c.system.settings_gui)
+        format(c.system.settings_core)
+        format(c.system.users)
+        format(c.system.roles)
+        format(c.system.nodes)
         format(c.system.discover)
         format(c.system.meta)
-
+        format(c.enforcements)
         format(c.users)
         format(c.devices)
         format(c.adapters)
 
     def test_invalid_creds(self, request):
         """Pass."""
-        ax_url = utils.get_url(request)
+        ax_url = get_url(request)
 
-        c = connect.Connect(url=ax_url, key=BAD_CRED, secret=BAD_CRED, certwarn=False)
+        c = Connect(url=ax_url, key=BAD_CRED, secret=BAD_CRED, certwarn=False)
 
         c._http.CONNECT_TIMEOUT = 1
 
-        with pytest.raises(exceptions.ConnectError) as exc:
+        with pytest.raises(ConnectError) as exc:
             c.start()
 
-        assert isinstance(exc.value.exc, exceptions.InvalidCredentials)
+        assert isinstance(exc.value.exc, InvalidCredentials)
 
     def test_connect_timeout(self):
         """Pass."""
-        c = connect.Connect(
-            url="127.0.0.99", key=BAD_CRED, secret=BAD_CRED, certwarn=False
-        )
+        c = Connect(url="127.0.0.99", key=BAD_CRED, secret=BAD_CRED, certwarn=False)
 
         c._http.CONNECT_TIMEOUT = 1
 
-        with pytest.raises(exceptions.ConnectError) as exc:
+        with pytest.raises(ConnectError) as exc:
             c.start()
 
-        if utils.IS_LINUX:
-            assert isinstance(
-                exc.value.exc, axonapi.http.requests.exceptions.ConnectionError
-            )
+        if IS_LINUX:
+            assert isinstance(exc.value.exc, requests.ConnectionError)
         else:
-            assert isinstance(
-                exc.value.exc, axonapi.http.requests.exceptions.ConnectTimeout
-            )
+            assert isinstance(exc.value.exc, requests.ConnectTimeout)
 
     def test_connect_error(self):
         """Pass."""
-        c = connect.Connect(
+        c = Connect(
             url="https://127.0.0.1:3919", key=BAD_CRED, secret=BAD_CRED, certwarn=False
         )
 
         c._http.CONNECT_TIMEOUT = 1
 
-        with pytest.raises(exceptions.ConnectError) as exc:
+        with pytest.raises(ConnectError) as exc:
             c.start()
-        assert isinstance(
-            exc.value.exc, axonapi.http.requests.exceptions.ConnectionError
-        )
+        assert isinstance(exc.value.exc, requests.ConnectionError)
 
     def test_invalid_creds_nowrap(self, request):
         """Pass."""
-        ax_url = utils.get_url(request)
+        ax_url = get_url(request)
 
-        c = connect.Connect(
+        c = Connect(
             url=ax_url, key=BAD_CRED, secret=BAD_CRED, certwarn=False, wraperror=False
         )
 
         c._http.CONNECT_TIMEOUT = 1
 
-        with pytest.raises(exceptions.InvalidCredentials):
+        with pytest.raises(InvalidCredentials):
             c.start()
 
     def test_other_exc(self, request):
         """Pass."""
-        c = connect.Connect(
-            url="127.0.0.1", key=BAD_CRED, secret=BAD_CRED, certwarn=False
-        )
+        c = Connect(url="127.0.0.1", key=BAD_CRED, secret=BAD_CRED, certwarn=False)
 
         c._http.CONNECT_TIMEOUT = 1
         c._auth._creds = None
 
-        with pytest.raises(exceptions.ConnectError):
+        with pytest.raises(ConnectError):
             c.start()
 
     def test_reason(self):
         """Pass."""
         exc = Exception("badwolf")
 
-        reason = connect.Connect._get_exc_reason(exc)
+        reason = Connect._get_exc_reason(exc)
 
         assert format(reason) == "badwolf"

@@ -1,7 +1,6 @@
 #!/usr/bin/env python -i
 # -*- coding: utf-8 -*-
 """Example script for devices with vulnerable software with min/max CVSS score."""
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 
 def jdump(obj, **kwargs):

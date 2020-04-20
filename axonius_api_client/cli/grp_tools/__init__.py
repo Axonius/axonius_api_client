@@ -1,14 +1,12 @@
 # -*- coding: utf-8 -*-
 """Command line interface for Axonius API Client."""
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 import click
 
-from .. import click_ext
+from ..context import AliasedGroup
 from . import cmd_shell, cmd_write_config
 
 
-@click.group(cls=click_ext.AliasedGroup)
+@click.group(cls=AliasedGroup)
 def tools():
     """Group: CLI tools."""
 

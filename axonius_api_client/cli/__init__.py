@@ -1,37 +1,14 @@
 # -*- coding: utf-8 -*-
 """Command line interface for Axonius API Client."""
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
-
 import click
 
 from .. import constants, version
-from . import (cli_constants, click_ext, context, grp_adapters, grp_assets,
-               grp_tools)
-
-# @click.option(
-#     "--log-request-attrs-verbose/--log-request-attrs-brief",
-#     "-reqv/-reqb",
-#     "log_request_attrs",
-#     default=None,
-#     help="Log http client verbose or brief request attributes.",
-#     is_flag=True,
-#     show_envvar=True,
-# )
-# @click.option(
-#     "--log-response-attrs-verbose/--log-response-attrs-brief",
-#     "-respv/-respb",
-#     "log_response_attrs",
-#     default=None,
-#     help="Log http client verbose or brief response attributes.",
-#     is_flag=True,
-#     show_envvar=True,
-# )
+from . import context, grp_adapters, grp_assets, grp_tools
 
 
 @click.group(
-    cls=click_ext.AliasedGroup,
-    context_settings=cli_constants.CONTEXT_SETTINGS,
+    cls=context.AliasedGroup,
+    context_settings=context.CONTEXT_SETTINGS,
     epilog="""
 All of the options listed above must be supplied BEFORE any commands or groups.
 """,

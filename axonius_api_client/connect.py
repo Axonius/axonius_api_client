@@ -1,18 +1,37 @@
 # -*- coding: utf-8 -*-
 """Easy all-in-one connection handler."""
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
-
 import re
 
 import requests
 
-from . import api, auth, constants, exceptions, http, logs, tools
+from .api.adapters import Adapters
+from .api.assets import Devices, Users
+from .api.enforcements import Enforcements
+from .api.system import System
+from .auth import ApiKey
+from .constants import (
+    LOG_FILE_MAX_FILES,
+    LOG_FILE_MAX_MB,
+    LOG_FILE_NAME,
+    LOG_FILE_PATH,
+    LOG_LEVEL_API,
+    LOG_LEVEL_AUTH,
+    LOG_LEVEL_CONSOLE,
+    LOG_LEVEL_FILE,
+    LOG_LEVEL_HTTP,
+    LOG_LEVEL_PACKAGE,
+    TIMEOUT_CONNECT,
+    TIMEOUT_RESPONSE,
+)
+from .exceptions import ConnectError, InvalidCredentials
+from .http import Http
+from .logs import LOG, add_file, add_stderr, set_log_level
+from .tools import dt_now, dt_sec_ago
 
 # TODO examples
 
 
-class Connect(object):
+class Connect:
     """Easy all-in-one connection handler."""
 
     REASON_RES = [
@@ -28,8 +47,8 @@ class Connect(object):
         key,
         secret,
         wraperror=True,
-        timeout_connect=constants.TIMEOUT_CONNECT,
-        timeout_response=constants.TIMEOUT_RESPONSE,
+        timeout_connect=TIMEOUT_CONNECT,
+        timeout_response=TIMEOUT_RESPONSE,
         certpath=None,
         certverify=False,
         certwarn=True,
@@ -42,19 +61,19 @@ class Connect(object):
         log_response_attrs=None,
         log_request_body=False,
         log_response_body=False,
-        log_logger=logs.LOG,
-        log_level_package=constants.LOG_LEVEL_PACKAGE,
-        log_level_http=constants.LOG_LEVEL_HTTP,
-        log_level_auth=constants.LOG_LEVEL_AUTH,
-        log_level_api=constants.LOG_LEVEL_API,
-        log_level_console=constants.LOG_LEVEL_CONSOLE,
-        log_level_file=constants.LOG_LEVEL_FILE,
+        log_logger=LOG,
+        log_level_package=LOG_LEVEL_PACKAGE,
+        log_level_http=LOG_LEVEL_HTTP,
+        log_level_auth=LOG_LEVEL_AUTH,
+        log_level_api=LOG_LEVEL_API,
+        log_level_console=LOG_LEVEL_CONSOLE,
+        log_level_file=LOG_LEVEL_FILE,
         log_console=False,
         log_file=False,
-        log_file_name=constants.LOG_FILE_NAME,
-        log_file_path=constants.LOG_FILE_PATH,
-        log_file_max_mb=constants.LOG_FILE_MAX_MB,
-        log_file_max_files=constants.LOG_FILE_MAX_FILES,
+        log_file_name=LOG_FILE_NAME,
+        log_file_path=LOG_FILE_PATH,
+        log_file_max_mb=LOG_FILE_MAX_MB,
+        log_file_max_files=LOG_FILE_MAX_FILES,
     ):
         """Easy all-in-one connection handler.
 
@@ -63,10 +82,10 @@ class Connect(object):
             key (:obj:`str`): API Key from account page in Axonius instance
             secret (:obj:`str`): API Secret from account page in Axonius instance
             timeout_connect (:obj:`int`, optional):
-                default :data:`constants.TIMEOUT_CONNECT` - seconds to
+                default :data:`TIMEOUT_CONNECT` - seconds to
                 wait for connections to open to :attr:`url`
             timeout_response (:obj:`int`, optional):
-                default :data:`constants.TIMEOUT_RESPONSE` - seconds to
+                default :data:`TIMEOUT_RESPONSE` - seconds to
                 wait for responses from :attr:`url`
             wraperror (:obj:`bool`, optional): default ``True``
 
@@ -107,17 +126,17 @@ class Connect(object):
               of request attributes:
 
               * if ``True``, log request attributes defined in
-                :data:`axonius_api_client.constants.LOG_REQUEST_ATTRS_VERBOSE`
+                :data:`axonius_api_client.LOG_REQUEST_ATTRS_VERBOSE`
               * if ``False``, log request attributes defined in
-                :data:`axonius_api_client.constants.LOG_REQUEST_ATTRS_BRIEF`
+                :data:`axonius_api_client.LOG_REQUEST_ATTRS_BRIEF`
               * if ``None``, do not log any request attributes
             log_response_attrs (:obj:`bool`): default ``None`` - control logging
               of response attributes:
 
               * if ``True``, log response attributes defined in
-                :data:`axonius_api_client.constants.LOG_RESPONSE_ATTRS_VERBOSE`
+                :data:`axonius_api_client.LOG_RESPONSE_ATTRS_VERBOSE`
               * if ``False``, log response attributes defined in
-                :data:`axonius_api_client.constants.LOG_RESPONSE_ATTRS_BRIEF`
+                :data:`axonius_api_client.LOG_RESPONSE_ATTRS_BRIEF`
               * if ``None``, do not log any response attributes
             log_request_body (:obj:`bool`): default ``False`` - control logging
               of request bodies:
@@ -131,27 +150,27 @@ class Connect(object):
               * if ``False``, do not log response bodies
 
             log_logger (:obj:`logging.Logger`, optional):
-                default :data:`axonius_api_client.logs.LOG`
+                default :data:`axonius_api_client.LOG`
                 logger to use as package root logger
             log_level_package (:obj:`str`, optional):
-                default :data:`axonius_api_client.constants.LOG_LEVEL_PACKAGE`
+                default :data:`axonius_api_client.LOG_LEVEL_PACKAGE`
                 log level to use for log_logger
             log_level_http (:obj:`str`, optional):
-                default :data:`axonius_api_client.constants.LOG_LEVEL_HTTP`
+                default :data:`axonius_api_client.LOG_LEVEL_HTTP`
                 log level to use for :obj:`axonius_api_client.http.Http`
             log_level_auth (:obj:`str`, optional):
-                default :data:`axonius_api_client.constants.LOG_LEVEL_AUTH`
+                default :data:`axonius_api_client.LOG_LEVEL_AUTH`
                 log level to use for all subclasses of
                 :obj:`axonius_api_client.auth.Mixins`
             log_level_api (:obj:`str`, optional):
-                default :data:`axonius_api_client.constants.LOG_LEVEL_API`
+                default :data:`axonius_api_client.LOG_LEVEL_API`
                 log level to use for all subclasses of
-                :obj:`axonius_api_client.api.mixins.Mixins`
+                :obj:`axonius_api_client.mixins.Mixins`
             log_level_console (:obj:`str`, optional):
-                default :data:`axonius_api_client.constants.LOG_LEVEL_CONSOLE`
+                default :data:`axonius_api_client.LOG_LEVEL_CONSOLE`
                 log level to use for logs sent to console
             log_level_file (:obj:`str`, optional):
-                default :data:`axonius_api_client.constants.LOG_LEVEL_FILE`
+                default :data:`axonius_api_client.LOG_LEVEL_FILE`
                 log level to use for logs sent to file
             log_console (:obj:`bool`, optional): default ``False`` -
 
@@ -162,16 +181,16 @@ class Connect(object):
                 * if ``True``, enable logging to file
                 * if ``False``, do not log to console
             log_file_name (:obj:`str`, optional):
-                default :data:`axonius_api_client.constants.LOG_FILE_NAME`
+                default :data:`axonius_api_client.LOG_FILE_NAME`
                 name of file to write logs to under log_file_path
             log_file_path (:obj:`str`, optional):
-                default :data:`axonius_api_client.constants.LOG_FILE_PATH`
+                default :data:`axonius_api_client.LOG_FILE_PATH`
                 path to write log_file_name to
             log_file_max_mb (:obj:`str`, optional):
-                default :data:`axonius_api_client.constants.LOG_FILE_MAX_MB`
+                default :data:`axonius_api_client.LOG_FILE_MAX_MB`
                 rollover file logs at this many MB
             log_file_max_files (:obj:`str`, optional):
-                default :data:`axonius_api_client.constants.LOG_FILE_MAX_FILES`
+                default :data:`axonius_api_client.LOG_FILE_MAX_FILES`
                 number of rollover file logs to keep
         """
         self._started = False
@@ -180,16 +199,16 @@ class Connect(object):
         self.url = url
         """:obj:`str`: URL to connect to"""
 
-        logs.set_level(obj=log_logger, level=log_level_package)
+        set_log_level(obj=log_logger, level=log_level_package)
 
         self._handler_file = None
         self._handler_con = None
 
         if log_console:
-            self._handler_con = logs.add_stderr(obj=log_logger, level=log_level_console)
+            self._handler_con = add_stderr(obj=log_logger, level=log_level_console)
 
         if log_file:
-            self._handler_file = logs.add_file(
+            self._handler_file = add_file(
                 obj=log_logger,
                 level=log_level_file,
                 file_path=log_file_path,
@@ -219,9 +238,9 @@ class Connect(object):
 
         self._auth_args = {"key": key, "secret": secret, "log_level": log_level_auth}
 
-        self._http = http.Http(**self._http_args)
+        self._http = Http(**self._http_args)
 
-        self._auth = auth.ApiKey(http=self._http, **self._auth_args)
+        self._auth = ApiKey(http=self._http, **self._auth_args)
 
         self._api_args = {"auth": self._auth, "log_level": log_level_api}
 
@@ -234,27 +253,24 @@ class Connect(object):
                 if not self._wraperror:
                     raise
 
-                msg_pre = "Unable to connect to {url!r}".format(url=self._http.url)
+                pre = f"Unable to connect to {self._http.url!r}"
 
-                if isinstance(exc, requests.exceptions.ConnectTimeout):
-                    msg = "{pre}: connection timed out after {t} seconds"
-                    msg = msg.format(pre=msg_pre, t=self._http.CONNECT_TIMEOUT)
-                    raise exceptions.ConnectError(msg=msg, exc=exc)
-                elif isinstance(exc, requests.exceptions.ConnectionError):
-                    msg = "{pre}: {reason}"
-                    msg = msg.format(pre=msg_pre, reason=self._get_exc_reason(exc=exc))
-                    raise exceptions.ConnectError(msg=msg, exc=exc)
-                elif isinstance(exc, exceptions.InvalidCredentials):
-                    msg = "{pre}: Invalid Credentials supplied"
-                    msg = msg.format(pre=msg_pre, url=self._http.url)
-                    raise exceptions.ConnectError(msg=msg, exc=exc)
-
-                msg = "{pre}: {exc}"
-                msg = msg.format(pre=msg_pre, exc=exc)
-                raise exceptions.ConnectError(msg=msg, exc=exc)
+                if isinstance(exc, requests.ConnectTimeout):
+                    timeout = self._http.CONNECT_TIMEOUT
+                    msg = f"{pre}: connection timed out after {timeout} seconds"
+                    cnxexc = ConnectError(msg)
+                elif isinstance(exc, requests.ConnectionError):
+                    reason = self._get_exc_reason(exc=exc)
+                    cnxexc = ConnectError(f"{pre}: {reason}")
+                elif isinstance(exc, InvalidCredentials):
+                    cnxexc = ConnectError(f"{pre}: Invalid Credentials supplied")
+                else:
+                    cnxexc = ConnectError(f"{pre}: {exc}")
+                cnxexc.exc = exc
+                raise cnxexc
 
             self._started = True
-            self._start_dt = tools.dt_now()
+            self._start_dt = dt_now()
 
     @property
     def users(self):
@@ -265,7 +281,7 @@ class Connect(object):
         """
         self.start()
         if not hasattr(self, "_users"):
-            self._users = api.Users(**self._api_args)
+            self._users = Users(**self._api_args)
         return self._users
 
     @property
@@ -273,11 +289,11 @@ class Connect(object):
         """Get the object for user assets API.
 
         Returns:
-            :obj:`axonius_api_client.api.assets.Devices`
+            :obj:`axonius_api_client.assets.Devices`
         """
         self.start()
         if not hasattr(self, "_devices"):
-            self._devices = api.Devices(**self._api_args)
+            self._devices = Devices(**self._api_args)
         return self._devices
 
     @property
@@ -285,11 +301,11 @@ class Connect(object):
         """Get the object for adapters API.
 
         Returns:
-            :obj:`axonius_api_client.api.adapters.Adapters`
+            :obj:`axonius_api_client.adapters.Adapters`
         """
         self.start()
         if not hasattr(self, "_adapters"):
-            self._adapters = api.Adapters(**self._api_args)
+            self._adapters = Adapters(**self._api_args)
         return self._adapters
 
     @property
@@ -297,11 +313,11 @@ class Connect(object):
         """Get the object for enforcements API.
 
         Returns:
-            :obj:`axonius_api_client.api.enforcements.Enforcements`
+            :obj:`axonius_api_client.enforcements.Enforcements`
         """
         self.start()
         if not hasattr(self, "_enforcements"):
-            self._enforcements = api.Enforcements(**self._api_args)
+            self._enforcements = Enforcements(**self._api_args)
         return self._enforcements
 
     @property
@@ -309,11 +325,11 @@ class Connect(object):
         """Get the object for system API.
 
         Returns:
-            :obj:`axonius_api_client.api.system.System`
+            :obj:`axonius_api_client.system.System`
         """
         self.start()
         if not hasattr(self, "_system"):
-            self._system = api.System(**self._api_args)
+            self._system = System(**self._api_args)
         return self._system
 
     def __str__(self):
@@ -326,10 +342,10 @@ class Connect(object):
         client = getattr(self, "_http", "")
         url = getattr(client, "url", self._http_args["url"])
         if self._started:
-            uptime = tools.dt_sec_ago(self._start_dt)
-            return "Connected to {url!r} for {uptime}".format(uptime=uptime, url=url)
+            uptime = dt_sec_ago(self._start_dt)
+            return f"Connected to {url!r} for {uptime}"
         else:
-            return "Not connected to {url!r}".format(url=url)
+            return f"Not connected to {url!r}"
 
     def __repr__(self):
         """Show object info.
@@ -352,7 +368,7 @@ class Connect(object):
         Returns:
             :obj:`str`: prettied up str if match found, else original exception str
         """
-        reason = format(exc)
+        reason = str(exc)
         for reason_re in cls.REASON_RES:
             if reason_re.search(reason):
                 return reason_re.sub(r"\1", reason).rstrip("')")

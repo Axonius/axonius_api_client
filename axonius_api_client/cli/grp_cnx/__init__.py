@@ -1,20 +1,16 @@
 # -*- coding: utf-8 -*-
 """Command line interface for Axonius API Client."""
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 import click
 
-from .. import click_ext
-from . import cmd_add, cmd_check, cmd_delete, cmd_discover, cmd_get
+from .. import context
+from . import cmd_add, cmd_get, cmd_get_by_id
 
 
-@click.group(cls=click_ext.AliasedGroup)
+@click.group(cls=context.AliasedGroup)
 def cnx():
     """Group: Work with adapter connections."""
 
 
 cnx.add_command(cmd_add.cmd)
-cnx.add_command(cmd_check.cmd)
-cnx.add_command(cmd_delete.cmd)
-cnx.add_command(cmd_discover.cmd)
 cnx.add_command(cmd_get.cmd)
+cnx.add_command(cmd_get_by_id.cmd)

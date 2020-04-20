@@ -1,38 +1,16 @@
 # -*- coding: utf-8 -*-
 """Command line interface for Axonius API Client."""
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
+from ..context import CONTEXT_SETTINGS, click
+from ..options import add_options
+from .grp_common import get_handler as handler
+from .grp_options import GET_BUILDERS as OPTIONS
 
-import click
-
-from .. import cli_constants, options
-from . import grp_common
+METHOD = "get-by-mail"
 
 
-@click.command(name="get-by-mail", context_settings=cli_constants.CONTEXT_SETTINGS)
-@options.OPT_URL
-@options.OPT_KEY
-@options.OPT_SECRET
-@options.OPT_EXPORT_FILE
-@options.OPT_EXPORT_PATH
-@options.OPT_EXPORT_FORMAT
-@options.OPT_EXPORT_OVERWRITE
-@options.OPT_EXPORT_DELIM
-@options.OPT_EXPORT_TABLE_FORMAT
-@options.OPT_FIELDS
-@options.OPT_FIELDS_REGEX
-@options.OPT_FIELDS_DEFAULT
-@options.OPT_MAX_ROWS
-@options.OPT_PAGE_START
-@options.OPT_PAGE_SIZE
-@options.OPT_GET_BY_PRE_QUERY
-@options.OPT_GET_BY_POST_QUERY
-@options.OPT_GET_BY_VALUE_NOT
-@options.OPT_GET_BY_VALUE_REGEX
-@options.OPT_GET_BY_VALUES
-@options.OPT_FIELD_NULLS
-@options.OPT_FIELD_EXCLUDES
+@click.command(name=METHOD, context_settings=CONTEXT_SETTINGS)
+@add_options(OPTIONS)
 @click.pass_context
-def cmd(ctx, **kwargs):
-    """Get assets with matching email addresses."""
-    grp_common.get_by_cmd(ctx=ctx, method="get_by_mail", **kwargs)
+def cmd(ctx, url, key, secret, **kwargs):
+    """Query builder to get users by email."""
+    handler(ctx=ctx, url=url, key=key, secret=secret, method=METHOD, **kwargs)

@@ -1,159 +1,98 @@
 # -*- coding: utf-8 -*-
 """Command line interface for Axonius API Client."""
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
+import re
 
-import click
-import tabulate
-
-from ... import api, tools
-from .. import cli_constants, context, serial
-
-FORMATTERS = {
-    "json": serial.to_json,
-    "csv": serial.obj_to_csv,
-    "table": serial.obj_to_table,
-}
+from ... import constants, tools
+from ..context import click
 
 
-def get_by_cmd(ctx, url, key, secret, method, values, **kwargs):
-    """Pass."""
-    p_grp = ctx.parent.command.name
+def get_handler(ctx, url, key, secret, method, values=None, **kwargs):
+    """Handle all of the get* commands."""
+    query_file = kwargs.pop("query_file", None)
+    if query_file:
+        kwargs["query"] = query_file.read().strip()
 
     client = ctx.obj.start_client(url=url, key=key, secret=secret)
-    api = getattr(client, p_grp)
-    apimethod = getattr(api, method)
 
-    kwargs = handle_kwargs(**kwargs)
+    method = method.replace("-", "_")
+    p_grp = ctx.parent.command.name
+    apiobj = getattr(client, p_grp)
+    apimethod = getattr(apiobj, method)
 
-    get_first = serial.is_list(values) and len(values) == 1
-    kwargs["value"] = values[0] if get_first else values
+    if values:
+        get_first = isinstance(values, constants.LIST) and len(values) == 1
+
+        if method == "get_by_subnet":
+            kwargs.pop("value_regex", None)
+            get_first = True
+
+        kwargs["value"] = values[0] if get_first else values
 
     with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
         apimethod(**kwargs)
 
 
-def echo_response(ctx, raw_data, api):
+def count_handler(ctx, url, key, secret, method, **kwargs):
     """Pass."""
-    last_get = getattr(api, "_LAST_GET", {})
-    last_filter = last_get.get("filter", "")
-    last_fields = "\n  ".join(last_get.get("fields", "").split(","))
+    query_file = kwargs.pop("query_file", None)
+    if query_file:
+        kwargs["query"] = query_file.read().strip()
 
-    ctx.obj.echo_ok("Returned {} rows".format(len(raw_data)))
-    ctx.obj.echo_ok("Query: {!r}".format(last_filter))
-    ctx.obj.echo_ok("Fields:\n  {}".format(last_fields))
+    client = ctx.obj.start_client(url=url, key=key, secret=secret)
 
-
-def get_sources(ctx):
-    """Pass."""
-    pp_grp = ctx.parent.parent.command.name
-    src_cmds = [x for x in ctx.parent.parent.command.commands if x.startswith("get")]
-    return ["{pp} {c}".format(pp=pp_grp, c=c) for c in src_cmds]
-
-
-def show_sources(ctx, param=None, value=None):
-    """Pass."""
-    if value:
-        pp_grp = ctx.parent.parent.command.name
-        p_grp = ctx.parent.command.name
-        grp = ctx.command.name
-
-        this_grp = "{pp} {p} {g}".format(pp=pp_grp, p=p_grp, g=grp)
-        this_cmd = "{tg} --rows".format(tg=this_grp)
-
-        src_cmds = get_sources(ctx=ctx)
-        msg = serial.ensure_srcs_msg(this_cmd=this_cmd, src_cmds=src_cmds)
-        click.secho(message=msg, err=True, fg="green")
-        ctx.exit(0)
-
-
-def get_rows(ctx, rows):
-    """Pass."""
-    pp_grp = ctx.parent.parent.command.name
+    method = method.replace("-", "_")
     p_grp = ctx.parent.command.name
-    grp = ctx.command.name
+    apiobj = getattr(client, p_grp)
+    apimethod = getattr(apiobj, method)
 
-    this_grp = "{pp} {p} {g}".format(pp=pp_grp, p=p_grp, g=grp)
-    this_cmd = "{tg} --rows".format(tg=this_grp)
+    with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
+        raw_data = apimethod(**kwargs)
 
-    src_cmds = get_sources(ctx=ctx)
-
-    rows = serial.json_to_rows(
-        ctx=ctx, stream=rows, this_cmd=this_cmd, src_cmds=src_cmds
-    )
-
-    serial.check_rows_type(
-        ctx=ctx, rows=rows, this_cmd=this_cmd, src_cmds=src_cmds, all_items=False
-    )
-
-    serial.ensure_keys(
-        ctx=ctx,
-        rows=rows,
-        this_cmd=this_cmd,
-        src_cmds=src_cmds,
-        keys=["internal_axon_id", "adapters"],
-        all_items=False,
-    )
-    return rows
+    click.secho(format(raw_data))
 
 
-def assets_to_table(assets, **kwargs):
-    """Pass."""
-    tablfmt = kwargs.get("export_table_format", cli_constants.EXPORT_TABLE_FORMAT)
-    data = tabulate.tabulate(
-        tabular_data=assets, tablefmt=tablfmt, showindex=False, headers="keys"
-    )
-    print(data)
-    return data
+def fields_handler(
+    ctx, url, key, secret, method, adapter_re, field_re, field_key, schema_type, **kwargs
+):
+    """Handle fields group."""
+    p_grp = ctx.parent.command.name
 
+    client = ctx.obj.start_client(url=url, key=key, secret=secret)
+    apiobj = getattr(client, p_grp)
+    apimethod = getattr(apiobj.fields, method)
 
-def handle_kwargs(**kwargs):
-    """Pass."""
-    kwargs["callbacks"] = []
-    kwargs["finish"] = None
+    are = re.compile(adapter_re, re.I)
+    fre = re.compile(field_re, re.I)
 
-    if kwargs.get("query_file"):
-        kwargs["query"] = kwargs["query_file"].read().strip()
+    with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
+        raw_fields = apimethod()
 
-    if kwargs.get("log_first_page", True):
-        kwargs["callbacks"].append(api.assets.cb_firstpage)
+    amatches = {k: v for k, v in raw_fields.items() if are.search(k)}
 
-    if kwargs.get("field_nulls", False):
-        kwargs["callbacks"].append(api.assets.cb_nulls)
-
-    if kwargs.get("field_excludes", []):
-        kwargs["callbacks"].append(api.assets.cb_excludes)
-
-    if kwargs.get("field_flatten", False):
-        kwargs["callbacks"].append(api.assets.cb_flatten)
-
-    if kwargs.get("field_join", False):
-        kwargs["callbacks"].append(api.assets.cb_joiner)
-
-    export_format = kwargs.get("export_format", "")
-
-    if export_format == "json":
-        kwargs["callbacks"].append(api.assets.cb_jsonstream)
-    elif export_format == "table":
-        kwargs["export_table_format"] = tablefmt = kwargs.get(
-            "export_table_format", cli_constants.EXPORT_TABLE_FORMAT
+    if not amatches:
+        ctx.obj.echo_error(
+            "No adapters found matching {!r}, valids: {}".format(
+                adapter_re, list(raw_fields)
+            )
         )
 
-        if tablefmt not in tabulate.tabulate_formats:
-            tablefmts = tools.join_comma(obj=tabulate.tabulate_formats)
-            msg = "{tf!r} is not a valid table format, must be one of {tfs}"
-            msg = msg.format(tf=tablefmt, tfs=tablefmts)
-            context.click_echo_error(msg=msg, abort=True)
+    fmatches = {k: {} for k in amatches}
 
-        if api.assets.cb_nulls not in kwargs["callbacks"]:
-            kwargs["callbacks"].append(api.assets.cb_nulls)
+    for adapter, schemas in amatches.items():
+        for field, schema in schemas.items():
+            fmatch = schema[field_key]
+            if fre.search(fmatch):
+                fmatches[adapter][field] = schema
 
-        if api.assets.cb_flatten not in kwargs["callbacks"]:
-            kwargs["callbacks"].append(api.assets.cb_flatten)
+    if schema_type == "basic":
+        basic_keys = ["name_qual", "column_title", "type_norm"]
+        basic = {k: {} for k in fmatches}
+        for adapter, schemas in fmatches.items():
+            for field, schema in schemas.items():
+                basic[adapter][field] = {
+                    k: v for k, v in schema.items() if k in basic_keys
+                }
+        click.secho(tools.json_dump(basic))
+        ctx.exit(0)
 
-        if api.assets.cb_joiner not in kwargs["callbacks"]:
-            kwargs["callbacks"].append(api.assets.cb_joiner)
-
-        kwargs["finish"] = assets_to_table
-
-    return kwargs
+    click.secho(tools.json_dump(fmatches))
