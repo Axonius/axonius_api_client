@@ -1,16 +1,26 @@
 # -*- coding: utf-8 -*-
 """Command line interface for Axonius API Client."""
 from ..context import CONTEXT_SETTINGS, click
-from ..options import add_options
-from .grp_common import count_handler as handler
-from .grp_options import COUNT_SQ as OPTIONS
+from ..options import AUTH, SQ_NAME, add_options, get_option_help
 
-METHOD = "count-by-saved-query"
+OPTIONS = [
+    *AUTH,
+    SQ_NAME,
+    get_option_help(choices=["auth"]),
+]
 
 
-@click.command(name=METHOD, context_settings=CONTEXT_SETTINGS)
+@click.command(name="count-by-saved-query", context_settings=CONTEXT_SETTINGS)
 @add_options(OPTIONS)
 @click.pass_context
 def cmd(ctx, url, key, secret, **kwargs):
     """Get the count of assets from a saved query."""
-    handler(ctx=ctx, url=url, key=key, secret=secret, method=METHOD, **kwargs)
+    client = ctx.obj.start_client(url=url, key=key, secret=secret)
+
+    p_grp = ctx.parent.command.name
+    apiobj = getattr(client, p_grp)
+
+    with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
+        raw_data = apiobj.count(**kwargs)
+
+    click.secho(format(raw_data))

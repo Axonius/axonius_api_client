@@ -1,16 +1,23 @@
 # -*- coding: utf-8 -*-
 """Command line interface for Axonius API Client."""
+from ...tools import json_dump
 from ..context import CONTEXT_SETTINGS, click
-from ..options import add_options
-from .grp_common import config_update_file_handler as handler
-from .grp_options import CONFIG_UPDATE_FILE as OPTIONS
+from ..options import AUTH, CONTENTS, NODE, add_options
+from .grp_common import CONFIG_EXPORT, CONFIG_TYPE, config_export
 
-METHOD = "config-update-file"
+OPTIONS = [*AUTH, CONFIG_EXPORT, CONFIG_TYPE, *NODE, CONTENTS]
 
 
-@click.command(name=METHOD, context_settings=CONTEXT_SETTINGS)
+@click.command(name="config-update-file", context_settings=CONTEXT_SETTINGS)
 @add_options(OPTIONS)
 @click.pass_context
-def cmd(ctx, url, key, secret, **kwargs):
-    """Set generic or specific advanced settings from a json file."""
-    handler(ctx=ctx, url=url, key=key, secret=secret, **kwargs)
+def cmd(ctx, url, key, secret, export_format, stream, **kwargs):
+    """Pass."""
+    client = ctx.obj.start_client(url=url, key=key, secret=secret)
+    contents = ctx.obj.read_stream_json(stream=stream, expect=dict)
+    kwargs["kwargs_config"] = contents
+
+    with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
+        rows = client.adapters.config_update(**kwargs)
+    ctx.obj.echo_ok(f"Updated adapter with config:\n{json_dump(contents)}")
+    config_export(ctx=ctx, rows=rows, export_format=export_format)
