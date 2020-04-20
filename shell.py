@@ -1,15 +1,12 @@
-#!/usr/bin/env python -i
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """Utilities for this package."""
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
-
 import os
 
 import axonius_api_client as axonapi
 
 if __name__ == "__main__":
-    axonapi.cli.cli_constants.load_dotenv()
+    axonapi.constants.load_dotenv()
 
     AX_URL = os.environ["AX_URL"]
     AX_KEY = os.environ["AX_KEY"]
@@ -32,70 +29,136 @@ if __name__ == "__main__":
         cert_client_key=AX_CLIENT_CERT_KEY,
         log_level_console="debug",
         log_level_api="debug",
-        log_level_http="info",
-        log_request_attrs=["url", "size"],
+        log_level_http="debug",
+        # log_request_attrs=["url", "size", "method"],
+        log_request_attrs=["url", "method"],
+        # log_response_attrs=["status", "size"],
+        # log_request_body=True,
+        # log_response_body=True,
         log_console=True,
     )
 
     ctx.start()
-
     devices = ctx.devices
     users = ctx.users
     adapters = ctx.adapters
     enforcements = ctx.enforcements
     system = ctx.system
 
-    # import jsonstreams
-    # import sys
-
-    # import pathlib
-
-    callbacks = [
-        # "first_page",
-        # "field_excludes",
-        # "field_nulls",
-        # "field_flatten",
-        "field_titles",
-        # "field_joiner",
-        # "export_json",
-        "export_csv",
-    ]
-
+    # schemas = devices.fields.get()
+    # root_complex = [
+    #     x["name_qual"] for x in schemas["agg"] if x["is_complex"] and x["is_root"]
+    # ]
+    '''
     z = devices.get(
-        callbacks=callbacks,
-        fields=["network_interfaces", "hostname_preferred"],
+        max_rows=1,
+        # query="""(((specific_data.data.direct_connected_devices == ({"$exists":true,"$ne":[]})) and specific_data.data.direct_connected_devices != [])) and (((specific_data.data.connected_devices == ({"$exists":true,"$ne":[]})) and specific_data.data.connected_devices != [])) and (((specific_data.data.network_interfaces == ({"$exists":true,"$ne":[]})) and specific_data.data.network_interfaces != []))""",  # noqa
+        # fields_manual=root_complex,
+        fields=[
+            "network_interfaces",
+            "hostname_preferred",
+            #     "open_ports",
+            #     "connected_devices",
+            #     "direct_connected_devices",
+            #     # "installed_software.name",
+            #     # "installed_software",
+        ],
         fields_default=False,
-        # export_file="blah.json",
-        export_file="blah.csv",
-        export_overwrite=True,
-        explode_field="network_interfaces",
-        # max_rows=2,
-        # field_excludes=["internal_axon_id"],
-        log_once=True,
-        # joiner="!!",
-        # joiner_trim_len=60,
-        # null_value="AAAAA",
+        #
+        # ---> echo/log first_page
+        # first_page=True,  # for cli
+        # ---> echo to stderr or log to debug
+        do_echo=True,  # for cli
+        # ---> field_null
+        field_null=True,  # relies on field_null_value
+        # field_null_value="MOOOOOOOO",
+        # ---> field_excludes
+        # field_excludes=[
+        #     # "speed",
+        #     # "installed_software",
+        #     # "specific_data.data.hostname_preferred",
+        #     "labels",
+        #     # "internal_axon_id",
+        #     "adapters",
+        #     "adapter_list_length",
+        #     # "installed_software.name",
+        # ],
+        # ---> field_flatten
+        # field_flatten=True,
+        # ---> field_explode
+        field_explode="network_interfaces",
+        # ---> report_adapters_missing
+        # report_adapters_missing=True,
+        # ---> field_join
+        # field_join=True,  # depends on field_join_value and field_join_trim
+        # field_join_value="!!!!!!",
+        # field_join_trim=0,
+        # field_titles=True,
+        # ---> exporters
+        export="json",  # csv, json; empty means no exporter
+        # export_file="blah.json",  # empty means use stdout
+        # export_path="moo",  # default CWD
+        export_overwrite=True,  # default False
+        # export_schema=True,  # add schema to csv/json
+        # csv_dialect="excel",  # excel, excel-tab, unix
+        # csv_quoting="nonnumeric",  # minimal, all, nonnumeric, none
+        # table_max_rows=10,
+        # table_format="fancy_grid",
     )
-    # stdout_orig = sys.__stdout__
-    # fd_stdout = os.fdopen(os.dup(stdout_orig.fileno()), stdout_orig.mode)
-    # fd_file = open("test.json", "w")
-    # callbacks = {
-    #     "asset": [axonapi.api.assets.cb_firstpage, axonapi.api.assets.cb_jsonstream]
-    # }
-    # with jsonstreams.Stream(
-    #     jsonstreams.Type.array, fd=fd_file, indent=2, pretty=True
-    # ) as stream:
-    #     devices.get(
-    #         callbacks=callbacks,
-    #         stream=stream,
-    #         echo_method=axonapi.cli.context.Context.echo_ok,
-    #     )
+    '''
 
-# WIP CODE FOR _download_file
-# csv = adapters.get_single("csv")
-# adapter_name = csv["name_raw"]
-# node_id = csv["node_id"]
-# cnx = csv["cnx"][0]
-# cnx_uuid = cnx["uuid"]
 
-# ret = adapters._download_file(adapter_name, node_id, cnx_uuid, "file_path")
+# def parse_schema(raw):
+#     """Pass."""
+#     parsed = {}
+#     if raw:
+#         schemas = raw["items"]
+#         required = raw["required"]
+#         for schema in schemas:
+#             schema_name = schema["name"]
+#             parsed[schema_name] = schema
+
+#             # core settings: password_brute_force_protection: conditional
+#             # has a list of dict enums, so turn it into a lookup map
+#             if schema.get("enum"):
+#                 if isinstance(schema["enum"][0], dict):
+#                     schema["enum"] = {x["name"]: x for x in schema["enum"]}
+
+#             # system settings have sub-schemas
+#             if schema.get("items"):
+#                 schema["sub_schemas"] = parse_schema(raw=schema)
+#                 schema.pop("items")
+#                 continue
+
+#             schema["required"] = schema_name in required
+
+#     return parsed
+
+
+# def parse_settings(raw, pretty_name=""):
+#     """Pass."""
+#     pretty_name = raw["schema"].get("pretty_name", "") or pretty_name
+#     sections = raw["schema"]["items"]
+
+#     parsed = {}
+#     parsed["titles"] = {"self": pretty_name}
+#     parsed["sections"] = {}
+#     parsed["config"] = raw["config"]
+
+#     for section in sections:
+#         section_name = section["name"]
+#         section_title = section["title"]
+
+#         parsed["titles"][section_name] = section_title
+#         parsed["sections"][section_name] = parse_schema(raw=section)
+
+#         # core settings: https_log_settings does not follow schema, so this:
+#         if section_name in section:
+#             for k, v in section[section_name].items():
+#                 parsed["sections"][section_name][k]["default"] = v
+#     return parsed
+
+
+# # sub sub schemas, fml
+# settings = system.settings_gui.get()
+# parsed = parse_settings(settings)

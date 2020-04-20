@@ -1,9 +1,6 @@
 # -*- coding: utf-8 -*-
 """Version information for this package."""
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
-
-__version__ = "2.3.0"
+__version__ = "3.0.0b"
 VERSION = __version__
 """:obj:`str`: Version of package."""
 

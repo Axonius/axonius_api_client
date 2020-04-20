@@ -1,16 +1,36 @@
 # -*- coding: utf-8 -*-
 """Constants."""
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
-
 import logging
 import os
+import pathlib
 import sys
+
+import dotenv
 
 from . import __package__ as PACKAGE_ROOT
 
-PY2 = sys.version_info[0] == 2
-PY3 = sys.version_info[0] == 3
+DEFAULT_PATH = os.getcwd()
+
+AX_ENV = os.environ.get("AX_ENV", "").strip() or DEFAULT_PATH
+
+
+def load_dotenv(ax_env=AX_ENV, reenv=False, verbose=False):
+    """Pass."""
+    if reenv:
+        ax_env = os.environ.get("AX_ENV", "").strip() or DEFAULT_PATH
+
+    ax_env_path = pathlib.Path(ax_env).expanduser().resolve()
+
+    if ax_env_path.is_dir():
+        ax_env_path = ax_env_path / ".env"
+
+    return (
+        dotenv.load_dotenv(dotenv_path=str(ax_env_path), verbose=verbose),
+        ax_env_path,
+    )
+
+
+load_dotenv()
 
 PY36 = sys.version_info[0:2] >= (3, 6)
 """:obj:`bool`: python version is 3.6 or higher"""
@@ -21,34 +41,16 @@ PY37 = sys.version_info[0:2] >= (3, 7)
 COMPLEX = (dict, list, tuple)
 """:obj:`tuple` of :obj:`type`: types that are considered as complex."""
 
+SIMPLE = (str, int, bool, float)
+""":obj:`tuple` of :obj:`type`: types that are considered as simple"""
+
 EMPTY = [None, "", [], {}, ()]
 """:obj:`list` of :obj:`type`: values that should be considered as empty"""
 
-LIST = (tuple, list)
-""":obj:`tuple` of :obj:`type`: types that are considered as lists"""
-
-if PY3:
-    STR = (str,)
-    INT = (int,)
-    TEXT = str
-    BYTES = bytes
-else:
-    STR = (basestring,)  # noqa
-    INT = (int, long)  # noqa
-    TEXT = unicode  # noqa
-    BYTES = str
-
-
-SIMPLE = tuple(list(STR) + [int, bool, float])
-""":obj:`tuple` of :obj:`type`: types that are considered as simple"""
-
-SIMPLE_NONE = tuple(list(SIMPLE) + [None])
-""":obj:`tuple` of :obj:`type`: types that are considered as simple or None"""
-
-YES = [True, 1, "1", "true", "t", "yes", "y", "yas"]
+YES = [True, 1, "1", "true", "t", "yes", "y"]
 """:obj:`list` of :obj:`type`: values that should be considered as truthy"""
 
-NO = [False, 0, "0", "false", "f", "no", "n", "noes"]
+NO = [False, 0, "0", "false", "f", "no", "n"]
 """:obj:`list` of :obj:`type`: values that should be considered as falsey"""
 
 MAX_PAGE_SIZE = 2000
@@ -137,16 +139,16 @@ LOG_LEVELS_STR_CSV = ", ".join(LOG_LEVELS_STR)
 LOG_LEVELS_INT = [getattr(logging, x.upper()) for x in LOG_LEVELS_STR]
 """:obj:`list` of :obj:`int`: valid logging level ints"""
 
-LOG_LEVELS_INT_CSV = ", ".join([format(x) for x in LOG_LEVELS_INT])
+LOG_LEVELS_INT_CSV = ", ".join([str(x) for x in LOG_LEVELS_INT])
 """:obj:`str`: csv of valid logging level ints"""
 
-LOG_FILE_PATH = os.getcwd()
+LOG_FILE_PATH = DEFAULT_PATH
 """:obj:`str`: default path to use for log files"""
 
 LOG_FILE_PATH_MODE = 0o700
 """:obj:`str`: default permisisons to use when creating directories"""
 
-LOG_FILE_NAME = "{pkg}.log".format(pkg=PACKAGE_ROOT)
+LOG_FILE_NAME = f"{PACKAGE_ROOT}.log"
 """:obj:`str`: default log file name to use"""
 
 LOG_FILE_MAX_MB = 5
@@ -164,44 +166,133 @@ LOG_NAME_STDOUT = "handler_stdout"
 LOG_NAME_FILE = "handler_file"
 """:obj:`str`: default handler name to use for file log"""
 
-CSV_FIELDS = {
-    "device": ["id", "serial", "mac_address", "hostname", "name"],
-    "user": ["id", "username", "mail", "name"],
-    "sw": ["hostname", "installed_sw_name"],
-}
-""":obj:`dict`: mapping of csv required columns for csv types"""
-
 SETTING_UNCHANGED = ["unchanged"]
 """:obj:`list` of :obj:`str`: ref used by REST API when supplying a password
 field that should remain the same as what is already in the database"""
 
-DEFAULT_NODE = "master"
+DEFAULT_NODE = "Master"
 """:obj:`str`: default node name to use"""
-
-CSV_KEYS_META = {
-    "file": "file_path",
-    "is_users_csv": "is_users",
-    "is_installed_sw": "is_installed_sw",
-    "id": "user_id",
-    "csv_http": "resource_path",
-    "csv_share": "resource_path",
-    "csv_share_username": "username",
-    "csv_share_password": "password",
-}
-""":obj:`dict`: mapping for csv adapter configuration items"""
 
 CSV_ADAPTER = "csv"
 """:obj:`str`: name of csv adapter"""
-
-DEBUG_MATCHES = False
-""":obj:`bool`: include log entries regarding match logic"""
-
+CSV_FIELD_NAME = "file_path"
+CNX_SANE_DEFAULTS = {
+    "all": {"verify_ssl": False},
+    "csv": {
+        "is_users": False,
+        "is_installed_sw": False,
+        "s3_use_ec2_attached_instance_profile": False,
+        "verify_ssl": False,
+    },
+}
 DEFAULT_PERM = "ReadOnly"
 """:obj:`str`: default user permission to use"""
 
 VALID_PERMS = ["Restricted", "ReadWrite", "ReadOnly"]
 """:obj:`list` of :obj:`str`: valid user permissions"""
 
-FIELD_TRIM_LEN = 30000
+FIELD_TRIM_LEN = 32000
 FIELD_TRIM_STR = "...TRIMMED - {field_len} characters over {trim_len}"
 FIELD_JOINER = "\n"
+TABLE_FORMAT = "fancy_grid"
+TABLE_MAX_ROWS = 5
+
+OK_ARGS = {"fg": "green", "bold": True, "err": True}
+
+OK_TMPL = "** {msg}"
+
+WARN_ARGS = {"fg": "yellow", "bold": True, "err": True}
+
+WARN_TMPL = "** WARNING: {msg}"
+
+ERROR_ARGS = {"fg": "red", "bold": True, "err": True}
+
+ERROR_TMPL = "** ERROR: {msg}"
+AGG_ADAPTER_NAME = "agg"
+AGG_ADAPTER_TITLE = "Aggregated"
+ALL_NAME = "all"
+AGG_ADAPTER_ALTS = ["generic", "general", "specific", "agg", "aggregated"]
+""":obj:`list` of :obj:`str`: list of alternatives for 'generic' adapter."""
+
+
+NORM_TYPE_MAP = (
+    # (type, format, items.type, items.format), normalized
+    (("string", "", "", ""), "string"),
+    (("string", "date-time", "", ""), "string_datetime"),
+    (("string", "image", "", ""), "string_image"),
+    (("string", "version", "", ""), "string_version"),
+    (("string", "ip", "", ""), "string_ipaddress"),
+    (("bool", "", "", ""), "bool"),
+    (("integer", "", "", ""), "integer"),
+    (("number", "", "", ""), "number"),
+    (("array", "table", "array", ""), "complex_table"),
+    (("array", "", "array", ""), "complex"),
+    (("array", "", "integer", ""), "list_integer"),
+    (("array", "", "string", ""), "list_string"),
+    (("array", "", "string", "tag"), "list_string"),
+    (("array", "version", "string", "version"), "list_string_version"),
+    (("array", "date-time", "string", "date-time"), "list_string_datetime"),
+    (("array", "subnet", "string", "subnet"), "list_string_subnet"),
+    (("array", "discrete", "string", "logo"), "list_string"),
+    (("array", "ip", "string", "ip"), "list_string_ipaddress"),
+)
+
+
+GET_SCHEMAS_KEYS = ["name", "name_qual", "name_base"]
+GET_SCHEMA_KEYS = ["name_base", "name_qual", "name"]
+
+SCHEMAS_CUSTOM = {
+    "report_adapters_missing": {
+        "adapters_missing": {
+            "adapter_name": "report",
+            "column_name": "report:adapters_missing",
+            "column_title": "Report: Adapters Missing",
+            "is_complex": False,
+            "is_list": True,
+            "is_root": True,
+            "parent": "root",
+            "name": "adapters_missing",
+            "name_base": "adapters_missing",
+            "name_qual": "adapters_missing",
+            "title": "Adapters Missing",
+            "type": "string",
+            "type_norm": "list_string",
+            "is_custom": True,
+        }
+    }
+}
+
+MAX_BODY_LEN = 2000
+GENERIC_NAME = "AdapterBase"
+
+
+KEY_MAP_CNX = [
+    ("adapter_name", "Adapter", 0),
+    ("node_name", "Node", 0),
+    ("id", "ID", 0),
+    ("uuid", "UUID", 0),
+    ("working", "Working", 0),
+    ("error", "Error", 20),
+    ("label", "Label", 0),
+    ("schemas", None, 0),
+]
+
+KEY_MAP_ADAPTER = [
+    ("name", "Name", 0),
+    ("node_name", "Node", 0),
+    ("cnx_count_total", "Connections", 0),
+    ("cnx_count_broken", "Broken", 0),
+    ("cnx_count_working", "Working", 0),
+]
+
+KEY_MAP_SCHEMA = [
+    ("name", "Name", 0),
+    ("title", "Title", 20),
+    ("type", "Type", 0),
+    ("required", "Required", 0),
+    ("default", "Default", 0),
+    ("description", "Description", 20),
+    ("format", "Format", 0),
+]
+CNX_GONE = "Server is already gone, please try again after refreshing the page"
+CNX_RETRY = 15

@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
 """Authentication methods."""
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
-
 import abc
 
-from . import api, constants, exceptions, logs
+from .api.routers import API_VERSION
+from .constants import LOG_LEVEL_AUTH
+from .exceptions import AlreadyLoggedIn, AuthError, InvalidCredentials, NotLoggedIn
+from .logs import get_obj_log
 
 
-class Model(object):
+class Model:
     """Abstract base class for all Authentication methods."""
 
     @abc.abstractmethod
@@ -23,36 +23,21 @@ class Model(object):
 
     @abc.abstractmethod
     def check_login(self):
-        """Throw exc if not login.
-
-        Raises:
-            :exc:`exceptions.NotLoggedIn`
-
-        """
+        """Throw exc if not login."""
         raise NotImplementedError  # pragma: no cover
 
     @abc.abstractproperty
     def http(self):
-        """Get HttpClient object.
-
-        Returns:
-            :obj:`.http.Http`
-
-        """
+        """Get HttpClient object."""
         raise NotImplementedError  # pragma: no cover
 
     @abc.abstractproperty
     def is_logged_in(self):
-        """Check if login has been called.
-
-        Returns:
-            :obj:`bool`
-
-        """
+        """Check if login has been called."""
         raise NotImplementedError  # pragma: no cover
 
 
-class Mixins(object):
+class Mixins:
     """Mixins for Model."""
 
     _logged_in = False
@@ -68,8 +53,8 @@ class Mixins(object):
                 Credentials used by this Auth method.
 
         """
-        log_level = kwargs.get("log_level", constants.LOG_LEVEL_AUTH)
-        self._log = logs.get_obj_log(obj=self, level=log_level)
+        log_level = kwargs.get("log_level", LOG_LEVEL_AUTH)
+        self.LOG = get_obj_log(obj=self, level=log_level)
         """:obj:`logging.Logger`: Logger for this object."""
 
         self._http = http
@@ -88,12 +73,9 @@ class Mixins(object):
             :obj:`str`
 
         """
-        bits = [
-            "url={!r}".format(self.http.url),
-            "is_logged_in={}".format(self.is_logged_in),
-        ]
-        bits = "({})".format(", ".join(bits))
-        return "{c.__module__}.{c.__name__}{bits}".format(c=self.__class__, bits=bits)
+        bits = [f"url={self.http.url!r}", f"is_logged_in={self.is_logged_in}"]
+        bits = ", ".join(bits)
+        return f"{self.__class__.__module__}.{self.__class__.__name__}({bits})"
 
     def __repr__(self):
         """Show object info.
@@ -118,14 +100,12 @@ class Mixins(object):
         """Check HTTP client not already used by another Auth.
 
         Raises:
-            :exc:`exceptions.AuthError`
+            :exc:`AuthError`
 
         """
         auth_lock = getattr(self.http, "_auth_lock", None)
         if auth_lock:
-            msg = "{http} already being used by {auth}"
-            msg = msg.format(http=self.http, auth=auth_lock)
-            raise exceptions.AuthError(msg)
+            raise AuthError(f"{self.http} already being used by {auth_lock}")
 
     def _set_http_lock(self):
         """Set HTTP Client auth lock."""
@@ -133,13 +113,15 @@ class Mixins(object):
 
     def _validate(self):
         """Validate credentials."""
-        response = self.http(method="get", path=api.routers.ApiV1.devices.count)
+        response = self.http(method="get", path=API_VERSION.devices.count)
 
         try:
             response.raise_for_status()
         except Exception as exc:
             self._logged_in = False
-            raise exceptions.InvalidCredentials(auth=self, exc=exc)
+            raise InvalidCredentials(
+                f"Invalid credentials on {self} -- exception: {exc}"
+            )
 
         self._logged_in = True
 
@@ -153,11 +135,11 @@ class Mixins(object):
         """Throw exc if not login.
 
         Raises:
-            :exc:`exceptions.NotLoggedIn`
+            :exc:`NotLoggedIn`
 
         """
         if not self.is_logged_in:
-            raise exceptions.NotLoggedIn(auth=self)
+            raise NotLoggedIn(f"Must call login() on {self}")
 
     @property
     def is_logged_in(self):
@@ -200,14 +182,10 @@ class ApiKey(Mixins, Model):
     def login(self):
         """Login to API."""
         if self.is_logged_in:
-            raise exceptions.AlreadyLoggedIn(auth=self)
+            raise AlreadyLoggedIn(f"Already logged in on {self}")
 
         self.http.session.headers["api-key"] = self._creds["key"]
         self.http.session.headers["api-secret"] = self._creds["secret"]
-
         self._validate()
-
         self._logged_in = True
-
-        msg = "Successfully logged in using {}".format(self._cred_fields)
-        self._log.debug(msg)
+        self.LOG.debug(f"Successfully logged in using {self._cred_fields}")

@@ -1,26 +1,45 @@
 # -*- coding: utf-8 -*-
 """Command line interface for Axonius API Client."""
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
-
 import atexit
+import os
 
-import axonius_api_client as axonapi
 import click
 
-from ... import constants, tools
-from .. import cli_constants, context, options
+import axonius_api_client as axonapi
+
+from ...constants import PY36
+from ...tools import echo_error, json_reload, pathlib
+from ..context import CONTEXT_SETTINGS
+from ..options import AUTH, add_options
+
+SHELL_BANNER = """Welcome human. We have some refreshments available for you:
+
+    - ctx: Click context object
+    - client/c: Instance of axonius_api_client.connect.Connect
+    - jdump/j: Helper function to pretty print python objects
+    - axonapi: API client package itself
+
+API Objects:
+    - adapters/a: Instance of axonius_api_client.api.Adapters
+    - devices/d: Instance of axonius_api_client.api.Devices
+    - users/u: Instance of axonius_api_client.api.Users
+    - system/s: Instance of axonius_api_client.api.System
+"""
+
+SHELL_EXIT = """Goodbye human. We hope you enjoyed your stay."""
+
+HISTPATH = os.path.expanduser("~")
+
+HISTFILE = ".python_history"
 
 
 def jdump(data):
     """Pass."""
-    print(tools.json_reload(data))
+    print(json_reload(data))
 
 
-@click.command(name="shell", context_settings=cli_constants.CONTEXT_SETTINGS)
-@options.OPT_URL
-@options.OPT_KEY
-@options.OPT_SECRET
+@click.command(name="shell", context_settings=CONTEXT_SETTINGS)
+@add_options(AUTH)
 @click.pass_context
 def cmd(ctx, url, key, secret):  # noqa: D301
     """Start an interactive python shell.
@@ -67,8 +86,8 @@ def write_hist_file():
     """Pass."""
     import readline
 
-    histpath = tools.pathlib.Path(cli_constants.HISTPATH)
-    histfile = histpath / cli_constants.HISTFILE
+    histpath = pathlib.Path(HISTPATH)
+    histfile = histpath / HISTFILE
 
     histpath.mkdir(mode=0o700, exist_ok=True)
     histfile.touch(mode=0o600, exist_ok=True)
@@ -87,8 +106,8 @@ def register_readline(shellvars=None):
 
     shellvars = shellvars or {}
 
-    histpath = tools.pathlib.Path(cli_constants.HISTPATH)
-    histfile = histpath / cli_constants.HISTFILE
+    histpath = pathlib.Path(HISTPATH)
+    histfile = histpath / HISTFILE
 
     histpath.mkdir(mode=0o700, exist_ok=True)
     histfile.touch(mode=0o600, exist_ok=True)
@@ -106,7 +125,7 @@ def register_readline(shellvars=None):
         readline.parse_and_bind(pab)
     except Exception as exc:
         msg = "Unable to register history and autocomplete:\n{}".format(exc)
-        context.Context.echo_error(msg, abort=False)
+        echo_error(msg, abort=False)
 
 
 def spawn_shell(shellvars=None):
@@ -116,9 +135,9 @@ def spawn_shell(shellvars=None):
     shellvars = shellvars or {}
     register_readline(shellvars)
 
-    args = {"local": shellvars, "banner": cli_constants.SHELL_BANNER}
+    args = {"local": shellvars, "banner": SHELL_BANNER}
 
-    if constants.PY36:
-        args["exitmsg"] = cli_constants.SHELL_EXIT
+    if PY36:
+        args["exitmsg"] = SHELL_EXIT
 
     code.interact(**args)

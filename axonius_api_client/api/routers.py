@@ -1,12 +1,9 @@
 # -*- coding: utf-8 -*-
 """REST API route definitions."""
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
-
-from .. import tools
+from ..tools import join_url
 
 
-class Router(object):
+class Router:
     """Simple object store for REST API routes."""
 
     def __init__(self, object_type, base, version, **routes):
@@ -21,11 +18,11 @@ class Router(object):
         self._version = version
         self._base = base
         self._object_type = object_type
-        self.root = tools.join_url(base, object_type)
+        self.root = join_url(base, object_type)
         self._routes = ["root"]
         for k, v in routes.items():
             self._routes.append(k)
-            setattr(self, k, tools.join_url(self.root, v))
+            setattr(self, k, join_url(self.root, v))
 
     def __str__(self):
         """Show object info.
@@ -48,7 +45,7 @@ class Router(object):
         return self.__str__()
 
 
-class ApiV1(object):
+class ApiV1:
     """Routes provided by the Axonius REST API version 1."""
 
     version = 1
@@ -59,8 +56,10 @@ class ApiV1(object):
         base=base,
         version=version,
         by_id="{id}",
+        cached="cached",
         count="count",
         views="views",
+        view_by_id="views/saved/{id}",
         labels="labels",
         fields="fields",
     )
@@ -68,10 +67,12 @@ class ApiV1(object):
     devices = Router(
         object_type="devices",
         base=base,
+        cached="cached",
         version=version,
         by_id="{id}",
         count="count",
         views="views",
+        view_by_id="views/saved/{id}",
         labels="labels",
         fields="fields",
     )
@@ -89,11 +90,12 @@ class ApiV1(object):
         object_type="adapters",
         base=base,
         version=version,
-        cnxs="{adapter_name}/clients",
-        cnxs_uuid="{adapter_name}/clients/{cnx_uuid}",
-        upload_file="{adapter_name}/{node_id}/upload_file",
-        download_file="{adapter_name}/{node_id}/download_file",
-        config="{adapter_name}/config/{config_name}",
+        cnxs="{adapter_name_raw}/clients",
+        cnxs_uuid="{adapter_name_raw}/clients/{cnx_uuid}",
+        file_upload="{adapter_name_raw}/{adapter_node_id}/upload_file",
+        # file_download="{name}/{node_id}/download_file",
+        config_set="{adapter_name_raw}/config/{adapter_config_name}",
+        config_get="{adapter_name_plugin}/config/{adapter_config_name}",
     )
 
     alerts = Router(object_type="alerts", base=base, version=version)
@@ -126,3 +128,6 @@ class ApiV1(object):
         alerts,
         system,
     ]
+
+
+API_VERSION = ApiV1

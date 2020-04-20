@@ -1,25 +1,16 @@
 # -*- coding: utf-8 -*-
 """Command line interface for Axonius API Client."""
-from __future__ import absolute_import, division, print_function, unicode_literals
+from ..context import CONTEXT_SETTINGS, click
+from ..options import add_options
+from .grp_common import handler
+from .grp_options import LABELS_GET as OPTIONS
 
-import click
-
-from .. import cli_constants, options, serial
+METHOD = "get"
 
 
-@click.command(name="get", context_settings=cli_constants.CONTEXT_SETTINGS)
-@options.OPT_URL
-@options.OPT_KEY
-@options.OPT_SECRET
+@click.command(name=METHOD, context_settings=CONTEXT_SETTINGS)
+@add_options(OPTIONS)
 @click.pass_context
-def cmd(ctx, url, key, secret):
+def cmd(ctx, url, key, secret, **kwargs):
     """Get all labels (tags) that exist in the system."""
-    client = ctx.obj.start_client(url=url, key=key, secret=secret)
-
-    pp_grp = ctx.parent.parent.command.name
-    api = getattr(client, pp_grp)
-
-    with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
-        raw_data = api.labels.get()
-
-    print(serial.to_json(ctx=ctx, raw_data=raw_data))
+    handler(ctx=ctx, url=url, key=key, secret=secret, method=METHOD, **kwargs)

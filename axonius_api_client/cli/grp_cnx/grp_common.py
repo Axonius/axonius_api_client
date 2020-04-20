@@ -1,240 +1,241 @@
 # -*- coding: utf-8 -*-
 """Command line interface for Axonius API Client."""
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
+from ...api.parsers.tables import tablize_cnxs, tablize_schemas
+from ...constants import CNX_SANE_DEFAULTS
+from ...exceptions import CnxAddError
+from ...tools import json_dump, listify, pathlib
+from ..context import click
 
-import re
+PATH_PROMPT = click.Path(
+    exists=True,
+    file_okay=True,
+    dir_okay=False,
+    writable=False,
+    readable=True,
+    resolve_path=True,
+    allow_dash=False,
+    path_type=None,
+)
+HIDDEN = ["secret", "key", "password"]
 
-import click
 
-from ... import constants, tools
-from .. import cli_constants, serial
-
-
-def to_csv(ctx, raw_data, include_settings=True, joiner="\n", **kwargs):
+def add_handler(
+    ctx,
+    url,
+    key,
+    secret,
+    config,
+    export_format,
+    prompt_optional,
+    prompt_default,
+    adapter_name,
+    adapter_node,
+    **kwargs,
+):  # noqa
     """Pass."""
-    rows = []
 
-    simples = ["adapter_name", "node_name", "id", "uuid", "status_raw", "error"]
+    client = ctx.obj.start_client(url=url, key=key, secret=secret)
 
-    for cnx in raw_data:
-        cnx = cnx["cnx"] if "cnx" in cnx else cnx
-        row = {k: cnx[k] for k in simples}
-        if include_settings:
-            row["settings"] = serial.join_tv(obj=cnx["config"], joiner=joiner)
+    config = dict(config)
+    kwargs["kwargs_config"] = config
 
-        rows.append(row)
+    with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
+        adapter = client.adapters.get_by_name(name=adapter_name, node=adapter_node)
 
-    return serial.dictwriter(rows=rows)
+    schemas = list(adapter["schemas"]["cnx"].values())
+    schemas = reversed(sorted(schemas, key=lambda x: [x["required"], x["name"]]))
+
+    for schema in schemas:
+        prompt_schema(
+            schema=schema,
+            config=config,
+            prompt_optional=prompt_optional,
+            prompt_default=prompt_default,
+            adapter_name=adapter_name,
+        )
+
+    with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
+        try:
+            cnx_new = client.adapters.cnx.add(
+                adapter_name=adapter_name, adapter_node=adapter_node, **config
+            )
+            ctx.obj.echo_ok(msg=f"Connection added successfully!")
+
+        except CnxAddError as exc:
+            ctx.obj.echo_error(msg=f"{exc}", abort=False)
+            cnx_new = exc.cnx_new
+
+    handle_export(ctx=ctx, rows=cnx_new, export_format=export_format)
 
 
-def fixup_schema(schema, hiddens):
-    """Pass."""
-    if "enum" in schema:
-        schema["valid_choices"] = schema.pop("enum")
-
-    schema["hide_input"] = any([re.search(x, schema["name"]) for x in hiddens])
-
-    schema = {k: schema[k] for k in sorted(schema.keys())}
-    return schema
-
-
-def show_schema(ctx, schema, hiddens, err=True):
-    """Pass."""
-    smsg = "\n{s}\n  Configuration item schema:{it}"
-    smsg = smsg.format(s="*" * 40, it=serial.join_kv(obj=schema, indent=" " * 4))
-    click.secho(message=smsg, fg="blue", err=err)
-
-
-def handle_schema(ctx, config, schema, hiddens, prompt_opt, skips):
+def prompt_schema(schema, config, prompt_optional, prompt_default, adapter_name):
     """Pass."""
     name = schema["name"]
     required = schema["required"]
+    stype = schema["type"]
     default = schema.get("default", None)
-
-    show_schema(ctx=ctx, schema=schema, hiddens=hiddens, err=True)
-    hide_input = schema["hide_input"]
-
-    if config.get(name):
-        hasmsg = "\nSkipping item, was provided via '--config {v!r}=...'\n"
-        hasmsg = hasmsg.format(v=name)
-        click.secho(message=hasmsg, fg="cyan", err=True)
-        raise SkipItem()
-
-    if not required and any([re.search(x, name) for x in skips]):
-        skipmsg = "\nSkipping item, was provided via '--skip {v!r}'\n"
-        skipmsg = skipmsg.format(v=name)
-        click.secho(message=skipmsg, fg="cyan", err=True)
-        raise SkipItem()
-
-    if not required and not prompt_opt:
-        skipmsg = "\nSkipping optional item {v!r} due to --no-prompt-opt\n"
-        skipmsg = skipmsg.format(v=name)
-        click.secho(message=skipmsg, fg="cyan", err=True)
-        raise SkipItem()
-
-    ptype = determine_type(schema=schema)
-    skippable = not required and ptype is None
-
-    ptext = "\nProvide value for item{sk}"
-    ptext = ptext.format(sk=" (SKIP to skip)" if skippable else "")
-    ptext = click.style(text=ptext, fg="bright_blue")
-
-    value = click.prompt(
-        text=ptext,
-        default=default,
-        hide_input=hide_input,
-        type=ptype,
-        err=True,
-        show_default=True,
-        show_choices=True,
-    )
-
-    if format(value).upper() == "SKIP":  # pragma: no cover
-        skipmsg = "\nSkipping item {v!r} due to value 'SKIP'\n"
-        skipmsg = skipmsg.format(v=name)
-        click.secho(message=skipmsg, fg="cyan", err=True)
-        raise SkipItem()
-
-    return value
-
-
-def determine_type(schema):
-    """Pass."""
-    type_str = schema["type"]
+    fmt = schema.get("format", "")
     enum = schema.get("enum", [])
-    has_enum = "enum" in schema
 
-    ptype = None
+    if enum:
+        str_type = click.Choice(choices=enum, case_sensitive=True)
+    else:
+        str_type = None
 
-    if type_str == "string" and has_enum and isinstance(enum, constants.LIST) and enum:
-        ptype = click.Choice(choices=enum, case_sensitive=True)
-    elif type_str in cli_constants.SETTING_TYPE_MAP:
-        ptype = cli_constants.SETTING_TYPE_MAP[type_str]
+    schema["hide_input"] = hide_input = fmt == "password" or name in HIDDEN
 
-    return ptype
-
-
-class SkipItem(Exception):
-    """Pass."""
-
-
-def handle_response(ctx, cnx, action, cnx_error=True):
-    """Pass."""
-    had_cnx_error = bool(cnx["cnx"]["error"])
-    had_error = cnx["response_had_error"]
-    response = cnx["response"]
-
-    info_keys = ["adapter_name", "node_name", "id", "uuid", "status", "error"]
-    cnxinfo = {k: cnx["cnx"][k] for k in info_keys}
-
-    color = "red" if had_error or had_cnx_error else "green"
-
-    msg = [
-        "\nFINISHED {a} CONNECTION",
-        "Had error: {he}",
-        "response: {resp}",
-        "connection:{ci}\n",
-    ]
-    msg = tools.join_cr(obj=msg, pre=False, indent="  ").format(
-        a=action.upper(),
-        he=had_error or (had_cnx_error and cnx_error),
-        resp=tools.json_dump(response).strip(),
-        ci=serial.join_kv(obj=cnxinfo, indent="   "),
-    )
-    click.secho(message=msg, fg=color, err=True)
-
-    return had_error, had_cnx_error
-
-
-def get_sources(ctx):
-    """Pass."""
-    pp_grp = ctx.parent.parent.command.name
-    p_grp = ctx.parent.command.name
-
-    src_cmds = ["{pp} {p} get", "{pp} get"]
-    src_cmds = [x.format(pp=pp_grp, p=p_grp) for x in src_cmds]
-    return src_cmds
-
-
-def show_sources(ctx, param=None, value=None):
-    """Pass."""
-    if value:
-        pp_grp = ctx.parent.parent.command.name
-        p_grp = ctx.parent.command.name
-        grp = ctx.command.name
-
-        this_grp = "{pp} {p} {g}".format(pp=pp_grp, p=p_grp, g=grp)
-        this_cmd = "{tg} --rows".format(tg=this_grp)
-
-        src_cmds = get_sources(ctx=ctx)
-        msg = serial.ensure_srcs_msg(this_cmd=this_cmd, src_cmds=src_cmds)
-        click.secho(message=msg, err=True, fg="green")
-        ctx.exit(0)
-
-
-def get_rows(ctx, rows):
-    """Pass."""
-    pp_grp = ctx.parent.parent.command.name
-    p_grp = ctx.parent.command.name
-    grp = ctx.command.name
-
-    this_grp = "{pp} {p} {g}".format(pp=pp_grp, p=p_grp, g=grp)
-    this_cmd = "{tg} --rows".format(tg=this_grp)
-
-    src_cmds = get_sources(ctx=ctx)
-    rows = serial.json_to_rows(
-        ctx=ctx, stream=rows, this_cmd=this_cmd, src_cmds=src_cmds
-    )
-
-    serial.check_rows_type(
-        ctx=ctx, rows=rows, this_cmd=this_cmd, src_cmds=src_cmds, all_items=True
-    )
-
-    rows = serial.collapse_rows(rows=rows, key="cnx")
-
-    serial.ensure_keys(
-        ctx=ctx,
-        rows=rows,
-        this_cmd=this_cmd,
-        src_cmds=src_cmds,
-        keys=[
-            "adapter_name",
-            "adapter_name_raw",
-            "config_raw",
-            "node_id",
-            "node_name",
-            "id",
-            "uuid",
-            "status",
-            "error",
-        ],
-        all_items=True,
-    )
-    return rows
-
-
-def check_empty(
-    ctx, this_data, prev_data, value_type, value, objtype, known_cb, known_cb_key
-):
-    """Pass."""
-    if value in constants.EMPTY:
+    if name in config:
         return
 
-    value = tools.join_comma(obj=value, empty=False)
+    sane_defaults = CNX_SANE_DEFAULTS.get(adapter_name, CNX_SANE_DEFAULTS["all"])
+    if name in sane_defaults and default is None:
+        default = sane_defaults[name]
 
-    if not this_data:
-        valid = tools.join_cr(obj=known_cb(**{known_cb_key: prev_data}))
-        msg = "Valid {objtype}:{valid}\n"
-        msg = msg.format(valid=valid, objtype=objtype)
-        ctx.obj.echo_error(msg, abort=False)
+    if not prompt_default and default is not None:
+        config[name] = default
+        return
 
-        msg = "No {objtype} found when searching by {value_type}: {value}"
-        msg = msg.format(objtype=objtype, value_type=value_type, value=value)
-        ctx.obj.echo_error(msg)
+    if not required:
+        if not prompt_optional:
+            return
 
-    msg = "Found {cnt} {objtype} by {value_type}: {value}"
-    msg = msg.format(
-        objtype=objtype, cnt=len(this_data), value_type=value_type, value=value
-    )
-    ctx.obj.echo_ok(msg)
+        show_schema(schema=schema)
+
+        do_prompt = click.prompt(
+            text="Prompt for this optional item?",
+            default=True,
+            type=click.BOOL,
+            err=True,
+            show_default=True,
+        )
+
+        if not do_prompt:
+            return
+    else:
+        show_schema(schema=schema)
+
+    if stype == "file":
+        value = click.prompt(text="Enter value", type=PATH_PROMPT, err=True)
+        value = pathlib.Path(value).expanduser().resolve()
+
+    if stype == "bool":
+        value = click.prompt(
+            text="Enter value",
+            default=default,
+            type=click.BOOL,
+            err=True,
+            show_default=True,
+            show_choices=True,
+        )
+
+    if stype in ["number", "integer"]:
+        value = click.prompt(
+            text="Enter value",
+            default=default,
+            type=click.INT,
+            err=True,
+            show_default=True,
+            show_choices=True,
+        )
+
+    if stype == "array":
+        value = click.prompt(
+            text="Enter value",
+            default=default,
+            err=True,
+            type=str_type,
+            hide_input=hide_input,
+            show_default=True,
+            show_choices=True,
+        )
+        value = [x.strip() for x in value.strip().split(",") if x.strip()]
+
+    if stype == "string":
+        value = click.prompt(
+            text="Enter value",
+            default=default,
+            err=True,
+            type=str_type,
+            hide_input=hide_input,
+            show_default=True,
+            show_choices=True,
+        )
+
+    config[name] = value
+
+
+def show_schema(schema, err=True):
+    """Pass."""
+    rkw = ["{}: {}".format(k, v) for k, v in schema.items()]
+    rkw = "\n  " + "\n  ".join(rkw)
+    click.secho(message=f"\n***  Configuration schema:{rkw}", fg="blue", err=err)
+
+
+def get_handler(ctx, url, key, secret, export_format, **kwargs):
+    """Pass."""
+    client = ctx.obj.start_client(url=url, key=key, secret=secret)
+
+    with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
+        rows = client.adapters.cnx.get_by_adapter(**kwargs)
+    handle_export(ctx=ctx, rows=rows, export_format=export_format)
+
+
+def get_by_id_handler(ctx, url, key, secret, export_format, **kwargs):
+    """Pass."""
+    client = ctx.obj.start_client(url=url, key=key, secret=secret)
+
+    with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
+        rows = client.adapters.cnx.get_by_id(**kwargs)
+    handle_export(ctx=ctx, rows=rows, export_format=export_format)
+
+
+def handle_export(ctx, rows, export_format):
+    """Pass."""
+    if export_format == "json":
+        if isinstance(rows, list):
+            for row in rows:
+                row.pop("schemas")
+        else:
+            rows.pop("schemas")
+        click.secho(json_dump(rows))
+    elif export_format == "json-config":
+        if isinstance(rows, list):
+            rows = [x["config"] for x in rows]
+        else:
+            rows = rows["config"]
+        click.secho(json_dump(rows))
+    elif export_format == "json-full":
+        click.secho(json_dump(rows))
+    elif export_format == "table":
+        rows = listify(rows)
+        click.secho(tablize_cnxs(cnxs=rows))
+    elif export_format == "table-schemas":
+        if isinstance(rows, list):
+            schemas = rows[0]["schemas"]
+        else:
+            schemas = rows["schemas"]
+        click.secho(
+            tablize_schemas(
+                schemas=schemas,
+                err=None,
+                fmt="simple",
+                footer=True,
+                orig=True,
+                orig_width=20,
+            )
+        )
+    elif export_format == "str-args":
+        rows = listify(rows)
+        lines = "\n".join(
+            [
+                "--node-name {node_name} --name {adapter_name} --id {id}".format(**row)
+                for row in rows
+            ]
+        )
+        click.secho(lines)
+    elif export_format == "str":
+        rows = listify(rows)
+        lines = "\n".join(["{id}".format(**row) for row in rows])
+        click.secho(lines)
+
+    ctx.exit(0)

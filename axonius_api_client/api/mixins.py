@@ -1,18 +1,20 @@
 # -*- coding: utf-8 -*-
 """API model base classes and mixins."""
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
-
 import abc
+import math
+import time
 
-from .. import constants, exceptions, logs
+from ..constants import LOG_LEVEL_API, MAX_BODY_LEN, MAX_PAGE_SIZE
+from ..exceptions import JsonError, JsonInvalid, NotFoundError, ResponseNotOk
+from ..logs import get_obj_log
+from ..tools import dt_now, dt_sec_ago, is_int, json_reload
 
 
-class Model(object):
+class Model:
     """API model base class."""
 
     @abc.abstractproperty
-    def _router(self):
+    def router(self):
         """Router for this API model.
 
         Returns:
@@ -21,20 +23,7 @@ class Model(object):
         raise NotImplementedError  # pragma: no cover
 
 
-class ModelAsset(Model):
-    """API model base class for asset types."""
-
-    @abc.abstractproperty
-    def _default_fields(self):
-        """Fields to add to all get calls for this asset type.
-
-        Returns:
-            :obj:`list` of :obj:`dict`: fields to add to
-        """
-        raise NotImplementedError  # pragma: no cover
-
-
-class Mixins(object):
+class ModelMixins(Model):
     """Mixins for :obj:`Model` objects."""
 
     def __init__(self, auth, **kwargs):
@@ -44,12 +33,13 @@ class Mixins(object):
             auth (:obj:`.auth.Model`): object to use for auth and sending API requests
             **kwargs: passed to :meth:`Mixins._init`
         """
-        log_level = kwargs.get("log_level", constants.LOG_LEVEL_API)
-        self._log = logs.get_obj_log(obj=self, level=log_level)
+        log_level = kwargs.get("log_level", LOG_LEVEL_API)
+        self.LOG = get_obj_log(obj=self, level=log_level)
         """:obj:`logging.Logger`: Logger for this object."""
 
-        self._auth = auth
+        self.auth = auth
         """:obj:`.auth.Model`: object to use for auth and sending API requests."""
+        self.http = auth.http
 
         self._init(auth=auth, **kwargs)
 
@@ -65,17 +55,38 @@ class Mixins(object):
 
     def __str__(self):
         """Show info for this model object."""
-        return "{c.__module__}.{c.__name__}(auth={auth!r}, url={url!r})".format(
-            c=self.__class__,
-            auth=self._auth.__class__.__name__,
-            url=self._auth._http.url,
-        )
+        cls = self.__class__
+        auth = self.auth.__class__.__name__
+        url = self.http.url
+        return f"{cls.__module__}.{cls.__name__}(auth={auth!r}, url={url!r})"
 
     def __repr__(self):
         """Show info for this model object."""
         return self.__str__()
 
-    def _request(
+    def _build_err_msg(self, response, error, exc=None):
+        """Pass."""
+        request_size = len(response.request.body or "")
+        response_size = len(response.text or "")
+
+        msgs = [
+            f"Original exception: {exc}",
+            f"Response details:",
+            f"  code: {response.status_code!r}",
+            f"  reason: {response.reason!r}",
+            f"  method={response.request.method!r}",
+            f"  url: {response.url!r}",
+            f"  request_size: {request_size}",
+            f"  response_size: {response_size}",
+            f"Request Body:",
+            json_reload(obj=response.request.body, error=False, trim=MAX_BODY_LEN),
+            f"Response Body:",
+            json_reload(obj=response.text, error=False, trim=MAX_BODY_LEN),
+            error,
+        ]
+        return "\n" + "\n".join(msgs)
+
+    def request(
         self,
         path,
         method="get",
@@ -120,7 +131,7 @@ class Mixins(object):
         sargs.update(kwargs)
         sargs.update({"path": path, "method": method})
 
-        response = self._auth.http(**sargs)
+        response = self.http(**sargs)
 
         if raw:
             return response
@@ -149,16 +160,22 @@ class Mixins(object):
                 * if ``False`` silently ignore bad response status codes
 
         Raises:
-            :exc:`.exceptions.ResponseNotOk`:
+            :exc:`.ResponseNotOk`:
                 if response has a status code that is an error and error_status is True
         """
         if error_status:
             try:
                 response.raise_for_status()
             except Exception as exc:
-                raise exceptions.ResponseNotOk(
-                    response=response, exc=exc, details=True, bodies=True
+                respexc = ResponseNotOk(
+                    self._build_err_msg(
+                        response=response,
+                        error="Response has a bad status code!",
+                        exc=exc,
+                    )
                 )
+                respexc.exc = exc
+                raise respexc
 
     def _check_response_json(
         self, response, error_json_bad_status=True, error_json_invalid=True
@@ -178,10 +195,10 @@ class Mixins(object):
                 * if ``False`` return the text of response if response is invalid json
 
         Raises:
-            :exc:`.exceptions.JsonInvalid`: if error_json_invalid is True and
+            :exc:`.JsonInvalid`: if error_json_invalid is True and
                 response has invalid json
 
-            :exc:`.exceptions.JsonError`: if error_json_bad_status is True and
+            :exc:`.JsonError`: if error_json_bad_status is True and
                 response is a json dict that has a non-empty error key or a
                 status key that == error
 
@@ -195,7 +212,14 @@ class Mixins(object):
             data = response.json()
         except Exception as exc:
             if error_json_invalid:
-                raise exceptions.JsonInvalid(response=response, exc=exc)
+                respexc = JsonInvalid(
+                    self._build_err_msg(
+                        response=response, error="JSON is not valid in response", exc=exc
+                    )
+                )
+                respexc.exc = exc
+                raise respexc
+
             return response.text
 
         if isinstance(data, dict):
@@ -203,13 +227,242 @@ class Mixins(object):
             has_error_status = data.get("status") == "error"
 
             if (has_error or has_error_status) and error_json_bad_status:
-                raise exceptions.JsonError(response=response, data=data)
-
+                respexc = JsonError(
+                    self._build_err_msg(
+                        response=response, error=f"Found error in response JSON"
+                    )
+                )
+                raise respexc
         return data
 
 
-class Child(object):
-    """Mixins model for children of :obj:`Model`."""
+class PagingMixins:
+    """Pass."""
+
+    def get(self, generator=False, **kwargs):
+        """Get objects for a given query using paging.
+
+        Args:
+            generator (:obj:`bool`, optional): default ``False`` -
+
+                * True: return an iterator for assets that will yield rows
+                  as they are fetched
+                * False: return a list of rows after all have been fetched
+            **kwargs: passed to :meth:`get_generator`
+
+        Yields:
+            :obj:`dict`: row if generator is True
+
+        Returns:
+            :obj:`list` of :obj:`dict`: rows if generator is False
+        """
+        gen = self.get_generator(**kwargs)
+
+        if generator:
+            return gen
+
+        return list(gen)
+
+    def get_generator(self, **kwargs):
+        """Pass."""
+        raise NotImplementedError  # pragma: no cover
+
+    def _get_page(self, state, store):
+        page_start = dt_now()
+        state["page_num"] += 1
+
+        state["page"] = self._get(
+            query=store["query"],
+            page_size=state["page_size"],
+            row_start=state["rows_fetched"],
+        )
+        rows = state["page"].pop("assets", [])
+
+        self._get_page_handle(state=state, store=store, rows=rows)
+
+        time_page = dt_sec_ago(obj=page_start)
+        rows_page = len(rows)
+
+        state["rows_start"] += rows_page
+        state["rows_fetched"] += rows_page
+        state["rows_page"] = rows_page
+        state["time_page"] = time_page
+        state["time_fetch"] += time_page
+
+        self.LOG.debug("FETCHED PAGE: {}".format(state))
+
+        return rows
+
+    def _get_page_handle(self, rows, state, store):
+        rows_total_page = state["page"].get("page", {}).get("totalResources")
+        rows_total = state["rows_total"]
+        page_size = state["page_size"]
+        page_num = state["page_num"]
+
+        if is_int(rows_total_page):
+            rows_total = rows_total_page
+        else:
+            rows_total_page = rows_total
+
+        page_total = math.ceil(rows_total_page / page_size)
+
+        state["page_total"] = page_total
+        state["page_left"] = page_total - page_num
+        state["rows_total"] = rows_total
+
+    def _get_page_size(self, page_size=MAX_PAGE_SIZE, max_rows=None):
+        if max_rows and max_rows < page_size:
+            self.LOG.debug(f"CHANGED PAGE SIZE {page_size} to max_rows {max_rows}")
+            page_size = max_rows
+
+        if page_size > MAX_PAGE_SIZE:
+            self.LOG.debug(f"CHANGED PAGE SIZE {page_size} to max {MAX_PAGE_SIZE}")
+            page_size = MAX_PAGE_SIZE
+
+        return page_size
+
+    def _get_page_stop_rows(self, row, rows, state, store):
+        if state.get("stop", False):
+            stop = state.get("stop_msg", "")
+            self.LOG.debug(f"STOPPED ROW LOOP: STOP called {stop}")
+            return True
+        if state["max_rows"] and state["rows_processed"] >= state["max_rows"]:
+            self.LOG.debug("STOPPED ROW LOOP: HIT MAX_ROWS")
+            return True
+        return False
+
+    def _get_page_stop_fetch(self, rows, state, store):
+        if not rows:
+            self.LOG.debug(f"STOPPED FETCH LOOP: HIT NO ROWS state={state}")
+            return True
+
+        if state.get("stop", False):
+            stop = state.get("stop_msg", "")
+            self.LOG.debug(f"STOPPED FETCH LOOP: STOP called {stop} state={state}")
+            return True
+
+        if state["max_pages"] and state["page_num"] >= state["max_pages"]:
+            self.LOG.debug(f"STOPPED FETCH LOOP: HIT MAX_PAGES state={state}")
+            return True
+
+        if state["max_rows"] and state["rows_fetched"] >= state["max_rows"]:
+            self.LOG.debug(f"STOPPED FETCH LOOP: HIT MAX_ROWS state={state}")
+            return True
+
+        return False
+
+
+class PagingMixinsObject(PagingMixins):
+    """Pass."""
+
+    def get_by_uuid(self, value, **kwargs):
+        """Get a single saved query by name.
+
+        Args:
+            name (:obj:`str`): name of saved query to get
+            **kwargs: passed to :meth:`get`
+
+        Returns:
+            :obj:`dict`: saved query
+        """
+        rows = self.get(**kwargs)
+
+        for row in rows:
+            if row["uuid"] == value:
+                return row
+
+        tmpl = "name: {name!r}, uuid: {uuid!r}".format
+        valid = "\n  " + "\n  ".join(sorted([tmpl(**row) for row in rows]))
+        raise NotFoundError(f"uuid {value!r} not found, valid:{valid}")
+
+    def get_by_name(self, value, **kwargs):
+        """Get a single saved query by name.
+
+        Args:
+            name (:obj:`str`): name of saved query to get
+            **kwargs: passed to :meth:`get`
+
+        Returns:
+            :obj:`dict`: saved query
+        """
+        rows = self.get(**kwargs)
+
+        for row in rows:
+            if row["name"] == value:
+                return row
+
+        tmpl = "name: {name!r}".format
+        valid = "\n  " + "\n  ".join(sorted([tmpl(**row) for row in rows]))
+        raise NotFoundError(f"name {value!r} not found, valid:{valid}")
+
+    def get_generator(
+        self,
+        query=None,
+        max_rows=None,
+        max_pages=None,
+        page_size=MAX_PAGE_SIZE,
+        page_start=0,
+        page_sleep=0,
+        **kwargs,
+    ):
+        """Get saved queries using paging.
+
+        Args:
+            query (:obj:`str`, optional): default ``None`` - filter rows to return
+
+                This is NOT a query built by the query wizard!
+            page_size (:obj:`int`, optional): default ``0`` - for paging, return N rows
+            max_rows (:obj:`int`, optional): default ``None`` - return N assets
+
+        Returns:
+            :obj:`list` of :obj:`dict`: list of saved query metadata
+        """
+        page_size = self._get_page_size(page_size=page_size, max_rows=max_rows)
+
+        store = {"query": query}
+        state = {
+            "max_pages": max_pages,
+            "max_rows": max_rows,
+            "page": {},
+            "page_cursor": None,
+            "page_left": 0,
+            "page_num": page_start,
+            "page_size": page_size,
+            "page_sleep": page_sleep,
+            "page_total": 0,
+            "rows_fetched": 0,
+            "rows_page": 0,
+            "rows_processed": 0,
+            "rows_start": page_start * page_size,
+            "rows_total": 0,
+            "time_fetch": 0,
+            "time_page": 0,
+        }
+
+        self.LOG.info(f"START FETCH store={store}")
+
+        while True:
+            rows = self._get_page(state=state, store=store)
+            for row in rows:
+                yield row
+
+                state["rows_processed"] += 1
+
+                if self._get_page_stop_rows(
+                    row=row, state=state, store=store, rows=rows
+                ):
+                    break
+
+            if self._get_page_stop_fetch(rows=rows, state=state, store=store):
+                break
+
+            time.sleep(state["page_sleep"])
+
+        self.LOG.info(f"FINISH FETCH store={store}")
+
+
+class ChildMixins:
+    """Mixins model for children of :obj:`Mixins`."""
 
     def __init__(self, parent):
         """Mixins model for children of :obj:`Model`.
@@ -217,8 +470,12 @@ class Child(object):
         Args:
             parent (:obj:`Model`): parent API model of this child
         """
-        self._parent = parent
-        self._log = parent._log.getChild(self.__class__.__name__)
+        self.parent = parent
+        self.http = parent.http
+        self.auth = parent.auth
+        self.router = parent.router
+        self.request = parent.request
+        self.LOG = parent.LOG.getChild(self.__class__.__name__)
         self._init(parent=parent)
 
     def _init(self, parent):
@@ -229,69 +486,10 @@ class Child(object):
         """
         pass
 
-    def _request(self, **kwargs):
-        """Get the response of parents :obj:`Mixins._request`.
-
-        Args:
-            **kwargs: passed to :obj:`Mixins._request`
-
-        Returns:
-            :obj:`object`: response from :obj:`Mixins._request`
-        """
-        return self._parent._request(**kwargs)
-
-    @property
-    def _router(self):
-        """Get the parents :attr:`Model._router`.
-
-        Returns:
-            :obj:`.routers.Router`: parents REST API route defs
-        """
-        return self._parent._router
-
     def __str__(self):
         """Show info for this model object."""
-        return "{} for {}".format(self.__class__.__name__, self._parent)
+        return f"{self.__class__.__name__} for {self.parent}"
 
     def __repr__(self):
         """Show info for this model object."""
-        return self.__str__()
-
-
-class Parser(object):
-    """Parser base class."""
-
-    def __init__(self, raw, parent, **kwargs):
-        """Parser base class.
-
-        Args:
-            raw (:obj:`object`): raw unparsed object
-            parent (:obj:`Model` or :obj:`Child`):
-                parent that called this parser
-        """
-        self._parent = parent
-        self._raw = raw
-        self._log = parent._log.getChild(self.__class__.__name__)
-        self._init(parent=parent)
-
-    def _init(self, parent):
-        """Post init method for subclasses to use for extra setup.
-
-        Args:
-            parent (:obj:`Model` or :obj:`Child`):
-                parent that called this parser
-        """
-        pass
-
-    @abc.abstractmethod
-    def parse(self):
-        """Get the parsed object supplied to init."""
-        raise NotImplementedError  # pragma: no cover
-
-    def __str__(self):
-        """Show info for this parser object."""
-        return "{} for {}".format(self.__class__.__name__, self._parent)
-
-    def __repr__(self):
-        """Show info for this parser object."""
         return self.__str__()
