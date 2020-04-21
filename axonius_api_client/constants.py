@@ -190,6 +190,16 @@ DEFAULT_PERM = "ReadOnly"
 
 VALID_PERMS = ["Restricted", "ReadWrite", "ReadOnly"]
 """:obj:`list` of :obj:`str`: valid user permissions"""
+PERM_SETS = [
+    "Adapters",
+    "Dashboard",
+    "Devices",
+    "Enforcements",
+    "Instances",
+    "Reports",
+    "Settings",
+    "Users",
+]
 
 FIELD_TRIM_LEN = 32000
 FIELD_TRIM_STR = "...TRIMMED - {field_len} characters over {trim_len}"

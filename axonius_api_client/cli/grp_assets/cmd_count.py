@@ -13,7 +13,7 @@ OPTIONS = [
 @click.command(name="count", context_settings=CONTEXT_SETTINGS)
 @add_options(OPTIONS)
 @click.pass_context
-def cmd(ctx, url, key, secret, query_file, **kwargs):
+def cmd(ctx, url, key, secret, query_file, help_detailed=None, **kwargs):
     """Get the count of assets from a query."""
     if query_file:
         kwargs["query"] = query_file.read().strip()

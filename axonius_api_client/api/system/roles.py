@@ -36,8 +36,8 @@ class Roles(ChildMixins):
         if name:
             role_names = self.get_names(roles=roles)
             if name not in role_names:
-                valid = ", ".join(role_names)
-                raise NotFoundError(f"Role not found {name!r}, valid roles: {valid}")
+                valid = "\n" + "\n".join(role_names)
+                raise NotFoundError(f"Role not found {name!r}, valid roles:{valid}")
             return [x for x in roles if x["name"] == name][0]
         return roles
 
@@ -181,8 +181,8 @@ class Roles(ChildMixins):
     def _check_valid_perm(self, name, value):
         """Pass."""
         if value not in VALID_PERMS:
-            valids = ", ".join(VALID_PERMS)
-            msg = f"Invalid permission {value!r} for {name!r} - Must be one of {valids}"
+            valids = "\n" + "\n".join(VALID_PERMS)
+            msg = f"Invalid permission {value!r} for {name!r} - Must be one of:{valids}"
             raise ApiError(msg)
 
     def _check_valid_perms(

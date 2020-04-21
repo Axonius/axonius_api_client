@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 """API model for working with system configuration."""
+import math
+
 from ..mixins import ChildMixins
 
 
@@ -20,7 +22,7 @@ class Meta(ChildMixins):
         Returns:
             :obj:`dict`: disk usage metadata
         """
-        return self._historical_sizes()
+        return parse_sizes(self._historical_sizes())
 
     def _init(self, parent):
         """Post init method for subclasses to use for extra setup.
@@ -47,3 +49,13 @@ class Meta(ChildMixins):
         """
         path = self.router.meta_historical_sizes
         return self.request(method="get", path=path)
+
+
+def parse_sizes(raw):
+    """Pass."""
+    parsed = {}
+    parsed["disk_free_mb"] = math.floor(raw["disk_free"] / 1024 / 1024)
+    parsed["disk_used_mb"] = math.ceil(raw["disk_used"] / 1024 / 1024)
+    parsed["historical_sizes_devices"] = raw["entity_sizes"]["Devices"]
+    parsed["historical_sizes_users"] = raw["entity_sizes"]["Users"]
+    return parsed

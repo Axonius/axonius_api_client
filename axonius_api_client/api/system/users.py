@@ -32,8 +32,8 @@ class Users(ChildMixins):
         if name:
             names = self.get_names(users=users)
             if name not in names:
-                valid = ", ".join(names)
-                raise NotFoundError(f"User not found {name!r}, valid users: {valid}")
+                valid = "\n" + "\n".join(names)
+                raise NotFoundError(f"User not found {name!r}, valid users:{valid}")
             return [x for x in users if x["user_name"] == name][0]
         return users
 
@@ -44,13 +44,14 @@ class Users(ChildMixins):
 
     def update(self, name, firstname=None, lastname=None, password=None):
         """Pass."""
+        user = self.get(name=name)
+
         one_of = [firstname, lastname, password]
         if not any(one_of):
             req = ", ".join(["firstname", "lastname", "password"])
             raise ApiError(f"Must supply at least one of: {req!r}")
 
         _, password = parse_unchanged(value=password)
-        user = self.get(name=name)
         uuid = user["uuid"]
 
         self._update(
@@ -60,6 +61,7 @@ class Users(ChildMixins):
 
     def update_role(self, name, rolename):
         """Pass."""
+        # XXX check if name == admin?
         user = self.get(name=name)
         role = self.parent.roles.get(name=rolename)
 
