@@ -2,6 +2,7 @@
 """Command line interface for Axonius API Client."""
 from ....api.parsers.tables import tablize_cnxs, tablize_schemas
 from ....constants import CNX_SANE_DEFAULTS
+from ....exceptions import CnxAddError
 from ....tools import json_dump, listify, pathlib
 from ...context import click
 
@@ -18,6 +19,29 @@ PATH_PROMPT = click.Path(
 
 HIDDEN = ["secret", "key", "password"]
 
+PROMPTS = [
+    click.option(
+        "--prompt-optional / --no-prompt-optional",
+        "-po / -npo",
+        "prompt_optional",
+        help="Prompt for optional items that are not supplied.",
+        is_flag=True,
+        default=True,
+        show_envvar=True,
+        show_default=True,
+    ),
+    click.option(
+        "--prompt-default / --no-prompt-default",
+        "-pd / -npd",
+        "prompt_default",
+        help="Prompt for items that have a default.",
+        is_flag=True,
+        default=True,
+        show_envvar=True,
+        show_default=True,
+    ),
+]
+
 EXPORT = click.option(
     "--export-format",
     "-xf",
@@ -30,9 +54,45 @@ EXPORT = click.option(
     show_envvar=True,
     show_default=True,
 )
+ID_CNX = click.option(
+    "--id",
+    "-i",
+    "cnx_id",
+    help="ID of connection",
+    required=True,
+    show_envvar=True,
+    show_default=True,
+)
 
 
-def prompt_schema(schema, config, prompt_optional, prompt_default, adapter_name):
+def prompt_config(
+    ctx,
+    client,
+    new_config,
+    adapter_name,
+    adapter_node,
+    prompt_optional,
+    prompt_default,
+    **kwargs,
+):
+    """Pass."""
+    with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
+        adapter = client.adapters.get_by_name(name=adapter_name, node=adapter_node)
+
+    schemas = list(adapter["schemas"]["cnx"].values())
+    schemas = reversed(sorted(schemas, key=lambda x: [x["required"], x["name"]]))
+
+    for schema in schemas:
+        prompt_schema(
+            schema=schema,
+            new_config=new_config,
+            prompt_optional=prompt_optional,
+            prompt_default=prompt_default,
+            adapter=adapter,
+        )
+
+
+def prompt_schema(schema, new_config, prompt_optional, prompt_default, adapter):
     """Pass."""
     name = schema["name"]
     required = schema["required"]
@@ -48,15 +108,17 @@ def prompt_schema(schema, config, prompt_optional, prompt_default, adapter_name)
 
     schema["hide_input"] = hide_input = fmt == "password" or name in HIDDEN
 
-    if name in config:
+    if name in new_config:
+        if stype == "file":
+            new_config[name] = pathlib.Path(new_config[name]).expanduser().resolve()
         return
 
-    sane_defaults = CNX_SANE_DEFAULTS.get(adapter_name, CNX_SANE_DEFAULTS["all"])
+    sane_defaults = CNX_SANE_DEFAULTS.get(adapter["name"], CNX_SANE_DEFAULTS["all"])
     if name in sane_defaults and default is None:
         default = sane_defaults[name]
 
     if not prompt_default and default is not None:
-        config[name] = default
+        new_config[name] = default
         return
 
     if not required:
@@ -125,7 +187,7 @@ def prompt_schema(schema, config, prompt_optional, prompt_default, adapter_name)
             show_choices=True,
         )
 
-    config[name] = value
+    new_config[name] = value
 
 
 def show_schema(schema, err=True):
@@ -135,7 +197,23 @@ def show_schema(schema, err=True):
     click.secho(message=f"\n***  Configuration schema:{rkw}", fg="blue", err=err)
 
 
-def handle_export(ctx, rows, export_format):
+def add_cnx(ctx, client, adapter_name, adapter_node, new_config, **kwargs):
+    """Pass."""
+    with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
+        try:
+            cnx_new = client.adapters.cnx.add(
+                adapter_name=adapter_name, adapter_node=adapter_node, **new_config,
+            )
+            ctx.obj.echo_ok(msg=f"Connection added successfully!")
+
+        except CnxAddError as exc:
+            ctx.obj.echo_error(msg=f"{exc}", abort=False)
+            cnx_new = exc.cnx_new
+
+    handle_export(ctx=ctx, rows=cnx_new, **kwargs)
+
+
+def handle_export(ctx, rows, export_format, **kwargs):
     """Pass."""
     if export_format == "json":
         if isinstance(rows, list):
@@ -198,96 +276,3 @@ def handle_export(ctx, rows, export_format):
         ctx.exit(0)
 
     ctx.exit(1)
-
-
-# def get_handler(ctx, url, key, secret, export_format, **kwargs):
-#     """Pass."""
-#     client = ctx.obj.start_client(url=url, key=key, secret=secret)
-
-#     with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
-#         rows = client.adapters.cnx.get_by_adapter(**kwargs)
-#     handle_export(ctx=ctx, rows=rows, export_format=export_format)
-
-
-# def get_by_id_handler(ctx, url, key, secret, export_format, **kwargs):
-#     """Pass."""
-#     client = ctx.obj.start_client(url=url, key=key, secret=secret)
-
-#     with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
-#         rows = client.adapters.cnx.get_by_id(**kwargs)
-#     handle_export(ctx=ctx, rows=rows, export_format=export_format)
-
-# def add_handler(
-#     ctx,
-#     url,
-#     key,
-#     secret,
-#     config,
-#     export_format,
-#     prompt_optional,
-#     prompt_default,
-#     adapter_name,
-#     adapter_node,
-#     **kwargs,
-# ):  # noqa
-#     """Pass."""
-
-#     client = ctx.obj.start_client(url=url, key=key, secret=secret)
-
-#     config = dict(config)
-#     kwargs["kwargs_config"] = config
-
-#     with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
-#         adapter = client.adapters.get_by_name(name=adapter_name, node=adapter_node)
-
-#     schemas = list(adapter["schemas"]["cnx"].values())
-#     schemas = reversed(sorted(schemas, key=lambda x: [x["required"], x["name"]]))
-
-#     for schema in schemas:
-#         prompt_schema(
-#             schema=schema,
-#             config=config,
-#             prompt_optional=prompt_optional,
-#             prompt_default=prompt_default,
-#             adapter_name=adapter_name,
-#         )
-
-#     with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
-#         try:
-#             cnx_new = client.adapters.cnx.add(
-#                 adapter_name=adapter_name, adapter_node=adapter_node, **config
-#             )
-#             ctx.obj.echo_ok(msg=f"Connection added successfully!")
-
-#         except CnxAddError as exc:
-#             ctx.obj.echo_error(msg=f"{exc}", abort=False)
-#             cnx_new = exc.cnx_new
-
-#     handle_export(ctx=ctx, rows=cnx_new, export_format=export_format)
-# from ....exceptions import CnxAddError
-
-
-# # -*- coding: utf-8 -*-
-# """Command line interface for Axonius API Client."""
-# from ...context import click
-# from ...options import AUTH, NODE_CNX, SPLIT_CONFIG_OPT  # , CONTENTS,
-
-# GET = [
-#     *AUTH,
-#     EXPORT,
-#     *NODE_CNX,
-# ]
-
-# GET_BY_ID = [
-#     *GET,
-#     click.option(
-#         "--id",
-#         "-i",
-#         "cnx_id",
-#         help="ID of connection",
-#         required=True,
-#         show_envvar=True,
-#         show_default=True,
-#     ),
-# ]
-# from ...options import AUTH, NODE_CNX, SPLIT_CONFIG_OPT  # , CONTENTS,

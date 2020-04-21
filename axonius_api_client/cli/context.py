@@ -1,13 +1,12 @@
 # -*- coding: utf-8 -*-
 """Command line interface for Axonius API Client."""
-import os
 import warnings
 
 import click
 import requests
 
 from ..connect import Connect
-from ..tools import echo_error, echo_ok, echo_warn, get_path, json_load
+from ..tools import echo_error, echo_ok, echo_warn, json_load
 
 CONTEXT_SETTINGS = {"auto_envvar_prefix": "AX"}
 SSLWARN_CLS = requests.urllib3.exceptions.InsecureRequestWarning
@@ -144,36 +143,36 @@ class Context:
 
     #     return listify(obj=rows, dictkeys=False)
 
-    def export(self, data, export_file=None, export_path=None, export_overwrite=False):
-        """Pass."""
-        if not export_file:
-            click.echo(data)
-            return
+    # def export(self, data, export_file=None, export_path=None, export_overwrite=False):
+    #     """Pass."""
+    #     if not export_file:
+    #         click.echo(data)
+    #         return
 
-        export_path = export_path or os.getcwd()
+    #     export_path = export_path or os.getcwd()
 
-        path = get_path(obj=export_path)
-        path.mkdir(mode=0o700, parents=True, exist_ok=True)
+    #     path = get_path(obj=export_path)
+    #     path.mkdir(mode=0o700, parents=True, exist_ok=True)
 
-        full_path = path / export_file
+    #     full_path = path / export_file
 
-        mode = "overwritten" if full_path.exists() else "created"
+    #     mode = "overwritten" if full_path.exists() else "created"
 
-        if full_path.exists() and not export_overwrite:
-            msg = "Export file {p} already exists and export-overwite is False!"
-            msg = msg.format(p=full_path)
-            self.echo_error(msg=msg)
+    #     if full_path.exists() and not export_overwrite:
+    #         msg = "Export file {p} already exists and export-overwite is False!"
+    #         msg = msg.format(p=full_path)
+    #         self.echo_error(msg=msg)
 
-        full_path.touch(mode=0o600)
+    #     full_path.touch(mode=0o600)
 
-        data = data.encode("utf-8")
+    #     data = data.encode("utf-8")
 
-        with full_path.open(mode="wb") as fh:
-            fh.write(data)
+    #     with full_path.open(mode="wb") as fh:
+    #         fh.write(data)
 
-        msg = "Exported file {p!r} {mode}!"
-        msg = msg.format(p=format(full_path), mode=mode)
-        self.echo_ok(msg)
+    #     msg = "Exported file {p!r} {mode}!"
+    #     msg = msg.format(p=format(full_path), mode=mode)
+    #     self.echo_ok(msg)
 
     @staticmethod
     def echo_ok(msg, **kwargs):

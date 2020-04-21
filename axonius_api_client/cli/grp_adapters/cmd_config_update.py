@@ -12,7 +12,7 @@ OPTIONS = [*AUTH, CONFIG_EXPORT, CONFIG_TYPE, *NODE, SPLIT_CONFIG_REQ]
 @add_options(OPTIONS)
 @click.pass_context
 def cmd(ctx, url, key, secret, export_format, config, **kwargs):
-    """Set generic or specific advanced settings."""
+    """Set adapter advanced settings."""
     client = ctx.obj.start_client(url=url, key=key, secret=secret)
     config = dict(config)
     kwargs["kwargs_config"] = config

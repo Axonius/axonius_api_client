@@ -6,6 +6,22 @@ from ..mixins import ChildMixins
 class Meta(ChildMixins):
     """Child API model for working with instance metadata."""
 
+    def about(self):
+        """Get about page metadata.
+
+        Returns:
+            :obj:`dict`: about page metadata
+        """
+        return self._about()
+
+    def historical_sizes(self):
+        """Get disk usage metadata.
+
+        Returns:
+            :obj:`dict`: disk usage metadata
+        """
+        return self._historical_sizes()
+
     def _init(self, parent):
         """Post init method for subclasses to use for extra setup.
 
@@ -31,19 +47,3 @@ class Meta(ChildMixins):
         """
         path = self.router.meta_historical_sizes
         return self.request(method="get", path=path)
-
-    def about(self):
-        """Get about page metadata.
-
-        Returns:
-            :obj:`dict`: about page metadata
-        """
-        return self._about()
-
-    def historical_sizes(self):
-        """Get disk usage metadata.
-
-        Returns:
-            :obj:`dict`: disk usage metadata
-        """
-        return self._historical_sizes()

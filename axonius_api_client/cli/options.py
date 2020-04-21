@@ -254,11 +254,11 @@ SPLIT_CONFIG_REQ = click.option(
     required=True,
 )
 
-CONTENTS = click.option(
-    "--contents",
-    "-c",
-    "stream",
-    help="JSON contents to read from file or STDIN",
+INPUT_FILE = click.option(
+    "--input-file",
+    "-if",
+    "input_file",
+    help="File to read (from path or piped via STDIN)",
     default="-",
     type=click.File(mode="r"),
     show_envvar=True,
