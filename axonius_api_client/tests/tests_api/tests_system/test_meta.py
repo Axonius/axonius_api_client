@@ -5,13 +5,30 @@ import pytest
 from ...meta import ABOUT_KEYS, ABOUT_KEYS_EMPTY_OK
 
 
-class TestSystemMeta:
+class SystemMetaBase:
     """Pass."""
 
     @pytest.fixture(scope="class")
     def apiobj(self, api_system):
         """Pass."""
         return api_system.meta
+
+    def val_about(self, data):
+        """Pass."""
+        assert isinstance(data, dict)
+
+        keys = ABOUT_KEYS
+        empty_ok = ABOUT_KEYS_EMPTY_OK
+
+        for key in keys:
+            assert key in data
+            assert isinstance(data[key], str)
+            if key not in empty_ok:
+                assert data[key]
+
+
+class TestSystemMetaPrivate(SystemMetaBase):
+    """Pass."""
 
     def val_entity_sizes(self, data):
         """Pass."""
@@ -44,35 +61,29 @@ class TestSystemMeta:
         assert not entity_sizes
         assert not data
 
-    def val_about(self, data):
+    def test_private_about(self, apiobj):
         """Pass."""
-        assert isinstance(data, dict)
+        data = apiobj._about()
+        self.val_about(data)
 
-        keys = ABOUT_KEYS
-        empty_ok = ABOUT_KEYS_EMPTY_OK
+    def test_private_historical_sizes(self, apiobj):
+        """Pass."""
+        data = apiobj._historical_sizes()
+        self.val_historical_sizes(data)
 
-        for key in keys:
-            assert key in data
-            assert isinstance(data[key], str)
-            if key not in empty_ok:
-                assert data[key]
+
+class TestSystemMetaPublic(SystemMetaBase):
+    """Pass."""
 
     def test_about(self, apiobj):
         """Pass."""
         data = apiobj.about()
         self.val_about(data)
 
-    def test__about(self, apiobj):
-        """Pass."""
-        data = apiobj._about()
-        self.val_about(data)
-
     def test_historical_sizes(self, apiobj):
         """Pass."""
         data = apiobj.historical_sizes()
-        self.val_historical_sizes(data)
-
-    def test__historical_sizes(self, apiobj):
-        """Pass."""
-        data = apiobj._historical_sizes()
-        self.val_historical_sizes(data)
+        assert isinstance(data["disk_free_mb"], int)
+        assert isinstance(data["disk_used_mb"], int)
+        assert isinstance(data["historical_sizes_devices"], dict)
+        assert isinstance(data["historical_sizes_users"], dict)

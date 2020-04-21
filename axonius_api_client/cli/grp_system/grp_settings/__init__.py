@@ -3,10 +3,11 @@
 import click
 
 from ...context import AliasedGroup
+from . import cmd_get
 
 
 @click.group(cls=AliasedGroup)
-def settings_global():
+def settings_core():
     """Group: Global Settings."""
 
 
@@ -18,3 +19,8 @@ def settings_lifecycle():
 @click.group(cls=AliasedGroup)
 def settings_gui():
     """Group: GUI Settings."""
+
+
+settings_core.add_command(cmd_get.cmd)
+settings_lifecycle.add_command(cmd_get.cmd)
+settings_gui.add_command(cmd_get.cmd)
