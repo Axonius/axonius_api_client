@@ -224,7 +224,7 @@ class AssetMixin(ModelMixins, PagingMixins):
         sq = self.saved_query.get_by_name(value=name)
         kwargs["query"] = sq["view"]["query"]["filter"]
         kwargs["fields_manual"] = sq["view"]["fields"]
-        kwargs["fields_default"] = False
+        kwargs.setdefault("fields_default", False)
         return self.get(**kwargs)
 
     def get_by_values(

@@ -29,4 +29,4 @@ def cmd(ctx, url, key, secret, **kwargs):
     apiobj = getattr(client, p_grp)
 
     with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
-        apiobj.get(**kwargs)
+        apiobj.get_by_saved_query(**kwargs)

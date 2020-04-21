@@ -62,7 +62,6 @@ def cmd(
     url,
     key,
     secret,
-    method,
     adapter_re,
     field_re,
     field_key,
