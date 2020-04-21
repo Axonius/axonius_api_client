@@ -16,7 +16,7 @@ OPTIONS = [
 @add_options(OPTIONS)
 @click.pass_context
 def cmd(ctx, url, key, secret, export_format, **kwargs):
-    """Get generic or specific advanced settings."""
+    """Get adapter advanced settings."""
     """Pass."""
     client = ctx.obj.start_client(url=url, key=key, secret=secret)
 

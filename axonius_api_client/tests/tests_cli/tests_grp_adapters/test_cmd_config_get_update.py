@@ -97,14 +97,14 @@ class TestGrpAdaptersCmdConfigGetUpdate:
 
         args3 = [
             "adapters",
-            "config-update-file",
+            "config-update-from-json",
             "--name",
             CSV_ADAPTER,
             "--node-name",
             DEFAULT_NODE,
             "--export-format",
             "json",
-            "--contents",
+            "--input-file",
             "-",
         ]
         result3 = runner.invoke(cli=cli, args=args3, input=json_dump(json2))

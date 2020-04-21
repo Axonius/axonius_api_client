@@ -11,7 +11,6 @@ OPTIONS = [*AUTH]
 @click.pass_context
 def cmd(ctx, url, key, secret, **kwargs):
     """Get all known tags."""
-    # handler(ctx=ctx, url=url, key=key, secret=secret, **kwargs)
     p_grp = ctx.parent.command.name
 
     client = ctx.obj.start_client(url=url, key=key, secret=secret)

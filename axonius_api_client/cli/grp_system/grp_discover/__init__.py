@@ -3,8 +3,12 @@
 import click
 
 from ...context import AliasedGroup
+from . import cmd_get
 
 
 @click.group(cls=AliasedGroup)
-def nodes():
-    """Group: Manage Nodes (Instances)."""
+def discover():
+    """Group: Discover and Lifecycle management."""
+
+
+discover.add_command(cmd_get.cmd)

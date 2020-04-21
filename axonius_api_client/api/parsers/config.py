@@ -1,13 +1,8 @@
 # -*- coding: utf-8 -*-
 """API models for working with adapters and connections."""
 from ...constants import NO, SETTING_UNCHANGED, YES
-from ...exceptions import (
-    ApiError,
-    ConfigInvalidValue,
-    ConfigRequired,
-    ConfigUnchanged,
-    ConfigUnknown,
-)
+from ...exceptions import (ApiError, ConfigInvalidValue, ConfigRequired,
+                           ConfigUnchanged, ConfigUnknown)
 from ...tools import is_int, json_load
 from .tables import tablize_schemas
 
@@ -21,7 +16,7 @@ def config_check(value, schema, source, callbacks=None, none_ok=True):
             return None
         else:
             sinfo = config_info(schema=schema, value=value, source=source)
-            raise ConfigInvalidValue(f"{sinfo} value of None not allowed")
+            raise ConfigInvalidValue(f"{sinfo}\nValue of None not allowed")
 
     if schema_type == "file":
         return config_check_file(
@@ -90,7 +85,8 @@ def config_check_bool(value, schema, source, callbacks=None):
     yes = ", ".join(sorted([str(x) for x in YES]))
     no = ", ".join(sorted([str(x) for x in NO]))
     msg = [
-        f"{sinfo} is not a valid boolean",
+        sinfo,
+        "Is not a valid boolean!",
         f"Valid values for true: {yes}",
         f"Valid values for false: {no}",
     ]
@@ -103,7 +99,7 @@ def config_check_int(value, schema, source, callbacks=None):
         return int(value)
 
     sinfo = config_info(schema=schema, value=value, source=source)
-    raise ConfigInvalidValue(f"{sinfo} is not a valid integer")
+    raise ConfigInvalidValue(f"{sinfo}\nIs not a valid integer!")
 
 
 def config_check_array(value, schema, source, callbacks=None):
@@ -115,7 +111,7 @@ def config_check_array(value, schema, source, callbacks=None):
 
     if not is_list or (is_list and not all([isinstance(x, str) for x in value])):
         sinfo = config_info(schema=schema, value=value, source=source)
-        msg = f"{sinfo} is not a list of strings or a comma seperated string"
+        msg = f"{sinfo}\nIs not a list of strings or a comma seperated string!"
         raise ConfigInvalidValue(msg)
 
     return value
@@ -142,7 +138,7 @@ def config_check_str(value, schema, source, callbacks=None):
     # XXX enum can be a dict lookup, handle better
     if schema_enum and value not in schema_enum:
         sinfo = config_info(schema=schema, value=value, source=source)
-        raise ConfigInvalidValue(f"{sinfo} is not one of {schema_enum}")
+        raise ConfigInvalidValue(f"{sinfo}\nIs not one of {schema_enum}!")
 
     if schema_fmt == "password":
         parsed, value = parse_unchanged(value=value)
@@ -154,7 +150,7 @@ def config_check_str(value, schema, source, callbacks=None):
 
     if not isinstance(value, str):
         sinfo = config_info(schema=schema, value=value, source=source)
-        raise ConfigInvalidValue(f"{sinfo} is not a string")
+        raise ConfigInvalidValue(f"{sinfo}\nIs not a string!")
 
     return value
 
