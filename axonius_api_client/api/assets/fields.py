@@ -2,12 +2,8 @@
 """API models for working with device and user assets."""
 import re
 
-from ...constants import (
-    AGG_ADAPTER_ALTS,
-    AGG_ADAPTER_NAME,
-    GET_SCHEMA_KEYS,
-    GET_SCHEMAS_KEYS,
-)
+from ...constants import (AGG_ADAPTER_ALTS, AGG_ADAPTER_NAME, GET_SCHEMA_KEYS,
+                          GET_SCHEMAS_KEYS)
 from ...exceptions import ApiError, NotFoundError
 from ...tools import listify, split_str, strip_right
 from ..mixins import ChildMixins
@@ -143,8 +139,8 @@ class Fields(ChildMixins):
             for name in names:
                 schemas = fields_map[adapter]
                 schema = self.get_field_schema(value=name, schemas=schemas)
-                if schema["name"] not in matches:
-                    matches.append(schema["name"])
+                if schema["name_qual"] not in matches:
+                    matches.append(schema["name_qual"])
 
         return matches
 
