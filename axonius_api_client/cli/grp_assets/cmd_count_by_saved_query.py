@@ -21,6 +21,6 @@ def cmd(ctx, url, key, secret, help_detailed=None, **kwargs):
     apiobj = getattr(client, p_grp)
 
     with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
-        raw_data = apiobj.count(**kwargs)
+        raw_data = apiobj.count_by_saved_query(**kwargs)
 
     click.secho(format(raw_data))
