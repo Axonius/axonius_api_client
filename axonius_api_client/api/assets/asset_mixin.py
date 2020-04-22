@@ -262,6 +262,7 @@ class AssetMixin(ModelMixins, PagingMixins):
         self,
         value,
         field,
+        cast_insensitive=True,
         not_flag=False,
         pre="",
         post="",
@@ -277,7 +278,10 @@ class AssetMixin(ModelMixins, PagingMixins):
             value=field, fields_map=fields_map, field_manual=field_manual
         )
 
-        inner = f'{field} == regex("{value}", "i")'
+        if cast_insensitive:
+            inner = f'{field} == regex("{value}", "i")'
+        else:
+            inner = f'{field} == regex("{value}")'
 
         kwargs["query"] = self._build_query(
             inner=inner, pre=pre, post=post, not_flag=not_flag,
@@ -366,7 +370,7 @@ class AssetMixin(ModelMixins, PagingMixins):
         lines = [pre, inner, post]
         query = " ".join([x.strip() for x in lines if x.strip()]).strip()
 
-        self.LOG.debug("Built query: {}")
+        self.LOG.debug(f"Built query: {query!r}")
         # XXX error if no OR / AND in pre & post
         return query
 

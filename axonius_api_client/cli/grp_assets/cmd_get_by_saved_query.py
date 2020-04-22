@@ -22,7 +22,6 @@ OPTIONS = [
 @click.pass_context
 def cmd(ctx, url, key, secret, **kwargs):
     """Get assets using a saved query."""
-    # handler(ctx=ctx, url=url, key=key, secret=secret, method=METHOD, **kwargs)
     client = ctx.obj.start_client(url=url, key=key, secret=secret)
 
     p_grp = ctx.parent.command.name

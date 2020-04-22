@@ -109,6 +109,8 @@ def prompt_schema(schema, new_config, prompt_optional, prompt_default, adapter):
     schema["hide_input"] = hide_input = fmt == "password" or name in HIDDEN
 
     if name in new_config:
+        if new_config[name].lower().strip() == "_empty_":
+            new_config[name] = None
         if stype == "file":
             new_config[name] = pathlib.Path(new_config[name]).expanduser().resolve()
         return

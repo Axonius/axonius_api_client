@@ -267,6 +267,16 @@ GET_BY_VALUE_REGEX_BUILDERS = [
         show_envvar=True,
         show_default=True,
     ),
+    click.option(
+        "--case-in-sensitive/--case-sensitive",
+        "-cis/-cs",
+        "cast_insensitive",
+        help="Build a regex that is / is not cases sensitive",
+        is_flag=True,
+        default=True,
+        show_envvar=True,
+        show_default=True,
+    ),
     get_option_help(choices=["auth", "assetexport", "selectfields"]),
 ]
 
