@@ -3,7 +3,7 @@
 import click
 
 from ...context import AliasedGroup
-from . import cmd_get
+from . import cmd_get, cmd_get_section, cmd_get_subsection
 
 
 @click.group(cls=AliasedGroup)
@@ -21,6 +21,9 @@ def settings_gui():
     """Group: GUI Settings."""
 
 
-settings_core.add_command(cmd_get.cmd)
-settings_lifecycle.add_command(cmd_get.cmd)
-settings_gui.add_command(cmd_get.cmd)
+CMDS = [cmd_get, cmd_get_section, cmd_get_subsection]
+
+for cmd in CMDS:
+    settings_core.add_command(cmd.cmd)
+    settings_lifecycle.add_command(cmd.cmd)
+    settings_gui.add_command(cmd.cmd)

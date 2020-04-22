@@ -15,6 +15,30 @@ EXPORT = click.option(
 )
 
 
+def echo_key(data, key):
+    """Pass."""
+    value = data[key]
+
+    key = key.replace("_", " ").title()
+
+    if isinstance(value, list):
+        value = ", ".join(value)
+
+    click.secho(f"{key}: {value}")
+
+
+def echo_fetch_progress(data, key):
+    """Pass."""
+    phases = data["phases"]
+    fetch = [x for x in phases if x["name"] == key][0]
+    key = key.replace("_", " ").title()
+
+    progress = fetch["progress"]
+    for status, adapters in progress.items():
+        adapters = ", ".join(adapters)
+        click.secho(f"Phase {key} {status}: {adapters}\n")
+
+
 def handle_export(ctx, data, export_format, **kwargs):
     """Pass."""
     if export_format == "json":
@@ -27,12 +51,30 @@ def handle_export(ctx, data, export_format, **kwargs):
         ctx.exit(0)
 
     if export_format == "str":
-        data.pop("phases")
-        for k, v in data.items():
-            k = k.replace("_", " ").title()
-            if isinstance(v, list):
-                v = ", ".join(v)
-            click.secho(f"{k}: {v}")
+        echo_fetch_progress(data, "Fetch_Devices")
+        echo_fetch_progress(data, "Fetch_Scanners")
+        keys = [
+            "last_start_date",
+            "last_finish_date",
+            "last_took_minutes",
+            "next_start_date",
+            "next_in_minutes",
+            "is_running",
+            "phases_done",
+            "phases_pending",
+        ]
+        for key in keys:
+            echo_key(data, key)
+
+        # adapters fetching
+        # adapters done
+        # echo_key(data, last_start)
+        # data.pop("phases")
+        # for k, v in data.items():
+        #     k = k.replace("_", " ").title()
+        #     if isinstance(v, list):
+        #         v = ", ".join(v)
+        #     click.secho(f"{k}: {v}")
         ctx.exit(0)
 
     ctx.exit(1)

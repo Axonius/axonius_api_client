@@ -11,7 +11,7 @@ def config_check(value, schema, source, callbacks=None, none_ok=True):
     """Check a supplied value for a setting is correctly typed."""
     schema_type = schema["type"]
 
-    if value is None:
+    if value is None or str(value).strip() == "None":
         if none_ok:
             return None
         else:

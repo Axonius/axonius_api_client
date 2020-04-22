@@ -13,7 +13,7 @@ OPTIONS = [
 @click.command(name="count-by-saved-query", context_settings=CONTEXT_SETTINGS)
 @add_options(OPTIONS)
 @click.pass_context
-def cmd(ctx, url, key, secret, **kwargs):
+def cmd(ctx, url, key, secret, help_detailed=None, **kwargs):
     """Get the count of assets from a saved query."""
     client = ctx.obj.start_client(url=url, key=key, secret=secret)
 
