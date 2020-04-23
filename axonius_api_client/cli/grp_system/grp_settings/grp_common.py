@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 """Command line interface for Axonius API Client."""
-from ....tools import json_dump
 from ...context import click
 
 EXPORT = click.option(
@@ -35,63 +34,64 @@ SUB_SECTION = click.option(
 )
 
 
-def config_sections(ctx, settings):
+def str_sections(meta):
     """Pass."""
-    settings_title = settings["title"]
-    settings_config = settings["config"]
+    settings_title = meta["settings_title"]
     click.secho(f"Settings: {settings_title}")
 
-    for section, meta in settings["sections"].items():
-        title = settings["section_titles"][section]
-        config = settings_config[section]
-        click.secho(f"\n{section:25}  ## SECTION {title}:")
-        config_section(ctx=ctx, parent_meta=meta, section_config=config)
+    sections = meta["sections"]
+
+    for name, meta in sections.items():
+        str_section(meta=meta)
 
 
-def config_section(ctx, parent_meta, section_config):
+def str_section(meta):
     """Pass."""
-    for section, meta in parent_meta.items():
-        config = section_config[section]
+    name = meta["name"]
+    title = meta["title"]
+    settings_title = meta["settings_title"]
 
-        if meta.get("sub_schemas"):
-            title = meta.get("title", "")
-            click.secho(f"\n    {section:30}  ## SUB SECTION {title}")
+    lines = [
+        f"Section Name: {name!r}",
+        f"Section Title: {settings_title}: {title}",
+    ]
+    join = "\n- "
+    click.secho(join + join.join(lines))
+    str_schemas(schemas=meta["schemas"], config=meta["config"], indent=4)
 
-            config_sub_section(ctx=ctx, parent_meta=meta, section_config=config)
-        else:
-            title = meta["title"]
-            ctype = meta["type"]
-            value = f"{section}={config!r}"
-            click.secho(f"   {value:30}  ## {title} ({ctype!r})")
+    sub_sections = meta["sub_sections"]
+    for sub_name, sub_meta in sub_sections.items():
+        str_subsection(meta=sub_meta)
 
 
-def config_sub_section(ctx, parent_meta, section_config):
+def str_subsection(meta):
     """Pass."""
-    for section, meta in parent_meta.get("sub_schemas").items():
-        config = section_config[section]
-        title = meta["title"]
-        ctype = meta["type"]
-        value = f"{section}={config!r}"
-        click.secho(f"        {value:30}  ## {title} ({ctype!r})")
+    name = meta["name"]
+    title = meta["title"]
+    settings_title = meta["settings_title"]
+    parent_title = meta["parent_title"]
+
+    lines = [
+        f"Sub Section Name: {name!r}",
+        f"Sub Section Title: {settings_title}: {parent_title}: {title}",
+    ]
+    join = "\n--- "
+    click.secho(join + join.join(lines))
+    str_schemas(schemas=meta["schemas"], config=meta["config"], indent=6)
 
 
-def handle_export(ctx, settings, export_format, section=None, **kwargs):
+def str_schemas(schemas, config, indent=4):
     """Pass."""
-    if export_format == "str":
-        config_sections(ctx=ctx, settings=settings)
-        ctx.exit(0)
+    join = "\n{}".format(" " * indent)
+    for name, schema in schemas.items():
+        title = schema.get("title")
+        stype = schema["type"]
+        value = config[name]
 
-    if export_format == "json-config":
-        if section:
-            config = settings["config"][section]
-        else:
-            config = settings["config"]
-
-        click.secho(json_dump(config))
-        ctx.exit(0)
-
-    if export_format == "json-full":
-        click.secho(json_dump(settings))
-        ctx.exit(0)
-
-    ctx.exit(1)
+        lines = [
+            f"Name: {name}",
+            f"Title: {title}",
+            f"Type: {stype!r}",
+            f"Value: {name}={value!r}",
+        ]
+        click.secho(join + join.join(lines))

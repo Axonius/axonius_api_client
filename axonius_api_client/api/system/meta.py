@@ -24,6 +24,12 @@ class Meta(ChildMixins):
         """
         return parse_sizes(self._historical_sizes())
 
+    @property
+    def version(self):
+        """Get the version of Axonius."""
+        about = self.about()
+        return (about["Version"] or "DEMO").replace("_", ".")
+
     def _init(self, parent):
         """Post init method for subclasses to use for extra setup.
 

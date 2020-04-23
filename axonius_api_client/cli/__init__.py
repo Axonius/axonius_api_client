@@ -19,6 +19,15 @@ All of the options listed above must be supplied BEFORE any commands or groups.
 """,
 )
 @click.option(
+    "--quiet/--no-quiet",
+    "-q/-nq",
+    "quiet",
+    default=False,
+    help="Silence green text.",
+    show_envvar=True,
+    show_default=True,
+)
+@click.option(
     "--log-level-package",
     "-lvlpkg",
     "log_level_package",
@@ -302,9 +311,11 @@ def cli(
     wraperror,
     timeout_connect,
     timeout_response,
+    quiet,
 ):
     """Command line interface for the Axonius API Client."""
     ctx._click_ctx = click_ctx
+    ctx.QUIET = quiet
     ctx._connect_args["log_level_package"] = log_level_package
     ctx._connect_args["log_level_http"] = log_level_http
     ctx._connect_args["log_level_auth"] = log_level_auth

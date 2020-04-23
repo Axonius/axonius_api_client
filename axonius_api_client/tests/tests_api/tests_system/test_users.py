@@ -2,12 +2,12 @@
 """Test suite."""
 
 import pytest
-
 from axonius_api_client.exceptions import ApiError, NotFoundError
 
 from ...meta import TEST_USER
 
 
+@pytest.mark.skip(f"Waiting for update to 3.3!")  # XXX update public API for roles/users
 class TestSystemUsers:
     """Pass."""
 

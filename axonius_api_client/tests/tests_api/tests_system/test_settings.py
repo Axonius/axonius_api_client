@@ -2,7 +2,6 @@
 """Test suite."""
 
 import pytest
-
 from axonius_api_client.exceptions import ApiError, NotFoundError
 
 # from ...meta import TEST_PERM, TEST_ROLE
@@ -14,25 +13,65 @@ GUI_SUB_SECTION = "percentageThresholds"
 GUI_SUB_KEYS = ["error", "success", "warning"]
 
 
-class SettingsBase:
+class SettingsBasePublic:
     """Pass."""
+
+    def val_schemas(self, schemas, config):
+        """Pass."""
+        for name, schema in schemas.items():
+            assert schema["name"] == name
+            assert schema["name"] in config
+            assert isinstance(schema["required"], bool)
+
+    def val_sub_section(self, name, meta, settings):
+        """Pass."""
+        assert isinstance(meta, dict) and meta
+        assert meta["settings_title"] == settings["settings_title"]
+        assert meta["name"] == name
+        assert isinstance(meta["title"], str) and meta["title"]
+        assert isinstance(meta["schemas"], dict) and meta["schemas"]
+        assert isinstance(meta["sub_sections"], dict) and not meta["sub_sections"]
+        assert isinstance(meta["parent_name"], str) and meta["parent_name"]
+        assert isinstance(meta["parent_title"], str) and meta["parent_title"]
+
+        assert isinstance(meta["config"], dict)
+        for k, v in meta["config"].items():
+            assert not isinstance(v, dict)
+
+        self.val_schemas(schemas=meta["schemas"], config=meta["config"])
+
+    def val_section(self, name, meta, settings):
+        """Pass."""
+        assert isinstance(meta, dict) and meta
+        assert meta["settings_title"] == settings["settings_title"]
+        assert meta["name"] == name
+        assert isinstance(meta["title"], str) and meta["title"]
+        assert isinstance(meta["schemas"], dict) and meta["schemas"]
+        assert isinstance(meta["sub_sections"], dict)
+        assert isinstance(meta["parent_name"], str) and not meta["parent_name"]
+        assert isinstance(meta["parent_title"], str) and not meta["parent_title"]
+
+        assert isinstance(meta["config"], dict)
+
+        self.val_schemas(schemas=meta["schemas"], config=meta["config"])
+        for sub_name, sub_meta in meta["sub_sections"].items():
+            self.val_sub_section(name=sub_name, meta=sub_meta, settings=settings)
 
     def test_get(self, apiobj):
         """Pass."""
-        result = apiobj.get()
-        assert isinstance(result, dict)
-        assert isinstance(result["section_titles"], dict) and result["section_titles"]
-        assert isinstance(result["sub_sections"], dict) and result["sub_sections"]
-        assert isinstance(result["sections"], dict) and result["sections"]
-        assert isinstance(result["title"], str) and result["title"]
-        assert isinstance(result["config"], dict) and result["config"]
-        for k, v in result["sections"].items():
-            assert isinstance(v, dict) and v
-            assert k in result["section_titles"]
-            assert k in result["sections"]
+        settings = apiobj.get()
+        assert isinstance(settings, dict)
+
+        assert isinstance(settings["settings_title"], str) and settings["settings_title"]
+        assert isinstance(settings["sections"], dict) and settings["sections"]
+        assert isinstance(settings["config"], dict) and settings["config"]
+
+        for name, meta in settings["sections"].items():
+            self.val_section(name=name, meta=meta, settings=settings)
+            assert name in settings["config"]
 
 
-class TestSettingsGui(SettingsBase):
+class TestSettingsGui(SettingsBasePublic):
     """Pass."""
 
     @pytest.fixture(scope="class")
@@ -40,26 +79,33 @@ class TestSettingsGui(SettingsBase):
         """Pass."""
         return api_system.settings_gui
 
-    def test_get_section_config_false(self, apiobj):
+    def test_get_section_full_config_true(self, apiobj):
         """Pass."""
-        result = apiobj.get_section(section=GUI_SECTION_WITH_SUBS, config=False)
+        result = apiobj.get_section(section=GUI_SECTION_WITH_SUBS, full_config=True)
         assert isinstance(result, dict)
-        sub_schema = result[GUI_SUB_SECTION]["sub_schemas"]
-        assert isinstance(sub_schema, dict) and sub_schema
+        assert "full_config" in result
 
-        for k, v in result.items():
-            assert isinstance(v, dict) and v
-            assert isinstance(v["name"], str) and v["name"]
-            assert isinstance(v.get("title", ""), str)
-            assert isinstance(v["required"], bool)
-            assert isinstance(v["type"], str) and v["type"]
-
-    def test_get_section_config_true(self, apiobj):
+    def test_get_sub_section_full_config_true(self, apiobj):
         """Pass."""
-        result = apiobj.get_section(section=GUI_SECTION_WITH_SUBS, config=True)
+        result = apiobj.get_sub_section(
+            section=GUI_SECTION_WITH_SUBS, sub_section=GUI_SUB_SECTION, full_config=True
+        )
         assert isinstance(result, dict)
-        value = result[GUI_SUB_SECTION]
-        assert isinstance(value, dict) and value
+        assert "full_config" in result
+
+    def test_get_section_full_config_false(self, apiobj):
+        """Pass."""
+        result = apiobj.get_section(section=GUI_SECTION_WITH_SUBS, full_config=False)
+        assert isinstance(result, dict)
+        assert "full_config" not in result
+
+    def test_get_sub_section_full_config_false(self, apiobj):
+        """Pass."""
+        result = apiobj.get_sub_section(
+            section=GUI_SECTION_WITH_SUBS, sub_section=GUI_SUB_SECTION, full_config=False
+        )
+        assert isinstance(result, dict)
+        assert "full_config" not in result
 
     def test_get_section_error(self, apiobj):
         """Pass."""
@@ -76,54 +122,36 @@ class TestSettingsGui(SettingsBase):
         with pytest.raises(ApiError):
             apiobj.get_sub_section(section=GUI_SECTION_NO_SUBS, sub_section="badwolf")
 
-    def test_get_sub_section_config_true(self, apiobj):
-        """Pass."""
-        result = apiobj.get_sub_section(
-            section=GUI_SECTION_WITH_SUBS, sub_section=GUI_SUB_SECTION, config=True
-        )
-        for i in GUI_SUB_KEYS:
-            assert i in result
-
-    def test_get_sub_section_config_false(self, apiobj):
-        """Pass."""
-        result = apiobj.get_sub_section(
-            section=GUI_SECTION_WITH_SUBS, sub_section=GUI_SUB_SECTION, config=False
-        )
-        assert isinstance(result, dict)
-        for k, v in result.items():
-            assert k in GUI_SUB_KEYS
-            assert isinstance(v["name"], str) and v["name"]
-            assert isinstance(v.get("title", ""), str)
-            assert isinstance(v["required"], bool)
-            assert isinstance(v["type"], str) and v["type"]
-
     def test_update_section(self, apiobj):
         """Pass."""
-        old_section = apiobj.get_section(section=GUI_SECTION_WITH_SUBS, config=True)
-        old_value = old_section[GUI_NON_SUB_SECTION]
+        old_section = apiobj.get_section(section=GUI_SECTION_WITH_SUBS)
+        old_config = old_section["config"]
+        old_value = old_config[GUI_NON_SUB_SECTION]
+
         update_value = not old_value
 
         new_section_args = {GUI_NON_SUB_SECTION: update_value}
         new_section = apiobj.update_section(
             section=GUI_SECTION_WITH_SUBS, **new_section_args
         )
-        new_value = new_section[GUI_NON_SUB_SECTION]
+        new_value = new_section["config"][GUI_NON_SUB_SECTION]
         assert new_value == update_value and old_value != new_value
 
         reset_section_args = {GUI_NON_SUB_SECTION: old_value}
         reset_section = apiobj.update_section(
             section=GUI_SECTION_WITH_SUBS, **reset_section_args
         )
-        reset_value = reset_section[GUI_NON_SUB_SECTION]
+        reset_value = reset_section["config"][GUI_NON_SUB_SECTION]
         assert reset_value == old_value and reset_value != new_value
 
     def test_update_sub_section(self, apiobj):
         """Pass."""
         old_section = apiobj.get_sub_section(
-            section=GUI_SECTION_WITH_SUBS, sub_section=GUI_SUB_SECTION, config=True
+            section=GUI_SECTION_WITH_SUBS, sub_section=GUI_SUB_SECTION
         )
         sub_key = GUI_SUB_KEYS[0]
-        old_value = old_section[sub_key]
+        old_config = old_section["config"]
+        old_value = old_config[sub_key]
         update_value = old_value + 1
 
         new_section_args = {sub_key: update_value}
@@ -132,7 +160,7 @@ class TestSettingsGui(SettingsBase):
             sub_section=GUI_SUB_SECTION,
             **new_section_args
         )
-        new_value = new_section[sub_key]
+        new_value = new_section["config"][sub_key]
         assert new_value == update_value and old_value != new_value
 
         reset_section_args = {sub_key: old_value}
@@ -141,11 +169,11 @@ class TestSettingsGui(SettingsBase):
             sub_section=GUI_SUB_SECTION,
             **reset_section_args
         )
-        reset_value = reset_section[sub_key]
+        reset_value = reset_section["config"][sub_key]
         assert reset_value == old_value and reset_value != new_value
 
 
-class TestSettingsCore(SettingsBase):
+class TestSettingsCore(SettingsBasePublic):
     """Pass."""
 
     @pytest.fixture(scope="class")
@@ -154,7 +182,7 @@ class TestSettingsCore(SettingsBase):
         return api_system.settings_core
 
 
-class TestSettingsLifecycle(SettingsBase):
+class TestSettingsLifecycle(SettingsBasePublic):
     """Pass."""
 
     @pytest.fixture(scope="class")
