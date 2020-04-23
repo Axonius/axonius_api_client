@@ -9,26 +9,13 @@ from .api.assets import Devices, Users
 from .api.enforcements import Enforcements
 from .api.system import System
 from .auth import ApiKey
-from .constants import (
-    LOG_FILE_MAX_FILES,
-    LOG_FILE_MAX_MB,
-    LOG_FILE_NAME,
-    LOG_FILE_PATH,
-    LOG_LEVEL_API,
-    LOG_LEVEL_AUTH,
-    LOG_LEVEL_CONSOLE,
-    LOG_LEVEL_FILE,
-    LOG_LEVEL_HTTP,
-    LOG_LEVEL_PACKAGE,
-    TIMEOUT_CONNECT,
-    TIMEOUT_RESPONSE,
-)
+from .constants import (LOG_FILE_MAX_FILES, LOG_FILE_MAX_MB, LOG_FILE_NAME,
+                        LOG_FILE_PATH, LOG_LEVEL_API, LOG_LEVEL_AUTH,
+                        LOG_LEVEL_CONSOLE, LOG_LEVEL_FILE, LOG_LEVEL_HTTP,
+                        LOG_LEVEL_PACKAGE, TIMEOUT_CONNECT, TIMEOUT_RESPONSE)
 from .exceptions import ConnectError, InvalidCredentials
 from .http import Http
 from .logs import LOG, add_file, add_stderr, set_log_level
-from .tools import dt_now, dt_sec_ago
-
-# TODO examples
 
 
 class Connect:
@@ -194,7 +181,6 @@ class Connect:
                 number of rollover file logs to keep
         """
         self._started = False
-        self._start_dt = None
         self._wraperror = wraperror
         self.url = url
         """:obj:`str`: URL to connect to"""
@@ -270,7 +256,6 @@ class Connect:
                 raise cnxexc
 
             self._started = True
-            self._start_dt = dt_now()
 
     @property
     def users(self):
@@ -341,9 +326,12 @@ class Connect:
         """
         client = getattr(self, "_http", "")
         url = getattr(client, "url", self._http_args["url"])
+
         if self._started:
-            uptime = dt_sec_ago(self._start_dt)
-            return f"Connected to {url!r} for {uptime}"
+            about = self.system.meta.about()
+            version = (about["Version"] or "DEMO").replace("_", ".")
+            built = about["Build Date"]
+            return f"Connected to {url!r} version {version} ({built})"
         else:
             return f"Not connected to {url!r}"
 

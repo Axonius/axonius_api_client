@@ -1,13 +1,12 @@
 # -*- coding: utf-8 -*-
 """Command line interface for Axonius API Client."""
-import os
 import warnings
 
 import click
 import requests
 
 from ..connect import Connect
-from ..tools import echo_error, echo_ok, echo_warn, get_path, json_load
+from ..tools import echo_error, echo_ok, echo_warn, json_load
 
 CONTEXT_SETTINGS = {"auto_envvar_prefix": "AX"}
 SSLWARN_CLS = requests.urllib3.exceptions.InsecureRequestWarning
@@ -80,13 +79,14 @@ class exc_wrapper:
         if value and self.wraperror and not isinstance(value, self.EXCLUDES):
             msg = "WRAPPED EXCEPTION: {c.__module__}.{c.__name__}\n{v}"
             msg = msg.format(c=value.__class__, v=value)
-            Context.echo_error(msg)
+            echo_error(msg)
 
 
 class Context:
     """Pass."""
 
     exc_wrap = exc_wrapper
+    QUIET = False
 
     def __init__(self):
         """Pass."""
@@ -111,82 +111,16 @@ class Context:
         """
         return self.__str__()
 
-    # def read_stream_rows(self, stream, this_cmd):
-    #     """Pass."""
-    #     stream_name = format(getattr(stream, "name", stream))
-
-    #     if stream.isatty():
-    #         # its STDIN with no input
-    #         msg = "No input provided on {s!r} for {tc!r}"
-    #         msg = msg.format(s=stream_name, tc=this_cmd)
-    #         echo_error(msg=msg, abort=True)
-
-    #     # its STDIN with input or a file
-    #     content = stream.read()
-
-    #     msg = "Read {n} bytes from {s!r} for {tc!r}"
-    #     msg = msg.format(n=len(content), s=stream_name, tc=this_cmd)
-    #     echo_ok(msg=msg)
-
-    #     content = content.strip()
-
-    #     if not content:
-    #         msg = "Empty content supplied in {s!r} for {tc!r}"
-    #         msg = msg.format(s=stream_name, tc=this_cmd)
-    #         echo_error(msg=msg, abort=True)
-
-    #     with self.exc_wrap(wraperror=self.wraperror):
-    #         rows = json_load(obj=content)
-
-    #     msg = "Loaded JSON as {t} with length of {n} for {tc!r}"
-    #     msg = msg.format(t=type(rows).__name__, tc=this_cmd, n=len(rows))
-    #     echo_ok(msg=msg)
-
-    #     return listify(obj=rows, dictkeys=False)
-
-    def export(self, data, export_file=None, export_path=None, export_overwrite=False):
+    def echo_ok(self, msg, **kwargs):
         """Pass."""
-        if not export_file:
-            click.echo(data)
-            return
+        if not getattr(self, "QUIET", False):
+            echo_ok(msg=msg, **kwargs)
 
-        export_path = export_path or os.getcwd()
-
-        path = get_path(obj=export_path)
-        path.mkdir(mode=0o700, parents=True, exist_ok=True)
-
-        full_path = path / export_file
-
-        mode = "overwritten" if full_path.exists() else "created"
-
-        if full_path.exists() and not export_overwrite:
-            msg = "Export file {p} already exists and export-overwite is False!"
-            msg = msg.format(p=full_path)
-            self.echo_error(msg=msg)
-
-        full_path.touch(mode=0o600)
-
-        data = data.encode("utf-8")
-
-        with full_path.open(mode="wb") as fh:
-            fh.write(data)
-
-        msg = "Exported file {p!r} {mode}!"
-        msg = msg.format(p=format(full_path), mode=mode)
-        self.echo_ok(msg)
-
-    @staticmethod
-    def echo_ok(msg, **kwargs):
-        """Pass."""
-        echo_ok(msg=msg, **kwargs)
-
-    @staticmethod
-    def echo_error(msg, abort=True, **kwargs):
+    def echo_error(self, msg, abort=True, **kwargs):
         """Pass."""
         echo_error(msg=msg, abort=abort, **kwargs)
 
-    @staticmethod
-    def echo_warn(msg, **kwargs):
+    def echo_warn(self, msg, **kwargs):
         """Pass."""
         echo_warn(msg=msg, **kwargs)
 
@@ -222,7 +156,7 @@ class Context:
             warnings.simplefilter("ignore", SSLWARN_CLS)
 
             if echo:
-                self.echo_ok(msg="Connected to {!r}".format(self.client._http.url))
+                self.echo_ok(msg=str(self.client))
 
         return self.client
 

@@ -1,13 +1,10 @@
 # -*- coding: utf-8 -*-
 """API models for working with adapters and connections."""
+import copy
+
 from ...constants import NO, SETTING_UNCHANGED, YES
-from ...exceptions import (
-    ApiError,
-    ConfigInvalidValue,
-    ConfigRequired,
-    ConfigUnchanged,
-    ConfigUnknown,
-)
+from ...exceptions import (ApiError, ConfigInvalidValue, ConfigRequired,
+                           ConfigUnchanged, ConfigUnknown)
 from ...tools import is_int, json_load
 from .tables import tablize_schemas
 
@@ -16,12 +13,12 @@ def config_check(value, schema, source, callbacks=None, none_ok=True):
     """Check a supplied value for a setting is correctly typed."""
     schema_type = schema["type"]
 
-    if value is None:
+    if value is None or str(value).strip() == "None":
         if none_ok:
             return None
         else:
             sinfo = config_info(schema=schema, value=value, source=source)
-            raise ConfigInvalidValue(f"{sinfo} value of None not allowed")
+            raise ConfigInvalidValue(f"{sinfo}\nValue of None not allowed")
 
     if schema_type == "file":
         return config_check_file(
@@ -90,7 +87,8 @@ def config_check_bool(value, schema, source, callbacks=None):
     yes = ", ".join(sorted([str(x) for x in YES]))
     no = ", ".join(sorted([str(x) for x in NO]))
     msg = [
-        f"{sinfo} is not a valid boolean",
+        sinfo,
+        "Is not a valid boolean!",
         f"Valid values for true: {yes}",
         f"Valid values for false: {no}",
     ]
@@ -103,7 +101,7 @@ def config_check_int(value, schema, source, callbacks=None):
         return int(value)
 
     sinfo = config_info(schema=schema, value=value, source=source)
-    raise ConfigInvalidValue(f"{sinfo} is not a valid integer")
+    raise ConfigInvalidValue(f"{sinfo}\nIs not a valid integer!")
 
 
 def config_check_array(value, schema, source, callbacks=None):
@@ -115,7 +113,7 @@ def config_check_array(value, schema, source, callbacks=None):
 
     if not is_list or (is_list and not all([isinstance(x, str) for x in value])):
         sinfo = config_info(schema=schema, value=value, source=source)
-        msg = f"{sinfo} is not a list of strings or a comma seperated string"
+        msg = f"{sinfo}\nIs not a list of strings or a comma seperated string!"
         raise ConfigInvalidValue(msg)
 
     return value
@@ -142,7 +140,7 @@ def config_check_str(value, schema, source, callbacks=None):
     # XXX enum can be a dict lookup, handle better
     if schema_enum and value not in schema_enum:
         sinfo = config_info(schema=schema, value=value, source=source)
-        raise ConfigInvalidValue(f"{sinfo} is not one of {schema_enum}")
+        raise ConfigInvalidValue(f"{sinfo}\nIs not one of {schema_enum}!")
 
     if schema_fmt == "password":
         parsed, value = parse_unchanged(value=value)
@@ -154,15 +152,13 @@ def config_check_str(value, schema, source, callbacks=None):
 
     if not isinstance(value, str):
         sinfo = config_info(schema=schema, value=value, source=source)
-        raise ConfigInvalidValue(f"{sinfo} is not a string")
+        raise ConfigInvalidValue(f"{sinfo}\nIs not a string!")
 
     return value
 
 
 def config_build(schemas, old_config, new_config, source, check=True, callbacks=None):
     """Pass."""
-    # built_config = {}
-
     for name, schema in schemas.items():
         if name not in new_config and name in old_config:
             new_config[name] = old_config[name]
@@ -178,10 +174,11 @@ def config_build(schemas, old_config, new_config, source, check=True, callbacks=
 
 def config_unknown(schemas, new_config, source, callbacks=None):
     """Pass."""
-    unknowns = [x for x in new_config if x not in schemas]
+    unknowns = {k: v for k, v in new_config.items() if k not in schemas}
     if unknowns:
-        vals = ", ".join(unknowns)
-        err = f"Unknown settings supplied for {source}: {vals}"
+        unknowns = ["{}: {!r}".format(k, v) for k, v in unknowns.items()]
+        unknowns = "\n  " + "\n  ".join(unknowns)
+        err = f"Unknown settings supplied for {source}: {unknowns}"
         raise ConfigUnknown(tablize_schemas(schemas=schemas, err=err))
     return new_config
 
@@ -190,7 +187,9 @@ def config_unchanged(schemas, old_config, new_config, source, callbacks=None):
     """Pass."""
     if new_config == old_config or not new_config:
         err = f"No changes supplied for {source}"
-        raise ConfigUnchanged(tablize_schemas(schemas=schemas, err=err))
+        raise ConfigUnchanged(
+            tablize_schemas(schemas=schemas, config=old_config, err=err)
+        )
     return new_config
 
 
@@ -258,20 +257,6 @@ def is_uploaded_file(value):
     return False, value
 
 
-# ORIG PARSE FOR JUST CNX CONFIGS
-# def parse_schema(raw):
-#     """Pass."""
-#     parsed = {}
-#     if raw:
-#         schemas = raw["items"]
-#         required = raw["required"]
-#         for schema in schemas:
-#             schema_name = schema["name"]
-#             schema["required"] = schema_name in required
-#             parsed[schema_name] = schema
-#     return parsed
-
-
 def parse_schema(raw):
     """Pass."""
     parsed = {}
@@ -280,59 +265,95 @@ def parse_schema(raw):
 
     schemas = raw["items"]
     required = raw["required"]
+
     for schema in schemas:
         schema_name = schema["name"]
         parsed[schema_name] = schema
-
-        # core settings: password_brute_force_protection: conditional
-        # has a list of dict enums, so turn it into a lookup map
-        if schema.get("enum"):
-            if isinstance(schema["enum"][0], dict):
-                schema["enum"] = {x["name"]: x for x in schema["enum"]}
-
-        # system settings have sub-schemas
-        if schema.get("items") and isinstance(schema["items"], list):
-            # sub_schemas has items: [{}], required: [""], type: array
-            # non sub_schemas has items: {"type": "file/etc"}, no required, type: array
-            schema["sub_schemas"] = parse_schema(raw=schema)
-            schema.pop("items")
-            schema["required"] = bool(schema["required"])
-            continue
-
         schema["required"] = schema_name in required
 
     return parsed
 
 
-def parse_settings(raw, pretty_name=""):
+def parse_schema_enum(schema):
     """Pass."""
-    # XXX write validation tests
-    # XXX throw warning in tests for missing pretty_name
-    pretty_name = raw["schema"].get("pretty_name", "") or pretty_name
-    sections = raw["schema"]["items"]
+    # core settings: password_brute_force_protection: conditional
+    # has a list of dict enums, so turn it into a lookup map
+    if schema.get("enum") and isinstance(schema["enum"][0], dict):
+        schema["enum"] = {x["name"]: x for x in schema["enum"]}
+
+
+def parse_section(raw, raw_config, parent, settings):
+    """Pass."""
+    # XXX has no title:
+    #   settings_gui::saml_login_settings::configure_authncc
+    title = raw.get("title", raw["name"].replace("_", " ").title())
+    config = raw_config.get(raw["name"], {})
+    section_name = raw["name"]
+    schemas = raw["items"]
+    required = raw["required"]
+    section_defaults = raw.get(section_name, {})
 
     parsed = {}
-    parsed["title"] = pretty_name
-    parsed["section_titles"] = {}
-    parsed["sub_sections"] = {}
-    parsed["sections"] = {}
-    parsed["config"] = raw["config"]
+    parsed["settings_title"] = settings["settings_title"]
+    parsed["name"] = section_name
+    parsed["title"] = title
+    parsed["schemas"] = {}
+    parsed["sub_sections"] = sub_sections = {}
+    parsed["parent_name"] = parent.get("name", "")
+    parsed["parent_title"] = parent.get("title", "")
+    parsed["config"] = config
 
-    for section in sections:
-        section_name = section["name"]
-        section_title = section["title"]
-        parsed["sub_sections"][section_name] = []
+    for schema in schemas:
+        parse_schema_enum(schema=schema)
+        schema_name = schema["name"]
 
-        parsed["section_titles"][section_name] = section_title
-        parsed["sections"][section_name] = parse_schema(raw=section)
+        items = schema.get("items", None)
 
-        for k, v in parsed["sections"][section_name].items():
-            if v.get("sub_schemas"):
-                parsed["sub_sections"][section_name].append(v["name"])
+        # sub_sections:
+        #   {"items": [{}], "required": [""], "type": "array"}
+        if isinstance(items, list):
+            sub_sections[schema_name] = parse_section(
+                raw=schema, raw_config=config, parent=parsed, settings=settings,
+            )
+            schema.pop("items")
 
-        # core settings: https_log_settings does not follow schema, so this:
-        # XXX throw warning in tests
-        if section_name in section:
-            for k, v in section[section_name].items():
-                parsed["sections"][section_name][k]["default"] = v
+        # non sub_sections:
+        #   no items key in schema
+        #   {"items": {"type": ""} "type": "array"}
+        schema["required"] = schema_name in required
+        parsed["schemas"][schema_name] = schema
+
+        # XXX does not follow schema for defaults:
+        #   core settings::https_log_settings
+        if schema_name in section_defaults and "default" not in schema:
+            schema["default"] = section_defaults[schema_name]
+
+        # XXX has no title:
+        #   settings_gui::saml_login_settings::configure_authncc
+        schema["title"] = schema.get("title", schema_name.replace("_", " ").title())
+
+    return parsed
+
+
+def parse_settings(raw, title=""):
+    """Pass."""
+    # XXX missing pretty_name:
+    #   settings_gui
+    #   settings_lifecycle
+    title = raw["schema"].get("pretty_name", "") or title
+
+    raw_config = raw["config"]
+    raw_sections = raw["schema"]["items"]
+
+    parsed = {}
+    parsed["settings_title"] = title
+    parsed["sections"] = sections = {}
+    parsed["config"] = copy.deepcopy(raw_config)
+
+    for raw_section in raw_sections:
+        section_name = raw_section["name"]
+        sections[section_name] = parse_section(
+            raw=raw_section, raw_config=raw_config, parent={}, settings=parsed
+        )
+
     return parsed

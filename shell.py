@@ -162,3 +162,14 @@ if __name__ == "__main__":
 # # sub sub schemas, fml
 # settings = system.settings_gui.get()
 # parsed = parse_settings(settings)
+
+
+def test(doc, method):
+    """Pass."""
+
+    def sub_test(arg1, **kwargs):
+        doc
+        return arg1, method
+
+    sub_test.__doc__ = doc
+    return sub_test

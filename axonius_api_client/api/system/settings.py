@@ -1,22 +1,16 @@
 # -*- coding: utf-8 -*-
 """API model for working with system configuration."""
-import copy
-
 from ...exceptions import ApiError, NotFoundError
 from ..mixins import ChildMixins
-from ..parsers.config import (
-    config_build,
-    config_unchanged,
-    config_unknown,
-    parse_settings,
-)
+from ..parsers.config import (config_build, config_unchanged, config_unknown,
+                              parse_settings)
 from ..parsers.tables import tablize
 
 
 class SettingsChild(ChildMixins):
     """Child API object to work with system settings."""
 
-    PRETTY_NAME = ""
+    TITLE = ""
 
     @property
     def router_path(self):
@@ -29,120 +23,119 @@ class SettingsChild(ChildMixins):
         Returns:
             :obj:`dict`: current system settings
         """
-        return parse_settings(raw=self._get(), pretty_name=self.PRETTY_NAME)
+        return parse_settings(raw=self._get(), title=self.TITLE)
 
-    def get_section(self, section, settings=None, config=False):
+    def get_section(self, section, sub_section=None, full_config=False):
         """Pass."""
-        settings = settings or self.get()
+        settings = self.get()
+        title = settings["settings_title"]
 
-        valid = []
+        valid_sections = []
 
-        for name, schemas in settings["sections"].items():
-            if section == name:
-                if config:
-                    return settings["config"][name]
-                return schemas
+        for name, meta in settings["sections"].items():
+            valid_sections.append(
+                {
+                    "Section Name": name,
+                    "Section Title": meta["title"],
+                    "Sub Section Names": "\n".join(list(meta["sub_sections"])),
+                }
+            )
 
-            title = settings["section_titles"][name]
-            valid.append({"name": name, "title": title})
+            if name == section:
+                if full_config:
+                    meta["full_config"] = settings["config"]
+                return meta
 
-        title = settings["title"]
-        err = f"Section {section!r} not found in {title!r}"
-        raise NotFoundError(tablize(value=valid, err=err))
+        err = f"Section Name {section!r} not found in {title}"
+        raise NotFoundError(tablize(value=valid_sections, err=err))
 
-    def get_sub_section(self, section, sub_section, settings=None, config=False):
+    def get_sub_section(self, section, sub_section, full_config=False):
         """Pass."""
-        settings = settings or self.get()
-        settings_section = self.get_section(section=section, settings=settings)
+        settings = self.get_section(section=section, full_config=full_config)
+        title = settings["settings_title"]
 
-        valid = []
-        for name, schemas in settings_section.items():
-            if schemas.get("sub_schemas"):
-                if sub_section == name:
-                    if config:
-                        return settings["config"][section][sub_section]
-                    return schemas["sub_schemas"]
+        if not settings["sub_sections"]:
+            raise ApiError(f"Section Name {section!r} has no sub sections!")
 
-                title = schemas["title"]
-                valid.append({"name": name, "title": title})
+        valids = []
 
-        title = settings["title"]
-        if not valid:
-            raise ApiError(f"Section {section!r} in {title} has no sub sections!")
+        for name, meta in settings["sub_sections"].items():
+            valids.append(
+                {
+                    "Sub Section Name": meta["name"],
+                    "Sub Section Title": meta["title"],
+                    "Section Name": meta["parent_name"],
+                    "Section Title": meta["parent_title"],
+                }
+            )
 
-        err = f"Sub section {sub_section!r} not found in section {section!r} in {title}"
-        raise NotFoundError(tablize(value=valid, err=err))
+            if name == sub_section:
+                if full_config:
+                    meta["full_config"] = settings["full_config"]
+                return meta
+
+        err = (
+            f"Sub Section Name {sub_section!r} not found in under "
+            f"Section Name {section!r} in {title}"
+        )
+        raise NotFoundError(tablize(value=valids, err=err))
 
     def update_section(self, section, **kwargs):
         """Update the system settings."""
-        settings = self.get()
-        settings_config_orig = settings["config"]
-        settings_config = copy.deepcopy(settings_config_orig)
+        settings = self.get_section(section=section, full_config=True)
+        title = settings["settings_title"]
+        schemas = settings["schemas"]
+        source = f"{title} Section Name {section!r}"
+        old_config = settings["config"]
+        full_config = settings["full_config"]
 
-        schemas = self.get_section(section=section, settings=settings)
-        section_config = settings_config[section]
         new_config = {}
         new_config.update(kwargs)
 
-        source = f"settings section {section!r}"
         config_unknown(
             schemas=schemas, new_config=new_config, source=source,
         )
         config_build(
-            schemas=schemas,
-            old_config=section_config,
-            new_config=new_config,
-            source=source,
-            check=True,
-            callbacks=None,
+            schemas=schemas, old_config=old_config, new_config=new_config, source=source,
         )
-        settings_config[section].update(new_config)
         config_unchanged(
-            schemas=schemas,
-            old_config=settings_config_orig,
-            new_config=settings_config,
-            source=source,
+            schemas=schemas, old_config=old_config, new_config=new_config, source=source,
         )
-        self._update(new_config=settings_config)
-        return self.get_section(section=section, config=True)
+
+        full_config[section] = new_config
+
+        self._update(new_config=full_config)
+
+        return self.get_section(section=section)
 
     def update_sub_section(self, section, sub_section, **kwargs):
         """Update the system settings."""
-        settings = self.get()
-        settings_config_orig = settings["config"]
-        settings_config = copy.deepcopy(settings_config_orig)
-
-        schemas = self.get_sub_section(
-            section=section, sub_section=sub_section, settings=settings
+        settings = self.get_sub_section(
+            section=section, sub_section=sub_section, full_config=True
         )
-        section_config = settings_config[section][sub_section]
+        title = settings["settings_title"]
+        schemas = settings["schemas"]
+        source = f"{title} Section Name {section!r} Sub Section Name {sub_section!r}"
+        old_config = settings["config"]
+        full_config = settings["full_config"]
 
         new_config = {}
         new_config.update(kwargs)
 
-        source = f"settings section {section!r} sub section {sub_section!r}"
         config_unknown(
             schemas=schemas, new_config=new_config, source=source,
         )
         config_build(
-            schemas=schemas,
-            old_config=section_config,
-            new_config=new_config,
-            source=source,
-            check=True,
-            callbacks=None,
+            schemas=schemas, old_config=old_config, new_config=new_config, source=source,
         )
-        settings_config[section][sub_section].update(new_config)
         config_unchanged(
-            schemas=schemas,
-            old_config=settings_config_orig,
-            new_config=settings_config,
-            source=source,
+            schemas=schemas, old_config=old_config, new_config=new_config, source=source,
         )
-        self._update(new_config=settings_config)
-        return self.get_sub_section(
-            section=section, sub_section=sub_section, config=True
-        )
+
+        full_config[section][sub_section] = new_config
+        self._update(new_config=full_config)
+
+        return self.get_sub_section(section=section, sub_section=sub_section)
 
     def _get(self):
         """Direct API method to get the current system settings.
@@ -160,7 +153,7 @@ class SettingsChild(ChildMixins):
 class SettingsCore(SettingsChild):
     """Child API object to work with System Global Settings."""
 
-    PRETTY_NAME = "Global Settings"
+    TITLE = "Global Settings"
 
     @property
     def router_path(self):
@@ -171,7 +164,7 @@ class SettingsCore(SettingsChild):
 class SettingsLifecycle(SettingsChild):
     """Child API object to work with Lifecycle Global Settings."""
 
-    PRETTY_NAME = "Lifecycle Settings"
+    TITLE = "Lifecycle Settings"
 
     @property
     def router_path(self):
@@ -182,7 +175,7 @@ class SettingsLifecycle(SettingsChild):
 class SettingsGui(SettingsChild):
     """Child API object to work with GUI Global Settings."""
 
-    PRETTY_NAME = "GUI Settings"
+    TITLE = "GUI Settings"
 
     @property
     def router_path(self):

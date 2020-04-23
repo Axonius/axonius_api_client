@@ -6,10 +6,13 @@ import textwrap
 import tabulate
 
 from ...constants import KEY_MAP_ADAPTER, KEY_MAP_CNX, KEY_MAP_SCHEMA
+from ...tools import json_dump
 
 
-def tablize(value, err=None, fmt="simple", footer=True):
+def tablize(value, err=None, fmt="simple", footer=True, **kwargs):
     """Pass."""
+    # value = wrapper(value=value, **kwargs)
+
     table = tabulate.tabulate(value, tablefmt=fmt, headers="keys")
 
     if footer:
@@ -28,11 +31,11 @@ def tablize(value, err=None, fmt="simple", footer=True):
 
 
 def tablize_schemas(
-    schemas, err=None, fmt="simple", footer=True, orig=True, orig_width=20
+    schemas, config=None, err=None, fmt="simple", footer=True, orig=True, orig_width=20
 ):
     """Pass."""
     values = []
-
+    config = config or None
     if isinstance(schemas, dict):
         schemas = list(schemas.values())
 
@@ -40,6 +43,11 @@ def tablize_schemas(
         value = tab_map(
             value=schema, key_map=KEY_MAP_SCHEMA, orig=orig, orig_width=orig_width
         )
+        if config:
+            config_value = config.get(schema["name"], None)
+            if isinstance(config_value, dict):
+                config_value = json_dump(config_value)
+            value["Current Value"] = config_value
         values.append(value)
 
     return tablize(value=values, err=err, fmt=fmt, footer=footer)

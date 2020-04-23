@@ -3,26 +3,14 @@
 import time
 
 from ...constants import CNX_GONE, CNX_RETRY, CNX_SANE_DEFAULTS, DEFAULT_NODE
-from ...exceptions import (
-    CnxAddError,
-    CnxGoneError,
-    CnxTestError,
-    CnxUpdateError,
-    ConfigInvalidValue,
-    ConfigRequired,
-    NotFoundError,
-)
+from ...exceptions import (CnxAddError, CnxGoneError, CnxTestError,
+                           CnxUpdateError, ConfigInvalidValue, ConfigRequired,
+                           NotFoundError)
 from ...tools import json_load, pathlib
 from ..mixins import ChildMixins
-from ..parsers.config import (
-    config_build,
-    config_default,
-    config_empty,
-    config_info,
-    config_required,
-    config_unchanged,
-    config_unknown,
-)
+from ..parsers.config import (config_build, config_default, config_empty,
+                              config_info, config_required, config_unchanged,
+                              config_unknown)
 from ..parsers.tables import tablize_cnxs, tablize_schemas
 
 
@@ -402,21 +390,27 @@ class Cnx(ChildMixins):
         adapter_node = callbacks["adapter_node"]
         field_name = schema["name"]
 
-        check = pathlib.Path(value).expanduser().resolve()
-        if check.is_file():
-            value = check
+        if isinstance(value, str):
+            check = pathlib.Path(value).expanduser().resolve()
+            if check.is_file():
+                value = check
 
         if isinstance(value, pathlib.Path):
             value = value.expanduser().resolve()
             if not value.is_file():
-                sinfo = config_info(schema=schema, value=value, source=source)
-                raise ConfigInvalidValue(f"{sinfo} file does not exist")
+                sinfo = config_info(schema=schema, value=str(value), source=source)
+                raise ConfigInvalidValue(f"{sinfo}\nFile does not exist!")
 
             file_name = value.name
             file_content = value.read_text()
+        elif hasattr(value, "read"):
+            file_content = value.read()
+            file_name = file_content[:20]
         else:
-            file_name = value[:20]
-            file_content = value
+            sinfo = config_info(schema=schema, value=str(value), source=source)
+            raise ConfigInvalidValue(
+                f"{sinfo}\nFile is not an existing file or a file-like object!"
+            )
 
         return self.parent.file_upload(
             name=adapter_name,

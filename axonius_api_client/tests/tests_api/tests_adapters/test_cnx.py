@@ -1,20 +1,14 @@
 # -*- coding: utf-8 -*-
 """Test suite."""
+import io
 import warnings
 
 import pytest
-
 from axonius_api_client.constants import CSV_ADAPTER, DEFAULT_NODE
-from axonius_api_client.exceptions import (
-    CnxAddError,
-    CnxGoneError,
-    CnxTestError,
-    CnxUpdateError,
-    ConfigInvalidValue,
-    ConfigRequired,
-    ConfigUnchanged,
-    NotFoundError,
-)
+from axonius_api_client.exceptions import (CnxAddError, CnxGoneError,
+                                           CnxTestError, CnxUpdateError,
+                                           ConfigInvalidValue, ConfigRequired,
+                                           ConfigUnchanged, NotFoundError)
 from axonius_api_client.tools import json_dump
 
 from ...meta import CSV_FILECONTENT_STR
@@ -223,7 +217,7 @@ class TestCnxPublic(TestCnxBase):
         """Pass."""
         config = {
             "user_id": "badwolf",
-            "file_path": "BADwoLF",
+            "file_path": io.StringIO("BADwoLF"),
         }
         with pytest.raises(CnxAddError) as exc:
             apiobj.cnx.add(adapter_name=CSV_ADAPTER, adapter_node=DEFAULT_NODE, **config)
@@ -290,11 +284,11 @@ class TestCnxPublic(TestCnxBase):
         with pytest.raises(ConfigInvalidValue):
             apiobj.cnx.add(adapter_name=CSV_ADAPTER, adapter_node=DEFAULT_NODE, **config)
 
-    def test_add_remove_str(self, apiobj):
+    def test_add_remove_stream(self, apiobj):
         """Pass."""
         config = {
             "user_id": "badwolf",
-            "file_path": CSV_FILECONTENT_STR,
+            "file_path": io.StringIO(CSV_FILECONTENT_STR),
         }
         cnx_added = apiobj.cnx.add(
             adapter_name=CSV_ADAPTER, adapter_node=DEFAULT_NODE, **config
