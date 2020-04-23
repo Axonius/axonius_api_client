@@ -315,6 +315,7 @@ def parse_section(raw, raw_config, parent, settings):
             sub_sections[schema_name] = parse_section(
                 raw=schema, raw_config=config, parent=parsed, settings=settings,
             )
+            schema.pop("items")
 
         # non sub_sections:
         #   no items key in schema

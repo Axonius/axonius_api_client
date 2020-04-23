@@ -297,7 +297,7 @@ KEY_MAP_ADAPTER = [
 
 KEY_MAP_SCHEMA = [
     ("name", "Name", 0),
-    ("title", "Title", 20),
+    ("title", "Title", 30),
     ("type", "Type", 0),
     ("required", "Required", 0),
     ("default", "Default", 0),

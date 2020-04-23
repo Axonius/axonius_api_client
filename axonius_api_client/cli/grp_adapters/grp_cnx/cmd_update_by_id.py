@@ -20,7 +20,7 @@ OPTIONS = [
 def cmd(
     ctx, url, key, secret, config, adapter_node, adapter_name, cnx_id, **kwargs,
 ):
-    """Update a connection from prompts or arguments."""
+    """Update a connection from arguments."""
     client = ctx.obj.start_client(url=url, key=key, secret=secret)
     new_config = dict(config)
 

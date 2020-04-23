@@ -6,6 +6,7 @@ import textwrap
 import tabulate
 
 from ...constants import KEY_MAP_ADAPTER, KEY_MAP_CNX, KEY_MAP_SCHEMA
+from ...tools import json_dump
 
 
 def tablize(value, err=None, fmt="simple", footer=True, **kwargs):
@@ -43,7 +44,10 @@ def tablize_schemas(
             value=schema, key_map=KEY_MAP_SCHEMA, orig=orig, orig_width=orig_width
         )
         if config:
-            value["Value"] = config.get(schema["name"], None)
+            config_value = config.get(schema["name"], None)
+            if isinstance(config_value, dict):
+                config_value = json_dump(config_value)
+            value["Current Value"] = config_value
         values.append(value)
 
     return tablize(value=values, err=err, fmt=fmt, footer=footer)
