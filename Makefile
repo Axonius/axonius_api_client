@@ -54,7 +54,7 @@ test:
 	pipenv run pytest -ra --verbose --cov-config=.coveragerc --cov-report xml --cov-report=html:cov_html --cov=$(PACKAGE) --showlocals  --exitfirst $(PACKAGE)/tests
 
 test_dev:
-	pipenv run pytest -vv --showlocals --exitfirst --last-failed $(PACKAGE)/tests
+	pipenv run pytest -vv --showlocals --exitfirst --last-failed --pdb $(PACKAGE)/tests
 
 test_cov_open:
 	open cov_html/index.html

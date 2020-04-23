@@ -34,7 +34,7 @@ class Users(AssetMixin):
         kwargs["field"] = self.FIELD_USERNAME
         kwargs["field_manual"] = True
         kwargs["value"] = value
-        return self.get_by_value_re(**kwargs)
+        return self.get_by_value_regex(**kwargs)
 
     def get_by_username(self, value, **kwargs):
         """Build a query to get assets where username == value."""
@@ -55,7 +55,7 @@ class Users(AssetMixin):
         kwargs["field"] = self.FIELD_MAIL
         kwargs["field_manual"] = True
         kwargs["value"] = value
-        return self.get_by_value_re(**kwargs)
+        return self.get_by_value_regex(**kwargs)
 
     def get_by_mail(self, value, **kwargs):
         """Build a query to get assets where mail == value."""

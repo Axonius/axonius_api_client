@@ -20,7 +20,7 @@ class TestGrpAdaptersFileUpload:
             CSV_ADAPTER,
             "--node-name",
             DEFAULT_NODE,
-            "--contents",
+            "--input-file",
             "-",
         ]
         result1 = runner.invoke(cli=cli, args=args1, input="badwolf")

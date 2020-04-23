@@ -2,8 +2,13 @@
 """Command line interface for Axonius API Client."""
 import click
 
-from .. import constants, version
-from . import context, grp_adapters, grp_assets, grp_tools
+from .. import version
+from ..constants import (LOG_FILE_MAX_FILES, LOG_FILE_MAX_MB, LOG_FILE_NAME,
+                         LOG_FILE_PATH, LOG_LEVEL_API, LOG_LEVEL_AUTH,
+                         LOG_LEVEL_CONSOLE, LOG_LEVEL_FILE, LOG_LEVEL_HTTP,
+                         LOG_LEVEL_PACKAGE, LOG_LEVELS_STR, REQUEST_ATTR_MAP,
+                         RESPONSE_ATTR_MAP, TIMEOUT_CONNECT, TIMEOUT_RESPONSE)
+from . import context, grp_adapters, grp_assets, grp_system, grp_tools
 
 
 @click.group(
@@ -14,12 +19,21 @@ All of the options listed above must be supplied BEFORE any commands or groups.
 """,
 )
 @click.option(
+    "--quiet/--no-quiet",
+    "-q/-nq",
+    "quiet",
+    default=False,
+    help="Silence green text.",
+    show_envvar=True,
+    show_default=True,
+)
+@click.option(
     "--log-level-package",
     "-lvlpkg",
     "log_level_package",
-    default=constants.LOG_LEVEL_PACKAGE,
+    default=LOG_LEVEL_PACKAGE,
     help="Logging level to use for entire package.",
-    type=click.Choice(constants.LOG_LEVELS_STR),
+    type=click.Choice(LOG_LEVELS_STR),
     show_envvar=True,
     show_default=True,
 )
@@ -27,9 +41,9 @@ All of the options listed above must be supplied BEFORE any commands or groups.
     "--log-level-http",
     "-lvlhttp",
     "log_level_http",
-    default=constants.LOG_LEVEL_HTTP,
+    default=LOG_LEVEL_HTTP,
     help="Logging level to use for http client.",
-    type=click.Choice(constants.LOG_LEVELS_STR),
+    type=click.Choice(LOG_LEVELS_STR),
     show_envvar=True,
     show_default=True,
 )
@@ -37,9 +51,9 @@ All of the options listed above must be supplied BEFORE any commands or groups.
     "--log-level-auth",
     "-lvlauth",
     "log_level_auth",
-    default=constants.LOG_LEVEL_AUTH,
+    default=LOG_LEVEL_AUTH,
     help="Logging level to use for auth client.",
-    type=click.Choice(constants.LOG_LEVELS_STR),
+    type=click.Choice(LOG_LEVELS_STR),
     show_envvar=True,
     show_default=True,
 )
@@ -47,9 +61,9 @@ All of the options listed above must be supplied BEFORE any commands or groups.
     "--log-level-api",
     "-lvlapi",
     "log_level_api",
-    default=constants.LOG_LEVEL_API,
+    default=LOG_LEVEL_API,
     help="Logging level to use for api clients.",
-    type=click.Choice(constants.LOG_LEVELS_STR),
+    type=click.Choice(LOG_LEVELS_STR),
     show_envvar=True,
     show_default=True,
 )
@@ -57,9 +71,9 @@ All of the options listed above must be supplied BEFORE any commands or groups.
     "--log-level-console",
     "-lvlcon",
     "log_level_console",
-    default=constants.LOG_LEVEL_CONSOLE,
+    default=LOG_LEVEL_CONSOLE,
     help="Logging level to use for console output.",
-    type=click.Choice(constants.LOG_LEVELS_STR),
+    type=click.Choice(LOG_LEVELS_STR),
     show_envvar=True,
     show_default=True,
 )
@@ -67,9 +81,9 @@ All of the options listed above must be supplied BEFORE any commands or groups.
     "--log-level-file",
     "-lvlfile",
     "log_level_file",
-    default=constants.LOG_LEVEL_FILE,
+    default=LOG_LEVEL_FILE,
     help="Logging level to use for file output.",
-    type=click.Choice(constants.LOG_LEVELS_STR),
+    type=click.Choice(LOG_LEVELS_STR),
     show_envvar=True,
     show_default=True,
 )
@@ -79,7 +93,7 @@ All of the options listed above must be supplied BEFORE any commands or groups.
     "log_request_attrs",
     help="Log http client request attributes.",
     multiple=True,
-    type=click.Choice(list(constants.REQUEST_ATTR_MAP) + ["all"]),
+    type=click.Choice(list(REQUEST_ATTR_MAP) + ["all"]),
     show_envvar=True,
 )
 @click.option(
@@ -88,7 +102,7 @@ All of the options listed above must be supplied BEFORE any commands or groups.
     "log_response_attrs",
     help="Log http client response attributes.",
     multiple=True,
-    type=click.Choice(list(constants.RESPONSE_ATTR_MAP) + ["all"]),
+    type=click.Choice(list(RESPONSE_ATTR_MAP) + ["all"]),
     show_envvar=True,
 )
 @click.option(
@@ -132,7 +146,7 @@ All of the options listed above must be supplied BEFORE any commands or groups.
     "-fn",
     "log_file_name",
     metavar="FILENAME",
-    default=constants.LOG_FILE_NAME,
+    default=LOG_FILE_NAME,
     help="Log file to save logs to if -f/--log-file supplied.",
     show_envvar=True,
     show_default=True,
@@ -142,7 +156,7 @@ All of the options listed above must be supplied BEFORE any commands or groups.
     "-fp",
     "log_file_path",
     metavar="PATH",
-    default=constants.LOG_FILE_PATH,
+    default=LOG_FILE_PATH,
     help="Directory to use for -fn/--log-file-name (Defaults to CWD).",
     show_envvar=True,
 )
@@ -150,7 +164,7 @@ All of the options listed above must be supplied BEFORE any commands or groups.
     "--log-file-max-mb",
     "-fmb",
     "log_file_max_mb",
-    default=constants.LOG_FILE_MAX_MB,
+    default=LOG_FILE_MAX_MB,
     help="Rollover -fn/--log-file-name at this many megabytes.",
     type=click.INT,
     show_envvar=True,
@@ -160,7 +174,7 @@ All of the options listed above must be supplied BEFORE any commands or groups.
     "--log-file-max-files",
     "-fmf",
     "log_file_max_files",
-    default=constants.LOG_FILE_MAX_FILES,
+    default=LOG_FILE_MAX_FILES,
     help="Keep this many rollover logs.",
     type=click.INT,
     show_envvar=True,
@@ -250,7 +264,7 @@ All of the options listed above must be supplied BEFORE any commands or groups.
     "--timeout-connect",
     "-tc",
     "timeout_connect",
-    default=constants.TIMEOUT_CONNECT,
+    default=TIMEOUT_CONNECT,
     help="Seconds to wait for connections to API",
     type=click.INT,
     show_envvar=True,
@@ -260,7 +274,7 @@ All of the options listed above must be supplied BEFORE any commands or groups.
     "--timeout-response",
     "-tr",
     "timeout_response",
-    default=constants.TIMEOUT_RESPONSE,
+    default=TIMEOUT_RESPONSE,
     help="Seconds to wait for responses from API",
     type=click.INT,
     show_default=True,
@@ -297,9 +311,11 @@ def cli(
     wraperror,
     timeout_connect,
     timeout_response,
+    quiet,
 ):
     """Command line interface for the Axonius API Client."""
     ctx._click_ctx = click_ctx
+    ctx.QUIET = quiet
     ctx._connect_args["log_level_package"] = log_level_package
     ctx._connect_args["log_level_http"] = log_level_http
     ctx._connect_args["log_level_auth"] = log_level_auth
@@ -331,4 +347,5 @@ def cli(
 cli.add_command(grp_adapters.adapters)
 cli.add_command(grp_assets.devices)
 cli.add_command(grp_assets.users)
+cli.add_command(grp_system.system)
 cli.add_command(grp_tools.tools)

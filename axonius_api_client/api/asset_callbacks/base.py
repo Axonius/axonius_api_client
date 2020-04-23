@@ -3,14 +3,8 @@
 import copy
 import sys
 
-from ...constants import (
-    DEFAULT_PATH,
-    FIELD_JOINER,
-    FIELD_TRIM_LEN,
-    FIELD_TRIM_STR,
-    GET_SCHEMA_KEYS,
-    SCHEMAS_CUSTOM,
-)
+from ...constants import (DEFAULT_PATH, FIELD_JOINER, FIELD_TRIM_LEN,
+                          FIELD_TRIM_STR, GET_SCHEMA_KEYS, SCHEMAS_CUSTOM)
 from ...exceptions import ApiError
 from ...tools import echo_error, echo_ok, get_path, listify
 
@@ -117,6 +111,10 @@ class Base:
         """Run start callbacks."""
         join = "\n   - "
         self.echo(msg=f"Starting {self}")
+
+        cbargs = ["{}={!r}".format(k, v) for k, v in self.GETARGS.items()]
+        cbargs = "\n  " + "\n  ".join(cbargs)
+        self.LOG.debug(f"Callback arguments: {cbargs}")
 
         config = join + join.join(self.args_strs)
         self.echo(msg=f"Configuration: {config}")
