@@ -79,7 +79,7 @@ class exc_wrapper:
         if value and self.wraperror and not isinstance(value, self.EXCLUDES):
             msg = "WRAPPED EXCEPTION: {c.__module__}.{c.__name__}\n{v}"
             msg = msg.format(c=value.__class__, v=value)
-            Context.echo_error(msg)
+            echo_error(msg)
 
 
 class Context:
