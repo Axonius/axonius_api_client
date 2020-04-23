@@ -70,7 +70,7 @@ if "%1" == "pip_install" (
 
 if "%1" == "test" (
     :test
-    pytest -ra --verbose --showlocals  --exitfirst axonius_api_client/tests --last-failed
+    pipenv run pytest -vv --showlocals --exitfirst --last-failed --pdb axonius_api_client/tests
     goto end
 )
 
