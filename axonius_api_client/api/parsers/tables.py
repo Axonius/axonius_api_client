@@ -30,11 +30,11 @@ def tablize(value, err=None, fmt="simple", footer=True, **kwargs):
 
 
 def tablize_schemas(
-    schemas, err=None, fmt="simple", footer=True, orig=True, orig_width=20
+    schemas, config=None, err=None, fmt="simple", footer=True, orig=True, orig_width=20
 ):
     """Pass."""
     values = []
-
+    config = config or None
     if isinstance(schemas, dict):
         schemas = list(schemas.values())
 
@@ -42,6 +42,8 @@ def tablize_schemas(
         value = tab_map(
             value=schema, key_map=KEY_MAP_SCHEMA, orig=orig, orig_width=orig_width
         )
+        if config:
+            value["Value"] = config.get(schema["name"], None)
         values.append(value)
 
     return tablize(value=values, err=err, fmt=fmt, footer=footer)

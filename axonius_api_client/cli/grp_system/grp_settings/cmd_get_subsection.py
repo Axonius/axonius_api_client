@@ -3,37 +3,31 @@
 from ....tools import json_dump
 from ...context import CONTEXT_SETTINGS, click
 from ...options import AUTH, add_options
-from .grp_common import EXPORT, SECTION, config_sections
+from .grp_common import EXPORT, SECTION, SUB_SECTION, str_subsection
 
-OPTIONS = [*AUTH, EXPORT, SECTION]
+OPTIONS = [*AUTH, EXPORT, SECTION, SUB_SECTION]
 
 
 @click.command(name="get-sub-section", context_settings=CONTEXT_SETTINGS)
 @add_options(OPTIONS)
 @click.pass_context
-def cmd(ctx, url, key, secret, section, export_format, **kwargs):
+def cmd(ctx, url, key, secret, section, sub_section, export_format, **kwargs):
     """Get settings for a specific section."""
     client = ctx.obj.start_client(url=url, key=key, secret=secret)
 
-    settings_name = ctx.parent.command.name.replace("-", "_")
-    settings_obj = getattr(client.system, settings_name)
+    apiname = ctx.parent.command.name.replace("-", "_")
+    apiobj = getattr(client.system, apiname)
 
     with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
-        settings = settings_obj.get()
-        settings_obj.get_section(section=section, settings=settings, config=False)
-        settings["sections"] = {
-            k: v for k, v in settings["sections"].items() if k == section
-        }
-        settings["config"] = {
-            k: v for k, v in settings["config"].items() if k == section
-        }
+        settings = apiobj.get_sub_section(section=section, sub_section=sub_section)
 
     if export_format == "str":
-        config_sections(ctx=ctx, settings=settings)
+        str_subsection(meta=settings)
         ctx.exit(0)
 
     if export_format == "json-config":
-        click.secho(json_dump(settings["config"][section]))
+        config = settings["config"]
+        click.secho(json_dump(config))
         ctx.exit(0)
 
     if export_format == "json-full":

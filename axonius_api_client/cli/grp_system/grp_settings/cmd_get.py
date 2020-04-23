@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 """Command line interface for Axonius API Client."""
+from ....tools import json_dump
 from ...context import CONTEXT_SETTINGS, click
 from ...options import AUTH, add_options
-from .grp_common import EXPORT, handle_export
+from .grp_common import EXPORT, str_sections
 
 OPTIONS = [*AUTH, EXPORT]
 
@@ -14,12 +15,23 @@ def cmd(ctx, url, key, secret, export_format, **kwargs):
     """Get all settings."""
     client = ctx.obj.start_client(url=url, key=key, secret=secret)
 
-    settings_name = ctx.parent.command.name.replace("-", "_")
-    settings_obj = getattr(client.system, settings_name)
+    apiname = ctx.parent.command.name.replace("-", "_")
+    apiobj = getattr(client.system, apiname)
 
     with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
-        settings = settings_obj.get()
+        settings = apiobj.get()
 
-    handle_export(
-        ctx=ctx, settings=settings, export_format=export_format,
-    )
+    if export_format == "str":
+        str_sections(meta=settings)
+        ctx.exit(0)
+
+    if export_format == "json-config":
+        config = settings["config"]
+        click.secho(json_dump(config))
+        ctx.exit(0)
+
+    if export_format == "json-full":
+        click.secho(json_dump(settings))
+        ctx.exit(0)
+
+    ctx.exit(1)
