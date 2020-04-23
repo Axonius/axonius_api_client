@@ -7,21 +7,45 @@ FOR /F "tokens=* USEBACKQ" %%F IN (`python get_version.py`) do (
 
 if "%1" == "" goto help
 
+if "%1" == "help" (
+    :help
+    echo.Please use `make ^<target^>` where ^<target^> is one of
+    echo.   init        to get things going
+    echo.   test        run the test suite
+    echo.   clean       clean everything up
+    goto end
+)
+
 if "%1" == "init" (
     :init
     echo.Initializing...
     call :pip_install_tools
     call :pip_install_dev
     call :pip_install
+    call :pipenv_install
 )
 
-if "%1" == "help" (
-    :help
-    echo.Please use `make ^<target^>` where ^<target^> is one of
-    echo.   init        to get things going
-    echo.   test        run the test suite
+if "%1" == "clean" (
+    :clean
+    echo.Cleaning...
+    call :pipenv_clean
+    call :pip_install
+)
+
+if "%1" == "pipenv_clean" (
+    :pipenv_clean
+    pipenv --rm
+    echo.Virtual environment removed
     goto end
 )
+
+if "%1" == "pipenv_install" (
+    :pipenv_install
+    pipenv install --dev --skip-lock
+    echo.Virtual environment installed
+    goto end
+)
+
 
 if "%1" == "pip_install_tools" (
     :pip_install_tools
