@@ -4,15 +4,16 @@ import os
 
 import dotenv
 import pytest
-
 from axonius_api_client.api import enforcements, system
 from axonius_api_client.api.adapters import Adapters
 from axonius_api_client.api.adapters.cnx import Cnx
-from axonius_api_client.api.assets import Devices, Users, fields, labels, saved_query
+from axonius_api_client.api.assets import (Devices, Users, fields, labels,
+                                           saved_query)
 from axonius_api_client.constants import CSV_ADAPTER, DEFAULT_NODE
 
 from .meta import CSV_FILECONTENT_STR, CSV_FILENAME, QUERIES
-from .utils import check_apiobj, check_apiobj_children, check_apiobj_xref, get_auth
+from .utils import (check_apiobj, check_apiobj_children, check_apiobj_xref,
+                    get_auth)
 
 dotenv.load_dotenv()
 
@@ -80,6 +81,7 @@ def api_devices(request):
 
     obj.TEST_DATA = getattr(obj, "TEST_DATA", {})
     obj.TEST_DATA["field_complex"] = field_complex
+    obj.TEST_DATA["field_simple"] = "specific_data.data.public_ips"
     obj.TEST_DATA["cb_assets_query"] = cb_assets_query
     obj.TEST_DATA["field_complexes"] = obj.fields_default + [field_complex]
     obj.TEST_DATA["field_main"] = obj.FIELD_HOSTNAME
@@ -111,8 +113,9 @@ def api_users(request):
 
     obj.TEST_DATA = getattr(obj, "TEST_DATA", {})
     obj.TEST_DATA["field_complex"] = field_complex
+    obj.TEST_DATA["field_simple"] = "specific_data.data.user_sid"
     obj.TEST_DATA["cb_assets_query"] = cb_assets_query
-    obj.TEST_DATA["field_complexes"] = obj.fields_default + [field_complex]
+    obj.TEST_DATA["field_complexes"] = obj.fields_default
     obj.TEST_DATA["field_main"] = obj.FIELD_USERNAME
     return obj
 

@@ -256,6 +256,7 @@ class Connect:
                 raise cnxexc
 
             self._started = True
+            LOG.info(str(self))
 
     @property
     def users(self):
