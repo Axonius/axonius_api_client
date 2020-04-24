@@ -754,6 +754,7 @@ def echo_error(msg, abort=True, tmpl=True, **kwargs):
 def sysinfo():
     """Pass."""
     info = {}
+    info["Date"] = str(dt_now())
     info["Python System Version"] = ", ".join(sys.version.splitlines())
     platform_attrs = [
         "machine",
