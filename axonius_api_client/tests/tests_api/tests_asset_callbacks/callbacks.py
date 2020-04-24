@@ -6,15 +6,10 @@ import logging
 import sys
 
 import pytest
-
 from axonius_api_client.api.asset_callbacks import get_callbacks_cls
-from axonius_api_client.constants import (
-    AGG_ADAPTER_NAME,
-    AGG_ADAPTER_TITLE,
-    FIELD_TRIM_LEN,
-    SCHEMAS_CUSTOM,
-)
-from axonius_api_client.exceptions import ApiError
+from axonius_api_client.constants import (AGG_ADAPTER_NAME, AGG_ADAPTER_TITLE,
+                                          FIELD_TRIM_LEN, SCHEMAS_CUSTOM)
+from axonius_api_client.exceptions import ApiError, NotFoundError
 
 from ...meta import TAGS
 from ...utils import log_check
@@ -31,6 +26,15 @@ def load_test_data(apiobj):
         apiobj.TEST_DATA["assets"] = apiobj.get(max_rows=2000, fields_map=fields_map)
 
     if not apiobj.TEST_DATA.get("cb_assets"):
+        field_complex = apiobj.TEST_DATA["field_complex"]
+        try:
+            apiobj.fields.get_field_name(value=field_complex)
+        except NotFoundError:
+            # XXX users no longer seem to have any complex field data as of 04/23/2020
+            apiobj.TEST_DATA["field_complex"] = None
+            apiobj.TEST_DATA["field_complexes"] = apiobj.fields_default
+            apiobj.TEST_DATA["cb_assets_query"] = None
+
         field_complexes = apiobj.TEST_DATA["field_complexes"]
         cb_assets_query = apiobj.TEST_DATA["cb_assets_query"]
         apiobj.TEST_DATA["cb_assets"] = apiobj.get(
@@ -183,6 +187,8 @@ class Callbacks:
         row = copy.deepcopy(apiobj.TEST_DATA["cb_assets"][0])
 
         field_complex = apiobj.TEST_DATA["field_complex"]
+        if field_complex is None:
+            pytest.skip(f"No complex field found for {apiobj}")
         field_complexes = apiobj.TEST_DATA["field_complexes"]
 
         schema = apiobj.fields.get_field_schema(
@@ -341,6 +347,8 @@ class Callbacks:
         row = copy.deepcopy(apiobj.TEST_DATA["cb_assets"][0])
 
         field_complex = apiobj.TEST_DATA["field_complex"]
+        if field_complex is None:
+            pytest.skip(f"No complex field found for {apiobj}")
 
         sub_exclude = list(row[field_complex][0])[0]
         fields = ["internal_axon_id", sub_exclude]
@@ -451,6 +459,8 @@ class Callbacks:
         """Pass."""
         row = copy.deepcopy(apiobj.TEST_DATA["cb_assets"][0])
         field_complex = apiobj.TEST_DATA["field_complex"]
+        if field_complex is None:
+            pytest.skip(f"No complex field found for {apiobj}")
         schema = apiobj.fields.get_field_schema(
             value=field_complex,
             schemas=apiobj.TEST_DATA["fields_map"][AGG_ADAPTER_NAME],
@@ -505,6 +515,8 @@ class Callbacks:
         """Pass."""
         row = copy.deepcopy(apiobj.TEST_DATA["cb_assets"][0])
         field_complex = apiobj.TEST_DATA["field_complex"]
+        if field_complex is None:
+            pytest.skip(f"No complex field found for {apiobj}")
 
         schema = apiobj.fields.get_field_schema(
             value=field_complex,
@@ -536,6 +548,9 @@ class Callbacks:
 
     def test_field_flatten_custom_null(self, cbexport, apiobj):
         """Pass."""
+        if apiobj.TEST_DATA["field_complex"] is None:
+            pytest.skip(f"No complex field found for {apiobj}")
+
         row = copy.deepcopy(apiobj.TEST_DATA["cb_assets"][0])
 
         getargs = {"field_flatten": True, "field_null_value": "badwolf"}
@@ -582,6 +597,8 @@ class Callbacks:
         """Pass."""
         row = copy.deepcopy(apiobj.TEST_DATA["cb_assets"][0])
         field_complex = apiobj.TEST_DATA["field_complex"]
+        if field_complex is None:
+            pytest.skip(f"No complex field found for {apiobj}")
 
         getargs = {"field_explode": field_complex}
         cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs=getargs)
@@ -782,7 +799,7 @@ class Callbacks:
         capture = capsys.readouterr()
         assert f"{entry}\n" in capture.err
         assert not capture.out
-        log_check(caplog=caplog, entries=[entry], exists=False)
+        log_check(caplog=caplog, entries=[entry], exists=True)
 
     def test_echo_ok_doecho_no(self, cbexport, apiobj, capsys, caplog):
         """Pass."""

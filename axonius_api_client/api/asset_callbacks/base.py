@@ -498,7 +498,7 @@ class Base:
 
         self._file_path.touch(mode=0o600)
         self._fd_close = self.GETARGS.get("export_fd_close", True)
-        self._fd = self._file_path.open(mode="w")
+        self._fd = self._file_path.open(mode="w", encoding="utf-8")
         self.echo(msg=f"Exporting to file '{fp}' ({mode})")
         return self._fd
 

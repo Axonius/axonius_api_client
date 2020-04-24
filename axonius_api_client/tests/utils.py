@@ -6,11 +6,10 @@ import sys
 from io import StringIO
 
 import pytest
-from click.testing import CliRunner
-
 from axonius_api_client import api, auth
 from axonius_api_client.cli.context import Context
 from axonius_api_client.http import Http
+from click.testing import CliRunner
 
 IS_WINDOWS = sys.platform == "win32"
 IS_LINUX = sys.platform == "linux"
@@ -54,10 +53,16 @@ def get_cnx_existing(apiobj, name=None):
 
 def get_cnx_working(apiobj, name=None):
     """Pass."""
+    problem_children = [
+        "symantec_altiris",  # AX-7165
+    ]
+
     found = None
     adapters = apiobj.get()
     for adapter in adapters:
         if name and adapter["name"] != name:
+            continue
+        if adapter["name"] in problem_children:
             continue
         cnxs = adapter["cnx"]
         for cnx in cnxs:

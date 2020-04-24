@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 """Utilities and tools."""
 import json
+import logging
 import pathlib
+import platform
 import sys
 from datetime import datetime, timedelta
 from itertools import zip_longest
@@ -12,18 +14,12 @@ import dateutil.parser
 import dateutil.relativedelta
 import dateutil.tz
 
-from .constants import (
-    ERROR_ARGS,
-    ERROR_TMPL,
-    NO,
-    OK_ARGS,
-    OK_TMPL,
-    SIMPLE,
-    WARN_ARGS,
-    WARN_TMPL,
-    YES,
-)
+from . import __package__ as PACKAGE_ROOT
+from .constants import (ERROR_ARGS, ERROR_TMPL, NO, OK_ARGS, OK_TMPL, SIMPLE,
+                        WARN_ARGS, WARN_TMPL, YES)
 from .exceptions import ApiError, ToolsError
+
+LOG = logging.getLogger(PACKAGE_ROOT)
 
 # XXX package time?
 # def val_type(value, types):
@@ -725,6 +721,7 @@ def echo_ok(msg, tmpl=True, **kwargs):
     if tmpl:
         msg = OK_TMPL.format(msg=msg)
 
+    LOG.info(msg)
     click.secho(msg, **echoargs)
 
 
@@ -736,6 +733,7 @@ def echo_warn(msg, tmpl=True, **kwargs):
     if tmpl:
         msg = WARN_TMPL.format(msg=msg)
 
+    LOG.warning(msg)
     click.secho(msg, **echoargs)
 
 
@@ -747,6 +745,35 @@ def echo_error(msg, abort=True, tmpl=True, **kwargs):
     if tmpl:
         msg = ERROR_TMPL.format(msg=msg)
 
+    LOG.error(msg)
     click.secho(msg, **echoargs)
     if abort:
         sys.exit(1)
+
+
+def sysinfo():
+    """Pass."""
+    info = {}
+    info["Date"] = str(dt_now())
+    info["Python System Version"] = ", ".join(sys.version.splitlines())
+    platform_attrs = [
+        "machine",
+        "node",
+        "platform",
+        "processor",
+        "python_branch",
+        "python_compiler",
+        "python_implementation",
+        "python_revision",
+        "python_version",
+        "release",
+        "system",
+        "version",
+        "win32_edition",
+    ]
+    for attr in platform_attrs:
+        method = getattr(platform, attr)
+        value = method()
+        attr = attr.replace("_", " ").title()
+        info[attr] = value
+    return info
