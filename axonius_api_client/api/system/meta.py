@@ -62,6 +62,6 @@ def parse_sizes(raw):
     parsed = {}
     parsed["disk_free_mb"] = math.floor(raw["disk_free"] / 1024 / 1024)
     parsed["disk_used_mb"] = math.ceil(raw["disk_used"] / 1024 / 1024)
-    parsed["historical_sizes_devices"] = raw["entity_sizes"]["Devices"]
-    parsed["historical_sizes_users"] = raw["entity_sizes"]["Users"]
+    parsed["historical_sizes_devices"] = raw["entity_sizes"].get("Devices", {})
+    parsed["historical_sizes_users"] = raw["entity_sizes"].get("Users", {})
     return parsed

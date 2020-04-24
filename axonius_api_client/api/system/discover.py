@@ -74,9 +74,15 @@ def parse_lifecycle(raw):
     """Pass."""
     parsed = {}
 
-    finish_dt = dt_parse(raw["last_finished_time"])
-    start_dt = dt_parse(raw["last_start_time"])
-    if finish_dt >= start_dt:
+    finish_dt = raw["last_finished_time"]
+    start_dt = raw["last_start_time"]
+
+    if finish_dt:
+        finish_dt = dt_parse(finish_dt)
+    if start_dt:
+        start_dt = dt_parse(start_dt)
+
+    if (finish_dt and start_dt) and finish_dt >= start_dt:
         took_seconds = (finish_dt - start_dt).seconds
         took_minutes = math.ceil(took_seconds / 60)
     else:

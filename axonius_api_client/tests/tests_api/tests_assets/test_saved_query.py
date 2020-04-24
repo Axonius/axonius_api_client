@@ -4,7 +4,6 @@ import copy
 import json
 
 import pytest
-
 from axonius_api_client.api.assets.saved_query import check_gui_page_size
 from axonius_api_client.constants import GUI_PAGE_SIZES, SIMPLE
 from axonius_api_client.exceptions import ApiError, NotFoundError
@@ -140,17 +139,18 @@ class SavedQueryPublic:
     @pytest.fixture(scope="class")
     def sq_fixture(self, apiobj):
         """Pass."""
-        field_complex = apiobj.TEST_DATA["field_complex"]
+        field_simple = apiobj.TEST_DATA["field_simple"]
+
         name = "badwolf torked"
-        fields = ["adapters", "last_seen", "id", field_complex]
+        fields = ["adapters", "last_seen", "id", field_simple]
         exp_fields = [
             "adapters",
             "specific_data.data.last_seen",
             "specific_data.data.id",
-            field_complex,
+            field_simple,
         ]
-        sort_field = field_complex
-        colfilters = {field_complex: "a"}
+        sort_field = field_simple
+        colfilters = {field_simple: "a"}
         sort_desc = False
         gui_page_size = GUI_PAGE_SIZES[-1]
         tags = ["badwolf1", "badwolf2"]
