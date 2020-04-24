@@ -83,21 +83,16 @@ def test_tab_map_long_str():
     """Pass."""
     long_str = "badwolf " * 30
     long_str_exp = (
-        "badwolf badwolf\n"
-        "badwolf badwolf\n"
-        "badwolf badwolf\n"
-        "badwolf badwolf\n"
-        "badwolf badwolf\n"
-        "badwolf badwolf\n"
-        "badwolf badwolf\n"
-        "badwolf badwolf\n"
-        "badwolf badwolf\n"
-        "badwolf badwolf\n"
-        "badwolf badwolf\n"
-        "badwolf badwolf\n"
-        "badwolf badwolf\n"
-        "badwolf badwolf\n"
-        "badwolf badwolf"
+        "badwolf badwolf badwolf\n"
+        "badwolf badwolf badwolf\n"
+        "badwolf badwolf badwolf\n"
+        "badwolf badwolf badwolf\n"
+        "badwolf badwolf badwolf\n"
+        "badwolf badwolf badwolf\n"
+        "badwolf badwolf badwolf\n"
+        "badwolf badwolf badwolf\n"
+        "badwolf badwolf badwolf\n"
+        "badwolf badwolf badwolf"
     )
     value = {
         "title": long_str,

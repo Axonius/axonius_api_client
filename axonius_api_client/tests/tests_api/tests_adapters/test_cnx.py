@@ -98,12 +98,13 @@ class TestCnxPublic(TestCnxBase):
 
     def test_test_fail(self, apiobj):
         """Pass."""
-        cnx = get_cnx_broken(apiobj)
         with pytest.raises(CnxTestError):
             apiobj.cnx.test(
-                adapter_name=cnx["adapter_name"],
-                adapter_node=cnx["node_name"],
-                **cnx["config"],
+                adapter_name="tanium",
+                adapter_node=DEFAULT_NODE,
+                domain="badwolf",
+                username="badwolf",
+                password="badwolf",
             )
 
     def test_test_fail_no_domain(self, apiobj):
@@ -119,6 +120,8 @@ class TestCnxPublic(TestCnxBase):
         with pytest.raises(ConfigUnchanged):
             apiobj.cnx.update_cnx(cnx_update=cnx)
 
+    # XXX broken in pre-3.3
+    # @pytest.mark.skip(f"Connection label update not working")
     def test_update_cnx(self, apiobj):
         """Pass."""
         cnx = get_cnx_working(apiobj)
@@ -148,6 +151,8 @@ class TestCnxPublic(TestCnxBase):
         )
         assert cnx_final["config"]["connection_label"] == old_label
 
+    # XXX broken in pre-3.3
+    # @pytest.mark.skip(f"Connection label update not working")
     def test_update_cnx_error(self, apiobj):
         """Pass."""
         cnx = get_cnx_working(apiobj, name="tanium")
@@ -205,6 +210,8 @@ class TestCnxPublic(TestCnxBase):
         )
 
         assert not del_result
+        # XXX changes pre-3.3
+        # assert del_result["client_id"] == cnx_added["id"]
 
         with pytest.raises(NotFoundError):
             apiobj.cnx.get_by_id(
@@ -235,6 +242,8 @@ class TestCnxPublic(TestCnxBase):
         )
 
         assert not del_result
+        # XXX changes pre-3.3
+        # assert del_result["client_id"] == cnx_added["id"]
 
         with pytest.raises(NotFoundError):
             apiobj.cnx.get_by_id(
@@ -266,6 +275,8 @@ class TestCnxPublic(TestCnxBase):
         )
 
         assert not del_result
+        # XXX changes pre-3.3
+        # assert del_result["client_id"] == cnx_added["id"]
 
         with pytest.raises(NotFoundError):
             apiobj.cnx.get_by_id(
@@ -304,6 +315,8 @@ class TestCnxPublic(TestCnxBase):
         )
 
         assert not del_result
+        # XXX changes pre-3.3
+        # assert del_result["client_id"] == cnx_added["id"]
 
         with pytest.raises(NotFoundError):
             apiobj.cnx.get_by_id(
@@ -317,6 +330,7 @@ class TestCnxPublic(TestCnxBase):
         config = {
             "user_id": "badwolf",
             "file_path": csv_file_path_broken,
+            # SANE_DEFAULTS handles these now:
             # "is_users": False,
             # "is_installed_sw": False,
             # "s3_use_ec2_attached_instance_profile": False,
@@ -337,6 +351,8 @@ class TestCnxPublic(TestCnxBase):
         )
 
         assert not del_result
+        # XXX changes pre-3.3
+        # assert del_result["client_id"] == cnx_added["id"]
 
         with pytest.raises(NotFoundError):
             apiobj.cnx.get_by_id(
