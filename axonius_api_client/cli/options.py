@@ -58,24 +58,27 @@ def get_option_fields_default(default=True):
     )
 
 
+URL = click.option(
+    "--url",
+    "-u",
+    "url",
+    required=True,
+    help="URL of an Axonius instance",
+    metavar="URL",
+    prompt="URL",
+    show_envvar=True,
+    show_default=True,
+)
+
+
 AUTH = [
-    click.option(
-        "--url",
-        "-u",
-        "url",
-        required=True,
-        help="""URL of an Axonius instance""",
-        metavar="URL",
-        prompt="URL",
-        show_envvar=True,
-        show_default=True,
-    ),
+    URL,
     click.option(
         "--key",
         "-k",
         "key",
         required=True,
-        help="""API Key of user in an Axonius instance""",
+        help="API Key of user in an Axonius instance",
         metavar="KEY",
         prompt="API Key of user",
         hide_input=True,
@@ -87,7 +90,7 @@ AUTH = [
         "-s",
         "secret",
         required=True,
-        help="""API Secret of user in an Axonius instance""",
+        help="API Secret of user in an Axonius instance",
         metavar="SECRET",
         prompt="API Secret of user",
         hide_input=True,
