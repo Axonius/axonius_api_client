@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Command line interface for Axonius API Client."""
 # from ....constants import DEFAULT_PERM, PERM_SETS, VALID_PERMS
-from ....tools import json_dump, listify
+from ....tools import dt_parse, json_dump, listify
 from ...context import click
 
 EXPORT = click.option(
@@ -24,21 +24,25 @@ def handle_export(ctx, data, export_format, **kwargs):
 
     if export_format == "str":
         for item in listify(data):
-            is_admin = item.get("admin", False)
             first_name = item["first_name"]
             last_name = item["last_name"]
-            perms = item.get("permissions", {})
+            role = item["role_obj"]
+            role_name = role["name"]
             source = item["source"]
             user_name = item["user_name"]
+            last_login = item.get("last_login")
+            if last_login:
+                last_login = str(dt_parse(last_login))
 
-            click.secho("\n---------------------------------------")
-            click.secho(f"User Name: {user_name}")
-            click.secho(f"{user_name} -- Is Admin: {is_admin}")
-            click.secho(f"{user_name} -- First Name: {first_name}")
-            click.secho(f"{user_name} -- Last Name: {last_name}")
-            click.secho(f"{user_name} -- Source: {source}")
-            for k, v in perms.items():
-                click.secho(f"{user_name} -- {k} permission: {v}")
+            lines = [
+                f"Name: {user_name!r}",
+                f"Role: {role_name!r}",
+                f"Last Login: {last_login!r}",
+                f"First Name: {first_name!r}",
+                f"Last Name: {last_name!r}",
+                f"Source: {source!r}",
+            ]
+            click.secho(", ".join(lines))
         ctx.exit(0)
 
     ctx.exit(1)

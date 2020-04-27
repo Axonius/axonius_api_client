@@ -12,8 +12,10 @@ class Users(ChildMixins):
         self, name, password, role_name, first_name=None, last_name=None, email=None,
     ):
         """Pass."""
-        role = self.parent.roles.get(name=role_name)
-        names = self.get_names()
+        role = self.parent.roles.get_by_name(name=role_name)
+        users = self.get()
+
+        names = [x["user_name"] for x in users]
 
         if name in names:
             raise ApiError(f"User named {name!r} already exists")
@@ -25,12 +27,20 @@ class Users(ChildMixins):
         user["password"] = password
         user["email"] = email
         user["role_id"] = role["uuid"]
-
-        return self._add(user=user)
+        user["role_obj"] = role
+        self._add(user=user)
+        return self.get_by_name(name=name)
 
     def get(self):
         """Pass."""
         users = self._get()
+        roles = self.parent.roles.get()
+        for user in users:
+            for role in roles:
+                if role["uuid"] == user["role_id"]:
+                    user["role_obj"] = role
+                    break
+
         return users
 
     def get_by_name(self, name):
@@ -57,7 +67,7 @@ class Users(ChildMixins):
         role_name=None,
     ):
         """Pass."""
-        user = self.get(name=name)
+        user = self.get_by_name(name=name)
 
         one_of = [first_name, last_name, password, email, role_name]
 
@@ -83,15 +93,16 @@ class Users(ChildMixins):
             user["email"] = email
 
         if role_name is not None:
-            role = self.parent.roles.get(name=role_name)
+            role = self.parent.roles.get_by_name(name=role_name)
             user["role_id"] = role["uuid"]
+            user["role_obj"] = role
 
         self._update(uuid=uuid, user=user)
-        return self.get(name=name)
+        return self.get_by_name(name=name)
 
     def delete(self, name):
         """Pass."""
-        user = self.get(name=name)
+        user = self.get_by_name(name=name)
         return self._delete(uuid=user["uuid"])
 
     def _get(self, limit=None, skip=None):
