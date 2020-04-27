@@ -32,6 +32,10 @@ class AssetMixin(ModelMixins, PagingMixins):
         """
         raise NotImplementedError  # pragma: no cover
 
+    def destroy(self, destroy, history):
+        """Destroy ALL assets."""
+        return self._destroy(destroy=destroy, history=history)
+
     def count(self, query=None):
         """Get the count of assets.
 
@@ -483,3 +487,9 @@ class AssetMixin(ModelMixins, PagingMixins):
         """
         path = self.router.by_id.format(id=id)
         return self.request(method="get", path=path)
+
+    def _destroy(self, destroy, history):
+        """Destroy ALL assets."""
+        data = {"destroy": destroy, "history": history}
+        path = self.router.destroy
+        return self.request(method="post", path=path, json=data)

@@ -7,7 +7,7 @@ import time
 from ..constants import LOG_LEVEL_API, MAX_BODY_LEN, MAX_PAGE_SIZE
 from ..exceptions import JsonError, JsonInvalid, NotFoundError, ResponseNotOk
 from ..logs import get_obj_log
-from ..tools import dt_now, dt_sec_ago, is_int, json_reload
+from ..tools import dt_now, dt_sec_ago, is_int, json_load, json_reload
 
 
 class Model:
@@ -64,13 +64,16 @@ class ModelMixins(Model):
         """Show info for this model object."""
         return self.__str__()
 
-    def _build_err_msg(self, response, error, exc=None):
+    def _build_err_msg(self, response, error=None, exc=None):
         """Pass."""
         request_size = len(response.request.body or "")
         response_size = len(response.text or "")
-
-        msgs = [
-            f"Original exception: {exc}",
+        msgs = []
+        msgs += [f"Original exception: {exc}"] if exc else []
+        msgs += [
+            f"Request Body:",
+            json_reload(obj=response.request.body, error=False, trim=MAX_BODY_LEN),
+            "",
             f"Response details:",
             f"  code: {response.status_code!r}",
             f"  reason: {response.reason!r}",
@@ -78,12 +81,27 @@ class ModelMixins(Model):
             f"  url: {response.url!r}",
             f"  request_size: {request_size}",
             f"  response_size: {response_size}",
-            f"Request Body:",
-            json_reload(obj=response.request.body, error=False, trim=MAX_BODY_LEN),
-            f"Response Body:",
-            json_reload(obj=response.text, error=False, trim=MAX_BODY_LEN),
-            error,
         ]
+
+        response_obj = json_load(obj=response.text, error=False)
+
+        if isinstance(response_obj, dict):
+            if "additional_data" in response_obj:
+                msg = json_reload(obj=response_obj.pop("additional_data"), error=False)
+                msgs += [f"  ** Additional Data:", msg]
+
+            if "status" in response_obj:
+                msgs += [f"  ** Status: " + response_obj.pop("status")]
+
+            if "message" in response_obj:
+                msgs += ["  ** Message: " + response_obj.pop("message")]
+
+            msgs += [f"Extra: {response_obj}"] if response_obj else []
+        else:
+            msgs += [f"Response Body:", response_obj]
+
+        msgs += [error] if error else []
+
         return "\n" + "\n".join(msgs)
 
     def request(
@@ -227,11 +245,7 @@ class ModelMixins(Model):
             has_error_status = data.get("status") == "error"
 
             if (has_error or has_error_status) and error_json_bad_status:
-                respexc = JsonError(
-                    self._build_err_msg(
-                        response=response, error=f"Found error in response JSON"
-                    )
-                )
+                respexc = JsonError(self._build_err_msg(response=response))
                 raise respexc
         return data
 

@@ -2,49 +2,54 @@
 """API model for working with system configuration."""
 from ...constants import DEFAULT_PERM, VALID_PERMS
 from ...exceptions import ApiError, NotFoundError
+from ...tools import strip_left
 from ..mixins import ChildMixins
 
 
 class Roles(ChildMixins):
     """Child API object to work with Roles."""
 
-    def set_default(self, name):
-        """Set the default role for external users.
+    def get_labels(self):
+        """Pass."""
+        labels = self._get_labels()
+        parsed = {}
+        for k, v in labels.items():
+            k = strip_left(obj=k, fix="permissions.")
 
-        Args:
-            name (:obj:`str`): name of role to set as the default role for external users
+        return labels
 
-        Returns:
-            :obj:`dict`: metadata of default role that was set as new default
-        """
-        role = self.get(name=name)
-        self._set_default(name=name)
-        return role
-
-    def get_default(self):
-        """Get the default role for external users.
-
-        Returns:
-            :obj:`dict`: metadata of default role
-        """
-        name = self._get_default()
-        return self.get(name=name)
-
-    def get(self, name=None):
+    def get(self):
         """Pass."""
         roles = self._get()
-        if name:
-            role_names = self.get_names(roles=roles)
-            if name not in role_names:
-                valid = "\n" + "\n".join(role_names)
-                raise NotFoundError(f"Role not found {name!r}, valid roles:{valid}")
-            return [x for x in roles if x["name"] == name][0]
         return roles
 
-    def get_names(self, roles=None):
+    def get_by_name(self, name):
         """Pass."""
-        roles = roles if roles else self.get()
-        return [x["name"] for x in roles]
+        roles = self.get()
+
+        valid = [x["name"] for x in roles]
+
+        if name not in valid:
+            valid = "\n" + "\n".join(valid)
+            raise NotFoundError(
+                f"Role not found with name {name!r}, valid roles:{valid}"
+            )
+
+        return [x for x in roles if x["name"] == name][0]
+
+    def get_by_uuid(self, uuid):
+        """Pass."""
+        roles = self.get()
+
+        valid = [x["uuid"] for x in roles]
+
+        if uuid not in valid:
+            valid = "\n" + "\n".join(valid)
+            raise NotFoundError(
+                f"Role not found with uuid {uuid!r}, valid roles:{valid}"
+            )
+
+        return [x for x in roles if x["uuid"] == uuid][0]
 
     def add(
         self,
@@ -60,6 +65,7 @@ class Roles(ChildMixins):
     ):
         """Pass."""
         names = self.get_names()
+
         if name in names:
             raise ApiError(f"Role named {name!r} already exists")
 
@@ -73,6 +79,7 @@ class Roles(ChildMixins):
             settings=settings,
             users=users,
         )
+
         self._add(name=name, permissions=permissions)
         return self.get(name=name)
 
@@ -89,9 +96,7 @@ class Roles(ChildMixins):
         users=DEFAULT_PERM,
     ):
         """Pass."""
-        names = self.get_names()
-        if name not in names:
-            raise NotFoundError(f"Role named {name!r} does not exist")
+        # role = self.get_by_name(name=name)
 
         permissions = self._check_valid_perms(
             adapters=adapters,
@@ -106,32 +111,15 @@ class Roles(ChildMixins):
         self._update(name=name, permissions=permissions)
         return self.get(name=name)
 
+    # XXX predefined
     def delete(self, name):
         """Pass."""
-        names = self.get_names()
-        if name not in names:
-            raise NotFoundError(f"Role named {name!r} does not exist")
-        self._delete(name=name)
-        return self.get()
+        role = self.get_by_name(name=name)
 
-    def _get_default(self):
-        """Direct API method to get the current default role for external users.
+        if role.get("predefined"):
+            raise ApiError(f"Not allowed to delete predefined role {name!r}")
 
-        Returns:
-            :obj:`str`: current default role for external users
-        """
-        path = self.router.roles_default
-        return self.request(method="get", path=path, error_json_invalid=False)
-
-    def _set_default(self, name):
-        """Direct API method to set the default role for external users.
-
-        Args:
-            name (:obj:`str`): name of role to set as the default role for external users
-        """
-        data = {"name": name}
-        path = self.router.roles_default
-        return self.request(method="post", path=path, json=data)
+        return self._delete(uuid=role["uuid"])
 
     def _get(self):
         """Direct API method to get known roles.
@@ -166,17 +154,14 @@ class Roles(ChildMixins):
             method="post", path=path, json=data, error_json_invalid=False
         )
 
-    def _delete(self, name):
+    def _delete(self, uuid):
         """Direct API method to delete a role.
 
         Args:
             name (:obj:`str`): name of role to delete
         """
-        data = {"name": name}
-        path = self.router.roles
-        return self.request(
-            method="delete", path=path, json=data, error_json_invalid=False
-        )
+        path = self.router.roles_by_uuid.format(uuid=uuid)
+        return self.request(method="delete", path=path, error_json_invalid=False)
 
     def _check_valid_perm(self, name, value):
         """Pass."""
@@ -216,3 +201,8 @@ class Roles(ChildMixins):
             "Settings": settings,
             "Users": users,
         }
+
+    def _get_labels(self):
+        """Pass."""
+        path = self.router.roles_labels
+        return self.request(method="get", path=path)

@@ -2,6 +2,7 @@
 """API model for working with system configuration."""
 from ..mixins import ModelMixins
 from ..routers import API_VERSION
+from .central_core import CentralCore
 from .discover import Discover
 from .meta import Meta
 from .nodes import Nodes
@@ -36,4 +37,5 @@ class System(ModelMixins):
         self.discover = Discover(parent=self)
         self.users = Users(parent=self)
         self.roles = Roles(parent=self)
+        self.central_core = CentralCore(parent=self)
         super(System, self)._init(auth=auth, **kwargs)

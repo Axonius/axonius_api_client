@@ -3,8 +3,8 @@
 import click
 
 from ..context import AliasedGroup
-from . import (grp_discover, grp_meta, grp_nodes,  # , grp_roles, grp_users
-               grp_settings)
+from . import grp_nodes  # , grp_roles, grp_users
+from . import grp_central_core, grp_discover, grp_meta, grp_settings
 
 
 @click.group(cls=AliasedGroup)
@@ -14,6 +14,7 @@ def system():
 
 system.add_command(grp_meta.meta)
 system.add_command(grp_nodes.nodes)
+system.add_command(grp_central_core.central_core)
 # system.add_command(grp_roles.roles)  # XXX 3.3
 system.add_command(grp_settings.settings_lifecycle)
 system.add_command(grp_settings.settings_gui)
