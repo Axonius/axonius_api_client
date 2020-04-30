@@ -51,9 +51,7 @@ class Users(ChildMixins):
 
         if name not in valid:
             valid = "\n" + "\n".join(valid)
-            raise NotFoundError(
-                f"User not found with name {name!r}, valid users:{valid}"
-            )
+            raise NotFoundError(f"User name {name!r} not found, valid users:{valid}")
 
         return [x for x in users if x["user_name"] == name][0]
 

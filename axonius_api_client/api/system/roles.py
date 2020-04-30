@@ -2,21 +2,94 @@
 """API model for working with system configuration."""
 from ...constants import DEFAULT_PERM, VALID_PERMS
 from ...exceptions import ApiError, NotFoundError
-from ...tools import strip_left
+from ...tools import listify
 from ..mixins import ChildMixins
+
+ROLE_ACTIONS = [
+    "delete",
+    "post",
+    "put",
+    "run",
+    "run_manual_discovery",
+    "reset_api_key",
+    "get_users_and_roles",
+    "get",
+    "post",
+    "put",
+    "run",
+]
+
+
+def parse_roles_labels(raw, role=None):
+    """Pass."""
+    # raw = {k.split(".")[1:]: v for k, v in raw.items()}
+    # permissions = (role or {}).get("permissions", {})
+    parsed = {}
+    # parsed = {
+    #     k[0]: {"actions": {}, "description": v, "parent": None}
+    #     for k, v in raw.items()
+    #     if len(k) == 1
+    # }
+
+    for perm, desc in raw.items():
+        items = perm.split(".")[1:]
+        category = items.pop(0)
+        if not items:
+            print(category)
+            parsed[category] = {"actions": {}, "description": desc, "parent": None}
+
+    # for perm, description in raw.items():
+    #     items = perm.split(".")[1:]
+    #     category = items.pop(0)
+    #     category_perms = permissions.get(category, {})
+    #     parsed[category] = parsed.get(
+    #         category, {"actions": {}, "description": None, "parent": None}
+    #     )
+
+    #     if not items:
+    #         parsed[category]["description"] = description
+    #         continue
+
+    #     action = items.pop(0)
+
+    #     if action in ROLE_ACTIONS:
+    #         parsed[category]["actions"][action] = {
+    #             "description": description,
+    #             "value": category_perms.get(action, False),
+    #         }
+    #         continue
+
+    #     section = action
+    #     section_perms = category_perms.get(section, {})
+
+    #     parsed[section] = parsed.get(
+    #         section,
+    #         {
+    #             "actions": {},
+    #             "parent": category,
+    #             "description": f"Section under {category}",
+    #         },
+    #     )
+
+    #     if items:
+    #         section_action = items.pop(0)
+
+    #         if section_action in ROLE_ACTIONS:
+    #             parsed[section]["actions"] = {
+    #                 "description": description,
+    #                 "value": section_perms.get(section_action, False),
+    #             }
+
+    return parsed
 
 
 class Roles(ChildMixins):
     """Child API object to work with Roles."""
 
-    def get_labels(self):
+    def get_categories(self, role=None):
         """Pass."""
         labels = self._get_labels()
-        parsed = {}
-        for k, v in labels.items():
-            k = strip_left(obj=k, fix="permissions.")
-
-        return labels
+        return parse_roles_labels(raw=labels, role=role)
 
     def get(self):
         """Pass."""
@@ -31,9 +104,7 @@ class Roles(ChildMixins):
 
         if name not in valid:
             valid = "\n" + "\n".join(valid)
-            raise NotFoundError(
-                f"Role not found with name {name!r}, valid roles:{valid}"
-            )
+            raise NotFoundError(f"Role name {name!r} not found, valid roles:{valid}")
 
         return [x for x in roles if x["name"] == name][0]
 
@@ -45,40 +116,29 @@ class Roles(ChildMixins):
 
         if uuid not in valid:
             valid = "\n" + "\n".join(valid)
-            raise NotFoundError(
-                f"Role not found with uuid {uuid!r}, valid roles:{valid}"
-            )
+            raise NotFoundError(f"Role uuid {uuid!r} not found, valid roles:{valid}")
 
         return [x for x in roles if x["uuid"] == uuid][0]
 
-    def add(
-        self,
-        name,
-        adapters=DEFAULT_PERM,
-        dashboard=DEFAULT_PERM,
-        devices=DEFAULT_PERM,
-        enforcements=DEFAULT_PERM,
-        instances=DEFAULT_PERM,
-        reports=DEFAULT_PERM,
-        settings=DEFAULT_PERM,
-        users=DEFAULT_PERM,
-    ):
+    def validate_perms(self, **kwargs):
         """Pass."""
-        names = self.get_names()
+        perms = self.get_categories()
+
+        for category, actions in kwargs.items():
+            if category not in perms:
+                valid = "\n" + "\n".join(list(perms))
+                raise NotFoundError(f"Category {category!r} not found, valid: {valid}")
+            actions = listify(actions)
+
+    def add(self, name, **kwargs):
+        """Pass."""
+        roles = self.get()
+        names = [x["user_name"] for x in roles]
 
         if name in names:
             raise ApiError(f"Role named {name!r} already exists")
 
-        permissions = self._check_valid_perms(
-            adapters=adapters,
-            dashboard=dashboard,
-            devices=devices,
-            enforcements=enforcements,
-            instances=instances,
-            reports=reports,
-            settings=settings,
-            users=users,
-        )
+        permissions = {}
 
         self._add(name=name, permissions=permissions)
         return self.get(name=name)
