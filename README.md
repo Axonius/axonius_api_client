@@ -1,7 +1,5 @@
 # axonius_api_client
 
-3.0.0b is a BETA release!!! use with caution!!!
-
 [![MIT license](https://img.shields.io/badge/License-MIT-blue.svg)](https://lbesson.mit-license.org/)
 [![Made With Python](https://img.shields.io/badge/Made%20with-Python-1f425f.svg)](https://www.python.org/)
 [![PyPi package](https://badge.fury.io/py/axonius-api-client.svg)](https://pypi.org/project/axonius-api-client/)

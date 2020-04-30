@@ -30,11 +30,11 @@ if __name__ == "__main__":
         log_level_console="debug",
         log_level_api="debug",
         log_level_http="debug",
-        log_request_attrs=["url", "size", "method"],
+        # log_request_attrs=["url", "size", "method"],
         # log_response_attrs=["status", "size"],
         # log_request_body=True,
         # log_response_body=True,
-        log_console=True,
+        # log_console=True,
     )
 
     ctx.start()
