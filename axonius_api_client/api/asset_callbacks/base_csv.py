@@ -45,7 +45,12 @@ class Csv(Base):
         self.open_fd()
         self._fd.write(codecs.BOM_UTF8.decode("utf-8"))
         self._stream = csv.DictWriter(
-            self._fd, fieldnames=titles, quoting=quote, restval=restval, dialect=dialect,
+            self._fd,
+            fieldnames=titles,
+            quoting=quote,
+            lineterminator="\n",
+            restval=restval,
+            dialect=dialect,
         )
         self._stream.writerow(dict(zip(titles, titles)))
         self.do_export_schema(final=final)

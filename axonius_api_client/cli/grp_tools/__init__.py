@@ -3,7 +3,8 @@
 import click
 
 from ..context import AliasedGroup
-from . import cmd_shell, cmd_sysinfo, cmd_write_config
+from . import (cmd_convert_cert, cmd_shell, cmd_signup, cmd_sysinfo,
+               cmd_write_config)
 
 
 @click.group(cls=AliasedGroup)
@@ -14,3 +15,5 @@ def tools():
 tools.add_command(cmd_shell.cmd)
 tools.add_command(cmd_write_config.cmd)
 tools.add_command(cmd_sysinfo.cmd)
+tools.add_command(cmd_signup.cmd)
+tools.add_command(cmd_convert_cert.cmd)

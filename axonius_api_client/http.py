@@ -6,14 +6,8 @@ from urllib.parse import urlparse, urlunparse
 
 import requests
 
-from .constants import (
-    LOG_LEVEL_HTTP,
-    MAX_BODY_LEN,
-    REQUEST_ATTR_MAP,
-    RESPONSE_ATTR_MAP,
-    TIMEOUT_CONNECT,
-    TIMEOUT_RESPONSE,
-)
+from .constants import (LOG_LEVEL_HTTP, MAX_BODY_LEN, REQUEST_ATTR_MAP,
+                        RESPONSE_ATTR_MAP, TIMEOUT_CONNECT, TIMEOUT_RESPONSE)
 from .exceptions import HttpError
 from .logs import get_obj_log, set_log_level
 from .tools import join_url, json_reload, listify, path_read
@@ -189,13 +183,13 @@ class Http:
         self.session.proxies["http"] = http_proxy
 
         if certpath:
-            path_read(obj=certpath)
+            path_read(obj=certpath, binary=True)
             self.session.verify = certpath
         else:
             self.session.verify = certverify
 
         if cert_client_both:
-            path_read(obj=cert_client_both)
+            path_read(obj=cert_client_both, binary=True)
             self.session.cert = str(cert_client_both)
         elif cert_client_cert or cert_client_key:
             if not all([cert_client_cert, cert_client_key]):
@@ -205,8 +199,8 @@ class Http:
                 )
                 raise HttpError(error)
 
-            path_read(obj=cert_client_cert)
-            path_read(obj=cert_client_key)
+            path_read(obj=cert_client_cert, binary=True)
+            path_read(obj=cert_client_key, binary=True)
             self.session.cert = (str(cert_client_cert), str(cert_client_key))
 
         if certwarn is True:
@@ -290,7 +284,7 @@ class Http:
 
         send_args = self.session.merge_environment_settings(
             url=prepped_request.url,
-            proxies=kwargs.get("proxies", None),
+            proxies=kwargs.get("proxies", {}),
             stream=kwargs.get("stream", None),
             verify=kwargs.get("verify", None),
             cert=kwargs.get("cert", None),

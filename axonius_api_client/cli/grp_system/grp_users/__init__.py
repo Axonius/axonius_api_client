@@ -3,7 +3,7 @@
 import click
 
 from ...context import AliasedGroup
-from . import cmd_add, cmd_delete, cmd_get, cmd_update, cmd_update_role
+from . import cmd_add, cmd_delete, cmd_get, cmd_get_by_name, cmd_update
 
 
 @click.group(cls=AliasedGroup)
@@ -12,7 +12,7 @@ def users():
 
 
 users.add_command(cmd_get.cmd)
-users.add_command(cmd_update_role.cmd)
+users.add_command(cmd_get_by_name.cmd)
 users.add_command(cmd_update.cmd)
 users.add_command(cmd_add.cmd)
 users.add_command(cmd_delete.cmd)

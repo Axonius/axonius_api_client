@@ -62,6 +62,7 @@ class ApiV1:
         view_by_id="views/saved/{id}",
         labels="labels",
         fields="fields",
+        destroy="destroy",
     )
 
     devices = Router(
@@ -75,6 +76,7 @@ class ApiV1:
         view_by_id="views/saved/{id}",
         labels="labels",
         fields="fields",
+        destroy="destroy",
     )
 
     actions = Router(
@@ -115,9 +117,12 @@ class ApiV1:
         discover_stop="discover/stop",
         roles_default="roles/default",
         roles="roles",
+        roles_by_uuid="roles/{uuid}",
+        roles_labels="roles/labels",
         users="users",
         user="users/{uuid}",
-        user_role="users/{uuid}/access",
+        central_core="central_core",
+        central_core_restore="central_core/restore",
     )
 
     all_objects = [
