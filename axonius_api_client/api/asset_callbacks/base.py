@@ -483,7 +483,7 @@ class Base:
 
         file_path = get_path(obj=self._export_path)
         file_path.mkdir(mode=0o700, parents=True, exist_ok=True)
-        self._file_path = fp = file_path / self._export_file
+        self._file_path = fp = (file_path / self._export_file).resolve()
 
         if self._file_path.exists():
             self._file_mode = "overwrote"
