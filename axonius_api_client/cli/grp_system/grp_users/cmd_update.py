@@ -24,26 +24,41 @@ PASSWORD = click.option(
 )
 FIRST_NAME = click.option(
     "--first-name",
-    "-fn",
-    "firstname",
+    "-f",
+    "first_name",
     help="First name of user",
-    default=None,
     required=False,
     show_envvar=True,
     show_default=True,
 )
 LAST_NAME = click.option(
     "--last-name",
-    "-ln",
-    "lastname",
-    default=None,
+    "-l",
+    "last_name",
     help="Last name of user",
     required=False,
     show_envvar=True,
     show_default=True,
 )
-
-OPTIONS = [*AUTH, EXPORT, FIRST_NAME, LAST_NAME, USER_NAME, PASSWORD]
+EMAIL = click.option(
+    "--email",
+    "-e",
+    "email",
+    help="Email address of user",
+    required=False,
+    show_envvar=True,
+    show_default=True,
+)
+ROLE_NAME = click.option(
+    "--role-name",
+    "-r",
+    "role_name",
+    help="Role to assign to user",
+    required=False,
+    show_envvar=True,
+    show_default=True,
+)
+OPTIONS = [*AUTH, EXPORT, FIRST_NAME, LAST_NAME, EMAIL, USER_NAME, PASSWORD, ROLE_NAME]
 
 
 @click.command(name="update", context_settings=CONTEXT_SETTINGS)
