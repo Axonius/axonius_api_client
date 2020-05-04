@@ -68,12 +68,14 @@ class Fields(ChildMixins):
                 if search.search(schema[key]) and schema not in matches:
                     matches.append(schema)
 
-        if not matches:
-            msg = "No field found where {} matches regex {!r}, valid fields: \n{}"
-            msg = msg.format(
-                keys, value, "\n".join(self._prettify_schemas(schemas=schemas)),
-            )
-            raise NotFoundError(msg)
+        # XXX fix test case for this
+        # os\. will fail for adapters that do not have os.type/dist/etc
+        # if not matches:
+        #     msg = "No field found where {} matches regex {!r}, valid fields: \n{}"
+        #     msg = msg.format(
+        #         keys, value, "\n".join(self._prettify_schemas(schemas=schemas)),
+        #     )
+        #     raise NotFoundError(msg)
         return matches
 
     def get_field_schema(self, value, schemas, **kwargs):
