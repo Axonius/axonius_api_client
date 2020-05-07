@@ -85,7 +85,7 @@ class Fields(ChildMixins):
 
         for schema in schemas:
             for key in keys:
-                if search == schema[key]:
+                if search == schema[key].lower():
                     return schema
 
         msg = "No field found where any of {} equals {!r}, valid fields: \n{}"
