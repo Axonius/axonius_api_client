@@ -66,15 +66,6 @@ def handle_export(ctx, data, export_format, **kwargs):
         for key in keys:
             echo_key(data, key)
 
-        # adapters fetching
-        # adapters done
-        # echo_key(data, last_start)
-        # data.pop("phases")
-        # for k, v in data.items():
-        #     k = k.replace("_", " ").title()
-        #     if isinstance(v, list):
-        #         v = ", ".join(v)
-        #     click.secho(f"{k}: {v}")
         ctx.exit(0)
 
     ctx.exit(1)

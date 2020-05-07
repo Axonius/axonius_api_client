@@ -71,7 +71,7 @@ def add_cmds(grp_obj, fields):
 
     grp_obj.add_command(
         gen_get_by_cmd(
-            options=[*GET_BY_VALUE_REGEX_BUILDERS, GET_BY_VALUE_FIELD],
+            options=[*GET_BY_VALUE_BUILDERS, GET_BY_VALUE_FIELD],
             doc=f"Get assets where a field equals value",
             cmd_name=f"get-by-value",
             method=f"get_by_value",
@@ -80,7 +80,7 @@ def add_cmds(grp_obj, fields):
 
     grp_obj.add_command(
         gen_get_by_cmd(
-            options=[*GET_BY_VALUE_REGEX_BUILDERS, GET_BY_VALUE_FIELD],
+            options=[*GET_BY_VALUES_BUILDERS, GET_BY_VALUE_FIELD],
             doc=f"Get assets where a field equals multiple values",
             cmd_name=f"get-by-values",
             method=f"get_by_values",
