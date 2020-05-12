@@ -93,7 +93,9 @@ TIMEOUT_CONNECT = 5
 TIMEOUT_RESPONSE = 900
 """:obj:`int`: seconds to wait for response from API."""
 
-LOG_FMT_VERBOSE = "%(asctime)s %(levelname)-8s [%(name)s:%(funcName)s()] %(message)s"
+LOG_FMT_VERBOSE = (
+    "%(asctime)s %(levelname)-8s [%(name)s:%(funcName)s:%(lineno)d] %(message)s"
+)
 LOG_FMT_BRIEF = "%(levelname)-8s [%(name)s] %(message)s"
 
 DEBUG = os.environ.get("AX_DEBUG", "").lower().strip()
@@ -105,10 +107,10 @@ LOG_FMT_CONSOLE = LOG_FMT_VERBOSE if DEBUG else LOG_FMT_BRIEF
 LOG_FMT_FILE = LOG_FMT_VERBOSE
 """:obj:`str`: default logging format to use for file logs"""
 
-LOG_DATEFMT_CONSOLE = "%m/%d/%Y %I:%M:%S %p"
+LOG_DATEFMT_CONSOLE = "%m/%d/%Y %I:%M:%S %p %Z"
 """:obj:`str`: default datetime format to use for console logs"""
 
-LOG_DATEFMT_FILE = "%m/%d/%Y %I:%M:%S %p"
+LOG_DATEFMT_FILE = "%m/%d/%Y %I:%M:%S %p %Z"
 """:obj:`str`: default datetime format to use for file logs"""
 
 LOG_LEVEL_CONSOLE = "debug"

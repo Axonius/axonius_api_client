@@ -92,6 +92,7 @@ All of the options listed above must be supplied BEFORE any commands or groups.
     "-reqattr",
     "log_request_attrs",
     help="Log http client request attributes.",
+    default=["size", "url"],
     multiple=True,
     type=click.Choice(list(REQUEST_ATTR_MAP) + ["all"]),
     show_envvar=True,
@@ -100,6 +101,7 @@ All of the options listed above must be supplied BEFORE any commands or groups.
     "--log-response-attrs",
     "-respattr",
     "log_response_attrs",
+    default=["size", "url", "status", "elapsed"],
     help="Log http client response attributes.",
     multiple=True,
     type=click.Choice(list(RESPONSE_ATTR_MAP) + ["all"]),
@@ -124,8 +126,8 @@ All of the options listed above must be supplied BEFORE any commands or groups.
     show_envvar=True,
 )
 @click.option(
-    "--log-console",
-    "-c",
+    "--log-console/--no-log-console",
+    "-c/-nc",
     "log_console",
     default=False,
     help="Enable logging to STDERR.",
@@ -133,10 +135,10 @@ All of the options listed above must be supplied BEFORE any commands or groups.
     show_envvar=True,
 )
 @click.option(
-    "--log-file",
-    "-f",
+    "--log-file/--no-log-file",
+    "-f/-nf",
     "log_file",
-    default=False,
+    default=True,
     help="Enable logging to -fn/--log-file-name in -fp/--log-file-path.",
     is_flag=True,
     show_envvar=True,
@@ -157,7 +159,7 @@ All of the options listed above must be supplied BEFORE any commands or groups.
     "log_file_path",
     metavar="PATH",
     default=LOG_FILE_PATH,
-    help="Directory to use for -fn/--log-file-name (Defaults to CWD).",
+    help="Directory to use for -fn/--log-file-name (Defaults to current directory).",
     show_envvar=True,
 )
 @click.option(
