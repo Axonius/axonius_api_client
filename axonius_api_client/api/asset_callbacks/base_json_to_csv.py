@@ -39,6 +39,7 @@ class JsonToCsv(Csv):
 
     def row(self, row):
         """Write row to temp file with no processing."""
+        self.first_page()
         return_row = [{"internal_axon_id": row["internal_axon_id"]}]
         row = json.dumps(row)
         self._temp_file.file.write(f"{row}\n")
