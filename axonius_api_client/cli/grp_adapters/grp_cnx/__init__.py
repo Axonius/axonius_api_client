@@ -3,8 +3,15 @@
 import click
 
 from ... import context
-from . import (cmd_add, cmd_add_from_json, cmd_delete_by_id, cmd_get,
-               cmd_get_by_id, cmd_test, cmd_test_by_id)
+from . import (
+    cmd_add,
+    cmd_add_from_json,
+    cmd_delete_by_id,
+    cmd_get,
+    cmd_get_by_id,
+    cmd_test,
+    cmd_test_by_id,
+)
 
 
 @click.group(cls=context.AliasedGroup)

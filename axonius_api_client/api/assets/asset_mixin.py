@@ -1,19 +1,20 @@
 # -*- coding: utf-8 -*-
 """API models for working with device and user assets."""
+import math
 import time
 
 from ...constants import MAX_PAGE_SIZE, PAGE_SIZE
 from ...exceptions import JsonError, NotFoundError
-from ...tools import dt_now, dt_sec_ago, listify
+from ...tools import dt_now, dt_sec_ago, json_dump, listify
 from ..adapters import Adapters
 from ..asset_callbacks import get_callbacks_cls
-from ..mixins import ModelMixins, PagingMixins
+from ..mixins import ModelMixins
 from .fields import Fields
 from .labels import Labels
 from .saved_query import SavedQuery
 
 
-class AssetMixin(ModelMixins, PagingMixins):
+class AssetMixin(ModelMixins):
     """API model for working with user and device assets."""
 
     FIELD_TAGS = "labels"
@@ -62,6 +63,30 @@ class AssetMixin(ModelMixins, PagingMixins):
         """
         sq = self.saved_query.get_by_name(value=name)
         return self._count(query=sq["view"]["query"]["filter"])
+
+    def get(self, generator=False, **kwargs):
+        """Get objects for a given query using paging.
+
+        Args:
+            generator (:obj:`bool`, optional): default ``False`` -
+
+                * True: return an iterator for assets that will yield rows
+                  as they are fetched
+                * False: return a list of rows after all have been fetched
+            **kwargs: passed to :meth:`get_generator`
+
+        Yields:
+            :obj:`dict`: row if generator is True
+
+        Returns:
+            :obj:`list` of :obj:`dict`: rows if generator is False
+        """
+        gen = self.get_generator(**kwargs)
+
+        if generator:
+            return gen
+
+        return list(gen)
 
     def get_generator(
         self,
@@ -113,8 +138,7 @@ class AssetMixin(ModelMixins, PagingMixins):
         Yields:
             :obj:`dict`: asset matching **query**
         """
-        if getattr(self, "NO_CURSOR_OVERRIDE", False):
-            use_cursor = False
+        page_size = self._get_page_size(page_size=page_size, max_rows=None)
 
         fields_map = fields_map or self.fields.get()
 
@@ -126,8 +150,6 @@ class AssetMixin(ModelMixins, PagingMixins):
             fields_map=fields_map,
         )
 
-        page_size = self._get_page_size(page_size=page_size, max_rows=max_rows)
-
         store = {
             "query": query,
             "fields": fields,
@@ -136,22 +158,30 @@ class AssetMixin(ModelMixins, PagingMixins):
         state = {
             "max_pages": max_pages,
             "max_rows": max_rows,
-            "page": {},
-            "page_cursor": None,
-            "page_left": 0,
-            "page_num": page_start,
-            "page_size": page_size,
-            "page_sleep": page_sleep,
-            "page_total": 0,
-            "rows_fetched": 0,
-            "rows_page": 0,
-            "rows_processed": 0,
-            "rows_start": page_start * page_size,
-            "rows_total": 0,
-            "time_fetch": 0,
-            "time_page": 0,
             "use_cursor": use_cursor,
+            "page_cursor": None,
+            "page_sleep": page_sleep,
+            "page_size": page_size,
+            "page_number": 1,
+            "pages_to_fetch_left": None,
+            "pages_to_fetch_total": None,
+            "rows_to_fetch_left": None,
+            "rows_to_fetch_total": None,
+            "rows_fetched_this_page": None,
+            "rows_fetched_total": 0,
+            "rows_processed_total": 0,
+            "fetch_seconds_total": 0,
+            "fetch_seconds_this_page": None,
+            "stop_fetch": False,
+            "stop_msg": None,
         }
+
+        if not use_cursor:
+            state["page_number"] = page_start or 1
+            state["page_start"] = page_start
+
+            if page_start > 1:
+                state["rows_fetched_total"] = page_start * page_size
 
         callbacks_cls = get_callbacks_cls(export=export)
 
@@ -166,31 +196,128 @@ class AssetMixin(ModelMixins, PagingMixins):
 
         callbacks.start()
 
-        self.LOG.info(f"START FETCH store={store}")
+        self.LOG.info(f"STARTING FETCH store={json_dump(store)}")
+        self.LOG.debug(f"STARTING FETCH state={json_dump(state)}")
 
-        while True:
-            rows = self._get_page(state=state, store=store)
+        while not state["stop_fetch"]:
+            if state["use_cursor"]:
+                page = self._get_page_cursor(state=state, store=store)
+            else:
+                page = self._get_page_normal(state=state, store=store)
+
+            rows = page.pop("assets")
+
+            self.LOG.debug(f"FETCHED PAGE: {json_dump(page)}")
+            self.LOG.debug(f"CURRENT PAGING STATE: {json_dump(state)}")
+
+            if not rows:
+                stop_msg = "no more rows returned"
+                state["stop_fetch"] = True
+                state["stop_msg"] = stop_msg
+                self.LOG.debug(f"STOPPED FETCH: {stop_msg}")
+                break
 
             for row in rows:
                 row_items = callbacks.row(row=row)
 
-                state["rows_processed"] += 1
-
                 for row_item in listify(obj=row_items):
                     yield row_item
 
-                if self._get_page_stop_rows(
-                    row=row, state=state, store=store, rows=rows
-                ):
+                state["rows_processed_total"] += 1
+
+                if state["stop_fetch"]:
                     break
 
-            if self._get_page_stop_fetch(rows=rows, state=state, store=store):
-                callbacks.stop()
+                if (
+                    state["max_rows"]
+                    and state["rows_processed_total"] >= state["max_rows"]
+                ):
+                    stop_msg = "'rows_processed_total' greater than 'max_rows'"
+                    state["stop_msg"] = stop_msg
+                    state["stop_fetch"] = True
+                    break
+
+            if state["stop_fetch"]:
+                stop_msg = state["stop_msg"]
+                self.LOG.debug(f"STOPPED FETCH: {stop_msg}")
                 break
+
+            if state["max_pages"] and state["page_number"] >= state["max_pages"]:
+                stop_msg = "'page_number' greater than 'max_pages'"
+                state["stop_msg"] = stop_msg
+                state["stop_fetch"] = True
+                self.LOG.debug(f"STOPPED FETCH: {stop_msg}")
+                break
+
+            if state["use_cursor"]:
+                state["page_number"] += 1
 
             time.sleep(state["page_sleep"])
 
-        self.LOG.info(f"FINISH FETCH store={store}")
+        callbacks.stop()
+
+        self.LOG.info(f"FINISHED FETCH store={store}")
+        self.LOG.debug(f"FINISHED FETCH state={json_dump(state)}")
+
+    def _get_page_cursor(self, state, store):
+        page_start_dt = dt_now()
+
+        page = self._get_cursor(
+            query=store["query"],
+            fields=store["fields"],
+            page_size=state["page_size"],
+            cursor=state["page_cursor"],
+        )
+
+        state["fetch_seconds_this_page"] = dt_sec_ago(obj=page_start_dt, exact=True)
+        state["fetch_seconds_total"] += state["fetch_seconds_this_page"]
+
+        # only first page has totalResources with integer when cursor paging!!
+        rows_to_fetch_total = page["page"]["totalResources"]
+
+        if rows_to_fetch_total is not None:
+            state["rows_to_fetch_total"] = rows_to_fetch_total
+
+        state["rows_fetched_this_page"] = len(page["assets"])
+        state["rows_fetched_total"] += state["rows_fetched_this_page"]
+        state["rows_to_fetch_left"] = (
+            state["rows_to_fetch_total"] - state["rows_fetched_total"]
+        )
+        state["pages_to_fetch_total"] = math.ceil(
+            state["rows_to_fetch_total"] / state["page_size"]
+        )
+        state["pages_to_fetch_left"] = math.ceil(
+            state["rows_to_fetch_left"] / state["page_size"]
+        )
+
+        state["page_cursor"] = page.get("cursor")
+        return page
+
+    def _get_page_normal(self, state, store):
+        page_start_dt = dt_now()
+
+        page = self._get(
+            query=store["query"],
+            fields=store["fields"],
+            row_start=state["rows_fetched_total"],
+            page_size=state["page_size"],
+        )
+
+        state["fetch_seconds_this_page"] = dt_sec_ago(obj=page_start_dt, exact=True)
+        state["fetch_seconds_total"] += state["fetch_seconds_this_page"]
+
+        state["rows_to_fetch_total"] = page["page"]["totalResources"]
+        state["rows_fetched_this_page"] = len(page["assets"])
+        state["rows_fetched_total"] += state["rows_fetched_this_page"]
+        state["rows_to_fetch_left"] = (
+            state["rows_to_fetch_total"] - state["rows_fetched_total"]
+        )
+        state["page_number"] = page["page"]["number"]
+        state["pages_to_fetch_total"] = page["page"]["totalPages"]
+        state["pages_to_fetch_left"] = (
+            state["pages_to_fetch_total"] - state["page_number"]
+        )
+        return page
 
     def get_by_id(self, id):
         """Get the full metadata of all adapters for a single asset.
@@ -320,50 +447,6 @@ class AssetMixin(ModelMixins, PagingMixins):
 
         return self.get(fields_map=fields_map, **kwargs)
 
-    def _get_page(self, state, store):
-        page_start = dt_now()
-        state["page_num"] += 1
-
-        if state["use_cursor"]:
-            rows = self._get_page_cursor(state=state, store=store)
-        else:
-            rows = self._get_page_normal(state=state, store=store)
-
-        self._get_page_handle(state=state, store=store, rows=rows)
-
-        time_page = dt_sec_ago(obj=page_start)
-        rows_page = len(rows)
-
-        state["rows_start"] += rows_page
-        state["rows_fetched"] += rows_page
-        state["rows_page"] = rows_page
-        state["time_page"] = time_page
-        state["time_fetch"] += time_page
-
-        self.LOG.debug(f"FETCHED PAGE: {state}")
-        return rows
-
-    def _get_page_cursor(self, state, store):
-        state["page"] = self._get_cursor(
-            query=store["query"],
-            fields=store["fields"],
-            page_size=state["page_size"],
-            cursor=state["page_cursor"],
-        )
-        rows = state["page"].pop("assets", [])
-        state["page_cursor"] = state["page"].get("cursor")
-        return rows
-
-    def _get_page_normal(self, state, store):
-        state["page"] = self._get(
-            query=store["query"],
-            fields=store["fields"],
-            row_start=state["rows_start"],
-            page_size=state["page_size"],
-        )
-        rows = state["page"].pop("assets", [])
-        return rows
-
     def _build_query(self, inner, not_flag=False, pre="", post=""):
         """Pass."""
         if not_flag:
@@ -413,7 +496,7 @@ class AssetMixin(ModelMixins, PagingMixins):
 
         return self.request(method="post", path=self.router.count, json=params)
 
-    def _get(self, query=None, fields=None, row_start=0, page_size=0):
+    def _get(self, query=None, fields=None, row_start=0, page_size=PAGE_SIZE):
         """Direct API method to get a page of assets.
 
         Args:

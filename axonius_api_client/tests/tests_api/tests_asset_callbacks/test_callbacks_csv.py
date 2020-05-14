@@ -4,6 +4,7 @@ import copy
 import io
 
 import pytest
+
 from axonius_api_client.constants import AGG_ADAPTER_NAME
 
 from .callbacks import Callbacks, load_test_data
@@ -19,9 +20,10 @@ class CallbacksCsv(Callbacks):
 
     def test_row_as_is(self, cbexport, apiobj):
         """Pass."""
-        field_complex = apiobj.TEST_DATA["field_complex"]
-        if field_complex is None:
+        if not apiobj.TEST_DATA["has_complex"]:
             pytest.skip(f"No complex field found for {apiobj}")
+
+        field_complex = apiobj.TEST_DATA["field_complex"]
 
         schema = apiobj.fields.get_field_schema(
             value=field_complex,
