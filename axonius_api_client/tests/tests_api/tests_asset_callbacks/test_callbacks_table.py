@@ -21,10 +21,10 @@ class CallbacksTable(Callbacks):
 
     def test_row_as_is(self, cbexport, apiobj):
         """Pass."""
-        field_complex = apiobj.TEST_DATA["field_complex"]
-
-        if field_complex is None:
+        if not apiobj.TEST_DATA["has_complex"]:
             pytest.skip(f"No complex field found for {apiobj}")
+
+        field_complex = apiobj.TEST_DATA["field_complex"]
 
         schema = apiobj.fields.get_field_schema(
             value=field_complex,
@@ -66,7 +66,7 @@ class CallbacksTable(Callbacks):
         cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs=getargs)
         cbobj.STATE["rows_processed"] = 10
         cbobj.check_stop()
-        assert cbobj.STATE["stop"]
+        assert cbobj.STATE["stop_fetch"]
         assert cbobj.STATE["stop_msg"]
 
 

@@ -221,6 +221,7 @@ PAGING = [
         type=click.INT,
         show_envvar=True,
         show_default=True,
+        hidden=True,
     ),
     click.option(
         "--page-sleep",

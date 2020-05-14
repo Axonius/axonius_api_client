@@ -3,8 +3,14 @@
 import copy
 import sys
 
-from ...constants import (DEFAULT_PATH, FIELD_JOINER, FIELD_TRIM_LEN,
-                          FIELD_TRIM_STR, GET_SCHEMA_KEYS, SCHEMAS_CUSTOM)
+from ...constants import (
+    DEFAULT_PATH,
+    FIELD_JOINER,
+    FIELD_TRIM_LEN,
+    FIELD_TRIM_STR,
+    GET_SCHEMA_KEYS,
+    SCHEMAS_CUSTOM,
+)
 from ...exceptions import ApiError
 from ...tools import echo_error, echo_ok, get_path, listify
 
@@ -529,13 +535,17 @@ class Base:
 
     def echo(self, msg, error=None, level="info", level_error="error"):
         """Pass."""
-        if self.GETARGS.get("do_echo", False):
+        do_echo = self.GETARGS.get("do_echo", False)
+
+        if do_echo:
             echo_error(msg) if error else echo_ok(msg)
-        else:
-            if error:
-                getattr(self.LOG, level_error)(msg)
-                raise error(msg)
-            getattr(self.LOG, level)(msg)
+            return
+
+        if error:
+            getattr(self.LOG, level_error)(msg)
+            raise error(msg)
+
+        getattr(self.LOG, level)(msg)
 
     @property
     def args_map(self):

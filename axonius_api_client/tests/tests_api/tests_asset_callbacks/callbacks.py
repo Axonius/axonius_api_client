@@ -6,9 +6,14 @@ import logging
 import sys
 
 import pytest
+
 from axonius_api_client.api.asset_callbacks import get_callbacks_cls
-from axonius_api_client.constants import (AGG_ADAPTER_NAME, AGG_ADAPTER_TITLE,
-                                          FIELD_TRIM_LEN, SCHEMAS_CUSTOM)
+from axonius_api_client.constants import (
+    AGG_ADAPTER_NAME,
+    AGG_ADAPTER_TITLE,
+    FIELD_TRIM_LEN,
+    SCHEMAS_CUSTOM,
+)
 from axonius_api_client.exceptions import ApiError, NotFoundError
 
 from ...meta import TAGS
@@ -55,7 +60,6 @@ class Callbacks:
         state = {
             "max_pages": None,
             "max_rows": None,
-            "page": {},
             "page_cursor": None,
             "page_left": 0,
             "page_num": 1,
@@ -187,8 +191,7 @@ class Callbacks:
         row = copy.deepcopy(apiobj.TEST_DATA["cb_assets"][0])
 
         field_complex = apiobj.TEST_DATA["field_complex"]
-        if field_complex is None:
-            pytest.skip(f"No complex field found for {apiobj}")
+
         field_complexes = apiobj.TEST_DATA["field_complexes"]
 
         schema = apiobj.fields.get_field_schema(
@@ -206,12 +209,13 @@ class Callbacks:
         for field in field_complexes:
             assert field in row_ret
 
-        for sub_field in schema["sub_fields"]:
-            for sub_value in row_ret[field_complex]:
-                if sub_field["is_root"]:
-                    assert sub_field["name"] in sub_value
-                else:
-                    assert sub_field["name"] not in sub_value
+        if apiobj.TEST_DATA["has_complex"]:
+            for sub_field in schema["sub_fields"]:
+                for sub_value in row_ret[field_complex]:
+                    if sub_field["is_root"]:
+                        assert sub_field["name"] in sub_value
+                    else:
+                        assert sub_field["name"] not in sub_value
 
     def test_field_null_false(self, cbexport, apiobj):
         """Pass."""
@@ -344,11 +348,12 @@ class Callbacks:
 
     def test_field_excludes_sub(self, cbexport, apiobj):
         """Pass."""
+        if not apiobj.TEST_DATA["has_complex"]:
+            pytest.skip(f"No complex field found for {apiobj}")
+
         row = copy.deepcopy(apiobj.TEST_DATA["cb_assets"][0])
 
         field_complex = apiobj.TEST_DATA["field_complex"]
-        if field_complex is None:
-            pytest.skip(f"No complex field found for {apiobj}")
 
         sub_exclude = list(row[field_complex][0])[0]
         fields = ["internal_axon_id", sub_exclude]
@@ -361,6 +366,7 @@ class Callbacks:
 
         for field in fields:
             assert field not in row_ret
+
         for item in row_ret[field_complex]:
             assert sub_exclude not in item
 
@@ -457,10 +463,12 @@ class Callbacks:
 
     def test_field_flatten_true(self, cbexport, apiobj):
         """Pass."""
+        if not apiobj.TEST_DATA["has_complex"]:
+            pytest.skip(f"No complex field found for {apiobj}")
+
         row = copy.deepcopy(apiobj.TEST_DATA["cb_assets"][0])
         field_complex = apiobj.TEST_DATA["field_complex"]
-        if field_complex is None:
-            pytest.skip(f"No complex field found for {apiobj}")
+
         schema = apiobj.fields.get_field_schema(
             value=field_complex,
             schemas=apiobj.TEST_DATA["fields_map"][AGG_ADAPTER_NAME],
@@ -513,10 +521,11 @@ class Callbacks:
 
     def test_field_flatten_exclude_sub(self, cbexport, apiobj):
         """Pass."""
+        if not apiobj.TEST_DATA["has_complex"]:
+            pytest.skip(f"No complex field found for {apiobj}")
+
         row = copy.deepcopy(apiobj.TEST_DATA["cb_assets"][0])
         field_complex = apiobj.TEST_DATA["field_complex"]
-        if field_complex is None:
-            pytest.skip(f"No complex field found for {apiobj}")
 
         schema = apiobj.fields.get_field_schema(
             value=field_complex,
@@ -548,7 +557,7 @@ class Callbacks:
 
     def test_field_flatten_custom_null(self, cbexport, apiobj):
         """Pass."""
-        if apiobj.TEST_DATA["field_complex"] is None:
+        if not apiobj.TEST_DATA["has_complex"]:
             pytest.skip(f"No complex field found for {apiobj}")
 
         row = copy.deepcopy(apiobj.TEST_DATA["cb_assets"][0])
@@ -595,10 +604,11 @@ class Callbacks:
 
     def test_field_explode_complex(self, cbexport, apiobj):
         """Pass."""
+        if not apiobj.TEST_DATA["has_complex"]:
+            pytest.skip(f"No complex field found for {apiobj}")
+
         row = copy.deepcopy(apiobj.TEST_DATA["cb_assets"][0])
         field_complex = apiobj.TEST_DATA["field_complex"]
-        if field_complex is None:
-            pytest.skip(f"No complex field found for {apiobj}")
 
         getargs = {"field_explode": field_complex}
         cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs=getargs)
@@ -785,7 +795,7 @@ class Callbacks:
         capture = capsys.readouterr()
         assert f"{entry}\n" in capture.err
         assert not capture.out
-        log_check(caplog=caplog, entries=[entry], exists=False)
+        log_check(caplog=caplog, entries=[entry], exists=True)
 
     def test_echo_error_doecho_yes(self, cbexport, apiobj, capsys, caplog):
         """Pass."""

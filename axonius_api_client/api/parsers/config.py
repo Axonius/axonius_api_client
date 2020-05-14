@@ -3,8 +3,13 @@
 import copy
 
 from ...constants import NO, SETTING_UNCHANGED, YES
-from ...exceptions import (ApiError, ConfigInvalidValue, ConfigRequired,
-                           ConfigUnchanged, ConfigUnknown)
+from ...exceptions import (
+    ApiError,
+    ConfigInvalidValue,
+    ConfigRequired,
+    ConfigUnchanged,
+    ConfigUnknown,
+)
 from ...tools import is_int, json_load
 from .tables import tablize_schemas
 

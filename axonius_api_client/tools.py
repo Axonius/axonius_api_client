@@ -15,31 +15,20 @@ import dateutil.relativedelta
 import dateutil.tz
 
 from . import __package__ as PACKAGE_ROOT
-from .constants import (ERROR_ARGS, ERROR_TMPL, NO, OK_ARGS, OK_TMPL, SIMPLE,
-                        WARN_ARGS, WARN_TMPL, YES)
+from .constants import (
+    ERROR_ARGS,
+    ERROR_TMPL,
+    NO,
+    OK_ARGS,
+    OK_TMPL,
+    SIMPLE,
+    WARN_ARGS,
+    WARN_TMPL,
+    YES,
+)
 from .exceptions import ApiError, ToolsError
 
-LOG = logging.getLogger(PACKAGE_ROOT)
-
-# XXX package time?
-# def val_type(value, types):
-#     """Check that value is one of types.
-
-#     Notes:
-#         * handy wrapper for isinstance to throw a wrapped exception
-
-#     Args:
-#         value (:obj:`object`): object to check type of
-#         types (:obj:`tuple` of :class:`type`): tuple of types
-
-#     Raises:
-#         :exc:`ToolsError`: if value is not an instance of types
-
-#     """
-#     if not isinstance(value, types):
-#         msg = "Invalid type for value {value!r}, must be one of {types!r}"
-#         msg = msg.format(value=value, types=types)
-#         raise ToolsError(msg)
+LOG = logging.getLogger(PACKAGE_ROOT).getChild("tools")
 
 
 def listify(obj, dictkeys=False):
@@ -97,32 +86,6 @@ def grouper(iterable, n, fillvalue=None):
         :obj:`typing.Iterator`: an iterator with chunks of length n
     """
     return zip_longest(*([iter(iterable)] * n), fillvalue=fillvalue)
-
-
-# def nest_depth(obj):
-#     """Get the nesting depth of an object.
-
-#     Notes:
-#         * checks to see if how many complex sub-objects an object has.
-#         * dictionary with any list or dict values would be 1.
-#         * list with a dictionary where values are all simple would be 1.
-#         * list of lists with simple values would be two.
-
-#     Args:
-#         obj (:obj:`object`): object to get the nesting depth of
-
-#     Returns:
-#         :obj:`int`: int of the complexity level of obj
-#     """
-#     if isinstance(obj, dict):
-#         obj = list(obj.values())
-
-#     if isinstance(obj, list):
-#         calcs = [nest_depth(obj=x) for x in obj if isinstance(obj, COMPLEX)]
-#         if calcs:
-#             return 1 + max(calcs)
-#         return 1
-#     return 0
 
 
 def coerce_int(obj):
@@ -213,105 +176,6 @@ def join_url(url, *parts):
         part = part.lstrip("/")
         url = urljoin(url, part)
     return url
-
-
-# def join_dot(obj, empty=False, joiner="."):
-#     """Join a string using periods.
-
-#     Notes:
-#         * obj will be coerced into a list
-#         * if obj is dict, keys of dict will be used as obj
-
-#     Args:
-#         obj (:obj:`object` or :obj:`list` of :obj:`object`): objects(s) to convert
-#             to str and join.
-#         empty (:obj:`bool`, optional): default ``False`` -
-
-#             * if ``True`` leave values in EMPTY in place
-#             * if ``false`` remove values in EMPTY
-#         joiner (:obj:`str`, optional): default ``"."`` - value to use when joining obj
-
-#     Returns:
-#         :obj:`str`: str of obj joined using joiner
-#     """
-#     obj = listify(obj=obj, dictkeys=True)
-
-#     if not empty:
-#         obj = [x for x in obj if x not in EMPTY and format(x)]
-
-#     return joiner.join([format(x) for x in obj])
-
-
-# def join_cr(obj, pre=True, post=False, indent="  ", joiner="\n"):
-#     r"""Create str of elements joined by carriage return.
-
-#     Notes:
-#         * obj will be coerced into a list
-#         * if obj is dict, keys of dict will be used as obj
-
-#     Args:
-#         obj (:obj:`object` or :obj:`list` of :obj:`object`): objects(s) to convert to
-#             str and join
-#         pre (:obj:`bool`, optional): default ``True`` -
-
-#             * if ``True`` add joiner to the beginning of the joined str
-#             * if ``False`` do not add joiner to the beginning of the joined str
-
-#         post (:obj:`bool`, optional): default ``False`` -
-
-#             * if ``True`` add joiner to the end of the joined str
-#             * if ``False`` do not add joiner to the end of the joined str
-#         indent (:obj:`str`, optional): default ``"  "`` - value to prefix joiner
-#         joiner (:obj:`str`, optional): default ``"\n"`` - value to use when joining obj
-
-#     Returns:
-#         :obj:`str`: str of obj joined using joiner
-#     """
-#     obj = listify(obj=obj, dictkeys=True)
-
-#     if indent:
-#         joiner = "{}{}".format(joiner, indent)
-
-#     joined = joiner.join([format(x) for x in obj])
-
-#     if joined:
-#         if pre:
-#             joined = joiner + joined
-#         if post:
-#             joined = joined + joiner
-
-#     return joined
-
-
-# def join_comma(obj, empty=False, indent=" ", joiner=","):
-#     """Create str of elements joined by comma.
-
-#     Notes:
-#         * obj will be coerced into a list
-#         * if obj is dict, keys of dict will be used as obj
-
-#     Args:
-#         obj (:obj:`object` or :obj:`list` of :obj:`object`): objects(s) to convert
-#             to str and join.
-#         empty (:obj:`bool`, optional): default ``False`` -
-
-#             * if ``True`` leave values in EMPTY in place
-#             * if ``False`` remove values in EMPTY
-#         indent (:obj:`str`, optional): default ``"  "`` - value to prefix joiner
-#         joiner (:obj:`str`, optional): default ``","`` - value to use when joining obj
-
-#     Returns:
-#         :obj:`str`: str of obj joined using joiner
-#     """
-#     obj = listify(obj=obj, dictkeys=True)
-
-#     if not empty:
-#         obj = [x for x in obj if x not in EMPTY and format(x)]
-
-#     if indent:
-#         joiner = "{}{}".format(joiner, indent)
-
-#     return joiner.join([format(x) for x in obj])
 
 
 def strip_right(obj, fix):
@@ -483,7 +347,7 @@ def dt_now(delta=None, tz=dateutil.tz.tzutc()):
     return datetime.now(tz)
 
 
-def dt_sec_ago(obj):
+def dt_sec_ago(obj, exact=False):
     """Get number of seconds ago a given datetime was.
 
     Args:
@@ -495,7 +359,8 @@ def dt_sec_ago(obj):
     """
     obj = dt_parse(obj=obj)
     now = dt_now(tz=obj.tzinfo)
-    return round((now - obj).total_seconds())
+    value = (now - obj).total_seconds()
+    return value if exact else round(value)
 
 
 def dt_min_ago(obj):

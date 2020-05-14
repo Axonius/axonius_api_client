@@ -7,8 +7,6 @@ from .asset_mixin import AssetMixin
 class Users(AssetMixin):
     """User related API methods."""
 
-    NO_CURSOR_OVERRIDE = True
-    # cursor in 3.2 only fetches device assets, will be fixed in 3.3
     FIELD_USERNAME = "specific_data.data.username"
     FIELD_MAIL = "specific_data.data.mail"
 
