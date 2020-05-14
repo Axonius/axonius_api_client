@@ -3,14 +3,8 @@
 import copy
 import sys
 
-from ...constants import (
-    DEFAULT_PATH,
-    FIELD_JOINER,
-    FIELD_TRIM_LEN,
-    FIELD_TRIM_STR,
-    GET_SCHEMA_KEYS,
-    SCHEMAS_CUSTOM,
-)
+from ...constants import (DEFAULT_PATH, FIELD_JOINER, FIELD_TRIM_LEN,
+                          FIELD_TRIM_STR, GET_SCHEMA_KEYS, SCHEMAS_CUSTOM)
 from ...exceptions import ApiError
 from ...tools import echo_error, echo_ok, get_path, listify
 
@@ -467,9 +461,9 @@ class Base:
 
         self.RAN.append("first_page")
 
-        rows_page = self.STATE.get("rows_page")
-        rows_total = self.STATE.get("rows_total")
-        page_total = self.STATE.get("page_total")
+        rows_page = self.STATE.get("rows_fetched_this_page")
+        rows_total = self.STATE.get("rows_to_fetch_total")
+        page_total = self.STATE.get("pages_to_fetch_total")
 
         info = f"{rows_page} rows (total rows {rows_total}, total pages {page_total})"
         self.echo(msg=f"First page received {info}")
