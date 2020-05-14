@@ -15,17 +15,8 @@ import dateutil.relativedelta
 import dateutil.tz
 
 from . import __package__ as PACKAGE_ROOT
-from .constants import (
-    ERROR_ARGS,
-    ERROR_TMPL,
-    NO,
-    OK_ARGS,
-    OK_TMPL,
-    SIMPLE,
-    WARN_ARGS,
-    WARN_TMPL,
-    YES,
-)
+from .constants import (ERROR_ARGS, ERROR_TMPL, NO, OK_ARGS, OK_TMPL, SIMPLE,
+                        WARN_ARGS, WARN_TMPL, YES)
 from .exceptions import ApiError, ToolsError
 
 LOG = logging.getLogger(PACKAGE_ROOT).getChild("tools")
@@ -637,8 +628,12 @@ def sysinfo():
         "win32_edition",
     ]
     for attr in platform_attrs:
-        method = getattr(platform, attr)
-        value = method()
+        try:
+            method = getattr(platform, attr)
+            value = method()
+        except Exception:
+            value = "unavailable"
+
         attr = attr.replace("_", " ").title()
         info[attr] = value
     return info
