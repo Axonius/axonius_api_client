@@ -3,9 +3,15 @@
 import click
 
 from ...context import AliasedGroup
-from . import (cmd_get, cmd_get_section, cmd_get_subsection,
-               cmd_update_section, cmd_update_section_from_json,
-               cmd_update_subsection, cmd_update_subsection_from_json)
+from . import (
+    cmd_get,
+    cmd_get_section,
+    cmd_get_subsection,
+    cmd_update_section,
+    cmd_update_section_from_json,
+    cmd_update_subsection,
+    cmd_update_subsection_from_json,
+)
 
 
 @click.group(cls=AliasedGroup)

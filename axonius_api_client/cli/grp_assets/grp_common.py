@@ -32,7 +32,7 @@ GET_EXPORT = [
         "export",
         default="json",
         help="Formatter to use when exporting asset data",
-        type=click.Choice(["csv", "json", "table"]),
+        type=click.Choice(["csv", "json", "table", "json_to_csv"]),
         show_envvar=True,
         show_default=True,
     ),
@@ -69,7 +69,7 @@ GET_EXPORT = [
     click.option(
         "--titles/--no-titles",
         "field_titles",
-        default=False,
+        # default=False,
         help="Rename fields from internal field names to their column titles",
         is_flag=True,
         show_envvar=True,
@@ -79,7 +79,7 @@ GET_EXPORT = [
     click.option(
         "--join/--no-join",
         "field_join",
-        default=False,
+        # default=False,
         help="Join multivalue fields using --join-value",
         is_flag=True,
         show_envvar=True,
@@ -118,7 +118,7 @@ GET_EXPORT = [
     click.option(
         "--flatten/--no-flatten",
         "field_flatten",
-        default=False,
+        # default=False,
         help="Remove complex fields and re-add their sub-field values to the row",
         show_envvar=True,
         show_default=True,
@@ -140,7 +140,7 @@ GET_EXPORT = [
     click.option(
         "--field-null/--no-field-null",
         "field_null",
-        default=False,
+        # default=False,
         help="Add missing fields with --field-null-value",
         show_envvar=True,
         show_default=True,
@@ -150,7 +150,7 @@ GET_EXPORT = [
     click.option(
         "--field-null-value",
         "field_null_value",
-        default=None,
+        # default=None,
         help="Value to use for fields that are not returned",
         show_envvar=True,
         show_default=True,

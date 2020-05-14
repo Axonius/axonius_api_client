@@ -4,11 +4,18 @@ import io
 import warnings
 
 import pytest
+
 from axonius_api_client.constants import CSV_ADAPTER, DEFAULT_NODE
-from axonius_api_client.exceptions import (CnxAddError, CnxGoneError,
-                                           CnxTestError, CnxUpdateError,
-                                           ConfigInvalidValue, ConfigRequired,
-                                           ConfigUnchanged, NotFoundError)
+from axonius_api_client.exceptions import (
+    CnxAddError,
+    CnxGoneError,
+    CnxTestError,
+    CnxUpdateError,
+    ConfigInvalidValue,
+    ConfigRequired,
+    ConfigUnchanged,
+    NotFoundError,
+)
 from axonius_api_client.tools import json_dump
 
 from ...meta import CSV_FILECONTENT_STR
@@ -209,9 +216,7 @@ class TestCnxPublic(TestCnxBase):
             delete_entities=True,
         )
 
-        assert not del_result
-        # XXX changes pre-3.3
-        # assert del_result["client_id"] == cnx_added["id"]
+        assert del_result == {"client_id": "badwolf"}
 
         with pytest.raises(NotFoundError):
             apiobj.cnx.get_by_id(
@@ -241,9 +246,7 @@ class TestCnxPublic(TestCnxBase):
             delete_entities=True,
         )
 
-        assert not del_result
-        # XXX changes pre-3.3
-        # assert del_result["client_id"] == cnx_added["id"]
+        assert del_result == {"client_id": "badwolf"}
 
         with pytest.raises(NotFoundError):
             apiobj.cnx.get_by_id(
@@ -274,9 +277,7 @@ class TestCnxPublic(TestCnxBase):
             delete_entities=True,
         )
 
-        assert not del_result
-        # XXX changes pre-3.3
-        # assert del_result["client_id"] == cnx_added["id"]
+        assert del_result == {"client_id": "badwolf"}
 
         with pytest.raises(NotFoundError):
             apiobj.cnx.get_by_id(
@@ -314,9 +315,7 @@ class TestCnxPublic(TestCnxBase):
             delete_entities=True,
         )
 
-        assert not del_result
-        # XXX changes pre-3.3
-        # assert del_result["client_id"] == cnx_added["id"]
+        assert del_result == {"client_id": "badwolf"}
 
         with pytest.raises(NotFoundError):
             apiobj.cnx.get_by_id(
@@ -350,9 +349,7 @@ class TestCnxPublic(TestCnxBase):
             delete_entities=True,
         )
 
-        assert not del_result
-        # XXX changes pre-3.3
-        # assert del_result["client_id"] == cnx_added["id"]
+        assert del_result == {"client_id": "badwolf"}
 
         with pytest.raises(NotFoundError):
             apiobj.cnx.get_by_id(

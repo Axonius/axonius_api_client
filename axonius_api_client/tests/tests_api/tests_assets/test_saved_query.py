@@ -4,6 +4,7 @@ import copy
 import json
 
 import pytest
+
 from axonius_api_client.api.assets.saved_query import check_gui_page_size
 from axonius_api_client.constants import GUI_PAGE_SIZES, SIMPLE
 from axonius_api_client.exceptions import ApiError, NotFoundError

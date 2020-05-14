@@ -461,9 +461,9 @@ class Base:
 
         self.RAN.append("first_page")
 
-        rows_page = self.STATE.get("rows_page")
-        rows_total = self.STATE.get("rows_total")
-        page_total = self.STATE.get("page_total")
+        rows_page = self.STATE.get("rows_fetched_this_page")
+        rows_total = self.STATE.get("rows_to_fetch_total")
+        page_total = self.STATE.get("pages_to_fetch_total")
 
         info = f"{rows_page} rows (total rows {rows_total}, total pages {page_total})"
         self.echo(msg=f"First page received {info}")
@@ -529,13 +529,17 @@ class Base:
 
     def echo(self, msg, error=None, level="info", level_error="error"):
         """Pass."""
-        if self.GETARGS.get("do_echo", False):
+        do_echo = self.GETARGS.get("do_echo", False)
+
+        if do_echo:
             echo_error(msg) if error else echo_ok(msg)
-        else:
-            if error:
-                getattr(self.LOG, level_error)(msg)
-                raise error(msg)
-            getattr(self.LOG, level)(msg)
+            return
+
+        if error:
+            getattr(self.LOG, level_error)(msg)
+            raise error(msg)
+
+        getattr(self.LOG, level)(msg)
 
     @property
     def args_map(self):

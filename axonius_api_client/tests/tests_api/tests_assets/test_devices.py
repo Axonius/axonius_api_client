@@ -2,8 +2,14 @@
 """Test suite for assets."""
 import pytest
 
-from .base_assets import (AssetsPrivate, AssetsPublic, ModelMixinsBase,
-                          check_assets, get_field_values, load_test_data)
+from .base_assets import (
+    AssetsPrivate,
+    AssetsPublic,
+    ModelMixinsBase,
+    check_assets,
+    get_field_values,
+    load_test_data,
+)
 
 
 class TestDevices(AssetsPrivate, AssetsPublic, ModelMixinsBase):

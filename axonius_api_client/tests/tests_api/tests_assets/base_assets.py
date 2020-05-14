@@ -100,31 +100,31 @@ class ModelMixinsBase:
 class AssetsPrivate:
     """Pass."""
 
-    def test_private_get_page_stop_rows_stop(self, apiobj):
-        """Pass."""
-        state = {
-            "max_rows": None,
-            "rows_processed": 1,
-            "stop": True,
-            "stop_msg": "fakestop",
-            "max_pages": None,
-            "page_num": 1,
-        }
-        result = apiobj._get_page_stop_rows(row={}, rows=[{}], state=state, store={})
-        assert result is True
+    # def test_private_get_page_stop_rows_stop(self, apiobj):
+    #     """Pass."""
+    #     state = {
+    #         "max_rows": None,
+    #         "rows_processed": 1,
+    #         "stop": True,
+    #         "stop_msg": "fakestop",
+    #         "max_pages": None,
+    #         "page_num": 1,
+    #     }
+    #     result = apiobj._get_page_stop_rows(row={}, rows=[{}], state=state, store={})
+    #     assert result is True
 
-    def test_private_get_page_stop_fetch_stop(self, apiobj):
-        """Pass."""
-        state = {
-            "max_rows": None,
-            "rows_processed": 1,
-            "stop": True,
-            "stop_msg": "fakestop",
-            "max_pages": None,
-            "page_num": 1,
-        }
-        result = apiobj._get_page_stop_fetch(rows=[{}], state=state, store={})
-        assert result is True
+    # def test_private_get_page_stop_fetch_stop(self, apiobj):
+    #     """Pass."""
+    #     state = {
+    #         "max_rows": None,
+    #         "rows_processed": 1,
+    #         "stop": True,
+    #         "stop_msg": "fakestop",
+    #         "max_pages": None,
+    #         "page_num": 1,
+    #     }
+    #     result = apiobj._get_page_stop_fetch(rows=[{}], state=state, store={})
+    #     assert result is True
 
     def test_private_get(self, apiobj):
         """Pass."""

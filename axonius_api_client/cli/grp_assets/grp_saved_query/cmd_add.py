@@ -2,8 +2,7 @@
 """Command line interface for Axonius API Client."""
 from ....tools import json_dump
 from ...context import CONTEXT_SETTINGS, click
-from ...options import (AUTH, FIELDS_SELECT, QUERY, add_options,
-                        get_option_fields_default)
+from ...options import AUTH, FIELDS_SELECT, QUERY, add_options, get_option_fields_default
 from .grp_common import SQ_OPTS
 
 EPILOG = """Note:

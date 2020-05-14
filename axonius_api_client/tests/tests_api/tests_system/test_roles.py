@@ -2,6 +2,7 @@
 """Test suite."""
 
 import pytest
+
 from axonius_api_client.constants import DEFAULT_PERM
 from axonius_api_client.exceptions import ApiError, NotFoundError
 

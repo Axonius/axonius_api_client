@@ -1,13 +1,12 @@
 # -*- coding: utf-8 -*-
 """API model base classes and mixins."""
 import abc
-import math
 import time
 
 from ..constants import LOG_LEVEL_API, MAX_BODY_LEN, MAX_PAGE_SIZE
 from ..exceptions import JsonError, JsonInvalid, NotFoundError, ResponseNotOk
 from ..logs import get_obj_log
-from ..tools import dt_now, dt_sec_ago, is_int, json_load, json_reload
+from ..tools import dt_now, dt_sec_ago, json_dump, json_load, json_reload
 
 
 class Model:
@@ -23,7 +22,25 @@ class Model:
         raise NotImplementedError  # pragma: no cover
 
 
-class ModelMixins(Model):
+class PageSizeMixin:
+    """Pass."""
+
+    def _get_page_size(self, page_size=MAX_PAGE_SIZE, max_rows=None):
+        if max_rows and max_rows < page_size:
+            self.LOG.debug(f"CHANGED PAGE SIZE {page_size} to max_rows {max_rows}")
+            page_size = max_rows
+
+        if page_size > MAX_PAGE_SIZE:
+            self.LOG.debug(f"CHANGED PAGE SIZE {page_size} to max {MAX_PAGE_SIZE}")
+            page_size = MAX_PAGE_SIZE
+
+        if not page_size:
+            page_size = MAX_PAGE_SIZE
+
+        return page_size
+
+
+class ModelMixins(Model, PageSizeMixin):
     """Mixins for :obj:`Model` objects."""
 
     def __init__(self, auth, **kwargs):
@@ -64,6 +81,20 @@ class ModelMixins(Model):
         """Show info for this model object."""
         return self.__str__()
 
+    def _get_page_size(self, page_size=MAX_PAGE_SIZE, max_rows=None):
+        if max_rows and max_rows < page_size:
+            self.LOG.debug(f"CHANGED PAGE SIZE {page_size} to max_rows {max_rows}")
+            page_size = max_rows
+
+        if page_size > MAX_PAGE_SIZE:
+            self.LOG.debug(f"CHANGED PAGE SIZE {page_size} to max {MAX_PAGE_SIZE}")
+            page_size = MAX_PAGE_SIZE
+
+        if not page_size:
+            page_size = MAX_PAGE_SIZE
+
+        return page_size
+
     def _build_err_msg(self, response, error=None, exc=None):
         """Pass."""
         request_size = len(response.request.body or "")
@@ -71,10 +102,10 @@ class ModelMixins(Model):
         msgs = []
         msgs += [f"Original exception: {exc}"] if exc else []
         msgs += [
-            f"Request Body:",
+            "Request Body:",
             json_reload(obj=response.request.body, error=False, trim=MAX_BODY_LEN),
             "",
-            f"Response details:",
+            "Response details:",
             f"  code: {response.status_code!r}",
             f"  reason: {response.reason!r}",
             f"  method={response.request.method!r}",
@@ -88,17 +119,17 @@ class ModelMixins(Model):
         if isinstance(response_obj, dict):
             if "additional_data" in response_obj:
                 msg = json_reload(obj=response_obj.pop("additional_data"), error=False)
-                msgs += [f"  ** Additional Data:", msg]
+                msgs += ["  ** Additional Data:", msg]
 
             if "status" in response_obj:
-                msgs += [f"  ** Status: " + response_obj.pop("status")]
+                msgs += ["  ** Status: " + response_obj.pop("status")]
 
             if "message" in response_obj:
                 msgs += ["  ** Message: " + response_obj.pop("message")]
 
             msgs += [f"Extra: {response_obj}"] if response_obj else []
         else:
-            msgs += [f"Response Body:", response_obj]
+            msgs += ["Response Body:", response_obj]
 
         msgs += [error] if error else []
 
@@ -250,123 +281,7 @@ class ModelMixins(Model):
         return data
 
 
-class PagingMixins:
-    """Pass."""
-
-    def get(self, generator=False, **kwargs):
-        """Get objects for a given query using paging.
-
-        Args:
-            generator (:obj:`bool`, optional): default ``False`` -
-
-                * True: return an iterator for assets that will yield rows
-                  as they are fetched
-                * False: return a list of rows after all have been fetched
-            **kwargs: passed to :meth:`get_generator`
-
-        Yields:
-            :obj:`dict`: row if generator is True
-
-        Returns:
-            :obj:`list` of :obj:`dict`: rows if generator is False
-        """
-        gen = self.get_generator(**kwargs)
-
-        if generator:
-            return gen
-
-        return list(gen)
-
-    def get_generator(self, **kwargs):
-        """Pass."""
-        raise NotImplementedError  # pragma: no cover
-
-    def _get_page(self, state, store):
-        page_start = dt_now()
-        state["page_num"] += 1
-
-        state["page"] = self._get(
-            query=store["query"],
-            page_size=state["page_size"],
-            row_start=state["rows_fetched"],
-        )
-        rows = state["page"].pop("assets", [])
-
-        self._get_page_handle(state=state, store=store, rows=rows)
-
-        time_page = dt_sec_ago(obj=page_start)
-        rows_page = len(rows)
-
-        state["rows_start"] += rows_page
-        state["rows_fetched"] += rows_page
-        state["rows_page"] = rows_page
-        state["time_page"] = time_page
-        state["time_fetch"] += time_page
-
-        self.LOG.debug("FETCHED PAGE: {}".format(state))
-
-        return rows
-
-    def _get_page_handle(self, rows, state, store):
-        rows_total_page = state["page"].get("page", {}).get("totalResources")
-        rows_total = state["rows_total"]
-        page_size = state["page_size"]
-        page_num = state["page_num"]
-
-        if is_int(rows_total_page):
-            rows_total = rows_total_page
-        else:
-            rows_total_page = rows_total
-
-        page_total = math.ceil(rows_total_page / page_size)
-
-        state["page_total"] = page_total
-        state["page_left"] = page_total - page_num
-        state["rows_total"] = rows_total
-
-    def _get_page_size(self, page_size=MAX_PAGE_SIZE, max_rows=None):
-        if max_rows and max_rows < page_size:
-            self.LOG.debug(f"CHANGED PAGE SIZE {page_size} to max_rows {max_rows}")
-            page_size = max_rows
-
-        if page_size > MAX_PAGE_SIZE:
-            self.LOG.debug(f"CHANGED PAGE SIZE {page_size} to max {MAX_PAGE_SIZE}")
-            page_size = MAX_PAGE_SIZE
-
-        return page_size
-
-    def _get_page_stop_rows(self, row, rows, state, store):
-        if state.get("stop", False):
-            stop = state.get("stop_msg", "")
-            self.LOG.debug(f"STOPPED ROW LOOP: STOP called {stop}")
-            return True
-        if state["max_rows"] and state["rows_processed"] >= state["max_rows"]:
-            self.LOG.debug("STOPPED ROW LOOP: HIT MAX_ROWS")
-            return True
-        return False
-
-    def _get_page_stop_fetch(self, rows, state, store):
-        if not rows:
-            self.LOG.debug(f"STOPPED FETCH LOOP: HIT NO ROWS state={state}")
-            return True
-
-        if state.get("stop", False):
-            stop = state.get("stop_msg", "")
-            self.LOG.debug(f"STOPPED FETCH LOOP: STOP called {stop} state={state}")
-            return True
-
-        if state["max_pages"] and state["page_num"] >= state["max_pages"]:
-            self.LOG.debug(f"STOPPED FETCH LOOP: HIT MAX_PAGES state={state}")
-            return True
-
-        if state["max_rows"] and state["rows_fetched"] >= state["max_rows"]:
-            self.LOG.debug(f"STOPPED FETCH LOOP: HIT MAX_ROWS state={state}")
-            return True
-
-        return False
-
-
-class PagingMixinsObject(PagingMixins):
+class PagingMixinsObject(PageSizeMixin):
     """Pass."""
 
     def get_by_uuid(self, value, **kwargs):
@@ -409,6 +324,30 @@ class PagingMixinsObject(PagingMixins):
         valid = "\n  " + "\n  ".join(sorted([tmpl(**row) for row in rows]))
         raise NotFoundError(f"name {value!r} not found, valid:{valid}")
 
+    def get(self, generator=False, **kwargs):
+        """Get objects for a given query using paging.
+
+        Args:
+            generator (:obj:`bool`, optional): default ``False`` -
+
+                * True: return an iterator for assets that will yield rows
+                  as they are fetched
+                * False: return a list of rows after all have been fetched
+            **kwargs: passed to :meth:`get_generator`
+
+        Yields:
+            :obj:`dict`: row if generator is True
+
+        Returns:
+            :obj:`list` of :obj:`dict`: rows if generator is False
+        """
+        gen = self.get_generator(**kwargs)
+
+        if generator:
+            return gen
+
+        return list(gen)
+
     def get_generator(
         self,
         query=None,
@@ -434,45 +373,84 @@ class PagingMixinsObject(PagingMixins):
         page_size = self._get_page_size(page_size=page_size, max_rows=max_rows)
 
         store = {"query": query}
+
         state = {
             "max_pages": max_pages,
             "max_rows": max_rows,
-            "page": {},
-            "page_cursor": None,
-            "page_left": 0,
-            "page_num": page_start,
-            "page_size": page_size,
             "page_sleep": page_sleep,
-            "page_total": 0,
-            "rows_fetched": 0,
-            "rows_page": 0,
-            "rows_processed": 0,
-            "rows_start": page_start * page_size,
-            "rows_total": 0,
-            "time_fetch": 0,
-            "time_page": 0,
+            "page_size": page_size,
+            "page_number": page_start or 1,
+            "row_to_fetch_next": page_start * page_size,
+            "rows_fetched_this_page": None,
+            "rows_processed_total": 0,
+            "rows_fetched_total": 0,
+            "fetch_seconds_total": 0,
+            "fetch_seconds_this_page": 0,
+            "stop_fetch": False,
+            "stop_msg": None,
         }
 
-        self.LOG.info(f"START FETCH store={store}")
+        self.LOG.info(f"STARTING FETCH store={json_dump(store)}")
+        self.LOG.debug(f"STARTING FETCH state={json_dump(state)}")
 
-        while True:
-            rows = self._get_page(state=state, store=store)
+        while not state["stop_fetch"]:
+            page_start = dt_now()
+            page = self._get(
+                query=store["query"],
+                page_size=state["page_size"],
+                row_start=state["row_to_fetch_next"],
+            )
+            page_took = dt_sec_ago(obj=page_start, exact=True)
+
+            state["fetch_seconds_this_page"] = page_took
+            state["fetch_seconds_total"] += state["fetch_seconds_this_page"]
+
+            rows = page.pop("assets", [])
+            state["rows_fetched_this_page"] = len(rows)
+            state["rows_fetched_total"] += state["rows_fetched_this_page"]
+            state["row_to_fetch_next"] += state["rows_fetched_this_page"]
+
+            self.LOG.debug(f"FETCHED PAGE: {json_dump(page)}")
+            self.LOG.debug(f"CURRENT PAGING STATE: {json_dump(state)}")
+
+            if not rows:
+                stop_msg = "no more rows returned"
+                state["stop_fetch"] = True
+                state["stop_msg"] = stop_msg
+                self.LOG.debug(f"STOPPED FETCH: {stop_msg}")
+                break
+
             for row in rows:
                 yield row
 
-                state["rows_processed"] += 1
+                state["rows_processed_total"] += 1
 
-                if self._get_page_stop_rows(
-                    row=row, state=state, store=store, rows=rows
+                if (
+                    state["max_rows"]
+                    and state["rows_processed_total"] >= state["max_rows"]
                 ):
+                    stop_msg = "'rows_processed_total' greater than 'max_rows'"
+                    state["stop_msg"] = stop_msg
+                    state["stop_fetch"] = True
                     break
 
-            if self._get_page_stop_fetch(rows=rows, state=state, store=store):
+            if state["stop_fetch"]:
+                stop_msg = state["stop_msg"]
+                self.LOG.debug(f"STOPPED FETCH: {stop_msg}")
                 break
 
-            time.sleep(state["page_sleep"])
+            if state["max_pages"] and state["page_number"] >= state["max_pages"]:
+                stop_msg = "'page_number' greater than 'max_pages'"
+                state["stop_fetch"] = True
+                state["stop_msg"] = stop_msg
+                self.LOG.debug(f"STOPPED FETCH: {stop_msg}")
+                break
 
-        self.LOG.info(f"FINISH FETCH store={store}")
+            state["page_number"] += 1
+            time.sleep(page_sleep)
+
+        self.LOG.info(f"FINISHED FETCH store={json_dump(store)}")
+        self.LOG.debug(f"FINISHED FETCH state={json_dump(state)}")
 
 
 class ChildMixins:
