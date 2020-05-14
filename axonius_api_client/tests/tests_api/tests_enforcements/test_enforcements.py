@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """Test suite for axonapi.api.enforcements."""
 import pytest
-
 from axonius_api_client.exceptions import NotFoundError
 
 from ...meta import CREATE_EC_ACTION_MAIN, CREATE_EC_NAME, CREATE_EC_TRIGGER1
@@ -111,9 +110,3 @@ class TestEnforcementsPublic(TestEnforcementsBase):
 
         with pytest.raises(NotFoundError):
             apiobj.get_by_name(found["name"])
-
-        allobjs = apiobj.get()
-        if allobjs:
-            name = allobjs[0]["name"]
-            rematches = apiobj.get_by_name(value=name[0], value_regex=True)
-            assert any([x["name"] == name for x in rematches])

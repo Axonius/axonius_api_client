@@ -17,6 +17,7 @@ from .constants import (
     LOG_FMT_FILE,
     LOG_LEVEL_CONSOLE,
     LOG_LEVEL_FILE,
+    LOG_LEVEL_PACKAGE,
     LOG_LEVELS_INT_CSV,
     LOG_LEVELS_STR_CSV,
     LOG_NAME_FILE,
@@ -468,3 +469,4 @@ LOG = logging.getLogger(PACKAGE_ROOT)
 
 add_null(obj=LOG)
 gmtime()
+set_log_level(obj=LOG, level=LOG_LEVEL_PACKAGE)

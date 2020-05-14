@@ -16,6 +16,8 @@ from .constants import (LOG_FILE_MAX_FILES, LOG_FILE_MAX_MB, LOG_FILE_NAME,
 from .exceptions import ConnectError, InvalidCredentials
 from .http import Http
 from .logs import LOG, add_file, add_stderr, set_log_level
+from .tools import json_dump, sysinfo
+from .version import __version__ as VERSION
 
 
 class Connect:
@@ -233,6 +235,9 @@ class Connect:
     def start(self):
         """Connect to and authenticate with Axonius."""
         if not self._started:
+            sysinfo_dump = json_dump(sysinfo())
+            LOG.debug(f"SYSTEM INFO: {sysinfo_dump}")
+
             try:
                 self._auth.login()
             except Exception as exc:
@@ -327,12 +332,14 @@ class Connect:
         """
         client = getattr(self, "_http", "")
         url = getattr(client, "url", self._http_args["url"])
-
         if self._started:
             about = self.system.meta.about()
             version = (about["Version"] or "DEMO").replace("_", ".")
             built = about["Build Date"]
-            return f"Connected to {url!r} version {version} ({built})"
+            return (
+                f"Connected to {url!r} version {version} (RELEASE DATE: {built})"
+                f" with API Client v{VERSION}"
+            )
         else:
             return f"Not connected to {url!r}"
 

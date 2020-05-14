@@ -57,7 +57,7 @@ class Table(Base):
         rows_processed = self.STATE.get("rows_processed", 0)
 
         if all([rows_processed, max_rows]) and rows_processed >= max_rows:
-            self.STATE["stop"] = True
+            self.STATE["stop_fetch"] = True
             self.STATE["stop_msg"] = f"table_max_rows of {max_rows}"
 
     def check_fmt(self, fmt):

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """API models for working with device and user assets."""
-from ...constants import GUI_PAGE_SIZES
+from ...constants import GUI_PAGE_SIZES, PAGE_SIZE
 from ...exceptions import ApiError, NotFoundError
 from ...tools import listify
 from ..mixins import ChildMixins, PagingMixinsObject
@@ -307,7 +307,7 @@ class SavedQuery(ChildMixins, PagingMixinsObject):
         path = self.router.views
         return self.request(method="delete", path=path, json=data)
 
-    def _get(self, query=None, row_start=0, page_size=None):
+    def _get(self, query=None, row_start=0, page_size=PAGE_SIZE):
         """Direct API method to get saved queries.
 
         Args:

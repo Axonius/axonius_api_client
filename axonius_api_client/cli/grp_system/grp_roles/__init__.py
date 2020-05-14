@@ -3,8 +3,7 @@
 import click
 
 from ...context import AliasedGroup
-from . import (cmd_add, cmd_delete, cmd_get, cmd_get_default, cmd_set_default,
-               cmd_update)
+from . import cmd_add, cmd_delete, cmd_get, cmd_get_default, cmd_set_default, cmd_update
 
 
 @click.group(cls=AliasedGroup)
