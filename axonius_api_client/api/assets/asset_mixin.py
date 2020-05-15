@@ -254,10 +254,10 @@ class AssetMixin(ModelMixins):
 
             time.sleep(state["page_sleep"])
 
-        callbacks.stop()
-
         self.LOG.info(f"FINISHED FETCH store={store}")
         self.LOG.debug(f"FINISHED FETCH state={json_dump(state)}")
+
+        callbacks.stop()
 
     def _get_page_cursor(self, state, store):
         page_start_dt = dt_now()
