@@ -77,6 +77,16 @@ GET_EXPORT = [
         hidden=False,
     ),
     click.option(
+        "--json-flat/--no-json-flat",
+        "json_flat",
+        default=False,
+        help="Flat JSON output (one line per row)",
+        is_flag=True,
+        show_envvar=True,
+        show_default=True,
+        hidden=False,
+    ),
+    click.option(
         "--titles/--no-titles",
         "field_titles",
         # default=False,
