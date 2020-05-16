@@ -637,3 +637,14 @@ def sysinfo():
         attr = attr.replace("_", " ").title()
         info[attr] = value
     return info
+
+
+def calc_percent(part, whole):
+    """Pass."""
+    if 0 in [part, whole]:
+        value = 0.00
+    elif part > whole:
+        value = 100.00
+    else:
+        value = 100 * (part / whole)
+    return value

@@ -27,6 +27,16 @@ GET_EXPORT = [
         hidden=False,
     ),
     click.option(
+        "--page-progress",
+        "page_progress",
+        default=10000,
+        help="Print progress every N rows",
+        show_envvar=True,
+        show_default=True,
+        type=click.INT,
+        hidden=False,
+    ),
+    click.option(
         "--export-format",
         "-xt",
         "export",

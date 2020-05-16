@@ -223,8 +223,6 @@ class AssetMixin(ModelMixins):
                 for row_item in listify(obj=row_items):
                     yield row_item
 
-                state["rows_processed_total"] += 1
-
                 if state["stop_fetch"]:
                     break
 
