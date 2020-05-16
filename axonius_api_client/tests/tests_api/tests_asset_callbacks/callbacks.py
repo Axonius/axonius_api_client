@@ -6,14 +6,9 @@ import logging
 import sys
 
 import pytest
-
 from axonius_api_client.api.asset_callbacks import get_callbacks_cls
-from axonius_api_client.constants import (
-    AGG_ADAPTER_NAME,
-    AGG_ADAPTER_TITLE,
-    FIELD_TRIM_LEN,
-    SCHEMAS_CUSTOM,
-)
+from axonius_api_client.constants import (AGG_ADAPTER_NAME, AGG_ADAPTER_TITLE,
+                                          FIELD_TRIM_LEN, SCHEMAS_CUSTOM)
 from axonius_api_client.exceptions import ApiError, NotFoundError
 
 from ...meta import TAGS
@@ -91,11 +86,11 @@ class Callbacks:
         )
         assert cbobj.CB_NAME == cbexport
         assert cbobj.APIOBJ == apiobj
-        assert cbobj.FIELDS_MAP == apiobj.TEST_DATA["fields_map"]
-        assert cbobj.FIELDS == fields
+        assert cbobj.ALL_SCHEMAS == apiobj.TEST_DATA["fields_map"]
         assert cbobj.QUERY == query
         assert cbobj.GETARGS == getargs
         assert cbobj.STATE == state
+        assert cbobj.SELECTED_FIELDS == fields
 
         assert isinstance(cbobj.args_map, list)
         assert isinstance(cbobj.args_strs, list)
@@ -110,17 +105,11 @@ class Callbacks:
         assert cbobj.__class__.__name__ in str(cbobj)
         assert cbobj.__class__.__name__ in repr(cbobj)
 
-        assert isinstance(cbobj.SCHEMAS_ALL, list)
-        assert cbobj.SCHEMAS_ALL
-
         assert isinstance(cbobj.adapter_map, dict)
         assert cbobj.adapter_map
 
-        assert isinstance(cbobj.SCHEMAS_FIELDS, list)
-        assert cbobj.SCHEMAS_FIELDS
-        for schema in cbobj.SCHEMAS_FIELDS:
-            assert schema in cbobj.SCHEMAS_ALL
-
+        assert isinstance(cbobj.selected_schemas, list)
+        assert cbobj.selected_schemas
         return cbobj
 
     def test_start_stop(self, cbexport, apiobj, caplog):
@@ -147,11 +136,11 @@ class Callbacks:
         assert isinstance(row_ret, dict)
         assert row == row_ret
 
-        assert isinstance(cbobj.SCHEMAS_CUSTOM, list)
+        assert isinstance(cbobj.custom_schemas, list)
         for field, schema in report_schemas.items():
-            assert schema not in cbobj.SCHEMAS_CUSTOM
+            assert schema not in cbobj.custom_schemas
 
-        assert not cbobj.SCHEMAS_CUSTOM
+        assert not cbobj.custom_schemas
 
     def test_report_adapters_missing_true(self, cbexport, apiobj):
         """Pass."""
@@ -165,10 +154,10 @@ class Callbacks:
         assert isinstance(row_ret, dict)
         assert row != row_ret
 
-        assert isinstance(cbobj.SCHEMAS_CUSTOM, list)
+        assert isinstance(cbobj.custom_schemas, list)
         for field, schema in report_schemas.items():
             assert schema["name_qual"] in row_ret
-            assert schema in cbobj.SCHEMAS_CUSTOM
+            assert schema in cbobj.custom_schemas
             assert schema in cbobj.schemas_final(flat=False)
             assert schema in cbobj.schemas_final(flat=True)
 

@@ -218,7 +218,7 @@ class AssetMixin(ModelMixins):
                 break
 
             for row in rows:
-                row_items = callbacks.row(row=row)
+                row_items = callbacks.process_row(row=row)
 
                 for row_item in listify(obj=row_items):
                     yield row_item

@@ -43,13 +43,13 @@ class Table(Base):
         self._fd.write("\n")
         self.close_fd()
 
-    def row(self, row):
+    def process_row(self, row):
         """Process row."""
         self.check_stop()
-        rows = super(Table, self).row(row=row)
+        new_rows = self._process_row(row=row)
         # XXX textwrap key/values
-        self._rows += listify(rows)
-        return rows
+        self._rows += listify(new_rows)
+        return new_rows
 
     def check_stop(self):
         """Pass."""
