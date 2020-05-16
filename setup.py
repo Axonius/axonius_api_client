@@ -29,7 +29,6 @@ install_requires = [
     "click>=7.1.1",
     "pyreadline>=2.1 ; platform_system == 'Windows'",
     "tabulate>=0.8.7",
-    "jsonstreams>=0.4.2",
 ]
 
 setup(

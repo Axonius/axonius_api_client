@@ -436,7 +436,8 @@ class Base:
         """Close a file descriptor."""
         self._fd.write("\n")
         if getattr(self, "_fd_close", False):
-            self.echo(msg=f"Closing {self._fd}")
+            name = str(getattr(self._fd, "name", self._fd))
+            self.echo(msg=f"Finished exporting to {name!r}")
             self._fd.close()
 
     def echo(self, msg, error=None, level="info", level_error="error"):
@@ -605,6 +606,7 @@ class Base:
             ["export_overwrite", "Export overwrite file:", False],
             ["export_schema", "Export schema:", False],
             ["page_progress", "Progress per row count:", 10000],
+            ["json_flat", "Produce flat json:", False],
         ]
 
     @property
