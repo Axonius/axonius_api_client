@@ -4,23 +4,16 @@ import copy
 import sys
 
 from ...constants import (DEFAULT_PATH, FIELD_JOINER, FIELD_TRIM_LEN,
-                          FIELD_TRIM_STR, GET_SCHEMA_KEYS, SCHEMAS_CUSTOM)
+                          FIELD_TRIM_STR, SCHEMAS_CUSTOM)
 from ...exceptions import ApiError
 from ...tools import echo_error, echo_ok, get_path, listify
-
-
-def custom_schemas(**kwargs):
-    """Pass."""
-    schemas = []
-    if kwargs.get("report_adapters_missing", False):
-        schemas += list(SCHEMAS_CUSTOM["report_adapters_missing"].values())
-    return schemas
 
 
 class Base:
     """Object for handling callbacks for assets."""
 
     CB_NAME = "base"
+    FIND_KEYS = ["name", "name_qual", "column_title", "name_base"]
 
     def __init__(
         self, apiobj, fields, query=None, state=None, fields_map=None, getargs=None
@@ -31,6 +24,13 @@ class Base:
 
         self.APIOBJ = apiobj
         """:obj:`AssetMixin`: assets object."""
+
+        apifields = [x for x in apiobj.FIELDS_API if x not in fields]
+        self.SELECTED_FIELDS = apifields + fields
+        """:obj:`list` of :obj:`str`: field names selected originally."""
+
+        self.ALL_SCHEMAS = fields_map or apiobj.fields.get()
+        """:obj:`dict`: map of adapter -> field schemas."""
 
         self.QUERY = query
         """:obj:`str`: query supplied to get assets method."""
@@ -50,63 +50,6 @@ class Base:
         self.TAG_ROWS_REMOVE = []
         """:obj:`list` of :obj:`dict`: assets to remove tags from in do_tagging."""
 
-        self.FIELDS = [x for x in apiobj.FIELDS_API if x not in fields] + fields
-        """:obj:`list` of :obj:`str`: field names selected originally."""
-
-        self.FIELDS_MAP = fields_map or apiobj.fields.get()
-        """:obj:`dict`: map of adapter -> field schemas."""
-
-        self.SCHEMAS_CUSTOM = custom_schemas(**self.GETARGS)
-        """:obj:`list` of :obj:`dict`: schemas of custom fields."""
-
-        self.SCHEMAS_ALL = [y for x in self.FIELDS_MAP.values() for y in x]
-        """:obj:`list` of :obj:`dict`: field schemas for all adapters."""
-
-        self.SCHEMAS_FIELDS = [self.get_schema(value=x) for x in self.FIELDS]
-        """:obj:`list` of :obj:`dict`: schemas of fields selected originally."""
-
-    def get_schema(self, value, schemas=None, qual_only=True, **kwargs):
-        """Pass."""
-        if qual_only:
-            kwargs["keys"] = ["name_qual"]
-        schemas = schemas or (self.SCHEMAS_ALL + self.SCHEMAS_CUSTOM)
-        return self.APIOBJ.fields.get_field_schema(
-            value=value, schemas=schemas, **kwargs
-        )
-
-    def schemas_final_complex(self, schema, final):
-        """Pass."""
-        sub_schemas = self.filter_sub_schemas(schema=schema)
-        final.update({x["name_qual"]: x for x in sub_schemas})
-
-    def schemas_final_simple(self, schema, final):
-        """Pass."""
-        final.setdefault(schema["name_qual"], schema)
-
-    def do_schemas_final(self, schema, explode, flat, final):
-        """Pass."""
-        if schema["is_complex"] and (schema["name_qual"] == explode or flat):
-            self.schemas_final_complex(schema=schema, final=final)
-        else:
-            self.schemas_final_simple(schema=schema, final=final)
-
-    def schemas_final(self, flat=False):
-        """Predict the future schemas that will be returned."""
-        flat = True if self.GETARGS.get("field_flatten", False) else flat
-
-        schemas = self.filter_schemas(schemas=self.SCHEMAS_FIELDS)
-
-        explode = self.explode_schema.get("name_qual", "")
-
-        final = {}
-
-        for schema in schemas:
-            self.do_schemas_final(schema=schema, explode=explode, flat=flat, final=final)
-
-        final = list(final.values())
-        final += self.SCHEMAS_CUSTOM
-        return final
-
     def start(self, **kwargs):
         """Run start callbacks."""
         join = "\n   - "
@@ -120,105 +63,93 @@ class Base:
         self.echo(msg=f"Configuration: {config}")
         self.echo(msg=f"Query: {self.QUERY}")
 
-        schemas = self.SCHEMAS_FIELDS
-        schemas_pretty = self.APIOBJ.fields._prettify_schemas(schemas=schemas)
+        columns_final = join + join.join(self.columns_final)
+        self.echo(msg=f"Final columns: {columns_final}")
+
+        schemas_pretty = self.APIOBJ.fields._prettify_schemas(
+            schemas=self.schemas_selected
+        )
         schemas_pretty = join + join.join(schemas_pretty)
-        self.echo(msg=f"Fields: {schemas_pretty}")
+        self.echo(msg=f"Selected Fields: {schemas_pretty}")
 
     def stop(self, **kwargs):
         """Run stop callbacks."""
         self.do_tagging()
         self.echo(msg=f"Stopping {self}")
 
-    def row(self, row):
-        """Handle callbacks for an asset."""
+    def _process_row(self, row):
+        """Pass."""
         self.first_page()
-        row = self.tags_add(row=row)
-        row = self.tags_remove(row=row)
-        row = self.report_adapters_missing(row=row)
-        row = self.field_null(row=row)
-        row = self.field_excludes(row=row)
-        rows = self.field_explode(row=row)
-        rows = [self.field_flatten(row=x) for x in rows]
-        rows = [self.field_join(row=x) for x in rows]
-        rows = [self.field_titles(row=x) for x in rows]
-        return rows
+        self.tags_add(row=row)
+        self.tags_remove(row=row)
+        self.report_adapters_missing(row=row)
+        for schema in self.schemas_selected:
+            self.do_excludes(row=row, schema=schema)
+            self.do_nulls(row=row, schema=schema)
+            self.do_flatten(row=row, schema=schema)
 
-    def field_null(self, row):
-        """Asset callback to add None values to fields not returned."""
-        if not self.GETARGS.get("field_null", False):
-            return row
+        new_rows = self.field_explode(row=row)
 
-        for schema in self.SCHEMAS_FIELDS:
-            self.do_null(field=schema["name_qual"], row=row, schema=schema)
-        return row
+        for new_row in new_rows:
+            self.field_join(row=new_row)
+            self.field_titles(row=new_row)
+        return new_rows
 
-    def null_complex(self, row, field, schema):
-        """Pass."""
-        row[field] = listify(row.get(field, []))
-        for entry in row[field]:
-            sub_schemas = self.filter_sub_schemas(schema=schema)
-            for sub_schema in sub_schemas:
-                self.do_null(field=sub_schema["name"], schema=sub_schema, row=entry)
+    def process_row(self, row):
+        """Handle callbacks for an asset."""
+        return self._process_row(row=row)
 
-    def null_simple(self, row, field, schema):
-        """Pass."""
-        null_value = self.GETARGS.get("field_null_value", None)
-        row[field] = row.get(field, null_value)
-
-    def do_null(self, row, field, schema):
+    def do_nulls(self, row, schema, key="name_qual"):
         """Null out missing fields."""
+        if not self.GETARGS.get("field_null", False):
+            return
+
         if self.is_excluded(schema=schema):
             return
 
+        null_value = self.GETARGS.get("field_null_value", None)
+        field = schema[key]
+
         if schema["is_complex"]:
-            self.null_complex(row=row, field=field, schema=schema)
+            row[field] = listify(row.get(field, []))
+
+            for item in row[field]:
+                for sub_schema in schema["sub_fields"]:
+                    if not self.is_excluded(schema=sub_schema) and sub_schema["is_root"]:
+                        self.do_nulls(schema=sub_schema, row=item, key="name")
         else:
-            self.null_simple(row=row, field=field, schema=schema)
+            row[field] = row.get(field, null_value)
 
-    def exclude_complex_sub(self, row, field, items, schema):
-        """Pass."""
-        if self.is_excluded(schema=schema):
-            for item in items:
-                item.pop(schema["name"], None)
-
-    def exclude_complex(self, row, field, schema):
-        """Pass."""
-        if schema["is_complex"]:
-            sub_schemas = schema["sub_fields"]
-            items = listify(row.get(field, []))
-            for sub_schema in sub_schemas:
-                self.exclude_complex_sub(
-                    row=row, field=field, items=items, schema=sub_schema
-                )
-
-    def exclude_simple(self, row, field, schema):
-        """Pass."""
-        if not schema["is_complex"] and self.is_excluded(schema=schema):
-            row.pop(field, None)
-
-    def do_exclude(self, row, field, schema):
-        """Pass."""
-        self.exclude_simple(row=row, field=field, schema=schema)
-        self.exclude_complex(row=row, field=field, schema=schema)
-
-    def field_excludes(self, row):
+    def do_excludes(self, row, schema):
         """Asset callback to remove fields from row."""
         if not self.GETARGS.get("field_excludes", []):
-            return row
+            return
 
-        for field in list(row):
-            schema = self.get_schema(value=field)
-            self.do_exclude(row=row, field=field, schema=schema)
+        field_name = self.find_field_name(row=row, schema=schema)
 
-        return row
+        if not field_name or field_name not in row:
+            return
+
+        if self.is_excluded(schema=schema):
+            row.pop(field_name)
+            return
+
+        if schema["is_complex"]:
+            items = listify(row.get(field_name, []))
+            for sub_schema in schema["sub_fields"]:
+                if self.is_excluded(schema=sub_schema):
+                    for item in items:
+                        sub_field_name = self.find_field_name(
+                            row=item, schema=sub_schema
+                        )
+                        item.pop(sub_field_name, None)
 
     def field_join(self, row):
         """Join values."""
         if not self.GETARGS.get("field_join", False):
-            return row
+            return
 
-        joiner = self.GETARGS.get("field_join_value", FIELD_JOINER)
+        joiner = str(self.GETARGS.get("field_join_value", FIELD_JOINER))
         trim_len = self.GETARGS.get("field_join_trim", FIELD_TRIM_LEN)
         trim_str = FIELD_TRIM_STR
 
@@ -231,114 +162,200 @@ class Base:
                 if len(row[field]) >= trim_len:
                     msg = trim_str.format(field_len=field_len, trim_len=trim_len)
                     row[field] = joiner.join([row[field][:trim_len], msg])
-        return row
 
     def field_titles(self, row):
         """Asset callback to change qual name to title."""
         if not self.GETARGS.get("field_titles", False):
-            return row
+            return
 
-        for field in list(row):
-            schema = self.get_schema(value=field)
-            row[schema["column_title"]] = row.pop(field)
-        return row
+        for schema in self.schemas_final:
+            field_name = self.find_field_name(row=row, schema=schema)
+            if field_name:
+                row[schema["column_title"]] = row.pop(field_name)
 
-    def flatten_complex_sub(self, row, field, items, schema):
-        """Asset callback to flatten complex fields."""
-        null_value = self.GETARGS.get("field_null_value", None)
-        sub_name = schema["name"]
-        sub_name_qual = schema["name_qual"]
-        row[sub_name_qual] = []
-        for item in items:
-            value = item.pop(sub_name, null_value)
-            value = value if isinstance(value, list) else [value]
-            row[sub_name_qual] += value
+    def get_sub_schemas(self, schema):
+        """Pass."""
+        schemas = schema["sub_fields"]
+        return [x for x in schemas if not self.is_excluded(schema=x) and x["is_root"]]
 
-    def flatten_complex(self, row, field, schema):
-        """Asset callback to flatten complex fields."""
-        if schema["is_complex"] and not self.is_excluded(schema=schema):
-            items = listify(row.pop(field, []))
-            sub_schemas = self.filter_sub_schemas(schema=schema)
-            for sub_schema in sub_schemas:
-                self.flatten_complex_sub(
-                    row=row, field=field, items=items, schema=sub_schema
-                )
-
-    def field_flatten(self, row):
+    def do_flatten(self, row, schema):
         """Asset callback to flatten complex fields."""
         if not self.GETARGS.get("field_flatten", False):
-            return row
+            return
 
-        for field in list(row):
-            schema = self.get_schema(value=field)
-            self.flatten_complex(row=row, field=field, schema=schema)
-        return row
-
-    def explode_complex_sub(self, row, rows, items, schema):
-        """Pass."""
         null_value = self.GETARGS.get("field_null_value", None)
-        sub_name = schema["name"]
-        sub_name_qual = schema["name_qual"]
 
-        for idx, item in enumerate(items):
-            rows.setdefault(idx, copy.deepcopy(row))
-            rows[idx][sub_name_qual] = item.pop(sub_name, null_value)
+        if (
+            self.is_excluded(schema=schema)
+            or not schema["is_complex"]
+            or self.schema_to_explode == schema
+        ):
+            return
 
-    def explode_complex(self, row, rows, field, schema):
-        """Explode a field into multiple rows."""
-        items = listify(row.pop(field))
-        sub_schemas = self.filter_sub_schemas(schema=schema)
+        sub_schemas = self.get_sub_schemas(schema=schema)
+
+        if not sub_schemas:
+            return
+
+        items = listify(row.pop(schema["name_qual"], []))
 
         for sub_schema in sub_schemas:
-            self.explode_complex_sub(row=row, rows=rows, items=items, schema=sub_schema)
+            row[sub_schema["name_qual"]] = []
 
-    def explode_simple(self, row, rows, field, schema):
-        """Explode a field into multiple rows."""
-        items = listify(row.pop(field))
+            for item in items:
+                value = item.pop(sub_schema["name"], null_value)
+                value = value if isinstance(value, list) else [value]
+                row[sub_schema["name_qual"]] += value
 
-        for idx, item in enumerate(items):
-            rows.setdefault(idx, copy.deepcopy(row))
-            rows[idx][field] = item
-
-    def do_explode(self, row, rows, field, schema):
+    def find_field_name(self, row, schema):
         """Pass."""
-        if schema["is_complex"]:
-            self.explode_complex(row=row, rows=rows, field=field, schema=schema)
-        else:
-            self.explode_simple(row=row, rows=rows, field=field, schema=schema)
+        for key in self.FIND_KEYS:
+            name = schema.get(key)
+            if name and name in row:
+                return name
+        return ""
 
     def field_explode(self, row):
         """Explode a field into multiple rows."""
         explode = self.GETARGS.get("field_explode", "")
-
         if not explode:
             return [row]
 
-        schema = self.explode_schema
-        is_excluded = self.is_excluded(schema=schema)
-        field = schema["name_qual"]
-        if is_excluded or row.get(field, None) in [None, []] or field not in row:
+        null_value = self.GETARGS.get("field_null_value", None)
+        schema = self.schema_to_explode
+        field_name = self.find_field_name(row=row, schema=schema)
+
+        if not schema or not field_name or self.is_excluded(schema=schema):
             return [row]
 
-        rows = {}
-        self.do_explode(row=row, rows=rows, field=field, schema=schema)
-        return [rows[idx] for idx in sorted(rows)]
+        if len(listify(row.get(field_name))) <= 1:
+            return [row]
+
+        if schema["is_complex"]:
+            sub_schemas = self.get_sub_schemas(schema=schema)
+            if not sub_schemas:
+                return [row]
+
+            new_rows = {}
+            items = listify(row.pop(field_name))
+
+            for sub_schema in sub_schemas:
+                for idx, item in enumerate(items):
+                    new_rows.setdefault(idx, copy.deepcopy(row))
+                    value = item.pop(sub_schema["name"], null_value)
+                    new_rows[idx][sub_schema["name_qual"]] = value
+        else:
+            new_rows = {}
+            items = listify(row.pop(field_name))
+
+            for idx, item in enumerate(items):
+                new_rows.setdefault(idx, copy.deepcopy(row))
+                new_rows[idx][field_name] = item
+
+        return [new_rows[idx] for idx in new_rows]
 
     @property
-    def explode_schema(self):
+    def schemas_custom(self):
         """Pass."""
+        schemas = []
+        if self.GETARGS.get("report_adapters_missing", False):
+            schemas += list(SCHEMAS_CUSTOM["report_adapters_missing"].values())
+        return schemas
+
+    @property
+    def schemas_final(self):
+        """Predict the future schemas that will be returned."""
+        if hasattr(self, "_schemas_final"):
+            return self._schemas_final
+
+        flat = self.GETARGS.get("field_flatten", False)
+        explode_field_name = self.schema_to_explode.get("name_qual", "")
+
+        final = {}
+
+        for schema in self.schemas_selected:
+            if self.is_excluded(schema=schema):
+                continue
+
+            is_explode_field = schema["name_qual"] == explode_field_name
+            if schema["is_complex"] and (is_explode_field or flat):
+                for sub_schema in schema["sub_fields"]:
+                    if self.is_excluded(schema=sub_schema) or not sub_schema["is_root"]:
+                        continue
+
+                    final[sub_schema["name_qual"]] = sub_schema
+            else:
+                final.setdefault(schema["name_qual"], schema)
+
+        self._schemas_final = list(final.values())
+        return self._schemas_final
+
+    @property
+    def columns_final(self):
+        """Pass."""
+        if hasattr(self, "_columns_final"):
+            return self._columns_final
+
+        use_titles = self.GETARGS.get("field_titles", False)
+        self._columns_final = []
+
+        for schema in self.schemas_final:
+            if use_titles:
+                name = schema["column_title"]
+            else:
+                name = schema["name_qual"]
+            self._columns_final.append(name)
+
+        return self._columns_final
+
+    @property
+    def schemas_selected(self):
+        """Pass."""
+        if hasattr(self, "_schemas_selected"):
+            return self._schemas_selected
+
+        self._schemas_selected = [] + self.schemas_custom
+
+        all_schemas = self.ALL_SCHEMAS
+
+        if isinstance(self.ALL_SCHEMAS, dict):
+            all_schemas = []
+            for schemas in self.ALL_SCHEMAS.values():
+                all_schemas += schemas
+
+        for field in self.SELECTED_FIELDS:
+            for schema in all_schemas:
+                name = schema["name_qual"]
+                if name == field:
+                    self._schemas_selected.append(schema)
+
+        return self._schemas_selected
+
+    @property
+    def schema_to_explode(self):
+        """Pass."""
+        if hasattr(self, "_schema_to_explode"):
+            return self._schema_to_explode
+
         explode = self.GETARGS.get("field_explode", "")
+
+        self._schema_to_explode = {}
+
         if not explode:
-            return {}
+            return self._schema_to_explode
 
         valids = []
 
-        for schema in self.SCHEMAS_FIELDS:
-            names = [schema[x] for x in GET_SCHEMA_KEYS]
-            if explode in names:
-                return schema
-            valids += names
+        for schema in self.schemas_selected:
+            for key in self.FIND_KEYS:
+                name = schema.get(key)
+                if name:
+                    valids.append(name)
+                    if name == explode:
+                        self._schema_to_explode = schema
+                        return self._schema_to_explode
 
+        valids = sorted(list(set(valids)))
         msg = f"Explode field {explode!r} not found, valid fields:{valids}"
         self.echo(msg=msg, error=ApiError)
 
@@ -349,7 +366,7 @@ class Base:
         amap = {
             "has_cnx": [],
             "all": [],
-            "all_fields": [f"{x}_adapter" for x in self.FIELDS_MAP],
+            "all_fields": [f"{x}_adapter" for x in self.ALL_SCHEMAS],
         }
 
         for adapter in self._adapters_meta:
@@ -366,10 +383,14 @@ class Base:
     def report_adapters_missing(self, row):
         """Pass."""
         if not self.GETARGS.get("report_adapters_missing", False):
-            return row
+            return
 
+        use_titles = self.GETARGS.get("field_titles", False)
         schemas = SCHEMAS_CUSTOM["report_adapters_missing"]
-        field = schemas["adapters_missing"]["name_qual"]
+        schema = schemas["adapters_missing"]
+
+        key = "name_qual" if use_titles else "column_title"
+        field_name = schema[key]
 
         adapters_row = row.get("adapters", [])
         adapter_map = self.adapter_map
@@ -385,53 +406,40 @@ class Base:
             if adapter not in missing:
                 missing.append(adapter)
 
-        row[field] = missing
-        return row
+        row[field_name] = missing
 
     def is_excluded(self, schema):
         """Check if a name supplied to field_excludes matches one of GET_SCHEMA_KEYS."""
         excludes = listify(self.GETARGS.get("field_excludes", []))
+
         for exclude in excludes:
-            for key in GET_SCHEMA_KEYS:
-                if schema.get(key, None) == exclude:
+            for key in self.FIND_KEYS:
+                name = schema.get(key, None)
+                if (name and exclude) and name == exclude:
                     return True
         return False
-
-    def filter_schemas(self, schemas):
-        """Pass."""
-        return [x for x in schemas if not self.is_excluded(schema=x)]
-
-    def filter_sub_schemas(self, schema):
-        """Pass."""
-        schemas = schema["sub_fields"]
-        schemas = self.filter_schemas(schemas=schemas)
-        schemas = [x for x in schemas if x["is_root"]]
-        return schemas
 
     def tags_add(self, row):
         """Pass."""
         tags = listify(self.GETARGS.get("tags_add", []))
         if not tags:
-            return row
+            return
 
         tag_row = {"internal_axon_id": row["internal_axon_id"]}
 
         if tag_row not in self.TAG_ROWS_ADD:
             self.TAG_ROWS_ADD.append(tag_row)
-        return row
 
     def tags_remove(self, row):
         """Pass."""
         tags = listify(self.GETARGS.get("tags_remove", []))
         if not tags:
-            return row
+            return
 
         tag_row = {"internal_axon_id": row["internal_axon_id"]}
 
         if tag_row not in self.TAG_ROWS_REMOVE:
             self.TAG_ROWS_REMOVE.append(tag_row)
-
-        return row
 
     def do_tagging(self):
         """Pass."""
@@ -507,7 +515,7 @@ class Base:
         self._file_path = None
         self._fd_close = False
         self._fd = sys.stdout
-        self.echo(msg=f"Exporting to stdout")
+        self.echo(msg="Exporting to stdout")
         return self._fd
 
     def open_fd(self):

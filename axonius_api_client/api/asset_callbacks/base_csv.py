@@ -12,55 +12,62 @@ class Csv(Base):
 
     CB_NAME = "csv"
 
-    def row(self, row):
-        """Write row to dictwriter and delete it."""
-        row_return = [{"internal_axon_id": row["internal_axon_id"]}]
-
-        rows = super(Csv, self).row(row=row)
-
-        for row_new in listify(rows):
-            self._stream.writerow(row_new)
-            del row_new
-
-        del rows
-        del row
-
-        return row_return
-
     def start(self, **kwargs):
         """Create csvstream and associated file descriptor."""
+        self._pre_start(**kwargs)
         super(Csv, self).start(**kwargs)
+        print("high")
         self._start(**kwargs)
 
-    def _start(self, **kwargs):
+    def _pre_start(self, **kwargs):
+        """Pass."""
         self.GETARGS["field_null"] = True
         self.GETARGS["field_flatten"] = True
         self.GETARGS["field_join"] = True
         if self.GETARGS.get("field_titles", None) is None:
             self.GETARGS["field_titles"] = True
 
+    def _start(self, **kwargs):
         restval = self.GETARGS.get("csv_key_miss", None)
         dialect = self.get_csv_dialect()
         quote = self.get_csv_quote()
-
-        final = self.schemas_final(flat=True)
-        if self.GETARGS["field_titles"]:
-            titles = [x["column_title"] for x in final]
-        else:
-            titles = [x["name_qual"] for x in final]
 
         self.open_fd()
         self._fd.write(codecs.BOM_UTF8.decode("utf-8"))
         self._stream = csv.DictWriter(
             self._fd,
-            fieldnames=titles,
+            fieldnames=self.columns_final,
             quoting=quote,
             lineterminator="\n",
             restval=restval,
             dialect=dialect,
         )
-        self._stream.writerow(dict(zip(titles, titles)))
-        self.do_export_schema(final=final)
+        self._stream.writerow(dict(zip(self.columns_final, self.columns_final)))
+        self.do_export_schema()
+
+    def stop(self, **kwargs):
+        """Close dictwriter and associated file descriptor."""
+        super(Csv, self).stop(**kwargs)
+        self._stop(**kwargs)
+
+    def _stop(self, **kwargs):
+        self._fd.write("\n")
+        self.close_fd()
+
+    def process_row(self, row):
+        """Write row to dictwriter and delete it."""
+        row_return = [{"internal_axon_id": row["internal_axon_id"]}]
+
+        new_rows = self._process_row(row=row)
+
+        for new_row in listify(new_rows):
+            self._stream.writerow(new_row)
+            del new_row
+
+        del new_rows
+        del row
+
+        return row_return
 
     def get_csv_dialect(self):
         """Pass."""
@@ -73,29 +80,17 @@ class Csv(Base):
         quote = getattr(csv, f"QUOTE_{quote.upper()}")
         return quote
 
-    def do_export_schema(self, final):
+    def do_export_schema(self):
         """Pass."""
         export_schema = self.GETARGS.get("export_schema", True)
 
         if export_schema:
+            titles = [x["column_title"] for x in self.schemas_final]
+            names = [x["name_qual"] for x in self.schemas_final]
+            types = [x["type_norm"] for x in self.schemas_final]
             if self.GETARGS["field_titles"]:
-                titles = [x["column_title"] for x in final]
-                names = [x["name_qual"] for x in final]
-                types = [x["type_norm"] for x in final]
-                self._stream.writerow(dict(zip(titles, names)))
-                self._stream.writerow(dict(zip(titles, types)))
+                self._stream.writerow(dict(zip(self.columns_final, names)))
+                self._stream.writerow(dict(zip(self.columns_final, types)))
             else:
-                titles = [x["column_title"] for x in final]
-                names = [x["name_qual"] for x in final]
-                types = [x["type_norm"] for x in final]
-                self._stream.writerow(dict(zip(names, titles)))
-                self._stream.writerow(dict(zip(names, types)))
-
-    def stop(self, **kwargs):
-        """Close dictwriter and associated file descriptor."""
-        super(Csv, self).stop(**kwargs)
-        self._stop(**kwargs)
-
-    def _stop(self, **kwargs):
-        self._fd.write("\n")
-        self.close_fd()
+                self._stream.writerow(dict(zip(self.columns_final, titles)))
+                self._stream.writerow(dict(zip(self.columns_final, types)))
