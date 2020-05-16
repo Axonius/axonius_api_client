@@ -6,7 +6,7 @@ import sys
 from ...constants import (DEFAULT_PATH, FIELD_JOINER, FIELD_TRIM_LEN,
                           FIELD_TRIM_STR, SCHEMAS_CUSTOM)
 from ...exceptions import ApiError
-from ...tools import echo_error, echo_ok, get_path, listify
+from ...tools import calc_percent, echo_error, echo_ok, get_path, listify
 
 
 class Base:
@@ -77,29 +77,78 @@ class Base:
         self.do_tagging()
         self.echo(msg=f"Stopping {self}")
 
-    def _process_row(self, row):
-        """Pass."""
-        self.first_page()
-        self.tags_add(row=row)
-        self.tags_remove(row=row)
-        self.report_adapters_missing(row=row)
-        for schema in self.schemas_selected:
-            self.do_excludes(row=row, schema=schema)
-            self.do_nulls(row=row, schema=schema)
-            self.do_flatten(row=row, schema=schema)
-
-        new_rows = self.field_explode(row=row)
-
-        for new_row in new_rows:
-            self.field_join(row=new_row)
-            self.field_titles(row=new_row)
-        return new_rows
-
     def process_row(self, row):
         """Handle callbacks for an asset."""
         return self._process_row(row=row)
 
-    def do_nulls(self, row, schema, key="name_qual"):
+    def _process_row(self, row):
+        """Pass."""
+        self.STATE["rows_processed_total"] += 1
+
+        # self.echo_first_page()
+        self.echo_page_progress()
+        self.process_tags_to_add(row=row)
+        self.process_tags_to_remove(row=row)
+        self.add_report_adapters_missing(row=row)
+
+        for schema in self.schemas_selected:
+            self.do_excludes(row=row, schema=schema)
+            self.do_add_null_values(row=row, schema=schema)
+            self.do_flatten_fields(row=row, schema=schema)
+
+        new_rows = self.do_explode_field(row=row)
+
+        for new_row in new_rows:
+            self.do_join_values(row=new_row)
+            self.do_change_field_titles(row=new_row)
+
+        return new_rows
+
+    # def echo_first_page(self):
+    #     """Asset callback to echo first page info using an echo method."""
+    #     if "first_page" in self.RAN:
+    #         return
+
+    #     self.RAN.append("first_page")
+
+    #     rows_page = self.STATE.get("rows_fetched_this_page")
+    #     rows_total = self.STATE.get("rows_to_fetch_total")
+    #     page_total = self.STATE.get("pages_to_fetch_total")
+
+    #     info = f"{rows_page} rows (total rows {rows_total}, total pages {page_total})"
+    #     self.echo(msg=f"First page received {info}")
+
+    def echo_page_progress(self):
+        """Asset callback to echo progress per N rows using an echo method."""
+        page_progress = self.GETARGS.get("page_progress", 10000)
+        if not page_progress or not isinstance(page_progress, int):
+            return
+
+        proc = self.STATE.get("rows_processed_total")
+        total = self.STATE.get("rows_to_fetch_total")
+
+        if not ((proc % page_progress == 0) or (proc >= total) or (proc <= 1)):
+            return
+
+        percent = calc_percent(part=proc, whole=total)
+        percent = f"{percent:.2f}%"
+        percent = f"{percent:>7}"
+
+        total_len = len(str(total))
+        rows = f"{proc:>{total_len}} / {total} rows"
+
+        page_total = self.STATE.get("pages_to_fetch_total")
+        page_num = self.STATE.get("page_number")
+        page_total_len = len(str(page_total))
+        pages = f"{page_num:>{page_total_len}} / {page_total} pages"
+
+        taken = self.STATE.get("fetch_seconds_total")
+        taken = f"{taken:.2f} seconds so far"
+
+        info = f"PROGRESS: {percent} {rows} {pages} in {taken}"
+        self.echo(msg=info)
+
+    def do_add_null_values(self, row, schema, key="name_qual"):
         """Null out missing fields."""
         if not self.GETARGS.get("field_null", False):
             return
@@ -116,7 +165,7 @@ class Base:
             for item in row[field]:
                 for sub_schema in schema["sub_fields"]:
                     if not self.is_excluded(schema=sub_schema) and sub_schema["is_root"]:
-                        self.do_nulls(schema=sub_schema, row=item, key="name")
+                        self.do_add_null_values(schema=sub_schema, row=item, key="name")
         else:
             row[field] = row.get(field, null_value)
 
@@ -144,7 +193,7 @@ class Base:
                         )
                         item.pop(sub_field_name, None)
 
-    def field_join(self, row):
+    def do_join_values(self, row):
         """Join values."""
         if not self.GETARGS.get("field_join", False):
             return
@@ -163,7 +212,7 @@ class Base:
                     msg = trim_str.format(field_len=field_len, trim_len=trim_len)
                     row[field] = joiner.join([row[field][:trim_len], msg])
 
-    def field_titles(self, row):
+    def do_change_field_titles(self, row):
         """Asset callback to change qual name to title."""
         if not self.GETARGS.get("field_titles", False):
             return
@@ -173,12 +222,7 @@ class Base:
             if field_name:
                 row[schema["column_title"]] = row.pop(field_name)
 
-    def get_sub_schemas(self, schema):
-        """Pass."""
-        schemas = schema["sub_fields"]
-        return [x for x in schemas if not self.is_excluded(schema=x) and x["is_root"]]
-
-    def do_flatten(self, row, schema):
+    def do_flatten_fields(self, row, schema):
         """Asset callback to flatten complex fields."""
         if not self.GETARGS.get("field_flatten", False):
             return
@@ -207,15 +251,7 @@ class Base:
                 value = value if isinstance(value, list) else [value]
                 row[sub_schema["name_qual"]] += value
 
-    def find_field_name(self, row, schema):
-        """Pass."""
-        for key in self.FIND_KEYS:
-            name = schema.get(key)
-            if name and name in row:
-                return name
-        return ""
-
-    def field_explode(self, row):
+    def do_explode_field(self, row):
         """Explode a field into multiple rows."""
         explode = self.GETARGS.get("field_explode", "")
         if not explode:
@@ -253,6 +289,174 @@ class Base:
                 new_rows[idx][field_name] = item
 
         return [new_rows[idx] for idx in new_rows]
+
+    def do_tagging(self):
+        """Pass."""
+        self.do_tag_add()
+        self.do_tag_remove()
+
+    def do_tag_add(self):
+        """Pass."""
+        tags_add = listify(self.GETARGS.get("tags_add", []))
+        rows_add = self.TAG_ROWS_ADD
+        if tags_add and rows_add:
+            self.echo(msg=f"Adding tags {tags_add} to {len(rows_add)} assets")
+            self.APIOBJ.labels.add(rows=rows_add, labels=tags_add)
+
+    def do_tag_remove(self):
+        """Pass."""
+        tags_remove = listify(self.GETARGS.get("tags_remove", []))
+        rows_remove = self.TAG_ROWS_REMOVE
+        if tags_remove and rows_remove:
+            self.echo(msg=f"Removing tags {tags_remove} from {len(rows_remove)} assets")
+            self.APIOBJ.labels.remove(rows=rows_remove, labels=tags_remove)
+
+    def process_tags_to_add(self, row):
+        """Pass."""
+        tags = listify(self.GETARGS.get("tags_add", []))
+        if not tags:
+            return
+
+        tag_row = {"internal_axon_id": row["internal_axon_id"]}
+
+        if tag_row not in self.TAG_ROWS_ADD:
+            self.TAG_ROWS_ADD.append(tag_row)
+
+    def process_tags_to_remove(self, row):
+        """Pass."""
+        tags = listify(self.GETARGS.get("tags_remove", []))
+        if not tags:
+            return
+
+        tag_row = {"internal_axon_id": row["internal_axon_id"]}
+
+        if tag_row not in self.TAG_ROWS_REMOVE:
+            self.TAG_ROWS_REMOVE.append(tag_row)
+
+    def add_report_adapters_missing(self, row):
+        """Pass."""
+        if not self.GETARGS.get("report_adapters_missing", False):
+            return
+
+        use_titles = self.GETARGS.get("field_titles", False)
+        schemas = SCHEMAS_CUSTOM["report_adapters_missing"]
+        schema = schemas["adapters_missing"]
+
+        key = "name_qual" if use_titles else "column_title"
+        field_name = schema[key]
+
+        adapters_row = row.get("adapters", [])
+        adapter_map = self.adapter_map
+        missing = []
+
+        for adapter in adapter_map["all"]:
+            if adapter in adapters_row:
+                continue
+
+            if adapter not in adapter_map["all_fields"]:
+                continue
+
+            if adapter not in missing:
+                missing.append(adapter)
+
+        row[field_name] = missing
+
+    def is_excluded(self, schema):
+        """Check if a name supplied to field_excludes matches one of GET_SCHEMA_KEYS."""
+        excludes = listify(self.GETARGS.get("field_excludes", []))
+
+        for exclude in excludes:
+            for key in self.FIND_KEYS:
+                name = schema.get(key, None)
+                if (name and exclude) and name == exclude:
+                    return True
+        return False
+
+    def find_field_name(self, row, schema):
+        """Pass."""
+        for key in self.FIND_KEYS:
+            name = schema.get(key)
+            if name and name in row:
+                return name
+        return ""
+
+    def open_fd_arg(self):
+        """Pass."""
+        self._fd = self.GETARGS["export_fd"]
+        self._fd_close = self.GETARGS.get("export_fd_close", False)
+        self.echo(msg=f"Exporting to {self._fd}")
+        return self._fd
+
+    def open_fd_path(self):
+        """Pass."""
+        self._export_file = self.GETARGS.get("export_file", None)
+        self._export_path = self.GETARGS.get("export_path", DEFAULT_PATH)
+        self._export_overwrite = self.GETARGS.get("export_overwrite", False)
+
+        file_path = get_path(obj=self._export_path)
+        file_path.mkdir(mode=0o700, parents=True, exist_ok=True)
+        self._file_path = fp = (file_path / self._export_file).resolve()
+
+        if self._file_path.exists():
+            self._file_mode = "overwrote"
+            mode = "overwriting"
+        else:
+            self._file_mode = "created"
+            mode = "creating"
+
+        if self._file_path.exists() and not self._export_overwrite:
+            msg = f"Export file '{fp}' already exists and overwite is False!"
+            self.echo(msg=msg, error=ApiError, level="error")
+
+        self._file_path.touch(mode=0o600)
+        self._fd_close = self.GETARGS.get("export_fd_close", True)
+        self._fd = self._file_path.open(mode="w", encoding="utf-8")
+        self.echo(msg=f"Exporting to file '{fp}' ({mode})")
+        return self._fd
+
+    def open_fd_stdout(self):
+        """Pass."""
+        self._file_path = None
+        self._fd_close = False
+        self._fd = sys.stdout
+        self.echo(msg="Exporting to stdout")
+        return self._fd
+
+    def open_fd(self):
+        """Open a file descriptor."""
+        if "export_fd" in self.GETARGS:
+            self.open_fd_arg()
+        elif self.GETARGS.get("export_file", None):
+            self.open_fd_path()
+        else:
+            self.open_fd_stdout()
+        return self._fd
+
+    def close_fd(self):
+        """Close a file descriptor."""
+        self._fd.write("\n")
+        if getattr(self, "_fd_close", False):
+            self.echo(msg=f"Closing {self._fd}")
+            self._fd.close()
+
+    def echo(self, msg, error=None, level="info", level_error="error"):
+        """Pass."""
+        do_echo = self.GETARGS.get("do_echo", False)
+
+        if do_echo:
+            echo_error(msg) if error else echo_ok(msg)
+            return
+
+        if error:
+            getattr(self.LOG, level_error)(msg)
+            raise error(msg)
+
+        getattr(self.LOG, level)(msg)
+
+    def get_sub_schemas(self, schema):
+        """Pass."""
+        schemas = schema["sub_fields"]
+        return [x for x in schemas if not self.is_excluded(schema=x) and x["is_root"]]
 
     @property
     def schemas_custom(self):
@@ -380,175 +584,6 @@ class Base:
         amap = {k: list(v) for k, v in amap.items()}
         return amap
 
-    def report_adapters_missing(self, row):
-        """Pass."""
-        if not self.GETARGS.get("report_adapters_missing", False):
-            return
-
-        use_titles = self.GETARGS.get("field_titles", False)
-        schemas = SCHEMAS_CUSTOM["report_adapters_missing"]
-        schema = schemas["adapters_missing"]
-
-        key = "name_qual" if use_titles else "column_title"
-        field_name = schema[key]
-
-        adapters_row = row.get("adapters", [])
-        adapter_map = self.adapter_map
-        missing = []
-
-        for adapter in adapter_map["all"]:
-            if adapter in adapters_row:
-                continue
-
-            if adapter not in adapter_map["all_fields"]:
-                continue
-
-            if adapter not in missing:
-                missing.append(adapter)
-
-        row[field_name] = missing
-
-    def is_excluded(self, schema):
-        """Check if a name supplied to field_excludes matches one of GET_SCHEMA_KEYS."""
-        excludes = listify(self.GETARGS.get("field_excludes", []))
-
-        for exclude in excludes:
-            for key in self.FIND_KEYS:
-                name = schema.get(key, None)
-                if (name and exclude) and name == exclude:
-                    return True
-        return False
-
-    def tags_add(self, row):
-        """Pass."""
-        tags = listify(self.GETARGS.get("tags_add", []))
-        if not tags:
-            return
-
-        tag_row = {"internal_axon_id": row["internal_axon_id"]}
-
-        if tag_row not in self.TAG_ROWS_ADD:
-            self.TAG_ROWS_ADD.append(tag_row)
-
-    def tags_remove(self, row):
-        """Pass."""
-        tags = listify(self.GETARGS.get("tags_remove", []))
-        if not tags:
-            return
-
-        tag_row = {"internal_axon_id": row["internal_axon_id"]}
-
-        if tag_row not in self.TAG_ROWS_REMOVE:
-            self.TAG_ROWS_REMOVE.append(tag_row)
-
-    def do_tagging(self):
-        """Pass."""
-        self.do_tag_add()
-        self.do_tag_remove()
-
-    def do_tag_add(self):
-        """Pass."""
-        tags_add = listify(self.GETARGS.get("tags_add", []))
-        rows_add = self.TAG_ROWS_ADD
-        if tags_add and rows_add:
-            self.echo(msg=f"Adding tags {tags_add} to {len(rows_add)} assets")
-            self.APIOBJ.labels.add(rows=rows_add, labels=tags_add)
-
-    def do_tag_remove(self):
-        """Pass."""
-        tags_remove = listify(self.GETARGS.get("tags_remove", []))
-        rows_remove = self.TAG_ROWS_REMOVE
-        if tags_remove and rows_remove:
-            self.echo(msg=f"Removing tags {tags_remove} from {len(rows_remove)} assets")
-            self.APIOBJ.labels.remove(rows=rows_remove, labels=tags_remove)
-
-    def first_page(self):
-        """Asset callback to echo first page info using an echo method."""
-        if "first_page" in self.RAN:
-            return
-
-        self.RAN.append("first_page")
-
-        rows_page = self.STATE.get("rows_fetched_this_page")
-        rows_total = self.STATE.get("rows_to_fetch_total")
-        page_total = self.STATE.get("pages_to_fetch_total")
-
-        info = f"{rows_page} rows (total rows {rows_total}, total pages {page_total})"
-        self.echo(msg=f"First page received {info}")
-
-    def open_fd_arg(self):
-        """Pass."""
-        self._fd = self.GETARGS["export_fd"]
-        self._fd_close = self.GETARGS.get("export_fd_close", False)
-        self.echo(msg=f"Exporting to {self._fd}")
-        return self._fd
-
-    def open_fd_path(self):
-        """Pass."""
-        self._export_file = self.GETARGS.get("export_file", None)
-        self._export_path = self.GETARGS.get("export_path", DEFAULT_PATH)
-        self._export_overwrite = self.GETARGS.get("export_overwrite", False)
-
-        file_path = get_path(obj=self._export_path)
-        file_path.mkdir(mode=0o700, parents=True, exist_ok=True)
-        self._file_path = fp = (file_path / self._export_file).resolve()
-
-        if self._file_path.exists():
-            self._file_mode = "overwrote"
-            mode = "overwriting"
-        else:
-            self._file_mode = "created"
-            mode = "creating"
-
-        if self._file_path.exists() and not self._export_overwrite:
-            msg = f"Export file '{fp}' already exists and overwite is False!"
-            self.echo(msg=msg, error=ApiError, level="error")
-
-        self._file_path.touch(mode=0o600)
-        self._fd_close = self.GETARGS.get("export_fd_close", True)
-        self._fd = self._file_path.open(mode="w", encoding="utf-8")
-        self.echo(msg=f"Exporting to file '{fp}' ({mode})")
-        return self._fd
-
-    def open_fd_stdout(self):
-        """Pass."""
-        self._file_path = None
-        self._fd_close = False
-        self._fd = sys.stdout
-        self.echo(msg="Exporting to stdout")
-        return self._fd
-
-    def open_fd(self):
-        """Open a file descriptor."""
-        if "export_fd" in self.GETARGS:
-            self.open_fd_arg()
-        elif self.GETARGS.get("export_file", None):
-            self.open_fd_path()
-        else:
-            self.open_fd_stdout()
-        return self._fd
-
-    def close_fd(self):
-        """Close a file descriptor."""
-        self._fd.write("\n")
-        if getattr(self, "_fd_close", False):
-            self.echo(msg=f"Closing {self._fd}")
-            self._fd.close()
-
-    def echo(self, msg, error=None, level="info", level_error="error"):
-        """Pass."""
-        do_echo = self.GETARGS.get("do_echo", False)
-
-        if do_echo:
-            echo_error(msg) if error else echo_ok(msg)
-            return
-
-        if error:
-            getattr(self.LOG, level_error)(msg)
-            raise error(msg)
-
-        getattr(self.LOG, level)(msg)
-
     @property
     def args_map(self):
         """Pass."""
@@ -569,6 +604,7 @@ class Base:
             ["export_path", "Export file to path:", DEFAULT_PATH],
             ["export_overwrite", "Export overwrite file:", False],
             ["export_schema", "Export schema:", False],
+            ["page_progress", "Progress per row count:", 10000],
         ]
 
     @property
