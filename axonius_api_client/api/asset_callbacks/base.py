@@ -135,12 +135,12 @@ class Base:
         percent = f"{percent:>7}"
 
         total_len = len(str(total))
-        rows = f"{proc:>{total_len}} / {total} rows"
+        rows = f"[ROWS: {proc:>{total_len}} / {total}]"
 
         page_total = self.STATE.get("pages_to_fetch_total")
         page_num = self.STATE.get("page_number")
         page_total_len = len(str(page_total))
-        pages = f"{page_num:>{page_total_len}} / {page_total} pages"
+        pages = f"[PAGES: {page_num:>{page_total_len}} / {page_total}]"
 
         taken = self.STATE.get("fetch_seconds_total")
         taken = f"{taken:.2f} seconds so far"
