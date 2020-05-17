@@ -3,8 +3,13 @@
 import copy
 import sys
 
-from ...constants import (DEFAULT_PATH, FIELD_JOINER, FIELD_TRIM_LEN,
-                          FIELD_TRIM_STR, SCHEMAS_CUSTOM)
+from ...constants import (
+    DEFAULT_PATH,
+    FIELD_JOINER,
+    FIELD_TRIM_LEN,
+    FIELD_TRIM_STR,
+    SCHEMAS_CUSTOM,
+)
 from ...exceptions import ApiError
 from ...tools import calc_percent, echo_error, echo_ok, get_path, listify
 
@@ -50,6 +55,12 @@ class Base:
         self.TAG_ROWS_REMOVE = []
         """:obj:`list` of :obj:`dict`: assets to remove tags from in do_tagging."""
 
+        self._init()
+
+    def _init(self):
+        """Pass."""
+        pass
+
     def start(self, **kwargs):
         """Run start callbacks."""
         join = "\n   - "
@@ -79,14 +90,17 @@ class Base:
 
     def process_row(self, row):
         """Handle callbacks for an asset."""
-        return self._process_row(row=row)
+        self.do_pre_row()
+        return self.do_row(row=row)
 
-    def _process_row(self, row):
+    def do_pre_row(self):
         """Pass."""
+        self.STATE.setdefault("rows_processed_total", 0)
         self.STATE["rows_processed_total"] += 1
-
-        # self.echo_first_page()
         self.echo_page_progress()
+
+    def do_row(self, row):
+        """Pass."""
         self.process_tags_to_add(row=row)
         self.process_tags_to_remove(row=row)
         self.add_report_adapters_missing(row=row)
@@ -104,28 +118,17 @@ class Base:
 
         return new_rows
 
-    # def echo_first_page(self):
-    #     """Asset callback to echo first page info using an echo method."""
-    #     if "first_page" in self.RAN:
-    #         return
-
-    #     self.RAN.append("first_page")
-
-    #     rows_page = self.STATE.get("rows_fetched_this_page")
-    #     rows_total = self.STATE.get("rows_to_fetch_total")
-    #     page_total = self.STATE.get("pages_to_fetch_total")
-
-    #     info = f"{rows_page} rows (total rows {rows_total}, total pages {page_total})"
-    #     self.echo(msg=f"First page received {info}")
-
     def echo_page_progress(self):
         """Asset callback to echo progress per N rows using an echo method."""
         page_progress = self.GETARGS.get("page_progress", 10000)
         if not page_progress or not isinstance(page_progress, int):
             return
 
-        proc = self.STATE.get("rows_processed_total")
-        total = self.STATE.get("rows_to_fetch_total")
+        proc = self.STATE.get("rows_processed_total", 0) or 0
+        total = self.STATE.get("rows_to_fetch_total", 0) or 0
+        taken = self.STATE.get("fetch_seconds_total", 0) or 0
+        page_total = self.STATE.get("pages_to_fetch_total", 0) or 0
+        page_num = self.STATE.get("page_number", 0) or 0
 
         if not ((proc % page_progress == 0) or (proc >= total) or (proc <= 1)):
             return
@@ -137,23 +140,16 @@ class Base:
         total_len = len(str(total))
         rows = f"[ROWS: {proc:>{total_len}} / {total}]"
 
-        page_total = self.STATE.get("pages_to_fetch_total")
-        page_num = self.STATE.get("page_number")
         page_total_len = len(str(page_total))
         pages = f"[PAGES: {page_num:>{page_total_len}} / {page_total}]"
 
-        taken = self.STATE.get("fetch_seconds_total")
         taken = f"{taken:.2f} seconds so far"
 
-        info = f"PROGRESS: {percent} {rows} {pages} in {taken}"
-        self.echo(msg=info)
+        self.echo(msg=f"PROGRESS: {percent} {rows} {pages} in {taken}")
 
     def do_add_null_values(self, row, schema, key="name_qual"):
         """Null out missing fields."""
-        if not self.GETARGS.get("field_null", False):
-            return
-
-        if self.is_excluded(schema=schema):
+        if not self.GETARGS.get("field_null", False) or self.is_excluded(schema=schema):
             return
 
         null_value = self.GETARGS.get("field_null_value", None)
@@ -163,9 +159,8 @@ class Base:
             row[field] = listify(row.get(field, []))
 
             for item in row[field]:
-                for sub_schema in schema["sub_fields"]:
-                    if not self.is_excluded(schema=sub_schema) and sub_schema["is_root"]:
-                        self.do_add_null_values(schema=sub_schema, row=item, key="name")
+                for sub_schema in self.get_sub_schemas(schema=schema):
+                    self.do_add_null_values(schema=sub_schema, row=item, key="name")
         else:
             row[field] = row.get(field, null_value)
 
@@ -180,7 +175,7 @@ class Base:
             return
 
         if self.is_excluded(schema=schema):
-            row.pop(field_name)
+            row.pop(field_name, None)
             return
 
         if schema["is_complex"]:
@@ -233,17 +228,13 @@ class Base:
             self.is_excluded(schema=schema)
             or not schema["is_complex"]
             or self.schema_to_explode == schema
+            or not row.get(schema["name_qual"])
         ):
-            return
-
-        sub_schemas = self.get_sub_schemas(schema=schema)
-
-        if not sub_schemas:
             return
 
         items = listify(row.pop(schema["name_qual"], []))
 
-        for sub_schema in sub_schemas:
+        for sub_schema in self.get_sub_schemas(schema=schema):
             row[sub_schema["name_qual"]] = []
 
             for item in items:
@@ -254,35 +245,31 @@ class Base:
     def do_explode_field(self, row):
         """Explode a field into multiple rows."""
         explode = self.GETARGS.get("field_explode", "")
-        if not explode:
-            return [row]
-
         null_value = self.GETARGS.get("field_null_value", None)
         schema = self.schema_to_explode
         field_name = self.find_field_name(row=row, schema=schema)
 
-        if not schema or not field_name or self.is_excluded(schema=schema):
-            return [row]
-
-        if len(listify(row.get(field_name))) <= 1:
+        if (
+            not explode
+            or not schema
+            or not field_name
+            or self.is_excluded(schema=schema)
+            or len(listify(row.get(field_name or "x"))) <= 1
+        ):
             return [row]
 
         if schema["is_complex"]:
-            sub_schemas = self.get_sub_schemas(schema=schema)
-            if not sub_schemas:
-                return [row]
-
             new_rows = {}
-            items = listify(row.pop(field_name))
+            items = listify(row.pop(field_name, []))
 
-            for sub_schema in sub_schemas:
+            for sub_schema in self.get_sub_schemas(schema=schema):
                 for idx, item in enumerate(items):
                     new_rows.setdefault(idx, copy.deepcopy(row))
                     value = item.pop(sub_schema["name"], null_value)
                     new_rows[idx][sub_schema["name_qual"]] = value
         else:
             new_rows = {}
-            items = listify(row.pop(field_name))
+            items = listify(row.pop(field_name, []))
 
             for idx, item in enumerate(items):
                 new_rows.setdefault(idx, copy.deepcopy(row))
@@ -338,12 +325,10 @@ class Base:
         if not self.GETARGS.get("report_adapters_missing", False):
             return
 
-        use_titles = self.GETARGS.get("field_titles", False)
         schemas = SCHEMAS_CUSTOM["report_adapters_missing"]
         schema = schemas["adapters_missing"]
 
-        key = "name_qual" if use_titles else "column_title"
-        field_name = schema[key]
+        field_name = schema["name_qual"]
 
         adapters_row = row.get("adapters", [])
         adapter_map = self.adapter_map
@@ -456,8 +441,11 @@ class Base:
 
     def get_sub_schemas(self, schema):
         """Pass."""
-        schemas = schema["sub_fields"]
-        return [x for x in schemas if not self.is_excluded(schema=x) and x["is_root"]]
+        sub_schemas = schema["sub_fields"]
+        for sub_schema in sub_schemas:
+            if self.is_excluded(schema=sub_schema) or not sub_schema["is_root"]:
+                continue
+            yield sub_schema
 
     @property
     def schemas_custom(self):
@@ -484,10 +472,7 @@ class Base:
 
             is_explode_field = schema["name_qual"] == explode_field_name
             if schema["is_complex"] and (is_explode_field or flat):
-                for sub_schema in schema["sub_fields"]:
-                    if self.is_excluded(schema=sub_schema) or not sub_schema["is_root"]:
-                        continue
-
+                for sub_schema in self.get_sub_schemas(schema=schema):
                     final[sub_schema["name_qual"]] = sub_schema
             else:
                 final.setdefault(schema["name_qual"], schema)
@@ -502,14 +487,8 @@ class Base:
             return self._columns_final
 
         use_titles = self.GETARGS.get("field_titles", False)
-        self._columns_final = []
-
-        for schema in self.schemas_final:
-            if use_titles:
-                name = schema["column_title"]
-            else:
-                name = schema["name_qual"]
-            self._columns_final.append(name)
+        key = "column_title" if use_titles else "name_qual"
+        self._columns_final = [x[key] for x in self.schemas_final]
 
         return self._columns_final
 
@@ -625,7 +604,7 @@ class Base:
 
     def __str__(self):
         """Show info for this object."""
-        return f"{self.__class__.__name__} callbacks"
+        return f"{self.CB_NAME} callbacks"
 
     def __repr__(self):
         """Show info for this object."""

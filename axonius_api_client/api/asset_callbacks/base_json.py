@@ -36,9 +36,11 @@ class Json(Base):
 
     def process_row(self, row):
         """Write row to jsonstreams and delete it."""
+        self.do_pre_row()
+
         return_row = [{"internal_axon_id": row["internal_axon_id"]}]
 
-        new_rows = self._process_row(row=row)
+        new_rows = self.do_row(row=row)
 
         for new_row in listify(new_rows):
             self.write_row(row=new_row)

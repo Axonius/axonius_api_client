@@ -5,6 +5,7 @@ import copy
 import io
 
 import pytest
+
 from axonius_api_client.constants import AGG_ADAPTER_NAME
 from axonius_api_client.exceptions import ApiError
 
@@ -40,9 +41,10 @@ class CallbacksTable(Callbacks):
         cbobj.start()
 
         for row in copy.deepcopy(apiobj.TEST_DATA["cb_assets"][:200]):
-            rows_ret = cbobj.row(row=copy.deepcopy(row))
+            rows_ret = cbobj.process_row(row=copy.deepcopy(row))
             assert len(rows_ret) == 1
-            assert "Aggregated: Asset Unique ID" in rows_ret[0]
+            # assert "Aggregated: Asset Unique ID" in rows_ret[0]
+            # -> only if table_api_fields = True
             assert schema["name_qual"] not in rows_ret[0]
             for i in sub_titles:
                 assert i in rows_ret[0]
@@ -53,18 +55,18 @@ class CallbacksTable(Callbacks):
         for i in sub_titles:
             assert i in checklines
 
-    def test_check_fmt(self, cbexport, apiobj):
+    def test_check_table_format(self, cbexport, apiobj):
         """Pass."""
         getargs = {}
         cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs=getargs)
         with pytest.raises(ApiError):
-            cbobj.check_fmt("badwolf")
+            cbobj.check_table_format("badwolf")
 
     def test_check_stop(self, cbexport, apiobj):
         """Pass."""
         getargs = {"table_max_rows": 10}
         cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs=getargs)
-        cbobj.STATE["rows_processed"] = 10
+        cbobj.STATE["rows_processed_total"] = 10
         cbobj.check_stop()
         assert cbobj.STATE["stop_fetch"]
         assert cbobj.STATE["stop_msg"]

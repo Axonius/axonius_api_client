@@ -12,14 +12,7 @@ class Csv(Base):
 
     CB_NAME = "csv"
 
-    def start(self, **kwargs):
-        """Create csvstream and associated file descriptor."""
-        self._pre_start(**kwargs)
-        super(Csv, self).start(**kwargs)
-        print("high")
-        self._start(**kwargs)
-
-    def _pre_start(self, **kwargs):
+    def _init(self, **kwargs):
         """Pass."""
         self.GETARGS["field_null"] = True
         self.GETARGS["field_flatten"] = True
@@ -27,7 +20,13 @@ class Csv(Base):
         if self.GETARGS.get("field_titles", None) is None:
             self.GETARGS["field_titles"] = True
 
-    def _start(self, **kwargs):
+    def start(self, **kwargs):
+        """Create csvstream and associated file descriptor."""
+        super(Csv, self).start(**kwargs)
+        self.do_start(**kwargs)
+
+    def do_start(self, **kwargs):
+        """Pass."""
         restval = self.GETARGS.get("csv_key_miss", None)
         dialect = self.get_csv_dialect()
         quote = self.get_csv_quote()
@@ -48,17 +47,19 @@ class Csv(Base):
     def stop(self, **kwargs):
         """Close dictwriter and associated file descriptor."""
         super(Csv, self).stop(**kwargs)
-        self._stop(**kwargs)
+        self.do_stop(**kwargs)
 
-    def _stop(self, **kwargs):
+    def do_stop(self, **kwargs):
+        """Pass."""
         self._fd.write("\n")
         self.close_fd()
 
     def process_row(self, row):
         """Write row to dictwriter and delete it."""
-        row_return = [{"internal_axon_id": row["internal_axon_id"]}]
+        self.do_pre_row()
 
-        new_rows = self._process_row(row=row)
+        row_return = [{"internal_axon_id": row["internal_axon_id"]}]
+        new_rows = self.do_row(row=row)
 
         for new_row in listify(new_rows):
             self._stream.writerow(new_row)

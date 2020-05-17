@@ -32,4 +32,4 @@ def cmd(ctx, url, key, secret, config, adapter_name, adapter_node, **kwargs):
         client.adapters.cnx.test(
             adapter_name=adapter_name, adapter_node=adapter_node, **new_config,
         )
-        ctx.obj.echo_ok(msg=f"Reachability test succeeded!")
+        ctx.obj.echo_ok(msg="Reachability test succeeded!")

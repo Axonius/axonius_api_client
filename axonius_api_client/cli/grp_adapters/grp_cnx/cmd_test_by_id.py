@@ -18,4 +18,4 @@ def cmd(ctx, url, key, secret, adapter_name, adapter_node, cnx_id, **kwargs):
         client.adapters.cnx.test_by_id(
             adapter_name=adapter_name, adapter_node=adapter_node, cnx_id=cnx_id,
         )
-        ctx.obj.echo_ok(msg=f"Reachability test succeeded!")
+        ctx.obj.echo_ok(msg="Reachability test succeeded!")

@@ -9,10 +9,20 @@ from .api.assets import Devices, Users
 from .api.enforcements import Enforcements
 from .api.system import System
 from .auth import ApiKey
-from .constants import (LOG_FILE_MAX_FILES, LOG_FILE_MAX_MB, LOG_FILE_NAME,
-                        LOG_FILE_PATH, LOG_LEVEL_API, LOG_LEVEL_AUTH,
-                        LOG_LEVEL_CONSOLE, LOG_LEVEL_FILE, LOG_LEVEL_HTTP,
-                        LOG_LEVEL_PACKAGE, TIMEOUT_CONNECT, TIMEOUT_RESPONSE)
+from .constants import (
+    LOG_FILE_MAX_FILES,
+    LOG_FILE_MAX_MB,
+    LOG_FILE_NAME,
+    LOG_FILE_PATH,
+    LOG_LEVEL_API,
+    LOG_LEVEL_AUTH,
+    LOG_LEVEL_CONSOLE,
+    LOG_LEVEL_FILE,
+    LOG_LEVEL_HTTP,
+    LOG_LEVEL_PACKAGE,
+    TIMEOUT_CONNECT,
+    TIMEOUT_RESPONSE,
+)
 from .exceptions import ConnectError, InvalidCredentials
 from .http import Http
 from .logs import LOG, add_file, add_stderr, set_log_level

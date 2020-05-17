@@ -34,5 +34,5 @@ def cmd(ctx, url, key, secret, input_file, **kwargs):
     with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
         rows = client.adapters.file_upload(**kwargs)
 
-    ctx.obj.echo_ok(f"File uploaded")
+    ctx.obj.echo_ok("File uploaded")
     click.echo(json_dump(rows, indent=None))

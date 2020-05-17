@@ -15,8 +15,17 @@ import dateutil.relativedelta
 import dateutil.tz
 
 from . import __package__ as PACKAGE_ROOT
-from .constants import (ERROR_ARGS, ERROR_TMPL, NO, OK_ARGS, OK_TMPL, SIMPLE,
-                        WARN_ARGS, WARN_TMPL, YES)
+from .constants import (
+    ERROR_ARGS,
+    ERROR_TMPL,
+    NO,
+    OK_ARGS,
+    OK_TMPL,
+    SIMPLE,
+    WARN_ARGS,
+    WARN_TMPL,
+    YES,
+)
 from .exceptions import ApiError, ToolsError
 
 LOG = logging.getLogger(PACKAGE_ROOT).getChild("tools")

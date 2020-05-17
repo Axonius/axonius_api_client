@@ -2,11 +2,17 @@
 """Command line interface for Axonius API Client."""
 import tabulate
 
-from ...constants import (FIELD_JOINER, FIELD_TRIM_LEN, TABLE_FORMAT,
-                          TABLE_MAX_ROWS)
+from ...constants import FIELD_JOINER, FIELD_TRIM_LEN, TABLE_FORMAT, TABLE_MAX_ROWS
 from ..context import CONTEXT_SETTINGS, click
-from ..options import (AUTH, EXPORT, FIELDS_SELECT, PAGING, add_options,
-                       get_option_fields_default, get_option_help)
+from ..options import (
+    AUTH,
+    EXPORT,
+    FIELDS_SELECT,
+    PAGING,
+    add_options,
+    get_option_fields_default,
+    get_option_help,
+)
 
 GET_EXPORT = [
     click.option(
@@ -67,6 +73,16 @@ GET_EXPORT = [
         hidden=False,
     ),
     click.option(
+        "--table-api-fields/--no-table-api-fields",
+        "table_api_fields",
+        default=False,
+        help="Include API related fields in table output",
+        is_flag=True,
+        show_envvar=True,
+        show_default=True,
+        hidden=False,
+    ),
+    click.option(
         "--schema/--no-schema",
         "export_schema",
         default=False,
@@ -89,7 +105,7 @@ GET_EXPORT = [
     click.option(
         "--titles/--no-titles",
         "field_titles",
-        # default=False,
+        default=None,
         help="Rename fields from internal field names to their column titles",
         is_flag=True,
         show_envvar=True,
@@ -99,7 +115,7 @@ GET_EXPORT = [
     click.option(
         "--join/--no-join",
         "field_join",
-        # default=False,
+        default=None,
         help="Join multivalue fields using --join-value",
         is_flag=True,
         show_envvar=True,
@@ -138,7 +154,7 @@ GET_EXPORT = [
     click.option(
         "--flatten/--no-flatten",
         "field_flatten",
-        # default=False,
+        default=None,
         help="Remove complex fields and re-add their sub-field values to the row",
         show_envvar=True,
         show_default=True,
@@ -160,7 +176,7 @@ GET_EXPORT = [
     click.option(
         "--field-null/--no-field-null",
         "field_null",
-        # default=False,
+        default=None,
         help="Add missing fields with --field-null-value",
         show_envvar=True,
         show_default=True,
@@ -170,7 +186,7 @@ GET_EXPORT = [
     click.option(
         "--field-null-value",
         "field_null_value",
-        # default=None,
+        default=None,
         help="Value to use for fields that are not returned",
         show_envvar=True,
         show_default=True,
