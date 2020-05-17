@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Test suite for axonapi.api.enforcements."""
 import pytest
+
 from axonius_api_client.exceptions import NotFoundError
 
 from ...meta import CREATE_EC_ACTION_MAIN, CREATE_EC_NAME, CREATE_EC_TRIGGER1

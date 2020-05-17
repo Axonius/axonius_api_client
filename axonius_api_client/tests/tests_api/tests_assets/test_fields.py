@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 """Test suite for assets."""
 import pytest
+
 from axonius_api_client.constants import AGG_ADAPTER_ALTS, AGG_ADAPTER_NAME
 from axonius_api_client.exceptions import ApiError, NotFoundError
 
-from ...meta import (FIELD_FORMATS, NORM_TYPES, SCHEMA_FIELD_FORMATS,
-                     SCHEMA_TYPES)
+from ...meta import FIELD_FORMATS, NORM_TYPES, SCHEMA_FIELD_FORMATS, SCHEMA_TYPES
 
 
 def load_test_data(apiobj):

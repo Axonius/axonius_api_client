@@ -24,7 +24,7 @@ class CallbacksBase(Callbacks):
         rows = copy.deepcopy(apiobj.TEST_DATA["cb_assets"][:5])
 
         for row in rows:
-            rows_ret = cbobj.row(row=copy.deepcopy(row))
+            rows_ret = cbobj.process_row(row=copy.deepcopy(row))
             for row_ret in rows_ret:
                 assert row == row_ret
         cbobj.stop()
@@ -45,7 +45,7 @@ class CallbacksBase(Callbacks):
         rows = copy.deepcopy(apiobj.TEST_DATA["cb_assets"][:5])
 
         for row in rows:
-            rows_ret = cbobj.row(row=copy.deepcopy(row))
+            rows_ret = cbobj.process_row(row=copy.deepcopy(row))
             for row_ret in rows_ret:
                 assert row != row_ret
 

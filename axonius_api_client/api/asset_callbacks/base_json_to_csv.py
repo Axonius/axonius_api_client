@@ -14,7 +14,6 @@ class JsonToCsv(Csv):
 
     def start(self, **kwargs):
         """Create temp file for writing to."""
-        self._pre_start(**kwargs)
         super(Csv, self).start(**kwargs)
         self._temp_file = tempfile.NamedTemporaryFile(mode="w+", encoding="utf-8")
         self.echo(msg=f"Writing JSON to temporary file {self._temp_file.name!r}")
@@ -27,8 +26,11 @@ class JsonToCsv(Csv):
         self.echo(msg="Re-reading temporary file and converting to CSV")
         self._temp_file.file.seek(0)
         for line in self._temp_file.file.readlines():
+            self.STATE["rows_processed_total"] = 0
+            self.do_pre_row()
+
             row = json.loads(line.strip())
-            new_rows = self._process_row(row=row)
+            new_rows = self.do_row(row=row)
             for new_row in listify(new_rows):
                 self._stream.writerow(new_row)
                 del new_row
@@ -40,9 +42,11 @@ class JsonToCsv(Csv):
 
     def process_row(self, row):
         """Write row to temp file with no processing."""
-        self.first_page()
+        self.do_pre_row()
+
         return_row = [{"internal_axon_id": row["internal_axon_id"]}]
         row = json.dumps(row)
         self._temp_file.file.write(f"{row}\n")
         del row
+
         return return_row
