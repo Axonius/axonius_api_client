@@ -21,4 +21,4 @@ def cmd(ctx, url, key, secret, **kwargs):
     with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
         client.adapters.cnx.delete_by_id(**kwargs)
 
-    ctx.obj.echo_ok(f"Connection deleted!")
+    ctx.obj.echo_ok("Connection deleted!")

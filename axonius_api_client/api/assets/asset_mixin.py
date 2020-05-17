@@ -218,12 +218,10 @@ class AssetMixin(ModelMixins):
                 break
 
             for row in rows:
-                row_items = callbacks.row(row=row)
+                row_items = callbacks.process_row(row=row)
 
                 for row_item in listify(obj=row_items):
                     yield row_item
-
-                state["rows_processed_total"] += 1
 
                 if state["stop_fetch"]:
                     break
@@ -254,10 +252,10 @@ class AssetMixin(ModelMixins):
 
             time.sleep(state["page_sleep"])
 
-        callbacks.stop()
-
         self.LOG.info(f"FINISHED FETCH store={store}")
         self.LOG.debug(f"FINISHED FETCH state={json_dump(state)}")
+
+        callbacks.stop()
 
     def _get_page_cursor(self, state, store):
         page_start_dt = dt_now()

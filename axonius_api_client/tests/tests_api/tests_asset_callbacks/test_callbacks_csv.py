@@ -29,7 +29,7 @@ class CallbacksCsv(Callbacks):
             value=field_complex,
             schemas=apiobj.TEST_DATA["fields_map"][AGG_ADAPTER_NAME],
         )
-        sub_titles = [x["column_title"] for x in schema["sub_fields"] if x["is_root"]]
+        sub_columns = [x["column_title"] for x in schema["sub_fields"] if x["is_root"]]
 
         io_fd = io.StringIO()
 
@@ -38,13 +38,18 @@ class CallbacksCsv(Callbacks):
         cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs=getargs)
         cbobj.start()
 
+        assert isinstance(cbobj.schemas_final, list)
+        assert cbobj.schemas_final
+        for x in cbobj.schemas_final:
+            assert isinstance(x, dict)
+
         start_val = io_fd.getvalue().splitlines()[0]
-        for i in sub_titles:
+        for i in sub_columns:
             assert f'"{i}"' in start_val
 
         for row in copy.deepcopy(apiobj.TEST_DATA["cb_assets"][:200]):
             row_id = row["internal_axon_id"]
-            rows_ret = cbobj.row(row=copy.deepcopy(row))
+            rows_ret = cbobj.process_row(row=copy.deepcopy(row))
             assert len(rows_ret) == 1
             assert rows_ret[0] == {"internal_axon_id": row_id}
 

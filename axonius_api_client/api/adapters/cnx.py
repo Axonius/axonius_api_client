@@ -242,7 +242,7 @@ class Cnx(ChildMixins):
         if had_error:
             if rjson.get("type") == "AttributeError":
                 err = (
-                    f"Reachability test failed due to settings required for "
+                    "Reachability test failed due to settings required for "
                     "testing reachability (supply at least hostname/domain/etc)"
                 )
                 msg = tablize_schemas(schemas=cnx_schemas, err=err)

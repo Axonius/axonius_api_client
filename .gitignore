@@ -286,4 +286,7 @@ fabric.properties
 cscope.out
 cscope.files
 tags
+
+# apiclient stuff
 blah*
+*.log*

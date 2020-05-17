@@ -105,13 +105,14 @@ class TestCnxPublic(TestCnxBase):
 
     def test_test_fail(self, apiobj):
         """Pass."""
+        mpass = "badwolf"
         with pytest.raises(CnxTestError):
             apiobj.cnx.test(
                 adapter_name="tanium",
                 adapter_node=DEFAULT_NODE,
-                domain="badwolf",
-                username="badwolf",
-                password="badwolf",
+                domain=mpass,
+                username=mpass,
+                password=mpass,
             )
 
     def test_test_fail_no_domain(self, apiobj):

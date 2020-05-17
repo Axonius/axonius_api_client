@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 """API models for working with device and user assets."""
 import json
-
-import jsonstreams
+import textwrap
 
 from ...tools import listify
 from .base import Base
+
+JSON_FLAT = False
 
 
 class Json(Base):
@@ -16,64 +17,65 @@ class Json(Base):
     def start(self, **kwargs):
         """Create jsonstream and associated file descriptor."""
         super(Json, self).start(**kwargs)
+        flat = self.GETARGS.get("json_flat", JSON_FLAT)
+
+        self._first_row = True
         self.open_fd()
-        self._stream = JsonStream(fd=self._fd)
+        begin = "" if flat else "["
+        self._fd.write(begin)
 
     def stop(self, **kwargs):
         """Close jsonstream and associated file descriptor."""
         super(Json, self).stop(**kwargs)
+        flat = self.GETARGS.get("json_flat", JSON_FLAT)
+
         self.do_export_schema()
-        self._stream.close()
-        self._fd.write("\n")
+        end = "" if flat else "\n]"
+        self._fd.write(end)
         self.close_fd()
 
-    def do_export_schema(self):
-        """Pass."""
-        export_schema = self.GETARGS.get("export_schema", False)
-        if export_schema:
-            self._stream.write({"schemas": self.schemas_final()})
-
-    def row(self, row):
+    def process_row(self, row):
         """Write row to jsonstreams and delete it."""
+        self.do_pre_row()
+
         return_row = [{"internal_axon_id": row["internal_axon_id"]}]
 
-        rows = super(Json, self).row(row=row)
+        new_rows = self.do_row(row=row)
 
-        for row_new in listify(rows):
-            self._stream.write(row_new)
-            del row_new
+        for new_row in listify(new_rows):
+            self.write_row(row=new_row)
+            del new_row
 
-        del rows
+        del new_rows
         del row
 
         return return_row
 
+    def write_row(self, row):
+        """Pass."""
+        flat = self.GETARGS.get("json_flat", JSON_FLAT)
 
-class JsonStream:
-    """Wrap jsonstreams.Stream object."""
+        indent = None if flat else 2
+        prefix = " " * indent if indent else ""
 
-    def __init__(self, fd, **kwargs):
-        """Wrap jsonstreams.Stream object."""
-        self.__fd = fd
+        if flat:
+            pre = "" if self._first_row else "\n"
+        else:
+            pre = "\n" if self._first_row else ",\n"
 
-        encoder = kwargs.get("encoder", json.JSONEncoder)
-        indent = kwargs.get("indent", 2)
+        self._first_row = False
+        self._fd.write(pre)
 
-        self.__inst = jsonstreams.Array(
-            fd=self.__fd,
-            indent=indent,
-            baseindent=0,
-            encoder=encoder(indent=indent),
-            pretty=kwargs.get("pretty", True),
-        )
+        value = json.dumps(row, indent=indent)
+        value = textwrap.indent(value, prefix=prefix) if indent else value
+        self._fd.write(value)
+        del value
 
-        self.subobject = self.__inst.subobject
-        self.subarray = self.__inst.subarray
+    def do_export_schema(self):
+        """Pass."""
+        export_schema = self.GETARGS.get("export_schema", False)
 
-    def close(self):
-        """Close the root element and print a message."""
-        self.__inst.close()
-
-    def write(self, *args, **kwargs):
-        """Write values into the stream."""
-        self.__inst.write(*args, **kwargs)
+        if export_schema:
+            row = {"schemas": self.schemas_final}
+            self.write_row(row=row)
+            del row

@@ -206,7 +206,7 @@ def add_cnx(ctx, client, adapter_name, adapter_node, new_config, **kwargs):
             cnx_new = client.adapters.cnx.add(
                 adapter_name=adapter_name, adapter_node=adapter_node, **new_config,
             )
-            ctx.obj.echo_ok(msg=f"Connection added successfully!")
+            ctx.obj.echo_ok(msg="Connection added successfully!")
 
         except CnxAddError as exc:
             ctx.obj.echo_error(msg=f"{exc}", abort=False)
