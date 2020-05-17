@@ -3,13 +3,8 @@
 import copy
 import sys
 
-from ...constants import (
-    DEFAULT_PATH,
-    FIELD_JOINER,
-    FIELD_TRIM_LEN,
-    FIELD_TRIM_STR,
-    SCHEMAS_CUSTOM,
-)
+from ...constants import (DEFAULT_PATH, FIELD_JOINER, FIELD_TRIM_LEN,
+                          FIELD_TRIM_STR, SCHEMAS_CUSTOM)
 from ...exceptions import ApiError
 from ...tools import calc_percent, echo_error, echo_ok, get_path, listify
 
@@ -169,24 +164,16 @@ class Base:
         if not self.GETARGS.get("field_excludes", []):
             return
 
-        field_name = self.find_field_name(row=row, schema=schema)
-
-        if not field_name or field_name not in row:
-            return
-
         if self.is_excluded(schema=schema):
-            row.pop(field_name, None)
+            row.pop(schema["name_qual"], None)
             return
 
         if schema["is_complex"]:
-            items = listify(row.get(field_name, []))
+            items = listify(row.get(schema["name_qual"], []))
             for sub_schema in schema["sub_fields"]:
                 if self.is_excluded(schema=sub_schema):
                     for item in items:
-                        sub_field_name = self.find_field_name(
-                            row=item, schema=sub_schema
-                        )
-                        item.pop(sub_field_name, None)
+                        item.pop(sub_schema["name"], None)
 
     def do_join_values(self, row):
         """Join values."""
@@ -213,9 +200,7 @@ class Base:
             return
 
         for schema in self.schemas_final:
-            field_name = self.find_field_name(row=row, schema=schema)
-            if field_name:
-                row[schema["column_title"]] = row.pop(field_name)
+            row[schema["column_title"]] = row.pop(schema["name_qual"], None)
 
     def do_flatten_fields(self, row, schema):
         """Asset callback to flatten complex fields."""
@@ -228,7 +213,6 @@ class Base:
             self.is_excluded(schema=schema)
             or not schema["is_complex"]
             or self.schema_to_explode == schema
-            or not row.get(schema["name_qual"])
         ):
             return
 
@@ -247,20 +231,20 @@ class Base:
         explode = self.GETARGS.get("field_explode", "")
         null_value = self.GETARGS.get("field_null_value", None)
         schema = self.schema_to_explode
-        field_name = self.find_field_name(row=row, schema=schema)
 
         if (
             not explode
             or not schema
-            or not field_name
             or self.is_excluded(schema=schema)
-            or len(listify(row.get(field_name or "x"))) <= 1
+            or len(listify(row.get(schema["name_qual"] or "x"))) <= 1
         ):
             return [row]
 
+        original_row = copy.deepcopy(row)
+
         if schema["is_complex"]:
             new_rows = {}
-            items = listify(row.pop(field_name, []))
+            items = listify(row.pop(schema["name_qual"], []))
 
             for sub_schema in self.get_sub_schemas(schema=schema):
                 for idx, item in enumerate(items):
@@ -269,13 +253,13 @@ class Base:
                     new_rows[idx][sub_schema["name_qual"]] = value
         else:
             new_rows = {}
-            items = listify(row.pop(field_name, []))
+            items = listify(row.pop(schema["name_qual"], []))
 
             for idx, item in enumerate(items):
                 new_rows.setdefault(idx, copy.deepcopy(row))
-                new_rows[idx][field_name] = item
+                new_rows[idx][schema["name_qual"]] = item
 
-        return [new_rows[idx] for idx in new_rows]
+        return [new_rows[idx] for idx in new_rows] or [original_row]
 
     def do_tagging(self):
         """Pass."""
@@ -356,14 +340,6 @@ class Base:
                 if (name and exclude) and name == exclude:
                     return True
         return False
-
-    def find_field_name(self, row, schema):
-        """Pass."""
-        for key in self.FIND_KEYS:
-            name = schema.get(key)
-            if name and name in row:
-                return name
-        return ""
 
     def open_fd_arg(self):
         """Pass."""
