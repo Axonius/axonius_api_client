@@ -2,10 +2,15 @@
 """Test suite for assets."""
 import pytest
 import requests
+
 from axonius_api_client.api import mixins
 from axonius_api_client.constants import MAX_PAGE_SIZE
-from axonius_api_client.exceptions import (JsonError, JsonInvalid,
-                                           NotFoundError, ResponseNotOk)
+from axonius_api_client.exceptions import (
+    JsonError,
+    JsonInvalid,
+    NotFoundError,
+    ResponseNotOk,
+)
 from axonius_api_client.tools import listify
 
 from ...meta import QUERIES

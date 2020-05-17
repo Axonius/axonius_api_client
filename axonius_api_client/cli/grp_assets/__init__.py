@@ -85,27 +85,27 @@ def add_cmds(grp_obj, fields):
     grp_obj.add_command(
         gen_get_by_cmd(
             options=[*GET_BY_VALUE_BUILDERS, GET_BY_VALUE_FIELD],
-            doc=f"Get assets where a field equals value",
-            cmd_name=f"get-by-value",
-            method=f"get_by_value",
+            doc="Get assets where a field equals value",
+            cmd_name="get-by-value",
+            method="get_by_value",
         )
     )
 
     grp_obj.add_command(
         gen_get_by_cmd(
             options=[*GET_BY_VALUES_BUILDERS, GET_BY_VALUE_FIELD],
-            doc=f"Get assets where a field equals multiple values",
-            cmd_name=f"get-by-values",
-            method=f"get_by_values",
+            doc="Get assets where a field equals multiple values",
+            cmd_name="get-by-values",
+            method="get_by_values",
         )
     )
 
     grp_obj.add_command(
         gen_get_by_cmd(
             options=[*GET_BY_VALUE_REGEX_BUILDERS, GET_BY_VALUE_FIELD],
-            doc=f"Get assets where a field matches regex value",
-            cmd_name=f"get-by-value-regex",
-            method=f"get_by_value_regex",
+            doc="Get assets where a field matches regex value",
+            cmd_name="get-by-value-regex",
+            method="get_by_value_regex",
         )
     )
 
@@ -116,8 +116,8 @@ add_cmds(grp_obj=users, fields=["username", "mail"])
 devices.add_command(
     gen_get_by_cmd(
         options=GET_BY_VALUE_BUILDERS,
-        doc=f"Get assets in subnet",
-        cmd_name=f"get-by-subnet",
-        method=f"get_by_subnet",
+        doc="Get assets in subnet",
+        cmd_name="get-by-subnet",
+        method="get_by_subnet",
     )
 )

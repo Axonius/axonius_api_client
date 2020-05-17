@@ -32,7 +32,7 @@ def cmd(
                 cnx_id=cnx_id,
                 **new_config,
             )
-            ctx.obj.echo_ok(msg=f"Connection updated successfully!")
+            ctx.obj.echo_ok(msg="Connection updated successfully!")
 
         except CnxUpdateError as exc:
             ctx.obj.echo_error(msg=f"{exc}", abort=False)
