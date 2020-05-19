@@ -9,10 +9,10 @@ This does the following:
 
 .. code:: shell
 
-   $ axonshell d count -q '(specific_data.data.last_seen >= date("NOW - 3d"))'
+   $ axonshell devices count --query '(specific_data.data.last_seen >= date("NOW - 3d"))'
 
 .. raw:: html
 
-   <script id="asciicast-271644" src="https://asciinema.org/a/271644.js" async></script>
+   <script id="asciicast-331825" src="https://asciinema.org/a/331825.js" async></script>
 
 .. include:: notes.rst

@@ -11,10 +11,10 @@ This does the following:
 
 .. code:: shell
 
-   $ axonshell devices fields --field-re last
+   $ axonshell devices get-fields --field-re last
 
 .. raw:: html
 
-   <script id="asciicast-271656" src="https://asciinema.org/a/271656.js" async></script>
+   <script id="asciicast-331847" src="https://asciinema.org/a/331847.js" async></script>
 
 .. include:: notes.rst
