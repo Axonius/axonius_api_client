@@ -1,18 +1,18 @@
 .. include:: /main/.special.rst
 
-Show Default Fields
+Get ALL device data by ID
 ###############################################
 
 This does the following:
 
-* Return a list of default fields returned for device queries.
+* Return all known data for a device
 
 .. code:: shell
 
-   $ axonshell devices get-fields-default
+   $ axonshell devices get-by-id
 
 .. raw:: html
 
-   <script id="asciicast-332349" src="https://asciinema.org/a/332349.js" async></script>
+   <script id="asciicast-332459" src="https://asciinema.org/a/332459.js" async></script>
 
 .. include:: notes.rst
