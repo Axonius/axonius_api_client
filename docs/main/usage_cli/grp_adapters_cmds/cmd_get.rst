@@ -5,16 +5,6 @@ adapters get
 
 This command allows you to get metadata of adapters and their connections.
 
-Output feeds
-===============================================
-
-The output from this command is able to be supplied as input to these commands:
-
-* :doc:`../grp_cnx_cmds/cmd_check`
-* :doc:`../grp_cnx_cmds/cmd_delete`
-* :doc:`../grp_cnx_cmds/cmd_discover`
-* :doc:`../grp_cnx_cmds/cmd_get`
-
 Common Options
 ===============================================
 
