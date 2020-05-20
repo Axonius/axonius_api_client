@@ -10,10 +10,10 @@ This does the following:
 
 .. code:: shell
 
-   $ axonshell devices get-by-saved-query -n badname
+   $ axonshell devices get-by-saved-query --name invalid_name
 
 .. raw:: html
 
-   <script id="asciicast-271658" src="https://asciinema.org/a/271658.js" async></script>
+   <script id="asciicast-332384" src="https://asciinema.org/a/332384.js" async></script>
 
 .. include:: notes.rst
