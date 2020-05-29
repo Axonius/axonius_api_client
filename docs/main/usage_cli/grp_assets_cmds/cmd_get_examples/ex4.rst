@@ -12,12 +12,11 @@ This does the following:
 
 .. code:: shell
 
-   $ cat query.txt
-   $ axonshell d get -qf query.txt -f all -xf device.json -xo
+   $ axonshell devices get --query-file query.txt --field all --max-rows 3
 
 .. raw:: html
 
-   <script id="asciicast-271584" src="https://asciinema.org/a/271584.js" async></script>
+   <script id="asciicast-332363" src="https://asciinema.org/a/332363.js" async></script>
 
 .. include:: notes.rst
 

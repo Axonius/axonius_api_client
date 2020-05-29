@@ -2,17 +2,11 @@
 """Command line interface for Axonius API Client."""
 import tabulate
 
-from ...constants import FIELD_JOINER, FIELD_TRIM_LEN, TABLE_FORMAT, TABLE_MAX_ROWS
+from ...constants import (FIELD_JOINER, FIELD_TRIM_LEN, TABLE_FORMAT,
+                          TABLE_MAX_ROWS)
 from ..context import CONTEXT_SETTINGS, click
-from ..options import (
-    AUTH,
-    EXPORT,
-    FIELDS_SELECT,
-    PAGING,
-    add_options,
-    get_option_fields_default,
-    get_option_help,
-)
+from ..options import (AUTH, EXPORT, FIELDS_SELECT, PAGING, add_options,
+                       get_option_fields_default, get_option_help)
 
 GET_EXPORT = [
     click.option(
@@ -224,6 +218,36 @@ GET_EXPORT = [
         hidden=False,
         metavar="TAG",
     ),
+    click.option(
+        "--include-details/--no-include-details",
+        "-id/-nid",
+        "include_details",
+        help="Include details for aggregated fields (req: 3.4 + patch)",
+        is_flag=True,
+        default=False,
+        show_envvar=True,
+        show_default=True,
+    ),
+    click.option(
+        "--sort-descending/--no-sort-descending",
+        "-sd/-nsd",
+        "sort_descending",
+        help="Sort --sort-field descending (req: 3.4 + patch)",
+        is_flag=True,
+        default=False,
+        show_envvar=True,
+        show_default=True,
+    ),
+    click.option(
+        "--sort-field",
+        "-sf",
+        "sort_field",
+        help="Sort assets based on a specific field (req: 3.4 + patch)",
+        default=None,
+        show_envvar=True,
+        show_default=True,
+    ),
+    # XXX add history_date
 ]
 
 GET_BUILDERS = [

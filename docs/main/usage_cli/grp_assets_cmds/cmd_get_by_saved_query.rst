@@ -5,18 +5,6 @@ devices/users get-by-saved-query
 
 This command will get assets returned from a saved query for users or devices.
 
-Output feeds
-===============================================
-
-The output from this command is able to be supplied as input to these commands:
-
-* :doc:`../grp_assets_reports_cmds/cmd_missing_adapters` to build a report of
-  missing adapters for all assets returned from this command.
-* :doc:`../grp_assets_labels_cmds/cmd_add` to add labels to all assets returned from
-  this command.
-* :doc:`../grp_assets_labels_cmds/cmd_remove` to remove labels from all assets returned
-  from this command.
-
 .. _fr_214_5:
 
 Common Options
