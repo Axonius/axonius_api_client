@@ -11,10 +11,10 @@ This does the following:
 
 .. code:: shell
 
-   $ axonshell d count -qf query.txt
+   $ axonshell devices count --query-file query.txt
 
 .. raw:: html
 
-   <script id="asciicast-271645" src="https://asciinema.org/a/271645.js" async></script>
+   <script id="asciicast-331828" src="https://asciinema.org/a/331828.js" async></script>
 
 .. include:: notes.rst

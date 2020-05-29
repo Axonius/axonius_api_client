@@ -1,9 +1,9 @@
 .. include:: /main/.special.rst
 
-adapters get
+devices/users get-fields-default
 ###############################################
 
-This command allows you to get metadata of adapters and their connections.
+This command will produce a report of the default fields (columns) for users or devices.
 
 Common Options
 ===============================================
@@ -18,10 +18,10 @@ Examples
    :maxdepth: 1
    :glob:
 
-   cmd_get_examples/ex*
+   cmd_get_fields_default_examples/ex*
 
 Help Page
 ===============================================
 
-.. click:: axonius_api_client.cli.grp_adapters.cmd_get:cmd
-   :prog: axonshell adapters get
+.. click:: axonius_api_client.cli.grp_assets.cmd_get_fields_default:cmd
+   :prog: axonshell devices/users get-fields-default

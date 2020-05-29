@@ -9,10 +9,10 @@ This does the following:
 
 .. code:: shell
 
-   $ axonshell d count-by-saved-query -n "SSH Open To Entire Internet"
+   $ axonshell devices count-by-saved-query --name "SSH Open To Entire Internet"
 
 .. raw:: html
 
-   <script id="asciicast-271650" src="https://asciinema.org/a/271650.js" async></script>
+   <script id="asciicast-331835" src="https://asciinema.org/a/331835.js" async></script>
 
 .. include:: notes.rst

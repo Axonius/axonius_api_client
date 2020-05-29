@@ -1,16 +1,14 @@
 .. include:: /main/.special.rst
 
-devices/users labels get
+devices/users get-by-id
 ###############################################
 
-This command will get all of the labels known by the system for users or devices.
+This command will get ALL data for a single asset.
 
 Common Options
 ===============================================
 
 * :ref:`connection_options` for examples of supplying the Axonius credentials and URL.
-* There are no export options for this command since it only a simple list of known
-  labels.
 
 Examples
 ===============================================
@@ -19,10 +17,10 @@ Examples
    :maxdepth: 1
    :glob:
 
-   cmd_get_examples/ex*
+   cmd_get_by_id_examples/ex*
 
 Help Page
 ===============================================
 
-.. click:: axonius_api_client.cli.grp_labels.cmd_get:cmd
-   :prog: axonshell devices/users labels get
+.. click:: axonius_api_client.cli.grp_assets.cmd_get_by_id:cmd
+   :prog: axonshell devices/users get-by-id
