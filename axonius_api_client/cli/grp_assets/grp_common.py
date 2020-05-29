@@ -8,6 +8,18 @@ from ..context import CONTEXT_SETTINGS, click
 from ..options import (AUTH, EXPORT, FIELDS_SELECT, PAGING, add_options,
                        get_option_fields_default, get_option_help)
 
+HISTORY_DATE = click.option(
+    "--history-date",
+    "-hd",
+    "history_date",
+    default=None,
+    help="Return results for a given date in history",
+    show_envvar=True,
+    show_default=True,
+    hidden=False,
+    metavar="YYYY-MM-DD",
+)
+
 GET_EXPORT = [
     click.option(
         "--use-cursor/--no-use-cursor",
@@ -247,8 +259,9 @@ GET_EXPORT = [
         show_envvar=True,
         show_default=True,
     ),
-    # XXX add history_date
+    HISTORY_DATE,
 ]
+# XXX show historical dates
 
 GET_BUILDERS = [
     *AUTH,
