@@ -63,6 +63,7 @@ class ApiV1:
         labels="labels",
         fields="fields",
         destroy="destroy",
+        history_dates="history_dates",
     )
 
     devices = Router(
@@ -77,6 +78,7 @@ class ApiV1:
         labels="labels",
         fields="fields",
         destroy="destroy",
+        history_dates="history_dates",
     )
 
     actions = Router(
