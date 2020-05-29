@@ -1,6 +1,6 @@
 .. include:: /main/.special.rst
 
-devices/users fields
+devices/users get-fields
 ###############################################
 
 This command will produce a report of all fields for users or devices.
@@ -18,10 +18,10 @@ Examples
    :maxdepth: 1
    :glob:
 
-   cmd_fields_examples/ex*
+   cmd_get_fields_examples/ex*
 
 Help Page
 ===============================================
 
-.. click:: axonius_api_client.cli.grp_assets.cmd_fields:cmd
-   :prog: axonshell devices/users fields
+.. click:: axonius_api_client.cli.grp_assets.cmd_get_fields:cmd
+   :prog: axonshell devices/users get-fields

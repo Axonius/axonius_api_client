@@ -10,12 +10,12 @@ This does the following:
 
 .. code:: shell
 
-   $ axonshell d get \
-     -q '(specific_data.data.last_seen >= date("NOW - 3d")) and (specific_data.data.os.type == "Windows")' \
-     -f os.type -xf device.json -xo
+   $ axonshell devices get \
+     --query '(specific_data.data.last_seen >= date("NOW - 3d")) and (specific_data.data.os.type == "Windows")' \
+     --field os.type --max-rows 4
 
 .. raw:: html
 
-   <script id="asciicast-271581" src="https://asciinema.org/a/271581.js" async></script>
+   <script id="asciicast-332359" src="https://asciinema.org/a/332359.js" async></script>
 
 .. include:: notes.rst
