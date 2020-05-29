@@ -3,26 +3,14 @@
 import time
 
 from ...constants import CNX_GONE, CNX_RETRY, CNX_SANE_DEFAULTS, DEFAULT_NODE
-from ...exceptions import (
-    CnxAddError,
-    CnxGoneError,
-    CnxTestError,
-    CnxUpdateError,
-    ConfigInvalidValue,
-    ConfigRequired,
-    NotFoundError,
-)
+from ...exceptions import (CnxAddError, CnxGoneError, CnxTestError,
+                           CnxUpdateError, ConfigInvalidValue, ConfigRequired,
+                           NotFoundError)
 from ...tools import json_load, pathlib
 from ..mixins import ChildMixins
-from ..parsers.config import (
-    config_build,
-    config_default,
-    config_empty,
-    config_info,
-    config_required,
-    config_unchanged,
-    config_unknown,
-)
+from ..parsers.config import (config_build, config_default, config_empty,
+                              config_info, config_required, config_unchanged,
+                              config_unknown)
 from ..parsers.tables import tablize_cnxs, tablize_schemas
 
 
@@ -160,6 +148,7 @@ class Cnx(ChildMixins):
             value=cnx_id, adapter_name=adapter_name, adapter_node=adapter_node, **kwargs
         )
 
+    # XXX add get_by_label
     def test_by_id(self, cnx_id, adapter_name, adapter_node=DEFAULT_NODE):
         """Pass."""
         cnx_test = self.get_by_id(

@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """API models for working with adapters and connections."""
-from ...constants import AGG_ADAPTER_NAME, AGG_ADAPTER_TITLE, ALL_NAME, NORM_TYPE_MAP
+from ...constants import (AGG_ADAPTER_NAME, AGG_ADAPTER_TITLE, ALL_NAME,
+                          NORM_TYPE_MAP)
 from ...exceptions import ApiError
 from ...tools import strip_left, strip_right
 
@@ -132,6 +133,7 @@ def parse_schemas(
     for field in raw_fields:
         title = field["title"]
         name_base = strip_left(obj=field["name"], fix=adapter_prefix).strip(".")
+        # XXX if adapter == "agg", _details
         field["adapter_name"] = adapter_name
         field["adapter_title"] = adapter_title
         field["adapter_prefix"] = adapter_prefix

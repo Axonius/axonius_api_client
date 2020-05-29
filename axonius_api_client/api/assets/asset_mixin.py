@@ -4,8 +4,8 @@ import math
 import time
 
 from ...constants import MAX_PAGE_SIZE, PAGE_SIZE
-from ...exceptions import JsonError, NotFoundError
-from ...tools import dt_now, dt_sec_ago, json_dump, listify
+from ...exceptions import ApiError, JsonError, NotFoundError
+from ...tools import dt_now, dt_parse, dt_sec_ago, json_dump, listify
 from ..adapters import Adapters
 from ..asset_callbacks import get_callbacks_cls
 from ..mixins import ModelMixins
@@ -37,7 +37,7 @@ class AssetMixin(ModelMixins):
         """Destroy ALL assets."""
         return self._destroy(destroy=destroy, history=history)
 
-    def count(self, query=None):
+    def count(self, query=None, history_date=None):
         """Get the count of assets.
 
         Args:
@@ -50,9 +50,10 @@ class AssetMixin(ModelMixins):
         Returns:
             :obj:`int`: count of assets matching query
         """
-        return self._count(query=query)
+        history_date = self.validate_history_date(value=history_date)
+        return self._count(query=query, history_date=history_date)
 
-    def count_by_saved_query(self, name):
+    def count_by_saved_query(self, name, history_date=None):
         """Get the count of assets that would be returned by a saved query.
 
         Args:
@@ -62,7 +63,9 @@ class AssetMixin(ModelMixins):
             :obj:`int`: count of assets matching query in saved query
         """
         sq = self.saved_query.get_by_name(value=name)
-        return self._count(query=sq["view"]["query"]["filter"])
+        history_date = self.validate_history_date(value=history_date)
+        query = sq["view"]["query"]["filter"]
+        return self._count(query=query, history_date=history_date)
 
     def get(self, generator=False, **kwargs):
         """Get objects for a given query using paging.
@@ -98,11 +101,16 @@ class AssetMixin(ModelMixins):
         fields_map=None,
         max_rows=None,
         max_pages=None,
+        row_start=0,
         page_size=MAX_PAGE_SIZE,
         page_start=0,
         page_sleep=0,
         use_cursor=True,
         export=None,
+        include_details=False,
+        sort_field=None,
+        sort_descending=False,
+        history_date=None,
         **kwargs,
     ):
         """Get an iterator of objects for a given query using paging.
@@ -138,7 +146,7 @@ class AssetMixin(ModelMixins):
         Yields:
             :obj:`dict`: asset matching **query**
         """
-        page_size = self._get_page_size(page_size=page_size, max_rows=None)
+        page_size = self._get_page_size(page_size=page_size, max_rows=max_rows)
 
         fields_map = fields_map or self.fields.get()
 
@@ -150,9 +158,20 @@ class AssetMixin(ModelMixins):
             fields_map=fields_map,
         )
 
+        if sort_field:
+            sort_field = self.fields.get_field_name(
+                value=sort_field, fields_map=fields_map
+            )
+
+        history_date = self.validate_history_date(value=history_date)
+
         store = {
             "query": query,
             "fields": fields,
+            "include_details": include_details,
+            "sort_field": sort_field,
+            "sort_descending": sort_descending,
+            "history_date": history_date,
         }
 
         state = {
@@ -162,26 +181,20 @@ class AssetMixin(ModelMixins):
             "page_cursor": None,
             "page_sleep": page_sleep,
             "page_size": page_size,
-            "page_number": 1,
+            "page_number": page_start or 1,
+            "page_start": page_start,
             "pages_to_fetch_left": None,
             "pages_to_fetch_total": None,
             "rows_to_fetch_left": None,
             "rows_to_fetch_total": None,
             "rows_fetched_this_page": None,
-            "rows_fetched_total": 0,
+            "rows_fetched_total": page_start * page_size if page_start else row_start,
             "rows_processed_total": 0,
             "fetch_seconds_total": 0,
             "fetch_seconds_this_page": None,
             "stop_fetch": False,
             "stop_msg": None,
         }
-
-        if not use_cursor:
-            state["page_number"] = page_start or 1
-            state["page_start"] = page_start
-
-            if page_start > 1:
-                state["rows_fetched_total"] = page_start * page_size
 
         callbacks_cls = get_callbacks_cls(export=export)
 
@@ -263,8 +276,13 @@ class AssetMixin(ModelMixins):
         page = self._get_cursor(
             query=store["query"],
             fields=store["fields"],
+            row_start=state["rows_fetched_total"],
             page_size=state["page_size"],
             cursor=state["page_cursor"],
+            include_details=store["include_details"],
+            sort_field=store["sort_field"],
+            sort_descending=store["sort_descending"],
+            history_date=store["history_date"],
         )
 
         state["fetch_seconds_this_page"] = dt_sec_ago(obj=page_start_dt, exact=True)
@@ -299,6 +317,10 @@ class AssetMixin(ModelMixins):
             fields=store["fields"],
             row_start=state["rows_fetched_total"],
             page_size=state["page_size"],
+            include_details=store["include_details"],
+            sort_field=store["sort_field"],
+            sort_descending=store["sort_descending"],
+            history_date=store["history_date"],
         )
 
         state["fetch_seconds_this_page"] = dt_sec_ago(obj=page_start_dt, exact=True)
@@ -445,6 +467,31 @@ class AssetMixin(ModelMixins):
 
         return self.get(fields_map=fields_map, **kwargs)
 
+    def history_dates(self):
+        """Get all known historical dates for this asset type."""
+        return self._history_dates()
+
+    def validate_history_date(self, value):
+        """Validate that a given date is known historical date."""
+        if not value:
+            return None
+        valid_fmts = "YYYY-MM-DD or YYYYMMDD"
+        try:
+            dt = dt_parse(obj=value)
+            dt_search = dt.strftime("%Y-%m-%d")
+        except Exception:
+            raise ApiError(f"Could not parse date {value!r}, try {valid_fmts}")
+
+        known_dates = self.history_dates()
+        if dt_search not in known_dates:
+            expl = "known history dates"
+            known = "\n  " + "\n  ".join(list(known_dates))
+            err = f"Unknown history date {dt_search!r}"
+            msg = f"{err}, {expl}: {known}\n{err}, see above for {expl}"
+            raise ApiError(msg)
+
+        return known_dates[dt_search]
+
     def _build_query(self, inner, not_flag=False, pre="", post=""):
         """Pass."""
         if not_flag:
@@ -475,7 +522,7 @@ class AssetMixin(ModelMixins):
 
         super(AssetMixin, self)._init(auth=auth, **kwargs)
 
-    def _count(self, query=None):
+    def _count(self, query=None, history_date=None):
         """Direct API method to get the count of assets.
 
         Args:
@@ -489,12 +536,21 @@ class AssetMixin(ModelMixins):
             :obj:`int`: count of assets matching query
         """
         params = {}
-        if query:
-            params["filter"] = query
-
+        params["filter"] = query
+        params["history"] = history_date
         return self.request(method="post", path=self.router.count, json=params)
 
-    def _get(self, query=None, fields=None, row_start=0, page_size=PAGE_SIZE):
+    def _get(
+        self,
+        query=None,
+        fields=None,
+        row_start=0,
+        page_size=PAGE_SIZE,
+        include_details=False,
+        history_date=None,
+        sort_field=None,
+        sort_descending=False,
+    ):
         """Direct API method to get a page of assets.
 
         Args:
@@ -521,9 +577,11 @@ class AssetMixin(ModelMixins):
         params = {}
         params["skip"] = row_start
         params["limit"] = page_size
-
-        if query:
-            params["filter"] = query
+        params["include_details"] = include_details
+        params["history"] = history_date
+        params["sort"] = sort_field
+        params["desc"] = "1" if sort_descending else None
+        params["filter"] = query
 
         if fields:
             if isinstance(fields, list):
@@ -535,16 +593,30 @@ class AssetMixin(ModelMixins):
 
         return self.request(method="post", path=self.router.root, json=params)
 
-    def _get_cursor(self, query=None, fields=None, page_size=PAGE_SIZE, cursor=None):
+    def _get_cursor(
+        self,
+        query=None,
+        fields=None,
+        row_start=0,
+        page_size=PAGE_SIZE,
+        cursor=None,
+        include_details=False,
+        history_date=None,
+        sort_field=None,
+        sort_descending=False,
+    ):
         """Get a page for a given query."""
         page_size = self._get_page_size(page_size=page_size, max_rows=None)
 
         params = {}
         params["cursor"] = cursor
+        params["skip"] = row_start
         params["limit"] = page_size
-
-        if query:
-            params["filter"] = query
+        params["include_details"] = include_details
+        params["history"] = history_date
+        params["sort"] = sort_field
+        params["desc"] = "1" if sort_descending else None
+        params["filter"] = query
 
         if fields:
             if isinstance(fields, list):
@@ -574,3 +646,8 @@ class AssetMixin(ModelMixins):
         data = {"destroy": destroy, "history": history}
         path = self.router.destroy
         return self.request(method="post", path=path, json=data)
+
+    def _history_dates(self):
+        """Get all known historical dates for this asset type."""
+        path = self.router.history_dates
+        return self.request(method="get", path=path)
