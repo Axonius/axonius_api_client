@@ -4,22 +4,12 @@ import copy
 import warnings
 
 import pytest
-
 from axonius_api_client.constants import CSV_ADAPTER, DEFAULT_NODE
-from axonius_api_client.exceptions import (
-    ApiError,
-    ConfigUnchanged,
-    ConfigUnknown,
-    NotFoundError,
-)
+from axonius_api_client.exceptions import (ApiError, ConfigUnchanged,
+                                           ConfigUnknown, NotFoundError)
 
-from ...meta import (
-    CSV_FILECONTENT_BYTES,
-    CSV_FILECONTENT_STR,
-    CSV_FILENAME,
-    FIELD_FORMATS,
-    SCHEMA_TYPES,
-)
+from ...meta import (CSV_FILECONTENT_BYTES, CSV_FILECONTENT_STR, CSV_FILENAME,
+                     FIELD_FORMATS, SCHEMA_TYPES)
 
 
 def val_parsed_schema(schema):
@@ -104,8 +94,9 @@ class TestAdaptersPrivate(TestAdaptersBase):
         node_id = instance.pop("node_id")
         assert isinstance(node_id, str) and node_id
 
-        unique_plugin_name = instance.pop("unique_plugin_name")
-        assert isinstance(unique_plugin_name, str) and unique_plugin_name
+        # XXX re-add post 3.5
+        # unique_plugin_name = instance.pop("unique_plugin_name")
+        # assert isinstance(unique_plugin_name, str) and unique_plugin_name
 
         node_name = instance.pop("node_name")
         assert isinstance(node_name, str) and node_name

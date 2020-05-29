@@ -22,7 +22,7 @@ def parse_adapter(name, raw):
     parsed = {
         "name": strip_right(obj=name, fix="_adapter"),
         "name_raw": name,
-        "name_plugin": raw.get("unique_plugin_name", "BROKEN"),
+        "name_plugin": raw.get("unique_plugin_name", f"{name}_0"),
         # XXX FIX POST 3.5, should be direct reference, no more get
         "node_name": raw["node_name"],
         "node_id": raw["node_id"],
