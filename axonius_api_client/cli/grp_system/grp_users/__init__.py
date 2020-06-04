@@ -3,7 +3,8 @@
 import click
 
 from ...context import AliasedGroup
-from . import cmd_add, cmd_delete, cmd_get, cmd_get_by_name, cmd_update
+from . import (cmd_add, cmd_delete, cmd_get, cmd_get_by_name,
+               cmd_get_password_reset_link, cmd_update)
 
 
 @click.group(cls=AliasedGroup)
@@ -16,3 +17,4 @@ users.add_command(cmd_get_by_name.cmd)
 users.add_command(cmd_update.cmd)
 users.add_command(cmd_add.cmd)
 users.add_command(cmd_delete.cmd)
+users.add_command(cmd_get_password_reset_link.cmd)
