@@ -40,7 +40,14 @@ class Users(ChildMixins):
         user["role_obj"] = role
         user["auto_generated_password"] = generate_password
         self._add(user=user)
-        return self.get_by_name(name=name)
+        user_obj = self.get_by_name(name=name)
+
+        if generate_password:
+            user_obj["password_reset_link"] = self._get_password_reset_link(
+                uuid=user_obj["uuid"]
+            )
+
+        return user_obj
 
     def get(self):
         """Pass."""

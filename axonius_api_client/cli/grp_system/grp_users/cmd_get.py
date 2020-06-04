@@ -4,22 +4,9 @@ from ...context import CONTEXT_SETTINGS, click
 from ...options import AUTH, add_options
 from .grp_common import EXPORT, handle_export
 
-# USER_NAME = click.option(
-#     "--name",
-#     "-n",
-#     "name",
-#     help="Name of user to get",
-#     default=None,
-#     required=False,
-#     show_envvar=True,
-#     show_default=True,
-# )
-
-
 OPTIONS = [
     *AUTH,
     EXPORT,
-    # USER_NAME,
 ]
 
 
