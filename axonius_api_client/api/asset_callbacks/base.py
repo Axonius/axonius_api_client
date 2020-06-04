@@ -104,7 +104,6 @@ class Base:
             self.do_flatten_fields(row=row, schema=schema)
 
         new_rows = self.do_explode_field(row=row)
-
         for new_row in new_rows:
             self.do_join_values(row=new_row)
             self.do_change_field_titles(row=new_row)
@@ -205,14 +204,18 @@ class Base:
         if not self.GETARGS.get("field_flatten", False):
             return
 
-        null_value = self.GETARGS.get("field_null_value", None)
-
         if (
             self.is_excluded(schema=schema)
             or not schema["is_complex"]
             or self.schema_to_explode == schema
         ):
             return
+
+        self._do_flatten_fields(row=row, schema=schema)
+
+    def _do_flatten_fields(self, row, schema):
+        """Pass."""
+        null_value = self.GETARGS.get("field_null_value", None)
 
         items = listify(row.pop(schema["name_qual"], []))
 
@@ -228,36 +231,41 @@ class Base:
         """Explode a field into multiple rows."""
         explode = self.GETARGS.get("field_explode", "")
         null_value = self.GETARGS.get("field_null_value", None)
+
+        if not explode:
+            return [row]
+
         schema = self.schema_to_explode
 
-        if (
-            not explode
-            or not schema
-            or self.is_excluded(schema=schema)
-            or len(listify(row.get(schema["name_qual"] or "x"))) <= 1
-        ):
+        if self.is_excluded(schema=schema):
             return [row]
 
         original_row = copy.deepcopy(row)
 
         if schema["is_complex"]:
-            new_rows = {}
+            new_rows_map = {}
             items = listify(row.pop(schema["name_qual"], []))
 
             for sub_schema in self.get_sub_schemas(schema=schema):
                 for idx, item in enumerate(items):
-                    new_rows.setdefault(idx, copy.deepcopy(row))
+                    new_rows_map.setdefault(idx, copy.deepcopy(row))
                     value = item.pop(sub_schema["name"], null_value)
-                    new_rows[idx][sub_schema["name_qual"]] = value
+                    new_rows_map[idx][sub_schema["name_qual"]] = value
         else:
-            new_rows = {}
+            new_rows_map = {}
             items = listify(row.pop(schema["name_qual"], []))
 
             for idx, item in enumerate(items):
-                new_rows.setdefault(idx, copy.deepcopy(row))
-                new_rows[idx][schema["name_qual"]] = item
+                new_rows_map.setdefault(idx, copy.deepcopy(row))
+                new_rows_map[idx][schema["name_qual"]] = item
 
-        return [new_rows[idx] for idx in new_rows] or [original_row]
+        new_rows = [new_rows_map[idx] for idx in new_rows_map]
+
+        if not new_rows:
+            self._do_flatten_fields(row=original_row, schema=schema)
+            return [original_row]
+
+        return new_rows
 
     def do_tagging(self):
         """Pass."""

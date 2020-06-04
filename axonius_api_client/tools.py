@@ -655,6 +655,6 @@ def join_kv(obj, listjoin=", ", tmpl="{k}: {v!r}"):
     items = []
     for k, v in obj.items():
         if isinstance(v, list):
-            v = listjoin.join(v)
+            v = listjoin.join([str(i) for i in v])
         items.append(tmpl.format(k=k, v=v))
     return items
