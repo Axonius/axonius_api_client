@@ -14,6 +14,7 @@ class Users(ChildMixins):
         role_name,
         password=None,
         generate_password=False,
+        email_password_link=False,
         first_name=None,
         last_name=None,
         email=None,
@@ -21,6 +22,9 @@ class Users(ChildMixins):
         """Pass."""
         if not any([password, generate_password]):
             raise ApiError("Must supply password or generate_password=True")
+
+        if email_password_link and not email:
+            raise ApiError("Must supply email if email_password_link is True")
 
         role = self.parent.roles.get_by_name(name=role_name)
         users = self.get()
@@ -42,10 +46,21 @@ class Users(ChildMixins):
         self._add(user=user)
         user_obj = self.get_by_name(name=name)
 
-        if generate_password:
+        if generate_password or email_password_link:
             user_obj["password_reset_link"] = self._get_password_reset_link(
                 uuid=user_obj["uuid"]
             )
+
+        if email_password_link:
+            try:
+                self._email_password_reset_link(
+                    uuid=user_obj["uuid"], email=email, new_user=True
+                )
+                user_obj["emailed_password_link_error"] = None
+            except Exception as exc:
+                user_obj["emailed_password_link_error"] = (
+                    getattr(getattr(exc, "response", None), "text", None) or exc
+                )
 
         return user_obj
 
@@ -124,7 +139,28 @@ class Users(ChildMixins):
     def get_password_reset_link(self, name):
         """Pass."""
         user = self.get_by_name(name=name)
-        return self._get_password_reset_link(uuid=user["uuid"])
+        user["password_reset_link"] = self._get_password_reset_link(uuid=user["uuid"])
+        return user
+
+    def email_password_reset_link(
+        self, name, email=None, new_user=False, generate_first=True
+    ):
+        """Pass."""
+        user = self.get_by_name(name=name)
+        user_email = user.get("email")
+        email = email or user_email
+
+        if not email:
+            raise ApiError("User has no email address defined, must supply email")
+
+        if generate_first:
+            user["password_reset_link"] = self._get_password_reset_link(
+                uuid=user["uuid"]
+            )
+
+        return self._email_password_reset_link(
+            uuid=user["uuid"], email=email, new_user=False
+        )
 
     def _get(self, limit=None, skip=None):
         """Pass."""
@@ -161,3 +197,9 @@ class Users(ChildMixins):
         path = f"{self.router._base}/tokens/reset"
         data = {"user_id": uuid}
         return self.request(method="put", path=path, json=data, error_json_invalid=False)
+
+    def _email_password_reset_link(self, uuid, email, new_user=False):
+        """Pass."""
+        path = f"{self.router._base}/tokens/notify"
+        data = {"user_id": uuid, "email": email, "invite": new_user}
+        return self.request(method="POST", path=path, json=data)
