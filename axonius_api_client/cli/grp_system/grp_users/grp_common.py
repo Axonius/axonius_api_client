@@ -31,6 +31,9 @@ def handle_export(ctx, data, export_format, **kwargs):
             source = item["source"]
             user_name = item["user_name"]
             last_login = item.get("last_login")
+            password_reset_link = item.get("password_reset_link")
+            email_password_link_error = item.get("email_password_link_error")
+
             if last_login:
                 last_login = str(dt_parse(last_login))
 
@@ -41,7 +44,10 @@ def handle_export(ctx, data, export_format, **kwargs):
                 f"First Name: {first_name!r}",
                 f"Last Name: {last_name!r}",
                 f"Source: {source!r}",
+                f"Password Reset Link: {password_reset_link}",
+                f"Email Password Reset Link Error: {email_password_link_error}",
             ]
+
             click.secho(", ".join(lines))
         ctx.exit(0)
 

@@ -2,10 +2,12 @@
 """Command line interface for Axonius API Client."""
 from ..context import CONTEXT_SETTINGS, click
 from ..options import AUTH, QUERY, add_options, get_option_help
+from .grp_common import HISTORY_DATE
 
 OPTIONS = [
     *AUTH,
     *QUERY,
+    HISTORY_DATE,
     get_option_help(choices=["auth", "query"]),
 ]
 

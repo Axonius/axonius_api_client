@@ -197,14 +197,15 @@ class AssetMixin(ModelMixins):
         }
 
         callbacks_cls = get_callbacks_cls(export=export)
-
+        # XXX add store as arg to callbacks,
         self._LAST_CALLBACKS = callbacks = callbacks_cls(
             apiobj=self,
             fields_map=fields_map,
             getargs=kwargs,
-            fields=fields,
-            query=query,
+            # fields=fields,
+            # query=query,
             state=state,
+            store=store,
         )
 
         callbacks.start()

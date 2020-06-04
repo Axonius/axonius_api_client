@@ -223,6 +223,7 @@ class ModelMixins(Model, PageSizeMixin):
                         exc=exc,
                     )
                 )
+                respexc.response = response
                 respexc.exc = exc
                 raise respexc
 
@@ -267,6 +268,7 @@ class ModelMixins(Model, PageSizeMixin):
                     )
                 )
                 respexc.exc = exc
+                respexc.response = response
                 raise respexc
 
             return response.text
@@ -277,6 +279,7 @@ class ModelMixins(Model, PageSizeMixin):
 
             if (has_error or has_error_status) and error_json_bad_status:
                 respexc = JsonError(self._build_err_msg(response=response))
+                respexc.response = response
                 raise respexc
         return data
 

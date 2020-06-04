@@ -186,6 +186,12 @@ CNX_SANE_DEFAULTS = {
         "s3_use_ec2_attached_instance_profile": False,
         "verify_ssl": False,
     },
+    "json": {
+        "is_users": False,
+        "is_installed_sw": False,
+        "s3_use_ec2_attached_instance_profile": False,
+        "verify_ssl": False,
+    },
 }
 DEFAULT_PERM = "ReadOnly"
 """:obj:`str`: default user permission to use"""
