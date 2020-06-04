@@ -77,8 +77,8 @@ class exc_wrapper:
     def __exit__(self, exc, value, traceback):
         """Pass."""
         if value and self.wraperror and not isinstance(value, self.EXCLUDES):
-            msg = "WRAPPED EXCEPTION: {c.__module__}.{c.__name__}\n{v}"
-            msg = msg.format(c=value.__class__, v=value)
+            cls = value.__class__
+            msg = f"WRAPPED EXCEPTION: {cls.__module__}.{cls.__name__}\n{value}"
             echo_error(msg)
 
 

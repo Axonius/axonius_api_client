@@ -15,17 +15,8 @@ import dateutil.relativedelta
 import dateutil.tz
 
 from . import __package__ as PACKAGE_ROOT
-from .constants import (
-    ERROR_ARGS,
-    ERROR_TMPL,
-    NO,
-    OK_ARGS,
-    OK_TMPL,
-    SIMPLE,
-    WARN_ARGS,
-    WARN_TMPL,
-    YES,
-)
+from .constants import (ERROR_ARGS, ERROR_TMPL, NO, OK_ARGS, OK_TMPL, SIMPLE,
+                        WARN_ARGS, WARN_TMPL, YES)
 from .exceptions import ApiError, ToolsError
 
 LOG = logging.getLogger(PACKAGE_ROOT).getChild("tools")
@@ -657,3 +648,13 @@ def calc_percent(part, whole):
     else:
         value = 100 * (part / whole)
     return value
+
+
+def join_kv(obj, listjoin=", ", tmpl="{k}: {v!r}"):
+    """Pass."""
+    items = []
+    for k, v in obj.items():
+        if isinstance(v, list):
+            v = listjoin.join([str(i) for i in v])
+        items.append(tmpl.format(k=k, v=v))
+    return items

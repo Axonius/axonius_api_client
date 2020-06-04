@@ -9,23 +9,13 @@ from .api.assets import Devices, Users
 from .api.enforcements import Enforcements
 from .api.system import System
 from .auth import ApiKey
-from .constants import (
-    LOG_FILE_MAX_FILES,
-    LOG_FILE_MAX_MB,
-    LOG_FILE_NAME,
-    LOG_FILE_PATH,
-    LOG_LEVEL_API,
-    LOG_LEVEL_AUTH,
-    LOG_LEVEL_CONSOLE,
-    LOG_LEVEL_FILE,
-    LOG_LEVEL_HTTP,
-    LOG_LEVEL_PACKAGE,
-    TIMEOUT_CONNECT,
-    TIMEOUT_RESPONSE,
-)
+from .constants import (LOG_FILE_MAX_FILES, LOG_FILE_MAX_MB, LOG_FILE_NAME,
+                        LOG_FILE_PATH, LOG_LEVEL_API, LOG_LEVEL_AUTH,
+                        LOG_LEVEL_CONSOLE, LOG_LEVEL_FILE, LOG_LEVEL_HTTP,
+                        LOG_LEVEL_PACKAGE, TIMEOUT_CONNECT, TIMEOUT_RESPONSE)
 from .exceptions import ConnectError, InvalidCredentials
 from .http import Http
-from .logs import LOG, add_file, add_stderr, set_log_level
+from .logs import LOG, add_file, add_stderr, get_obj_log, set_log_level
 from .tools import json_dump, sysinfo
 from .version import __version__ as VERSION
 
@@ -56,6 +46,7 @@ class Connect:
         cert_client_both=None,
         proxy=None,
         save_history=False,
+        log_level="debug",
         log_request_attrs=None,
         log_response_attrs=None,
         log_request_body=False,
@@ -192,6 +183,7 @@ class Connect:
                 default :data:`axonius_api_client.LOG_FILE_MAX_FILES`
                 number of rollover file logs to keep
         """
+        self.LOG = get_obj_log(obj=self, level=log_level)
         self._started = False
         self._wraperror = wraperror
         self.url = url

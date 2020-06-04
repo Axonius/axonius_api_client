@@ -18,9 +18,31 @@ PASSWORD = click.option(
     "-p",
     "password",
     help="Name of user",
-    required=True,
+    required=False,
     show_envvar=True,
     show_default=True,
+)
+GENERATE_PASSWORD = click.option(
+    "--generate-password-link/--no-generate-password-link",
+    "-gpl/-ngpl",
+    "generate_password_link",
+    help="Generate a password reset link for the new user",
+    default=False,
+    is_flag=True,
+    show_envvar=True,
+    show_default=True,
+    required=False,
+)
+EMAIL_PASSWORD = click.option(
+    "--email-password-link/--no-email-password-link",
+    "-epl/-nepl",
+    "email_password_link",
+    help="Email a password reset link to the new user",
+    default=False,
+    is_flag=True,
+    show_envvar=True,
+    show_default=True,
+    required=False,
 )
 ROLE_NAME = click.option(
     "--role-name",
@@ -59,7 +81,18 @@ EMAIL = click.option(
     show_default=True,
 )
 
-OPTIONS = [*AUTH, EXPORT, FIRST_NAME, LAST_NAME, EMAIL, USER_NAME, PASSWORD, ROLE_NAME]
+OPTIONS = [
+    *AUTH,
+    EXPORT,
+    FIRST_NAME,
+    LAST_NAME,
+    EMAIL,
+    USER_NAME,
+    PASSWORD,
+    GENERATE_PASSWORD,
+    EMAIL_PASSWORD,
+    ROLE_NAME,
+]
 
 
 @click.command(name="add", context_settings=CONTEXT_SETTINGS)

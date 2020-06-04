@@ -32,16 +32,21 @@ class Csv(Base):
         quote = self.get_csv_quote()
 
         self.open_fd()
-        self._fd.write(codecs.BOM_UTF8.decode("utf-8"))
+
+        try:
+            self._fd.write(codecs.BOM_UTF8.decode("utf-8"))
+        except Exception:
+            self.LOG.error("Unable to write UTF8 BOM!")
+
         self._stream = csv.DictWriter(
             self._fd,
-            fieldnames=self.columns_final,
+            fieldnames=self.final_columns,
             quoting=quote,
             lineterminator="\n",
             restval=restval,
             dialect=dialect,
         )
-        self._stream.writerow(dict(zip(self.columns_final, self.columns_final)))
+        self._stream.writerow(dict(zip(self.final_columns, self.final_columns)))
         self.do_export_schema()
 
     def stop(self, **kwargs):
@@ -86,12 +91,12 @@ class Csv(Base):
         export_schema = self.GETARGS.get("export_schema", True)
 
         if export_schema:
-            titles = [x["column_title"] for x in self.schemas_final]
-            names = [x["name_qual"] for x in self.schemas_final]
-            types = [x["type_norm"] for x in self.schemas_final]
+            titles = [x["column_title"] for x in self.final_schemas]
+            names = [x["name_qual"] for x in self.final_schemas]
+            types = [x["type_norm"] for x in self.final_schemas]
             if self.GETARGS["field_titles"]:
-                self._stream.writerow(dict(zip(self.columns_final, names)))
-                self._stream.writerow(dict(zip(self.columns_final, types)))
+                self._stream.writerow(dict(zip(self.final_columns, names)))
+                self._stream.writerow(dict(zip(self.final_columns, types)))
             else:
-                self._stream.writerow(dict(zip(self.columns_final, titles)))
-                self._stream.writerow(dict(zip(self.columns_final, types)))
+                self._stream.writerow(dict(zip(self.final_columns, titles)))
+                self._stream.writerow(dict(zip(self.final_columns, types)))

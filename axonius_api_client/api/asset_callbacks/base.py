@@ -6,7 +6,8 @@ import sys
 from ...constants import (DEFAULT_PATH, FIELD_JOINER, FIELD_TRIM_LEN,
                           FIELD_TRIM_STR, SCHEMAS_CUSTOM)
 from ...exceptions import ApiError
-from ...tools import calc_percent, echo_error, echo_ok, get_path, listify
+from ...tools import (calc_percent, echo_error, echo_ok, echo_warn, get_path,
+                      join_kv, listify)
 
 
 class Base:
@@ -16,7 +17,7 @@ class Base:
     FIND_KEYS = ["name", "name_qual", "column_title", "name_base"]
 
     def __init__(
-        self, apiobj, fields, query=None, state=None, fields_map=None, getargs=None
+        self, apiobj, store, state=None, fields_map=None, getargs=None,
     ):
         """Object for handling callbacks for assets."""
         self.LOG = apiobj.LOG.getChild(self.__class__.__name__)
@@ -25,18 +26,14 @@ class Base:
         self.APIOBJ = apiobj
         """:obj:`AssetMixin`: assets object."""
 
-        apifields = [x for x in apiobj.FIELDS_API if x not in fields]
-        self.SELECTED_FIELDS = apifields + fields
-        """:obj:`list` of :obj:`str`: field names selected originally."""
-
         self.ALL_SCHEMAS = fields_map or apiobj.fields.get()
         """:obj:`dict`: map of adapter -> field schemas."""
 
-        self.QUERY = query
-        """:obj:`str`: query supplied to get assets method."""
-
         self.STATE = state or {}
         """:obj:`dict`: state dict used by get assets method to track paging."""
+
+        self.STORE = store or {}
+        """:obj:`dict`: store dict used by get assets method to track arguments."""
 
         self.GETARGS = getargs or {}
         """:obj:`dict`: original kwargs supplied to get assets method."""
@@ -61,22 +58,23 @@ class Base:
         join = "\n   - "
         self.echo(msg=f"Starting {self}")
 
-        cbargs = ["{}={!r}".format(k, v) for k, v in self.GETARGS.items()]
-        cbargs = "\n  " + "\n  ".join(cbargs)
-        self.LOG.debug(f"Callback arguments: {cbargs}")
+        cbargs = join + join.join(join_kv(obj=self.GETARGS))
+        self.LOG.debug(f"Get Extra Arguments: {cbargs}")
 
         config = join + join.join(self.args_strs)
         self.echo(msg=f"Configuration: {config}")
-        self.echo(msg=f"Query: {self.QUERY}")
 
-        columns_final = join + join.join(self.columns_final)
-        self.echo(msg=f"Final columns: {columns_final}")
+        store = join + join.join(join_kv(obj=self.STORE))
+        self.echo(msg=f"Get Arguments: {store}")
 
         schemas_pretty = self.APIOBJ.fields._prettify_schemas(
             schemas=self.schemas_selected
         )
         schemas_pretty = join + join.join(schemas_pretty)
-        self.echo(msg=f"Selected Fields: {schemas_pretty}")
+        self.echo(msg=f"Selected Columns: {schemas_pretty}")
+
+        final_columns = join + join.join(self.final_columns)
+        self.echo(msg=f"Final Columns: {final_columns}")
 
     def stop(self, **kwargs):
         """Run stop callbacks."""
@@ -106,7 +104,6 @@ class Base:
             self.do_flatten_fields(row=row, schema=schema)
 
         new_rows = self.do_explode_field(row=row)
-
         for new_row in new_rows:
             self.do_join_values(row=new_row)
             self.do_change_field_titles(row=new_row)
@@ -199,7 +196,7 @@ class Base:
         if not self.GETARGS.get("field_titles", False):
             return
 
-        for schema in self.schemas_final:
+        for schema in self.final_schemas:
             row[schema["column_title"]] = row.pop(schema["name_qual"], None)
 
     def do_flatten_fields(self, row, schema):
@@ -207,14 +204,18 @@ class Base:
         if not self.GETARGS.get("field_flatten", False):
             return
 
-        null_value = self.GETARGS.get("field_null_value", None)
-
         if (
             self.is_excluded(schema=schema)
             or not schema["is_complex"]
             or self.schema_to_explode == schema
         ):
             return
+
+        self._do_flatten_fields(row=row, schema=schema)
+
+    def _do_flatten_fields(self, row, schema):
+        """Pass."""
+        null_value = self.GETARGS.get("field_null_value", None)
 
         items = listify(row.pop(schema["name_qual"], []))
 
@@ -230,36 +231,41 @@ class Base:
         """Explode a field into multiple rows."""
         explode = self.GETARGS.get("field_explode", "")
         null_value = self.GETARGS.get("field_null_value", None)
+
+        if not explode:
+            return [row]
+
         schema = self.schema_to_explode
 
-        if (
-            not explode
-            or not schema
-            or self.is_excluded(schema=schema)
-            or len(listify(row.get(schema["name_qual"] or "x"))) <= 1
-        ):
+        if self.is_excluded(schema=schema):
             return [row]
 
         original_row = copy.deepcopy(row)
 
         if schema["is_complex"]:
-            new_rows = {}
+            new_rows_map = {}
             items = listify(row.pop(schema["name_qual"], []))
 
             for sub_schema in self.get_sub_schemas(schema=schema):
                 for idx, item in enumerate(items):
-                    new_rows.setdefault(idx, copy.deepcopy(row))
+                    new_rows_map.setdefault(idx, copy.deepcopy(row))
                     value = item.pop(sub_schema["name"], null_value)
-                    new_rows[idx][sub_schema["name_qual"]] = value
+                    new_rows_map[idx][sub_schema["name_qual"]] = value
         else:
-            new_rows = {}
+            new_rows_map = {}
             items = listify(row.pop(schema["name_qual"], []))
 
             for idx, item in enumerate(items):
-                new_rows.setdefault(idx, copy.deepcopy(row))
-                new_rows[idx][schema["name_qual"]] = item
+                new_rows_map.setdefault(idx, copy.deepcopy(row))
+                new_rows_map[idx][schema["name_qual"]] = item
 
-        return [new_rows[idx] for idx in new_rows] or [original_row]
+        new_rows = [new_rows_map[idx] for idx in new_rows_map]
+
+        if not new_rows:
+            self._do_flatten_fields(row=original_row, schema=schema)
+            return [original_row]
+
+        return new_rows
 
     def do_tagging(self):
         """Pass."""
@@ -401,17 +407,34 @@ class Base:
             self.echo(msg=f"Finished exporting to {name!r}")
             self._fd.close()
 
-    def echo(self, msg, error=None, level="info", level_error="error"):
+    def echo(
+        self,
+        msg,
+        error=False,
+        warning=False,
+        level="info",
+        level_error="error",
+        level_warning="warning",
+        abort=True,
+    ):
         """Pass."""
         do_echo = self.GETARGS.get("do_echo", False)
 
         if do_echo:
-            echo_error(msg) if error else echo_ok(msg)
+            if warning:
+                echo_warn(msg=msg)
+            elif error:
+                echo_error(msg=msg, abort=abort)
+            else:
+                echo_ok(msg=msg)
             return
 
-        if error:
+        if warning:
+            getattr(self.LOG, level_warning)(msg)
+        elif error:
             getattr(self.LOG, level_error)(msg)
-            raise error(msg)
+            if abort:
+                raise error(msg)
 
         getattr(self.LOG, level)(msg)
 
@@ -424,7 +447,7 @@ class Base:
             yield sub_schema
 
     @property
-    def schemas_custom(self):
+    def custom_schemas(self):
         """Pass."""
         schemas = []
         if self.GETARGS.get("report_adapters_missing", False):
@@ -432,10 +455,10 @@ class Base:
         return schemas
 
     @property
-    def schemas_final(self):
+    def final_schemas(self):
         """Predict the future schemas that will be returned."""
-        if hasattr(self, "_schemas_final"):
-            return self._schemas_final
+        if hasattr(self, "_final_schemas"):
+            return self._final_schemas
 
         flat = self.GETARGS.get("field_flatten", False)
         explode_field_name = self.schema_to_explode.get("name_qual", "")
@@ -453,20 +476,44 @@ class Base:
             else:
                 final.setdefault(schema["name_qual"], schema)
 
-        self._schemas_final = list(final.values())
-        return self._schemas_final
+        self._final_schemas = list(final.values())
+        return self._final_schemas
 
     @property
-    def columns_final(self):
+    def final_columns(self):
         """Pass."""
-        if hasattr(self, "_columns_final"):
-            return self._columns_final
+        if hasattr(self, "_final_columns"):
+            return self._final_columns
 
         use_titles = self.GETARGS.get("field_titles", False)
         key = "column_title" if use_titles else "name_qual"
-        self._columns_final = [x[key] for x in self.schemas_final]
+        self._final_columns = [x[key] for x in self.final_schemas]
 
-        return self._columns_final
+        return self._final_columns
+
+    @property
+    def fields_selected(self):
+        """Pass."""
+        if hasattr(self, "_fields_selected"):
+            return self._fields_selected
+
+        include_details = self.STORE.get("include_details", False)
+
+        fields = listify(self.STORE.get("fields", []))
+        api_fields = [x for x in self.APIOBJ.FIELDS_API if x not in fields]
+
+        if include_details:
+            api_fields += ["meta_data.client_used", "unique_adapter_names_details"]
+
+        self._fields_selected = []
+
+        for field in api_fields + fields:
+            self._fields_selected.append(field)
+            if include_details and not field.startswith("adapters_data."):
+                field_details = f"{field}_details"
+                self._fields_selected.append(field_details)
+
+        return self._fields_selected
 
     @property
     def schemas_selected(self):
@@ -474,7 +521,7 @@ class Base:
         if hasattr(self, "_schemas_selected"):
             return self._schemas_selected
 
-        self._schemas_selected = [] + self.schemas_custom
+        self._schemas_selected = [] + self.custom_schemas
 
         all_schemas = self.ALL_SCHEMAS
 
@@ -483,11 +530,14 @@ class Base:
             for schemas in self.ALL_SCHEMAS.values():
                 all_schemas += schemas
 
-        for field in self.SELECTED_FIELDS:
-            for schema in all_schemas:
-                name = schema["name_qual"]
-                if name == field:
-                    self._schemas_selected.append(schema)
+        all_schemas_map = {x["name_qual"]: x for x in all_schemas}
+
+        for field in self.fields_selected:
+            if field in all_schemas_map:
+                self._schemas_selected.append(all_schemas_map[field])
+            else:
+                msg = f"No schema found for field {field}"
+                self.echo(msg=msg, warning=True)
 
         return self._schemas_selected
 
@@ -580,7 +630,7 @@ class Base:
 
     def __str__(self):
         """Show info for this object."""
-        return f"{self.CB_NAME} callbacks"
+        return f"{self.CB_NAME.upper()} processor"
 
     def __repr__(self):
         """Show info for this object."""

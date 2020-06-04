@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 """API models for working with adapters and connections."""
+import copy
+
 from ...constants import (AGG_ADAPTER_NAME, AGG_ADAPTER_TITLE, ALL_NAME,
                           NORM_TYPE_MAP)
 from ...exceptions import ApiError
@@ -20,6 +22,7 @@ def parse_fields(raw):
         adapter_prefix="specific_data.data",
         all_field="specific_data",
         raw_fields=raw["generic"],
+        details=True,
     )
 
     for raw_name, raw_fields in raw["specific"].items():
@@ -97,12 +100,16 @@ def parse_complex(field):
 
 
 def parse_schemas(
-    adapter_name_raw, adapter_name, adapter_prefix, adapter_title, all_field, raw_fields,
+    adapter_name_raw,
+    adapter_name,
+    adapter_prefix,
+    adapter_title,
+    all_field,
+    raw_fields,
+    details=False,
 ):
     """Parse field schemas for an adapter."""
     fields = []
-    # adapter_name = strip_right(obj=adapter_name_raw, fix="_adapter")
-    # adapter_title = " ".join(adapter_name.split("_")).title()
 
     fields.append(
         {
@@ -126,6 +133,48 @@ def parse_schemas(
         }
     )
 
+    if details:
+        fields += [
+            {
+                "adapter_name_raw": adapter_name_raw,
+                "adapter_name": adapter_name,
+                "adapter_title": adapter_title,
+                "adapter_prefix": adapter_prefix,
+                "column_name": f"{adapter_name}:unique_adapter_names_details",
+                "column_title": "Unique Adapter Names Details Index",
+                "sub_fields": [],
+                "is_complex": False,
+                "is_list": True,
+                "is_root": True,
+                "parent": "root",
+                "name": "unique_adapter_names_details",
+                "name_base": "unique_adapter_names_details",
+                "name_qual": "unique_adapter_names_details",
+                "title": "Unique Adapter Names Details Index",
+                "type": "array",
+                "type_norm": "list_string",
+            },
+            {
+                "adapter_name_raw": adapter_name_raw,
+                "adapter_name": adapter_name,
+                "adapter_title": adapter_title,
+                "adapter_prefix": adapter_prefix,
+                "column_name": f"{adapter_name}:meta_data.client_used",
+                "column_title": "Adapter Connection Details Index",
+                "sub_fields": [],
+                "is_complex": False,
+                "is_list": True,
+                "is_root": True,
+                "parent": "root",
+                "name": "meta_data.client_used",
+                "name_base": "meta_data.client_used",
+                "name_qual": "meta_data.client_used",
+                "title": "Adapter Connection Details Index",
+                "type": "array",
+                "type_norm": "list_string",
+            },
+        ]
+
     field_names = [
         strip_left(obj=f["name"], fix=adapter_prefix).strip(".") for f in raw_fields
     ]
@@ -133,7 +182,6 @@ def parse_schemas(
     for field in raw_fields:
         title = field["title"]
         name_base = strip_left(obj=field["name"], fix=adapter_prefix).strip(".")
-        # XXX if adapter == "agg", _details
         field["adapter_name"] = adapter_name
         field["adapter_title"] = adapter_title
         field["adapter_prefix"] = adapter_prefix
@@ -148,6 +196,13 @@ def parse_schemas(
         field["type_norm"] = get_type_norm(field=field)
         parse_complex(field=field)
         fields.append(field)
+        if details:
+            field_details = copy.deepcopy(field)
+            field_details["name_base"] += "_details"
+            field_details["name_qual"] += "_details"
+            field_details["column_title"] += " Details"
+            field_details["column_name"] += "_details"
+            fields.append(field_details)
 
     return fields
 
