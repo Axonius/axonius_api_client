@@ -13,15 +13,17 @@ class Users(ChildMixins):
         name,
         role_name,
         password=None,
-        generate_password=False,
+        generate_password_link=False,
         email_password_link=False,
         first_name=None,
         last_name=None,
         email=None,
     ):
         """Pass."""
-        if not any([password, generate_password]):
-            raise ApiError("Must supply password or generate_password=True")
+        if not any([password, generate_password_link, email_password_link]):
+            raise ApiError(
+                "Must supply password, generate_password_link, or email_password_link"
+            )
 
         if email_password_link and not email:
             raise ApiError("Must supply email if email_password_link is True")
@@ -42,11 +44,11 @@ class Users(ChildMixins):
         user["email"] = email
         user["role_id"] = role["uuid"]
         user["role_obj"] = role
-        user["auto_generated_password"] = generate_password
+        user["auto_generated_password"] = generate_password_link
         self._add(user=user)
         user_obj = self.get_by_name(name=name)
 
-        if generate_password or email_password_link:
+        if generate_password_link or email_password_link:
             user_obj["password_reset_link"] = self._get_password_reset_link(
                 uuid=user_obj["uuid"]
             )
@@ -56,9 +58,9 @@ class Users(ChildMixins):
                 self._email_password_reset_link(
                     uuid=user_obj["uuid"], email=email, new_user=True
                 )
-                user_obj["emailed_password_link_error"] = None
+                user_obj["email_password_link_error"] = None
             except Exception as exc:
-                user_obj["emailed_password_link_error"] = (
+                user_obj["email_password_link_error"] = (
                     getattr(getattr(exc, "response", None), "text", None) or exc
                 )
 
@@ -158,9 +160,8 @@ class Users(ChildMixins):
                 uuid=user["uuid"]
             )
 
-        return self._email_password_reset_link(
-            uuid=user["uuid"], email=email, new_user=False
-        )
+        self._email_password_reset_link(uuid=user["uuid"], email=email, new_user=False)
+        return email
 
     def _get(self, limit=None, skip=None):
         """Pass."""

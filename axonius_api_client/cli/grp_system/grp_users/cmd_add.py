@@ -23,10 +23,21 @@ PASSWORD = click.option(
     show_default=True,
 )
 GENERATE_PASSWORD = click.option(
-    "--generate-password/--no-generate-password",
-    "-gp/-ngp",
-    "generate_password",
-    help="Generate a password for the new user",
+    "--generate-password-link/--no-generate-password-link",
+    "-gpl/-ngpl",
+    "generate_password_link",
+    help="Generate a password reset link for the new user",
+    default=False,
+    is_flag=True,
+    show_envvar=True,
+    show_default=True,
+    required=False,
+)
+EMAIL_PASSWORD = click.option(
+    "--email-password-link/--no-email-password-link",
+    "-epl/-nepl",
+    "email_password_link",
+    help="Email a password reset link to the new user",
     default=False,
     is_flag=True,
     show_envvar=True,
@@ -79,6 +90,7 @@ OPTIONS = [
     USER_NAME,
     PASSWORD,
     GENERATE_PASSWORD,
+    EMAIL_PASSWORD,
     ROLE_NAME,
 ]
 
