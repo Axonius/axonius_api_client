@@ -49,9 +49,9 @@ class Users(ChildMixins):
         user_obj = self.get_by_name(name=name)
 
         if generate_password_link or email_password_link:
-            user_obj["password_reset_link"] = self._get_password_reset_link(
-                uuid=user_obj["uuid"]
-            )
+            password_reset_link = self._get_password_reset_link(uuid=user_obj["uuid"])
+            if generate_password_link:
+                user_obj["password_reset_link"] = password_reset_link
 
         if email_password_link:
             try:
