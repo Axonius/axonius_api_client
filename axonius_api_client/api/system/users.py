@@ -9,9 +9,19 @@ class Users(ChildMixins):
     """User Role controls."""
 
     def add(
-        self, name, password, role_name, first_name=None, last_name=None, email=None,
+        self,
+        name,
+        role_name,
+        password=None,
+        generate_password=False,
+        first_name=None,
+        last_name=None,
+        email=None,
     ):
         """Pass."""
+        if not any([password, generate_password]):
+            raise ApiError("Must supply password or generate_password=True")
+
         role = self.parent.roles.get_by_name(name=role_name)
         users = self.get()
 
@@ -28,6 +38,7 @@ class Users(ChildMixins):
         user["email"] = email
         user["role_id"] = role["uuid"]
         user["role_obj"] = role
+        user["auto_generated_password"] = generate_password
         self._add(user=user)
         return self.get_by_name(name=name)
 
@@ -103,6 +114,11 @@ class Users(ChildMixins):
         user = self.get_by_name(name=name)
         return self._delete(uuid=user["uuid"])
 
+    def get_password_reset_link(self, name):
+        """Pass."""
+        user = self.get_by_name(name=name)
+        return self._get_password_reset_link(uuid=user["uuid"])
+
     def _get(self, limit=None, skip=None):
         """Pass."""
         data = {}
@@ -132,3 +148,9 @@ class Users(ChildMixins):
         return self.request(
             method="post", path=path, json=user, error_json_invalid=False
         )
+
+    def _get_password_reset_link(self, uuid):
+        """Pass."""
+        path = f"{self.router._base}/tokens/reset"
+        data = {"user_id": uuid}
+        return self.request(method="put", path=path, json=data, error_json_invalid=False)
