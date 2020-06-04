@@ -48,7 +48,7 @@ def handle_export(ctx, data, export_format, **kwargs):
                 f"Email Password Reset Link Error: {email_password_link_error}",
             ]
 
-            click.secho("\n  " + "\n  ".join(lines))
+            click.secho(", ".join(lines))
         ctx.exit(0)
 
     ctx.exit(1)
