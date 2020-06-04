@@ -32,7 +32,12 @@ class Csv(Base):
         quote = self.get_csv_quote()
 
         self.open_fd()
-        self._fd.write(codecs.BOM_UTF8.decode("utf-8"))
+
+        try:
+            self._fd.write(codecs.BOM_UTF8.decode("utf-8"))
+        except Exception:
+            self.LOG.error("Unable to write UTF8 BOM!")
+
         self._stream = csv.DictWriter(
             self._fd,
             fieldnames=self.final_columns,
