@@ -214,6 +214,16 @@ PAGING = [
         show_default=True,
     ),
     click.option(
+        "--row-start",
+        "row_start",
+        help="Start fetching from row N",
+        default=0,
+        type=click.INT,
+        show_envvar=True,
+        show_default=True,
+        hidden=True,
+    ),
+    click.option(
         "--page-start",
         "page_start",
         help="Start fetching from page N of --page-size",
