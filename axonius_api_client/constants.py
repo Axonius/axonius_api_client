@@ -280,7 +280,7 @@ SCHEMAS_CUSTOM = {
     }
 }
 
-MAX_BODY_LEN = 2000
+MAX_BODY_LEN = 100000
 GENERIC_NAME = "AdapterBase"
 
 
