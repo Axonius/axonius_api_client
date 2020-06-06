@@ -290,3 +290,4 @@ tags
 # apiclient stuff
 blah*
 *.log*
+*.env
