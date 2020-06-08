@@ -204,6 +204,10 @@ class Fields(ChildMixins):
             field = search
             adapter_split = adapter
 
+        qual_check = re.match(r"adapters_data\.(.*?)\.", field)
+        if qual_check and len(qual_check.groups()) == 1:
+            adapter_split = qual_check.groups()[0]
+
         adapter_split = strip_right(obj=adapter_split.lower().strip(), fix="_adapter")
 
         fields = split_str(
