@@ -336,8 +336,9 @@ class Connect:
         url = getattr(client, "url", self._http_args["url"])
         if self._started:
             about = self.system.meta.about()
-            version = (about["Version"] or "DEMO").replace("_", ".")
-            built = about["Build Date"]
+            version = about.get("Version", "") or "DEMO"
+            version = version.replace("_", ".")
+            built = about.get("Build Date", "")
             return (
                 f"Connected to {url!r} version {version} (RELEASE DATE: {built})"
                 f" with API Client v{VERSION}"

@@ -14,7 +14,10 @@ class Meta(ChildMixins):
         Returns:
             :obj:`dict`: about page metadata
         """
-        return self._about()
+        data = self._about()
+        version = data.pop("Version", "") or data.pop("Installed Version", "")
+        data["Version"] = version
+        return data
 
     def historical_sizes(self):
         """Get disk usage metadata.
