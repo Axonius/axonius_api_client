@@ -291,3 +291,4 @@ tags
 blah*
 *.log*
 *.env
+shell.py
