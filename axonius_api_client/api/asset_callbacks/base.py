@@ -204,17 +204,19 @@ class Base:
         if not self.GETARGS.get("field_flatten", False):
             return
 
-        if (
-            self.is_excluded(schema=schema)
-            or not schema["is_complex"]
-            or self.schema_to_explode == schema
-        ):
+        if self.schema_to_explode == schema:
             return
 
         self._do_flatten_fields(row=row, schema=schema)
 
     def _do_flatten_fields(self, row, schema):
         """Pass."""
+        if self.is_excluded(schema=schema):
+            return
+
+        if not schema["is_complex"]:
+            return
+
         null_value = self.GETARGS.get("field_null_value", None)
 
         items = listify(row.pop(schema["name_qual"], []))

@@ -129,7 +129,8 @@ class ModelMixins(Model, PageSizeMixin):
 
             msgs += [f"Extra: {response_obj}"] if response_obj else []
         else:
-            msgs += ["Response Body:", response_obj]
+
+            msgs += ["Response Body:", str(response_obj)[:MAX_BODY_LEN]]
 
         msgs += [error] if error else []
 
