@@ -15,8 +15,7 @@ class Meta(ChildMixins):
             :obj:`dict`: about page metadata
         """
         data = self._about()
-        version = data.pop("Version", "") or data.pop("Installed Version", "")
-        data["Version"] = version
+        data["Version"] = self._get_version(about=data)
         return data
 
     def historical_sizes(self):
@@ -27,11 +26,17 @@ class Meta(ChildMixins):
         """
         return parse_sizes(self._historical_sizes())
 
+    def _get_version(self, about):
+        """Pass."""
+        version = about.pop("Version", "") or about.pop("Installed Version", "")
+        version = version.replace("_", ".")
+        return version
+
     @property
     def version(self):
         """Get the version of Axonius."""
         about = self.about()
-        return (about["Version"] or "DEMO").replace("_", ".")
+        return about["Version"]
 
     def _init(self, parent):
         """Post init method for subclasses to use for extra setup.
