@@ -2,12 +2,8 @@
 """API models for working with device and user assets."""
 import re
 
-from ...constants import (
-    AGG_ADAPTER_ALTS,
-    AGG_ADAPTER_NAME,
-    GET_SCHEMA_KEYS,
-    GET_SCHEMAS_KEYS,
-)
+from ...constants import (AGG_ADAPTER_ALTS, AGG_ADAPTER_NAME, GET_SCHEMA_KEYS,
+                          GET_SCHEMAS_KEYS)
 from ...exceptions import ApiError, NotFoundError
 from ...tools import listify, split_str, strip_right
 from ..mixins import ChildMixins
@@ -68,6 +64,9 @@ class Fields(ChildMixins):
         matches = []
 
         for schema in schemas:
+            if not schema.get("selectable"):
+                continue
+
             for key in keys:
                 if search.search(schema[key]) and schema not in matches:
                     matches.append(schema)
@@ -88,6 +87,9 @@ class Fields(ChildMixins):
         search = value.lower().strip()
 
         for schema in schemas:
+            if not schema.get("selectable"):
+                continue
+
             for key in keys:
                 if search == schema[key].lower():
                     return schema
