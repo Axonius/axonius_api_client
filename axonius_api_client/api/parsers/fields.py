@@ -130,6 +130,7 @@ def parse_schemas(
             "title": "All Adapter Specific Data",
             "type": "array",
             "type_norm": "complex_complex",
+            "selectable": True,
         }
     )
 
@@ -153,6 +154,7 @@ def parse_schemas(
                 "title": "Unique Adapter Names Details Index",
                 "type": "array",
                 "type_norm": "list_string",
+                "selectable": False,
             },
             {
                 "adapter_name_raw": adapter_name_raw,
@@ -172,6 +174,7 @@ def parse_schemas(
                 "title": "Adapter Connection Details Index",
                 "type": "array",
                 "type_norm": "list_string",
+                "selectable": False,
             },
         ]
 
@@ -194,6 +197,7 @@ def parse_schemas(
         field["column_title"] = f"{adapter_title}: {title}"
         field["column_name"] = f"{adapter_name}:{name_base}"
         field["type_norm"] = get_type_norm(field=field)
+        field["selectable"] = True
         parse_complex(field=field)
         fields.append(field)
         if details:
@@ -202,6 +206,7 @@ def parse_schemas(
             field_details["name_qual"] += "_details"
             field_details["column_title"] += " Details"
             field_details["column_name"] += "_details"
+            field_details["selectable"] = False
             fields.append(field_details)
 
     return fields
