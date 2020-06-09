@@ -314,3 +314,18 @@ KEY_MAP_SCHEMA = [
 ]
 CNX_GONE = "Server is already gone, please try again after refreshing the page"
 CNX_RETRY = 15
+
+
+ROLE_ACTIONS = [
+    "delete",
+    "post",
+    "put",
+    "run",
+    "run_manual_discovery",
+    "reset_api_key",
+    "get_users_and_roles",
+    "get",
+    "post",
+    "put",
+    "run",
+]

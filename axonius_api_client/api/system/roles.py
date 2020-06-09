@@ -4,92 +4,16 @@ from ...constants import DEFAULT_PERM, VALID_PERMS
 from ...exceptions import ApiError, NotFoundError
 from ...tools import listify
 from ..mixins import ChildMixins
-
-ROLE_ACTIONS = [
-    "delete",
-    "post",
-    "put",
-    "run",
-    "run_manual_discovery",
-    "reset_api_key",
-    "get_users_and_roles",
-    "get",
-    "post",
-    "put",
-    "run",
-]
-
-
-def parse_roles_labels(raw, role=None):
-    """Pass."""
-    # raw = {k.split(".")[1:]: v for k, v in raw.items()}
-    # permissions = (role or {}).get("permissions", {})
-    parsed = {}
-    # parsed = {
-    #     k[0]: {"actions": {}, "description": v, "parent": None}
-    #     for k, v in raw.items()
-    #     if len(k) == 1
-    # }
-
-    for perm, desc in raw.items():
-        items = perm.split(".")[1:]
-        category = items.pop(0)
-        if not items:
-            print(category)
-            parsed[category] = {"actions": {}, "description": desc, "parent": None}
-
-    # for perm, description in raw.items():
-    #     items = perm.split(".")[1:]
-    #     category = items.pop(0)
-    #     category_perms = permissions.get(category, {})
-    #     parsed[category] = parsed.get(
-    #         category, {"actions": {}, "description": None, "parent": None}
-    #     )
-
-    #     if not items:
-    #         parsed[category]["description"] = description
-    #         continue
-
-    #     action = items.pop(0)
-
-    #     if action in ROLE_ACTIONS:
-    #         parsed[category]["actions"][action] = {
-    #             "description": description,
-    #             "value": category_perms.get(action, False),
-    #         }
-    #         continue
-
-    #     section = action
-    #     section_perms = category_perms.get(section, {})
-
-    #     parsed[section] = parsed.get(
-    #         section,
-    #         {
-    #             "actions": {},
-    #             "parent": category,
-    #             "description": f"Section under {category}",
-    #         },
-    #     )
-
-    #     if items:
-    #         section_action = items.pop(0)
-
-    #         if section_action in ROLE_ACTIONS:
-    #             parsed[section]["actions"] = {
-    #                 "description": description,
-    #                 "value": section_perms.get(section_action, False),
-    #             }
-
-    return parsed
+from ..parsers.roles import parse_roles_labels
 
 
 class Roles(ChildMixins):
     """Child API object to work with Roles."""
 
-    def get_categories(self, role=None):
+    def get_permissions(self):
         """Pass."""
         labels = self._get_labels()
-        return parse_roles_labels(raw=labels, role=role)
+        return parse_roles_labels(raw=labels)
 
     def get(self):
         """Pass."""
