@@ -204,6 +204,7 @@ class Fields(ChildMixins):
             field = search
             adapter_split = adapter
 
+        # XXX needs test case
         qual_check = re.match(r"adapters_data\.(.*?)\.", field)
         if qual_check and len(qual_check.groups()) == 1:
             adapter_split = qual_check.groups()[0]
