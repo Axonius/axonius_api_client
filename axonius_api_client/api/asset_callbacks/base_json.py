@@ -76,6 +76,6 @@ class Json(Base):
         export_schema = self.GETARGS.get("export_schema", False)
 
         if export_schema:
-            row = {"schemas": self.schemas_final}
+            row = {"schemas": self.final_schemas}
             self.write_row(row=row)
             del row

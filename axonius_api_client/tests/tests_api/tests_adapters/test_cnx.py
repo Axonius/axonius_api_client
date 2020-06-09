@@ -1,22 +1,13 @@
 # -*- coding: utf-8 -*-
 """Test suite."""
 import io
-import warnings
 
 import pytest
-
 from axonius_api_client.constants import CSV_ADAPTER, DEFAULT_NODE
-from axonius_api_client.exceptions import (
-    CnxAddError,
-    CnxGoneError,
-    CnxTestError,
-    CnxUpdateError,
-    ConfigInvalidValue,
-    ConfigRequired,
-    ConfigUnchanged,
-    NotFoundError,
-)
-from axonius_api_client.tools import json_dump
+from axonius_api_client.exceptions import (CnxAddError, CnxGoneError,
+                                           CnxTestError, CnxUpdateError,
+                                           ConfigInvalidValue, ConfigRequired,
+                                           ConfigUnchanged, NotFoundError)
 
 from ...meta import CSV_FILECONTENT_STR
 from ...utils import get_cnx_broken, get_cnx_existing, get_cnx_working
@@ -128,8 +119,6 @@ class TestCnxPublic(TestCnxBase):
         with pytest.raises(ConfigUnchanged):
             apiobj.cnx.update_cnx(cnx_update=cnx)
 
-    # XXX broken in pre-3.3
-    # @pytest.mark.skip(f"Connection label update not working")
     def test_update_cnx(self, apiobj):
         """Pass."""
         cnx = get_cnx_working(apiobj)
@@ -159,41 +148,25 @@ class TestCnxPublic(TestCnxBase):
         )
         assert cnx_final["config"]["connection_label"] == old_label
 
-    # XXX broken in pre-3.3
-    # @pytest.mark.skip(f"Connection label update not working")
     def test_update_cnx_error(self, apiobj):
         """Pass."""
-        cnx = get_cnx_working(apiobj, name="tanium")
-        old_label = cnx["config"].get("connection_label", None)
-        old_domain = cnx["config"]["domain"]
-        new_label = f"old_domain_{old_domain}"
-        new_domain = "badwolf"
-
-        if old_domain == new_domain:
-            if "old_domain_" in old_label:
-                warnings.warn(f"Trying to fix old test data for cnx: {json_dump(cnx)}")
-                old_domain = old_label.replace("old_domain_", "")
-                cnx = apiobj.cnx.update_cnx(cnx_update=cnx, domain=old_domain)
-            else:
-                raise Exception(f"Old test data exists for cnx: {json_dump(cnx)}")
+        cnx = get_cnx_working(apiobj=apiobj, reqkeys=["verify_ssl"])
+        old_verify_ssl = cnx["config"].get("verify_ssl", False)
+        new_verify_ssl = not old_verify_ssl
 
         with pytest.raises(CnxUpdateError) as exc:
-            apiobj.cnx.update_cnx(
-                cnx_update=cnx, connection_label=new_label, domain=new_domain
-            )
+            apiobj.cnx.update_cnx(cnx_update=cnx, verify_ssl=new_verify_ssl)
 
         assert getattr(exc.value, "cnx_new", None)
         assert getattr(exc.value, "cnx_old", None)
         assert getattr(exc.value, "result", None)
-        cnx_update = exc.value.cnx_new
-        assert cnx_update["config"]["connection_label"] == new_label
-        assert cnx_update["config"]["domain"] == new_domain
+        assert exc.value.cnx_new["config"]["verify_ssl"] == new_verify_ssl
+        assert exc.value.cnx_old["config"]["verify_ssl"] == old_verify_ssl
 
         cnx_reset = apiobj.cnx.update_cnx(
-            cnx_update=cnx_update, domain=old_domain, connection_label=old_label
+            cnx_update=exc.value.cnx_new, verify_ssl=old_verify_ssl
         )
-        assert cnx_reset["config"]["connection_label"] == old_label
-        assert cnx_reset["config"]["domain"] == old_domain
+        assert cnx_reset["config"]["verify_ssl"] == old_verify_ssl
 
     def test_add_remove(self, apiobj, csv_file_path):
         """Pass."""

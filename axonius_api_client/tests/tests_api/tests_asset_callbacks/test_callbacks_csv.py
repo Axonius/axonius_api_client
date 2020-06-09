@@ -4,7 +4,6 @@ import copy
 import io
 
 import pytest
-
 from axonius_api_client.constants import AGG_ADAPTER_NAME
 
 from .callbacks import Callbacks, load_test_data
@@ -38,9 +37,9 @@ class CallbacksCsv(Callbacks):
         cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs=getargs)
         cbobj.start()
 
-        assert isinstance(cbobj.schemas_final, list)
-        assert cbobj.schemas_final
-        for x in cbobj.schemas_final:
+        assert isinstance(cbobj.final_schemas, list)
+        assert cbobj.final_schemas
+        for x in cbobj.final_schemas:
             assert isinstance(x, dict)
 
         start_val = io_fd.getvalue().splitlines()[0]
