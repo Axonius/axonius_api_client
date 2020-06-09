@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 """Test suite for assets."""
 import pytest
-
 from axonius_api_client.constants import AGG_ADAPTER_ALTS, AGG_ADAPTER_NAME
 from axonius_api_client.exceptions import ApiError, NotFoundError
 
-from ...meta import FIELD_FORMATS, NORM_TYPES, SCHEMA_FIELD_FORMATS, SCHEMA_TYPES
+from ...meta import (FIELD_FORMATS, NORM_TYPES, SCHEMA_FIELD_FORMATS,
+                     SCHEMA_TYPES)
 
 
 def load_test_data(apiobj):
@@ -267,6 +267,9 @@ class FieldsPublic:
         is_list = schema.pop("is_list")
         assert isinstance(is_list, bool)
 
+        selectable = schema.pop("selectable", False)
+        assert isinstance(selectable, bool)
+
         description = schema.pop("description", "")
         assert isinstance(description, str)
 
@@ -291,9 +294,10 @@ class FieldsPublic:
         for enum in enums:
             assert isinstance(enum, str) or isinstance(enum, int)
 
+        sub_fields = schema.pop("sub_fields", [])
+        assert isinstance(sub_fields, list)
+
         if is_complex:
-            sub_fields = schema.pop("sub_fields", {})
-            assert isinstance(sub_fields, list)
             if name != "all":
                 assert sub_fields
 
@@ -410,7 +414,12 @@ class FieldsPublic:
         exp = [
             x
             for x in apiobj.TEST_DATA["fields_map"][AGG_ADAPTER_NAME]
-            if search in x["name_base"]
+            if (
+                search in x["name_base"]
+                or search in x["name_qual"]
+                or search in x["name"]
+            )
+            and x.get("selectable", False)
         ]
         result = apiobj.fields.get_field_schemas(
             value=search, schemas=apiobj.TEST_DATA["fields_map"][AGG_ADAPTER_NAME]

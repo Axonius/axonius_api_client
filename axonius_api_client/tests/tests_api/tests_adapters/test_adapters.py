@@ -94,9 +94,8 @@ class TestAdaptersPrivate(TestAdaptersBase):
         node_id = instance.pop("node_id")
         assert isinstance(node_id, str) and node_id
 
-        # XXX re-add post 3.5
-        # unique_plugin_name = instance.pop("unique_plugin_name")
-        # assert isinstance(unique_plugin_name, str) and unique_plugin_name
+        unique_plugin_name = instance.pop("unique_plugin_name")
+        assert isinstance(unique_plugin_name, str) and unique_plugin_name
 
         node_name = instance.pop("node_name")
         assert isinstance(node_name, str) and node_name
