@@ -19,7 +19,7 @@ CONTINUE_ON_ERROR = click.option(
     required=False,
 )
 
-
+YES = ["yes", "true", "y", "1"]
 OPTIONS = [*AUTH, INPUT_FILE, EXPORT, CONTINUE_ON_ERROR]
 REQUIRED_COLUMNS = [
     "name",
@@ -34,13 +34,25 @@ REQUIRED_COLUMNS = [
 REQUIRED_VALUES = ["name", "role_name"]
 BOOL_COLUMNS = ["generate_password_link", "email_password_link"]
 
-""" XXX
-axonshell -nw system users add -n asdojfkasdfoasda -epl --email jim@axonius.com -r Viewer
-add examples help
-"""  # noqa
+HELP = f"""
+
+CSV required columns: {",".join(REQUIRED_COLUMNS)}
+
+CSV columns that must have values: {REQUIRED_VALUES}
+
+CSV columns that must be boolean values: {BOOL_COLUMNS}
+
+Boolean values that are not one of {YES} will be considered false.
+
+'generate_password_link' will produce a link that can be provided manually to the user.
+
+'email_password_link' will email the user with a link to change their password and when
+provided, 'email' must be supplied.
+
+"""
 
 
-@click.command(name="add-from-csv", context_settings=CONTEXT_SETTINGS)
+@click.command(name="add-from-csv", context_settings=CONTEXT_SETTINGS, epilog=HELP)
 @add_options(OPTIONS)
 @click.pass_context
 def cmd(ctx, url, key, secret, export_format, input_file, continue_on_error, **kwargs):
@@ -62,7 +74,7 @@ def cmd(ctx, url, key, secret, export_format, input_file, continue_on_error, **k
         name = row.get("name")
         for bool_column in BOOL_COLUMNS:
             bool_value = str(row.get(bool_column, "")).lower().strip()
-            row[bool_column] = bool_value in ["yes", "true", "y"]
+            row[bool_column] = bool_value in YES
 
         rowi = f"row {idx + 2}"
         rowj = "\n   " + "\n   ".join(join_kv(obj=row))
