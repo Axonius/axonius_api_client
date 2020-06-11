@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """Command line interface for Axonius API Client."""
-from ....constants import DEFAULT_PERM, PERM_SETS, VALID_PERMS
-from ....tools import json_dump, listify
+from ....tools import join_kv, json_dump, listify
 from ...context import click
 
 EXPORT = click.option(
@@ -25,20 +24,36 @@ ROLE_NAME = click.option(
     show_default=True,
 )
 
-PERMS = [
-    click.option(
-        f"--{x.lower()}",
-        f"-{x.lower()[:4]}",
-        f"{x.lower()}",
-        help=f"Permission level for {x}",
-        type=click.Choice(VALID_PERMS),
-        required=False,
-        default=DEFAULT_PERM,
-        show_envvar=True,
-        show_default=True,
-    )
-    for x in PERM_SETS
-]
+ALLOW = click.option(
+    "--allow",
+    "-a",
+    "allow",
+    help="Regex of permissions to allow",
+    required=True,
+    show_envvar=True,
+    show_default=True,
+)
+
+DENY = click.option(
+    "--deny",
+    "-d",
+    "deny",
+    help="Regex of permissions to deny",
+    required=True,
+    show_envvar=True,
+    show_default=True,
+)
+
+DEFAULT = click.option(
+    "--default-allow/--default-deny",
+    "-da/-dd",
+    "default",
+    help="Default access to apply to unspecified permissions",
+    required=False,
+    default=False,
+    show_envvar=True,
+    show_default=True,
+)
 
 
 def handle_export(ctx, data, export_format, **kwargs):
@@ -49,13 +64,12 @@ def handle_export(ctx, data, export_format, **kwargs):
 
     if export_format == "str":
         for item in listify(data):
-            name = item["name"]
-            perms = item["permissions"]
+            for perm in item["perms"]:
+                perm = {k.title(): v for k, v in perm.items()}
+                click.secho(", ".join(join_kv(obj=perm)))
 
-            click.secho("\n---------------------------------------")
-            click.secho(f"Role Name: {name}")
-            for k, v in perms.items():
-                click.secho(f"{name} -- {k} permission: {v}")
+            click.secho("\n")
+
         ctx.exit(0)
 
     ctx.exit(1)

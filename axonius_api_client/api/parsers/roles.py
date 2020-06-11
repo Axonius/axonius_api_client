@@ -1,39 +1,34 @@
 # -*- coding: utf-8 -*-
 """API models for working with adapters and connections."""
-from ...constants import ROLE_ACTIONS
+# from ...constants import ROLE_ACTIONS
+# from ...tools import strip_left
 
 
-def parse_roles_labels(raw):
+def parse_permissions(raw, default_perm=False):
     """Pass."""
-    perms = {}
-    descs = {}
+    actions = {}
+    categories = {}
 
-    for perm, desc in raw.items():
-        if not perm.startswith("permissions"):
+    for permission, description in raw.items():
+        if not permission.startswith("permissions."):
             continue
 
-        items = perm.split(".")
-        items.pop(0)
+        permission_split = permission.split(".")[1:]
+        category = permission_split[0]
 
-        category = items.pop(0)
-        if category not in perms:
-            perms[category] = {}
-            descs[category] = desc
+        if len(permission_split) == 1:
+            categories[category] = description
 
-        if not items:
+    for permission, description in raw.items():
+        if not permission.startswith("permissions."):
             continue
 
-        action = items.pop(0)
+        permission_split = permission.split(".")[1:]
+        category = permission_split[0]
+        category_description = categories[category]
 
-        if action in ROLE_ACTIONS:
-            perms[category][action] = desc
-        else:
-            if action not in perms[category]:
-                perms[category][action] = {}
+        if len(permission_split) > 1:
+            action = ".".join(permission_split)
+            actions[action] = f"{category_description}: {description}"
 
-            sub_action = items.pop(0)
-
-            if sub_action in ROLE_ACTIONS:
-                perms[category][action][sub_action] = desc
-
-    return {"permissions": perms, "descriptions": descs}
+    return actions

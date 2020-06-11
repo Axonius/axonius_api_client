@@ -193,21 +193,6 @@ CNX_SANE_DEFAULTS = {
         "verify_ssl": False,
     },
 }
-DEFAULT_PERM = "ReadOnly"
-""":obj:`str`: default user permission to use"""
-
-VALID_PERMS = ["Restricted", "ReadWrite", "ReadOnly"]
-""":obj:`list` of :obj:`str`: valid user permissions"""
-PERM_SETS = [
-    "Adapters",
-    "Dashboard",
-    "Devices",
-    "Enforcements",
-    "Instances",
-    "Reports",
-    "Settings",
-    "Users",
-]
 
 FIELD_TRIM_LEN = 32000
 FIELD_TRIM_STR = "...TRIMMED - {field_len} characters over {trim_len}"
@@ -314,18 +299,3 @@ KEY_MAP_SCHEMA = [
 ]
 CNX_GONE = "Server is already gone, please try again after refreshing the page"
 CNX_RETRY = 15
-
-
-ROLE_ACTIONS = [
-    "delete",
-    "post",
-    "put",
-    "run",
-    "run_manual_discovery",
-    "reset_api_key",
-    "get_users_and_roles",
-    "get",
-    "post",
-    "put",
-    "run",
-]
