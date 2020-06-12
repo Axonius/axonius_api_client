@@ -2,8 +2,6 @@
 """Test suite."""
 import pytest
 
-from ...meta import ABOUT_KEYS, ABOUT_KEYS_EMPTY_OK
-
 
 class SystemMetaBase:
     """Pass."""
@@ -12,19 +10,6 @@ class SystemMetaBase:
     def apiobj(self, api_system):
         """Pass."""
         return api_system.meta
-
-    def val_about(self, data):
-        """Pass."""
-        assert isinstance(data, dict)
-
-        keys = ABOUT_KEYS
-        empty_ok = ABOUT_KEYS_EMPTY_OK
-
-        for key in keys:
-            assert key in data
-            assert isinstance(data[key], str)
-            if key not in empty_ok:
-                assert data[key]
 
 
 class TestSystemMetaPrivate(SystemMetaBase):
@@ -64,7 +49,16 @@ class TestSystemMetaPrivate(SystemMetaBase):
     def test_private_about(self, apiobj):
         """Pass."""
         data = apiobj._about()
-        self.val_about(data)
+        assert isinstance(data, dict)
+        # XXX add api_client_version post 3.5
+        keys = ["Build Date", "Installed Version", "Customer ID"]
+        empty_ok = ["Installed Version"]
+
+        for key in keys:
+            assert key in data
+            assert isinstance(data[key], str)
+            if key not in empty_ok:
+                assert data[key]
 
     def test_private_historical_sizes(self, apiobj):
         """Pass."""
@@ -78,7 +72,17 @@ class TestSystemMetaPublic(SystemMetaBase):
     def test_about(self, apiobj):
         """Pass."""
         data = apiobj.about()
-        self.val_about(data)
+        assert isinstance(data, dict)
+
+        # XXX add api_client_version post 3.5
+        keys = ["Build Date", "Version", "Customer ID"]
+        empty_ok = ["Version"]
+
+        for key in keys:
+            assert key in data
+            assert isinstance(data[key], str)
+            if key not in empty_ok:
+                assert data[key]
 
     def test_historical_sizes(self, apiobj):
         """Pass."""

@@ -15,8 +15,6 @@ from .grp_common import EXPORT, handle_export
 #     show_default=True,
 # )
 
-# XXX MISSING: adapters cnx update-by-id
-
 OPTIONS = [
     *AUTH,
     EXPORT,

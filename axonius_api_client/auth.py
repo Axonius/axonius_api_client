@@ -4,8 +4,10 @@ import abc
 
 from .api.routers import API_VERSION
 from .constants import LOG_LEVEL_AUTH
-from .exceptions import AlreadyLoggedIn, AuthError, InvalidCredentials, NotLoggedIn
+from .exceptions import (AlreadyLoggedIn, AuthError, InvalidCredentials,
+                         NotLoggedIn)
 from .logs import get_obj_log
+from .tools import json_reload
 
 
 class Model:
@@ -113,7 +115,14 @@ class Mixins:
 
     def _validate(self):
         """Validate credentials."""
-        response = self.http(method="get", path=API_VERSION.devices.count)
+        # XXX fallback to old auth path, remove once everyone is 3.5+
+        paths = [API_VERSION.system.meta_about, API_VERSION.devices.count]
+        for path in paths:
+            response = self.http(method="get", path=path)
+            body = json_reload(obj=response.text, error=False)
+            self.LOG.debug(f"Received auth path {path!r} body:\n{body}")
+            if response.ok:
+                break
 
         try:
             response.raise_for_status()

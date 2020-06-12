@@ -2,9 +2,15 @@
 """Command line interface for Axonius API Client."""
 from ...context import CONTEXT_SETTINGS, click
 from ...options import AUTH, add_options
-from .grp_common import EXPORT, PERMS, ROLE_NAME, handle_export
+from .grp_common import ALLOW, DENY, EXPORT, ROLE_NAME, handle_export
 
-OPTIONS = [*AUTH, EXPORT, ROLE_NAME, *PERMS]
+OPTIONS = [
+    *AUTH,
+    EXPORT,
+    ROLE_NAME,
+    ALLOW,
+    DENY,
+]
 
 
 @click.command(name="update", context_settings=CONTEXT_SETTINGS)

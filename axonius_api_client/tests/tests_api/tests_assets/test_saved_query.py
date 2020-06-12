@@ -4,7 +4,6 @@ import copy
 import json
 
 import pytest
-
 from axonius_api_client.api.assets.saved_query import check_gui_page_size
 from axonius_api_client.constants import GUI_PAGE_SIZES, SIMPLE
 from axonius_api_client.exceptions import ApiError, NotFoundError
@@ -214,6 +213,9 @@ class SavedQueryPublic:
 
         row_updated_by_json = json.loads(row_updated_by)
         assert isinstance(row_updated_by_json, dict)
+
+        row_private = row.pop("private", False)
+        assert isinstance(row_private, bool)
 
         assert not row
 
@@ -473,6 +475,9 @@ def validate_sq(asset):
 
     predefined = asset.pop("predefined", False)
     assert isinstance(predefined, bool)
+
+    private = asset.pop("private", False)
+    assert isinstance(private, bool)
 
     view = asset.pop("view")
     assert isinstance(view, dict)

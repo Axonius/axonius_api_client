@@ -2,7 +2,6 @@
 """Test suite."""
 
 import pytest
-
 from axonius_api_client.exceptions import ApiError, NotFoundError
 
 # from ...meta import TEST_PERM, TEST_ROLE
@@ -123,7 +122,6 @@ class TestSettingsGui(SettingsBasePublic):
         with pytest.raises(ApiError):
             apiobj.get_sub_section(section=GUI_SECTION_NO_SUBS, sub_section="badwolf")
 
-    @pytest.mark.skip("broken in 3.3: AX-7477")
     def test_update_section(self, apiobj):
         """Pass."""
         old_section = apiobj.get_section(section=GUI_SECTION_WITH_SUBS)
@@ -146,7 +144,6 @@ class TestSettingsGui(SettingsBasePublic):
         reset_value = reset_section["config"][GUI_NON_SUB_SECTION]
         assert reset_value == old_value and reset_value != new_value
 
-    @pytest.mark.skip("broken in 3.3: AX-7477")
     def test_update_sub_section(self, apiobj):
         """Pass."""
         old_section = apiobj.get_sub_section(
