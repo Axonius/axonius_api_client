@@ -6,11 +6,10 @@ import sys
 from io import StringIO
 
 import pytest
-from click.testing import CliRunner
-
 from axonius_api_client import api, auth
 from axonius_api_client.cli.context import Context
 from axonius_api_client.http import Http
+from click.testing import CliRunner
 
 IS_WINDOWS = sys.platform == "win32"
 IS_LINUX = sys.platform == "linux"
@@ -52,11 +51,12 @@ def get_cnx_existing(apiobj, name=None):
     return found
 
 
-def get_cnx_working(apiobj, name=None):
+def get_cnx_working(apiobj, name=None, reqkeys=None):
     """Pass."""
     problem_children = [
         "symantec_altiris",  # AX-7165
     ]
+    reqkeys = reqkeys or []
 
     found = None
     adapters = apiobj.get()
@@ -65,11 +65,16 @@ def get_cnx_working(apiobj, name=None):
             continue
         if adapter["name"] in problem_children:
             continue
+        schema = adapter["schemas"]["cnx"]
+
+        if reqkeys and not [x for x in reqkeys if x in schema]:
+            continue
+
         cnxs = adapter["cnx"]
         for cnx in cnxs:
             if cnx["working"]:
                 found = cnxs[0]
-                found["schemas"] = adapter["schemas"]["cnx"]
+                found["schemas"] = schema
                 break
 
     if not found:

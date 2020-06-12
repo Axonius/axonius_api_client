@@ -1,99 +1,128 @@
 # -*- coding: utf-8 -*-
 """API model for working with system configuration."""
-from ...constants import DEFAULT_PERM, VALID_PERMS
+import re
+
 from ...exceptions import ApiError, NotFoundError
-from ...tools import listify
+from ...tools import join_kv, longest_str, split_str
 from ..mixins import ChildMixins
-
-ROLE_ACTIONS = [
-    "delete",
-    "post",
-    "put",
-    "run",
-    "run_manual_discovery",
-    "reset_api_key",
-    "get_users_and_roles",
-    "get",
-    "post",
-    "put",
-    "run",
-]
-
-
-def parse_roles_labels(raw, role=None):
-    """Pass."""
-    # raw = {k.split(".")[1:]: v for k, v in raw.items()}
-    # permissions = (role or {}).get("permissions", {})
-    parsed = {}
-    # parsed = {
-    #     k[0]: {"actions": {}, "description": v, "parent": None}
-    #     for k, v in raw.items()
-    #     if len(k) == 1
-    # }
-
-    for perm, desc in raw.items():
-        items = perm.split(".")[1:]
-        category = items.pop(0)
-        if not items:
-            print(category)
-            parsed[category] = {"actions": {}, "description": desc, "parent": None}
-
-    # for perm, description in raw.items():
-    #     items = perm.split(".")[1:]
-    #     category = items.pop(0)
-    #     category_perms = permissions.get(category, {})
-    #     parsed[category] = parsed.get(
-    #         category, {"actions": {}, "description": None, "parent": None}
-    #     )
-
-    #     if not items:
-    #         parsed[category]["description"] = description
-    #         continue
-
-    #     action = items.pop(0)
-
-    #     if action in ROLE_ACTIONS:
-    #         parsed[category]["actions"][action] = {
-    #             "description": description,
-    #             "value": category_perms.get(action, False),
-    #         }
-    #         continue
-
-    #     section = action
-    #     section_perms = category_perms.get(section, {})
-
-    #     parsed[section] = parsed.get(
-    #         section,
-    #         {
-    #             "actions": {},
-    #             "parent": category,
-    #             "description": f"Section under {category}",
-    #         },
-    #     )
-
-    #     if items:
-    #         section_action = items.pop(0)
-
-    #         if section_action in ROLE_ACTIONS:
-    #             parsed[section]["actions"] = {
-    #                 "description": description,
-    #                 "value": section_perms.get(section_action, False),
-    #             }
-
-    return parsed
+from ..parsers.roles import parse_permissions
 
 
 class Roles(ChildMixins):
     """Child API object to work with Roles."""
 
-    def get_categories(self, role=None):
+    @property
+    def permissions(self):
         """Pass."""
-        labels = self._get_labels()
-        return parse_roles_labels(raw=labels, role=role)
+        if hasattr(self, "_permissions"):
+            return self._permissions
+
+        raw = self._get_labels()
+        self._permissions = parse_permissions(raw=raw)
+        return self._permissions
+
+    def map_role_perms(self, role):
+        """Pass."""
+        perms = []
+
+        for category, actions in role["permissions"].items():
+            for action, action_value in actions.items():
+                if not isinstance(action_value, dict):
+                    perm = ".".join([category, action])
+                    perm_obj = {
+                        "role": role["name"],
+                        "permission": perm,
+                        "description": self.permissions[perm],
+                        "value": action_value,
+                    }
+                    perms.append(perm_obj)
+                    continue
+
+                for sub_action, sub_action_value in action_value.items():
+                    perm = ".".join([category, action, sub_action])
+                    perm_obj = {
+                        "role": role["name"],
+                        "permission": perm,
+                        "description": self.permissions[perm],
+                        "value": sub_action_value,
+                    }
+                    perms.append(perm_obj)
+
+        return sorted(perms, key=lambda x: x["permission"])
+
+    def find_perm(self, perm):
+        """Pass."""
+        if not perm:
+            return []
+
+        matches = [x for x in self.permissions if re.match(perm, x, re.I)]
+
+        if not matches:
+            longest = longest_str(obj=self.permissions)
+            tmpl = f"{{k:<{longest}}} {{v}}"
+            valid = "\n  " + "\n  ".join(join_kv(obj=self.permissions, tmpl=tmpl))
+            msg = f"Invalid permission supplied: {perm!r}"
+            msg = f"{msg}\nValid permissions: {valid}\n\n{msg}"
+            raise NotFoundError(msg)
+
+        return list(set(matches))
+
+    def _map_perm_role(self, perm, value, perms):
+        """Pass."""
+        if not perm:
+            return perms
+
+        perm_split = perm.split(".")
+        category = perm_split.pop(0)
+
+        if category not in perms:
+            perms[category] = {}
+
+        action = perm_split.pop(0)
+
+        if perm_split:
+            sub_action = perm_split.pop(0)
+
+            if action not in perms[category]:
+                perms[category][action] = {}
+
+            if sub_action not in perms[category][action]:
+                perms[category][action][sub_action] = value
+        else:
+            if action not in perms[category]:
+                perms[category][action] = value
+
+        return perms
+
+    def map_perms_role(self, allow="", deny="", default=False, role=None):
+        """Pass."""
+        perms = {}
+
+        deny_perms = [y for x in split_str(obj=deny) for y in self.find_perm(perm=x)]
+        allow_perms = [y for x in split_str(obj=allow) for y in self.find_perm(perm=x)]
+
+        for perm in deny_perms:
+            self._map_perm_role(perm=perm, value=False, perms=perms)
+
+        for perm in allow_perms:
+            self._map_perm_role(perm=perm, value=True, perms=perms)
+
+        if role:
+            for perm in role["perms"]:
+                self._map_perm_role(
+                    perm=perm["permission"], value=perm["value"], perms=perms
+                )
+
+        for perm in self.permissions:
+            self._map_perm_role(perm=perm, value=default, perms=perms)
+
+        return perms
 
     def get(self):
         """Pass."""
         roles = self._get()
+        for role in roles:
+            role["perms"] = self.map_role_perms(role=role)
         return roles
 
     def get_by_name(self, name):
@@ -103,10 +132,11 @@ class Roles(ChildMixins):
         valid = [x["name"] for x in roles]
 
         if name not in valid:
-            valid = "\n" + "\n".join(valid)
+            valid = "\n  " + "\n  ".join(valid)
             raise NotFoundError(f"Role name {name!r} not found, valid roles:{valid}")
 
-        return [x for x in roles if x["name"] == name][0]
+        role = [x for x in roles if x["name"] == name][0]
+        return role
 
     def get_by_uuid(self, uuid):
         """Pass."""
@@ -118,65 +148,38 @@ class Roles(ChildMixins):
             valid = "\n" + "\n".join(valid)
             raise NotFoundError(f"Role uuid {uuid!r} not found, valid roles:{valid}")
 
-        return [x for x in roles if x["uuid"] == uuid][0]
+        role = [x for x in roles if x["uuid"] == uuid][0]
+        return role
 
-    def validate_perms(self, **kwargs):
-        """Pass."""
-        perms = self.get_categories()
-
-        for category, actions in kwargs.items():
-            if category not in perms:
-                valid = "\n" + "\n".join(list(perms))
-                raise NotFoundError(f"Category {category!r} not found, valid: {valid}")
-            actions = listify(actions)
-
-    def add(self, name, **kwargs):
+    def add(self, name, allow="", deny="", default=False):
         """Pass."""
         roles = self.get()
-        names = [x["user_name"] for x in roles]
+        names = [x["name"] for x in roles]
 
         if name in names:
             raise ApiError(f"Role named {name!r} already exists")
 
-        permissions = {}
-
+        permissions = self.map_perms_role(allow=allow, deny=deny, default=default)
         self._add(name=name, permissions=permissions)
-        return self.get(name=name)
+        return self.get_by_name(name=name)
 
-    def update(
-        self,
-        name,
-        adapters=DEFAULT_PERM,
-        dashboard=DEFAULT_PERM,
-        devices=DEFAULT_PERM,
-        enforcements=DEFAULT_PERM,
-        instances=DEFAULT_PERM,
-        reports=DEFAULT_PERM,
-        settings=DEFAULT_PERM,
-        users=DEFAULT_PERM,
-    ):
+    def update(self, name, allow="", deny=""):
         """Pass."""
-        # role = self.get_by_name(name=name)
+        role = self.get_by_name(name=name)
 
-        permissions = self._check_valid_perms(
-            adapters=adapters,
-            dashboard=dashboard,
-            devices=devices,
-            enforcements=enforcements,
-            instances=instances,
-            reports=reports,
-            settings=settings,
-            users=users,
-        )
-        self._update(name=name, permissions=permissions)
-        return self.get(name=name)
+        if role.get("predefined", False):
+            raise ApiError(f"Not allowed to update predefined role {name!r}")
 
-    # XXX predefined
+        perms = self.map_perms_role(allow=allow, deny=deny, role=role)
+
+        self._update(uuid=role["uuid"], name=role["name"], permissions=perms)
+        return self.get_by_name(name=name)
+
     def delete(self, name):
         """Pass."""
         role = self.get_by_name(name=name)
 
-        if role.get("predefined"):
+        if role.get("predefined", False):
             raise ApiError(f"Not allowed to delete predefined role {name!r}")
 
         return self._delete(uuid=role["uuid"])
@@ -201,15 +204,15 @@ class Roles(ChildMixins):
         path = self.router.roles
         return self.request(method="put", path=path, json=data)
 
-    def _update(self, name, permissions):
+    def _update(self, uuid, name, permissions):
         """Direct API method to update a roles permissions.
 
         Args:
             name (:obj:`str`): name of role to update
             permissions (:obj:`dict`): permissions to update on new role
         """
-        data = {"name": name, "permissions": permissions}
-        path = self.router.roles
+        data = {"name": name, "permissions": permissions, "uuid": uuid}
+        path = self.router.roles_by_uuid.format(uuid=uuid)
         return self.request(
             method="post", path=path, json=data, error_json_invalid=False
         )
@@ -222,45 +225,6 @@ class Roles(ChildMixins):
         """
         path = self.router.roles_by_uuid.format(uuid=uuid)
         return self.request(method="delete", path=path, error_json_invalid=False)
-
-    def _check_valid_perm(self, name, value):
-        """Pass."""
-        if value not in VALID_PERMS:
-            valids = "\n" + "\n".join(VALID_PERMS)
-            msg = f"Invalid permission {value!r} for {name!r} - Must be one of:{valids}"
-            raise ApiError(msg)
-
-    def _check_valid_perms(
-        self,
-        adapters,
-        dashboard,
-        devices,
-        enforcements,
-        instances,
-        reports,
-        settings,
-        users,
-    ):
-        """Pass."""
-        self._check_valid_perm(name="adapters", value=adapters)
-        self._check_valid_perm(name="dashboard", value=dashboard)
-        self._check_valid_perm(name="devices", value=devices)
-        self._check_valid_perm(name="enforcements", value=enforcements)
-        self._check_valid_perm(name="instances", value=instances)
-        self._check_valid_perm(name="reports", value=reports)
-        self._check_valid_perm(name="settings", value=settings)
-        self._check_valid_perm(name="users", value=users)
-
-        return {
-            "Adapters": adapters,
-            "Dashboard": dashboard,
-            "Devices": devices,
-            "Enforcements": enforcements,
-            "Instances": instances,
-            "Reports": reports,
-            "Settings": settings,
-            "Users": users,
-        }
 
     def _get_labels(self):
         """Pass."""

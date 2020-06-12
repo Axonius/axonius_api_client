@@ -193,21 +193,6 @@ CNX_SANE_DEFAULTS = {
         "verify_ssl": False,
     },
 }
-DEFAULT_PERM = "ReadOnly"
-""":obj:`str`: default user permission to use"""
-
-VALID_PERMS = ["Restricted", "ReadWrite", "ReadOnly"]
-""":obj:`list` of :obj:`str`: valid user permissions"""
-PERM_SETS = [
-    "Adapters",
-    "Dashboard",
-    "Devices",
-    "Enforcements",
-    "Instances",
-    "Reports",
-    "Settings",
-    "Users",
-]
 
 FIELD_TRIM_LEN = 32000
 FIELD_TRIM_STR = "...TRIMMED - {field_len} characters over {trim_len}"

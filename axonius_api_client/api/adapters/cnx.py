@@ -287,6 +287,8 @@ class Cnx(ChildMixins):
             cnx_uuid=old_uuid,
         )
 
+        result = {} if not isinstance(result, dict) else result
+
         self.check_if_gone(
             result=result,
             cnx_id=old_id,
@@ -294,12 +296,17 @@ class Cnx(ChildMixins):
             adapter_node=adapter_node_name,
         )
 
-        cnx_new = self.get_by_uuid(
-            cnx_uuid=result["id"],
-            adapter_name=adapter_name,
-            adapter_node=adapter_node_name,
-            retry=CNX_RETRY,
-        )
+        if result.get("id"):
+            cnx_new = self.get_by_uuid(
+                cnx_uuid=result["id"],
+                adapter_name=adapter_name,
+                adapter_node=adapter_node_name,
+                retry=CNX_RETRY,
+            )
+        else:
+            cnx_new = self.get_by_id(
+                cnx_id=old_id, adapter_name=adapter_name, adapter_node=adapter_node_name
+            )
 
         error_in_status = result.get("status", "") == "error"
         error_empty = bool(result.get("error", ""))

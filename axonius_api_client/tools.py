@@ -97,7 +97,7 @@ def coerce_int(obj):
         raise ToolsError(f"Supplied value {obj!r} is not an integer.")
 
 
-def coerce_bool(obj):
+def coerce_bool(obj, errmsg=None):
     """Convert an object into bool.
 
     Notes:
@@ -124,10 +124,13 @@ def coerce_bool(obj):
     if coerce_obj in NO:
         return False
 
-    msg = (
-        f"Supplied value {coerce_obj!r} is not one of {YES} for true or {NO} for false."
-    )
-    raise ToolsError(msg)
+    msg = listify(errmsg)
+    msg += [
+        f"Supplied value {coerce_obj!r} must be one of:",
+        f"  For true: {YES}",
+        f"  For false: {NO}",
+    ]
+    raise ToolsError("\n".join(msg))
 
 
 def is_int(obj, digit=False):
@@ -541,6 +544,9 @@ def longest_str(obj):
 
 def split_str(obj, split=",", strip=None, do_strip=True, lower=True, empty=False):
     """Split a string or list of strings into a list of strings."""
+    if obj is None:
+        return []
+
     if isinstance(obj, list):
         return [
             y
@@ -554,6 +560,7 @@ def split_str(obj, split=",", strip=None, do_strip=True, lower=True, empty=False
                 empty=empty,
             )
         ]
+
     if not isinstance(obj, str):
         raise ApiError(f"Unable to split non-str value {obj}")
 
