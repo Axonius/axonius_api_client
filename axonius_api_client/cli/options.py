@@ -152,6 +152,17 @@ FIELDS_SELECT = [
         show_envvar=True,
         show_default=True,
     ),
+    click.option(
+        "--fields-root",
+        "-fro",
+        "fields_root",
+        help="Select all root fields for a given adapter (PERFORMANCE HIT!)",
+        metavar="ADAPTER",
+        default=None,
+        required=False,
+        show_envvar=True,
+        show_default=True,
+    ),
 ]
 
 EXPORT = [

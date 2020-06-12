@@ -98,6 +98,7 @@ class AssetMixin(ModelMixins):
         fields_manual=None,
         fields_regex=None,
         fields_default=True,
+        fields_root=None,
         fields_map=None,
         max_rows=None,
         max_pages=None,
@@ -156,6 +157,7 @@ class AssetMixin(ModelMixins):
             fields_regex=fields_regex,
             fields_default=fields_default,
             fields_map=fields_map,
+            fields_root=fields_root,
         )
 
         if sort_field:

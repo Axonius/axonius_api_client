@@ -1,14 +1,13 @@
 # -*- coding: utf-8 -*-
 """Test suite."""
 
-import pytest
+# import pytest
+# from axonius_api_client.constants import DEFAULT_PERM
+# from axonius_api_client.exceptions import ApiError, NotFoundError
 
-from axonius_api_client.constants import DEFAULT_PERM
-from axonius_api_client.exceptions import ApiError, NotFoundError
+# from ...meta import TEST_PERM, TEST_ROLE
 
-from ...meta import TEST_PERM, TEST_ROLE
-
-
+'''
 @pytest.mark.skip("Waiting for update to 3.3!")  # XXX update public API for roles/users
 class TestSystemRoles:
     """Pass."""
@@ -86,3 +85,4 @@ class TestSystemRoles:
 
         with pytest.raises(NotFoundError):
             apiobj.get(name=TEST_ROLE)
+'''
