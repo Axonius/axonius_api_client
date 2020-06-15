@@ -30,7 +30,9 @@ class Adapters(ModelMixins):
         adapters = self.get()
 
         keys = ["node_name", "node_id"]
-        nodes = [x for x in adapters if node.lower() in [x[k].lower() for k in keys]]
+        nodes = [
+            x for x in adapters if node.lower() in [str(x[k]).lower() for k in keys]
+        ]
 
         if not nodes:
             err = f"No node named {node!r} found"
