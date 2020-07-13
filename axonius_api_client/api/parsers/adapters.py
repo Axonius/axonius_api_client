@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """API models for working with adapters and connections."""
-from ...constants import GENERIC_NAME
+from ...constants import DISCOVERY_NAME, GENERIC_NAME
 from ...tools import strip_right
 from .config import parse_schema
 
@@ -23,7 +23,7 @@ def parse_adapter(name, raw):
         "name": strip_right(obj=name, fix="_adapter"),
         "name_raw": name,
         "name_plugin": raw.get("unique_plugin_name", f"{name}_0"),
-        # XXX FIX POST 3.5, should be direct reference, no more get
+        # XXX REMOVE POST 3.5, should be direct reference, no more get
         "node_name": raw["node_name"],
         "node_id": raw["node_id"],
         "status": raw["status"],
@@ -31,6 +31,8 @@ def parse_adapter(name, raw):
     }
 
     generic_name = GENERIC_NAME
+    discovery_name = DISCOVERY_NAME
+
     specific_name = get_specific_name(raw=raw)
     config = raw["config"]
 
@@ -39,6 +41,9 @@ def parse_adapter(name, raw):
 
     generic_schema = config[generic_name]["schema"]
     generic_schema = parse_schema(raw=generic_schema)
+
+    discovery_schema = config[discovery_name]["schema"]
+    discovery_schema = parse_schema(raw=discovery_schema)
 
     cnx_schema = parse_schema(raw=raw["schema"])
     cnx_schema["connection_label"] = {
@@ -52,13 +57,16 @@ def parse_adapter(name, raw):
         "cnx": cnx_schema,
         "specific": specific_schema,
         "generic": generic_schema,
+        "discovery": discovery_schema,
         "generic_name": generic_name,
         "specific_name": specific_name,
+        "discovery_name": discovery_name,
     }
 
     parsed["config"] = {
         "specific": raw["config"].get(specific_name, {}).get("config", {}),
         "generic": raw["config"].get(generic_name, {}).get("config", {}),
+        "discovery": raw["config"].get(discovery_name, {}).get("config", {}),
     }
 
     parsed["cnx"] = parse_cnx(raw=raw, parsed=parsed)
@@ -71,7 +79,7 @@ def parse_adapter(name, raw):
 
 def get_specific_name(raw):
     """Pass."""
-    found = [x for x in raw["config"] if x != GENERIC_NAME]
+    found = [x for x in raw["config"] if x not in [GENERIC_NAME, DISCOVERY_NAME]]
     return found[0] if found else ""
 
 

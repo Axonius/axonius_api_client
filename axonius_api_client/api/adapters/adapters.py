@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """API models for working with adapters and connections."""
-from ...constants import DEFAULT_NODE
+from ...constants import CONFIG_TYPES, DEFAULT_NODE
 from ...exceptions import ApiError, NotFoundError
 from ...tools import path_read
 from ..mixins import ModelMixins
@@ -46,20 +46,24 @@ class Adapters(ModelMixins):
         err = f"No adapter named {name!r} found on node {node!r}"
         raise NotFoundError(tablize_adapters(adapters=adapters, err=err))
 
-    def config_get(self, name, node=DEFAULT_NODE, generic=True):
+    def config_get(self, name, node=DEFAULT_NODE, config_type="generic"):
         """Pass."""
         adapter = self.get_by_name(name=name, node=node)
-        return self.config_refetch(adapter=adapter, generic=generic)
+        return self.config_refetch(adapter=adapter, config_type=config_type)
 
-    def config_refetch(self, adapter, generic=True):
+    def config_refetch(self, adapter, config_type="generic"):
         """Pass."""
-        name_config = "generic_name" if generic else "specific_name"
+        if config_type not in CONFIG_TYPES:
+            msg = f"Invalid configuration type {config_type!r}, valids: {CONFIG_TYPES}"
+            raise ApiError(msg)
+
+        name_config = f"{config_type}_name"
         name_config = adapter["schemas"][name_config]
         name_plugin = adapter["name_plugin"]
 
-        if not generic and not name_config:
+        if not name_config:
             name = adapter["name"]
-            raise ApiError(f"Adapter {name} has no adapter specific advanced settings!")
+            raise ApiError(f"Adapter {name} has no adapter {config_type} settings!")
 
         data = self._config_get(name_plugin=name_plugin, name_config=name_config)
 
@@ -67,21 +71,21 @@ class Adapters(ModelMixins):
 
         return data
 
-    def config_update(self, name, node=DEFAULT_NODE, generic=True, **kwargs):
+    def config_update(self, name, node=DEFAULT_NODE, config_type="generic", **kwargs):
         """Pass."""
         kwargs_config = kwargs.pop("kwargs_config", {})
         kwargs.update(kwargs_config)
         adapter = self.get_by_name(name=name, node=node)
 
-        name_config = "generic_name" if generic else "specific_name"
-        name_config_src = "generic" if generic else "adapter specific"
+        config_map = self.config_refetch(adapter=adapter, config_type=config_type)
+
+        name_config = f"{config_type}_name"
         name_config = adapter["schemas"][name_config]
 
-        config_map = self.config_refetch(adapter=adapter, generic=generic)
         old_config = config_map["config"]
         schemas = config_map["schema"]
 
-        source = f"adapter {name!r} {name_config_src} advanced settings"
+        source = f"adapter {name!r} {config_type} advanced settings"
         config_unknown(schemas=schemas, new_config=kwargs, source=source)
         new_config = config_build(
             schemas=schemas, old_config=old_config, new_config=kwargs, source=source
@@ -94,7 +98,7 @@ class Adapters(ModelMixins):
             name_raw=adapter["name_raw"], name_config=name_config, new_config=new_config,
         )
 
-        return self.config_refetch(adapter=adapter, generic=generic)
+        return self.config_refetch(adapter=adapter, config_type=config_type)
 
     def file_upload(
         self,

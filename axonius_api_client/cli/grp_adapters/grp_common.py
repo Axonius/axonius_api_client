@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Command line interface for Axonius API Client."""
+from ...constants import CONFIG_TYPES
 # from ...api.parsers.tables import tablize_adapters
 from ...tools import json_dump
 from ..context import click
@@ -16,13 +17,14 @@ CONFIG_EXPORT = click.option(
 )
 
 CONFIG_TYPE = click.option(
-    "--generic/--specific",
-    "-g/-s",
-    "generic",
-    default=True,
+    "--config-type",
+    "-ct",
+    "config_type",
+    default=CONFIG_TYPES[0],
+    type=click.Choice(CONFIG_TYPES),
     show_envvar=True,
     show_default=True,
-    help="Generic or adapter specific config",
+    help="Type of adapter configuration to work with",
 )
 
 

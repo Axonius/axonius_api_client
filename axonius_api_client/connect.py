@@ -7,6 +7,7 @@ import requests
 from .api.adapters import Adapters
 from .api.assets import Devices, Users
 from .api.enforcements import Enforcements
+from .api.enforcements.actions import RunAction
 from .api.system import System
 from .auth import ApiKey
 from .constants import (LOG_FILE_MAX_FILES, LOG_FILE_MAX_MB, LOG_FILE_NAME,
@@ -312,6 +313,18 @@ class Connect:
         if not hasattr(self, "_enforcements"):
             self._enforcements = Enforcements(**self._api_args)
         return self._enforcements
+
+    @property
+    def actions(self):
+        """Get the object for actions API.
+
+        Returns:
+            :obj:`axonius_api_client.actions.RunAction`
+        """
+        self.start()
+        if not hasattr(self, "_actions"):
+            self._actions = RunAction(**self._api_args)
+        return self._actions
 
     @property
     def system(self):

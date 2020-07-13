@@ -267,8 +267,8 @@ SCHEMAS_CUSTOM = {
 
 MAX_BODY_LEN = 100000
 GENERIC_NAME = "AdapterBase"
-
-
+DISCOVERY_NAME = "DiscoverySchema"
+CONFIG_TYPES = ["generic", "specific", "discovery"]
 KEY_MAP_CNX = [
     ("adapter_name", "Adapter", 0),
     ("node_name", "Node", 0),
