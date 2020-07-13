@@ -3,14 +3,9 @@
 import copy
 
 from ...constants import NO, SETTING_UNCHANGED, YES
-from ...exceptions import (
-    ApiError,
-    ConfigInvalidValue,
-    ConfigRequired,
-    ConfigUnchanged,
-    ConfigUnknown,
-)
-from ...tools import is_int, json_load
+from ...exceptions import (ApiError, ConfigInvalidValue, ConfigRequired,
+                           ConfigUnchanged, ConfigUnknown)
+from ...tools import is_int, join_kv, json_load
 from .tables import tablize_schemas
 
 
@@ -142,10 +137,20 @@ def config_check_str(value, schema, source, callbacks=None):
     schema_fmt = schema.get("format", "")
     schema_enum = schema.get("enum", [])
 
-    # XXX enum can be a dict lookup, handle better
-    if schema_enum and value not in schema_enum:
-        sinfo = config_info(schema=schema, value=value, source=source)
-        raise ConfigInvalidValue(f"{sinfo}\nIs not one of {schema_enum}!")
+    if schema_enum:
+        enum_is_str = all([isinstance(x, str) for x in schema_enum])
+        if enum_is_str:
+            if value not in schema_enum:
+                sinfo = config_info(schema=schema, value=value, source=source)
+                raise ConfigInvalidValue(f"{sinfo}\nIs not one of {schema_enum}!")
+        else:
+            valids = [x["name"] for x in schema_enum]
+            if value not in valids:
+                valids = "\n" + "\n".join(
+                    ["  ".join(x) for x in join_kv(obj=schema_enum)]
+                )
+                sinfo = config_info(schema=schema, value=value, source=source)
+                raise ConfigInvalidValue(f"{sinfo}\nIs not one of:{valids}!")
 
     if schema_fmt == "password":
         parsed, value = parse_unchanged(value=value)
@@ -295,7 +300,10 @@ def parse_section(raw, raw_config, parent, settings):
     config = raw_config.get(raw["name"], {})
     section_name = raw["name"]
     schemas = raw["items"]
-    required = raw["required"]
+    # XXX core_settings::tunnel_email_recipients is missing 'required' as of 3.6!
+    # required = raw["required"]
+    required = raw.get("required", [])
+
     section_defaults = raw.get(section_name, {})
 
     parsed = {}
@@ -316,7 +324,8 @@ def parse_section(raw, raw_config, parent, settings):
 
         # sub_sections:
         #   {"items": [{}], "required": [""], "type": "array"}
-        if isinstance(items, list):
+        # XXX core_settings::tunnel_email_recipients has an empty items list 3.6
+        if isinstance(items, list) and items:
             sub_sections[schema_name] = parse_section(
                 raw=schema, raw_config=config, parent=parsed, settings=settings,
             )
@@ -325,7 +334,10 @@ def parse_section(raw, raw_config, parent, settings):
         # non sub_sections:
         #   no items key in schema
         #   {"items": {"type": ""} "type": "array"}
-        schema["required"] = schema_name in required
+        # XXX some things have a required key already that is a bool 3.6
+        if not isinstance(schema.get("required", []), bool):
+            schema["required"] = schema_name in required
+
         parsed["schemas"][schema_name] = schema
 
         # XXX does not follow schema for defaults:

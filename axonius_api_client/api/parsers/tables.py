@@ -39,6 +39,7 @@ def tablize_schemas(
     if isinstance(schemas, dict):
         schemas = list(schemas.values())
 
+    # XXX TRANSLATE ENUM DICTS!!
     for schema in sorted(schemas, key=lambda x: [x["required"], x["name"]]):
         value = tab_map(
             value=schema, key_map=KEY_MAP_SCHEMA, orig=orig, orig_width=orig_width
