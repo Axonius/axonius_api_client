@@ -174,14 +174,10 @@ class Adapters(ModelMixins):
         kwargs["file_content"] = file_content
         return self.file_upload(**kwargs)
 
-    def _init(self, auth, **kwargs):
-        """Post init method for subclasses to use for extra setup.
-
-        Args:
-            auth (:obj:`.auth.Model`): object to use for auth and sending API requests
-        """
+    def _init(self, **kwargs):
+        """Post init method for subclasses to use for extra setup."""
         self.cnx = Cnx(parent=self)
-        super(Adapters, self)._init(auth=auth, **kwargs)
+        super(Adapters, self)._init(**kwargs)
 
     def _get(self):
         """Direct API method to get all adapters.
