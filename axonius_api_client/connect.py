@@ -315,16 +315,16 @@ class Connect:
         return self._enforcements
 
     @property
-    def actions(self):
-        """Get the object for actions API.
+    def run_actions(self):
+        """Get the object for run actions API.
 
         Returns:
             :obj:`axonius_api_client.actions.RunAction`
         """
         self.start()
-        if not hasattr(self, "_actions"):
-            self._actions = RunAction(**self._api_args)
-        return self._actions
+        if not hasattr(self, "_run_actions"):
+            self._run_actions = RunAction(**self._api_args)
+        return self._run_actions
 
     @property
     def system(self):
