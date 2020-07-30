@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """Utilities for this package."""
-# import dataclasses
 import os
 
 import axonius_api_client as axonapi
