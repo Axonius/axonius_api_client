@@ -222,7 +222,7 @@ class TestAdaptersPrivate(TestAdaptersBase):
                     assert isinstance(x["name"], str)
                     assert isinstance(x["title"], str)
                     continue
-                assert isinstance(x, str)
+                assert isinstance(x, (str, int))
 
             item_default = item.pop("default", "")
             assert isinstance(item_default, (str, int, bool)) or item_default is None
