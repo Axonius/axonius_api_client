@@ -509,21 +509,17 @@ class AssetMixin(ModelMixins):
         # XXX error if no OR / AND in pre & post
         return query
 
-    def _init(self, auth, **kwargs):
-        """Post init method for subclasses to use for extra setup.
-
-        Args:
-            auth (:obj:`.auth.Model`): object to use for auth and sending API requests
-        """
+    def _init(self, **kwargs):
+        """Post init method for subclasses to use for extra setup."""
         # cross reference
-        self.adapters = Adapters(auth=auth, **kwargs)
+        self.adapters = Adapters(auth=self.auth, **kwargs)
 
         # children
         self.labels = Labels(parent=self)
         self.saved_query = SavedQuery(parent=self)
         self.fields = Fields(parent=self)
 
-        super(AssetMixin, self)._init(auth=auth, **kwargs)
+        super(AssetMixin, self)._init(**kwargs)
 
     def _count(self, query=None, history_date=None):
         """Direct API method to get the count of assets.
