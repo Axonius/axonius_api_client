@@ -14,9 +14,11 @@ class Meta(ChildMixins):
         Returns:
             :obj:`dict`: about page metadata
         """
-        data = self._about()
-        data["Version"] = self._get_version(about=data)
-        return data
+        if not hasattr(self, "_about_data"):
+            data = self._about()
+            data["Version"] = self._get_version(about=data)
+            self._about_data = data
+        return self._about_data
 
     def historical_sizes(self):
         """Get disk usage metadata.
