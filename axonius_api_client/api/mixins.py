@@ -1,31 +1,36 @@
 # -*- coding: utf-8 -*-
 """API model base classes and mixins."""
 import abc
+import logging
 import time
+from typing import Any, Optional, Union
 
+import requests
+
+from ..auth import Model as AuthModel
 from ..constants import LOG_LEVEL_API, MAX_BODY_LEN, MAX_PAGE_SIZE
 from ..exceptions import JsonError, JsonInvalid, NotFoundError, ResponseNotOk
+from ..http import Http
 from ..logs import get_obj_log
 from ..tools import dt_now, dt_sec_ago, json_dump, json_load, json_reload
+from .routers import Router
 
 
-class Model:
+class Model(metaclass=abc.ABCMeta):
     """API model base class."""
 
     @abc.abstractproperty
-    def router(self):
-        """Router for this API model.
-
-        Returns:
-            :obj:`.routers.Router`: REST API route defs
-        """
+    def router(self) -> Router:
+        """REST API routes definition for this API model."""
         raise NotImplementedError  # pragma: no cover
 
 
 class PageSizeMixin:
-    """Pass."""
+    """Mixins for models that utilize paging in their endpoints."""
 
-    def _get_page_size(self, page_size=MAX_PAGE_SIZE, max_rows=None):
+    def _get_page_size(
+        self, page_size: Optional[int] = MAX_PAGE_SIZE, max_rows: Optional[int] = None
+    ) -> int:
         if max_rows and max_rows < page_size:
             self.LOG.debug(f"CHANGED PAGE SIZE {page_size} to max_rows {max_rows}")
             page_size = max_rows
@@ -43,45 +48,39 @@ class PageSizeMixin:
 class ModelMixins(Model, PageSizeMixin):
     """Mixins for :obj:`Model` objects."""
 
-    def __init__(self, auth, **kwargs):
+    def __init__(self, auth: AuthModel, **kwargs):
         """Mixins for :obj:`Model` objects.
 
         Args:
-            auth (:obj:`.auth.Model`): object to use for auth and sending API requests
-            **kwargs: passed to :meth:`Mixins._init`
+            auth: object to use for auth and sending API requests
+            **kwargs: passed to :meth:`_init`
         """
         log_level = kwargs.get("log_level", LOG_LEVEL_API)
-        self.LOG = get_obj_log(obj=self, level=log_level)
-        """:obj:`logging.Logger`: Logger for this object."""
-
-        self.auth = auth
-        """:obj:`.auth.Model`: object to use for auth and sending API requests."""
-        self.http = auth.http
-
-        self._init(auth=auth, **kwargs)
+        self.LOG: logging.Logger = get_obj_log(obj=self, level=log_level)
+        self.auth: AuthModel = auth
+        self.http: Http = auth.http
+        self._init(**kwargs)
 
         auth.check_login()
 
-    def _init(self, auth, **kwargs):
-        """Post init method for subclasses to use for extra setup.
-
-        Args:
-            auth (:obj:`.auth.Model`): object to use for auth and sending API requests
-        """
+    def _init(self, **kwargs):
+        """Post init method for subclasses to use for extra setup."""
         pass
 
-    def __str__(self):
+    def __str__(self) -> str:
         """Show info for this model object."""
         cls = self.__class__
         auth = self.auth.__class__.__name__
         url = self.http.url
         return f"{cls.__module__}.{cls.__name__}(auth={auth!r}, url={url!r})"
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """Show info for this model object."""
         return self.__str__()
 
-    def _get_page_size(self, page_size=MAX_PAGE_SIZE, max_rows=None):
+    def _get_page_size(
+        self, page_size: Optional[int] = MAX_PAGE_SIZE, max_rows: Optional[int] = None
+    ) -> int:
         if max_rows and max_rows < page_size:
             self.LOG.debug(f"CHANGED PAGE SIZE {page_size} to max_rows {max_rows}")
             page_size = max_rows
@@ -95,7 +94,12 @@ class ModelMixins(Model, PageSizeMixin):
 
         return page_size
 
-    def _build_err_msg(self, response, error=None, exc=None):
+    def _build_err_msg(
+        self,
+        response: requests.Response,
+        error: Optional[str] = None,
+        exc: Optional[Exception] = None,
+    ) -> str:
         """Pass."""
         request_size = len(response.request.body or "")
         response_size = len(response.text or "")
@@ -138,31 +142,31 @@ class ModelMixins(Model, PageSizeMixin):
 
     def request(
         self,
-        path,
-        method="get",
-        raw=False,
-        is_json=True,
-        error_status=True,
-        error_json_bad_status=True,
-        error_json_invalid=True,
+        path: str,
+        method: Optional[str] = "get",
+        raw: Optional[bool] = False,
+        is_json: Optional[bool] = True,
+        error_status: Optional[bool] = True,
+        error_json_bad_status: Optional[bool] = True,
+        error_json_invalid: Optional[bool] = True,
         # fmt: off
         **kwargs
         # fmt: on
-    ):
+    ) -> Union[requests.Response, Any]:
         """Send a REST API request using :attr:`.auth.Mixins.http`.
 
         Args:
-            path (:obj:`str`): path to use in request
-            method (:obj:`str`, optional): default ``get`` - method to use in request
-            raw (:obj:`bool`, optional): default ``False`` -
+            path: path to use in request
+            method: default ``get`` - method to use in request
+            raw: default ``False`` -
 
                 * if ``True`` return the raw :obj:`requests.Response` object
                 * if ``False`` return the text or json of the response based on is_json
-            is_json (:obj:`bool`, optional): default ``True`` - if raw is False:
+            is_json: default ``True`` - if raw is False:
 
                 * if ``True`` return the decoded json of the response text body
                 * if ``False`` return the text body of the response
-            error_status (:obj:`bool`, optional): default ``True`` -
+            error_status: default ``True`` -
 
                 * if ``True`` check response status code
                   with :meth:`_check_response_code`
@@ -203,8 +207,8 @@ class ModelMixins(Model, PageSizeMixin):
         """Check the status code of a response.
 
         Args:
-            response (:obj:`requests.Response`): response object to check
-            error_status (:obj:`bool`, optional): default ``True`` -
+            response: response object to check
+            error_status: default ``True`` -
 
                 * if ``True`` throw exc if response status code is bad
                 * if ``False`` silently ignore bad response status codes
@@ -229,18 +233,22 @@ class ModelMixins(Model, PageSizeMixin):
                 raise respexc
 
     def _check_response_json(
-        self, response, error_json_bad_status=True, error_json_invalid=True
-    ):
+        self,
+        response: requests.Response,
+        error_json_bad_status: Optional[bool] = True,
+        error_json_invalid: Optional[bool] = True,
+        uses_api_response: Optional[bool] = False,
+    ) -> Union[Any, str]:
         """Check the text body of a response is JSON.
 
         Args:
             response (:obj:`requests.Response`): response object to check
-            error_json_bad_status (:obj:`bool`, optional): default ``True`` -
+            error_json_bad_status: default ``True`` -
 
                 * if ``True`` throw an exc if response is a json dict that
                   has a non-empty error key or a status key that == error
                 * if ``False`` ignore error and status keys in response json dicts
-            error_json_invalid (:obj:`bool`, optional): default ``True`` -
+            error_json_invalid: default ``True`` -
 
                 * if ``True`` throw an exc if response is invalid json
                 * if ``False`` return the text of response if response is invalid json
@@ -332,7 +340,7 @@ class PagingMixinsObject(PageSizeMixin):
         """Get objects for a given query using paging.
 
         Args:
-            generator (:obj:`bool`, optional): default ``False`` -
+            generator: default ``False`` -
 
                 * True: return an iterator for assets that will yield rows
                   as they are fetched
