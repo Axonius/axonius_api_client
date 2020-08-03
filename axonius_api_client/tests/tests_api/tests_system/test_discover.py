@@ -28,7 +28,7 @@ class TestSystemDiscoverPrivate(SystemDiscoverBase):
         assert not stop
 
         lifecycle = apiobj._get()
-        assert lifecycle["status"] in ["done"]
+        assert lifecycle["status"] in ["done", "stopping"]
 
         start = apiobj._start()
         assert not start
@@ -40,7 +40,7 @@ class TestSystemDiscoverPrivate(SystemDiscoverBase):
         assert not re_stop
 
         lifecycle = apiobj._get()
-        assert lifecycle["status"] in ["done"]
+        assert lifecycle["status"] in ["done", "stopping"]
 
 
 class TestSystemDiscoverPublic(SystemDiscoverBase):
