@@ -2,6 +2,7 @@
 """API models for working with device and user assets."""
 import math
 import time
+from typing import Generator, List, Optional, Union
 
 from ...constants import MAX_PAGE_SIZE, PAGE_SIZE
 from ...exceptions import ApiError, JsonError, NotFoundError
@@ -17,61 +18,70 @@ from .saved_query import SavedQuery
 class AssetMixin(ModelMixins):
     """API model for working with user and device assets."""
 
-    FIELD_TAGS = "labels"
-    FIELD_AXON_ID = "internal_axon_id"
-    FIELD_ADAPTERS = "adapters"
-    FIELD_ADAPTER_LEN = "adapter_list_length"
+    FIELD_TAGS: str = "labels"
+    FIELD_AXON_ID: str = "internal_axon_id"
+    FIELD_ADAPTERS: str = "adapters"
+    FIELD_ADAPTER_LEN: str = "adapter_list_length"
 
-    FIELDS_API = [FIELD_AXON_ID, FIELD_ADAPTERS, FIELD_TAGS, FIELD_ADAPTER_LEN]
+    FIELDS_API: List[str] = [
+        FIELD_AXON_ID,
+        FIELD_ADAPTERS,
+        FIELD_TAGS,
+        FIELD_ADAPTER_LEN,
+    ]
 
     @property
-    def fields_default(self):
+    def fields_default(self) -> List[dict]:
         """Fields to add to all get calls for this asset type.
 
         Returns:
-            :obj:`list` of :obj:`dict`: fields to add to
+            fields to add to
         """
         raise NotImplementedError  # pragma: no cover
 
-    def destroy(self, destroy, history):
+    def destroy(self, destroy: bool, history: bool) -> dict:
         """Destroy ALL assets."""
         return self._destroy(destroy=destroy, history=history)
 
-    def count(self, query=None, history_date=None):
+    def count(
+        self, query: Optional[str] = None, history_date: Optional[str] = None
+    ) -> int:
         """Get the count of assets.
 
         Args:
-            query (:obj:`str`, optional): default ``None`` -
+            query: default ``None`` -
 
                 * if ``None`` return the count of all assets
                 * if :obj:`str` return the count of assets that match a
                   query built by the GUI query wizard
 
         Returns:
-            :obj:`int`: count of assets matching query
+            count of assets matching query
         """
         history_date = self.validate_history_date(value=history_date)
         return self._count(query=query, history_date=history_date)
 
-    def count_by_saved_query(self, name, history_date=None):
+    def count_by_saved_query(self, name: str, history_date: Optional[str] = None) -> int:
         """Get the count of assets that would be returned by a saved query.
 
         Args:
-            name (:obj:`str`): name of saved query to get count of assets from
+            name of saved query to get count of assets from
 
         Returns:
-            :obj:`int`: count of assets matching query in saved query
+            count of assets matching query in saved query
         """
         sq = self.saved_query.get_by_name(value=name)
         history_date = self.validate_history_date(value=history_date)
         query = sq["view"]["query"]["filter"]
         return self._count(query=query, history_date=history_date)
 
-    def get(self, generator=False, **kwargs):
+    def get(
+        self, generator: bool = False, **kwargs
+    ) -> Union[Generator[dict, None, None], List[dict]]:
         """Get objects for a given query using paging.
 
         Args:
-            generator (:obj:`bool`, optional): default ``False`` -
+            generator: default ``False`` -
 
                 * True: return an iterator for assets that will yield rows
                   as they are fetched
@@ -79,10 +89,10 @@ class AssetMixin(ModelMixins):
             **kwargs: passed to :meth:`get_generator`
 
         Yields:
-            :obj:`dict`: row if generator is True
+            row if generator is True
 
         Returns:
-            :obj:`list` of :obj:`dict`: rows if generator is False
+            rows if generator is False
         """
         gen = self.get_generator(**kwargs)
 

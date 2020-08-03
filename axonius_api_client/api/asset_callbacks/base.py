@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 """API models for working with device and user assets."""
 import copy
+import logging
 import sys
+from typing import IO, Generator, List, Optional
 
 from ...constants import (DEFAULT_PATH, FIELD_JOINER, FIELD_TRIM_LEN,
                           FIELD_TRIM_STR, SCHEMAS_CUSTOM)
@@ -13,39 +15,44 @@ from ...tools import (calc_percent, echo_error, echo_ok, echo_warn, get_path,
 class Base:
     """Object for handling callbacks for assets."""
 
-    CB_NAME = "base"
-    FIND_KEYS = ["name", "name_qual", "column_title", "name_base"]
+    CB_NAME: str = "base"
+    FIND_KEYS: List[str] = ["name", "name_qual", "column_title", "name_base"]
 
     def __init__(
-        self, apiobj, store, state=None, fields_map=None, getargs=None,
+        self,
+        apiobj,
+        store: dict,
+        state: Optional[dict] = None,
+        fields_map: Optional[dict] = None,
+        getargs: dict = None,
     ):
         """Object for handling callbacks for assets."""
-        self.LOG = apiobj.LOG.getChild(self.__class__.__name__)
-        """:obj:`logging.Logger`: logger for this object."""
+        self.LOG: logging.Logger = apiobj.LOG.getChild(self.__class__.__name__)
+        """logger for this object."""
 
         self.APIOBJ = apiobj
         """:obj:`AssetMixin`: assets object."""
 
-        self.ALL_SCHEMAS = fields_map or apiobj.fields.get()
-        """:obj:`dict`: map of adapter -> field schemas."""
+        self.ALL_SCHEMAS: dict = fields_map or apiobj.fields.get()
+        """Map of adapter -> field schemas."""
 
-        self.STATE = state or {}
-        """:obj:`dict`: state dict used by get assets method to track paging."""
+        self.STATE: dict = state or {}
+        """state dict used by get assets method to track paging."""
 
-        self.STORE = store or {}
-        """:obj:`dict`: store dict used by get assets method to track arguments."""
+        self.STORE: dict = store or {}
+        """store dict used by get assets method to track arguments."""
 
-        self.GETARGS = getargs or {}
-        """:obj:`dict`: original kwargs supplied to get assets method."""
+        self.GETARGS: dict = getargs or {}
+        """original kwargs supplied to get assets method."""
 
-        self.RAN = []
-        """:obj:`list` of :obj:`str`: used by callbacks to see if they've run already."""
+        self.RAN: List[str] = []
+        """used by callbacks to see if they've run already."""
 
-        self.TAG_ROWS_ADD = []
-        """:obj:`list` of :obj:`dict`: assets to add tags to in do_tagging."""
+        self.TAG_ROWS_ADD: List[dict] = []
+        """assets to add tags to in do_tagging."""
 
-        self.TAG_ROWS_REMOVE = []
-        """:obj:`list` of :obj:`dict`: assets to remove tags from in do_tagging."""
+        self.TAG_ROWS_REMOVE: List[dict] = []
+        """assets to remove tags from in do_tagging."""
 
         self._init()
 
@@ -81,7 +88,7 @@ class Base:
         self.do_tagging()
         self.echo(msg=f"Stopping {self}")
 
-    def process_row(self, row):
+    def process_row(self, row: dict) -> List[dict]:
         """Handle callbacks for an asset."""
         self.do_pre_row()
         return self.do_row(row=row)
@@ -92,7 +99,7 @@ class Base:
         self.STATE["rows_processed_total"] += 1
         self.echo_page_progress()
 
-    def do_row(self, row):
+    def do_row(self, row: dict) -> List[dict]:
         """Pass."""
         self.process_tags_to_add(row=row)
         self.process_tags_to_remove(row=row)
@@ -139,7 +146,7 @@ class Base:
 
         self.echo(msg=f"PROGRESS: {percent} {rows} {pages} in {taken}")
 
-    def do_add_null_values(self, row, schema, key="name_qual"):
+    def do_add_null_values(self, row: dict, schema: dict, key: str = "name_qual"):
         """Null out missing fields."""
         if not self.GETARGS.get("field_null", False) or self.is_excluded(schema=schema):
             return
@@ -156,7 +163,7 @@ class Base:
         else:
             row[field] = row.get(field, null_value)
 
-    def do_excludes(self, row, schema):
+    def do_excludes(self, row: dict, schema: dict):
         """Asset callback to remove fields from row."""
         if not self.GETARGS.get("field_excludes", []):
             return
@@ -172,7 +179,7 @@ class Base:
                     for item in items:
                         item.pop(sub_schema["name"], None)
 
-    def do_join_values(self, row):
+    def do_join_values(self, row: dict):
         """Join values."""
         if not self.GETARGS.get("field_join", False):
             return
@@ -191,7 +198,7 @@ class Base:
                     msg = trim_str.format(field_len=field_len, trim_len=trim_len)
                     row[field] = joiner.join([row[field][:trim_len], msg])
 
-    def do_change_field_titles(self, row):
+    def do_change_field_titles(self, row: dict):
         """Asset callback to change qual name to title."""
         if not self.GETARGS.get("field_titles", False):
             return
@@ -199,7 +206,7 @@ class Base:
         for schema in self.final_schemas:
             row[schema["column_title"]] = row.pop(schema["name_qual"], None)
 
-    def do_flatten_fields(self, row, schema):
+    def do_flatten_fields(self, row: dict, schema: dict):
         """Asset callback to flatten complex fields."""
         if not self.GETARGS.get("field_flatten", False):
             return
@@ -209,7 +216,7 @@ class Base:
 
         self._do_flatten_fields(row=row, schema=schema)
 
-    def _do_flatten_fields(self, row, schema):
+    def _do_flatten_fields(self, row: dict, schema: dict):
         """Pass."""
         if self.is_excluded(schema=schema):
             return
@@ -229,7 +236,7 @@ class Base:
                 value = value if isinstance(value, list) else [value]
                 row[sub_schema["name_qual"]] += value
 
-    def do_explode_field(self, row):
+    def do_explode_field(self, row: dict) -> List[dict]:
         """Explode a field into multiple rows."""
         explode = self.GETARGS.get("field_explode", "")
         null_value = self.GETARGS.get("field_null_value", None)
@@ -290,7 +297,7 @@ class Base:
             self.echo(msg=f"Removing tags {tags_remove} from {len(rows_remove)} assets")
             self.APIOBJ.labels.remove(rows=rows_remove, labels=tags_remove)
 
-    def process_tags_to_add(self, row):
+    def process_tags_to_add(self, row: dict):
         """Pass."""
         tags = listify(self.GETARGS.get("tags_add", []))
         if not tags:
@@ -301,7 +308,7 @@ class Base:
         if tag_row not in self.TAG_ROWS_ADD:
             self.TAG_ROWS_ADD.append(tag_row)
 
-    def process_tags_to_remove(self, row):
+    def process_tags_to_remove(self, row: dict):
         """Pass."""
         tags = listify(self.GETARGS.get("tags_remove", []))
         if not tags:
@@ -312,7 +319,7 @@ class Base:
         if tag_row not in self.TAG_ROWS_REMOVE:
             self.TAG_ROWS_REMOVE.append(tag_row)
 
-    def add_report_adapters_missing(self, row):
+    def add_report_adapters_missing(self, row: dict):
         """Pass."""
         if not self.GETARGS.get("report_adapters_missing", False):
             return
@@ -338,7 +345,7 @@ class Base:
 
         row[field_name] = missing
 
-    def is_excluded(self, schema):
+    def is_excluded(self, schema: dict) -> bool:
         """Check if a name supplied to field_excludes matches one of GET_SCHEMA_KEYS."""
         excludes = listify(self.GETARGS.get("field_excludes", []))
 
@@ -383,7 +390,7 @@ class Base:
         self.echo(msg=f"Exporting to file '{fp}' ({mode})")
         return self._fd
 
-    def open_fd_stdout(self):
+    def open_fd_stdout(self) -> IO:
         """Pass."""
         self._file_path = None
         self._fd_close = False
@@ -391,7 +398,7 @@ class Base:
         self.echo(msg="Exporting to stdout")
         return self._fd
 
-    def open_fd(self):
+    def open_fd(self) -> IO:
         """Open a file descriptor."""
         if "export_fd" in self.GETARGS:
             self.open_fd_arg()
@@ -411,13 +418,13 @@ class Base:
 
     def echo(
         self,
-        msg,
-        error=False,
-        warning=False,
-        level="info",
-        level_error="error",
-        level_warning="warning",
-        abort=True,
+        msg: str,
+        error: bool = False,
+        warning: bool = False,
+        level: str = "info",
+        level_error: str = "error",
+        level_warning: str = "warning",
+        abort: bool = True,
     ):
         """Pass."""
         do_echo = self.GETARGS.get("do_echo", False)
@@ -440,7 +447,7 @@ class Base:
 
         getattr(self.LOG, level)(msg)
 
-    def get_sub_schemas(self, schema):
+    def get_sub_schemas(self, schema: dict) -> Generator[dict, None, None]:
         """Pass."""
         sub_schemas = schema["sub_fields"]
         for sub_schema in sub_schemas:
@@ -449,7 +456,7 @@ class Base:
             yield sub_schema
 
     @property
-    def custom_schemas(self):
+    def custom_schemas(self) -> List[dict]:
         """Pass."""
         schemas = []
         if self.GETARGS.get("report_adapters_missing", False):
@@ -457,7 +464,7 @@ class Base:
         return schemas
 
     @property
-    def final_schemas(self):
+    def final_schemas(self) -> List[dict]:
         """Predict the future schemas that will be returned."""
         if hasattr(self, "_final_schemas"):
             return self._final_schemas
@@ -482,7 +489,7 @@ class Base:
         return self._final_schemas
 
     @property
-    def final_columns(self):
+    def final_columns(self) -> List[str]:
         """Pass."""
         if hasattr(self, "_final_columns"):
             return self._final_columns
@@ -494,7 +501,7 @@ class Base:
         return self._final_columns
 
     @property
-    def fields_selected(self):
+    def fields_selected(self) -> List[str]:
         """Pass."""
         if hasattr(self, "_fields_selected"):
             return self._fields_selected
@@ -518,7 +525,7 @@ class Base:
         return self._fields_selected
 
     @property
-    def schemas_selected(self):
+    def schemas_selected(self) -> List[dict]:
         """Pass."""
         if hasattr(self, "_schemas_selected"):
             return self._schemas_selected
@@ -544,7 +551,7 @@ class Base:
         return self._schemas_selected
 
     @property
-    def schema_to_explode(self):
+    def schema_to_explode(self) -> dict:
         """Pass."""
         if hasattr(self, "_schema_to_explode"):
             return self._schema_to_explode
@@ -572,7 +579,7 @@ class Base:
         self.echo(msg=msg, error=ApiError)
 
     @property
-    def adapter_map(self):
+    def adapter_map(self) -> dict:
         """Pass."""
         self._adapters_meta = getattr(self, "_adapters_meta", self.APIOBJ.adapters.get())
         amap = {
@@ -593,7 +600,7 @@ class Base:
         return amap
 
     @property
-    def args_map(self):
+    def args_map(self) -> List[list]:
         """Pass."""
         return [
             ["field_excludes", "Exclude fields:", []],
@@ -617,7 +624,7 @@ class Base:
         ]
 
     @property
-    def args_strs(self):
+    def args_strs(self) -> List[str]:
         """Pass."""
         lines = []
         for arg, text, default in self.args_map:
@@ -630,10 +637,10 @@ class Base:
             lines.append(f"{text:30}{value}")
         return lines
 
-    def __str__(self):
+    def __str__(self) -> str:
         """Show info for this object."""
         return f"{self.CB_NAME.upper()} processor"
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """Show info for this object."""
         return self.__str__()

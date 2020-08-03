@@ -2,6 +2,7 @@
 """API models for working with device and user assets."""
 import json
 import tempfile
+from typing import List
 
 from ...tools import listify
 from .base_csv import Csv
@@ -10,7 +11,7 @@ from .base_csv import Csv
 class JsonToCsv(Csv):
     """Pass."""
 
-    CB_NAME = "json_to_csv"
+    CB_NAME: str = "json_to_csv"
 
     def start(self, **kwargs):
         """Create temp file for writing to."""
@@ -40,7 +41,7 @@ class JsonToCsv(Csv):
         self._temp_file.file.close()
         self._stop(**kwargs)
 
-    def process_row(self, row):
+    def process_row(self, row: dict) -> List[dict]:
         """Write row to temp file with no processing."""
         self.do_pre_row()
 

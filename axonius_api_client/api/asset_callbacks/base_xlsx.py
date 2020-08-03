@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 """API models for working with device and user assets."""
+from typing import List
+
 import xlsxwriter
 
 from ...exceptions import ApiError
@@ -10,9 +12,9 @@ from .base import Base
 class Xlsx(Base):
     """Pass."""
 
-    CB_NAME = "xlsx"
-    CELL_FORMAT = {"text_wrap": True}
-    COLUMN_LENGTH = 50
+    CB_NAME: str = "xlsx"
+    CELL_FORMAT: dict = {"text_wrap": True}
+    COLUMN_LENGTH: int = 50
 
     def _init(self, **kwargs):
         """Pass."""
@@ -61,7 +63,7 @@ class Xlsx(Base):
         """Pass."""
         self._workbook.close()
 
-    def process_row(self, row):
+    def process_row(self, row: dict) -> List[dict]:
         """Write row to dictwriter and delete it."""
         self.do_pre_row()
 
