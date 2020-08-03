@@ -6,14 +6,8 @@ from urllib.parse import urlparse, urlunparse
 
 import requests
 
-from .constants import (
-    LOG_LEVEL_HTTP,
-    MAX_BODY_LEN,
-    REQUEST_ATTR_MAP,
-    RESPONSE_ATTR_MAP,
-    TIMEOUT_CONNECT,
-    TIMEOUT_RESPONSE,
-)
+from .constants import (LOG_LEVEL_HTTP, MAX_BODY_LEN, REQUEST_ATTR_MAP,
+                        RESPONSE_ATTR_MAP, TIMEOUT_CONNECT, TIMEOUT_RESPONSE)
 from .exceptions import HttpError
 from .logs import get_obj_log, set_log_level
 from .tools import join_url, json_reload, listify, path_read
@@ -175,6 +169,9 @@ class Http:
         self.session = requests.Session()
         """:obj:`requests.Session`: session object to use"""
 
+        self.LOG_HIDE_HEADERS = ["api-key", "api-secret"]
+        """Headers to hide when logging."""
+
         self.LOG_REQUEST_BODY = log_request_body
         """:obj:`bool`: Log the full request body."""
 
@@ -279,14 +276,11 @@ class Http:
             files=files or [],
         )
         prepped_request = self.session.prepare_request(request=request)
-        prepped_request.body_size = len(prepped_request.body or "")
 
         if self.SAVE_LAST:
             self.LAST_REQUEST = prepped_request
 
-        if self.log_request_attrs:
-            lattrs = ", ".join(self.log_request_attrs).format(request=prepped_request)
-            self.LOG.debug(f"REQUEST ATTRS: {lattrs}")
+        self._do_log_request(request=prepped_request)
 
         send_args = self.session.merge_environment_settings(
             url=prepped_request.url,
@@ -302,11 +296,7 @@ class Http:
             kwargs.get("response_timeout", self.RESPONSE_TIMEOUT),
         )
 
-        if self.LOG_REQUEST_BODY:
-            self.log_body(body=prepped_request.body, body_type="REQUEST")
-
         response = self.session.send(**send_args)
-        response.body_size = len(response.text or "")
 
         if self.SAVE_LAST:
             self.LAST_RESPONSE = response
@@ -314,12 +304,7 @@ class Http:
         if self.SAVEHISTORY:
             self.HISTORY.append(response)
 
-        if self.log_response_attrs:
-            lattrs = ", ".join(self.log_response_attrs).format(response=response)
-            self.LOG.debug(f"RESPONSE ATTRS: {lattrs}")
-
-        if self.LOG_RESPONSE_BODY:
-            self.log_body(body=response.text, body_type="RESPONSE")
+        self._do_log_response(response=response)
 
         return response
 
@@ -349,6 +334,42 @@ class Http:
             :obj:`str`: user agent string
         """
         return f"{__name__}.{self.__class__.__name__}/{__version__}"
+
+    def _do_log_request(self, request):
+        """Do it."""
+        if self.log_request_attrs:
+            lattrs = ", ".join(self.log_request_attrs).format(
+                url=request.url,
+                body_size=len(request.body or ""),
+                method=request.method,
+                headers=self._clean_headers(headers=request.headers),
+            )
+            self.LOG.debug(f"REQUEST ATTRS: {lattrs}")
+
+        if self.LOG_REQUEST_BODY:
+            self.log_body(body=request.body, body_type="REQUEST")
+
+    def _clean_headers(self, headers):
+        hide = "*********"
+        hidden = self.LOG_HIDE_HEADERS
+        return {k: hide if k in hidden else v for k, v in headers.items()}
+
+    def _do_log_response(self, response):
+        """Do it."""
+        if self.log_response_attrs:
+            lattrs = ", ".join(self.log_response_attrs).format(
+                url=response.url,
+                body_size=len(response.text or ""),
+                method=response.request.method,
+                status_code=response.status_code,
+                reason=response.reason,
+                elapsed=response.elapsed,
+                headers=self._clean_headers(headers=response.headers),
+            )
+            self.LOG.debug(f"RESPONSE ATTRS: {lattrs}")
+
+        if self.LOG_RESPONSE_BODY:
+            self.log_body(body=response.text, body_type="RESPONSE")
 
     @property
     def log_request_attrs(self):
