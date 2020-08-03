@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 """API models for working with adapters and connections."""
+import pathlib
+from typing import List, Optional, Union
+
 from ...constants import CONFIG_TYPES, DEFAULT_NODE
 from ...exceptions import ApiError, NotFoundError
 from ...tools import path_read
@@ -7,7 +10,7 @@ from ..mixins import ModelMixins
 from ..parsers.adapters import parse_adapters, parse_schema
 from ..parsers.config import config_build, config_unchanged, config_unknown
 from ..parsers.tables import tablize_adapters
-from ..routers import API_VERSION
+from ..routers import API_VERSION, Router
 from .cnx import Cnx
 
 
@@ -15,17 +18,17 @@ class Adapters(ModelMixins):
     """API model for working with adapters."""
 
     @property
-    def router(self):
+    def router(self) -> Router:
         """Router for this API model."""
         return API_VERSION.adapters
 
-    def get(self):
+    def get(self) -> List[dict]:
         """Pass."""
         parsed = parse_adapters(raw=self._get())
         parsed = sorted(parsed, key=lambda x: [x["node_name"], x["name"]])
         return parsed
 
-    def get_by_name(self, name, node=DEFAULT_NODE):
+    def get_by_name(self, name: str, node: str = DEFAULT_NODE) -> dict:
         """Pass."""
         adapters = self.get()
 
@@ -46,12 +49,17 @@ class Adapters(ModelMixins):
         err = f"No adapter named {name!r} found on node {node!r}"
         raise NotFoundError(tablize_adapters(adapters=adapters, err=err))
 
-    def config_get(self, name, node=DEFAULT_NODE, config_type="generic"):
+    def config_get(
+        self,
+        name: str,
+        node: Optional[str] = DEFAULT_NODE,
+        config_type: Optional[str] = "generic",
+    ) -> dict:
         """Pass."""
         adapter = self.get_by_name(name=name, node=node)
         return self.config_refetch(adapter=adapter, config_type=config_type)
 
-    def config_refetch(self, adapter, config_type="generic"):
+    def config_refetch(self, adapter: dict, config_type: str = "generic") -> dict:
         """Pass."""
         if config_type not in CONFIG_TYPES:
             msg = f"Invalid configuration type {config_type!r}, valids: {CONFIG_TYPES}"
@@ -71,7 +79,9 @@ class Adapters(ModelMixins):
 
         return data
 
-    def config_update(self, name, node=DEFAULT_NODE, config_type="generic", **kwargs):
+    def config_update(
+        self, name: str, node: str = DEFAULT_NODE, config_type: str = "generic", **kwargs
+    ) -> dict:
         """Pass."""
         kwargs_config = kwargs.pop("kwargs_config", {})
         kwargs.update(kwargs_config)
@@ -102,13 +112,13 @@ class Adapters(ModelMixins):
 
     def file_upload(
         self,
-        name,
-        field_name,
-        file_name,
-        file_content,
-        file_content_type=None,
-        node=DEFAULT_NODE,
-    ):
+        name: str,
+        field_name: str,
+        file_name: str,
+        file_content: Union[str, bytes],
+        file_content_type: Optional[str] = None,
+        node: str = DEFAULT_NODE,
+    ) -> dict:
         """Upload a str as a file to a specific adapter on a specific node.
 
         Args:
@@ -143,7 +153,7 @@ class Adapters(ModelMixins):
             file_content_type=file_content_type,
         )
 
-    def file_upload_path(self, path, **kwargs):
+    def file_upload_path(self, path: Union[str, pathlib.Path], **kwargs):
         """Upload the contents of a file to a specific adapter on a specific node.
 
         Args:
@@ -179,7 +189,7 @@ class Adapters(ModelMixins):
         self.cnx = Cnx(parent=self)
         super(Adapters, self)._init(**kwargs)
 
-    def _get(self):
+    def _get(self) -> dict:
         """Direct API method to get all adapters.
 
         Returns:
@@ -188,7 +198,7 @@ class Adapters(ModelMixins):
         path = self.router.root
         return self.request(method="get", path=path)
 
-    def _config_update(self, name_raw, name_config, new_config):
+    def _config_update(self, name_raw: str, name_config: str, new_config: dict) -> str:
         """Direct API method to set advanced settings for an adapter.
 
         Args:
@@ -210,7 +220,7 @@ class Adapters(ModelMixins):
             method="post", path=path, json=new_config, error_json_invalid=False
         )
 
-    def _config_get(self, name_plugin, name_config):
+    def _config_get(self, name_plugin: str, name_config: str) -> dict:
         """Direct API method to set advanced settings for an adapter.
 
         Args:
@@ -231,14 +241,14 @@ class Adapters(ModelMixins):
 
     def _file_upload(
         self,
-        name_raw,
-        node_id,
-        field_name,
-        file_name,
-        file_content,
-        file_content_type=None,
-        file_headers=None,
-    ):
+        name_raw: str,
+        node_id: str,
+        field_name: str,
+        file_name: str,
+        file_content: Union[bytes, str],
+        file_content_type: Optional[str] = None,
+        file_headers: Optional[dict] = None,
+    ) -> dict:
         """Direct API method to upload a file to a specific adapter on a specifc node.
 
         Args:
@@ -267,17 +277,3 @@ class Adapters(ModelMixins):
         ret = self.request(method="post", path=path, data=data, files=files)
         ret["filename"] = file_name
         return ret
-
-    # def _download_file(self, name, node_id, cnx_id, schema_key):
-    #     """Direct API method to download a file.
-
-    #     Notes:
-    #         WORK IN PROGRESS!
-
-    #     """
-    #     data = {"uuid": cnx_id, "schema_key": schema_key}
-    #     path = self.router.download_file.format(
-    #         name=name, node_id=node_id
-    #     )
-    #     ret = self.request(method="post", path=path, json=data, raw=True)
-    #     return ret

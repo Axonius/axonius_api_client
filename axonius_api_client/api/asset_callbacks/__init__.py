@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 """API models package."""
+from typing import Optional
+
 from ...exceptions import ApiError
 from . import base, base_csv, base_json, base_table, base_xlsx
 from .base import Base
@@ -34,7 +36,7 @@ CALLBACKS_MAP = {
 }
 
 
-def get_callbacks_cls(export=None):
+def get_callbacks_cls(export: Optional[str] = None) -> Base:
     """Get a callback class."""
     export = export or DEFAULT_CALLBACKS_CLS
     if export in CALLBACKS_MAP:

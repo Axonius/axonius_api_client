@@ -2,6 +2,7 @@
 """API models for working with device and user assets."""
 import codecs
 import csv
+from typing import List
 
 from ...tools import listify
 from .base import Base
@@ -10,7 +11,7 @@ from .base import Base
 class Csv(Base):
     """Pass."""
 
-    CB_NAME = "csv"
+    CB_NAME: str = "csv"
 
     def _init(self, **kwargs):
         """Pass."""
@@ -59,7 +60,7 @@ class Csv(Base):
         self._fd.write("\n")
         self.close_fd()
 
-    def process_row(self, row):
+    def process_row(self, row: dict) -> List[dict]:
         """Write row to dictwriter and delete it."""
         self.do_pre_row()
 
@@ -75,12 +76,12 @@ class Csv(Base):
 
         return row_return
 
-    def get_csv_dialect(self):
+    def get_csv_dialect(self) -> str:
         """Pass."""
         dialect = self.GETARGS.get("csv_dialect", "excel")
         return dialect
 
-    def get_csv_quote(self):
+    def get_csv_quote(self) -> int:
         """Pass."""
         quote = self.GETARGS.get("csv_quoting", "nonnumeric")
         quote = getattr(csv, f"QUOTE_{quote.upper()}")
