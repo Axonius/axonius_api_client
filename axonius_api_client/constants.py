@@ -71,20 +71,20 @@ LOG_REQUEST_ATTRS_BRIEF = [
 """:obj:`list` of :obj:`str`: request attributes to log when verbose=False"""
 
 RESPONSE_ATTR_MAP = {
-    "url": "{response.url!r}",
-    "size": "{response.body_size}",
-    "method": "{response.request.method!r}",
-    "status": "{response.status_code!r}",
-    "reason": "{response.reason!r}",
-    "elapsed": "{response.elapsed}",
-    "headers": "{response.headers}",
+    "url": "{url!r}",
+    "size": "{body_size}",
+    "method": "{method!r}",
+    "status": "{status_code!r}",
+    "reason": "{reason!r}",
+    "elapsed": "{elapsed}",
+    "headers": "{headers}",
 }
 
 REQUEST_ATTR_MAP = {
-    "url": "{request.url!r}",
-    "size": "{request.body_size}",
-    "method": "{request.method!r}",
-    "headers": "{request.headers}",
+    "url": "{url!r}",
+    "size": "{body_size}",
+    "method": "{method!r}",
+    "headers": "{headers}",
 }
 
 TIMEOUT_CONNECT = 5
