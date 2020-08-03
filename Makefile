@@ -51,10 +51,10 @@ lint:
 	pipenv run bandit --skip B101 -r $(PACKAGE)
 
 test:
-	pipenv run pytest -ra --verbose --cov-config=.coveragerc --cov-report xml --cov-report=html:cov_html --cov=$(PACKAGE) --showlocals  --exitfirst $(PACKAGE)/tests
+	pipenv run pytest -ra -vv --showlocals --exitfirst --pdb --cov-config=.coveragerc --cov-report xml --cov-report=html:cov_html --cov=$(PACKAGE) $(PACKAGE)/tests
 
-test_dev:
-	pipenv run pytest -vv --showlocals --exitfirst --last-failed --pdb $(PACKAGE)/tests
+test_last:
+	pipenv run pytest -ra -vv --showlocals --exitfirst --last-failed --pdb --cov-config=.coveragerc --cov-report xml --cov-report=html:cov_html --cov=$(PACKAGE) $(PACKAGE)/tests
 
 test_cov_open:
 	open cov_html/index.html

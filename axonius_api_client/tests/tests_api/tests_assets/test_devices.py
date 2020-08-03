@@ -2,14 +2,8 @@
 """Test suite for assets."""
 import pytest
 
-from .base_assets import (
-    AssetsPrivate,
-    AssetsPublic,
-    ModelMixinsBase,
-    check_assets,
-    get_field_values,
-    load_test_data,
-)
+from .base_assets import (AssetsPrivate, AssetsPublic, ModelMixinsBase,
+                          check_assets, get_field_values, load_test_data)
 
 
 class TestDevices(AssetsPrivate, AssetsPublic, ModelMixinsBase):
@@ -135,7 +129,7 @@ class TestDevices(AssetsPrivate, AssetsPublic, ModelMixinsBase):
             value=value, field=field, fields_map=apiobj.TEST_DATA["fields_map"],
         )
         check_assets(rows)
-        assert len(rows) == 1
+        assert len(rows) >= 1
 
         rows_values = get_field_values(rows=rows, field=field)
         assert value in rows_values

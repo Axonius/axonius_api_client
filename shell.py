@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """Utilities for this package."""
-# import dataclasses
 import os
 
 import axonius_api_client as axonapi
@@ -44,41 +43,3 @@ if __name__ == "__main__":
     adapters = ctx.adapters
     enforcements = ctx.enforcements
     system = ctx.system
-    import datetime
-    import json
-
-    # field = 'specific_data.data.plugin_and_severities'
-    query = '(((specific_data.data.plugin_and_severities == ({"$exists":true,"$ne":[]})) and specific_data.data.plugin_and_severities != []))'  # noqa
-    query = None
-    # get_fields = devices.fields.validate(fields_regex='specific_data.data\..*')
-    all_fields = devices.fields.get()
-    agg_fields = all_fields["agg"]
-    root_agg_fields = [x for x in agg_fields if x["is_root"]]
-    root_agg_fields = [x["name_qual"] for x in root_agg_fields]
-    root_agg_fields = [x for x in root_agg_fields if not x.endswith("_details")]
-
-    pages = []
-    cursor = None
-    idx = 0
-    while True:
-        start = datetime.datetime.now()
-
-        page = devices._get_cursor(
-            query=query,
-            fields=root_agg_fields,
-            row_start=idx,
-            page_size=1,
-            cursor=cursor,
-        )
-        pages.append(page)
-        cursor = page["cursor"]
-        end = datetime.datetime.now()
-        delta = str(end - start)
-        size = len(json.dumps(pages[idx])) / 1024
-        page["meta"] = {"delta": delta, "size": size, "idx": idx}
-        print(f"asset#: {idx}, delta: {delta}, KB: {size}")
-        if not page["assets"] or idx >= 100:
-            break
-        idx += 1
-
-    time_pages = sorted(pages, key=lambda x: x["meta"]["delta"])

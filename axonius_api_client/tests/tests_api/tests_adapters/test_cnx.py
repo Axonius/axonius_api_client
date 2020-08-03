@@ -150,23 +150,23 @@ class TestCnxPublic(TestCnxBase):
 
     def test_update_cnx_error(self, apiobj):
         """Pass."""
-        cnx = get_cnx_working(apiobj=apiobj, reqkeys=["verify_ssl"])
-        old_verify_ssl = cnx["config"].get("verify_ssl", False)
-        new_verify_ssl = not old_verify_ssl
+        cnx = get_cnx_working(apiobj=apiobj, reqkeys=["https_proxy"])
+        old_https_proxy = cnx["config"].get("https_proxy")
+        new_https_proxy = "badwolf"
 
         with pytest.raises(CnxUpdateError) as exc:
-            apiobj.cnx.update_cnx(cnx_update=cnx, verify_ssl=new_verify_ssl)
+            apiobj.cnx.update_cnx(cnx_update=cnx, https_proxy=new_https_proxy)
 
         assert getattr(exc.value, "cnx_new", None)
         assert getattr(exc.value, "cnx_old", None)
         assert getattr(exc.value, "result", None)
-        assert exc.value.cnx_new["config"]["verify_ssl"] == new_verify_ssl
-        assert exc.value.cnx_old["config"]["verify_ssl"] == old_verify_ssl
+        assert exc.value.cnx_new["config"]["https_proxy"] == new_https_proxy
+        assert exc.value.cnx_old["config"].get("https_proxy") == old_https_proxy
 
         cnx_reset = apiobj.cnx.update_cnx(
-            cnx_update=exc.value.cnx_new, verify_ssl=old_verify_ssl
+            cnx_update=exc.value.cnx_new, https_proxy=old_https_proxy
         )
-        assert cnx_reset["config"]["verify_ssl"] == old_verify_ssl
+        assert cnx_reset["config"]["https_proxy"] == old_https_proxy
 
     def test_add_remove(self, apiobj, csv_file_path):
         """Pass."""

@@ -40,6 +40,10 @@ def val_parsed_schema(schema):
         item_enum = item.pop("enum", [])
         assert isinstance(item_enum, list)
         for x in item_enum:
+            if isinstance(x, dict):
+                assert isinstance(x["name"], str)
+                assert isinstance(x["title"], str)
+                continue
             assert isinstance(x, str) and x
 
         item_default = item.pop("default", "")
@@ -49,7 +53,14 @@ def val_parsed_schema(schema):
         ]
 
         item_items = item.pop("items", {})
-        assert isinstance(item_items, dict)
+        if isinstance(item_items, list):
+            for x in item_items:
+                assert isinstance(x, dict)
+                assert isinstance(x["name"], str)
+                assert isinstance(x["title"], str)
+                assert isinstance(x["type"], str)
+        else:
+            assert isinstance(item_items, dict)
 
         item_report_id = item.pop("report_id", "")
         assert isinstance(item_report_id, str)
@@ -105,7 +116,7 @@ class TestAdaptersPrivate(TestAdaptersBase):
 
         config = instance.pop("config")
         assert isinstance(config, dict) and config
-        assert len(config) in [1, 2]
+        assert len(config) in [2, 3]
         assert "AdapterBase" in config
 
         for config_name, item in config.items():
@@ -207,12 +218,23 @@ class TestAdaptersPrivate(TestAdaptersBase):
             item_enum = item.pop("enum", [])
             assert isinstance(item_enum, list)
             for x in item_enum:
-                assert isinstance(x, str)
+                if isinstance(x, dict):
+                    assert isinstance(x["name"], str)
+                    assert isinstance(x["title"], str)
+                    continue
+                assert isinstance(x, (str, int))
 
             item_default = item.pop("default", "")
             assert isinstance(item_default, (str, int, bool)) or item_default is None
 
             item_items = item.pop("items", {})
+            if isinstance(item_items, list):
+                for x in item_items:
+                    assert isinstance(x, dict)
+                    assert isinstance(x["name"], str)
+                    assert isinstance(x["title"], str)
+                    assert isinstance(x["type"], str)
+                continue
             assert isinstance(item_items, dict)
 
             item_req = item.pop("required", False)
@@ -439,6 +461,12 @@ class TestAdaptersPublic(TestAdaptersBase):
         specific_schema = schemas.pop("specific")
         assert isinstance(specific_schema, dict)
 
+        discovery_name = schemas.pop("discovery_name")
+        assert isinstance(discovery_name, str)
+
+        discovery_schema = schemas.pop("discovery")
+        val_parsed_schema(schema=discovery_schema)
+
         assert not schemas
 
         if specific_name:
@@ -538,14 +566,14 @@ class TestAdaptersPublic(TestAdaptersBase):
         with pytest.raises(NotFoundError):
             apiobj.get_by_name(name="badwolf", node=DEFAULT_NODE)
 
-    def test_config_get_generic_false_bad(self, apiobj):
+    def test_config_get_bad_config_type(self, apiobj):
         """Pass."""
         with pytest.raises(ApiError):
-            apiobj.config_get(name=CSV_ADAPTER, node=DEFAULT_NODE, generic=False)
+            apiobj.config_get(name=CSV_ADAPTER, node=DEFAULT_NODE, config_type="badwolf")
 
-    def test_config_get_generic_false(self, apiobj):
+    def test_config_get_specific(self, apiobj):
         """Pass."""
-        data = apiobj.config_get(name="aws", node=DEFAULT_NODE, generic=False)
+        data = apiobj.config_get(name="aws", node=DEFAULT_NODE, config_type="specific")
         assert isinstance(data, dict)
         config = data.pop("config")
         assert isinstance(config, dict) and config
@@ -555,9 +583,11 @@ class TestAdaptersPublic(TestAdaptersBase):
 
         val_parsed_schema(schema=schema)
 
-    def test_config_get_generic_true(self, apiobj):
+    def test_config_get_generic(self, apiobj):
         """Pass."""
-        data = apiobj.config_get(name=CSV_ADAPTER, node=DEFAULT_NODE, generic=True)
+        data = apiobj.config_get(
+            name=CSV_ADAPTER, node=DEFAULT_NODE, config_type="generic"
+        )
         assert isinstance(data, dict)
 
         config = data.pop("config")
@@ -597,13 +627,18 @@ class TestAdaptersPublic(TestAdaptersBase):
         """Pass."""
         with pytest.raises(ConfigUnknown):
             apiobj.config_update(
-                name=CSV_ADAPTER, node=DEFAULT_NODE, generic=True, badwolf="badwolf",
+                name=CSV_ADAPTER,
+                node=DEFAULT_NODE,
+                config_type="generic",
+                badwolf="badwolf",
             )
 
     def test_config_update_unchanged(self, apiobj):
         """Pass."""
         with pytest.raises(ConfigUnchanged):
-            apiobj.config_update(name=CSV_ADAPTER, node=DEFAULT_NODE, generic=True)
+            apiobj.config_update(
+                name=CSV_ADAPTER, node=DEFAULT_NODE, config_type="generic"
+            )
 
     def test_config_update_generic_true(self, apiobj, adapter):
         """Pass."""
@@ -617,7 +652,7 @@ class TestAdaptersPublic(TestAdaptersBase):
             name=adapter["name"],
             node=adapter["node_name"],
             user_last_fetched_threshold_hours=new_value,
-            generic=True,
+            config_type="generic",
         )
         set_value = set_response["config"][key]
         assert set_value == new_value
@@ -626,7 +661,7 @@ class TestAdaptersPublic(TestAdaptersBase):
             name=adapter["name"],
             node=adapter["node_name"],
             user_last_fetched_threshold_hours=current_value,
-            generic=True,
+            config_type="generic",
         )
         reset_value = reset_response["config"][key]
         assert reset_value == current_value
