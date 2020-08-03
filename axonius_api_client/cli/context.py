@@ -66,9 +66,10 @@ class exc_wrapper:
 
     EXCLUDES = (SystemExit, click.exceptions.Exit)
 
-    def __init__(self, wraperror=True):
+    def __init__(self, wraperror=True, abort=True):
         """Pass."""
         self.wraperror = wraperror
+        self.abort = abort
 
     def __enter__(self):
         """Pass."""
@@ -79,7 +80,7 @@ class exc_wrapper:
         if value and self.wraperror and not isinstance(value, self.EXCLUDES):
             cls = value.__class__
             msg = f"WRAPPED EXCEPTION: {cls.__module__}.{cls.__name__}\n{value}"
-            echo_error(msg)
+            echo_error(msg=msg, abort=self.abort)
 
 
 class Context:

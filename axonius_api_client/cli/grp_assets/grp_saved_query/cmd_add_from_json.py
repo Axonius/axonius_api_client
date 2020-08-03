@@ -5,13 +5,26 @@ from ....tools import listify
 from ...context import CONTEXT_SETTINGS, click
 from ...options import AUTH, INPUT_FILE, add_options
 
-OPTIONS = [*AUTH, INPUT_FILE]
+OPTIONS = [
+    *AUTH,
+    INPUT_FILE,
+    click.option(
+        "--abort/--no-abort",
+        "-a/-na",
+        "abort",
+        help="Stop adding saved queries if an error happens",
+        required=False,
+        default=False,
+        show_envvar=True,
+        show_default=True,
+    ),
+]
 
 
 @click.command(name="add-from-json", context_settings=CONTEXT_SETTINGS)
 @add_options(OPTIONS)
 @click.pass_context
-def cmd(ctx, url, key, secret, input_file, **kwargs):
+def cmd(ctx, url, key, secret, input_file, abort, **kwargs):
     """Add saved queries from a JSON file."""
     new_sqs = listify(ctx.obj.read_stream_json(stream=input_file, expect=(list, dict)))
 
@@ -34,7 +47,8 @@ def cmd(ctx, url, key, secret, input_file, **kwargs):
 
         if missing_keys:
             missing_keys = ", ".join(missing_keys)
-            ctx.obj.echo_error(f"Missing required keys: {missing_keys}")
+
+            ctx.obj.echo_error(msg=f"Missing required keys: {missing_keys}", abort=abort)
 
         client = ctx.obj.start_client(url=url, key=key, secret=secret)
 
@@ -44,15 +58,18 @@ def cmd(ctx, url, key, secret, input_file, **kwargs):
         sq_name = new_sq["name"]
 
         try:
-            row = apiobj.saved_query.get_by_name(value=sq_name)
-            ctx.obj.echo_error(f"Saved query {sq_name!r} already exists, can not add")
+            apiobj.saved_query.get_by_name(value=sq_name)
+            ctx.obj.echo_error(
+                msg=f"Saved query {sq_name!r} already exists, can not add", abort=abort,
+            )
+            continue
         except NotFoundError:
             ctx.obj.echo_ok(f"Saved query {sq_name!r} does not exist, will add")
 
-        with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
+        with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror, abort=abort):
             sq_uuid = apiobj.saved_query._add(data=new_sq)
-            row = apiobj.saved_query.get_by_uuid(value=sq_uuid)
-
-        ctx.obj.echo_ok(f"Successfully created saved query: {row['name']}")
+            ctx.obj.echo_ok(
+                f"Successfully created saved query: {sq_name} with UUID {sq_uuid}"
+            )
 
     ctx.exit(0)
