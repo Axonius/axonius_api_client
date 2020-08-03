@@ -54,7 +54,7 @@ GET_EXPORT = [
         "export",
         default="json",
         help="Formatter to use when exporting asset data",
-        type=click.Choice(["csv", "json", "table", "json_to_csv"]),
+        type=click.Choice(["csv", "json", "table", "json_to_csv", "xlsx"]),
         show_envvar=True,
         show_default=True,
     ),
