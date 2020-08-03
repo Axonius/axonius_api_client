@@ -3,9 +3,8 @@
 import atexit
 import os
 
-import click
-
 import axonius_api_client as axonapi
+import click
 
 from ...constants import PY36
 from ...tools import echo_error, json_reload, pathlib
@@ -24,6 +23,7 @@ API Objects:
     - devices/d: Instance of axonius_api_client.api.Devices
     - users/u: Instance of axonius_api_client.api.Users
     - system/s: Instance of axonius_api_client.api.System
+    - enforcements/e: Instance of axonius_api_client.api.Enforcements
 """
 
 SHELL_EXIT = """Goodbye human. We hope you enjoyed your stay."""
@@ -74,6 +74,8 @@ def cmd(ctx, url, key, secret):  # noqa: D301
         "a": client.adapters,
         "jdump": jdump,
         "j": jdump,
+        "enforcements": client.enforcements,
+        "e": client.enforcements,
         "s": client.system,
         "system": client.system,
         "axonapi": axonapi,

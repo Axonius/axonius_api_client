@@ -152,6 +152,21 @@ class Fields(ChildMixins):
 
         return matches
 
+    def get_field_schemas_root(self, adapter, fields_map=None):
+        """Pass."""
+        fields_map = fields_map or self.get()
+        adapter = self.get_adapter_name(value=adapter, fields_map=fields_map)
+        schemas = fields_map[adapter]
+
+        matches = [x for x in schemas if x.get("selectable") and x.get("is_root")]
+        return matches
+
+    def get_field_names_root(self, adapter, fields_map=None):
+        """Pass."""
+        schemas = self.get_field_schemas_root(adapter=adapter, fields_map=fields_map)
+        names = [x["name_qual"] for x in schemas]
+        return names
+
     def validate(
         self,
         fields=None,
@@ -159,17 +174,24 @@ class Fields(ChildMixins):
         fields_manual=None,
         fields_default=True,
         fields_map=None,
+        fields_root=None,
     ):
         """Validate provided fields."""
         fields_manual = listify(obj=fields_manual)
-
         selected = []
 
-        if fields_default:
+        if fields_default and not fields_root:
             selected += self.parent.fields_default
 
         if fields_manual:
             selected += [x for x in fields_manual if x not in selected]
+
+        if fields_root:
+            fields_map = fields_map or self.get()
+            matches_root = self.get_field_names_root(
+                adapter=fields_root, fields_map=fields_map
+            )
+            selected += [x for x in matches_root if x not in selected]
 
         if not any([fields, fields_regex]):
             if not selected:
@@ -178,13 +200,11 @@ class Fields(ChildMixins):
 
         fields_map = fields_map or self.get()
 
-        for field in self.get_field_names_eq(value=fields, fields_map=fields_map):
-            if field not in selected:
-                selected.append(field)
+        matches_eq = self.get_field_names_eq(value=fields, fields_map=fields_map)
+        selected += [x for x in matches_eq if x not in selected]
 
-        for field in self.get_field_names_re(value=fields_regex, fields_map=fields_map):
-            if field not in selected:
-                selected.append(field)
+        matches_re = self.get_field_names_re(value=fields_regex, fields_map=fields_map)
+        selected += [x for x in matches_re if x not in selected]
 
         return selected
 

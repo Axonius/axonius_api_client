@@ -88,6 +88,9 @@ def cmd(
             continue
 
         for schema in schemas:
+            if not schema.get("selectable"):
+                continue
+
             if not fre.search(schema[field_key]):
                 continue
 

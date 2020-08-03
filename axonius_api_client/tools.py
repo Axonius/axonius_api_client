@@ -659,6 +659,12 @@ def calc_percent(part, whole):
 
 def join_kv(obj, listjoin=", ", tmpl="{k}: {v!r}"):
     """Pass."""
+    if isinstance(obj, list):
+        return [join_kv(obj=x, listjoin=listjoin, tmpl=tmpl) for x in obj]
+
+    if not isinstance(obj, dict):
+        raise ToolsError(f"Object must be a dict, supplied {type(obj)}")
+
     items = []
     for k, v in obj.items():
         if isinstance(v, list):

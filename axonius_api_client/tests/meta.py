@@ -79,6 +79,7 @@ FIELD_FORMATS = [
     "subnet",
     "version",
     "password",
+    "time",
 ]
 SCHEMA_FIELD_FORMATS = [
     "image",

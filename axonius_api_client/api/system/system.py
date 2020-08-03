@@ -23,12 +23,8 @@ class System(ModelMixins):
         """
         return API_VERSION.system
 
-    def _init(self, auth, **kwargs):
-        """Post init method for subclasses to use for extra setup.
-
-        Args:
-            auth (:obj:`.auth.Model`): object to use for auth and sending API requests
-        """
+    def _init(self, **kwargs):
+        """Post init method for subclasses to use for extra setup."""
         self.nodes = Nodes(parent=self)
         self.settings_core = SettingsCore(parent=self)
         self.settings_gui = SettingsGui(parent=self)
@@ -38,4 +34,4 @@ class System(ModelMixins):
         self.users = Users(parent=self)
         self.roles = Roles(parent=self)
         self.central_core = CentralCore(parent=self)
-        super(System, self)._init(auth=auth, **kwargs)
+        super(System, self)._init(**kwargs)

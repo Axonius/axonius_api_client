@@ -1,6 +1,7 @@
-#!/usr/bin/env python -i
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
-"""Example script for devices with vulnerable software with min/max CVSS score."""
+"""Utilities for this package."""
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 
 def jdump(obj, **kwargs):
@@ -51,7 +52,7 @@ if __name__ == "__main__":
     import axonius_api_client as axonapi
 
     tools = axonapi.tools
-    axonapi.cli.cli_constants.load_dotenv()
+    axonapi.constants.load_dotenv()
 
     AX_URL = os.environ["AX_URL"]
     AX_KEY = os.environ["AX_KEY"]
