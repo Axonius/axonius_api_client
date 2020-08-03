@@ -79,6 +79,10 @@ SQ_OPTS = [
 def handle_export(ctx, rows, export_format):
     """Pass."""
     if export_format == "json":
+        # convert the list into a single item if only one item
+        if isinstance(rows, list) and len(rows) == 1:
+            rows = rows[0]
+
         click.secho(json_dump(rows))
         ctx.exit(0)
 
