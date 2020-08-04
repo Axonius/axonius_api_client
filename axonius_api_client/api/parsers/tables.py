@@ -2,6 +2,7 @@
 """API models for working with adapters and connections."""
 import copy
 import textwrap
+from typing import List, Optional, Union
 
 import tabulate
 
@@ -9,7 +10,13 @@ from ...constants import KEY_MAP_ADAPTER, KEY_MAP_CNX, KEY_MAP_SCHEMA
 from ...tools import json_dump
 
 
-def tablize(value, err=None, fmt="simple", footer=True, **kwargs):
+def tablize(
+    value: List[dict],
+    err: Optional[str] = None,
+    fmt: str = "simple",
+    footer: bool = True,
+    **kwargs
+) -> str:
     """Pass."""
     # value = wrapper(value=value, **kwargs)
 
@@ -31,8 +38,14 @@ def tablize(value, err=None, fmt="simple", footer=True, **kwargs):
 
 
 def tablize_schemas(
-    schemas, config=None, err=None, fmt="simple", footer=True, orig=True, orig_width=20
-):
+    schemas: List[dict],
+    config: Optional[dict] = None,
+    err: Optional[str] = None,
+    fmt: str = "simple",
+    footer: bool = True,
+    orig: bool = True,
+    orig_width: int = 20,
+) -> str:
     """Pass."""
     values = []
     config = config or None
@@ -54,7 +67,12 @@ def tablize_schemas(
     return tablize(value=values, err=err, fmt=fmt, footer=footer)
 
 
-def tablize_adapters(adapters, err=None, fmt="simple", footer=True):
+def tablize_adapters(
+    adapters: List[dict],
+    err: Optional[str] = None,
+    fmt: str = "simple",
+    footer: bool = True,
+) -> str:
     """Pass."""
     values = []
 
@@ -66,7 +84,9 @@ def tablize_adapters(adapters, err=None, fmt="simple", footer=True):
     return tablize(value=values, err=err, fmt=fmt, footer=footer)
 
 
-def tablize_cnxs(cnxs, err=None, fmt="simple", footer=True):
+def tablize_cnxs(
+    cnxs: List[dict], err: Optional[str] = None, fmt: str = "simple", footer: bool = True
+) -> str:
     """Pass."""
     values = []
     for cnx in cnxs:
@@ -77,7 +97,12 @@ def tablize_cnxs(cnxs, err=None, fmt="simple", footer=True):
     return tablize(value=values, err=err, fmt=fmt, footer=footer)
 
 
-def tab_map(value, key_map, orig=False, orig_width=20):
+def tab_map(
+    value: dict,
+    key_map: List[List[Union[str, str, int]]],
+    orig: bool = False,
+    orig_width: int = 20,
+) -> str:
     """Pass."""
     orig_value = copy.deepcopy(value)
 

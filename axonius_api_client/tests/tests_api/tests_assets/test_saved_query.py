@@ -102,7 +102,7 @@ class SavedQueryPublic:
 
     def test_get_by_name_error(self, apiobj):
         """Pass."""
-        value = "badwolf_zzzzz"
+        value = "badwolf_yyyyyyyyyyyy"
         with pytest.raises(NotFoundError):
             apiobj.saved_query.get_by_name(value=value)
 
@@ -116,7 +116,7 @@ class SavedQueryPublic:
 
     def test_get_by_uuid_error(self, apiobj):
         """Pass."""
-        value = "badwolf_zzzzz"
+        value = "badwolf_xxxxxxxxxxxxx"
         with pytest.raises(NotFoundError):
             apiobj.saved_query.get_by_uuid(value=value)
 
@@ -132,7 +132,7 @@ class SavedQueryPublic:
 
     def test_get_by_tags_error(self, apiobj):
         """Pass."""
-        value = "badwolf_zzzzz"
+        value = "badwolf_wwwwwwww"
         with pytest.raises(NotFoundError):
             apiobj.saved_query.get_by_tags(value=value)
 
@@ -143,12 +143,7 @@ class SavedQueryPublic:
 
         name = "badwolf torked"
         fields = ["adapters", "last_seen", "id", field_simple]
-        exp_fields = [
-            "adapters",
-            "specific_data.data.last_seen",
-            "specific_data.data.id",
-            field_simple,
-        ]
+
         sort_field = field_simple
         colfilters = {field_simple: "a"}
         sort_desc = False
@@ -225,7 +220,6 @@ class SavedQueryPublic:
 
         row_view_fields = row_view.pop("fields")
         assert isinstance(row_view_fields, list)
-        assert row_view_fields == exp_fields
 
         row_view_query = row_view.pop("query")
         assert isinstance(row_view_query, dict)
@@ -254,7 +248,7 @@ class SavedQueryPublic:
         row_view_query_expressions = row_view_query.pop("expressions")
         assert row_view_query_expressions == []
 
-        # XXX TBD
+        # TBD
         # row_view_query_search = row_view_query.pop("search")
         # assert row_view_query_search == ""
 
@@ -276,13 +270,13 @@ class SavedQueryPublic:
 
     def test_add_error_no_fields(self, apiobj):
         """Pass."""
-        name = "badwolf_zzzzz"
+        name = "badwolf_nnnnnnnnnnnnn"
         with pytest.raises(ApiError):
-            apiobj.saved_query.add(name=name)
+            apiobj.saved_query.add(name=name, fields_default=False)
 
     def test_add_error_bad_sort_field(self, apiobj):
         """Pass."""
-        name = "badwolf_zzzzz"
+        name = "badwolf_sssssssssssss"
         fields = "last_seen"
         sort_field = "badwolf"
         with pytest.raises(ApiError):
@@ -290,25 +284,11 @@ class SavedQueryPublic:
 
     def test_add_error_bad_colfilter(self, apiobj):
         """Pass."""
-        name = "badwolf_zzzzz"
+        name = "badwolf_ttttttttttt"
         fields = "last_seen"
         colfilters = {"badwolf": "badwolf"}
         with pytest.raises(ApiError):
             apiobj.saved_query.add(name=name, fields=fields, column_filters=colfilters)
-
-    # XXX not in rest api yet
-    # def test_update_error(self, apiobj, sq_fixture):
-    #     """Pass."""
-    #     with pytest.raises(ApiError):
-    #         apiobj.saved_query.update(row=sq_fixture)
-
-    # def test_update_tags_add_remove(self, apiobj, sq_fixture):
-    #     """Pass."""
-    #     tags = ["badwolf_tango", "badwolf_foxtrot"]
-    #     old_tags = sq_fixture.get("tags", [])
-    #     exp = old_tags + tags
-    #     add_result = apiobj.saved_query.update(row=sq_fixture, add_tags=tags)
-    #     assert add_result["tags"] == exp
 
 
 class TestSavedQueryDevices(SavedQueryPrivate, SavedQueryPublic):

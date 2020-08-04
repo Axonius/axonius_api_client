@@ -4,6 +4,7 @@ import logging
 import os
 import pathlib
 import sys
+from typing import Dict, List, Optional, Tuple, Type, Union
 
 import dotenv
 
@@ -14,7 +15,9 @@ DEFAULT_PATH = os.getcwd()
 AX_ENV = os.environ.get("AX_ENV", "").strip() or DEFAULT_PATH
 
 
-def load_dotenv(ax_env=AX_ENV, reenv=False, verbose=False):
+def load_dotenv(
+    ax_env: str = AX_ENV, reenv: bool = False, verbose: bool = False
+) -> Tuple[str, pathlib.Path]:
     """Pass."""
     if reenv:
         ax_env = os.environ.get("AX_ENV", "").strip() or DEFAULT_PATH
@@ -32,45 +35,44 @@ def load_dotenv(ax_env=AX_ENV, reenv=False, verbose=False):
 
 load_dotenv()
 
-PY36 = sys.version_info[0:2] >= (3, 6)
+PY36: bool = sys.version_info[0:2] >= (3, 6)
 """:obj:`bool`: python version is 3.6 or higher"""
 
-PY37 = sys.version_info[0:2] >= (3, 7)
+PY37: bool = sys.version_info[0:2] >= (3, 7)
 """:obj:`bool`: python version is 3.7 or higher"""
 
-COMPLEX = (dict, list, tuple)
+COMPLEX: Tuple[Type] = (dict, list, tuple)
 """:obj:`tuple` of :obj:`type`: types that are considered as complex."""
 
-SIMPLE = (str, int, bool, float)
+SIMPLE: Tuple[Type] = (str, int, bool, float)
 """:obj:`tuple` of :obj:`type`: types that are considered as simple"""
 
-EMPTY = [None, "", [], {}, ()]
+EMPTY: List[Union[str, list, dict, tuple]] = [None, "", [], {}, ()]
 """:obj:`list` of :obj:`type`: values that should be considered as empty"""
 
-YES = [True, 1, "1", "true", "t", "yes", "y"]
+YES: List[Union[bool, int, str]] = [True, 1, "1", "true", "t", "yes", "y"]
 """:obj:`list` of :obj:`type`: values that should be considered as truthy"""
 
-NO = [False, 0, "0", "false", "f", "no", "n"]
+NO: List[Union[bool, int, str]] = [False, 0, "0", "false", "f", "no", "n"]
 """:obj:`list` of :obj:`type`: values that should be considered as falsey"""
 
-MAX_PAGE_SIZE = 2000
+MAX_PAGE_SIZE: int = 2000
 """:obj:`int`: maximum page size that REST API allows"""
 
-PAGE_SIZE = MAX_PAGE_SIZE
-PAGE_SLEEP = 0
-PAGE_CACHE = False
+PAGE_SIZE: int = MAX_PAGE_SIZE
+PAGE_SLEEP: int = 0
 
-GUI_PAGE_SIZES = [25, 50, 100]
+GUI_PAGE_SIZES: List[int] = [25, 50, 100]
 """:obj:`list` of :obj:`int`: valid page sizes for GUI paging"""
 
-LOG_REQUEST_ATTRS_BRIEF = [
+LOG_REQUEST_ATTRS_BRIEF: List[str] = [
     "request to {request.url!r}",
     "method={request.method!r}",
     "size={size}",
 ]
 """:obj:`list` of :obj:`str`: request attributes to log when verbose=False"""
 
-RESPONSE_ATTR_MAP = {
+RESPONSE_ATTR_MAP: dict = {
     "url": "{url!r}",
     "size": "{body_size}",
     "method": "{method!r}",
@@ -80,105 +82,105 @@ RESPONSE_ATTR_MAP = {
     "headers": "{headers}",
 }
 
-REQUEST_ATTR_MAP = {
+REQUEST_ATTR_MAP: dict = {
     "url": "{url!r}",
     "size": "{body_size}",
     "method": "{method!r}",
     "headers": "{headers}",
 }
 
-TIMEOUT_CONNECT = 5
+TIMEOUT_CONNECT: int = 5
 """:obj:`int`: seconds to wait for connection to API."""
 
-TIMEOUT_RESPONSE = 900
+TIMEOUT_RESPONSE: int = 900
 """:obj:`int`: seconds to wait for response from API."""
 
-LOG_FMT_VERBOSE = (
+LOG_FMT_VERBOSE: str = (
     "%(asctime)s %(levelname)-8s [%(name)s:%(funcName)s:%(lineno)d] %(message)s"
 )
-LOG_FMT_BRIEF = "%(levelname)-8s [%(name)s] %(message)s"
+LOG_FMT_BRIEF: str = "%(levelname)-8s [%(name)s] %(message)s"
 
-DEBUG = os.environ.get("AX_DEBUG", "").lower().strip()
-DEBUG = any([DEBUG == x for x in YES])
+DEBUG: str = os.environ.get("AX_DEBUG", "").lower().strip()
+DEBUG: bool = any([DEBUG == x for x in YES])
 
-LOG_FMT_CONSOLE = LOG_FMT_VERBOSE if DEBUG else LOG_FMT_BRIEF
+LOG_FMT_CONSOLE: str = LOG_FMT_VERBOSE if DEBUG else LOG_FMT_BRIEF
 """:obj:`str`: default logging format to use for console logs"""
 
-LOG_FMT_FILE = LOG_FMT_VERBOSE
+LOG_FMT_FILE: str = LOG_FMT_VERBOSE
 """:obj:`str`: default logging format to use for file logs"""
 
-LOG_DATEFMT_CONSOLE = "%m/%d/%Y %I:%M:%S %p %Z"
+LOG_DATEFMT_CONSOLE: str = "%m/%d/%Y %I:%M:%S %p %Z"
 """:obj:`str`: default datetime format to use for console logs"""
 
-LOG_DATEFMT_FILE = "%m/%d/%Y %I:%M:%S %p %Z"
+LOG_DATEFMT_FILE: str = "%m/%d/%Y %I:%M:%S %p %Z"
 """:obj:`str`: default datetime format to use for file logs"""
 
-LOG_LEVEL_CONSOLE = "debug"
+LOG_LEVEL_CONSOLE: str = "debug"
 """:obj:`str`: default logging level to use for console log handlers"""
 
-LOG_LEVEL_FILE = "debug"
+LOG_LEVEL_FILE: str = "debug"
 """:obj:`str`: default logging level to use for file log handlers"""
 
-LOG_LEVEL_HTTP = "debug"
+LOG_LEVEL_HTTP: str = "debug"
 """:obj:`str`: default logging level to use for :obj:`axonius_api_client.http.Http`"""
 
-LOG_LEVEL_AUTH = "debug"
+LOG_LEVEL_AUTH: str = "debug"
 """:obj:`str`: default logging level to use for :obj:`axonius_api_client.auth.Mixins`"""
 
-LOG_LEVEL_API = "debug"
+LOG_LEVEL_API: str = "debug"
 """:obj:`str`: default logging level to use for
 :obj:`axonius_api_client.api.mixins.Mixins`"""
 
-LOG_LEVEL_PACKAGE = "debug"
+LOG_LEVEL_PACKAGE: str = "debug"
 """:obj:`str`: default logging level to use for :mod:`axonius_api_client`"""
 
-LOG_LEVELS_STR = ["debug", "info", "warning", "error", "fatal"]
+LOG_LEVELS_STR: List[str] = ["debug", "info", "warning", "error", "fatal"]
 """:obj:`list` of :obj:`str`: valid logging level strs"""
 
-LOG_LEVELS_STR_CSV = ", ".join(LOG_LEVELS_STR)
+LOG_LEVELS_STR_CSV: str = ", ".join(LOG_LEVELS_STR)
 """:obj:`str`: csv of valid logging level strs"""
 
-LOG_LEVELS_INT = [getattr(logging, x.upper()) for x in LOG_LEVELS_STR]
+LOG_LEVELS_INT: List[int] = [getattr(logging, x.upper()) for x in LOG_LEVELS_STR]
 """:obj:`list` of :obj:`int`: valid logging level ints"""
 
-LOG_LEVELS_INT_CSV = ", ".join([str(x) for x in LOG_LEVELS_INT])
+LOG_LEVELS_INT_CSV: str = ", ".join([str(x) for x in LOG_LEVELS_INT])
 """:obj:`str`: csv of valid logging level ints"""
 
-LOG_FILE_PATH = DEFAULT_PATH
+LOG_FILE_PATH: str = DEFAULT_PATH
 """:obj:`str`: default path to use for log files"""
 
-LOG_FILE_PATH_MODE = 0o700
+LOG_FILE_PATH_MODE: oct = 0o700
 """:obj:`str`: default permisisons to use when creating directories"""
 
-LOG_FILE_NAME = f"{PACKAGE_ROOT}.log"
+LOG_FILE_NAME: str = f"{PACKAGE_ROOT}.log"
 """:obj:`str`: default log file name to use"""
 
-LOG_FILE_MAX_MB = 5
+LOG_FILE_MAX_MB: int = 5
 """:obj:`int`: default rollover trigger in MB"""
 
-LOG_FILE_MAX_FILES = 5
+LOG_FILE_MAX_FILES: int = 5
 """:obj:`int`: default max rollovers to keep"""
 
-LOG_NAME_STDERR = "handler_stderr"
+LOG_NAME_STDERR: str = "handler_stderr"
 """:obj:`str`: default handler name to use for STDERR log"""
 
-LOG_NAME_STDOUT = "handler_stdout"
+LOG_NAME_STDOUT: str = "handler_stdout"
 """:obj:`str`: default handler name to use for STDOUT log"""
 
-LOG_NAME_FILE = "handler_file"
+LOG_NAME_FILE: str = "handler_file"
 """:obj:`str`: default handler name to use for file log"""
 
-SETTING_UNCHANGED = ["unchanged"]
+SETTING_UNCHANGED: List[str] = ["unchanged"]
 """:obj:`list` of :obj:`str`: ref used by REST API when supplying a password
 field that should remain the same as what is already in the database"""
 
-DEFAULT_NODE = "Master"
+DEFAULT_NODE: str = "Master"
 """:obj:`str`: default node name to use"""
 
-CSV_ADAPTER = "csv"
+CSV_ADAPTER: str = "csv"
 """:obj:`str`: name of csv adapter"""
-CSV_FIELD_NAME = "file_path"
-CNX_SANE_DEFAULTS = {
+CSV_FIELD_NAME: str = "file_path"
+CNX_SANE_DEFAULTS: Dict[str, dict] = {
     "all": {"verify_ssl": False},
     "csv": {
         "is_users": False,
@@ -194,31 +196,31 @@ CNX_SANE_DEFAULTS = {
     },
 }
 
-FIELD_TRIM_LEN = 32000
-FIELD_TRIM_STR = "...TRIMMED - {field_len} characters over {trim_len}"
-FIELD_JOINER = "\n"
-TABLE_FORMAT = "fancy_grid"
-TABLE_MAX_ROWS = 5
+FIELD_TRIM_LEN: int = 32000
+FIELD_TRIM_STR: str = "...TRIMMED - {field_len} characters over {trim_len}"
+FIELD_JOINER: str = "\n"
+TABLE_FORMAT: str = "fancy_grid"
+TABLE_MAX_ROWS: int = 5
 
-OK_ARGS = {"fg": "green", "bold": True, "err": True}
+OK_ARGS: dict = {"fg": "green", "bold": True, "err": True}
 
-OK_TMPL = "** {msg}"
+OK_TMPL: str = "** {msg}"
 
-WARN_ARGS = {"fg": "yellow", "bold": True, "err": True}
+WARN_ARGS: dict = {"fg": "yellow", "bold": True, "err": True}
 
-WARN_TMPL = "** WARNING: {msg}"
+WARN_TMPL: str = "** WARNING: {msg}"
 
-ERROR_ARGS = {"fg": "red", "bold": True, "err": True}
+ERROR_ARGS: dict = {"fg": "red", "bold": True, "err": True}
 
-ERROR_TMPL = "** ERROR: {msg}"
-AGG_ADAPTER_NAME = "agg"
-AGG_ADAPTER_TITLE = "Aggregated"
-ALL_NAME = "all"
-AGG_ADAPTER_ALTS = ["generic", "general", "specific", "agg", "aggregated"]
+ERROR_TMPL: str = "** ERROR: {msg}"
+AGG_ADAPTER_NAME: str = "agg"
+AGG_ADAPTER_TITLE: str = "Aggregated"
+ALL_NAME: str = "all"
+AGG_ADAPTER_ALTS: List[str] = ["generic", "general", "specific", "agg", "aggregated"]
 """:obj:`list` of :obj:`str`: list of alternatives for 'generic' adapter."""
 
 
-NORM_TYPE_MAP = (
+NORM_TYPE_MAP: Tuple[Tuple[str, str, str, str], str] = (
     # (type, format, items.type, items.format), normalized
     (("string", "", "", ""), "string"),
     (("string", "date-time", "", ""), "string_datetime"),
@@ -241,10 +243,10 @@ NORM_TYPE_MAP = (
 )
 
 
-GET_SCHEMAS_KEYS = ["name", "name_qual", "name_base"]
-GET_SCHEMA_KEYS = ["name_base", "name_qual", "name"]
+GET_SCHEMAS_KEYS: List[str] = ["name", "name_qual", "name_base"]
+GET_SCHEMA_KEYS: List[str] = ["name_base", "name_qual", "name"]
 
-SCHEMAS_CUSTOM = {
+SCHEMAS_CUSTOM: Dict[str, dict] = {
     "report_adapters_missing": {
         "adapters_missing": {
             "adapter_name": "report",
@@ -265,11 +267,11 @@ SCHEMAS_CUSTOM = {
     }
 }
 
-MAX_BODY_LEN = 100000
-GENERIC_NAME = "AdapterBase"
-DISCOVERY_NAME = "DiscoverySchema"
-CONFIG_TYPES = ["generic", "specific", "discovery"]
-KEY_MAP_CNX = [
+MAX_BODY_LEN: int = 100000
+GENERIC_NAME: str = "AdapterBase"
+DISCOVERY_NAME: str = "DiscoverySchema"
+CONFIG_TYPES: List[str] = ["generic", "specific", "discovery"]
+KEY_MAP_CNX: List[Tuple[str, Optional[str], int]] = [
     ("adapter_name", "Adapter", 0),
     ("node_name", "Node", 0),
     ("id", "ID", 0),
@@ -280,7 +282,7 @@ KEY_MAP_CNX = [
     ("schemas", None, 0),
 ]
 
-KEY_MAP_ADAPTER = [
+KEY_MAP_ADAPTER: List[Tuple[str, Optional[str], int]] = [
     ("name", "Name", 0),
     ("node_name", "Node", 0),
     ("cnx_count_total", "Connections", 0),
@@ -288,7 +290,7 @@ KEY_MAP_ADAPTER = [
     ("cnx_count_working", "Working", 0),
 ]
 
-KEY_MAP_SCHEMA = [
+KEY_MAP_SCHEMA: List[Tuple[str, Optional[str], int]] = [
     ("name", "Name", 0),
     ("title", "Title", 30),
     ("type", "Type", 0),
@@ -297,5 +299,5 @@ KEY_MAP_SCHEMA = [
     ("description", "Description", 20),
     ("format", "Format", 0),
 ]
-CNX_GONE = "Server is already gone, please try again after refreshing the page"
-CNX_RETRY = 15
+CNX_GONE: str = "Server is already gone, please try again after refreshing the page"
+CNX_RETRY: int = 15

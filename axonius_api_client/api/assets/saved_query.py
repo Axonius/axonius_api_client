@@ -1,12 +1,14 @@
 # -*- coding: utf-8 -*-
 """API models for working with device and user assets."""
+from typing import List, Optional, Union
+
 from ...constants import GUI_PAGE_SIZES, PAGE_SIZE
 from ...exceptions import ApiError, NotFoundError
 from ...tools import listify
 from ..mixins import ChildMixins, PagingMixinsObject
 
 
-def check_gui_page_size(size=None):
+def check_gui_page_size(size: Optional[int] = None) -> int:
     """Pass."""
     if size:
         if size not in GUI_PAGE_SIZES:
@@ -21,7 +23,7 @@ def check_gui_page_size(size=None):
 class SavedQuery(ChildMixins, PagingMixinsObject):
     """ChildMixins API model for working with saved queries for the parent asset type."""
 
-    def get_by_tags(self, value, **kwargs):
+    def get_by_tags(self, value: Union[str, List[str]], **kwargs) -> List[dict]:
         """Get saved queries by tags."""
         value = listify(value)
         rows = self.get(**kwargs)
@@ -40,7 +42,7 @@ class SavedQuery(ChildMixins, PagingMixinsObject):
             raise NotFoundError(msg)
         return matches
 
-    def get_tags(self, **kwargs):
+    def get_tags(self, **kwargs) -> List[str]:
         """Get all tags for saved queries."""
         rows = self.get(**kwargs)
         tags = [y for x in rows for y in x.get("tags", [])]
@@ -48,18 +50,19 @@ class SavedQuery(ChildMixins, PagingMixinsObject):
 
     def add(
         self,
-        name,
-        query=None,
-        tags=None,
-        description=None,
-        fields=None,
-        fields_manual=None,
-        fields_default=False,
-        sort_field=None,
-        sort_descending=True,
-        column_filters=None,
-        gui_page_size=None,
-        fields_map=None,
+        name: str,
+        query: Optional[str] = None,
+        tags: Optional[List[str]] = None,
+        description: Optional[str] = None,
+        fields: Optional[Union[List[str], str]] = None,
+        fields_regex: Optional[Union[List[str], str]] = None,
+        fields_manual: Optional[Union[List[str], str]] = None,
+        fields_default: bool = True,
+        sort_field: Optional[str] = None,
+        sort_descending: bool = True,
+        column_filters: Optional[dict] = None,
+        gui_page_size: Optional[int] = None,
+        fields_map: Optional[dict] = None,
         **kwargs,
     ):
         """Create a saved query.
@@ -100,7 +103,7 @@ class SavedQuery(ChildMixins, PagingMixinsObject):
         fields = self.parent.fields.validate(
             fields=fields,
             fields_manual=fields_manual,
-            fields_regex=None,
+            fields_regex=fields_regex,
             fields_default=fields_default,
             fields_map=fields_map,
         )
@@ -145,105 +148,7 @@ class SavedQuery(ChildMixins, PagingMixinsObject):
         kwargs["value"] = added
         return self.get_by_uuid(**kwargs)
 
-    # XXX this isn't in API server yet
-    '''
-    def update(
-        self,
-        row,
-        add_tags=None,
-        remove_tags=None,
-        add_fields=None,
-        remove_fields=None,
-        add_column_filters=None,
-        remove_column_filters=None,
-        description=None,
-        sort_field=None,
-        sort_descending=None,
-        gui_page_size=None,
-        **kwargs,
-    ):
-        """Update a saved query."""
-        new_row = copy.deepcopy(row)
-        old_tags = row.get("tags", [])
-        old_fields = row["view"]["fields"]
-        old_column_filters = row["view"].get("colFilters", {})
-
-        if any([add_fields, remove_fields, sort_field]):
-            fields_map = kwargs.get("fields_map") or self.parent.fields.get()
-
-        if add_fields:
-            add_fields = self.parent.fields.validate(
-                fields=add_fields,
-                fields_manual=None,
-                fields_regex=None,
-                fields_default=False,
-                fields_map=fields_map,
-            )
-            new_fields = old_fields + [x for x in add_fields if x not in old_fields]
-            row["view"]["fields"] = new_fields
-
-        if remove_fields:
-            remove_fields = self.parent.fields.validate(
-                fields=remove_fields,
-                fields_manual=None,
-                fields_regex=None,
-                fields_default=False,
-                fields_map=fields_map,
-            )
-            new_fields = [x for x in old_fields if x not in remove_fields]
-            row["view"]["fields"] = new_fields
-
-        if add_tags:
-            row["tags"] = old_tags + [x for x in add_tags if x not in old_tags]
-
-        if remove_tags:
-            row["tags"] = [x for x in old_tags if x not in remove_tags]
-
-        if description is not None:
-            new_row["description"] = description
-
-        if sort_field is not None:
-            sort_field = self.parent.fields.get_field_name(
-                value=sort_field, fields_map=fields_map
-            )
-            new_row["view"]["sort"]["field"] = sort_field
-
-        if sort_descending is not None:
-            new_row["view"]["sort"]["desc"] = sort_descending
-
-        if add_column_filters:
-            new_column_filters = {}
-            new_column_filters.update(old_column_filters)
-            new_column_filters.update(add_column_filters)
-            new_row["view"]["colFilters"] = new_column_filters
-
-        if remove_column_filters:
-            new_column_filters = {
-                k: v
-                for k, v in old_column_filters.items()
-                if k not in remove_column_filters
-            }
-            new_row["view"]["colFilters"] = new_column_filters
-
-        if gui_page_size:
-            gui_page_size = check_gui_page_size(gui_page_size=gui_page_size)
-
-        if row == new_row:
-            raise ApiError("No changes supplied!")
-
-        self._update(id=row["uuid"], data=new_row)
-        kwargs["value"] = row["uuid"]
-        return self.get_by_uuid(**kwargs)
-
-    def update_by_name(self, value, **kwargs):
-        """Pass."""
-        row = self.get_by_name(value=value, **kwargs)
-        kwargs["row"] = row
-        self.update(**kwargs)
-        return row
-    '''
-
-    def delete(self, rows):
+    def delete(self, rows: List[dict]) -> List[dict]:
         """Delete saved queries returned from get.
 
         Args:
@@ -257,7 +162,7 @@ class SavedQuery(ChildMixins, PagingMixinsObject):
         self._delete(ids=list(set(ids)))
         return rows
 
-    def delete_by_name(self, value, **kwargs):
+    def delete_by_name(self, value: str, **kwargs) -> dict:
         """Delete saved queries returned from get.
 
         Args:
@@ -270,7 +175,7 @@ class SavedQuery(ChildMixins, PagingMixinsObject):
         self.delete(rows=[row])
         return row
 
-    def _add(self, data):
+    def _add(self, data: dict) -> str:
         """Direct API method to create a saved query.
 
         Warning:
@@ -283,18 +188,7 @@ class SavedQuery(ChildMixins, PagingMixinsObject):
         path = self.router.views
         return self.request(method="post", path=path, json=data)
 
-    # XXX this is not in public API, need to add
-    # def _update(self, id, data):
-    #     """Direct API method to update a saved query.
-
-    #     Args:
-    #         id (:obj:`str`): id of saved query to update
-    #         data (:obj:`dict`): metadata of saved query to update
-    #     """
-    #     path = self.router.view_by_id.format(id=id)
-    #     return self.request(method="post", path=path, json=data)
-
-    def _delete(self, ids):
+    def _delete(self, ids: List[str]) -> str:
         """Direct API method to delete saved queries.
 
         Args:
@@ -307,7 +201,9 @@ class SavedQuery(ChildMixins, PagingMixinsObject):
         path = self.router.views
         return self.request(method="delete", path=path, json=data)
 
-    def _get(self, query=None, row_start=0, page_size=PAGE_SIZE):
+    def _get(
+        self, query: Optional[str] = None, row_start: int = 0, page_size: int = PAGE_SIZE
+    ) -> List[dict]:
         """Direct API method to get saved queries.
 
         Args:

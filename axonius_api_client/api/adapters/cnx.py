@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """API models for working with adapters and connections."""
 import time
-from typing import List
+from typing import IO, List, Union
 
 from ...constants import CNX_GONE, CNX_RETRY, CNX_SANE_DEFAULTS, DEFAULT_NODE
 from ...exceptions import (CnxAddError, CnxGoneError, CnxTestError,
@@ -420,7 +420,11 @@ class Cnx(ChildMixins):
         return new_config
 
     def cb_file_upload(
-        self, value: str, schema: dict, callbacks: dict, source: str
+        self,
+        value: Union[str, pathlib.Path, IO],
+        schema: dict,
+        callbacks: dict,
+        source: str,
     ) -> dict:
         """Pass."""
         adapter_name = callbacks["adapter_name"]

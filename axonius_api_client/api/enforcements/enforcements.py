@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 """API models for working with Enforcement Center."""
+from typing import List, Optional
+
 from ...tools import listify
 from ..mixins import ModelMixins, PagingMixinsObject
-from ..routers import API_VERSION
+from ..routers import API_VERSION, Router
 
 
 class Enforcements(ModelMixins, PagingMixinsObject):
@@ -13,12 +15,12 @@ class Enforcements(ModelMixins, PagingMixinsObject):
         Until then, this class should be considered **BETA**.
     """
 
-    def delete(self, rows):
+    def delete(self, rows: List[dict]) -> str:
         """Delete an enforcement by name."""
         return self._delete(ids=[x["uuid"] for x in listify(obj=rows, dictkeys=False)])
 
     @property
-    def router(self):
+    def router(self) -> Router:
         """Router for this API model.
 
         Returns:
@@ -26,7 +28,7 @@ class Enforcements(ModelMixins, PagingMixinsObject):
         """
         return API_VERSION.alerts
 
-    def _delete(self, ids):
+    def _delete(self, ids: List[str]) -> str:
         """Delete objects by internal axonius IDs.
 
         Args:
@@ -36,7 +38,15 @@ class Enforcements(ModelMixins, PagingMixinsObject):
 
         return self.request(method="delete", path=path, json=ids)
 
-    def _create(self, name, main, success=None, failure=None, post=None, triggers=None):
+    def _create(
+        self,
+        name: str,
+        main: dict,
+        success: Optional[List[dict]] = None,
+        failure: Optional[List[dict]] = None,
+        post: Optional[List[dict]] = None,
+        triggers: Optional[List[dict]] = None,
+    ) -> str:
         """Create an enforcement set.
 
         Args:
@@ -67,7 +77,9 @@ class Enforcements(ModelMixins, PagingMixinsObject):
         path = self.router.root
         return self.request(method="put", path=path, json=data, is_json=False)
 
-    def _get(self, query=None, row_start=0, page_size=0):
+    def _get(
+        self, query: Optional[str] = None, row_start: int = 0, page_size: int = 0
+    ) -> dict:
         """Get a page for a given query."""
         params = {}
         params["skip"] = row_start

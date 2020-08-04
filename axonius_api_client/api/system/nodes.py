@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 """API model for working with system configuration."""
-from ..mixins import ChildMixins
+from ..mixins import ChildMixins, Model
 
 
 class Nodes(ChildMixins):
     """Child API model for working with instances."""
 
-    def get(self):
+    def get(self) -> dict:
         """Get instances.
 
         Returns:
@@ -16,7 +16,7 @@ class Nodes(ChildMixins):
 
     # XXX add get_by_name, get_core, get_collectors
 
-    def _init(self, parent):
+    def _init(self, parent: Model):
         """Post init method for subclasses to use for extra setup.
 
         Args:
@@ -24,7 +24,7 @@ class Nodes(ChildMixins):
         """
         super(Nodes, self)._init(parent=parent)
 
-    def _get(self):
+    def _get(self) -> dict:
         """Direct API method to get instances.
 
         Returns:
@@ -54,13 +54,15 @@ class Nodes(ChildMixins):
         """
         return self.request(method="get", path=self.router.instances)
 
-    def _delete(self, node_id):  # pragma: no cover
+    def _delete(self, node_id: str):  # pragma: no cover
         """Pass."""
         data = {"nodeIds": node_id}
         path = self.router.instances
         return self.request(method="delete", path=path, json=data)
 
-    def _update(self, node_id, node_name, hostname):  # pragma: no cover
+    def _update(
+        self, node_id: str, node_name: str, hostname: str
+    ) -> dict:  # pragma: no cover
         """Direct API method to update an instance.
 
         Args:
