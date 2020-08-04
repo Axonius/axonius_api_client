@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """API models for working with adapters and connections."""
 import copy
+from typing import List
 
 from ...constants import (AGG_ADAPTER_NAME, AGG_ADAPTER_TITLE, ALL_NAME,
                           NORM_TYPE_MAP)
@@ -8,7 +9,7 @@ from ...exceptions import ApiError
 from ...tools import strip_left, strip_right
 
 
-def parse_fields(raw):
+def parse_fields(raw: dict) -> dict:
     """Parse all generic and adapter specific fields.
 
     Returns:
@@ -49,7 +50,7 @@ def parse_fields(raw):
     return parsed
 
 
-def is_complex(field):
+def is_complex(field: dict) -> bool:
     """Determine if a field is complex from its schema."""
     field_type = field["type"]
     field_items_type = field.get("items", {}).get("type")
@@ -58,13 +59,13 @@ def is_complex(field):
     return False
 
 
-def is_root(name, names):
+def is_root(name: str, names: List[str]) -> bool:
     """Determine if a field is a root field."""
     dots = name.split(".")
     return not (len(dots) > 1 and dots[0] in names)
 
 
-def parse_complex(field):
+def parse_complex(field: dict):
     """Pass."""
     field["is_complex"] = is_complex(field=field)
     if field["is_complex"]:
@@ -100,14 +101,14 @@ def parse_complex(field):
 
 
 def parse_schemas(
-    adapter_name_raw,
-    adapter_name,
-    adapter_prefix,
-    adapter_title,
-    all_field,
-    raw_fields,
-    details=False,
-):
+    adapter_name_raw: str,
+    adapter_name: str,
+    adapter_prefix: str,
+    adapter_title: str,
+    all_field: str,
+    raw_fields: List[dict],
+    details: bool = False,
+) -> List[dict]:
     """Parse field schemas for an adapter."""
     fields = []
 
@@ -212,7 +213,7 @@ def parse_schemas(
     return fields
 
 
-def get_type_norm(field):
+def get_type_norm(field: dict) -> str:
     """Get the normalized type of a field."""
     ftype = field["type"]
     ffmt = field.get("format", "")

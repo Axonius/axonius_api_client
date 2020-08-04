@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 """API models for working with device and user assets."""
+from typing import List
+
 from ...tools import grouper
 from ..mixins import ChildMixins
 
@@ -7,7 +9,7 @@ from ..mixins import ChildMixins
 class Labels(ChildMixins):
     """ChildMixins API model for working with labels/tags for the parent asset type."""
 
-    def add(self, rows, labels):
+    def add(self, rows: List[dict], labels: List[str]) -> int:
         """Add labels/tags to assets.
 
         Args:
@@ -30,7 +32,7 @@ class Labels(ChildMixins):
 
         return processed
 
-    def get(self):
+    def get(self) -> List[str]:
         """Get all known labels/tags.
 
         Returns:
@@ -38,7 +40,7 @@ class Labels(ChildMixins):
         """
         return self._get()
 
-    def remove(self, rows, labels):
+    def remove(self, rows: List[dict], labels: List[str]) -> int:
         """Remove labels/tags from assets.
 
         Args:
@@ -61,7 +63,7 @@ class Labels(ChildMixins):
 
         return processed
 
-    def _add(self, labels, ids):
+    def _add(self, labels: List[str], ids: List[str]) -> int:
         """Direct API method to add labels/tags to assets.
 
         Args:
@@ -79,7 +81,7 @@ class Labels(ChildMixins):
         path = self.router.labels
         return self.request(method="post", path=path, json=data)
 
-    def _get(self):
+    def _get(self) -> List[str]:
         """Direct API method to get all known labels/tags.
 
         Returns:
@@ -88,7 +90,7 @@ class Labels(ChildMixins):
         path = self.router.labels
         return self.request(method="get", path=path)
 
-    def _remove(self, labels, ids):
+    def _remove(self, labels: List[str], ids: List[str]) -> int:
         """Direct API method to remove labels/tags from assets.
 
         Args:

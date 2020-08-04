@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """API models for working with device and user assets."""
+import datetime
 import math
 import time
 from typing import Generator, List, Optional, Union
@@ -103,27 +104,27 @@ class AssetMixin(ModelMixins):
 
     def get_generator(
         self,
-        query=None,
-        fields=None,
-        fields_manual=None,
-        fields_regex=None,
-        fields_default=True,
-        fields_root=None,
-        fields_map=None,
-        max_rows=None,
-        max_pages=None,
-        row_start=0,
-        page_size=MAX_PAGE_SIZE,
-        page_start=0,
-        page_sleep=0,
-        use_cursor=True,
-        export=None,
-        include_details=False,
-        sort_field=None,
-        sort_descending=False,
-        history_date=None,
+        query: Optional[str] = None,
+        fields: Optional[Union[List[str], str]] = None,
+        fields_manual: Optional[Union[List[str], str]] = None,
+        fields_regex: Optional[Union[List[str], str]] = None,
+        fields_default: bool = True,
+        fields_root: Optional[str] = None,
+        fields_map: Optional[dict] = None,
+        max_rows: Optional[int] = None,
+        max_pages: Optional[int] = None,
+        row_start: int = 0,
+        page_size: int = MAX_PAGE_SIZE,
+        page_start: int = 0,
+        page_sleep: int = 0,
+        use_cursor: bool = True,
+        export: Optional[str] = None,
+        include_details: bool = False,
+        sort_field: Optional[str] = None,
+        sort_descending: bool = False,
+        history_date: Optional[Union[str, datetime.datetime]] = None,
         **kwargs,
-    ):
+    ) -> Generator[dict, None, None]:
         """Get an iterator of objects for a given query using paging.
 
         Args:
@@ -209,15 +210,8 @@ class AssetMixin(ModelMixins):
         }
 
         callbacks_cls = get_callbacks_cls(export=export)
-        # XXX add store as arg to callbacks,
         self._LAST_CALLBACKS = callbacks = callbacks_cls(
-            apiobj=self,
-            fields_map=fields_map,
-            getargs=kwargs,
-            # fields=fields,
-            # query=query,
-            state=state,
-            store=store,
+            apiobj=self, fields_map=fields_map, getargs=kwargs, state=state, store=store,
         )
 
         callbacks.start()
@@ -283,7 +277,7 @@ class AssetMixin(ModelMixins):
 
         callbacks.stop()
 
-    def _get_page_cursor(self, state, store):
+    def _get_page_cursor(self, state: dict, store: dict) -> dict:
         page_start_dt = dt_now()
 
         page = self._get_cursor(
@@ -322,7 +316,7 @@ class AssetMixin(ModelMixins):
         state["page_cursor"] = page.get("cursor")
         return page
 
-    def _get_page_normal(self, state, store):
+    def _get_page_normal(self, state: dict, store: dict) -> dict:
         page_start_dt = dt_now()
 
         page = self._get(
@@ -352,7 +346,7 @@ class AssetMixin(ModelMixins):
         )
         return page
 
-    def get_by_id(self, id):
+    def get_by_id(self, id: str) -> dict:
         """Get the full metadata of all adapters for a single asset.
 
         Args:
@@ -372,7 +366,9 @@ class AssetMixin(ModelMixins):
             msg = f"Failed to find internal_axon_id {id!r} for {otype}"
             raise NotFoundError(msg)
 
-    def get_by_saved_query(self, name, **kwargs):
+    def get_by_saved_query(
+        self, name: str, **kwargs
+    ) -> Union[Generator[dict, None, None], List[dict]]:
         """Get assets that would be returned by a saved query.
 
         Args:
@@ -393,15 +389,15 @@ class AssetMixin(ModelMixins):
 
     def get_by_values(
         self,
-        values,
-        field,
-        not_flag=False,
-        pre="",
-        post="",
-        field_manual=False,
-        fields_map=None,
+        values: List[str],
+        field: str,
+        not_flag: bool = False,
+        pre: str = "",
+        post: str = "",
+        field_manual: bool = False,
+        fields_map: Optional[dict] = None,
         **kwargs,
-    ):
+    ) -> Union[Generator[dict, None, None], List[dict]]:
         """Pass."""
         if not field_manual:
             fields_map = fields_map or self.fields.get()
@@ -424,16 +420,16 @@ class AssetMixin(ModelMixins):
 
     def get_by_value_regex(
         self,
-        value,
-        field,
-        cast_insensitive=True,
-        not_flag=False,
-        pre="",
-        post="",
-        field_manual=False,
-        fields_map=False,
+        value: str,
+        field: str,
+        cast_insensitive: bool = True,
+        not_flag: bool = False,
+        pre: str = "",
+        post: str = "",
+        field_manual: bool = False,
+        fields_map: Optional[dict] = None,
         **kwargs,
-    ):
+    ) -> Union[Generator[dict, None, None], List[dict]]:
         """Pass."""
         if not field_manual:
             fields_map = fields_map or self.fields.get()
@@ -455,15 +451,15 @@ class AssetMixin(ModelMixins):
 
     def get_by_value(
         self,
-        value,
-        field,
-        not_flag=False,
-        pre="",
-        post="",
-        field_manual=False,
-        fields_map=False,
+        value: str,
+        field: str,
+        not_flag: bool = False,
+        pre: str = "",
+        post: str = "",
+        field_manual: bool = False,
+        fields_map: Optional[dict] = None,
         **kwargs,
-    ):
+    ) -> Union[Generator[dict, None, None], List[dict]]:
         """Build query to get an asset by field value."""
         if not field_manual:
             fields_map = fields_map or self.fields.get()
@@ -480,11 +476,11 @@ class AssetMixin(ModelMixins):
 
         return self.get(fields_map=fields_map, **kwargs)
 
-    def history_dates(self):
+    def history_dates(self) -> dict:
         """Get all known historical dates for this asset type."""
         return self._history_dates()
 
-    def validate_history_date(self, value):
+    def validate_history_date(self, value: str) -> str:
         """Validate that a given date is known historical date."""
         if not value:
             return None
@@ -505,7 +501,9 @@ class AssetMixin(ModelMixins):
 
         return known_dates[dt_search]
 
-    def _build_query(self, inner, not_flag=False, pre="", post=""):
+    def _build_query(
+        self, inner: str, not_flag: bool = False, pre: str = "", post: str = ""
+    ) -> str:
         """Pass."""
         if not_flag:
             inner = f"(not ({inner}))"
@@ -531,7 +529,9 @@ class AssetMixin(ModelMixins):
 
         super(AssetMixin, self)._init(**kwargs)
 
-    def _count(self, query=None, history_date=None):
+    def _count(
+        self, query: Optional[str] = None, history_date: Optional[str] = None,
+    ) -> int:
         """Direct API method to get the count of assets.
 
         Args:
@@ -551,15 +551,15 @@ class AssetMixin(ModelMixins):
 
     def _get(
         self,
-        query=None,
-        fields=None,
-        row_start=0,
-        page_size=PAGE_SIZE,
-        include_details=False,
-        history_date=None,
-        sort_field=None,
-        sort_descending=False,
-    ):
+        query: Optional[str] = None,
+        fields: Optional[Union[List[str], str]] = None,
+        row_start: int = 0,
+        page_size: int = PAGE_SIZE,
+        include_details: bool = False,
+        history_date: Optional[str] = None,
+        sort_field: Optional[str] = None,
+        sort_descending: bool = False,
+    ) -> dict:
         """Direct API method to get a page of assets.
 
         Args:
@@ -604,16 +604,16 @@ class AssetMixin(ModelMixins):
 
     def _get_cursor(
         self,
-        query=None,
-        fields=None,
-        row_start=0,
-        page_size=PAGE_SIZE,
-        cursor=None,
-        include_details=False,
-        history_date=None,
-        sort_field=None,
-        sort_descending=False,
-    ):
+        query: Optional[str] = None,
+        fields: Optional[Union[List[str], str]] = None,
+        row_start: int = 0,
+        page_size: int = PAGE_SIZE,
+        cursor: Optional[str] = None,
+        include_details: bool = False,
+        history_date: Optional[str] = None,
+        sort_field: Optional[str] = None,
+        sort_descending: bool = False,
+    ) -> dict:
         """Get a page for a given query."""
         page_size = self._get_page_size(page_size=page_size, max_rows=None)
 
@@ -637,7 +637,7 @@ class AssetMixin(ModelMixins):
 
         return self.request(method="post", path=self.router.cached, json=params)
 
-    def _get_by_id(self, id):
+    def _get_by_id(self, id: str) -> dict:
         """Direct API method to get the full metadata of all adapters for a single asset.
 
         Args:
@@ -650,13 +650,13 @@ class AssetMixin(ModelMixins):
         path = self.router.by_id.format(id=id)
         return self.request(method="get", path=path)
 
-    def _destroy(self, destroy, history):
+    def _destroy(self, destroy: bool, history: bool) -> dict:
         """Destroy ALL assets."""
         data = {"destroy": destroy, "history": history}
         path = self.router.destroy
         return self.request(method="post", path=path, json=data)
 
-    def _history_dates(self):
+    def _history_dates(self) -> dict:
         """Get all known historical dates for this asset type."""
         path = self.router.history_dates
         return self.request(method="get", path=path)

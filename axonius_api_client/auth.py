@@ -1,11 +1,14 @@
 # -*- coding: utf-8 -*-
 """Authentication methods."""
 import abc
+import logging
+from typing import List
 
 from .api.routers import API_VERSION
 from .constants import LOG_LEVEL_AUTH
 from .exceptions import (AlreadyLoggedIn, AuthError, InvalidCredentials,
                          NotLoggedIn)
+from .http import Http
 from .logs import get_obj_log
 from .tools import json_reload
 
@@ -29,12 +32,12 @@ class Model:
         raise NotImplementedError  # pragma: no cover
 
     @abc.abstractproperty
-    def http(self):
+    def http(self) -> Http:
         """Get HttpClient object."""
         raise NotImplementedError  # pragma: no cover
 
     @abc.abstractproperty
-    def is_logged_in(self):
+    def is_logged_in(self) -> bool:
         """Check if login has been called."""
         raise NotImplementedError  # pragma: no cover
 
@@ -42,10 +45,10 @@ class Model:
 class Mixins:
     """Mixins for Model."""
 
-    _logged_in = False
+    _logged_in: bool = False
     """:obj:`bool`: Attribute checked by :meth:`is_logged_in`."""
 
-    def __init__(self, http, creds, **kwargs):
+    def __init__(self, http: Http, creds: dict, **kwargs):
         """Mixins for Model.
 
         Args:
@@ -56,19 +59,19 @@ class Mixins:
 
         """
         log_level = kwargs.get("log_level", LOG_LEVEL_AUTH)
-        self.LOG = get_obj_log(obj=self, level=log_level)
+        self.LOG: logging.Logger = get_obj_log(obj=self, level=log_level)
         """:obj:`logging.Logger`: Logger for this object."""
 
-        self._http = http
+        self._http: Http = http
         """:obj:`.http.Http`: HTTP Client."""
 
-        self._creds = creds
+        self._creds: dict = creds
         """:obj:`dict`: Credential store."""
 
         self._check_http_lock()
         self._set_http_lock()
 
-    def __str__(self):
+    def __str__(self) -> str:
         """Show object info.
 
         Returns:
@@ -79,7 +82,7 @@ class Mixins:
         bits = ", ".join(bits)
         return f"{self.__class__.__module__}.{self.__class__.__name__}({bits})"
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """Show object info.
 
         Returns:
@@ -89,7 +92,7 @@ class Mixins:
         return self.__str__()
 
     @property
-    def http(self):
+    def http(self) -> Http:
         """Get HttpClient object.
 
         Returns:
@@ -151,7 +154,7 @@ class Mixins:
             raise NotLoggedIn(f"Must call login() on {self}")
 
     @property
-    def is_logged_in(self):
+    def is_logged_in(self) -> bool:
         """Check if login has been called.
 
         Returns:
@@ -164,7 +167,7 @@ class Mixins:
 class ApiKey(Mixins, Model):
     """Authentication method using API key & API secret."""
 
-    def __init__(self, http, key, secret, **kwargs):
+    def __init__(self, http: Http, key: str, secret: str, **kwargs):
         """Authenticate using API key & API secret.
 
         Args:
@@ -180,7 +183,7 @@ class ApiKey(Mixins, Model):
         super(ApiKey, self).__init__(http=http, creds=creds, **kwargs)
 
     @property
-    def _cred_fields(self):
+    def _cred_fields(self) -> List[str]:
         return ["key", "secret"]
 
     def _logout(self):

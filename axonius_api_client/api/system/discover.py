@@ -9,7 +9,7 @@ from ..mixins import ChildMixins
 class Discover(ChildMixins):
     """Child API model for working with discovery cycles."""
 
-    def get(self):
+    def get(self) -> dict:
         """Get lifecycle metadata.
 
         Returns:
@@ -18,7 +18,7 @@ class Discover(ChildMixins):
         return parse_lifecycle(raw=self._get())
 
     @property
-    def is_running(self):
+    def is_running(self) -> bool:
         """Check if discovery cycle is running.
 
         Returns:
@@ -26,7 +26,7 @@ class Discover(ChildMixins):
         """
         return self.get()["is_running"]
 
-    def start(self):
+    def start(self) -> dict:
         """Start a discovery cycle if one is not running.
 
         Returns:
@@ -36,7 +36,7 @@ class Discover(ChildMixins):
             self._start()
         return self.get()
 
-    def stop(self):
+    def stop(self) -> dict:
         """Stop a discovery cycle if one is running.
 
         Returns:
@@ -46,7 +46,7 @@ class Discover(ChildMixins):
             self._stop()
         return self.get()
 
-    def _get(self):
+    def _get(self) -> dict:
         """Direct API method to get discovery cycle metadata.
 
         Returns:
@@ -55,12 +55,12 @@ class Discover(ChildMixins):
         path = self.router.discover_lifecycle
         return self.request(method="get", path=path)
 
-    def _start(self):
+    def _start(self) -> str:
         """Direct API method to start a discovery cycle."""
         path = self.router.discover_start
         return self.request(method="post", path=path)
 
-    def _stop(self):
+    def _stop(self) -> str:
         """Direct API method to stop a discovery cycle.
 
         Returns:
@@ -70,7 +70,7 @@ class Discover(ChildMixins):
         return self.request(method="post", path=path)
 
 
-def parse_lifecycle(raw):
+def parse_lifecycle(raw: dict) -> dict:
     """Pass."""
     parsed = {}
 
@@ -106,7 +106,7 @@ def parse_lifecycle(raw):
     return parsed
 
 
-def parse_sub_phase(raw):
+def parse_sub_phase(raw: dict) -> dict:
     """Pass."""
     parsed = {}
     parsed["is_done"] = raw["status"] == 1

@@ -3,7 +3,7 @@
 import abc
 import logging
 import time
-from typing import Any, Optional, Union
+from typing import Any, Generator, List, Optional, Union
 
 import requests
 
@@ -203,7 +203,9 @@ class ModelMixins(Model, PageSizeMixin):
 
         return data
 
-    def _check_response_code(self, response, error_status=True):
+    def _check_response_code(
+        self, response: requests.Response, error_status: bool = True
+    ):
         """Check the status code of a response.
 
         Args:
@@ -296,7 +298,7 @@ class ModelMixins(Model, PageSizeMixin):
 class PagingMixinsObject(PageSizeMixin):
     """Pass."""
 
-    def get_by_uuid(self, value, **kwargs):
+    def get_by_uuid(self, value: str, **kwargs) -> dict:
         """Get a single saved query by name.
 
         Args:
@@ -316,7 +318,7 @@ class PagingMixinsObject(PageSizeMixin):
         valid = "\n  " + "\n  ".join(sorted([tmpl(**row) for row in rows]))
         raise NotFoundError(f"uuid {value!r} not found, valid:{valid}")
 
-    def get_by_name(self, value, **kwargs):
+    def get_by_name(self, value: str, **kwargs) -> dict:
         """Get a single saved query by name.
 
         Args:
@@ -336,7 +338,9 @@ class PagingMixinsObject(PageSizeMixin):
         valid = "\n  " + "\n  ".join(sorted([tmpl(**row) for row in rows]))
         raise NotFoundError(f"name {value!r} not found, valid:{valid}")
 
-    def get(self, generator=False, **kwargs):
+    def get(
+        self, generator: bool = False, **kwargs
+    ) -> Union[Generator[dict, None, None], List[dict]]:
         """Get objects for a given query using paging.
 
         Args:
@@ -362,14 +366,14 @@ class PagingMixinsObject(PageSizeMixin):
 
     def get_generator(
         self,
-        query=None,
-        max_rows=None,
-        max_pages=None,
-        page_size=MAX_PAGE_SIZE,
-        page_start=0,
-        page_sleep=0,
+        query: Optional[str] = None,
+        max_rows: Optional[int] = None,
+        max_pages: Optional[int] = None,
+        page_size: int = MAX_PAGE_SIZE,
+        page_start: int = 0,
+        page_sleep: int = 0,
         **kwargs,
-    ):
+    ) -> Generator[dict, None, None]:
         """Get saved queries using paging.
 
         Args:
@@ -468,7 +472,7 @@ class PagingMixinsObject(PageSizeMixin):
 class ChildMixins:
     """Mixins model for children of :obj:`Mixins`."""
 
-    def __init__(self, parent):
+    def __init__(self, parent: Model):
         """Mixins model for children of :obj:`Model`.
 
         Args:
@@ -482,7 +486,7 @@ class ChildMixins:
         self.LOG = parent.LOG.getChild(self.__class__.__name__)
         self._init(parent=parent)
 
-    def _init(self, parent):
+    def _init(self, parent: Model):
         """Post init method for subclasses to use for extra setup.
 
         Args:
@@ -490,10 +494,10 @@ class ChildMixins:
         """
         pass
 
-    def __str__(self):
+    def __str__(self) -> str:
         """Show info for this model object."""
         return f"{self.__class__.__name__} for {self.parent}"
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """Show info for this model object."""
         return self.__str__()

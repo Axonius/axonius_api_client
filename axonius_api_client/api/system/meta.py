@@ -2,13 +2,13 @@
 """API model for working with system configuration."""
 import math
 
-from ..mixins import ChildMixins
+from ..mixins import ChildMixins, Model
 
 
 class Meta(ChildMixins):
     """Child API model for working with instance metadata."""
 
-    def about(self):
+    def about(self) -> dict:
         """Get about page metadata.
 
         Returns:
@@ -20,7 +20,7 @@ class Meta(ChildMixins):
             self._about_data = data
         return self._about_data
 
-    def historical_sizes(self):
+    def historical_sizes(self) -> dict:
         """Get disk usage metadata.
 
         Returns:
@@ -28,19 +28,19 @@ class Meta(ChildMixins):
         """
         return parse_sizes(self._historical_sizes())
 
-    def _get_version(self, about):
+    def _get_version(self, about: dict) -> str:
         """Pass."""
         version = about.pop("Version", "") or about.pop("Installed Version", "")
         version = version.replace("_", ".")
         return version
 
     @property
-    def version(self):
+    def version(self) -> str:
         """Get the version of Axonius."""
         about = self.about()
         return about["Version"]
 
-    def _init(self, parent):
+    def _init(self, parent: Model):
         """Post init method for subclasses to use for extra setup.
 
         Args:
@@ -48,7 +48,7 @@ class Meta(ChildMixins):
         """
         super(Meta, self)._init(parent=parent)
 
-    def _about(self):
+    def _about(self) -> dict:
         """Direct API method to get the About page.
 
         Returns:
@@ -57,7 +57,7 @@ class Meta(ChildMixins):
         path = self.router.meta_about
         return self.request(method="get", path=path)
 
-    def _historical_sizes(self):
+    def _historical_sizes(self) -> dict:
         """Direct API method to get the metadata about disk usage.
 
         Returns:
@@ -67,7 +67,7 @@ class Meta(ChildMixins):
         return self.request(method="get", path=path)
 
 
-def parse_sizes(raw):
+def parse_sizes(raw: dict) -> dict:
     """Pass."""
     parsed = {}
     parsed["disk_free_mb"] = math.floor(raw["disk_free"] / 1024 / 1024)
