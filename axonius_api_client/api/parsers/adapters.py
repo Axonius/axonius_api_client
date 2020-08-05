@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
 """API models for working with adapters and connections."""
+from typing import List
+
 from ...constants import DISCOVERY_NAME, GENERIC_NAME
 from ...tools import strip_right
 from .config import parse_schema
 
 
-def parse_adapters(raw):
+def parse_adapters(raw: dict) -> List[dict]:
     """Parser to turn adapters metadata into a more friendly format."""
     parsed = []
 
@@ -17,7 +19,7 @@ def parse_adapters(raw):
     return parsed
 
 
-def parse_adapter(name, raw):
+def parse_adapter(name: str, raw: dict) -> dict:
     """Parse a single adapter."""
     parsed = {
         "name": strip_right(obj=name, fix="_adapter"),
@@ -77,13 +79,13 @@ def parse_adapter(name, raw):
     return parsed
 
 
-def get_specific_name(raw):
+def get_specific_name(raw: dict) -> str:
     """Pass."""
     found = [x for x in raw["config"] if x not in [GENERIC_NAME, DISCOVERY_NAME]]
     return found[0] if found else ""
 
 
-def parse_cnx(raw, parsed):
+def parse_cnx(raw: dict, parsed: dict) -> List[dict]:
     """Parse the connection metadata for this adapter."""
     cnx = []
 

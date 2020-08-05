@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 """API models for working with Enforcement Center."""
+from typing import IO, List, Optional
+
 from ..mixins import ModelMixins
-from ..routers import API_VERSION
+from ..routers import API_VERSION, Router
 
 
 class RunAction(ModelMixins):
@@ -13,7 +15,7 @@ class RunAction(ModelMixins):
     """
 
     @property
-    def router(self):
+    def router(self) -> Router:
         """Router for this API model.
 
         Returns:
@@ -22,7 +24,7 @@ class RunAction(ModelMixins):
         return API_VERSION.actions
 
     # sort of pointless
-    def _get(self):
+    def _get(self) -> List[str]:
         """Direct API method to get all actions.
 
         Returns:
@@ -31,7 +33,14 @@ class RunAction(ModelMixins):
         path = self.router.root
         return self.request(method="get", path=path)
 
-    def _deploy(self, action_name, ids, file_uuid, file_name, params=None):
+    def _deploy(
+        self,
+        action_name: str,
+        ids: List[str],
+        file_uuid: str,
+        file_name: str,
+        params: Optional[str] = None,
+    ) -> dict:
         """Deploy an action.
 
         Args:
@@ -56,7 +65,7 @@ class RunAction(ModelMixins):
 
         return self.request(method="post", path=path, json=data)
 
-    def _shell(self, action_name, ids, command):
+    def _shell(self, action_name: str, ids: List[str], command: str) -> dict:
         """Run an action.
 
         Args:
@@ -75,7 +84,13 @@ class RunAction(ModelMixins):
         path = self.router.shell
         return self.request(method="post", path=path, json=data)
 
-    def _upload_file(self, name, content, content_type=None, headers=None):
+    def _upload_file(
+        self,
+        name: str,
+        content: IO,
+        content_type: Optional[str] = None,
+        headers: Optional[dict] = None,
+    ):
         """Upload a file to the system for use in deployment.
 
         Args:

@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """API models for working with device and user assets."""
 import re
+from typing import List, Optional, Tuple, Union
 
 from ...constants import (AGG_ADAPTER_ALTS, AGG_ADAPTER_NAME, GET_SCHEMA_KEYS,
                           GET_SCHEMAS_KEYS)
@@ -13,7 +14,7 @@ from ..parsers.fields import parse_fields
 class Fields(ChildMixins):
     """Child API model for working with fields for the parent asset type."""
 
-    def get(self):
+    def get(self) -> dict:
         """Get the schema of all adapters and their fields.
 
         Returns:
@@ -21,7 +22,9 @@ class Fields(ChildMixins):
         """
         return parse_fields(raw=self._get())
 
-    def get_adapter_names(self, value, fields_map=None):
+    def get_adapter_names(
+        self, value: str, fields_map: Optional[dict] = None
+    ) -> List[str]:
         """Find an adapter by name regex."""
         fields_map = fields_map or self.get()
 
@@ -40,7 +43,7 @@ class Fields(ChildMixins):
             raise NotFoundError(msg)
         return matches
 
-    def get_adapter_name(self, value, fields_map=None):
+    def get_adapter_name(self, value: str, fields_map: Optional[dict] = None) -> str:
         """Find an adapter by name."""
         fields_map = fields_map or self.get()
 
@@ -56,7 +59,7 @@ class Fields(ChildMixins):
         msg = msg.format(value, "\n  ".join(list(fields_map)))
         raise NotFoundError(msg)
 
-    def get_field_schemas(self, value, schemas, **kwargs):
+    def get_field_schemas(self, value: str, schemas: List[dict], **kwargs) -> List[dict]:
         """Find a schema for a field by regex of name."""
         keys = kwargs.get("keys", GET_SCHEMAS_KEYS)
         search = re.compile(value.lower().strip(), re.I)
@@ -70,18 +73,9 @@ class Fields(ChildMixins):
             for key in keys:
                 if search.search(schema[key]) and schema not in matches:
                     matches.append(schema)
-
-        # XXX fix test case for this
-        # os\. will fail for adapters that do not have os.type/dist/etc
-        # if not matches:
-        #     msg = "No field found where {} matches regex {!r}, valid fields: \n{}"
-        #     msg = msg.format(
-        #         keys, value, "\n".join(self._prettify_schemas(schemas=schemas)),
-        #     )
-        #     raise NotFoundError(msg)
         return matches
 
-    def get_field_schema(self, value, schemas, **kwargs):
+    def get_field_schema(self, value: str, schemas: List[dict], **kwargs) -> dict:
         """Find a schema for a field by name."""
         keys = kwargs.get("keys", GET_SCHEMA_KEYS)
         search = value.lower().strip()
@@ -98,7 +92,9 @@ class Fields(ChildMixins):
         msg = msg.format(keys, value, "\n".join(self._prettify_schemas(schemas=schemas)))
         raise NotFoundError(msg)
 
-    def get_field_name(self, value, field_manual=False, fields_map=None):
+    def get_field_name(
+        self, value: str, field_manual: bool = False, fields_map: Optional[dict] = None
+    ) -> str:
         """Pass."""
         if field_manual:
             return value
@@ -116,7 +112,9 @@ class Fields(ChildMixins):
         schema = self.get_field_schema(value=field, schemas=schemas)
         return schema["name_qual"]
 
-    def get_field_names_re(self, value, fields_map=None):
+    def get_field_names_re(
+        self, value: str, fields_map: Optional[dict] = None
+    ) -> List[str]:
         """Pass."""
         splits = self.split_searches(value=value)
         fields_map = fields_map or self.get()
@@ -135,7 +133,9 @@ class Fields(ChildMixins):
                     matches += [x for x in names if x not in matches]
         return matches
 
-    def get_field_names_eq(self, value, fields_map=None):
+    def get_field_names_eq(
+        self, value: str, fields_map: Optional[dict] = None
+    ) -> List[str]:
         """Pass."""
         splits = self.split_searches(value=value)
         fields_map = fields_map or self.get()
@@ -152,7 +152,9 @@ class Fields(ChildMixins):
 
         return matches
 
-    def get_field_schemas_root(self, adapter, fields_map=None):
+    def get_field_schemas_root(
+        self, adapter: str, fields_map: Optional[dict] = None
+    ) -> List[dict]:
         """Pass."""
         fields_map = fields_map or self.get()
         adapter = self.get_adapter_name(value=adapter, fields_map=fields_map)
@@ -161,7 +163,9 @@ class Fields(ChildMixins):
         matches = [x for x in schemas if x.get("selectable") and x.get("is_root")]
         return matches
 
-    def get_field_names_root(self, adapter, fields_map=None):
+    def get_field_names_root(
+        self, adapter: str, fields_map: Optional[dict] = None
+    ) -> List[str]:
         """Pass."""
         schemas = self.get_field_schemas_root(adapter=adapter, fields_map=fields_map)
         names = [x["name_qual"] for x in schemas]
@@ -169,13 +173,13 @@ class Fields(ChildMixins):
 
     def validate(
         self,
-        fields=None,
-        fields_regex=None,
-        fields_manual=None,
-        fields_default=True,
-        fields_map=None,
-        fields_root=None,
-    ):
+        fields: Optional[Union[List[str], str]] = None,
+        fields_regex: Optional[Union[List[str], str]] = None,
+        fields_manual: Optional[Union[List[str], str]] = None,
+        fields_default: bool = True,
+        fields_map: Optional[dict] = None,
+        fields_root: Optional[str] = None,
+    ) -> List[dict]:
         """Validate provided fields."""
         fields_manual = listify(obj=fields_manual)
         selected = []
@@ -208,11 +212,15 @@ class Fields(ChildMixins):
 
         return selected
 
-    def split_searches(self, value):
+    def split_searches(
+        self, value: Union[List[str], str]
+    ) -> List[Tuple[str, List[str]]]:
         """Pass."""
         return [self.split_search(value=x) for x in listify(obj=value)]
 
-    def split_search(self, value, adapter=AGG_ADAPTER_NAME):
+    def split_search(
+        self, value: str, adapter: str = AGG_ADAPTER_NAME
+    ) -> Tuple[str, List[str]]:
         """Pass."""
         search = value.strip().lower()
 
@@ -242,7 +250,7 @@ class Fields(ChildMixins):
 
         return adapter_split, fields
 
-    def _get(self):
+    def _get(self) -> dict:
         """Direct API method to get the schema of all fields.
 
         Returns:
@@ -250,7 +258,7 @@ class Fields(ChildMixins):
         """
         return self.request(method="get", path=self.router.fields)
 
-    def _prettify_schemas(self, schemas):
+    def _prettify_schemas(self, schemas: List[dict]) -> List[str]:
         """Pass."""
         stmpl = "{adapter_name}:{name_base:{name_base_len}} -> {column_title}".format
         name_base_len = max([len(x["name_base"]) for x in schemas])

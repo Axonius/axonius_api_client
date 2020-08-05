@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """API models for working with adapters and connections."""
 import time
+from typing import IO, List, Union
 
 from ...constants import CNX_GONE, CNX_RETRY, CNX_SANE_DEFAULTS, DEFAULT_NODE
 from ...exceptions import (CnxAddError, CnxGoneError, CnxTestError,
@@ -17,7 +18,7 @@ from ..parsers.tables import tablize_cnxs, tablize_schemas
 class Cnx(ChildMixins):
     """API model for working with adapter connections."""
 
-    def add(self, adapter_name, adapter_node=DEFAULT_NODE, **kwargs):
+    def add(self, adapter_name: str, adapter_node: str = DEFAULT_NODE, **kwargs) -> dict:
         """Pass."""
         kwargs_config = kwargs.pop("kwargs_config", {})
         kwargs.update(kwargs_config)
@@ -82,11 +83,13 @@ class Cnx(ChildMixins):
 
         return cnx_new
 
-    def get_sane_defaults(self, adapter_name):
+    def get_sane_defaults(self, adapter_name: str) -> dict:
         """Pass."""
         return CNX_SANE_DEFAULTS.get(adapter_name, CNX_SANE_DEFAULTS["all"])
 
-    def get_by_adapter(self, adapter_name, adapter_node=DEFAULT_NODE):
+    def get_by_adapter(
+        self, adapter_name: str, adapter_node: str = DEFAULT_NODE
+    ) -> List[dict]:
         """Get connections from an adapter."""
         adapter = self.parent.get_by_name(name=adapter_name, node=adapter_node)
         cnxs = adapter["cnx"]
@@ -98,13 +101,13 @@ class Cnx(ChildMixins):
 
     def get_by_key(
         self,
-        value,
-        value_key,
-        adapter_name,
-        adapter_node=DEFAULT_NODE,
-        retry=0,
-        sleep=1,
-    ):
+        value: str,
+        value_key: str,
+        adapter_name: str,
+        adapter_node: str = DEFAULT_NODE,
+        retry: int = 0,
+        sleep: int = 1,
+    ) -> dict:
         """Pass."""
         tries = 1
         cnxs = self.get_by_adapter(adapter_name=adapter_name, adapter_node=adapter_node)
@@ -131,7 +134,13 @@ class Cnx(ChildMixins):
         )
         raise NotFoundError(tablize_cnxs(cnxs=cnxs, err=err))
 
-    def get_by_uuid(self, cnx_uuid, adapter_name, adapter_node=DEFAULT_NODE, **kwargs):
+    def get_by_uuid(
+        self,
+        cnx_uuid: str,
+        adapter_name: str,
+        adapter_node: str = DEFAULT_NODE,
+        **kwargs,
+    ) -> dict:
         """Pass."""
         kwargs["value_key"] = "uuid"
         return self.get_by_key(
@@ -141,7 +150,9 @@ class Cnx(ChildMixins):
             **kwargs,
         )
 
-    def get_by_id(self, cnx_id, adapter_name, adapter_node=DEFAULT_NODE, **kwargs):
+    def get_by_id(
+        self, cnx_id: str, adapter_name: str, adapter_node: str = DEFAULT_NODE, **kwargs
+    ) -> dict:
         """Pass."""
         kwargs["value_key"] = "id"
         return self.get_by_key(
@@ -149,14 +160,16 @@ class Cnx(ChildMixins):
         )
 
     # XXX add get_by_label
-    def test_by_id(self, cnx_id, adapter_name, adapter_node=DEFAULT_NODE):
+    def test_by_id(
+        self, cnx_id: str, adapter_name: str, adapter_node: str = DEFAULT_NODE
+    ) -> str:
         """Pass."""
         cnx_test = self.get_by_id(
             cnx_id=cnx_id, adapter_name=adapter_name, adapter_node=adapter_node
         )
         return self.test_cnx(cnx_test=cnx_test)
 
-    def test_cnx(self, cnx_test, **kwargs):
+    def test_cnx(self, cnx_test: dict, **kwargs) -> str:
         """Pass."""
         test_adapter_meta = {
             "adapter_name": cnx_test["adapter_name"],
@@ -174,7 +187,7 @@ class Cnx(ChildMixins):
             **kwargs,
         )
 
-    def test(self, adapter_name, adapter_node=DEFAULT_NODE, **kwargs):
+    def test(self, adapter_name: str, adapter_node: str = DEFAULT_NODE, **kwargs) -> str:
         """Pass."""
         adapter = self.parent.get_by_name(name=adapter_name, node=adapter_node)
 
@@ -194,7 +207,7 @@ class Cnx(ChildMixins):
             **kwargs,
         )
 
-    def do_test(self, test_adapter_meta, test_old_config, **kwargs):
+    def do_test(self, test_adapter_meta: dict, test_old_config: dict, **kwargs) -> str:
         """Pass."""
         kwargs_config = kwargs.pop("kwargs_config", {})
         kwargs.update(kwargs_config)
@@ -243,7 +256,7 @@ class Cnx(ChildMixins):
                 raise CnxTestError(msg)
         return rtext
 
-    def update_cnx(self, cnx_update, **kwargs):
+    def update_cnx(self, cnx_update: dict, **kwargs) -> dict:
         """Pass."""
         kwargs_config = kwargs.pop("kwargs_config", {})
         kwargs.update(kwargs_config)
@@ -326,7 +339,9 @@ class Cnx(ChildMixins):
 
         return cnx_new
 
-    def check_if_gone(self, result, cnx_id, adapter_name, adapter_node):
+    def check_if_gone(
+        self, result: dict, cnx_id: str, adapter_name: str, adapter_node: str
+    ):
         """Pass."""
         message = result.get("message", "")
         if message == CNX_GONE:
@@ -336,14 +351,16 @@ class Cnx(ChildMixins):
             err = f"Connection with ID {cnx_id!r} no longer exists!"
             raise CnxGoneError(tablize_cnxs(cnxs=cnxs, err=err))
 
-    def update_by_id(self, cnx_id, adapter_name, adapter_node=DEFAULT_NODE, **kwargs):
+    def update_by_id(
+        self, cnx_id: str, adapter_name: str, adapter_node: str = DEFAULT_NODE, **kwargs
+    ) -> dict:
         """Pass."""
         cnx_update = self.get_by_id(
             cnx_id=cnx_id, adapter_name=adapter_name, adapter_node=adapter_node
         )
         return self.update_cnx(cnx_update=cnx_update, **kwargs)
 
-    def delete_cnx(self, cnx_delete, delete_entities=False):
+    def delete_cnx(self, cnx_delete: dict, delete_entities: bool = False) -> str:
         """Pass."""
         adapter_name_raw = cnx_delete["adapter_name_raw"]
         adapter_node_id = cnx_delete["node_id"]
@@ -357,8 +374,12 @@ class Cnx(ChildMixins):
         )
 
     def delete_by_id(
-        self, cnx_id, adapter_name, adapter_node=DEFAULT_NODE, delete_entities=False
-    ):
+        self,
+        cnx_id: str,
+        adapter_name: str,
+        adapter_node: str = DEFAULT_NODE,
+        delete_entities: bool = False,
+    ) -> str:
         """Pass."""
         cnx_delete = self.get_by_id(
             cnx_id=cnx_id, adapter_name=adapter_name, adapter_node=adapter_node
@@ -366,8 +387,14 @@ class Cnx(ChildMixins):
         return self.delete_cnx(cnx_delete=cnx_delete, delete_entities=delete_entities)
 
     def build_config(
-        self, cnx_schemas, old_config, new_config, source, adapter_name, adapter_node,
-    ):
+        self,
+        cnx_schemas: List[dict],
+        old_config: dict,
+        new_config: dict,
+        source: str,
+        adapter_name: str,
+        adapter_node: str,
+    ) -> dict:
         """Pass."""
         callbacks = {
             "cb_file": self.cb_file_upload,
@@ -392,7 +419,13 @@ class Cnx(ChildMixins):
 
         return new_config
 
-    def cb_file_upload(self, value, schema, callbacks, source):
+    def cb_file_upload(
+        self,
+        value: Union[str, pathlib.Path, IO],
+        schema: dict,
+        callbacks: dict,
+        source: str,
+    ) -> dict:
         """Pass."""
         adapter_name = callbacks["adapter_name"]
         adapter_node = callbacks["adapter_node"]
@@ -428,16 +461,16 @@ class Cnx(ChildMixins):
             node=adapter_node,
         )
 
-    def _add(self, adapter_name_raw, adapter_node_id, new_config):
+    def _add(self, adapter_name_raw: str, adapter_node_id: str, new_config: dict) -> str:
         """Direct API method to add a connection to an adapter.
 
         Args:
-            adapter (:obj:`str`): name of adapter
-            node_id (:obj:`str`): id of node running **adapter**
-            config (:obj:`dict`): configuration values for new connection
+            adapter: name of adapter
+            node_id: id of node running **adapter**
+            config: configuration values for new connection
 
         Returns:
-            :obj:`str`: an empty str
+            an empty str
         """
         data = {}
         data.update(new_config)
@@ -453,16 +486,16 @@ class Cnx(ChildMixins):
             error_status=False,
         )
 
-    def _test(self, adapter_name_raw, adapter_node_id, config):
+    def _test(self, adapter_name_raw: str, adapter_node_id: str, config: dict) -> str:
         """Direct API method to add a connection to an adapter.
 
         Args:
-            adapter (:obj:`str`): name of adapter
-            node_id (:obj:`str`): id of node running **adapter**
-            config (:obj:`dict`): configuration values to test reachability for
+            adapter: name of adapter
+            node_id: id of node running **adapter**
+            config: configuration values to test reachability for
 
         Returns:
-            :obj:`str`: an empty str
+            an empty str
         """
         data = {}
         data.update(config)
@@ -474,22 +507,26 @@ class Cnx(ChildMixins):
         return self.parent.request(method="post", path=path, json=data, raw=True)
 
     def _delete(
-        self, adapter_name_raw, adapter_node_id, cnx_uuid, delete_entities=False
-    ):
+        self,
+        adapter_name_raw: str,
+        adapter_node_id: str,
+        cnx_uuid: str,
+        delete_entities: bool = False,
+    ) -> str:
         """Direct API method to delete a connection from an adapter.
 
         Args:
-            name_raw (:obj:`str`): name_raw of adapter
-            node_id (:obj:`str`): id of node running **adapter**
-            uuid (:obj:`str`): uuid of connection to delete
-            delete_entities (:obj:`bool`, optional): default ``False`` -
+            name_raw: name_raw of adapter
+            node_id: id of node running **adapter**
+            uuid: uuid of connection to delete
+            delete_entities: default ``False`` -
 
                 * if ``True`` delete the connection and also delete all asset entities
                   fetched by this connection
                 * if ``False`` just delete the connection
 
         Returns:
-            :obj:`str`: an empty str
+            an empty str
         """
         data = {}
         data["instanceName"] = adapter_node_id
@@ -509,17 +546,23 @@ class Cnx(ChildMixins):
             error_status=False,
         )
 
-    def _update(self, adapter_name_raw, adapter_node_id, new_config, cnx_uuid):
+    def _update(
+        self,
+        adapter_name_raw: str,
+        adapter_node_id: str,
+        new_config: dict,
+        cnx_uuid: str,
+    ) -> str:
         """Direct API method to update a connection on an adapter.
 
         Args:
-            name_raw (:obj:`str`): name_raw of adapter
-            node_id (:obj:`str`): id of node running **adapter**
-            config (:obj:`dict`): configuration of connection to update
-            uuid (:obj:`str`): uuid of connection to update
+            name_raw: name_raw of adapter
+            node_id: id of node running **adapter**
+            config: configuration of connection to update
+            uuid: uuid of connection to update
 
         Returns:
-            :obj:`str`: an empty str
+            an empty str
         """
         data = {}
         data.update(new_config)

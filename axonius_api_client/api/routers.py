@@ -1,12 +1,14 @@
 # -*- coding: utf-8 -*-
 """REST API route definitions."""
+from typing import List
+
 from ..tools import join_url
 
 
 class Router:
     """Simple object store for REST API routes."""
 
-    def __init__(self, object_type, base, version, **routes):
+    def __init__(self, object_type: str, base: str, version: int, **routes):
         """Object store for REST API routes.
 
         Args:
@@ -24,7 +26,7 @@ class Router:
             self._routes.append(k)
             setattr(self, k, join_url(self.root, v))
 
-    def __str__(self):
+    def __str__(self) -> str:
         """Show object info.
 
         Returns:
@@ -35,7 +37,7 @@ class Router:
         msg += "(object_type={obj._object_type!r}, version={obj._version})"
         return msg.format(obj=self)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """Show object info.
 
         Returns:
@@ -48,10 +50,10 @@ class Router:
 class ApiV1:
     """Routes provided by the Axonius REST API version 1."""
 
-    version = 1
-    base = "api/V{version}".format(version=version)
+    version: int = 1
+    base: str = "api/V{version}".format(version=version)
 
-    users = Router(
+    users: Router = Router(
         object_type="users",
         base=base,
         version=version,
@@ -66,7 +68,7 @@ class ApiV1:
         history_dates="history_dates",
     )
 
-    devices = Router(
+    devices: Router = Router(
         object_type="devices",
         base=base,
         cached="cached",
@@ -81,7 +83,7 @@ class ApiV1:
         history_dates="history_dates",
     )
 
-    actions = Router(
+    actions: Router = Router(
         object_type="actions",
         base=base,
         version=version,
@@ -90,7 +92,7 @@ class ApiV1:
         upload_file="upload_file",
     )
 
-    adapters = Router(
+    adapters: Router = Router(
         object_type="adapters",
         base=base,
         version=version,
@@ -102,9 +104,9 @@ class ApiV1:
         config_get="{adapter_name_plugin}/config/{adapter_config_name}",
     )
 
-    alerts = Router(object_type="alerts", base=base, version=version)
+    alerts: Router = Router(object_type="alerts", base=base, version=version)
 
-    system = Router(
+    system: Router = Router(
         object_type="system",
         base=base,
         version=version,
@@ -127,7 +129,7 @@ class ApiV1:
         central_core_restore="central_core/restore",
     )
 
-    all_objects = [
+    all_objects: List[Router] = [
         users,
         devices,
         actions,

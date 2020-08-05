@@ -42,6 +42,36 @@ OPTIONS = [
         show_default=True,
     ),
     click.option(
+        "--root-only/--no-root-only",
+        "-ro/-nro",
+        "root_only",
+        default=False,
+        is_flag=True,
+        help="Only show root fields",
+        show_envvar=True,
+        show_default=True,
+    ),
+    click.option(
+        "--include-simple/--no-include-simple",
+        "-is/-nis",
+        "include_simple",
+        default=True,
+        is_flag=True,
+        help="Include simple fields",
+        show_envvar=True,
+        show_default=True,
+    ),
+    click.option(
+        "--include-complex/--no-include-complex",
+        "-ic/-nic",
+        "include_complex",
+        default=True,
+        is_flag=True,
+        help="Include complex fields",
+        show_envvar=True,
+        show_default=True,
+    ),
+    click.option(
         "--export-format",
         "-xf",
         "export_format",
@@ -66,6 +96,9 @@ def cmd(
     field_re,
     field_key,
     export_format,
+    root_only,
+    include_simple,
+    include_complex,
     help_detailed=None,
     **kwargs
 ):
@@ -88,6 +121,14 @@ def cmd(
             continue
 
         for schema in schemas:
+            if root_only and not schema["is_root"]:
+                continue
+            if not include_complex and schema["is_complex"]:
+                continue
+
+            if not include_simple and not schema["is_complex"]:
+                continue
+
             if not schema.get("selectable"):
                 continue
 

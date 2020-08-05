@@ -1,27 +1,25 @@
 # -*- coding: utf-8 -*-
 """API model for working with system configuration."""
+from typing import Optional
+
 from ...exceptions import ApiError, NotFoundError
 from ..mixins import ChildMixins
-from ..parsers.config import (
-    config_build,
-    config_unchanged,
-    config_unknown,
-    parse_settings,
-)
+from ..parsers.config import (config_build, config_unchanged, config_unknown,
+                              parse_settings)
 from ..parsers.tables import tablize
 
 
 class SettingsChild(ChildMixins):
     """Child API object to work with system settings."""
 
-    TITLE = ""
+    TITLE: str = ""
 
     @property
-    def router_path(self):
+    def router_path(self) -> str:
         """Pass."""
         raise NotImplementedError  # pragma: no cover
 
-    def get(self):
+    def get(self) -> dict:
         """Get the current system settings.
 
         Returns:
@@ -29,7 +27,9 @@ class SettingsChild(ChildMixins):
         """
         return parse_settings(raw=self._get(), title=self.TITLE)
 
-    def get_section(self, section, sub_section=None, full_config=False):
+    def get_section(
+        self, section: str, sub_section: Optional[str] = None, full_config: bool = False
+    ) -> dict:
         """Pass."""
         settings = self.get()
         title = settings["settings_title"]
@@ -53,7 +53,9 @@ class SettingsChild(ChildMixins):
         err = f"Section Name {section!r} not found in {title}"
         raise NotFoundError(tablize(value=valid_sections, err=err))
 
-    def get_sub_section(self, section, sub_section, full_config=False):
+    def get_sub_section(
+        self, section: str, sub_section: str, full_config: bool = False
+    ) -> dict:
         """Pass."""
         settings = self.get_section(section=section, full_config=full_config)
         title = settings["settings_title"]
@@ -84,7 +86,7 @@ class SettingsChild(ChildMixins):
         )
         raise NotFoundError(tablize(value=valids, err=err))
 
-    def update_section(self, section, **kwargs):
+    def update_section(self, section: str, **kwargs) -> dict:
         """Update the system settings."""
         settings = self.get_section(section=section, full_config=True)
         title = settings["settings_title"]
@@ -112,7 +114,7 @@ class SettingsChild(ChildMixins):
 
         return self.get_section(section=section)
 
-    def update_sub_section(self, section, sub_section, **kwargs):
+    def update_sub_section(self, section: str, sub_section: str, **kwargs) -> dict:
         """Update the system settings."""
         settings = self.get_sub_section(
             section=section, sub_section=sub_section, full_config=True
@@ -141,7 +143,7 @@ class SettingsChild(ChildMixins):
 
         return self.get_sub_section(section=section, sub_section=sub_section)
 
-    def _get(self):
+    def _get(self) -> dict:
         """Direct API method to get the current system settings.
 
         Returns:
@@ -149,7 +151,7 @@ class SettingsChild(ChildMixins):
         """
         return self.request(method="get", path=self.router_path)
 
-    def _update(self, new_config):
+    def _update(self, new_config: dict) -> dict:
         """Direct API method to update the system settings."""
         return self.request(method="post", path=self.router_path, json=new_config)
 
@@ -157,10 +159,10 @@ class SettingsChild(ChildMixins):
 class SettingsCore(SettingsChild):
     """Child API object to work with System Global Settings."""
 
-    TITLE = "Global Settings"
+    TITLE: str = "Global Settings"
 
     @property
-    def router_path(self):
+    def router_path(self) -> str:
         """Route path for this setting object."""
         return self.parent.router.settings_core
 
@@ -168,10 +170,10 @@ class SettingsCore(SettingsChild):
 class SettingsLifecycle(SettingsChild):
     """Child API object to work with Lifecycle Global Settings."""
 
-    TITLE = "Lifecycle Settings"
+    TITLE: str = "Lifecycle Settings"
 
     @property
-    def router_path(self):
+    def router_path(self) -> str:
         """Route path for this setting object."""
         return self.parent.router.settings_lifecycle
 
@@ -179,9 +181,9 @@ class SettingsLifecycle(SettingsChild):
 class SettingsGui(SettingsChild):
     """Child API object to work with GUI Global Settings."""
 
-    TITLE = "GUI Settings"
+    TITLE: str = "GUI Settings"
 
     @property
-    def router_path(self):
+    def router_path(self) -> str:
         """Route path for this setting object."""
         return self.parent.router.settings_gui

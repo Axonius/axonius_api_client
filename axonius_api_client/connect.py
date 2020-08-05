@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 """Easy all-in-one connection handler."""
+import logging
+import pathlib
 import re
+from typing import List, Optional, Union
 
 import requests
 
@@ -24,7 +27,7 @@ from .version import __version__ as VERSION
 class Connect:
     """Easy all-in-one connection handler."""
 
-    REASON_RES = [
+    REASON_RES: List[str] = [
         re.compile(r".*?object at.*?\>\: ([a-zA-Z0-9\]\[: ]+)"),
         re.compile(r".*?\] (.*) "),
     ]
@@ -33,38 +36,38 @@ class Connect:
 
     def __init__(
         self,
-        url,
-        key,
-        secret,
-        wraperror=True,
-        timeout_connect=TIMEOUT_CONNECT,
-        timeout_response=TIMEOUT_RESPONSE,
-        certpath=None,
-        certverify=False,
-        certwarn=True,
-        cert_client_key=None,
-        cert_client_cert=None,
-        cert_client_both=None,
-        proxy=None,
-        save_history=False,
-        log_level="debug",
-        log_request_attrs=None,
-        log_response_attrs=None,
-        log_request_body=False,
-        log_response_body=False,
-        log_logger=LOG,
-        log_level_package=LOG_LEVEL_PACKAGE,
-        log_level_http=LOG_LEVEL_HTTP,
-        log_level_auth=LOG_LEVEL_AUTH,
-        log_level_api=LOG_LEVEL_API,
-        log_level_console=LOG_LEVEL_CONSOLE,
-        log_level_file=LOG_LEVEL_FILE,
-        log_console=False,
-        log_file=False,
-        log_file_name=LOG_FILE_NAME,
-        log_file_path=LOG_FILE_PATH,
-        log_file_max_mb=LOG_FILE_MAX_MB,
-        log_file_max_files=LOG_FILE_MAX_FILES,
+        url: str,
+        key: str,
+        secret: str,
+        wraperror: bool = True,
+        timeout_connect: int = TIMEOUT_CONNECT,
+        timeout_response: int = TIMEOUT_RESPONSE,
+        certpath: Optional[Union[str, pathlib.Path]] = None,
+        certverify: bool = False,
+        certwarn: bool = True,
+        cert_client_key: Optional[Union[str, pathlib.Path]] = None,
+        cert_client_cert: Optional[Union[str, pathlib.Path]] = None,
+        cert_client_both: Optional[Union[str, pathlib.Path]] = None,
+        proxy: Optional[str] = None,
+        save_history: bool = False,
+        log_level: Union[str, int] = "debug",
+        log_request_attrs: Optional[List[str]] = None,
+        log_response_attrs: Optional[List[str]] = None,
+        log_request_body: bool = False,
+        log_response_body: bool = False,
+        log_logger: logging.Logger = LOG,
+        log_level_package: Union[str, int] = LOG_LEVEL_PACKAGE,
+        log_level_http: Union[str, int] = LOG_LEVEL_HTTP,
+        log_level_auth: Union[str, int] = LOG_LEVEL_AUTH,
+        log_level_api: Union[str, int] = LOG_LEVEL_API,
+        log_level_console: Union[str, int] = LOG_LEVEL_CONSOLE,
+        log_level_file: Union[str, int] = LOG_LEVEL_FILE,
+        log_console: bool = False,
+        log_file: bool = False,
+        log_file_name: Union[str, pathlib.Path] = LOG_FILE_NAME,
+        log_file_path: Union[str, pathlib.Path] = LOG_FILE_PATH,
+        log_file_max_mb: int = LOG_FILE_MAX_MB,
+        log_file_max_files: int = LOG_FILE_MAX_FILES,
     ):
         """Easy all-in-one connection handler.
 
@@ -267,7 +270,7 @@ class Connect:
             LOG.info(str(self))
 
     @property
-    def users(self):
+    def users(self) -> Users:
         """Get the object for user assets API.
 
         Returns:
@@ -279,7 +282,7 @@ class Connect:
         return self._users
 
     @property
-    def devices(self):
+    def devices(self) -> Devices:
         """Get the object for user assets API.
 
         Returns:
@@ -291,7 +294,7 @@ class Connect:
         return self._devices
 
     @property
-    def adapters(self):
+    def adapters(self) -> Adapters:
         """Get the object for adapters API.
 
         Returns:
@@ -303,7 +306,7 @@ class Connect:
         return self._adapters
 
     @property
-    def enforcements(self):
+    def enforcements(self) -> Enforcements:
         """Get the object for enforcements API.
 
         Returns:
@@ -315,7 +318,7 @@ class Connect:
         return self._enforcements
 
     @property
-    def run_actions(self):
+    def run_actions(self) -> RunAction:
         """Get the object for run actions API.
 
         Returns:
@@ -327,7 +330,7 @@ class Connect:
         return self._run_actions
 
     @property
-    def system(self):
+    def system(self) -> System:
         """Get the object for system API.
 
         Returns:
@@ -338,7 +341,7 @@ class Connect:
             self._system = System(**self._api_args)
         return self._system
 
-    def __str__(self):
+    def __str__(self) -> str:
         """Show object info.
 
         Returns:
@@ -359,7 +362,7 @@ class Connect:
         else:
             return f"Not connected to {url!r}"
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """Show object info.
 
         Returns:
@@ -369,7 +372,7 @@ class Connect:
         return self.__str__()
 
     @classmethod
-    def _get_exc_reason(cls, exc):
+    def _get_exc_reason(cls, exc: Exception) -> str:
         """Trim exceptions down to a more user friendly display.
 
         Uses :attr:`REASON_RES` to do regex substituions.

@@ -1,19 +1,15 @@
 # -*- coding: utf-8 -*-
 """HTTP client."""
 import logging
+import pathlib
 import warnings
-from urllib.parse import urlparse, urlunparse
+from typing import List, Optional, Union
+from urllib.parse import ParseResult, urlparse, urlunparse
 
 import requests
 
-from .constants import (
-    LOG_LEVEL_HTTP,
-    MAX_BODY_LEN,
-    REQUEST_ATTR_MAP,
-    RESPONSE_ATTR_MAP,
-    TIMEOUT_CONNECT,
-    TIMEOUT_RESPONSE,
-)
+from .constants import (LOG_LEVEL_HTTP, MAX_BODY_LEN, REQUEST_ATTR_MAP,
+                        RESPONSE_ATTR_MAP, TIMEOUT_CONNECT, TIMEOUT_RESPONSE)
 from .exceptions import HttpError
 from .logs import get_obj_log, set_log_level
 from .tools import join_url, json_reload, listify, path_read
@@ -27,25 +23,25 @@ class Http:
 
     def __init__(
         self,
-        url,
-        connect_timeout=TIMEOUT_CONNECT,
-        response_timeout=TIMEOUT_RESPONSE,
-        certpath=None,
-        certwarn=True,
-        certverify=False,
-        cert_client_both=None,
-        cert_client_cert=None,
-        cert_client_key=None,
-        http_proxy=None,
-        https_proxy=None,
-        save_last=True,
-        save_history=False,
-        log_level=LOG_LEVEL_HTTP,
-        log_level_urllib="warning",
-        log_request_attrs=None,
-        log_response_attrs=None,
-        log_request_body=False,
-        log_response_body=False,
+        url: str,
+        connect_timeout: int = TIMEOUT_CONNECT,
+        response_timeout: int = TIMEOUT_RESPONSE,
+        certpath: Optional[Union[str, pathlib.Path]] = None,
+        certwarn: bool = True,
+        certverify: bool = False,
+        cert_client_both: Optional[Union[str, pathlib.Path]] = None,
+        cert_client_cert: Optional[Union[str, pathlib.Path]] = None,
+        cert_client_key: Optional[Union[str, pathlib.Path]] = None,
+        http_proxy: Optional[str] = None,
+        https_proxy: Optional[str] = None,
+        save_last: bool = True,
+        save_history: bool = False,
+        log_level: Union[int, str] = LOG_LEVEL_HTTP,
+        log_level_urllib: str = "warning",
+        log_request_attrs: Optional[List[str]] = None,
+        log_response_attrs: Optional[List[str]] = None,
+        log_request_body: bool = False,
+        log_response_body: bool = False,
     ):
         """HTTP client wrapper around :obj:`requests.Session`.
 
@@ -139,50 +135,53 @@ class Http:
                 cert_client_key, or cert_client_both are supplied and the file does
                 not exist
         """
-        self.LOG = get_obj_log(obj=self, level=log_level)
+        self.LOG: logging.Logger = get_obj_log(obj=self, level=log_level)
         """:obj:`logging.Logger`: Logger for this object."""
 
         if isinstance(url, ParserUrl):
-            self.URLPARSED = url
+            self.URLPARSED: ParserUrl = url
         else:
-            self.URLPARSED = ParserUrl(url=url, default_scheme="https")
+            self.URLPARSED: ParserUrl = ParserUrl(url=url, default_scheme="https")
 
-        self.url = self.URLPARSED.url
+        self.url: str = self.URLPARSED.url
         """:obj:`str`: URL to connect to"""
 
-        self.LAST_REQUEST = None
+        self.LAST_REQUEST: requests.PreparedRequest = None
         """:obj:`requests.PreparedRequest`: last request sent"""
 
-        self.LAST_RESPONSE = None
+        self.LAST_RESPONSE: requests.Response = None
         """:obj:`requests.Response`: last response received"""
 
-        self.HISTORY = []
+        self.HISTORY: List[requests.Response] = []
         """:obj:`list` of :obj:`requests.Response`: all responses received."""
 
-        self.SAVE_LAST = save_last
+        self.SAVE_LAST: bool = save_last
         """:obj:`bool`: save requests to :attr:`LAST_REQUEST` and responses
         to :attr:`LAST_RESPONSE`"""
 
-        self.SAVEHISTORY = save_history
+        self.SAVEHISTORY: bool = save_history
         """:obj:`bool`: Append all responses to :attr:`HISTORY`"""
 
-        self.CONNECT_TIMEOUT = connect_timeout
+        self.CONNECT_TIMEOUT: int = connect_timeout
         """:obj:`int`: seconds to wait for connections to open to :attr:`url`"""
 
-        self.RESPONSE_TIMEOUT = response_timeout
+        self.RESPONSE_TIMEOUT: int = response_timeout
         """:obj:`int`: seconds to wait for responses from :attr:`url`"""
 
-        self.session = requests.Session()
+        self.session: requests.Session = requests.Session()
         """:obj:`requests.Session`: session object to use"""
 
-        self.LOG_REQUEST_BODY = log_request_body
+        self.LOG_HIDE_HEADERS: List[str] = ["api-key", "api-secret"]
+        """Headers to hide when logging."""
+
+        self.LOG_REQUEST_BODY: bool = log_request_body
         """:obj:`bool`: Log the full request body."""
 
-        self.LOG_RESPONSE_BODY = log_response_body
+        self.LOG_RESPONSE_BODY: bool = log_response_body
         """:obj:`bool`: Log the full response body."""
 
-        self.log_request_attrs = log_request_attrs
-        self.log_response_attrs = log_response_attrs
+        self.log_request_attrs: Optional[List[str]] = log_request_attrs
+        self.log_response_attrs: Optional[List[str]] = log_response_attrs
 
         self.session.proxies = {}
         self.session.proxies["https"] = https_proxy
@@ -219,18 +218,18 @@ class Http:
 
     def __call__(
         self,
-        path=None,
-        route=None,
-        method="get",
-        data=None,
-        params=None,
-        headers=None,
-        json=None,
-        files=None,
+        path: Optional[str] = None,
+        route: Optional[str] = None,
+        method: str = "get",
+        data: Optional[str] = None,
+        params: Optional[dict] = None,
+        headers: Optional[dict] = None,
+        json: Optional[dict] = None,
+        files: tuple = None,
         # fmt: off
         **kwargs
         # fmt: on
-    ):
+    ) -> requests.Response:
         """Create, prepare, and then send a request using :attr:`session`.
 
         Args:
@@ -279,14 +278,11 @@ class Http:
             files=files or [],
         )
         prepped_request = self.session.prepare_request(request=request)
-        prepped_request.body_size = len(prepped_request.body or "")
 
         if self.SAVE_LAST:
             self.LAST_REQUEST = prepped_request
 
-        if self.log_request_attrs:
-            lattrs = ", ".join(self.log_request_attrs).format(request=prepped_request)
-            self.LOG.debug(f"REQUEST ATTRS: {lattrs}")
+        self._do_log_request(request=prepped_request)
 
         send_args = self.session.merge_environment_settings(
             url=prepped_request.url,
@@ -302,11 +298,7 @@ class Http:
             kwargs.get("response_timeout", self.RESPONSE_TIMEOUT),
         )
 
-        if self.LOG_REQUEST_BODY:
-            self.log_body(body=prepped_request.body, body_type="REQUEST")
-
         response = self.session.send(**send_args)
-        response.body_size = len(response.text or "")
 
         if self.SAVE_LAST:
             self.LAST_RESPONSE = response
@@ -314,16 +306,11 @@ class Http:
         if self.SAVEHISTORY:
             self.HISTORY.append(response)
 
-        if self.log_response_attrs:
-            lattrs = ", ".join(self.log_response_attrs).format(response=response)
-            self.LOG.debug(f"RESPONSE ATTRS: {lattrs}")
-
-        if self.LOG_RESPONSE_BODY:
-            self.log_body(body=response.text, body_type="RESPONSE")
+        self._do_log_response(response=response)
 
         return response
 
-    def __str__(self):
+    def __str__(self) -> str:
         """Show object info.
 
         Returns:
@@ -333,7 +320,7 @@ class Http:
             c=self.__class__, url=self.url
         )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """Show object info.
 
         Returns:
@@ -342,7 +329,7 @@ class Http:
         return self.__str__()
 
     @property
-    def user_agent(self):
+    def user_agent(self) -> str:
         """Value to use in User-Agent header.
 
         Returns:
@@ -350,34 +337,72 @@ class Http:
         """
         return f"{__name__}.{self.__class__.__name__}/{__version__}"
 
+    def _do_log_request(self, request: requests.PreparedRequest):
+        """Do it."""
+        if self.log_request_attrs:
+            lattrs = ", ".join(self.log_request_attrs).format(
+                url=request.url,
+                body_size=len(request.body or ""),
+                method=request.method,
+                headers=self._clean_headers(headers=request.headers),
+            )
+            self.LOG.debug(f"REQUEST ATTRS: {lattrs}")
+
+        if self.LOG_REQUEST_BODY:
+            self.log_body(body=request.body, body_type="REQUEST")
+
+    def _clean_headers(self, headers: dict) -> dict:
+        hide = "*********"
+        hidden = self.LOG_HIDE_HEADERS
+        return {k: hide if k in hidden else v for k, v in headers.items()}
+
+    def _do_log_response(self, response: requests.Response):
+        """Do it."""
+        if self.log_response_attrs:
+            lattrs = ", ".join(self.log_response_attrs).format(
+                url=response.url,
+                body_size=len(response.text or ""),
+                method=response.request.method,
+                status_code=response.status_code,
+                reason=response.reason,
+                elapsed=response.elapsed,
+                headers=self._clean_headers(headers=response.headers),
+            )
+            self.LOG.debug(f"RESPONSE ATTRS: {lattrs}")
+
+        if self.LOG_RESPONSE_BODY:
+            self.log_body(body=response.text, body_type="RESPONSE")
+
     @property
-    def log_request_attrs(self):
+    def log_request_attrs(self) -> List[str]:
         """Get the request attributes that should be logged."""
         return self._get_log_attrs("request")
 
     @log_request_attrs.setter
-    def log_request_attrs(self, value):
+    def log_request_attrs(self, value: List[str]):
         """Set the request attributes that should be logged."""
         attr_map = REQUEST_ATTR_MAP
         attr_type = "request"
         self._set_log_attrs(attr_map=attr_map, attr_type=attr_type, value=value)
 
     @property
-    def log_response_attrs(self):
+    def log_response_attrs(self) -> List[str]:
         """Get the response attributes that should be logged."""
         return self._get_log_attrs("response")
 
     @log_response_attrs.setter
-    def log_response_attrs(self, value):
+    def log_response_attrs(self, value: List[str]):
         """Set the response attributes that should be logged."""
         attr_map = RESPONSE_ATTR_MAP
         attr_type = "response"
         self._set_log_attrs(attr_map=attr_map, attr_type=attr_type, value=value)
 
-    def _get_log_attrs(self, attr_type):
+    def _get_log_attrs(self, attr_type: str) -> List[str]:
         return getattr(self, "_LOG_ATTRS", {}).get(attr_type, [])
 
-    def _set_log_attrs(self, attr_map, attr_type, value):
+    def _set_log_attrs(
+        self, attr_map: dict, attr_type: str, value: Union[str, List[str]]
+    ):
         if not hasattr(self, "_LOG_ATTRS"):
             self._LOG_ATTRS = {"response": [], "request": []}
 
@@ -403,7 +428,7 @@ class Http:
                 if entry not in log_attrs:
                     log_attrs.append(entry)
 
-    def log_body(self, body, body_type):
+    def log_body(self, body: str, body_type: str):
         """Pass."""
         body = body or ""
         body = json_reload(obj=body, error=False, trim=MAX_BODY_LEN)
@@ -413,7 +438,7 @@ class Http:
 class ParserUrl:
     """Parse a URL and ensure it has the neccessary bits."""
 
-    def __init__(self, url, default_scheme="https"):
+    def __init__(self, url: str, default_scheme: str = "https"):
         """Parse a URL and ensure it has the neccessary bits.
 
         Args:
@@ -426,16 +451,16 @@ class ParserUrl:
                 if parsed URL winds up without a hostname, port, or scheme.
 
         """
-        self._init_url = url
+        self._init_url: str = url
         """:obj:`str`: initial URL provided"""
 
-        self._init_scheme = default_scheme
+        self._init_scheme: str = default_scheme
         """:obj:`str`: default scheme provided"""
 
-        self._init_parsed = urlparse(url)
+        self._init_parsed: ParseResult = urlparse(url)
         """:obj:`urllib.parse.ParseResult`: first pass of parsing URL"""
 
-        self.parsed = self.reparse(
+        self.parsed: ParseResult = self.reparse(
             parsed=self._init_parsed, default_scheme=default_scheme
         )
         """:obj:`urllib.parse.ParseResult`: second pass of parsing URL"""
@@ -448,7 +473,7 @@ class ParserUrl:
                 )
                 raise HttpError(error)
 
-    def __str__(self):
+    def __str__(self) -> str:
         """Show object info.
 
         Returns:
@@ -457,7 +482,7 @@ class ParserUrl:
         cls = self.__class__
         return f"{cls.__module__}.{cls.__name__}({self.parsed_str})"
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """Show object info.
 
         Returns:
@@ -466,7 +491,7 @@ class ParserUrl:
         return self.__str__()
 
     @property
-    def hostname(self):
+    def hostname(self) -> str:
         """Hostname part from :attr:`ParserUrl.parsed`.
 
         Returns:
@@ -475,7 +500,7 @@ class ParserUrl:
         return self.parsed.hostname
 
     @property
-    def port(self):
+    def port(self) -> int:
         """Port part from :attr:`ParserUrl.parsed`.
 
         Returns
@@ -484,7 +509,7 @@ class ParserUrl:
         return int(self.parsed.port)
 
     @property
-    def scheme(self):
+    def scheme(self) -> str:
         """Scheme part from :attr:`ParserUrl.parsed`.
 
         Returns:
@@ -493,7 +518,7 @@ class ParserUrl:
         return self.parsed.scheme
 
     @property
-    def url(self):
+    def url(self) -> str:
         """Get scheme, hostname, and port from :attr:`ParserUrl.parsed`.
 
         Returns:
@@ -502,7 +527,7 @@ class ParserUrl:
         return self.unparse_base(parsed_result=self.parsed)
 
     @property
-    def url_full(self):
+    def url_full(self) -> str:
         """Get full URL from :attr:`ParserUrl.parsed`.
 
         Returns:
@@ -511,7 +536,7 @@ class ParserUrl:
         return self.unparse_all(parsed_result=self.parsed)
 
     @property
-    def parsed_str(self):
+    def parsed_str(self) -> str:
         """Get a str value of :attr:`ParserUrl.parsed`.
 
         Returns:
@@ -532,7 +557,7 @@ class ParserUrl:
         attrs = [atmpl(a=a, v="{}".format(getattr(parsed, a, "")) or "") for a in attrs]
         return ", ".join(attrs)
 
-    def make_netloc(self, host, port):
+    def make_netloc(self, host: str, port: Union[str, int]) -> str:
         """Create netloc from host and port.
 
         Args:
@@ -543,9 +568,9 @@ class ParserUrl:
             :obj:`str`: host and port values joined by :
 
         """
-        return ":".join([x for x in [host, port] if x])
+        return ":".join([str(x) for x in [host, port] if x])
 
-    def reparse(self, parsed, default_scheme=""):
+    def reparse(self, parsed: ParseResult, default_scheme: str = "") -> ParseResult:
         """Reparse a parsed URL into a parsed URL with values fixed.
 
         Args:
@@ -608,7 +633,7 @@ class ParserUrl:
         pass2 = urlunparse((scheme, netloc, path, params, query, fragment))
         return urlparse(pass2)
 
-    def unparse_base(self, parsed_result):
+    def unparse_base(self, parsed_result: ParseResult) -> str:
         """Unparse a parsed URL into just the scheme, hostname, and port parts.
 
         Args:
@@ -621,7 +646,7 @@ class ParserUrl:
         bits = (parsed_result.scheme, parsed_result.netloc, "", "", "", "")
         return urlunparse(bits)
 
-    def unparse_all(self, parsed_result):
+    def unparse_all(self, parsed_result: ParseResult) -> str:
         """Unparse a parsed URL with all the parts.
 
         Args:
