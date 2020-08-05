@@ -48,13 +48,13 @@ SIMPLE: Tuple[Type] = (str, int, bool, float)
 """:obj:`tuple` of :obj:`type`: types that are considered as simple"""
 
 EMPTY: List[Union[str, list, dict, tuple]] = [None, "", [], {}, ()]
-""":obj:`list` of :obj:`type`: values that should be considered as empty"""
+"""Values that should be considered as empty"""
 
-YES: List[Union[bool, int, str]] = [True, 1, "1", "true", "t", "yes", "y"]
-""":obj:`list` of :obj:`type`: values that should be considered as truthy"""
+YES: List[Union[bool, int, str]] = [True, 1, "1", "true", "t", "yes", "y", "on"]
+"""Values that should be considered as truthy"""
 
-NO: List[Union[bool, int, str]] = [False, 0, "0", "false", "f", "no", "n"]
-""":obj:`list` of :obj:`type`: values that should be considered as falsey"""
+NO: List[Union[bool, int, str]] = [False, 0, "0", "false", "f", "no", "n", "off"]
+"""Values that should be considered as falsey"""
 
 MAX_PAGE_SIZE: int = 2000
 """:obj:`int`: maximum page size that REST API allows"""
@@ -264,7 +264,57 @@ SCHEMAS_CUSTOM: Dict[str, dict] = {
             "type_norm": "list_string",
             "is_custom": True,
         }
-    }
+    },
+    "report_software_whitelist": {
+        "software_missing": {
+            "adapter_name": "report",
+            "column_name": "report:software_missing",
+            "column_title": "Report: Missing Software",
+            "is_complex": False,
+            "is_list": True,
+            "is_root": True,
+            "parent": "root",
+            "name": "software_missing",
+            "name_base": "software_missing",
+            "name_qual": "software_missing",
+            "title": "Missing Software",
+            "type": "string",
+            "type_norm": "list_string",
+            "is_custom": True,
+        },
+        "software_extra": {
+            "adapter_name": "report",
+            "column_name": "report:software_extra",
+            "column_title": "Report: Extra Software",
+            "is_complex": False,
+            "is_list": True,
+            "is_root": True,
+            "parent": "root",
+            "name": "software_extra",
+            "name_base": "software_extra",
+            "name_qual": "software_extra",
+            "title": "Extra Software",
+            "type": "string",
+            "type_norm": "list_string",
+            "is_custom": True,
+        },
+        "software_whitelist": {
+            "adapter_name": "report",
+            "column_name": "report:software_whitelist",
+            "column_title": "Report: Software Whitelist",
+            "is_complex": False,
+            "is_list": True,
+            "is_root": True,
+            "parent": "root",
+            "name": "software_whitelist",
+            "name_base": "software_whitelist",
+            "name_qual": "software_whitelist",
+            "title": "Software Whitelist",
+            "type": "string",
+            "type_norm": "list_string",
+            "is_custom": True,
+        },
+    },
 }
 
 MAX_BODY_LEN: int = 100000

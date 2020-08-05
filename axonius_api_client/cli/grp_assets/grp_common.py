@@ -209,6 +209,15 @@ GET_EXPORT = [
         hidden=False,
     ),
     click.option(
+        "--software-whitelist-file",
+        "whitelist",
+        default=None,
+        help="Read in a file of software names to add missing and delta sw columns",
+        show_envvar=True,
+        show_default=True,
+        type=click.File(),
+    ),
+    click.option(
         "--tag",
         "tags_add",
         help="Tags to add to each asset (multiples)",
@@ -364,14 +373,21 @@ GET_BY_VALUE_FIELD = click.option(
 )
 
 
+def load_whitelist(fh):
+    if fh:
+        return [x.strip() for x in fh.readlines() if x.strip()]
+    return None
+
+
 def gen_get_by_cmd(options, doc, cmd_name, method):
     """Pass."""
 
     @click.command(name=cmd_name, context_settings=CONTEXT_SETTINGS, help=doc)
     @add_options(options)
     @click.pass_context
-    def cmd(ctx, url, key, secret, get_method=method, **kwargs):
+    def cmd(ctx, url, key, secret, whitelist=None, get_method=method, **kwargs):
         client = ctx.obj.start_client(url=url, key=key, secret=secret)
+        kwargs["report_software_whitelist"] = load_whitelist(whitelist)
 
         p_grp = ctx.parent.command.name
         apiobj = getattr(client, p_grp)
