@@ -2,6 +2,7 @@
 """API models for working with device and user assets."""
 import copy
 import logging
+import re
 import sys
 from typing import IO, Generator, List, Optional
 
@@ -104,6 +105,7 @@ class Base:
         self.process_tags_to_add(row=row)
         self.process_tags_to_remove(row=row)
         self.add_report_adapters_missing(row=row)
+        self.add_report_software_whitelist(row=row)
 
         for schema in self.schemas_selected:
             self.do_excludes(row=row, schema=schema)
@@ -319,6 +321,66 @@ class Base:
         if tag_row not in self.TAG_ROWS_REMOVE:
             self.TAG_ROWS_REMOVE.append(tag_row)
 
+    def add_report_software_whitelist(self, row: dict):
+        """Pass."""
+
+        def whitelist_match(whitelist, sw):
+            name = sw.get("name", "")
+            for whitelist_entry in whitelist:
+                if re.search(whitelist_entry, name, re.I):
+                    return True
+            return False
+
+        def sw_match(whitelist_entry, sws):
+            for sw in sws:
+                name = sw.get("name", "")
+                if re.search(whitelist_entry, name, re.I):
+                    return True
+            return False
+
+        def clean_list(obj):
+            return sorted(list(set(obj)))
+
+        if not self.GETARGS.get("report_software_whitelist", []):
+            return
+
+        sw_field = "specific_data.data.installed_software"
+
+        if sw_field not in self.fields_selected:
+            msg = f"Must include field (column) {sw_field!r}"
+            self.echo(msg=msg, error=ApiError, level="error")
+
+        schemas = SCHEMAS_CUSTOM["report_software_whitelist"]
+        software_missing_schema = schemas["software_missing"]
+        software_missing_name = software_missing_schema["name_qual"]
+
+        software_whitelist_schema = schemas["software_whitelist"]
+        software_whitelist_name = software_whitelist_schema["name_qual"]
+
+        software_extra_schema = schemas["software_extra"]
+        software_extra_name = software_extra_schema["name_qual"]
+
+        installed_software = listify(row.get(sw_field, []))
+        whitelist = self.GETARGS.get("report_software_whitelist", [])
+
+        row[software_extra_name] = clean_list(
+            [
+                x.get("name")
+                for x in installed_software
+                if x.get("name") and not whitelist_match(whitelist=whitelist, sw=x)
+            ]
+        )
+
+        row[software_missing_name] = clean_list(
+            [
+                x
+                for x in whitelist
+                if not sw_match(whitelist_entry=x, sws=installed_software)
+            ]
+        )
+
+        row[software_whitelist_name] = whitelist
+
     def add_report_adapters_missing(self, row: dict):
         """Pass."""
         if not self.GETARGS.get("report_adapters_missing", False):
@@ -461,6 +523,8 @@ class Base:
         schemas = []
         if self.GETARGS.get("report_adapters_missing", False):
             schemas += list(SCHEMAS_CUSTOM["report_adapters_missing"].values())
+        if self.GETARGS.get("report_software_whitelist", False):
+            schemas += list(SCHEMAS_CUSTOM["report_software_whitelist"].values())
         return schemas
 
     @property
