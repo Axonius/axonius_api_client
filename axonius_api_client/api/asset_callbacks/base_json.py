@@ -2,17 +2,18 @@
 """API models for working with device and user assets."""
 import json
 import textwrap
+from typing import List
 
 from ...tools import listify
 from .base import Base
 
-JSON_FLAT = False
+JSON_FLAT: bool = False
 
 
 class Json(Base):
     """Pass."""
 
-    CB_NAME = "json"
+    CB_NAME: str = "json"
 
     def start(self, **kwargs):
         """Create jsonstream and associated file descriptor."""
@@ -34,7 +35,7 @@ class Json(Base):
         self._fd.write(end)
         self.close_fd()
 
-    def process_row(self, row):
+    def process_row(self, row: dict) -> List[dict]:
         """Write row to jsonstreams and delete it."""
         self.do_pre_row()
 
@@ -51,7 +52,7 @@ class Json(Base):
 
         return return_row
 
-    def write_row(self, row):
+    def write_row(self, row: dict):
         """Pass."""
         flat = self.GETARGS.get("json_flat", JSON_FLAT)
 

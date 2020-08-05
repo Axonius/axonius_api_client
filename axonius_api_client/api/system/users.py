@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 """API model for working with system configuration."""
+from typing import List, Optional
+
 from ...exceptions import ApiError, NotFoundError
 from ..mixins import ChildMixins
 from ..parsers.config import parse_unchanged
@@ -10,15 +12,15 @@ class Users(ChildMixins):
 
     def add(
         self,
-        name,
-        role_name,
-        password=None,
-        generate_password_link=False,
-        email_password_link=False,
-        first_name=None,
-        last_name=None,
-        email=None,
-    ):
+        name: str,
+        role_name: str,
+        password: Optional[str] = None,
+        generate_password_link: bool = False,
+        email_password_link: bool = False,
+        first_name: Optional[str] = None,
+        last_name: Optional[str] = None,
+        email: Optional[str] = None,
+    ) -> dict:
         """Pass."""
         if not any([password, generate_password_link, email_password_link]):
             raise ApiError(
@@ -66,7 +68,7 @@ class Users(ChildMixins):
 
         return user_obj
 
-    def get(self):
+    def get(self) -> List[dict]:
         """Pass."""
         users = self._get()
         roles = self.parent.roles.get()
@@ -78,7 +80,7 @@ class Users(ChildMixins):
 
         return users
 
-    def get_by_name(self, name):
+    def get_by_name(self, name: str) -> dict:
         """Pass."""
         users = self.get()
 
@@ -92,13 +94,13 @@ class Users(ChildMixins):
 
     def update(
         self,
-        name,
-        first_name=None,
-        last_name=None,
-        password=None,
-        email=None,
-        role_name=None,
-    ):
+        name: str,
+        first_name: Optional[str] = None,
+        last_name: Optional[str] = None,
+        password: Optional[str] = None,
+        email: Optional[str] = None,
+        role_name: Optional[str] = None,
+    ) -> dict:
         """Pass."""
         user = self.get_by_name(name=name)
 
@@ -133,20 +135,24 @@ class Users(ChildMixins):
         self._update(uuid=uuid, user=user)
         return self.get_by_name(name=name)
 
-    def delete(self, name):
+    def delete(self, name: str) -> str:
         """Pass."""
         user = self.get_by_name(name=name)
         return self._delete(uuid=user["uuid"])
 
-    def get_password_reset_link(self, name):
+    def get_password_reset_link(self, name: str) -> str:
         """Pass."""
         user = self.get_by_name(name=name)
         user["password_reset_link"] = self._get_password_reset_link(uuid=user["uuid"])
         return user
 
     def email_password_reset_link(
-        self, name, email=None, new_user=False, generate_first=True
-    ):
+        self,
+        name: str,
+        email: Optional[str] = None,
+        new_user: bool = False,
+        generate_first: bool = True,
+    ) -> str:
         """Pass."""
         user = self.get_by_name(name=name)
         user_email = user.get("email")
@@ -163,7 +169,9 @@ class Users(ChildMixins):
         self._email_password_reset_link(uuid=user["uuid"], email=email, new_user=False)
         return email
 
-    def _get(self, limit=None, skip=None):
+    def _get(
+        self, limit: Optional[int] = None, skip: Optional[int] = None
+    ) -> List[dict]:
         """Pass."""
         data = {}
 
@@ -176,30 +184,32 @@ class Users(ChildMixins):
         path = self.router.users
         return self.request(method="get", path=path, params=data)
 
-    def _add(self, user):
+    def _add(self, user: dict) -> str:
         """Pass."""
         path = self.router.users
         return self.request(method="put", path=path, json=user)
 
-    def _delete(self, uuid):
+    def _delete(self, uuid: str) -> str:
         """Pass."""
         path = self.router.user.format(uuid=uuid)
         return self.request(method="delete", path=path)
 
-    def _update(self, uuid, user):
+    def _update(self, uuid: str, user: dict) -> str:
         """Pass."""
         path = self.router.user.format(uuid=uuid)
         return self.request(
             method="post", path=path, json=user, error_json_invalid=False
         )
 
-    def _get_password_reset_link(self, uuid):
+    def _get_password_reset_link(self, uuid: str) -> str:
         """Pass."""
         path = f"{self.router._base}/tokens/reset"
         data = {"user_id": uuid}
         return self.request(method="put", path=path, json=data, error_json_invalid=False)
 
-    def _email_password_reset_link(self, uuid, email, new_user=False):
+    def _email_password_reset_link(
+        self, uuid: str, email: str, new_user: bool = False
+    ) -> str:
         """Pass."""
         path = f"{self.router._base}/tokens/notify"
         data = {"user_id": uuid, "email": email, "invite": new_user}

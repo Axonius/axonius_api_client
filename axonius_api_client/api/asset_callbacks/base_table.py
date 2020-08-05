@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """API models for working with device and user assets."""
+from typing import List
 
 import tabulate
 
@@ -12,7 +13,7 @@ from .base import Base
 class Table(Base):
     """Pass."""
 
-    CB_NAME = "table"
+    CB_NAME: str = "table"
 
     def _init(self):
         """Pass."""
@@ -55,7 +56,7 @@ class Table(Base):
         self._fd.write("\n")
         self.close_fd()
 
-    def process_row(self, row):
+    def process_row(self, row: dict) -> List[dict]:
         """Process row."""
         self.do_pre_row()
         self.check_stop()
@@ -74,7 +75,7 @@ class Table(Base):
             self.STATE["stop_fetch"] = True
             self.STATE["stop_msg"] = f"table_max_rows of {max_rows}"
 
-    def check_table_format(self, fmt):
+    def check_table_format(self, fmt: str):
         """Pass."""
         if fmt not in tabulate.tabulate_formats:
             fmts = ", ".join(tabulate.tabulate_formats)
@@ -82,7 +83,7 @@ class Table(Base):
             self.echo(msg=msg, error=ApiError)
 
     @property
-    def args_map(self):
+    def args_map(self) -> List[list]:
         """Pass."""
         args = super(Table, self).args_map
         return args + [

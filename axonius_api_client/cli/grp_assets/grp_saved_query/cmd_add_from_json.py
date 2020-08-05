@@ -1,59 +1,75 @@
 # -*- coding: utf-8 -*-
 """Command line interface for Axonius API Client."""
 from ....exceptions import NotFoundError
-from ....tools import json_dump
+from ....tools import listify
 from ...context import CONTEXT_SETTINGS, click
 from ...options import AUTH, INPUT_FILE, add_options
 
-OPTIONS = [*AUTH, INPUT_FILE]
+OPTIONS = [
+    *AUTH,
+    INPUT_FILE,
+    click.option(
+        "--abort/--no-abort",
+        "-a/-na",
+        "abort",
+        help="Stop adding saved queries if an error happens",
+        required=False,
+        default=False,
+        show_envvar=True,
+        show_default=True,
+    ),
+]
 
 
 @click.command(name="add-from-json", context_settings=CONTEXT_SETTINGS)
 @add_options(OPTIONS)
 @click.pass_context
-def cmd(ctx, url, key, secret, input_file, **kwargs):
-    """Add a saved query from a JSON file."""
-    new_sq = ctx.obj.read_stream_json(stream=input_file, expect=dict)
+def cmd(ctx, url, key, secret, input_file, abort, **kwargs):
+    """Add saved queries from a JSON file."""
+    new_sqs = listify(ctx.obj.read_stream_json(stream=input_file, expect=(list, dict)))
 
-    remove_keys = [
-        "date_fetched",
-        "predefined",
-        "timestamp",
-        "updated_by",
-        "user_id",
-        "uuid",
-    ]
-    [new_sq.pop(x, None) for x in remove_keys]
+    for new_sq in new_sqs:
+        remove_keys = [
+            "date_fetched",
+            "predefined",
+            "timestamp",
+            "updated_by",
+            "user_id",
+            "uuid",
+        ]
+        [new_sq.pop(x, None) for x in remove_keys]
 
-    set_defaults = {"query_type": "saved"}
-    new_sq.update(set_defaults)
+        set_defaults = {"query_type": "saved"}
+        new_sq.update(set_defaults)
 
-    ensure_keys = ["name", "view"]
-    missing_keys = [x for x in ensure_keys if x not in new_sq]
+        ensure_keys = ["name", "view"]
+        missing_keys = [x for x in ensure_keys if x not in new_sq]
 
-    if missing_keys:
-        missing_keys = ", ".join(missing_keys)
-        ctx.obj.echo_error(f"Missing required keys: {missing_keys}")
+        if missing_keys:
+            missing_keys = ", ".join(missing_keys)
 
-    client = ctx.obj.start_client(url=url, key=key, secret=secret)
+            ctx.obj.echo_error(msg=f"Missing required keys: {missing_keys}", abort=abort)
 
-    p_grp = ctx.parent.parent.command.name
-    apiobj = getattr(client, p_grp)
+        client = ctx.obj.start_client(url=url, key=key, secret=secret)
 
-    sq_name = new_sq["name"]
+        p_grp = ctx.parent.parent.command.name
+        apiobj = getattr(client, p_grp)
 
-    try:
-        row = apiobj.saved_query.get_by_name(value=sq_name)
-        ctx.obj.echo_error(f"Saved query {sq_name!r} already exists, can not add")
-    except NotFoundError:
-        ctx.obj.echo_ok(f"Saved query {sq_name!r} does not exist, will add")
+        sq_name = new_sq["name"]
 
-    with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
-        sq_uuid = apiobj.saved_query._add(data=new_sq)
-        row = apiobj.saved_query.get_by_uuid(value=sq_uuid)
+        try:
+            apiobj.saved_query.get_by_name(value=sq_name)
+            ctx.obj.echo_error(
+                msg=f"Saved query {sq_name!r} already exists, can not add", abort=abort,
+            )
+            continue
+        except NotFoundError:
+            ctx.obj.echo_ok(f"Saved query {sq_name!r} does not exist, will add")
 
-    ctx.obj.echo_ok(f"Successfully created saved query: {row['name']}")
-
-    click.secho(json_dump(row))
+        with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror, abort=abort):
+            sq_uuid = apiobj.saved_query._add(data=new_sq)
+            ctx.obj.echo_ok(
+                f"Successfully created saved query: {sq_name} with UUID {sq_uuid}"
+            )
 
     ctx.exit(0)

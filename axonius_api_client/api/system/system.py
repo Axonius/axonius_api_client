@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """API model for working with system configuration."""
 from ..mixins import ModelMixins
-from ..routers import API_VERSION
+from ..routers import API_VERSION, Router
 from .central_core import CentralCore
 from .discover import Discover
 from .meta import Meta
@@ -15,7 +15,7 @@ class System(ModelMixins):
     """System methods."""
 
     @property
-    def router(self):
+    def router(self) -> Router:
         """Router for this API model.
 
         Returns:

@@ -1,5 +1,20 @@
 # Release notes
 
+## 3.1.5
+
+Release date: 2020-08-03
+
+### CLI Enhancements
+- Added --fields-root argument to axonshell devices/users get. Will select all root complex and simple fields for the given adapter
+
+### Library enhancements
+- About metadata now cached
+- example scripts added to "examples" directory
+- added fields_root argument to devices/users.get(). Will select all root complex and simple fields for the given adapter
+
+### Bug fixes
+- Handle scenarios where an adapters node name could be empty. This happens when an adapter still exists for a node that has been deleted.
+
 ## 2.3.0
 
 Release date: 2020-02-12

@@ -29,6 +29,7 @@ install_requires = [
     "click>=7.1.1",
     "pyreadline>=2.1 ; platform_system == 'Windows'",
     "tabulate>=0.8.7",
+    "xlsxwriter>=1.3.1",
 ]
 
 setup(

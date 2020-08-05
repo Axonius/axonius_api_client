@@ -5,8 +5,10 @@ import logging
 import pathlib
 import platform
 import sys
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from itertools import zip_longest
+from typing import (Any, Callable, Iterable, Iterator, List, Optional, Tuple,
+                    Union)
 from urllib.parse import urljoin
 
 import click
@@ -19,10 +21,10 @@ from .constants import (ERROR_ARGS, ERROR_TMPL, NO, OK_ARGS, OK_TMPL, SIMPLE,
                         WARN_ARGS, WARN_TMPL, YES)
 from .exceptions import ApiError, ToolsError
 
-LOG = logging.getLogger(PACKAGE_ROOT).getChild("tools")
+LOG: logging.Logger = logging.getLogger(PACKAGE_ROOT).getChild("tools")
 
 
-def listify(obj, dictkeys=False):
+def listify(obj: Any, dictkeys: bool = False) -> list:
     """Force an object into a list.
 
     Notes:
@@ -64,7 +66,7 @@ def listify(obj, dictkeys=False):
     return obj
 
 
-def grouper(iterable, n, fillvalue=None):
+def grouper(iterable: Iterable, n: int, fillvalue: Optional[Any] = None) -> Iterator:
     """Split an iterable into chunks.
 
     Args:
@@ -79,7 +81,7 @@ def grouper(iterable, n, fillvalue=None):
     return zip_longest(*([iter(iterable)] * n), fillvalue=fillvalue)
 
 
-def coerce_int(obj):
+def coerce_int(obj: Any) -> int:
     """Convert an object into int.
 
     Args:
@@ -97,7 +99,7 @@ def coerce_int(obj):
         raise ToolsError(f"Supplied value {obj!r} is not an integer.")
 
 
-def coerce_bool(obj, errmsg=None):
+def coerce_bool(obj: Any, errmsg: Optional[str] = None) -> bool:
     """Convert an object into bool.
 
     Notes:
@@ -133,7 +135,7 @@ def coerce_bool(obj, errmsg=None):
     raise ToolsError("\n".join(msg))
 
 
-def is_int(obj, digit=False):
+def is_int(obj: Any, digit: bool = False) -> bool:
     """Check if obj is int typeable.
 
     Args:
@@ -152,7 +154,7 @@ def is_int(obj, digit=False):
     return not isinstance(obj, bool) and isinstance(obj, int)
 
 
-def join_url(url, *parts):
+def join_url(url: str, *parts) -> str:
     """Join a URL to any number of parts.
 
     Args:
@@ -172,7 +174,7 @@ def join_url(url, *parts):
     return url
 
 
-def strip_right(obj, fix):
+def strip_right(obj: Union[List[str], str], fix: str) -> Union[List[str], str]:
     """Strip text from the right side of obj.
 
     Args:
@@ -194,7 +196,7 @@ def strip_right(obj, fix):
     return obj
 
 
-def strip_left(obj, fix):
+def strip_left(obj: Union[List[str], str], fix: str) -> Union[List[str], str]:
     """Strip text from the left side of obj.
 
     Args:
@@ -216,7 +218,9 @@ def strip_left(obj, fix):
     return obj
 
 
-def json_dump(obj, indent=2, sort_keys=False, error=True, **kwargs):
+def json_dump(
+    obj: Any, indent: int = 2, sort_keys: bool = False, error: bool = True, **kwargs
+) -> str:
     """Serialize an object into json str.
 
     Args:
@@ -248,7 +252,7 @@ def json_dump(obj, indent=2, sort_keys=False, error=True, **kwargs):
         return obj
 
 
-def json_load(obj, error=True, **kwargs):
+def json_load(obj: str, error: bool = True, **kwargs) -> Any:
     """Deserialize a json str into an object.
 
     Args:
@@ -270,7 +274,7 @@ def json_load(obj, error=True, **kwargs):
         return obj
 
 
-def json_reload(obj, error=False, trim=None, **kwargs):
+def json_reload(obj: Any, error: bool = False, trim: int = None, **kwargs) -> str:
     """Re-serialize a json str into a pretty json str.
 
     Args:
@@ -297,7 +301,7 @@ def json_reload(obj, error=False, trim=None, **kwargs):
     return obj
 
 
-def dt_parse(obj):
+def dt_parse(obj: Union[str, timedelta, datetime]) -> datetime:
     """Parse a str, datetime, or timedelta into a datetime object.
 
     Notes:
@@ -324,7 +328,9 @@ def dt_parse(obj):
     return dateutil.parser.parse(obj)
 
 
-def dt_now(delta=None, tz=dateutil.tz.tzutc()):
+def dt_now(
+    delta: Optional[timedelta] = None, tz: timezone = dateutil.tz.tzutc(),
+) -> datetime:
     """Get the current datetime in for a specific tz.
 
     Args:
@@ -341,7 +347,7 @@ def dt_now(delta=None, tz=dateutil.tz.tzutc()):
     return datetime.now(tz)
 
 
-def dt_sec_ago(obj, exact=False):
+def dt_sec_ago(obj: Union[str, timedelta, datetime], exact: bool = False) -> int:
     """Get number of seconds ago a given datetime was.
 
     Args:
@@ -357,7 +363,7 @@ def dt_sec_ago(obj, exact=False):
     return value if exact else round(value)
 
 
-def dt_min_ago(obj):
+def dt_min_ago(obj: Union[str, timedelta, datetime]) -> int:
     """Get number of minutes ago a given datetime was.
 
     Args:
@@ -369,7 +375,9 @@ def dt_min_ago(obj):
     return round(dt_sec_ago(obj=obj) / 60)
 
 
-def dt_within_min(obj, n=None):
+def dt_within_min(
+    obj: Union[str, timedelta, datetime], n: Optional[Union[str, int]] = None,
+) -> bool:
     """Check if given datetime is within the past n minutes.
 
     Args:
@@ -386,7 +394,7 @@ def dt_within_min(obj, n=None):
     return dt_min_ago(obj=obj) >= int(n)
 
 
-def get_path(obj):
+def get_path(obj: Union[str, pathlib.Path]) -> pathlib.Path:
     """Convert a str into a fully resolved & expanded Path object.
 
     Args:
@@ -399,7 +407,9 @@ def get_path(obj):
     return pathlib.Path(obj).expanduser().resolve()
 
 
-def path_read(obj, binary=False, is_json=False, **kwargs):
+def path_read(
+    obj: Union[str, pathlib.Path], binary: bool = False, is_json: bool = False, **kwargs
+) -> Union[bytes, str]:
     """Read data from a file.
 
     Notes:
@@ -446,19 +456,19 @@ def path_read(obj, binary=False, is_json=False, **kwargs):
 
 
 def path_write(
-    obj,
-    data,
-    overwrite=False,
-    binary=False,
-    binary_encoding="utf-8",
-    is_json=False,
-    make_parent=True,
-    protect_file=0o600,
-    protect_parent=0o700,
+    obj: Union[str, pathlib.Path],
+    data: Union[bytes, str],
+    overwrite: bool = False,
+    binary: bool = False,
+    binary_encoding: str = "utf-8",
+    is_json: bool = False,
+    make_parent: bool = True,
+    protect_file: oct = 0o600,
+    protect_parent: oct = 0o700,
     # fmt: off
     **kwargs
     # fmt: on
-):
+) -> Tuple[pathlib.Path, Callable]:
     """Write data to a file.
 
     Notes:
@@ -537,12 +547,19 @@ def path_write(
     return obj, method(data)
 
 
-def longest_str(obj):
+def longest_str(obj: List[str]) -> int:
     """Badwolf."""
     return round(max([len(x) + 5 for x in obj]), -1)
 
 
-def split_str(obj, split=",", strip=None, do_strip=True, lower=True, empty=False):
+def split_str(
+    obj: Union[List[str], str],
+    split: str = ",",
+    strip: Optional[str] = None,
+    do_strip: bool = True,
+    lower: bool = True,
+    empty: bool = False,
+) -> List[str]:
     """Split a string or list of strings into a list of strings."""
     if obj is None:
         return []
@@ -576,7 +593,7 @@ def split_str(obj, split=",", strip=None, do_strip=True, lower=True, empty=False
     return ret
 
 
-def echo_ok(msg, tmpl=True, **kwargs):
+def echo_ok(msg: str, tmpl: bool = True, **kwargs):
     """Pass."""
     echoargs = {}
     echoargs.update(OK_ARGS)
@@ -588,7 +605,7 @@ def echo_ok(msg, tmpl=True, **kwargs):
     click.secho(msg, **echoargs)
 
 
-def echo_warn(msg, tmpl=True, **kwargs):
+def echo_warn(msg: str, tmpl: bool = True, **kwargs):
     """Pass."""
     echoargs = {}
     echoargs.update(WARN_ARGS)
@@ -600,7 +617,7 @@ def echo_warn(msg, tmpl=True, **kwargs):
     click.secho(msg, **echoargs)
 
 
-def echo_error(msg, abort=True, tmpl=True, **kwargs):
+def echo_error(msg: str, abort: bool = True, tmpl: bool = True, **kwargs):
     """Pass."""
     echoargs = {}
     echoargs.update(ERROR_ARGS)
@@ -614,7 +631,7 @@ def echo_error(msg, abort=True, tmpl=True, **kwargs):
         sys.exit(1)
 
 
-def sysinfo():
+def sysinfo() -> dict:
     """Pass."""
     info = {}
     info["Date"] = str(dt_now())
@@ -646,7 +663,7 @@ def sysinfo():
     return info
 
 
-def calc_percent(part, whole):
+def calc_percent(part: Union[int, float], whole: Union[int, float]) -> float:
     """Pass."""
     if 0 in [part, whole]:
         value = 0.00
@@ -657,7 +674,9 @@ def calc_percent(part, whole):
     return value
 
 
-def join_kv(obj, listjoin=", ", tmpl="{k}: {v!r}"):
+def join_kv(
+    obj: Union[List[dict], dict], listjoin: str = ", ", tmpl: str = "{k}: {v!r}"
+) -> List[str]:
     """Pass."""
     if isinstance(obj, list):
         return [join_kv(obj=x, listjoin=listjoin, tmpl=tmpl) for x in obj]
