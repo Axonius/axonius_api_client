@@ -16,10 +16,12 @@ import dateutil.parser
 import dateutil.relativedelta
 import dateutil.tz
 
+from . import __file__ as PACKAGE_FILE
 from . import __package__ as PACKAGE_ROOT
 from .constants import (ERROR_ARGS, ERROR_TMPL, NO, OK_ARGS, OK_TMPL, SIMPLE,
                         WARN_ARGS, WARN_TMPL, YES)
 from .exceptions import ApiError, ToolsError
+from .version import VERSION
 
 LOG: logging.Logger = logging.getLogger(PACKAGE_ROOT).getChild("tools")
 
@@ -634,6 +636,8 @@ def echo_error(msg: str, abort: bool = True, tmpl: bool = True, **kwargs):
 def sysinfo() -> dict:
     """Pass."""
     info = {}
+    info["API Client Version"] = VERSION
+    info["API Client Package"] = PACKAGE_FILE
     info["Date"] = str(dt_now())
     info["Python System Version"] = ", ".join(sys.version.splitlines())
     platform_attrs = [
