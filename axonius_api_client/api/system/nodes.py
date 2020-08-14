@@ -83,4 +83,4 @@ class Nodes(ChildMixins):
         """
         data = {"nodeIds": node_id, "node_name": node_name, "hostname": hostname}
         path = self.router.instances
-        return self.request(method="update", path=path, json=data)
+        return self.request(method="post", path=path, json=data)
