@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Utilities and tools."""
+import ipaddress
 import json
 import logging
 import pathlib
@@ -20,7 +21,7 @@ from . import __file__ as PACKAGE_FILE
 from . import __package__ as PACKAGE_ROOT
 from .constants import (ERROR_ARGS, ERROR_TMPL, NO, OK_ARGS, OK_TMPL, SIMPLE,
                         WARN_ARGS, WARN_TMPL, YES)
-from .exceptions import ApiError, ToolsError
+from .exceptions import ToolsError
 from .version import VERSION
 
 LOG: logging.Logger = logging.getLogger(PACKAGE_ROOT).getChild("tools")
@@ -98,7 +99,8 @@ def coerce_int(obj: Any) -> int:
     try:
         return int(obj)
     except Exception:
-        raise ToolsError(f"Supplied value {obj!r} is not an integer.")
+        vtype = type(obj).__name__
+        raise ToolsError(f"Supplied value {obj!r} of type {vtype} is not an integer.")
 
 
 def coerce_bool(obj: Any, errmsg: Optional[str] = None) -> bool:
@@ -128,9 +130,10 @@ def coerce_bool(obj: Any, errmsg: Optional[str] = None) -> bool:
     if coerce_obj in NO:
         return False
 
+    vtype = type(obj).__name__
     msg = listify(errmsg)
     msg += [
-        f"Supplied value {coerce_obj!r} must be one of:",
+        f"Supplied value {coerce_obj!r} of type {vtype} must be one of:",
         f"  For true: {YES}",
         f"  For false: {NO}",
     ]
@@ -328,6 +331,25 @@ def dt_parse(obj: Union[str, timedelta, datetime]) -> datetime:
         obj = str(dt_now() - obj)
 
     return dateutil.parser.parse(obj)
+
+
+def dt_parse_tmpl(obj: Union[str, timedelta, datetime], tmpl: str = "%Y-%m-%d") -> str:
+    valid_fmts = [
+        "YYYY-MM-DD",
+        "YYYYMMDD",
+    ]
+    try:
+        dt = dt_parse(obj=obj)
+        return dt.strftime(tmpl)
+    except Exception:
+        vtype = type(obj).__name__
+        valid = "\n - " + "\n - ".join(valid_fmts)
+        raise ToolsError(
+            (
+                f"Could not parse date {obj!r} of type {vtype}"
+                f", try a string in the format of:{valid}"
+            )
+        )
 
 
 def dt_now(
@@ -581,7 +603,7 @@ def split_str(
         ]
 
     if not isinstance(obj, str):
-        raise ApiError(f"Unable to split non-str value {obj}")
+        raise ToolsError(f"Unable to split non-str value {obj}")
 
     ret = []
     for x in obj.split(split):
@@ -694,3 +716,126 @@ def join_kv(
             v = listjoin.join([str(i) for i in v])
         items.append(tmpl.format(k=k, v=v))
     return items
+
+
+def get_type_str(obj):
+    if isinstance(obj, tuple):
+        return " or ".join([x.__name__ for x in obj])
+    else:
+        return obj.__name__
+
+
+def check_type(value, exp, name="", exp_items=None):
+    """Pass."""
+    name = f" for {name!r}" if name else ""
+
+    if not isinstance(value, exp):
+        vtype = get_type_str(obj=type(value))
+        etype = get_type_str(obj=exp)
+        err = f"Required type {etype}{name} but received type {vtype}: {value!r}"
+        raise ToolsError(err)
+
+    if exp_items and isinstance(value, list):
+        for idx, item in enumerate(value):
+            if isinstance(item, exp_items):
+                continue
+            vtype = get_type_str(obj=type(item))
+            etype = get_type_str(obj=exp_items)
+            err = (
+                f"Required type {etype}{name} in list item {idx} but received "
+                f"type {vtype}: {value!r}"
+            )
+            raise ToolsError(err)
+
+
+def check_empty(value, name=""):
+    """Pass."""
+    if not value:
+        vtype = type(value).__name__
+        name = f" for {name!r}" if name else ""
+        err = f"Required value{name} but received an empty {vtype}: {value!r}"
+        raise ToolsError(err)
+
+
+def get_raw_version(value):
+    converted = "0"
+    version = value
+    if ":" in value:
+        if "." in value and value.index(":") > value.index("."):
+            raise ToolsError(f"Invalid version with ':' after '.' in {value!r}")
+        converted, version = value.split(":", 1)
+    octects = version.split(".")
+    for octect in octects:
+        if not octect.isdigit():
+            raise ToolsError(f"Invalid version with non-digit {octect!r} in {value!r}")
+        if len(octect) > 8:
+            octect = octect[:8]
+        converted += "".join(["0" for _ in range(8 - len(octect))]) + octect
+    return converted
+
+
+def coerce_str_to_csv(value):
+    new_value = value
+    if isinstance(value, str):
+        new_value = [x.strip() for x in value.split(",") if x.strip()]
+        if not new_value:
+            raise ToolsError(f"Empty value after parsing CSV: {value!r}")
+
+    if not isinstance(new_value, (list, tuple)):
+        vtype = type(new_value).__name__
+        raise ToolsError(f"Invalid type {vtype} supplied, must be a list")
+
+    if not new_value:
+        raise ToolsError(f"Empty list supplied {value}")
+
+    return new_value
+
+
+def check_str(obj):
+    if not isinstance(obj, str):
+        vtype = type(obj).__name__
+        raise ToolsError(f"Supplied value {obj!r} of type {vtype} is not a string.")
+    return obj
+
+
+def parse_ip_address(value: str) -> Union[ipaddress.IPv4Address, ipaddress.IPv6Address]:
+    try:
+        return ipaddress.ip_address(value)
+    except Exception as exc:
+        raise ToolsError(str(exc))
+
+
+def parse_ip_network(value: str) -> Union[ipaddress.IPv4Network, ipaddress.IPv6Network]:
+    if "/" not in str(value):
+        vtype = type(value).__name__
+        raise ToolsError(
+            (
+                f"Supplied value {value!r} of type {vtype} is not a valid subnet "
+                "- format must be <address>/<CIDR>."
+            )
+        )
+    try:
+        return ipaddress.ip_network(value)
+    except Exception as exc:
+        raise ToolsError(str(exc))
+
+
+def get_or_flag(item: str) -> Tuple[str, bool]:
+    or_flag = False
+    removed = ""
+    and_text = "and "
+    or_text = "or "
+    value = item
+
+    if item.startswith(and_text):
+        value = strip_left(obj=item, fix=and_text).strip()
+        removed = and_text
+    elif item.startswith(or_text):
+        value = strip_left(obj=item, fix=or_text).strip()
+        or_flag = True
+        removed = or_text
+
+    if not value:
+        raise ToolsError(f"Empty string after removing {removed!r} from {item!r}")
+
+    return value, or_flag

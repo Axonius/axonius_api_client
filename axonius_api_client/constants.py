@@ -131,6 +131,8 @@ LOG_LEVEL_API: str = "debug"
 """:obj:`str`: default logging level to use for
 :obj:`axonius_api_client.api.mixins.Mixins`"""
 
+LOG_LEVEL_WIZARD: str = "debug"
+
 LOG_LEVEL_PACKAGE: str = "debug"
 """:obj:`str`: default logging level to use for :mod:`axonius_api_client`"""
 
@@ -227,18 +229,20 @@ NORM_TYPE_MAP: Tuple[Tuple[str, str, str, str], str] = (
     (("string", "image", "", ""), "string_image"),
     (("string", "version", "", ""), "string_version"),
     (("string", "ip", "", ""), "string_ipaddress"),
-    (("bool", "", "", ""), "bool"),
+    (("string", "subnet", "", ""), "string_subnet"),
+    (("bool", "", "", ""), "boolean"),
     (("integer", "", "", ""), "integer"),
     (("number", "", "", ""), "number"),
-    (("array", "table", "array", ""), "complex_table"),
-    (("array", "", "array", ""), "complex"),
+    (("array", "table", "array", ""), "list_table_object"),
+    (("array", "", "array", ""), "list_object"),
     (("array", "", "integer", ""), "list_integer"),
+    (("array", "", "number", ""), "list_number"),
     (("array", "", "string", ""), "list_string"),
-    (("array", "", "string", "tag"), "list_string"),
+    (("array", "", "string", "tag"), "list_string_tag"),
     (("array", "version", "string", "version"), "list_string_version"),
     (("array", "date-time", "string", "date-time"), "list_string_datetime"),
     (("array", "subnet", "string", "subnet"), "list_string_subnet"),
-    (("array", "discrete", "string", "logo"), "list_string"),
+    (("array", "discrete", "string", "logo"), "list_string_discrete_logo"),
     (("array", "ip", "string", "ip"), "list_string_ipaddress"),
 )
 

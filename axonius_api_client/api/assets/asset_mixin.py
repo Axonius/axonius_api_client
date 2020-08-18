@@ -7,7 +7,7 @@ from typing import Generator, List, Optional, Union
 
 from ...constants import MAX_PAGE_SIZE, PAGE_SIZE
 from ...exceptions import ApiError, JsonError, NotFoundError
-from ...tools import dt_now, dt_parse, dt_sec_ago, json_dump, listify
+from ...tools import dt_now, dt_parse_tmpl, dt_sec_ago, json_dump, listify
 from ..adapters import Adapters
 from ..asset_callbacks import get_callbacks_cls
 from ..mixins import ModelMixins
@@ -484,22 +484,18 @@ class AssetMixin(ModelMixins):
         """Validate that a given date is known historical date."""
         if not value:
             return None
-        valid_fmts = "YYYY-MM-DD or YYYYMMDD"
-        try:
-            dt = dt_parse(obj=value)
-            dt_search = dt.strftime("%Y-%m-%d")
-        except Exception:
-            raise ApiError(f"Could not parse date {value!r}, try {valid_fmts}")
+
+        dt = dt_parse_tmpl(obj=value)
 
         known_dates = self.history_dates()
-        if dt_search not in known_dates:
+        if dt not in known_dates:
             expl = "known history dates"
             known = "\n  " + "\n  ".join(list(known_dates))
-            err = f"Unknown history date {dt_search!r}"
+            err = f"Unknown history date {dt!r}"
             msg = f"{err}, {expl}: {known}\n{err}, see above for {expl}"
             raise ApiError(msg)
 
-        return known_dates[dt_search]
+        return known_dates[dt]
 
     def _build_query(
         self, inner: str, not_flag: bool = False, pre: str = "", post: str = ""
