@@ -4,8 +4,7 @@ import pytest
 from axonius_api_client.constants import AGG_ADAPTER_ALTS, AGG_ADAPTER_NAME
 from axonius_api_client.exceptions import ApiError, NotFoundError
 
-from ...meta import (FIELD_FORMATS, NORM_TYPES, SCHEMA_FIELD_FORMATS,
-                     SCHEMA_TYPES)
+from ...meta import FIELD_FORMATS, SCHEMA_FIELD_FORMATS, SCHEMA_TYPES
 
 
 def load_test_data(apiobj):
@@ -256,7 +255,6 @@ class FieldsPublic:
 
         type_norm = schema.pop("type_norm")
         assert isinstance(type_norm, str) and type_norm
-        assert type_norm in NORM_TYPES
 
         parent = schema.pop("parent")
         assert isinstance(parent, str) and parent
