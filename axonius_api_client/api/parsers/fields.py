@@ -14,8 +14,7 @@ def parse_fields(raw: dict) -> dict:
     Returns:
         :obj:`dict`: parsed generic and adapter specific fields
     """
-    parsed = {}
-    parsed[AGG_ADAPTER_NAME] = parse_schemas(
+    agg_fields: List[dict] = parse_schemas(
         adapter_name=AGG_ADAPTER_NAME,
         adapter_title=AGG_ADAPTER_TITLE,
         adapter_name_raw=f"{AGG_ADAPTER_NAME}_adapter",
@@ -24,6 +23,13 @@ def parse_fields(raw: dict) -> dict:
         raw_fields=raw["generic"],
         details=True,
     )
+    for agg_field in agg_fields:
+        agg_field["is_agg"] = True
+
+    agg_base_names: List[str] = [x["name_base"] for x in agg_fields]
+
+    parsed = {}
+    parsed[AGG_ADAPTER_NAME] = agg_fields
 
     for raw_name, raw_fields in raw["specific"].items():
         # raw_name = aws_adapter
@@ -44,6 +50,9 @@ def parse_fields(raw: dict) -> dict:
             all_field=prefix,
             raw_fields=raw_fields,
         )
+        for field in fields:
+            field["is_agg"] = field["name_base"] in agg_base_names
+
         parsed[name] = fields
 
     return parsed

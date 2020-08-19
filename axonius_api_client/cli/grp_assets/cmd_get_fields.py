@@ -3,6 +3,7 @@
 import re
 
 from ...api.parsers.tables import tablize
+from ...constants import AGG_ADAPTER_NAME
 from ...tools import json_dump
 from ..context import CONTEXT_SETTINGS, click
 from ..options import AUTH, add_options
@@ -72,6 +73,16 @@ OPTIONS = [
         show_default=True,
     ),
     click.option(
+        "--include-agg/--no-include-agg",
+        "-ia/-nia",
+        "include_agg",
+        default=True,
+        is_flag=True,
+        help="Include aggregated fields",
+        show_envvar=True,
+        show_default=True,
+    ),
+    click.option(
         "--export-format",
         "-xf",
         "export_format",
@@ -99,6 +110,7 @@ def cmd(
     root_only,
     include_simple,
     include_complex,
+    include_agg,
     help_detailed=None,
     **kwargs
 ):
@@ -123,6 +135,14 @@ def cmd(
         for schema in schemas:
             if root_only and not schema["is_root"]:
                 continue
+
+            if (
+                not include_agg
+                and schema["is_agg"]
+                and not schema["adapter_name"] == AGG_ADAPTER_NAME
+            ):
+                continue
+
             if not include_complex and schema["is_complex"]:
                 continue
 
