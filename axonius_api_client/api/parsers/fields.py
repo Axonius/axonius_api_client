@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 """API models for working with adapters and connections."""
 import copy
-from typing import List
+from typing import List, Optional
 
-from ...constants import AGG_ADAPTER_NAME, AGG_ADAPTER_TITLE, ALL_NAME
+from ...constants import (AGG_ADAPTER_NAME, AGG_ADAPTER_TITLE,
+                          AGG_EXPR_FIELD_TYPE, ALL_NAME)
 from ...data_classes.fields import OperatorTypeMaps
 from ...tools import strip_left, strip_right
 
@@ -21,10 +22,7 @@ def parse_fields(raw: dict) -> dict:
         adapter_prefix="specific_data.data",
         all_field="specific_data",
         raw_fields=raw["generic"],
-        details=True,
     )
-    for agg_field in agg_fields:
-        agg_field["is_agg"] = True
 
     agg_base_names: List[str] = [x["name_base"] for x in agg_fields]
 
@@ -49,9 +47,8 @@ def parse_fields(raw: dict) -> dict:
             adapter_title=title,
             all_field=prefix,
             raw_fields=raw_fields,
+            agg_base_names=agg_base_names,
         )
-        for field in fields:
-            field["is_agg"] = field["name_base"] in agg_base_names
 
         parsed[name] = fields
 
@@ -81,9 +78,16 @@ def parse_complex(field: dict):
         col_name = field["column_name"]
         name_base = field["name_base"]
         prefix = field["adapter_prefix"]
-        field["sub_fields"] = sub_fields = []
         items = field["items"].pop("items")
+        adapter_name = field["adapter_name"]
+        adapter_name_raw = field["adapter_name_raw"]
+        adapter_prefix = field["adapter_prefix"]
+        adapter_title = field["adapter_title"]
+        parent = field["name_qual"]
+        expr_field_type = field["expr_field_type"]
+        is_agg = field["is_agg"]
 
+        field["sub_fields"] = sub_fields = []
         field_names = [f["name"] for f in items]
 
         for sub_field in items:
@@ -96,13 +100,16 @@ def parse_complex(field: dict):
             sub_field["name_qual"] = sub_name_qual
             sub_field["is_root"] = is_root(name=sub_name, names=field_names)
             sub_field["is_list"] = sub_field["type"] == "array"
-            sub_field["parent"] = field["name_qual"]
-            sub_field["adapter_name"] = field["adapter_name"]
-            sub_field["adapter_name_raw"] = field["adapter_name_raw"]
-            sub_field["adapter_prefix"] = field["adapter_prefix"]
-            sub_field["adapter_title"] = field["adapter_title"]
+            sub_field["parent"] = parent
+            sub_field["adapter_name"] = adapter_name
+            sub_field["adapter_name_raw"] = adapter_name_raw
+            sub_field["adapter_prefix"] = adapter_prefix
+            sub_field["adapter_title"] = adapter_title
             sub_field["column_title"] = f"{col_title}: {sub_title}"
             sub_field["column_name"] = f"{col_name}.{sub_name}"
+            sub_field["is_agg"] = is_agg
+            sub_field["expr_field_type"] = expr_field_type
+
             type_map = OperatorTypeMaps.get(field=sub_field)
             sub_field["type_norm"] = type_map.name
             sub_field["selectable"] = True
@@ -117,9 +124,10 @@ def parse_schemas(
     adapter_title: str,
     all_field: str,
     raw_fields: List[dict],
-    details: bool = False,
+    agg_base_names: Optional[List[str]] = None,
 ) -> List[dict]:
     """Parse field schemas for an adapter."""
+    agg_base_names = agg_base_names or []
     fields = []
 
     fields.append(
@@ -142,10 +150,12 @@ def parse_schemas(
             "type": "array",
             "type_norm": "array_object_object",
             "selectable": True,
+            "is_agg": adapter_name == AGG_ADAPTER_NAME,
+            "expr_field_type": AGG_EXPR_FIELD_TYPE,
         }
     )
 
-    if details:
+    if adapter_name == AGG_ADAPTER_NAME:
         fields += [
             {
                 "adapter_name_raw": adapter_name_raw,
@@ -166,6 +176,8 @@ def parse_schemas(
                 "type": "array",
                 "type_norm": "array_string",
                 "selectable": False,
+                "is_agg": True,
+                "expr_field_type": AGG_EXPR_FIELD_TYPE,
             },
             {
                 "adapter_name_raw": adapter_name_raw,
@@ -186,6 +198,8 @@ def parse_schemas(
                 "type": "array",
                 "type_norm": "array_string",
                 "selectable": False,
+                "is_agg": True,
+                "expr_field_type": AGG_EXPR_FIELD_TYPE,
             },
         ]
 
@@ -210,9 +224,17 @@ def parse_schemas(
         type_map = OperatorTypeMaps.get(field=field)
         field["type_norm"] = type_map.name
         field["selectable"] = True
+        field["is_agg"] = bool(agg_base_names) and name_base in agg_base_names
+
+        if adapter_name == AGG_ADAPTER_NAME:
+            field["expr_field_type"] = AGG_EXPR_FIELD_TYPE
+        else:
+            field["expr_field_type"] = adapter_name_raw
+
         parse_complex(field=field)
         fields.append(field)
-        if details:
+
+        if adapter_name == AGG_ADAPTER_NAME:
             field_details = copy.deepcopy(field)
             field_details["name"] += "_details"
             field_details["name_base"] += "_details"
