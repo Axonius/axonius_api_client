@@ -791,13 +791,6 @@ def coerce_str_to_csv(value):
     return new_value
 
 
-def check_str(obj):
-    if not isinstance(obj, str):
-        vtype = type(obj).__name__
-        raise ToolsError(f"Supplied value {obj!r} of type {vtype} is not a string.")
-    return obj
-
-
 def parse_ip_address(value: str) -> Union[ipaddress.IPv4Address, ipaddress.IPv6Address]:
     try:
         return ipaddress.ip_address(value)
@@ -818,24 +811,3 @@ def parse_ip_network(value: str) -> Union[ipaddress.IPv4Network, ipaddress.IPv6N
         return ipaddress.ip_network(value)
     except Exception as exc:
         raise ToolsError(str(exc))
-
-
-def get_or_flag(item: str) -> Tuple[str, bool]:
-    or_flag = False
-    removed = ""
-    and_text = "and "
-    or_text = "or "
-    value = item
-
-    if item.startswith(and_text):
-        value = strip_left(obj=item, fix=and_text).strip()
-        removed = and_text
-    elif item.startswith(or_text):
-        value = strip_left(obj=item, fix=or_text).strip()
-        or_flag = True
-        removed = or_text
-
-    if not value:
-        raise ToolsError(f"Empty string after removing {removed!r} from {item!r}")
-
-    return value, or_flag

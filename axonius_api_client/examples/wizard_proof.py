@@ -39,7 +39,6 @@ if __name__ == "__main__":
     ini_dir = get_path(__file__).parent
     ini_file = "wizard_proof.ini"
     ini_path = ini_dir / ini_file
-    wizard = QueryWizardIni(apiobj=devices)
-    parsed = wizard.from_file(ini_path)
-    final = wizard.parse_expression(value="junkbench, and blah, or strregex")
-    print(final["aql"])
+    wizard = QueryWizardIni.from_file(apiobj=devices, path=ini_path)
+    final = wizard.parse("combo1")
+    print(final["value"]["aql"])

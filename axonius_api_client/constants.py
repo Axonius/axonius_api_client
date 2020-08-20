@@ -218,6 +218,7 @@ ERROR_TMPL: str = "** ERROR: {msg}"
 AGG_ADAPTER_NAME: str = "agg"
 AGG_ADAPTER_TITLE: str = "Aggregated"
 ALL_NAME: str = "all"
+AGG_EXPR_FIELD_TYPE: str = "axonius"
 AGG_ADAPTER_ALTS: List[str] = ["generic", "general", "specific", "agg", "aggregated"]
 """:obj:`list` of :obj:`str`: list of alternatives for 'generic' adapter."""
 

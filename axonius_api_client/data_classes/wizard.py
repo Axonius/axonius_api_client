@@ -10,33 +10,31 @@ from .fields import Operators, OperatorTypeMaps
 
 
 @dataclasses.dataclass
-class ExprTemplates(BaseData):
-    bracket_expr: str = "({aqls})"
-    complex_expr: str = "({field} == match([{aqls}]))"
-    and_text: str = " and "
-    or_text: str = " or "
-    not_text: str = "not "
-
-
-@dataclasses.dataclass
-class ErrorTemplates(BaseData):
+class Templates(BaseData):
+    bracket_expr: str = "({aql_final})"
+    complex_expr: str = "({field} == match([{aql_subs}]))"
+    not_op: str = "not"
+    and_op: str = "and"
+    or_op: str = "or"
     invalid_choice: str = "Invalid choice {value!r}"
     missing_key: str = "Missing required key"
 
 
 @dataclasses.dataclass
 class Types(BaseData):
-    SIMPLE: str = "simple"
-    COMPLEX: str = "complex"
+    SIMPLE: str = "simple_filter"
+    COMPLEX: str = "complex_filter"
     COMPLEX_EXPR: str = "complex_expression"
     BRACKET_EXPR: str = "bracket_expression"
+    EXPR: str = "expression"
 
 
 @dataclasses.dataclass
 class ValueTypes(BaseData):
     choice: str = "choice"
-    complex_expr: str = Types.COMPLEX_EXPR
-    bracket_expr: str = Types.BRACKET_EXPR
+    complex_expr: str = "complex_expr"
+    bracket_expr: str = "bracket_expr"
+    expr: str = "expr"
     field: str = "field"
     sub_field: str = "sub_field"
     string: str = "string"
@@ -47,14 +45,13 @@ class ValueTypes(BaseData):
 @dataclasses.dataclass
 class KeyNames(BaseData):
     field: str = "field"
-    sub_field: str = "sub_field"
     value: str = "value"
-    section_name: str = "name"
-    section_type: str = "type"
+    name: str = "name"
+    type: str = "type"
+    parent: str = "parent"
     operator: str = "operator"
     not_flag: str = "not_flag"
-    complex_expr: str = Types.COMPLEX_EXPR
-    bracket_expr: str = Types.BRACKET_EXPR
+    or_flag: str = "or_flag"
 
 
 class Key(BaseData):
@@ -72,6 +69,8 @@ class KeyBase(Key):
     _priority: int = 0
     _lower: bool = True
     _strip: bool = True
+    _split: str = ""
+    _split_cnt: int = -1
 
 
 @dataclasses.dataclass
@@ -85,6 +84,8 @@ class KeyBoolean(Key):
     _priority: int = 0
     _lower: bool = True
     _strip: bool = True
+    _split: str = ""
+    _split_cnt: int = -1
     for_true: Tuple[str] = tuple(sorted(list(set([str(x).lower() for x in YES]))))
     for_false: Tuple[str] = tuple(sorted(list(set([str(x).lower() for x in NO]))))
 
@@ -101,6 +102,8 @@ class KeyChoices(Key):
     _priority: int = 0
     _lower: bool = True
     _strip: bool = True
+    _split: str = ""
+    _split_cnt: int = -1
 
 
 @dataclasses.dataclass
@@ -115,6 +118,8 @@ class KeyExpression(Key):
     _priority: int = 0
     _lower: bool = True
     _strip: bool = True
+    _split: str = ""
+    _split_cnt: int = -1
 
 
 @dataclasses.dataclass
@@ -122,16 +127,18 @@ class Keys(BaseData):
     field: Key = KeyBase(
         key=KeyNames.field,
         value_type=ValueTypes.field,
-        example="agg:network_interfaces",
+        example="agg:network_interfaces.ips",
         description="field (column) to use in filter",
         _priority=20,
     )
     sub_field: Key = KeyBase(
-        key=KeyNames.sub_field,
+        key=KeyNames.field,
         value_type=ValueTypes.sub_field,
-        example="ips",
-        description=f"sub field of {KeyNames.field!r} key to use in filter",
-        _priority=30,
+        example="agg:network_interfaces/ips",
+        description="complex sub field to use in filter",
+        _priority=20,
+        _split="/",
+        _split_cnt=2,
     )
     value: Key = KeyBase(
         key=KeyNames.value,
@@ -139,14 +146,17 @@ class Keys(BaseData):
         example="192.168.1.24",
         description=f"value to filter on for {KeyNames.field!r} key",
         required=False,
-        _priority=40,
+        _priority=100,
         _lower=False,
     )
-    section_name: Key = KeyBase(
-        key=KeyNames.section_name, example="foobar", description="name of section",
+    name: Key = KeyBase(
+        key=KeyNames.name, example="foobar", description="name of section",
     )
-    section_type: Key = KeyChoices(
-        key=KeyNames.section_type,
+    parent: Key = KeyBase(
+        key=KeyNames.parent, example="foobar", description="parent of section",
+    )
+    type: Key = KeyChoices(
+        key=KeyNames.type,
         example=Types.SIMPLE,
         description="type of section, controls which keys are used",
         choices=[x.default for x in Types.get_fields()],
@@ -167,27 +177,34 @@ class Keys(BaseData):
         description=f"inverse matches of {KeyNames.operator!r} key",
         _priority=60,
     )
+    or_flag: Key = KeyBoolean(
+        key=KeyNames.or_flag,
+        description="use OR instead of AND with the previous filter",
+        _priority=60,
+    )
     bracket_expr: Key = KeyExpression(
-        key=KeyNames.bracket_expr,
-        example="simple1, or simple2, and complex1, complex2",
-        description=(
-            f"sections with {KeyNames.section_type!r} key of"
-            f" {Types.COMPLEX_EXPR!r} or {Types.SIMPLE!r} to surround in brackets '()'"
-        ),
+        key=KeyNames.value,
+        example="simple1, simple2, complex_expr1",
+        description="references to sections to surround in brackets '()'",
         reference_types=[Types.SIMPLE, Types.COMPLEX_EXPR],
         value_type=ValueTypes.bracket_expr,
         _priority=70,
     )
     complex_expr: Key = KeyExpression(
-        key=KeyNames.complex_expr,
+        key=KeyNames.value,
         example="complex1, complex2",
-        description=(
-            f"sections with {KeyNames.section_type!r} key of"
-            f" {Types.COMPLEX!r} to combine"
-        ),
+        description="references to sections to combine into a complex filter",
         reference_types=[Types.SIMPLE, Types.COMPLEX],
         value_type=ValueTypes.complex_expr,
-        _priority=80,
+        _priority=70,
+    )
+    expr: Key = KeyExpression(
+        key=KeyNames.value,
+        example="simple1, complex_expr1, bracket_expr1",
+        description="references to sections to parse a complete query",
+        reference_types=[Types.SIMPLE, Types.COMPLEX_EXPR, Types.BRACKET_EXPR],
+        value_type=ValueTypes.expr,
+        _priority=70,
     )
 
 
@@ -201,28 +218,38 @@ class Section(BaseData):
 
 Simple: Section = Section.new(
     name=Types.SIMPLE,
-    keys=[Keys.section_type, Keys.operator, Keys.value, Keys.field, Keys.not_flag],
+    keys=[
+        Keys.type,
+        Keys.operator,
+        Keys.value,
+        Keys.field,
+        Keys.not_flag,
+        Keys.or_flag,
+    ],
 )
 
 Complex: Section = Section.new(
-    name=Types.COMPLEX,
-    keys=[Keys.section_type, Keys.operator, Keys.value, Keys.field, Keys.sub_field],
+    name=Types.COMPLEX, keys=[Keys.type, Keys.operator, Keys.value, Keys.sub_field],
 )
 
 ComplexExpr: Section = Section.new(
-    name=Types.COMPLEX_EXPR, keys=[Keys.section_type, Keys.complex_expr, Keys.not_flag],
+    name=Types.COMPLEX_EXPR,
+    keys=[Keys.type, Keys.complex_expr, Keys.not_flag, Keys.or_flag],
 )
 
 BracketExpr: Section = Section.new(
-    name=Types.BRACKET_EXPR, keys=[Keys.section_type, Keys.bracket_expr],
+    name=Types.BRACKET_EXPR, keys=[Keys.type, Keys.bracket_expr],
+)
+
+Expr: Section = Section.new(
+    name=Types.EXPR, keys=[Keys.type, Keys.expr],
 )
 
 Sections = dataclasses.make_dataclass(
     "Sections",
     fields=[
-        (x.__name__, Section, x) for x in [Simple, Complex, ComplexExpr, BracketExpr]
+        (x.__name__, Section, x)
+        for x in [Simple, Complex, ComplexExpr, BracketExpr, Expr]
     ],
+    bases=(BaseData,),
 )
-
-
-EXTERNAL_REFS: List[str] = [Types.BRACKET_EXPR, Types.SIMPLE, Types.COMPLEX_EXPR]

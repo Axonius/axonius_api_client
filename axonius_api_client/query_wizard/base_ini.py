@@ -3,9 +3,9 @@
 """Utilities for this package."""
 import configparser
 import pathlib
-from typing import List, Optional, Union
+from typing import List, Union
 
-from ..data_classes.wizard import Key, KeyNames, Sections
+from ..data_classes.wizard import Key, Sections
 from ..tools import listify
 from .base import QueryWizard
 
@@ -13,27 +13,32 @@ from .base import QueryWizard
 class QueryWizardIni(QueryWizard):
     SECTION_SKIPS_INI: List[str] = ["DEFAULT"]
 
-    def from_file(self, path: Union[str, pathlib.Path]):
-        self.parser = configparser.ConfigParser()
-        self.parser.read(path)
-        sections = self._get_sections_ini(parser=self.parser)
-        return self.from_dict(sections=sections)
+    @classmethod
+    def from_file(cls, path: Union[str, pathlib.Path], **kwargs):
+        parser = configparser.ConfigParser()
+        parser.read(path)
+        kwargs["sections"] = cls._get_sections(parser=parser)
+        kwargs["source"] = f"INI file at: {path}"
+        return cls(**kwargs)
 
-    def from_str(self, contents: str):
-        self.parser = configparser.ConfigParser()
-        self.parser.read_string(contents)
-        sections = self._get_sections_ini(parser=self.parser)
-        return self.from_dict(sections=sections)
+    @classmethod
+    def from_str(cls, contents: str, **kwargs):
+        parser = configparser.ConfigParser()
+        parser.read_string(contents)
+        kwargs["sections"] = cls._get_sections(parser=parser)
+        kwargs["source"] = "INI string"
+        return cls(**kwargs)
 
-    def _get_sections_ini(self, parser) -> dict:
+    @classmethod
+    def _get_sections(cls, parser: configparser.ConfigParser) -> dict:
         sections = {
             name.lower().strip(): {k: v for k, v in section.items()}
             for name, section in parser.items()
-            if name not in self.SECTION_SKIPS_INI
+            if name not in cls.SECTION_SKIPS_INI
         }
-        self.LOG.debug(f"Parsed {len(sections)} sections from INI file")
         return sections
 
+    # XXX MAKE PRIVATE
     @classmethod
     def doc_sections(cls):
         lines = []
@@ -54,36 +59,31 @@ class QueryWizardIni(QueryWizard):
         lines = []
         section = cls._get_section_type(name=name)
         for key in section.get_fields():
-            example_over = None
-            key_name = key.key
-            if key_name == KeyNames.section_type:
-                example_over = section.__name__
             lines += [
                 "",
-                cls.doc_section_key(key=key.default, example_over=example_over),
+                cls.doc_section_key(key=key.default),
                 "",
             ]
         return "\n".join(lines)
 
     @staticmethod
-    def doc_section_key(key: Key, example_over: Optional[str] = None) -> str:
-        lines = [f"{key.key} = {example_over or key.example}"]
+    def doc_section_key(key: Key) -> str:
+        # lines = [f"{key.key} = {example_over or key.example}"]
+        lines = []
         fields = key.get_fields()
 
-        skips = [
-            # KeyNames.SECTION_NAME,
-            "example",
-            # KeyTypeNames.KEY.name,
-        ]
         for field in fields:
-            if field.name.startswith("_") or field.name in skips:
+            if field.name.startswith("_"):
                 continue
 
             human_name = field.name.replace("_", " ")
+            pre = f"# {human_name:14}:"
             value = getattr(key, field.name)
 
-            if isinstance(value, (list, tuple)):
-                lines.append(f"# {human_name:14}:")
+            if field.name == "example":
+                lines.append(f"{pre} {key.key} = {value}")
+            elif isinstance(value, (list, tuple)):
+                lines.append(pre)
                 lines += [f"#    - {x}" for x in value]
             elif isinstance(value, dict):
                 lines.append(f"# {human_name:14}:")
@@ -91,6 +91,6 @@ class QueryWizardIni(QueryWizard):
                     v = ", ".join([str(x) for x in listify(v)])
                     lines.append(f"#    - {k}: {v}")
             else:
-                lines.append(f"# {human_name:14}: {value}")
+                lines.append(f"{pre} {value}")
 
         return "\n".join(lines)
