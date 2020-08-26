@@ -10,6 +10,52 @@ from .fields import Operators, OperatorTypeMaps
 
 
 @dataclasses.dataclass
+class ExprTypes(BaseData):
+    SIMPLE: str = "simple"
+    COMPLEX: str = "complex"
+    BRACKET: str = "bracket"
+
+
+class ExprKeys:
+    TYPE: str = "type"
+    SUBS: str = "subs"
+    FROM: str = "from"
+    SRC: str = "source"
+    SRC_IDX: str = "index"
+    SRC_LINE: str = "line"
+    OP: str = "operator"
+    SUBS: str = "subs"
+    LOG: str = "logical"
+    FIELD: str = "field"
+    PVALUE: str = "parsed_value"
+    EVALUE: str = "expr_value"
+    AQL: str = "aql"
+
+
+class ExprKeyDefaults:
+    OP_VALUE: str = "equals"
+    OP_NO_VALUE: str = "exists"
+    LOG: str = "and"
+
+
+@dataclasses.dataclass
+class LogTypes(BaseData):
+    AND: str = "and"
+    OR: str = "or"
+    AND_NOT: str = "and_not"
+    OR_NOT: str = "or_not"
+
+
+@dataclasses.dataclass
+class TextTypes(BaseData):
+    simple: str = ExprTypes.SIMPLE
+    start_complex: str = ExprTypes.COMPLEX
+    stop_complex: str = ""
+    start_bracket: str = ExprTypes.BRACKET
+    stop_bracket: str = ""
+
+
+@dataclasses.dataclass
 class Templates(BaseData):
     bracket_expr: str = "({aql_final})"
     complex_expr: str = "({field} == match([{aql_subs}]))"

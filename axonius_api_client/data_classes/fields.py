@@ -533,7 +533,7 @@ class OperatorTypeMaps(BaseData):
     )
 
     @classmethod
-    def get(cls, field: dict) -> OperatorTypeMap:
+    def get_type_map(cls, field: dict) -> OperatorTypeMap:
         """Get the type mapping for a field."""
 
         def attrs_str(attrs):
@@ -566,6 +566,24 @@ class OperatorTypeMaps(BaseData):
         err = f"Unable to map field {name!r} with {attrs_str(attrs)}"
         valid_str = "\n  ".join([f"{k}: {attrs_str(v)}" for k, v in valid.items()])
         raise NotFoundError("\n".join([err, valid_str, err]))
+
+    @classmethod
+    def get_operator(cls, field: dict, operator: str):
+        operator = operator.lower().strip()
+        type_map = cls.get_type_map(field=field)
+        for op in type_map.operators:
+            if operator == op.name.name:
+                return op
+
+        name = field["name"]
+        if field["parent"] != "root":
+            parent = field["parent"]
+            name = f"{name} (sub field of {parent})"
+
+        valid = "\n - " + "\n - ".join([x.name.name for x in type_map.operators])
+        raise NotFoundError(
+            f"Invalid operator {operator!r} for field {name!r}, valids:{valid}"
+        )
 
     @classmethod
     def get_map(cls) -> dict:

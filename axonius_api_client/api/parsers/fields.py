@@ -110,7 +110,7 @@ def parse_complex(field: dict):
             sub_field["is_agg"] = is_agg
             sub_field["expr_field_type"] = expr_field_type
 
-            type_map = OperatorTypeMaps.get(field=sub_field)
+            type_map = OperatorTypeMaps.get_type_map(field=sub_field)
             sub_field["type_norm"] = type_map.name
             sub_field["selectable"] = True
             parse_complex(field=sub_field)
@@ -221,7 +221,7 @@ def parse_schemas(
         field["parent"] = "root"
         field["column_title"] = f"{adapter_title}: {title}"
         field["column_name"] = f"{adapter_name}:{name_base}"
-        type_map = OperatorTypeMaps.get(field=field)
+        type_map = OperatorTypeMaps.get_type_map(field=field)
         field["type_norm"] = type_map.name
         field["selectable"] = True
         field["is_agg"] = bool(agg_base_names) and name_base in agg_base_names
