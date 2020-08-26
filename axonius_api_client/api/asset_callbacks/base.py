@@ -102,6 +102,15 @@ class Base:
 
     def do_row(self, row: dict) -> List[dict]:
         """Pass."""
+        custom_cbs = listify(self.GETARGS.get("custom_cbs", []))
+
+        for custom_cb in custom_cbs:
+            try:
+                custom_cb(self=self, row=row)
+            except Exception as exc:
+                msg = f"Custom callback {custom_cb} failed: {exc}"
+                self.echo(msg=msg, error="exception", abort=False)
+
         self.process_tags_to_add(row=row)
         self.process_tags_to_remove(row=row)
         self.add_report_adapters_missing(row=row)
@@ -506,8 +515,8 @@ class Base:
             getattr(self.LOG, level_error)(msg)
             if abort:
                 raise error(msg)
-
-        getattr(self.LOG, level)(msg)
+        else:
+            getattr(self.LOG, level)(msg)
 
     def get_sub_schemas(self, schema: dict) -> Generator[dict, None, None]:
         """Pass."""
