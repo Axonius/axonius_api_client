@@ -31,7 +31,6 @@ from axonius_api_client.tools import (
 
 from ..utils import IS_WINDOWS
 
-
 '''
 class TestValType:
     """Test axonius_api_client.val_type."""

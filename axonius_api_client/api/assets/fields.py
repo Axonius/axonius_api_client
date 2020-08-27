@@ -3,8 +3,12 @@
 import re
 from typing import List, Optional, Tuple, Union
 
-from ...constants import (AGG_ADAPTER_ALTS, AGG_ADAPTER_NAME, GET_SCHEMA_KEYS,
-                          GET_SCHEMAS_KEYS)
+from ...constants import (
+    AGG_ADAPTER_ALTS,
+    AGG_ADAPTER_NAME,
+    GET_SCHEMA_KEYS,
+    GET_SCHEMAS_KEYS,
+)
 from ...exceptions import ApiError, NotFoundError
 from ...tools import listify, split_str, strip_right
 from ..mixins import ChildMixins
@@ -80,10 +84,9 @@ class Fields(ChildMixins):
         keys = kwargs.get("keys", GET_SCHEMA_KEYS)
         search = value.lower().strip()
 
-        for schema in schemas:
-            if not schema.get("selectable"):
-                continue
+        schemas = [x for x in schemas if x.get("selectable", True)]
 
+        for schema in schemas:
             for key in keys:
                 if search == schema[key].lower():
                     return schema
@@ -93,7 +96,12 @@ class Fields(ChildMixins):
         raise NotFoundError(msg)
 
     def get_field_name(
-        self, value: str, field_manual: bool = False, fields_map: Optional[dict] = None
+        self,
+        value: str,
+        field_manual: bool = False,
+        fields_map: Optional[dict] = None,
+        custom_fields_map: Optional[dict] = None,
+        key: str = "name_qual",
     ) -> str:
         """Pass."""
         if field_manual:
@@ -109,8 +117,10 @@ class Fields(ChildMixins):
         fields_map = fields_map or self.get()
         adapter = self.get_adapter_name(value=adapter, fields_map=fields_map)
         schemas = fields_map[adapter]
+        if custom_fields_map and adapter in custom_fields_map:
+            schemas += custom_fields_map[adapter]
         schema = self.get_field_schema(value=field, schemas=schemas)
-        return schema["name_qual"]
+        return schema[key] if key else schema
 
     def get_field_names_re(
         self, value: str, fields_map: Optional[dict] = None

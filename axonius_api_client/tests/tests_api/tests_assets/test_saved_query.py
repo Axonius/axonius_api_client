@@ -4,6 +4,7 @@ import copy
 import json
 
 import pytest
+
 from axonius_api_client.api.assets.saved_query import check_gui_page_size
 from axonius_api_client.constants import GUI_PAGE_SIZES, SIMPLE
 from axonius_api_client.exceptions import ApiError, NotFoundError
@@ -464,7 +465,6 @@ def validate_sq(asset):
 
     colsizes = view.pop("coloumnSizes", [])
     assert isinstance(colsizes, list)
-    # XXX figure this out
 
     for x in colsizes:
         assert isinstance(x, int)
@@ -507,19 +507,19 @@ def validate_sq(asset):
 
     qmeta = query.pop("meta", {})
     assert isinstance(qmeta, dict)
-    # XXX figure this out / parse more fully
 
     qonlyexprfilter = query.pop("onlyExpressionsFilter", "")
     assert isinstance(qonlyexprfilter, str)
-    # XXX figure this out
 
     qsearch = query.pop("search", None)
     assert qsearch is None or isinstance(qsearch, str)
-    # XXX figure this out
 
     historical = view.pop("historical", None)
     assert historical is None or isinstance(historical, SIMPLE)
-    # XXX still used?
+
+    # 3.6+
+    excluded_adapters = view.pop("colExcludedAdapters", {})
+    assert isinstance(excluded_adapters, dict)
 
     for qexpr in qexprs:
         validate_qexpr(qexpr, asset)

@@ -6,9 +6,14 @@ import logging
 import sys
 
 import pytest
+
 from axonius_api_client.api.asset_callbacks import get_callbacks_cls
-from axonius_api_client.constants import (AGG_ADAPTER_NAME, AGG_ADAPTER_TITLE,
-                                          FIELD_TRIM_LEN, SCHEMAS_CUSTOM)
+from axonius_api_client.constants import (
+    AGG_ADAPTER_NAME,
+    AGG_ADAPTER_TITLE,
+    FIELD_TRIM_LEN,
+    SCHEMAS_CUSTOM,
+)
 from axonius_api_client.exceptions import ApiError, NotFoundError
 
 from ...meta import TAGS
