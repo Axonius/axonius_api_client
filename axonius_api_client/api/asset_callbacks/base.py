@@ -6,11 +6,23 @@ import re
 import sys
 from typing import IO, Generator, List, Optional
 
-from ...constants import (DEFAULT_PATH, FIELD_JOINER, FIELD_TRIM_LEN,
-                          FIELD_TRIM_STR, SCHEMAS_CUSTOM)
+from ...constants import (
+    DEFAULT_PATH,
+    FIELD_JOINER,
+    FIELD_TRIM_LEN,
+    FIELD_TRIM_STR,
+    SCHEMAS_CUSTOM,
+)
 from ...exceptions import ApiError
-from ...tools import (calc_percent, echo_error, echo_ok, echo_warn, get_path,
-                      join_kv, listify)
+from ...tools import (
+    calc_percent,
+    echo_error,
+    echo_ok,
+    echo_warn,
+    get_path,
+    join_kv,
+    listify,
+)
 
 
 class Base:
@@ -102,6 +114,15 @@ class Base:
 
     def do_row(self, row: dict) -> List[dict]:
         """Pass."""
+        custom_cbs = listify(self.GETARGS.get("custom_cbs", []))
+
+        for custom_cb in custom_cbs:
+            try:
+                custom_cb(self=self, row=row)
+            except Exception as exc:
+                msg = f"Custom callback {custom_cb} failed: {exc}"
+                self.echo(msg=msg, error="exception", abort=False)
+
         self.process_tags_to_add(row=row)
         self.process_tags_to_remove(row=row)
         self.add_report_adapters_missing(row=row)
@@ -506,8 +527,8 @@ class Base:
             getattr(self.LOG, level_error)(msg)
             if abort:
                 raise error(msg)
-
-        getattr(self.LOG, level)(msg)
+        else:
+            getattr(self.LOG, level)(msg)
 
     def get_sub_schemas(self, schema: dict) -> Generator[dict, None, None]:
         """Pass."""

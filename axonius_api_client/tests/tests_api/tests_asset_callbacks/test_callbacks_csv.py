@@ -4,6 +4,7 @@ import copy
 import io
 
 import pytest
+
 from axonius_api_client.constants import AGG_ADAPTER_NAME
 
 from .callbacks import Callbacks, load_test_data

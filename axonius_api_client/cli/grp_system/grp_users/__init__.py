@@ -3,9 +3,16 @@
 import click
 
 from ...context import AliasedGroup
-from . import (cmd_add, cmd_add_from_csv, cmd_delete,
-               cmd_email_password_reset_link, cmd_get, cmd_get_by_name,
-               cmd_get_password_reset_link, cmd_update)
+from . import (
+    cmd_add,
+    cmd_add_from_csv,
+    cmd_delete,
+    cmd_email_password_reset_link,
+    cmd_get,
+    cmd_get_by_name,
+    cmd_get_password_reset_link,
+    cmd_update,
+)
 
 
 @click.group(cls=AliasedGroup)

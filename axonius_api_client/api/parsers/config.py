@@ -5,8 +5,13 @@ import pathlib
 from typing import Any, List, Optional, Tuple, Union
 
 from ...constants import NO, SETTING_UNCHANGED, YES
-from ...exceptions import (ApiError, ConfigInvalidValue, ConfigRequired,
-                           ConfigUnchanged, ConfigUnknown)
+from ...exceptions import (
+    ApiError,
+    ConfigInvalidValue,
+    ConfigRequired,
+    ConfigUnchanged,
+    ConfigUnknown,
+)
 from ...tools import is_int, join_kv, json_load
 from .tables import tablize_schemas
 

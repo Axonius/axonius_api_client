@@ -3,8 +3,8 @@
 """Example of getting devices by a saved query."""
 
 if __name__ == "__main__":
-    import os
     import json
+    import os
 
     import axonius_api_client as axonapi
 

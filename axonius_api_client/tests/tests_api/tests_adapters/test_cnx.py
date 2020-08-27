@@ -3,11 +3,18 @@
 import io
 
 import pytest
+
 from axonius_api_client.constants import CSV_ADAPTER, DEFAULT_NODE
-from axonius_api_client.exceptions import (CnxAddError, CnxGoneError,
-                                           CnxTestError, CnxUpdateError,
-                                           ConfigInvalidValue, ConfigRequired,
-                                           ConfigUnchanged, NotFoundError)
+from axonius_api_client.exceptions import (
+    CnxAddError,
+    CnxGoneError,
+    CnxTestError,
+    CnxUpdateError,
+    ConfigInvalidValue,
+    ConfigRequired,
+    ConfigUnchanged,
+    NotFoundError,
+)
 
 from ...meta import CSV_FILECONTENT_STR
 from ...utils import get_cnx_broken, get_cnx_existing, get_cnx_working
