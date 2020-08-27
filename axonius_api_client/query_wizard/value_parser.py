@@ -9,8 +9,15 @@ from ..constants import AGG_ADAPTER_NAME, LOG_LEVEL_WIZARD
 from ..data_classes.fields import Operator, OperatorTypeMap, OperatorTypeMaps
 from ..exceptions import WizardError
 from ..logs import get_obj_log
-from ..tools import (check_type, coerce_int, coerce_str_to_csv, dt_parse_tmpl,
-                     get_raw_version, parse_ip_address, parse_ip_network)
+from ..tools import (
+    check_type,
+    coerce_int,
+    coerce_str_to_csv,
+    dt_parse_tmpl,
+    get_raw_version,
+    parse_ip_address,
+    parse_ip_network,
+)
 
 
 class ValueParser:

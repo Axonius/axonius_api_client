@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Test suite for assets."""
 import pytest
+
 from axonius_api_client.constants import AGG_ADAPTER_ALTS, AGG_ADAPTER_NAME
 from axonius_api_client.exceptions import ApiError, NotFoundError
 

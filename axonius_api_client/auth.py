@@ -6,8 +6,7 @@ from typing import List
 
 from .api.routers import API_VERSION
 from .constants import LOG_LEVEL_AUTH
-from .exceptions import (AlreadyLoggedIn, AuthError, InvalidCredentials,
-                         NotLoggedIn)
+from .exceptions import AlreadyLoggedIn, AuthError, InvalidCredentials, NotLoggedIn
 from .http import Http
 from .logs import get_obj_log
 from .tools import json_reload
