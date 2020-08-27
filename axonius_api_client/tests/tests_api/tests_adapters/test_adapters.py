@@ -9,7 +9,7 @@ from axonius_api_client.exceptions import (ApiError, ConfigUnchanged,
                                            ConfigUnknown, NotFoundError)
 
 from ...meta import (CSV_FILECONTENT_BYTES, CSV_FILECONTENT_STR, CSV_FILENAME,
-                     FIELD_FORMATS, SCHEMA_TYPES)
+                     FIELD_FORMATS, NO_TITLES, SCHEMA_TYPES)
 
 
 def val_parsed_schema(schema):
@@ -57,7 +57,8 @@ def val_parsed_schema(schema):
             for x in item_items:
                 assert isinstance(x, dict)
                 assert isinstance(x["name"], str)
-                assert isinstance(x["title"], str)
+                if x["name"] not in NO_TITLES:
+                    assert isinstance(x["title"], str)
                 assert isinstance(x["type"], str)
         else:
             assert isinstance(item_items, dict)
@@ -186,6 +187,13 @@ class TestAdaptersPrivate(TestAdaptersBase):
         adapter_name = client.pop("adapter_name")
         assert isinstance(adapter_name, str)
 
+        # TBD: bust out dict?
+        connection_discovery = client.pop("connection_discovery")
+        assert isinstance(connection_discovery, dict)
+
+        last_fetch_time = client.pop("last_fetch_time")
+        assert last_fetch_time is None or isinstance(last_fetch_time, str)
+
         assert not client
 
     def val_raw_schema(self, name, schema):
@@ -232,7 +240,8 @@ class TestAdaptersPrivate(TestAdaptersBase):
                 for x in item_items:
                     assert isinstance(x, dict)
                     assert isinstance(x["name"], str)
-                    assert isinstance(x["title"], str)
+                    if x["name"] not in NO_TITLES:
+                        assert isinstance(x["title"], str)
                     assert isinstance(x["type"], str)
                 continue
             assert isinstance(item_items, dict)

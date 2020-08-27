@@ -186,3 +186,4 @@ TEST_PERM = "Restricted"
 # ABOUT_KEYS_EMPTY_OK = ["Version"]
 # ABOUT on BUILD: ["Build Date", "Commit Date", "Commit Hash", "Version"]
 # ABOUT on RELEASE: ["Build Date", "Customer ID", "Version"]
+NO_TITLES = ["system_research_date", "system_research_weekdays"]
