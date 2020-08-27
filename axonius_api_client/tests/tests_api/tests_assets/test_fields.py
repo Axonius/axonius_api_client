@@ -289,11 +289,20 @@ class FieldsPublic:
         enums = schema.pop("enum", [])
         assert isinstance(enums, list)
 
+        is_agg = schema.pop("is_agg")
+        assert isinstance(is_agg, bool)
+
+        expr_field_type = schema.pop("expr_field_type")
+        assert isinstance(expr_field_type, str)
+
         for enum in enums:
             assert isinstance(enum, str) or isinstance(enum, int)
 
         sub_fields = schema.pop("sub_fields", [])
         assert isinstance(sub_fields, list)
+
+        items = schema.pop("items", {})
+        assert isinstance(items, dict)
 
         if is_complex:
             if name != "all":
@@ -302,8 +311,6 @@ class FieldsPublic:
             for sub_field in sub_fields:
                 self.val_parsed_schema(adapter=f"{adapter}:{name}", schema=sub_field)
         else:
-            items = schema.pop("items", {})
-
             dynamic = items.pop("dynamic", False)
             assert isinstance(dynamic, bool)
 
