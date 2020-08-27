@@ -3,8 +3,12 @@
 import copy
 from typing import List, Optional
 
-from ...constants import (AGG_ADAPTER_NAME, AGG_ADAPTER_TITLE,
-                          AGG_EXPR_FIELD_TYPE, ALL_NAME)
+from ...constants import (
+    AGG_ADAPTER_NAME,
+    AGG_ADAPTER_TITLE,
+    AGG_EXPR_FIELD_TYPE,
+    ALL_NAME,
+)
 from ...data_classes.fields import OperatorTypeMaps
 from ...tools import strip_left, strip_right
 

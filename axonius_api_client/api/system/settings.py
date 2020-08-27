@@ -4,8 +4,12 @@ from typing import Optional
 
 from ...exceptions import ApiError, NotFoundError
 from ..mixins import ChildMixins
-from ..parsers.config import (config_build, config_unchanged, config_unknown,
-                              parse_settings)
+from ..parsers.config import (
+    config_build,
+    config_unchanged,
+    config_unknown,
+    parse_settings,
+)
 from ..parsers.tables import tablize
 
 

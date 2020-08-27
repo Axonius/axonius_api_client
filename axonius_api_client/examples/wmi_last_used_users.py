@@ -8,8 +8,9 @@ N days.
 import datetime
 import os
 
-import axonius_api_client as axonapi
 import dateutil
+
+import axonius_api_client as axonapi
 
 if __name__ == "__main__":
     axonapi.constants.load_dotenv()

@@ -9,13 +9,19 @@ from typing import Any, Dict, List, Optional, Union
 from ..api.assets.asset_mixin import AssetMixin
 from ..constants import LOG_LEVEL_WIZARD
 from ..data_classes.fields import CUSTOM_FIELDS_MAP, Operator, OperatorTypeMaps
-from ..data_classes.wizard import (ExprKeyDefaults, ExprKeys, ExprTypes,
-                                   LogTypes)
+from ..data_classes.wizard import ExprKeyDefaults, ExprKeys, ExprTypes, LogTypes
 from ..exceptions import WizardError
 from ..logs import get_obj_log
-from ..tools import (check_empty, check_type, coerce_int, coerce_str_to_csv,
-                     dt_parse_tmpl, get_raw_version, parse_ip_address,
-                     parse_ip_network)
+from ..tools import (
+    check_empty,
+    check_type,
+    coerce_int,
+    coerce_str_to_csv,
+    dt_parse_tmpl,
+    get_raw_version,
+    parse_ip_address,
+    parse_ip_network,
+)
 
 SRC: str = "list of dictionaries"
 

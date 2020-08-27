@@ -6,6 +6,7 @@ import os
 import axonius_api_client as axonapi  # noqa:F401
 from axonius_api_client.connect import Connect
 from axonius_api_client.constants import load_dotenv
+
 # from axonius_api_client.data_classes import wizard
 from axonius_api_client.query_wizard import Wizard, WizardText
 from axonius_api_client.tools import json_reload

@@ -4,12 +4,23 @@ import copy
 import warnings
 
 import pytest
-from axonius_api_client.constants import CSV_ADAPTER, DEFAULT_NODE
-from axonius_api_client.exceptions import (ApiError, ConfigUnchanged,
-                                           ConfigUnknown, NotFoundError)
 
-from ...meta import (CSV_FILECONTENT_BYTES, CSV_FILECONTENT_STR, CSV_FILENAME,
-                     FIELD_FORMATS, NO_TITLES, SCHEMA_TYPES)
+from axonius_api_client.constants import CSV_ADAPTER, DEFAULT_NODE
+from axonius_api_client.exceptions import (
+    ApiError,
+    ConfigUnchanged,
+    ConfigUnknown,
+    NotFoundError,
+)
+
+from ...meta import (
+    CSV_FILECONTENT_BYTES,
+    CSV_FILECONTENT_STR,
+    CSV_FILENAME,
+    FIELD_FORMATS,
+    NO_TITLES,
+    SCHEMA_TYPES,
+)
 
 
 def val_parsed_schema(schema):
