@@ -24,7 +24,10 @@ class Router:
         self._routes = ["root"]
         for k, v in routes.items():
             self._routes.append(k)
-            setattr(self, k, join_url(self.root, v))
+            if v.startswith("/"):
+                setattr(self, k, join_url(base, v))
+            else:
+                setattr(self, k, join_url(self.root, v))
 
     def __str__(self) -> str:
         """Show object info.
