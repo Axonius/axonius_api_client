@@ -4,24 +4,19 @@
 import copy
 import logging
 import re
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 from ..api.assets.asset_mixin import AssetMixin
-from ..constants import LOG_LEVEL_WIZARD
+from ..constants import ALL_NAME, LOG_LEVEL_WIZARD
 from ..data_classes.fields import CUSTOM_FIELDS_MAP, Operator, OperatorTypeMaps
-from ..data_classes.wizard import ExprKeyDefaults, ExprKeys, ExprTypes, LogTypes
+from ..data_classes.wizard import (ExprKeyDefaults, ExprKeys, ExprTypes,
+                                   GuiExpr, Templates)
 from ..exceptions import WizardError
 from ..logs import get_obj_log
-from ..tools import (
-    check_empty,
-    check_type,
-    coerce_int,
-    coerce_str_to_csv,
-    dt_parse_tmpl,
-    get_raw_version,
-    parse_ip_address,
-    parse_ip_network,
-)
+from ..tools import (check_empty, check_type, coerce_bool, coerce_int_float,
+                     coerce_str_to_csv, dt_parse_tmpl, get_raw_version,
+                     json_dump, parse_ip_address, parse_ip_network)
+from .wizard_text import WizardText
 
 SRC: str = "list of dictionaries"
 
@@ -30,81 +25,125 @@ class Wizard:
 
     DEFAULT_TYPE = ExprTypes.SIMPLE
 
-    def __init__(self, apiobj: AssetMixin, **kwargs):
-        log_level: str = kwargs.get("log_level", LOG_LEVEL_WIZARD)
+    def __init__(
+        self,
+        apiobj: AssetMixin,
+        log_exprs: bool = False,
+        log_level: Union[str, int] = LOG_LEVEL_WIZARD,
+    ):
         self.LOG: logging.Logger = get_obj_log(obj=self, level=log_level)
         self.apiobj: AssetMixin = apiobj
+        self.aql: str = ""
+        self.exprs: List[dict] = []
+        self._error_stop: bool = True
+        self._log_exprs: bool = log_exprs
 
-    def parse(self, exprs: List[dict], source: str = SRC) -> dict:
-        err = "Expressions must be a list with at least one dictionary"
+    def parse(
+        self, exprs: List[dict], error_stop: bool = True
+    ) -> Tuple[str, List[dict]]:
+        self.exprs: List[dict] = exprs
+        self._error_stop: bool = error_stop
 
-        if not isinstance(exprs, list):
-            vtype = type(exprs).__name__
-            raise WizardError(f"{err}, not type {vtype}")
+        check_type(value=exprs, name="exprs", exp=list, exp_items=dict)
+        check_empty(value=exprs, name="exprs")
 
-        if not exprs:
-            raise WizardError(f"{err}, not an empty list")
+        self.LOG.debug(f"Parsing {len(exprs)} exprs")
 
+        aqls = []
+        gui_exprs = []
+
+        expr_types = ExprTypes.get_values()
         for idx, expr in enumerate(exprs):
-            self._parse_expr(expr=expr, idx=idx, source=source)
+            expr[ExprKeys.IDX] = idx
+            aql_expr, gui_expr = self._parse_expr(expr=expr, expr_types=expr_types)
+            if aql_expr:
+                aqls.append(aql_expr)
 
-        return exprs
+            if gui_expr:
+                gui_exprs += gui_expr
 
-    def _parse_expr(self, expr: dict, idx: int, source: str):
+        self.aql = aql = " ".join(aqls)
+        self.LOG.info(f"Final AQL produced: {aql}")
+
+        GuiExpr.set_idx(exprs=gui_exprs, first=False)
+        if self._log_exprs:
+            self.LOG.debug(f"Final GUI exprs produced: {json_dump(gui_exprs)}")
+
+        return aql, gui_exprs
+
+    def parse_text_str(self, content: str) -> Tuple[str, List[dict]]:
+        self._wizard = WizardText(log_level=self.LOG.level, log_exprs=self._log_exprs)
+        exprs = self._wizard.from_text(content=content)
+        return self.parse(exprs=exprs)
+
+    def parse_text_path(self, path: str) -> Tuple[str, List[dict]]:
+        self._wizard = WizardText(log_level=self.LOG.level, log_exprs=self._log_exprs)
+        exprs = self._wizard.from_path(path=path)
+        return self.parse(exprs=exprs)
+
+    def _parse_expr(self, expr: dict, expr_types: List[str]) -> Tuple[str, List[dict]]:
         orig_expr = copy.deepcopy(expr)
-
         try:
-            if not isinstance(expr, dict):
-                vtype = type(expr).__name__
-                raise WizardError(f"Expression must be a dictionary, not type {vtype}")
+            check_type(value=expr, name="expression", exp=dict)
 
-            expr_type = self._get_type(expr=expr)
-            getattr(self, f"_handle_{expr_type}")(expr=expr)
+            key = ExprKeys.TYPE
+            expr[key] = expr_type = expr.get(key, self.DEFAULT_TYPE).strip().lower()
+            if expr_type not in expr_types:
+                valid = "\n - " + "\n - ".join(expr_types)
+                raise WizardError(f"Invalid type {expr_type!r}, valids:{valid}")
+
+            return getattr(self, f"_handle_{expr_type}")(expr=expr)
         except Exception as exc:
             expr_lines = self._get_expr_lines(expr=orig_expr)
-            raise WizardError(
-                f"Error in expression #{idx + 1} from {source}:{expr_lines}{exc}"
-            )
+            msg = f"Error in expr:\n\n{expr_lines}\n\n{exc}"
+            if self._error_stop:
+                raise WizardError(msg)
+            self.LOG.exception(msg)
+        return "", []
 
-    @staticmethod
-    def _get_expr_lines(expr: dict) -> str:
-        expr_lines = ["", ""]
+    def _get_expr_lines(self, expr: dict, indent=0) -> str:
+        itxt = " " * indent
+        expr_lines = []
 
         for k, v in expr.items():
             if k.startswith("_"):
                 continue
 
-            if isinstance(v, dict):
-                expr_lines.append(f" - {k}:")
-                expr_lines += [f"   -  {a}: {b}" for a, b in v.items()]
+            if k == ExprKeys.SUBS:
+                expr_lines.append(f"{itxt}- {k}:")
+                for sub in v:
+                    lines = ["", self._get_expr_lines(expr=sub, indent=indent + 2)]
+                    expr_lines += lines
+            elif isinstance(v, dict):
+                expr_lines.append(f"{itxt}- {k}:")
+                expr_lines += [f"{itxt}  - {a}: {b}" for a, b in v.items()]
             else:
-                expr_lines.append(f" - {k}: {v}")
+                expr_lines.append(f"{itxt}- {k}: {v}")
 
-        expr_lines += ["", ""]
+        expr_lines += []
         return "\n".join(expr_lines)
 
-    def _get_type(self, expr: dict) -> str:
+    def _get_type(self, expr: dict, expr_types: List[str]) -> str:
         key = ExprKeys.TYPE
+        value = expr.get(key, self.DEFAULT_TYPE).strip().lower()
+        if value not in expr_types:
+            valid = "\n - " + "\n - ".join(expr_types)
+            raise WizardError(f"Invalid type {value!r}, valids:{valid}")
 
-        if not isinstance(expr, dict):
-            vtype = type(expr).__name__
-            raise WizardError(f"Expression must be a dictionary, not type {vtype}")
+        expr[key] = value
+        return value
 
-        expr_type = expr.get(key, self.DEFAULT_TYPE).strip().lower()
-        expr_types = ExprTypes.get_values()
+    def _get_key(self, expr: dict, key: str) -> str:
+        if key not in expr:
+            raise WizardError(f"Key {key!r} must be defined")
 
-        if expr_type not in expr_types:
-            valid = ExprTypes.JOIN(expr_types)
-            raise WizardError(f"Invalid type {expr_type!r}, valids:{valid}")
-
-        expr[key] = expr_type
-        return expr_type
+        return expr[key]
 
     def _get_str(self, expr: dict, key: str) -> str:
-        value = expr[key]
+        value = self._get_key(expr=expr, key=key)
 
         if not isinstance(value, str) or not value:
-            vtype = type(expr).__name__
+            vtype = type(value).__name__
             raise WizardError(f"Key {key!r} must be a non-empty string, not {vtype}")
 
         return value.strip().lower()
@@ -118,42 +157,73 @@ class Wizard:
             else:
                 expr[key] = ExprKeyDefaults.OP_NO_VALUE
 
-        field = expr[ExprKeys.FIELD]
-        operator = self._get_str(expr=expr, key=key)
-        op = OperatorTypeMaps.get_operator(field=field, operator=operator)
-
-        expr[key] = op
+        field = self._get_field(expr=expr)
+        value = self._get_str(expr=expr, key=key)
+        op = OperatorTypeMaps.get_operator(field=field, operator=value)
         return op
 
-    def _get_subs(self, expr: dict):
-        pass
+    def _get_complex_sub_exprs(self, expr: dict) -> List[dict]:
+        field = self._get_complex_field(expr=expr)
+        fname = field["name"]
+        key = ExprKeys.SUBS
+        value = self._get_key(expr=expr, key=key)
+        if not value:
+            raise WizardError(
+                f"No complex sub-exprs in {key!r}: {value!r} for field {fname!r}"
+            )
+        return value
 
-    def _get_logical(self, expr: dict) -> str:
-        key = ExprKeys.LOG
+    def _get_bracket_sub_exprs(self, expr: dict) -> List[dict]:
+        key = ExprKeys.SUBS
+        value = self._get_key(expr=expr, key=key)
+        if not value:
+            raise WizardError(f"No bracket sub-exprs in {key!r}: {value!r}")
+        return value
 
-        if key not in expr:
-            expr[key] = ExprKeyDefaults.LOG
+    def _get_or_flag(self, expr: dict) -> str:
+        key = ExprKeys.OR
+        default = ExprKeyDefaults.OR
+        expr[key] = value = coerce_bool(expr.get(key, default))
+        return value
 
-        log_type = self._get_str(expr=expr, key=key)
-        log_types = LogTypes.get_values()
+    def _get_comp_op(self, expr: dict) -> str:
+        return Templates.OR if self._get_or_flag(expr=expr) else Templates.AND
 
-        if log_type not in log_types:
-            valid = LogTypes.get_values(join="\n - ")
-            raise WizardError(f"Invalid logical operator {log_type!r}, valids:{valid}")
+    def _get_not_flag(self, expr: dict) -> str:
+        key = ExprKeys.NOT
+        default = ExprKeyDefaults.NOT
+        expr[key] = value = coerce_bool(expr.get(key, default))
+        return value
 
-        expr[key] = log_type
-        return log_type
+    def _get_aql_logic(self, expr: dict) -> str:
+        value = []
+
+        if expr[ExprKeys.IDX]:
+            value.append(self._get_comp_op(expr=expr))
+
+        if self._get_not_flag(expr=expr):
+            value.append(Templates.NOT)
+
+        if value:
+            value.append("")
+
+        return " ".join(value)
 
     def _get_field(self, expr: dict) -> dict:
         key = ExprKeys.FIELD
 
+        if isinstance(expr.get(key), dict):
+            return expr[key]
+
         field = self._get_str(expr=expr, key=key)
         field = self.apiobj.fields.get_field_name(
             value=field,
-            fields_map=self.api_fields,
+            fields_map=self._get_api_fields(),
             key=None,
             custom_fields_map=CUSTOM_FIELDS_MAP,
         )
+        if field["name"] == ALL_NAME:
+            raise WizardError(f"Can not use field {ALL_NAME!r} in queries")
 
         expr[key] = field
         return field
@@ -167,12 +237,11 @@ class Wizard:
         if not field["is_complex"]:
             schemas = [
                 x
-                for x in self.api_fields[adapter]
-                if x["is_complex"] and x["name"] != "all"
+                for x in self._get_api_fields()[adapter]
+                if x["is_complex"] and x["name"] != ALL_NAME
             ]
             msg = [
-                f"Invalid complex field {field_name!r}",
-                f"Valid complex fields for {adapter}:",
+                f"Invalid complex field {field_name!r} for {adapter}, valids:",
                 *self.apiobj.fields._prettify_schemas(schemas=schemas),
             ]
             msg = "\n".join(msg)
@@ -180,34 +249,154 @@ class Wizard:
 
         return field
 
-    def _get_sub_field(self, expr, sub_expr):
-        pass
+    def _get_aql_logic_bracket(self, expr: dict, aql: str) -> str:
+        bracket = expr.get(ExprKeys.BRACKET, {})
+        pre = "(" if bracket.get(ExprKeys.BRACKET_LEFT) else ""
+        post = ")" if bracket.get(ExprKeys.BRACKET_RIGHT) else ""
+        aql = self._get_aql_logic(expr=expr) + f"{pre}{aql}{post}"
+        return aql
 
-    def _handle_simple(self, expr: dict):
-        # field, operator, logical, value
-        self._get_field(expr=expr)
-        self._get_logical(expr=expr)
-        self._get_operator(expr=expr)
-        self._value_parser(expr=expr)
+    def _handle_simple(self, expr: dict) -> Tuple[str, List[dict]]:
+        op = self._get_operator(expr=expr)
+        op_logic = self._get_comp_op(expr=expr) if expr[ExprKeys.IDX] else ""
+        not_flag = self._get_not_flag(expr=expr)
+        field = self._get_field(expr=expr)
 
-    def _handle_complex(self, expr: dict):
-        # field, subs, logical
-        # subs: field, operator, value
-        pass
+        aql = self._value_parser(expr=expr)
+        expr[ExprKeys.AQL] = aql = self._get_aql_logic_bracket(expr=expr, aql=aql)
+        self.LOG.info(f"Simple AQL produced: {aql}")
 
-    def _handle_bracket(self, expr: dict):
-        # subs
-        # subs: simple or complex based on type
-        pass
+        bracket = expr.get(ExprKeys.BRACKET, {})
+        expr[ExprKeys.EXPR_GUI] = expr_gui = GuiExpr.get(
+            aql=aql,
+            field=field["name"],
+            field_type=field["expr_field_type"],
+            op_comp=op.name_map.op,
+            value=expr[ExprKeys.EVALUE],
+            op_logic=op_logic,
+            not_flag=not_flag,
+            **bracket,
+        )
+        if self._log_exprs:
+            self.LOG.debug(f"Simple GUI expr produced:\n{json_dump(expr_gui)}")
 
-    def _value_parser(self, expr: dict) -> Any:
-        op = expr[ExprKeys.OP]
-        parser = f"_value_{op.parser.value}"
+        return aql, [expr_gui]
 
-        if not hasattr(self, parser):
+    def _handle_complex(self, expr: dict) -> Tuple[str, List[dict]]:
+        field = self._get_complex_field(expr=expr)
+        op_logic = self._get_comp_op(expr=expr) if expr[ExprKeys.IDX] else ""
+        not_flag = self._get_not_flag(expr=expr)
+
+        sub_exprs = self._get_complex_sub_exprs(expr=expr)
+        self.LOG.debug(f"Parsing {len(sub_exprs)} complex sub-exprs")
+
+        sub_aqls = []
+        sub_gui_exprs = []
+        for sub_expr in sub_exprs:
+            sub_aql_expr, sub_gui_expr = self._complex_sub(expr=expr, sub_expr=sub_expr)
+            sub_aqls.append(sub_aql_expr)
+            sub_gui_exprs.append(sub_gui_exprs)
+
+        tmpl = Templates.COMPLEX.format
+        aql = tmpl(field=field["name"], sub_aqls=f" {Templates.AND} ".join(sub_aqls))
+        expr[ExprKeys.AQL] = aql = self._get_aql_logic_bracket(expr=expr, aql=aql)
+        self.LOG.info(f"Complex AQL produced: {aql}")
+
+        bracket = expr.get(ExprKeys.BRACKET, {})
+        expr[ExprKeys.EXPR_GUI] = expr_gui = GuiExpr.get_complex(
+            aql=aql,
+            field=field["name"],
+            field_type=field["expr_field_type"],
+            children=sub_gui_exprs,
+            op_logic=op_logic,
+            not_flag=not_flag,
+            **bracket,
+        )
+        if self._log_exprs:
+            self.LOG.debug(f"Complex GUI expr produced:\n{json_dump(expr_gui)}")
+
+        return aql, [expr_gui]
+
+    def _handle_bracket(self, expr: dict) -> Tuple[str, List[dict]]:
+        sub_exprs = self._get_bracket_sub_exprs(expr=expr)
+        self.LOG.debug(f"Parsing {len(sub_exprs)} bracket sub-exprs")
+
+        aqls = []
+        gui_exprs = []
+        expr_types = [ExprTypes.COMPLEX, ExprTypes.SIMPLE]
+
+        for idx, sub_expr in enumerate(sub_exprs):
+            bracket = {}
+            bracket[ExprKeys.BRACKET_LEFT] = idx == 0
+            bracket[ExprKeys.BRACKET_RIGHT] = idx == len(sub_exprs) - 1
+            bracket[ExprKeys.BRACKET_WEIGHT] = idx - 1
+            sub_expr[ExprKeys.BRACKET] = bracket
+            sub_expr[ExprKeys.IDX] = idx + expr[ExprKeys.IDX]
+            aql_expr, gui_expr = self._parse_expr(expr=sub_expr, expr_types=expr_types)
+
+            if aql_expr:
+                aqls.append(aql_expr)
+
+            if gui_expr:
+                gui_exprs += gui_expr
+
+        expr[ExprKeys.AQL] = aql = " ".join(aqls)
+        self.LOG.info(f"Bracket AQL produced: {aql}")
+        expr[ExprKeys.EXPR_GUI] = gui_exprs
+        return aql, gui_exprs
+
+    def _complex_sub(self, expr: dict, sub_expr: dict) -> Tuple[str, dict]:
+        check_type(value=sub_expr, exp=dict, name="complex sub-field")
+
+        field = self._get_complex_field(expr=expr)
+        field_name = field["name"]
+        field_subs = {x["name"]: x for x in field["sub_fields"]}
+
+        sub_name = self._get_str(expr=sub_expr, key=ExprKeys.SUB)
+        if sub_name not in field_subs:
+            valid = "\n - " + "\n - ".join(list(field_subs))
+            raise WizardError(
+                f"{sub_name!r} is not a sub field of {field_name!r}, valids:{valid}"
+            )
+
+        sub_expr[ExprKeys.FIELD] = field_subs[sub_name]
+        sub_field_name = field_subs[sub_name]["name"]
+        op = self._get_operator(expr=sub_expr)
+        aql = self._value_parser(expr=sub_expr)
+        sub_expr[ExprKeys.AQL] = aql
+        self.LOG.info(f"Complex sub-field AQL produced: {aql}")
+
+        expr_gui = GuiExpr.get_child(
+            aql=aql,
+            field=sub_field_name,
+            op_comp=op.name_map.op,
+            value=sub_expr[ExprKeys.EVALUE],
+        )
+        sub_expr[ExprKeys.EXPR_GUI] = expr_gui
+
+        if self._log_exprs:
+            self.LOG.debug(
+                f"Complex sub-field GUI expr produced:\n{json_dump(expr_gui)}"
+            )
+
+        return aql, expr_gui
+
+    def _value_parser(self, expr: dict) -> str:
+        field = self._get_field(expr=expr)
+        field_name = field["name"]
+
+        op = self._get_operator(expr=expr)
+        parser = f"_value_{op.parser.name}"
+        method = getattr(self, parser, None)
+
+        if not method:
             raise WizardError(f"No parser implemented for {parser!r}")
 
-        parser(expr=expr)
+        pvalue = method(expr=expr)
+
+        tmpl = op.template.format
+        aql = tmpl(field=field_name, parsed_value=pvalue)
+        return aql
 
     def _check_enum(
         self, value: Union[int, str], field: dict, extra: Optional[List[str]] = None
@@ -222,63 +411,63 @@ class Wizard:
             return value
 
         if isinstance(enum, (list, tuple)):
-            if value in enum:
-                return value
+            for item in enum:
+                item_check = item.lower() if isinstance(item, str) else item
+                value_check = value.lower() if isinstance(value, str) else value
+                if item_check == value_check:
+                    return item
 
             valid = "\n - " + "\n - ".join([str(x) for x in enum])
-            raise WizardError(f"invalid choice {value!r}, valid choices: {valid}")
+            raise WizardError(f"invalid choice {value!r}, valid choices:{valid}")
 
         if isinstance(enum, dict):
-            if value in enum:
-                return enum[value]
+            for item, item_value in enum.items():
+                item_check = item.lower() if isinstance(item, str) else item
+                value_check = value.lower() if isinstance(value, str) else value
+                if item_check == value_check:
+                    return item_value
 
             valid = "\n - " + "\n - ".join([str(x) for x in enum])
-            raise WizardError(f"invalid choice {value!r}, valid choices: {valid}")
+            raise WizardError(f"invalid choice {value!r}, valid choices:{valid}")
 
         etype = type(enum).__name__
         raise WizardError(f"Unhandled enum type {etype}: {enum}")
 
-    def _get_aql(self, expr: dict):
-        field = expr[ExprKeys.FIELD]
-        pvalue = expr[ExprKeys.PVALUE]
-        op = expr[ExprKeys.OP]
-
-        aql = op.template.format(field=field["name"], parsed_value=pvalue)
-        expr[ExprKeys.AQL] = aql
-        self.LOG.info(f"AQL produced: {aql}")
-
-    def _check_str_value(value):
+    def _check_str_value(self, value) -> str:
         check_type(value=value, exp=str)
         check_empty(value=value, name=f"{ExprKeys.VALUE} key")
         return value
 
-    def _value_to_str(self, expr: dict):
+    def _value_to_str(self, expr: dict) -> str:
         value = expr.get(ExprKeys.VALUE, "")
         self._check_str_value(value=value)
 
-        field = expr[ExprKeys.FIELD]
+        field = self._get_field(expr=expr)
         pvalue = self._check_enum(value=value, field=field)
 
         expr[ExprKeys.PVALUE] = pvalue
         expr[ExprKeys.EVALUE] = pvalue
+        return pvalue
 
-    def _value_to_int(self, expr: dict, field: dict) -> dict:
+    def _value_to_int(self, expr: dict) -> int:
         value = expr.get(ExprKeys.VALUE, "")
+        pvalue = coerce_int_float(value=value)
 
-        value = coerce_int(obj=value)
-        field = expr[ExprKeys.FIELD]
-        pvalue = self._check_enum(value=value, field=field)
+        field = self._get_field(expr=expr)
+        pvalue = self._check_enum(value=pvalue, field=field)
 
         expr[ExprKeys.PVALUE] = pvalue
         expr[ExprKeys.EVALUE] = pvalue
+        return pvalue
 
-    def _value_none(self, expr: dict, field: dict) -> dict:
-        value = None
+    def _value_none(self, expr: dict) -> None:
+        pvalue = None
 
-        expr[ExprKeys.PVALUE] = value
-        expr[ExprKeys.EVALUE] = value
+        expr[ExprKeys.PVALUE] = pvalue
+        expr[ExprKeys.EVALUE] = pvalue
+        return pvalue
 
-    def _value_to_raw_version(self, expr: dict):
+    def _value_to_raw_version(self, expr: dict) -> str:
         value = expr.get(ExprKeys.VALUE, "")
         self._check_str_value(value=value)
 
@@ -286,8 +475,9 @@ class Wizard:
 
         expr[ExprKeys.PVALUE] = pvalue
         expr[ExprKeys.EVALUE] = value
+        return pvalue
 
-    def _value_to_dt(self, expr: dict):
+    def _value_to_dt(self, expr: dict) -> str:
         value = expr.get(ExprKeys.VALUE, "")
         self._check_str_value(value=value)
 
@@ -295,6 +485,7 @@ class Wizard:
 
         expr[ExprKeys.PVALUE] = pvalue
         expr[ExprKeys.EVALUE] = pvalue
+        return pvalue
 
     def _value_to_ip(self, expr: dict):
         value = expr.get(ExprKeys.VALUE, "")
@@ -304,8 +495,9 @@ class Wizard:
 
         expr[ExprKeys.PVALUE] = pvalue
         expr[ExprKeys.EVALUE] = pvalue
+        return pvalue
 
-    def _value_to_subnet(self, expr: dict):
+    def _value_to_subnet(self, expr: dict) -> str:
         value = expr.get(ExprKeys.VALUE, "")
         self._check_str_value(value=value)
 
@@ -313,8 +505,9 @@ class Wizard:
 
         expr[ExprKeys.PVALUE] = pvalue
         expr[ExprKeys.EVALUE] = pvalue
+        return pvalue
 
-    def _value_ip_to_subnet_start_end(self, expr: dict):
+    def _value_ip_to_subnet_start_end(self, expr: dict) -> str:
         value = expr.get(ExprKeys.VALUE, "")
         self._check_str_value(value=value)
 
@@ -327,8 +520,9 @@ class Wizard:
 
         expr[ExprKeys.PVALUE] = pvalue
         expr[ExprKeys.EVALUE] = evalue
+        return pvalue
 
-    def _value_to_escaped_regex(self, expr: dict):
+    def _value_to_escaped_regex(self, expr: dict) -> str:
         value = expr.get(ExprKeys.VALUE, "")
         self._check_str_value(value=value)
 
@@ -336,57 +530,65 @@ class Wizard:
 
         expr[ExprKeys.PVALUE] = pvalue
         expr[ExprKeys.EVALUE] = value
+        return pvalue
 
-    def _value_to_str_tags(self, expr: dict):
+    def _value_to_str_tags(self, expr: dict) -> str:
         value = expr.get(ExprKeys.VALUE, "")
         self._check_str_value(value=value)
 
-        field = expr[ExprKeys.FIELD]
-        pvalue = self._check_enum(value=value, field=field, extra=self.api_tags)
+        field = self._get_field(expr=expr)
+
+        pvalue = self._check_enum(value=value, field=field, extra=self._get_api_tags())
 
         expr[ExprKeys.PVALUE] = pvalue
         expr[ExprKeys.EVALUE] = pvalue
+        return pvalue
 
-    def _value_to_str_adapters(self, expr: dict):
+    def _value_to_str_adapters(self, expr: dict) -> str:
         value = expr.get(ExprKeys.VALUE, "")
         self._check_str_value(value=value)
 
-        field = expr[ExprKeys.FIELD]
-        pvalue = self._check_enum(value=value, field=field, extra=self.api_adapter_names)
+        field = self._get_field(expr=expr)
+
+        pvalue = self._check_enum(
+            value=value, field=field, extra=self._get_api_adapter_names()
+        )
 
         expr[ExprKeys.PVALUE] = pvalue
         expr[ExprKeys.EVALUE] = pvalue
+        return pvalue
 
-    def _value_to_str_cnx_label(self, expr: dict):
+    def _value_to_str_cnx_label(self, expr: dict) -> str:
         value = expr.get(ExprKeys.VALUE, "")
         self._check_str_value(value=value)
 
         check_type(value=value, exp=str)
 
-        field = expr[ExprKeys.FIELD]
+        field = self._get_field(expr=expr)
+
         pvalue = self._check_enum(
-            value=value, field=field, extra=self.api_adapter_cnx_labels
+            value=value, field=field, extra=self._get_api_adapter_cnx_labels()
         )
 
         expr[ExprKeys.PVALUE] = pvalue
         expr[ExprKeys.EVALUE] = pvalue
+        return pvalue
 
     def _value_to_csv(
         self,
         expr: dict,
-        value: Any,
+        value: Union[int, str],
         item_method: Any,
         join_tmpl: str = '"{}"',
         post_method: Optional[Any] = None,
         enum_extra: Optional[List[Union[int, str]]] = None,
-    ):
+    ) -> str:
         items = coerce_str_to_csv(value=value)
-
-        value = expr[ExprKeys.FIELD]
-        field = expr[ExprKeys.FIELD]
+        field = self._get_field(expr=expr)
 
         new_items = []
         for idx, item in enumerate(items):
+            item_num = idx + 1
             try:
                 item = item_method(item)
 
@@ -396,71 +598,80 @@ class Wizard:
                 item = self._check_enum(field=field, value=item, extra=enum_extra)
                 new_items.append(item)
             except Exception as exc:
-                raise WizardError(f"Error in item #{idx + 1} of {len(items)}: {exc}")
+                raise WizardError(f"Error in item #{item_num} of {len(items)}: {exc}")
 
         pvalue = ", ".join([join_tmpl.format(x) for x in new_items])
         evalue = ",".join([str(x) for x in new_items])
 
         expr[ExprKeys.PVALUE] = pvalue
         expr[ExprKeys.EVALUE] = evalue
+        return pvalue
 
-    def _value_to_csv_str(self, expr: dict):
-        self._value_to_csv(expr=expr, item_method=self._check_str_value)
+    def _value_to_csv_str(self, expr: dict) -> str:
+        pvalue = self._value_to_csv(expr=expr, item_method=self._check_str_value)
+        return pvalue
 
-    def _value_to_csv_int(self, expr: dict):
-        self._value_to_csv(expr=expr, item_method=coerce_int, join_tmpl="{}")
-
-    def _value_to_csv_subnet(self, expr: dict):
-        self._value_to_csv(expr=expr, item_method=parse_ip_network, post_method=str)
-
-    def _value_to_csv_ip(self, expr: dict):
-        self._value_to_csv(expr=expr, item_method=parse_ip_address, post_method=str)
-
-    def _value_to_csv_tags(self, expr: dict):
-        self._value_to_csv(
-            expr=expr, item_method=self._check_str_value, enum_extra=self.api_tags
+    def _value_to_csv_int(self, expr: dict) -> str:
+        pvalue = self._value_to_csv(
+            expr=expr, item_method=coerce_int_float, join_tmpl="{}"
         )
+        return pvalue
 
-    def _value_to_csv_adapters(self, expr: dict):
-        self._value_to_csv(
+    def _value_to_csv_subnet(self, expr: dict) -> str:
+        pvalue = self._value_to_csv(
+            expr=expr, item_method=parse_ip_network, post_method=str
+        )
+        return pvalue
+
+    def _value_to_csv_ip(self, expr: dict) -> str:
+        pvalue = self._value_to_csv(
+            expr=expr, item_method=parse_ip_address, post_method=str
+        )
+        return pvalue
+
+    def _value_to_csv_tags(self, expr: dict) -> str:
+        pvalue = self._value_to_csv(
+            expr=expr, item_method=self._check_str_value, enum_extra=self._get_api_tags()
+        )
+        return pvalue
+
+    def _value_to_csv_adapters(self, expr: dict) -> str:
+        pvalue = self._value_to_csv(
             expr=expr,
             item_method=self._check_str_value,
-            enum_extra=self.api_adapter_names,
+            enum_extra=self._get_api_adapter_names(),
         )
+        return pvalue
 
-    def _value_to_csv_cnx_label(self, expr: dict):
-        self._value_to_csv(
+    def _value_to_csv_cnx_label(self, expr: dict) -> str:
+        pvalue = self._value_to_csv(
             expr=expr,
             item_method=self._check_str_value,
-            enum_extra=self.api_adapter_cnx_labels,
+            enum_extra=self._get_api_adapter_cnx_labels(),
         )
+        return pvalue
 
-    @property
-    def api_fields(self) -> Dict[str, List[dict]]:
-        if not hasattr(self, "_fields"):
-            self._fields = self.apiobj.fields.get()
-        return self._fields
+    def _get_api_fields(self) -> Dict[str, List[dict]]:
+        if not hasattr(self, "_api_fields"):
+            self._api_fields = self.apiobj.fields.get()
+        return self._api_fields
 
-    @property
-    def api_tags(self) -> List[str]:
-        if not hasattr(self.apiobj, "_api_tags"):
-            self.apiobj._api_tags = self.apiobj.labels.get()
-        return self.apiobj._api_tags
+    def _get_api_tags(self) -> List[str]:
+        if not hasattr(self, "_api_tags"):
+            self._api_tags = self.apiobj.labels.get()
+        return self._api_tags
 
-    @property
-    def api_adapters(self) -> List[dict]:
-        if not hasattr(self.apiobj, "_api_adapters"):
-            self.apiobj._api_adapters = self.apiobj.adapters.get()
-        return self.apiobj._api_adapters
+    def _get_api_adapters(self) -> List[dict]:
+        if not hasattr(self, "_api_adapters"):
+            self._api_adapters = self.apiobj.adapters.get()
+        return self._api_adapters
 
-    @property
-    def api_adapter_names(self) -> Dict[str, str]:
-        return {x["name"]: x["name_raw"] for x in self.api_adapters if x["cnx"]}
+    def _get_api_adapter_names(self) -> Dict[str, str]:
+        return {x["name"]: x["name_raw"] for x in self._get_api_adapters() if x["cnx"]}
 
-    @property
-    def api_adapter_cnx_labels(self) -> List[str]:
+    def _get_api_adapter_cnx_labels(self) -> List[str]:
         value = []
-        for adapter in self.api_adapters:
+        for adapter in self._get_api_adapters():
             for cnx in adapter["cnx"]:
                 config = cnx.get("config", {})
                 label = config.get("connection_label", "")

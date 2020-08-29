@@ -52,8 +52,10 @@ class SavedQuery(ChildMixins, PagingMixinsObject):
         self,
         name: str,
         query: Optional[str] = None,
+        query_expr: Optional[str] = None,
         tags: Optional[List[str]] = None,
         description: Optional[str] = None,
+        expressions: Optional[List[str]] = None,
         fields: Optional[Union[List[str], str]] = None,
         fields_regex: Optional[Union[List[str], str]] = None,
         fields_manual: Optional[Union[List[str], str]] = None,
@@ -63,6 +65,7 @@ class SavedQuery(ChildMixins, PagingMixinsObject):
         column_filters: Optional[dict] = None,
         gui_page_size: Optional[int] = None,
         fields_map: Optional[dict] = None,
+        private: bool = False,
         **kwargs,
     ):
         """Create a saved query.
@@ -113,6 +116,8 @@ class SavedQuery(ChildMixins, PagingMixinsObject):
                 value=sort_field, fields_map=fields_map
             )
 
+        query_expr = query_expr or query  # TBD
+
         data_column_filters = {}
         if column_filters:
             for col_field, col_value in column_filters.items():
@@ -121,10 +126,16 @@ class SavedQuery(ChildMixins, PagingMixinsObject):
                 )
                 data_column_filters[col_field] = col_value
 
+        dmeta = {}  # TBD
+        dmeta["enforcementFilter"] = ""  # TBD
+        dmeta["uniqueAdapters"] = ""  # TBD
+
         data_query = {}
         data_query["filter"] = query
-        data_query["expressions"] = []  # query wizard generated only
-        # data_query["search"] = ""  # tbd
+        data_query["onlyExpressionsFilter"] = query_expr
+        data_query["expressions"] = expressions or []
+        data_query["search"] = None  # TBD
+        data_query["meta"] = dmeta  # TBD
 
         data_sort = {}
         data_sort["desc"] = sort_descending
@@ -136,6 +147,7 @@ class SavedQuery(ChildMixins, PagingMixinsObject):
         data_view["fields"] = fields
         data_view["pageSize"] = gui_page_size
         data_view["colFilters"] = data_column_filters or {}
+        data_view["colExcludedAdapters"] = {}  # TBD
 
         data = {}
         data["name"] = name
@@ -143,6 +155,7 @@ class SavedQuery(ChildMixins, PagingMixinsObject):
         data["description"] = description
         data["view"] = data_view
         data["tags"] = tags or []
+        data["private"] = private
 
         added = self._add(data=data)
         kwargs["value"] = added
