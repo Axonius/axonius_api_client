@@ -2,13 +2,13 @@
 """Python API Client for Axonius."""
 import logging
 import shlex
-from typing import List
+from typing import List, Union
 
 from ..constants import LOG_LEVEL_WIZARD
 from ..data_classes.wizard import ExprKeys, TextTypes
 from ..exceptions import WizardError
 from ..logs import get_obj_log
-from ..tools import path_read
+from ..tools import check_empty, check_type, json_dump, path_read
 
 SRC: str = "text string"
 
@@ -17,38 +17,62 @@ class WizardText:
     ITEM_SEP: str = ","
     VALUE_SEP: str = "="
     WORDCHARS: str = f"{VALUE_SEP}: "
-    DEFAULT_TYPE = TextTypes.simple
+    DEFAULT_TYPE: str = TextTypes.simple.name_text
 
-    def __init__(self, **kwargs):
-        log_level: str = kwargs.get("log_level", LOG_LEVEL_WIZARD)
+    def __init__(
+        self, log_exprs: bool = False, log_level: Union[str, int] = LOG_LEVEL_WIZARD
+    ):
         self.LOG: logging.Logger = get_obj_log(obj=self, level=log_level)
+        self._expr_bracket: dict = {}
+        self._expr_complex: dict = {}
+        self.exprs: List[dict] = []
+        self.source: str = SRC
+        self._log_exprs: bool = log_exprs
 
     def from_text(self, content: str, source: str = SRC):
-        self.idx_bracket: int = None
-        self.idx_complex: int = None
-        self.expr_bracket: dict = None
-        self.expr_complex: dict = None
-
-        self.source = source
-        self.content: str = content
-        self.lines: List[str] = content.splitlines()
+        check_type(value=content, exp=str, name="content")
+        check_empty(value=content, name="content")
+        self._expr_bracket: dict = {}
+        self._expr_complex: dict = {}
         self.exprs: List[dict] = []
+        self.source: str = source
 
-        line_cnt = len(self.lines)
-        self.LOG.debug(f"Parsing {line_cnt} lines from {source}")
+        lines: List[str] = content.splitlines()
 
-        for idx, line in enumerate(self.lines):
-            self.line = line
-            self.idx = idx
-            self.expr: dict = {}
+        self.LOG.info(f"Parsing {len(lines)} lines from {source}")
 
+        for idx, line in enumerate(lines):
+            line_num = idx + 1
+            current = f"line #{line_num}: '{line}'"
             try:
-                self._parse()
+                expr = self._parse_line(line=line)
+                self.LOG.debug(f"Parsed {current}")
+
+                if self._log_exprs:
+                    self.LOG.debug(f"Split {current} into expr:\n{json_dump(expr)}")
+
+                if not expr:
+                    continue
+
+                expr[ExprKeys.IDX] = idx
+                expr[ExprKeys.SRC] = {
+                    ExprKeys.SRC_LINE: line,
+                    ExprKeys.SRC_LINE_NUM: line_num,
+                }
+                self._parse_expr(expr=expr)
+                if self._log_exprs:
+                    self.LOG.debug(f"Parsed {current} into expr: {json_dump(expr)}")
+
             except Exception as exc:
-                current = f"Current line #{idx + 1}: {line}"
                 raise WizardError(
                     f"Error while parsing expression from {source}: {exc}:\n{current}"
                 )
+
+        if not self.exprs:
+            raise WizardError(
+                f"No expressions parsed from {source} with content:\n{content}"
+            )
+        self.LOG.info(f"Parsed {len(self.exprs)} expressions from {source}")
 
         return self.exprs
 
@@ -56,15 +80,14 @@ class WizardText:
         path, content = path_read(obj=path)
         return self.from_text(content=content, source=f"{path}")
 
-    def _parse(self):
+    def _parse_line(self, line: str) -> dict:
         """Parse key-value pairs from a shell-like text."""
-        line = self.line
-        idx = self.idx
-        line = line.lstrip()
+        line = line.strip()
+        expr = {}
 
         if not line or line.startswith("#"):
-            self.LOG.debug(f"Skipping line #{idx + 1}: empty/comment line")
-            return
+            self.LOG.debug("Skipping empty or comment line")
+            return expr
 
         if self.VALUE_SEP not in line:
             raise WizardError(f"Missing separator {self.VALUE_SEP!r}")
@@ -77,84 +100,107 @@ class WizardText:
             value = word.split(self.VALUE_SEP, maxsplit=1)
             key = value.pop(0).strip().lower()
 
-            if not all([key, value]):
-                self.LOG.debug(f"No key/value pair in word {word!r}")
+            value = value.pop().lstrip()
+
+            if not value.strip():
+                self.LOG.debug(f"Empty value {value!r} in word {word!r}")
                 continue
 
-            self.expr[key] = value.pop()
+            if not key:
+                self.LOG.debug(f"Empty key {key!r} in word {word!r}")
+                continue
 
-        self.LOG.debug(f"Split line #{idx + 1} into expr: {self.expr}")
+            expr[key] = value
 
-        if self.expr:
-            self._handle()
+        return expr
 
-        self.LOG.debug(f"Parsed line #{idx + 1} into expr: {self.expr}")
-
-        self.expr[ExprKeys.SRC] = {ExprKeys.SRC_LINE: line, ExprKeys.SRC_IDX: idx}
-
-    def _handle(self):
-        expr_type = self.expr.pop(ExprKeys.TYPE, self.DEFAULT_TYPE).strip().lower()
-        expr_types = TextTypes.get_names()
+    def _parse_expr(self, expr: dict):
+        expr_type = expr.pop(ExprKeys.TYPE, self.DEFAULT_TYPE).strip().lower()
+        expr_types = [x.name_text for x in TextTypes.get_values()]
         if expr_type not in expr_types:
-            valid = TextTypes.get_names(join="\n - ")
+            valid = "\n - " + "\n - ".join(expr_types)
             raise WizardError(f"Invalid type {expr_type!r}, valids:{valid}")
 
-        getattr(self, f"_handle_{expr_type}")()
+        getattr(self, f"_handle_{expr_type}")(expr=expr)
 
-    def _handle_simple(self):
-        if self.expr_complex:
-            self.expr_complex[ExprKeys.SUBS].append(self.expr)
-        elif self.expr_bracket:
-            self.expr[ExprKeys.TYPE] = TextTypes.simple
-            self.expr_bracket[ExprKeys.SUBS].append(self.expr)
+    def _handle_simple(self, expr: dict):
+        if self._expr_complex:
+            self._check_req(expr=expr, req=ExprKeys.SUB)
+            self._expr_complex[ExprKeys.SUBS].append(expr)
         else:
-            self.expr[ExprKeys.TYPE] = TextTypes.simple
-            self.exprs.append(self.expr)
+            self._check_req(expr=expr, req=ExprKeys.FIELD)
+            if self._expr_bracket:
+                expr[ExprKeys.TYPE] = TextTypes.simple.name_expr
+                self._expr_bracket[ExprKeys.SUBS].append(expr)
+            else:
+                expr[ExprKeys.TYPE] = TextTypes.simple.name_expr
+                self.exprs.append(expr)
 
-    def _handle_start_complex(self):
-        err = "Can not start a complex section"
-        if self.expr_complex:
-            idx = self.idx_complex + 1
-            raise WizardError(f"{err} while in a complex section started on line #{idx}")
+    def _handle_start_complex(self, expr: dict):
+        self._check_start(
+            expr=expr,
+            attr="_expr_complex",
+            type1=TextTypes.start_complex.name_expr,
+            type2=TextTypes.start_complex.name_expr,
+        )
+        self._check_req(expr=expr, req=ExprKeys.FIELD)
 
-        self.expr[ExprKeys.SUBS] = []
-        self.expr[ExprKeys.TYPE] = TextTypes.start_complex
-        self.idx_complex = self.idx
-        self.expr_complex = self.expr
+        expr[ExprKeys.SUBS] = []
+        expr[ExprKeys.TYPE] = TextTypes.start_complex.name_expr
+        self._expr_complex = expr
 
-        if isinstance(self.idx_bracket, int):
-            self.expr_bracket[ExprKeys.SUBS].append(self.expr)
+        if self._expr_bracket:
+            self._expr_bracket[ExprKeys.SUBS].append(expr)
         else:
-            self.exprs.append(self.expr)
+            self.exprs.append(expr)
 
-    def _handle_stop_complex(self):
-        err = "Can not stop a complex section"
-        if not self.expr_complex:
-            raise WizardError(f"{err} when a complex section has not been started")
+    def _handle_start_bracket(self, expr: dict):
+        self._check_start(
+            expr=expr,
+            attr="_expr_bracket",
+            type1=TextTypes.start_bracket.name_expr,
+            type2=TextTypes.start_bracket.name_expr,
+        )
+        self._check_start(
+            expr=expr,
+            attr="_expr_complex",
+            type1=TextTypes.start_bracket.name_expr,
+            type2=TextTypes.start_complex.name_expr,
+        )
+        expr[ExprKeys.TYPE] = TextTypes.start_bracket.name_expr
+        expr[ExprKeys.SUBS] = []
+        self._expr_bracket = expr
+        self.exprs.append(expr)
 
-        self.expr_complex = None
-        self.idx_complex = None
+    def _handle_stop_complex(self, expr: dict):
+        self._check_stop(
+            expr=expr, attr="_expr_complex", type1=TextTypes.start_complex.name_expr
+        )
 
-    def _handle_start_bracket(self):
-        err = "Can not start a bracket section"
-        if self.expr_bracket:
-            idx = self.idx_bracket + 1
-            raise WizardError(f"{err} while in a bracket section started on line #{idx}")
+    def _handle_stop_bracket(self, expr: dict):
+        self._check_stop(
+            expr=expr, attr="_expr_bracket", type1=TextTypes.start_bracket.name_expr
+        )
 
-        if self.expr_complex:
-            idx = self.idx_complex + 1
-            raise WizardError(f"{err} while in a complex section started on line #{idx}")
+    def _check_start(self, expr: dict, attr: str, type1: str, type2: str):
+        attr_value = getattr(self, attr, {})
+        if attr_value:
+            type1 = f"{type1} section"
+            type2 = f"{type2} section"
+            idx = attr_value[ExprKeys.IDX] + 1
+            raise WizardError(
+                f"Can not start a {type1} when in a {type2} started on line #{idx}"
+            )
 
-        self.expr[ExprKeys.TYPE] = TextTypes.start_bracket
-        self.expr[ExprKeys.SUBS] = []
-        self.idx_bracket = self.idx
-        self.expr_bracket = self.expr
-        self.exprs.append(self.expr)
+    def _check_stop(self, expr: dict, attr: str, type1: str):
+        attr_value = getattr(self, attr, {})
+        if not attr_value:
+            type1 = f"{type1} section"
+            raise WizardError(
+                f"Can not stop a {type1} when a {type1} has not been started"
+            )
+        setattr(self, attr, {})
 
-    def _handle_stop_bracket(self):
-        err = "Can not stop a bracket section"
-        if not self.expr_bracket:
-            raise WizardError(f"{err} when a bracket section has not been started")
-
-        self.expr_bracket = None
-        self.idx_bracket = None
+    def _check_req(self, expr: dict, req: str):
+        if not expr.get(req):
+            raise WizardError(f"Missing required key {req!r}")

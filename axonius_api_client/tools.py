@@ -8,7 +8,8 @@ import platform
 import sys
 from datetime import datetime, timedelta, timezone
 from itertools import zip_longest
-from typing import Any, Callable, Iterable, Iterator, List, Optional, Tuple, Union
+from typing import (Any, Callable, Iterable, Iterator, List, Optional, Tuple,
+                    Union)
 from urllib.parse import urljoin
 
 import click
@@ -18,17 +19,8 @@ import dateutil.tz
 
 from . import __file__ as PACKAGE_FILE
 from . import __package__ as PACKAGE_ROOT
-from .constants import (
-    ERROR_ARGS,
-    ERROR_TMPL,
-    NO,
-    OK_ARGS,
-    OK_TMPL,
-    SIMPLE,
-    WARN_ARGS,
-    WARN_TMPL,
-    YES,
-)
+from .constants import (ERROR_ARGS, ERROR_TMPL, NO, OK_ARGS, OK_TMPL, SIMPLE,
+                        WARN_ARGS, WARN_TMPL, YES)
 from .exceptions import ToolsError
 from .version import VERSION
 
@@ -109,6 +101,26 @@ def coerce_int(obj: Any) -> int:
     except Exception:
         vtype = type(obj).__name__
         raise ToolsError(f"Supplied value {obj!r} of type {vtype} is not an integer.")
+
+
+def coerce_int_float(value: Union[int, float, str]) -> Union[int, float]:
+    if isinstance(value, float):
+        return value
+
+    if isinstance(value, int):
+        return value
+
+    if isinstance(value, str):
+        if value.isdigit():
+            return int(value)
+
+        if value.replace(".", "").strip().isdigit():
+            return float(value)
+
+    vtype = type(value).__name__
+    raise ToolsError(
+        f"Supplied value {value!r} of type {vtype} is not an integer or float."
+    )
 
 
 def coerce_bool(obj: Any, errmsg: Optional[str] = None) -> bool:

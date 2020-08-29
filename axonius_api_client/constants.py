@@ -131,7 +131,7 @@ LOG_LEVEL_API: str = "debug"
 """:obj:`str`: default logging level to use for
 :obj:`axonius_api_client.api.mixins.Mixins`"""
 
-LOG_LEVEL_WIZARD: str = "debug"
+LOG_LEVEL_WIZARD: str = "info"
 
 LOG_LEVEL_PACKAGE: str = "debug"
 """:obj:`str`: default logging level to use for :mod:`axonius_api_client`"""
