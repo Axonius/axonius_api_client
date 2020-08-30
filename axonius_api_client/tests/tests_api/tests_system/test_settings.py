@@ -9,9 +9,9 @@ from axonius_api_client.exceptions import ApiError, NotFoundError
 
 GUI_SECTION_WITH_SUBS = "system_settings"
 GUI_SECTION_NO_SUBS = "ldap_login_settings"
-GUI_NON_SUB_SECTION = "multiLine"
+GUI_NON_SUB_SECTION = "exactSearch"
 GUI_SUB_SECTION = "timeout_settings"
-GUI_SUB_KEYS = ["error", "success", "warning"]
+GUI_SUB_KEYS = ["disable_remember_me", "enabled", "timeout"]
 
 
 class SettingsBasePublic:

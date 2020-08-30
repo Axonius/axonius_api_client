@@ -102,8 +102,7 @@ class RunAction(ModelMixins):
         """
         data = {"field_name": "binary"}
         files = {"userfile": (name, content, content_type, headers)}
-
-        path = self.router.upload_file
+        path = API_VERSION.alerts.upload_file
 
         ret = self.request(method="post", path=path, data=data, files=files)
         ret["filename"] = name

@@ -202,6 +202,7 @@ class ApiV4:
 
     alerts: Router = Router(
         object_type="enforcements", base=base, version=version,
+        upload_file="actions/upload_file",
     )
 
     instances: Router = Router(

@@ -231,6 +231,9 @@ class SavedQueryPublic:
         row_view_colfilters = row_view.pop("colFilters")
         assert row_view_colfilters == colfilters
 
+        row_view_excluded_adapters = row_view.pop("colExcludedAdapters")
+        assert isinstance(row_view_excluded_adapters, dict)
+
         assert not row_view
 
         # row["view"]["sort"]
@@ -249,9 +252,14 @@ class SavedQueryPublic:
         row_view_query_expressions = row_view_query.pop("expressions")
         assert row_view_query_expressions == []
 
-        # TBD
-        # row_view_query_search = row_view_query.pop("search")
-        # assert row_view_query_search == ""
+        row_view_query_search = row_view_query.pop("search")
+        assert not row_view_query_search
+
+        row_view_query_meta = row_view_query.pop("meta")
+        assert isinstance(row_view_query_meta, dict)
+
+        row_view_query_only_expressions = row_view_query.pop("onlyExpressionsFilter")
+        assert row_view_query_only_expressions
 
         assert not row_view_query
         yield row_original

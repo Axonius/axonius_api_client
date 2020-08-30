@@ -40,6 +40,7 @@ class ExprKeys:
     BRACKET_LEFT: str = "bracket_left"
     BRACKET_RIGHT: str = "bracket_right"
     BRACKET_WEIGHT: str = "bracket_weight"
+    LOG: str = "logical"
 
 
 class ExprGuiKeys:
