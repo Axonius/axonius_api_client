@@ -123,55 +123,55 @@ class TestSettingsGui(SettingsBasePublic):
         with pytest.raises(ApiError):
             apiobj.get_sub_section(section=GUI_SECTION_NO_SUBS, sub_section="badwolf")
 
-    # def test_update_section(self, apiobj):
-    #     """Pass."""
-    #     old_section = apiobj.get_section(section=GUI_SECTION_WITH_SUBS)
-    #     old_config = old_section["config"]
-    #     old_value = old_config[GUI_NON_SUB_SECTION]
-    #
-    #     update_value = not old_value
-    #
-    #     new_section_args = {GUI_NON_SUB_SECTION: update_value}
-    #     new_section = apiobj.update_section(
-    #         section=GUI_SECTION_WITH_SUBS, **new_section_args
-    #     )
-    #     new_value = new_section["config"][GUI_NON_SUB_SECTION]
-    #     assert new_value == update_value and old_value != new_value
-    #
-    #     reset_section_args = {GUI_NON_SUB_SECTION: old_value}
-    #     reset_section = apiobj.update_section(
-    #         section=GUI_SECTION_WITH_SUBS, **reset_section_args
-    #     )
-    #     reset_value = reset_section["config"][GUI_NON_SUB_SECTION]
-    #     assert reset_value == old_value and reset_value != new_value
+    def test_update_section(self, apiobj):
+        """Pass."""
+        old_section = apiobj.get_section(section=GUI_SECTION_WITH_SUBS)
+        old_config = old_section["config"]
+        old_value = old_config[GUI_NON_SUB_SECTION]
 
-    # def test_update_sub_section(self, apiobj):
-    #     """Pass."""
-    #     old_section = apiobj.get_sub_section(
-    #         section=GUI_SECTION_WITH_SUBS, sub_section=GUI_SUB_SECTION
-    #     )
-    #     sub_key = GUI_SUB_KEYS[0]
-    #     old_config = old_section["config"]
-    #     old_value = old_config[sub_key]
-    #     update_value = old_value + 1
-    #
-    #     new_section_args = {sub_key: update_value}
-    #     new_section = apiobj.update_sub_section(
-    #         section=GUI_SECTION_WITH_SUBS,
-    #         sub_section=GUI_SUB_SECTION,
-    #         **new_section_args
-    #     )
-    #     new_value = new_section["config"][sub_key]
-    #     assert new_value == update_value and old_value != new_value
-    #
-    #     reset_section_args = {sub_key: old_value}
-    #     reset_section = apiobj.update_sub_section(
-    #         section=GUI_SECTION_WITH_SUBS,
-    #         sub_section=GUI_SUB_SECTION,
-    #         **reset_section_args
-    #     )
-    #     reset_value = reset_section["config"][sub_key]
-    #     assert reset_value == old_value and reset_value != new_value
+        update_value = not old_value
+
+        new_section_args = {GUI_NON_SUB_SECTION: update_value}
+        new_section = apiobj.update_section(
+            section=GUI_SECTION_WITH_SUBS, **new_section_args
+        )
+        new_value = new_section["config"][GUI_NON_SUB_SECTION]
+        assert new_value == update_value and old_value != new_value
+
+        reset_section_args = {GUI_NON_SUB_SECTION: old_value}
+        reset_section = apiobj.update_section(
+            section=GUI_SECTION_WITH_SUBS, **reset_section_args
+        )
+        reset_value = reset_section["config"][GUI_NON_SUB_SECTION]
+        assert reset_value == old_value and reset_value != new_value
+
+    def test_update_sub_section(self, apiobj):
+        """Pass."""
+        old_section = apiobj.get_sub_section(
+            section=GUI_SECTION_WITH_SUBS, sub_section=GUI_SUB_SECTION
+        )
+        sub_key = GUI_SUB_KEYS[0]
+        old_config = old_section["config"]
+        old_value = old_config[sub_key]
+        update_value = old_value + 1
+
+        new_section_args = {sub_key: update_value}
+        new_section = apiobj.update_sub_section(
+            section=GUI_SECTION_WITH_SUBS,
+            sub_section=GUI_SUB_SECTION,
+            **new_section_args
+        )
+        new_value = new_section["config"][sub_key]
+        assert new_value == update_value and old_value != new_value
+
+        reset_section_args = {sub_key: old_value}
+        reset_section = apiobj.update_sub_section(
+            section=GUI_SECTION_WITH_SUBS,
+            sub_section=GUI_SUB_SECTION,
+            **reset_section_args
+        )
+        reset_value = reset_section["config"][sub_key]
+        assert reset_value == old_value and reset_value != new_value
 
 
 class TestSettingsCore(SettingsBasePublic):
