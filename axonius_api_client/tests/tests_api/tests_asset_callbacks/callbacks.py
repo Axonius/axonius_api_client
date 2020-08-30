@@ -207,40 +207,40 @@ class Callbacks:
         cbobj.echo_page_progress()
         log_check(caplog=caplog, entries=log_entries, exists=False)
 
-    # def test_do_add_null_values_true(self, cbexport, apiobj):
-    #     """Pass."""
-    #     original_row = copy.deepcopy(apiobj.TEST_DATA["cb_assets"][0])
-    #     picks = [x for x in original_row if x.startswith("specific_data.data.")][-1]
-    #     original_row.pop(picks)
-    #     test_row = copy.deepcopy(original_row)
-    #
-    #     field_complex = apiobj.TEST_DATA["field_complex"]
-    #
-    #     schema = apiobj.fields.get_field_schema(
-    #         value=field_complex,
-    #         schemas=apiobj.TEST_DATA["fields_map"][AGG_ADAPTER_NAME],
-    #     )
-    #
-    #     getargs = {"field_null": True}
-    #     cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs=getargs)
-    #
-    #     for cb_schema in cbobj.schemas_selected:
-    #         cbobj.do_add_null_values(row=test_row, schema=cb_schema)
-    #
-    #     assert original_row != test_row
-    #
-    #     for schema in cbobj.schemas_selected:
-    #         if schema["name_qual"] in cbobj.GETARGS.get("field_excludes", []):
-    #             continue
-    #         assert schema["name_qual"] in test_row
-    #
-    #     if apiobj.TEST_DATA["has_complex"]:
-    #         for sub_field in schema["sub_fields"]:
-    #             for sub_value in test_row[field_complex]:
-    #                 if sub_field["is_root"]:
-    #                     assert sub_field["name"] in sub_value
-    #                 else:
-    #                     assert sub_field["name"] not in sub_value
+    def test_do_add_null_values_true(self, cbexport, apiobj):
+        """Pass."""
+        original_row = copy.deepcopy(apiobj.TEST_DATA["cb_assets"][0])
+        picks = [x for x in original_row if x.startswith("specific_data.data.")][-1]
+        original_row.pop(picks)
+        test_row = copy.deepcopy(original_row)
+
+        field_complex = apiobj.TEST_DATA["field_complex"]
+
+        schema = apiobj.fields.get_field_schema(
+            value=field_complex,
+            schemas=apiobj.TEST_DATA["fields_map"][AGG_ADAPTER_NAME],
+        )
+
+        getargs = {"field_null": True}
+        cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs=getargs)
+
+        for cb_schema in cbobj.schemas_selected:
+            cbobj.do_add_null_values(row=test_row, schema=cb_schema)
+
+        assert original_row != test_row
+
+        for schema in cbobj.schemas_selected:
+            if schema["name_qual"] in cbobj.GETARGS.get("field_excludes", []):
+                continue
+            assert schema["name_qual"] in test_row
+
+        if apiobj.TEST_DATA["has_complex"]:
+            for sub_field in schema["sub_fields"]:
+                for sub_value in test_row[field_complex]:
+                    if sub_field["is_root"]:
+                        assert sub_field["name"] in sub_value
+                    else:
+                        assert sub_field["name"] not in sub_value
 
     def test_do_add_null_values_false(self, cbexport, apiobj):
         """Pass."""
