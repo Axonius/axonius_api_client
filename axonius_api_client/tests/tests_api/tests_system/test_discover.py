@@ -7,9 +7,9 @@ class SystemDiscoverBase:
     """Pass."""
 
     @pytest.fixture(scope="class")
-    def apiobj(self, api_system):
+    def apiobj(self, api_dashboard):
         """Pass."""
-        return api_system.discover
+        return api_dashboard
 
 
 class TestSystemDiscoverPrivate(SystemDiscoverBase):

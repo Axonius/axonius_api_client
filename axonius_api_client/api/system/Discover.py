@@ -2,9 +2,9 @@
 """API model for working with system configuration."""
 import math
 
+from ..routers import Router, API_VERSION
 from ...tools import dt_now, dt_parse, timedelta
 from ..mixins import ModelMixins
-from ..routers import API_VERSION, Router
 
 
 class Discover(ModelMixins):

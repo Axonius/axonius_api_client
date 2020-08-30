@@ -9,13 +9,27 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 from ..api.assets.asset_mixin import AssetMixin
 from ..constants import ALL_NAME, LOG_LEVEL_WIZARD
 from ..data_classes.fields import CUSTOM_FIELDS_MAP, Operator, OperatorTypeMaps
-from ..data_classes.wizard import (ExprKeyDefaults, ExprKeys, ExprTypes,
-                                   GuiExpr, Templates)
+from ..data_classes.wizard import (
+    ExprKeyDefaults,
+    ExprKeys,
+    ExprTypes,
+    GuiExpr,
+    Templates,
+)
 from ..exceptions import WizardError
 from ..logs import get_obj_log
-from ..tools import (check_empty, check_type, coerce_bool, coerce_int_float,
-                     coerce_str_to_csv, dt_parse_tmpl, get_raw_version,
-                     json_dump, parse_ip_address, parse_ip_network)
+from ..tools import (
+    check_empty,
+    check_type,
+    coerce_bool,
+    coerce_int_float,
+    coerce_str_to_csv,
+    dt_parse_tmpl,
+    get_raw_version,
+    json_dump,
+    parse_ip_address,
+    parse_ip_network,
+)
 from .wizard_text import WizardText
 
 SRC: str = "list of dictionaries"

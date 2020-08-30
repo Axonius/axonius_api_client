@@ -7,7 +7,12 @@ from ..mixins import ModelMixins
 from ..routers import API_VERSION, Router
 
 
-class Discover(ModelMixins):
+class Dashboard(ModelMixins):
+    def _init(self, **kwargs):
+        """Post init method for subclasses to use for extra setup."""
+        super(Dashboard, self)._init(**kwargs)
+
+    @property
     def router(self) -> Router:
         """Router for this API model.
 
@@ -15,6 +20,10 @@ class Discover(ModelMixins):
             :obj:`.routers.Router`: REST API route defs
         """
         return API_VERSION.dashboard
+
+    @property
+    def system_router(self) -> Router:
+        return API_VERSION.system
 
     """Child API model for working with discovery cycles."""
 
@@ -61,12 +70,12 @@ class Discover(ModelMixins):
         Returns:
             :obj:`dict`: discovery cycle metadata
         """
-        path = self.router.discover_lifecycle
+        path = self.router.lifecycle
         return self.request(method="get", path=path)
 
     def _start(self) -> str:
         """Direct API method to start a discovery cycle."""
-        path = self.router.discover_start
+        path = self.system_router.discover_start
         return self.request(method="post", path=path)
 
     def _stop(self) -> str:
@@ -75,7 +84,7 @@ class Discover(ModelMixins):
         Returns:
             :obj:`dict`: discovery cycle metadata
         """
-        path = self.router.discover_stop
+        path = self.system_router.discover_stop
         return self.request(method="post", path=path)
 
 

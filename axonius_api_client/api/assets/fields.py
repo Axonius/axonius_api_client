@@ -82,7 +82,7 @@ class Fields(ChildMixins):
     def get_field_schema(self, value: str, schemas: List[dict], **kwargs) -> dict:
         """Find a schema for a field by name."""
         keys = kwargs.get("keys", GET_SCHEMA_KEYS)
-        search = value.lower().strip()
+        search = value.lower().strip() if value else ""
 
         schemas = [x for x in schemas if x.get("selectable", True)]
 

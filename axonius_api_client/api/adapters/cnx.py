@@ -514,8 +514,7 @@ class Cnx(ChildMixins):
         data["instanceName"] = adapter_node_id
         data["oldInstanceName"] = adapter_node_id
 
-        path = self.parent.router.cnxs.format(adapter_name_raw=adapter_name_raw)
-
+        path = self.parent.router.cnxs_test.format(adapter_name_raw=adapter_name_raw)
         return self.parent.request(method="post", path=path, json=data, raw=True)
 
     def _delete(
@@ -585,7 +584,7 @@ class Cnx(ChildMixins):
             adapter_name_raw=adapter_name_raw, cnx_uuid=cnx_uuid
         )
         return self.parent.request(
-            method="put",
+            method="post",
             path=path,
             json=data,
             error_json_bad_status=False,

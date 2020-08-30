@@ -5,7 +5,7 @@ import os
 import dotenv
 import pytest
 
-from axonius_api_client.api import enforcements, system
+from axonius_api_client.api import dashboard, enforcements, instances, system
 from axonius_api_client.api.adapters import Adapters
 from axonius_api_client.api.adapters.cnx import Cnx
 from axonius_api_client.api.assets import Devices, Users, fields, labels, saved_query
@@ -110,7 +110,6 @@ def api_users(request):
 
     field_complex = "specific_data.data.associated_devices"
     cb_assets_query = QUERIES["exist_complex"].format(f=field_complex)
-
     obj.TEST_DATA = getattr(obj, "TEST_DATA", {})
     obj.TEST_DATA["field_complex"] = field_complex
     obj.TEST_DATA["field_simple"] = "specific_data.data.user_sid"
@@ -151,6 +150,24 @@ def api_adapters(request):
 
 
 @pytest.fixture(scope="session")
+def api_dashboard(request):
+    """Pass."""
+    auth = get_auth(request)
+    obj = dashboard.Dashboard(auth=auth)
+    check_apiobj(authobj=auth, apiobj=obj)
+    return obj
+
+
+@pytest.fixture(scope="session")
+def api_instances(request):
+    """Pass."""
+    auth = get_auth(request)
+    obj = instances.Instances(auth=auth)
+    check_apiobj(authobj=auth, apiobj=obj)
+    return obj
+
+
+@pytest.fixture(scope="session")
 def api_system(request):
     """Pass."""
     auth = get_auth(request)
@@ -158,12 +175,10 @@ def api_system(request):
     check_apiobj(authobj=auth, apiobj=obj)
     check_apiobj_children(
         apiobj=obj,
-        nodes=system.nodes.Nodes,
         settings_core=system.settings.SettingsCore,
         settings_gui=system.settings.SettingsGui,
         settings_lifecycle=system.settings.SettingsLifecycle,
         meta=system.meta.Meta,
-        discover=system.discover.Discover,
         users=system.users.Users,
         roles=system.roles.Roles,
     )

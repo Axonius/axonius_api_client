@@ -26,6 +26,9 @@ class TestRunActionPrivate(TestRunActionBase):
 
     def test_private_get(self, apiobj):
         """Pass."""
+        import pdb
+
+        pdb.set_trace()
         data = apiobj._get()
         for i in ["deploy", "shell", "upload_file"]:
             assert i in data

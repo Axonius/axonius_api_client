@@ -7,8 +7,8 @@ from . import cmd_get
 
 
 @click.group(cls=AliasedGroup)
-def nodes():
-    """Group: Manage Nodes (Instances)."""
+def instances():
+    """Group: Manage Instances."""
 
 
-nodes.add_command(cmd_get.cmd)
+instances.add_command(cmd_get.cmd)

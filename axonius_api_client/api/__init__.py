@@ -5,7 +5,7 @@ from .adapters import Adapters
 from .assets import Devices, Users
 from .enforcements import Enforcements, RunAction
 from .entry import Entry
-from .system import System
+from .system import Dashboard, Instances, System, dashboard, instances
 
 __all__ = (
     "Users",
@@ -14,6 +14,8 @@ __all__ = (
     "Enforcements",
     "RunAction",
     "System",
+    "Instances",
+    "Dashboard",
     "Entry",
     "routers",
     "assets",
@@ -23,4 +25,6 @@ __all__ = (
     "system",
     "parsers",
     "entry",
+    "instances",
+    "dashboard",
 )

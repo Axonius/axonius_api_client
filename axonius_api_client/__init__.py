@@ -12,7 +12,7 @@ from . import (
     tools,
     version,
 )
-from .api import Adapters, Devices, Enforcements, System, Users
+from .api import Adapters, Devices, Enforcements, Instances, System, Users
 from .auth import ApiKey
 from .connect import Connect
 from .http import Http
@@ -33,6 +33,7 @@ __all__ = (
     "Adapters",
     "Enforcements",
     "System",
+    "Instances",
     # modules
     "api",
     "auth",

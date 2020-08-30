@@ -117,7 +117,7 @@ class TestCnxPublic(TestCnxBase):
         """Pass."""
         with pytest.raises(ConfigRequired):
             apiobj.cnx.test(
-                adapter_name="tanium", adapter_node=DEFAULT_NODE, username="x",
+                adapter_name="tanium", adapter_node=DEFAULT_NODE, username="x"
             )
 
     def test_update_cnx_nochange(self, apiobj):

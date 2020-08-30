@@ -11,7 +11,7 @@ from .api.adapters import Adapters
 from .api.assets import Devices, Users
 from .api.enforcements import Enforcements
 from .api.enforcements.actions import RunAction
-from .api.system import System
+from .api.system import Dashboard, Instances, System
 from .auth import ApiKey
 from .constants import (
     LOG_FILE_MAX_FILES,
@@ -314,6 +314,30 @@ class Connect:
         if not hasattr(self, "_adapters"):
             self._adapters = Adapters(**self._api_args)
         return self._adapters
+
+    @property
+    def instances(self) -> Adapters:
+        """Get the object for adapters API.
+
+        Returns:
+            :obj:`axonius_api_client.adapters.Adapters`
+        """
+        self.start()
+        if not hasattr(self, "_instances"):
+            self._instances = Instances(**self._api_args)
+        return self._instances
+
+    @property
+    def dashboard(self) -> Adapters:
+        """Get the object for adapters API.
+
+        Returns:
+            :obj:`axonius_api_client.adapters.Adapters`
+        """
+        self.start()
+        if not hasattr(self, "_dashboard"):
+            self._dashboard = Dashboard(**self._api_args)
+        return self._dashboard
 
     @property
     def enforcements(self) -> Enforcements:

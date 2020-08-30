@@ -199,7 +199,7 @@ class SavedQuery(ChildMixins, PagingMixinsObject):
             :obj:`str`: ID of the saved query that was created
         """
         path = self.router.views
-        return self.request(method="post", path=path, json=data)
+        return self.request(method="put", path=path, json=data)
 
     def _delete(self, ids: List[str]) -> str:
         """Direct API method to delete saved queries.
@@ -211,7 +211,7 @@ class SavedQuery(ChildMixins, PagingMixinsObject):
             :obj:`str`: empty string
         """
         data = {"ids": listify(ids)}
-        path = self.router.views
+        path = f"{self.router.views}/saved"
         return self.request(method="delete", path=path, json=data)
 
     def _get(
@@ -233,5 +233,5 @@ class SavedQuery(ChildMixins, PagingMixinsObject):
         params["limit"] = page_size
         params["skip"] = row_start
         params["filter"] = query
-        path = self.router.views
+        path = f"{self.router.views}/saved"
         return self.request(method="get", path=path, params=params)
