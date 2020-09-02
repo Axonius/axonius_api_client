@@ -8,9 +8,11 @@ from ..constants import LOG_LEVEL_WIZARD
 from ..data_classes.wizard import ExprKeys, TextTypes
 from ..exceptions import WizardError
 from ..logs import get_obj_log
-from ..tools import check_empty, check_type, json_dump, path_read
+from ..tools import check_empty, check_type, join_kv, path_read
 
-SRC: str = "text string"
+
+def kv_dump(obj):
+    return "\n  ".join(join_kv(obj))
 
 
 class WizardText:
@@ -26,16 +28,15 @@ class WizardText:
         self._expr_bracket: dict = {}
         self._expr_complex: dict = {}
         self.exprs: List[dict] = []
-        self.source: str = SRC
         self._log_exprs: bool = log_exprs
+        self._expr_log = self.LOG.debug if log_exprs else lambda x: x
 
-    def from_text(self, content: str, source: str = SRC):
+    def from_text(self, content: str, source: str = "text string"):
         check_type(value=content, exp=str, name="content")
         check_empty(value=content, name="content")
         self._expr_bracket: dict = {}
         self._expr_complex: dict = {}
         self.exprs: List[dict] = []
-        self.source: str = source
 
         lines: List[str] = content.splitlines()
 
@@ -43,30 +44,21 @@ class WizardText:
 
         for idx, line in enumerate(lines):
             line_num = idx + 1
-            current = f"line #{line_num}: '{line}'"
+            src = f"from {source} line #{line_num}: {line!r}"
             try:
                 expr = self._parse_line(line=line)
-                self.LOG.debug(f"Parsed {current}")
-
-                if self._log_exprs:
-                    self.LOG.debug(f"Split {current} into expr:\n{json_dump(expr)}")
+                self._expr_log(f"Split line into expr {src}\n{kv_dump(expr)}")
 
                 if not expr:
                     continue
 
                 expr[ExprKeys.IDX] = idx
-                expr[ExprKeys.SRC] = {
-                    ExprKeys.SRC_LINE: line,
-                    ExprKeys.SRC_LINE_NUM: line_num,
-                }
+                expr[ExprKeys.SRC] = src
                 self._parse_expr(expr=expr)
-                if self._log_exprs:
-                    self.LOG.debug(f"Parsed {current} into expr: {json_dump(expr)}")
+                self._expr_log(f"Parsed expr {src}\n{kv_dump(expr)}")
 
             except Exception as exc:
-                raise WizardError(
-                    f"Error while parsing expression from {source}: {exc}:\n{current}"
-                )
+                raise WizardError(f"Error parsing {src}\n{exc}")
 
         if not self.exprs:
             raise WizardError(
@@ -78,7 +70,7 @@ class WizardText:
 
     def from_path(self, path):
         path, content = path_read(obj=path)
-        return self.from_text(content=content, source=f"{path}")
+        return self.from_text(content=content, source=f"text file {path}")
 
     def _parse_line(self, line: str) -> dict:
         """Parse key-value pairs from a shell-like text."""
@@ -124,11 +116,10 @@ class WizardText:
         getattr(self, f"_handle_{expr_type}")(expr=expr)
 
     def _handle_simple(self, expr: dict):
+        self._check_req(expr=expr, req=ExprKeys.FIELD)
         if self._expr_complex:
-            self._check_req(expr=expr, req=ExprKeys.SUB)
             self._expr_complex[ExprKeys.SUBS].append(expr)
         else:
-            self._check_req(expr=expr, req=ExprKeys.FIELD)
             if self._expr_bracket:
                 expr[ExprKeys.TYPE] = TextTypes.simple.name_expr
                 self._expr_bracket[ExprKeys.SUBS].append(expr)

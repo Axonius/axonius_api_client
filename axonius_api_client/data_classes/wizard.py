@@ -13,16 +13,19 @@ class Templates(BaseData):
     NOT: str = "not"
     AND: str = "and"
     OR: str = "or"
-    # BRACKET: str = "({sub_aqls})"
-    COMPLEX: str = "({field} == match([{sub_aqls}]))"
+    OR_IDX0: str = ""
+    LEFT_BRACKET: str = "({aql}"
+    RIGHT_BRACKET: str = "{aql})"
+    NOT_PRE: str = f"{NOT} {{aql}}"
+    OR_PRE: str = f"{OR} {{aql}}"
+    AND_PRE: str = f"{AND} {{aql}}"
+    COMPLEX: str = "({field} == match([{aqls}]))"
 
 
 class ExprKeys:
     TYPE: str = "type"
     SUBS: str = "subs"
     SRC: str = "source"
-    SRC_LINE_NUM: str = "line_number"
-    SRC_LINE: str = "line"
     IDX: str = "_idx"
     OP: str = "operator"
     SUBS: str = "subs"
@@ -31,7 +34,6 @@ class ExprKeys:
     EVALUE: str = "expr_value"
     AQL: str = "aql"
     VALUE: str = "value"
-    SUB: str = "sub_field"
     EXPRS: str = "exprs"
     OR: str = "or"
     NOT: str = "not"
@@ -68,12 +70,25 @@ class ExprTypes(BaseData):
     COMPLEX: str = "complex"
     BRACKET: str = "bracket"
 
+    @classmethod
+    def get_all_types(cls) -> List[str]:
+        return cls.get_values()
+
+    @classmethod
+    def get_bracket_types(cls) -> List[str]:
+        return [cls.COMPLEX, cls.SIMPLE]
+
+    @classmethod
+    def get_default_type(cls) -> str:
+        return cls.SIMPLE
+
 
 class ExprKeyDefaults:
     OP_VALUE: str = OperatorNameMaps.equals.name
     OP_NO_VALUE: str = OperatorNameMaps.exists.name
     OR: bool = False
     NOT: bool = False
+    TYPE: str = ExprTypes.SIMPLE
 
 
 @dataclasses.dataclass
@@ -102,18 +117,18 @@ class GuiExpr:
         aql: str,
         field: str,
         field_type: str,
-        op_comp: str,  # One of: value of data_classes.fields.OperatorNames
-        value: Optional[Union[str, int]] = None,
+        op_comp: str,
+        not_flag: bool,
+        or_flag: bool,
+        idx: int,
+        value: Optional[Union[str, int]],
         children: Optional[List[dict]] = None,
         filter_adapters: Optional[dict] = None,
         bracket_weight: int = 0,
         bracket_left: bool = False,
         bracket_right: bool = False,
-        op_logic: str = "",  # One of: "", "and", "or"
-        not_flag: bool = False,
     ) -> dict:
         children = children or [cls.get_child()]
-        cls.set_idx(exprs=children)
         expr = {}
         expr[ExprGuiKeys.BRACKET_WEIGHT] = bracket_weight
         expr[ExprGuiKeys.CHILDREN] = children
@@ -123,7 +138,7 @@ class GuiExpr:
         expr[ExprGuiKeys.FILTER] = aql
         expr[ExprGuiKeys.FILTER_ADAPTERS] = filter_adapters
         expr[ExprGuiKeys.BRACKET_LEFT] = bracket_left
-        expr[ExprGuiKeys.OP_LOGIC] = op_logic
+        expr[ExprGuiKeys.OP_LOGIC] = cls.get_op_logic(or_flag=or_flag, idx=idx)
         expr[ExprGuiKeys.NOT] = not_flag
         expr[ExprGuiKeys.BRACKET_RIGHT] = bracket_right
         expr[ExprGuiKeys.VALUE] = value
@@ -145,7 +160,7 @@ class GuiExpr:
         field: str = "",
         filter_adapters: Optional[dict] = None,
         value: Optional[Union[int, str]] = None,
-        **kwargs,
+        idx: int = 0,
     ) -> dict:
         expr = {}
         expr[ExprGuiKeys.CONDITION] = aql
@@ -154,17 +169,44 @@ class GuiExpr:
         expr[ExprGuiKeys.EXPR][ExprGuiKeys.FIELD] = field
         expr[ExprGuiKeys.EXPR][ExprGuiKeys.FILTER_ADAPTERS] = filter_adapters
         expr[ExprGuiKeys.EXPR][ExprGuiKeys.VALUE] = value
-        expr[ExprGuiKeys.IDX] = 0
+        expr[ExprGuiKeys.IDX] = idx
         return expr
 
-    @classmethod
-    def set_idx(cls, exprs: List[dict], first: bool = True):
-        idx = 0
-        for expr in exprs:
-            if not first and not idx:
-                expr.pop(ExprGuiKeys.IDX, None)
-                idx += 1
-                continue
+    @staticmethod
+    def get_op_logic(or_flag: bool, idx: int) -> str:
+        if idx:
+            if or_flag:
+                value = Templates.OR
+            else:
+                value = Templates.AND
+        else:
+            value = Templates.OR_IDX0
+        return value
 
-            expr[ExprGuiKeys.IDX] = idx
-            idx += 1
+    @staticmethod
+    def aql_add_logic(
+        aql: str,
+        or_flag: bool,
+        not_flag: bool,
+        idx: int,
+        bracket: Optional[dict] = None,
+    ) -> str:
+        if aql:
+            bracket = bracket or {}
+
+            if bracket.get(ExprKeys.BRACKET_LEFT):
+                aql = Templates.LEFT_BRACKET.format(aql=aql)
+
+            if bracket.get(ExprKeys.BRACKET_RIGHT):
+                aql = Templates.RIGHT_BRACKET.format(aql=aql)
+
+            if not_flag:
+                aql = Templates.NOT_PRE.format(aql=aql)
+
+            if idx:
+                if or_flag:
+                    aql = Templates.OR_PRE.format(aql=aql)
+                else:
+                    aql = Templates.AND_PRE.format(aql=aql)
+
+        return aql

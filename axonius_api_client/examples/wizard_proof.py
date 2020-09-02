@@ -39,32 +39,14 @@ if __name__ == "__main__":
 
 
 content = """
-
-field=last_seen, operator=last_hours, or=y, not=y, value=24
-field=last_seen, operator=last_hours, or=y, not=n, value=24
-
-type=start_bracket
-    field=last_seen, operator=last_hours, not=n, value=24
-    field=last_seen, operator=last_hours, or=y, not=y, value=24
-    type = START_COMPLEX, or=y, not=y, field=agg:installed_software
-        sub_field=name, operator=equals, value="Google Chrome"
-        sub_field=version, operator=earlier_than, value=99
-    type=stop_complex
-type=stop_bracket
-
-type = START_COMPLEX, not=y, field=agg:installed_software
-    sub_field=name, operator=equals, value="Google Chrome"
-    sub_field=version, operator=earlier_than, value=99
-type=stop_complex
+type=simple, field=last_seen, operator=last_hours, or=y, not=y, value=24
+type=simple, field=last_seen, operator=last_hours, or=y, not=n, value=24
+type=simple, field=last_seen, operator=last_hours, not=n, value=24
+type=simple, field=last_seen, operator=last_hours, or=y, not=y, value=24
+type=complex, or=y, not=y, field=agg:installed_software, left_bracket=y
+type=complex_sub, field=name, operator=equals, value="Google Chrome"
+type=complex_sub, field=version, operator=earlier_than, value=99
 """
-content = """
-type=start_bracket
-    field=last_seen, operator=last_hours, not=n, value=24
-type=stop_bracket
-"""
-# SQ -> DICT -> TEXT
-# RE-TEST WizardText
-# Test Wizard
 wizard = Wizard(apiobj=devices, log_level="debug")
 aql, exprs = wizard.parse_text_str(content=content)
 a = devices.saved_query.add(
