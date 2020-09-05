@@ -248,8 +248,8 @@ NORM_TYPE_MAP: Tuple[Tuple[str, str, str, str], str] = (
 )
 
 
-GET_SCHEMAS_KEYS: List[str] = ["name", "name_qual", "name_base"]
-GET_SCHEMA_KEYS: List[str] = ["name_base", "name_qual", "name"]
+GET_SCHEMAS_KEYS: List[str] = ["name", "name_qual", "name_base", "title"]
+GET_SCHEMA_KEYS: List[str] = ["name_base", "name_qual", "name", "title"]
 
 SCHEMAS_CUSTOM: Dict[str, dict] = {
     "report_adapters_missing": {

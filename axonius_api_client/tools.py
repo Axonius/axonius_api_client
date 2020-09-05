@@ -778,6 +778,7 @@ def check_empty(value, name=""):
 
 
 def get_raw_version(value):
+    check_type(value=value, exp=str)
     converted = "0"
     version = value
     if ":" in value:
