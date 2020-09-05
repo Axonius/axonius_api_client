@@ -24,7 +24,8 @@ def _field_wanted(field):
     is_root = field.get("is_root")
     is_selectable = field.get("selectable")
     is_all = field["name_base"] == ALL_NAME
-    return name and is_root and is_selectable and not is_all
+    is_complex = field.get("is_complex")
+    return name and is_root and is_selectable and not is_all and not is_complex
 
 
 def calc_row_size(self, row):
@@ -104,21 +105,24 @@ if __name__ == "__main__":
 
     agg_fields = devices.fields.get().get("agg")
     get_fields = [field.get("name_qual") for field in agg_fields if _field_wanted(field)]
-    get_fields.extend(["specific_data", "specific_data.data.network_interfaces.ips"])
+    get_fields.extend(
+        ["specific_data", "specific_data.data.network_interfaces.ips", "agent_versions"]
+    )
 
     start_all = datetime.now()
-    count = devices.count(query=query)
-    print(f"About to fetch {count} assets with page size {PAGE_SIZE}")
-    time.sleep(3)
+    # count = devices.count(query=query)
+    # print(f"About to fetch {count} assets with page size {PAGE_SIZE}")
+    # time.sleep(3)
 
     assets = devices.get(
         query=query,
         fields=get_fields,
         fields_default=False,
-        page_size=PAGE_SIZE,
-        custom_cbs=[calc_row_size],
-        page_progress=None,
+        max_rows=1,
+        # page_size=PAGE_SIZE,
+        # custom_cbs=[calc_row_size],
+        # page_progress=None,
         do_echo=True,
-        # include_details=True,
+        include_details=True,
         # might be better than specific_data!?
     )

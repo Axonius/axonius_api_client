@@ -3,12 +3,8 @@
 import re
 from typing import List, Optional, Tuple, Union
 
-from ...constants import (
-    AGG_ADAPTER_ALTS,
-    AGG_ADAPTER_NAME,
-    GET_SCHEMA_KEYS,
-    GET_SCHEMAS_KEYS,
-)
+from ...constants import (AGG_ADAPTER_ALTS, AGG_ADAPTER_NAME, GET_SCHEMA_KEYS,
+                          GET_SCHEMAS_KEYS)
 from ...exceptions import ApiError, NotFoundError
 from ...tools import listify, split_str, strip_right
 from ..mixins import ChildMixins
@@ -88,7 +84,7 @@ class Fields(ChildMixins):
 
         for schema in schemas:
             for key in keys:
-                if search == schema[key].lower():
+                if search.lower().strip() == schema[key].lower():
                     return schema
 
         msg = "No field found where any of {} equals {!r}, valid fields: \n{}"

@@ -1,197 +1,187 @@
 # -*- coding: utf-8 -*-
 """Python API Client for Axonius."""
-import logging
+import re
 import shlex
 from typing import List, Union
 
-from ..constants import LOG_LEVEL_WIZARD
-from ..data_classes.wizard import ExprKeys, TextTypes
+from ..data_classes.wizard import EntryKeys, EntryType, EntryTypes
 from ..exceptions import WizardError
-from ..logs import get_obj_log
-from ..tools import check_empty, check_type, join_kv, path_read
+from ..tools import check_empty, check_type, path_read
+from .wizard import Wizard, kv_dump
 
 
-def kv_dump(obj):
-    return "\n  ".join(join_kv(obj))
-
-
-class WizardText:
+# WizardCli
+# WizardCsv
+class WizardText(Wizard):
     ITEM_SEP: str = ","
     VALUE_SEP: str = "="
-    WORDCHARS: str = f"{VALUE_SEP}: "
-    DEFAULT_TYPE: str = TextTypes.simple.name_text
+    WORDCHARS: str = f"{VALUE_SEP}.: "
 
-    def __init__(
-        self, log_exprs: bool = False, log_level: Union[str, int] = LOG_LEVEL_WIZARD
+    def parse(
+        self, content: str, source: str = "text string", sq_required: bool = False
     ):
-        self.LOG: logging.Logger = get_obj_log(obj=self, level=log_level)
-        self._expr_bracket: dict = {}
-        self._expr_complex: dict = {}
-        self.exprs: List[dict] = []
-        self._log_exprs: bool = log_exprs
-        self._expr_log = self.LOG.debug if log_exprs else lambda x: x
-
-    def from_text(self, content: str, source: str = "text string"):
         check_type(value=content, exp=str, name="content")
-        check_empty(value=content, name="content")
-        self._expr_bracket: dict = {}
-        self._expr_complex: dict = {}
-        self.exprs: List[dict] = []
+        self._pre_parse()
 
         lines: List[str] = content.splitlines()
-
         self.LOG.info(f"Parsing {len(lines)} lines from {source}")
 
+        entries = []
+
         for idx, line in enumerate(lines):
-            line_num = idx + 1
-            src = f"from {source} line #{line_num}: {line!r}"
+            src = f"from {source} line #{idx + 1}: {line!r}"
             try:
-                expr = self._parse_line(line=line)
-                self._expr_log(f"Split line into expr {src}\n{kv_dump(expr)}")
-
-                if not expr:
-                    continue
-
-                expr[ExprKeys.IDX] = idx
-                expr[ExprKeys.SRC] = src
-                self._parse_expr(expr=expr)
-                self._expr_log(f"Parsed expr {src}\n{kv_dump(expr)}")
-
+                entry = self._parse_line(line=line)
+                self.LOG.debug(f"Split line into entry {src}\n{kv_dump(entry)}")
             except Exception as exc:
-                raise WizardError(f"Error parsing {src}\n{exc}")
+                raise WizardError(f"Error splitting line into entry {src}\n{exc}")
 
-        if not self.exprs:
-            raise WizardError(
-                f"No expressions parsed from {source} with content:\n{content}"
-            )
-        self.LOG.info(f"Parsed {len(self.exprs)} expressions from {source}")
+            if entry:
+                entry["_source"] = src
+                entries.append(entry)
 
-        return self.exprs
+        for idx, entry in enumerate(entries):
+            src = entry.pop("_source")
+            try:
+                self._parse_entry(entry=entry, sq_required=sq_required)
+            except Exception as exc:
+                raise WizardError(f"Error parsing entry #{idx + 1} {src}\n{exc}")
 
-    def from_path(self, path):
-        path, content = path_read(obj=path)
-        return self.from_text(content=content, source=f"text file {path}")
+        return self._sqs_serialize
+
+    def parse_path(self, path):
+        path, content = path_read(path)
+        return self.parse(content=content, source=f"text file {path}")
+
+    @classmethod
+    def unparse(cls, entries: List[dict]):
+        check_type(value=entries, exp=list, name="entries", exp_items=dict)
+        check_empty(value=entries, name="entries")
+        return "\n".join([cls._entry_unparse(entry=entry) for entry in entries])
+
+    @classmethod
+    def get_examples(cls, include_help: bool = True) -> str:
+        lines = ["", "# EXAMPLES"]
+        lines += [
+            cls.get_example(x, include_help=include_help)
+            for x in EntryTypes.get_values()
+        ]
+        return "\n".join(lines)
+
+    @classmethod
+    def get_example(
+        cls, entry_type: Union[str, EntryType], include_help: bool = True
+    ) -> str:
+        entry_type = cls.get_entry_type(entry_type)
+
+        examples = []
+        helps = []
+
+        for key in entry_type.keys:
+            req = "REQUIRED" if key.required else "OPTIONAL"
+            ex_default = cls._value_unparse(key.default)
+
+            if key == EntryKeys.TYPE:
+                ex_default = entry_type.name
+                h_default = f", default: {key.default}"
+            elif key.default:
+                h_default = f", default: {ex_default}"
+            else:
+                h_default = ""
+
+            if isinstance(key.description, dict):
+                description = key.description[entry_type.name]
+            else:
+                description = key.description
+
+            if key.choices:
+                choices = ", valid choices: " + ", ".join([x for x in key.choices if x])
+            else:
+                choices = ""
+
+            examples.append(f"{key.name}{cls.VALUE_SEP}{ex_default}")
+            helps.append(f"# {key.name}: [{req}] {description}{h_default}{choices}")
+
+        example = f"{cls.ITEM_SEP} ".join(examples)
+        if include_help:
+            example = [
+                f"# --> {entry_type.name} example",
+                example,
+                "",
+                f"# --> {entry_type.name} help",
+                *helps,
+                "",
+            ]
+            example = "\n".join(example)
+        return example
+
+    @staticmethod
+    def _value_unparse(value: Union[str, int, bool]) -> str:
+        if value is None:
+            value = ""
+
+        if value is False:
+            value = "n"
+
+        if value is True:
+            value = "y"
+
+        if isinstance(value, list):
+            value = ", ".join([str(x) for x in value])
+
+        if isinstance(value, str) and re.search(r"[^a-zA-Z0-9_.: ]", value):
+            value = f'"{value}"'
+
+        if value == "":
+            value = '""'
+        return value
+
+    @classmethod
+    def _entry_unparse(cls, entry: dict) -> str:
+        check_type(value=entry, exp=dict, name="entry")
+        keys = EntryKeys.get_values()
+        words = []
+        for key in keys:
+            if key.name not in entry:
+                continue
+            value = cls._value_unparse(value=entry[key.name])
+            words.append(f"{key.name}{cls.VALUE_SEP}{value}")
+        return f"{cls.ITEM_SEP} ".join(words)
 
     def _parse_line(self, line: str) -> dict:
-        """Parse key-value pairs from a shell-like text."""
+        """Parse key-value pairs from a shell-like text line."""
+        check_type(value=line, exp=str, name="line")
         line = line.strip()
-        expr = {}
+        entry = {}
 
         if not line or line.startswith("#"):
-            self.LOG.debug("Skipping empty or comment line")
-            return expr
-
-        if self.VALUE_SEP not in line:
-            raise WizardError(f"Missing separator {self.VALUE_SEP!r}")
+            return entry
 
         lexer = shlex.shlex(line, posix=True)
         lexer.whitespace = self.ITEM_SEP
         lexer.wordchars += self.WORDCHARS
 
         for word in lexer:
-            value = word.split(self.VALUE_SEP, maxsplit=1)
-            key = value.pop(0).strip().lower()
+            self._parse_word(entry=entry, word=word)
 
-            value = value.pop().lstrip()
+        return entry
 
-            if not value.strip():
-                self.LOG.debug(f"Empty value {value!r} in word {word!r}")
-                continue
-
-            if not key:
-                self.LOG.debug(f"Empty key {key!r} in word {word!r}")
-                continue
-
-            expr[key] = value
-
-        return expr
-
-    def _parse_expr(self, expr: dict):
-        expr_type = expr.pop(ExprKeys.TYPE, self.DEFAULT_TYPE).strip().lower()
-        expr_types = [x.name_text for x in TextTypes.get_values()]
-        if expr_type not in expr_types:
-            valid = "\n - " + "\n - ".join(expr_types)
-            raise WizardError(f"Invalid type {expr_type!r}, valids:{valid}")
-
-        getattr(self, f"_handle_{expr_type}")(expr=expr)
-
-    def _handle_simple(self, expr: dict):
-        self._check_req(expr=expr, req=ExprKeys.FIELD)
-        if self._expr_complex:
-            self._expr_complex[ExprKeys.SUBS].append(expr)
-        else:
-            if self._expr_bracket:
-                expr[ExprKeys.TYPE] = TextTypes.simple.name_expr
-                self._expr_bracket[ExprKeys.SUBS].append(expr)
-            else:
-                expr[ExprKeys.TYPE] = TextTypes.simple.name_expr
-                self.exprs.append(expr)
-
-    def _handle_start_complex(self, expr: dict):
-        self._check_start(
-            expr=expr,
-            attr="_expr_complex",
-            type1=TextTypes.start_complex.name_expr,
-            type2=TextTypes.start_complex.name_expr,
-        )
-        self._check_req(expr=expr, req=ExprKeys.FIELD)
-
-        expr[ExprKeys.SUBS] = []
-        expr[ExprKeys.TYPE] = TextTypes.start_complex.name_expr
-        self._expr_complex = expr
-
-        if self._expr_bracket:
-            self._expr_bracket[ExprKeys.SUBS].append(expr)
-        else:
-            self.exprs.append(expr)
-
-    def _handle_start_bracket(self, expr: dict):
-        self._check_start(
-            expr=expr,
-            attr="_expr_bracket",
-            type1=TextTypes.start_bracket.name_expr,
-            type2=TextTypes.start_bracket.name_expr,
-        )
-        self._check_start(
-            expr=expr,
-            attr="_expr_complex",
-            type1=TextTypes.start_bracket.name_expr,
-            type2=TextTypes.start_complex.name_expr,
-        )
-        expr[ExprKeys.TYPE] = TextTypes.start_bracket.name_expr
-        expr[ExprKeys.SUBS] = []
-        self._expr_bracket = expr
-        self.exprs.append(expr)
-
-    def _handle_stop_complex(self, expr: dict):
-        self._check_stop(
-            expr=expr, attr="_expr_complex", type1=TextTypes.start_complex.name_expr
-        )
-
-    def _handle_stop_bracket(self, expr: dict):
-        self._check_stop(
-            expr=expr, attr="_expr_bracket", type1=TextTypes.start_bracket.name_expr
-        )
-
-    def _check_start(self, expr: dict, attr: str, type1: str, type2: str):
-        attr_value = getattr(self, attr, {})
-        if attr_value:
-            type1 = f"{type1} section"
-            type2 = f"{type2} section"
-            idx = attr_value[ExprKeys.IDX] + 1
+    def _parse_word(self, entry: dict, word: str) -> dict:
+        sep = self.VALUE_SEP
+        if sep not in word:
             raise WizardError(
-                f"Can not start a {type1} when in a {type2} started on line #{idx}"
+                "Missing double quotes around value???"
+                f" No separator {sep!r} in word {word!r}"
             )
 
-    def _check_stop(self, expr: dict, attr: str, type1: str):
-        attr_value = getattr(self, attr, {})
-        if not attr_value:
-            type1 = f"{type1} section"
-            raise WizardError(
-                f"Can not stop a {type1} when a {type1} has not been started"
-            )
-        setattr(self, attr, {})
+        word_key, word_value = word.split(self.VALUE_SEP, maxsplit=1)
+        word_key = word_key.strip().lower()
+        word_value = word_value.lstrip()
 
-    def _check_req(self, expr: dict, req: str):
-        if not expr.get(req):
-            raise WizardError(f"Missing required key {req!r}")
+        if not word_key:
+            raise WizardError(f"Empty key {word_key!r} in word {word!r}")
+
+        if word_key in entry:
+            raise WizardError(f"Duplicate key {word_key!r} found")
+
+        entry[word_key] = word_value
