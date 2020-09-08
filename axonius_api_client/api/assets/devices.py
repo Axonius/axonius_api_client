@@ -10,20 +10,35 @@ from .asset_mixin import AssetMixin
 class Devices(AssetMixin):
     """Device related API methods."""
 
+    FIELD_ASSET_NAME: str = "specific_data.data.name"
     FIELD_HOSTNAME: str = "specific_data.data.hostname"
     FIELD_IP: str = "specific_data.data.network_interfaces.ips"
     FIELD_IP_RAW: str = "specific_data.data.network_interfaces.ips_raw"
     FIELD_MAC: str = "specific_data.data.network_interfaces.mac"
     FIELD_SUBNET: str = "specific_data.data.network_interfaces.subnets"
+    FIELD_OS_TYPE: str = "specific_data.data.os.type"
+
+    FIELDS_SPECIFIC: List[str] = [
+        FIELD_ASSET_NAME,
+        FIELD_HOSTNAME,
+        FIELD_IP,
+        FIELD_MAC,
+        FIELD_SUBNET,
+        FIELD_OS_TYPE,
+    ]
 
     @property
     def fields_default(self) -> List[str]:
         """Fields to use by default for getting assets."""
-        return self.FIELDS_API + [
+        return [
+            self.FIELD_ADAPTERS,
+            self.FIELD_ASSET_NAME,
             self.FIELD_HOSTNAME,
+            self.FIELD_LAST_SEEN,
             self.FIELD_IP,
             self.FIELD_MAC,
-            self.FIELD_SUBNET,
+            self.FIELD_OS_TYPE,
+            self.FIELD_TAGS,
         ]
 
     @property
