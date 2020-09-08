@@ -11,11 +11,28 @@ class Users(AssetMixin):
 
     FIELD_USERNAME: str = "specific_data.data.username"
     FIELD_MAIL: str = "specific_data.data.mail"
+    FIELD_DOMAIN: str = "specific_data.data.domain"
+    FIELD_IS_ADMIN: str = "specific_data.data.is_admin"
+
+    FIELDS_SPECIFIC: List[str] = [
+        FIELD_USERNAME,
+        FIELD_DOMAIN,
+        FIELD_MAIL,
+        FIELD_IS_ADMIN,
+    ]
 
     @property
     def fields_default(self) -> List[str]:
         """Fields to use by default for getting assets."""
-        return self.FIELDS_API + [self.FIELD_USERNAME, self.FIELD_MAIL]
+        return [
+            self.FIELD_ADAPTERS,
+            self.FIELD_USERNAME,
+            self.FIELD_DOMAIN,
+            self.FIELD_MAIL,
+            self.FIELD_IS_ADMIN,
+            self.FIELD_LAST_SEEN,
+            self.FIELD_TAGS,
+        ]
 
     @property
     def router(self) -> Router:

@@ -15,7 +15,7 @@ class SavedQuery(BaseData):
     tags: Optional[List[str]] = None
     description: Optional[str] = None
     fields_manual: Optional[List[str]] = None
-
+    _entries: [Optional[List[dict]]] = dataclasses.field(default_factory=list)
     # def to_dict(self) -> dict:
     #     value = dataclasses.asdict(self)
 
@@ -61,8 +61,8 @@ class Templates(BaseData):
     OP_LOGIC_AND: str = AND
     OP_LOGIC_OR: str = OR
     OP_LOGIC_IDX0: str = ""
-    LEFT_BRACKET: str = "({query}"
-    RIGHT_BRACKET: str = "{query})"
+    BRACKET_LEFT: str = "({query}"
+    BRACKET_RIGHT: str = "{query})"
     NOT_PRE: str = f"{NOT} {{query}}"
     OR_PRE: str = f"{OR} {{query}}"
     AND_PRE: str = f"{AND} {{query}}"
@@ -77,6 +77,7 @@ class EntryKey(BaseData):
     choices: Optional[List[str]] = None
     required: bool = False
     value_type: str = "str"
+    example: str = ""
 
 
 @dataclasses.dataclass
@@ -86,61 +87,110 @@ class EntryKeys(BaseData):
         default=TypeNames.SIMPLE,
         choices=TypeNames.get_values(),
         description="Type of entry",
+        example=f'"{TypeNames.SIMPLE}"',
     )
     SQ_NAME: EntryKey = EntryKey(
-        name="name", required=True, description="Name of Saved Query",
+        name="name",
+        required=True,
+        description="Name",
+        example='"All devices with old versions of Google Chrome"',
     )
     SQ_FIELDS: EntryKey = EntryKey(
         name="fields",
-        required=True,
-        description="List of fields to include in Saved Query",
+        description="Comma seperated list of fields",
         value_type="csv",
+        example='"hostname,aws:aws_device_type,os.type"',
+    )
+    SQ_FIELDS_DEFAULT: EntryKey = EntryKey(
+        name="fields_default",
+        description="Include the default fields defined in the API client",
+        default=True,
+        value_type="bool",
+        example='"y"',
     )
     SQ_TAGS: EntryKey = EntryKey(
         name="tags",
-        description="List of tags for Saved Query",
+        description="Comma separated list of tags",
         default="",
         value_type="csv",
+        example='"tag1,tag2"',
     )
     SQ_DESC: EntryKey = EntryKey(
-        name="description", description="Description of Saved Query"
+        name="description",
+        description="Description",
+        example='"Find out dated software"',
     )
-    FIELD: EntryKey = EntryKey(
+    FIELD_SIMPLE: EntryKey = EntryKey(
         name="field",
         required=True,
-        description={
-            TypeNames.SIMPLE: "Title/name of field",
-            TypeNames.COMPLEX: "Title/name of complex field",
-            TypeNames.COMPLEX_SUB: (
-                "Title/name of sub-field of previous complex field entry"
-            ),
-        },
+        description="Title/name of field",
+        example='"hostname"',
+    )
+    FIELD_COMPLEX: EntryKey = EntryKey(
+        name="field",
+        required=True,
+        description="Title/name of complex field",
+        example='"installed_software"',
+    )
+    FIELD_COMPLEX_SUB: EntryKey = EntryKey(
+        name="field",
+        required=True,
+        description="Title/name of sub-field of previous complex field entry",
+        example='"version"',
     )
     OP: EntryKey = EntryKey(
         name="operator",
         description="Comparison operator, valid choices depend on field type",
         default="equals",
+        example='"contains"',
     )
-    VALUE: EntryKey = EntryKey(
+    OP_SUB: EntryKey = EntryKey(
+        name="operator",
+        description="Comparison operator, valid choices depend on sub-field type",
+        default="equals",
+        example='"less_than"',
+    )
+    VALUE_SIMPLE: EntryKey = EntryKey(
         name="value",
-        description={
-            TypeNames.SIMPLE: "Value to compare against field",
-            TypeNames.COMPLEX_SUB: "Value to compare against complex sub field",
-            TypeNames.SAVED_QUERY: "Description of Saved Suery",
-        },
+        description="Value to compare against field",
         value_type="variable",
-    )
-    BRACKET: EntryKey = EntryKey(
-        name="bracket",
         default="",
-        description="Set the left or right bracket",
-        choices=["", "left", "right"],
+        example='"test.domain"',
     )
-    LOGIC: EntryKey = EntryKey(
-        name="logic",
-        default="and",
-        description="Set the and/or/not logic",
-        choices=["and", "and not", "or", "or not"],
+    VALUE_COMPLEX_SUB: EntryKey = EntryKey(
+        name="value",
+        description="Value to compare against complex sub field",
+        value_type="variable",
+        default="",
+        example='"99"',
+    )
+    OR: EntryKey = EntryKey(
+        name="or",
+        default=False,
+        description="Use or instead of and",
+        value_type="bool",
+        example="False",
+    )
+    NOT: EntryKey = EntryKey(
+        name="not",
+        default=False,
+        description="Use not",
+        value_type="bool",
+        example="False",
+    )
+    BRACKET_LEFT: EntryKey = EntryKey(
+        name="bracket_left",
+        default=False,
+        description="Open a bracket '(' ",
+        value_type="bool",
+        example="False",
+    )
+    BRACKET_RIGHT: EntryKey = EntryKey(
+        name="bracket_right",
+        default=False,
+        description="Close a bracket ')'",
+        value_type="bool",
+        example="False",
     )
 
 
@@ -151,26 +201,7 @@ class EntryType(BaseData):
 
 
 @dataclasses.dataclass
-class EntryTypes(BaseData):
-    SIMPLE: EntryType = EntryType(
-        name=TypeNames.SIMPLE,
-        keys=[
-            EntryKeys.TYPE,
-            EntryKeys.FIELD,
-            EntryKeys.OP,
-            EntryKeys.VALUE,
-            EntryKeys.LOGIC,
-            EntryKeys.BRACKET,
-        ],
-    )
-    COMPLEX: EntryType = EntryType(
-        name=TypeNames.COMPLEX,
-        keys=[EntryKeys.TYPE, EntryKeys.FIELD, EntryKeys.LOGIC, EntryKeys.BRACKET],
-    )
-    COMPLEX_SUB: EntryType = EntryType(
-        name=TypeNames.COMPLEX_SUB,
-        keys=[EntryKeys.TYPE, EntryKeys.FIELD, EntryKeys.OP, EntryKeys.VALUE],
-    )
+class AllEntryTypes(BaseData):
     SAVED_QUERY: EntryType = EntryType(
         name=TypeNames.SAVED_QUERY,
         keys=[
@@ -179,8 +210,56 @@ class EntryTypes(BaseData):
             EntryKeys.SQ_DESC,
             EntryKeys.SQ_TAGS,
             EntryKeys.SQ_FIELDS,
+            EntryKeys.SQ_FIELDS_DEFAULT,
         ],
     )
+    SIMPLE: EntryType = EntryType(
+        name=TypeNames.SIMPLE,
+        keys=[
+            EntryKeys.TYPE,
+            EntryKeys.FIELD_SIMPLE,
+            EntryKeys.OP,
+            EntryKeys.VALUE_SIMPLE,
+            EntryKeys.OR,
+            EntryKeys.NOT,
+            EntryKeys.BRACKET_LEFT,
+            EntryKeys.BRACKET_RIGHT,
+        ],
+    )
+    COMPLEX: EntryType = EntryType(
+        name=TypeNames.COMPLEX,
+        keys=[
+            EntryKeys.TYPE,
+            EntryKeys.FIELD_COMPLEX,
+            EntryKeys.OR,
+            EntryKeys.NOT,
+            EntryKeys.BRACKET_LEFT,
+            EntryKeys.BRACKET_RIGHT,
+        ],
+    )
+    COMPLEX_SUB: EntryType = EntryType(
+        name=TypeNames.COMPLEX_SUB,
+        keys=[
+            EntryKeys.TYPE,
+            EntryKeys.FIELD_COMPLEX_SUB,
+            EntryKeys.OP_SUB,
+            EntryKeys.VALUE_COMPLEX_SUB,
+        ],
+    )
+
+
+@dataclasses.dataclass
+class EntryTypes(BaseData):
+    SIMPLE: EntryType = AllEntryTypes.SIMPLE
+    COMPLEX: EntryType = AllEntryTypes.COMPLEX
+
+
+@dataclasses.dataclass
+class TextEntryTypes(EntryTypes):
+    SAVED_QUERY: EntryType = AllEntryTypes.SAVED_QUERY
+    SIMPLE: EntryType = AllEntryTypes.SIMPLE
+    COMPLEX: EntryType = AllEntryTypes.COMPLEX
+    COMPLEX_SUB: EntryType = AllEntryTypes.COMPLEX_SUB
 
 
 # XXX CsvKeys

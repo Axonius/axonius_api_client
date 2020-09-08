@@ -23,12 +23,13 @@ class AssetMixin(ModelMixins):
     FIELD_AXON_ID: str = "internal_axon_id"
     FIELD_ADAPTERS: str = "adapters"
     FIELD_ADAPTER_LEN: str = "adapter_list_length"
+    FIELD_LAST_SEEN: str = "specific_data.data.last_seen"
 
     FIELDS_API: List[str] = [
-        FIELD_AXON_ID,
-        FIELD_ADAPTERS,
-        FIELD_TAGS,
-        FIELD_ADAPTER_LEN,
+        # FIELD_AXON_ID,
+        # FIELD_ADAPTERS,
+        # FIELD_TAGS,
+        # FIELD_ADAPTER_LEN,
     ]
 
     @property
