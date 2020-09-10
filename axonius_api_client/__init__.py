@@ -1,21 +1,12 @@
 # -*- coding: utf-8 -*-
 """Python API Client for Axonius."""
-from . import (
-    api,
-    auth,
-    cli,
-    constants,
-    data_classes,
-    exceptions,
-    http,
-    logs,
-    tools,
-    version,
-)
+from . import (api, auth, cli, constants, data, exceptions, http, logs, tools,
+               version, wizard)
 from .api import Adapters, Devices, Enforcements, System, Users
 from .auth import ApiKey
 from .connect import Connect
 from .http import Http
+from .wizard import Wizard, WizardCli, WizardCsv, WizardText
 
 __version__ = version.__version__
 LOG = logs.LOG
@@ -33,6 +24,11 @@ __all__ = (
     "Adapters",
     "Enforcements",
     "System",
+    # wizards
+    "Wizard",
+    "WizardText",
+    "WizardCsv",
+    "WizardCli",
     # modules
     "api",
     "auth",
@@ -43,5 +39,6 @@ __all__ = (
     "constants",
     "cli",
     "logs",
-    "data_classes",
+    "data",
+    "wizard",
 )

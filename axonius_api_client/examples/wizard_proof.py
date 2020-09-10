@@ -4,9 +4,9 @@
 import os
 
 import axonius_api_client as axonapi  # noqa:F401
-from axonius_api_client.connect import Connect
+import click
+from axonius_api_client import Connect, WizardCsv, WizardText
 from axonius_api_client.constants import load_dotenv
-from axonius_api_client.query_wizard import WizardText
 from axonius_api_client.tools import json_reload
 
 
@@ -29,45 +29,59 @@ if __name__ == "__main__":
         certwarn=False,
         log_console=True,
         log_level_console="debug",
+        log_request_attrs="url",
     )
-
-    # ctx.start()
 
     devices = ctx.devices
     users = ctx.users
     j = jdump
 
 
-content = """
-type=saved_query, name=boogy, description=vittles, tags="a,b", fields="os.type"
-type=complex, field=installed_software, bracket_left=y
-type=complex_sub, field=version, operator=earlier_than, value=99
-type=complex_sub, field=name, operator=contains, value=chrome
-type=simple, field=hostname, value='x'
-type=simple, field=hostname, value='x'
-type=simple, field=hostname, value='x'
-type=simple, field=hostname, value='x', or=y
-type=simple, field=hostname, value='x'
+"type, value, description, tags, flags, fields"
+
+content_txt = """
+simple      "hostname contains test.domain"
+complex     "or not ( installed_software"
+complex_sub "version earlier_than 99"
+simple      "or not ) hostname contains test.domain"
 """  # noqa
-parser = WizardText(apiobj=devices, log_level="debug")
-sqs = parser.parse(content)
 
-for sq in sqs:
-    devices.saved_query.add(**sq["sq"])
+"""
+[
+    {'type': 'saved_query', 'name': '', 'description': ''},
+    {'type': 'simple', 'value': ''},
+    {'type': 'saved_query', 'name': '', 'description': ''},
+]
+# axonshell devices saved-query wiz-add-from-csv --file pg.csv
+# axonshell devices saved-query wiz-add --name '' --description '' --wiz simple "hostname contains test.domain"
+# axonshell devices get --wiz simple "hostname contains test.domain" --wiz complex "installed_software"
 
-# try:
-#     entries = parser.parse(content)
-# except Exception as exc:
-#     print(f"----\n{exc}")
-#     raise
-# else:
-#     print(entries)
-#     # print(entries[0]["query"])
-#     # lines = parser.unparse(entries)
-#     # examples = parser.get_examples()
-#     # print(examples)
+"""  # noqa
+content_csv = """
+type, query, name, description, tags, fields
+saved_query, "", "bbb", "ccc", "a,b", "hostname,os.type,default"
+simple,"or not ( ) hostname contains test.domain"
+"""  # noqa
+text_parser = WizardText(apiobj=devices, log_level="debug")
+sqs = text_parser.parse(content_txt)
+# print(text_parser.get_examples())
 
-#     # sqs = []
-#     # for entry in entries:
-#     #     sq = devices.saved_query.add(**entry)
-#     #     sqs.append(sq)
+csv_parser = WizardCsv(apiobj=devices, log_level="debug")
+# sqs = csv_parser.parse_path("~/pg.csv")
+# sqs = csv_parser.parse(content_csv)
+
+# for sq in sqs:
+#     devices.saved_query.add(**sq)
+
+
+def callback(ctx, param, value):
+    print(param, value)
+
+
+@click.command()
+@click.option("--wiz", nargs=2, callback=callback, multiple=True)
+def cli(wiz):
+    print(wiz)
+
+
+# cli()

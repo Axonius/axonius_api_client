@@ -64,7 +64,6 @@ class SavedQuery(ChildMixins, PagingMixinsObject):
         sort_descending: bool = True,
         column_filters: Optional[dict] = None,
         gui_page_size: Optional[int] = None,
-        fields_map: Optional[dict] = None,
         private: bool = False,
         **kwargs,
     ):
@@ -101,29 +100,23 @@ class SavedQuery(ChildMixins, PagingMixinsObject):
             :obj:`dict`: metadata of saved query that was created
         """
         gui_page_size = check_gui_page_size(size=gui_page_size)
-        fields_map = fields_map or self.parent.fields.get()
 
         fields = self.parent.fields.validate(
             fields=fields,
             fields_manual=fields_manual,
             fields_regex=fields_regex,
             fields_default=fields_default,
-            fields_map=fields_map,
         )
 
         if sort_field:
-            sort_field = self.parent.fields.get_field_name(
-                value=sort_field, fields_map=fields_map
-            )
+            sort_field = self.parent.fields.get_field_name(value=sort_field)
 
         query_expr = query_expr or query  # TBD
 
         data_column_filters = {}
         if column_filters:
             for col_field, col_value in column_filters.items():
-                col_field = self.parent.fields.get_field_name(
-                    value=col_field, fields_map=fields_map
-                )
+                col_field = self.parent.fields.get_field_name(value=col_field)
                 data_column_filters[col_field] = col_value
 
         dmeta = {}  # TBD

@@ -3,7 +3,7 @@
 import re
 from typing import Any, List, Optional, Tuple, Union
 
-from ..data_classes.fields import Operator
+from ..api.parsers.constants import Operator
 from ..exceptions import WizardError
 from ..tools import (check_empty, check_type, coerce_int_float,
                      coerce_str_to_csv, dt_parse_tmpl, get_raw_version,

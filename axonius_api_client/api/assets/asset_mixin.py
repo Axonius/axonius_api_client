@@ -9,7 +9,7 @@ from ...constants import MAX_PAGE_SIZE, PAGE_SIZE
 from ...exceptions import ApiError, JsonError, NotFoundError
 from ...tools import dt_now, dt_parse_tmpl, dt_sec_ago, json_dump, listify
 from ..adapters import Adapters
-from ..asset_callbacks import get_callbacks_cls
+from ..asset_callbacks import Base, get_callbacks_cls
 from ..mixins import ModelMixins
 from .fields import Fields
 from .labels import Labels
@@ -111,7 +111,6 @@ class AssetMixin(ModelMixins):
         fields_regex: Optional[Union[List[str], str]] = None,
         fields_default: bool = True,
         fields_root: Optional[str] = None,
-        fields_map: Optional[dict] = None,
         max_rows: Optional[int] = None,
         max_pages: Optional[int] = None,
         row_start: int = 0,
@@ -161,21 +160,16 @@ class AssetMixin(ModelMixins):
         """
         page_size = self._get_page_size(page_size=page_size, max_rows=max_rows)
 
-        fields_map = fields_map or self.fields.get()
-
         fields = self.fields.validate(
             fields=fields,
             fields_manual=fields_manual,
             fields_regex=fields_regex,
             fields_default=fields_default,
-            fields_map=fields_map,
             fields_root=fields_root,
         )
 
         if sort_field:
-            sort_field = self.fields.get_field_name(
-                value=sort_field, fields_map=fields_map
-            )
+            sort_field = self.fields.get_field_name(value=sort_field)
 
         history_date = self.validate_history_date(value=history_date)
 
@@ -211,9 +205,8 @@ class AssetMixin(ModelMixins):
         }
 
         callbacks_cls = get_callbacks_cls(export=export)
-        self._LAST_CALLBACKS = callbacks = callbacks_cls(
-            apiobj=self, fields_map=fields_map, getargs=kwargs, state=state, store=store,
-        )
+        callbacks = callbacks_cls(apiobj=self, getargs=kwargs, state=state, store=store)
+        self._LAST_CALLBACKS: Base = callbacks
 
         callbacks.start()
 
@@ -396,16 +389,10 @@ class AssetMixin(ModelMixins):
         pre: str = "",
         post: str = "",
         field_manual: bool = False,
-        fields_map: Optional[dict] = None,
         **kwargs,
     ) -> Union[Generator[dict, None, None], List[dict]]:
         """Pass."""
-        if not field_manual:
-            fields_map = fields_map or self.fields.get()
-
-        field = self.fields.get_field_name(
-            value=field, fields_map=fields_map, field_manual=field_manual
-        )
+        field = self.fields.get_field_name(value=field, field_manual=field_manual)
 
         match = listify(values)
         match = [f"'{x.strip()}'" for x in match]
@@ -417,7 +404,7 @@ class AssetMixin(ModelMixins):
             inner=inner, pre=pre, post=post, not_flag=not_flag,
         )
 
-        return self.get(fields_map=fields_map, **kwargs)
+        return self.get(**kwargs)
 
     def get_by_value_regex(
         self,
@@ -428,16 +415,10 @@ class AssetMixin(ModelMixins):
         pre: str = "",
         post: str = "",
         field_manual: bool = False,
-        fields_map: Optional[dict] = None,
         **kwargs,
     ) -> Union[Generator[dict, None, None], List[dict]]:
         """Pass."""
-        if not field_manual:
-            fields_map = fields_map or self.fields.get()
-
-        field = self.fields.get_field_name(
-            value=field, fields_map=fields_map, field_manual=field_manual
-        )
+        field = self.fields.get_field_name(value=field, field_manual=field_manual)
 
         if cast_insensitive:
             inner = f'{field} == regex("{value}", "i")'
@@ -448,7 +429,7 @@ class AssetMixin(ModelMixins):
             inner=inner, pre=pre, post=post, not_flag=not_flag,
         )
 
-        return self.get(fields_map=fields_map, **kwargs)
+        return self.get(**kwargs)
 
     def get_by_value(
         self,
@@ -458,16 +439,10 @@ class AssetMixin(ModelMixins):
         pre: str = "",
         post: str = "",
         field_manual: bool = False,
-        fields_map: Optional[dict] = None,
         **kwargs,
     ) -> Union[Generator[dict, None, None], List[dict]]:
         """Build query to get an asset by field value."""
-        if not field_manual:
-            fields_map = fields_map or self.fields.get()
-
-        field = self.fields.get_field_name(
-            value=field, fields_map=fields_map, field_manual=field_manual
-        )
+        field = self.fields.get_field_name(value=field, field_manual=field_manual)
 
         inner = f'{field} == "{value}"'
 
@@ -475,7 +450,7 @@ class AssetMixin(ModelMixins):
             inner=inner, pre=pre, post=post, not_flag=not_flag,
         )
 
-        return self.get(fields_map=fields_map, **kwargs)
+        return self.get(**kwargs)
 
     def history_dates(self) -> dict:
         """Get all known historical dates for this asset type."""
@@ -517,12 +492,15 @@ class AssetMixin(ModelMixins):
     def _init(self, **kwargs):
         """Post init method for subclasses to use for extra setup."""
         # cross reference
-        self.adapters = Adapters(auth=self.auth, **kwargs)
+        self.adapters: Adapters = Adapters(auth=self.auth, **kwargs)
 
         # children
-        self.labels = Labels(parent=self)
-        self.saved_query = SavedQuery(parent=self)
-        self.fields = Fields(parent=self)
+        self.labels: Labels = Labels(parent=self)
+        self.saved_query: SavedQuery = SavedQuery(parent=self)
+        self.fields: Fields = Fields(parent=self)
+
+        self._LAST_GET: dict = {}
+        self._LAST_CALLBACKS: Base = None
 
         super(AssetMixin, self)._init(**kwargs)
 
@@ -595,7 +573,7 @@ class AssetMixin(ModelMixins):
 
             params["fields"] = fields
 
-        self._LAST_GET = params
+        self._LAST_GET: dict = params
 
         return self.request(method="post", path=self.router.root, json=params)
 
@@ -630,7 +608,7 @@ class AssetMixin(ModelMixins):
 
             params["fields"] = fields
 
-        self._LAST_GET = params
+        self._LAST_GET: dict = params
 
         return self.request(method="post", path=self.router.cached, json=params)
 

@@ -4,10 +4,10 @@ import dataclasses
 import enum
 from typing import Dict, List, Optional
 
-from ..constants import (AGG_ADAPTER_NAME, AGG_ADAPTER_TITLE,
-                         AGG_EXPR_FIELD_TYPE)
-from ..exceptions import NotFoundError
-from .base import BaseData, BaseEnum
+from ...constants import (AGG_ADAPTER_NAME, AGG_ADAPTER_TITLE,
+                          AGG_EXPR_FIELD_TYPE)
+from ...data import BaseData, BaseEnum
+from ...exceptions import NotFoundError
 
 
 class Parsers(BaseEnum):
@@ -600,7 +600,8 @@ class OperatorTypeMaps(BaseData):
 
         valid = "\n - " + "\n - ".join([x.name_map.name for x in type_map.operators])
         raise NotFoundError(
-            f"Invalid operator {operator!r} for field {name!r}, valids:{valid}"
+            f"Invalid operator supplied {operator!r} for field {name!r} "
+            f"of type {type_map.name}, valid operators:{valid}"
         )
 
     @classmethod

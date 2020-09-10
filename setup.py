@@ -30,6 +30,7 @@ install_requires = [
     "pyreadline>=2.1 ; platform_system == 'Windows'",
     "tabulate>=0.8.7",
     "xlsxwriter>=1.3.1",
+    "cachetools>=4.1.1",
 ]
 
 setup(
