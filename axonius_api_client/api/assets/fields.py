@@ -3,6 +3,8 @@
 import re
 from typing import List, Optional, Tuple, Union
 
+from cachetools import TTLCache, cached
+
 from ...constants import (AGG_ADAPTER_ALTS, AGG_ADAPTER_NAME, GET_SCHEMA_KEYS,
                           GET_SCHEMAS_KEYS)
 from ...exceptions import ApiError, NotFoundError
@@ -10,10 +12,13 @@ from ...tools import listify, split_str, strip_right
 from ..mixins import ChildMixins
 from ..parsers.fields import parse_fields
 
+CACHE: TTLCache = TTLCache(maxsize=1024, ttl=30)
+
 
 class Fields(ChildMixins):
     """Child API model for working with fields for the parent asset type."""
 
+    @cached(cache=CACHE)
     def get(self) -> dict:
         """Get the schema of all adapters and their fields.
 
@@ -22,11 +27,9 @@ class Fields(ChildMixins):
         """
         return parse_fields(raw=self._get())
 
-    def get_adapter_names(
-        self, value: str, fields_map: Optional[dict] = None
-    ) -> List[str]:
+    def get_adapter_names(self, value: str) -> List[str]:
         """Find an adapter by name regex."""
-        fields_map = fields_map or self.get()
+        fields = self.get()
 
         search = strip_right(obj=value.lower().strip(), fix="_adapter")
 
@@ -34,29 +37,29 @@ class Fields(ChildMixins):
             search = AGG_ADAPTER_NAME
 
         search = re.compile(search, re.I)
-        matches = [x for x in fields_map if search.search(x)]
+        matches = [x for x in fields if search.search(x)]
 
         if not matches:
             msg = (
                 "No adapter found where name regex matches {!r}, valid adapters:\n  {}"
-            ).format(value, "\n  ".join(list(fields_map)))
+            ).format(value, "\n  ".join(list(fields)))
             raise NotFoundError(msg)
         return matches
 
-    def get_adapter_name(self, value: str, fields_map: Optional[dict] = None) -> str:
+    def get_adapter_name(self, value: str) -> str:
         """Find an adapter by name."""
-        fields_map = fields_map or self.get()
+        fields = self.get()
 
         search = strip_right(obj=value.lower().strip(), fix="_adapter")
 
         if search in AGG_ADAPTER_ALTS:
             search = AGG_ADAPTER_NAME
 
-        if search in fields_map:
+        if search in fields:
             return search
 
         msg = "No adapter found where name equals {!r}, valid adapters:\n  {}"
-        msg = msg.format(value, "\n  ".join(list(fields_map)))
+        msg = msg.format(value, "\n  ".join(list(fields)))
         raise NotFoundError(msg)
 
     def get_field_schemas(self, value: str, schemas: List[dict], **kwargs) -> List[dict]:
@@ -95,8 +98,7 @@ class Fields(ChildMixins):
         self,
         value: str,
         field_manual: bool = False,
-        fields_map: Optional[dict] = None,
-        custom_fields_map: Optional[dict] = None,
+        fields_custom: Optional[dict] = None,
         key: str = "name_qual",
     ) -> str:
         """Pass."""
@@ -110,70 +112,62 @@ class Fields(ChildMixins):
 
         field = fields[0]
 
-        fields_map = fields_map or self.get()
-        adapter = self.get_adapter_name(value=adapter, fields_map=fields_map)
-        schemas = fields_map[adapter]
-        if custom_fields_map and adapter in custom_fields_map:
-            schemas += custom_fields_map[adapter]
+        fields = self.get()
+        adapter = self.get_adapter_name(value=adapter)
+        schemas = fields[adapter]
+        if fields_custom and adapter in fields_custom:
+            schemas += fields_custom[adapter]
         schema = self.get_field_schema(value=field, schemas=schemas)
         return schema[key] if key else schema
 
-    def get_field_names_re(
-        self, value: str, fields_map: Optional[dict] = None
-    ) -> List[str]:
+    def get_field_names_re(self, value: str) -> List[str]:
         """Pass."""
         splits = self.split_searches(value=value)
-        fields_map = fields_map or self.get()
+        fields = self.get()
 
         matches = []
 
         for adapter_re, fields in splits:
-            adapters = self.get_adapter_names(value=adapter_re, fields_map=fields_map)
+            adapters = self.get_adapter_names(value=adapter_re)
 
             for adapter in adapters:
                 for field in fields:
                     fschemas = self.get_field_schemas(
-                        value=field, schemas=fields_map[adapter]
+                        value=field, schemas=fields[adapter]
                     )
                     names = [x["name_qual"] for x in fschemas]
                     matches += [x for x in names if x not in matches]
         return matches
 
-    def get_field_names_eq(
-        self, value: str, fields_map: Optional[dict] = None
-    ) -> List[str]:
+    def get_field_names_eq(self, value: str) -> List[str]:
         """Pass."""
         splits = self.split_searches(value=value)
-        fields_map = fields_map or self.get()
+        fields = self.get()
 
         matches = []
 
         for adapter_name, names in splits:
-            adapter = self.get_adapter_name(value=adapter_name, fields_map=fields_map)
+            adapter = self.get_adapter_name(value=adapter_name)
             for name in names:
-                schemas = fields_map[adapter]
+                schemas = fields[adapter]
                 schema = self.get_field_schema(value=name, schemas=schemas)
                 if schema["name_qual"] not in matches:
                     matches.append(schema["name_qual"])
 
         return matches
 
-    def get_field_schemas_root(
-        self, adapter: str, fields_map: Optional[dict] = None
-    ) -> List[dict]:
+    def get_field_schemas_root(self, adapter: str) -> List[dict]:
         """Pass."""
-        fields_map = fields_map or self.get()
-        adapter = self.get_adapter_name(value=adapter, fields_map=fields_map)
-        schemas = fields_map[adapter]
+        fields = self.get()
+        adapter = self.get_adapter_name(value=adapter)
+        schemas = fields[adapter]
 
         matches = [x for x in schemas if x.get("selectable") and x.get("is_root")]
         return matches
 
-    def get_field_names_root(
-        self, adapter: str, fields_map: Optional[dict] = None
-    ) -> List[str]:
+    def get_field_names_root(self, adapter: str) -> List[str]:
         """Pass."""
-        schemas = self.get_field_schemas_root(adapter=adapter, fields_map=fields_map)
+        schemas = self.get_field_schemas_root(adapter=adapter)
         names = [x["name_qual"] for x in schemas]
         return names
 
@@ -183,7 +177,6 @@ class Fields(ChildMixins):
         fields_regex: Optional[Union[List[str], str]] = None,
         fields_manual: Optional[Union[List[str], str]] = None,
         fields_default: bool = True,
-        fields_map: Optional[dict] = None,
         fields_root: Optional[str] = None,
     ) -> List[dict]:
         """Validate provided fields."""
@@ -197,10 +190,7 @@ class Fields(ChildMixins):
             selected += [x for x in fields_manual if x not in selected]
 
         if fields_root:
-            fields_map = fields_map or self.get()
-            matches_root = self.get_field_names_root(
-                adapter=fields_root, fields_map=fields_map
-            )
+            matches_root = self.get_field_names_root(adapter=fields_root)
             selected += [x for x in matches_root if x not in selected]
 
         if not any([fields, fields_regex]):
@@ -208,12 +198,10 @@ class Fields(ChildMixins):
                 raise ApiError("No fields supplied, must supply at least one field")
             return selected
 
-        fields_map = fields_map or self.get()
-
-        matches_eq = self.get_field_names_eq(value=fields, fields_map=fields_map)
+        matches_eq = self.get_field_names_eq(value=fields)
         selected += [x for x in matches_eq if x not in selected]
 
-        matches_re = self.get_field_names_re(value=fields_regex, fields_map=fields_map)
+        matches_re = self.get_field_names_re(value=fields_regex)
         selected += [x for x in matches_re if x not in selected]
 
         return selected

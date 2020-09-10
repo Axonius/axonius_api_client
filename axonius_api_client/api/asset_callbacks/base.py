@@ -6,23 +6,11 @@ import re
 import sys
 from typing import IO, Generator, List, Optional
 
-from ...constants import (
-    DEFAULT_PATH,
-    FIELD_JOINER,
-    FIELD_TRIM_LEN,
-    FIELD_TRIM_STR,
-    SCHEMAS_CUSTOM,
-)
+from ...constants import (DEFAULT_PATH, FIELD_JOINER, FIELD_TRIM_LEN,
+                          FIELD_TRIM_STR, SCHEMAS_CUSTOM)
 from ...exceptions import ApiError
-from ...tools import (
-    calc_percent,
-    echo_error,
-    echo_ok,
-    echo_warn,
-    get_path,
-    join_kv,
-    listify,
-)
+from ...tools import (calc_percent, echo_error, echo_ok, echo_warn, get_path,
+                      join_kv, listify)
 
 
 class Base:
@@ -32,12 +20,7 @@ class Base:
     FIND_KEYS: List[str] = ["name", "name_qual", "column_title", "name_base"]
 
     def __init__(
-        self,
-        apiobj,
-        store: dict,
-        state: Optional[dict] = None,
-        fields_map: Optional[dict] = None,
-        getargs: dict = None,
+        self, apiobj, store: dict, state: Optional[dict] = None, getargs: dict = None,
     ):
         """Object for handling callbacks for assets."""
         self.LOG: logging.Logger = apiobj.LOG.getChild(self.__class__.__name__)
@@ -46,7 +29,7 @@ class Base:
         self.APIOBJ = apiobj
         """:obj:`AssetMixin`: assets object."""
 
-        self.ALL_SCHEMAS: dict = fields_map or apiobj.fields.get()
+        self.ALL_SCHEMAS: dict = apiobj.fields.get()
         """Map of adapter -> field schemas."""
 
         self.STATE: dict = state or {}

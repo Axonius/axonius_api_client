@@ -5,7 +5,7 @@ import enum
 from typing import List, Optional, Union
 
 
-def joiner(value: List[str], join: str, pre: bool = True):
+def joiner(value: List[str], join: Optional[str] = None, pre: bool = True):
     if isinstance(join, str):
         value = join.join(value)
         value = join + value if pre else value

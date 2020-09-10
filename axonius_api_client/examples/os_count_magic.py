@@ -351,7 +351,7 @@ if __name__ == "__main__":
     AX_URL = os.environ["AX_URL"]
     AX_KEY = os.environ["AX_KEY"]
     AX_SECRET = os.environ["AX_SECRET"]
-    ctx = Connect(url=AX_URL, key=AX_KEY, secret=AX_SECRET, certwarn=False,)
+    ctx = Connect(url=AX_URL, key=AX_KEY, secret=AX_SECRET, certwarn=False)
     ctx.start()
     devices = ctx.devices
 
