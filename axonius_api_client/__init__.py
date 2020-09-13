@@ -6,7 +6,7 @@ from .api import Adapters, Devices, Enforcements, System, Users
 from .auth import ApiKey
 from .connect import Connect
 from .http import Http
-from .wizard import Wizard, WizardCli, WizardCsv, WizardText
+from .wizard import Wizard, WizardCsv, WizardText
 
 __version__ = version.__version__
 LOG = logs.LOG
@@ -28,7 +28,6 @@ __all__ = (
     "Wizard",
     "WizardText",
     "WizardCsv",
-    "WizardCli",
     # modules
     "api",
     "auth",

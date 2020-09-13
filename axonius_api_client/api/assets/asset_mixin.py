@@ -26,10 +26,10 @@ class AssetMixin(ModelMixins):
     FIELD_LAST_SEEN: str = "specific_data.data.last_seen"
 
     FIELDS_API: List[str] = [
-        # FIELD_AXON_ID,
-        # FIELD_ADAPTERS,
-        # FIELD_TAGS,
-        # FIELD_ADAPTER_LEN,
+        FIELD_AXON_ID,
+        FIELD_ADAPTERS,
+        FIELD_TAGS,
+        FIELD_ADAPTER_LEN,
     ]
 
     @property
@@ -486,7 +486,6 @@ class AssetMixin(ModelMixins):
         query = " ".join([x.strip() for x in lines if x.strip()]).strip()
 
         self.LOG.debug(f"Built query: {query!r}")
-        # XXX error if no OR / AND in pre & post
         return query
 
     def _init(self, **kwargs):

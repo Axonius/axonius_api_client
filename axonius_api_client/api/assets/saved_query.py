@@ -120,12 +120,13 @@ class SavedQuery(ChildMixins, PagingMixinsObject):
                 data_column_filters[col_field] = col_value
 
         dmeta = {}  # TBD
-        dmeta["enforcementFilter"] = ""  # TBD
-        dmeta["uniqueAdapters"] = ""  # TBD
+        dmeta["enforcementFilter"] = None  # TBD
+        dmeta["uniqueAdapters"] = False  # TBD
 
         data_query = {}
-        data_query["filter"] = query
-        data_query["onlyExpressionsFilter"] = query_expr
+        data_query["filter"] = query or ""
+        if query_expr:
+            data_query["onlyExpressionsFilter"] = query_expr
         data_query["expressions"] = expressions or []
         data_query["search"] = None  # TBD
         data_query["meta"] = dmeta  # TBD

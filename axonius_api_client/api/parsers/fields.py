@@ -247,18 +247,36 @@ def parse_schemas(
     return fields
 
 
-# def get_type_norm(field: dict) -> str:
-#     """Get the normalized type of a field."""
-#     ftype = field["type"]
-#     ffmt = field.get("format", "")
-#     fitype = field.get("items", {}).get("type", "")
-#     fifmt = field.get("items", {}).get("format", "")
-#     check = (ftype, ffmt, fitype, fifmt)
-
-#     for norm_map, norm_type in NORM_TYPE_MAP:
-#         if check == norm_map:
-#             return norm_type
-
-#     name = field["name"]
-#     check = dict(zip(("type", "format", "items.type", "items.format"), check))
-#     raise ApiError(f"Unmapped normalized type: {name}: {check}")
+def schema_custom(name: str, **kwargs) -> dict:
+    unknown = kwargs.get("unknown", "custom")
+    adapter_name = kwargs.get("adapter_name", unknown)
+    adapter_name_raw = kwargs.get("adapter_name_raw", unknown)
+    adapter_title = kwargs.get("adapter_title", unknown.capitalize())
+    adapter_prefix = kwargs.get("adapter_name_raw", unknown[:2])
+    title = name.capitalize()
+    column_name = kwargs.get("column_name", f"{adapter_name}:{name}")
+    column_title = kwargs.get("column_title", f"{adapter_title}: {title}")
+    ftype = kwargs.get("type", "string")
+    ftype_norm = kwargs.get("type_name", "string")
+    return {
+        "adapter_name_raw": adapter_name_raw,
+        "adapter_name": adapter_name,
+        "adapter_title": adapter_title,
+        "adapter_prefix": adapter_prefix,
+        "column_name": column_name,
+        "column_title": column_title,
+        "sub_fields": [],
+        "is_complex": False,
+        "is_list": False,
+        "is_root": True,
+        "parent": "root",
+        "name": name,
+        "name_base": name,
+        "name_qual": name,
+        "title": title,
+        "type": ftype,
+        "type_norm": ftype_norm,
+        "selectable": False,
+        "is_agg": False,
+        "expr_field_type": "",
+    }

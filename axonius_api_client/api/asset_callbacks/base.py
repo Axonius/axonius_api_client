@@ -11,6 +11,7 @@ from ...constants import (DEFAULT_PATH, FIELD_JOINER, FIELD_TRIM_LEN,
 from ...exceptions import ApiError
 from ...tools import (calc_percent, echo_error, echo_ok, echo_warn, get_path,
                       join_kv, listify)
+from ..parsers.fields import schema_custom
 
 
 class Base:
@@ -37,6 +38,8 @@ class Base:
 
         self.STORE: dict = store or {}
         """store dict used by get assets method to track arguments."""
+
+        self.CURRENT_ROW: dict = {}
 
         self.GETARGS: dict = getargs or {}
         """original kwargs supplied to get assets method."""
@@ -70,6 +73,11 @@ class Base:
         store = join + join.join(join_kv(obj=self.STORE))
         self.echo(msg=f"Get Arguments: {store}")
 
+    def echo_columns(self, **kwargs):
+        if getattr(self, "ECHO_DONE", False):
+            return
+
+        join = "\n   - "
         schemas_pretty = self.APIOBJ.fields._prettify_schemas(
             schemas=self.schemas_selected
         )
@@ -78,6 +86,7 @@ class Base:
 
         final_columns = join + join.join(self.final_columns)
         self.echo(msg=f"Final Columns: {final_columns}")
+        self.ECHO_DONE = True
 
     def stop(self, **kwargs):
         """Run stop callbacks."""
@@ -86,13 +95,15 @@ class Base:
 
     def process_row(self, row: dict) -> List[dict]:
         """Handle callbacks for an asset."""
-        self.do_pre_row()
+        self.do_pre_row(row=row)
         return self.do_row(row=row)
 
-    def do_pre_row(self):
+    def do_pre_row(self, row: dict):
         """Pass."""
+        self.CURRENT_ROW = row
         self.STATE.setdefault("rows_processed_total", 0)
         self.STATE["rows_processed_total"] += 1
+        self.echo_columns()
         self.echo_page_progress()
 
     def do_row(self, row: dict) -> List[dict]:
@@ -590,6 +601,10 @@ class Base:
                 field_details = f"{field}_details"
                 self._fields_selected.append(field_details)
 
+        self._fields_selected += [
+            x for x in self.CURRENT_ROW if x not in self._fields_selected
+        ]
+
         return self._fields_selected
 
     @property
@@ -613,6 +628,7 @@ class Base:
             if field in all_schemas_map:
                 self._schemas_selected.append(all_schemas_map[field])
             else:
+                self._schemas_selected.append(schema_custom(name=field))
                 msg = f"No schema found for field {field}"
                 self.echo(msg=msg, warning=True)
 

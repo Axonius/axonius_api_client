@@ -37,7 +37,7 @@ class Json(Base):
 
     def process_row(self, row: dict) -> List[dict]:
         """Write row to jsonstreams and delete it."""
-        self.do_pre_row()
+        self.do_pre_row(row=row)
 
         return_row = [{"internal_axon_id": row["internal_axon_id"]}]
 

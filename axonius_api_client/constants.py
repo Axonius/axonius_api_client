@@ -96,9 +96,10 @@ TIMEOUT_RESPONSE: int = 900
 """:obj:`int`: seconds to wait for response from API."""
 
 LOG_FMT_VERBOSE: str = (
-    "%(asctime)s %(levelname)-8s [%(name)s:%(funcName)s:%(lineno)d] %(message)s"
+    "%(asctime)s %(levelname)-8s [%(name)s:%(funcName)s:%(pathname)s:%(lineno)d] "
+    "%(message)s"
 )
-LOG_FMT_BRIEF: str = "%(levelname)-8s [%(name)s] %(message)s"
+LOG_FMT_BRIEF: str = "%(levelname)-8s %(module)-15s %(message)s"
 
 DEBUG: str = os.environ.get("AX_DEBUG", "").lower().strip()
 DEBUG: bool = any([DEBUG == x for x in YES])
@@ -250,6 +251,7 @@ NORM_TYPE_MAP: Tuple[Tuple[str, str, str, str], str] = (
 
 GET_SCHEMAS_KEYS: List[str] = ["name", "name_qual", "name_base", "title"]
 GET_SCHEMA_KEYS: List[str] = ["name_base", "name_qual", "name", "title"]
+FUZZY_SCHEMAS_KEYS: List[str] = ["name_base", "title"]
 
 SCHEMAS_CUSTOM: Dict[str, dict] = {
     "report_adapters_missing": {

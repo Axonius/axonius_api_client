@@ -58,7 +58,7 @@ class Table(Base):
 
     def process_row(self, row: dict) -> List[dict]:
         """Process row."""
-        self.do_pre_row()
+        self.do_pre_row(row=row)
         self.check_stop()
 
         new_rows = self.do_row(row=row)

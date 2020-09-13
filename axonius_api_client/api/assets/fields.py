@@ -4,8 +4,10 @@ import re
 from typing import List, Optional, Tuple, Union
 
 from cachetools import TTLCache, cached
+from fuzzywuzzy import fuzz
 
-from ...constants import (AGG_ADAPTER_ALTS, AGG_ADAPTER_NAME, GET_SCHEMA_KEYS,
+from ...constants import (AGG_ADAPTER_ALTS, AGG_ADAPTER_NAME,
+                          FUZZY_SCHEMAS_KEYS, GET_SCHEMA_KEYS,
                           GET_SCHEMAS_KEYS)
 from ...exceptions import ApiError, NotFoundError
 from ...tools import listify, split_str, strip_right
@@ -17,6 +19,68 @@ CACHE: TTLCache = TTLCache(maxsize=1024, ttl=30)
 
 class Fields(ChildMixins):
     """Child API model for working with fields for the parent asset type."""
+
+    @staticmethod
+    def fuzzy_filter(
+        search: str,
+        schemas: List[dict],
+        root_only: bool = True,
+        do_contains: bool = True,
+        token_score: int = 70,
+        partial_score: int = 50,
+        **kwargs,
+    ) -> List[dict]:
+        def do_skip():
+            if schema in matches:
+                return True
+
+            if schema["name"].endswith("_details"):
+                return True
+
+            if schema["name"] == "all":
+                return True
+
+            if root_only and not schema["is_root"]:
+                return True
+
+            if not schema.get("selectable", True):
+                return True
+
+            return False
+
+        def is_match(method, **kwargs):
+            for key in keys:
+                if method(search, schema[key], **kwargs):
+                    return True
+
+            return False
+
+        def token_set_ratio(search, value, score=70, **kwargs):
+            return fuzz.token_set_ratio(search, value) >= score
+
+        def partial_ratio(search, value, score=50, **kwargs):
+            return fuzz.partial_ratio(search, value) >= score
+
+        def contains(search, value, **kwargs):
+            return search.strip().lower() in value.strip().lower()
+
+        keys = kwargs.get("fuzzy_keys", FUZZY_SCHEMAS_KEYS)
+
+        matches = []
+
+        for schema in schemas:
+            if do_contains and not do_skip() and is_match(contains):
+                matches.append(schema)
+
+            if token_score and not do_skip() and is_match(token_set_ratio):
+                matches.append(schema)
+
+        if not matches:
+            for schema in schemas:
+                if partial_score and not do_skip() and is_match(partial_ratio):
+                    matches.append(schema)
+
+        return matches
 
     @cached(cache=CACHE)
     def get(self) -> dict:
@@ -81,6 +145,8 @@ class Fields(ChildMixins):
     def get_field_schema(self, value: str, schemas: List[dict], **kwargs) -> dict:
         """Find a schema for a field by name."""
         keys = kwargs.get("keys", GET_SCHEMA_KEYS)
+        keys_fuzzy = kwargs.get("keys_fuzzy", FUZZY_SCHEMAS_KEYS)
+
         search = value.lower().strip()
 
         schemas = [x for x in schemas if x.get("selectable", True)]
@@ -90,9 +156,19 @@ class Fields(ChildMixins):
                 if search.lower().strip() == schema[key].lower():
                     return schema
 
-        msg = "No field found where any of {} equals {!r}, valid fields: \n{}"
-        msg = msg.format(keys, value, "\n".join(self._prettify_schemas(schemas=schemas)))
-        raise NotFoundError(msg)
+        err = "No fuzzy matches, all valid fields:"
+
+        kwargs["search"] = value
+        kwargs["schemas"] = schemas
+        fuzzy = self.fuzzy_filter(**kwargs)
+        if fuzzy:
+            keys = keys_fuzzy
+            err = "Maybe you meant one of these fuzzy matches:"
+
+        ktxt = " or ".join(keys)
+        pre = f"No field found where {ktxt} equals {value!r}"
+        errs = [pre, err, "", *self._prettify_schemas(schemas=fuzzy or schemas)]
+        raise NotFoundError("\n".join(errs))
 
     def get_field_name(
         self,
@@ -226,7 +302,6 @@ class Fields(ChildMixins):
             field = search
             adapter_split = adapter
 
-        # XXX needs test case
         qual_check = re.match(r"adapters_data\.(.*?)\.", field)
         if qual_check and len(qual_check.groups()) == 1:
             adapter_split = qual_check.groups()[0]
