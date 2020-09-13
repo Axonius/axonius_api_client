@@ -586,23 +586,26 @@ class OperatorTypeMaps(BaseData):
         raise NotFoundError("\n".join([err, valid_str, err]))
 
     @classmethod
-    def get_operator(cls, field: dict, operator: str):
+    def get_operator(cls, field: dict, operator: str, err: Optional[str] = None):
         operator = operator.lower().strip()
         type_map = cls.get_type_map(field=field)
-        for op in type_map.operators:
-            if operator == op.name_map.name:
+        ops = {x.name_map.name: x for x in type_map.operators}
+
+        for op_name, op in ops.items():
+            if operator == op_name:
                 return op
 
-        name = field["name"]
+        fname = field["name"]
+        ftype = type_map.name
+
         if field["parent"] != "root":
             parent = field["parent"]
-            name = f"{name} (sub field of {parent})"
+            fname = f"{fname} (sub field of {parent})"
 
-        valid = "\n - " + "\n - ".join([x.name_map.name for x in type_map.operators])
-        raise NotFoundError(
-            f"Invalid operator supplied {operator!r} for field {name!r} "
-            f"of type {type_map.name}, valid operators:{valid}"
-        )
+        valid = "\n - " + "\n - ".join(list(ops))
+        valid = f"Valid operators for field {fname!r} with type {ftype!r}:{valid}"
+        err = err or f"Invalid operator supplied {operator!r}\n"
+        raise NotFoundError(f"{err}{valid}")
 
     @classmethod
     def get_map(cls) -> dict:
@@ -641,6 +644,7 @@ CUSTOM_FIELDS_MAP: Dict[str, List[dict]] = {
             "format": "connection_label",
             "type_norm": "string_cnx_label",
             "is_agg": True,
+            "selectable": False,
             "expr_field_type": AGG_EXPR_FIELD_TYPE,
         },
     ]

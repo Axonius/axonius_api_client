@@ -1,18 +1,23 @@
 # -*- coding: utf-8 -*-
 """Python API Client for Axonius."""
 import re
-from typing import Any, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
+from cachetools import TTLCache, cached
+
+from ..api.assets.asset_mixin import AssetMixin
 from ..api.parsers.constants import Operator
 from ..exceptions import WizardError
 from ..tools import (check_empty, check_type, coerce_int_float,
                      coerce_str_to_csv, dt_parse_tmpl, get_raw_version,
                      parse_ip_address, parse_ip_network)
 
+CACHE: TTLCache = TTLCache(maxsize=1024, ttl=30)
+
 
 class ValueParser:
-    def __init__(self, wizard):
-        self.wizard = wizard
+    def __init__(self, apiobj: AssetMixin):
+        self.apiobj = apiobj
 
     def __call__(self, value: Any, field: dict, operator: Operator) -> Tuple[str, Any]:
         self.field = field
@@ -69,19 +74,19 @@ class ValueParser:
     def value_to_str_tags(self, value: Any) -> Tuple[str, str]:
         check_type(value=value, exp=str)
         check_empty(value=value)
-        aql_value = self.check_enum(value=value, extra=self.wizard._tags())
+        aql_value = self.check_enum(value=value, extra=self._tags())
         return aql_value, aql_value
 
     def value_to_str_adapters(self, value: Any) -> Tuple[str, str]:
         check_type(value=value, exp=str)
         check_empty(value=value)
-        aql_value = self.check_enum(value=value, extra=self.wizard._adapter_names())
+        aql_value = self.check_enum(value=value, extra=self._adapter_names())
         return aql_value, aql_value
 
     def value_to_str_cnx_label(self, value: Any) -> Tuple[str, str]:
         check_type(value=value, exp=str)
         check_empty(value=value)
-        aql_value = self.check_enum(value=value, extra=self.wizard._cnx_labels())
+        aql_value = self.check_enum(value=value, extra=self._cnx_labels())
         return aql_value, aql_value
 
     def value_to_csv_str(self, value: Any) -> Tuple[str, str]:
@@ -97,13 +102,13 @@ class ValueParser:
         return self.parse_csv(value=value, converter=parse_ip_address)
 
     def value_to_csv_tags(self, value: Any) -> Tuple[str, str]:
-        return self.parse_csv(value=value, enum_extra=self.wizard._tags())
+        return self.parse_csv(value=value, enum_extra=self._tags())
 
     def value_to_csv_adapters(self, value: Any) -> Tuple[str, str]:
-        return self.parse_csv(value=value, enum_extra=self.wizard._adapter_names())
+        return self.parse_csv(value=value, enum_extra=self._adapter_names())
 
     def value_to_csv_cnx_label(self, entry: dict) -> Tuple[str, str]:
-        aql_value = self.parse_csv(entry=entry, enum_extra=self.wizard._cnx_labels())
+        aql_value = self.parse_csv(entry=entry, enum_extra=self._cnx_labels())
         return aql_value
 
     def parse_csv(
@@ -170,3 +175,26 @@ class ValueParser:
 
         etype = type(enum).__name__
         raise WizardError(f"Unhandled enum type {etype}: {enum}")
+
+    @cached(cache=CACHE)
+    def _tags(self) -> List[str]:
+        return self.apiobj.labels.get()
+
+    @cached(cache=CACHE)
+    def _adapters(self) -> List[dict]:
+        return self.apiobj.adapters.get()
+
+    @cached(cache=CACHE)
+    def _adapter_names(self) -> Dict[str, str]:
+        return {x["name"]: x["name_raw"] for x in self._adapters() if x["cnx"]}
+
+    @cached(cache=CACHE)
+    def _cnx_labels(self) -> List[str]:
+        value = []
+        for adapter in self._adapters():
+            for cnx in adapter["cnx"]:
+                config = cnx.get("config", {})
+                label = config.get("connection_label", "")
+                if label and label not in value:
+                    value.append(label)
+        return value

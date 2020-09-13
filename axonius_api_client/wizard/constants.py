@@ -1,230 +1,209 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """Utilities for this package."""
-import dataclasses
-from typing import Any, List, Optional, Union
-
-from ..data import BaseData
+import re
+from typing import List, Optional, Union
 
 
-class Consts:
-    SRC: str = "source"
-    IN_COMPLEX: str = "in_complex"
-    ENTRIES: str = "entries"
-    QUERY: str = "query"
+class Sources:
+    CLI_STR: str = "Command Line Interface"
+    CSV_STR: str = "csv text string"
+    CSV_PATH: str = "csv file {path}"
+    TEXT_STR: str = "text string"
+    TEXT_PATH: str = "text file {path}"
+    LOD: str = "list of dictionaries"
+    JSON_STR: str = "json string"
+    JSON_PATH: str = "json file {path}"
+
+
+class Templates:
+    LEFT: str = "({query}"
+    RIGHT: str = "{query})"
+    NOT: str = "not {query}"
+    OR: str = "or {query}"
+    AND: str = "and {query}"
+    COMPLEX: str = "({field} == match([{sub_queries}]))"
+    SUBS: str = " and "
+
+
+class Fields:
+    NAME: str = "name"
+    EXPR_TYPE: str = "expr_field_type"
+    ANAME: str = "adapter_name"
+    SUBS: str = "sub_fields"
+    DETAILS: str = "_details"
+    IS_COMPLEX: str = "is_complex"
+
+
+class Results:
     EXPRS: str = "expressions"
-    SUBS: str = "subs"
-    WEIGHT: str = "bracket_weight"
+    QUERY: str = "query"
 
-    SQ: str = "sq"
-    SQ_NAME: str = "name"
-    FNAME: str = "name"
-    FEXPR: str = "expr_field_type"
-    FANAME: str = "adapter_name"
-    FSUBS: str = "sub_fields"
-    FDETAILS: str = "_details"
-    FCOMPLEX: str = "is_complex"
-    TYPE_STR: str = "str"
-    TYPE_CSV: str = "csv"
-    FMANUAL: str = "fields_manual"
-    FDEFAULT: str = "fields_default"
-    NO_FDEFAULT: str = "no_fields_default"
 
-    CLI_SRC_STR: str = "Command Line Interface"
-    CSV_SRC_STR: str = "csv text string"
-    CSV_SRC_PATH: str = "csv file {path}"
-    TXT_SRC_STR: str = "text string"
-    TXT_SRC_PATH: str = "text file {path}"
+class Checks:
+    FIELD_VALID: re.Pattern = re.compile(
+        r"([^a-z0-9:._\-]) # contains characters that are not one of: a-z 0-9 : . _ -",
+        re.I | re.X,
+    )
+    FIELD_FIRST_ALPHA: re.Pattern = re.compile(
+        r"(^[^a-zA-Z]) # starts with characters that are not one of: a-z", re.I | re.X
+    )
+    OP_ALPHA: re.Pattern = re.compile(
+        r"([^a-z_\-])  # contains characters that are not one of: a-z _ -", re.I | re.X
+    )
 
-    ITEM_SEP: str = " "
-    VALUE_SEP: str = "="
-    WORDCHARS: str = ""  # f"{VALUE_SEP}"
+    FIELD: List[re.Pattern] = [FIELD_VALID, FIELD_FIRST_ALPHA]
+    OP: List[re.Pattern] = [OP_ALPHA]
 
-    NOT: str = "not"
-    AND: str = "and"
-    OR: str = "or"
 
-    OP_LOGIC_AND: str = AND
-    OP_LOGIC_OR: str = OR
-    OP_LOGIC_IDX0: str = ""
-
-    LEFT_TMPL: str = "({query}"
-    RIGHT_TMPL: str = "{query})"
-    NOT_TMPL: str = f"{NOT} {{query}}"
-    OR_TMPL: str = f"{OR} {{query}}"
-    AND_TMPL: str = f"{AND} {{query}}"
-    COMPLEX_TMPL: str = "({field} == match([{sub_queries}]))"
-    LEFTB: str = "bracket_left"
-    RIGHTB: str = "bracket_right"
-
-    DESC: str = "DESCRIPTION"
-    REQ: str = "REQUIRED"
-    OPT: str = "OPTIONAL"
-    DEFAULT: str = "DEFAULT"
-    CHOICES: str = "CHOICES"
-    STR_EXAMPLE: str = "# EXAMPLE:"
-    STR_EXAMPLES: str = "# EXAMPLES:"
-
-    FLAGS_FIELD: dict = {
-        OR: "Use or instead of and",
+class Flags:
+    NOT: str = "!"
+    AND: str = "&"
+    OR: str = "|"
+    LEFTB: str = "("
+    RIGHTB: str = ")"
+    FLAGS: dict = {
+        AND: "Use and instead of or (default)",
+        OR: f"Use or instead of and (overrides {AND})",
         NOT: "Use not",
-        LEFTB: "Open a bracket '('",
-        RIGHTB: "Close a bracket ')'",
+        LEFTB: "Open a parentheses",
+        RIGHTB: "Close a parentheses (can also be at end of entry)",
     }
-    FLAGS_SQ = {
-        NO_FDEFAULT: (
-            "Do not include the default columns from the API client in the Saved Query"
-        ),
-    }
+    LFMT: str = "[" + " ".join(list(FLAGS)) + "]"
+    RFMT: str = f"[{RIGHTB}]"
+    FMT_TEXT: str = "\n# " + "\n# ".join([f"{k}  {v}" for k, v in FLAGS.items()])
+    FMT_CSV: str = ", ".join([f"{k} {v}" for k, v in FLAGS.items()])
 
 
-@dataclasses.dataclass
-class TypeNames(BaseData):
+class Entry:
+    SRC: str = "source"
+    WEIGHT: str = "bracket_weight"
+    FLAGS: str = "flags"
+    VALUE: str = "value"
+    TYPE: str = "type"
+    REQ: List[str] = [VALUE, TYPE]
+
+    SPLIT: str = " "
+    CSPLIT: str = " // "
+
+
+class EntrySq:
+    NAME: str = "name"
+    DESC: str = "description"
+    TAGS: str = "tags"
+    FIELDS: str = "fields"
+    DEFAULT: str = "default"
+    FDEF: str = "fields_default"
+    FMAN: str = "fields_manual"
+    REQ: List[str] = [*Entry.REQ]
+
+
+class Types:
     SIMPLE: str = "simple"
     COMPLEX: str = "complex"
-    COMPLEX_SUB: str = "complex_sub"
     SAVED_QUERY: str = "saved_query"
 
-
-@dataclasses.dataclass
-class EntryKey(BaseData):
-    name: str
-    description: Union[str, dict]
-    example: str
-    value_type: str
-    required: bool
-    default: Optional[Union[str, int, bool, dict]] = None
-    choices: Optional[List[str]] = None
+    DICT: List[str] = [SIMPLE, COMPLEX]
+    TEXT: List[str] = [*DICT]
+    SQ: List[str] = [*DICT, SAVED_QUERY]
 
 
-@dataclasses.dataclass
-class EntryKeys(BaseData):
-    TYPE: EntryKey = EntryKey(
-        name="type",
-        required=True,
-        choices=TypeNames.get_values(),
-        description="Type of entry",
-        example={x: x for x in TypeNames.get_values()},
-        value_type=Consts.TYPE_STR,
+class Docs:
+    SUB_OPT: str = f"[{Entry.CSPLIT} ...]"
+    OPVAL: str = "FIELD OPERATOR VALUE"
+
+    FMT_SIMPLE: str = f"{Flags.LFMT} {OPVAL} {Flags.RFMT}"
+    FMT_COMPLEX: str = (
+        f"{Flags.LFMT} COMPLEX-FIELD{Entry.CSPLIT}SUB-{OPVAL}{SUB_OPT} {Flags.RFMT}"
     )
-    SQ_FIELDS: EntryKey = EntryKey(
-        name="fields",
-        required=False,
-        default="default",
-        description="Comma seperated list of columns to display in the Saved Query",
-        value_type=Consts.TYPE_CSV,
-        example="aws:aws_device_type,os.type",
-    )
-    SQ_TAGS: EntryKey = EntryKey(
-        name="tags",
-        required=False,
-        description="Comma separated list of tags to set on the Saved Query",
-        default="",
-        value_type=Consts.TYPE_CSV,
-        example="tag1,tag2",
-    )
-    SQ_DESC: EntryKey = EntryKey(
-        name="description",
-        required=False,
-        description="Description of the Saved Query",
-        default="",
-        value_type=Consts.TYPE_STR,
-        example="Find outdated browsers",
-    )
-    VALUE: EntryKey = EntryKey(
-        name="value",
-        required=True,
-        description={
-            TypeNames.SAVED_QUERY: "Name of saved question",
-            TypeNames.SIMPLE: "{field name} {operator} {value}",
-            TypeNames.COMPLEX: "Name of complex field",
-            TypeNames.COMPLEX_SUB: "{complex sub field name} {operator} {value}",
-        },
-        value_type=Consts.TYPE_STR,
-        example={
-            TypeNames.SAVED_QUERY: "Old browsers",
-            TypeNames.SIMPLE: "hostname contains test",
-            TypeNames.COMPLEX: "installed_software",
-            TypeNames.COMPLEX_SUB: "version less_than 99",
-        },
-    )
-    FLAGS: EntryKey = EntryKey(
-        name="flags",
-        required=False,
-        description={
-            TypeNames.SAVED_QUERY: Consts.FLAGS_SQ,
-            TypeNames.SIMPLE: Consts.FLAGS_FIELD,
-            TypeNames.COMPLEX: Consts.FLAGS_FIELD,
-        },
-        choices={
-            TypeNames.SAVED_QUERY: list(Consts.FLAGS_SQ),
-            TypeNames.SIMPLE: list(Consts.FLAGS_FIELD),
-            TypeNames.COMPLEX: list(Consts.FLAGS_FIELD),
-        },
-        value_type=Consts.TYPE_CSV,
-        default={
-            TypeNames.SAVED_QUERY: Consts.NO_FDEFAULT,
-            TypeNames.SIMPLE: "",
-            TypeNames.COMPLEX: "",
-        },
-        example={
-            TypeNames.SAVED_QUERY: ", ".join(list(Consts.FLAGS_SQ)),
-            TypeNames.SIMPLE: ", ".join(list(Consts.FLAGS_FIELD)),
-            TypeNames.COMPLEX: ", ".join(list(Consts.FLAGS_FIELD)),
-        },
+    DESC_SIMPLE: str = "Filter entry for simple fields"
+    DESC_COMPLEX: str = "Filter entry for complex fields and their sub-fields"
+    EX_SIMPLE1: str = f"{Flags.LEFTB} hostname contains test"
+    EX_SIMPLE2: str = f"{Flags.NOT} hostname contains internal {Flags.RIGHTB}"
+    EX_SIMPLE3: str = f"{Flags.LEFTB} os.type equals windows"
+    EX_SIMPLE4: str = f"{Flags.OR} os.type equals os x {Flags.RIGHTB}"
+    EX_COMPLEX1: str = (
+        f"installed_software{Entry.CSPLIT}name contains chrome"
+        f"{Entry.CSPLIT}version earlier_than 82"
     )
 
+    EX_TEXT: str = f"""{Types.SIMPLE:<8} "{EX_SIMPLE1}"
+{Types.SIMPLE:<8} "{EX_SIMPLE2}"
+{Types.SIMPLE:<8} "{EX_SIMPLE3}"
+{Types.SIMPLE:<8} "{EX_SIMPLE4}"
+{Types.COMPLEX:<8} "{EX_COMPLEX1}"
+"""
 
-@dataclasses.dataclass
-class EntryType(BaseData):
-    name: str
-    keys: List[EntryKey]
+    EX_DICT: str = f"""[
+  {{
+    "{Entry.TYPE}": "{Types.SIMPLE}",
+    "{Entry.VALUE}": "{EX_SIMPLE1}"
+  }},
+  {{
+    "{Entry.TYPE}": "{Types.SIMPLE}",
+    "{Entry.VALUE}": "{EX_SIMPLE2}"
+  }},
+  {{
+    "{Entry.TYPE}": "{Types.SIMPLE}",
+    "{Entry.VALUE}": "{EX_SIMPLE3}"
+  }},
+  {{
+    "{Entry.TYPE}": "{Types.SIMPLE}",
+    "{Entry.VALUE}": "{EX_SIMPLE4}"
+  }},
+  {{
+    "{Entry.TYPE}": "{Types.COMPLEX}",
+    "{Entry.VALUE}": "{EX_COMPLEX1}"
+  }}
+]
+"""
+    EX_FIELDS: str = "os.distribution,os.os_str,aws:aws_device_type"
 
-    @staticmethod
-    def key_dict(value: Any, entry_type: "EntryType") -> Any:
-        if isinstance(value, dict):
-            return value[entry_type.name]
-        return value
+    EX_CSV: str = f"""
+{Entry.TYPE},{Entry.VALUE},{EntrySq.DESC},{EntrySq.TAGS},{EntrySq.FIELDS}
+"# If {Entry.TYPE} column is empty or begins with # it is ignored",,,,
+"# {Entry.TYPE} of {Types.SIMPLE} or {Types.COMPLEX} will belong to the {Types.SAVED_QUERY} they are under",,,,
+"# Column descriptions for {Entry.TYPE} of {Types.SAVED_QUERY}","Name of Saved Query","Description of Saved Query","Tags to apply to Saved Query","Columns to display in Saved Query"
+"# Column descriptions for {Entry.TYPE} of {Types.SIMPLE}","Format ([brackets] represent optional items): {FMT_SIMPLE}","Description: {DESC_SIMPLE}","Only uses columns {Entry.TYPE} and {Entry.VALUE}",
+"# Column descriptions for {Entry.TYPE} of {Types.COMPLEX}","Format ([brackets] represent optional items): {FMT_COMPLEX}","Description: {DESC_COMPLEX}","Only uses columns {Entry.TYPE} and {Entry.VALUE}",
+"# Value Flags for {Entry.TYPE} of {Types.SIMPLE} or {Types.COMPLEX}","{Flags.FMT_CSV}",,,
+"{Types.SAVED_QUERY}","example 1","Filters, default fields, custom fields","example,tag1,tag2","{EX_FIELDS},{EntrySq.DEFAULT},os.build"
+"{Types.SIMPLE}","{EX_SIMPLE1}",,,
+"{Types.SIMPLE}","{EX_SIMPLE2}",,,
+"{Types.SIMPLE}","{EX_SIMPLE3}",,,
+"{Types.SIMPLE}","{EX_SIMPLE4}",,,
+"{Types.SAVED_QUERY}","example 2","No filters, no default fields, custom fields","example,tag3,tag4","{EX_FIELDS}"
+"{Types.SAVED_QUERY}","example 3","No filters, default fields, no custom fields","example,tag5,tag6",
+"""  # noqa: E501
+
+    TEXT: str = f"""
+# Example:
+{EX_TEXT}
+
+# Format ([brackets] represent optional items):
+{Types.SIMPLE:<8} "{FMT_SIMPLE}"
+# Description: "{DESC_SIMPLE}"
+{Types.COMPLEX:<8} "{FMT_COMPLEX}"
+# Description: "{DESC_COMPLEX}"
+
+# Flags:{Flags.FMT_TEXT}
+"""
+    DICT: str = f"""
+# Example:
+{EX_DICT}
+
+# Format ([brackets] represent optional items):
+# "{Entry.TYPE}": "{Types.SIMPLE}, "{Entry.VALUE}": "{FMT_SIMPLE}"
+# Description: "{DESC_SIMPLE}"
+# "{Entry.TYPE}": "{Types.COMPLEX}", "{Entry.VALUE}": "{FMT_COMPLEX}"
+# Description: "{DESC_COMPLEX}"
+
+# Flags:{Flags.FMT_TEXT}
+"""
+    CSV: str = f"Example:\n{EX_CSV}"
 
 
-@dataclasses.dataclass
-class AllEntryTypes(BaseData):
-    SAVED_QUERY: EntryType = EntryType(
-        name=TypeNames.SAVED_QUERY,
-        keys=[
-            EntryKeys.TYPE,
-            EntryKeys.VALUE,
-            EntryKeys.SQ_DESC,
-            EntryKeys.SQ_TAGS,
-            EntryKeys.SQ_FIELDS,
-        ],
-    )
-    SIMPLE: EntryType = EntryType(
-        name=TypeNames.SIMPLE, keys=[EntryKeys.TYPE, EntryKeys.VALUE, EntryKeys.FLAGS],
-    )
-    COMPLEX: EntryType = EntryType(
-        name=TypeNames.COMPLEX, keys=[EntryKeys.TYPE, EntryKeys.VALUE, EntryKeys.FLAGS],
-    )
-    COMPLEX_SUB: EntryType = EntryType(
-        name=TypeNames.COMPLEX_SUB, keys=[EntryKeys.TYPE, EntryKeys.VALUE],
-    )
-
-
-@dataclasses.dataclass
-class EntryTypes(BaseData):
-    SIMPLE: EntryType = AllEntryTypes.SIMPLE
-    COMPLEX: EntryType = AllEntryTypes.COMPLEX
-
-
-@dataclasses.dataclass
-class TextEntryTypes(EntryTypes):
-    SAVED_QUERY: EntryType = AllEntryTypes.SAVED_QUERY
-    SIMPLE: EntryType = AllEntryTypes.SIMPLE
-    COMPLEX: EntryType = AllEntryTypes.COMPLEX
-    COMPLEX_SUB: EntryType = AllEntryTypes.COMPLEX_SUB
-
-
-class ExprKeys:
+class Expr:
     BRACKET_LEFT: str = "leftBracket"
     BRACKET_RIGHT: str = "rightBracket"
     BRACKET_WEIGHT: str = "bracketWeight"
@@ -242,3 +221,92 @@ class ExprKeys:
     OP_LOGIC: str = "logicOp"
     VALUE: str = "value"
     CONTEXT_OBJ: str = "OBJ"
+
+    OP_AND: str = "and"
+    OP_OR: str = "or"
+    OP_IDX0: str = ""
+
+    @classmethod
+    def get_query(cls, exprs: List[dict]) -> str:
+        return " ".join([x[cls.FILTER] for x in exprs])
+
+    @classmethod
+    def get_subs_query(cls, sub_exprs: List[dict]) -> str:
+        return Templates.SUBS.join([x[cls.CONDITION] for x in sub_exprs])
+
+    @classmethod
+    def build(
+        cls,
+        entry: dict,
+        query: str,
+        field: dict,
+        idx: int,
+        value: str,
+        op_comp: str,
+        is_complex: bool = False,
+        children: Optional[List[dict]] = None,
+    ) -> dict:
+        flags = entry[Entry.FLAGS]
+        weight = entry[Entry.WEIGHT]
+
+        is_right = Flags.RIGHTB in flags
+        is_left = Flags.LEFTB in flags
+        is_not = Flags.NOT in flags
+        is_or = Flags.OR in flags
+
+        if is_not:
+            query = Templates.NOT.format(query=query)
+
+        if is_right:
+            query = Templates.RIGHT.format(query=query)
+
+        if is_left:
+            query = Templates.LEFT.format(query=query)
+
+        if idx:
+            if is_or:
+                query = Templates.OR.format(query=query)
+                op_logic = cls.OP_OR
+            else:
+                query = Templates.AND.format(query=query)
+                op_logic = cls.OP_AND
+        else:
+            op_logic = cls.OP_IDX0
+
+        expression = {}
+        expression[cls.BRACKET_WEIGHT] = weight
+        expression[cls.CHILDREN] = children or [cls.build_child()]
+        expression[cls.OP_COMP] = op_comp
+        expression[cls.FIELD] = field[Fields.NAME]
+        expression[cls.FIELD_TYPE] = field[Fields.EXPR_TYPE]
+        expression[cls.FILTER] = query
+        expression[cls.FILTER_ADAPTERS] = None
+        expression[cls.BRACKET_LEFT] = is_left
+        expression[cls.OP_LOGIC] = op_logic
+        expression[cls.NOT] = is_not
+        expression[cls.BRACKET_RIGHT] = is_right
+        expression[cls.VALUE] = value
+
+        if is_complex:
+            expression[cls.CONTEXT] = cls.CONTEXT_OBJ
+
+        return expression
+
+    @classmethod
+    def build_child(
+        cls,
+        query: str = "",
+        op_comp: str = "",
+        field: str = "",
+        value: Optional[Union[int, str]] = None,
+        idx: int = 0,
+    ) -> dict:
+        expression = {}
+        expression[cls.CONDITION] = query
+        expression[cls.EXPR] = {}
+        expression[cls.EXPR][cls.OP_COMP] = op_comp
+        expression[cls.EXPR][cls.FIELD] = field
+        expression[cls.EXPR][cls.FILTER_ADAPTERS] = None
+        expression[cls.EXPR][cls.VALUE] = value
+        expression[cls.IDX] = idx
+        return expression

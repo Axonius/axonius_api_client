@@ -26,14 +26,13 @@ class JsonToCsv(Csv):
 
         self.echo(msg="Re-reading temporary file and converting to CSV")
         self._temp_file.file.seek(0)
+        self.STATE["rows_processed_total"] = 0
         for line in self._temp_file.file.readlines():
-            self.STATE["rows_processed_total"] = 0
-            self.do_pre_row()
-
             row = json.loads(line.strip())
+            self.do_pre_row(row=row)
             new_rows = self.do_row(row=row)
             for new_row in listify(new_rows):
-                self._stream.writerow(new_row)
+                self.write_row(row=new_row)
                 del new_row
             del new_rows
 
@@ -43,7 +42,8 @@ class JsonToCsv(Csv):
 
     def process_row(self, row: dict) -> List[dict]:
         """Write row to temp file with no processing."""
-        self.do_pre_row()
+        self.do_pre_row(row=row)
+        self.do_start()
 
         return_row = [{"internal_axon_id": row["internal_axon_id"]}]
         row = json.dumps(row)

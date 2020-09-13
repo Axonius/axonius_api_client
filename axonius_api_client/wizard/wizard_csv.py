@@ -3,126 +3,153 @@
 import codecs
 import csv
 import io
-from typing import List, Union
+import pathlib
+from typing import List, Optional, Union
 
 from ..exceptions import WizardError
 from ..tools import check_type, path_read
-from .constants import AllEntryTypes, Consts, EntryKeys, EntryType
-from .wizard_text import WizardTextBase
+from .constants import Docs, Entry, EntrySq, Sources, Types
+from .wizard import Wizard
 
 
-# WizardCli
-# get_example_header()
-class WizardCsv(WizardTextBase):
-    NEEDS_SQ: bool = True
-    BOM = codecs.BOM_UTF8.decode()
+def kv_dump(obj: dict) -> str:
+    return "\n  " + "\n  ".join([f"{k}: {v}" for k, v in obj.items()])
 
-    def parse(self, content: str, source: str = Consts.CSV_SRC_STR) -> List[dict]:
-        try:
-            lines = self._load_csv(content=content, source=source)
-        except Exception as exc:
-            errs = [f"Error reading from {source}:", f"{exc}"]
-            raise WizardError("\n".join(errs))
-        sq_entries = self._parse_lines(lines=lines, source=source)
-        return [self._parse_sq(sq_entry=x) for x in sq_entries]
 
-    def parse_path(self, path) -> List[dict]:
+class WizardCsv(Wizard):
+    DOCS: str = Docs.CSV
+
+    def parse(self, content: str, source: Optional[str] = None) -> List[dict]:
+        source = source or Sources.CSV_STR
+        return self._load_csv(content=content, source=source)
+
+    def parse_path(
+        self, path: Union[str, pathlib.Path], source: Optional[str] = None
+    ) -> List[dict]:
+        source = source or Sources.CSV_PATH.format(path=path)
         path, content = path_read(path, encoding="utf-8")
-        return self.parse(content=content, source=Consts.CSV_SRC_PATH.format(path=path))
-
-    def _line_to_entry(self, line: dict, src: str) -> dict:
-        """Parse key-value pairs from a shell-like text line."""
-        return {k.strip().lower(): v.lstrip() for k, v in line.items()}
+        return self.parse(content=content, source=source)
 
     def _load_csv(self, content: str, source: str) -> List[dict]:
         check_type(value=content, exp=str, name="content")
-        if content.startswith(self.BOM):
+        if content.startswith(codecs.BOM_UTF8.decode()):
             content = content[1:]
 
         content = content.strip()
-
         fh = io.StringIO(content)
-
-        # XXX catch general errors here
         reader = csv.DictReader(fh)
-        lines = [x for x in reader]
-        # XXX catch general errors here
+        rows = [x for x in reader if x]
+        columns = [x.strip().lower() for x in reader.fieldnames or []]
 
-        columns = [x.strip().lower() for x in reader.fieldnames]
+        found = ", ".join(columns or ["NONE!"])
+        ctxt = f"Found columns: {found}, rows: {len(rows)}"
+        self.LOG.debug(ctxt)
 
-        entry_keys = EntryKeys.get_values()
-        required = [x for x in entry_keys if x.required]
-        optional = [x for x in entry_keys if not x.required]
-        req_miss = [x.name for x in required if x.name not in columns]
-        opt_miss = [x.name for x in optional if x.name not in columns]
+        if not rows:
+            err = f"Error parsing from {source}\n\nNo rows found! {ctxt}"
+            errs = [err, self.DOCS, err]
+            raise WizardError("\n".join(errs))
 
-        found = ", ".join(columns)
-        self.LOG.debug(f"Found columns: {found}")
+        self._sqs = []
+        self._sq = {}
+        self._sq_entries = []
+        self._sqs_done = []
 
-        if opt_miss:
-            opt_txt = ", ".join(opt_miss)
-            self.LOG.info(f"Missing columns that are optional: {opt_txt}")
+        for idx, row in enumerate(rows):
+            src = f"{source} row #{idx + 1}:{kv_dump(row)}"
 
-        if req_miss:
-            req_txt = ", ".join(req_miss)
-            raise WizardError(f"Missing columns that are required: {req_txt}")
+            try:
+                self._process_row(row=row, idx=idx, row_count=len(rows), src=src)
+            except Exception as exc:
+                err = f"Error parsing from {src}\n\n{exc}"
+                errs = [err, self.DOCS, err]
+                raise WizardError("\n".join(errs))
 
-        return lines
+        return self._sqs
 
-    @classmethod
-    def get_examples(cls, include_help: bool = True) -> str:
-        lines = [
-            cls.get_example(
-                entry_type=AllEntryTypes.SAVED_QUERY, include_help=include_help
-            ),
-            cls.get_example(entry_type=AllEntryTypes.SIMPLE, include_help=include_help),
-            cls.get_example(entry_type=AllEntryTypes.COMPLEX, include_help=include_help),
-            cls.get_example(
-                entry_type=AllEntryTypes.COMPLEX_SUB, include_help=include_help
-            ),
-        ]
-        join = "\n\n" if include_help else "\n"
-        return join.join(lines)
+    def _process_row(self, row: dict, idx: int, row_count: int, src: str):
+        entry = self._row_to_entry(row=row)
 
-    @classmethod
-    def get_example(
-        cls, entry_type: Union[str, EntryType], include_help: bool = True
-    ) -> str:
-        examples = []
-        helps = []
+        if not entry:
+            return
 
-        for key in entry_type.keys:
-            required = EntryType.key_dict(value=key.required, entry_type=entry_type)
-            example = EntryType.key_dict(value=key.example, entry_type=entry_type)
-            desc = EntryType.key_dict(value=key.description, entry_type=entry_type)
-            choices = EntryType.key_dict(value=key.choices, entry_type=entry_type)
-            default = EntryType.key_dict(value=key.default, entry_type=entry_type)
-            name = EntryType.key_dict(value=key.name, entry_type=entry_type)
+        self._check_keys(entry=entry, keys=EntrySq.REQ)
+        entry[Entry.SRC] = src
+        etype = self._check_entry_type(entry=entry, types=Types.SQ)
+        stype = Types.SAVED_QUERY
 
-            req_txt = Consts.REQ if required else Consts.OPT
-            choice_txt = ""
-            help_txt = ""
-            desc_txt = f", {Consts.DESC}: {desc}"
+        if not idx:
+            if etype == stype:
+                self._new_sq(entry=entry)
+                return
 
-            if isinstance(desc, dict):
-                desc = "".join([f"\n#  - {k}: {v}" for k, v in desc.items()])
-                desc_txt = f", {Consts.DESC}: {desc}"
+            raise WizardError(f"First entry must be type {stype!r}, not {etype!r}")
 
-            if default is not None:
-                help_txt = f', {Consts.DEFAULT}: "{default}"'
+        if etype == stype:
+            if self._sq_entries:
+                self._process_sq(src=src)
 
-            if choices:
-                choice_txt = ", ".join([x for x in choices if x])
-                choice_txt = f", {Consts.CHOICES}: {choice_txt}"
+            self._new_sq(entry=entry)
+            return
 
-            examples.append(f'{name}{Consts.VALUE_SEP}"{example}"')
-            helps.append(f"# {name:<14}: [{req_txt}] {help_txt}{choice_txt}{desc_txt}")
+        self._sq_entries.append(entry)
 
-        example = f"{Consts.ITEM_SEP} ".join(examples)
-        if include_help:
-            example = [
-                example,
-                *helps,
-            ]
-            example = "\n".join(example)
-        return example
+        if idx == row_count - 1:
+            self._process_sq(src=src)
+            return
+
+    def _row_to_entry(self, row: dict) -> dict:
+        entry = {}
+        for k, v in row.items():
+            k = str(k or "").lower().strip()
+
+            if k == Entry.TYPE:
+                if not v or not isinstance(v, str) or str(v).startswith("#"):
+                    return {}
+
+            if v is not None and str(v).strip():
+                entry[k] = str(v)
+        return entry
+
+    def _process_sq(self, src: str):
+        if self._sq_entries and self._sq not in self._sqs_done:
+            cnt = len(self._sq_entries)
+            self.LOG.debug(f"processing {cnt} entries in for SQ {kv_dump(self._sq)}")
+            parsed = super().parse(entries=self._sq_entries, source=src)
+            self._sq.update(parsed)
+        self._sqs_done.append(self._sq)
+
+    def _new_sq(self, entry: dict):
+        self._sq = {}
+        self._sq[EntrySq.NAME] = entry[Entry.VALUE]
+        self._sq[EntrySq.FDEF] = False
+        self._sq[EntrySq.FMAN] = self._process_fields(entry=entry)
+        self._sq[EntrySq.TAGS] = self._process_tags(entry=entry)
+        self._sq[EntrySq.DESC] = self._process_desc(entry=entry)
+        self._sq_entries = []
+        self._sqs.append(self._sq)
+        self.LOG.debug(f"New {Types.SAVED_QUERY} found {kv_dump(self._sq)}")
+
+    def _process_desc(self, entry: dict) -> Optional[str]:
+        desc = entry.get(EntrySq.DESC) or ""
+        desc = desc.strip()
+        return desc or None
+
+    def _process_tags(self, entry: dict) -> Optional[List[str]]:
+        tags = entry.get(EntrySq.TAGS) or ""
+        tags = [x.strip() for x in tags.split(",") if x.strip()]
+        return tags or None
+
+    def _process_fields(self, entry: dict) -> [List[str]]:
+        fields = entry.get(EntrySq.FIELDS) or EntrySq.DEFAULT
+        fields = fields if fields else ""
+        fields = [x.strip().lower() for x in fields.split(",") if x.strip()]
+
+        if EntrySq.DEFAULT in fields:
+            lidx = fields.index(EntrySq.DEFAULT)
+            ridx = lidx + 1
+            fields[lidx:ridx] = self._apiobj.fields_default
+            fields = [x for x in fields if x != EntrySq.DEFAULT]
+
+        fields = self._apiobj.fields.validate(fields=fields, fields_default=False)
+        return fields

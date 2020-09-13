@@ -65,7 +65,7 @@ class Xlsx(Base):
 
     def process_row(self, row: dict) -> List[dict]:
         """Write row to dictwriter and delete it."""
-        self.do_pre_row()
+        self.do_pre_row(row=row)
 
         row_return = [{"internal_axon_id": row["internal_axon_id"]}]
         new_rows = self.do_row(row=row)

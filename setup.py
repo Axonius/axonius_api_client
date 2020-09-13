@@ -31,6 +31,7 @@ install_requires = [
     "tabulate>=0.8.7",
     "xlsxwriter>=1.3.1",
     "cachetools>=4.1.1",
+    "fuzzywuzzy[speedup]>=0.18.0",
 ]
 
 setup(

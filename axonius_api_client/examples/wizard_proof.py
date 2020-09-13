@@ -1,13 +1,14 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """Utilities for this package."""
+import json
 import os
 
 import axonius_api_client as axonapi  # noqa:F401
-import click
-from axonius_api_client import Connect, WizardCsv, WizardText
+from axonius_api_client import Connect, wizard
 from axonius_api_client.constants import load_dotenv
 from axonius_api_client.tools import json_reload
+from axonius_api_client.wizard.constants import Docs
 
 
 def jdump(obj, **kwargs):
@@ -28,6 +29,7 @@ if __name__ == "__main__":
         secret=AX_SECRET,
         certwarn=False,
         log_console=True,
+        log_file=True,
         log_level_console="debug",
         log_request_attrs="url",
     )
@@ -37,51 +39,48 @@ if __name__ == "__main__":
     j = jdump
 
 
-"type, value, description, tags, flags, fields"
+content_text = Docs.EX_TEXT
+content_json = Docs.EX_DICT
+content_dict = json.loads(content_json)
+content_csv = Docs.EX_CSV
 
-content_txt = """
-simple      "hostname contains test.domain"
-complex     "or not ( installed_software"
-complex_sub "version earlier_than 99"
-simple      "or not ) hostname contains test.domain"
-"""  # noqa
+cli = f"""
+axonshell devices saved-query wiz-add-from-csv --file blah.csv
+
+axonshell devices saved-query wiz-add
+    --name 'test'
+    --description 'test'
+    --wiz simple "{Docs.EX_SIMPLE1}"
+    --wiz simple "{Docs.EX_SIMPLE2}"
+    --wiz simple "{Docs.EX_SIMPLE3}"
+    --wiz simple "{Docs.EX_SIMPLE4}"
+    --wiz complex "{Docs.EX_COMPLEX1}"
+    --wiz text_file "blah.txt"
+    --wiz json_file "blah.json"
+
+axonshell devices get
+    --wiz simple "{Docs.EX_SIMPLE1}"
+    --wiz simple "{Docs.EX_SIMPLE2}"
+    --wiz simple "{Docs.EX_SIMPLE3}"
+    --wiz simple "{Docs.EX_SIMPLE4}"
+    --wiz complex "{Docs.EX_COMPLEX1}"
+    --wiz text_file "blah.txt"
+    --wiz json_file "blah.json"
 
 """
-[
-    {'type': 'saved_query', 'name': '', 'description': ''},
-    {'type': 'simple', 'value': ''},
-    {'type': 'saved_query', 'name': '', 'description': ''},
-]
-# axonshell devices saved-query wiz-add-from-csv --file pg.csv
-# axonshell devices saved-query wiz-add --name '' --description '' --wiz simple "hostname contains test.domain"
-# axonshell devices get --wiz simple "hostname contains test.domain" --wiz complex "installed_software"
+# content_csv = """z"""
+parser = wizard.Wizard(apiobj=devices, log_level="debug")
+parser_csv = wizard.WizardCsv(apiobj=devices, log_level="debug")
+parser_text = wizard.WizardText(apiobj=devices, log_level="debug")
 
-"""  # noqa
-content_csv = """
-type, query, name, description, tags, fields
-saved_query, "", "bbb", "ccc", "a,b", "hostname,os.type,default"
-simple,"or not ( ) hostname contains test.domain"
-"""  # noqa
-text_parser = WizardText(apiobj=devices, log_level="debug")
-sqs = text_parser.parse(content_txt)
-# print(text_parser.get_examples())
+# result = parser.parse(entries=content_dict)
+# sq = devices.saved_query.add(name="sq from list of dict", **result)
 
-csv_parser = WizardCsv(apiobj=devices, log_level="debug")
-# sqs = csv_parser.parse_path("~/pg.csv")
-# sqs = csv_parser.parse(content_csv)
+# result_text = parser_text.parse(content=content_text)
+# sq = devices.saved_query.add(name="sq from text", **result_text)
 
-# for sq in sqs:
-#     devices.saved_query.add(**sq)
+# result_csv = parser_csv.parse(content=content_csv)
+# sqs = [devices.saved_query.add(**sq) for sq in result_csv]
 
 
-def callback(ctx, param, value):
-    print(param, value)
-
-
-@click.command()
-@click.option("--wiz", nargs=2, callback=callback, multiple=True)
-def cli(wiz):
-    print(wiz)
-
-
-# cli()
+# sq to wiz?
