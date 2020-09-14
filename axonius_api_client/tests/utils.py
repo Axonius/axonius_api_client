@@ -6,15 +6,74 @@ import sys
 from io import StringIO
 
 import pytest
-from click.testing import CliRunner
-
-from axonius_api_client import api, auth
+from axonius_api_client import Wizard, api, auth
 from axonius_api_client.cli.context import Context
+from axonius_api_client.constants import AGG_ADAPTER_NAME
 from axonius_api_client.http import Http
+from axonius_api_client.tools import listify
+from cachetools import TTLCache, cached
+from click.testing import CliRunner
 
 IS_WINDOWS = sys.platform == "win32"
 IS_LINUX = sys.platform == "linux"
 IS_MAC = sys.platform == "darwin"
+
+
+CACHE: TTLCache = TTLCache(maxsize=1024, ttl=600)
+
+
+def get_field_vals(rows, field):
+    """Pass."""
+    values = [x[field] for x in rows if x.get(field)]
+    values = [x for y in values for x in listify(y)]
+    return values
+
+
+def check_assets(rows):
+    """Pass."""
+    assert isinstance(rows, list)
+    for row in rows:
+        check_asset(row)
+
+
+def check_asset(row):
+    """Pass."""
+    assert isinstance(row, dict)
+    assert row["internal_axon_id"]
+
+
+def build_query(apiobj, fields=None):
+    if not fields:
+        return None
+
+    try:
+        fields = apiobj.fields.validate(fields=fields, fields_default=False)
+    except Exception as exc:
+        pytest.skip(f"Fields {fields} not known for {apiobj}: {exc}")
+
+    entries = [{"type": "simple", "value": f"{x} exists"} for x in fields]
+    wizard = Wizard(apiobj=apiobj)
+    query = wizard.parse(entries=entries)["query"]
+    return query
+
+
+@cached(cache=CACHE)
+def get_rows_exist(apiobj, fields=None, max_rows=5):
+    query = build_query(apiobj=apiobj, fields=fields)
+    rows = apiobj.get(fields=fields, max_rows=max_rows, query=query)
+    if not rows:
+        pytest.skip(f"No {apiobj} assets with fields {fields}")
+    return rows
+
+
+@cached(cache=CACHE)
+def get_schemas(apiobj, adapter=AGG_ADAPTER_NAME):
+    return apiobj.fields.get()[adapter]
+
+
+@cached(cache=CACHE)
+def get_sqs(apiobj):
+    return apiobj.saved_query.get()
 
 
 def log_check(caplog, entries, exists=True):

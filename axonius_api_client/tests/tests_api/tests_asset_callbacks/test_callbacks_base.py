@@ -4,7 +4,7 @@ import copy
 
 import pytest
 
-from .callbacks import Callbacks, load_test_data
+from .callbacks import Callbacks
 
 
 class CallbacksBase(Callbacks):
@@ -58,7 +58,7 @@ class TestDevicesCallbacksBase(CallbacksBase):
     @pytest.fixture(scope="class")
     def apiobj(self, api_devices):
         """Pass."""
-        return load_test_data(apiobj=api_devices)
+        return api_devices
 
 
 class TestUsersCallbacksBase(CallbacksBase):
@@ -67,4 +67,4 @@ class TestUsersCallbacksBase(CallbacksBase):
     @pytest.fixture(scope="class")
     def apiobj(self, api_users):
         """Pass."""
-        return load_test_data(apiobj=api_users)
+        return api_users

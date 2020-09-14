@@ -14,7 +14,7 @@ from ...tools import listify, split_str, strip_right
 from ..mixins import ChildMixins
 from ..parsers.fields import parse_fields
 
-CACHE: TTLCache = TTLCache(maxsize=1024, ttl=30)
+CACHE: TTLCache = TTLCache(maxsize=1024, ttl=300)
 
 
 class Fields(ChildMixins):

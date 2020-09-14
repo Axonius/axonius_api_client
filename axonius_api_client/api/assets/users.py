@@ -13,6 +13,8 @@ class Users(AssetMixin):
     FIELD_MAIL: str = "specific_data.data.mail"
     FIELD_DOMAIN: str = "specific_data.data.domain"
     FIELD_IS_ADMIN: str = "specific_data.data.is_admin"
+    FIELD_SIMPLE: str = FIELD_USERNAME
+    FIELD_COMPLEX: str = "specific_data.data.associated_devices"
 
     FIELDS_SPECIFIC: List[str] = [
         FIELD_USERNAME,

@@ -17,6 +17,9 @@ class Devices(AssetMixin):
     FIELD_MAC: str = "specific_data.data.network_interfaces.mac"
     FIELD_SUBNET: str = "specific_data.data.network_interfaces.subnets"
     FIELD_OS_TYPE: str = "specific_data.data.os.type"
+    FIELD_MAIN: str = FIELD_HOSTNAME
+    FIELD_SIMPLE: str = FIELD_HOSTNAME
+    FIELD_COMPLEX: str = "specific_data.data.network_interfaces"
 
     FIELDS_SPECIFIC: List[str] = [
         FIELD_ASSET_NAME,
