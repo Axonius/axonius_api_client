@@ -6,50 +6,12 @@ import logging
 import sys
 
 import pytest
-
 from axonius_api_client.api.asset_callbacks import get_callbacks_cls
-from axonius_api_client.constants import (
-    AGG_ADAPTER_NAME,
-    AGG_ADAPTER_TITLE,
-    FIELD_TRIM_LEN,
-    SCHEMAS_CUSTOM,
-)
-from axonius_api_client.exceptions import ApiError, NotFoundError
+from axonius_api_client.constants import FIELD_TRIM_LEN, SCHEMAS_CUSTOM
+from axonius_api_client.exceptions import ApiError
 
 from ...meta import TAGS
-from ...utils import log_check
-
-
-def load_test_data(apiobj):
-    """Pass."""
-    apiobj.TEST_DATA = getattr(apiobj, "TEST_DATA", {})
-
-    if not apiobj.TEST_DATA.get("fields_map"):
-        apiobj.TEST_DATA["fields_map"] = fields_map = apiobj.fields.get()
-
-    if not apiobj.TEST_DATA.get("assets"):
-        apiobj.TEST_DATA["assets"] = apiobj.get(max_rows=2000, fields_map=fields_map)
-
-    if not apiobj.TEST_DATA.get("cb_assets"):
-        field_complex = apiobj.TEST_DATA["field_complex"]
-        try:
-            apiobj.fields.get_field_name(value=field_complex)
-        except NotFoundError:
-            # XXX users no longer seem to have any complex field data as of 04/23/2020
-            apiobj.TEST_DATA["field_complex"] = None
-            apiobj.TEST_DATA["field_complexes"] = apiobj.fields_default
-            apiobj.TEST_DATA["cb_assets_query"] = None
-
-        field_complexes = apiobj.TEST_DATA["field_complexes"]
-        cb_assets_query = apiobj.TEST_DATA["cb_assets_query"]
-        apiobj.TEST_DATA["cb_assets"] = apiobj.get(
-            query=cb_assets_query,
-            max_rows=2000,
-            fields=field_complexes,
-            fields_map=fields_map,
-        )
-
-    return apiobj
+from ...utils import get_rows_exist, get_schemas, log_check
 
 
 class Callbacks:
@@ -61,28 +23,16 @@ class Callbacks:
         getargs = getargs or {}
         store = store or {}
 
-        query = apiobj.TEST_DATA["cb_assets_query"]
-        fields = apiobj.TEST_DATA["field_complexes"]
-
-        store.setdefault("query", query)
-        store.setdefault("fields", fields)
-
         cbcls = get_callbacks_cls(export=cbexport)
         assert cbcls.CB_NAME == cbexport
 
-        cbobj = cbcls(
-            apiobj=apiobj,
-            fields_map=apiobj.TEST_DATA["fields_map"],
-            getargs=getargs,
-            state=state,
-            store=store,
-        )
+        cbobj = cbcls(apiobj=apiobj, getargs=getargs, state=state, store=store)
         assert cbobj.CB_NAME == cbexport
         assert cbobj.APIOBJ == apiobj
-        assert cbobj.ALL_SCHEMAS == apiobj.TEST_DATA["fields_map"]
         assert cbobj.STORE == store
         assert cbobj.STATE == state
 
+        assert isinstance(cbobj.ALL_SCHEMAS, dict) and cbobj.ALL_SCHEMAS
         assert isinstance(cbobj.args_map, list)
         assert isinstance(cbobj.args_strs, list)
 
@@ -125,7 +75,7 @@ class Callbacks:
 
     def test_add_report_adapters_missing_false(self, cbexport, apiobj):
         """Pass."""
-        original_row = copy.deepcopy(apiobj.TEST_DATA["cb_assets"][0])
+        original_row = get_rows_exist(apiobj=apiobj, max_rows=1)[0]
         test_row = copy.deepcopy(original_row)
 
         report_schemas = SCHEMAS_CUSTOM["report_adapters_missing"]
@@ -143,7 +93,7 @@ class Callbacks:
 
     def test_add_report_adapters_missing_true(self, cbexport, apiobj):
         """Pass."""
-        original_row = copy.deepcopy(apiobj.TEST_DATA["cb_assets"][0])
+        original_row = get_rows_exist(apiobj=apiobj, max_rows=1)[0]
         test_row = copy.deepcopy(original_row)
 
         report_schemas = SCHEMAS_CUSTOM["report_adapters_missing"]
@@ -209,16 +159,14 @@ class Callbacks:
 
     def test_do_add_null_values_true(self, cbexport, apiobj):
         """Pass."""
-        original_row = copy.deepcopy(apiobj.TEST_DATA["cb_assets"][0])
-        picks = [x for x in original_row if x.startswith("specific_data.data.")][-1]
-        original_row.pop(picks)
-        test_row = copy.deepcopy(original_row)
+        original_row = get_rows_exist(apiobj=apiobj, max_rows=1)[0]
+        picks = [x for x in original_row if x.startswith("specific_data.data.")]
+        test_row = {k: v for k, v in original_row.items() if k not in picks}
 
-        field_complex = apiobj.TEST_DATA["field_complex"]
+        field_complex = apiobj.FIELD_COMPLEX
 
         schema = apiobj.fields.get_field_schema(
-            value=field_complex,
-            schemas=apiobj.TEST_DATA["fields_map"][AGG_ADAPTER_NAME],
+            value=field_complex, schemas=get_schemas(apiobj=apiobj),
         )
 
         getargs = {"field_null": True}
@@ -229,22 +177,21 @@ class Callbacks:
 
         assert original_row != test_row
 
-        for schema in cbobj.schemas_selected:
-            if schema["name_qual"] in cbobj.GETARGS.get("field_excludes", []):
+        for x in cbobj.schemas_selected:
+            if x["name_qual"] in cbobj.GETARGS.get("field_excludes", []):
                 continue
-            assert schema["name_qual"] in test_row
+            assert x["name_qual"] in test_row
 
-        if apiobj.TEST_DATA["has_complex"]:
-            for sub_field in schema["sub_fields"]:
-                for sub_value in test_row[field_complex]:
-                    if sub_field["is_root"]:
-                        assert sub_field["name"] in sub_value
-                    else:
-                        assert sub_field["name"] not in sub_value
+        for x in schema["sub_fields"]:
+            for sub_value in test_row.get(field_complex) or []:
+                if x["is_root"]:
+                    assert x["name"] in sub_value
+                else:
+                    assert x["name"] not in sub_value
 
     def test_do_add_null_values_false(self, cbexport, apiobj):
         """Pass."""
-        original_row = copy.deepcopy(apiobj.TEST_DATA["cb_assets"][0])
+        original_row = get_rows_exist(apiobj=apiobj, max_rows=1)[0]
         test_row = copy.deepcopy(original_row)
 
         getargs = {"field_null": False}
@@ -253,25 +200,24 @@ class Callbacks:
         for cb_schema in cbobj.schemas_selected:
             cbobj.do_add_null_values(row=test_row, schema=cb_schema)
 
-        if not cbobj.GETARGS["field_null"]:
-            assert original_row == test_row
+        assert original_row == test_row
 
     def test_do_add_null_values_exclude(self, cbexport, apiobj):
         """Pass."""
-        original_row = copy.deepcopy(apiobj.TEST_DATA["cb_assets"][0])
+        original_row = get_rows_exist(apiobj=apiobj, max_rows=1)[0]
         test_row = copy.deepcopy(original_row)
-        test_row.pop("adapters", None)
+        test_row.pop(apiobj.FIELD_ADAPTERS, None)
 
-        getargs = {"field_null": True, "field_excludes": ["adapters"]}
+        getargs = {"field_null": True, "field_excludes": [apiobj.FIELD_ADAPTERS]}
         cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs=getargs)
 
         for cb_schema in cbobj.schemas_selected:
             cbobj.do_add_null_values(row=test_row, schema=cb_schema)
-        assert "adapters" not in test_row
+        assert apiobj.FIELD_ADAPTERS not in test_row
 
     def test_process_tags_to_add(self, cbexport, apiobj, caplog):
         """Pass."""
-        original_row = copy.deepcopy(apiobj.TEST_DATA["cb_assets"][0])
+        original_row = get_rows_exist(apiobj=apiobj, max_rows=1)[0]
         test_row = copy.deepcopy(original_row)
         row_id = test_row["internal_axon_id"]
 
@@ -298,7 +244,7 @@ class Callbacks:
 
     def test_process_tags_to_remove(self, cbexport, apiobj, caplog):
         """Pass."""
-        original_row = copy.deepcopy(apiobj.TEST_DATA["cb_assets"][0])
+        original_row = get_rows_exist(apiobj=apiobj, max_rows=1)[0]
         test_row = copy.deepcopy(original_row)
         row_id = test_row["internal_axon_id"]
 
@@ -324,7 +270,7 @@ class Callbacks:
 
     def test_process_tags_to_add_empty(self, cbexport, apiobj, caplog):
         """Pass."""
-        original_row = copy.deepcopy(apiobj.TEST_DATA["cb_assets"][0])
+        original_row = get_rows_exist(apiobj=apiobj, max_rows=1)[0]
         test_row = copy.deepcopy(original_row)
 
         getargs = {"tags_add": []}
@@ -341,7 +287,7 @@ class Callbacks:
 
     def test_process_tags_to_remove_empty(self, cbexport, apiobj, caplog):
         """Pass."""
-        original_row = copy.deepcopy(apiobj.TEST_DATA["cb_assets"][0])
+        original_row = get_rows_exist(apiobj=apiobj, max_rows=1)[0]
         test_row = copy.deepcopy(original_row)
 
         getargs = {"tags_remove": []}
@@ -358,7 +304,7 @@ class Callbacks:
 
     def test_do_excludes_empty(self, cbexport, apiobj):
         """Pass."""
-        original_row = copy.deepcopy(apiobj.TEST_DATA["cb_assets"][0])
+        original_row = get_rows_exist(apiobj=apiobj, max_rows=1)[0]
         test_row = copy.deepcopy(original_row)
 
         getargs = {"field_excludes": []}
@@ -374,10 +320,10 @@ class Callbacks:
 
     def test_do_excludes(self, cbexport, apiobj):
         """Pass."""
-        original_row = copy.deepcopy(apiobj.TEST_DATA["cb_assets"][0])
+        original_row = get_rows_exist(apiobj=apiobj, max_rows=1)[0]
         test_row = copy.deepcopy(original_row)
 
-        fields = ["internal_axon_id", "adapters", "adapters_list_length"]
+        fields = ["internal_axon_id", apiobj.FIELD_ADAPTERS, "adapters_list_length"]
 
         getargs = {"field_excludes": fields}
         cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs=getargs)
@@ -392,26 +338,27 @@ class Callbacks:
 
     def test_do_excludes_sub(self, cbexport, apiobj):
         """Pass."""
-        if not apiobj.TEST_DATA["has_complex"]:
-            pytest.skip(f"No complex field found for {apiobj}")
+        field_complex = apiobj.FIELD_COMPLEX
 
-        original_row = copy.deepcopy(apiobj.TEST_DATA["cb_assets"][0])
+        original_row = get_rows_exist(apiobj=apiobj, fields=field_complex, max_rows=1)[0]
         test_row = copy.deepcopy(original_row)
+        complex_subs = list(test_row[field_complex][0])
 
-        field_complex = apiobj.TEST_DATA["field_complex"]
+        sub_exclude = complex_subs[0]
+        excludes = ["internal_axon_id", sub_exclude]
 
-        sub_exclude = list(test_row[field_complex][0])[0]
-        fields = ["internal_axon_id", sub_exclude]
-
-        getargs = {"field_excludes": fields}
-        cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs=getargs)
+        getargs = {"field_excludes": excludes}
+        store = {"fields": [field_complex]}
+        cbobj = self.get_cbobj(
+            apiobj=apiobj, cbexport=cbexport, store=store, getargs=getargs
+        )
 
         for cb_schema in cbobj.schemas_selected:
             cbobj.do_excludes(row=test_row, schema=cb_schema)
 
         assert test_row != original_row
 
-        for field in fields:
+        for field in excludes:
             assert field not in test_row
 
         for item in test_row[field_complex]:
@@ -419,7 +366,7 @@ class Callbacks:
 
     def test_do_join_values_true(self, cbexport, apiobj):
         """Pass."""
-        original_row = copy.deepcopy(apiobj.TEST_DATA["cb_assets"][0])
+        original_row = get_rows_exist(apiobj=apiobj, max_rows=1)[0]
         test_row = copy.deepcopy(original_row)
 
         getargs = {"field_join": True}
@@ -434,7 +381,7 @@ class Callbacks:
 
     def test_do_join_values_false(self, cbexport, apiobj):
         """Pass."""
-        original_row = copy.deepcopy(apiobj.TEST_DATA["cb_assets"][0])
+        original_row = get_rows_exist(apiobj=apiobj, max_rows=1)[0]
         test_row = copy.deepcopy(original_row)
 
         getargs = {"field_join": False}
@@ -449,7 +396,7 @@ class Callbacks:
 
     def test_do_join_values_trim(self, cbexport, apiobj):
         """Pass."""
-        original_row = copy.deepcopy(apiobj.TEST_DATA["cb_assets"][0])
+        original_row = get_rows_exist(apiobj=apiobj, max_rows=1)[0]
         original_row["test"] = ("aaaa " * (FIELD_TRIM_LEN + 1000)).split()
         test_row = copy.deepcopy(original_row)
 
@@ -466,7 +413,7 @@ class Callbacks:
 
     def test_do_join_values_trim_disabled(self, cbexport, apiobj):
         """Pass."""
-        original_row = copy.deepcopy(apiobj.TEST_DATA["cb_assets"][0])
+        original_row = get_rows_exist(apiobj=apiobj, max_rows=1)[0]
         original_row["test"] = ("aaaa " * (FIELD_TRIM_LEN + 1000)).split()
         test_row = copy.deepcopy(original_row)
 
@@ -479,7 +426,7 @@ class Callbacks:
 
     def test_do_join_values_trim_custom_joiner(self, cbexport, apiobj):
         """Pass."""
-        original_row = copy.deepcopy(apiobj.TEST_DATA["cb_assets"][0])
+        original_row = get_rows_exist(apiobj=apiobj, max_rows=1)[0]
         original_row["test"] = ("aaaa " * (FIELD_TRIM_LEN + 1000)).split()
         test_row = copy.deepcopy(original_row)
 
@@ -492,33 +439,31 @@ class Callbacks:
 
     def test_do_change_field_titles_true(self, cbexport, apiobj):
         """Pass."""
-        original_row = copy.deepcopy(apiobj.TEST_DATA["cb_assets"][0])
+        original_row = get_rows_exist(apiobj=apiobj, max_rows=1)[0]
         test_row = copy.deepcopy(original_row)
 
         row_titles = list(test_row)
-        field_complex = apiobj.TEST_DATA["field_complex"]
+        field_complex = apiobj.FIELD_COMPLEX
 
         getargs = {"field_titles": True}
-        cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs=getargs)
+        store = {"fields": field_complex}
+        cbobj = self.get_cbobj(
+            apiobj=apiobj, cbexport=cbexport, store=store, getargs=getargs
+        )
 
         cbobj.do_change_field_titles(row=test_row)
         for cb_schema in cbobj.schemas_selected:
-            cbobj.do_excludes(row=test_row, schema=cb_schema)
+            assert cb_schema["column_title"] in test_row
+            assert cb_schema["name"] not in test_row
+            assert cb_schema["name_qual"] not in test_row
         assert test_row != original_row
 
         test_row_titles = list(test_row)
         assert row_titles != test_row_titles
-        check_pre = f"{AGG_ADAPTER_TITLE}: "
-        not_check_pre = "specific_data.data."
-        for test_row_title in test_row_titles:
-            if test_row_title == field_complex:
-                continue
-            assert check_pre in test_row_title
-            assert not_check_pre not in test_row_title
 
     def test_do_change_field_titles_false(self, cbexport, apiobj):
         """Pass."""
-        original_row = copy.deepcopy(apiobj.TEST_DATA["cb_assets"][0])
+        original_row = get_rows_exist(apiobj=apiobj, max_rows=1)[0]
         test_row = copy.deepcopy(original_row)
 
         getargs = {"field_titles": False}
@@ -533,17 +478,13 @@ class Callbacks:
 
     def test_do_flatten_fields_true(self, cbexport, apiobj):
         """Pass."""
-        if not apiobj.TEST_DATA["has_complex"]:
-            pytest.skip(f"No complex field found for {apiobj}")
-
-        original_row = copy.deepcopy(apiobj.TEST_DATA["cb_assets"][0])
+        original_row = get_rows_exist(apiobj=apiobj, max_rows=1)[0]
         test_row = copy.deepcopy(original_row)
 
-        field_complex = apiobj.TEST_DATA["field_complex"]
+        field_complex = apiobj.FIELD_COMPLEX
 
         schema = apiobj.fields.get_field_schema(
-            value=field_complex,
-            schemas=apiobj.TEST_DATA["fields_map"][AGG_ADAPTER_NAME],
+            value=field_complex, schemas=get_schemas(apiobj=apiobj),
         )
         sub_fields = schema["sub_fields"]
         sub_quals = [x["name_qual"] for x in sub_fields if x["is_root"]]
@@ -595,17 +536,13 @@ class Callbacks:
 
     def test_do_flatten_fields_exclude_sub(self, cbexport, apiobj):
         """Pass."""
-        if not apiobj.TEST_DATA["has_complex"]:
-            pytest.skip(f"No complex field found for {apiobj}")
-
-        original_row = copy.deepcopy(apiobj.TEST_DATA["cb_assets"][0])
+        original_row = get_rows_exist(apiobj=apiobj, max_rows=1)[0]
         test_row = copy.deepcopy(original_row)
 
-        field_complex = apiobj.TEST_DATA["field_complex"]
+        field_complex = apiobj.FIELD_COMPLEX
 
         schema = apiobj.fields.get_field_schema(
-            value=field_complex,
-            schemas=apiobj.TEST_DATA["fields_map"][AGG_ADAPTER_NAME],
+            value=field_complex, schemas=get_schemas(apiobj=apiobj),
         )
         sub_field = schema["sub_fields"][0]
         sub_field_name = sub_field["name"]
@@ -625,7 +562,9 @@ class Callbacks:
 
     def test_do_flatten_fields_false(self, cbexport, apiobj):
         """Pass."""
-        original_row = copy.deepcopy(apiobj.TEST_DATA["cb_assets"][0])
+        original_row = get_rows_exist(
+            apiobj=apiobj, fields=apiobj.FIELD_COMPLEX, max_rows=1
+        )[0]
         test_row = copy.deepcopy(original_row)
 
         getargs = {"field_flatten": False}
@@ -634,20 +573,11 @@ class Callbacks:
         for cb_schema in cbobj.schemas_selected:
             cbobj.do_flatten_fields(row=test_row, schema=cb_schema)
 
-        if cbobj.GETARGS["field_flatten"]:
-            if apiobj.TEST_DATA["has_complex"]:
-                assert original_row != test_row
-            else:
-                assert original_row == test_row
-        else:
-            assert original_row == test_row
+        assert original_row != test_row
 
     def test_do_flatten_fields_custom_null(self, cbexport, apiobj):
         """Pass."""
-        if not apiobj.TEST_DATA["has_complex"]:
-            pytest.skip(f"No complex field found for {apiobj}")
-
-        original_row = copy.deepcopy(apiobj.TEST_DATA["cb_assets"][0])
+        original_row = get_rows_exist(apiobj=apiobj, max_rows=1)[0]
         test_row = copy.deepcopy(original_row)
 
         getargs = {"field_flatten": True, "field_null_value": "badwolf"}
@@ -693,13 +623,10 @@ class Callbacks:
 
     def test_do_explode_field_complex(self, cbexport, apiobj):
         """Pass."""
-        if not apiobj.TEST_DATA["has_complex"]:
-            pytest.skip(f"No complex field found for {apiobj}")
-
-        original_row = copy.deepcopy(apiobj.TEST_DATA["cb_assets"][0])
+        original_row = get_rows_exist(apiobj=apiobj, max_rows=1)[0]
         test_row = copy.deepcopy(original_row)
 
-        field_complex = apiobj.TEST_DATA["field_complex"]
+        field_complex = apiobj.FIELD_COMPLEX
 
         getargs = {"field_explode": field_complex}
         cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs=getargs)
@@ -712,10 +639,10 @@ class Callbacks:
 
     def test_do_explode_field_simple(self, cbexport, apiobj):
         """Pass."""
-        original_row = copy.deepcopy(apiobj.TEST_DATA["cb_assets"][0])
+        original_row = get_rows_exist(apiobj=apiobj, max_rows=1)[0]
         test_row = copy.deepcopy(original_row)
 
-        key = "adapters"
+        key = apiobj.FIELD_ADAPTERS
         row_val = test_row[key]
         row_val += ["test1", "test2"]
         row_len = len(row_val)
@@ -733,10 +660,13 @@ class Callbacks:
 
     def test_do_explode_field_exclude(self, cbexport, apiobj):
         """Pass."""
-        original_row = copy.deepcopy(apiobj.TEST_DATA["cb_assets"][0])
+        original_row = get_rows_exist(apiobj=apiobj, max_rows=1)[0]
         test_row = copy.deepcopy(original_row)
 
-        getargs = {"field_explode": "adapters", "field_excludes": ["adapters"]}
+        getargs = {
+            "field_explode": apiobj.FIELD_ADAPTERS,
+            "field_excludes": [apiobj.FIELD_ADAPTERS],
+        }
         cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs=getargs)
 
         new_rows = cbobj.do_explode_field(row=test_row)
@@ -746,7 +676,7 @@ class Callbacks:
 
     def test_do_explode_field_none(self, cbexport, apiobj):
         """Pass."""
-        original_row = copy.deepcopy(apiobj.TEST_DATA["cb_assets"][0])
+        original_row = get_rows_exist(apiobj=apiobj, max_rows=1)[0]
         test_row = copy.deepcopy(original_row)
 
         getargs = {}

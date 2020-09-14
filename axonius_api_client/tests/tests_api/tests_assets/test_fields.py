@@ -1,20 +1,11 @@
 # -*- coding: utf-8 -*-
 """Test suite for assets."""
 import pytest
-
 from axonius_api_client.constants import AGG_ADAPTER_ALTS, AGG_ADAPTER_NAME
 from axonius_api_client.exceptions import ApiError, NotFoundError
 
 from ...meta import FIELD_FORMATS, SCHEMA_FIELD_FORMATS, SCHEMA_TYPES
-
-
-def load_test_data(apiobj):
-    """Pass."""
-    apiobj.TEST_DATA = getattr(apiobj, "TEST_DATA", {})
-
-    if not apiobj.TEST_DATA.get("fields_map"):
-        apiobj.TEST_DATA["fields_map"] = apiobj.fields.get()
-    return apiobj
+from ...utils import get_schemas
 
 
 class FieldsPrivate:
@@ -182,8 +173,7 @@ class FieldsPrivate:
 
     def test_private_prettify_schemas(self, apiobj):
         """Pass."""
-        fields_map = apiobj.TEST_DATA["fields_map"]
-        schemas = fields_map[AGG_ADAPTER_NAME]
+        schemas = get_schemas(apiobj=apiobj)
         pretty = apiobj.fields._prettify_schemas(schemas=schemas)
         assert isinstance(pretty, list)
         for p in pretty:
@@ -196,16 +186,16 @@ class FieldsPublic:
 
     def test_get(self, apiobj):
         """Pass."""
-        fields_map = apiobj.fields.get()
-        assert isinstance(fields_map, dict)
-        assert isinstance(fields_map[AGG_ADAPTER_NAME], list)
-        self.val_parsed_fields(fields_map=fields_map)
+        fields = apiobj.fields.get()
+        assert isinstance(fields, dict)
+        assert isinstance(fields[AGG_ADAPTER_NAME], list)
+        self.val_parsed_fields(fields=fields)
 
-    def val_parsed_fields(self, fields_map):
+    def val_parsed_fields(self, fields):
         """Pass."""
-        assert isinstance(fields_map, dict)
+        assert isinstance(fields, dict)
 
-        for adapter, schemas in fields_map.items():
+        for adapter, schemas in fields.items():
             assert not adapter.endswith("_adapter")
             assert isinstance(schemas, list)
 
@@ -339,34 +329,26 @@ class FieldsPublic:
         """Pass."""
         search = AGG_ADAPTER_ALTS[0]
         exp = AGG_ADAPTER_NAME
-        adapter = apiobj.fields.get_adapter_name(
-            value=search, fields_map=apiobj.TEST_DATA["fields_map"]
-        )
+        adapter = apiobj.fields.get_adapter_name(value=search)
         assert adapter == exp
 
     def test_get_adapter_name_error(self, apiobj):
         """Pass."""
         search = "badwolf"
         with pytest.raises(NotFoundError):
-            apiobj.fields.get_adapter_name(
-                value=search, fields_map=apiobj.TEST_DATA["fields_map"]
-            )
+            apiobj.fields.get_adapter_name(value=search)
 
     def test_get_adapter_names_single(self, apiobj):
         """Pass."""
         search = AGG_ADAPTER_ALTS[0]
         exp = [AGG_ADAPTER_NAME]
-        adapters = apiobj.fields.get_adapter_names(
-            value=search, fields_map=apiobj.TEST_DATA["fields_map"]
-        )
+        adapters = apiobj.fields.get_adapter_names(value=search)
         assert adapters == exp
 
     def test_get_adapter_names_multi(self, apiobj):
         """Pass."""
         search = "a"
-        adapters = apiobj.fields.get_adapter_names(
-            value=search, fields_map=apiobj.TEST_DATA["fields_map"]
-        )
+        adapters = apiobj.fields.get_adapter_names(value=search)
         assert AGG_ADAPTER_NAME in adapters
         assert len(adapters) > 1
 
@@ -374,52 +356,43 @@ class FieldsPublic:
         """Pass."""
         search = "badwolf"
         with pytest.raises(NotFoundError):
-            apiobj.fields.get_adapter_names(
-                value=search, fields_map=apiobj.TEST_DATA["fields_map"]
-            )
+            apiobj.fields.get_adapter_names(value=search)
 
     def test_get_field_schema(self, apiobj):
         """Pass."""
         search = "last_seen"
-        exp = [
-            x
-            for x in apiobj.TEST_DATA["fields_map"][AGG_ADAPTER_NAME]
-            if x["name_base"] == search
-        ][0]
-        result = apiobj.fields.get_field_schema(
-            value=search, schemas=apiobj.TEST_DATA["fields_map"][AGG_ADAPTER_NAME]
-        )
+        schemas = get_schemas(apiobj=apiobj)
+        exp = [x for x in schemas if x["name_base"] == search][0]
+        result = apiobj.fields.get_field_schema(value=search, schemas=schemas)
         assert exp == result
 
     def test_get_field_names_re(self, apiobj):
         """Pass."""
         search = ["seen"]
-        result = apiobj.fields.get_field_names_re(
-            value=search, fields_map=apiobj.TEST_DATA["fields_map"]
-        )
+        result = apiobj.fields.get_field_names_re(value=search)
         assert "specific_data.data.last_seen" in result
 
     def test_get_field_names_eq(self, apiobj):
         """Pass."""
         search = ["specific_data.data.id", "last_seen"]
         exp = []
+        schemas = get_schemas(apiobj=apiobj)
         for i in search:
             exp += [
                 x["name_qual"]
-                for x in apiobj.TEST_DATA["fields_map"][AGG_ADAPTER_NAME]
+                for x in schemas
                 if x["name_base"] == i or x["name_qual"] == i
             ]
-        result = apiobj.fields.get_field_names_eq(
-            value=search, fields_map=apiobj.TEST_DATA["fields_map"]
-        )
+        result = apiobj.fields.get_field_names_eq(value=search)
         assert exp == result
 
     def test_get_field_schemas(self, apiobj):
         """Pass."""
+        schemas = get_schemas(apiobj=apiobj)
         search = "l"
         exp = [
             x
-            for x in apiobj.TEST_DATA["fields_map"][AGG_ADAPTER_NAME]
+            for x in schemas
             if (
                 search in x["name_base"]
                 or search in x["name_qual"]
@@ -427,26 +400,15 @@ class FieldsPublic:
             )
             and x.get("selectable", False)
         ]
-        result = apiobj.fields.get_field_schemas(
-            value=search, schemas=apiobj.TEST_DATA["fields_map"][AGG_ADAPTER_NAME]
-        )
+        result = apiobj.fields.get_field_schemas(value=search, schemas=schemas)
         assert exp == result
 
     def test_get_field_schema_error(self, apiobj):
         """Pass."""
         search = "badwolf"
+        schemas = get_schemas(apiobj=apiobj)
         with pytest.raises(NotFoundError):
-            apiobj.fields.get_field_schema(
-                value=search, schemas=apiobj.TEST_DATA["fields_map"][AGG_ADAPTER_NAME],
-            )
-
-    # def test_get_field_schemas_error(self, apiobj):
-    #     """Pass."""
-    #     search = "badwolf"
-    #     with pytest.raises(NotFoundError):
-    #         apiobj.fields.get_field_schemas(
-    #             value=search, schemas=apiobj.TEST_DATA["fields_map"][AGG_ADAPTER_NAME],
-    #         )
+            apiobj.fields.get_field_schema(value=search, schemas=schemas)
 
     @pytest.mark.parametrize(
         "test_data",
@@ -500,26 +462,20 @@ class FieldsPublic:
     def test_get_field_name_manual(self, apiobj):
         """Pass."""
         search = "test"
-        result = apiobj.fields.get_field_name(
-            value=search, fields_map=apiobj.TEST_DATA["fields_map"], field_manual=True,
-        )
+        result = apiobj.fields.get_field_name(value=search, field_manual=True,)
         assert search == result
 
     def test_get_field_name_error(self, apiobj):
         """Pass."""
         search = "bad,wolf"
         with pytest.raises(ApiError):
-            apiobj.fields.get_field_name(
-                value=search, fields_map=apiobj.TEST_DATA["fields_map"]
-            )
+            apiobj.fields.get_field_name(value=search)
 
     def test_get_field_name(self, apiobj):
         """Pass."""
         search = "last_seen"
         exp = "specific_data.data.last_seen"
-        result = apiobj.fields.get_field_name(
-            value=search, fields_map=apiobj.TEST_DATA["fields_map"]
-        )
+        result = apiobj.fields.get_field_name(value=search)
         assert result == exp
 
     def test_validate(self, apiobj):
@@ -559,7 +515,7 @@ class TestFieldsDevices(FieldsPrivate, FieldsPublic):
     @pytest.fixture(scope="class")
     def apiobj(self, api_devices):
         """Pass."""
-        return load_test_data(api_devices)
+        return api_devices
 
 
 class TestFieldsUsers(FieldsPrivate, FieldsPublic):
@@ -568,7 +524,7 @@ class TestFieldsUsers(FieldsPrivate, FieldsPublic):
     @pytest.fixture(scope="class")
     def apiobj(self, api_users):
         """Pass."""
-        return load_test_data(api_users)
+        return api_users
 
 
 def val_source(obj):

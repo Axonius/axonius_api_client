@@ -7,11 +7,8 @@ def load_test_data(apiobj):
     """Pass."""
     apiobj.TEST_DATA = getattr(apiobj, "TEST_DATA", {})
 
-    if not apiobj.TEST_DATA.get("fields_map"):
-        apiobj.TEST_DATA["fields_map"] = fields_map = apiobj.fields.get()
-
     if not apiobj.TEST_DATA.get("assets"):
-        apiobj.TEST_DATA["assets"] = apiobj.get(max_rows=4000, fields_map=fields_map)
+        apiobj.TEST_DATA["assets"] = apiobj.get(max_rows=4000)
 
     return apiobj
 
@@ -21,9 +18,9 @@ class LabelsPrivate:
 
     def test_private_get(self, apiobj):
         """Pass."""
-        fields = apiobj.labels._get()
-        assert isinstance(fields, list)
-        for x in fields:
+        labels = apiobj.labels._get()
+        assert isinstance(labels, list)
+        for x in labels:
             assert isinstance(x, str)
 
     def test_private_add_get_remove(self, apiobj):
@@ -40,10 +37,7 @@ class LabelsPrivate:
 
         # re-get the asset and check that it has the label
         assets_added = apiobj.get_by_values(
-            values=labels,
-            field="labels",
-            fields="labels",
-            fields_map=apiobj.TEST_DATA["fields_map"],
+            values=labels, field="labels", fields="labels"
         )
         assets_added_ids = [x["internal_axon_id"] for x in assets_added]
         assert asset_id in assets_added_ids
@@ -69,10 +63,7 @@ class LabelsPrivate:
 
         # re-get the asset and check that it has the label
         assets_removed = apiobj.get_by_values(
-            values=labels,
-            field="labels",
-            fields="labels",
-            fields_map=apiobj.TEST_DATA["fields_map"],
+            values=labels, field="labels", fields="labels"
         )
         assert not assets_removed
 
@@ -108,10 +99,7 @@ class LabelsPublic:
 
         # re-get the asset and check that it has the label
         assets_added = apiobj.get_by_values(
-            values=labels,
-            field="labels",
-            fields="labels",
-            fields_map=apiobj.TEST_DATA["fields_map"],
+            values=labels, field="labels", fields="labels",
         )
         assets_added_ids = [x["internal_axon_id"] for x in assets_added]
         assert asset_id in assets_added_ids
@@ -137,10 +125,7 @@ class LabelsPublic:
 
         # re-get the asset and check that it has the label
         assets_removed = apiobj.get_by_values(
-            values=labels,
-            field="labels",
-            fields="labels",
-            fields_map=apiobj.TEST_DATA["fields_map"],
+            values=labels, field="labels", fields="labels"
         )
         assert not assets_removed
 

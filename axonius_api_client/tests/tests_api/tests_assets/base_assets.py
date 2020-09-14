@@ -2,34 +2,14 @@
 """Test suite for assets."""
 import pytest
 import requests
-
 from axonius_api_client.api import mixins
 from axonius_api_client.constants import MAX_PAGE_SIZE
-from axonius_api_client.exceptions import (
-    JsonError,
-    JsonInvalid,
-    NotFoundError,
-    ResponseNotOk,
-)
-from axonius_api_client.tools import listify
+from axonius_api_client.exceptions import (JsonError, JsonInvalid,
+                                           NotFoundError, ResponseNotOk)
 
 from ...meta import QUERIES
-
-
-def load_test_data(apiobj):
-    """Pass."""
-    apiobj.TEST_DATA = getattr(apiobj, "TEST_DATA", {})
-
-    if not apiobj.TEST_DATA.get("fields_map"):
-        apiobj.TEST_DATA["fields_map"] = fields_map = apiobj.fields.get()
-
-    if not apiobj.TEST_DATA.get("assets"):
-        apiobj.TEST_DATA["assets"] = apiobj.get(max_rows=4000, fields_map=fields_map)
-
-    if not apiobj.TEST_DATA.get("saved_queries"):
-        apiobj.TEST_DATA["saved_queries"] = apiobj.saved_query.get()
-
-    return apiobj
+from ...utils import (check_asset, check_assets, get_field_vals,
+                      get_rows_exist, get_sqs)
 
 
 class ModelMixinsBase:
@@ -105,32 +85,6 @@ class ModelMixinsBase:
 class AssetsPrivate:
     """Pass."""
 
-    # def test_private_get_page_stop_rows_stop(self, apiobj):
-    #     """Pass."""
-    #     state = {
-    #         "max_rows": None,
-    #         "rows_processed": 1,
-    #         "stop": True,
-    #         "stop_msg": "fakestop",
-    #         "max_pages": None,
-    #         "page_num": 1,
-    #     }
-    #     result = apiobj._get_page_stop_rows(row={}, rows=[{}], state=state, store={})
-    #     assert result is True
-
-    # def test_private_get_page_stop_fetch_stop(self, apiobj):
-    #     """Pass."""
-    #     state = {
-    #         "max_rows": None,
-    #         "rows_processed": 1,
-    #         "stop": True,
-    #         "stop_msg": "fakestop",
-    #         "max_pages": None,
-    #         "page_num": 1,
-    #     }
-    #     result = apiobj._get_page_stop_fetch(rows=[{}], state=state, store={})
-    #     assert result is True
-
     def test_private_get(self, apiobj):
         """Pass."""
         data = apiobj._get(page_size=1)
@@ -162,7 +116,7 @@ class AssetsPrivate:
 
     def test_private_get_by_id(self, apiobj):
         """Pass."""
-        asset = apiobj.TEST_DATA["assets"][0]
+        asset = apiobj.devices.get(max_rows=1)[0]
         id = asset["internal_axon_id"]
         data = apiobj._get_by_id(id=id)
         assert isinstance(data, dict)
@@ -223,7 +177,7 @@ class AssetsPublic:
 
     def test_count_by_saved_query(self, apiobj):
         """Pass."""
-        sq = apiobj.TEST_DATA["saved_queries"][0]
+        sq = get_sqs(apiobj=apiobj)[0]
         sq_name = sq["name"]
         data = apiobj.count_by_saved_query(name=sq_name)
         assert isinstance(data, int)
@@ -252,9 +206,6 @@ class AssetsPublic:
 
     def test_get_cursor_yes_generator_no(self, apiobj):
         """Pass."""
-        if getattr(apiobj, "NO_CURSOR_OVERRIDE", False):
-            pytest.skip(f"{apiobj} has no cursor override")
-
         rows = apiobj.get(use_cursor=True, generator=False, max_rows=1)
 
         assert not rows.__class__.__name__ == "generator"
@@ -264,9 +215,6 @@ class AssetsPublic:
 
     def test_get_cursor_yes_generator_yes(self, apiobj):
         """Pass."""
-        if getattr(apiobj, "NO_CURSOR_OVERRIDE", False):
-            pytest.skip(f"{apiobj} has no cursor override")
-
         gen = apiobj.get(use_cursor=True, generator=True, max_rows=1)
 
         assert gen.__class__.__name__ == "generator"
@@ -290,7 +238,7 @@ class AssetsPublic:
 
     def test_get_id(self, apiobj):
         """Pass."""
-        asset = apiobj.TEST_DATA["assets"][0]
+        asset = apiobj.get(max_rows=1)[0]
         id = asset["internal_axon_id"]
 
         row = apiobj.get_by_id(id=id)
@@ -304,13 +252,11 @@ class AssetsPublic:
 
     def test_get_by_saved_query(self, apiobj):
         """Pass."""
-        sq = apiobj.TEST_DATA["saved_queries"][0]
+        sq = get_sqs(apiobj=apiobj)[0]
         sq_name = sq["name"]
         sq_fields = sq["view"]["fields"]
 
-        rows = apiobj.get_by_saved_query(
-            name=sq_name, max_rows=1, fields_map=apiobj.TEST_DATA["fields_map"],
-        )
+        rows = apiobj.get_by_saved_query(name=sq_name, max_rows=1)
         check_assets(rows)
 
         last_fields = apiobj._LAST_GET["fields"].split(",")
@@ -320,49 +266,41 @@ class AssetsPublic:
         """Pass."""
         field = apiobj.TEST_DATA["field_main"]
 
-        values = get_field_values(rows=apiobj.TEST_DATA["assets"], field=field)
+        rows_with_vals = get_rows_exist(apiobj=apiobj, fields=field)
+        values = get_field_vals(rows=rows_with_vals, field=field)
         value = values[0]
 
-        rows = apiobj.get_by_value(
-            value=value, field=field, fields_map=apiobj.TEST_DATA["fields_map"],
-        )
+        rows = apiobj.get_by_value(value=value, field=field)
         check_assets(rows)
         assert len(rows) == 1
 
-        rows_values = get_field_values(rows=rows, field=field)
+        rows_values = get_field_vals(rows=rows, field=field)
         assert value in rows_values
 
     def test_get_by_value_not(self, apiobj):
         """Pass."""
         field = apiobj.TEST_DATA["field_main"]
 
-        values = get_field_values(rows=apiobj.TEST_DATA["assets"], field=field)
-        value = values[0]
+        rows_with_vals = get_rows_exist(apiobj=apiobj, fields=field)
+        value = get_field_vals(rows=rows_with_vals, field=field)[0]
 
-        rows = apiobj.get_by_value(
-            value=value,
-            field=field,
-            not_flag=True,
-            fields_map=apiobj.TEST_DATA["fields_map"],
-        )
+        rows = apiobj.get_by_value(value=value, field=field, not_flag=True)
         check_assets(rows)
 
-        rows_values = get_field_values(rows=rows, field=field)
+        rows_values = get_field_vals(rows=rows, field=field)
         assert value not in rows_values
 
     def test_get_by_values(self, apiobj):
         """Pass."""
         field = apiobj.TEST_DATA["field_main"]
 
-        values = get_field_values(rows=apiobj.TEST_DATA["assets"], field=field)
-        values = values[0:2]
+        rows_with_vals = get_rows_exist(apiobj=apiobj, fields=field)
+        values = get_field_vals(rows=rows_with_vals, field=field)[0:2]
 
-        rows = apiobj.get_by_values(
-            values=values, field=field, fields_map=apiobj.TEST_DATA["fields_map"],
-        )
+        rows = apiobj.get_by_values(values=values, field=field)
         check_assets(rows)
 
-        rows_values = get_field_values(rows=rows, field=field)
+        rows_values = get_field_vals(rows=rows, field=field)
         for value in values:
             assert value in rows_values
 
@@ -370,18 +308,13 @@ class AssetsPublic:
         """Pass."""
         field = apiobj.TEST_DATA["field_main"]
 
-        values = get_field_values(rows=apiobj.TEST_DATA["assets"], field=field)
-        values = values[0:2]
+        rows_with_vals = get_rows_exist(apiobj=apiobj, fields=field)
+        values = get_field_vals(rows=rows_with_vals, field=field)[0:2]
 
-        rows = apiobj.get_by_values(
-            values=values,
-            field=field,
-            not_flag=True,
-            fields_map=apiobj.TEST_DATA["fields_map"],
-        )
+        rows = apiobj.get_by_values(values=values, field=field, not_flag=True)
         check_assets(rows)
 
-        rows_values = get_field_values(rows=rows, field=field)
+        rows_values = get_field_vals(rows=rows, field=field)
         for value in values:
             assert value not in rows_values
 
@@ -389,53 +322,28 @@ class AssetsPublic:
         """Pass."""
         field = apiobj.TEST_DATA["field_main"]
 
-        values = get_field_values(rows=apiobj.TEST_DATA["assets"], field=field)
+        rows_with_vals = get_rows_exist(apiobj=apiobj, fields=field)
+        values = get_field_vals(rows=rows_with_vals, field=field)
         value = values[0]
-        regex_value = value[0:5]
+        regex_value = value[0:4]
 
-        rows = apiobj.get_by_value_regex(
-            value=regex_value, field=field, fields_map=apiobj.TEST_DATA["fields_map"],
-        )
+        rows = apiobj.get_by_value_regex(value=regex_value, field=field)
         check_assets(rows)
 
-        rows_values = get_field_values(rows=rows, field=field)
+        rows_values = get_field_vals(rows=rows, field=field)
         assert value in rows_values
 
     def test_get_by_value_regex_not(self, apiobj):
         """Pass."""
         field = apiobj.TEST_DATA["field_main"]
 
-        values = get_field_values(rows=apiobj.TEST_DATA["assets"], field=field)
+        rows_with_vals = get_rows_exist(apiobj=apiobj, fields=field)
+        values = get_field_vals(rows=rows_with_vals, field=field)
         value = values[0]
-        regex_value = value[0:5]
+        regex_value = value[0:4]
 
-        rows = apiobj.get_by_value_regex(
-            value=regex_value,
-            field=field,
-            not_flag=True,
-            fields_map=apiobj.TEST_DATA["fields_map"],
-        )
+        rows = apiobj.get_by_value_regex(value=regex_value, field=field, not_flag=True)
         check_assets(rows)
 
-        rows_values = get_field_values(rows=rows, field=field)
+        rows_values = get_field_vals(rows=rows, field=field)
         assert value not in rows_values
-
-
-def get_field_values(rows, field):
-    """Pass."""
-    values = [x[field] for x in rows if x.get(field)]
-    values = [x for y in values for x in listify(y)]
-    return values
-
-
-def check_assets(rows):
-    """Pass."""
-    assert isinstance(rows, list)
-    for row in rows:
-        check_asset(row)
-
-
-def check_asset(row):
-    """Pass."""
-    assert isinstance(row, dict)
-    assert row["internal_axon_id"]

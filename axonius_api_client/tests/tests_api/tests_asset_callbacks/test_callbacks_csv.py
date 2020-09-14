@@ -4,10 +4,9 @@ import copy
 import io
 
 import pytest
-
 from axonius_api_client.constants import AGG_ADAPTER_NAME
 
-from .callbacks import Callbacks, load_test_data
+from .callbacks import Callbacks
 
 
 class CallbacksCsv(Callbacks):
@@ -26,8 +25,7 @@ class CallbacksCsv(Callbacks):
         field_complex = apiobj.TEST_DATA["field_complex"]
 
         schema = apiobj.fields.get_field_schema(
-            value=field_complex,
-            schemas=apiobj.TEST_DATA["fields_map"][AGG_ADAPTER_NAME],
+            value=field_complex, schemas=apiobj.fields.get()[AGG_ADAPTER_NAME],
         )
         sub_columns = [x["column_title"] for x in schema["sub_fields"] if x["is_root"]]
 
@@ -43,15 +41,15 @@ class CallbacksCsv(Callbacks):
         for x in cbobj.final_schemas:
             assert isinstance(x, dict)
 
-        start_val = io_fd.getvalue().splitlines()[0]
-        for i in sub_columns:
-            assert f'"{i}"' in start_val
-
         for row in copy.deepcopy(apiobj.TEST_DATA["cb_assets"][:200]):
             row_id = row["internal_axon_id"]
             rows_ret = cbobj.process_row(row=copy.deepcopy(row))
             assert len(rows_ret) == 1
             assert rows_ret[0] == {"internal_axon_id": row_id}
+
+        start_val = io_fd.getvalue().splitlines()[0]
+        for i in sub_columns:
+            assert f'"{i}"' in start_val
 
         cbobj.stop()
         output = io_fd.getvalue()
@@ -64,7 +62,7 @@ class TestDevicesCallbacksCsv(CallbacksCsv):
     @pytest.fixture(scope="class")
     def apiobj(self, api_devices):
         """Pass."""
-        return load_test_data(apiobj=api_devices)
+        return api_devices
 
 
 class TestUsersCallbacksCsv(CallbacksCsv):
@@ -73,4 +71,4 @@ class TestUsersCallbacksCsv(CallbacksCsv):
     @pytest.fixture(scope="class")
     def apiobj(self, api_users):
         """Pass."""
-        return load_test_data(apiobj=api_users)
+        return api_users

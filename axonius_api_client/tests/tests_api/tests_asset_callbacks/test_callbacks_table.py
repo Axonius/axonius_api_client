@@ -5,11 +5,10 @@ import copy
 import io
 
 import pytest
-
 from axonius_api_client.constants import AGG_ADAPTER_NAME
 from axonius_api_client.exceptions import ApiError
 
-from .callbacks import Callbacks, load_test_data
+from .callbacks import Callbacks
 
 
 class CallbacksTable(Callbacks):
@@ -28,8 +27,7 @@ class CallbacksTable(Callbacks):
         field_complex = apiobj.TEST_DATA["field_complex"]
 
         schema = apiobj.fields.get_field_schema(
-            value=field_complex,
-            schemas=apiobj.TEST_DATA["fields_map"][AGG_ADAPTER_NAME],
+            value=field_complex, schemas=apiobj.fields.get()[AGG_ADAPTER_NAME],
         )
         sub_titles = [x["column_title"] for x in schema["sub_fields"] if x["is_root"]]
 
@@ -78,7 +76,7 @@ class TestDevicesCallbacksTable(CallbacksTable):
     @pytest.fixture(scope="class")
     def apiobj(self, api_devices):
         """Pass."""
-        return load_test_data(apiobj=api_devices)
+        return api_devices
 
 
 class TestUsersCallbacksTable(CallbacksTable):
@@ -87,4 +85,4 @@ class TestUsersCallbacksTable(CallbacksTable):
     @pytest.fixture(scope="class")
     def apiobj(self, api_users):
         """Pass."""
-        return load_test_data(apiobj=api_users)
+        return api_users
