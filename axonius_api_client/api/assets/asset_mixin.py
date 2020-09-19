@@ -611,7 +611,6 @@ class AssetMixin(ModelMixins):
             params["fields"] = fields
 
         self._LAST_GET: dict = params
-
         return self.request(method="post", path=self.router.cached, json=params)
 
     def _get_by_id(self, id: str) -> dict:
