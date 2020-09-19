@@ -24,6 +24,9 @@ class AssetMixin(ModelMixins):
     FIELD_ADAPTERS: str = "adapters"
     FIELD_ADAPTER_LEN: str = "adapter_list_length"
     FIELD_LAST_SEEN: str = "specific_data.data.last_seen"
+    FIELD_MAIN: str = FIELD_AXON_ID
+    FIELD_SIMPLE: str = FIELD_AXON_ID
+    FIELD_COMPLEX: str = None
 
     FIELDS_API: List[str] = [
         FIELD_AXON_ID,

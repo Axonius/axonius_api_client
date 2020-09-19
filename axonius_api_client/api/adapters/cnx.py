@@ -4,26 +4,14 @@ import time
 from typing import IO, List, Union
 
 from ...constants import CNX_GONE, CNX_RETRY, CNX_SANE_DEFAULTS, DEFAULT_NODE
-from ...exceptions import (
-    CnxAddError,
-    CnxGoneError,
-    CnxTestError,
-    CnxUpdateError,
-    ConfigInvalidValue,
-    ConfigRequired,
-    NotFoundError,
-)
+from ...exceptions import (CnxAddError, CnxGoneError, CnxTestError,
+                           CnxUpdateError, ConfigInvalidValue, ConfigRequired,
+                           NotFoundError)
 from ...tools import json_load, pathlib
 from ..mixins import ChildMixins
-from ..parsers.config import (
-    config_build,
-    config_default,
-    config_empty,
-    config_info,
-    config_required,
-    config_unchanged,
-    config_unknown,
-)
+from ..parsers.config import (config_build, config_default, config_empty,
+                              config_info, config_required, config_unchanged,
+                              config_unknown)
 from ..parsers.tables import tablize_cnxs, tablize_schemas
 
 
@@ -473,6 +461,7 @@ class Cnx(ChildMixins):
             node=adapter_node,
         )
 
+    # XXX failing with secondary node!!! wrong plugin name?
     def _add(self, adapter_name_raw: str, adapter_node_id: str, new_config: dict) -> str:
         """Direct API method to add a connection to an adapter.
 

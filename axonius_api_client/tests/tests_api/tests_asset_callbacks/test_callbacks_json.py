@@ -6,6 +6,7 @@ import json
 
 import pytest
 
+from ...utils import get_rows_exist
 from .callbacks import Callbacks
 
 
@@ -20,16 +21,17 @@ class CallbacksJson(Callbacks):
     def test_row_as_is(self, cbexport, apiobj):
         """Pass."""
         io_fd = io.StringIO()
+        original_rows = get_rows_exist(apiobj=apiobj, max_rows=5, first=False)
 
-        getargs = {"export_fd": io_fd}
-
-        cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs=getargs)
+        cbobj = self.get_cbobj(
+            apiobj=apiobj, cbexport=cbexport, getargs={"export_fd": io_fd}
+        )
         cbobj.start()
 
         start_val = io_fd.getvalue().splitlines()[0]
         assert start_val == "["
 
-        for row in copy.deepcopy(apiobj.TEST_DATA["cb_assets"][:200]):
+        for row in copy.deepcopy(original_rows):
             row_id = row["internal_axon_id"]
             rows_ret = cbobj.process_row(row=copy.deepcopy(row))
             assert len(rows_ret) == 1
@@ -47,24 +49,28 @@ class CallbacksJson(Callbacks):
     def test_row_fully_loaded(self, cbexport, apiobj):
         """Pass."""
         io_fd = io.StringIO()
+        original_rows = get_rows_exist(apiobj=apiobj, max_rows=5, first=False)
 
-        getargs = {
-            "export_fd": io_fd,
-            "field_excludes": ["adapters"],
-            "field_flatten": True,
-            "field_titles": True,
-            "field_join": True,
-            "field_null": True,
-            "report_adapters_missing": True,
-            "export_schema": True,
-        }
-        cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs=getargs)
+        cbobj = self.get_cbobj(
+            apiobj=apiobj,
+            cbexport=cbexport,
+            getargs={
+                "export_fd": io_fd,
+                "field_excludes": ["adapters"],
+                "field_flatten": True,
+                "field_titles": True,
+                "field_join": True,
+                "field_null": True,
+                "report_adapters_missing": True,
+                "export_schema": True,
+            },
+        )
         cbobj.start()
 
         start_val = io_fd.getvalue().splitlines()[0]
         assert start_val == "["
 
-        for row in copy.deepcopy(apiobj.TEST_DATA["cb_assets"][:20]):
+        for row in copy.deepcopy(original_rows):
             row_id = row["internal_axon_id"]
             rows_ret = cbobj.process_row(row=copy.deepcopy(row))
             assert len(rows_ret) == 1

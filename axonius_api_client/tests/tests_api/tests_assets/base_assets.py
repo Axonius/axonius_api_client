@@ -8,8 +8,7 @@ from axonius_api_client.exceptions import (JsonError, JsonInvalid,
                                            NotFoundError, ResponseNotOk)
 
 from ...meta import QUERIES
-from ...utils import (check_asset, check_assets, get_field_vals,
-                      get_rows_exist, get_sqs)
+from ...utils import check_asset, check_assets, get_field_vals, get_rows_exist
 
 
 class ModelMixinsBase:
@@ -116,7 +115,7 @@ class AssetsPrivate:
 
     def test_private_get_by_id(self, apiobj):
         """Pass."""
-        asset = apiobj.devices.get(max_rows=1)[0]
+        asset = apiobj.get(max_rows=1)[0]
         id = asset["internal_axon_id"]
         data = apiobj._get_by_id(id=id)
         assert isinstance(data, dict)
@@ -177,8 +176,7 @@ class AssetsPublic:
 
     def test_count_by_saved_query(self, apiobj):
         """Pass."""
-        sq = get_sqs(apiobj=apiobj)[0]
-        sq_name = sq["name"]
+        sq_name = apiobj.saved_query.get()[0]["name"]
         data = apiobj.count_by_saved_query(name=sq_name)
         assert isinstance(data, int)
 
@@ -252,7 +250,7 @@ class AssetsPublic:
 
     def test_get_by_saved_query(self, apiobj):
         """Pass."""
-        sq = get_sqs(apiobj=apiobj)[0]
+        sq = apiobj.saved_query.get()[0]
         sq_name = sq["name"]
         sq_fields = sq["view"]["fields"]
 
@@ -262,88 +260,108 @@ class AssetsPublic:
         last_fields = apiobj._LAST_GET["fields"].split(",")
         assert sq_fields == last_fields
 
-    def test_get_by_value(self, apiobj):
+    def test_get_bys_value(self, apiobj):
         """Pass."""
-        field = apiobj.TEST_DATA["field_main"]
+        self._all_get_by(
+            apiobj=apiobj,
+            method="value",
+            field="FIELD_MAIN",
+            use_field=apiobj.FIELD_MAIN,
+        )
 
-        rows_with_vals = get_rows_exist(apiobj=apiobj, fields=field)
-        values = get_field_vals(rows=rows_with_vals, field=field)
-        value = values[0]
+    def _get_by_value(self, apiobj, method, field, not_flag=False, use_field=None):
+        field = getattr(apiobj, field)
+        row_with_val = get_rows_exist(apiobj=apiobj, fields=field)
+        value = get_field_vals(rows=row_with_val, field=field)[0]
+        method = getattr(apiobj, f"get_by_{method}")
 
-        rows = apiobj.get_by_value(value=value, field=field)
+        method_args = {"value": value, "not_flag": not_flag, "max_rows": 5}
+        if use_field:
+            method_args["field"] = use_field
+
+        rows = method(**method_args)
+
         check_assets(rows)
-        assert len(rows) == 1
-
         rows_values = get_field_vals(rows=rows, field=field)
-        assert value in rows_values
 
-    def test_get_by_value_not(self, apiobj):
-        """Pass."""
-        field = apiobj.TEST_DATA["field_main"]
-
-        rows_with_vals = get_rows_exist(apiobj=apiobj, fields=field)
-        value = get_field_vals(rows=rows_with_vals, field=field)[0]
-
-        rows = apiobj.get_by_value(value=value, field=field, not_flag=True)
-        check_assets(rows)
-
-        rows_values = get_field_vals(rows=rows, field=field)
-        assert value not in rows_values
-
-    def test_get_by_values(self, apiobj):
-        """Pass."""
-        field = apiobj.TEST_DATA["field_main"]
-
-        rows_with_vals = get_rows_exist(apiobj=apiobj, fields=field)
-        values = get_field_vals(rows=rows_with_vals, field=field)[0:2]
-
-        rows = apiobj.get_by_values(values=values, field=field)
-        check_assets(rows)
-
-        rows_values = get_field_vals(rows=rows, field=field)
-        for value in values:
+        if not_flag:
+            assert value not in rows_values
+        else:
+            assert len(rows) == 1
             assert value in rows_values
 
-    def test_get_by_values_not(self, apiobj):
-        """Pass."""
-        field = apiobj.TEST_DATA["field_main"]
+    def _get_by_values(self, apiobj, method, field, not_flag=False, use_field=None):
+        field = getattr(apiobj, field)
+        rows_with_val = get_rows_exist(
+            apiobj=apiobj, fields=field, max_rows=2, first=False
+        )
+        values = get_field_vals(rows=rows_with_val, field=field)
+        method = getattr(apiobj, f"get_by_{method}s")
 
-        rows_with_vals = get_rows_exist(apiobj=apiobj, fields=field)
-        values = get_field_vals(rows=rows_with_vals, field=field)[0:2]
+        method_args = {"values": values, "not_flag": not_flag, "max_rows": 5}
+        if use_field:
+            method_args["field"] = use_field
 
-        rows = apiobj.get_by_values(values=values, field=field, not_flag=True)
+        rows = method(**method_args)
         check_assets(rows)
 
         rows_values = get_field_vals(rows=rows, field=field)
         for value in values:
+            if not_flag:
+                assert value not in rows_values
+            else:
+                assert value in rows_values
+                assert len(rows) >= 1
+
+    def _get_by_value_re(self, apiobj, method, field, not_flag=False, use_field=None):
+        field = getattr(apiobj, field)
+        row_with_val = get_rows_exist(apiobj=apiobj, fields=field)
+        value = get_field_vals(rows=row_with_val, field=field)[0]
+        regex_value = value[0:5]
+
+        method = getattr(apiobj, f"get_by_{method}_regex")
+        method_args = {"value": regex_value, "not_flag": not_flag, "max_rows": 5}
+        if use_field:
+            method_args["field"] = use_field
+
+        rows = method(**method_args)
+        check_assets(rows)
+
+        rows_values = get_field_vals(rows=rows, field=field)
+        if not_flag:
             assert value not in rows_values
+        else:
+            assert value in rows_values
+            assert len(rows) >= 1
 
-    def test_get_by_value_regex(self, apiobj):
-        """Pass."""
-        field = apiobj.TEST_DATA["field_main"]
-
-        rows_with_vals = get_rows_exist(apiobj=apiobj, fields=field)
-        values = get_field_vals(rows=rows_with_vals, field=field)
-        value = values[0]
-        regex_value = value[0:4]
-
-        rows = apiobj.get_by_value_regex(value=regex_value, field=field)
-        check_assets(rows)
-
-        rows_values = get_field_vals(rows=rows, field=field)
-        assert value in rows_values
-
-    def test_get_by_value_regex_not(self, apiobj):
-        """Pass."""
-        field = apiobj.TEST_DATA["field_main"]
-
-        rows_with_vals = get_rows_exist(apiobj=apiobj, fields=field)
-        values = get_field_vals(rows=rows_with_vals, field=field)
-        value = values[0]
-        regex_value = value[0:4]
-
-        rows = apiobj.get_by_value_regex(value=regex_value, field=field, not_flag=True)
-        check_assets(rows)
-
-        rows_values = get_field_vals(rows=rows, field=field)
-        assert value not in rows_values
+    def _all_get_by(self, apiobj, method, field, use_field=None):
+        self._get_by_value(
+            apiobj=apiobj,
+            method=method,
+            field=field,
+            not_flag=False,
+            use_field=use_field,
+        )
+        self._get_by_value(
+            apiobj=apiobj, method=method, field=field, not_flag=True, use_field=use_field
+        )
+        self._get_by_values(
+            apiobj=apiobj,
+            method=method,
+            field=field,
+            not_flag=False,
+            use_field=use_field,
+        )
+        self._get_by_values(
+            apiobj=apiobj, method=method, field=field, not_flag=True, use_field=use_field
+        )
+        self._get_by_value_re(
+            apiobj=apiobj,
+            method=method,
+            field=field,
+            not_flag=False,
+            use_field=use_field,
+        )
+        self._get_by_value_re(
+            apiobj=apiobj, method=method, field=field, not_flag=True, use_field=use_field
+        )

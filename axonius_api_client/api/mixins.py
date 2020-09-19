@@ -328,14 +328,14 @@ class PagingMixinsObject(PageSizeMixin):
         Returns:
             :obj:`dict`: saved query
         """
-        rows = self.get(**kwargs)
-
-        for row in rows:
+        valid = []
+        tmpl = "name: {name!r}".format
+        for row in self.get(**kwargs):
             if row["name"] == value:
                 return row
+            valid.append(tmpl(**row))
 
-        tmpl = "name: {name!r}".format
-        valid = "\n  " + "\n  ".join(sorted([tmpl(**row) for row in rows]))
+        valid = "\n  " + "\n  ".join(sorted(valid))
         raise NotFoundError(f"name {value!r} not found, valid:{valid}")
 
     def get(
