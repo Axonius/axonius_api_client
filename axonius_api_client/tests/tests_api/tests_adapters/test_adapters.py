@@ -55,7 +55,10 @@ def val_parsed_schema(schema):
                 assert isinstance(x["name"], str)
                 assert isinstance(x["title"], str)
                 continue
-            assert isinstance(x, str) and x
+            if item_type == "integer":
+                assert isinstance(x, int)
+            else:
+                assert isinstance(x, str) and x
 
         item_default = item.pop("default", "")
         assert isinstance(item_default, (str, int, bool)) or item_default in [
@@ -327,7 +330,7 @@ class TestAdaptersPrivate(TestAdaptersBase):
             new_config=config_update,
         )
 
-        assert not set_response
+        assert set_response.get("config_name")
         updated = apiobj._config_get(
             name_plugin=adapter["name_plugin"], name_config="AdapterBase"
         )
@@ -343,7 +346,7 @@ class TestAdaptersPrivate(TestAdaptersBase):
             name_config="AdapterBase",
             new_config=reconfig_update,
         )
-        assert not reset_response
+        assert reset_response.get("config_name")
         post_reset = apiobj._config_get(
             name_plugin=adapter["name_plugin"], name_config="AdapterBase"
         )
