@@ -4,8 +4,8 @@ import copy
 import io
 
 import pytest
-from axonius_api_client.constants import AGG_ADAPTER_NAME
 
+from ...utils import get_rows_exist, get_schema
 from .callbacks import Callbacks
 
 
@@ -19,21 +19,24 @@ class CallbacksCsv(Callbacks):
 
     def test_row_as_is(self, cbexport, apiobj):
         """Pass."""
-        if not apiobj.TEST_DATA["has_complex"]:
-            pytest.skip(f"No complex field found for {apiobj}")
-
-        field_complex = apiobj.TEST_DATA["field_complex"]
-
-        schema = apiobj.fields.get_field_schema(
-            value=field_complex, schemas=apiobj.fields.get()[AGG_ADAPTER_NAME],
+        field_complex = apiobj.FIELD_COMPLEX
+        sub_columns = [
+            x["column_title"]
+            for x in get_schema(apiobj=apiobj, field=field_complex, key="sub_fields")
+            if x["is_root"]
+        ]
+        original_rows = get_rows_exist(
+            apiobj=apiobj, fields=field_complex, max_rows=5, first=False
         )
-        sub_columns = [x["column_title"] for x in schema["sub_fields"] if x["is_root"]]
 
         io_fd = io.StringIO()
 
-        getargs = {"export_fd": io_fd}
-
-        cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs=getargs)
+        cbobj = self.get_cbobj(
+            apiobj=apiobj,
+            cbexport=cbexport,
+            store={"fields": [field_complex]},
+            getargs={"export_fd": io_fd},
+        )
         cbobj.start()
 
         assert isinstance(cbobj.final_schemas, list)
@@ -41,7 +44,7 @@ class CallbacksCsv(Callbacks):
         for x in cbobj.final_schemas:
             assert isinstance(x, dict)
 
-        for row in copy.deepcopy(apiobj.TEST_DATA["cb_assets"][:200]):
+        for row in original_rows:
             row_id = row["internal_axon_id"]
             rows_ret = cbobj.process_row(row=copy.deepcopy(row))
             assert len(rows_ret) == 1

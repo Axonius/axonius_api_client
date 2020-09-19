@@ -4,22 +4,11 @@ import copy
 import json
 
 import pytest
-
 from axonius_api_client.api.assets.saved_query import check_gui_page_size
 from axonius_api_client.constants import GUI_PAGE_SIZES, SIMPLE
 from axonius_api_client.exceptions import ApiError, NotFoundError
 
 from ...meta import QUERIES
-
-
-def load_test_data(apiobj):
-    """Pass."""
-    apiobj.TEST_DATA = getattr(apiobj, "TEST_DATA", {})
-
-    if not apiobj.TEST_DATA.get("saved_queries"):
-        apiobj.TEST_DATA["saved_queries"] = apiobj.saved_query.get()
-
-    return apiobj
 
 
 def test_check_gui_page_size_error():
@@ -95,7 +84,7 @@ class SavedQueryPublic:
 
     def test_get_by_name(self, apiobj):
         """Pass."""
-        sq = apiobj.TEST_DATA["saved_queries"][0]
+        sq = apiobj.saved_query.get()[0]
         value = sq["name"]
         row = apiobj.saved_query.get_by_name(value=value)
         assert isinstance(row, dict)
@@ -109,7 +98,7 @@ class SavedQueryPublic:
 
     def test_get_by_uuid(self, apiobj):
         """Pass."""
-        sq = apiobj.TEST_DATA["saved_queries"][0]
+        sq = apiobj.saved_query.get()[0]
         value = sq["uuid"]
         row = apiobj.saved_query.get_by_uuid(value=value)
         assert isinstance(row, dict)
@@ -123,7 +112,7 @@ class SavedQueryPublic:
 
     def test_get_by_tags(self, apiobj):
         """Pass."""
-        tags = [y for x in apiobj.TEST_DATA["saved_queries"] for y in x.get("tags", [])]
+        tags = [y for x in apiobj.saved_query.get() for y in x.get("tags", [])]
         value = tags[0]
         rows = apiobj.saved_query.get_by_tags(value=value)
         assert isinstance(rows, list)
@@ -140,7 +129,7 @@ class SavedQueryPublic:
     @pytest.fixture(scope="class")
     def sq_fixture(self, apiobj):
         """Pass."""
-        field_simple = apiobj.TEST_DATA["field_simple"]
+        field_simple = apiobj.FIELD_SIMPLE
 
         name = "badwolf torked"
         fields = ["adapters", "last_seen", "id", field_simple]
@@ -158,7 +147,7 @@ class SavedQueryPublic:
         except NotFoundError:
             pass
 
-        row_original = apiobj.saved_query.add(
+        row = apiobj.saved_query.add(
             name=name,
             fields=fields,
             sort_field=sort_field,
@@ -169,92 +158,24 @@ class SavedQueryPublic:
             description=description,
             query=query,
         )
-        assert isinstance(row_original, dict)
-        row_validate = copy.deepcopy(row_original)
-        row = copy.deepcopy(row_original)
-        validate_sq(row_validate)
+        validate_sq(row)
 
-        row_name = row.pop("name")
-        assert row_name == name
+        assert row["name"] == name
+        assert row["query_type"] == "saved"
+        assert row["tags"] == tags
+        assert row["description"] == description
+        assert row["archived"] is False
+        assert row["private"] is False
+        assert row["view"]["query"]["filter"] == query
+        assert row["view"]["query"]["onlyExpressionsFilter"] == query
+        assert row["view"]["query"]["expressions"] == []
+        assert row["view"]["pageSize"] == gui_page_size
+        assert row["view"]["colFilters"] == colfilters
+        assert row["view"]["sort"]["field"] == sort_field
+        assert row["view"]["sort"]["desc"] == sort_desc
 
-        row_query_type = row.pop("query_type")
-        assert row_query_type == "saved"
+        yield row
 
-        row_tags = row.pop("tags")
-        assert row_tags == tags
-
-        row_description = row.pop("description")
-        assert row_description == description
-
-        row_view = row.pop("view")
-        assert isinstance(row_view, dict)
-
-        row_archived = row.pop("archived")
-        assert row_archived is False
-
-        row_date_fetched = row.pop("date_fetched")
-        assert isinstance(row_date_fetched, str)
-
-        row_user_id = row.pop("user_id")
-        assert isinstance(row_user_id, str)
-
-        row_last_updated = row.pop("last_updated")
-        assert isinstance(row_last_updated, str)
-
-        row_uuid = row.pop("uuid")
-        assert isinstance(row_uuid, str)
-
-        row_updated_by = row.pop("updated_by")
-        assert isinstance(row_updated_by, str)
-
-        row_updated_by_json = json.loads(row_updated_by)
-        assert isinstance(row_updated_by_json, dict)
-
-        row_private = row.pop("private", False)
-        assert isinstance(row_private, bool)
-
-        assert not row
-
-        # row["view"]
-        row_view_sort = row_view.pop("sort")
-        assert isinstance(row_view_sort, dict)
-
-        row_view_fields = row_view.pop("fields")
-        assert isinstance(row_view_fields, list)
-
-        row_view_query = row_view.pop("query")
-        assert isinstance(row_view_query, dict)
-
-        row_view_page_size = row_view.pop("pageSize")
-        assert row_view_page_size == gui_page_size
-
-        row_view_colfilters = row_view.pop("colFilters")
-        assert row_view_colfilters == colfilters
-
-        assert not row_view
-
-        # row["view"]["sort"]
-        row_view_sort_field = row_view_sort.pop("field")
-        assert row_view_sort_field == sort_field
-
-        row_view_sort_desc = row_view_sort.pop("desc")
-        assert row_view_sort_desc == sort_desc
-
-        assert not row_view_sort
-
-        # row["view"]["query"]
-        row_view_query_filter = row_view_query.pop("filter")
-        assert row_view_query_filter == query
-
-        row_view_query_expressions = row_view_query.pop("expressions")
-        assert row_view_query_expressions == []
-
-        # TBD
-        # row_view_query_search = row_view_query.pop("search")
-        # assert row_view_query_search == ""
-
-        assert not row_view_query
-        yield row_original
         try:
             apiobj.saved_query.delete_by_name(value=name)
         except NotFoundError:
@@ -298,7 +219,7 @@ class TestSavedQueryDevices(SavedQueryPrivate, SavedQueryPublic):
     @pytest.fixture(scope="class")
     def apiobj(self, api_devices):
         """Pass."""
-        return load_test_data(api_devices)
+        return api_devices
 
 
 class TestSavedQueryUsers(SavedQueryPrivate, SavedQueryPublic):
@@ -307,13 +228,12 @@ class TestSavedQueryUsers(SavedQueryPrivate, SavedQueryPublic):
     @pytest.fixture(scope="class")
     def apiobj(self, api_users):
         """Pass."""
-        return load_test_data(api_users)
+        return api_users
 
 
 def validate_qexpr(qexpr, asset):
     """Pass."""
     assert isinstance(qexpr, dict)
-    # XXX build a query builder :)
 
     compop = qexpr.pop("compOp")
     assert isinstance(compop, str)
@@ -379,9 +299,6 @@ def validate_nested(nested, asset):
     """Pass."""
     assert isinstance(nested, dict)
 
-    # new in 2.10, unsure of
-    # if not None, dict with keys: clearAll, selectAll, selectedValues
-    # XXX figure this out
     nfiltered_adapters = nested.pop("filteredAdapters", {})
     assert isinstance(nfiltered_adapters, dict) or nfiltered_adapters is None
 
@@ -399,6 +316,7 @@ def validate_nested(nested, asset):
 
 def validate_sq(asset):
     """Pass."""
+    asset = copy.deepcopy(asset)
     assert isinstance(asset, dict)
 
     original = copy.deepcopy(asset)

@@ -24,7 +24,6 @@ class Csv(Base):
     def start(self, **kwargs):
         """Create csvstream and associated file descriptor."""
         super(Csv, self).start(**kwargs)
-        # self.do_start(**kwargs)
         self.open_fd()
 
     def do_start(self, **kwargs):

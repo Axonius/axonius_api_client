@@ -121,11 +121,9 @@ class Base:
         self.process_tags_to_remove(row=row)
         self.add_report_adapters_missing(row=row)
         self.add_report_software_whitelist(row=row)
-
-        for schema in self.schemas_selected:
-            self.do_excludes(row=row, schema=schema)
-            self.do_add_null_values(row=row, schema=schema)
-            self.do_flatten_fields(row=row, schema=schema)
+        self.do_excludes(row=row)
+        self.do_add_null_values(row=row)
+        self.do_flatten_fields(row=row)
 
         new_rows = self.do_explode_field(row=row)
         for new_row in new_rows:
@@ -163,38 +161,49 @@ class Base:
 
         self.echo(msg=f"PROGRESS: {percent} {rows} {pages} in {taken}")
 
-    def do_add_null_values(self, row: dict, schema: dict, key: str = "name_qual"):
+    def do_add_null_values(self, row: dict):
         """Null out missing fields."""
-        if not self.GETARGS.get("field_null", False) or self.is_excluded(schema=schema):
+        if not self.GETARGS.get("field_null", False):
+            return
+
+        for schema in self.schemas_selected:
+            self._do_add_null_values(row=row, schema=schema)
+
+    def _do_add_null_values(self, row: dict, schema: dict, key: str = "name_qual"):
+        """Null out missing fields."""
+        if self.is_excluded(schema=schema):
             return
 
         null_value = self.GETARGS.get("field_null_value", None)
+
         field = schema[key]
 
         if schema["is_complex"]:
+
             row[field] = listify(row.get(field, []))
 
             for item in row[field]:
                 for sub_schema in self.get_sub_schemas(schema=schema):
-                    self.do_add_null_values(schema=sub_schema, row=item, key="name")
+                    self._do_add_null_values(schema=sub_schema, row=item, key="name")
         else:
             row[field] = row.get(field, null_value)
 
-    def do_excludes(self, row: dict, schema: dict):
+    def do_excludes(self, row: dict):
         """Asset callback to remove fields from row."""
         if not self.GETARGS.get("field_excludes", []):
             return
 
-        if self.is_excluded(schema=schema):
-            row.pop(schema["name_qual"], None)
-            return
+        for schema in self.schemas_selected:
+            if self.is_excluded(schema=schema):
+                row.pop(schema["name_qual"], None)
+                continue
 
-        if schema["is_complex"]:
-            items = listify(row.get(schema["name_qual"], []))
-            for sub_schema in schema["sub_fields"]:
-                if self.is_excluded(schema=sub_schema):
-                    for item in items:
-                        item.pop(sub_schema["name"], None)
+            if schema["is_complex"]:
+                items = listify(row.get(schema["name_qual"], []))
+                for sub_schema in schema["sub_fields"]:
+                    if self.is_excluded(schema=sub_schema):
+                        for item in items:
+                            item.pop(sub_schema["name"], None)
 
     def do_join_values(self, row: dict):
         """Join values."""
@@ -223,15 +232,16 @@ class Base:
         for schema in self.final_schemas:
             row[schema["column_title"]] = row.pop(schema["name_qual"], None)
 
-    def do_flatten_fields(self, row: dict, schema: dict):
+    def do_flatten_fields(self, row: dict):
         """Asset callback to flatten complex fields."""
         if not self.GETARGS.get("field_flatten", False):
             return
 
-        if self.schema_to_explode == schema:
-            return
+        for schema in self.schemas_selected:
+            if self.schema_to_explode == schema:
+                return
 
-        self._do_flatten_fields(row=row, schema=schema)
+            self._do_flatten_fields(row=row, schema=schema)
 
     def _do_flatten_fields(self, row: dict, schema: dict):
         """Pass."""

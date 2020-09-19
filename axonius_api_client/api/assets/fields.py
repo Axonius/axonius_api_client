@@ -203,13 +203,13 @@ class Fields(ChildMixins):
 
         matches = []
 
-        for adapter_re, fields in splits:
+        for adapter_re, fields_re in splits:
             adapters = self.get_adapter_names(value=adapter_re)
 
             for adapter in adapters:
-                for field in fields:
+                for field_re in fields_re:
                     fschemas = self.get_field_schemas(
-                        value=field, schemas=fields[adapter]
+                        value=field_re, schemas=fields[adapter]
                     )
                     names = [x["name_qual"] for x in fschemas]
                     matches += [x for x in names if x not in matches]

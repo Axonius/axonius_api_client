@@ -4,6 +4,7 @@ import copy
 
 import pytest
 
+from ...utils import get_rows_exist
 from .callbacks import Callbacks
 
 
@@ -21,12 +22,13 @@ class CallbacksBase(Callbacks):
         cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs=getargs)
         cbobj.start()
 
-        rows = copy.deepcopy(apiobj.TEST_DATA["cb_assets"][:5])
-
+        rows_orig = get_rows_exist(apiobj=apiobj, max_rows=5, first=False)
+        rows = copy.deepcopy(rows_orig)
+        rows_proc = []
         for row in rows:
-            rows_ret = cbobj.process_row(row=copy.deepcopy(row))
-            for row_ret in rows_ret:
-                assert row == row_ret
+            rows_proc += cbobj.process_row(row=row)
+
+        assert rows_proc == rows_orig
         cbobj.stop()
 
     def test_row_fully_loaded(self, cbexport, apiobj, caplog):
@@ -42,13 +44,13 @@ class CallbacksBase(Callbacks):
         cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs=getargs)
         cbobj.start()
 
-        rows = copy.deepcopy(apiobj.TEST_DATA["cb_assets"][:5])
-
+        rows_orig = get_rows_exist(apiobj=apiobj, max_rows=5, first=False)
+        rows = copy.deepcopy(rows_orig)
+        rows_proc = []
         for row in rows:
-            rows_ret = cbobj.process_row(row=copy.deepcopy(row))
-            for row_ret in rows_ret:
-                assert row != row_ret
+            rows_proc += cbobj.process_row(row=row)
 
+        assert rows_proc != rows_orig
         cbobj.stop()
 
 

@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 """Test suite."""
 import csv
+import random
 import re
+import string
 import sys
 from io import StringIO
 
@@ -24,7 +26,7 @@ CACHE: TTLCache = TTLCache(maxsize=1024, ttl=600)
 
 def get_field_vals(rows, field):
     """Pass."""
-    values = [x[field] for x in rows if x.get(field)]
+    values = [x[field] for x in listify(rows) if x.get(field)]
     values = [x for y in values for x in listify(y)]
     return values
 
@@ -42,7 +44,7 @@ def check_asset(row):
     assert row["internal_axon_id"]
 
 
-def build_query(apiobj, fields=None):
+def exists_query(apiobj, fields=None, not_exist=False):
     if not fields:
         return None
 
@@ -51,29 +53,41 @@ def build_query(apiobj, fields=None):
     except Exception as exc:
         pytest.skip(f"Fields {fields} not known for {apiobj}: {exc}")
 
-    entries = [{"type": "simple", "value": f"{x} exists"} for x in fields]
+    if not_exist:
+        entries = [{"type": "simple", "value": f"! {x} exists"} for x in fields]
+    else:
+        entries = [{"type": "simple", "value": f"{x} exists"} for x in fields]
+
     wizard = Wizard(apiobj=apiobj)
     query = wizard.parse(entries=entries)["query"]
     return query
 
 
 @cached(cache=CACHE)
-def get_rows_exist(apiobj, fields=None, max_rows=5):
-    query = build_query(apiobj=apiobj, fields=fields)
+def get_schema(apiobj, field, key=None, adapter=AGG_ADAPTER_NAME):
+    schema = apiobj.fields.get_field_schema(
+        value=field, schemas=get_schemas(apiobj=apiobj),
+    )
+    return schema[key] if key else schema
+
+
+def random_string(length):
+    letters = string.ascii_lowercase
+    result_str = "".join(random.choice(letters) for i in range(length))
+    return result_str
+
+
+def get_rows_exist(apiobj, fields=None, max_rows=1, first=True, not_exist=False):
+    query = exists_query(apiobj=apiobj, fields=fields, not_exist=not_exist)
     rows = apiobj.get(fields=fields, max_rows=max_rows, query=query)
     if not rows:
         pytest.skip(f"No {apiobj} assets with fields {fields}")
-    return rows
+    return rows[0] if first else rows
 
 
 @cached(cache=CACHE)
 def get_schemas(apiobj, adapter=AGG_ADAPTER_NAME):
     return apiobj.fields.get()[adapter]
-
-
-@cached(cache=CACHE)
-def get_sqs(apiobj):
-    return apiobj.saved_query.get()
 
 
 def log_check(caplog, entries, exists=True):
