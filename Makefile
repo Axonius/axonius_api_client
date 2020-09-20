@@ -41,7 +41,6 @@ pipenv_clean:
 
 pyenv_init:
 	pyenv install $(PYVER) -s || true
-	pyenv local $(PYVER) || true
 
 lint:
 	pipenv run isort $(PACKAGE) setup.py shell.py

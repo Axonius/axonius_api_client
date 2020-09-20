@@ -6,10 +6,12 @@ from typing import List
 
 from .api.routers import API_VERSION
 from .constants import LOG_LEVEL_AUTH
-from .exceptions import AlreadyLoggedIn, AuthError, InvalidCredentials, NotLoggedIn
+from .exceptions import (AlreadyLoggedIn, AuthError, InvalidCredentials,
+                         NotLoggedIn)
 from .http import Http
 from .logs import get_obj_log
 from .tools import json_reload
+from .version import __version__
 
 
 class Model:
@@ -117,14 +119,16 @@ class Mixins:
 
     def _validate(self):
         """Validate credentials."""
-        # XXX fallback to old auth path, remove once everyone is 3.5+
-        paths = [API_VERSION.system.meta_about, API_VERSION.devices.count]
-        for path in paths:
-            response = self.http(method="get", path=path)
-            body = json_reload(obj=response.text, error=False)
-            self.LOG.debug(f"Received auth path {path!r} body:\n{body}")
-            if response.ok:
-                break
+        path = API_VERSION.system.meta_about
+        response = self.http(method="get", path=path)
+        if response.status_code == 404:
+            raise AuthError(
+                f"Unable to access endpoint {path}, "
+                f"API client v{__version__} requires Axonius v3.9 or above"
+            )
+
+        body = json_reload(obj=response.text, error=False)
+        self.LOG.debug(f"Received auth path {path!r} body:\n{body}")
 
         try:
             response.raise_for_status()
