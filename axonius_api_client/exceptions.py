@@ -107,27 +107,4 @@ class JsonError(ResponseError):
 
 
 class WizardError(ApiError):
-    pass
-
-
-class SectionParserKeyError(ApiError):
-    def __init__(self, parser, key, msg):
-        self.parser = parser
-        self.key = key
-        self.msg = msg
-
-        err = f"Error in section {parser.name!r} with {key.key!r} key: {msg}"
-        section_lines = [f"  {k}: {v!r}" for k, v in parser.unparsed.items()]
-
-        lines = [
-            err,
-            "",
-            f"Supplied Section: {parser.name}",
-            *section_lines,
-            "",
-            "Key documentation:",
-            parser.wizard.doc_section_key(key=key),
-            "",
-            err,
-        ]
-        super().__init__("\n".join(lines))
+    """Error in wizards."""

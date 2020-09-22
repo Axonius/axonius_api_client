@@ -3,7 +3,7 @@
 import pytest
 
 
-class SystemDiscoverBase:
+class DashboardBase:
     """Pass."""
 
     @pytest.fixture(scope="class")
@@ -12,7 +12,7 @@ class SystemDiscoverBase:
         return api_dashboard
 
 
-class TestSystemDiscoverPrivate(SystemDiscoverBase):
+class TestDashboardPrivate(DashboardBase):
     """Pass."""
 
     def test_private_lifecycle(self, apiobj):
@@ -43,7 +43,7 @@ class TestSystemDiscoverPrivate(SystemDiscoverBase):
         assert lifecycle["status"] in ["done", "stopping"]
 
 
-class TestSystemDiscoverPublic(SystemDiscoverBase):
+class TestDashboardPublic(DashboardBase):
     """Pass."""
 
     def test_get(self, apiobj):

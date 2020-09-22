@@ -7,11 +7,8 @@ from .base_assets import AssetsPrivate, AssetsPublic, ModelMixinsBase
 
 
 class TestDevices(AssetsPrivate, AssetsPublic, ModelMixinsBase):
-    """Pass."""
-
     @pytest.fixture(scope="class")
     def apiobj(self, api_devices):
-        """Pass."""
         return api_devices
 
     @pytest.mark.parametrize(
@@ -19,15 +16,11 @@ class TestDevices(AssetsPrivate, AssetsPublic, ModelMixinsBase):
         [["hostname", "FIELD_HOSTNAME"], ["mac", "FIELD_MAC"], ["ip", "FIELD_IP"]],
     )
     def test_get_bys(self, apiobj, method, field):
-        """Pass."""
         self._all_get_by(apiobj=apiobj, method=method, field=field)
 
     def test_get_by_subnet(self, apiobj):
-        """Pass."""
         field = apiobj.FIELD_SUBNET
-        row_with_val = get_rows_exist(
-            apiobj=apiobj, fields=field, max_rows=1, first=False
-        )
+        row_with_val = get_rows_exist(apiobj=apiobj, fields=field, max_rows=1)
         value = get_field_vals(rows=row_with_val, field=field)[0]
 
         rows = apiobj.get_by_subnet(value=value, fields=field, max_rows=3)

@@ -6,14 +6,23 @@ import pathlib
 from typing import List, Optional, Tuple, Union
 
 from ..api.assets.asset_mixin import AssetMixin
-from ..api.parsers.constants import (CUSTOM_FIELDS_MAP, Operator,
-                                     OperatorTypeMaps)
+from ..api.parsers.constants import CUSTOM_FIELDS_MAP, Operator, OperatorTypeMaps
 from ..constants import ALL_NAME, LOG_LEVEL_WIZARD
 from ..exceptions import WizardError
 from ..logs import get_obj_log
 from ..tools import check_empty, check_type, listify, path_read
-from .constants import (Checks, Docs, Entry, Expr, Fields, Flags, Results,
-                        Sources, Templates, Types)
+from .constants import (
+    Checks,
+    Docs,
+    Entry,
+    Expr,
+    Fields,
+    Flags,
+    Results,
+    Sources,
+    Templates,
+    Types,
+)
 from .value_parser import ValueParser
 
 
@@ -114,10 +123,16 @@ class Wizard:
             self.LOG.debug(f"Got value {value!r} from {split} from '{value_raw}'")
 
         self._value_checks(
-            value_raw=value_raw, value=field, src="FIELD", checks=Checks.FIELD,
+            value_raw=value_raw,
+            value=field,
+            src="FIELD",
+            checks=Checks.FIELD,
         )
         self._value_checks(
-            value_raw=value_raw, value=operator, src="OPERATOR", checks=Checks.OP,
+            value_raw=value_raw,
+            value=operator,
+            src="OPERATOR",
+            checks=Checks.OP,
         )
 
         return field, operator, value
@@ -144,7 +159,10 @@ class Wizard:
             )
 
         self._value_checks(
-            value_raw=value_raw, value=field, src="FIELD", checks=Checks.FIELD,
+            value_raw=value_raw,
+            value=field,
+            src="FIELD",
+            checks=Checks.FIELD,
         )
         self._value_checks(
             value_raw=value_raw, value=subs_raw, src="SUB-FIELD(s)", checks=[]
@@ -207,7 +225,9 @@ class Wizard:
             operator=operator, field=sub_field, value_raw=value_raw
         )
         aql_value, expr_value = self._value_parser(
-            field=sub_field, operator=operator, value=sub_value,
+            field=sub_field,
+            operator=operator,
+            value=sub_value,
         )
         query = operator.template.format(
             field=sub_field[Fields.NAME], aql_value=aql_value
@@ -235,7 +255,9 @@ class Wizard:
             operator=operator, field=field, value_raw=value_raw
         )
         aql_value, expr_value = self._value_parser(
-            field=field, operator=operator, value=value,
+            field=field,
+            operator=operator,
+            value=value,
         )
         query = operator.template.format(field=field[Fields.NAME], aql_value=aql_value)
         expr = Expr.build(
@@ -353,7 +375,9 @@ class Wizard:
 
     def _get_field(self, value: str) -> dict:
         field = self._apiobj.fields.get_field_name(
-            value=value, key=None, fields_custom=CUSTOM_FIELDS_MAP,
+            value=value,
+            key=None,
+            fields_custom=CUSTOM_FIELDS_MAP,
         )
 
         if field[Fields.NAME] == ALL_NAME:

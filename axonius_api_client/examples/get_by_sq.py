@@ -44,7 +44,9 @@ if __name__ == "__main__":
     elif FORMAT.lower() == "csv":
         joiner = "\n"  # join multiple items in inner cell with this character
         export_results = axonapi.cli.serial.obj_to_csv(
-            ctx=None, raw_data=results, joiner=joiner,
+            ctx=None,
+            raw_data=results,
+            joiner=joiner,
         )
 
     else:

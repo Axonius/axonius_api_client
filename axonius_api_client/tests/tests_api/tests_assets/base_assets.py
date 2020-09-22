@@ -4,16 +4,15 @@ import pytest
 import requests
 from axonius_api_client.api import mixins
 from axonius_api_client.constants import MAX_PAGE_SIZE
-from axonius_api_client.exceptions import (JsonError, JsonInvalid,
-                                           NotFoundError, ResponseNotOk)
+from axonius_api_client.exceptions import (ApiError, JsonError, JsonInvalid,
+                                           NotFoundError, ResponseNotOk,
+                                           ToolsError)
 
 from ...meta import QUERIES
 from ...utils import check_asset, check_assets, get_field_vals, get_rows_exist
 
 
 class ModelMixinsBase:
-    """Pass."""
-
     def test_model_json(self, apiobj):
         """Test that JSON is returned when is_json=True."""
         response = apiobj.request(
@@ -75,38 +74,31 @@ class ModelMixinsBase:
         assert isinstance(response, str)
 
     def test_model_child(self, apiobj):
-        """Pass."""
         child = mixins.ChildMixins(parent=apiobj)
         assert str(apiobj) in str(child)
         assert repr(apiobj) in repr(child)
 
 
 class AssetsPrivate:
-    """Pass."""
-
     def test_private_get(self, apiobj):
-        """Pass."""
         data = apiobj._get(page_size=1)
         assert isinstance(data, dict)
         assert isinstance(data["assets"], list)
         assert len(data["assets"]) == 1
 
     def test_private_get_normal_query(self, apiobj):
-        """Pass."""
         data = apiobj._get(query=QUERIES["not_last_seen_day"], page_size=1)
         assert isinstance(data, dict)
         assert isinstance(data["assets"], list)
         assert len(data["assets"]) == 1
 
     def test_private_get_cursor(self, apiobj):
-        """Pass."""
         data = apiobj._get_cursor(page_size=1)
         assert isinstance(data, dict)
         assert isinstance(data["assets"], list)
         assert len(data["assets"]) == 1
 
     def test_private_get_cursor_query(self, apiobj):
-        """Pass."""
         query = QUERIES["not_last_seen_day"]
         data = apiobj._get_cursor(query=query, page_size=1)
         assert isinstance(data, dict)
@@ -114,7 +106,6 @@ class AssetsPrivate:
         assert len(data["assets"]) == 1
 
     def test_private_get_by_id(self, apiobj):
-        """Pass."""
         asset = apiobj.get(max_rows=1)[0]
         id = asset["internal_axon_id"]
         data = apiobj._get_by_id(id=id)
@@ -122,18 +113,15 @@ class AssetsPrivate:
         assert data["internal_axon_id"] == id
 
     def test_private_count(self, apiobj):
-        """Pass."""
         data = apiobj._count()
         assert isinstance(data, int)
 
     def test_private_count_query(self, apiobj):
-        """Pass."""
         query = QUERIES["not_last_seen_day"]
         data = apiobj._count(query=query)
         assert isinstance(data, int)
 
     def test_private_build_query(self, apiobj):
-        """Pass."""
         pre_query = QUERIES["not_last_seen_day"]
         post_query = QUERIES["not_last_seen_day"]
 
@@ -161,27 +149,49 @@ class AssetsPrivate:
 
 
 class AssetsPublic:
-    """Pass."""
+    def test_sort(self, apiobj):
+        apiobj.get(max_rows=1, sort_field=apiobj.FIELD_MAIN)
+
+    def test_sort_bad(self, apiobj):
+        with pytest.raises(NotFoundError):
+            apiobj.get(max_rows=1, sort_field="badwolf")
+
+    def test_history_date(self, apiobj):
+        dates = apiobj.history_dates()
+        assert isinstance(dates, dict) and dates
+        for k, v in dates.items():
+            assert isinstance(k, str) and "-" in k
+            assert isinstance(v, str) and "-" in v and "T" in v
+
+    def test_validate_history_date(self, apiobj):
+        dates = apiobj.history_dates()
+        date = list(dates)[0]
+        dt = apiobj.validate_history_date(value=date)
+        assert dt == dates[date]
+
+    def test_validate_history_date_unknown_date(self, apiobj):
+        with pytest.raises(ApiError):
+            apiobj.validate_history_date(value="1999-09-09")
+
+    def test_validate_history_date_invalid_date(self, apiobj):
+        with pytest.raises(ToolsError):
+            apiobj.validate_history_date(value="xxx")
 
     def test_count(self, apiobj):
-        """Pass."""
         data = apiobj.count()
         assert isinstance(data, int)
 
     def test_count_query(self, apiobj):
-        """Pass."""
         query = QUERIES["not_last_seen_day"]
         data = apiobj.count(query=query)
         assert isinstance(data, int)
 
     def test_count_by_saved_query(self, apiobj):
-        """Pass."""
         sq_name = apiobj.saved_query.get()[0]["name"]
         data = apiobj.count_by_saved_query(name=sq_name)
         assert isinstance(data, int)
 
     def test_get_cursor_no_generator_no(self, apiobj):
-        """Pass."""
         rows = apiobj.get(use_cursor=False, generator=False, max_rows=1)
 
         assert not rows.__class__.__name__ == "generator"
@@ -190,7 +200,6 @@ class AssetsPublic:
         assert len(rows) == 1
 
     def test_get_cursor_no_generator_yes(self, apiobj):
-        """Pass."""
         gen = apiobj.get(use_cursor=False, generator=True, max_rows=1)
 
         assert not isinstance(gen, list)
@@ -203,7 +212,6 @@ class AssetsPublic:
         assert len(rows) == 1
 
     def test_get_cursor_yes_generator_no(self, apiobj):
-        """Pass."""
         rows = apiobj.get(use_cursor=True, generator=False, max_rows=1)
 
         assert not rows.__class__.__name__ == "generator"
@@ -212,7 +220,6 @@ class AssetsPublic:
         assert len(rows) == 1
 
     def test_get_cursor_yes_generator_yes(self, apiobj):
-        """Pass."""
         gen = apiobj.get(use_cursor=True, generator=True, max_rows=1)
 
         assert gen.__class__.__name__ == "generator"
@@ -223,19 +230,16 @@ class AssetsPublic:
         assert len(rows) == 1
 
     def test_get_page_size_over_max(self, apiobj):
-        """Pass."""
         rows = apiobj.get(page_size=3000, max_pages=1)
         check_assets(rows)
         assert len(rows) <= MAX_PAGE_SIZE
 
     def test_get_maxpages(self, apiobj):
-        """Pass."""
         rows = apiobj.get(page_size=20, max_pages=1)
         check_assets(rows)
         assert len(rows) == 20
 
     def test_get_id(self, apiobj):
-        """Pass."""
         asset = apiobj.get(max_rows=1)[0]
         id = asset["internal_axon_id"]
 
@@ -244,12 +248,10 @@ class AssetsPublic:
         assert row["internal_axon_id"] == id
 
     def test_get_id_error(self, apiobj):
-        """Pass."""
         with pytest.raises(NotFoundError):
             apiobj.get_by_id(id="badwolf")
 
     def test_get_by_saved_query(self, apiobj):
-        """Pass."""
         sq = apiobj.saved_query.get()[0]
         sq_name = sq["name"]
         sq_fields = sq["view"]["fields"]
@@ -261,7 +263,6 @@ class AssetsPublic:
         assert sq_fields == last_fields
 
     def test_get_bys_value(self, apiobj):
-        """Pass."""
         self._all_get_by(
             apiobj=apiobj,
             method="value",
@@ -292,9 +293,7 @@ class AssetsPublic:
 
     def _get_by_values(self, apiobj, method, field, not_flag=False, use_field=None):
         field = getattr(apiobj, field)
-        rows_with_val = get_rows_exist(
-            apiobj=apiobj, fields=field, max_rows=2, first=False
-        )
+        rows_with_val = get_rows_exist(apiobj=apiobj, fields=field, max_rows=2)
         values = get_field_vals(rows=rows_with_val, field=field)
         method = getattr(apiobj, f"get_by_{method}s")
 

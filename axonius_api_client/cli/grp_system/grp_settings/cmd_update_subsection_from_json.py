@@ -12,7 +12,15 @@ OPTIONS = [*AUTH, EXPORT, SECTION, SUB_SECTION, INPUT_FILE]
 @add_options(OPTIONS)
 @click.pass_context
 def cmd(
-    ctx, url, key, secret, input_file, section, sub_section, export_format, **kwargs,
+    ctx,
+    url,
+    key,
+    secret,
+    input_file,
+    section,
+    sub_section,
+    export_format,
+    **kwargs,
 ):
     """Update a sub-section from a JSON file."""
     client = ctx.obj.start_client(url=url, key=key, secret=secret)

@@ -8,14 +8,8 @@ from urllib.parse import ParseResult, urlparse, urlunparse
 
 import requests
 
-from .constants import (
-    LOG_LEVEL_HTTP,
-    MAX_BODY_LEN,
-    REQUEST_ATTR_MAP,
-    RESPONSE_ATTR_MAP,
-    TIMEOUT_CONNECT,
-    TIMEOUT_RESPONSE,
-)
+from .constants import (LOG_LEVEL_HTTP, MAX_BODY_LEN, REQUEST_ATTR_MAP,
+                        RESPONSE_ATTR_MAP, TIMEOUT_CONNECT, TIMEOUT_RESPONSE)
 from .exceptions import HttpError
 from .logs import get_obj_log, set_log_level
 from .tools import join_url, json_reload, listify, path_read
@@ -193,7 +187,7 @@ class Http:
         self.session.proxies["https"] = https_proxy
         self.session.proxies["http"] = http_proxy
 
-        if certpath:
+        if certpath:  # pragma: no cover
             path_read(obj=certpath, binary=True)
             self.session.verify = certpath
         else:

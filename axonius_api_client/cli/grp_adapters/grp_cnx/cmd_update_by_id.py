@@ -18,7 +18,15 @@ OPTIONS = [
 @add_options(OPTIONS)
 @click.pass_context
 def cmd(
-    ctx, url, key, secret, config, adapter_node, adapter_name, cnx_id, **kwargs,
+    ctx,
+    url,
+    key,
+    secret,
+    config,
+    adapter_node,
+    adapter_name,
+    cnx_id,
+    **kwargs,
 ):
     """Update a connection from arguments."""
     client = ctx.obj.start_client(url=url, key=key, secret=secret)

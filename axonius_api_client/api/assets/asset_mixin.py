@@ -44,7 +44,7 @@ class AssetMixin(ModelMixins):
         """
         raise NotImplementedError  # pragma: no cover
 
-    def destroy(self, destroy: bool, history: bool) -> dict:
+    def destroy(self, destroy: bool, history: bool) -> dict:  # pragma: no cover
         """Destroy ALL assets."""
         return self._destroy(destroy=destroy, history=history)
 
@@ -240,7 +240,7 @@ class AssetMixin(ModelMixins):
                 for row_item in listify(obj=row_items):
                     yield row_item
 
-                if state["stop_fetch"]:
+                if state["stop_fetch"]:  # pragma: no cover
                     break
 
                 if (
@@ -404,7 +404,10 @@ class AssetMixin(ModelMixins):
         inner = f"{field} in [{match}]"
 
         kwargs["query"] = self._build_query(
-            inner=inner, pre=pre, post=post, not_flag=not_flag,
+            inner=inner,
+            pre=pre,
+            post=post,
+            not_flag=not_flag,
         )
 
         return self.get(**kwargs)
@@ -422,16 +425,14 @@ class AssetMixin(ModelMixins):
     ) -> Union[Generator[dict, None, None], List[dict]]:
         """Pass."""
         field = self.fields.get_field_name(value=field, field_manual=field_manual)
-
-        if cast_insensitive:
-            inner = f'{field} == regex("{value}", "i")'
-        else:
-            inner = f'{field} == regex("{value}")'
-
+        flags = ', "i"' if cast_insensitive else ""
+        inner = f'{field} == regex("{value}"{flags})'
         kwargs["query"] = self._build_query(
-            inner=inner, pre=pre, post=post, not_flag=not_flag,
+            inner=inner,
+            pre=pre,
+            post=post,
+            not_flag=not_flag,
         )
-
         return self.get(**kwargs)
 
     def get_by_value(
@@ -450,7 +451,10 @@ class AssetMixin(ModelMixins):
         inner = f'{field} == "{value}"'
 
         kwargs["query"] = self._build_query(
-            inner=inner, pre=pre, post=post, not_flag=not_flag,
+            inner=inner,
+            pre=pre,
+            post=post,
+            not_flag=not_flag,
         )
 
         return self.get(**kwargs)
@@ -507,7 +511,9 @@ class AssetMixin(ModelMixins):
         super(AssetMixin, self)._init(**kwargs)
 
     def _count(
-        self, query: Optional[str] = None, history_date: Optional[str] = None,
+        self,
+        query: Optional[str] = None,
+        history_date: Optional[str] = None,
     ) -> int:
         """Direct API method to get the count of assets.
 
@@ -626,7 +632,7 @@ class AssetMixin(ModelMixins):
         path = self.router.by_id.format(id=id)
         return self.request(method="get", path=path)
 
-    def _destroy(self, destroy: bool, history: bool) -> dict:
+    def _destroy(self, destroy: bool, history: bool) -> dict:  # pragma: no cover
         """Destroy ALL assets."""
         data = {"destroy": destroy, "history": history}
         path = self.router.destroy

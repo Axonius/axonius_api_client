@@ -10,24 +10,18 @@ from .callbacks import Callbacks
 
 
 class CallbacksCsv(Callbacks):
-    """Pass."""
-
     @pytest.fixture(scope="class")
     def cbexport(self):
-        """Pass."""
         return "csv"
 
     def test_row_as_is(self, cbexport, apiobj):
-        """Pass."""
         field_complex = apiobj.FIELD_COMPLEX
         sub_columns = [
             x["column_title"]
             for x in get_schema(apiobj=apiobj, field=field_complex, key="sub_fields")
             if x["is_root"]
         ]
-        original_rows = get_rows_exist(
-            apiobj=apiobj, fields=field_complex, max_rows=5, first=False
-        )
+        original_rows = get_rows_exist(apiobj=apiobj, fields=field_complex, max_rows=5)
 
         io_fd = io.StringIO()
 
@@ -58,20 +52,38 @@ class CallbacksCsv(Callbacks):
         output = io_fd.getvalue()
         assert output.endswith("\n\n")
 
+    def test_row_no_titles(self, cbexport, apiobj):
+        rows = get_rows_exist(apiobj=apiobj, max_rows=5)
+
+        io_fd = io.StringIO()
+        cbobj = self.get_cbobj(
+            apiobj=apiobj,
+            cbexport=cbexport,
+            store={"fields": apiobj.fields_default},
+            getargs={"export_fd": io_fd, "field_titles": False},
+        )
+        cbobj.start()
+        assert cbobj.GETARGS["field_titles"] is False
+
+        for row in rows:
+            cbobj.process_row(row=copy.deepcopy(row))
+
+        start_val = io_fd.getvalue().splitlines()[0]
+        for i in cbobj.final_columns:
+            assert f'"{i}"' in start_val
+
+        cbobj.stop()
+        output = io_fd.getvalue()
+        assert output.endswith("\n\n")
+
 
 class TestDevicesCallbacksCsv(CallbacksCsv):
-    """Pass."""
-
     @pytest.fixture(scope="class")
     def apiobj(self, api_devices):
-        """Pass."""
         return api_devices
 
 
 class TestUsersCallbacksCsv(CallbacksCsv):
-    """Pass."""
-
     @pytest.fixture(scope="class")
     def apiobj(self, api_users):
-        """Pass."""
         return api_users

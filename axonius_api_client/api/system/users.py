@@ -7,7 +7,7 @@ from ..mixins import ChildMixins
 from ..parsers.config import parse_unchanged
 
 
-class Users(ChildMixins):
+class Users(ChildMixins):  # pragma: no cover
     """User Role controls."""
 
     def add(

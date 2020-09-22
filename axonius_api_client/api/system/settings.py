@@ -103,13 +103,21 @@ class SettingsChild(ChildMixins):
         new_config.update(kwargs)
 
         config_unknown(
-            schemas=schemas, new_config=new_config, source=source,
+            schemas=schemas,
+            new_config=new_config,
+            source=source,
         )
         config_build(
-            schemas=schemas, old_config=old_config, new_config=new_config, source=source,
+            schemas=schemas,
+            old_config=old_config,
+            new_config=new_config,
+            source=source,
         )
         config_unchanged(
-            schemas=schemas, old_config=old_config, new_config=new_config, source=source,
+            schemas=schemas,
+            old_config=old_config,
+            new_config=new_config,
+            source=source,
         )
 
         full_config[section] = new_config
@@ -133,13 +141,21 @@ class SettingsChild(ChildMixins):
         new_config.update(kwargs)
 
         config_unknown(
-            schemas=schemas, new_config=new_config, source=source,
+            schemas=schemas,
+            new_config=new_config,
+            source=source,
         )
         config_build(
-            schemas=schemas, old_config=old_config, new_config=new_config, source=source,
+            schemas=schemas,
+            old_config=old_config,
+            new_config=new_config,
+            source=source,
         )
         config_unchanged(
-            schemas=schemas, old_config=old_config, new_config=new_config, source=source,
+            schemas=schemas,
+            old_config=old_config,
+            new_config=new_config,
+            source=source,
         )
 
         full_config[section][sub_section] = new_config

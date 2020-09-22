@@ -9,11 +9,12 @@ from axonius_api_client.api.adapters import Adapters
 from axonius_api_client.api.adapters.cnx import Cnx
 from axonius_api_client.api.assets import (Devices, Users, fields, labels,
                                            saved_query)
+from axonius_api_client.api.signup import Signup
 from axonius_api_client.constants import CSV_ADAPTER, DEFAULT_NODE
 
 from .meta import CSV_FILECONTENT_STR, CSV_FILENAME
 from .utils import (check_apiobj, check_apiobj_children, check_apiobj_xref,
-                    get_auth)
+                    get_auth, get_url)
 
 dotenv.load_dotenv()
 
@@ -161,6 +162,13 @@ def api_system(request):
         users=system.users.Users,
         roles=system.roles.Roles,
     )
+    return obj
+
+
+@pytest.fixture(scope="session")
+def api_signup(request):
+    """Pass."""
+    obj = Signup(url=get_url(request))
     return obj
 
 

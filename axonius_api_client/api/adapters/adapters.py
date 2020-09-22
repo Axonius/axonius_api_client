@@ -61,17 +61,17 @@ class Adapters(ModelMixins):
 
     def config_refetch(self, adapter: dict, config_type: str = "generic") -> dict:
         """Pass."""
-        if config_type not in CONFIG_TYPES:
-            msg = f"Invalid configuration type {config_type!r}, valids: {CONFIG_TYPES}"
-            raise ApiError(msg)
-
+        schemas = adapter["schemas"]
         name_config = f"{config_type}_name"
-        name_config = adapter["schemas"][name_config]
+        name_config = schemas.get(name_config)
         name_plugin = adapter["name_plugin"]
 
         if not name_config:
             name = adapter["name"]
-            raise ApiError(f"Adapter {name} has no adapter {config_type} settings!")
+            valid = ", ".join([x for x in CONFIG_TYPES if f"{x}_name" in schemas])
+            raise ApiError(
+                f"Adapter {name} has no config type {config_type!r}, valids: {valid}!"
+            )
 
         data = self._config_get(name_plugin=name_plugin, name_config=name_config)
 
@@ -105,7 +105,9 @@ class Adapters(ModelMixins):
         )
 
         self._config_update(
-            name_raw=adapter["name_raw"], name_config=name_config, new_config=new_config,
+            name_raw=adapter["name_raw"],
+            name_config=name_config,
+            new_config=new_config,
         )
 
         return self.config_refetch(adapter=adapter, config_type=config_type)

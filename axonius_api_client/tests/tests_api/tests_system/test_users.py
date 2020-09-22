@@ -8,7 +8,7 @@ from axonius_api_client.exceptions import ApiError, NotFoundError
 from ...meta import TEST_USER
 
 
-@pytest.mark.skip("Waiting for update to 3.3!")  # XXX update public API for roles/users
+@pytest.mark.skip("Waiting for update to 3.3!")
 class TestSystemUsers:
     """Pass."""
 

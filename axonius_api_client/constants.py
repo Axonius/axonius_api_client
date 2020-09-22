@@ -10,23 +10,21 @@ import dotenv
 
 from . import __package__ as PACKAGE_ROOT
 
-DEFAULT_PATH = os.getcwd()
+DEFAULT_PATH: str = os.getcwd()
 
-AX_ENV = os.environ.get("AX_ENV", "").strip() or DEFAULT_PATH
+AX_ENV_KEY: str = "AX_ENV"
 
 
 def load_dotenv(
-    ax_env: str = AX_ENV, reenv: bool = False, verbose: bool = False
+    ax_env: Union[str, pathlib.Path] = DEFAULT_PATH,
+    reenv: bool = False,
+    verbose: bool = False,
 ) -> Tuple[str, pathlib.Path]:
     """Pass."""
-    if reenv:
-        ax_env = os.environ.get("AX_ENV", "").strip() or DEFAULT_PATH
-
+    ax_env = os.environ.get(AX_ENV_KEY, "").strip() or ax_env
     ax_env_path = pathlib.Path(ax_env).expanduser().resolve()
-
     if ax_env_path.is_dir():
         ax_env_path = ax_env_path / ".env"
-
     return (
         dotenv.load_dotenv(dotenv_path=str(ax_env_path), verbose=verbose),
         ax_env_path,

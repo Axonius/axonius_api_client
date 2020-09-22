@@ -100,7 +100,7 @@ def parse_lifecycle(raw: dict) -> dict:
     if start_dt:
         start_dt = dt_parse(start_dt)
 
-    if (finish_dt and start_dt) and finish_dt >= start_dt:
+    if (finish_dt and start_dt) and finish_dt >= start_dt:  # pragma: no cover
         took_seconds = (finish_dt - start_dt).seconds
         took_minutes = math.ceil(took_seconds / 60)
     else:
@@ -131,7 +131,6 @@ def parse_sub_phase(raw: dict) -> dict:
     parsed["name"] = raw["name"]
     parsed["progress"] = {}
     for name, status in raw["additional_data"].items():
-        if status not in parsed["progress"]:
-            parsed["progress"][status] = []
+        parsed["progress"][status] = parsed["progress"].get(status)
         parsed["progress"][status].append(name)
     return parsed

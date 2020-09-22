@@ -24,7 +24,6 @@ from ...meta import (
 
 
 def val_parsed_schema(schema):
-    """Pass."""
     for setting_name, item in schema.items():
         item_name = item.pop("name")
         assert isinstance(item_name, str) and item_name
@@ -84,30 +83,22 @@ def val_parsed_schema(schema):
 
 
 class TestAdaptersBase:
-    """Pass."""
-
     @pytest.fixture(scope="class")
     def apiobj(self, api_adapters):
-        """Pass."""
         return api_adapters
 
     @pytest.fixture(scope="class")
     def adapter(self, apiobj):
-        """Pass."""
         return apiobj.get_by_name(name=CSV_ADAPTER, node=DEFAULT_NODE)
 
 
 class TestAdaptersPrivate(TestAdaptersBase):
-    """Pass."""
-
     def test_private_get(self, apiobj):
-        """Pass."""
         adapters = apiobj._get()
         assert isinstance(adapters, dict)
         self.val_raw_adapters(adapters=adapters)
 
     def val_raw_adapters(self, adapters):
-        """Pass."""
         for name, instances in adapters.items():
             assert name.endswith("_adapter")
             assert isinstance(instances, list)
@@ -116,7 +107,6 @@ class TestAdaptersPrivate(TestAdaptersBase):
                 self.val_raw_adapter(name=name, instance=instance)
 
     def val_raw_adapter(self, name, instance):
-        """Pass."""
         node_id = instance.pop("node_id")
         assert isinstance(node_id, str) and node_id
 
@@ -165,7 +155,6 @@ class TestAdaptersPrivate(TestAdaptersBase):
             self.val_raw_client(name=name, client=client, instance_status=status)
 
     def val_raw_client(self, name, client, instance_status):
-        """Pass."""
         assert isinstance(client, dict)
 
         client_config = client.pop("client_config")
@@ -211,7 +200,6 @@ class TestAdaptersPrivate(TestAdaptersBase):
         assert not client
 
     def val_raw_schema(self, name, schema):
-        """Pass."""
         assert isinstance(schema, dict)
 
         items = schema.pop("items")
@@ -288,7 +276,6 @@ class TestAdaptersPrivate(TestAdaptersBase):
         assert not schema
 
     def test_private_file_upload_str(self, apiobj, adapter):
-        """Pass."""
         data = apiobj._file_upload(
             name_raw=adapter["name_raw"],
             node_id=adapter["node_id"],
@@ -301,7 +288,6 @@ class TestAdaptersPrivate(TestAdaptersBase):
         assert data["filename"]
 
     def test_private_file_upload_bytes(self, apiobj, adapter):
-        """Pass."""
         data = apiobj._file_upload(
             name_raw=adapter["name_raw"],
             node_id=adapter["node_id"],
@@ -314,7 +300,6 @@ class TestAdaptersPrivate(TestAdaptersBase):
         assert data["filename"]
 
     def test_private_config_update(self, apiobj, adapter):
-        """Pass."""
         current = apiobj._config_get(
             name_plugin=adapter["name_plugin"], name_config="AdapterBase"
         )
@@ -353,7 +338,6 @@ class TestAdaptersPrivate(TestAdaptersBase):
         assert post_reset["config"] == current_config
 
     def test_private_config_get_generic(self, apiobj):
-        """Pass."""
         for meta in apiobj.get():
             data = apiobj._config_get(
                 name_plugin=meta["name_plugin"],
@@ -366,7 +350,6 @@ class TestAdaptersPrivate(TestAdaptersBase):
 
             schema = data.pop("schema")
             assert isinstance(schema, dict)
-            # XXX test schema!
 
             assert not data
 
@@ -386,7 +369,6 @@ class TestAdaptersPrivate(TestAdaptersBase):
             assert not schema
 
     def test_private_config_get_specific(self, apiobj):
-        """Pass."""
         for meta in apiobj.get():
             if not meta["schemas"]["specific_name"]:
                 continue
@@ -422,22 +404,17 @@ class TestAdaptersPrivate(TestAdaptersBase):
 
 
 class TestAdaptersPublic(TestAdaptersBase):
-    """Pass."""
-
     def test_get(self, apiobj):
-        """Pass."""
         adapters = apiobj.get()
         assert all(["schemas" in x for x in adapters])
         self.val_parsed_adapters(adapters=adapters)
 
     def val_parsed_adapters(self, adapters):
-        """Pass."""
         assert isinstance(adapters, list)
         for adapter in adapters:
             self.val_parsed_adapter(adapter=adapter)
 
     def val_parsed_adapter(self, adapter):
-        """Pass."""
         assert isinstance(adapter, dict)
 
         name = adapter.pop("name")
@@ -532,9 +509,13 @@ class TestAdaptersPublic(TestAdaptersBase):
         assert not adapter
 
     def val_parsed_cnx(
-        self, cnx, adapter_name, adapter_name_raw, adapter_node_id, adapter_node_name,
+        self,
+        cnx,
+        adapter_name,
+        adapter_name_raw,
+        adapter_node_id,
+        adapter_node_name,
     ):
-        """Pass."""
         assert isinstance(cnx, dict)
 
         cnx_adapter_name = cnx.pop("adapter_name")
@@ -574,28 +555,34 @@ class TestAdaptersPublic(TestAdaptersBase):
         assert not cnx
 
     def test_get_by_name(self, apiobj):
-        """Pass."""
         adapter = apiobj.get_by_name(name=CSV_ADAPTER, node=DEFAULT_NODE)
         assert "schemas" in adapter
         self.val_parsed_adapter(adapter=adapter)
 
     def test_get_by_name_bad_node(self, apiobj):
-        """Pass."""
         with pytest.raises(NotFoundError):
             apiobj.get_by_name(name=CSV_ADAPTER, node="badwolf")
 
     def test_get_by_name_bad_name(self, apiobj):
-        """Pass."""
         with pytest.raises(NotFoundError):
             apiobj.get_by_name(name="badwolf", node=DEFAULT_NODE)
 
     def test_config_get_bad_config_type(self, apiobj):
-        """Pass."""
         with pytest.raises(ApiError):
             apiobj.config_get(name=CSV_ADAPTER, node=DEFAULT_NODE, config_type="badwolf")
 
+    def test_config_get_discovery(self, apiobj):
+        data = apiobj.config_get(name="aws", node=DEFAULT_NODE, config_type="discovery")
+        assert isinstance(data, dict)
+        config = data.pop("config")
+        assert isinstance(config, dict) and config
+
+        schema = data.pop("schema")
+        assert isinstance(schema, dict) and schema
+
+        val_parsed_schema(schema=schema)
+
     def test_config_get_specific(self, apiobj):
-        """Pass."""
         data = apiobj.config_get(name="aws", node=DEFAULT_NODE, config_type="specific")
         assert isinstance(data, dict)
         config = data.pop("config")
@@ -607,7 +594,6 @@ class TestAdaptersPublic(TestAdaptersBase):
         val_parsed_schema(schema=schema)
 
     def test_config_get_generic(self, apiobj):
-        """Pass."""
         data = apiobj.config_get(
             name=CSV_ADAPTER, node=DEFAULT_NODE, config_type="generic"
         )
@@ -622,7 +608,6 @@ class TestAdaptersPublic(TestAdaptersBase):
         val_parsed_schema(schema=schema)
 
     def test_file_upload_str(self, apiobj, adapter):
-        """Pass."""
         data = apiobj.file_upload(
             name=adapter["name"],
             node=adapter["node_name"],
@@ -635,19 +620,19 @@ class TestAdaptersPublic(TestAdaptersBase):
         assert data["filename"]
 
     def test_file_upload_path(self, apiobj, tmp_path):
-        """Pass."""
         test_path = tmp_path / CSV_FILENAME
         test_path.write_text(CSV_FILECONTENT_STR)
 
         data = apiobj.file_upload_path(
-            name=CSV_ADAPTER, node=DEFAULT_NODE, path=test_path,
+            name=CSV_ADAPTER,
+            node=DEFAULT_NODE,
+            path=test_path,
         )
         assert isinstance(data, dict)
         assert data["uuid"]
         assert data["filename"]
 
     def test_config_update_unknown(self, apiobj):
-        """Pass."""
         with pytest.raises(ConfigUnknown):
             apiobj.config_update(
                 name=CSV_ADAPTER,
@@ -657,14 +642,12 @@ class TestAdaptersPublic(TestAdaptersBase):
             )
 
     def test_config_update_unchanged(self, apiobj):
-        """Pass."""
         with pytest.raises(ConfigUnchanged):
             apiobj.config_update(
                 name=CSV_ADAPTER, node=DEFAULT_NODE, config_type="generic"
             )
 
-    def test_config_update_generic_true(self, apiobj, adapter):
-        """Pass."""
+    def test_config_update_generic(self, apiobj, adapter):
         data = apiobj.config_refetch(adapter=adapter)
         current = data["config"]
         key = "user_last_fetched_threshold_hours"

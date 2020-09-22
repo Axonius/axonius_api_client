@@ -15,7 +15,7 @@ class Enforcements(ModelMixins, PagingMixinsObject):
         Until then, this class should be considered **BETA**.
     """
 
-    def delete(self, rows: List[dict]) -> str:
+    def delete(self, rows: List[dict]) -> str:  # pragma: no cover
         """Delete an enforcement by name."""
         return self._delete(ids=[x["uuid"] for x in listify(obj=rows, dictkeys=False)])
 
@@ -28,7 +28,7 @@ class Enforcements(ModelMixins, PagingMixinsObject):
         """
         return API_VERSION.alerts
 
-    def _delete(self, ids: List[str]) -> str:
+    def _delete(self, ids: List[str]) -> str:  # pragma: no cover
         """Delete objects by internal axonius IDs.
 
         Args:
@@ -46,7 +46,7 @@ class Enforcements(ModelMixins, PagingMixinsObject):
         failure: Optional[List[dict]] = None,
         post: Optional[List[dict]] = None,
         triggers: Optional[List[dict]] = None,
-    ) -> str:
+    ) -> str:  # pragma: no cover
         """Create an enforcement set.
 
         Args:

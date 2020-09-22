@@ -21,7 +21,11 @@ class Base:
     FIND_KEYS: List[str] = ["name", "name_qual", "column_title", "name_base"]
 
     def __init__(
-        self, apiobj, store: dict, state: Optional[dict] = None, getargs: dict = None,
+        self,
+        apiobj,
+        store: dict,
+        state: Optional[dict] = None,
+        getargs: dict = None,
     ):
         """Object for handling callbacks for assets."""
         self.LOG: logging.Logger = apiobj.LOG.getChild(self.__class__.__name__)
@@ -52,6 +56,8 @@ class Base:
 
         self.TAG_ROWS_REMOVE: List[dict] = []
         """assets to remove tags from in do_tagging."""
+
+        self._custom_cb_exc: List[dict] = []
 
         self._init()
 
@@ -108,15 +114,7 @@ class Base:
 
     def do_row(self, row: dict) -> List[dict]:
         """Pass."""
-        custom_cbs = listify(self.GETARGS.get("custom_cbs", []))
-
-        for custom_cb in custom_cbs:
-            try:
-                custom_cb(self=self, row=row)
-            except Exception as exc:
-                msg = f"Custom callback {custom_cb} failed: {exc}"
-                self.echo(msg=msg, error="exception", abort=False)
-
+        self.do_custom_cbs(row=row)
         self.process_tags_to_add(row=row)
         self.process_tags_to_remove(row=row)
         self.add_report_adapters_missing(row=row)
@@ -131,6 +129,17 @@ class Base:
             self.do_change_field_titles(row=new_row)
 
         return new_rows
+
+    def do_custom_cbs(self, row: dict):
+        custom_cbs = listify(self.GETARGS.get("custom_cbs", []))
+
+        for custom_cb in custom_cbs:
+            try:
+                custom_cb(self=self, row=row)
+            except Exception as exc:
+                msg = f"Custom callback {custom_cb} failed: {exc}"
+                self._custom_cb_exc.append({"cb": custom_cb, "exc": exc, "msg": msg})
+                self.echo(msg=msg, error="exception", abort=False)
 
     def echo_page_progress(self):
         """Asset callback to echo progress per N rows using an echo method."""
@@ -271,37 +280,31 @@ class Base:
         if not explode:
             return [row]
 
-        schema = self.schema_to_explode
-
-        if self.is_excluded(schema=schema):
+        if self.is_excluded(schema=self.schema_to_explode):
             return [row]
 
-        original_row = copy.deepcopy(row)
+        schema = self.schema_to_explode
+        field = schema["name_qual"]
+
+        if len(listify(row.get(field, []))) <= 1:
+            self._do_flatten_fields(row=row, schema=schema)
+            return [row]
+
+        items = listify(row.pop(field, []))
+        new_rows_map = {}
 
         if schema["is_complex"]:
-            new_rows_map = {}
-            items = listify(row.pop(schema["name_qual"], []))
-
             for sub_schema in self.get_sub_schemas(schema=schema):
                 for idx, item in enumerate(items):
                     new_rows_map.setdefault(idx, copy.deepcopy(row))
                     value = item.pop(sub_schema["name"], null_value)
                     new_rows_map[idx][sub_schema["name_qual"]] = value
         else:
-            new_rows_map = {}
-            items = listify(row.pop(schema["name_qual"], []))
-
             for idx, item in enumerate(items):
                 new_rows_map.setdefault(idx, copy.deepcopy(row))
                 new_rows_map[idx][schema["name_qual"]] = item
 
-        new_rows = [new_rows_map[idx] for idx in new_rows_map]
-
-        if not new_rows:
-            self._do_flatten_fields(row=original_row, schema=schema)
-            return [original_row]
-
-        return new_rows
+        return [new_rows_map[idx] for idx in new_rows_map]
 
     def do_tagging(self):
         """Pass."""

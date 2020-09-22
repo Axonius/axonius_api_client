@@ -804,7 +804,9 @@ class TestDtParse:
     """Test dt_*."""
 
     @pytest.mark.parametrize(
-        "val", [format(dt_now()), dt_now(), timedelta(minutes=1)], scope="class",
+        "val",
+        [format(dt_now()), dt_now(), timedelta(minutes=1)],
+        scope="class",
     )
     def test_val(self, val):
         """Pass."""

@@ -24,8 +24,7 @@ def parse_adapter(name: str, raw: dict) -> dict:
     parsed = {
         "name": strip_right(obj=name, fix="_adapter"),
         "name_raw": name,
-        "name_plugin": raw.get("unique_plugin_name", f"{name}_0"),
-        # XXX REMOVE POST 3.5, should be direct reference, no more get
+        "name_plugin": raw["unique_plugin_name"],
         "node_name": raw["node_name"],
         "node_id": raw["node_id"],
         "status": raw["status"],

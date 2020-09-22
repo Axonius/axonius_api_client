@@ -348,7 +348,7 @@ class Connect:
         return self._enforcements
 
     @property
-    def run_actions(self) -> RunAction:
+    def run_actions(self) -> RunAction:  # pragma: no cover
         """Get the object for run actions API.
 
         Returns:

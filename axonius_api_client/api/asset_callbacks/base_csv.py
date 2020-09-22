@@ -30,13 +30,16 @@ class Csv(Base):
         """Pass."""
         if getattr(self, "_stream", None):
             return
+
         restval = self.GETARGS.get("csv_key_miss", None)
+        extras = self.GETARGS.get("csv_key_extras", "ignore")
         dialect = self.get_csv_dialect()
         quote = self.get_csv_quote()
 
         try:
             self._fd.write(codecs.BOM_UTF8.decode("utf-8"))
-        except Exception:
+        except Exception:  # pragma: no cover
+            # only happens on windows sometimes
             self.LOG.error("Unable to write UTF8 BOM!")
 
         self._stream = csv.DictWriter(
@@ -46,6 +49,7 @@ class Csv(Base):
             lineterminator="\n",
             restval=restval,
             dialect=dialect,
+            extrasaction=extras,
         )
         self._stream.writerow(dict(zip(self.final_columns, self.final_columns)))
         self.do_export_schema()
