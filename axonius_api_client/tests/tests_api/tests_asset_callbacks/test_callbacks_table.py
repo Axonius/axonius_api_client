@@ -12,24 +12,18 @@ from .callbacks import Callbacks
 
 
 class CallbacksTable(Callbacks):
-    """Pass."""
-
     @pytest.fixture(scope="class")
     def cbexport(self):
-        """Pass."""
         return "table"
 
     def test_row_as_is(self, cbexport, apiobj):
-        """Pass."""
         field_complex = apiobj.FIELD_COMPLEX
         sub_columns = [
             x["column_title"]
             for x in get_schema(apiobj=apiobj, field=field_complex, key="sub_fields")
             if x["is_root"]
         ]
-        original_rows = get_rows_exist(
-            apiobj=apiobj, fields=field_complex, max_rows=5, first=False
-        )
+        original_rows = get_rows_exist(apiobj=apiobj, fields=field_complex, max_rows=5)
 
         io_fd = io.StringIO()
 
@@ -57,13 +51,11 @@ class CallbacksTable(Callbacks):
             assert i in checklines
 
     def test_check_table_format(self, cbexport, apiobj):
-        """Pass."""
         cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport)
         with pytest.raises(ApiError):
             cbobj.check_table_format("badwolf")
 
     def test_check_stop(self, cbexport, apiobj):
-        """Pass."""
         cbobj = self.get_cbobj(
             apiobj=apiobj, cbexport=cbexport, getargs={"table_max_rows": 10}
         )
@@ -74,18 +66,12 @@ class CallbacksTable(Callbacks):
 
 
 class TestDevicesCallbacksTable(CallbacksTable):
-    """Pass."""
-
     @pytest.fixture(scope="class")
     def apiobj(self, api_devices):
-        """Pass."""
         return api_devices
 
 
 class TestUsersCallbacksTable(CallbacksTable):
-    """Pass."""
-
     @pytest.fixture(scope="class")
     def apiobj(self, api_users):
-        """Pass."""
         return api_users

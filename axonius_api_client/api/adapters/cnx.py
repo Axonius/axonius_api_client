@@ -159,7 +159,7 @@ class Cnx(ChildMixins):
             value=cnx_id, adapter_name=adapter_name, adapter_node=adapter_node, **kwargs
         )
 
-    # XXX add get_by_label
+    # TBD add get_by_label
     def test_by_id(
         self, cnx_id: str, adapter_name: str, adapter_node: str = DEFAULT_NODE
     ) -> str:
@@ -300,7 +300,8 @@ class Cnx(ChildMixins):
             cnx_uuid=old_uuid,
         )
 
-        result = {} if not isinstance(result, dict) else result
+        if not isinstance(result, dict) or not result:
+            result = {"error": result}
 
         self.check_if_gone(
             result=result,
@@ -309,9 +310,14 @@ class Cnx(ChildMixins):
             adapter_node=adapter_node_name,
         )
 
-        if result.get("id"):
+        result_status = result.get("status", "")
+        result_error = result.get("error", "")
+        result_id = result.get("id", "")
+        status_is_error = result_status == "error"
+
+        if result_id:
             cnx_new = self.get_by_uuid(
-                cnx_uuid=result["id"],
+                cnx_uuid=result_id,
                 adapter_name=adapter_name,
                 adapter_node=adapter_node_name,
                 retry=CNX_RETRY,
@@ -321,10 +327,7 @@ class Cnx(ChildMixins):
                 cnx_id=old_id, adapter_name=adapter_name, adapter_node=adapter_node_name
             )
 
-        error_in_status = result.get("status", "") == "error"
-        error_empty = bool(result.get("error", ""))
-
-        if any([error_in_status, error_empty]):
+        if any([status_is_error, result_error]):
             rkw = ["{}: {}".format(k, v) for k, v in result.items()]
             rkw = "\n  " + "\n  ".join(rkw)
 
@@ -421,7 +424,7 @@ class Cnx(ChildMixins):
 
     def cb_file_upload(
         self,
-        value: Union[str, pathlib.Path, IO],
+        value: Union[str, pathlib.Path, IO, dict],
         schema: dict,
         callbacks: dict,
         source: str,
@@ -431,10 +434,29 @@ class Cnx(ChildMixins):
         adapter_node = callbacks["adapter_node"]
         field_name = schema["name"]
 
+        value = json_load(obj=value, error=False)
+
         if isinstance(value, str):
-            check = pathlib.Path(value).expanduser().resolve()
-            if check.is_file():
-                value = check
+            value = pathlib.Path(value).expanduser().resolve()
+            if not value.is_file():
+                sinfo = config_info(schema=schema, value=str(value), source=source)
+                raise ConfigInvalidValue(f"{sinfo}\nFile does not exist!")
+            return self.parent.file_upload(
+                name=adapter_name,
+                field_name=field_name,
+                file_name=value.name,
+                file_content=value.read_text(),
+                node=adapter_node,
+            )
+
+        if isinstance(value, dict):
+            if value.get("uuid") and value.get("filename"):
+                return {"uuid": value["uuid"], "filename": value["filename"]}
+
+            sinfo = config_info(schema=schema, value=str(value), source=source)
+            raise ConfigInvalidValue(
+                f"{sinfo}\nDictionary must have uuid and filename keys: {value}!"
+            )
 
         if isinstance(value, pathlib.Path):
             value = value.expanduser().resolve()
@@ -442,23 +464,17 @@ class Cnx(ChildMixins):
                 sinfo = config_info(schema=schema, value=str(value), source=source)
                 raise ConfigInvalidValue(f"{sinfo}\nFile does not exist!")
 
-            file_name = value.name
-            file_content = value.read_text()
-        elif hasattr(value, "read"):
-            file_content = value.read()
-            file_name = file_content[:20]
-        else:
-            sinfo = config_info(schema=schema, value=str(value), source=source)
-            raise ConfigInvalidValue(
-                f"{sinfo}\nFile is not an existing file or a file-like object!"
+            return self.parent.file_upload(
+                name=adapter_name,
+                field_name=field_name,
+                file_name=value.name,
+                file_content=value.read_text(),
+                node=adapter_node,
             )
 
-        return self.parent.file_upload(
-            name=adapter_name,
-            field_name=field_name,
-            file_name=file_name,
-            file_content=file_content,
-            node=adapter_node,
+        sinfo = config_info(schema=schema, value=str(value), source=source)
+        raise ConfigInvalidValue(
+            f"{sinfo}\nFile is not an existing file or a file-like object!"
         )
 
     # XXX failing with secondary node!!! wrong plugin name?

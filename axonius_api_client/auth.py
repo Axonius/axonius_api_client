@@ -48,6 +48,7 @@ class Mixins:
 
     _logged_in: bool = False
     """:obj:`bool`: Attribute checked by :meth:`is_logged_in`."""
+    _validate_path: str = API_VERSION.system.meta_about
 
     def __init__(self, http: Http, creds: dict, **kwargs):
         """Mixins for Model.
@@ -119,16 +120,15 @@ class Mixins:
 
     def _validate(self):
         """Validate credentials."""
-        path = API_VERSION.system.meta_about
-        response = self.http(method="get", path=path)
+        response = self.http(method="get", path=self._validate_path)
         if response.status_code == 404:
             raise AuthError(
-                f"Unable to access endpoint {path}, "
+                f"Unable to access endpoint {self._validate_path}, "
                 f"API client v{__version__} requires Axonius v3.9 or above"
             )
 
         body = json_reload(obj=response.text, error=False)
-        self.LOG.debug(f"Received auth path {path!r} body:\n{body}")
+        self.LOG.debug(f"Received auth path {self._validate_path!r} body:\n{body}")
 
         try:
             response.raise_for_status()

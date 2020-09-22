@@ -5,7 +5,7 @@ from ..routers import API_VERSION, Router
 
 
 class Instances(ModelMixins):
-    # XXX add get_by_name, get_core, get_collectors
+    # TBD add get_by_name, get_core, get_collectors
     def _init(self, **kwargs):
         """Post init method for subclasses to use for extra setup."""
         super(Instances, self)._init(**kwargs)

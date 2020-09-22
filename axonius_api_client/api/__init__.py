@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 """API models package."""
-from . import (adapters, assets, enforcements, entry, mixins, parsers, routers,
-               system)
+from . import (adapters, assets, enforcements, mixins, parsers, routers,
+               signup, system)
 from .adapters import Adapters
 from .assets import Devices, Users
 from .enforcements import Enforcements, RunAction
-from .entry import Entry
+from .signup import Signup
 from .system import Dashboard, Instances, System, dashboard, instances
 
 __all__ = (
@@ -17,7 +17,7 @@ __all__ = (
     "System",
     "Instances",
     "Dashboard",
-    "Entry",
+    "Signup",
     "routers",
     "assets",
     "adapters",
@@ -25,7 +25,7 @@ __all__ = (
     "mixins",
     "system",
     "parsers",
-    "entry",
+    "signup",
     "instances",
     "dashboard",
 )

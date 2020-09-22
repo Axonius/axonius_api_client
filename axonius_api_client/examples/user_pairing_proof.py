@@ -6,12 +6,74 @@ import os
 import axonius_api_client as axonapi  # noqa: F401
 from axonius_api_client.connect import Connect
 from axonius_api_client.constants import load_dotenv
-from axonius_api_client.tools import json_reload
+from axonius_api_client.tools import json_reload, listify
+
+FIND_DVC_QUERY_TMPL = (
+    '(specific_data.data.hostname == "{value}") or '
+    '(specific_data.data.name == "{value}")'
+)
+ASS_DVC_FIELD = "specific_data.data.associated_devices"
+AGENT_VERSIONS_FIELD = "specific_data.data.agent_versions"
+DVC_FIELDS = [AGENT_VERSIONS_FIELD]
+AGENT_CHECKS = [
+    {
+        "name": "CrowdStrike Agent",
+        "status": "normal",
+        "version": "5.36.11809.0",
+    }
+]
 
 
 def jdump(obj, **kwargs):
     """JSON dump utility."""
     print(json_reload(obj, **kwargs))
+
+
+def parse_user(user, client):
+    ass_dvcs = listify(user.get(ASS_DVC_FIELD, []))
+    # username = listify(asset.get("specific_data.data.username"), [])
+
+    if not ass_dvcs:
+        # print(f"NO associated devices found for user {username}")
+        return
+
+    for ass_dvc in ass_dvcs:
+        dvc = parse_ass_dvc(user=user, ass_dvc=ass_dvc, client=client)
+        check_agents(user=user, dvc=dvc)
+
+
+def check_agents(user, dvc):
+    agents = listify(dvc.get(AGENT_VERSIONS_FIELD, []))
+    for agent in agents:
+        for check in AGENT_CHECKS:
+            pass
+
+
+def parse_ass_dvc(user, ass_dvc, client):
+    username = listify(user.get("specific_data.data.username"), [])
+    caption = ass_dvc.get("device_caption")
+    query = FIND_DVC_QUERY_TMPL.format(value=caption)
+    found = client.devices.get(query=query, fields=DVC_FIELDS)
+    # NEED TO PASS devices apiobj
+
+    if not found:
+        print(
+            f"No devices found that match associated device {caption} for "
+            f"user {username}"
+        )
+        return
+
+    if len(found) > 1:
+        print(
+            f"Too many devices ({len(found)}) found that match associated device "
+            f"{caption} for user {username}"
+        )
+        return
+
+    return found[0]
+
+
+j = jdump
 
 
 if __name__ == "__main__":
@@ -26,33 +88,13 @@ if __name__ == "__main__":
         key=AX_KEY,
         secret=AX_SECRET,
         certwarn=False,
-        # log_console=True,
     )
 
     ctx.start()
     devices = ctx.devices
     users = ctx.users
-    adapters = ctx.adapters
-    enforcements = ctx.enforcements
-    system = ctx.system
-    j = jdump
-    tmpl = 'specific_data.data.hostname == regex("{value}", "i") or specific_data.data.name == regex("{value}", "i") or specific_data.data.id == regex("{value}", "i")'  # noqa
 
-    user_assets = users.get(fields=["associated_devices"])
-    for user_asset in user_assets:
-        assdvcs = list(user_asset.get("specific_data.data.associated_devices", []) or [])
-        username = user_asset.get("specific_data.data.username")
-        if not assdvcs:
-            print(f"NO associated_devices for user {username}")
-            continue
+    assets = users.get(fields=[ASS_DVC_FIELD])
 
-        for assdvc in assdvcs:
-            caption = assdvc.get("device_caption")
-            query = tmpl.format(value=caption)
-            found_assdvc = devices.get(query=query)
-            if not found_assdvc:
-                print(
-                    f"Unable to find associated_devices for user {username} using query {query}"
-                )
-                continue
-            print(found_assdvc)
+    for user in assets:
+        parse_user(user=user, client=ctx)

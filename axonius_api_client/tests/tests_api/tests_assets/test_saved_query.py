@@ -4,6 +4,7 @@ import copy
 import json
 
 import pytest
+
 from axonius_api_client.api.assets.saved_query import check_gui_page_size
 from axonius_api_client.constants import GUI_PAGE_SIZES, SIMPLE
 from axonius_api_client.exceptions import ApiError, NotFoundError
@@ -12,17 +13,13 @@ from ...meta import QUERIES
 
 
 def test_check_gui_page_size_error():
-    """Pass."""
     gui_page_size = 9999
     with pytest.raises(ApiError):
         check_gui_page_size(size=gui_page_size)
 
 
 class SavedQueryPrivate:
-    """Pass."""
-
     def test_private_get(self, apiobj):
-        """Pass."""
         result = apiobj.saved_query._get()
         assert isinstance(result, dict)
 
@@ -35,10 +32,7 @@ class SavedQueryPrivate:
 
 
 class SavedQueryPublic:
-    """Pass."""
-
     def test_get_no_generator(self, apiobj):
-        """Pass."""
         rows = apiobj.saved_query.get(generator=False)
         assert not rows.__class__.__name__ == "generator"
         assert isinstance(rows, list)
@@ -47,7 +41,6 @@ class SavedQueryPublic:
             validate_sq(row)
 
     def test_get_generator(self, apiobj):
-        """Pass."""
         gen = apiobj.saved_query.get(generator=True)
         assert gen.__class__.__name__ == "generator"
         assert not isinstance(gen, list)
@@ -58,7 +51,6 @@ class SavedQueryPublic:
             validate_sq(row)
 
     def test_get_max_pages(self, apiobj):
-        """Pass."""
         rows = apiobj.saved_query.get(max_pages=1, page_size=2)
         assert isinstance(rows, list)
         assert len(rows) == 2
@@ -67,7 +59,6 @@ class SavedQueryPublic:
             validate_sq(row)
 
     def test_get_max_rows(self, apiobj):
-        """Pass."""
         rows = apiobj.saved_query.get(max_rows=1)
         assert isinstance(rows, list)
         assert len(rows) == 1
@@ -76,14 +67,12 @@ class SavedQueryPublic:
             validate_sq(row)
 
     def test_get_tags(self, apiobj):
-        """Pass."""
         tags = apiobj.saved_query.get_tags()
         assert isinstance(tags, list)
         for tag in tags:
             assert isinstance(tag, str)
 
     def test_get_by_name(self, apiobj):
-        """Pass."""
         sq = apiobj.saved_query.get()[0]
         value = sq["name"]
         row = apiobj.saved_query.get_by_name(value=value)
@@ -91,13 +80,11 @@ class SavedQueryPublic:
         assert row["name"] == value
 
     def test_get_by_name_error(self, apiobj):
-        """Pass."""
         value = "badwolf_yyyyyyyyyyyy"
         with pytest.raises(NotFoundError):
             apiobj.saved_query.get_by_name(value=value)
 
     def test_get_by_uuid(self, apiobj):
-        """Pass."""
         sq = apiobj.saved_query.get()[0]
         value = sq["uuid"]
         row = apiobj.saved_query.get_by_uuid(value=value)
@@ -105,13 +92,11 @@ class SavedQueryPublic:
         assert row["uuid"] == value
 
     def test_get_by_uuid_error(self, apiobj):
-        """Pass."""
         value = "badwolf_xxxxxxxxxxxxx"
         with pytest.raises(NotFoundError):
             apiobj.saved_query.get_by_uuid(value=value)
 
     def test_get_by_tags(self, apiobj):
-        """Pass."""
         tags = [y for x in apiobj.saved_query.get() for y in x.get("tags", [])]
         value = tags[0]
         rows = apiobj.saved_query.get_by_tags(value=value)
@@ -121,14 +106,12 @@ class SavedQueryPublic:
             assert value in row["tags"]
 
     def test_get_by_tags_error(self, apiobj):
-        """Pass."""
         value = "badwolf_wwwwwwww"
         with pytest.raises(NotFoundError):
             apiobj.saved_query.get_by_tags(value=value)
 
     @pytest.fixture(scope="class")
     def sq_fixture(self, apiobj):
-        """Pass."""
         field_simple = apiobj.FIELD_SIMPLE
 
         name = "badwolf torked"
@@ -182,7 +165,6 @@ class SavedQueryPublic:
             pass
 
     def test_add_remove(self, apiobj, sq_fixture):
-        """Pass."""
         row = apiobj.saved_query.delete_by_name(value=sq_fixture["name"])
         assert isinstance(row, dict)
         assert row["uuid"] == sq_fixture["uuid"]
@@ -191,13 +173,11 @@ class SavedQueryPublic:
             apiobj.saved_query.get_by_name(value=sq_fixture["name"])
 
     def test_add_error_no_fields(self, apiobj):
-        """Pass."""
         name = "badwolf_nnnnnnnnnnnnn"
         with pytest.raises(ApiError):
             apiobj.saved_query.add(name=name, fields_default=False)
 
     def test_add_error_bad_sort_field(self, apiobj):
-        """Pass."""
         name = "badwolf_sssssssssssss"
         fields = "last_seen"
         sort_field = "badwolf"
@@ -205,7 +185,6 @@ class SavedQueryPublic:
             apiobj.saved_query.add(name=name, fields=fields, sort_field=sort_field)
 
     def test_add_error_bad_colfilter(self, apiobj):
-        """Pass."""
         name = "badwolf_ttttttttttt"
         fields = "last_seen"
         colfilters = {"badwolf": "badwolf"}
@@ -214,25 +193,18 @@ class SavedQueryPublic:
 
 
 class TestSavedQueryDevices(SavedQueryPrivate, SavedQueryPublic):
-    """Pass."""
-
     @pytest.fixture(scope="class")
     def apiobj(self, api_devices):
-        """Pass."""
         return api_devices
 
 
 class TestSavedQueryUsers(SavedQueryPrivate, SavedQueryPublic):
-    """Pass."""
-
     @pytest.fixture(scope="class")
     def apiobj(self, api_users):
-        """Pass."""
         return api_users
 
 
 def validate_qexpr(qexpr, asset):
-    """Pass."""
     assert isinstance(qexpr, dict)
 
     compop = qexpr.pop("compOp")
@@ -296,7 +268,6 @@ def validate_qexpr(qexpr, asset):
 
 
 def validate_nested(nested, asset):
-    """Pass."""
     assert isinstance(nested, dict)
 
     nfiltered_adapters = nested.pop("filteredAdapters", {})
@@ -315,7 +286,6 @@ def validate_nested(nested, asset):
 
 
 def validate_sq(asset):
-    """Pass."""
     asset = copy.deepcopy(asset)
     assert isinstance(asset, dict)
 

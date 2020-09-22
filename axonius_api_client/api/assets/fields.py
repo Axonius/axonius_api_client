@@ -28,6 +28,7 @@ class Fields(ChildMixins):
         do_contains: bool = True,
         token_score: int = 70,
         partial_score: int = 50,
+        names: bool = False,
         **kwargs,
     ) -> List[dict]:
         def do_skip():
@@ -75,12 +76,12 @@ class Fields(ChildMixins):
             if token_score and not do_skip() and is_match(token_set_ratio):
                 matches.append(schema)
 
-        if not matches:
+        if partial_score and not matches:
             for schema in schemas:
-                if partial_score and not do_skip() and is_match(partial_ratio):
+                if not do_skip() and is_match(partial_ratio):
                     matches.append(schema)
 
-        return matches
+        return [x["name_qual"] for x in matches] if names else matches
 
     @cached(cache=CACHE)
     def get(self) -> dict:
@@ -232,6 +233,22 @@ class Fields(ChildMixins):
 
         return matches
 
+    def get_field_names_fuzzy(self, value: str) -> List[str]:
+        """Pass."""
+        splits = self.split_searches(value=value)
+        fields = self.get()
+
+        matches = []
+
+        for adapter_name, names in splits:
+            adapter = self.get_adapter_name(value=adapter_name)
+            for name in names:
+                schemas = fields[adapter]
+                amatches = self.fuzzy_filter(search=name, schemas=schemas, names=True)
+                matches += [x for x in amatches if x not in matches]
+
+        return matches
+
     def get_field_schemas_root(self, adapter: str) -> List[dict]:
         """Pass."""
         fields = self.get()
@@ -252,33 +269,36 @@ class Fields(ChildMixins):
         fields: Optional[Union[List[str], str]] = None,
         fields_regex: Optional[Union[List[str], str]] = None,
         fields_manual: Optional[Union[List[str], str]] = None,
+        fields_fuzzy: Optional[Union[List[str], str]] = None,
         fields_default: bool = True,
         fields_root: Optional[str] = None,
     ) -> List[dict]:
         """Validate provided fields."""
+
+        def add(items):
+            for item in items:
+                if item not in selected:
+                    selected.append(item)
+
+        fields = listify(obj=fields)
         fields_manual = listify(obj=fields_manual)
+        fields_fuzzy = listify(obj=fields_fuzzy)
+
         selected = []
 
         if fields_default and not fields_root:
-            selected += self.parent.fields_default
-
-        if fields_manual:
-            selected += [x for x in fields_manual if x not in selected]
+            add(self.parent.fields_default)
 
         if fields_root:
-            matches_root = self.get_field_names_root(adapter=fields_root)
-            selected += [x for x in matches_root if x not in selected]
+            add(self.get_field_names_root(adapter=fields_root))
 
-        if not any([fields, fields_regex]):
-            if not selected:
-                raise ApiError("No fields supplied, must supply at least one field")
-            return selected
+        add(fields_manual)
+        add(self.get_field_names_eq(value=fields))
+        add(self.get_field_names_re(value=fields_regex))
+        add(self.get_field_names_fuzzy(value=fields_fuzzy))
 
-        matches_eq = self.get_field_names_eq(value=fields)
-        selected += [x for x in matches_eq if x not in selected]
-
-        matches_re = self.get_field_names_re(value=fields_regex)
-        selected += [x for x in matches_re if x not in selected]
+        if not selected:
+            raise ApiError("No fields supplied, must supply at least one field")
 
         return selected
 
@@ -309,7 +329,12 @@ class Fields(ChildMixins):
         adapter_split = strip_right(obj=adapter_split.lower().strip(), fix="_adapter")
 
         fields = split_str(
-            obj=field, split=",", strip=None, do_strip=True, lower=True, empty=False,
+            obj=field,
+            split=",",
+            strip=None,
+            do_strip=True,
+            lower=True,
+            empty=False,
         )
 
         if not fields:

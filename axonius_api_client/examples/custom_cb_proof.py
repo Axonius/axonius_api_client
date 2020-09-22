@@ -2,7 +2,6 @@
 """Utilities for this package."""
 import json
 import os
-import time
 from datetime import datetime, timedelta
 
 import axonius_api_client as axonapi

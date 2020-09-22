@@ -12,3 +12,14 @@ def test_api_v1_routers():
         assert obj._object_type in repr(obj)
         for route in obj._routes:
             assert hasattr(obj, route)
+
+
+def test_api_v4_routers():
+    """Test api.routers.ApiV4."""
+    api_routes = axonapi.api.routers.ApiV4
+    for obj in api_routes.all_objects:
+        assert isinstance(obj, axonapi.api.routers.Router)
+        assert obj._object_type in format(obj)
+        assert obj._object_type in repr(obj)
+        for route in obj._routes:
+            assert hasattr(obj, route)

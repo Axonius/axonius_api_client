@@ -3,32 +3,18 @@
 import pytest
 
 
-def load_test_data(apiobj):
-    """Pass."""
-    apiobj.TEST_DATA = getattr(apiobj, "TEST_DATA", {})
-
-    if not apiobj.TEST_DATA.get("assets"):
-        apiobj.TEST_DATA["assets"] = apiobj.get(max_rows=4000)
-
-    return apiobj
-
-
 class LabelsPrivate:
-    """Pass."""
-
     def test_private_get(self, apiobj):
-        """Pass."""
         labels = apiobj.labels._get()
         assert isinstance(labels, list)
         for x in labels:
             assert isinstance(x, str)
 
     def test_private_add_get_remove(self, apiobj):
-        """Pass."""
         labels = ["badwolf1", "badwolf2"]
 
         # get a single asset to add a label to
-        asset = apiobj.TEST_DATA["assets"][0]
+        asset = apiobj.get(max_rows=1)[0]
         asset_id = asset["internal_axon_id"]
 
         # add the label to the asset
@@ -76,21 +62,17 @@ class LabelsPrivate:
 
 
 class LabelsPublic:
-    """Pass."""
-
     def test_get(self, apiobj):
-        """Pass."""
         fields = apiobj.labels.get()
         assert isinstance(fields, list)
         for x in fields:
             assert isinstance(x, str)
 
     def test_add_get_remove(self, apiobj):
-        """Pass."""
         labels = ["badwolf1", "badwolf2"]
 
         # get a single asset to add a label to
-        asset = apiobj.TEST_DATA["assets"][0]
+        asset = apiobj.get(max_rows=1)[0]
         asset_id = asset["internal_axon_id"]
 
         # add the label to the asset
@@ -99,7 +81,9 @@ class LabelsPublic:
 
         # re-get the asset and check that it has the label
         assets_added = apiobj.get_by_values(
-            values=labels, field="labels", fields="labels",
+            values=labels,
+            field="labels",
+            fields="labels",
         )
         assets_added_ids = [x["internal_axon_id"] for x in assets_added]
         assert asset_id in assets_added_ids
@@ -138,18 +122,12 @@ class LabelsPublic:
 
 
 class TestLabelsDevices(LabelsPrivate, LabelsPublic):
-    """Pass."""
-
     @pytest.fixture(scope="class")
     def apiobj(self, api_devices):
-        """Pass."""
-        return load_test_data(api_devices)
+        return api_devices
 
 
 class TestLabelsUsers(LabelsPrivate, LabelsPublic):
-    """Pass."""
-
     @pytest.fixture(scope="class")
     def apiobj(self, api_users):
-        """Pass."""
-        return load_test_data(api_users)
+        return api_users

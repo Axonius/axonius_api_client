@@ -8,7 +8,7 @@ from ..mixins import ChildMixins
 from ..parsers.roles import parse_permissions
 
 
-class Roles(ChildMixins):
+class Roles(ChildMixins):  # pragma: no cover
     """Child API object to work with Roles."""
 
     @property

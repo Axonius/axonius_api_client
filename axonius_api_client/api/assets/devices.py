@@ -157,7 +157,10 @@ class Devices(AssetMixin):
         inner = f"{field} == {match}"
 
         kwargs["query"] = self._build_query(
-            inner=inner, pre=pre, post=post, not_flag=not_flag,
+            inner=inner,
+            pre=pre,
+            post=post,
+            not_flag=not_flag,
         )
 
         return self.get(**kwargs)

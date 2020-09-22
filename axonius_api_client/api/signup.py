@@ -4,10 +4,16 @@ from ..constants import LOG_LEVEL_API
 from ..exceptions import ResponseNotOk
 from ..http import Http
 from ..logs import get_obj_log
+from .routers import API_VERSION, Router
 
 
-class Entry:
+class Signup:
     """API model for unauthenticated endpoints."""
+
+    @property
+    def router(self) -> Router:
+        """Router for this API model."""
+        return API_VERSION.signup
 
     @property
     def is_signed_up(self) -> bool:
@@ -16,7 +22,6 @@ class Entry:
 
     def signup(self, password: str, company_name: str, contact_email: str) -> dict:
         """Perform the initial signup."""
-        # XXX 400, signup already completed
         response = self._signup_post(
             password=password, company_name=company_name, contact_email=contact_email
         )
@@ -25,16 +30,11 @@ class Entry:
         message = response.get("message")
         if status == "error":
             raise ResponseNotOk(f"{message}")
-        return response
-
-    @property
-    def api_version(self) -> int:
-        """Get the API version."""
-        return self._api_version
+        return response  # pragma: no cover
 
     def _signup_get(self) -> dict:
         """Get the status of initial signup."""
-        response = self.http(method="get", path="api", route="signup_api")
+        response = self.http(method="get", path=self.router.root)
         return response.json()
 
     def _signup_post(self, password: str, company_name: str, contact_email: str) -> dict:
@@ -46,13 +46,8 @@ class Entry:
             "newPassword": password,
             "confirmNewPassword": password,
         }
-        response = self.http(method="post", path="api", route="signup_api", json=data)
+        response = self.http(method="post", path=self.router.root, json=data)
         return response.json()
-
-    def _api_version(self) -> int:
-        """Get the API version."""
-        response = self.http(method="get", path="api", route="api")
-        return response.text
 
     def __init__(self, url, **kwargs):
         """Pass."""

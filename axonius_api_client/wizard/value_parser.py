@@ -8,9 +8,16 @@ from cachetools import TTLCache, cached
 from ..api.assets.asset_mixin import AssetMixin
 from ..api.parsers.constants import Operator
 from ..exceptions import WizardError
-from ..tools import (check_empty, check_type, coerce_int_float,
-                     coerce_str_to_csv, dt_parse_tmpl, get_raw_version,
-                     parse_ip_address, parse_ip_network)
+from ..tools import (
+    check_empty,
+    check_type,
+    coerce_int_float,
+    coerce_str_to_csv,
+    dt_parse_tmpl,
+    get_raw_version,
+    parse_ip_address,
+    parse_ip_network,
+)
 
 CACHE: TTLCache = TTLCache(maxsize=1024, ttl=30)
 

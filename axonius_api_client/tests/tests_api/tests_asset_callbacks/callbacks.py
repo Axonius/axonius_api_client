@@ -13,55 +13,57 @@ from axonius_api_client.exceptions import ApiError
 from ...utils import get_rows_exist, get_schema, log_check, random_string
 
 
+def get_cbobj_main(apiobj, cbexport, getargs=None, state=None, store=None):
+    state = state or {}
+    getargs = getargs or {}
+    store = store or {}
+
+    cbcls = get_callbacks_cls(export=cbexport)
+    assert cbcls.CB_NAME == cbexport
+
+    cbobj = cbcls(apiobj=apiobj, getargs=getargs, state=state, store=store)
+    assert cbobj.CB_NAME == cbexport
+    assert cbobj.APIOBJ == apiobj
+    assert cbobj.STORE == store
+    assert cbobj.STATE == state
+
+    assert isinstance(cbobj.ALL_SCHEMAS, dict) and cbobj.ALL_SCHEMAS
+    assert isinstance(cbobj.args_map, list)
+    assert isinstance(cbobj.args_strs, list)
+
+    assert isinstance(cbobj.TAG_ROWS_ADD, list) and not cbobj.TAG_ROWS_ADD
+    assert isinstance(cbobj.TAG_ROWS_REMOVE, list) and not cbobj.TAG_ROWS_REMOVE
+
+    assert isinstance(cbobj.LOG, logging.Logger)
+    assert isinstance(cbobj.RAN, list)
+    assert not cbobj.RAN
+
+    assert "processor" in str(cbobj)
+    assert "processor" in repr(cbobj)
+
+    assert isinstance(cbobj.adapter_map, dict)
+    assert cbobj.adapter_map
+
+    assert isinstance(cbobj.schemas_selected, list)
+    assert cbobj.schemas_selected
+    for x in cbobj.schemas_selected:
+        assert isinstance(x, dict)
+
+    assert isinstance(cbobj.fields_selected, list)
+    assert cbobj.fields_selected
+    for x in cbobj.fields_selected:
+        assert isinstance(x, str)
+
+    return cbobj
+
+
 class Callbacks:
-    """Pass."""
-
     def get_cbobj(self, apiobj, cbexport, getargs=None, state=None, store=None):
-        """Pass."""
-        state = state or {}
-        getargs = getargs or {}
-        store = store or {}
-
-        cbcls = get_callbacks_cls(export=cbexport)
-        assert cbcls.CB_NAME == cbexport
-
-        cbobj = cbcls(apiobj=apiobj, getargs=getargs, state=state, store=store)
-        assert cbobj.CB_NAME == cbexport
-        assert cbobj.APIOBJ == apiobj
-        assert cbobj.STORE == store
-        assert cbobj.STATE == state
-
-        assert isinstance(cbobj.ALL_SCHEMAS, dict) and cbobj.ALL_SCHEMAS
-        assert isinstance(cbobj.args_map, list)
-        assert isinstance(cbobj.args_strs, list)
-
-        assert isinstance(cbobj.TAG_ROWS_ADD, list) and not cbobj.TAG_ROWS_ADD
-        assert isinstance(cbobj.TAG_ROWS_REMOVE, list) and not cbobj.TAG_ROWS_REMOVE
-
-        assert isinstance(cbobj.LOG, logging.Logger)
-        assert isinstance(cbobj.RAN, list)
-        assert not cbobj.RAN
-
-        assert "processor" in str(cbobj)
-        assert "processor" in repr(cbobj)
-
-        assert isinstance(cbobj.adapter_map, dict)
-        assert cbobj.adapter_map
-
-        assert isinstance(cbobj.schemas_selected, list)
-        assert cbobj.schemas_selected
-        for x in cbobj.schemas_selected:
-            assert isinstance(x, dict)
-
-        assert isinstance(cbobj.fields_selected, list)
-        assert cbobj.fields_selected
-        for x in cbobj.fields_selected:
-            assert isinstance(x, str)
-
-        return cbobj
+        return get_cbobj_main(
+            apiobj=apiobj, cbexport=cbexport, getargs=getargs, state=state, store=store
+        )
 
     def test_start_stop(self, cbexport, apiobj, caplog):
-        """Pass."""
         getargs = {}
         cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs=getargs)
         assert not caplog.records
@@ -73,7 +75,6 @@ class Callbacks:
         log_check(caplog=caplog, entries=["Stopping"], exists=True)
 
     def test_add_report_adapters_missing_false(self, cbexport, apiobj):
-        """Pass."""
         original_row = get_rows_exist(apiobj=apiobj)
         test_row = copy.deepcopy(original_row)
 
@@ -91,7 +92,6 @@ class Callbacks:
         assert not cbobj.custom_schemas
 
     def test_add_report_adapters_missing_true(self, cbexport, apiobj):
-        """Pass."""
         original_row = get_rows_exist(apiobj=apiobj)
         test_row = copy.deepcopy(original_row)
 
@@ -109,7 +109,6 @@ class Callbacks:
             assert schema in cbobj.final_schemas
 
     def test_echo_page_progress_0(self, cbexport, apiobj, caplog):
-        """Pass."""
         cbobj = self.get_cbobj(
             apiobj=apiobj,
             cbexport=cbexport,
@@ -120,7 +119,6 @@ class Callbacks:
         log_check(caplog=caplog, entries=["PROGRESS: "], exists=False)
 
     def test_echo_page_progress_1000_match_begin(self, cbexport, apiobj, caplog):
-        """Pass."""
         cbobj = self.get_cbobj(
             apiobj=apiobj,
             cbexport=cbexport,
@@ -131,7 +129,6 @@ class Callbacks:
         log_check(caplog=caplog, entries=["PROGRESS: "], exists=True)
 
     def test_echo_page_progress_1000_match(self, cbexport, apiobj, caplog):
-        """Pass."""
         cbobj = self.get_cbobj(
             apiobj=apiobj,
             cbexport=cbexport,
@@ -142,7 +139,6 @@ class Callbacks:
         log_check(caplog=caplog, entries=["PROGRESS: "], exists=True)
 
     def test_echo_page_progress_1000_no_match(self, cbexport, apiobj, caplog):
-        """Pass."""
         cbobj = self.get_cbobj(
             apiobj=apiobj,
             cbexport=cbexport,
@@ -153,7 +149,6 @@ class Callbacks:
         log_check(caplog=caplog, entries=["PROGRESS: "], exists=False)
 
     def test_do_add_null_values_true(self, cbexport, apiobj):
-        """Pass."""
         field_complex = apiobj.FIELD_COMPLEX
         original_row = get_rows_exist(apiobj=apiobj, fields=field_complex)
         picks = [x for x in original_row if x.startswith("specific_data.data.")]
@@ -184,7 +179,6 @@ class Callbacks:
                     assert x["name"] not in sub_value
 
     def test_do_add_null_values_false(self, cbexport, apiobj):
-        """Pass."""
         original_row = get_rows_exist(
             apiobj=apiobj, fields=apiobj.FIELD_COMPLEX, not_exist=True
         )
@@ -201,7 +195,6 @@ class Callbacks:
             assert apiobj.FIELD_COMPLEX not in test_row
 
     def test_do_add_null_values_exclude(self, cbexport, apiobj):
-        """Pass."""
         original_row = get_rows_exist(apiobj=apiobj)
         test_row = copy.deepcopy(original_row)
         test_row.pop(apiobj.FIELD_ADAPTERS, None)
@@ -215,8 +208,28 @@ class Callbacks:
         cbobj.do_add_null_values(row=test_row)
         assert apiobj.FIELD_ADAPTERS not in test_row
 
+    def test_do_custom_cb(self, cbexport, apiobj):
+        def cb1(self, row):
+            self._row_idx = getattr(self, "_row_idx", 0)
+            row["idcaps"] = row[apiobj.FIELD_AXON_ID].upper()
+            row["idx"] = self._row_idx
+            self._row_idx += 1
+
+        rows = apiobj.get(custom_cbs=[cb1], max_rows=2)
+        for idx, row in enumerate(rows):
+            assert idx == row["idx"]
+            assert row["idcaps"] == row[apiobj.FIELD_AXON_ID].upper()
+
+    def test_do_custom_cb_fail(self, cbexport, apiobj):
+        def cb1(self, row):
+            raise ValueError("boom")
+
+        apiobj.get(custom_cbs=[cb1], max_rows=2)
+        assert len(apiobj._LAST_CALLBACKS._custom_cb_exc) == 2
+        for x in apiobj._LAST_CALLBACKS._custom_cb_exc:
+            assert isinstance(x["exc"], ValueError)
+
     def test_process_tags_to_add_remove(self, cbexport, apiobj, caplog):
-        """Pass."""
         original_row = get_rows_exist(apiobj=apiobj)
         test_row = copy.deepcopy(original_row)
         row_id = test_row[apiobj.FIELD_AXON_ID]
@@ -264,7 +277,6 @@ class Callbacks:
             assert tag not in row_tags
 
     def test_process_tags_to_add_empty(self, cbexport, apiobj, caplog):
-        """Pass."""
         original_row = get_rows_exist(apiobj=apiobj)
         test_row = copy.deepcopy(original_row)
 
@@ -279,7 +291,6 @@ class Callbacks:
         log_check(caplog=caplog, entries=["tags.*assets"], exists=False)
 
     def test_process_tags_to_remove_empty(self, cbexport, apiobj, caplog):
-        """Pass."""
         original_row = get_rows_exist(apiobj=apiobj)
         test_row = copy.deepcopy(original_row)
 
@@ -294,7 +305,6 @@ class Callbacks:
         log_check(caplog=caplog, entries=["tags.*assets"], exists=False)
 
     def test_do_excludes_empty(self, cbexport, apiobj):
-        """Pass."""
         original_row = get_rows_exist(apiobj=apiobj)
         test_row = copy.deepcopy(original_row)
 
@@ -310,7 +320,6 @@ class Callbacks:
             assert test_row != original_row
 
     def test_do_excludes(self, cbexport, apiobj):
-        """Pass."""
         original_row = get_rows_exist(apiobj=apiobj)
         test_row = copy.deepcopy(original_row)
 
@@ -328,7 +337,6 @@ class Callbacks:
             assert field not in test_row
 
     def test_do_excludes_sub(self, cbexport, apiobj):
-        """Pass."""
         field_complex = apiobj.FIELD_COMPLEX
         original_row = get_rows_exist(apiobj=apiobj, fields=field_complex)
         test_row = copy.deepcopy(original_row)
@@ -354,7 +362,6 @@ class Callbacks:
             assert sub_exclude not in item
 
     def test_do_join_values_true(self, cbexport, apiobj):
-        """Pass."""
         original_row = get_rows_exist(apiobj=apiobj)
         test_row = copy.deepcopy(original_row)
 
@@ -369,7 +376,6 @@ class Callbacks:
                 assert isinstance(test_row[field], str)
 
     def test_do_join_values_false(self, cbexport, apiobj):
-        """Pass."""
         original_row = get_rows_exist(apiobj=apiobj)
         test_row = copy.deepcopy(original_row)
 
@@ -377,14 +383,12 @@ class Callbacks:
             apiobj=apiobj, cbexport=cbexport, getargs={"field_join": False}
         )
         cbobj.do_join_values(row=test_row)
-        # XXX override this in subclass instead
         if cbobj.GETARGS["field_join"]:
             assert original_row != test_row
         else:
             assert original_row == test_row
 
     def test_do_join_values_trim(self, cbexport, apiobj):
-        """Pass."""
         original_row = get_rows_exist(apiobj=apiobj)
         original_row["test"] = ("aaaa " * (FIELD_TRIM_LEN + 1000)).split()
         test_row = copy.deepcopy(original_row)
@@ -402,7 +406,6 @@ class Callbacks:
         assert test_len <= exp_len
 
     def test_do_join_values_trim_disabled(self, cbexport, apiobj):
-        """Pass."""
         original_row = get_rows_exist(apiobj=apiobj)
         original_row["test"] = ("aaaa " * (FIELD_TRIM_LEN + 1000)).split()
         test_row = copy.deepcopy(original_row)
@@ -418,7 +421,6 @@ class Callbacks:
         assert "TRIMMED" not in test_row["test"]
 
     def test_do_join_values_trim_custom_joiner(self, cbexport, apiobj):
-        """Pass."""
         original_row = get_rows_exist(apiobj=apiobj)
         original_row["test"] = ("aaaa " * (FIELD_TRIM_LEN + 1000)).split()
         test_row = copy.deepcopy(original_row)
@@ -434,7 +436,6 @@ class Callbacks:
         assert "!!" in test_row["test"]
 
     def test_do_change_field_titles_true(self, cbexport, apiobj):
-        """Pass."""
         field_complex = apiobj.FIELD_COMPLEX
         original_row = get_rows_exist(apiobj=apiobj, fields=field_complex)
         test_row = copy.deepcopy(original_row)
@@ -456,7 +457,6 @@ class Callbacks:
         assert list(original_row) != list(test_row)
 
     def test_do_change_field_titles_false(self, cbexport, apiobj):
-        """Pass."""
         original_row = get_rows_exist(apiobj=apiobj)
         test_row = copy.deepcopy(original_row)
 
@@ -472,7 +472,6 @@ class Callbacks:
             assert original_row == test_row
 
     def test_do_flatten_fields_true(self, cbexport, apiobj):
-        """Pass."""
         field_complex = apiobj.FIELD_COMPLEX
         original_row = get_rows_exist(apiobj=apiobj, fields=field_complex)
         test_row = copy.deepcopy(original_row)
@@ -530,7 +529,6 @@ class Callbacks:
                 assert all([x is None for x in value])
 
     def test_do_flatten_fields_exclude_sub(self, cbexport, apiobj):
-        """Pass."""
         field_complex = apiobj.FIELD_COMPLEX
         original_row = get_rows_exist(apiobj=apiobj, fields=field_complex)
         test_row = copy.deepcopy(original_row)
@@ -558,7 +556,6 @@ class Callbacks:
         assert sub_name_qual not in test_row
 
     def test_do_flatten_fields_false(self, cbexport, apiobj):
-        """Pass."""
         field_complex = apiobj.FIELD_COMPLEX
         original_row = get_rows_exist(apiobj=apiobj, fields=field_complex)
         test_row = copy.deepcopy(original_row)
@@ -577,7 +574,6 @@ class Callbacks:
             assert original_row == test_row
 
     def test_do_flatten_fields_custom_null(self, cbexport, apiobj):
-        """Pass."""
         field_complex = apiobj.FIELD_COMPLEX
         original_row = get_rows_exist(apiobj=apiobj, fields=field_complex)
         test_row = copy.deepcopy(original_row)
@@ -627,7 +623,6 @@ class Callbacks:
                 assert all([x == "badwolf" for x in value])
 
     def test_do_explode_field_complex(self, cbexport, apiobj):
-        """Pass."""
         field_complex = apiobj.FIELD_COMPLEX
         original_row = get_rows_exist(apiobj=apiobj, fields=field_complex)
         test_row = copy.deepcopy(original_row)
@@ -646,7 +641,6 @@ class Callbacks:
             assert field_complex not in new_row
 
     def test_do_explode_field_simple(self, cbexport, apiobj):
-        """Pass."""
         original_row = get_rows_exist(apiobj=apiobj)
         test_row = copy.deepcopy(original_row)
 
@@ -670,7 +664,6 @@ class Callbacks:
             assert value == row_val[idx]
 
     def test_do_explode_field_exclude(self, cbexport, apiobj):
-        """Pass."""
         original_row = get_rows_exist(apiobj=apiobj)
         test_row = copy.deepcopy(original_row)
 
@@ -689,7 +682,6 @@ class Callbacks:
         assert test_row == new_rows[0]
 
     def test_do_explode_field_none(self, cbexport, apiobj):
-        """Pass."""
         original_row = get_rows_exist(apiobj=apiobj)
         test_row = copy.deepcopy(original_row)
 
@@ -701,7 +693,6 @@ class Callbacks:
         assert test_row == new_rows[0]
 
     def test_schema_to_explode_error(self, cbexport, apiobj):
-        """Pass."""
         cbobj = self.get_cbobj(
             apiobj=apiobj, cbexport=cbexport, getargs={"field_explode": "badwolf"}
         )
@@ -709,7 +700,6 @@ class Callbacks:
             cbobj.schema_to_explode
 
     def test_schema_to_explode_success(self, cbexport, apiobj):
-        """Pass."""
         field = "adapters"
         cbobj = self.get_cbobj(
             apiobj=apiobj, cbexport=cbexport, getargs={"field_explode": field}
@@ -718,7 +708,6 @@ class Callbacks:
         assert schema["name_qual"] == field
 
     def test_fd_stdout_open_no_close(self, cbexport, apiobj):
-        """Pass."""
         cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport)
 
         fd = cbobj.open_fd()
@@ -731,7 +720,6 @@ class Callbacks:
         sys.stdout.write("should still work")
 
     def test_fd_custom_open_close_false(self, cbexport, apiobj):
-        """Pass."""
         io_fd = io.StringIO()
         cbobj = self.get_cbobj(
             apiobj=apiobj,
@@ -752,7 +740,6 @@ class Callbacks:
         fd.write("")
 
     def test_fd_custom_open_close_true(self, cbexport, apiobj):
-        """Pass."""
         io_fd = io.StringIO()
 
         cbobj = self.get_cbobj(
@@ -775,7 +762,6 @@ class Callbacks:
             fd.write("")
 
     def test_fd_path_open_close_true(self, cbexport, apiobj, tmp_path):
-        """Pass."""
         export_file = tmp_path / "badwolf.txt"
 
         cbobj = self.get_cbobj(
@@ -796,7 +782,6 @@ class Callbacks:
             cbobj._fd.write("")
 
     def test_fd_path_open_close_false(self, cbexport, apiobj, tmp_path):
-        """Pass."""
         export_file = tmp_path / "badwolf.txt"
 
         cbobj = self.get_cbobj(
@@ -818,7 +803,6 @@ class Callbacks:
         assert export_file.read_text() == "\n "
 
     def test_fd_path_overwrite_true(self, cbexport, apiobj, tmp_path):
-        """Pass."""
         export_file = tmp_path / "badwolf.txt"
         export_file.touch()
 
@@ -838,7 +822,6 @@ class Callbacks:
         assert export_file.is_file()
 
     def test_fd_path_overwrite_false(self, cbexport, apiobj, tmp_path):
-        """Pass."""
         export_file = tmp_path / "badwolf.txt"
         export_file.touch()
 
@@ -852,7 +835,6 @@ class Callbacks:
             cbobj.open_fd()
 
     def test_echo_ok_doecho_yes(self, cbexport, apiobj, capsys, caplog):
-        """Pass."""
         entry = "xxxxxxx"
 
         cbobj = self.get_cbobj(
@@ -865,7 +847,6 @@ class Callbacks:
         log_check(caplog=caplog, entries=[entry], exists=True)
 
     def test_echo_error_doecho_yes(self, cbexport, apiobj, capsys, caplog):
-        """Pass."""
         entry = "xxxxxxx"
 
         cbobj = self.get_cbobj(
@@ -880,7 +861,6 @@ class Callbacks:
         log_check(caplog=caplog, entries=[entry], exists=True)
 
     def test_echo_ok_doecho_no(self, cbexport, apiobj, capsys, caplog):
-        """Pass."""
         entry = "xxxxxxx"
 
         cbobj = self.get_cbobj(
@@ -893,7 +873,6 @@ class Callbacks:
         log_check(caplog=caplog, entries=[entry], exists=True)
 
     def test_echo_error_doecho_no(self, cbexport, apiobj, capsys, caplog):
-        """Pass."""
         entry = "xxxxxxx"
 
         cbobj = self.get_cbobj(
@@ -908,6 +887,38 @@ class Callbacks:
         log_check(caplog=caplog, entries=[entry], exists=True)
 
     def test_get_callbacks_cls_error(self):
-        """Pass."""
         with pytest.raises(ApiError):
             get_callbacks_cls(export="badwolf")
+
+    def test_sw_whitelist_fail_no_sw_field(self, cbexport, apiobj, caplog):
+        whitelist = ["chrome"]
+        rows = apiobj.get(max_rows=1)
+
+        cbobj = self.get_cbobj(
+            apiobj=apiobj,
+            cbexport=cbexport,
+            getargs={"report_software_whitelist": whitelist},
+        )
+
+        for row in rows:
+            with pytest.raises(ApiError):
+                cbobj.add_report_software_whitelist(row=row)
+
+    def test_sw_whitelist(self, cbexport, api_devices):
+        field = "specific_data.data.installed_software"
+        whitelist = ["chrome"]
+        query = '(specific_data.data.installed_software.name == regex("chrome", "i"))'
+        rows = api_devices.get(fields=field, query=query, max_rows=1)
+
+        cbobj = self.get_cbobj(
+            apiobj=api_devices,
+            cbexport=cbexport,
+            store={"fields": field},
+            getargs={"report_software_whitelist": whitelist},
+        )
+
+        for row in rows:
+            cbobj.add_report_software_whitelist(row=row)
+            for schema in SCHEMAS_CUSTOM["report_software_whitelist"].values():
+                assert schema["name_qual"] in row
+                assert field in row

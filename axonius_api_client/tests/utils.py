@@ -66,7 +66,8 @@ def exists_query(apiobj, fields=None, not_exist=False):
 @cached(cache=CACHE)
 def get_schema(apiobj, field, key=None, adapter=AGG_ADAPTER_NAME):
     schema = apiobj.fields.get_field_schema(
-        value=field, schemas=get_schemas(apiobj=apiobj),
+        value=field,
+        schemas=get_schemas(apiobj=apiobj),
     )
     return schema[key] if key else schema
 
@@ -77,12 +78,12 @@ def random_string(length):
     return result_str
 
 
-def get_rows_exist(apiobj, fields=None, max_rows=1, first=True, not_exist=False):
+def get_rows_exist(apiobj, fields=None, max_rows=1, not_exist=False):
     query = exists_query(apiobj=apiobj, fields=fields, not_exist=not_exist)
     rows = apiobj.get(fields=fields, max_rows=max_rows, query=query)
     if not rows:
         pytest.skip(f"No {apiobj} assets with fields {fields}")
-    return rows[0] if first else rows
+    return rows[0] if max_rows == 1 else rows
 
 
 @cached(cache=CACHE)

@@ -11,15 +11,11 @@ from ...utils import get_schemas
 
 
 class FieldsPrivate:
-    """Pass."""
-
     def test_private_get(self, apiobj):
-        """Pass."""
         fields = apiobj.fields._get()
         self.val_raw_fields(fields=fields)
 
     def val_raw_fields(self, fields):
-        """Pass."""
         fields = copy.deepcopy(fields)
         assert isinstance(fields, dict)
 
@@ -49,7 +45,6 @@ class FieldsPrivate:
         assert not schema
 
     def val_raw_schema(self, adapter, schema):
-        """Pass."""
         assert isinstance(schema, dict)
 
         items = schema.pop("items")
@@ -71,7 +66,6 @@ class FieldsPrivate:
             self.val_raw_items(adapter=adapter, items=item)
 
     def val_raw_adapter_fields(self, adapter, adapter_fields):
-        """Pass."""
         assert isinstance(adapter_fields, list)
 
         for field in adapter_fields:
@@ -119,7 +113,6 @@ class FieldsPrivate:
             assert not field, list(field)
 
     def val_raw_items(self, adapter, items):
-        """Pass."""
         assert isinstance(items, dict)
 
         if items:
@@ -174,7 +167,6 @@ class FieldsPrivate:
                     self.val_raw_items(adapter=adapter, items=sub_item)
 
     def test_private_prettify_schemas(self, apiobj):
-        """Pass."""
         schemas = get_schemas(apiobj=apiobj)
         pretty = apiobj.fields._prettify_schemas(schemas=schemas)
         assert isinstance(pretty, list)
@@ -184,15 +176,11 @@ class FieldsPrivate:
 
 
 class FieldsPublic:
-    """Pass."""
-
     def test_get(self, apiobj):
-        """Pass."""
         fields = apiobj.fields.get()
         self.val_parsed_fields(fields=fields)
 
     def val_parsed_fields(self, fields):
-        """Pass."""
         fields = copy.deepcopy(fields)
         assert isinstance(fields, dict)
 
@@ -204,7 +192,6 @@ class FieldsPublic:
                 self.val_parsed_schema(schema=schema, adapter=adapter)
 
     def val_parsed_schema(self, schema, adapter):
-        """Pass."""
         schema = copy.deepcopy(schema)
         assert isinstance(schema, dict)
 
@@ -328,40 +315,34 @@ class FieldsPublic:
         assert not schema, list(schema)
 
     def test_get_adapter_name(self, apiobj):
-        """Pass."""
         search = AGG_ADAPTER_ALTS[0]
         exp = AGG_ADAPTER_NAME
         adapter = apiobj.fields.get_adapter_name(value=search)
         assert adapter == exp
 
     def test_get_adapter_name_error(self, apiobj):
-        """Pass."""
         search = "badwolf"
         with pytest.raises(NotFoundError):
             apiobj.fields.get_adapter_name(value=search)
 
     def test_get_adapter_names_single(self, apiobj):
-        """Pass."""
         search = AGG_ADAPTER_ALTS[0]
         exp = [AGG_ADAPTER_NAME]
         adapters = apiobj.fields.get_adapter_names(value=search)
         assert adapters == exp
 
     def test_get_adapter_names_multi(self, apiobj):
-        """Pass."""
         search = "a"
         adapters = apiobj.fields.get_adapter_names(value=search)
         assert AGG_ADAPTER_NAME in adapters
         assert len(adapters) > 1
 
     def test_get_adapter_names_error(self, apiobj):
-        """Pass."""
         search = "badwolf"
         with pytest.raises(NotFoundError):
             apiobj.fields.get_adapter_names(value=search)
 
     def test_get_field_schema(self, apiobj):
-        """Pass."""
         search = "last_seen"
         schemas = get_schemas(apiobj=apiobj)
         exp = [x for x in schemas if x["name_base"] == search][0]
@@ -369,13 +350,11 @@ class FieldsPublic:
         assert exp == result
 
     def test_get_field_names_re(self, apiobj):
-        """Pass."""
         search = ["seen"]
         result = apiobj.fields.get_field_names_re(value=search)
         assert "specific_data.data.last_seen" in result
 
     def test_get_field_names_eq(self, apiobj):
-        """Pass."""
         search = ["specific_data.data.id", "last_seen"]
         exp = []
         schemas = get_schemas(apiobj=apiobj)
@@ -389,7 +368,6 @@ class FieldsPublic:
         assert exp == result
 
     def test_get_field_schemas(self, apiobj):
-        """Pass."""
         # schemas = get_schemas(apiobj=apiobj)
         search = "l"
         result = [
@@ -401,7 +379,6 @@ class FieldsPublic:
         assert len(result) >= 1
 
     def test_get_field_schema_error(self, apiobj):
-        """Pass."""
         search = "badwolf"
         schemas = get_schemas(apiobj=apiobj)
         with pytest.raises(NotFoundError):
@@ -422,8 +399,13 @@ class FieldsPublic:
         scope="class",
     )
     def test_split_search(self, apiobj, test_data):
-        """Pass."""
         search, exp = test_data
+        result = apiobj.fields.split_search(value=search)
+        assert result == exp
+
+    def test_split_search_adapter_specific(self, apiobj):
+        exp = ("tanium_asset", ["adapters_data.tanium_asset_adapter.installed_software"])
+        search = "adapters_data.tanium_asset_adapter.installed_software"
         result = apiobj.fields.split_search(value=search)
         assert result == exp
 
@@ -445,38 +427,35 @@ class FieldsPublic:
         scope="class",
     )
     def test_split_searches(self, apiobj, test_data):
-        """Pass."""
         searches, exp = test_data
         result = apiobj.fields.split_searches(value=searches)
         assert result == exp
 
     def test_split_search_error(self, apiobj):
-        """Pass."""
         search = f"{AGG_ADAPTER_NAME}:"
         with pytest.raises(ApiError):
             apiobj.fields.split_search(value=search)
 
     def test_get_field_name_manual(self, apiobj):
-        """Pass."""
         search = "test"
-        result = apiobj.fields.get_field_name(value=search, field_manual=True,)
+        result = apiobj.fields.get_field_name(
+            value=search,
+            field_manual=True,
+        )
         assert search == result
 
     def test_get_field_name_error(self, apiobj):
-        """Pass."""
         search = "bad,wolf"
         with pytest.raises(ApiError):
             apiobj.fields.get_field_name(value=search)
 
     def test_get_field_name(self, apiobj):
-        """Pass."""
         search = "last_seen"
         exp = "specific_data.data.last_seen"
         result = apiobj.fields.get_field_name(value=search)
         assert result == exp
 
     def test_validate(self, apiobj):
-        """Pass."""
         exp = apiobj.fields_default + [
             "specific_data.data",
             "specific_data.data.first_fetch_time",
@@ -489,42 +468,66 @@ class FieldsPublic:
         )
         assert result == exp
 
+    def test_validate_root(self, apiobj):
+        result = apiobj.fields.validate(fields_root="agg")
+        assert len(result) > 1
+
     def test_validate_defaults(self, apiobj):
-        """Pass."""
         exp = apiobj.fields_default
-        result = apiobj.fields.validate(
-            fields=None, fields_regex=None, fields_manual=None, fields_default=True
-        )
+        result = apiobj.fields.validate()
         assert exp == result
 
+    def test_validate_fuzzy(self, apiobj):
+        result = apiobj.fields.validate(fields_fuzzy="last seen", fields_default=False)
+        assert "specific_data.data.last_seen" in result
+
     def test_validate_error(self, apiobj):
-        """Pass."""
         with pytest.raises(ApiError):
-            apiobj.fields.validate(
-                fields=None, fields_regex=None, fields_manual=None, fields_default=False,
-            )
+            apiobj.fields.validate(fields_default=False)
+
+    def test_fuzzy_filter_contains(self, apiobj):
+        schemas = apiobj.fields.get()["agg"]
+        matches = apiobj.fields.fuzzy_filter(search="last", schemas=schemas, names=True)
+        assert isinstance(matches, list) and matches
+        for x in matches:
+            assert isinstance(x, str)
+        assert len(matches) > 1
+        assert "specific_data.data.last_seen" in matches
+
+    def test_fuzzy_filter_token(self, apiobj):
+        schemas = apiobj.fields.get()["agg"]
+        matches = apiobj.fields.fuzzy_filter(
+            search="last seen", schemas=schemas, names=True
+        )
+        assert isinstance(matches, list) and matches
+        for x in matches:
+            assert isinstance(x, str)
+        assert len(matches) > 1
+        assert "specific_data.data.last_seen" in matches
+
+    def test_fuzzy_filter_partial(self, apiobj):
+        schemas = apiobj.fields.get()["agg"]
+        matches = apiobj.fields.fuzzy_filter(search="bd", schemas=schemas, names=True)
+        assert isinstance(matches, list) and matches
+        for x in matches:
+            assert isinstance(x, str)
+        assert len(matches) > 1
+        assert "specific_data.data.id" in matches
 
 
 class TestFieldsDevices(FieldsPrivate, FieldsPublic):
-    """Pass."""
-
     @pytest.fixture(scope="class")
     def apiobj(self, api_devices):
-        """Pass."""
         return api_devices
 
 
 class TestFieldsUsers(FieldsPrivate, FieldsPublic):
-    """Pass."""
-
     @pytest.fixture(scope="class")
     def apiobj(self, api_users):
-        """Pass."""
         return api_users
 
 
 def val_source(obj):
-    """Pass."""
     source = obj.pop("source", {})
     assert isinstance(source, dict)
 

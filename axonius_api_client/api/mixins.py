@@ -35,11 +35,8 @@ class PageSizeMixin:
             self.LOG.debug(f"CHANGED PAGE SIZE {page_size} to max_rows {max_rows}")
             page_size = max_rows
 
-        if page_size > MAX_PAGE_SIZE:
+        if page_size > MAX_PAGE_SIZE or not page_size:
             self.LOG.debug(f"CHANGED PAGE SIZE {page_size} to max {MAX_PAGE_SIZE}")
-            page_size = MAX_PAGE_SIZE
-
-        if not page_size:
             page_size = MAX_PAGE_SIZE
 
         return page_size
@@ -77,22 +74,6 @@ class ModelMixins(Model, PageSizeMixin):
     def __repr__(self) -> str:
         """Show info for this model object."""
         return self.__str__()
-
-    def _get_page_size(
-        self, page_size: Optional[int] = MAX_PAGE_SIZE, max_rows: Optional[int] = None
-    ) -> int:
-        if max_rows and max_rows < page_size:
-            self.LOG.debug(f"CHANGED PAGE SIZE {page_size} to max_rows {max_rows}")
-            page_size = max_rows
-
-        if page_size > MAX_PAGE_SIZE:
-            self.LOG.debug(f"CHANGED PAGE SIZE {page_size} to max {MAX_PAGE_SIZE}")
-            page_size = MAX_PAGE_SIZE
-
-        if not page_size:
-            page_size = MAX_PAGE_SIZE
-
-        return page_size
 
     def _build_err_msg(
         self,

@@ -49,7 +49,10 @@ class Table(Base):
         rows = getattr(self, "_rows", [])
 
         table = tabulate.tabulate(
-            tabular_data=rows, tablefmt=tablefmt, showindex=False, headers="keys",
+            tabular_data=rows,
+            tablefmt=tablefmt,
+            showindex=False,
+            headers="keys",
         )
 
         self._fd.write(table)
@@ -62,7 +65,7 @@ class Table(Base):
         self.check_stop()
 
         new_rows = self.do_row(row=row)
-        # XXX textwrap key/values
+        # TBD textwrap key/values
         self._rows += listify(new_rows)
         return new_rows
 

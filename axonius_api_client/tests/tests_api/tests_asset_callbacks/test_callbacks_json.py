@@ -11,17 +11,13 @@ from .callbacks import Callbacks
 
 
 class CallbacksJson(Callbacks):
-    """Pass."""
-
     @pytest.fixture(scope="class")
     def cbexport(self):
-        """Pass."""
         return "json"
 
     def test_row_as_is(self, cbexport, apiobj):
-        """Pass."""
         io_fd = io.StringIO()
-        original_rows = get_rows_exist(apiobj=apiobj, max_rows=5, first=False)
+        original_rows = get_rows_exist(apiobj=apiobj, max_rows=5)
 
         cbobj = self.get_cbobj(
             apiobj=apiobj, cbexport=cbexport, getargs={"export_fd": io_fd}
@@ -47,9 +43,8 @@ class CallbacksJson(Callbacks):
         assert "]" in stop_val
 
     def test_row_fully_loaded(self, cbexport, apiobj):
-        """Pass."""
         io_fd = io.StringIO()
-        original_rows = get_rows_exist(apiobj=apiobj, max_rows=5, first=False)
+        original_rows = get_rows_exist(apiobj=apiobj, max_rows=5)
 
         cbobj = self.get_cbobj(
             apiobj=apiobj,
@@ -89,18 +84,12 @@ class CallbacksJson(Callbacks):
 
 
 class TestDevicesCallbacksJson(CallbacksJson):
-    """Pass."""
-
     @pytest.fixture(scope="class")
     def apiobj(self, api_devices):
-        """Pass."""
         return api_devices
 
 
 class TestUsersCallbacksJson(CallbacksJson):
-    """Pass."""
-
     @pytest.fixture(scope="class")
     def apiobj(self, api_users):
-        """Pass."""
         return api_users

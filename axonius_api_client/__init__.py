@@ -2,7 +2,8 @@
 """Python API Client for Axonius."""
 from . import (api, auth, cli, constants, data, exceptions, http, logs, tools,
                version, wizard)
-from .api import Adapters, Devices, Enforcements, Instances, System, Users
+from .api import (Adapters, Devices, Enforcements, Instances, Signup, System,
+                  Users)
 from .auth import ApiKey
 from .connect import Connect
 from .http import Http
@@ -24,6 +25,7 @@ __all__ = (
     "Adapters",
     "Enforcements",
     "System",
+    "Signup",
     # wizards
     "Wizard",
     "WizardText",

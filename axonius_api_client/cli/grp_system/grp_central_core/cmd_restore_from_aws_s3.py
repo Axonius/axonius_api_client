@@ -98,7 +98,9 @@ the settings under Global Settings > Amazon S3 Settings:
 
 
 @click.command(
-    name="restore-from-aws-s3", context_settings=CONTEXT_SETTINGS, epilog=EPILOG,
+    name="restore-from-aws-s3",
+    context_settings=CONTEXT_SETTINGS,
+    epilog=EPILOG,
 )
 @add_options(OPTIONS)
 @click.pass_context

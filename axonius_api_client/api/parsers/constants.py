@@ -432,7 +432,9 @@ class OperatorTypeMaps(BaseData):
         field_type=Types.integer,
     )
     number: OperatorTypeMap = OperatorTypeMap(
-        name="number", operators=integer.operators, field_type=Types.number,
+        name="number",
+        operators=integer.operators,
+        field_type=Types.number,
     )
     array_object: OperatorTypeMap = OperatorTypeMap(
         name="array_object",
@@ -607,19 +609,19 @@ class OperatorTypeMaps(BaseData):
         err = err or f"Invalid operator supplied {operator!r}\n"
         raise NotFoundError(f"{err}{valid}")
 
-    @classmethod
-    def get_map(cls) -> dict:
-        op_map = {}
+    # @classmethod
+    # def get_map(cls) -> dict:
+    #     op_map = {}
 
-        typemaps = cls.get_fields()
-        for typemap in typemaps:
-            type_name = typemap.name
-            for op in typemap.default.operators:
-                op_name = op.name.name
-                if op_name not in op_map:
-                    op_map[op_name] = []
-                op_map[op_name].append(type_name)
-        return op_map
+    #     typemaps = cls.get_fields()
+    #     for typemap in typemaps:
+    #         type_name = typemap.name
+    #         for op in typemap.default.operators:
+    #             op_name = op.name.name
+    #             if op_name not in op_map:
+    #                 op_map[op_name] = []
+    #             op_map[op_name].append(type_name)
+    #     return op_map
 
 
 CUSTOM_FIELDS_MAP: Dict[str, List[dict]] = {

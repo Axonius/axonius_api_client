@@ -47,7 +47,7 @@ lint:
 	pipenv run pipenv run black -l 89 $(PACKAGE) setup.py shell.py
 # 	pipenv run pydocstyle --match='(?!test_).*\.py' $(PACKAGE) setup.py shell.py
 	pipenv run flake8 --max-line-length 89 $(PACKAGE) setup.py shell.py
-	pipenv run bandit --skip B101 -r $(PACKAGE)
+	pipenv run bandit -x $(PACKAGE)/examples,$(PACKAGE)/tests --skip B101 -r $(PACKAGE)
 
 test:
 	pipenv run pytest -ra -vv --showlocals --exitfirst --pdb --cov-config=.coveragerc --cov-report xml --cov-report=html:cov_html --cov=$(PACKAGE) $(PACKAGE)/tests

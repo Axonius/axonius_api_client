@@ -24,10 +24,8 @@ class Router:
         self._routes = ["root"]
         for k, v in routes.items():
             self._routes.append(k)
-            if v.startswith("/"):
-                setattr(self, k, join_url(base, v))
-            else:
-                setattr(self, k, join_url(self.root, v))
+            items = [base, v] if v.startswith("/") else [self.root, v]
+            setattr(self, k, join_url(*items))
 
     def __str__(self) -> str:
         """Show object info.
@@ -201,16 +199,23 @@ class ApiV4:
     )
 
     alerts: Router = Router(
-        object_type="enforcements", base=base, version=version,
+        object_type="enforcements",
+        base=base,
+        version=version,
         upload_file="actions/upload_file",
     )
 
     instances: Router = Router(
-        object_type="instances", base=base, version=version,
+        object_type="instances",
+        base=base,
+        version=version,
     )
 
     dashboard: Router = Router(
-        object_type="dashboard", base=base, version=version, lifecycle="lifecycle",
+        object_type="dashboard",
+        base=base,
+        version=version,
+        lifecycle="lifecycle",
     )
 
     system: Router = Router(
@@ -234,6 +239,12 @@ class ApiV4:
         central_core_restore="central_core/restore",
     )
 
+    signup: Router = Router(
+        object_type="signup",
+        base=base,
+        version=version,
+    )
+
     labels: Router = Router(object_type="labels", base=base, version=version)
 
     all_objects: List[Router] = [
@@ -246,6 +257,7 @@ class ApiV4:
         dashboard,
         system,
         labels,
+        signup,
     ]
 
 

@@ -60,7 +60,8 @@ def cmd(ctx, url, key, secret, input_file, abort, **kwargs):
         try:
             apiobj.saved_query.get_by_name(value=sq_name)
             ctx.obj.echo_error(
-                msg=f"Saved query {sq_name!r} already exists, can not add", abort=abort,
+                msg=f"Saved query {sq_name!r} already exists, can not add",
+                abort=abort,
             )
             continue
         except NotFoundError:

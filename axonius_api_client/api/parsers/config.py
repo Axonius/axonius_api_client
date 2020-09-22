@@ -355,13 +355,13 @@ def parse_schema_enum(schema: dict):
 
 def parse_section(raw: dict, raw_config: dict, parent: dict, settings: dict) -> dict:
     """Pass."""
-    # XXX has no title:
+    # FYI has no title:
     #   settings_gui::saml_login_settings::configure_authncc
     title = raw.get("title", raw["name"].replace("_", " ").title())
     config = raw_config.get(raw["name"], {})
     section_name = raw["name"]
     schemas = raw["items"]
-    # XXX core_settings::tunnel_email_recipients is missing 'required' as of 3.6!
+    # FYI core_settings::tunnel_email_recipients is missing 'required' as of 3.6!
     # required = raw["required"]
     required = raw.get("required", [])
 
@@ -385,28 +385,31 @@ def parse_section(raw: dict, raw_config: dict, parent: dict, settings: dict) -> 
 
         # sub_sections:
         #   {"items": [{}], "required": [""], "type": "array"}
-        # XXX core_settings::tunnel_email_recipients has an empty items list 3.6
+        # FYI core_settings::tunnel_email_recipients has an empty items list 3.6
         if isinstance(items, list) and items:
             sub_sections[schema_name] = parse_section(
-                raw=schema, raw_config=config, parent=parsed, settings=settings,
+                raw=schema,
+                raw_config=config,
+                parent=parsed,
+                settings=settings,
             )
             schema.pop("items")
 
         # non sub_sections:
         #   no items key in schema
         #   {"items": {"type": ""} "type": "array"}
-        # XXX some things have a required key already that is a bool 3.6
+        # FYI some things have a required key already that is a bool 3.6
         if not isinstance(schema.get("required", []), bool):
             schema["required"] = schema_name in required
 
         parsed["schemas"][schema_name] = schema
 
-        # XXX does not follow schema for defaults:
+        # FYI does not follow schema for defaults:
         #   core settings::https_log_settings
         if schema_name in section_defaults and "default" not in schema:
             schema["default"] = section_defaults[schema_name]
 
-        # XXX has no title:
+        # FYI has no title:
         #   settings_gui::saml_login_settings::configure_authncc
         schema["title"] = schema.get("title", schema_name.replace("_", " ").title())
 
@@ -415,7 +418,7 @@ def parse_section(raw: dict, raw_config: dict, parent: dict, settings: dict) -> 
 
 def parse_settings(raw: dict, title: str = "") -> dict:
     """Pass."""
-    # XXX missing pretty_name:
+    # FYI missing pretty_name:
     #   settings_gui
     #   settings_lifecycle
     title = raw["schema"].get("pretty_name", "") or title

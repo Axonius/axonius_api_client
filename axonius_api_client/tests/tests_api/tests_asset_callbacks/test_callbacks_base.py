@@ -9,20 +9,16 @@ from .callbacks import Callbacks
 
 
 class CallbacksBase(Callbacks):
-    """Pass."""
-
     @pytest.fixture(scope="class")
     def cbexport(self):
-        """Pass."""
         return "base"
 
     def test_row_as_is(self, cbexport, apiobj, caplog):
-        """Pass."""
         getargs = {}
         cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs=getargs)
         cbobj.start()
 
-        rows_orig = get_rows_exist(apiobj=apiobj, max_rows=5, first=False)
+        rows_orig = get_rows_exist(apiobj=apiobj, max_rows=5)
         rows = copy.deepcopy(rows_orig)
         rows_proc = []
         for row in rows:
@@ -32,7 +28,6 @@ class CallbacksBase(Callbacks):
         cbobj.stop()
 
     def test_row_fully_loaded(self, cbexport, apiobj, caplog):
-        """Pass."""
         getargs = {
             "field_excludes": ["adapters"],
             "field_flatten": True,
@@ -44,7 +39,7 @@ class CallbacksBase(Callbacks):
         cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs=getargs)
         cbobj.start()
 
-        rows_orig = get_rows_exist(apiobj=apiobj, max_rows=5, first=False)
+        rows_orig = get_rows_exist(apiobj=apiobj, max_rows=5)
         rows = copy.deepcopy(rows_orig)
         rows_proc = []
         for row in rows:
@@ -55,18 +50,12 @@ class CallbacksBase(Callbacks):
 
 
 class TestDevicesCallbacksBase(CallbacksBase):
-    """Pass."""
-
     @pytest.fixture(scope="class")
     def apiobj(self, api_devices):
-        """Pass."""
         return api_devices
 
 
 class TestUsersCallbacksBase(CallbacksBase):
-    """Pass."""
-
     @pytest.fixture(scope="class")
     def apiobj(self, api_users):
-        """Pass."""
         return api_users

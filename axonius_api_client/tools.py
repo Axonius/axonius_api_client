@@ -381,7 +381,8 @@ def dt_parse_tmpl(obj: Union[str, timedelta, datetime], tmpl: str = "%Y-%m-%d") 
 
 
 def dt_now(
-    delta: Optional[timedelta] = None, tz: timezone = dateutil.tz.tzutc(),
+    delta: Optional[timedelta] = None,
+    tz: timezone = dateutil.tz.tzutc(),
 ) -> datetime:
     """Get the current datetime in for a specific tz.
 
@@ -428,7 +429,8 @@ def dt_min_ago(obj: Union[str, timedelta, datetime]) -> int:
 
 
 def dt_within_min(
-    obj: Union[str, timedelta, datetime], n: Optional[Union[str, int]] = None,
+    obj: Union[str, timedelta, datetime],
+    n: Optional[Union[str, int]] = None,
 ) -> bool:
     """Check if given datetime is within the past n minutes.
 
