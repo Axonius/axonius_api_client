@@ -8,7 +8,8 @@ import platform
 import sys
 from datetime import datetime, timedelta, timezone
 from itertools import zip_longest
-from typing import Any, Callable, Iterable, Iterator, List, Optional, Tuple, Union
+from typing import (Any, Callable, Iterable, Iterator, List, Optional, Tuple,
+                    Union)
 from urllib.parse import urljoin
 
 import click
@@ -18,17 +19,8 @@ import dateutil.tz
 
 from . import __file__ as PACKAGE_FILE
 from . import __package__ as PACKAGE_ROOT
-from .constants import (
-    ERROR_ARGS,
-    ERROR_TMPL,
-    NO,
-    OK_ARGS,
-    OK_TMPL,
-    SIMPLE,
-    WARN_ARGS,
-    WARN_TMPL,
-    YES,
-)
+from .constants import (ERROR_ARGS, ERROR_TMPL, NO, OK_ARGS, OK_TMPL,
+                        WARN_ARGS, WARN_TMPL, YES)
 from .exceptions import ToolsError
 from .version import VERSION
 
@@ -65,16 +57,10 @@ def listify(obj: Any, dictkeys: bool = False) -> list:
     if obj is None:
         return []
 
-    if isinstance(obj, SIMPLE):
-        return [obj]
+    if isinstance(obj, dict) and dictkeys:
+        return list(obj)
 
-    if isinstance(obj, dict):
-        if dictkeys:
-            return list(obj)
-
-        return [obj]
-
-    return obj
+    return [obj]
 
 
 def grouper(iterable: Iterable, n: int, fillvalue: Optional[Any] = None) -> Iterator:
@@ -647,7 +633,7 @@ def split_str(
     return ret
 
 
-def echo_ok(msg: str, tmpl: bool = True, **kwargs):
+def echo_ok(msg: str, tmpl: bool = True, **kwargs):  # pragma: no cover
     """Pass."""
     echoargs = {}
     echoargs.update(OK_ARGS)
@@ -659,7 +645,7 @@ def echo_ok(msg: str, tmpl: bool = True, **kwargs):
     click.secho(msg, **echoargs)
 
 
-def echo_warn(msg: str, tmpl: bool = True, **kwargs):
+def echo_warn(msg: str, tmpl: bool = True, **kwargs):  # pragma: no cover
     """Pass."""
     echoargs = {}
     echoargs.update(WARN_ARGS)
@@ -671,7 +657,9 @@ def echo_warn(msg: str, tmpl: bool = True, **kwargs):
     click.secho(msg, **echoargs)
 
 
-def echo_error(msg: str, abort: bool = True, tmpl: bool = True, **kwargs):
+def echo_error(
+    msg: str, abort: bool = True, tmpl: bool = True, **kwargs
+):  # pragma: no cover
     """Pass."""
     echoargs = {}
     echoargs.update(ERROR_ARGS)
@@ -708,18 +696,19 @@ def sysinfo() -> dict:
         "win32_edition",
     ]
     for attr in platform_attrs:
-        try:
-            method = getattr(platform, attr)
+        method = getattr(platform, attr, None)
+        value = "unavailable"
+        if method:
             value = method()
-        except Exception:
-            value = "unavailable"
 
         attr = attr.replace("_", " ").title()
         info[attr] = value
     return info
 
 
-def calc_percent(part: Union[int, float], whole: Union[int, float]) -> float:
+def calc_percent(
+    part: Union[int, float], whole: Union[int, float], places: int = 2
+) -> float:
     """Pass."""
     if 0 in [part, whole]:
         value = 0.00
@@ -727,6 +716,8 @@ def calc_percent(part: Union[int, float], whole: Union[int, float]) -> float:
         value = 100.00
     else:
         value = 100 * (part / whole)
+    if isinstance(places, int):
+        value = float(f"{value:.{places}f}")
     return value
 
 

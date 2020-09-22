@@ -3,47 +3,21 @@
 import tempfile
 
 import pytest
-
 from axonius_api_client.exceptions import ToolsError
-from axonius_api_client.tools import (
-    coerce_bool,
-    coerce_int,
-    datetime,
-    dt_min_ago,
-    dt_now,
-    dt_parse,
-    dt_within_min,
-    get_path,
-    grouper,
-    is_int,
-    join_url,
-    json_dump,
-    json_load,
-    json_reload,
-    listify,
-    path_read,
-    path_write,
-    pathlib,
-    strip_left,
-    strip_right,
-    timedelta,
-)
+from axonius_api_client.tools import (calc_percent, check_empty, check_type,
+                                      coerce_bool, coerce_int,
+                                      coerce_int_float, coerce_str_to_csv,
+                                      datetime, dt_min_ago, dt_now, dt_parse,
+                                      dt_parse_tmpl, dt_within_min, get_path,
+                                      get_raw_version, get_type_str, grouper,
+                                      is_int, join_kv, join_url, json_dump,
+                                      json_load, json_reload, listify,
+                                      longest_str, parse_ip_address,
+                                      parse_ip_network, path_read, path_write,
+                                      pathlib, split_str, strip_left,
+                                      strip_right, sysinfo, timedelta)
 
 from ..utils import IS_WINDOWS
-
-'''
-class TestValType:
-    """Test axonius_api_client.val_type."""
-
-    def test_good(self):
-        """Pass."""
-        val_type(1, INT)
-
-    def test_bad(self):
-        """Pass."""
-        with pytest.raises(ToolsError):
-            val_type("", INT)
-'''
 
 
 class TestCoerce:
@@ -77,6 +51,15 @@ class TestCoerce:
         assert coerce_bool(0) is False
         assert coerce_bool("f") is False
         assert coerce_bool(False) is False
+
+    def test_coerce_int_float(self):
+        with pytest.raises(ToolsError):
+            coerce_int_float("1.x")
+
+        assert coerce_int_float(1.0) == 1.0
+        assert coerce_int_float(1) == 1
+        assert coerce_int_float("1") == 1
+        assert coerce_int_float("1.0") == 1.0
 
 
 class TestJoinUrl:
@@ -717,6 +700,12 @@ class TestJsonDump:
         y = json_dump(obj=x)
         assert y == '{\n  "x": 2\n}'
 
+    def test_dump_bytes(self):
+        """Simple test."""
+        x = b"xxx"
+        y = json_dump(obj=x)
+        assert y == '"xxx"'
+
     def test_dump_error_false(self):
         """Simple test."""
         x = pytest
@@ -730,6 +719,137 @@ class TestJsonDump:
             json_dump(obj=x, error=True)
 
 
+class TestDtParseTmpl:
+    def test_valid(self):
+        assert dt_parse_tmpl("2019-07-09T09:22:21") == "2019-07-09"
+        assert dt_parse_tmpl("20190709T09:22:21") == "2019-07-09"
+
+    def test_invalid(self):
+        with pytest.raises(ToolsError):
+            dt_parse_tmpl("2019-07-09Txx")
+        with pytest.raises(ToolsError):
+            dt_parse_tmpl("xxx")
+
+
+class TestSplitStr:
+    def test_valid(self):
+        assert split_str("x, y, z") == ["x", "y", "z"]
+        assert split_str(["x, y, z", "a, b, c"]) == ["x", "y", "z", "a", "b", "c"]
+        assert split_str(None) == []
+        assert split_str(["x,,y,,z"]) == ["x", "y", "z"]
+
+    def test_invalid(self):
+        with pytest.raises(ToolsError):
+            split_str({})
+
+
+class TestLongestStr:
+    def test_valid(self):
+        assert longest_str(["a" * 5, "b" * 20, "c" * 3]) == 20
+
+
+class TestSysInfo:
+    def test_valid(self):
+        data = sysinfo()
+        assert isinstance(data, dict)
+
+
+class TestCalc:
+    def test_valid(self):
+        assert calc_percent(0, 100) == 0.00
+        assert calc_percent(50, 57) == 87.72
+        assert calc_percent(50, 57, 0) == 88
+        assert calc_percent(59, 57) == 100.00
+
+
+class TestJoinKv:
+    def test_valid(self):
+        assert join_kv({"k1": "v1", "k2": "v2"}) == ["k1: 'v1'", "k2: 'v2'"]
+        assert join_kv([{"k1": "v1"}, {"k2": "v2"}]) == [["k1: 'v1'"], ["k2: 'v2'"]]
+        assert join_kv({"k1": ["v1", "v2"]}) == ["k1: 'v1, v2'"]
+
+    def test_invalid(self):
+        with pytest.raises(ToolsError):
+            join_kv(2)
+
+
+class TestChecks:
+    def test_get_type_str(self):
+        assert get_type_str(list) == "list"
+        assert get_type_str((list, dict)) == "list or dict"
+
+    def test_check_type_valid(self):
+        check_type([], exp=list)
+        check_type(["x", 1], exp=list, exp_items=(str, int))
+
+    def test_check_type_invalid(self):
+        with pytest.raises(ToolsError):
+            check_type([], exp=dict)
+
+        with pytest.raises(ToolsError):
+            check_type(["x", 1], exp=list, exp_items=str)
+
+    def test_check_empty_valid(self):
+        check_empty(["x"])
+
+    def test_check_empty_invalid(self):
+        with pytest.raises(ToolsError):
+            check_empty([])
+
+
+class TestGetRawVersion:
+    def test_valid(self):
+        assert get_raw_version("3.1.0") == "0000000030000000100000000"
+        assert get_raw_version("boo:2.1.0") == "boo000000020000000100000000"
+        assert get_raw_version("123456789123456789.1.0") == "0123456780000000100000000"
+
+    def test_invalid(self):
+        with pytest.raises(ToolsError):
+            get_raw_version("3.1.0:x")
+
+        with pytest.raises(ToolsError):
+            get_raw_version("3.x.0")
+
+
+class TestParseIpAddress:
+    def test_valid(self):
+        assert str(parse_ip_address("127.0.0.1")) == "127.0.0.1"
+
+    def test_invalid(self):
+        with pytest.raises(ToolsError):
+            parse_ip_address("127.0.0")
+
+
+class TestParseIpNetwork:
+    def test_valid(self):
+        assert str(parse_ip_network("127.0.0.1/32")) == "127.0.0.1/32"
+
+    def test_invalid(self):
+        with pytest.raises(ToolsError):
+            parse_ip_network("127.0.0.1")
+
+        with pytest.raises(ToolsError):
+            parse_ip_network("127.0.0/32")
+
+
+class TestCoerceStrToCsv:
+    def test_valid(self):
+        assert coerce_str_to_csv("x, y,, z") == ["x", "y", "z"]
+
+    def test_invalid(self):
+        with pytest.raises(ToolsError):
+            coerce_str_to_csv({})
+
+        with pytest.raises(ToolsError):
+            coerce_str_to_csv(",,,")
+
+        with pytest.raises(ToolsError):
+            coerce_str_to_csv("")
+
+        with pytest.raises(ToolsError):
+            coerce_str_to_csv([])
+
+
 class TestJsonReload:
     """Test json_dump."""
 
@@ -738,6 +858,12 @@ class TestJsonReload:
         x = '{"x": 2}'
         y = json_reload(obj=x)
         assert y == '{\n  "x": 2\n}'
+
+    def test_re_load_trim(self):
+        """Simple test."""
+        x = '{{"x": {}}}'.format("a" * 50)
+        y = json_reload(obj=x, trim=20)
+        assert y == '{"x": aaaaaaaaaaaaaa\nTrimmed over 20 characters'
 
     def test_re_load_error_false(self):
         """Simple test."""
