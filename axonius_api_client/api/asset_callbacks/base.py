@@ -247,7 +247,7 @@ class Base:
             return
 
         for schema in self.schemas_selected:
-            if self.schema_to_explode == schema:
+            if self.schema_to_explode == schema:  # pragma: no cover
                 return
 
             self._do_flatten_fields(row=row, schema=schema)
@@ -364,7 +364,7 @@ class Base:
                 name = sw.get("name", "")
                 if re.search(whitelist_entry, name, re.I):
                     return True
-            return False
+            return False  # pragma: no cover
 
         def clean_list(obj):
             return sorted(list(set(obj)))
@@ -521,7 +521,7 @@ class Base:
 
         if do_echo:
             if warning:
-                echo_warn(msg=msg)
+                echo_warn(msg=msg)  # pragma: no cover
             elif error:
                 echo_error(msg=msg, abort=abort)
             else:
@@ -529,7 +529,7 @@ class Base:
             return
 
         if warning:
-            getattr(self.LOG, level_warning)(msg)
+            getattr(self.LOG, level_warning)(msg)  # pragma: no cover
         elif error:
             getattr(self.LOG, level_error)(msg)
             if abort:
@@ -640,7 +640,7 @@ class Base:
         for field in self.fields_selected:
             if field in all_schemas_map:
                 self._schemas_selected.append(all_schemas_map[field])
-            else:
+            else:  # pragma: no cover
                 self._schemas_selected.append(schema_custom(name=field))
                 msg = f"No schema found for field {field}"
                 self.echo(msg=msg, warning=True)

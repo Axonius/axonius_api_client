@@ -5,13 +5,8 @@ import pathlib
 from typing import Any, List, Optional, Tuple, Union
 
 from ...constants import NO, SETTING_UNCHANGED, YES
-from ...exceptions import (
-    ApiError,
-    ConfigInvalidValue,
-    ConfigRequired,
-    ConfigUnchanged,
-    ConfigUnknown,
-)
+from ...exceptions import (ApiError, ConfigInvalidValue, ConfigRequired,
+                           ConfigUnchanged, ConfigUnknown)
 from ...tools import is_int, join_kv, json_load
 from .tables import tablize_schemas
 
@@ -175,7 +170,7 @@ def config_check_str(
             if value not in schema_enum:
                 sinfo = config_info(schema=schema, value=value, source=source)
                 raise ConfigInvalidValue(f"{sinfo}\nIs not one of {schema_enum}!")
-        else:
+        else:  # pragma: no cover
             valids = [x["name"] for x in schema_enum]
             if value not in valids:
                 valids = "\n" + "\n".join(
@@ -189,8 +184,7 @@ def config_check_str(
         if parsed:
             return value
 
-    if isinstance(value, int):
-        value = str(value)
+    value = str(value) if isinstance(value, int) else value
 
     if not isinstance(value, str):
         sinfo = config_info(schema=schema, value=value, source=source)

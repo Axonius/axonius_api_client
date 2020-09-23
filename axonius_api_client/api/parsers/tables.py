@@ -59,7 +59,7 @@ def tablize_schemas(
         )
         if config:
             config_value = config.get(schema["name"], None)
-            if isinstance(config_value, dict):
+            if isinstance(config_value, dict):  # pragma: no cover
                 config_value = json_dump(config_value)
             value["Current Value"] = config_value
         values.append(value)
@@ -123,15 +123,17 @@ def tab_map(
 
     if orig:
         for orig_key, orig_key_value in orig_value.items():
-            if isinstance(orig_key_value, dict):
+            if isinstance(orig_key_value, dict):  # pragma: no cover
                 continue
 
-            if isinstance(orig_key_value, list):
-                new_value[orig_key] = "\n".join([str(x) for x in orig_key_value])
+            new_key_value = orig_key_value
 
-            elif isinstance(orig_key_value, str) and orig_key_value and orig_width:
-                new_value[orig_key] = textwrap.fill(orig_key_value, width=orig_width)
-            else:
-                new_value[orig_key] = orig_key_value
+            if isinstance(orig_key_value, list):
+                new_key_value = "\n".join([str(x) for x in orig_key_value])
+
+            if isinstance(orig_key_value, str) and orig_key_value and orig_width:
+                new_key_value = textwrap.fill(orig_key_value, width=orig_width)
+
+            new_value[orig_key] = new_key_value
 
     return new_value

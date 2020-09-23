@@ -59,10 +59,10 @@ class Json(Base):
         indent = None if flat else 2
         prefix = " " * indent if indent else ""
 
-        if flat:
-            pre = "" if self._first_row else "\n"
+        if self._first_row:
+            pre = "" if flat else "\n"
         else:
-            pre = "\n" if self._first_row else ",\n"
+            pre = "\n" if flat else ",\n"
 
         self._first_row = False
         self._fd.write(pre)

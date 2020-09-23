@@ -4,12 +4,8 @@ from typing import Optional
 
 from ...exceptions import ApiError, NotFoundError
 from ..mixins import ChildMixins
-from ..parsers.config import (
-    config_build,
-    config_unchanged,
-    config_unknown,
-    parse_settings,
-)
+from ..parsers.config import (config_build, config_unchanged, config_unknown,
+                              parse_settings)
 from ..parsers.tables import tablize
 
 
@@ -64,7 +60,7 @@ class SettingsChild(ChildMixins):
         settings = self.get_section(section=section, full_config=full_config)
         title = settings["settings_title"]
 
-        if not settings["sub_sections"]:
+        if not settings["sub_sections"]:  # pragma: no cover
             raise ApiError(f"Section Name {section!r} has no sub sections!")
 
         valids = []

@@ -300,7 +300,7 @@ class Cnx(ChildMixins):
             cnx_uuid=old_uuid,
         )
 
-        if not isinstance(result, dict) or not result:
+        if not isinstance(result, dict) or not result:  # pragma: no cover
             result = {"error": result}
 
         self.check_if_gone(
@@ -322,7 +322,7 @@ class Cnx(ChildMixins):
                 adapter_node=adapter_node_name,
                 retry=CNX_RETRY,
             )
-        else:
+        else:  # pragma: no cover
             cnx_new = self.get_by_id(
                 cnx_id=old_id, adapter_name=adapter_name, adapter_node=adapter_node_name
             )

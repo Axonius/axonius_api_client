@@ -3,12 +3,8 @@
 import copy
 from typing import List, Optional
 
-from ...constants import (
-    AGG_ADAPTER_NAME,
-    AGG_ADAPTER_TITLE,
-    AGG_EXPR_FIELD_TYPE,
-    ALL_NAME,
-)
+from ...constants import (AGG_ADAPTER_NAME, AGG_ADAPTER_TITLE,
+                          AGG_EXPR_FIELD_TYPE, ALL_NAME)
 from ...tools import strip_left, strip_right
 from .constants import OperatorTypeMaps
 
@@ -282,5 +278,5 @@ def schema_custom(name: str, **kwargs) -> dict:
         "type_norm": ftype_norm,
         "selectable": False,
         "is_agg": False,
-        "expr_field_type": "",
+        "expr_field_type": "agg",
     }
