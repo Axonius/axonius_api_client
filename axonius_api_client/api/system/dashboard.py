@@ -130,7 +130,7 @@ def parse_sub_phase(raw: dict) -> dict:
     parsed["is_done"] = raw["status"] == 1
     parsed["name"] = raw["name"]
     parsed["progress"] = {}
-    for name, status in raw["additional_data"].items():
+    for name, status in raw["additional_data"].items():  # pragma: no cover
         parsed["progress"][status] = parsed["progress"].get(status)
         parsed["progress"][status].append(name)
     return parsed
