@@ -25,6 +25,8 @@ def test_schema_custom():
         "type_norm": "string",
         "selectable": False,
         "is_agg": False,
-        "expr_field_type": "",
+        "expr_field_type": "agg",
+        "is_all": False,
+        "is_details": False,
     }
     assert schema == exp

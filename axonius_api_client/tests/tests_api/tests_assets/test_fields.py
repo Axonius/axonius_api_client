@@ -272,6 +272,12 @@ class FieldsPublic:
         is_agg = schema.pop("is_agg")
         assert isinstance(is_agg, bool)
 
+        is_all = schema.pop("is_all")
+        assert isinstance(is_all, bool)
+
+        is_details = schema.pop("is_details")
+        assert isinstance(is_details, bool)
+
         expr_field_type = schema.pop("expr_field_type")
         assert isinstance(expr_field_type, str)
 

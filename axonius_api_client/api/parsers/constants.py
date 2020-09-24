@@ -19,6 +19,7 @@ class Parsers(BaseEnum):
     to_csv_subnet = enum.auto()
     to_csv_tags = enum.auto()
     to_dt = enum.auto()
+    to_in_subnet = enum.auto()
     to_int = enum.auto()
     to_ip = enum.auto()
     to_none = enum.auto()
@@ -27,9 +28,8 @@ class Parsers(BaseEnum):
     to_str_adapters = enum.auto()
     to_str_cnx_label = enum.auto()
     to_str_escaped_regex = enum.auto()
+    to_str_subnet = enum.auto()
     to_str_tags = enum.auto()
-    to_subnet = enum.auto()
-    to_subnet_start_end = enum.auto()
 
 
 class Types(BaseEnum):
@@ -163,7 +163,7 @@ class Operators(BaseData):
     equals_subnet: Operator = Operator(
         name_map=OperatorNameMaps.equals,
         template='({field} == "{aql_value}")',
-        parser=Parsers.to_subnet,
+        parser=Parsers.to_str_subnet,
     )
     equals_int: Operator = Operator(
         name_map=OperatorNameMaps.equals,
@@ -191,7 +191,7 @@ class Operators(BaseData):
             '({field}_raw == match({{"$gte": {aql_value[0]}, "$lte": '
             "{aql_value[1]}}}))"
         ),
-        parser=Parsers.to_subnet_start_end,
+        parser=Parsers.to_in_subnet,
     )
     ip_not_in_subnet: Operator = Operator(
         name_map=OperatorNameMaps.is_not_in_subnet,
@@ -199,7 +199,7 @@ class Operators(BaseData):
             '(({field}_raw == match({{"$gte": 0, "$lte": {aql_value[0]}}}) or '
             '{field}_raw == match({{"$gte": {aql_value[1]}, "$lte": 4294967295}})))'
         ),
-        parser=Parsers.to_subnet_start_end,
+        parser=Parsers.to_in_subnet,
     )
     ipv4: Operator = Operator(
         name_map=OperatorNameMaps.is_ipv4,
@@ -648,6 +648,8 @@ CUSTOM_FIELDS_MAP: Dict[str, List[dict]] = {
             "is_agg": True,
             "selectable": False,
             "expr_field_type": AGG_EXPR_FIELD_TYPE,
+            "is_details": False,
+            "is_all": False,
         },
     ]
 }

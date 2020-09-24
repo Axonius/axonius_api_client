@@ -109,7 +109,8 @@ def parse_complex(field: dict):
             sub_field["column_name"] = f"{col_name}.{sub_name}"
             sub_field["is_agg"] = is_agg
             sub_field["expr_field_type"] = expr_field_type
-
+            sub_field["is_details"] = field["is_details"]
+            sub_field["is_all"] = False
             type_map = OperatorTypeMaps.get_type_map(field=sub_field)
             sub_field["type_norm"] = type_map.name
             sub_field["selectable"] = True
@@ -152,6 +153,8 @@ def parse_schemas(
             "selectable": True,
             "is_agg": adapter_name == AGG_ADAPTER_NAME,
             "expr_field_type": AGG_EXPR_FIELD_TYPE,
+            "is_details": False,
+            "is_all": True,
         }
     )
 
@@ -178,6 +181,8 @@ def parse_schemas(
                 "selectable": False,
                 "is_agg": True,
                 "expr_field_type": AGG_EXPR_FIELD_TYPE,
+                "is_details": True,
+                "is_all": False,
             },
             {
                 "adapter_name_raw": adapter_name_raw,
@@ -200,6 +205,8 @@ def parse_schemas(
                 "selectable": False,
                 "is_agg": True,
                 "expr_field_type": AGG_EXPR_FIELD_TYPE,
+                "is_details": True,
+                "is_all": False,
             },
         ]
 
@@ -225,7 +232,8 @@ def parse_schemas(
         field["type_norm"] = type_map.name
         field["selectable"] = True
         field["is_agg"] = bool(agg_base_names) and name_base in agg_base_names
-
+        field["is_details"] = False
+        field["is_all"] = False
         if adapter_name == AGG_ADAPTER_NAME:
             field["expr_field_type"] = AGG_EXPR_FIELD_TYPE
         else:
@@ -242,6 +250,7 @@ def parse_schemas(
             field_details["column_title"] += " Details"
             field_details["column_name"] += "_details"
             field_details["selectable"] = False
+            field_details["is_details"] = True
             fields.append(field_details)
 
     return fields
@@ -279,4 +288,6 @@ def schema_custom(name: str, **kwargs) -> dict:
         "selectable": False,
         "is_agg": False,
         "expr_field_type": "agg",
+        "is_details": False,
+        "is_all": False,
     }
