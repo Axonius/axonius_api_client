@@ -63,11 +63,11 @@ def exists_query(apiobj, fields=None, not_exist=False):
     return query
 
 
-@cached(cache=CACHE)
 def get_schema(apiobj, field, key=None, adapter=AGG_ADAPTER_NAME):
+    schemas = get_schemas(apiobj=apiobj, adapter=adapter)
     schema = apiobj.fields.get_field_schema(
         value=field,
-        schemas=get_schemas(apiobj=apiobj),
+        schemas=schemas,
     )
     return schema[key] if key else schema
 

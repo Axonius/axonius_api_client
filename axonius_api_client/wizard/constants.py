@@ -31,7 +31,8 @@ class Fields:
     EXPR_TYPE: str = "expr_field_type"
     ANAME: str = "adapter_name"
     SUBS: str = "sub_fields"
-    DETAILS: str = "_details"
+    IS_ALL: str = "is_all"
+    IS_DETAILS: str = "is_details"
     IS_COMPLEX: str = "is_complex"
 
 
@@ -40,16 +41,31 @@ class Results:
     QUERY: str = "query"
 
 
-class Checks:
+class Patterns:
     FIELD_VALID: re.Pattern = re.compile(
-        r"([^a-z0-9:._\-]) # contains characters that are not one of: a-z 0-9 : . _ -",
-        re.I | re.X,
+        r"""
+(?ix)            # case insensitive and verbose
+([^a-z0-9:._\-]) # contains characters that are not one of: a-z 0-9 : . _ -
+""",
     )
     FIELD_FIRST_ALPHA: re.Pattern = re.compile(
-        r"(^[^a-zA-Z]) # starts with characters that are not one of: a-z", re.I | re.X
+        r"""
+(?ix)        # case insensitive and verbose
+(^[^a-zA-Z]) # starts with characters that are not one of: a-z
+"""
     )
     OP_ALPHA: re.Pattern = re.compile(
-        r"([^a-z_\-])  # contains characters that are not one of: a-z _ -", re.I | re.X
+        r"""
+(?ix)        # case insensitive and verbose
+([^a-z_\-])  # contains characters that are not one of: a-z _ -
+"""
+    )
+    FLAGS: re.Pattern = re.compile(
+        r"""
+(?ix)                   # case insensitive and verbose
+(?P<flags>[^a-z0-9]*)?  # capture optional flags at beginning
+(?P<value>.*)    # capture the rest as the value
+"""
     )
 
     FIELD: List[re.Pattern] = [FIELD_VALID, FIELD_FIRST_ALPHA]

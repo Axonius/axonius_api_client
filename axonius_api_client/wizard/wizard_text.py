@@ -13,16 +13,15 @@ from .wizard import Wizard
 class WizardText(Wizard):
     DOCS: str = Docs.TEXT
 
-    def parse(self, content: str, source: Optional[str] = None) -> List[dict]:
-        source = source or Sources.TEXT_STR
+    def parse(self, content: str, source: str = Sources.TEXT_STR) -> List[dict]:
         self._parsed = entries = self._lines_to_entries(content=content, source=source)
         return super().parse(entries=entries, source=source)
 
     def parse_path(
-        self, path: Union[str, pathlib.Path], source: Optional[str] = None
+        self, path: Union[str, pathlib.Path], source: str = Sources.TEXT_PATH
     ) -> List[dict]:
-        source = source or Sources.TEXT_PATH.format(path=path)
         path, content = path_read(path)
+        source = source.format(path=path)
         return self.parse(content=content, source=source)
 
     def _lines_to_entries(

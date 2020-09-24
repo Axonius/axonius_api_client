@@ -19,15 +19,15 @@ def kv_dump(obj: dict) -> str:
 class WizardCsv(Wizard):
     DOCS: str = Docs.CSV
 
-    def parse(self, content: str, source: Optional[str] = None) -> List[dict]:
+    def parse(self, content: str, source: str = Sources.CSV_STR) -> List[dict]:
         source = source or Sources.CSV_STR
         return self._load_csv(content=content, source=source)
 
     def parse_path(
-        self, path: Union[str, pathlib.Path], source: Optional[str] = None
+        self, path: Union[str, pathlib.Path], source: str = Sources.CSV_PATH
     ) -> List[dict]:
-        source = source or Sources.CSV_PATH.format(path=path)
         path, content = path_read(path, encoding="utf-8")
+        source = source.format(path=path)
         return self.parse(content=content, source=source)
 
     def _load_csv(self, content: str, source: str) -> List[dict]:
@@ -73,7 +73,7 @@ class WizardCsv(Wizard):
         if not entry:
             return
 
-        self._check_keys(entry=entry, keys=EntrySq.REQ)
+        self._check_entry_keys(entry=entry, keys=EntrySq.REQ)
         entry[Entry.SRC] = src
         etype = self._check_entry_type(entry=entry, types=Types.SQ)
         stype = Types.SAVED_QUERY
