@@ -3,6 +3,7 @@
 import codecs
 
 import pytest
+
 from axonius_api_client.exceptions import WizardError
 from axonius_api_client.wizard import ValueParser, WizardCsv
 from axonius_api_client.wizard.constants import Entry, EntrySq, Results, Types

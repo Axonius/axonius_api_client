@@ -4,14 +4,23 @@ import logging
 from typing import List, Optional, Tuple, Union
 
 from ..api.assets.asset_mixin import AssetMixin
-from ..api.parsers.constants import (CUSTOM_FIELDS_MAP, Operator,
-                                     OperatorTypeMaps)
+from ..api.parsers.constants import CUSTOM_FIELDS_MAP, Operator, OperatorTypeMaps
 from ..constants import ALL_NAME, LOG_LEVEL_WIZARD
 from ..exceptions import WizardError
 from ..logs import get_obj_log
 from ..tools import check_type, listify
-from .constants import (Docs, Entry, Expr, Fields, Flags, Patterns, Results,
-                        Sources, Templates, Types)
+from .constants import (
+    Docs,
+    Entry,
+    Expr,
+    Fields,
+    Flags,
+    Patterns,
+    Results,
+    Sources,
+    Templates,
+    Types,
+)
 from .value_parser import ValueParser
 
 
