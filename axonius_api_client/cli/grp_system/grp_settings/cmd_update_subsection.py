@@ -12,7 +12,15 @@ OPTIONS = [*AUTH, EXPORT, SECTION, SUB_SECTION, SPLIT_CONFIG_OPT]
 @add_options(OPTIONS)
 @click.pass_context
 def cmd(
-    ctx, url, key, secret, config, section, sub_section, export_format, **kwargs,
+    ctx,
+    url,
+    key,
+    secret,
+    config,
+    section,
+    sub_section,
+    export_format,
+    **kwargs,
 ):
     """Update a sub-section from arguments."""
     client = ctx.obj.start_client(url=url, key=key, secret=secret)
@@ -22,9 +30,7 @@ def cmd(
     apiobj = getattr(client.system, apiname)
 
     with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
-        settings = apiobj.update_sub_section(
-            section=section, sub_section=sub_section, **new_config
-        )
+        settings = apiobj.update_sub_section(section=section, sub_section=sub_section, **new_config)
         ctx.obj.echo_ok(f"Updated {sub_section!r} with configuration {new_config}")
 
     if export_format == "str":

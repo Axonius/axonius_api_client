@@ -10,12 +10,7 @@ from axonius_api_client.exceptions import HttpError
 from axonius_api_client.http import Http, ParserUrl
 from axonius_api_client.version import __version__
 
-from ..meta import (
-    TEST_CLIENT_CERT,
-    TEST_CLIENT_CERT_NAME,
-    TEST_CLIENT_KEY,
-    TEST_CLIENT_KEY_NAME,
-)
+from ..meta import TEST_CLIENT_CERT, TEST_CLIENT_CERT_NAME, TEST_CLIENT_KEY, TEST_CLIENT_KEY_NAME
 from ..utils import get_url, log_check
 
 InsecureRequestWarning = requests.urllib3.exceptions.InsecureRequestWarning
@@ -253,9 +248,7 @@ class TestHttp:
 
         ax_url = get_url(request)
 
-        http = Http(
-            url=ax_url, log_request_attrs=None, certwarn=False, log_level="debug"
-        )
+        http = Http(url=ax_url, log_request_attrs=None, certwarn=False, log_level="debug")
 
         http()
 
@@ -287,9 +280,7 @@ class TestHttp:
 
         ax_url = get_url(request)
 
-        http = Http(
-            url=ax_url, log_response_attrs="all", certwarn=False, log_level="debug"
-        )
+        http = Http(url=ax_url, log_response_attrs="all", certwarn=False, log_level="debug")
 
         http()
 
@@ -301,9 +292,7 @@ class TestHttp:
 
         ax_url = get_url(request)
 
-        http = Http(
-            url=ax_url, log_response_attrs=None, certwarn=False, log_level="debug"
-        )
+        http = Http(url=ax_url, log_response_attrs=None, certwarn=False, log_level="debug")
 
         http()
 
@@ -315,9 +304,7 @@ class TestHttp:
 
         ax_url = get_url(request)
 
-        http = Http(
-            url=ax_url, log_response_body=True, certwarn=False, log_level="debug"
-        )
+        http = Http(url=ax_url, log_response_body=True, certwarn=False, log_level="debug")
 
         http()
 
@@ -332,9 +319,7 @@ class TestHttp:
 
         ax_url = get_url(request)
 
-        http = Http(
-            url=ax_url, log_response_body=False, certwarn=False, log_level="debug"
-        )
+        http = Http(url=ax_url, log_response_body=False, certwarn=False, log_level="debug")
 
         http()
 
@@ -361,9 +346,7 @@ class TestHttp:
 
         ax_url = get_url(request)
 
-        http = Http(
-            url=ax_url, log_request_body=False, certwarn=False, log_level="debug"
-        )
+        http = Http(url=ax_url, log_request_body=False, certwarn=False, log_level="debug")
 
         http()
 

@@ -5,37 +5,32 @@ import io
 
 import pytest
 
-from axonius_api_client.constants import AGG_ADAPTER_NAME
-
-from .callbacks import Callbacks, load_test_data
+from ...utils import get_rows_exist, get_schema
+from .callbacks import Callbacks
 
 
 class CallbacksCsv(Callbacks):
-    """Pass."""
-
     @pytest.fixture(scope="class")
     def cbexport(self):
-        """Pass."""
         return "csv"
 
     def test_row_as_is(self, cbexport, apiobj):
-        """Pass."""
-        if not apiobj.TEST_DATA["has_complex"]:
-            pytest.skip(f"No complex field found for {apiobj}")
-
-        field_complex = apiobj.TEST_DATA["field_complex"]
-
-        schema = apiobj.fields.get_field_schema(
-            value=field_complex,
-            schemas=apiobj.TEST_DATA["fields_map"][AGG_ADAPTER_NAME],
-        )
-        sub_columns = [x["column_title"] for x in schema["sub_fields"] if x["is_root"]]
+        field_complex = apiobj.FIELD_COMPLEX
+        sub_columns = [
+            x["column_title"]
+            for x in get_schema(apiobj=apiobj, field=field_complex, key="sub_fields")
+            if x["is_root"]
+        ]
+        original_rows = get_rows_exist(apiobj=apiobj, fields=field_complex, max_rows=5)
 
         io_fd = io.StringIO()
 
-        getargs = {"export_fd": io_fd}
-
-        cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs=getargs)
+        cbobj = self.get_cbobj(
+            apiobj=apiobj,
+            cbexport=cbexport,
+            store={"fields": [field_complex]},
+            getargs={"export_fd": io_fd},
+        )
         cbobj.start()
 
         assert isinstance(cbobj.final_schemas, list)
@@ -43,15 +38,39 @@ class CallbacksCsv(Callbacks):
         for x in cbobj.final_schemas:
             assert isinstance(x, dict)
 
-        start_val = io_fd.getvalue().splitlines()[0]
-        for i in sub_columns:
-            assert f'"{i}"' in start_val
-
-        for row in copy.deepcopy(apiobj.TEST_DATA["cb_assets"][:200]):
+        for row in original_rows:
             row_id = row["internal_axon_id"]
             rows_ret = cbobj.process_row(row=copy.deepcopy(row))
             assert len(rows_ret) == 1
             assert rows_ret[0] == {"internal_axon_id": row_id}
+
+        start_val = io_fd.getvalue().splitlines()[0]
+        for i in sub_columns:
+            assert f'"{i}"' in start_val
+
+        cbobj.stop()
+        output = io_fd.getvalue()
+        assert output.endswith("\n\n")
+
+    def test_row_no_titles(self, cbexport, apiobj):
+        rows = get_rows_exist(apiobj=apiobj, max_rows=5)
+
+        io_fd = io.StringIO()
+        cbobj = self.get_cbobj(
+            apiobj=apiobj,
+            cbexport=cbexport,
+            store={"fields": apiobj.fields_default},
+            getargs={"export_fd": io_fd, "field_titles": False},
+        )
+        cbobj.start()
+        assert cbobj.GETARGS["field_titles"] is False
+
+        for row in rows:
+            cbobj.process_row(row=copy.deepcopy(row))
+
+        start_val = io_fd.getvalue().splitlines()[0]
+        for i in cbobj.final_columns:
+            assert f'"{i}"' in start_val
 
         cbobj.stop()
         output = io_fd.getvalue()
@@ -59,18 +78,12 @@ class CallbacksCsv(Callbacks):
 
 
 class TestDevicesCallbacksCsv(CallbacksCsv):
-    """Pass."""
-
     @pytest.fixture(scope="class")
     def apiobj(self, api_devices):
-        """Pass."""
-        return load_test_data(apiobj=api_devices)
+        return api_devices
 
 
 class TestUsersCallbacksCsv(CallbacksCsv):
-    """Pass."""
-
     @pytest.fixture(scope="class")
     def apiobj(self, api_users):
-        """Pass."""
-        return load_test_data(apiobj=api_users)
+        return api_users

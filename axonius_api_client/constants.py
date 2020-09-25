@@ -10,23 +10,21 @@ import dotenv
 
 from . import __package__ as PACKAGE_ROOT
 
-DEFAULT_PATH = os.getcwd()
+DEFAULT_PATH: str = os.getcwd()
 
-AX_ENV = os.environ.get("AX_ENV", "").strip() or DEFAULT_PATH
+AX_ENV_KEY: str = "AX_ENV"
 
 
 def load_dotenv(
-    ax_env: str = AX_ENV, reenv: bool = False, verbose: bool = False
+    ax_env: Union[str, pathlib.Path] = DEFAULT_PATH,
+    reenv: bool = False,
+    verbose: bool = False,
 ) -> Tuple[str, pathlib.Path]:
     """Pass."""
-    if reenv:
-        ax_env = os.environ.get("AX_ENV", "").strip() or DEFAULT_PATH
-
+    ax_env = os.environ.get(AX_ENV_KEY, "").strip() or ax_env
     ax_env_path = pathlib.Path(ax_env).expanduser().resolve()
-
     if ax_env_path.is_dir():
         ax_env_path = ax_env_path / ".env"
-
     return (
         dotenv.load_dotenv(dotenv_path=str(ax_env_path), verbose=verbose),
         ax_env_path,
@@ -96,9 +94,9 @@ TIMEOUT_RESPONSE: int = 900
 """:obj:`int`: seconds to wait for response from API."""
 
 LOG_FMT_VERBOSE: str = (
-    "%(asctime)s %(levelname)-8s [%(name)s:%(funcName)s:%(lineno)d] %(message)s"
+    "%(asctime)s %(levelname)-8s [%(name)s:%(funcName)s:%(pathname)s:%(lineno)d] " "%(message)s"
 )
-LOG_FMT_BRIEF: str = "%(levelname)-8s [%(name)s] %(message)s"
+LOG_FMT_BRIEF: str = "%(levelname)-8s %(module)-15s %(message)s"
 
 DEBUG: str = os.environ.get("AX_DEBUG", "").lower().strip()
 DEBUG: bool = any([DEBUG == x for x in YES])
@@ -131,7 +129,7 @@ LOG_LEVEL_API: str = "debug"
 """:obj:`str`: default logging level to use for
 :obj:`axonius_api_client.api.mixins.Mixins`"""
 
-LOG_LEVEL_WIZARD: str = "debug"
+LOG_LEVEL_WIZARD: str = "info"
 
 LOG_LEVEL_PACKAGE: str = "debug"
 """:obj:`str`: default logging level to use for :mod:`axonius_api_client`"""
@@ -248,8 +246,9 @@ NORM_TYPE_MAP: Tuple[Tuple[str, str, str, str], str] = (
 )
 
 
-GET_SCHEMAS_KEYS: List[str] = ["name", "name_qual", "name_base"]
-GET_SCHEMA_KEYS: List[str] = ["name_base", "name_qual", "name"]
+GET_SCHEMAS_KEYS: List[str] = ["name", "name_qual", "name_base", "title"]
+GET_SCHEMA_KEYS: List[str] = ["name_base", "name_qual", "name", "title"]
+FUZZY_SCHEMAS_KEYS: List[str] = ["name_base", "title"]
 
 SCHEMAS_CUSTOM: Dict[str, dict] = {
     "report_adapters_missing": {

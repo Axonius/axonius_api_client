@@ -24,19 +24,22 @@ class Csv(Base):
     def start(self, **kwargs):
         """Create csvstream and associated file descriptor."""
         super(Csv, self).start(**kwargs)
-        self.do_start(**kwargs)
+        self.open_fd()
 
     def do_start(self, **kwargs):
         """Pass."""
+        if getattr(self, "_stream", None):
+            return
+
         restval = self.GETARGS.get("csv_key_miss", None)
+        extras = self.GETARGS.get("csv_key_extras", "ignore")
         dialect = self.get_csv_dialect()
         quote = self.get_csv_quote()
 
-        self.open_fd()
-
         try:
             self._fd.write(codecs.BOM_UTF8.decode("utf-8"))
-        except Exception:
+        except Exception:  # pragma: no cover
+            # only happens on windows sometimes
             self.LOG.error("Unable to write UTF8 BOM!")
 
         self._stream = csv.DictWriter(
@@ -46,6 +49,7 @@ class Csv(Base):
             lineterminator="\n",
             restval=restval,
             dialect=dialect,
+            extrasaction=extras,
         )
         self._stream.writerow(dict(zip(self.final_columns, self.final_columns)))
         self.do_export_schema()
@@ -60,15 +64,20 @@ class Csv(Base):
         self._fd.write("\n")
         self.close_fd()
 
+    def write_row(self, row: dict):
+        self._stream.fieldnames += [x for x in row if x not in self._stream.fieldnames]
+        self._stream.writerow(row)
+
     def process_row(self, row: dict) -> List[dict]:
         """Write row to dictwriter and delete it."""
-        self.do_pre_row()
+        self.do_pre_row(row=row)
+        self.do_start()
 
         row_return = [{"internal_axon_id": row["internal_axon_id"]}]
         new_rows = self.do_row(row=row)
 
         for new_row in listify(new_rows):
-            self._stream.writerow(new_row)
+            self.write_row(row=new_row)
             del new_row
 
         del new_rows

@@ -16,6 +16,8 @@ def cmd(ctx, url, key, secret, adapter_name, adapter_node, cnx_id, **kwargs):
 
     with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
         client.adapters.cnx.test_by_id(
-            adapter_name=adapter_name, adapter_node=adapter_node, cnx_id=cnx_id,
+            adapter_name=adapter_name,
+            adapter_node=adapter_node,
+            cnx_id=cnx_id,
         )
         ctx.obj.echo_ok(msg="Reachability test succeeded!")

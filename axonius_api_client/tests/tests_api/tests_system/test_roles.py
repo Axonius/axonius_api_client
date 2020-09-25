@@ -8,7 +8,7 @@
 # from ...meta import TEST_PERM, TEST_ROLE
 
 '''
-@pytest.mark.skip("Waiting for update to 3.3!")  # XXX update public API for roles/users
+@pytest.mark.skip("Waiting for update to 3.3!")
 class TestSystemRoles:
     """Pass."""
 

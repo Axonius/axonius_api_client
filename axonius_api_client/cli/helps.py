@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 """Command line interface for Axonius API Client."""
+from ..wizard.constants import Docs
+
 HELPSTR_AUTH = """
 Detailed help for authentication:
 
@@ -193,3 +195,5 @@ HELPSTRS["auth"] = HELPSTR_AUTH
 HELPSTRS["assetexport"] = HELPSTR_EXPORT_ASSET
 HELPSTRS["selectfields"] = HELPSTR_SELECT_FIELDS
 HELPSTRS["query"] = HELPSTR_QUERY
+HELPSTRS["wizard"] = Docs.TEXT
+HELPSTRS["wizard_csv"] = Docs.CSV

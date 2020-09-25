@@ -11,13 +11,15 @@ from .api.adapters import Adapters
 from .api.assets import Devices, Users
 from .api.enforcements import Enforcements
 from .api.enforcements.actions import RunAction
-from .api.system import System
+from .api.system import Dashboard, Instances, System
 from .auth import ApiKey
 from .constants import (
     LOG_FILE_MAX_FILES,
     LOG_FILE_MAX_MB,
     LOG_FILE_NAME,
     LOG_FILE_PATH,
+    LOG_FMT_BRIEF,
+    LOG_FMT_VERBOSE,
     LOG_LEVEL_API,
     LOG_LEVEL_AUTH,
     LOG_LEVEL_CONSOLE,
@@ -73,7 +75,9 @@ class Connect:
         log_level_console: Union[str, int] = LOG_LEVEL_CONSOLE,
         log_level_file: Union[str, int] = LOG_LEVEL_FILE,
         log_console: bool = False,
+        log_console_fmt: str = LOG_FMT_BRIEF,
         log_file: bool = False,
+        log_file_fmt: str = LOG_FMT_VERBOSE,
         log_file_name: Union[str, pathlib.Path] = LOG_FILE_NAME,
         log_file_path: Union[str, pathlib.Path] = LOG_FILE_PATH,
         log_file_max_mb: int = LOG_FILE_MAX_MB,
@@ -209,7 +213,9 @@ class Connect:
         self._handler_con = None
 
         if log_console:
-            self._handler_con = add_stderr(obj=log_logger, level=log_level_console)
+            self._handler_con = add_stderr(
+                obj=log_logger, level=log_level_console, fmt=log_console_fmt
+            )
 
         if log_file:
             self._handler_file = add_file(
@@ -219,6 +225,7 @@ class Connect:
                 file_name=log_file_name,
                 max_mb=log_file_max_mb,
                 max_files=log_file_max_files,
+                fmt=log_file_fmt,
             )
 
         self._http_args = {
@@ -316,6 +323,30 @@ class Connect:
         return self._adapters
 
     @property
+    def instances(self) -> Adapters:
+        """Get the object for adapters API.
+
+        Returns:
+            :obj:`axonius_api_client.adapters.Adapters`
+        """
+        self.start()
+        if not hasattr(self, "_instances"):
+            self._instances = Instances(**self._api_args)
+        return self._instances
+
+    @property
+    def dashboard(self) -> Adapters:
+        """Get the object for adapters API.
+
+        Returns:
+            :obj:`axonius_api_client.adapters.Adapters`
+        """
+        self.start()
+        if not hasattr(self, "_dashboard"):
+            self._dashboard = Dashboard(**self._api_args)
+        return self._dashboard
+
+    @property
     def enforcements(self) -> Enforcements:
         """Get the object for enforcements API.
 
@@ -328,7 +359,7 @@ class Connect:
         return self._enforcements
 
     @property
-    def run_actions(self) -> RunAction:
+    def run_actions(self) -> RunAction:  # pragma: no cover
         """Get the object for run actions API.
 
         Returns:

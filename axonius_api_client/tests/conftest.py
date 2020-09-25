@@ -5,14 +5,15 @@ import os
 import dotenv
 import pytest
 
-from axonius_api_client.api import enforcements, system
+from axonius_api_client.api import dashboard, enforcements, instances, system
 from axonius_api_client.api.adapters import Adapters
 from axonius_api_client.api.adapters.cnx import Cnx
 from axonius_api_client.api.assets import Devices, Users, fields, labels, saved_query
+from axonius_api_client.api.signup import Signup
 from axonius_api_client.constants import CSV_ADAPTER, DEFAULT_NODE
 
-from .meta import CSV_FILECONTENT_STR, CSV_FILENAME, QUERIES
-from .utils import check_apiobj, check_apiobj_children, check_apiobj_xref, get_auth
+from .meta import CSV_FILECONTENT_STR, CSV_FILENAME
+from .utils import check_apiobj, check_apiobj_children, check_apiobj_xref, get_auth, get_url
 
 dotenv.load_dotenv()
 
@@ -48,12 +49,8 @@ def pytest_addoption(parser):
 
 def pytest_configure(config):
     """Ini file additions."""
-    config.addinivalue_line(
-        "filterwarnings", "error::axonius_api_client.exceptions.AxonWarning"
-    )
-    config.addinivalue_line(
-        "filterwarnings", "ignore::urllib3.exceptions.InsecureRequestWarning"
-    )
+    config.addinivalue_line("filterwarnings", "error::axonius_api_client.exceptions.AxonWarning")
+    config.addinivalue_line("filterwarnings", "ignore::urllib3.exceptions.InsecureRequestWarning")
 
 
 @pytest.fixture(scope="session")
@@ -74,17 +71,6 @@ def api_devices(request):
     )
 
     check_apiobj_xref(apiobj=obj, adapters=Adapters)
-
-    field_complex = "specific_data.data.network_interfaces"
-    cb_assets_query = QUERIES["exist_complex"].format(f=field_complex)
-
-    obj.TEST_DATA = getattr(obj, "TEST_DATA", {})
-    obj.TEST_DATA["field_complex"] = field_complex
-    obj.TEST_DATA["field_simple"] = "specific_data.data.public_ips"
-    obj.TEST_DATA["cb_assets_query"] = cb_assets_query
-    obj.TEST_DATA["field_complexes"] = obj.fields_default + [field_complex]
-    obj.TEST_DATA["field_main"] = obj.FIELD_HOSTNAME
-    obj.TEST_DATA["has_complex"] = True
     return obj
 
 
@@ -107,18 +93,6 @@ def api_users(request):
     )
 
     check_apiobj_xref(apiobj=obj, adapters=Adapters)
-
-    field_complex = "specific_data.data.associated_devices"
-    cb_assets_query = QUERIES["exist_complex"].format(f=field_complex)
-
-    obj.TEST_DATA = getattr(obj, "TEST_DATA", {})
-    obj.TEST_DATA["field_complex"] = field_complex
-    obj.TEST_DATA["field_simple"] = "specific_data.data.user_sid"
-    obj.TEST_DATA["cb_assets_query"] = cb_assets_query
-    obj.TEST_DATA["field_complexes"] = obj.fields_default
-    obj.TEST_DATA["field_main"] = obj.FIELD_USERNAME
-    # demo systems have no complex fields for users anymore as of around 3.2
-    obj.TEST_DATA["has_complex"] = False
     return obj
 
 
@@ -151,6 +125,24 @@ def api_adapters(request):
 
 
 @pytest.fixture(scope="session")
+def api_dashboard(request):
+    """Pass."""
+    auth = get_auth(request)
+    obj = dashboard.Dashboard(auth=auth)
+    check_apiobj(authobj=auth, apiobj=obj)
+    return obj
+
+
+@pytest.fixture(scope="session")
+def api_instances(request):
+    """Pass."""
+    auth = get_auth(request)
+    obj = instances.Instances(auth=auth)
+    check_apiobj(authobj=auth, apiobj=obj)
+    return obj
+
+
+@pytest.fixture(scope="session")
 def api_system(request):
     """Pass."""
     auth = get_auth(request)
@@ -158,15 +150,20 @@ def api_system(request):
     check_apiobj(authobj=auth, apiobj=obj)
     check_apiobj_children(
         apiobj=obj,
-        nodes=system.nodes.Nodes,
         settings_core=system.settings.SettingsCore,
         settings_gui=system.settings.SettingsGui,
         settings_lifecycle=system.settings.SettingsLifecycle,
         meta=system.meta.Meta,
-        discover=system.discover.Discover,
         users=system.users.Users,
         roles=system.roles.Roles,
     )
+    return obj
+
+
+@pytest.fixture(scope="session")
+def api_signup(request):
+    """Pass."""
+    obj = Signup(url=get_url(request))
     return obj
 
 

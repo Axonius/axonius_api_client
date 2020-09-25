@@ -4,31 +4,31 @@ import dataclasses
 import enum
 from typing import Dict, List, Optional
 
-from ..constants import AGG_ADAPTER_NAME, AGG_ADAPTER_TITLE, AGG_EXPR_FIELD_TYPE
-from ..exceptions import NotFoundError
-from .base import BaseData, BaseEnum
+from ...constants import AGG_ADAPTER_NAME, AGG_ADAPTER_TITLE, AGG_EXPR_FIELD_TYPE
+from ...data import BaseData, BaseEnum
+from ...exceptions import NotFoundError
 
 
 class Parsers(BaseEnum):
     to_csv_adapters = enum.auto()
-    to_csv_str = enum.auto()
+    to_csv_cnx_label = enum.auto()
     to_csv_int = enum.auto()
     to_csv_ip = enum.auto()
+    to_csv_str = enum.auto()
     to_csv_subnet = enum.auto()
     to_csv_tags = enum.auto()
     to_dt = enum.auto()
-    to_escaped_regex = enum.auto()
+    to_in_subnet = enum.auto()
     to_int = enum.auto()
     to_ip = enum.auto()
+    to_none = enum.auto()
     to_raw_version = enum.auto()
     to_str = enum.auto()
     to_str_adapters = enum.auto()
-    to_str_tags = enum.auto()
-    to_subnet = enum.auto()
-    ip_to_subnet_start_end = enum.auto()
-    none = enum.auto()
     to_str_cnx_label = enum.auto()
-    to_csv_cnx_label = enum.auto()
+    to_str_escaped_regex = enum.auto()
+    to_str_subnet = enum.auto()
+    to_str_tags = enum.auto()
 
 
 class Types(BaseEnum):
@@ -52,40 +52,44 @@ class Formats(BaseEnum):
     connection_label = enum.auto()
 
 
-class OperatorName(BaseData):
+@dataclasses.dataclass
+class OperatorNameMap(BaseData):
     name: str
-    expr_name: Optional[str] = None
+    op: str
 
 
-class OperatorNames(BaseEnum):
-    contains = "contains"
-    count_equals = "count_equals"
-    count_less_than = "count_below"
-    count_more_than = "count_above"
-    endswith = "ends"
-    equals = "equals"
-    exists = "exists"
-    is_false = "false"
-    is_in = "IN"
-    is_in_subnet = "subnet"
-    is_ipv4 = "isIPv4"
-    is_ipv6 = "isIPv6"
-    is_not_in_subnet = "notInSubnet"
-    is_true = "true"
-    last_days = "last_days"
-    last_hours = "last_hours"
-    less_than = "<"
-    more_than = ">"
-    next_days = "next_days"
-    next_hours = "next_hours"
-    regex = "regex"
-    startswith = "starts"
+@dataclasses.dataclass
+class OperatorNameMaps(BaseData):
+    contains: OperatorNameMap = OperatorNameMap(name="contains", op="contains")
+    count_equals: OperatorNameMap = OperatorNameMap(name="count_equals", op="count_equals")
+    count_less_than: OperatorNameMap = OperatorNameMap(name="count_below", op="count_below")
+    count_more_than: OperatorNameMap = OperatorNameMap(name="count_above", op="count_above")
+    endswith: OperatorNameMap = OperatorNameMap(name="endswith", op="ends")
+    equals: OperatorNameMap = OperatorNameMap(name="equals", op="equals")
+    exists: OperatorNameMap = OperatorNameMap(name="exists", op="exists")
+    is_false: OperatorNameMap = OperatorNameMap(name="false", op="false")
+    is_true: OperatorNameMap = OperatorNameMap(name="true", op="true")
+    is_in: OperatorNameMap = OperatorNameMap(name="in", op="IN")
+    is_in_subnet: OperatorNameMap = OperatorNameMap(name="in_subnet", op="subnet")
+    is_ipv4: OperatorNameMap = OperatorNameMap(name="is_ipv4", op="isIPv4")
+    is_ipv6: OperatorNameMap = OperatorNameMap(name="is_ipv6", op="isIPv6")
+    is_not_in_subnet: OperatorNameMap = OperatorNameMap(name="not_in_subnet", op="notInSubnet")
+    last_days: OperatorNameMap = OperatorNameMap(name="last_days", op="days")
+    last_hours: OperatorNameMap = OperatorNameMap(name="last_hours", op="hours")
+    less_than: OperatorNameMap = OperatorNameMap(name="less_than", op="<")
+    more_than: OperatorNameMap = OperatorNameMap(name="more_than", op=">")
+    next_days: OperatorNameMap = OperatorNameMap(name="next_days", op="next_days")
+    next_hours: OperatorNameMap = OperatorNameMap(name="next_hours", op="next_hours")
+    regex: OperatorNameMap = OperatorNameMap(name="regex", op="regex")
+    startswith: OperatorNameMap = OperatorNameMap(name="startswith", op="starts")
+    earlier_than: OperatorNameMap = OperatorNameMap(name="earlier_than", op="earlier than")
+    later_than: OperatorNameMap = OperatorNameMap(name="later_than", op="later than")
 
 
 @dataclasses.dataclass
 class Operator(BaseData):
     template: str
-    name: OperatorNames
+    name_map: OperatorNameMap
     parser: Parsers
 
 
@@ -96,206 +100,207 @@ def ops_clean(operators: List[Operator], clean: List[Operator]):
 @dataclasses.dataclass
 class Operators(BaseData):
     contains: Operator = Operator(
-        name=OperatorNames.contains,
-        template='({field} == regex("{parsed_value}", "i"))',
-        parser=Parsers.to_escaped_regex,
+        name_map=OperatorNameMaps.contains,
+        template='({field} == regex("{aql_value}", "i"))',
+        parser=Parsers.to_str_escaped_regex,
     )
     count_equals: Operator = Operator(
-        name=OperatorNames.count_equals,
-        template="({field} == size({parsed_value}))",
+        name_map=OperatorNameMaps.count_equals,
+        template="({field} == size({aql_value}))",
         parser=Parsers.to_int,
     )
     count_less_than: Operator = Operator(
-        name=OperatorNames.count_less_than,
-        template="({field} < size({parsed_value}))",
+        name_map=OperatorNameMaps.count_less_than,
+        template="({field} < size({aql_value}))",
         parser=Parsers.to_int,
     )
     count_more_than: Operator = Operator(
-        name=OperatorNames.count_more_than,
-        template="({field} > size({parsed_value}))",
+        name_map=OperatorNameMaps.count_more_than,
+        template="({field} > size({aql_value}))",
         parser=Parsers.to_int,
     )
     endswith: Operator = Operator(
-        name=OperatorNames.endswith,
-        template='({field} == regex("{parsed_value}$", "i"))',
-        parser=Parsers.to_escaped_regex,
+        name_map=OperatorNameMaps.endswith,
+        template='({field} == regex("{aql_value}$", "i"))',
+        parser=Parsers.to_str_escaped_regex,
     )
     equals_str: Operator = Operator(
-        name=OperatorNames.equals,
-        template='({field} == "{parsed_value}")',
+        name_map=OperatorNameMaps.equals,
+        template='({field} == "{aql_value}")',
         parser=Parsers.to_str,
     )
     equals_str_tag: Operator = Operator(
-        name=OperatorNames.equals,
-        template='({field} == "{parsed_value}")',
+        name_map=OperatorNameMaps.equals,
+        template='({field} == "{aql_value}")',
         parser=Parsers.to_str_tags,
     )
     equals_str_adapter: Operator = Operator(
-        name=OperatorNames.equals,
-        template='({field} == "{parsed_value}")',
+        name_map=OperatorNameMaps.equals,
+        template='({field} == "{aql_value}")',
         parser=Parsers.to_str_adapters,
     )
     equals_str_cnx_label: Operator = Operator(
-        name=OperatorNames.equals,
-        template='({field} == "{parsed_value}")',
+        name_map=OperatorNameMaps.equals,
+        template='({field} == "{aql_value}")',
         parser=Parsers.to_str_cnx_label,
     )
     equals_ip: Operator = Operator(
-        name=OperatorNames.equals,
-        template='({field} == "{parsed_value}")',
+        name_map=OperatorNameMaps.equals,
+        template='({field} == "{aql_value}")',
         parser=Parsers.to_ip,
     )
     equals_subnet: Operator = Operator(
-        name=OperatorNames.equals,
-        template='({field} == "{parsed_value}")',
-        parser=Parsers.to_subnet,
+        name_map=OperatorNameMaps.equals,
+        template='({field} == "{aql_value}")',
+        parser=Parsers.to_str_subnet,
     )
     equals_int: Operator = Operator(
-        name=OperatorNames.equals,
-        template="({field} == {parsed_value})",
+        name_map=OperatorNameMaps.equals,
+        template="({field} == {aql_value})",
         parser=Parsers.to_int,
     )
     exists: Operator = Operator(
-        name=OperatorNames.exists,
+        name_map=OperatorNameMaps.exists,
         template='(({field} == ({{"$exists":true,"$ne":""}})))',
-        parser=Parsers.none,
+        parser=Parsers.to_none,
     )
     exists_array: Operator = Operator(
-        name=OperatorNames.exists,
+        name_map=OperatorNameMaps.exists,
         template='(({field} == ({{"$exists":true,"$ne":[]}})))',
-        parser=Parsers.none,
+        parser=Parsers.to_none,
     )
     exists_array_object: Operator = Operator(
-        name=OperatorNames.exists,
+        name_map=OperatorNameMaps.exists,
         template='(({field} == ({{"$exists":true,"$ne":[]}})) and {field} != [])',
-        parser=Parsers.none,
+        parser=Parsers.to_none,
     )
     ip_in_subnet: Operator = Operator(
-        name=OperatorNames.is_in_subnet,
-        template=(
-            '({field}_raw == match({{"$gte": {parsed_value[0]}, "$lte": '
-            "{parsed_value[1]}}}))"
-        ),
-        parser=Parsers.ip_to_subnet_start_end,
+        name_map=OperatorNameMaps.is_in_subnet,
+        template=('({field}_raw == match({{"$gte": {aql_value[0]}, "$lte": ' "{aql_value[1]}}}))"),
+        parser=Parsers.to_in_subnet,
     )
     ip_not_in_subnet: Operator = Operator(
-        name=OperatorNames.is_not_in_subnet,
+        name_map=OperatorNameMaps.is_not_in_subnet,
         template=(
-            '(({field}_raw == match({{"$gte": 0, "$lte": {parsed_value[0]}}}) or '
-            '{field}_raw == match({{"$gte": {parsed_value[1]}, "$lte": 4294967295}})))'
+            '(({field}_raw == match({{"$gte": 0, "$lte": {aql_value[0]}}}) or '
+            '{field}_raw == match({{"$gte": {aql_value[1]}, "$lte": 4294967295}})))'
         ),
-        parser=Parsers.ip_to_subnet_start_end,
+        parser=Parsers.to_in_subnet,
     )
     ipv4: Operator = Operator(
-        name=OperatorNames.is_ipv4,
+        name_map=OperatorNameMaps.is_ipv4,
         template='({field} == regex("\\."))',
-        parser=Parsers.none,
+        parser=Parsers.to_none,
     )
     ipv6: Operator = Operator(
-        name=OperatorNames.is_ipv6,
+        name_map=OperatorNameMaps.is_ipv6,
         template='({field} == regex(":"))',
-        parser=Parsers.none,
+        parser=Parsers.to_none,
     )
     is_in_str: Operator = Operator(
-        name=OperatorNames.is_in,
-        template="({field} in [{parsed_value}])",
+        name_map=OperatorNameMaps.is_in,
+        template="({field} in [{aql_value}])",
         parser=Parsers.to_csv_str,
     )
     is_in_str_tag: Operator = Operator(
-        name=OperatorNames.is_in,
-        template="({field} in [{parsed_value}])",
+        name_map=OperatorNameMaps.is_in,
+        template="({field} in [{aql_value}])",
         parser=Parsers.to_csv_tags,
     )
     is_in_str_adapter: Operator = Operator(
-        name=OperatorNames.is_in,
-        template="({field} in [{parsed_value}])",
+        name_map=OperatorNameMaps.is_in,
+        template="({field} in [{aql_value}])",
         parser=Parsers.to_csv_adapters,
     )
     is_in_str_cnx_label: Operator = Operator(
-        name=OperatorNames.is_in,
-        template="({field} in [{parsed_value}])",
+        name_map=OperatorNameMaps.is_in,
+        template="({field} in [{aql_value}])",
         parser=Parsers.to_csv_cnx_label,
     )
     is_in_int: Operator = Operator(
-        name=OperatorNames.is_in,
-        template="{field} in [{parsed_value}]",
+        name_map=OperatorNameMaps.is_in,
+        template="{field} in [{aql_value}]",
         parser=Parsers.to_csv_int,
     )
     is_in_ip: Operator = Operator(
-        name=OperatorNames.is_in,
-        template="({field} in [{parsed_value}])",
+        name_map=OperatorNameMaps.is_in,
+        template="({field} in [{aql_value}])",
         parser=Parsers.to_csv_ip,
     )
     is_in_subnet: Operator = Operator(
-        name=OperatorNames.is_in,
-        template="({field} in [{parsed_value}])",
+        name_map=OperatorNameMaps.is_in,
+        template="({field} in [{aql_value}])",
         parser=Parsers.to_csv_subnet,
     )
     is_false: Operator = Operator(
-        name=OperatorNames.is_false, template="({field} == false)", parser=Parsers.none
+        name_map=OperatorNameMaps.is_false,
+        template="({field} == false)",
+        parser=Parsers.to_none,
     )
     is_true: Operator = Operator(
-        name=OperatorNames.is_true, template="({field} == true)", parser=Parsers.none
+        name_map=OperatorNameMaps.is_true,
+        template="({field} == true)",
+        parser=Parsers.to_none,
     )
     last_hours: Operator = Operator(
-        name=OperatorNames.last_hours,
-        template='({field} >= date("NOW - {parsed_value}h"))',
+        name_map=OperatorNameMaps.last_hours,
+        template='({field} >= date("NOW - {aql_value}h"))',
         parser=Parsers.to_int,
     )
     last_days: Operator = Operator(
-        name=OperatorNames.last_days,
-        template='({field} >= date("NOW - {parsed_value}d"))',
+        name_map=OperatorNameMaps.last_days,
+        template='({field} >= date("NOW - {aql_value}d"))',
         parser=Parsers.to_int,
     )
     less_than_date: Operator = Operator(
-        name=OperatorNames.less_than,
-        template='({field} < date("{parsed_value}"))',
+        name_map=OperatorNameMaps.less_than,
+        template='({field} < date("{aql_value}"))',
         parser=Parsers.to_dt,
     )
     less_than_int: Operator = Operator(
-        name=OperatorNames.less_than,
-        template="({field} < {parsed_value})",
+        name_map=OperatorNameMaps.less_than,
+        template="({field} < {aql_value})",
         parser=Parsers.to_int,
     )
-    less_than_version: Operator = Operator(
-        name=OperatorNames.less_than,
-        template="({field}_raw < '{parsed_value}')",
+    earlier_than_version: Operator = Operator(
+        name_map=OperatorNameMaps.earlier_than,
+        template="({field}_raw < '{aql_value}')",
         parser=Parsers.to_raw_version,
     )
     more_than_date: Operator = Operator(
-        name=OperatorNames.more_than,
-        template='({field} > date("{parsed_value}"))',
+        name_map=OperatorNameMaps.more_than,
+        template='({field} > date("{aql_value}"))',
         parser=Parsers.to_dt,
     )
     more_than_int: Operator = Operator(
-        name=OperatorNames.more_than,
-        template="({field} < {parsed_value})",
+        name_map=OperatorNameMaps.more_than,
+        template="({field} < {aql_value})",
         parser=Parsers.to_int,
     )
-    more_than_version: Operator = Operator(
-        name=OperatorNames.more_than,
-        template="({field}_raw > '{parsed_value}')",
+    later_than_version: Operator = Operator(
+        name_map=OperatorNameMaps.later_than,
+        template="({field}_raw > '{aql_value}')",
         parser=Parsers.to_raw_version,
     )
     next_hours: Operator = Operator(
-        name=OperatorNames.next_hours,
-        template='({field} >= date("NOW + {parsed_value}h"))',
+        name_map=OperatorNameMaps.next_hours,
+        template='({field} >= date("NOW + {aql_value}h"))',
         parser=Parsers.to_int,
     )
     next_days: Operator = Operator(
-        name=OperatorNames.next_days,
-        template='({field} >= date("NOW + {parsed_value}d"))',
+        name_map=OperatorNameMaps.next_days,
+        template='({field} >= date("NOW + {aql_value}d"))',
         parser=Parsers.to_int,
     )
     regex: Operator = Operator(
-        name=OperatorNames.regex,
-        template='({field} == regex("{parsed_value}", "i"))',
+        name_map=OperatorNameMaps.regex,
+        template='({field} == regex("{aql_value}", "i"))',
         parser=Parsers.to_str,
     )
     startswith: Operator = Operator(
-        name=OperatorNames.startswith,
-        template='({field} == regex("^{parsed_value}", "i"))',
-        parser=Parsers.to_escaped_regex,
+        name_map=OperatorNameMaps.startswith,
+        template='({field} == regex("^{aql_value}", "i"))',
+        parser=Parsers.to_str_escaped_regex,
     )
 
 
@@ -378,8 +383,8 @@ class OperatorTypeMaps(BaseData):
             Operators.contains,
             Operators.is_in_str,
             Operators.equals_str,
-            Operators.less_than_version,
-            Operators.more_than_version,
+            Operators.earlier_than_version,
+            Operators.later_than_version,
         ],
         field_type=Types.string,
         field_format=Formats.version,
@@ -413,7 +418,9 @@ class OperatorTypeMaps(BaseData):
         field_type=Types.integer,
     )
     number: OperatorTypeMap = OperatorTypeMap(
-        name="number", operators=integer.operators, field_type=Types.number,
+        name="number",
+        operators=integer.operators,
+        field_type=Types.number,
     )
     array_object: OperatorTypeMap = OperatorTypeMap(
         name="array_object",
@@ -567,36 +574,40 @@ class OperatorTypeMaps(BaseData):
         raise NotFoundError("\n".join([err, valid_str, err]))
 
     @classmethod
-    def get_operator(cls, field: dict, operator: str):
+    def get_operator(cls, field: dict, operator: str, err: Optional[str] = None):
         operator = operator.lower().strip()
         type_map = cls.get_type_map(field=field)
-        for op in type_map.operators:
-            if operator == op.name.name:
+        ops = {x.name_map.name: x for x in type_map.operators}
+
+        for op_name, op in ops.items():
+            if operator == op_name:
                 return op
 
-        name = field["name"]
+        fname = field["name"]
+        ftype = type_map.name
+
         if field["parent"] != "root":
             parent = field["parent"]
-            name = f"{name} (sub field of {parent})"
+            fname = f"{fname} (sub field of {parent})"
 
-        valid = "\n - " + "\n - ".join([x.name.name for x in type_map.operators])
-        raise NotFoundError(
-            f"Invalid operator {operator!r} for field {name!r}, valids:{valid}"
-        )
+        valid = "\n - " + "\n - ".join(list(ops))
+        valid = f"Valid operators for field {fname!r} with type {ftype!r}:{valid}"
+        err = err or f"Invalid operator supplied {operator!r}\n"
+        raise NotFoundError(f"{err}{valid}")
 
-    @classmethod
-    def get_map(cls) -> dict:
-        op_map = {}
+    # @classmethod
+    # def get_map(cls) -> dict:
+    #     op_map = {}
 
-        typemaps = cls.get_fields()
-        for typemap in typemaps:
-            type_name = typemap.name
-            for op in typemap.default.operators:
-                op_name = op.name.name
-                if op_name not in op_map:
-                    op_map[op_name] = []
-                op_map[op_name].append(type_name)
-        return op_map
+    #     typemaps = cls.get_fields()
+    #     for typemap in typemaps:
+    #         type_name = typemap.name
+    #         for op in typemap.default.operators:
+    #             op_name = op.name.name
+    #             if op_name not in op_map:
+    #                 op_map[op_name] = []
+    #             op_map[op_name].append(type_name)
+    #     return op_map
 
 
 CUSTOM_FIELDS_MAP: Dict[str, List[dict]] = {
@@ -621,7 +632,10 @@ CUSTOM_FIELDS_MAP: Dict[str, List[dict]] = {
             "format": "connection_label",
             "type_norm": "string_cnx_label",
             "is_agg": True,
+            "selectable": False,
             "expr_field_type": AGG_EXPR_FIELD_TYPE,
+            "is_details": False,
+            "is_all": False,
         },
     ]
 }

@@ -4,21 +4,9 @@ from ....exceptions import NotFoundError
 from ....tools import listify
 from ...context import CONTEXT_SETTINGS, click
 from ...options import AUTH, INPUT_FILE, add_options
+from .grp_common import ABORT
 
-OPTIONS = [
-    *AUTH,
-    INPUT_FILE,
-    click.option(
-        "--abort/--no-abort",
-        "-a/-na",
-        "abort",
-        help="Stop adding saved queries if an error happens",
-        required=False,
-        default=False,
-        show_envvar=True,
-        show_default=True,
-    ),
-]
+OPTIONS = [*AUTH, INPUT_FILE, ABORT]
 
 
 @click.command(name="add-from-json", context_settings=CONTEXT_SETTINGS)
@@ -60,7 +48,8 @@ def cmd(ctx, url, key, secret, input_file, abort, **kwargs):
         try:
             apiobj.saved_query.get_by_name(value=sq_name)
             ctx.obj.echo_error(
-                msg=f"Saved query {sq_name!r} already exists, can not add", abort=abort,
+                msg=f"Saved query {sq_name!r} already exists, can not add",
+                abort=abort,
             )
             continue
         except NotFoundError:
@@ -68,8 +57,6 @@ def cmd(ctx, url, key, secret, input_file, abort, **kwargs):
 
         with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror, abort=abort):
             sq_uuid = apiobj.saved_query._add(data=new_sq)
-            ctx.obj.echo_ok(
-                f"Successfully created saved query: {sq_name} with UUID {sq_uuid}"
-            )
+            ctx.obj.echo_ok(f"Successfully created saved query: {sq_name} with UUID {sq_uuid}")
 
     ctx.exit(0)

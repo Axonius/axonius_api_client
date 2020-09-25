@@ -5,7 +5,6 @@ from axonius_api_client.constants import KEY_MAP_SCHEMA
 
 
 def test_tablize_footer_true():
-    """Pass."""
     key = "badwolf1"
     key_value = "badwolf2"
     err = "badwolf3"
@@ -19,7 +18,6 @@ def test_tablize_footer_true():
 
 
 def test_tablize_footer_false():
-    """Pass."""
     key = "badwolf1"
     key_value = "badwolf2"
     err = "badwolf3"
@@ -33,7 +31,6 @@ def test_tablize_footer_false():
 
 
 def test_tablize_err_false():
-    """Pass."""
     key = "badwolf1"
     key_value = "badwolf2"
 
@@ -46,7 +43,6 @@ def test_tablize_err_false():
 
 
 def test_tab_map_orig_false():
-    """Pass."""
     value = {"name": "schema_str", "type": "string", "required": False, "other": "bloop"}
     exp = {"Name": "schema_str", "Type": "string", "Required": False}
     result = tab_map(value=value, key_map=KEY_MAP_SCHEMA, orig=False)
@@ -54,7 +50,6 @@ def test_tab_map_orig_false():
 
 
 def test_tab_map_orig_true():
-    """Pass."""
     value = {"name": "schema_str", "type": "string", "required": False, "other": "bloop"}
     exp = {"Name": "schema_str", "Type": "string", "Required": False, "other": "bloop"}
     result = tab_map(value=value, key_map=KEY_MAP_SCHEMA, orig=True)
@@ -62,7 +57,6 @@ def test_tab_map_orig_true():
 
 
 def test_tab_map_list():
-    """Pass."""
     long_str = ("badwolf " * 30).split(" ")
     long_str_exp = "\n".join(long_str)
     value = {
@@ -80,7 +74,6 @@ def test_tab_map_list():
 
 
 def test_tab_map_long_str():
-    """Pass."""
     long_str = "badwolf " * 30
     long_str_exp = (
         "badwolf badwolf badwolf\n"
@@ -109,7 +102,6 @@ def test_tab_map_long_str():
 
 
 def test_tab_map_list_other():
-    """Pass."""
     value = {
         "name": "schema_str",
         "type": "string",

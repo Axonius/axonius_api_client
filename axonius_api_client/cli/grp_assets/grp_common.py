@@ -2,17 +2,14 @@
 """Command line interface for Axonius API Client."""
 import tabulate
 
-from ...constants import FIELD_JOINER, FIELD_TRIM_LEN, TABLE_FORMAT, TABLE_MAX_ROWS
+from ...constants import (FIELD_JOINER, FIELD_TRIM_LEN, TABLE_FORMAT,
+                          TABLE_MAX_ROWS)
+from ...tools import path_read
+from ...wizard import WizardText
+from ...wizard.constants import Results, Types
 from ..context import CONTEXT_SETTINGS, click
-from ..options import (
-    AUTH,
-    EXPORT,
-    FIELDS_SELECT,
-    PAGING,
-    add_options,
-    get_option_fields_default,
-    get_option_help,
-)
+from ..options import (AUTH, EXPORT, FIELDS_SELECT, PAGING, add_options,
+                       get_option_fields_default, get_option_help)
 
 HISTORY_DATE = click.option(
     "--history-date",
@@ -25,6 +22,42 @@ HISTORY_DATE = click.option(
     hidden=False,
     metavar="YYYY-MM-DD",
 )
+
+
+def wiz_callback(ctx, param, value):
+    """Pass."""
+    contents = []
+    if value:
+        for i in value:
+            etype = i[0].strip().lower()
+            if etype not in Types.CLI:
+                types = ", ".join(Types.CLI)
+                msg = f"Invalid expression type {etype!r}, valid types: {types}"
+                click.secho(msg, err=True, fg="red")
+                ctx.exit(1)
+            expr = i[1]
+            if etype == Types.FILE:
+                contents += path_read(obj=expr)[1].strip().splitlines()
+            else:
+                contents.append(f"{etype} {expr}")
+    return "\n".join(contents)
+
+
+WIZ = [
+    click.option(
+        "--wiz",
+        "-wz",
+        "wizard_content",
+        help="Build a query using an expression (multiples, will override --query)",
+        nargs=2,
+        multiple=True,
+        default=[],
+        show_envvar=True,
+        hidden=False,
+        callback=wiz_callback,
+        metavar='TYPE "EXPRESSION"',
+    ),
+]
 
 GET_EXPORT = [
     click.option(
@@ -276,7 +309,6 @@ GET_EXPORT = [
     ),
     HISTORY_DATE,
 ]
-# XXX show historical dates
 
 GET_BUILDERS = [
     *AUTH,
@@ -404,3 +436,15 @@ def gen_get_by_cmd(options, doc, cmd_name, method):
 
     cmd.__doc__ = doc
     return cmd
+
+
+def load_wiz(apiobj, wizard_content, kwargs, exprs=False):
+    if wizard_content:
+        wizard = WizardText(apiobj=apiobj)
+        result = wizard.parse(content=wizard_content)
+        query = result[Results.QUERY]
+        click.secho(f"Wizard built a query: {query}", err=True, fg="green")
+        kwargs["query"] = query
+        if exprs:
+            kwargs["expressions"] = result[Results.EXPRS]
+    return kwargs

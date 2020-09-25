@@ -10,6 +10,7 @@ from .exceptions import AlreadyLoggedIn, AuthError, InvalidCredentials, NotLogge
 from .http import Http
 from .logs import get_obj_log
 from .tools import json_reload
+from .version import __version__
 
 
 class Model:
@@ -46,6 +47,7 @@ class Mixins:
 
     _logged_in: bool = False
     """:obj:`bool`: Attribute checked by :meth:`is_logged_in`."""
+    _validate_path: str = API_VERSION.system.meta_about
 
     def __init__(self, http: Http, creds: dict, **kwargs):
         """Mixins for Model.
@@ -117,22 +119,21 @@ class Mixins:
 
     def _validate(self):
         """Validate credentials."""
-        # XXX fallback to old auth path, remove once everyone is 3.5+
-        paths = [API_VERSION.system.meta_about, API_VERSION.devices.count]
-        for path in paths:
-            response = self.http(method="get", path=path)
-            body = json_reload(obj=response.text, error=False)
-            self.LOG.debug(f"Received auth path {path!r} body:\n{body}")
-            if response.ok:
-                break
+        response = self.http(method="get", path=self._validate_path)
+        if response.status_code == 404:
+            raise AuthError(
+                f"Unable to access endpoint {self._validate_path}, "
+                f"API client v{__version__} requires Axonius v3.9 or above"
+            )
+
+        body = json_reload(obj=response.text, error=False)
+        self.LOG.debug(f"Received auth path {self._validate_path!r} body:\n{body}")
 
         try:
             response.raise_for_status()
         except Exception as exc:
             self._logged_in = False
-            raise InvalidCredentials(
-                f"Invalid credentials on {self} -- exception: {exc}"
-            )
+            raise InvalidCredentials(f"Invalid credentials on {self} -- exception: {exc}")
 
         self._logged_in = True
 

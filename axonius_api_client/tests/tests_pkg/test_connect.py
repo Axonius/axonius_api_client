@@ -31,9 +31,7 @@ class TestConnect:
         """Pass."""
         ax_url = get_url(request)
 
-        c = Connect(
-            url=ax_url, key=BAD_CRED, secret=BAD_CRED, log_console=True, log_file=True
-        )
+        c = Connect(url=ax_url, key=BAD_CRED, secret=BAD_CRED, log_console=True, log_file=True)
 
         assert "Not connected" in format(c)
         assert "Not connected" in repr(c)
@@ -56,8 +54,8 @@ class TestConnect:
         format(c.system.settings_core)
         format(c.system.users)
         format(c.system.roles)
-        format(c.system.nodes)
-        format(c.system.discover)
+        format(c.instances)
+        format(c.dashboard)
         format(c.system.meta)
         format(c.enforcements)
         format(c.users)
@@ -93,9 +91,7 @@ class TestConnect:
 
     def test_connect_error(self):
         """Pass."""
-        c = Connect(
-            url="https://127.0.0.1:3919", key=BAD_CRED, secret=BAD_CRED, certwarn=False
-        )
+        c = Connect(url="https://127.0.0.1:3919", key=BAD_CRED, secret=BAD_CRED, certwarn=False)
 
         c._http.CONNECT_TIMEOUT = 1
 
@@ -107,9 +103,7 @@ class TestConnect:
         """Pass."""
         ax_url = get_url(request)
 
-        c = Connect(
-            url=ax_url, key=BAD_CRED, secret=BAD_CRED, certwarn=False, wraperror=False
-        )
+        c = Connect(url=ax_url, key=BAD_CRED, secret=BAD_CRED, certwarn=False, wraperror=False)
 
         c._http.CONNECT_TIMEOUT = 1
 

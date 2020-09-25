@@ -2,7 +2,7 @@
 """Command line interface for Axonius API Client."""
 import click
 
-from ...api.entry import Entry
+from ...api.signup import Signup
 from ...tools import json_dump
 from ..options import URL, add_options
 
@@ -58,7 +58,7 @@ OPTIONS = [URL, PASSWORD, COMPANY, CONTACT, EXPORT]
 @click.pass_context
 def cmd(ctx, url, password, company_name, contact_email, export_format):
     """Perform the initial signup to an instance."""
-    entry = Entry(url=url)
+    entry = Signup(url=url)
     with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
         data = entry.signup(
             password=password, company_name=company_name, contact_email=contact_email

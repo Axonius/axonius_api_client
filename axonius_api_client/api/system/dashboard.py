@@ -3,10 +3,28 @@
 import math
 
 from ...tools import dt_now, dt_parse, timedelta
-from ..mixins import ChildMixins
+from ..mixins import ModelMixins
+from ..routers import API_VERSION, Router
 
 
-class Discover(ChildMixins):
+class Dashboard(ModelMixins):
+    def _init(self, **kwargs):
+        """Post init method for subclasses to use for extra setup."""
+        super(Dashboard, self)._init(**kwargs)
+
+    @property
+    def router(self) -> Router:
+        """Router for this API model.
+
+        Returns:
+            :obj:`.routers.Router`: REST API route defs
+        """
+        return API_VERSION.dashboard
+
+    @property
+    def system_router(self) -> Router:
+        return API_VERSION.system
+
     """Child API model for working with discovery cycles."""
 
     def get(self) -> dict:
@@ -52,12 +70,12 @@ class Discover(ChildMixins):
         Returns:
             :obj:`dict`: discovery cycle metadata
         """
-        path = self.router.discover_lifecycle
+        path = self.router.lifecycle
         return self.request(method="get", path=path)
 
     def _start(self) -> str:
         """Direct API method to start a discovery cycle."""
-        path = self.router.discover_start
+        path = self.system_router.discover_start
         return self.request(method="post", path=path)
 
     def _stop(self) -> str:
@@ -66,7 +84,7 @@ class Discover(ChildMixins):
         Returns:
             :obj:`dict`: discovery cycle metadata
         """
-        path = self.router.discover_stop
+        path = self.system_router.discover_stop
         return self.request(method="post", path=path)
 
 
@@ -82,7 +100,7 @@ def parse_lifecycle(raw: dict) -> dict:
     if start_dt:
         start_dt = dt_parse(start_dt)
 
-    if (finish_dt and start_dt) and finish_dt >= start_dt:
+    if (finish_dt and start_dt) and finish_dt >= start_dt:  # pragma: no cover
         took_seconds = (finish_dt - start_dt).seconds
         took_minutes = math.ceil(took_seconds / 60)
     else:
@@ -112,8 +130,7 @@ def parse_sub_phase(raw: dict) -> dict:
     parsed["is_done"] = raw["status"] == 1
     parsed["name"] = raw["name"]
     parsed["progress"] = {}
-    for name, status in raw["additional_data"].items():
-        if status not in parsed["progress"]:
-            parsed["progress"][status] = []
+    for name, status in raw["additional_data"].items():  # pragma: no cover
+        parsed["progress"][status] = parsed["progress"].get(status)
         parsed["progress"][status].append(name)
     return parsed

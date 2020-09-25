@@ -6,23 +6,12 @@ import re
 import sys
 from typing import IO, Generator, List, Optional
 
-from ...constants import (
-    DEFAULT_PATH,
-    FIELD_JOINER,
-    FIELD_TRIM_LEN,
-    FIELD_TRIM_STR,
-    SCHEMAS_CUSTOM,
-)
+from ...constants import (DEFAULT_PATH, FIELD_JOINER, FIELD_TRIM_LEN,
+                          FIELD_TRIM_STR, SCHEMAS_CUSTOM)
 from ...exceptions import ApiError
-from ...tools import (
-    calc_percent,
-    echo_error,
-    echo_ok,
-    echo_warn,
-    get_path,
-    join_kv,
-    listify,
-)
+from ...tools import (calc_percent, echo_error, echo_ok, echo_warn, get_path,
+                      join_kv, listify)
+from ..parsers.fields import schema_custom
 
 
 class Base:
@@ -36,7 +25,6 @@ class Base:
         apiobj,
         store: dict,
         state: Optional[dict] = None,
-        fields_map: Optional[dict] = None,
         getargs: dict = None,
     ):
         """Object for handling callbacks for assets."""
@@ -46,7 +34,7 @@ class Base:
         self.APIOBJ = apiobj
         """:obj:`AssetMixin`: assets object."""
 
-        self.ALL_SCHEMAS: dict = fields_map or apiobj.fields.get()
+        self.ALL_SCHEMAS: dict = apiobj.fields.get()
         """Map of adapter -> field schemas."""
 
         self.STATE: dict = state or {}
@@ -54,6 +42,8 @@ class Base:
 
         self.STORE: dict = store or {}
         """store dict used by get assets method to track arguments."""
+
+        self.CURRENT_ROW: dict = {}
 
         self.GETARGS: dict = getargs or {}
         """original kwargs supplied to get assets method."""
@@ -66,6 +56,8 @@ class Base:
 
         self.TAG_ROWS_REMOVE: List[dict] = []
         """assets to remove tags from in do_tagging."""
+
+        self._custom_cb_exc: List[dict] = []
 
         self._init()
 
@@ -87,14 +79,18 @@ class Base:
         store = join + join.join(join_kv(obj=self.STORE))
         self.echo(msg=f"Get Arguments: {store}")
 
-        schemas_pretty = self.APIOBJ.fields._prettify_schemas(
-            schemas=self.schemas_selected
-        )
+    def echo_columns(self, **kwargs):
+        if getattr(self, "ECHO_DONE", False):
+            return
+
+        join = "\n   - "
+        schemas_pretty = self.APIOBJ.fields._prettify_schemas(schemas=self.schemas_selected)
         schemas_pretty = join + join.join(schemas_pretty)
         self.echo(msg=f"Selected Columns: {schemas_pretty}")
 
         final_columns = join + join.join(self.final_columns)
         self.echo(msg=f"Final Columns: {final_columns}")
+        self.ECHO_DONE = True
 
     def stop(self, **kwargs):
         """Run stop callbacks."""
@@ -103,35 +99,27 @@ class Base:
 
     def process_row(self, row: dict) -> List[dict]:
         """Handle callbacks for an asset."""
-        self.do_pre_row()
+        self.do_pre_row(row=row)
         return self.do_row(row=row)
 
-    def do_pre_row(self):
+    def do_pre_row(self, row: dict):
         """Pass."""
+        self.CURRENT_ROW = row
         self.STATE.setdefault("rows_processed_total", 0)
         self.STATE["rows_processed_total"] += 1
+        self.echo_columns()
         self.echo_page_progress()
 
     def do_row(self, row: dict) -> List[dict]:
         """Pass."""
-        custom_cbs = listify(self.GETARGS.get("custom_cbs", []))
-
-        for custom_cb in custom_cbs:
-            try:
-                custom_cb(self=self, row=row)
-            except Exception as exc:
-                msg = f"Custom callback {custom_cb} failed: {exc}"
-                self.echo(msg=msg, error="exception", abort=False)
-
+        self.do_custom_cbs(row=row)
         self.process_tags_to_add(row=row)
         self.process_tags_to_remove(row=row)
         self.add_report_adapters_missing(row=row)
         self.add_report_software_whitelist(row=row)
-
-        for schema in self.schemas_selected:
-            self.do_excludes(row=row, schema=schema)
-            self.do_add_null_values(row=row, schema=schema)
-            self.do_flatten_fields(row=row, schema=schema)
+        self.do_excludes(row=row)
+        self.do_add_null_values(row=row)
+        self.do_flatten_fields(row=row)
 
         new_rows = self.do_explode_field(row=row)
         for new_row in new_rows:
@@ -139,6 +127,17 @@ class Base:
             self.do_change_field_titles(row=new_row)
 
         return new_rows
+
+    def do_custom_cbs(self, row: dict):
+        custom_cbs = listify(self.GETARGS.get("custom_cbs", []))
+
+        for custom_cb in custom_cbs:
+            try:
+                custom_cb(self=self, row=row)
+            except Exception as exc:
+                msg = f"Custom callback {custom_cb} failed: {exc}"
+                self._custom_cb_exc.append({"cb": custom_cb, "exc": exc, "msg": msg})
+                self.echo(msg=msg, error="exception", abort=False)
 
     def echo_page_progress(self):
         """Asset callback to echo progress per N rows using an echo method."""
@@ -169,38 +168,49 @@ class Base:
 
         self.echo(msg=f"PROGRESS: {percent} {rows} {pages} in {taken}")
 
-    def do_add_null_values(self, row: dict, schema: dict, key: str = "name_qual"):
+    def do_add_null_values(self, row: dict):
         """Null out missing fields."""
-        if not self.GETARGS.get("field_null", False) or self.is_excluded(schema=schema):
+        if not self.GETARGS.get("field_null", False):
+            return
+
+        for schema in self.schemas_selected:
+            self._do_add_null_values(row=row, schema=schema)
+
+    def _do_add_null_values(self, row: dict, schema: dict, key: str = "name_qual"):
+        """Null out missing fields."""
+        if self.is_excluded(schema=schema):
             return
 
         null_value = self.GETARGS.get("field_null_value", None)
+
         field = schema[key]
 
         if schema["is_complex"]:
+
             row[field] = listify(row.get(field, []))
 
             for item in row[field]:
                 for sub_schema in self.get_sub_schemas(schema=schema):
-                    self.do_add_null_values(schema=sub_schema, row=item, key="name")
+                    self._do_add_null_values(schema=sub_schema, row=item, key="name")
         else:
             row[field] = row.get(field, null_value)
 
-    def do_excludes(self, row: dict, schema: dict):
+    def do_excludes(self, row: dict):
         """Asset callback to remove fields from row."""
         if not self.GETARGS.get("field_excludes", []):
             return
 
-        if self.is_excluded(schema=schema):
-            row.pop(schema["name_qual"], None)
-            return
+        for schema in self.schemas_selected:
+            if self.is_excluded(schema=schema):
+                row.pop(schema["name_qual"], None)
+                continue
 
-        if schema["is_complex"]:
-            items = listify(row.get(schema["name_qual"], []))
-            for sub_schema in schema["sub_fields"]:
-                if self.is_excluded(schema=sub_schema):
-                    for item in items:
-                        item.pop(sub_schema["name"], None)
+            if schema["is_complex"]:
+                items = listify(row.get(schema["name_qual"], []))
+                for sub_schema in schema["sub_fields"]:
+                    if self.is_excluded(schema=sub_schema):
+                        for item in items:
+                            item.pop(sub_schema["name"], None)
 
     def do_join_values(self, row: dict):
         """Join values."""
@@ -229,15 +239,16 @@ class Base:
         for schema in self.final_schemas:
             row[schema["column_title"]] = row.pop(schema["name_qual"], None)
 
-    def do_flatten_fields(self, row: dict, schema: dict):
+    def do_flatten_fields(self, row: dict):
         """Asset callback to flatten complex fields."""
         if not self.GETARGS.get("field_flatten", False):
             return
 
-        if self.schema_to_explode == schema:
-            return
+        for schema in self.schemas_selected:
+            if self.schema_to_explode == schema:  # pragma: no cover
+                return
 
-        self._do_flatten_fields(row=row, schema=schema)
+            self._do_flatten_fields(row=row, schema=schema)
 
     def _do_flatten_fields(self, row: dict, schema: dict):
         """Pass."""
@@ -267,37 +278,31 @@ class Base:
         if not explode:
             return [row]
 
-        schema = self.schema_to_explode
-
-        if self.is_excluded(schema=schema):
+        if self.is_excluded(schema=self.schema_to_explode):
             return [row]
 
-        original_row = copy.deepcopy(row)
+        schema = self.schema_to_explode
+        field = schema["name_qual"]
+
+        if len(listify(row.get(field, []))) <= 1:
+            self._do_flatten_fields(row=row, schema=schema)
+            return [row]
+
+        items = listify(row.pop(field, []))
+        new_rows_map = {}
 
         if schema["is_complex"]:
-            new_rows_map = {}
-            items = listify(row.pop(schema["name_qual"], []))
-
             for sub_schema in self.get_sub_schemas(schema=schema):
                 for idx, item in enumerate(items):
                     new_rows_map.setdefault(idx, copy.deepcopy(row))
                     value = item.pop(sub_schema["name"], null_value)
                     new_rows_map[idx][sub_schema["name_qual"]] = value
         else:
-            new_rows_map = {}
-            items = listify(row.pop(schema["name_qual"], []))
-
             for idx, item in enumerate(items):
                 new_rows_map.setdefault(idx, copy.deepcopy(row))
                 new_rows_map[idx][schema["name_qual"]] = item
 
-        new_rows = [new_rows_map[idx] for idx in new_rows_map]
-
-        if not new_rows:
-            self._do_flatten_fields(row=original_row, schema=schema)
-            return [original_row]
-
-        return new_rows
+        return [new_rows_map[idx] for idx in new_rows_map]
 
     def do_tagging(self):
         """Pass."""
@@ -357,7 +362,7 @@ class Base:
                 name = sw.get("name", "")
                 if re.search(whitelist_entry, name, re.I):
                     return True
-            return False
+            return False  # pragma: no cover
 
         def clean_list(obj):
             return sorted(list(set(obj)))
@@ -393,11 +398,7 @@ class Base:
         )
 
         row[software_missing_name] = clean_list(
-            [
-                x
-                for x in whitelist
-                if not sw_match(whitelist_entry=x, sws=installed_software)
-            ]
+            [x for x in whitelist if not sw_match(whitelist_entry=x, sws=installed_software)]
         )
 
         row[software_whitelist_name] = whitelist
@@ -514,7 +515,7 @@ class Base:
 
         if do_echo:
             if warning:
-                echo_warn(msg=msg)
+                echo_warn(msg=msg)  # pragma: no cover
             elif error:
                 echo_error(msg=msg, abort=abort)
             else:
@@ -522,7 +523,7 @@ class Base:
             return
 
         if warning:
-            getattr(self.LOG, level_warning)(msg)
+            getattr(self.LOG, level_warning)(msg)  # pragma: no cover
         elif error:
             getattr(self.LOG, level_error)(msg)
             if abort:
@@ -596,16 +597,18 @@ class Base:
         fields = listify(self.STORE.get("fields", []))
         api_fields = [x for x in self.APIOBJ.FIELDS_API if x not in fields]
 
-        if include_details:
+        if include_details:  # pragma: no cover
             api_fields += ["meta_data.client_used", "unique_adapter_names_details"]
 
         self._fields_selected = []
 
         for field in api_fields + fields:
             self._fields_selected.append(field)
-            if include_details and not field.startswith("adapters_data."):
+            if include_details and not field.startswith("adapters_data."):  # pragma: no cover
                 field_details = f"{field}_details"
                 self._fields_selected.append(field_details)
+
+        self._fields_selected += [x for x in self.CURRENT_ROW if x not in self._fields_selected]
 
         return self._fields_selected
 
@@ -629,7 +632,8 @@ class Base:
         for field in self.fields_selected:
             if field in all_schemas_map:
                 self._schemas_selected.append(all_schemas_map[field])
-            else:
+            else:  # pragma: no cover
+                self._schemas_selected.append(schema_custom(name=field))
                 msg = f"No schema found for field {field}"
                 self.echo(msg=msg, warning=True)
 

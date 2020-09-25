@@ -4,7 +4,7 @@
 # from ...tools import strip_left
 
 
-def parse_permissions(raw, default_perm=False):
+def parse_permissions(raw, default_perm=False):  # pragma: no cover
     """Pass."""
     actions = {}
     categories = {}

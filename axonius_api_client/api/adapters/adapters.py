@@ -33,9 +33,7 @@ class Adapters(ModelMixins):
         adapters = self.get()
 
         keys = ["node_name", "node_id"]
-        nodes = [
-            x for x in adapters if node.lower() in [str(x[k]).lower() for k in keys]
-        ]
+        nodes = [x for x in adapters if node.lower() in [str(x[k]).lower() for k in keys]]
 
         if not nodes:
             err = f"No node named {node!r} found"
@@ -61,17 +59,15 @@ class Adapters(ModelMixins):
 
     def config_refetch(self, adapter: dict, config_type: str = "generic") -> dict:
         """Pass."""
-        if config_type not in CONFIG_TYPES:
-            msg = f"Invalid configuration type {config_type!r}, valids: {CONFIG_TYPES}"
-            raise ApiError(msg)
-
+        schemas = adapter["schemas"]
         name_config = f"{config_type}_name"
-        name_config = adapter["schemas"][name_config]
+        name_config = schemas.get(name_config)
         name_plugin = adapter["name_plugin"]
 
         if not name_config:
             name = adapter["name"]
-            raise ApiError(f"Adapter {name} has no adapter {config_type} settings!")
+            valid = ", ".join([x for x in CONFIG_TYPES if f"{x}_name" in schemas])
+            raise ApiError(f"Adapter {name} has no config type {config_type!r}, valids: {valid}!")
 
         data = self._config_get(name_plugin=name_plugin, name_config=name_config)
 
@@ -105,7 +101,9 @@ class Adapters(ModelMixins):
         )
 
         self._config_update(
-            name_raw=adapter["name_raw"], name_config=name_config, new_config=new_config,
+            name_raw=adapter["name_raw"],
+            name_config=name_config,
+            new_config=new_config,
         )
 
         return self.config_refetch(adapter=adapter, config_type=config_type)
@@ -216,9 +214,7 @@ class Adapters(ModelMixins):
         path = self.router.config_set.format(
             adapter_name_raw=name_raw, adapter_config_name=name_config
         )
-        return self.request(
-            method="post", path=path, json=new_config, error_json_invalid=False
-        )
+        return self.request(method="post", path=path, json=new_config, error_json_invalid=False)
 
     def _config_get(self, name_plugin: str, name_config: str) -> dict:
         """Direct API method to set advanced settings for an adapter.
@@ -271,9 +267,7 @@ class Adapters(ModelMixins):
         """
         data = {"field_name": field_name}
         files = {"userfile": (file_name, file_content, file_content_type, file_headers)}
-        path = self.router.file_upload.format(
-            adapter_name_raw=name_raw, adapter_node_id=node_id
-        )
+        path = self.router.file_upload.format(adapter_name_raw=name_raw, adapter_node_id=node_id)
         ret = self.request(method="post", path=path, data=data, files=files)
         ret["filename"] = file_name
         return ret

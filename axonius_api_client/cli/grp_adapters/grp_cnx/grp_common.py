@@ -204,7 +204,9 @@ def add_cnx(ctx, client, adapter_name, adapter_node, new_config, **kwargs):
     with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
         try:
             cnx_new = client.adapters.cnx.add(
-                adapter_name=adapter_name, adapter_node=adapter_node, **new_config,
+                adapter_name=adapter_name,
+                adapter_node=adapter_node,
+                **new_config,
             )
             ctx.obj.echo_ok(msg="Connection added successfully!")
 

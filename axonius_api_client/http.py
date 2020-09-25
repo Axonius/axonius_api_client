@@ -193,7 +193,7 @@ class Http:
         self.session.proxies["https"] = https_proxy
         self.session.proxies["http"] = http_proxy
 
-        if certpath:
+        if certpath:  # pragma: no cover
             path_read(obj=certpath, binary=True)
             self.session.verify = certpath
         else:
@@ -322,9 +322,7 @@ class Http:
         Returns:
             :obj:`str`
         """
-        return "{c.__module__}.{c.__name__}(url={url!r})".format(
-            c=self.__class__, url=self.url
-        )
+        return "{c.__module__}.{c.__name__}(url={url!r})".format(c=self.__class__, url=self.url)
 
     def __repr__(self) -> str:
         """Show object info.
@@ -406,9 +404,7 @@ class Http:
     def _get_log_attrs(self, attr_type: str) -> List[str]:
         return getattr(self, "_LOG_ATTRS", {}).get(attr_type, [])
 
-    def _set_log_attrs(
-        self, attr_map: dict, attr_type: str, value: Union[str, List[str]]
-    ):
+    def _set_log_attrs(self, attr_map: dict, attr_type: str, value: Union[str, List[str]]):
         if not hasattr(self, "_LOG_ATTRS"):
             self._LOG_ATTRS = {"response": [], "request": []}
 

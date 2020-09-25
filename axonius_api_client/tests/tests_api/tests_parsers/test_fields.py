@@ -1,13 +1,32 @@
 # -*- coding: utf-8 -*-
 """Test suite."""
-# import pytest
-
-# from axonius_api_client.api.parsers.fields import get_type_norm
-# from axonius_api_client.exceptions import ApiError
+from axonius_api_client.api.parsers.fields import schema_custom
 
 
-# def test_get_type_norm_error():
-#     """Pass."""
-#     field = {"type": "badwolf", "name": "badwolf"}
-#     with pytest.raises(ApiError):
-#         get_type_norm(field=field)
+def test_schema_custom():
+    schema = schema_custom("badwolf")
+    exp = {
+        "adapter_name_raw": "custom",
+        "adapter_name": "custom",
+        "adapter_title": "Custom",
+        "adapter_prefix": "cu",
+        "column_name": "custom:badwolf",
+        "column_title": "Custom: Badwolf",
+        "sub_fields": [],
+        "is_complex": False,
+        "is_list": False,
+        "is_root": True,
+        "parent": "root",
+        "name": "badwolf",
+        "name_base": "badwolf",
+        "name_qual": "badwolf",
+        "title": "Badwolf",
+        "type": "string",
+        "type_norm": "string",
+        "selectable": False,
+        "is_agg": False,
+        "expr_field_type": "agg",
+        "is_all": False,
+        "is_details": False,
+    }
+    assert schema == exp

@@ -80,6 +80,7 @@ FIELD_FORMATS = [
     "version",
     "password",
     "time",
+    "connection_label",
 ]
 SCHEMA_FIELD_FORMATS = [
     "image",
