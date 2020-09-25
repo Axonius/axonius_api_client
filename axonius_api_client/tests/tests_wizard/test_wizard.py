@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Test suite for axonius_api_client.wizard.wizard"""
 import pytest
+
 from axonius_api_client.api.parsers.constants import Operators
 from axonius_api_client.constants import ALL_NAME
 from axonius_api_client.exceptions import NotFoundError, WizardError

@@ -3,8 +3,7 @@
 from ....wizard import WizardCsv
 from ...context import CONTEXT_SETTINGS, click
 from ...options import AUTH, INPUT_FILE, add_options, get_option_help
-from .grp_common import (ABORT, EXPORT_FORMAT, OVERWRITE, check_sq_exist,
-                         handle_export)
+from .grp_common import ABORT, EXPORT_FORMAT, OVERWRITE, check_sq_exist, handle_export
 
 OPTIONS = [
     *AUTH,
