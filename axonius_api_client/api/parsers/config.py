@@ -5,8 +5,13 @@ import pathlib
 from typing import Any, List, Optional, Tuple, Union
 
 from ...constants import NO, SETTING_UNCHANGED, YES
-from ...exceptions import (ApiError, ConfigInvalidValue, ConfigRequired,
-                           ConfigUnchanged, ConfigUnknown)
+from ...exceptions import (
+    ApiError,
+    ConfigInvalidValue,
+    ConfigRequired,
+    ConfigUnchanged,
+    ConfigUnknown,
+)
 from ...tools import is_int, join_kv, json_load
 from .tables import tablize_schemas
 
@@ -29,34 +34,22 @@ def config_check(
             raise ConfigInvalidValue(f"{sinfo}\nValue of None not allowed")
 
     if schema_type == "file":
-        return config_check_file(
-            value=value, schema=schema, callbacks=callbacks, source=source
-        )
+        return config_check_file(value=value, schema=schema, callbacks=callbacks, source=source)
 
     if schema_type == "bool":
-        return config_check_bool(
-            value=value, schema=schema, callbacks=callbacks, source=source
-        )
+        return config_check_bool(value=value, schema=schema, callbacks=callbacks, source=source)
 
     if schema_type == "number":
-        return config_check_int(
-            value=value, schema=schema, callbacks=callbacks, source=source
-        )
+        return config_check_int(value=value, schema=schema, callbacks=callbacks, source=source)
 
     if schema_type == "integer":
-        return config_check_int(
-            value=value, schema=schema, callbacks=callbacks, source=source
-        )
+        return config_check_int(value=value, schema=schema, callbacks=callbacks, source=source)
 
     if schema_type == "array":
-        return config_check_array(
-            value=value, schema=schema, callbacks=callbacks, source=source
-        )
+        return config_check_array(value=value, schema=schema, callbacks=callbacks, source=source)
 
     if schema_type == "string":
-        return config_check_str(
-            value=value, schema=schema, callbacks=callbacks, source=source
-        )
+        return config_check_str(value=value, schema=schema, callbacks=callbacks, source=source)
 
     valids = ["string", "integer", "number", "bool", "array"]
     valids = ", ".join(valids)
@@ -173,9 +166,7 @@ def config_check_str(
         else:  # pragma: no cover
             valids = [x["name"] for x in schema_enum]
             if value not in valids:
-                valids = "\n" + "\n".join(
-                    ["  ".join(x) for x in join_kv(obj=schema_enum)]
-                )
+                valids = "\n" + "\n".join(["  ".join(x) for x in join_kv(obj=schema_enum)])
                 sinfo = config_info(schema=schema, value=value, source=source)
                 raise ConfigInvalidValue(f"{sinfo}\nIs not one of:{valids}!")
 
@@ -208,9 +199,7 @@ def config_build(
         elif name in new_config:
             value = new_config[name]
             if check:
-                value = config_check(
-                    value=value, schema=schema, source=source, callbacks=callbacks
-                )
+                value = config_check(value=value, schema=schema, source=source, callbacks=callbacks)
             new_config[name] = value
     return new_config
 
@@ -238,9 +227,7 @@ def config_unchanged(
     """Pass."""
     if new_config == old_config or not new_config:
         err = f"No changes supplied for {source}"
-        raise ConfigUnchanged(
-            tablize_schemas(schemas=schemas, config=old_config, err=err)
-        )
+        raise ConfigUnchanged(tablize_schemas(schemas=schemas, config=old_config, err=err))
     return new_config
 
 

@@ -2,11 +2,17 @@
 """Test suite for assets."""
 import pytest
 import requests
+
 from axonius_api_client.api import mixins
 from axonius_api_client.constants import MAX_PAGE_SIZE
-from axonius_api_client.exceptions import (ApiError, JsonError, JsonInvalid,
-                                           NotFoundError, ResponseNotOk,
-                                           ToolsError)
+from axonius_api_client.exceptions import (
+    ApiError,
+    JsonError,
+    JsonInvalid,
+    NotFoundError,
+    ResponseNotOk,
+    ToolsError,
+)
 
 from ...meta import QUERIES
 from ...utils import check_asset, check_assets, get_field_vals, get_rows_exist
@@ -49,9 +55,7 @@ class ModelMixinsBase:
     def test_model_json_error(self, apiobj):
         """Test exc thrown when json has error status."""
         with pytest.raises(JsonError):
-            apiobj.request(
-                path=apiobj.router.root + "/badwolf", method="get", error_status=False
-            )
+            apiobj.request(path=apiobj.router.root + "/badwolf", method="get", error_status=False)
 
     def test_model_no_json_error(self, apiobj):
         """Test exc thrown when status code != 200."""

@@ -69,8 +69,6 @@ def cmd(ctx, url, key, secret, input_file, abort, **kwargs):
 
         with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror, abort=abort):
             sq_uuid = apiobj.saved_query._add(data=new_sq)
-            ctx.obj.echo_ok(
-                f"Successfully created saved query: {sq_name} with UUID {sq_uuid}"
-            )
+            ctx.obj.echo_ok(f"Successfully created saved query: {sq_name} with UUID {sq_uuid}")
 
     ctx.exit(0)

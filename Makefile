@@ -44,9 +44,9 @@ pyenv_init:
 
 lint:
 	pipenv run isort $(PACKAGE) setup.py shell.py
-	pipenv run pipenv run black -l 89 $(PACKAGE) setup.py shell.py
+	pipenv run pipenv run black -l 100 $(PACKAGE) setup.py shell.py
 # 	pipenv run pydocstyle --match='(?!test_).*\.py' $(PACKAGE) setup.py shell.py
-	pipenv run flake8 --max-line-length 89 $(PACKAGE) setup.py shell.py
+	pipenv run flake8 --max-line-length 100 $(PACKAGE) setup.py shell.py
 	pipenv run bandit -x $(PACKAGE)/examples,$(PACKAGE)/tests --skip B101 -r $(PACKAGE)
 
 test:

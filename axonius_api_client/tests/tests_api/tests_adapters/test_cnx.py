@@ -2,11 +2,18 @@
 """Test suite."""
 
 import pytest
+
 from axonius_api_client.constants import CSV_ADAPTER, DEFAULT_NODE
-from axonius_api_client.exceptions import (CnxAddError, CnxGoneError,
-                                           CnxTestError, CnxUpdateError,
-                                           ConfigInvalidValue, ConfigRequired,
-                                           ConfigUnchanged, NotFoundError)
+from axonius_api_client.exceptions import (
+    CnxAddError,
+    CnxGoneError,
+    CnxTestError,
+    CnxUpdateError,
+    ConfigInvalidValue,
+    ConfigRequired,
+    ConfigUnchanged,
+    NotFoundError,
+)
 
 from ...meta import CSV_FILECONTENT_STR
 from ...utils import get_cnx_broken, get_cnx_existing, get_cnx_working
@@ -28,9 +35,7 @@ class TestCnxPrivate(TestCnxBase):
 
 class TestCnxPublic(TestCnxBase):
     def test_get_by_adapter(self, apiobj):
-        cnxs = apiobj.cnx.get_by_adapter(
-            adapter_name=CSV_ADAPTER, adapter_node=DEFAULT_NODE
-        )
+        cnxs = apiobj.cnx.get_by_adapter(adapter_name=CSV_ADAPTER, adapter_node=DEFAULT_NODE)
         assert isinstance(cnxs, list)
         for cnx in cnxs:
             assert isinstance(cnx, dict)
@@ -93,9 +98,7 @@ class TestCnxPublic(TestCnxBase):
 
     def test_test_fail_no_domain(self, apiobj):
         with pytest.raises(ConfigRequired):
-            apiobj.cnx.test(
-                adapter_name="tanium", adapter_node=DEFAULT_NODE, username="x"
-            )
+            apiobj.cnx.test(adapter_name="tanium", adapter_node=DEFAULT_NODE, username="x")
 
     def test_update_cnx_nochange(self, apiobj):
         cnx = get_cnx_broken(apiobj)
@@ -144,9 +147,7 @@ class TestCnxPublic(TestCnxBase):
         assert exc.value.cnx_new["config"]["https_proxy"] == new_https_proxy
         assert exc.value.cnx_old["config"].get("https_proxy") == old_https_proxy
 
-        cnx_reset = apiobj.cnx.update_cnx(
-            cnx_update=exc.value.cnx_new, https_proxy=old_https_proxy
-        )
+        cnx_reset = apiobj.cnx.update_cnx(cnx_update=exc.value.cnx_new, https_proxy=old_https_proxy)
         assert cnx_reset["config"]["https_proxy"] == old_https_proxy
 
     def test_cb_file_upload_fail(self, apiobj, csv_file_path, monkeypatch):
@@ -264,9 +265,7 @@ class TestCnxPublic(TestCnxBase):
             # "is_installed_sw": False,
             # "s3_use_ec2_attached_instance_profile": False,
         }
-        cnx_added = apiobj.cnx.add(
-            adapter_name=CSV_ADAPTER, adapter_node=DEFAULT_NODE, **config
-        )
+        cnx_added = apiobj.cnx.add(adapter_name=CSV_ADAPTER, adapter_node=DEFAULT_NODE, **config)
         for k, v in config.items():
             assert v == cnx_added["config"][k]
 
@@ -293,9 +292,7 @@ class TestCnxPublic(TestCnxBase):
             "user_id": "badwolf",
             "file_path": file_path,
         }
-        cnx_added = apiobj.cnx.add(
-            adapter_name=CSV_ADAPTER, adapter_node=DEFAULT_NODE, **config
-        )
+        cnx_added = apiobj.cnx.add(adapter_name=CSV_ADAPTER, adapter_node=DEFAULT_NODE, **config)
 
         assert isinstance(cnx_added["config"]["file_path"], dict)
 

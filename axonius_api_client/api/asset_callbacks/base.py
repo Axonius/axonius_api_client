@@ -84,9 +84,7 @@ class Base:
             return
 
         join = "\n   - "
-        schemas_pretty = self.APIOBJ.fields._prettify_schemas(
-            schemas=self.schemas_selected
-        )
+        schemas_pretty = self.APIOBJ.fields._prettify_schemas(schemas=self.schemas_selected)
         schemas_pretty = join + join.join(schemas_pretty)
         self.echo(msg=f"Selected Columns: {schemas_pretty}")
 
@@ -400,11 +398,7 @@ class Base:
         )
 
         row[software_missing_name] = clean_list(
-            [
-                x
-                for x in whitelist
-                if not sw_match(whitelist_entry=x, sws=installed_software)
-            ]
+            [x for x in whitelist if not sw_match(whitelist_entry=x, sws=installed_software)]
         )
 
         row[software_whitelist_name] = whitelist
@@ -603,20 +597,18 @@ class Base:
         fields = listify(self.STORE.get("fields", []))
         api_fields = [x for x in self.APIOBJ.FIELDS_API if x not in fields]
 
-        if include_details:
+        if include_details:  # pragma: no cover
             api_fields += ["meta_data.client_used", "unique_adapter_names_details"]
 
         self._fields_selected = []
 
         for field in api_fields + fields:
             self._fields_selected.append(field)
-            if include_details and not field.startswith("adapters_data."):
+            if include_details and not field.startswith("adapters_data."):  # pragma: no cover
                 field_details = f"{field}_details"
                 self._fields_selected.append(field_details)
 
-        self._fields_selected += [
-            x for x in self.CURRENT_ROW if x not in self._fields_selected
-        ]
+        self._fields_selected += [x for x in self.CURRENT_ROW if x not in self._fields_selected]
 
         return self._fields_selected
 

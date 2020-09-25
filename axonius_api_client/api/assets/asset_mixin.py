@@ -27,6 +27,7 @@ class AssetMixin(ModelMixins):
     FIELD_MAIN: str = FIELD_AXON_ID
     FIELD_SIMPLE: str = FIELD_AXON_ID
     FIELD_COMPLEX: str = None
+    FIELD_COMPLEX_SUB: str = None
 
     FIELDS_API: List[str] = [
         FIELD_AXON_ID,
@@ -48,9 +49,7 @@ class AssetMixin(ModelMixins):
         """Destroy ALL assets."""
         return self._destroy(destroy=destroy, history=history)
 
-    def count(
-        self, query: Optional[str] = None, history_date: Optional[str] = None
-    ) -> int:
+    def count(self, query: Optional[str] = None, history_date: Optional[str] = None) -> int:
         """Get the count of assets.
 
         Args:
@@ -243,10 +242,7 @@ class AssetMixin(ModelMixins):
                 if state["stop_fetch"]:  # pragma: no cover
                     break
 
-                if (
-                    state["max_rows"]
-                    and state["rows_processed_total"] >= state["max_rows"]
-                ):
+                if state["max_rows"] and state["rows_processed_total"] >= state["max_rows"]:
                     stop_msg = "'rows_processed_total' greater than 'max_rows'"
                     state["stop_msg"] = stop_msg
                     state["stop_fetch"] = True
@@ -300,15 +296,9 @@ class AssetMixin(ModelMixins):
 
         state["rows_fetched_this_page"] = len(page["assets"])
         state["rows_fetched_total"] += state["rows_fetched_this_page"]
-        state["rows_to_fetch_left"] = (
-            state["rows_to_fetch_total"] - state["rows_fetched_total"]
-        )
-        state["pages_to_fetch_total"] = math.ceil(
-            state["rows_to_fetch_total"] / state["page_size"]
-        )
-        state["pages_to_fetch_left"] = math.ceil(
-            state["rows_to_fetch_left"] / state["page_size"]
-        )
+        state["rows_to_fetch_left"] = state["rows_to_fetch_total"] - state["rows_fetched_total"]
+        state["pages_to_fetch_total"] = math.ceil(state["rows_to_fetch_total"] / state["page_size"])
+        state["pages_to_fetch_left"] = math.ceil(state["rows_to_fetch_left"] / state["page_size"])
 
         state["page_cursor"] = page.get("cursor")
         return page
@@ -333,14 +323,10 @@ class AssetMixin(ModelMixins):
         state["rows_to_fetch_total"] = page["page"]["totalResources"]
         state["rows_fetched_this_page"] = len(page["assets"])
         state["rows_fetched_total"] += state["rows_fetched_this_page"]
-        state["rows_to_fetch_left"] = (
-            state["rows_to_fetch_total"] - state["rows_fetched_total"]
-        )
+        state["rows_to_fetch_left"] = state["rows_to_fetch_total"] - state["rows_fetched_total"]
         state["page_number"] = page["page"]["number"]
         state["pages_to_fetch_total"] = page["page"]["totalPages"]
-        state["pages_to_fetch_left"] = (
-            state["pages_to_fetch_total"] - state["page_number"]
-        )
+        state["pages_to_fetch_left"] = state["pages_to_fetch_total"] - state["page_number"]
         return page
 
     def get_by_id(self, id: str) -> dict:

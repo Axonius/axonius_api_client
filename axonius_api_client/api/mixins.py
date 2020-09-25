@@ -184,9 +184,7 @@ class ModelMixins(Model, PageSizeMixin):
 
         return data
 
-    def _check_response_code(
-        self, response: requests.Response, error_status: bool = True
-    ):
+    def _check_response_code(self, response: requests.Response, error_status: bool = True):
         """Check the status code of a response.
 
         Args:
@@ -422,10 +420,7 @@ class PagingMixinsObject(PageSizeMixin):
 
                 state["rows_processed_total"] += 1
 
-                if (
-                    state["max_rows"]
-                    and state["rows_processed_total"] >= state["max_rows"]
-                ):
+                if state["max_rows"] and state["rows_processed_total"] >= state["max_rows"]:
                     stop_msg = "'rows_processed_total' greater than 'max_rows'"
                     state["stop_msg"] = stop_msg
                     state["stop_fetch"] = True

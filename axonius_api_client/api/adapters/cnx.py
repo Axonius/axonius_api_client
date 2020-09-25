@@ -4,14 +4,26 @@ import time
 from typing import IO, List, Union
 
 from ...constants import CNX_GONE, CNX_RETRY, CNX_SANE_DEFAULTS, DEFAULT_NODE
-from ...exceptions import (CnxAddError, CnxGoneError, CnxTestError,
-                           CnxUpdateError, ConfigInvalidValue, ConfigRequired,
-                           NotFoundError)
+from ...exceptions import (
+    CnxAddError,
+    CnxGoneError,
+    CnxTestError,
+    CnxUpdateError,
+    ConfigInvalidValue,
+    ConfigRequired,
+    NotFoundError,
+)
 from ...tools import json_load, pathlib
 from ..mixins import ChildMixins
-from ..parsers.config import (config_build, config_default, config_empty,
-                              config_info, config_required, config_unchanged,
-                              config_unknown)
+from ..parsers.config import (
+    config_build,
+    config_default,
+    config_empty,
+    config_info,
+    config_required,
+    config_unchanged,
+    config_unknown,
+)
 from ..parsers.tables import tablize_cnxs, tablize_schemas
 
 
@@ -87,9 +99,7 @@ class Cnx(ChildMixins):
         """Pass."""
         return CNX_SANE_DEFAULTS.get(adapter_name, CNX_SANE_DEFAULTS["all"])
 
-    def get_by_adapter(
-        self, adapter_name: str, adapter_node: str = DEFAULT_NODE
-    ) -> List[dict]:
+    def get_by_adapter(self, adapter_name: str, adapter_node: str = DEFAULT_NODE) -> List[dict]:
         """Get connections from an adapter."""
         adapter = self.parent.get_by_name(name=adapter_name, node=adapter_node)
         cnxs = adapter["cnx"]
@@ -123,9 +133,7 @@ class Cnx(ChildMixins):
 
             time.sleep(sleep)
 
-            cnxs = self.get_by_adapter(
-                adapter_name=adapter_name, adapter_node=adapter_node
-            )
+            cnxs = self.get_by_adapter(adapter_name=adapter_name, adapter_node=adapter_node)
 
         value_key = value_key.upper()
         err = (
@@ -160,9 +168,7 @@ class Cnx(ChildMixins):
         )
 
     # TBD add get_by_label
-    def test_by_id(
-        self, cnx_id: str, adapter_name: str, adapter_node: str = DEFAULT_NODE
-    ) -> str:
+    def test_by_id(self, cnx_id: str, adapter_name: str, adapter_node: str = DEFAULT_NODE) -> str:
         """Pass."""
         cnx_test = self.get_by_id(
             cnx_id=cnx_id, adapter_name=adapter_name, adapter_node=adapter_node
@@ -271,9 +277,7 @@ class Cnx(ChildMixins):
         old_uuid = cnx_update["uuid"]
         old_id = cnx_update["id"]
 
-        source = (
-            f"updating settings for connection ID {old_id!r} on adapter {adapter_name!r}"
-        )
+        source = f"updating settings for connection ID {old_id!r} on adapter {adapter_name!r}"
 
         new_config = self.build_config(
             cnx_schemas=cnx_schemas,
@@ -342,15 +346,11 @@ class Cnx(ChildMixins):
 
         return cnx_new
 
-    def check_if_gone(
-        self, result: dict, cnx_id: str, adapter_name: str, adapter_node: str
-    ):
+    def check_if_gone(self, result: dict, cnx_id: str, adapter_name: str, adapter_node: str):
         """Pass."""
         message = result.get("message", "")
         if message == CNX_GONE:
-            cnxs = self.get_by_adapter(
-                adapter_name=adapter_name, adapter_node=adapter_node
-            )
+            cnxs = self.get_by_adapter(adapter_name=adapter_name, adapter_node=adapter_node)
             err = f"Connection with ID {cnx_id!r} no longer exists!"
             raise CnxGoneError(tablize_cnxs(cnxs=cnxs, err=err))
 
@@ -473,9 +473,7 @@ class Cnx(ChildMixins):
             )
 
         sinfo = config_info(schema=schema, value=str(value), source=source)
-        raise ConfigInvalidValue(
-            f"{sinfo}\nFile is not an existing file or a file-like object!"
-        )
+        raise ConfigInvalidValue(f"{sinfo}\nFile is not an existing file or a file-like object!")
 
     # XXX failing with secondary node!!! wrong plugin name?
     def _add(self, adapter_name_raw: str, adapter_node_id: str, new_config: dict) -> str:

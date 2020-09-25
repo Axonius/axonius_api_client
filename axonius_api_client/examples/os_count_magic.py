@@ -58,9 +58,7 @@ SEARCH_MAPS = [
         "updates": {"build": 0},
     },
     {
-        "searches": {
-            "str": re.compile(r"cisco.* \((.*?)\), version ([\d.\w, \(\)]+)", re.I)
-        },
+        "searches": {"str": re.compile(r"cisco.* \((.*?)\), version ([\d.\w, \(\)]+)", re.I)},
         "updates": {"build": 1, "dist": 0},
     },
     {
@@ -77,9 +75,7 @@ SEARCH_MAPS = [
         "overwrites": ["type"],
     },
     {
-        "searches": {
-            "str": re.compile(r"big-ip software release (.*)", re.DOTALL | re.I)
-        },
+        "searches": {"str": re.compile(r"big-ip software release (.*)", re.DOTALL | re.I)},
         "updates": {"build": 0, "dist": "Big-IP"},
     },
     {
@@ -99,15 +95,11 @@ SEARCH_MAPS = [
         "updates": {"build": 0},
     },
     {
-        "searches": {
-            "str": re.compile(r"(japan computer.*?) (\d[\d.\w\-]+) ", re.DOTALL | re.I)
-        },
+        "searches": {"str": re.compile(r"(japan computer.*?) (\d[\d.\w\-]+) ", re.DOTALL | re.I)},
         "updates": {"build": 1, "dist": 0},
     },
     {
-        "searches": {
-            "str": re.compile(r"matsushita.*swver(\d[\d.]+)", re.DOTALL | re.I)
-        },
+        "searches": {"str": re.compile(r"matsushita.*swver(\d[\d.]+)", re.DOTALL | re.I)},
         "updates": {"build": 0},
     },
     {
@@ -186,9 +178,7 @@ SEARCH_MAPS = [
         "updates": {"dist": "VG3X0 Analog Voice Gateway"},
     },
     {
-        "searches": {
-            "str": re.compile(r"network_camera_firmware.*axis", re.I | re.DOTALL)
-        },
+        "searches": {"str": re.compile(r"network_camera_firmware.*axis", re.I | re.DOTALL)},
         "updates": {"dist": "Axis network camera firmware"},
     },
 ]
@@ -326,9 +316,7 @@ def write_csv(results, path="os_counts.csv", logs=True):
     if not logs:
         fields = [x for x in fields if x != "logs"]
     with path.open("w") as fh:
-        writer = csv.DictWriter(
-            fh, fieldnames=fields, extrasaction="ignore", quoting=csv.QUOTE_ALL
-        )
+        writer = csv.DictWriter(fh, fieldnames=fields, extrasaction="ignore", quoting=csv.QUOTE_ALL)
         writer.writerow(dict(zip(fields, fields)))
         for result in results:
             for k, v in result.items():

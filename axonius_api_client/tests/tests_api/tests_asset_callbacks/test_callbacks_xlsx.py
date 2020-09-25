@@ -2,6 +2,7 @@
 """Test suite for assets."""
 
 import pytest
+
 from axonius_api_client.exceptions import ApiError
 
 

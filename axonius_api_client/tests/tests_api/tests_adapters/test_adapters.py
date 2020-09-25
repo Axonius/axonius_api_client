@@ -6,12 +6,7 @@ import warnings
 import pytest
 
 from axonius_api_client.constants import CSV_ADAPTER, DEFAULT_NODE
-from axonius_api_client.exceptions import (
-    ApiError,
-    ConfigUnchanged,
-    ConfigUnknown,
-    NotFoundError,
-)
+from axonius_api_client.exceptions import ApiError, ConfigUnchanged, ConfigUnknown, NotFoundError
 
 from ...meta import (
     CSV_FILECONTENT_BYTES,
@@ -300,9 +295,7 @@ class TestAdaptersPrivate(TestAdaptersBase):
         assert data["filename"]
 
     def test_private_config_update(self, apiobj, adapter):
-        current = apiobj._config_get(
-            name_plugin=adapter["name_plugin"], name_config="AdapterBase"
-        )
+        current = apiobj._config_get(name_plugin=adapter["name_plugin"], name_config="AdapterBase")
         key = "user_last_fetched_threshold_hours"
         current_config = current["config"]
         config_update = copy.deepcopy(current_config)
@@ -316,9 +309,7 @@ class TestAdaptersPrivate(TestAdaptersBase):
         )
 
         assert set_response.get("config_name")
-        updated = apiobj._config_get(
-            name_plugin=adapter["name_plugin"], name_config="AdapterBase"
-        )
+        updated = apiobj._config_get(name_plugin=adapter["name_plugin"], name_config="AdapterBase")
         updated_config = updated["config"]
         assert updated_config[key] == set_value
         assert updated_config == config_update
@@ -594,9 +585,7 @@ class TestAdaptersPublic(TestAdaptersBase):
         val_parsed_schema(schema=schema)
 
     def test_config_get_generic(self, apiobj):
-        data = apiobj.config_get(
-            name=CSV_ADAPTER, node=DEFAULT_NODE, config_type="generic"
-        )
+        data = apiobj.config_get(name=CSV_ADAPTER, node=DEFAULT_NODE, config_type="generic")
         assert isinstance(data, dict)
 
         config = data.pop("config")
@@ -643,9 +632,7 @@ class TestAdaptersPublic(TestAdaptersBase):
 
     def test_config_update_unchanged(self, apiobj):
         with pytest.raises(ConfigUnchanged):
-            apiobj.config_update(
-                name=CSV_ADAPTER, node=DEFAULT_NODE, config_type="generic"
-            )
+            apiobj.config_update(name=CSV_ADAPTER, node=DEFAULT_NODE, config_type="generic")
 
     def test_config_update_generic(self, apiobj, adapter):
         data = apiobj.config_refetch(adapter=adapter)

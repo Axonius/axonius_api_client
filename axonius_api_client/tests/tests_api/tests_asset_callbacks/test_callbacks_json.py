@@ -19,9 +19,7 @@ class CallbacksJson(Callbacks):
         io_fd = io.StringIO()
         original_rows = get_rows_exist(apiobj=apiobj, max_rows=5)
 
-        cbobj = self.get_cbobj(
-            apiobj=apiobj, cbexport=cbexport, getargs={"export_fd": io_fd}
-        )
+        cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs={"export_fd": io_fd})
         cbobj.start()
 
         start_val = io_fd.getvalue().splitlines()[0]

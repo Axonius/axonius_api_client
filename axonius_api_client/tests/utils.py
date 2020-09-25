@@ -8,13 +8,14 @@ import sys
 from io import StringIO
 
 import pytest
+from cachetools import TTLCache, cached
+from click.testing import CliRunner
+
 from axonius_api_client import Wizard, api, auth
 from axonius_api_client.cli.context import Context
 from axonius_api_client.constants import AGG_ADAPTER_NAME
 from axonius_api_client.http import Http
 from axonius_api_client.tools import listify
-from cachetools import TTLCache, cached
-from click.testing import CliRunner
 
 IS_WINDOWS = sys.platform == "win32"
 IS_LINUX = sys.platform == "linux"

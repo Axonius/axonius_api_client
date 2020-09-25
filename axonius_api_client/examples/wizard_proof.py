@@ -45,9 +45,9 @@ content_dict = json.loads(content_json)
 content_csv = Docs.EX_CSV
 
 cli = f"""
-axonshell devices saved-query wiz-add-from-csv --file blah.csv
+axonshell devices saved-query wiz-add-from-csv --file blah.csv --recreate/--no-recreate
 
-axonshell devices saved-query wiz-add
+axonshell devices saved-query wiz-add --recreate/--no-recreate
     --name 'test'
     --description 'test'
     --wiz simple "{Docs.EX_SIMPLE1}"
@@ -55,8 +55,7 @@ axonshell devices saved-query wiz-add
     --wiz simple "{Docs.EX_SIMPLE3}"
     --wiz simple "{Docs.EX_SIMPLE4}"
     --wiz complex "{Docs.EX_COMPLEX1}"
-    --wiz text_file "blah.txt"
-    --wiz json_file "blah.json"
+    --wiz file "blah.txt"
 
 axonshell devices get
     --wiz simple "{Docs.EX_SIMPLE1}"
@@ -64,8 +63,7 @@ axonshell devices get
     --wiz simple "{Docs.EX_SIMPLE3}"
     --wiz simple "{Docs.EX_SIMPLE4}"
     --wiz complex "{Docs.EX_COMPLEX1}"
-    --wiz text_file "blah.txt"
-    --wiz json_file "blah.json"
+    --wiz file "blah.txt"
 
 """
 # content_csv = """z"""

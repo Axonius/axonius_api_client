@@ -96,8 +96,6 @@ if __name__ == "__main__":
 
     dvcs_with_cves = get_dvcs_with_cves(dvcs=dvcs)
 
-    dvcs_cvss_minmax = list(
-        filter_cvss(dvcs=dvcs_with_cves, cvss_min=CVSS_MIN, cvss_max=CVSS_MAX)
-    )
+    dvcs_cvss_minmax = list(filter_cvss(dvcs=dvcs_with_cves, cvss_min=CVSS_MIN, cvss_max=CVSS_MAX))
 
     dump_cves(dvcs=dvcs_cvss_minmax, dvc_keys=DUMP_DVC_KEYS, sw_keys=DUMP_SW_KEYS)

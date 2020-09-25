@@ -11,11 +11,7 @@ from ...tools import json_dump
 
 
 def tablize(
-    value: List[dict],
-    err: Optional[str] = None,
-    fmt: str = "simple",
-    footer: bool = True,
-    **kwargs
+    value: List[dict], err: Optional[str] = None, fmt: str = "simple", footer: bool = True, **kwargs
 ) -> str:
     """Pass."""
     # value = wrapper(value=value, **kwargs)
@@ -54,9 +50,7 @@ def tablize_schemas(
 
     # TBD TRANSLATE ENUM DICTS!!
     for schema in sorted(schemas, key=lambda x: [x["required"], x["name"]]):
-        value = tab_map(
-            value=schema, key_map=KEY_MAP_SCHEMA, orig=orig, orig_width=orig_width
-        )
+        value = tab_map(value=schema, key_map=KEY_MAP_SCHEMA, orig=orig, orig_width=orig_width)
         if config:
             config_value = config.get(schema["name"], None)
             if isinstance(config_value, dict):  # pragma: no cover

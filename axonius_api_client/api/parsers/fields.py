@@ -3,8 +3,7 @@
 import copy
 from typing import List, Optional
 
-from ...constants import (AGG_ADAPTER_NAME, AGG_ADAPTER_TITLE,
-                          AGG_EXPR_FIELD_TYPE, ALL_NAME)
+from ...constants import AGG_ADAPTER_NAME, AGG_ADAPTER_TITLE, AGG_EXPR_FIELD_TYPE, ALL_NAME
 from ...tools import strip_left, strip_right
 from .constants import OperatorTypeMaps
 
@@ -210,9 +209,7 @@ def parse_schemas(
             },
         ]
 
-    field_names = [
-        strip_left(obj=f["name"], fix=adapter_prefix).strip(".") for f in raw_fields
-    ]
+    field_names = [strip_left(obj=f["name"], fix=adapter_prefix).strip(".") for f in raw_fields]
 
     for field in raw_fields:
         title = field["title"]
