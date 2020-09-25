@@ -4,21 +4,9 @@ from ....exceptions import NotFoundError
 from ....tools import listify
 from ...context import CONTEXT_SETTINGS, click
 from ...options import AUTH, INPUT_FILE, add_options
+from .grp_common import ABORT
 
-OPTIONS = [
-    *AUTH,
-    INPUT_FILE,
-    click.option(
-        "--abort/--no-abort",
-        "-a/-na",
-        "abort",
-        help="Stop adding saved queries if an error happens",
-        required=False,
-        default=False,
-        show_envvar=True,
-        show_default=True,
-    ),
-]
+OPTIONS = [*AUTH, INPUT_FILE, ABORT]
 
 
 @click.command(name="add-from-json", context_settings=CONTEXT_SETTINGS)
