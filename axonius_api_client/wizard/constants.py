@@ -119,10 +119,12 @@ class Types:
     SIMPLE: str = "simple"
     COMPLEX: str = "complex"
     SAVED_QUERY: str = "saved_query"
+    FILE: str = "file"
 
     DICT: List[str] = [SIMPLE, COMPLEX]
     TEXT: List[str] = [*DICT]
     SQ: List[str] = [*DICT, SAVED_QUERY]
+    CLI: List[str] = [FILE, *DICT]
 
 
 class Docs:

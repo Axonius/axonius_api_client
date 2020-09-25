@@ -15,7 +15,26 @@ EXPORT_FORMAT = click.option(
     show_envvar=True,
     show_default=True,
 )
-
+OVERWRITE = click.option(
+    "--overwrite/--no-overwrite",
+    "-ow/-now",
+    "overwrite",
+    default=False,
+    help="Overwrite pre-existing query.",
+    is_flag=True,
+    show_envvar=True,
+    show_default=True,
+)
+ABORT = click.option(
+    "--abort/--no-abort",
+    "-a/-na",
+    "abort",
+    help="Stop adding saved queries if an error happens",
+    required=False,
+    default=True,
+    show_envvar=True,
+    show_default=True,
+)
 SQ_OPTS = [
     click.option(
         "--tag",
@@ -84,12 +103,12 @@ def handle_export(ctx, rows, export_format):
             rows = rows[0]
 
         click.secho(json_dump(rows))
-        ctx.exit(0)
+        return 0
 
     if export_format == "str-names":
         names = "\n".join([x["name"] for x in listify(rows)])
         click.secho(names)
-        ctx.exit(0)
+        return 0
 
     if export_format == "str":
         for row in listify(rows):
@@ -107,4 +126,18 @@ def handle_export(ctx, rows, export_format):
             click.secho(f"Tags: {tags}")
             click.secho(f"Fields: {fields}")
 
-        ctx.exit(0)
+        return 0
+
+    return 1
+
+
+def check_sq_exist(ctx, apiobj, name, overwrite):
+    try:
+        apiobj.saved_query.get_by_name(value=name)
+    except Exception:
+        ctx.obj.echo_ok(f"Saved query {name!r} does not exist, will add")
+    else:
+        if not overwrite:
+            ctx.obj.echo_error(f"Saved Query named {name!r} exists and overwrite is False")
+        else:
+            ctx.obj.echo_ok(f"Saved query {name!r} exists and overwrite is True, will add")

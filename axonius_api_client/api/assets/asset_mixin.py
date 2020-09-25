@@ -111,6 +111,7 @@ class AssetMixin(ModelMixins):
         fields: Optional[Union[List[str], str]] = None,
         fields_manual: Optional[Union[List[str], str]] = None,
         fields_regex: Optional[Union[List[str], str]] = None,
+        fields_fuzzy: Optional[Union[List[str], str]] = None,
         fields_default: bool = True,
         fields_root: Optional[str] = None,
         max_rows: Optional[int] = None,
@@ -168,6 +169,7 @@ class AssetMixin(ModelMixins):
             fields_regex=fields_regex,
             fields_default=fields_default,
             fields_root=fields_root,
+            fields_fuzzy=fields_fuzzy,
         )
 
         if sort_field:
