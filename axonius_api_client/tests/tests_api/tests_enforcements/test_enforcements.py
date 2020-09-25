@@ -8,19 +8,13 @@ import pytest
 
 
 class TestEnforcementsBase:
-    """Pass."""
-
     @pytest.fixture(scope="class")
     def apiobj(self, api_enforcements):
-        """Pass."""
         return api_enforcements
 
 
 class TestEnforcementsPrivate(TestEnforcementsBase):
-    """Pass."""
-
     def test_private_get(self, apiobj):
-        """Pass."""
         data = apiobj._get()
         assert isinstance(data, dict)
 
@@ -32,10 +26,7 @@ class TestEnforcementsPrivate(TestEnforcementsBase):
 
 
 class TestEnforcementsPublic(TestEnforcementsBase):
-    """Pass."""
-
     def test_get(self, apiobj):
-        """Pass."""
         data = apiobj.get()
         assert isinstance(data, list)
         for found in data:
@@ -48,16 +39,13 @@ class TestEnforcementsPublic(TestEnforcementsBase):
             assert "triggers.times_triggered" in found
 
     def test_get_maxpages(self, apiobj):
-        """Pass."""
         found = apiobj.get(max_pages=1, page_size=1)
         assert isinstance(found, list)
         # we can't test for length if there are no enforcements...
         # assert len(found) == 1
 
-    # XXX broken in 3.4, investigate later
     '''
     def test_create_get_delete(self, apiobj, api_users):
-        """Pass."""
         try:
             old_found = apiobj.get_by_name(CREATE_EC_NAME, eq_single=False)
         except Exception:

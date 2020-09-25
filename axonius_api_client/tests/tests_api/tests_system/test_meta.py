@@ -50,7 +50,6 @@ class TestSystemMetaPrivate(SystemMetaBase):
         """Pass."""
         data = apiobj._about()
         assert isinstance(data, dict)
-        # XXX add api_client_version post 3.5
         keys = ["Build Date", "Installed Version", "Customer ID"]
         empty_ok = ["Installed Version"]
 
@@ -69,12 +68,15 @@ class TestSystemMetaPrivate(SystemMetaBase):
 class TestSystemMetaPublic(SystemMetaBase):
     """Pass."""
 
+    def test_version(self, apiobj):
+        data = apiobj.version
+        assert isinstance(data, str)
+
     def test_about(self, apiobj):
         """Pass."""
         data = apiobj.about()
         assert isinstance(data, dict)
 
-        # XXX add api_client_version post 3.5
         keys = ["Build Date", "Version", "Customer ID"]
         empty_ok = ["Version"]
 

@@ -41,9 +41,7 @@ class Xlsx(Base):
             msg = "Must supply export_file for this export method"
             self.echo(msg=msg, error=ApiError, level="error")
 
-        self._workbook = xlsxwriter.Workbook(
-            str(self._file_path), {"constant_memory": True}
-        )
+        self._workbook = xlsxwriter.Workbook(str(self._file_path), {"constant_memory": True})
         self._cell_format = self._workbook.add_format(self.CELL_FORMAT)
 
         worksheet = f"{self.APIOBJ.__class__.__name__}"
@@ -65,7 +63,7 @@ class Xlsx(Base):
 
     def process_row(self, row: dict) -> List[dict]:
         """Write row to dictwriter and delete it."""
-        self.do_pre_row()
+        self.do_pre_row(row=row)
 
         row_return = [{"internal_axon_id": row["internal_axon_id"]}]
         new_rows = self.do_row(row=row)

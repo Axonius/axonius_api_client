@@ -153,6 +153,16 @@ FIELDS_SELECT = [
         show_default=True,
     ),
     click.option(
+        "--field-fuzzy",
+        "-ff",
+        "fields_fuzzy",
+        help="Fuzzy matching of fields to include (multiples)",
+        metavar="ADAPTER:FIELD",
+        multiple=True,
+        show_envvar=True,
+        show_default=True,
+    ),
+    click.option(
         "--fields-root",
         "-fro",
         "fields_root",

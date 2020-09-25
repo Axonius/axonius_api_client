@@ -3,14 +3,9 @@
 import copy
 from typing import List, Optional
 
-from ...constants import (
-    AGG_ADAPTER_NAME,
-    AGG_ADAPTER_TITLE,
-    AGG_EXPR_FIELD_TYPE,
-    ALL_NAME,
-)
-from ...data_classes.fields import OperatorTypeMaps
+from ...constants import AGG_ADAPTER_NAME, AGG_ADAPTER_TITLE, AGG_EXPR_FIELD_TYPE, ALL_NAME
 from ...tools import strip_left, strip_right
+from .constants import OperatorTypeMaps
 
 
 def parse_fields(raw: dict) -> dict:
@@ -113,7 +108,8 @@ def parse_complex(field: dict):
             sub_field["column_name"] = f"{col_name}.{sub_name}"
             sub_field["is_agg"] = is_agg
             sub_field["expr_field_type"] = expr_field_type
-
+            sub_field["is_details"] = field["is_details"]
+            sub_field["is_all"] = False
             type_map = OperatorTypeMaps.get_type_map(field=sub_field)
             sub_field["type_norm"] = type_map.name
             sub_field["selectable"] = True
@@ -156,6 +152,8 @@ def parse_schemas(
             "selectable": True,
             "is_agg": adapter_name == AGG_ADAPTER_NAME,
             "expr_field_type": AGG_EXPR_FIELD_TYPE,
+            "is_details": False,
+            "is_all": True,
         }
     )
 
@@ -182,6 +180,8 @@ def parse_schemas(
                 "selectable": False,
                 "is_agg": True,
                 "expr_field_type": AGG_EXPR_FIELD_TYPE,
+                "is_details": True,
+                "is_all": False,
             },
             {
                 "adapter_name_raw": adapter_name_raw,
@@ -204,12 +204,12 @@ def parse_schemas(
                 "selectable": False,
                 "is_agg": True,
                 "expr_field_type": AGG_EXPR_FIELD_TYPE,
+                "is_details": True,
+                "is_all": False,
             },
         ]
 
-    field_names = [
-        strip_left(obj=f["name"], fix=adapter_prefix).strip(".") for f in raw_fields
-    ]
+    field_names = [strip_left(obj=f["name"], fix=adapter_prefix).strip(".") for f in raw_fields]
 
     for field in raw_fields:
         title = field["title"]
@@ -229,7 +229,8 @@ def parse_schemas(
         field["type_norm"] = type_map.name
         field["selectable"] = True
         field["is_agg"] = bool(agg_base_names) and name_base in agg_base_names
-
+        field["is_details"] = False
+        field["is_all"] = False
         if adapter_name == AGG_ADAPTER_NAME:
             field["expr_field_type"] = AGG_EXPR_FIELD_TYPE
         else:
@@ -246,23 +247,44 @@ def parse_schemas(
             field_details["column_title"] += " Details"
             field_details["column_name"] += "_details"
             field_details["selectable"] = False
+            field_details["is_details"] = True
             fields.append(field_details)
 
     return fields
 
 
-# def get_type_norm(field: dict) -> str:
-#     """Get the normalized type of a field."""
-#     ftype = field["type"]
-#     ffmt = field.get("format", "")
-#     fitype = field.get("items", {}).get("type", "")
-#     fifmt = field.get("items", {}).get("format", "")
-#     check = (ftype, ffmt, fitype, fifmt)
-
-#     for norm_map, norm_type in NORM_TYPE_MAP:
-#         if check == norm_map:
-#             return norm_type
-
-#     name = field["name"]
-#     check = dict(zip(("type", "format", "items.type", "items.format"), check))
-#     raise ApiError(f"Unmapped normalized type: {name}: {check}")
+def schema_custom(name: str, **kwargs) -> dict:
+    unknown = kwargs.get("unknown", "custom")
+    adapter_name = kwargs.get("adapter_name", unknown)
+    adapter_name_raw = kwargs.get("adapter_name_raw", unknown)
+    adapter_title = kwargs.get("adapter_title", unknown.capitalize())
+    adapter_prefix = kwargs.get("adapter_name_raw", unknown[:2])
+    title = name.capitalize()
+    column_name = kwargs.get("column_name", f"{adapter_name}:{name}")
+    column_title = kwargs.get("column_title", f"{adapter_title}: {title}")
+    ftype = kwargs.get("type", "string")
+    ftype_norm = kwargs.get("type_name", "string")
+    return {
+        "adapter_name_raw": adapter_name_raw,
+        "adapter_name": adapter_name,
+        "adapter_title": adapter_title,
+        "adapter_prefix": adapter_prefix,
+        "column_name": column_name,
+        "column_title": column_title,
+        "sub_fields": [],
+        "is_complex": False,
+        "is_list": False,
+        "is_root": True,
+        "parent": "root",
+        "name": name,
+        "name_base": name,
+        "name_qual": name,
+        "title": title,
+        "type": ftype,
+        "type_norm": ftype_norm,
+        "selectable": False,
+        "is_agg": False,
+        "expr_field_type": "agg",
+        "is_details": False,
+        "is_all": False,
+    }

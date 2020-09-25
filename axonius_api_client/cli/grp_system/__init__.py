@@ -20,7 +20,7 @@ def system():
 
 
 system.add_command(grp_meta.meta)
-system.add_command(grp_nodes.nodes)
+system.add_command(grp_nodes.instances)
 system.add_command(grp_central_core.central_core)
 system.add_command(grp_roles.roles)
 system.add_command(grp_settings.settings_lifecycle)

@@ -41,9 +41,7 @@ def localtime():
     logging.Formatter.converter = time.localtime
 
 
-def get_obj_log(
-    obj: object, level: Optional[Union[int, str]] = None, **kwargs
-) -> logging.Logger:
+def get_obj_log(obj: object, level: Optional[Union[int, str]] = None, **kwargs) -> logging.Logger:
     """Get a child logger for an object.
 
     Notes:
@@ -340,9 +338,7 @@ def del_stderr(
             dict handler handler name->[handler objects] mapping of found and
             removed handlers
     """
-    return del_handler(
-        obj=obj, hname=hname, htype=logging.StreamHandler, traverse=traverse
-    )
+    return del_handler(obj=obj, hname=hname, htype=logging.StreamHandler, traverse=traverse)
 
 
 def del_stdout(
@@ -368,9 +364,7 @@ def del_stdout(
             dict handler handler name->[handler objects] mapping of found and
             removed handlers
     """
-    return del_handler(
-        obj=obj, hname=hname, htype=logging.StreamHandler, traverse=traverse
-    )
+    return del_handler(obj=obj, hname=hname, htype=logging.StreamHandler, traverse=traverse)
 
 
 def del_file(
@@ -426,9 +420,7 @@ def del_null(
             dict handler handler name->[handler objects] mapping of found and
             removed handlers
     """
-    return del_handler(
-        obj=obj, hname=hname, htype=logging.NullHandler, traverse=traverse
-    )
+    return del_handler(obj=obj, hname=hname, htype=logging.NullHandler, traverse=traverse)
 
 
 def del_handler(
@@ -504,9 +496,7 @@ def find_handlers(
                 handlers[obj.name].append(handler)
 
     if obj.parent and traverse:
-        found = find_handlers(
-            obj=obj.parent, hname=hname, htype=htype, traverse=traverse
-        )
+        found = find_handlers(obj=obj.parent, hname=hname, htype=htype, traverse=traverse)
         handlers.update(found)
 
     return handlers
@@ -520,7 +510,7 @@ gmtime()
 set_log_level(obj=LOG, level=LOG_LEVEL_PACKAGE)
 
 
-def handle_unhandled_exception(exc_type, exc_value, exc_traceback):
+def handle_unhandled_exception(exc_type, exc_value, exc_traceback):  # pragma: no cover
     """Log unhandled exceptions."""
     sys.__excepthook__(exc_type, exc_value, exc_traceback)
     LOG.critical("Unhandled exception", exc_info=(exc_type, exc_value, exc_traceback))

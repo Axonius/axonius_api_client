@@ -11,11 +11,31 @@ class Users(AssetMixin):
 
     FIELD_USERNAME: str = "specific_data.data.username"
     FIELD_MAIL: str = "specific_data.data.mail"
+    FIELD_DOMAIN: str = "specific_data.data.domain"
+    FIELD_IS_ADMIN: str = "specific_data.data.is_admin"
+    FIELD_SIMPLE: str = FIELD_USERNAME
+    FIELD_COMPLEX: str = "specific_data.data.associated_devices"
+    FIELD_COMPLEX_SUB: str = "device_caption"
+
+    FIELDS_SPECIFIC: List[str] = [
+        FIELD_USERNAME,
+        FIELD_DOMAIN,
+        FIELD_MAIL,
+        FIELD_IS_ADMIN,
+    ]
 
     @property
     def fields_default(self) -> List[str]:
         """Fields to use by default for getting assets."""
-        return self.FIELDS_API + [self.FIELD_USERNAME, self.FIELD_MAIL]
+        return [
+            self.FIELD_ADAPTERS,
+            self.FIELD_USERNAME,
+            self.FIELD_DOMAIN,
+            self.FIELD_MAIL,
+            self.FIELD_IS_ADMIN,
+            self.FIELD_LAST_SEEN,
+            self.FIELD_TAGS,
+        ]
 
     @property
     def router(self) -> Router:
@@ -67,9 +87,7 @@ class Users(AssetMixin):
         kwargs["value"] = value
         return self.get_by_value_regex(**kwargs)
 
-    def get_by_mail(
-        self, value: str, **kwargs
-    ) -> Union[Generator[dict, None, None], List[dict]]:
+    def get_by_mail(self, value: str, **kwargs) -> Union[Generator[dict, None, None], List[dict]]:
         """Build a query to get assets where mail == value."""
         kwargs["field"] = self.FIELD_MAIL
         kwargs["field_manual"] = True

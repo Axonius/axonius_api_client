@@ -53,9 +53,7 @@ def cmd(ctx, url, key, secret, export_format, **kwargs):
     elif export_format == "table":
         click.secho(tablize_adapters(adapters=rows))
     elif export_format == "str-args":
-        lines = "\n".join(
-            ["--node-name {node_name} --name {name}".format(**row) for row in rows]
-        )
+        lines = "\n".join(["--node-name {node_name} --name {name}".format(**row) for row in rows])
         click.secho(lines)
     elif export_format == "str":
         lines = "\n".join(["{node_name}:{name}".format(**row) for row in rows])

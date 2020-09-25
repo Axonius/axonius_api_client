@@ -36,9 +36,7 @@ OPTIONS = [
         "field_key",
         default="name_qual",
         help="Which field key to match against for --field-re",
-        type=click.Choice(
-            ["name_qual", "name", "name_base", "column_title", "column_name"]
-        ),
+        type=click.Choice(["name_qual", "name", "name_base", "column_title", "column_name"]),
         show_envvar=True,
         show_default=True,
     ),

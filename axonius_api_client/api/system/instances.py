@@ -1,9 +1,24 @@
 # -*- coding: utf-8 -*-
 """API model for working with system configuration."""
-from ..mixins import ChildMixins, Model
+from ..mixins import ModelMixins
+from ..routers import API_VERSION, Router
 
 
-class Nodes(ChildMixins):
+class Instances(ModelMixins):
+    # TBD add get_by_name, get_core, get_collectors
+    def _init(self, **kwargs):
+        """Post init method for subclasses to use for extra setup."""
+        super(Instances, self)._init(**kwargs)
+
+    @property
+    def router(self) -> Router:
+        """Router for this API model.
+
+        Returns:
+            :obj:`.routers.Router`: REST API route defs
+        """
+        return API_VERSION.instances
+
     """Child API model for working with instances."""
 
     def get(self) -> dict:
@@ -13,16 +28,6 @@ class Nodes(ChildMixins):
             :obj:`dict`: instances
         """
         return self._get()["instances"]
-
-    # XXX add get_by_name, get_core, get_collectors
-
-    def _init(self, parent: Model):
-        """Post init method for subclasses to use for extra setup.
-
-        Args:
-            parent (:obj:`.api.mixins.Model`): parent API model of this child
-        """
-        super(Nodes, self)._init(parent=parent)
 
     def _get(self) -> dict:
         """Direct API method to get instances.
@@ -52,17 +57,15 @@ class Nodes(ChildMixins):
             ]
         }
         """
-        return self.request(method="get", path=self.router.instances)
+        return self.request(method="get", path=self.router.root)
 
     def _delete(self, node_id: str):  # pragma: no cover
         """Pass."""
         data = {"nodeIds": node_id}
-        path = self.router.instances
+        path = self.router.root
         return self.request(method="delete", path=path, json=data)
 
-    def _update(
-        self, node_id: str, node_name: str, hostname: str
-    ) -> dict:  # pragma: no cover
+    def _update(self, node_id: str, node_name: str, hostname: str) -> dict:  # pragma: no cover
         """Direct API method to update an instance.
 
         Args:
@@ -82,5 +85,5 @@ class Nodes(ChildMixins):
         }
         """
         data = {"nodeIds": node_id, "node_name": node_name, "hostname": hostname}
-        path = self.router.instances
+        path = self.router.root
         return self.request(method="post", path=path, json=data)

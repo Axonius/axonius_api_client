@@ -34,34 +34,22 @@ def config_check(
             raise ConfigInvalidValue(f"{sinfo}\nValue of None not allowed")
 
     if schema_type == "file":
-        return config_check_file(
-            value=value, schema=schema, callbacks=callbacks, source=source
-        )
+        return config_check_file(value=value, schema=schema, callbacks=callbacks, source=source)
 
     if schema_type == "bool":
-        return config_check_bool(
-            value=value, schema=schema, callbacks=callbacks, source=source
-        )
+        return config_check_bool(value=value, schema=schema, callbacks=callbacks, source=source)
 
     if schema_type == "number":
-        return config_check_int(
-            value=value, schema=schema, callbacks=callbacks, source=source
-        )
+        return config_check_int(value=value, schema=schema, callbacks=callbacks, source=source)
 
     if schema_type == "integer":
-        return config_check_int(
-            value=value, schema=schema, callbacks=callbacks, source=source
-        )
+        return config_check_int(value=value, schema=schema, callbacks=callbacks, source=source)
 
     if schema_type == "array":
-        return config_check_array(
-            value=value, schema=schema, callbacks=callbacks, source=source
-        )
+        return config_check_array(value=value, schema=schema, callbacks=callbacks, source=source)
 
     if schema_type == "string":
-        return config_check_str(
-            value=value, schema=schema, callbacks=callbacks, source=source
-        )
+        return config_check_str(value=value, schema=schema, callbacks=callbacks, source=source)
 
     valids = ["string", "integer", "number", "bool", "array"]
     valids = ", ".join(valids)
@@ -175,12 +163,10 @@ def config_check_str(
             if value not in schema_enum:
                 sinfo = config_info(schema=schema, value=value, source=source)
                 raise ConfigInvalidValue(f"{sinfo}\nIs not one of {schema_enum}!")
-        else:
+        else:  # pragma: no cover
             valids = [x["name"] for x in schema_enum]
             if value not in valids:
-                valids = "\n" + "\n".join(
-                    ["  ".join(x) for x in join_kv(obj=schema_enum)]
-                )
+                valids = "\n" + "\n".join(["  ".join(x) for x in join_kv(obj=schema_enum)])
                 sinfo = config_info(schema=schema, value=value, source=source)
                 raise ConfigInvalidValue(f"{sinfo}\nIs not one of:{valids}!")
 
@@ -189,8 +175,7 @@ def config_check_str(
         if parsed:
             return value
 
-    if isinstance(value, int):
-        value = str(value)
+    value = str(value) if isinstance(value, int) else value
 
     if not isinstance(value, str):
         sinfo = config_info(schema=schema, value=value, source=source)
@@ -214,9 +199,7 @@ def config_build(
         elif name in new_config:
             value = new_config[name]
             if check:
-                value = config_check(
-                    value=value, schema=schema, source=source, callbacks=callbacks
-                )
+                value = config_check(value=value, schema=schema, source=source, callbacks=callbacks)
             new_config[name] = value
     return new_config
 
@@ -244,9 +227,7 @@ def config_unchanged(
     """Pass."""
     if new_config == old_config or not new_config:
         err = f"No changes supplied for {source}"
-        raise ConfigUnchanged(
-            tablize_schemas(schemas=schemas, config=old_config, err=err)
-        )
+        raise ConfigUnchanged(tablize_schemas(schemas=schemas, config=old_config, err=err))
     return new_config
 
 
@@ -355,13 +336,13 @@ def parse_schema_enum(schema: dict):
 
 def parse_section(raw: dict, raw_config: dict, parent: dict, settings: dict) -> dict:
     """Pass."""
-    # XXX has no title:
+    # FYI has no title:
     #   settings_gui::saml_login_settings::configure_authncc
     title = raw.get("title", raw["name"].replace("_", " ").title())
     config = raw_config.get(raw["name"], {})
     section_name = raw["name"]
     schemas = raw["items"]
-    # XXX core_settings::tunnel_email_recipients is missing 'required' as of 3.6!
+    # FYI core_settings::tunnel_email_recipients is missing 'required' as of 3.6!
     # required = raw["required"]
     required = raw.get("required", [])
 
@@ -385,28 +366,31 @@ def parse_section(raw: dict, raw_config: dict, parent: dict, settings: dict) -> 
 
         # sub_sections:
         #   {"items": [{}], "required": [""], "type": "array"}
-        # XXX core_settings::tunnel_email_recipients has an empty items list 3.6
+        # FYI core_settings::tunnel_email_recipients has an empty items list 3.6
         if isinstance(items, list) and items:
             sub_sections[schema_name] = parse_section(
-                raw=schema, raw_config=config, parent=parsed, settings=settings,
+                raw=schema,
+                raw_config=config,
+                parent=parsed,
+                settings=settings,
             )
             schema.pop("items")
 
         # non sub_sections:
         #   no items key in schema
         #   {"items": {"type": ""} "type": "array"}
-        # XXX some things have a required key already that is a bool 3.6
+        # FYI some things have a required key already that is a bool 3.6
         if not isinstance(schema.get("required", []), bool):
             schema["required"] = schema_name in required
 
         parsed["schemas"][schema_name] = schema
 
-        # XXX does not follow schema for defaults:
+        # FYI does not follow schema for defaults:
         #   core settings::https_log_settings
         if schema_name in section_defaults and "default" not in schema:
             schema["default"] = section_defaults[schema_name]
 
-        # XXX has no title:
+        # FYI has no title:
         #   settings_gui::saml_login_settings::configure_authncc
         schema["title"] = schema.get("title", schema_name.replace("_", " ").title())
 
@@ -415,7 +399,7 @@ def parse_section(raw: dict, raw_config: dict, parent: dict, settings: dict) -> 
 
 def parse_settings(raw: dict, title: str = "") -> dict:
     """Pass."""
-    # XXX missing pretty_name:
+    # FYI missing pretty_name:
     #   settings_gui
     #   settings_lifecycle
     title = raw["schema"].get("pretty_name", "") or title

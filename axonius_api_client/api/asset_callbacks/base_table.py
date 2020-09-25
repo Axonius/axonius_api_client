@@ -49,7 +49,10 @@ class Table(Base):
         rows = getattr(self, "_rows", [])
 
         table = tabulate.tabulate(
-            tabular_data=rows, tablefmt=tablefmt, showindex=False, headers="keys",
+            tabular_data=rows,
+            tablefmt=tablefmt,
+            showindex=False,
+            headers="keys",
         )
 
         self._fd.write(table)
@@ -58,11 +61,11 @@ class Table(Base):
 
     def process_row(self, row: dict) -> List[dict]:
         """Process row."""
-        self.do_pre_row()
+        self.do_pre_row(row=row)
         self.check_stop()
 
         new_rows = self.do_row(row=row)
-        # XXX textwrap key/values
+        # TBD textwrap key/values
         self._rows += listify(new_rows)
         return new_rows
 

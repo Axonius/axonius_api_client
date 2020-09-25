@@ -99,9 +99,7 @@ class Cnx(ChildMixins):
         """Pass."""
         return CNX_SANE_DEFAULTS.get(adapter_name, CNX_SANE_DEFAULTS["all"])
 
-    def get_by_adapter(
-        self, adapter_name: str, adapter_node: str = DEFAULT_NODE
-    ) -> List[dict]:
+    def get_by_adapter(self, adapter_name: str, adapter_node: str = DEFAULT_NODE) -> List[dict]:
         """Get connections from an adapter."""
         adapter = self.parent.get_by_name(name=adapter_name, node=adapter_node)
         cnxs = adapter["cnx"]
@@ -135,9 +133,7 @@ class Cnx(ChildMixins):
 
             time.sleep(sleep)
 
-            cnxs = self.get_by_adapter(
-                adapter_name=adapter_name, adapter_node=adapter_node
-            )
+            cnxs = self.get_by_adapter(adapter_name=adapter_name, adapter_node=adapter_node)
 
         value_key = value_key.upper()
         err = (
@@ -171,10 +167,8 @@ class Cnx(ChildMixins):
             value=cnx_id, adapter_name=adapter_name, adapter_node=adapter_node, **kwargs
         )
 
-    # XXX add get_by_label
-    def test_by_id(
-        self, cnx_id: str, adapter_name: str, adapter_node: str = DEFAULT_NODE
-    ) -> str:
+    # TBD add get_by_label
+    def test_by_id(self, cnx_id: str, adapter_name: str, adapter_node: str = DEFAULT_NODE) -> str:
         """Pass."""
         cnx_test = self.get_by_id(
             cnx_id=cnx_id, adapter_name=adapter_name, adapter_node=adapter_node
@@ -283,9 +277,7 @@ class Cnx(ChildMixins):
         old_uuid = cnx_update["uuid"]
         old_id = cnx_update["id"]
 
-        source = (
-            f"updating settings for connection ID {old_id!r} on adapter {adapter_name!r}"
-        )
+        source = f"updating settings for connection ID {old_id!r} on adapter {adapter_name!r}"
 
         new_config = self.build_config(
             cnx_schemas=cnx_schemas,
@@ -312,7 +304,8 @@ class Cnx(ChildMixins):
             cnx_uuid=old_uuid,
         )
 
-        result = {} if not isinstance(result, dict) else result
+        if not isinstance(result, dict) or not result:  # pragma: no cover
+            result = {"error": result}
 
         self.check_if_gone(
             result=result,
@@ -321,22 +314,24 @@ class Cnx(ChildMixins):
             adapter_node=adapter_node_name,
         )
 
-        if result.get("id"):
+        result_status = result.get("status", "")
+        result_error = result.get("error", "")
+        result_id = result.get("id", "")
+        status_is_error = result_status == "error"
+
+        if result_id:
             cnx_new = self.get_by_uuid(
-                cnx_uuid=result["id"],
+                cnx_uuid=result_id,
                 adapter_name=adapter_name,
                 adapter_node=adapter_node_name,
                 retry=CNX_RETRY,
             )
-        else:
+        else:  # pragma: no cover
             cnx_new = self.get_by_id(
                 cnx_id=old_id, adapter_name=adapter_name, adapter_node=adapter_node_name
             )
 
-        error_in_status = result.get("status", "") == "error"
-        error_empty = bool(result.get("error", ""))
-
-        if any([error_in_status, error_empty]):
+        if any([status_is_error, result_error]):
             rkw = ["{}: {}".format(k, v) for k, v in result.items()]
             rkw = "\n  " + "\n  ".join(rkw)
 
@@ -351,15 +346,11 @@ class Cnx(ChildMixins):
 
         return cnx_new
 
-    def check_if_gone(
-        self, result: dict, cnx_id: str, adapter_name: str, adapter_node: str
-    ):
+    def check_if_gone(self, result: dict, cnx_id: str, adapter_name: str, adapter_node: str):
         """Pass."""
         message = result.get("message", "")
         if message == CNX_GONE:
-            cnxs = self.get_by_adapter(
-                adapter_name=adapter_name, adapter_node=adapter_node
-            )
+            cnxs = self.get_by_adapter(adapter_name=adapter_name, adapter_node=adapter_node)
             err = f"Connection with ID {cnx_id!r} no longer exists!"
             raise CnxGoneError(tablize_cnxs(cnxs=cnxs, err=err))
 
@@ -433,7 +424,7 @@ class Cnx(ChildMixins):
 
     def cb_file_upload(
         self,
-        value: Union[str, pathlib.Path, IO],
+        value: Union[str, pathlib.Path, IO, dict],
         schema: dict,
         callbacks: dict,
         source: str,
@@ -443,10 +434,29 @@ class Cnx(ChildMixins):
         adapter_node = callbacks["adapter_node"]
         field_name = schema["name"]
 
+        value = json_load(obj=value, error=False)
+
         if isinstance(value, str):
-            check = pathlib.Path(value).expanduser().resolve()
-            if check.is_file():
-                value = check
+            value = pathlib.Path(value).expanduser().resolve()
+            if not value.is_file():
+                sinfo = config_info(schema=schema, value=str(value), source=source)
+                raise ConfigInvalidValue(f"{sinfo}\nFile does not exist!")
+            return self.parent.file_upload(
+                name=adapter_name,
+                field_name=field_name,
+                file_name=value.name,
+                file_content=value.read_text(),
+                node=adapter_node,
+            )
+
+        if isinstance(value, dict):
+            if value.get("uuid") and value.get("filename"):
+                return {"uuid": value["uuid"], "filename": value["filename"]}
+
+            sinfo = config_info(schema=schema, value=str(value), source=source)
+            raise ConfigInvalidValue(
+                f"{sinfo}\nDictionary must have uuid and filename keys: {value}!"
+            )
 
         if isinstance(value, pathlib.Path):
             value = value.expanduser().resolve()
@@ -454,25 +464,18 @@ class Cnx(ChildMixins):
                 sinfo = config_info(schema=schema, value=str(value), source=source)
                 raise ConfigInvalidValue(f"{sinfo}\nFile does not exist!")
 
-            file_name = value.name
-            file_content = value.read_text()
-        elif hasattr(value, "read"):
-            file_content = value.read()
-            file_name = file_content[:20]
-        else:
-            sinfo = config_info(schema=schema, value=str(value), source=source)
-            raise ConfigInvalidValue(
-                f"{sinfo}\nFile is not an existing file or a file-like object!"
+            return self.parent.file_upload(
+                name=adapter_name,
+                field_name=field_name,
+                file_name=value.name,
+                file_content=value.read_text(),
+                node=adapter_node,
             )
 
-        return self.parent.file_upload(
-            name=adapter_name,
-            field_name=field_name,
-            file_name=file_name,
-            file_content=file_content,
-            node=adapter_node,
-        )
+        sinfo = config_info(schema=schema, value=str(value), source=source)
+        raise ConfigInvalidValue(f"{sinfo}\nFile is not an existing file or a file-like object!")
 
+    # XXX failing with secondary node!!! wrong plugin name?
     def _add(self, adapter_name_raw: str, adapter_node_id: str, new_config: dict) -> str:
         """Direct API method to add a connection to an adapter.
 
@@ -514,8 +517,7 @@ class Cnx(ChildMixins):
         data["instanceName"] = adapter_node_id
         data["oldInstanceName"] = adapter_node_id
 
-        path = self.parent.router.cnxs.format(adapter_name_raw=adapter_name_raw)
-
+        path = self.parent.router.cnxs_test.format(adapter_name_raw=adapter_name_raw)
         return self.parent.request(method="post", path=path, json=data, raw=True)
 
     def _delete(
@@ -585,7 +587,7 @@ class Cnx(ChildMixins):
             adapter_name_raw=adapter_name_raw, cnx_uuid=cnx_uuid
         )
         return self.parent.request(
-            method="put",
+            method="post",
             path=path,
             json=data,
             error_json_bad_status=False,

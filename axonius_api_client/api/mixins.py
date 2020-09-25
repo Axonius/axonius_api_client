@@ -35,11 +35,8 @@ class PageSizeMixin:
             self.LOG.debug(f"CHANGED PAGE SIZE {page_size} to max_rows {max_rows}")
             page_size = max_rows
 
-        if page_size > MAX_PAGE_SIZE:
+        if page_size > MAX_PAGE_SIZE or not page_size:
             self.LOG.debug(f"CHANGED PAGE SIZE {page_size} to max {MAX_PAGE_SIZE}")
-            page_size = MAX_PAGE_SIZE
-
-        if not page_size:
             page_size = MAX_PAGE_SIZE
 
         return page_size
@@ -77,22 +74,6 @@ class ModelMixins(Model, PageSizeMixin):
     def __repr__(self) -> str:
         """Show info for this model object."""
         return self.__str__()
-
-    def _get_page_size(
-        self, page_size: Optional[int] = MAX_PAGE_SIZE, max_rows: Optional[int] = None
-    ) -> int:
-        if max_rows and max_rows < page_size:
-            self.LOG.debug(f"CHANGED PAGE SIZE {page_size} to max_rows {max_rows}")
-            page_size = max_rows
-
-        if page_size > MAX_PAGE_SIZE:
-            self.LOG.debug(f"CHANGED PAGE SIZE {page_size} to max {MAX_PAGE_SIZE}")
-            page_size = MAX_PAGE_SIZE
-
-        if not page_size:
-            page_size = MAX_PAGE_SIZE
-
-        return page_size
 
     def _build_err_msg(
         self,
@@ -203,9 +184,7 @@ class ModelMixins(Model, PageSizeMixin):
 
         return data
 
-    def _check_response_code(
-        self, response: requests.Response, error_status: bool = True
-    ):
+    def _check_response_code(self, response: requests.Response, error_status: bool = True):
         """Check the status code of a response.
 
         Args:
@@ -328,14 +307,14 @@ class PagingMixinsObject(PageSizeMixin):
         Returns:
             :obj:`dict`: saved query
         """
-        rows = self.get(**kwargs)
-
-        for row in rows:
+        valid = []
+        tmpl = "name: {name!r}".format
+        for row in self.get(**kwargs):
             if row["name"] == value:
                 return row
+            valid.append(tmpl(**row))
 
-        tmpl = "name: {name!r}".format
-        valid = "\n  " + "\n  ".join(sorted([tmpl(**row) for row in rows]))
+        valid = "\n  " + "\n  ".join(sorted(valid))
         raise NotFoundError(f"name {value!r} not found, valid:{valid}")
 
     def get(
@@ -441,10 +420,7 @@ class PagingMixinsObject(PageSizeMixin):
 
                 state["rows_processed_total"] += 1
 
-                if (
-                    state["max_rows"]
-                    and state["rows_processed_total"] >= state["max_rows"]
-                ):
+                if state["max_rows"] and state["rows_processed_total"] >= state["max_rows"]:
                     stop_msg = "'rows_processed_total' greater than 'max_rows'"
                     state["stop_msg"] = stop_msg
                     state["stop_fetch"] = True

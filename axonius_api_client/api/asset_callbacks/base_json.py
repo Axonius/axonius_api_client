@@ -37,7 +37,7 @@ class Json(Base):
 
     def process_row(self, row: dict) -> List[dict]:
         """Write row to jsonstreams and delete it."""
-        self.do_pre_row()
+        self.do_pre_row(row=row)
 
         return_row = [{"internal_axon_id": row["internal_axon_id"]}]
 
@@ -59,10 +59,10 @@ class Json(Base):
         indent = None if flat else 2
         prefix = " " * indent if indent else ""
 
-        if flat:
-            pre = "" if self._first_row else "\n"
+        if self._first_row:
+            pre = "" if flat else "\n"
         else:
-            pre = "\n" if self._first_row else ",\n"
+            pre = "\n" if flat else ",\n"
 
         self._first_row = False
         self._fd.write(pre)

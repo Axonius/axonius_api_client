@@ -1,3 +1,5 @@
 [run]
 omit =
     axonius_api_client/tests/*
+    axonius_api_client/examples/*
+    axonius_api_client/cli/*

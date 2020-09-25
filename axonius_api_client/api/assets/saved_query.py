@@ -12,9 +12,7 @@ def check_gui_page_size(size: Optional[int] = None) -> int:
     """Pass."""
     if size:
         if size not in GUI_PAGE_SIZES:
-            raise ApiError(
-                f"gui_page_size of {size} is invalid, must be one of {GUI_PAGE_SIZES}"
-            )
+            raise ApiError(f"gui_page_size of {size} is invalid, must be one of {GUI_PAGE_SIZES}")
     else:
         size = GUI_PAGE_SIZES[0]
     return size
@@ -52,8 +50,10 @@ class SavedQuery(ChildMixins, PagingMixinsObject):
         self,
         name: str,
         query: Optional[str] = None,
+        query_expr: Optional[str] = None,
         tags: Optional[List[str]] = None,
         description: Optional[str] = None,
+        expressions: Optional[List[str]] = None,
         fields: Optional[Union[List[str], str]] = None,
         fields_regex: Optional[Union[List[str], str]] = None,
         fields_manual: Optional[Union[List[str], str]] = None,
@@ -62,7 +62,7 @@ class SavedQuery(ChildMixins, PagingMixinsObject):
         sort_descending: bool = True,
         column_filters: Optional[dict] = None,
         gui_page_size: Optional[int] = None,
-        fields_map: Optional[dict] = None,
+        private: bool = False,
         **kwargs,
     ):
         """Create a saved query.
@@ -98,33 +98,36 @@ class SavedQuery(ChildMixins, PagingMixinsObject):
             :obj:`dict`: metadata of saved query that was created
         """
         gui_page_size = check_gui_page_size(size=gui_page_size)
-        fields_map = fields_map or self.parent.fields.get()
 
         fields = self.parent.fields.validate(
             fields=fields,
             fields_manual=fields_manual,
             fields_regex=fields_regex,
             fields_default=fields_default,
-            fields_map=fields_map,
         )
 
         if sort_field:
-            sort_field = self.parent.fields.get_field_name(
-                value=sort_field, fields_map=fields_map
-            )
+            sort_field = self.parent.fields.get_field_name(value=sort_field)
+
+        query_expr = query_expr or query  # TBD
 
         data_column_filters = {}
         if column_filters:
             for col_field, col_value in column_filters.items():
-                col_field = self.parent.fields.get_field_name(
-                    value=col_field, fields_map=fields_map
-                )
+                col_field = self.parent.fields.get_field_name(value=col_field)
                 data_column_filters[col_field] = col_value
 
+        dmeta = {}  # TBD
+        dmeta["enforcementFilter"] = None  # TBD
+        dmeta["uniqueAdapters"] = False  # TBD
+
         data_query = {}
-        data_query["filter"] = query
-        data_query["expressions"] = []  # query wizard generated only
-        # data_query["search"] = ""  # tbd
+        data_query["filter"] = query or ""
+        if query_expr:
+            data_query["onlyExpressionsFilter"] = query_expr
+        data_query["expressions"] = expressions or []
+        data_query["search"] = None  # TBD
+        data_query["meta"] = dmeta  # TBD
 
         data_sort = {}
         data_sort["desc"] = sort_descending
@@ -136,6 +139,7 @@ class SavedQuery(ChildMixins, PagingMixinsObject):
         data_view["fields"] = fields
         data_view["pageSize"] = gui_page_size
         data_view["colFilters"] = data_column_filters or {}
+        data_view["colExcludedAdapters"] = {}  # TBD
 
         data = {}
         data["name"] = name
@@ -143,6 +147,7 @@ class SavedQuery(ChildMixins, PagingMixinsObject):
         data["description"] = description
         data["view"] = data_view
         data["tags"] = tags or []
+        data["private"] = private
 
         added = self._add(data=data)
         kwargs["value"] = added
@@ -186,7 +191,7 @@ class SavedQuery(ChildMixins, PagingMixinsObject):
             :obj:`str`: ID of the saved query that was created
         """
         path = self.router.views
-        return self.request(method="post", path=path, json=data)
+        return self.request(method="put", path=path, json=data)
 
     def _delete(self, ids: List[str]) -> str:
         """Direct API method to delete saved queries.
@@ -198,7 +203,7 @@ class SavedQuery(ChildMixins, PagingMixinsObject):
             :obj:`str`: empty string
         """
         data = {"ids": listify(ids)}
-        path = self.router.views
+        path = f"{self.router.views}/saved"
         return self.request(method="delete", path=path, json=data)
 
     def _get(
@@ -220,5 +225,5 @@ class SavedQuery(ChildMixins, PagingMixinsObject):
         params["limit"] = page_size
         params["skip"] = row_start
         params["filter"] = query
-        path = self.router.views
+        path = f"{self.router.views}/saved"
         return self.request(method="get", path=path, params=params)

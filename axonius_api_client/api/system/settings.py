@@ -4,12 +4,7 @@ from typing import Optional
 
 from ...exceptions import ApiError, NotFoundError
 from ..mixins import ChildMixins
-from ..parsers.config import (
-    config_build,
-    config_unchanged,
-    config_unknown,
-    parse_settings,
-)
+from ..parsers.config import config_build, config_unchanged, config_unknown, parse_settings
 from ..parsers.tables import tablize
 
 
@@ -57,14 +52,12 @@ class SettingsChild(ChildMixins):
         err = f"Section Name {section!r} not found in {title}"
         raise NotFoundError(tablize(value=valid_sections, err=err))
 
-    def get_sub_section(
-        self, section: str, sub_section: str, full_config: bool = False
-    ) -> dict:
+    def get_sub_section(self, section: str, sub_section: str, full_config: bool = False) -> dict:
         """Pass."""
         settings = self.get_section(section=section, full_config=full_config)
         title = settings["settings_title"]
 
-        if not settings["sub_sections"]:
+        if not settings["sub_sections"]:  # pragma: no cover
             raise ApiError(f"Section Name {section!r} has no sub sections!")
 
         valids = []
@@ -103,13 +96,21 @@ class SettingsChild(ChildMixins):
         new_config.update(kwargs)
 
         config_unknown(
-            schemas=schemas, new_config=new_config, source=source,
+            schemas=schemas,
+            new_config=new_config,
+            source=source,
         )
         config_build(
-            schemas=schemas, old_config=old_config, new_config=new_config, source=source,
+            schemas=schemas,
+            old_config=old_config,
+            new_config=new_config,
+            source=source,
         )
         config_unchanged(
-            schemas=schemas, old_config=old_config, new_config=new_config, source=source,
+            schemas=schemas,
+            old_config=old_config,
+            new_config=new_config,
+            source=source,
         )
 
         full_config[section] = new_config
@@ -120,9 +121,7 @@ class SettingsChild(ChildMixins):
 
     def update_sub_section(self, section: str, sub_section: str, **kwargs) -> dict:
         """Update the system settings."""
-        settings = self.get_sub_section(
-            section=section, sub_section=sub_section, full_config=True
-        )
+        settings = self.get_sub_section(section=section, sub_section=sub_section, full_config=True)
         title = settings["settings_title"]
         schemas = settings["schemas"]
         source = f"{title} Section Name {section!r} Sub Section Name {sub_section!r}"
@@ -133,13 +132,21 @@ class SettingsChild(ChildMixins):
         new_config.update(kwargs)
 
         config_unknown(
-            schemas=schemas, new_config=new_config, source=source,
+            schemas=schemas,
+            new_config=new_config,
+            source=source,
         )
         config_build(
-            schemas=schemas, old_config=old_config, new_config=new_config, source=source,
+            schemas=schemas,
+            old_config=old_config,
+            new_config=new_config,
+            source=source,
         )
         config_unchanged(
-            schemas=schemas, old_config=old_config, new_config=new_config, source=source,
+            schemas=schemas,
+            old_config=old_config,
+            new_config=new_config,
+            source=source,
         )
 
         full_config[section][sub_section] = new_config

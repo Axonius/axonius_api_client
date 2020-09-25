@@ -18,17 +18,7 @@ import dateutil.tz
 
 from . import __file__ as PACKAGE_FILE
 from . import __package__ as PACKAGE_ROOT
-from .constants import (
-    ERROR_ARGS,
-    ERROR_TMPL,
-    NO,
-    OK_ARGS,
-    OK_TMPL,
-    SIMPLE,
-    WARN_ARGS,
-    WARN_TMPL,
-    YES,
-)
+from .constants import ERROR_ARGS, ERROR_TMPL, NO, OK_ARGS, OK_TMPL, WARN_ARGS, WARN_TMPL, YES
 from .exceptions import ToolsError
 from .version import VERSION
 
@@ -65,16 +55,10 @@ def listify(obj: Any, dictkeys: bool = False) -> list:
     if obj is None:
         return []
 
-    if isinstance(obj, SIMPLE):
-        return [obj]
+    if isinstance(obj, dict) and dictkeys:
+        return list(obj)
 
-    if isinstance(obj, dict):
-        if dictkeys:
-            return list(obj)
-
-        return [obj]
-
-    return obj
+    return [obj]
 
 
 def grouper(iterable: Iterable, n: int, fillvalue: Optional[Any] = None) -> Iterator:
@@ -109,6 +93,24 @@ def coerce_int(obj: Any) -> int:
     except Exception:
         vtype = type(obj).__name__
         raise ToolsError(f"Supplied value {obj!r} of type {vtype} is not an integer.")
+
+
+def coerce_int_float(value: Union[int, float, str]) -> Union[int, float]:
+    if isinstance(value, float):
+        return value
+
+    if isinstance(value, int):
+        return value
+
+    if isinstance(value, str):
+        if value.isdigit():
+            return int(value)
+
+        if value.replace(".", "").strip().isdigit():
+            return float(value)
+
+    vtype = type(value).__name__
+    raise ToolsError(f"Supplied value {value!r} of type {vtype} is not an integer or float.")
 
 
 def coerce_bool(obj: Any, errmsg: Optional[str] = None) -> bool:
@@ -361,7 +363,8 @@ def dt_parse_tmpl(obj: Union[str, timedelta, datetime], tmpl: str = "%Y-%m-%d") 
 
 
 def dt_now(
-    delta: Optional[timedelta] = None, tz: timezone = dateutil.tz.tzutc(),
+    delta: Optional[timedelta] = None,
+    tz: timezone = dateutil.tz.tzutc(),
 ) -> datetime:
     """Get the current datetime in for a specific tz.
 
@@ -408,7 +411,8 @@ def dt_min_ago(obj: Union[str, timedelta, datetime]) -> int:
 
 
 def dt_within_min(
-    obj: Union[str, timedelta, datetime], n: Optional[Union[str, int]] = None,
+    obj: Union[str, timedelta, datetime],
+    n: Optional[Union[str, int]] = None,
 ) -> bool:
     """Check if given datetime is within the past n minutes.
 
@@ -625,7 +629,7 @@ def split_str(
     return ret
 
 
-def echo_ok(msg: str, tmpl: bool = True, **kwargs):
+def echo_ok(msg: str, tmpl: bool = True, **kwargs):  # pragma: no cover
     """Pass."""
     echoargs = {}
     echoargs.update(OK_ARGS)
@@ -637,7 +641,7 @@ def echo_ok(msg: str, tmpl: bool = True, **kwargs):
     click.secho(msg, **echoargs)
 
 
-def echo_warn(msg: str, tmpl: bool = True, **kwargs):
+def echo_warn(msg: str, tmpl: bool = True, **kwargs):  # pragma: no cover
     """Pass."""
     echoargs = {}
     echoargs.update(WARN_ARGS)
@@ -649,7 +653,7 @@ def echo_warn(msg: str, tmpl: bool = True, **kwargs):
     click.secho(msg, **echoargs)
 
 
-def echo_error(msg: str, abort: bool = True, tmpl: bool = True, **kwargs):
+def echo_error(msg: str, abort: bool = True, tmpl: bool = True, **kwargs):  # pragma: no cover
     """Pass."""
     echoargs = {}
     echoargs.update(ERROR_ARGS)
@@ -686,18 +690,17 @@ def sysinfo() -> dict:
         "win32_edition",
     ]
     for attr in platform_attrs:
-        try:
-            method = getattr(platform, attr)
+        method = getattr(platform, attr, None)
+        value = "unavailable"
+        if method:
             value = method()
-        except Exception:
-            value = "unavailable"
 
         attr = attr.replace("_", " ").title()
         info[attr] = value
     return info
 
 
-def calc_percent(part: Union[int, float], whole: Union[int, float]) -> float:
+def calc_percent(part: Union[int, float], whole: Union[int, float], places: int = 2) -> float:
     """Pass."""
     if 0 in [part, whole]:
         value = 0.00
@@ -705,6 +708,8 @@ def calc_percent(part: Union[int, float], whole: Union[int, float]) -> float:
         value = 100.00
     else:
         value = 100 * (part / whole)
+    if isinstance(places, int):
+        value = float(f"{value:.{places}f}")
     return value
 
 
@@ -766,6 +771,7 @@ def check_empty(value, name=""):
 
 
 def get_raw_version(value):
+    check_type(value=value, exp=str)
     converted = "0"
     version = value
     if ":" in value:

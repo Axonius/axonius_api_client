@@ -4,33 +4,30 @@ import copy
 
 import pytest
 
-from .callbacks import Callbacks, load_test_data
+from ...utils import get_rows_exist
+from .callbacks import Callbacks
 
 
 class CallbacksBase(Callbacks):
-    """Pass."""
-
     @pytest.fixture(scope="class")
     def cbexport(self):
-        """Pass."""
         return "base"
 
     def test_row_as_is(self, cbexport, apiobj, caplog):
-        """Pass."""
         getargs = {}
         cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs=getargs)
         cbobj.start()
 
-        rows = copy.deepcopy(apiobj.TEST_DATA["cb_assets"][:5])
-
+        rows_orig = get_rows_exist(apiobj=apiobj, max_rows=5)
+        rows = copy.deepcopy(rows_orig)
+        rows_proc = []
         for row in rows:
-            rows_ret = cbobj.process_row(row=copy.deepcopy(row))
-            for row_ret in rows_ret:
-                assert row == row_ret
+            rows_proc += cbobj.process_row(row=row)
+
+        assert rows_proc == rows_orig
         cbobj.stop()
 
     def test_row_fully_loaded(self, cbexport, apiobj, caplog):
-        """Pass."""
         getargs = {
             "field_excludes": ["adapters"],
             "field_flatten": True,
@@ -42,29 +39,23 @@ class CallbacksBase(Callbacks):
         cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs=getargs)
         cbobj.start()
 
-        rows = copy.deepcopy(apiobj.TEST_DATA["cb_assets"][:5])
-
+        rows_orig = get_rows_exist(apiobj=apiobj, max_rows=5)
+        rows = copy.deepcopy(rows_orig)
+        rows_proc = []
         for row in rows:
-            rows_ret = cbobj.process_row(row=copy.deepcopy(row))
-            for row_ret in rows_ret:
-                assert row != row_ret
+            rows_proc += cbobj.process_row(row=row)
 
+        assert rows_proc != rows_orig
         cbobj.stop()
 
 
 class TestDevicesCallbacksBase(CallbacksBase):
-    """Pass."""
-
     @pytest.fixture(scope="class")
     def apiobj(self, api_devices):
-        """Pass."""
-        return load_test_data(apiobj=api_devices)
+        return api_devices
 
 
 class TestUsersCallbacksBase(CallbacksBase):
-    """Pass."""
-
     @pytest.fixture(scope="class")
     def apiobj(self, api_users):
-        """Pass."""
-        return load_test_data(apiobj=api_users)
+        return api_users
