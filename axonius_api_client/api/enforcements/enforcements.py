@@ -77,9 +77,7 @@ class Enforcements(ModelMixins, PagingMixinsObject):
         path = self.router.root
         return self.request(method="put", path=path, json=data, is_json=False)
 
-    def _get(
-        self, query: Optional[str] = None, row_start: int = 0, page_size: int = 0
-    ) -> dict:
+    def _get(self, query: Optional[str] = None, row_start: int = 0, page_size: int = 0) -> dict:
         """Get a page for a given query."""
         params = {}
         params["skip"] = row_start

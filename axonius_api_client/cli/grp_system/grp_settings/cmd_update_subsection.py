@@ -30,9 +30,7 @@ def cmd(
     apiobj = getattr(client.system, apiname)
 
     with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
-        settings = apiobj.update_sub_section(
-            section=section, sub_section=sub_section, **new_config
-        )
+        settings = apiobj.update_sub_section(section=section, sub_section=sub_section, **new_config)
         ctx.obj.echo_ok(f"Updated {sub_section!r} with configuration {new_config}")
 
     if export_format == "str":

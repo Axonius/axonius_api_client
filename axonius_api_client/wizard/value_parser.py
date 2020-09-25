@@ -7,9 +7,16 @@ from cachetools import TTLCache, cached
 
 from ..api.assets.asset_mixin import AssetMixin
 from ..exceptions import WizardError
-from ..tools import (check_empty, check_type, coerce_int_float,
-                     coerce_str_to_csv, dt_parse_tmpl, get_raw_version,
-                     parse_ip_address, parse_ip_network)
+from ..tools import (
+    check_empty,
+    check_type,
+    coerce_int_float,
+    coerce_str_to_csv,
+    dt_parse_tmpl,
+    get_raw_version,
+    parse_ip_address,
+    parse_ip_network,
+)
 
 CACHE: TTLCache = TTLCache(maxsize=1024, ttl=30)
 
@@ -299,9 +306,7 @@ class ValueParser:
         custom_id: Optional[str] = None,
     ) -> Union[int, str]:
         if enum_custom is not None and not enum_custom:
-            raise WizardError(
-                f"No {custom_id}s exist, can not query for {custom_id} {value!r}"
-            )
+            raise WizardError(f"No {custom_id}s exist, can not query for {custom_id} {value!r}")
 
         enum = enum or enum_items or enum_custom
 

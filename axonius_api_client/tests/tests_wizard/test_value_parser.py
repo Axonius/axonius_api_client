@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Test suite."""
 import pytest
+
 from axonius_api_client.api.parsers.constants import Parsers
 from axonius_api_client.exceptions import WizardError
 from axonius_api_client.wizard import ValueParser
@@ -164,9 +165,7 @@ class TestToCsvIp(TestValueParser, Common):
         )
 
     def test_valid_list(self, value_parser, parser):
-        ret = value_parser(
-            value=["192.168.1.28", "10.0.0.43", "10.4.2.1"], parser=parser
-        )
+        ret = value_parser(value=["192.168.1.28", "10.0.0.43", "10.4.2.1"], parser=parser)
         assert ret == (
             '"192.168.1.28", "10.0.0.43", "10.4.2.1"',
             "192.168.1.28,10.0.0.43,10.4.2.1",
@@ -223,23 +222,17 @@ class TestToCsvTags(TestValueParser, Common):
         return Parsers.to_csv_tags.name
 
     def test_valid(self, value_parser, monkeypatch, parser):
-        patch_tags(
-            values=["tag1", "tag2"], value_parser=value_parser, monkeypatch=monkeypatch
-        )
+        patch_tags(values=["tag1", "tag2"], value_parser=value_parser, monkeypatch=monkeypatch)
         ret = value_parser(value="tag1, tag2,", parser=parser)
         assert ret == ('"tag1", "tag2"', "tag1,tag2")
 
     def test_valid_list(self, value_parser, monkeypatch, parser):
-        patch_tags(
-            values=["tag1", "tag2"], value_parser=value_parser, monkeypatch=monkeypatch
-        )
+        patch_tags(values=["tag1", "tag2"], value_parser=value_parser, monkeypatch=monkeypatch)
         ret = value_parser(value=["tag1", "tag2"], parser=parser)
         assert ret == ('"tag1", "tag2"', "tag1,tag2")
 
     def test_invalid(self, value_parser, monkeypatch, parser):
-        patch_tags(
-            values=["tag1", "tag2"], value_parser=value_parser, monkeypatch=monkeypatch
-        )
+        patch_tags(values=["tag1", "tag2"], value_parser=value_parser, monkeypatch=monkeypatch)
         with pytest.raises(WizardError):
             value_parser(value="tag1, tag3, tag2,", parser=parser)
 
@@ -414,16 +407,12 @@ class TestToStrTags(TestValueParser, Common):
         return Parsers.to_str_tags.name
 
     def test_valid(self, value_parser, monkeypatch, parser):
-        patch_tags(
-            values=["tag1", "tag2"], value_parser=value_parser, monkeypatch=monkeypatch
-        )
+        patch_tags(values=["tag1", "tag2"], value_parser=value_parser, monkeypatch=monkeypatch)
         ret = value_parser(value="tag1", parser=parser)
         assert ret == ("tag1", "tag1")
 
     def test_invalid(self, value_parser, monkeypatch, parser):
-        patch_tags(
-            values=["tag1", "tag2"], value_parser=value_parser, monkeypatch=monkeypatch
-        )
+        patch_tags(values=["tag1", "tag2"], value_parser=value_parser, monkeypatch=monkeypatch)
         with pytest.raises(WizardError):
             value_parser(value="tag3", parser=parser)
 

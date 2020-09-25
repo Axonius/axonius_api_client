@@ -6,8 +6,7 @@ from typing import List
 
 from .api.routers import API_VERSION
 from .constants import LOG_LEVEL_AUTH
-from .exceptions import (AlreadyLoggedIn, AuthError, InvalidCredentials,
-                         NotLoggedIn)
+from .exceptions import AlreadyLoggedIn, AuthError, InvalidCredentials, NotLoggedIn
 from .http import Http
 from .logs import get_obj_log
 from .tools import json_reload
@@ -134,9 +133,7 @@ class Mixins:
             response.raise_for_status()
         except Exception as exc:
             self._logged_in = False
-            raise InvalidCredentials(
-                f"Invalid credentials on {self} -- exception: {exc}"
-            )
+            raise InvalidCredentials(f"Invalid credentials on {self} -- exception: {exc}")
 
         self._logged_in = True
 

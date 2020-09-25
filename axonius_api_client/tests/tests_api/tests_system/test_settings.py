@@ -132,16 +132,12 @@ class TestSettingsGui(SettingsBasePublic):
         update_value = not old_value
 
         new_section_args = {GUI_NON_SUB_SECTION: update_value}
-        new_section = apiobj.update_section(
-            section=GUI_SECTION_WITH_SUBS, **new_section_args
-        )
+        new_section = apiobj.update_section(section=GUI_SECTION_WITH_SUBS, **new_section_args)
         new_value = new_section["config"][GUI_NON_SUB_SECTION]
         assert new_value == update_value and old_value != new_value
 
         reset_section_args = {GUI_NON_SUB_SECTION: old_value}
-        reset_section = apiobj.update_section(
-            section=GUI_SECTION_WITH_SUBS, **reset_section_args
-        )
+        reset_section = apiobj.update_section(section=GUI_SECTION_WITH_SUBS, **reset_section_args)
         reset_value = reset_section["config"][GUI_NON_SUB_SECTION]
         assert reset_value == old_value and reset_value != new_value
 
@@ -157,18 +153,14 @@ class TestSettingsGui(SettingsBasePublic):
 
         new_section_args = {sub_key: update_value}
         new_section = apiobj.update_sub_section(
-            section=GUI_SECTION_WITH_SUBS,
-            sub_section=GUI_SUB_SECTION,
-            **new_section_args
+            section=GUI_SECTION_WITH_SUBS, sub_section=GUI_SUB_SECTION, **new_section_args
         )
         new_value = new_section["config"][sub_key]
         assert new_value == update_value and old_value != new_value
 
         reset_section_args = {sub_key: old_value}
         reset_section = apiobj.update_sub_section(
-            section=GUI_SECTION_WITH_SUBS,
-            sub_section=GUI_SUB_SECTION,
-            **reset_section_args
+            section=GUI_SECTION_WITH_SUBS, sub_section=GUI_SUB_SECTION, **reset_section_args
         )
         reset_value = reset_section["config"][sub_key]
         assert reset_value == old_value and reset_value != new_value

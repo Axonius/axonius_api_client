@@ -8,13 +8,25 @@ import time
 from typing import Dict, List, Optional, Union
 
 from . import __package__ as PACKAGE_ROOT
-from .constants import (LOG_DATEFMT_CONSOLE, LOG_DATEFMT_FILE,
-                        LOG_FILE_MAX_FILES, LOG_FILE_MAX_MB, LOG_FILE_NAME,
-                        LOG_FILE_PATH, LOG_FILE_PATH_MODE, LOG_FMT_CONSOLE,
-                        LOG_FMT_FILE, LOG_LEVEL_CONSOLE, LOG_LEVEL_FILE,
-                        LOG_LEVEL_PACKAGE, LOG_LEVELS_INT_CSV,
-                        LOG_LEVELS_STR_CSV, LOG_NAME_FILE, LOG_NAME_STDERR,
-                        LOG_NAME_STDOUT)
+from .constants import (
+    LOG_DATEFMT_CONSOLE,
+    LOG_DATEFMT_FILE,
+    LOG_FILE_MAX_FILES,
+    LOG_FILE_MAX_MB,
+    LOG_FILE_NAME,
+    LOG_FILE_PATH,
+    LOG_FILE_PATH_MODE,
+    LOG_FMT_CONSOLE,
+    LOG_FMT_FILE,
+    LOG_LEVEL_CONSOLE,
+    LOG_LEVEL_FILE,
+    LOG_LEVEL_PACKAGE,
+    LOG_LEVELS_INT_CSV,
+    LOG_LEVELS_STR_CSV,
+    LOG_NAME_FILE,
+    LOG_NAME_STDERR,
+    LOG_NAME_STDOUT,
+)
 from .exceptions import ToolsError
 from .tools import get_path, is_int
 
@@ -29,9 +41,7 @@ def localtime():
     logging.Formatter.converter = time.localtime
 
 
-def get_obj_log(
-    obj: object, level: Optional[Union[int, str]] = None, **kwargs
-) -> logging.Logger:
+def get_obj_log(obj: object, level: Optional[Union[int, str]] = None, **kwargs) -> logging.Logger:
     """Get a child logger for an object.
 
     Notes:
@@ -328,9 +338,7 @@ def del_stderr(
             dict handler handler name->[handler objects] mapping of found and
             removed handlers
     """
-    return del_handler(
-        obj=obj, hname=hname, htype=logging.StreamHandler, traverse=traverse
-    )
+    return del_handler(obj=obj, hname=hname, htype=logging.StreamHandler, traverse=traverse)
 
 
 def del_stdout(
@@ -356,9 +364,7 @@ def del_stdout(
             dict handler handler name->[handler objects] mapping of found and
             removed handlers
     """
-    return del_handler(
-        obj=obj, hname=hname, htype=logging.StreamHandler, traverse=traverse
-    )
+    return del_handler(obj=obj, hname=hname, htype=logging.StreamHandler, traverse=traverse)
 
 
 def del_file(
@@ -414,9 +420,7 @@ def del_null(
             dict handler handler name->[handler objects] mapping of found and
             removed handlers
     """
-    return del_handler(
-        obj=obj, hname=hname, htype=logging.NullHandler, traverse=traverse
-    )
+    return del_handler(obj=obj, hname=hname, htype=logging.NullHandler, traverse=traverse)
 
 
 def del_handler(
@@ -492,9 +496,7 @@ def find_handlers(
                 handlers[obj.name].append(handler)
 
     if obj.parent and traverse:
-        found = find_handlers(
-            obj=obj.parent, hname=hname, htype=htype, traverse=traverse
-        )
+        found = find_handlers(obj=obj.parent, hname=hname, htype=htype, traverse=traverse)
         handlers.update(found)
 
     return handlers

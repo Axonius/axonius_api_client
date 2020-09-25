@@ -61,16 +61,12 @@ class CentralCore(ChildMixins):
         response = self.request(method="post", path=path, json=data)
         return response
 
-    def _restore(
-        self, restore_type: str, restore_opts: dict
-    ) -> dict:  # pragma: no cover
+    def _restore(self, restore_type: str, restore_opts: dict) -> dict:  # pragma: no cover
         """Perform a central core restore operation."""
         data = {}
         data["restore_type"] = restore_type
         data.update(restore_opts)
 
         path = self.router.central_core_restore
-        response = self.request(
-            method="post", path=path, json=data, response_timeout=3600
-        )
+        response = self.request(method="post", path=path, json=data, response_timeout=3600)
         return response

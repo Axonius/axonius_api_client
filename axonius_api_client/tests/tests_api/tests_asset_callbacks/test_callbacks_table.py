@@ -5,6 +5,7 @@ import copy
 import io
 
 import pytest
+
 from axonius_api_client.exceptions import ApiError
 
 from ...utils import get_rows_exist, get_schema
@@ -56,9 +57,7 @@ class CallbacksTable(Callbacks):
             cbobj.check_table_format("badwolf")
 
     def test_check_stop(self, cbexport, apiobj):
-        cbobj = self.get_cbobj(
-            apiobj=apiobj, cbexport=cbexport, getargs={"table_max_rows": 10}
-        )
+        cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs={"table_max_rows": 10})
         cbobj.STATE["rows_processed_total"] = 10
         cbobj.check_stop()
         assert cbobj.STATE["stop_fetch"]

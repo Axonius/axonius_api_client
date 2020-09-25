@@ -20,6 +20,7 @@ class Devices(AssetMixin):
     FIELD_MAIN: str = FIELD_HOSTNAME
     FIELD_SIMPLE: str = FIELD_HOSTNAME
     FIELD_COMPLEX: str = "specific_data.data.network_interfaces"
+    FIELD_COMPLEX_SUB: str = "name"
 
     FIELDS_SPECIFIC: List[str] = [
         FIELD_ASSET_NAME,
@@ -94,9 +95,7 @@ class Devices(AssetMixin):
         kwargs["value"] = value
         return self.get_by_value_regex(**kwargs)
 
-    def get_by_mac(
-        self, value: str, **kwargs
-    ) -> Union[Generator[dict, None, None], List[dict]]:
+    def get_by_mac(self, value: str, **kwargs) -> Union[Generator[dict, None, None], List[dict]]:
         """Build a query to get assets where mac == value."""
         kwargs["field"] = self.FIELD_MAC
         kwargs["field_manual"] = True
@@ -121,9 +120,7 @@ class Devices(AssetMixin):
         kwargs["value"] = value
         return self.get_by_value_regex(**kwargs)
 
-    def get_by_ip(
-        self, value: str, **kwargs
-    ) -> Union[Generator[dict, None, None], List[dict]]:
+    def get_by_ip(self, value: str, **kwargs) -> Union[Generator[dict, None, None], List[dict]]:
         """Build a query to get assets where ip == value."""
         kwargs["field"] = self.FIELD_IP
         kwargs["field_manual"] = True

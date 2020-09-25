@@ -65,9 +65,7 @@ class Instances(ModelMixins):
         path = self.router.root
         return self.request(method="delete", path=path, json=data)
 
-    def _update(
-        self, node_id: str, node_name: str, hostname: str
-    ) -> dict:  # pragma: no cover
+    def _update(self, node_id: str, node_name: str, hostname: str) -> dict:  # pragma: no cover
         """Direct API method to update an instance.
 
         Args:

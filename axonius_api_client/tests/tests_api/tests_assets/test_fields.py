@@ -3,6 +3,7 @@
 import copy
 
 import pytest
+
 from axonius_api_client.constants import AGG_ADAPTER_ALTS, AGG_ADAPTER_NAME
 from axonius_api_client.exceptions import ApiError, NotFoundError
 
@@ -365,11 +366,7 @@ class FieldsPublic:
         exp = []
         schemas = get_schemas(apiobj=apiobj)
         for i in search:
-            exp += [
-                x["name_qual"]
-                for x in schemas
-                if x["name_base"] == i or x["name_qual"] == i
-            ]
+            exp += [x["name_qual"] for x in schemas if x["name_base"] == i or x["name_qual"] == i]
         result = apiobj.fields.get_field_names_eq(value=search)
         assert exp == result
 
@@ -502,9 +499,7 @@ class FieldsPublic:
 
     def test_fuzzy_filter_token(self, apiobj):
         schemas = apiobj.fields.get()["agg"]
-        matches = apiobj.fields.fuzzy_filter(
-            search="last seen", schemas=schemas, names=True
-        )
+        matches = apiobj.fields.fuzzy_filter(search="last seen", schemas=schemas, names=True)
         assert isinstance(matches, list) and matches
         for x in matches:
             assert isinstance(x, str)

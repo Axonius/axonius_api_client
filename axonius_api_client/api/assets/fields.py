@@ -6,9 +6,13 @@ from typing import List, Optional, Tuple, Union
 from cachetools import TTLCache, cached
 from fuzzywuzzy import fuzz
 
-from ...constants import (AGG_ADAPTER_ALTS, AGG_ADAPTER_NAME,
-                          FUZZY_SCHEMAS_KEYS, GET_SCHEMA_KEYS,
-                          GET_SCHEMAS_KEYS)
+from ...constants import (
+    AGG_ADAPTER_ALTS,
+    AGG_ADAPTER_NAME,
+    FUZZY_SCHEMAS_KEYS,
+    GET_SCHEMA_KEYS,
+    GET_SCHEMAS_KEYS,
+)
 from ...exceptions import ApiError, NotFoundError
 from ...tools import listify, split_str, strip_right
 from ..mixins import ChildMixins
@@ -105,9 +109,9 @@ class Fields(ChildMixins):
         matches = [x for x in fields if search.search(x)]
 
         if not matches:
-            msg = (
-                "No adapter found where name regex matches {!r}, valid adapters:\n  {}"
-            ).format(value, "\n  ".join(list(fields)))
+            msg = ("No adapter found where name regex matches {!r}, valid adapters:\n  {}").format(
+                value, "\n  ".join(list(fields))
+            )
             raise NotFoundError(msg)
         return matches
 
@@ -209,9 +213,7 @@ class Fields(ChildMixins):
 
             for adapter in adapters:
                 for field_re in fields_re:
-                    fschemas = self.get_field_schemas(
-                        value=field_re, schemas=fields[adapter]
-                    )
+                    fschemas = self.get_field_schemas(value=field_re, schemas=fields[adapter])
                     names = [x["name_qual"] for x in fschemas]
                     matches += [x for x in names if x not in matches]
         return matches
@@ -302,15 +304,11 @@ class Fields(ChildMixins):
 
         return selected
 
-    def split_searches(
-        self, value: Union[List[str], str]
-    ) -> List[Tuple[str, List[str]]]:
+    def split_searches(self, value: Union[List[str], str]) -> List[Tuple[str, List[str]]]:
         """Pass."""
         return [self.split_search(value=x) for x in listify(obj=value)]
 
-    def split_search(
-        self, value: str, adapter: str = AGG_ADAPTER_NAME
-    ) -> Tuple[str, List[str]]:
+    def split_search(self, value: str, adapter: str = AGG_ADAPTER_NAME) -> Tuple[str, List[str]]:
         """Pass."""
         search = value.strip().lower()
 

@@ -8,8 +8,7 @@ import platform
 import sys
 from datetime import datetime, timedelta, timezone
 from itertools import zip_longest
-from typing import (Any, Callable, Iterable, Iterator, List, Optional, Tuple,
-                    Union)
+from typing import Any, Callable, Iterable, Iterator, List, Optional, Tuple, Union
 from urllib.parse import urljoin
 
 import click
@@ -19,8 +18,7 @@ import dateutil.tz
 
 from . import __file__ as PACKAGE_FILE
 from . import __package__ as PACKAGE_ROOT
-from .constants import (ERROR_ARGS, ERROR_TMPL, NO, OK_ARGS, OK_TMPL,
-                        WARN_ARGS, WARN_TMPL, YES)
+from .constants import ERROR_ARGS, ERROR_TMPL, NO, OK_ARGS, OK_TMPL, WARN_ARGS, WARN_TMPL, YES
 from .exceptions import ToolsError
 from .version import VERSION
 
@@ -112,9 +110,7 @@ def coerce_int_float(value: Union[int, float, str]) -> Union[int, float]:
             return float(value)
 
     vtype = type(value).__name__
-    raise ToolsError(
-        f"Supplied value {value!r} of type {vtype} is not an integer or float."
-    )
+    raise ToolsError(f"Supplied value {value!r} of type {vtype} is not an integer or float.")
 
 
 def coerce_bool(obj: Any, errmsg: Optional[str] = None) -> bool:
@@ -657,9 +653,7 @@ def echo_warn(msg: str, tmpl: bool = True, **kwargs):  # pragma: no cover
     click.secho(msg, **echoargs)
 
 
-def echo_error(
-    msg: str, abort: bool = True, tmpl: bool = True, **kwargs
-):  # pragma: no cover
+def echo_error(msg: str, abort: bool = True, tmpl: bool = True, **kwargs):  # pragma: no cover
     """Pass."""
     echoargs = {}
     echoargs.update(ERROR_ARGS)
@@ -706,9 +700,7 @@ def sysinfo() -> dict:
     return info
 
 
-def calc_percent(
-    part: Union[int, float], whole: Union[int, float], places: int = 2
-) -> float:
+def calc_percent(part: Union[int, float], whole: Union[int, float], places: int = 2) -> float:
     """Pass."""
     if 0 in [part, whole]:
         value = 0.00

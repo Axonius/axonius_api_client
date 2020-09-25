@@ -9,8 +9,7 @@ from axonius_api_client.constants import load_dotenv
 from axonius_api_client.tools import json_reload, listify
 
 FIND_DVC_QUERY_TMPL = (
-    '(specific_data.data.hostname == "{value}") or '
-    '(specific_data.data.name == "{value}")'
+    '(specific_data.data.hostname == "{value}") or ' '(specific_data.data.name == "{value}")'
 )
 ASS_DVC_FIELD = "specific_data.data.associated_devices"
 AGENT_VERSIONS_FIELD = "specific_data.data.agent_versions"
@@ -57,10 +56,7 @@ def parse_ass_dvc(user, ass_dvc, client):
     # NEED TO PASS devices apiobj
 
     if not found:
-        print(
-            f"No devices found that match associated device {caption} for "
-            f"user {username}"
-        )
+        print(f"No devices found that match associated device {caption} for " f"user {username}")
         return
 
     if len(found) > 1:

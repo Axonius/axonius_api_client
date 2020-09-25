@@ -8,8 +8,14 @@ from urllib.parse import ParseResult, urlparse, urlunparse
 
 import requests
 
-from .constants import (LOG_LEVEL_HTTP, MAX_BODY_LEN, REQUEST_ATTR_MAP,
-                        RESPONSE_ATTR_MAP, TIMEOUT_CONNECT, TIMEOUT_RESPONSE)
+from .constants import (
+    LOG_LEVEL_HTTP,
+    MAX_BODY_LEN,
+    REQUEST_ATTR_MAP,
+    RESPONSE_ATTR_MAP,
+    TIMEOUT_CONNECT,
+    TIMEOUT_RESPONSE,
+)
 from .exceptions import HttpError
 from .logs import get_obj_log, set_log_level
 from .tools import join_url, json_reload, listify, path_read
@@ -316,9 +322,7 @@ class Http:
         Returns:
             :obj:`str`
         """
-        return "{c.__module__}.{c.__name__}(url={url!r})".format(
-            c=self.__class__, url=self.url
-        )
+        return "{c.__module__}.{c.__name__}(url={url!r})".format(c=self.__class__, url=self.url)
 
     def __repr__(self) -> str:
         """Show object info.
@@ -400,9 +404,7 @@ class Http:
     def _get_log_attrs(self, attr_type: str) -> List[str]:
         return getattr(self, "_LOG_ATTRS", {}).get(attr_type, [])
 
-    def _set_log_attrs(
-        self, attr_map: dict, attr_type: str, value: Union[str, List[str]]
-    ):
+    def _set_log_attrs(self, attr_map: dict, attr_type: str, value: Union[str, List[str]]):
         if not hasattr(self, "_LOG_ATTRS"):
             self._LOG_ATTRS = {"response": [], "request": []}
 

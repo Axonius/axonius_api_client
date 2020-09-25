@@ -41,9 +41,7 @@ class Xlsx(Base):
             msg = "Must supply export_file for this export method"
             self.echo(msg=msg, error=ApiError, level="error")
 
-        self._workbook = xlsxwriter.Workbook(
-            str(self._file_path), {"constant_memory": True}
-        )
+        self._workbook = xlsxwriter.Workbook(str(self._file_path), {"constant_memory": True})
         self._cell_format = self._workbook.add_format(self.CELL_FORMAT)
 
         worksheet = f"{self.APIOBJ.__class__.__name__}"

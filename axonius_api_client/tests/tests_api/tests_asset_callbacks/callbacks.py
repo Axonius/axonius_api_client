@@ -6,6 +6,7 @@ import logging
 import sys
 
 import pytest
+
 from axonius_api_client.api.asset_callbacks import get_callbacks_cls
 from axonius_api_client.constants import FIELD_TRIM_LEN, SCHEMAS_CUSTOM
 from axonius_api_client.exceptions import ApiError
@@ -179,14 +180,10 @@ class Callbacks:
                     assert x["name"] not in sub_value
 
     def test_do_add_null_values_false(self, cbexport, apiobj):
-        original_row = get_rows_exist(
-            apiobj=apiobj, fields=apiobj.FIELD_COMPLEX, not_exist=True
-        )
+        original_row = get_rows_exist(apiobj=apiobj, fields=apiobj.FIELD_COMPLEX, not_exist=True)
         test_row = copy.deepcopy(original_row)
 
-        cbobj = self.get_cbobj(
-            apiobj=apiobj, cbexport=cbexport, getargs={"field_null": False}
-        )
+        cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs={"field_null": False})
 
         cbobj.do_add_null_values(row=test_row)
 
@@ -234,9 +231,7 @@ class Callbacks:
         test_row = copy.deepcopy(original_row)
         row_id = test_row[apiobj.FIELD_AXON_ID]
         tags = [f"badwolf_{random_string(9)}", f"badwolf_{random_string(9)}"]
-        cbobj = self.get_cbobj(
-            apiobj=apiobj, cbexport=cbexport, getargs={"tags_add": tags}
-        )
+        cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs={"tags_add": tags})
 
         cbobj.process_tags_to_add(row=test_row)
         assert test_row == original_row
@@ -256,9 +251,7 @@ class Callbacks:
             assert tag in all_tags
             assert tag in row_tags
 
-        cbobj = self.get_cbobj(
-            apiobj=apiobj, cbexport=cbexport, getargs={"tags_remove": tags}
-        )
+        cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs={"tags_remove": tags})
 
         cbobj.process_tags_to_remove(row=test_row)
         assert test_row == original_row
@@ -280,9 +273,7 @@ class Callbacks:
         original_row = get_rows_exist(apiobj=apiobj)
         test_row = copy.deepcopy(original_row)
 
-        cbobj = self.get_cbobj(
-            apiobj=apiobj, cbexport=cbexport, getargs={"tags_add": []}
-        )
+        cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs={"tags_add": []})
 
         cbobj.process_tags_to_add(row=test_row)
         assert test_row == original_row
@@ -294,9 +285,7 @@ class Callbacks:
         original_row = get_rows_exist(apiobj=apiobj)
         test_row = copy.deepcopy(original_row)
 
-        cbobj = self.get_cbobj(
-            apiobj=apiobj, cbexport=cbexport, getargs={"tags_remove": []}
-        )
+        cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs={"tags_remove": []})
 
         cbobj.process_tags_to_remove(row=test_row)
         assert test_row == original_row
@@ -308,9 +297,7 @@ class Callbacks:
         original_row = get_rows_exist(apiobj=apiobj)
         test_row = copy.deepcopy(original_row)
 
-        cbobj = self.get_cbobj(
-            apiobj=apiobj, cbexport=cbexport, getargs={"field_excludes": []}
-        )
+        cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs={"field_excludes": []})
 
         cbobj.do_excludes(row=test_row)
 
@@ -325,9 +312,7 @@ class Callbacks:
 
         fields = [apiobj.FIELD_AXON_ID, apiobj.FIELD_ADAPTERS, "adapters_list_length"]
 
-        cbobj = self.get_cbobj(
-            apiobj=apiobj, cbexport=cbexport, getargs={"field_excludes": fields}
-        )
+        cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs={"field_excludes": fields})
 
         cbobj.do_excludes(row=test_row)
 
@@ -365,9 +350,7 @@ class Callbacks:
         original_row = get_rows_exist(apiobj=apiobj)
         test_row = copy.deepcopy(original_row)
 
-        cbobj = self.get_cbobj(
-            apiobj=apiobj, cbexport=cbexport, getargs={"field_join": True}
-        )
+        cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs={"field_join": True})
         cbobj.do_join_values(row=test_row)
 
         assert original_row != test_row
@@ -379,9 +362,7 @@ class Callbacks:
         original_row = get_rows_exist(apiobj=apiobj)
         test_row = copy.deepcopy(original_row)
 
-        cbobj = self.get_cbobj(
-            apiobj=apiobj, cbexport=cbexport, getargs={"field_join": False}
-        )
+        cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs={"field_join": False})
         cbobj.do_join_values(row=test_row)
         if cbobj.GETARGS["field_join"]:
             assert original_row != test_row
@@ -393,9 +374,7 @@ class Callbacks:
         original_row["test"] = ("aaaa " * (FIELD_TRIM_LEN + 1000)).split()
         test_row = copy.deepcopy(original_row)
 
-        cbobj = self.get_cbobj(
-            apiobj=apiobj, cbexport=cbexport, getargs={"field_join": True}
-        )
+        cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs={"field_join": True})
 
         cbobj.do_join_values(row=test_row)
         assert original_row != test_row
@@ -460,9 +439,7 @@ class Callbacks:
         original_row = get_rows_exist(apiobj=apiobj)
         test_row = copy.deepcopy(original_row)
 
-        cbobj = self.get_cbobj(
-            apiobj=apiobj, cbexport=cbexport, getargs={"field_titles": False}
-        )
+        cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs={"field_titles": False})
 
         cbobj.do_change_field_titles(row=test_row)
 
@@ -488,9 +465,7 @@ class Callbacks:
         assert original_row != test_row
         assert field_complex not in test_row
 
-        for sub_field in get_schema(
-            apiobj=apiobj, field=field_complex, key="sub_fields"
-        ):
+        for sub_field in get_schema(apiobj=apiobj, field=field_complex, key="sub_fields"):
             if sub_field["is_root"]:
                 assert sub_field["name_qual"] in test_row
 
@@ -533,12 +508,10 @@ class Callbacks:
         original_row = get_rows_exist(apiobj=apiobj, fields=field_complex)
         test_row = copy.deepcopy(original_row)
 
-        sub_name = get_schema(apiobj=apiobj, field=field_complex, key="sub_fields")[0][
-            "name"
+        sub_name = get_schema(apiobj=apiobj, field=field_complex, key="sub_fields")[0]["name"]
+        sub_name_qual = get_schema(apiobj=apiobj, field=field_complex, key="sub_fields")[0][
+            "name_qual"
         ]
-        sub_name_qual = get_schema(apiobj=apiobj, field=field_complex, key="sub_fields")[
-            0
-        ]["name_qual"]
 
         cbobj = self.get_cbobj(
             apiobj=apiobj,
@@ -701,9 +674,7 @@ class Callbacks:
 
     def test_schema_to_explode_success(self, cbexport, apiobj):
         field = "adapters"
-        cbobj = self.get_cbobj(
-            apiobj=apiobj, cbexport=cbexport, getargs={"field_explode": field}
-        )
+        cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs={"field_explode": field})
         schema = cbobj.schema_to_explode
         assert schema["name_qual"] == field
 
@@ -837,9 +808,7 @@ class Callbacks:
     def test_echo_ok_doecho_yes(self, cbexport, apiobj, capsys, caplog):
         entry = "xxxxxxx"
 
-        cbobj = self.get_cbobj(
-            apiobj=apiobj, cbexport=cbexport, getargs={"do_echo": True}
-        )
+        cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs={"do_echo": True})
         cbobj.echo(msg=entry)
         capture = capsys.readouterr()
         assert f"{entry}\n" in capture.err
@@ -849,9 +818,7 @@ class Callbacks:
     def test_echo_error_doecho_yes(self, cbexport, apiobj, capsys, caplog):
         entry = "xxxxxxx"
 
-        cbobj = self.get_cbobj(
-            apiobj=apiobj, cbexport=cbexport, getargs={"do_echo": True}
-        )
+        cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs={"do_echo": True})
         with pytest.raises(SystemExit):
             cbobj.echo(msg=entry, error=ApiError)
 
@@ -863,9 +830,7 @@ class Callbacks:
     def test_echo_ok_doecho_no(self, cbexport, apiobj, capsys, caplog):
         entry = "xxxxxxx"
 
-        cbobj = self.get_cbobj(
-            apiobj=apiobj, cbexport=cbexport, getargs={"do_echo": False}
-        )
+        cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs={"do_echo": False})
         cbobj.echo(msg=entry)
         capture = capsys.readouterr()
         assert not capture.err
@@ -875,9 +840,7 @@ class Callbacks:
     def test_echo_error_doecho_no(self, cbexport, apiobj, capsys, caplog):
         entry = "xxxxxxx"
 
-        cbobj = self.get_cbobj(
-            apiobj=apiobj, cbexport=cbexport, getargs={"do_echo": False}
-        )
+        cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs={"do_echo": False})
         with pytest.raises(ApiError):
             cbobj.echo(msg=entry, error=ApiError)
 

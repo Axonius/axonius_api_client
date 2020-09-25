@@ -109,9 +109,7 @@ class Roles(ChildMixins):  # pragma: no cover
 
         if role:
             for perm in role["perms"]:
-                self._map_perm_role(
-                    perm=perm["permission"], value=perm["value"], perms=perms
-                )
+                self._map_perm_role(perm=perm["permission"], value=perm["value"], perms=perms)
 
         for perm in self.permissions:
             self._map_perm_role(perm=perm, value=default, perms=perms)
@@ -213,9 +211,7 @@ class Roles(ChildMixins):  # pragma: no cover
         """
         data = {"name": name, "permissions": permissions, "uuid": uuid}
         path = self.router.roles_by_uuid.format(uuid=uuid)
-        return self.request(
-            method="post", path=path, json=data, error_json_invalid=False
-        )
+        return self.request(method="post", path=path, json=data, error_json_invalid=False)
 
     def _delete(self, uuid):
         """Direct API method to delete a role.

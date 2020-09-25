@@ -22,9 +22,7 @@ class LabelsPrivate:
         assert add_label_result == 1
 
         # re-get the asset and check that it has the label
-        assets_added = apiobj.get_by_values(
-            values=labels, field="labels", fields="labels"
-        )
+        assets_added = apiobj.get_by_values(values=labels, field="labels", fields="labels")
         assets_added_ids = [x["internal_axon_id"] for x in assets_added]
         assert asset_id in assets_added_ids
 
@@ -48,9 +46,7 @@ class LabelsPrivate:
         assert remove_label_result >= 1
 
         # re-get the asset and check that it has the label
-        assets_removed = apiobj.get_by_values(
-            values=labels, field="labels", fields="labels"
-        )
+        assets_removed = apiobj.get_by_values(values=labels, field="labels", fields="labels")
         assert not assets_removed
 
         # check that the label is not in all the labels on the system
@@ -108,9 +104,7 @@ class LabelsPublic:
         assert remove_label_result >= 1
 
         # re-get the asset and check that it has the label
-        assets_removed = apiobj.get_by_values(
-            values=labels, field="labels", fields="labels"
-        )
+        assets_removed = apiobj.get_by_values(values=labels, field="labels", fields="labels")
         assert not assets_removed
 
         # check that the label is not in all the labels on the system

@@ -212,9 +212,7 @@ def test_config_check_file_callback():
     )
     assert result == exp
 
-    result = config_check(
-        value=value, schema=SCHEMA_FILE, source="badwolf", callbacks=callbacks
-    )
+    result = config_check(value=value, schema=SCHEMA_FILE, source="badwolf", callbacks=callbacks)
     assert result == exp
 
 
@@ -302,9 +300,7 @@ def test_is_uploaded_file_false(value):
 
 
 def test_config_empty_ok():
-    config_empty(
-        schemas=SCHEMAS_DICT, new_config={"badwolf": "badwolf"}, source="badwolf"
-    )
+    config_empty(schemas=SCHEMAS_DICT, new_config={"badwolf": "badwolf"}, source="badwolf")
 
 
 def test_config_empty_bad():
@@ -350,9 +346,7 @@ def test_config_default(value):
         schema["default"] = "badwolf"
         exp[name] = "badwolf"
     exp.update(value)
-    result = config_default(
-        schemas=schemas, new_config=copy.deepcopy(value), source="badwolf"
-    )
+    result = config_default(schemas=schemas, new_config=copy.deepcopy(value), source="badwolf")
     assert result == exp
 
 

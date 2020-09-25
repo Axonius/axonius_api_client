@@ -64,7 +64,7 @@ class Patterns:
         r"""
 (?ix)                   # case insensitive and verbose
 (?P<flags>[^a-z0-9]*)?  # capture optional flags at beginning
-(?P<value>.*)    # capture the rest as the value
+(?P<value>.*)           # capture the rest as the value
 """
     )
 
@@ -112,6 +112,7 @@ class EntrySq:
     FDEF: str = "fields_default"
     FMAN: str = "fields_manual"
     REQ: List[str] = [*Entry.REQ]
+    OPT: dict = {DESC: "", TAGS: "", FIELDS: DEFAULT}
 
 
 class Types:
@@ -129,9 +130,7 @@ class Docs:
     OPVAL: str = "FIELD OPERATOR VALUE"
 
     FMT_SIMPLE: str = f"{Flags.LFMT} {OPVAL} {Flags.RFMT}"
-    FMT_COMPLEX: str = (
-        f"{Flags.LFMT} COMPLEX-FIELD{Entry.CSPLIT}SUB-{OPVAL}{SUB_OPT} {Flags.RFMT}"
-    )
+    FMT_COMPLEX: str = f"{Flags.LFMT} COMPLEX-FIELD{Entry.CSPLIT}SUB-{OPVAL}{SUB_OPT} {Flags.RFMT}"
     DESC_SIMPLE: str = "Filter entry for simple fields"
     DESC_COMPLEX: str = "Filter entry for complex fields and their sub-fields"
     EX_SIMPLE1: str = f"{Flags.LEFTB} hostname contains test"
@@ -143,11 +142,11 @@ class Docs:
         f"{Entry.CSPLIT}version earlier_than 82"
     )
 
-    EX_TEXT: str = f"""{Types.SIMPLE:<8} "{EX_SIMPLE1}"
-{Types.SIMPLE:<8} "{EX_SIMPLE2}"
-{Types.SIMPLE:<8} "{EX_SIMPLE3}"
-{Types.SIMPLE:<8} "{EX_SIMPLE4}"
-{Types.COMPLEX:<8} "{EX_COMPLEX1}"
+    EX_TEXT: str = f"""{Types.SIMPLE:<8} {EX_SIMPLE1}
+{Types.SIMPLE:<8} {EX_SIMPLE2}
+{Types.SIMPLE:<8} {EX_SIMPLE3}
+{Types.SIMPLE:<8} {EX_SIMPLE4}
+{Types.COMPLEX:<8} {EX_COMPLEX1}
 """
 
     EX_DICT: str = f"""[
@@ -180,8 +179,8 @@ class Docs:
 "# If {Entry.TYPE} column is empty or begins with # it is ignored",,,,
 "# {Entry.TYPE} of {Types.SIMPLE} or {Types.COMPLEX} will belong to the {Types.SAVED_QUERY} they are under",,,,
 "# Column descriptions for {Entry.TYPE} of {Types.SAVED_QUERY}","Name of Saved Query","Description of Saved Query","Tags to apply to Saved Query","Columns to display in Saved Query"
-"# Column descriptions for {Entry.TYPE} of {Types.SIMPLE}","Format ([brackets] represent optional items): {FMT_SIMPLE}","Description: {DESC_SIMPLE}","Only uses columns {Entry.TYPE} and {Entry.VALUE}",
-"# Column descriptions for {Entry.TYPE} of {Types.COMPLEX}","Format ([brackets] represent optional items): {FMT_COMPLEX}","Description: {DESC_COMPLEX}","Only uses columns {Entry.TYPE} and {Entry.VALUE}",
+"# Column descriptions for {Entry.TYPE} of {Types.SIMPLE}","Format -- [] represents optional items: {FMT_SIMPLE}","Description: {DESC_SIMPLE}","Only uses columns {Entry.TYPE} and {Entry.VALUE}",
+"# Column descriptions for {Entry.TYPE} of {Types.COMPLEX}","Format -- [] represents optional items: {FMT_COMPLEX}","Description: {DESC_COMPLEX}","Only uses columns {Entry.TYPE} and {Entry.VALUE}",
 "# Value Flags for {Entry.TYPE} of {Types.SIMPLE} or {Types.COMPLEX}","{Flags.FMT_CSV}",,,
 "{Types.SAVED_QUERY}","example 1","Filters, default fields, custom fields","example,tag1,tag2","{EX_FIELDS},{EntrySq.DEFAULT},os.build"
 "{Types.SIMPLE}","{EX_SIMPLE1}",,,
@@ -196,11 +195,11 @@ class Docs:
 # Example:
 {EX_TEXT}
 
-# Format ([brackets] represent optional items):
-{Types.SIMPLE:<8} "{FMT_SIMPLE}"
-# Description: "{DESC_SIMPLE}"
-{Types.COMPLEX:<8} "{FMT_COMPLEX}"
-# Description: "{DESC_COMPLEX}"
+# Format -- [] represents optional items:
+{Types.SIMPLE:<8} {FMT_SIMPLE}
+# Description: {DESC_SIMPLE}
+{Types.COMPLEX:<8} {FMT_COMPLEX}
+# Description: {DESC_COMPLEX}
 
 # Flags:{Flags.FMT_TEXT}
 """
@@ -208,7 +207,7 @@ class Docs:
 # Example:
 {EX_DICT}
 
-# Format ([brackets] represent optional items):
+# Format -- [] represents optional items:
 # "{Entry.TYPE}": "{Types.SIMPLE}, "{Entry.VALUE}": "{FMT_SIMPLE}"
 # Description: "{DESC_SIMPLE}"
 # "{Entry.TYPE}": "{Types.COMPLEX}", "{Entry.VALUE}": "{FMT_COMPLEX}"
@@ -262,8 +261,8 @@ class Expr:
         is_complex: bool = False,
         children: Optional[List[dict]] = None,
     ) -> dict:
-        flags = entry[Entry.FLAGS]
-        weight = entry[Entry.WEIGHT]
+        flags = entry.get(Entry.FLAGS, []) or []
+        weight = entry.get(Entry.WEIGHT, 0)
 
         is_right = Flags.RIGHTB in flags
         is_left = Flags.LEFTB in flags

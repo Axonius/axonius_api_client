@@ -94,8 +94,7 @@ TIMEOUT_RESPONSE: int = 900
 """:obj:`int`: seconds to wait for response from API."""
 
 LOG_FMT_VERBOSE: str = (
-    "%(asctime)s %(levelname)-8s [%(name)s:%(funcName)s:%(pathname)s:%(lineno)d] "
-    "%(message)s"
+    "%(asctime)s %(levelname)-8s [%(name)s:%(funcName)s:%(pathname)s:%(lineno)d] " "%(message)s"
 )
 LOG_FMT_BRIEF: str = "%(levelname)-8s %(module)-15s %(message)s"
 
