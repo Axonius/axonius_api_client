@@ -24,8 +24,8 @@ class TestConnect:
 
         assert "Not connected" in format(c)
         assert "Not connected" in repr(c)
-        assert c._handler_file is None
-        assert c._handler_con is None
+        assert c.HANDLER_FILE is None
+        assert c.HANDLER_CON is None
 
     def test_no_start_logs(self, request):
         """Pass."""
@@ -35,8 +35,8 @@ class TestConnect:
 
         assert "Not connected" in format(c)
         assert "Not connected" in repr(c)
-        assert isinstance(c._handler_file, logging.Handler)
-        assert isinstance(c._handler_con, logging.Handler)
+        assert isinstance(c.HANDLER_FILE, logging.Handler)
+        assert isinstance(c.HANDLER_CON, logging.Handler)
 
     def test_start(self, request):
         """Pass."""
@@ -68,7 +68,7 @@ class TestConnect:
 
         c = Connect(url=ax_url, key=BAD_CRED, secret=BAD_CRED, certwarn=False)
 
-        c._http.CONNECT_TIMEOUT = 1
+        c.HTTP.CONNECT_TIMEOUT = 1
 
         with pytest.raises(ConnectError) as exc:
             c.start()
@@ -79,7 +79,7 @@ class TestConnect:
         """Pass."""
         c = Connect(url="127.0.0.99", key=BAD_CRED, secret=BAD_CRED, certwarn=False)
 
-        c._http.CONNECT_TIMEOUT = 1
+        c.HTTP.CONNECT_TIMEOUT = 1
 
         with pytest.raises(ConnectError) as exc:
             c.start()
@@ -93,7 +93,7 @@ class TestConnect:
         """Pass."""
         c = Connect(url="https://127.0.0.1:3919", key=BAD_CRED, secret=BAD_CRED, certwarn=False)
 
-        c._http.CONNECT_TIMEOUT = 1
+        c.HTTP.CONNECT_TIMEOUT = 1
 
         with pytest.raises(ConnectError) as exc:
             c.start()
@@ -105,7 +105,7 @@ class TestConnect:
 
         c = Connect(url=ax_url, key=BAD_CRED, secret=BAD_CRED, certwarn=False, wraperror=False)
 
-        c._http.CONNECT_TIMEOUT = 1
+        c.HTTP.CONNECT_TIMEOUT = 1
 
         with pytest.raises(InvalidCredentials):
             c.start()
@@ -114,8 +114,8 @@ class TestConnect:
         """Pass."""
         c = Connect(url="127.0.0.1", key=BAD_CRED, secret=BAD_CRED, certwarn=False)
 
-        c._http.CONNECT_TIMEOUT = 1
-        c._auth._creds = None
+        c.HTTP.CONNECT_TIMEOUT = 1
+        c.AUTH._creds = None
 
         with pytest.raises(ConnectError):
             c.start()

@@ -1,11 +1,24 @@
 # -*- coding: utf-8 -*-
-"""API models package."""
-from . import adapters, assets, enforcements, mixins, parsers, routers, signup, system
+"""API library package."""
+from . import (
+    adapters,
+    assets,
+    dashboard,
+    enforcements,
+    instances,
+    mixins,
+    parsers,
+    routers,
+    signup,
+    system,
+)
 from .adapters import Adapters
 from .assets import Devices, Users
+from .dashboard import Dashboard
 from .enforcements import Enforcements, RunAction
+from .instances import Instances
 from .signup import Signup
-from .system import Dashboard, Instances, System, dashboard, instances
+from .system import System
 
 __all__ = (
     "Users",

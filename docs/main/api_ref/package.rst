@@ -11,7 +11,7 @@ API Reference
 .. toctree::
     openapi
     api/package
-    auth
+    auth/package
     connect
     constants
     exceptions
