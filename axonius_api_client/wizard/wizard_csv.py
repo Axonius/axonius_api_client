@@ -13,13 +13,17 @@ from .wizard import Wizard
 
 
 def kv_dump(obj: dict) -> str:
+    """Pass."""
     return "\n  " + "\n  ".join([f"{k}: {v}" for k, v in obj.items()])
 
 
 class WizardCsv(Wizard):
+    """Pass."""
+
     DOCS: str = Docs.CSV
 
     def parse(self, content: str, source: str = Sources.CSV_STR) -> List[dict]:
+        """Pass."""
         source = source or Sources.CSV_STR
         entries = self._load_csv(content=content, source=source)
         sqs = self._process_sqs(entries=entries)
@@ -28,11 +32,13 @@ class WizardCsv(Wizard):
     def parse_path(
         self, path: Union[str, pathlib.Path], source: str = Sources.CSV_PATH
     ) -> List[dict]:
+        """Pass."""
         path, content = path_read(path, encoding="utf-8")
         source = source.format(path=path)
         return self.parse(content=content, source=source)
 
     def _load_csv(self, content: str, source: str) -> List[dict]:
+        """Pass."""
         check_type(value=content, exp=str, name="content")
         content = content.strip()
         if content.startswith(codecs.BOM_UTF8.decode()):
@@ -46,6 +52,7 @@ class WizardCsv(Wizard):
         return entries
 
     def _process_csv(self, rows: List[dict], columns: List[str], source: str) -> List[dict]:
+        """Pass."""
         found = [x.strip().lower() for x in columns if x.strip()]
         found_txt = ", ".join(found or ["NONE!"])
 
@@ -70,6 +77,7 @@ class WizardCsv(Wizard):
         return entries
 
     def _rows_to_entries(self, rows: List[dict], source: str) -> List[dict]:
+        """Pass."""
         entries = []
         for idx, row in enumerate(rows):
             src = f"{source} row #{idx + 1}:{kv_dump(row)}"
@@ -81,6 +89,7 @@ class WizardCsv(Wizard):
         return [x for x in entries if x]
 
     def _row_to_entry(self, row: dict, src: str) -> dict:
+        """Pass."""
         oetype = row.get(Entry.TYPE, "")
         etype = str(oetype or "").strip().lower()
         value = row.get(Entry.VALUE, "") or ""
@@ -103,6 +112,7 @@ class WizardCsv(Wizard):
         return entry
 
     def _process_sqs(self, entries: List[dict]) -> List[dict]:
+        """Pass."""
         self._sqs = sqs = []
         self._sq = {}
         self._sq_entries = []
@@ -120,6 +130,7 @@ class WizardCsv(Wizard):
         return sqs
 
     def _process_sq(self, entry: dict, is_last: bool) -> int:
+        """Pass."""
         if entry[Entry.TYPE] == Types.SAVED_QUERY:
             if self._sq_entries:
                 self._process_sq_entries()
@@ -163,15 +174,18 @@ class WizardCsv(Wizard):
         self._sqs.append(self._sq)
 
     def _process_desc(self, entry: dict) -> Optional[str]:
+        """Pass."""
         desc = str(entry.get(EntrySq.DESC) or "")
         return desc.strip() or None
 
     def _process_tags(self, entry: dict) -> Optional[List[str]]:
+        """Pass."""
         tags = str(entry.get(EntrySq.TAGS) or "")
         tags = [x.strip() for x in tags.split(",") if x.strip()]
         return tags or None
 
     def _process_fields(self, entry: dict) -> [List[str]]:
+        """Pass."""
         fields = str(entry.get(EntrySq.FIELDS) or EntrySq.DEFAULT)
         fields = [x.strip().lower() for x in fields.split(",") if x.strip()]
 

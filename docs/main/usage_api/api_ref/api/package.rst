@@ -14,3 +14,5 @@ api
     mixins
     routers
     system
+    dashboard
+    instances

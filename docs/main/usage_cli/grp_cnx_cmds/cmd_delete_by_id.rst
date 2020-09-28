@@ -1,6 +1,6 @@
 .. include:: /main/.special.rst
 
-adapters cnx delete
+adapters cnx delete-by-id
 ###############################################
 
 This command will delete a connection from an adapter on a node.
@@ -39,5 +39,5 @@ Examples
 Help Page
 ===============================================
 
-.. click:: axonius_api_client.cli.grp_cnx.cmd_delete:cmd
+.. click:: axonius_api_client.cli.grp_adapters.grp_cnx.cmd_delete_by_id:cmd
    :prog: axonshell adapters cnx delete

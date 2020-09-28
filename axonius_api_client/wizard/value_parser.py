@@ -7,22 +7,18 @@ from cachetools import TTLCache, cached
 
 from ..api.assets.asset_mixin import AssetMixin
 from ..exceptions import WizardError
-from ..tools import (
-    check_empty,
-    check_type,
-    coerce_int_float,
-    coerce_str_to_csv,
-    dt_parse_tmpl,
-    get_raw_version,
-    parse_ip_address,
-    parse_ip_network,
-)
+from ..tools import (check_empty, check_type, coerce_int_float,
+                     coerce_str_to_csv, dt_parse_tmpl, get_raw_version,
+                     parse_ip_address, parse_ip_network)
 
 CACHE: TTLCache = TTLCache(maxsize=1024, ttl=30)
 
 
 class ValueParser:
+    """Pass."""
+
     def __init__(self, apiobj: AssetMixin):
+        """Pass."""
         self.apiobj = apiobj
 
     def __call__(
@@ -32,6 +28,7 @@ class ValueParser:
         enum: Optional[List[str]] = None,
         enum_items: Optional[List[str]] = None,
     ) -> Tuple[str, Any]:
+        """Pass."""
         method = getattr(self, f"value_{parser}")
         try:
             return method(value=value, enum=enum, enum_items=enum_items)
@@ -46,6 +43,7 @@ class ValueParser:
         enum: Optional[List[str]] = None,
         enum_items: Optional[List[str]] = None,
     ) -> Tuple[str, str]:
+        """Pass."""
         return self.parse_csv(
             value=value,
             enum=enum,
@@ -60,6 +58,7 @@ class ValueParser:
         enum: Optional[List[str]] = None,
         enum_items: Optional[List[str]] = None,
     ) -> Tuple[str, str]:
+        """Pass."""
         aql_value = self.parse_csv(
             value=value,
             enum=enum,
@@ -75,6 +74,7 @@ class ValueParser:
         enum: Optional[List[str]] = None,
         enum_items: Optional[List[str]] = None,
     ) -> Tuple[str, str]:
+        """Pass."""
         return self.parse_csv(
             value=value,
             enum=enum,
@@ -89,6 +89,7 @@ class ValueParser:
         enum: Optional[List[str]] = None,
         enum_items: Optional[List[str]] = None,
     ) -> Tuple[str, str]:
+        """Pass."""
         return self.parse_csv(
             value=value, enum=enum, enum_items=enum_items, converter=parse_ip_address
         )
@@ -99,6 +100,7 @@ class ValueParser:
         enum: Optional[List[str]] = None,
         enum_items: Optional[List[str]] = None,
     ) -> Tuple[str, str]:
+        """Pass."""
         return self.parse_csv(value=value, enum=enum, enum_items=enum_items)
 
     def value_to_csv_subnet(
@@ -107,6 +109,7 @@ class ValueParser:
         enum: Optional[List[str]] = None,
         enum_items: Optional[List[str]] = None,
     ) -> Tuple[str, str]:
+        """Pass."""
         return self.parse_csv(
             value=value, enum=enum, enum_items=enum_items, converter=parse_ip_network
         )
@@ -117,6 +120,7 @@ class ValueParser:
         enum: Optional[List[str]] = None,
         enum_items: Optional[List[str]] = None,
     ) -> Tuple[str, str]:
+        """Pass."""
         return self.parse_csv(
             value=value,
             enum=enum,
@@ -131,6 +135,7 @@ class ValueParser:
         enum: Optional[List[str]] = None,
         enum_items: Optional[List[str]] = None,
     ) -> Tuple[str, str]:
+        """Pass."""
         aql_value = dt_parse_tmpl(obj=value)
         return aql_value, aql_value
 
@@ -140,6 +145,7 @@ class ValueParser:
         enum: Optional[List[str]] = None,
         enum_items: Optional[List[str]] = None,
     ) -> Tuple[List[str], str]:
+        """Pass."""
         ip_network = parse_ip_network(value=value)
         aql_value = [
             str(int(ip_network.network_address)),
@@ -153,6 +159,7 @@ class ValueParser:
         enum: Optional[List[str]] = None,
         enum_items: Optional[List[str]] = None,
     ) -> Tuple[str, Union[int, float]]:
+        """Pass."""
         value = coerce_int_float(value=value)
         value = self.check_enum(value=value, enum=enum, enum_items=enum_items)
         return str(value), value
@@ -163,6 +170,7 @@ class ValueParser:
         enum: Optional[List[str]] = None,
         enum_items: Optional[List[str]] = None,
     ) -> Tuple[str, str]:
+        """Pass."""
         aql_value = str(parse_ip_address(value=value))
         return aql_value, aql_value
 
@@ -172,6 +180,7 @@ class ValueParser:
         enum: Optional[List[str]] = None,
         enum_items: Optional[List[str]] = None,
     ) -> Tuple[str, None]:
+        """Pass."""
         return "", None
 
     def value_to_raw_version(
@@ -180,6 +189,7 @@ class ValueParser:
         enum: Optional[List[str]] = None,
         enum_items: Optional[List[str]] = None,
     ) -> Tuple[str, str]:
+        """Pass."""
         aql_value = get_raw_version(value=value)
         return aql_value, value
 
@@ -189,6 +199,7 @@ class ValueParser:
         enum: Optional[List[str]] = None,
         enum_items: Optional[List[str]] = None,
     ) -> Tuple[str, str]:
+        """Pass."""
         check_type(value=value, exp=str)
         check_empty(value=value)
         aql_value = self.check_enum(value=value, enum=enum, enum_items=enum_items)
@@ -200,6 +211,7 @@ class ValueParser:
         enum: Optional[List[str]] = None,
         enum_items: Optional[List[str]] = None,
     ) -> Tuple[str, str]:
+        """Pass."""
         check_type(value=value, exp=str)
         check_empty(value=value)
         aql_value = self.check_enum(
@@ -217,6 +229,7 @@ class ValueParser:
         enum: Optional[List[str]] = None,
         enum_items: Optional[List[str]] = None,
     ) -> Tuple[str, str]:
+        """Pass."""
         check_type(value=value, exp=str)
         check_empty(value=value)
         aql_value = self.check_enum(
@@ -234,6 +247,7 @@ class ValueParser:
         enum: Optional[List[str]] = None,
         enum_items: Optional[List[str]] = None,
     ) -> Tuple[str, str]:
+        """Pass."""
         check_type(value=value, exp=str)
         check_empty(value=value)
         aql_value = re.escape(value)
@@ -245,6 +259,7 @@ class ValueParser:
         enum: Optional[List[str]] = None,
         enum_items: Optional[List[str]] = None,
     ) -> Tuple[str, str]:
+        """Pass."""
         check_type(value=value, exp=str)
         check_empty(value=value)
         aql_value = self.check_enum(
@@ -262,6 +277,7 @@ class ValueParser:
         enum: Optional[List[str]] = None,
         enum_items: Optional[List[str]] = None,
     ) -> Tuple[str, str]:
+        """Pass."""
         aql_value = str(parse_ip_network(value=value))
         return aql_value, aql_value
 
@@ -275,6 +291,7 @@ class ValueParser:
         enum_custom: Optional[List[Union[int, str]]] = None,
         custom_id: Optional[str] = None,
     ) -> Tuple[str, str]:
+        """Pass."""
         items = coerce_str_to_csv(value=value)
 
         new_items = []
@@ -305,6 +322,7 @@ class ValueParser:
         enum_custom: Optional[Union[List[str], Dict[str, str]]] = None,
         custom_id: Optional[str] = None,
     ) -> Union[int, str]:
+        """Pass."""
         if enum_custom is not None and not enum_custom:
             raise WizardError(f"No {custom_id}s exist, can not query for {custom_id} {value!r}")
 
@@ -337,16 +355,20 @@ class ValueParser:
             raise WizardError(f"Unhandled enum type {etype}: {enum}")
 
     def _tags(self) -> List[str]:
+        """Pass."""
         return self.apiobj.labels.get()
 
     @cached(cache=CACHE)
     def _adapters(self) -> List[dict]:
+        """Pass."""
         return self.apiobj.adapters.get()
 
     def _adapter_names(self) -> Dict[str, str]:
+        """Pass."""
         return {x["name"]: x["name_raw"] for x in self._adapters() if x["cnx"]}
 
     def _cnx_labels(self) -> List[str]:
+        """Pass."""
         value = []
         for adapter in self._adapters():
             for cnx in adapter["cnx"]:

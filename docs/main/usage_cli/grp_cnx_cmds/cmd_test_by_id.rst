@@ -1,25 +1,28 @@
 .. include:: /main/.special.rst
 
-users get-by-username
+adapters cnx test-by-id
 ###############################################
 
-This command lets you search for users by username and export the data to CSV or JSON.
+This command will trigger a test_by_id (aka fetch) for a connection of an adapter on a node.
 
 Common Options
 ===============================================
 
 * :ref:`connection_options` for examples of supplying the Axonius credentials and URL.
 * :ref:`export_options` for examples of exporting data in different formats and outputs.
+* :ref:`rows_option` for examples of working with input feeds.
 
-Common Examples
+Examples
 ===============================================
 
-* :ref:`get_by_ex` for examples that are common to all ``get-by..`` commands.
-* :ref:`select_fields_ex` for examples of selecting which fields (columns) to include
-  in the response.
+.. toctree::
+   :maxdepth: 1
+   :glob:
+
+   cmd_test_by_id_examples/ex*
 
 Help Page
 ===============================================
 
-.. click:: axonius_api_client.cli.grp_assets:cmd_get_by_username
-   :prog: axonshell users get-by-username
+.. click:: axonius_api_client.cli.grp_adapters.grp_cnx.cmd_test_by_id:cmd
+   :prog: axonshell adapters cnx test-by-id

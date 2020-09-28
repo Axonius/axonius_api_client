@@ -6,9 +6,11 @@ import re
 import sys
 from typing import IO, Generator, List, Optional
 
-from ...constants import DEFAULT_PATH, FIELD_JOINER, FIELD_TRIM_LEN, FIELD_TRIM_STR, SCHEMAS_CUSTOM
+from ...constants import (DEFAULT_PATH, FIELD_JOINER, FIELD_TRIM_LEN,
+                          FIELD_TRIM_STR, SCHEMAS_CUSTOM)
 from ...exceptions import ApiError
-from ...tools import calc_percent, echo_error, echo_ok, echo_warn, get_path, join_kv, listify
+from ...tools import (calc_percent, echo_error, echo_ok, echo_warn, get_path,
+                      join_kv, listify)
 from ..parsers.fields import schema_custom
 
 
@@ -30,7 +32,7 @@ class Base:
         """logger for this object."""
 
         self.APIOBJ = apiobj
-        """:obj:`AssetMixin`: assets object."""
+        """AssetMixin: assets object."""
 
         self.ALL_SCHEMAS: dict = apiobj.fields.get()
         """Map of adapter -> field schemas."""

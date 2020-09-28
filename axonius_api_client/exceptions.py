@@ -71,11 +71,11 @@ class ConfigRequired(ConfigError):
 
 
 class CnxError(ApiError):
-    """Errors for :obj:`.api.adapters.Cnx`."""
+    """Errors for connections."""
 
 
 class CnxGoneError(CnxError):
-    """Errors for :obj:`.api.adapters.Cnx`."""
+    """Errors when a connection has gone away."""
 
 
 class CnxUpdateError(CnxError):

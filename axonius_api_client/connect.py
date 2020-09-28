@@ -7,24 +7,15 @@ from typing import List, Optional, Union
 
 import requests
 
-from .api import Adapters, Dashboard, Devices, Enforcements, Instances, RunAction, System, Users
+from .api import (Dashboard, Devices, Enforcements, Instances, RunAction,
+                  System, Users)
+from .api.adapters import Adapters
 from .auth import ApiKey
-from .constants import (
-    LOG_FILE_MAX_FILES,
-    LOG_FILE_MAX_MB,
-    LOG_FILE_NAME,
-    LOG_FILE_PATH,
-    LOG_FMT_BRIEF,
-    LOG_FMT_VERBOSE,
-    LOG_LEVEL_API,
-    LOG_LEVEL_AUTH,
-    LOG_LEVEL_CONSOLE,
-    LOG_LEVEL_FILE,
-    LOG_LEVEL_HTTP,
-    LOG_LEVEL_PACKAGE,
-    TIMEOUT_CONNECT,
-    TIMEOUT_RESPONSE,
-)
+from .constants import (LOG_FILE_MAX_FILES, LOG_FILE_MAX_MB, LOG_FILE_NAME,
+                        LOG_FILE_PATH, LOG_FMT_BRIEF, LOG_FMT_VERBOSE,
+                        LOG_LEVEL_API, LOG_LEVEL_AUTH, LOG_LEVEL_CONSOLE,
+                        LOG_LEVEL_FILE, LOG_LEVEL_HTTP, LOG_LEVEL_PACKAGE,
+                        TIMEOUT_CONNECT, TIMEOUT_RESPONSE)
 from .exceptions import ConnectError, InvalidCredentials
 from .http import Http
 from .logs import LOG, add_file, add_stderr, get_obj_log, set_log_level
@@ -77,7 +68,7 @@ class Connect:
 
     """
 
-    _REASON_RES: List[str] = [
+    REASON_RES: List[str] = [
         re.compile(r".*?object at.*?\>\: ([a-zA-Z0-9\]\[: ]+)"),
         re.compile(r".*?\] (.*) "),
     ]
@@ -131,7 +122,7 @@ class Connect:
         return self._devices
 
     @property
-    def adapters(self) -> Adapters:
+    def adapters(self):
         """Work with adapters and adapter connections."""
         self.start()
         if not hasattr(self, "_adapters"):
@@ -155,7 +146,7 @@ class Connect:
         return self._dashboard
 
     @property
-    def enforcements(self) -> Enforcements:
+    def enforcements(self):
         """Work with Enforcement Center."""
         self.start()
         if not hasattr(self, "_enforcements"):
@@ -163,7 +154,7 @@ class Connect:
         return self._enforcements
 
     @property
-    def run_actions(self) -> RunAction:  # pragma: no cover
+    def run_actions(self):  # pragma: no cover
         """Work with Enforcement Center actions."""
         self.start()
         if not hasattr(self, "_run_actions"):
@@ -171,7 +162,7 @@ class Connect:
         return self._run_actions
 
     @property
-    def system(self) -> System:
+    def system(self):  # TODO: DOCS???
         """Work with users, roles, global settings, and more."""
         self.start()
         if not hasattr(self, "_system"):
@@ -228,26 +219,22 @@ class Connect:
             "cert_client_both", None
         )
         """cert file with both private key and cert to offer to :attr:`url`
-        ``kwargs=cert_client_both``
-        """
+        ``kwargs=cert_client_both``"""
 
         self.SAVE_HISTORY: bool = kwargs.get("save_history", False)
         """append responses to :attr:`axonius_api_client.http.Http.HISTORY`
-        ``kwargs=save_history``
-        """
+        ``kwargs=save_history``"""
 
         self.LOG_LEVEL: Union[str, int] = kwargs.get("log_level", "debug")
         """log level for this class ``kwargs=log_level``"""
 
         self.LOG_REQUEST_ATTRS: Optional[List[str]] = kwargs.get("log_request_attrs", None)
         """request attrs to log :attr:`axonius_api_client.constants.REQUEST_ATTR_MAP`
-        ``kwargs=log_request_attrs``
-        """
+        ``kwargs=log_request_attrs``"""
 
         self.LOG_RESPONSE_ATTRS: Optional[List[str]] = kwargs.get("log_response_attrs", None)
         """response attrs to log :attr:`axonius_api_client.constants.RESPONSE_ATTR_MAP`
-        ``kwargs=log_response_attrs``
-        """
+        ``kwargs=log_response_attrs``"""
 
         self.LOG_REQUEST_BODY: bool = kwargs.get("log_request_body", False)
         """log request bodies ``kwargs=log_request_body``"""
@@ -265,10 +252,11 @@ class Connect:
         """log level for :obj:`axonius_api_client.http.Http` ``kwargs=log_level_http``"""
 
         self.LOG_LEVEL_AUTH: Union[str, int] = kwargs.get("log_level_auth", LOG_LEVEL_AUTH)
-        """log level for :obj:`axonius_api_client.auth.Mixins` ``kwargs=log_level_auth``"""
+        """log level for :obj:`axonius_api_client.auth.models.Mixins` ``kwargs=log_level_auth``"""
 
         self.LOG_LEVEL_API: Union[str, int] = kwargs.get("log_level_api", LOG_LEVEL_API)
-        """log level for :obj:`axonius_api_client.mixins.Mixins` ``kwargs=log_level_api``"""
+        """log level for :obj:`axonius_api_client.api.mixins.ModelMixins`
+        ``kwargs=log_level_api``"""
 
         self.LOG_LEVEL_CONSOLE: Union[str, int] = kwargs.get("log_level_console", LOG_LEVEL_CONSOLE)
         """log level for logs sent to console ``kwargs=log_level_console``"""
@@ -350,11 +338,11 @@ class Connect:
         self.AUTH_ARGS: dict = {"key": key, "secret": secret, "log_level": self.LOG_LEVEL_AUTH}
         """arguments to use for creating :attr:`AUTH`"""
 
-        self.HTTP: Http = Http(**self.HTTP_ARGS)
-        """http client to use for :attr:`AUTH`"""
+        self.HTTP = Http(**self.HTTP_ARGS)
+        """:obj:`axonius_api_client.http.Http` client to use for :attr:`AUTH`"""
 
-        self.AUTH: ApiKey = ApiKey(http=self.HTTP, **self.AUTH_ARGS)
-        """auth client to use for all API models"""
+        self.AUTH = ApiKey(http=self.HTTP, **self.AUTH_ARGS)
+        """:obj:`axonius_api_client.auth.api_key.ApiKey` auth method to use for all API models"""
 
         self.API_ARGS: dict = {"auth": self.AUTH, "log_level": self.LOG_LEVEL_API}
         """arguments to use for all API models"""
@@ -383,10 +371,10 @@ class Connect:
     def _get_exc_reason(cls, exc: Exception) -> str:
         """Trim exceptions down to a more user friendly display.
 
-        Uses :attr:`_REASON_RES` to do regex substituions.
+        Uses :attr:`REASON_RES` to do regex substituions.
         """
         reason = str(exc)
-        for reason_re in cls._REASON_RES:
+        for reason_re in cls.REASON_RES:
             if reason_re.search(reason):
                 return reason_re.sub(r"\1", reason).rstrip("')")
         return reason

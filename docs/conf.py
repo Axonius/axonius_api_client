@@ -28,6 +28,7 @@ extensions = [
     "sphinx.ext.githubpages",
     "sphinx.ext.napoleon",
     "sphinx_click.ext",
+    "sphinx_autodoc_typehints",
 ]
 
 templates_path = ["_templates"]
@@ -121,7 +122,7 @@ todo_include_todos = True
 # -- Options for napoleon ------------------------------------------
 
 napoleon_google_docstring = True
-napoleon_numpy_docstring = False
+napoleon_numpy_docstring = True
 napoleon_include_init_with_doc = True
 napoleon_include_private_with_doc = True
 napoleon_include_special_with_doc = True

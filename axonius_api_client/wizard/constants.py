@@ -6,6 +6,8 @@ from typing import List, Optional, Union
 
 
 class Sources:
+    """Pass."""
+
     CLI_STR: str = "Command Line Interface"
     CSV_STR: str = "csv text string"
     CSV_PATH: str = "csv file {path}"
@@ -17,6 +19,8 @@ class Sources:
 
 
 class Templates:
+    """Pass."""
+
     LEFT: str = "({query}"
     RIGHT: str = "{query})"
     NOT: str = "not {query}"
@@ -27,6 +31,8 @@ class Templates:
 
 
 class Fields:
+    """Pass."""
+
     NAME: str = "name"
     EXPR_TYPE: str = "expr_field_type"
     ANAME: str = "adapter_name"
@@ -37,11 +43,15 @@ class Fields:
 
 
 class Results:
+    """Pass."""
+
     EXPRS: str = "expressions"
     QUERY: str = "query"
 
 
 class Patterns:
+    """Pass."""
+
     FIELD_VALID: re.Pattern = re.compile(
         r"""
 (?ix)            # case insensitive and verbose
@@ -73,6 +83,8 @@ class Patterns:
 
 
 class Flags:
+    """Pass."""
+
     NOT: str = "!"
     AND: str = "&"
     OR: str = "|"
@@ -92,6 +104,8 @@ class Flags:
 
 
 class Entry:
+    """Pass."""
+
     SRC: str = "source"
     WEIGHT: str = "bracket_weight"
     FLAGS: str = "flags"
@@ -104,6 +118,8 @@ class Entry:
 
 
 class EntrySq:
+    """Pass."""
+
     NAME: str = "name"
     DESC: str = "description"
     TAGS: str = "tags"
@@ -116,6 +132,8 @@ class EntrySq:
 
 
 class Types:
+    """Pass."""
+
     SIMPLE: str = "simple"
     COMPLEX: str = "complex"
     SAVED_QUERY: str = "saved_query"
@@ -128,6 +146,8 @@ class Types:
 
 
 class Docs:
+    """Pass."""
+
     SUB_OPT: str = f"[{Entry.CSPLIT} ...]"
     OPVAL: str = "FIELD OPERATOR VALUE"
 
@@ -221,6 +241,8 @@ class Docs:
 
 
 class Expr:
+    """Pass."""
+
     BRACKET_LEFT: str = "leftBracket"
     BRACKET_RIGHT: str = "rightBracket"
     BRACKET_WEIGHT: str = "bracketWeight"
@@ -245,10 +267,12 @@ class Expr:
 
     @classmethod
     def get_query(cls, exprs: List[dict]) -> str:
+        """Pass."""
         return " ".join([x[cls.FILTER] for x in exprs])
 
     @classmethod
     def get_subs_query(cls, sub_exprs: List[dict]) -> str:
+        """Pass."""
         return Templates.SUBS.join([x[cls.CONDITION] for x in sub_exprs])
 
     @classmethod
@@ -263,6 +287,7 @@ class Expr:
         is_complex: bool = False,
         children: Optional[List[dict]] = None,
     ) -> dict:
+        """Pass."""
         flags = entry.get(Entry.FLAGS, []) or []
         weight = entry.get(Entry.WEIGHT, 0)
 
@@ -318,6 +343,7 @@ class Expr:
         value: Optional[Union[int, str]] = None,
         idx: int = 0,
     ) -> dict:
+        """Pass."""
         expression = {}
         expression[cls.CONDITION] = query
         expression[cls.EXPR] = {}

@@ -25,8 +25,6 @@ class Dashboard(ModelMixins):
     def system_router(self) -> Router:
         return API_VERSION.system
 
-    """Child API model for working with discovery cycles."""
-
     def get(self) -> dict:
         """Get lifecycle metadata.
 

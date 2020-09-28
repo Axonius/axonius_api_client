@@ -1,9 +1,10 @@
 .. include:: /main/.special.rst
 
-users get-by-username
+adapters cnx add-from-json
 ###############################################
 
-This command lets you search for users by username and export the data to CSV or JSON.
+This command will add a perform a connectivity test for a connection for an adapter on
+a node.
 
 Common Options
 ===============================================
@@ -11,15 +12,17 @@ Common Options
 * :ref:`connection_options` for examples of supplying the Axonius credentials and URL.
 * :ref:`export_options` for examples of exporting data in different formats and outputs.
 
-Common Examples
+Examples
 ===============================================
 
-* :ref:`get_by_ex` for examples that are common to all ``get-by..`` commands.
-* :ref:`select_fields_ex` for examples of selecting which fields (columns) to include
-  in the response.
+.. toctree::
+   :maxdepth: 1
+   :glob:
+
+   cmd_add_from_json_examples/ex*
 
 Help Page
 ===============================================
 
-.. click:: axonius_api_client.cli.grp_assets:cmd_get_by_username
-   :prog: axonshell users get-by-username
+.. click:: axonius_api_client.cli.grp_adapters.grp_cnx.cmd_add_from_json:cmd
+   :prog: axonshell adapters cnx add-from-json

@@ -41,7 +41,7 @@ class Model:
         raise NotImplementedError  # pragma: no cover
 
 
-class Mixins:
+class Mixins(Model):
     """Mixins for Auth Models."""
 
     _logged_in: bool = False
@@ -83,12 +83,11 @@ class Mixins:
         self._logout()
 
     def check_login(self):
-        """Throw exc if not login.
+        """Check if login has been called.
 
         Raises:
             :exc:`NotLoggedIn`:
-                When :meth:`login` has not been called before trying to make a call with this
-                Auth model.
+                When login has not been called before trying to make a call with this Auth model.
 
         """
         if not self.is_logged_in:
