@@ -11,17 +11,15 @@ Commands
 ===============================================
 
 * :doc:`grp_cnx_cmds/cmd_add` to add a connection for an adapter.
-* :doc:`grp_cnx_cmds/cmd_check` to check (test the reachability) of an existing connection
-  for an adapter.
-* :doc:`grp_cnx_cmds/cmd_delete` to delete an existing connection for an adapter.
-* :doc:`grp_cnx_cmds/cmd_discover` to discover (trigger a fetch) of an existing
-  connection for an adapter.
-* :doc:`grp_cnx_cmds/cmd_get` to filter metadata from adapters to only include
-  connections that match various attributes.
+* :doc:`grp_cnx_cmds/cmd_add_from_json` to add multiple connections from JSON.
+* :doc:`grp_cnx_cmds/cmd_get` to get connections for an adapter
+* :doc:`grp_cnx_cmds/cmd_get_by_id` to get connections for an adapter by ID
+* :doc:`grp_cnx_cmds/cmd_get` to test a connection for an adapter
+* :doc:`grp_cnx_cmds/cmd_get_by_id` to test a connection for an adapter
 
 Help Page
 ===============================================
 
-.. click:: axonius_api_client.cli.grp_cnx:cnx
+.. click:: axonius_api_client.cli.grp_adapters.grp_cnx:cnx
    :prog: axonshell adapters cnx
 

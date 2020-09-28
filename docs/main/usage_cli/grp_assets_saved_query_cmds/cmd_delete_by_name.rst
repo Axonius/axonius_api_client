@@ -1,9 +1,9 @@
 .. include:: /main/.special.rst
 
-users get-by-username
+devices/users saved-query delete-by-name
 ###############################################
 
-This command lets you search for users by username and export the data to CSV or JSON.
+This command will delete a saved query by name for users or devices.
 
 Common Options
 ===============================================
@@ -11,15 +11,17 @@ Common Options
 * :ref:`connection_options` for examples of supplying the Axonius credentials and URL.
 * :ref:`export_options` for examples of exporting data in different formats and outputs.
 
-Common Examples
+Examples
 ===============================================
 
-* :ref:`get_by_ex` for examples that are common to all ``get-by..`` commands.
-* :ref:`select_fields_ex` for examples of selecting which fields (columns) to include
-  in the response.
+.. toctree::
+   :maxdepth: 1
+   :glob:
+
+   cmd_delete_examples/ex*
 
 Help Page
 ===============================================
 
-.. click:: axonius_api_client.cli.grp_assets:cmd_get_by_username
-   :prog: axonshell users get-by-username
+.. click:: axonius_api_client.cli.grp_assets.grp_saved_query.cmd_delete_by_name:cmd
+   :prog: axonshell devices/users saved-query delete-by-name

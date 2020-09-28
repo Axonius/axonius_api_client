@@ -1,9 +1,9 @@
 .. include:: /main/.special.rst
 
-devices/users saved-query delete
+devices/users saved-query delete-by-tags
 ###############################################
 
-This command will delete a saved query by name for users or devices.
+This command will delete a saved query by tags for users or devices.
 
 Common Options
 ===============================================
@@ -18,10 +18,10 @@ Examples
    :maxdepth: 1
    :glob:
 
-   cmd_delete_examples/ex*
+   cmd_delete_by_tags_examples/ex*
 
 Help Page
 ===============================================
 
-.. click:: axonius_api_client.cli.grp_saved_query.cmd_delete:cmd
-   :prog: axonshell devices/users saved-query delete
+.. click:: axonius_api_client.cli.grp_assets.grp_saved_query.cmd_delete_by_tags:cmd
+   :prog: axonshell devices/users saved-query delete-by-tags

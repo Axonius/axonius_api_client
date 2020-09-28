@@ -5,12 +5,9 @@ import logging
 import time
 from typing import Any, Generator, List, Optional, Union
 
-import requests
-
-from ..auth import Model as AuthModel
+from .. import auth
 from ..constants import LOG_LEVEL_API, MAX_BODY_LEN, MAX_PAGE_SIZE
 from ..exceptions import JsonError, JsonInvalid, NotFoundError, ResponseNotOk
-from ..http import Http
 from ..logs import get_obj_log
 from ..tools import dt_now, dt_sec_ago, json_dump, json_load, json_reload
 from .routers import Router
@@ -43,10 +40,10 @@ class PageSizeMixin:
 
 
 class ModelMixins(Model, PageSizeMixin):
-    """Mixins for :obj:`Model` objects."""
+    """Mixins for API Models."""
 
-    def __init__(self, auth: AuthModel, **kwargs):
-        """Mixins for :obj:`Model` objects.
+    def __init__(self, auth: auth.Model, **kwargs):
+        """Mixins for API Models.
 
         Args:
             auth: object to use for auth and sending API requests
@@ -54,8 +51,11 @@ class ModelMixins(Model, PageSizeMixin):
         """
         log_level = kwargs.get("log_level", LOG_LEVEL_API)
         self.LOG: logging.Logger = get_obj_log(obj=self, level=log_level)
-        self.auth: AuthModel = auth
-        self.http: Http = auth.http
+        """Logger for this object."""
+        self.auth = auth
+        """:obj:`axonius_api_client.auth.models.Mixins` authentication object."""
+        self.http = auth.http
+        """:obj:`axonius_api_client.http.Http` client to use to send requests,"""
         self._init(**kwargs)
 
         auth.check_login()
@@ -77,7 +77,7 @@ class ModelMixins(Model, PageSizeMixin):
 
     def _build_err_msg(
         self,
-        response: requests.Response,
+        response,
         error: Optional[str] = None,
         exc: Optional[Exception] = None,
     ) -> str:
@@ -130,37 +130,22 @@ class ModelMixins(Model, PageSizeMixin):
         error_status: Optional[bool] = True,
         error_json_bad_status: Optional[bool] = True,
         error_json_invalid: Optional[bool] = True,
-        # fmt: off
-        **kwargs
-        # fmt: on
-    ) -> Union[requests.Response, Any]:
-        """Send a REST API request using :attr:`.auth.Mixins.http`.
+        **kwargs,
+    ) -> Any:
+        """Send a REST API request.
 
         Args:
             path: path to use in request
-            method: default ``get`` - method to use in request
-            raw: default ``False`` -
-
-                * if ``True`` return the raw :obj:`requests.Response` object
-                * if ``False`` return the text or json of the response based on is_json
-            is_json: default ``True`` - if raw is False:
-
-                * if ``True`` return the decoded json of the response text body
-                * if ``False`` return the text body of the response
-            error_status: default ``True`` -
-
-                * if ``True`` check response status code
-                  with :meth:`_check_response_code`
-                * if ``False`` do not check response status code
-            **kwargs:
-                Passed to :meth:`.http.Http.__call__`
+            method: method to use in request
+            raw: return the raw response object
+            is_json: return the response as deserialized json or just return the text body
+            error_status: throw error if response has a bad status code
+            error_json_bad_status: throw error if json response has non-empty error key
+            error_json_invalid: throw error if response can not be deserialized into json
+            **kwargs: Passed to :meth:`axonius_api_client.http.Http.__call__`
 
         Returns:
-            :obj:`requests.Response` or :obj:`object` or :obj:`str`:
-
-                * :obj:`requests.Response`: if raw is True
-                * :obj:`object`: if raw is False and is_json is True
-                * :obj:`str`: if raw is False and is_json is False
+            :obj:`requests.Response` or :obj:`str` or :obj:`dict` or :obj:`int` or :obj:`list`
         """
         sargs = {}
         sargs.update(kwargs)
@@ -184,15 +169,12 @@ class ModelMixins(Model, PageSizeMixin):
 
         return data
 
-    def _check_response_code(self, response: requests.Response, error_status: bool = True):
+    def _check_response_code(self, response, error_status: bool = True):
         """Check the status code of a response.
 
         Args:
-            response: response object to check
-            error_status: default ``True`` -
-
-                * if ``True`` throw exc if response status code is bad
-                * if ``False`` silently ignore bad response status codes
+            response: :obj:`requests.Response` object to check
+            error_status: throw exc if response status code is bad
 
         Raises:
             :exc:`.ResponseNotOk`:
@@ -215,38 +197,25 @@ class ModelMixins(Model, PageSizeMixin):
 
     def _check_response_json(
         self,
-        response: requests.Response,
+        response,
         error_json_bad_status: Optional[bool] = True,
         error_json_invalid: Optional[bool] = True,
         uses_api_response: Optional[bool] = False,
-    ) -> Union[Any, str]:
+    ) -> Any:
         """Check the text body of a response is JSON.
 
         Args:
-            response (:obj:`requests.Response`): response object to check
-            error_json_bad_status: default ``True`` -
-
-                * if ``True`` throw an exc if response is a json dict that
-                  has a non-empty error key or a status key that == error
-                * if ``False`` ignore error and status keys in response json dicts
-            error_json_invalid: default ``True`` -
-
-                * if ``True`` throw an exc if response is invalid json
-                * if ``False`` return the text of response if response is invalid json
+            response: :obj:`requests.Response` object to check
+            error_json_bad_status: throw an exc if error key is not empty or status key == error
+            error_json_invalid: throw an exc if response is invalid json
 
         Raises:
-            :exc:`.JsonInvalid`: if error_json_invalid is True and
+            :exc:`JsonInvalid`: if error_json_invalid is True and
                 response has invalid json
 
-            :exc:`.JsonError`: if error_json_bad_status is True and
+            :exc:`JsonError`: if error_json_bad_status is True and
                 response is a json dict that has a non-empty error key or a
                 status key that == error
-
-        Returns:
-            :obj:`object` or :obj:`str`:
-
-                * :obj:`object` if response has json data
-                * :obj:`str` if response has invalid json data
         """
         try:
             data = response.json()
@@ -278,14 +247,11 @@ class PagingMixinsObject(PageSizeMixin):
     """Pass."""
 
     def get_by_uuid(self, value: str, **kwargs) -> dict:
-        """Get a single saved query by name.
+        """Get an object by UUID.
 
         Args:
-            name (:obj:`str`): name of saved query to get
+            value: uuid of object to get
             **kwargs: passed to :meth:`get`
-
-        Returns:
-            :obj:`dict`: saved query
         """
         rows = self.get(**kwargs)
 
@@ -298,14 +264,11 @@ class PagingMixinsObject(PageSizeMixin):
         raise NotFoundError(f"uuid {value!r} not found, valid:{valid}")
 
     def get_by_name(self, value: str, **kwargs) -> dict:
-        """Get a single saved query by name.
+        """Get an object by name.
 
         Args:
-            name (:obj:`str`): name of saved query to get
+            value: name of object ot get
             **kwargs: passed to :meth:`get`
-
-        Returns:
-            :obj:`dict`: saved query
         """
         valid = []
         tmpl = "name: {name!r}".format
@@ -323,25 +286,11 @@ class PagingMixinsObject(PageSizeMixin):
         """Get objects for a given query using paging.
 
         Args:
-            generator: default ``False`` -
-
-                * True: return an iterator for assets that will yield rows
-                  as they are fetched
-                * False: return a list of rows after all have been fetched
+            generator: return an iterator for objects that will yield rows as they are fetched
             **kwargs: passed to :meth:`get_generator`
-
-        Yields:
-            :obj:`dict`: row if generator is True
-
-        Returns:
-            :obj:`list` of :obj:`dict`: rows if generator is False
         """
         gen = self.get_generator(**kwargs)
-
-        if generator:
-            return gen
-
-        return list(gen)
+        return gen if generator else list(gen)
 
     def get_generator(
         self,
@@ -356,14 +305,12 @@ class PagingMixinsObject(PageSizeMixin):
         """Get saved queries using paging.
 
         Args:
-            query (:obj:`str`, optional): default ``None`` - filter rows to return
-
-                This is NOT a query built by the query wizard!
-            page_size (:obj:`int`, optional): default ``0`` - for paging, return N rows
-            max_rows (:obj:`int`, optional): default ``None`` - return N assets
-
-        Returns:
-            :obj:`list` of :obj:`dict`: list of saved query metadata
+            query: mongo query to filter objects to return
+            max_rows: only return N objects
+            max_pages: only return N pages
+            page_size: fetch N objects per page
+            page_start: start at page N
+            page_sleep: sleep for N seconds between each page fetch
         """
         page_size = self._get_page_size(page_size=page_size, max_rows=max_rows)
 
@@ -446,13 +393,13 @@ class PagingMixinsObject(PageSizeMixin):
 
 
 class ChildMixins:
-    """Mixins model for children of :obj:`Mixins`."""
+    """Mixins model for API child objects."""
 
     def __init__(self, parent: Model):
-        """Mixins model for children of :obj:`Model`.
+        """Mixins model for API child objects.
 
         Args:
-            parent (:obj:`Model`): parent API model of this child
+            parent: parent API model of this child
         """
         self.parent = parent
         self.http = parent.http
@@ -466,7 +413,7 @@ class ChildMixins:
         """Post init method for subclasses to use for extra setup.
 
         Args:
-            parent (:obj:`Model`): parent API model of this child
+            parent: parent API model of this child
         """
         pass
 

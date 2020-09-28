@@ -1,7 +1,7 @@
-http
+enforcements
 ###############################################
 
-.. automodule:: axonius_api_client.http
+.. autoclass:: axonius_api_client.api.enforcements.Enforcements
    :members:
    :member-order: bysource
    :show-inheritance:

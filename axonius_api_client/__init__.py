@@ -42,11 +42,14 @@ Examples:
     >>> dashboard = ctx.dashboard
 
 """
-from . import api, auth, cli, constants, data, exceptions, http, logs, tools, version, wizard
-from .api import Adapters, Devices, Enforcements, Instances, Signup, System, Users
+from . import (api, auth, cli, constants, data, exceptions, http, logs, tools,
+               url_parser, version, wizard)
+from .api import (Adapters, Devices, Enforcements, Instances, Signup, System,
+                  Users)
 from .auth import ApiKey
 from .connect import Connect
 from .http import Http
+from .url_parser import UrlParser
 from .wizard import Wizard, WizardCsv, WizardText
 
 __version__ = version.__version__
@@ -71,6 +74,7 @@ __all__ = (
     "WizardText",
     "WizardCsv",
     "Instances",
+    "UrlParser",
     # modules
     "api",
     "auth",
@@ -83,4 +87,5 @@ __all__ = (
     "logs",
     "data",
     "wizard",
+    "url_parser",
 )

@@ -127,13 +127,13 @@ LOG_LEVEL_HTTP: str = "debug"
 """default logging level for :obj:`axonius_api_client.http.Http`"""
 
 LOG_LEVEL_AUTH: str = "debug"
-"""default logging level for :obj:`axonius_api_client.auth.Mixins`"""
+"""default logging level for :obj:`axonius_api_client.auth.models.Mixins`"""
 
 LOG_LEVEL_API: str = "debug"
-"""default logging level for :obj:`axonius_api_client.api.mixins.Mixins`"""
+"""default logging level for :obj:`axonius_api_client.api.mixins.ModelMixins`"""
 
 LOG_LEVEL_WIZARD: str = "info"
-"""default logging level for :obj:`axonius_api_client.wizard.Wizard`"""
+"""default logging level for :obj:`axonius_api_client.wizard.wizard.Wizard`"""
 
 LOG_LEVEL_PACKAGE: str = "debug"
 """default logging level for :mod:`axonius_api_client`"""
@@ -153,8 +153,8 @@ LOG_LEVELS_INT_CSV: str = ", ".join([str(x) for x in LOG_LEVELS_INT])
 LOG_FILE_PATH: str = DEFAULT_PATH
 """default path for log files"""
 
-LOG_FILE_PATH_MODE: oct = 0o700
-"""default permisisons to use when creating directories"""
+LOG_FILE_PATH_MODE = 0o700
+""":obj:`oct` default permisisons to use when creating directories"""
 
 LOG_FILE_NAME: str = f"{PACKAGE_ROOT}.log"
 """default log file name to use"""

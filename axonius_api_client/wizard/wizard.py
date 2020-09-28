@@ -4,36 +4,31 @@ import logging
 from typing import List, Optional, Tuple, Union
 
 from ..api.assets.asset_mixin import AssetMixin
-from ..api.parsers.constants import CUSTOM_FIELDS_MAP, Operator, OperatorTypeMaps
+from ..api.parsers.constants import (CUSTOM_FIELDS_MAP, Operator,
+                                     OperatorTypeMaps)
 from ..constants import ALL_NAME, LOG_LEVEL_WIZARD
 from ..exceptions import WizardError
 from ..logs import get_obj_log
 from ..tools import check_type, listify
-from .constants import (
-    Docs,
-    Entry,
-    Expr,
-    Fields,
-    Flags,
-    Patterns,
-    Results,
-    Sources,
-    Templates,
-    Types,
-)
+from .constants import (Docs, Entry, Expr, Fields, Flags, Patterns, Results,
+                        Sources, Templates, Types)
 from .value_parser import ValueParser
 
 
 class Wizard:
+    """Pass."""
+
     DOCS: str = Docs.DICT
 
     def __init__(self, apiobj: AssetMixin, log_level: Union[str, int] = LOG_LEVEL_WIZARD):
+        """Pass."""
         self.LOG: logging.Logger = get_obj_log(obj=self, level=log_level)
         self._apiobj: AssetMixin = apiobj
         self._value_parser: ValueParser = ValueParser(apiobj=apiobj)
         self._init()
 
     def parse(self, entries: List[dict], source: str = Sources.LOD) -> List[dict]:
+        """Pass."""
         check_type(value=entries, exp=(list, tuple), exp_items=dict)
         entries = [x for x in entries if x]
         entries = self._parse_entries(entries=entries, source=source)
@@ -42,6 +37,7 @@ class Wizard:
         return {Results.EXPRS: exprs, Results.QUERY: query}
 
     def _parse_entries(self, entries: List[dict], source: str) -> List[dict]:
+        """Pass."""
         is_open, tracker = False, 0
         for idx, entry in enumerate(entries):
             src = f"{source} entry #{idx + 1}/{len(entries)}"
@@ -66,6 +62,8 @@ class Wizard:
     def _parse_flags(
         self, entry: dict, idx: int, entries: List[dict], tracker: int, is_open: bool
     ) -> dict:
+        """Pass."""
+        """Pass."""
         value_raw = entry[Entry.VALUE]
         flags = listify(entry.get(Entry.FLAGS) or [])
         flags, value = self._split_flags(value_raw=value_raw, flags=flags)
@@ -133,6 +131,7 @@ class Wizard:
         return entry, is_open, tracker
 
     def _parse_exprs(self, entries: List[dict]) -> List[dict]:
+        """Pass."""
         exprs = []
         for idx, entry in enumerate(entries):
             src = f"entry #{idx + 1}/{len(entries)}"
@@ -146,6 +145,7 @@ class Wizard:
         return exprs
 
     def _parse_simple(self, entry: dict, idx: int) -> dict:
+        """Pass."""
         value_raw = entry[Entry.VALUE]
         field, operator, value = self._split_simple(value_raw=value_raw)
         field = self._get_field(value=field, value_raw=value_raw)
@@ -168,6 +168,7 @@ class Wizard:
         return expr
 
     def _parse_complex(self, entry: dict, idx: int) -> dict:
+        """Pass."""
         value_raw = entry[Entry.VALUE]
         field, subs_raw = self._split_complex(value_raw=value_raw)
         field = self._get_field_complex(value=field, value_raw=value_raw)
@@ -195,6 +196,7 @@ class Wizard:
         return expr
 
     def _parse_sub(self, field: str, value_raw: str, idx: int) -> dict:
+        """Pass."""
         sub_field, operator, sub_value = self._split_simple(value_raw=value_raw)
 
         field_subs = {x[Fields.NAME]: x for x in field[Fields.SUBS]}
@@ -230,6 +232,7 @@ class Wizard:
     def _split_flags(
         self, value_raw: str, flags: Optional[List[str]] = None
     ) -> Tuple[List[str], str]:
+        """Pass."""
         value = value_raw
         flags = flags or []
 
@@ -259,6 +262,7 @@ class Wizard:
         return flags, value
 
     def _split_simple(self, value_raw: str) -> Tuple[str, str, str]:
+        """Pass."""
         splitter = Entry.SPLIT
         split = value_raw.split(splitter, maxsplit=2)
         field = ""
@@ -293,6 +297,7 @@ class Wizard:
         return field, operator, value
 
     def _split_complex(self, value_raw: str) -> Tuple[str, List[str]]:
+        """Pass."""
         splitter = Entry.CSPLIT
         if splitter not in value_raw:
             raise WizardError(f"No {splitter} found in value '{value_raw}'")
@@ -320,10 +325,12 @@ class Wizard:
         return field, subs_raw
 
     def _get_operator(self, operator: str, field: dict, value_raw: str) -> Operator:
+        """Pass."""
         err = f"Invalid OPERATOR name {operator!r} from value '{value_raw}'\n\n"
         return OperatorTypeMaps.get_operator(operator=operator, field=field, err=err)
 
     def _get_field(self, value: str, value_raw: str) -> dict:
+        """Pass."""
         try:
             field = self._apiobj.fields.get_field_name(
                 value=value,
@@ -341,6 +348,7 @@ class Wizard:
         return field
 
     def _get_field_complex(self, value: str, value_raw: str) -> dict:
+        """Pass."""
         try:
             field = self._apiobj.fields.get_field_name(
                 value=value,
@@ -372,6 +380,7 @@ class Wizard:
         return field
 
     def _check_entry_type(self, etype: str, types: List[str]) -> str:
+        """Pass."""
         etype = etype.lower().strip()
         if etype not in types:
             valid = ", ".join(types)
@@ -379,6 +388,7 @@ class Wizard:
         return etype
 
     def _check_entry_keys(self, entry: dict, keys: List[str]) -> dict:
+        """Pass."""
         for key in keys:
             if key not in entry:
                 found = ", ".join(list(entry))

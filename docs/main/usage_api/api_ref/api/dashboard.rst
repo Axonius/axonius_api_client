@@ -1,7 +1,7 @@
-assets
+Dashboard
 ###############################################
 
-.. automodule:: axonius_api_client.api.assets
+.. autoclass:: axonius_api_client.api.dashboard.Dashboard
    :members:
    :member-order: bysource
    :show-inheritance:

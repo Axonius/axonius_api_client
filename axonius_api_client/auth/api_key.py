@@ -4,10 +4,10 @@ from typing import List
 
 from ..exceptions import AlreadyLoggedIn
 from ..http import Http
-from .models import Mixins, Model
+from .models import Mixins
 
 
-class ApiKey(Mixins, Model):
+class ApiKey(Mixins):
     """Authentication method using API key & API secret."""
 
     def __init__(self, http: Http, key: str, secret: str, **kwargs):

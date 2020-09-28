@@ -30,7 +30,6 @@ Table of Contents
    main/axtokens.rst
    main/usage_cli.rst
    main/usage_api.rst
-   main/api_ref/package.rst
    main/contributing.rst
    main/releases.rst
 

@@ -10,12 +10,14 @@ API Reference
 
 .. toctree::
     openapi
-    api/package
+    http
     auth/package
+    api/package
     connect
     constants
     exceptions
-    http
     logs
     tools
     version
+    wizard/package
+    url_parser
