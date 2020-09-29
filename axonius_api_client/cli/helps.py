@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """Command line interface for Axonius API Client."""
-from ..wizard.constants import Docs
+from ..api.wizard.constants import Docs
 
 HELPSTR_AUTH = """
 Detailed help for authentication:

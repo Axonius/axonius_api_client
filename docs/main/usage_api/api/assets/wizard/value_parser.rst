@@ -1,7 +1,7 @@
-Query wizard builder from list of dictionaries
+Value parser
 ###############################################
 
-.. automodule:: axonius_api_client.wizard.wizard
+.. automodule:: axonius_api_client.api.wizard.value_parser
    :members:
    :show-inheritance:
    :inherited-members:

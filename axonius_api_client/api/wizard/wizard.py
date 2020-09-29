@@ -1,21 +1,57 @@
 # -*- coding: utf-8 -*-
-"""Python API Client for Axonius."""
+"""Wizard for list of dictionaries."""
 import logging
 from typing import List, Optional, Tuple, Union
 
-from ..api.parsers.constants import (CUSTOM_FIELDS_MAP, Operator,
-                                     OperatorTypeMaps)
-from ..constants import ALL_NAME, LOG_LEVEL_WIZARD
-from ..exceptions import WizardError
-from ..logs import get_obj_log
-from ..tools import check_type, listify
+from ...constants import ALL_NAME, LOG_LEVEL_WIZARD
+from ...exceptions import WizardError
+from ...logs import get_obj_log
+from ...tools import check_type, listify
+from ..parsers.constants import CUSTOM_FIELDS_MAP, Operator, OperatorTypeMaps
 from .constants import (Docs, Entry, Expr, Fields, Flags, Patterns, Results,
                         Sources, Templates, Types)
 from .value_parser import ValueParser
 
 
 class Wizard:
-    """Pass."""
+    """Wizard for list of dictionaries.
+
+    Examples:
+        First, create a ``client`` using :obj:`axonius_api_client.connect.Connect`.
+
+        >>> # Define some entries to parse
+        >>> entries = [
+        ...     {
+        ...         'value': 'hostname contains test',
+        ...         'type': 'simple',
+        ...     },
+        ...     {
+        ...         'value': 'installed_software // name contains chrome // version earlier_than 82',
+        ...         'type': 'complex'
+        ...     },
+        ... ]
+        >>>
+        >>> # Parse the entries into a query and GUI expressions
+        >>> parsed = client.devices.wizard.parse(entries=entries)
+        >>>
+        >>> # get the query produced by the wizard
+        >>> query = parsed["query"]
+        >>> print(query)
+        >>>
+        >>> # get the GUI expressions produced by the wizard
+        >>> expressions = parsed["expressions"]
+        >>> print(expressions)
+        >>>
+        >>> # use the query to get assets
+        >>> assets = client.devices.get(query=query)
+        >>>
+        >>> # use the query to get a count of assets
+        >>> count = client.devices.count(query=query)
+        >>>
+        >>> # use the query and expressions to create a saved query that the GUI understands
+        >>> sq = client.devices.saved_query.add(name="test", query=query, expressions=expressions)
+
+    """  # noqa: E501
 
     DOCS: str = Docs.DICT
 
@@ -23,22 +59,27 @@ class Wizard:
         """Query wizard builder.
 
         Args:
-            apiobj: :obj:`axonius_api_client.api.assets.asset_mixin.AssetMixin`: Asset object
+            apiobj (:obj:`axonius_api_client.api.assets.asset_mixin.AssetMixin`): Asset object
             log_level: logging level for this object
         """
         self.LOG: logging.Logger = get_obj_log(obj=self, level=log_level)
         """Logger for this object."""
 
-        self.APIOBJ = apiobj  # noqa: F821
+        self.APIOBJ = apiobj
         """:obj:`axonius_api_client.api.assets.asset_mixin.AssetMixin`: Asset object."""
 
-        self.VALUE_PARSER: ValueParser = ValueParser(apiobj=apiobj)
-        """Value parser."""
+        self.VALUE_PARSER = ValueParser(apiobj=apiobj)
+        """:obj:`axonius_api_client.api.wizard.value_parser.ValueParser`: Value parser."""
 
         self._init()
 
     def parse(self, entries: List[dict], source: str = Sources.LOD) -> List[dict]:
-        """Pass."""
+        """Parse a list of entries into a query and the associated GUI query wizard expressions.
+
+        Args:
+            entries: list of entries to parse
+            source: where entries came from
+        """
         check_type(value=entries, exp=(list, tuple), exp_items=dict)
         entries = [x for x in entries if x]
         entries = self._parse_entries(entries=entries, source=source)
@@ -47,7 +88,16 @@ class Wizard:
         return {Results.EXPRS: exprs, Results.QUERY: query}
 
     def _parse_entries(self, entries: List[dict], source: str) -> List[dict]:
-        """Pass."""
+        """Parse a list of entries into a query and the associated GUI query wizard expressions.
+
+        Args:
+            entries: list of entries to parse
+            source: where entries came from
+
+        Raises:
+            :exc:`axonius_api_client.exceptions.WizardError`:
+                if an entry fails to be parsed
+        """
         is_open, tracker = False, 0
         for idx, entry in enumerate(entries):
             src = f"{source} entry #{idx + 1}/{len(entries)}"
@@ -72,7 +122,15 @@ class Wizard:
     def _parse_flags(
         self, entry: dict, idx: int, entries: List[dict], tracker: int, is_open: bool
     ) -> dict:
-        """Pass."""
+        """Parse flags from an entry.
+
+        Args:
+            entry: entry to parse with Entry.VALUE key
+            idx: index of this entry
+            entries: all entries
+            tracker: tracker for Entry.WEIGHT key
+            is_open: parenthesis are currently open
+        """
         value_raw = entry[Entry.VALUE]
         flags = listify(entry.get(Entry.FLAGS) or [])
         flags, value = self._split_flags(value_raw=value_raw, flags=flags)
@@ -140,7 +198,15 @@ class Wizard:
         return entry, is_open, tracker
 
     def _parse_exprs(self, entries: List[dict]) -> List[dict]:
-        """Pass."""
+        """Parse a list of entries into GUI expressions.
+
+        Args:
+            entries: list of entries to parse
+
+        Raises:
+            :exc:`axonius_api_client.exceptions.WizardError`:
+                if an entry fails to be parsed
+        """
         exprs = []
         for idx, entry in enumerate(entries):
             src = f"entry #{idx + 1}/{len(entries)}"
@@ -154,7 +220,12 @@ class Wizard:
         return exprs
 
     def _parse_simple(self, entry: dict, idx: int) -> dict:
-        """Pass."""
+        """Parse an entry of type simple into GUI expressions.
+
+        Args:
+            entry: entry to parse
+            idx: index of this entry
+        """
         value_raw = entry[Entry.VALUE]
         field, operator, value = self._split_simple(value_raw=value_raw)
         field = self._get_field(value=field, value_raw=value_raw)
@@ -177,7 +248,16 @@ class Wizard:
         return expr
 
     def _parse_complex(self, entry: dict, idx: int) -> dict:
-        """Pass."""
+        """Parse an entry of type complex into GUI expressions.
+
+        Args:
+            entry: entry to parse
+            idx: index of this entry
+
+        Raises:
+            :exc:`axonius_api_client.exceptions.WizardError`:
+                if sub expr fails to parse
+        """
         value_raw = entry[Entry.VALUE]
         field, subs_raw = self._split_complex(value_raw=value_raw)
         field = self._get_field_complex(value=field, value_raw=value_raw)
@@ -204,8 +284,18 @@ class Wizard:
         )
         return expr
 
-    def _parse_sub(self, field: str, value_raw: str, idx: int) -> dict:
-        """Pass."""
+    def _parse_sub(self, field: dict, value_raw: str, idx: int) -> dict:
+        """Parse an sub expression of an entry of type complex.
+
+        Args:
+            field: complex field schema
+            value_raw: the value split from the complex filter line
+            idx: index of this entry
+
+        Raises:
+            :exc:`axonius_api_client.exceptions.WizardError`:
+                if sub field supplied is not a valid sub field of the complex field
+        """
         sub_field, operator, sub_value = self._split_simple(value_raw=value_raw)
 
         field_subs = {x[Fields.NAME]: x for x in field[Fields.SUBS]}
@@ -241,7 +331,16 @@ class Wizard:
     def _split_flags(
         self, value_raw: str, flags: Optional[List[str]] = None
     ) -> Tuple[List[str], str]:
-        """Pass."""
+        """Parse an expression and get the flags from the beginning and end.
+
+        Args:
+            value_raw: the value to get the flags from
+            flags: flags from the entry
+
+        Raises:
+            :exc:`axonius_api_client.exceptions.WizardError`:
+                if value is empty after removing flags
+        """
         value = value_raw
         flags = flags or []
 
@@ -271,7 +370,11 @@ class Wizard:
         return flags, value
 
     def _split_simple(self, value_raw: str) -> Tuple[str, str, str]:
-        """Pass."""
+        """Split a simple query wizard expression into field, operator, and value.
+
+        Args:
+            value_raw: the raw unparsed value to parse
+        """
         splitter = Entry.SPLIT
         split = value_raw.split(splitter, maxsplit=2)
         field = ""
@@ -306,7 +409,11 @@ class Wizard:
         return field, operator, value
 
     def _split_complex(self, value_raw: str) -> Tuple[str, List[str]]:
-        """Pass."""
+        """Split a complex query wizard expression into field and sub field expressions.
+
+        Args:
+            value_raw: the raw unparsed value to parse
+        """
         splitter = Entry.CSPLIT
         if splitter not in value_raw:
             raise WizardError(f"No {splitter} found in value '{value_raw}'")
@@ -334,12 +441,27 @@ class Wizard:
         return field, subs_raw
 
     def _get_operator(self, operator: str, field: dict, value_raw: str) -> Operator:
-        """Pass."""
+        """Validate the supplied operator for an expression for the type of field.
+
+        Args:
+            operator: operator supplied by user
+            field: field schema to check that operator is valid for
+            value_raw: raw unparsed value where operator and field came from
+        """
         err = f"Invalid OPERATOR name {operator!r} from value '{value_raw}'\n\n"
         return OperatorTypeMaps.get_operator(operator=operator, field=field, err=err)
 
     def _get_field(self, value: str, value_raw: str) -> dict:
-        """Pass."""
+        """Find a field schema for the supplied field name.
+
+        Args:
+            value: name of field to find schema for
+            value_raw: raw unparsed value where field name came from
+
+        Raises:
+            :exc:`axonius_api_client.exceptions.WizardError`:
+                if field can not be found or is "all" field
+        """
         try:
             field = self.APIOBJ.fields.get_field_name(
                 value=value,
@@ -357,7 +479,16 @@ class Wizard:
         return field
 
     def _get_field_complex(self, value: str, value_raw: str) -> dict:
-        """Pass."""
+        """Find a field schema for the supplied complex field name.
+
+        Args:
+            value: name of complex field to find schema for
+            value_raw: raw unparsed value where complex field name came from
+
+        Raises:
+            :exc:`axonius_api_client.exceptions.WizardError`:
+                if field can not be found, is not a complex field, or is "all" field
+        """
         try:
             field = self.APIOBJ.fields.get_field_name(
                 value=value,
@@ -389,7 +520,16 @@ class Wizard:
         return field
 
     def _check_entry_type(self, etype: str, types: List[str]) -> str:
-        """Pass."""
+        """Check that a supplied entry type is valid.
+
+        Args:
+            etype: entry type to check
+            types: valid entry types to check etype against
+
+        Raises:
+            :exc:`axonius_api_client.exceptions.WizardError`:
+                if etype is not on of types
+        """
         etype = etype.lower().strip()
         if etype not in types:
             valid = ", ".join(types)
@@ -397,7 +537,16 @@ class Wizard:
         return etype
 
     def _check_entry_keys(self, entry: dict, keys: List[str]) -> dict:
-        """Pass."""
+        """Check that an entry has the required keys.
+
+        Args:
+            entry: entry to check keys against
+            keys: list of keys that entry must have
+
+        Raises:
+            :exc:`axonius_api_client.exceptions.WizardError`:
+                if key is not in entry, value is empty, or value is not a string
+        """
         for key in keys:
             if key not in entry:
                 found = ", ".join(list(entry))
@@ -415,7 +564,18 @@ class Wizard:
         return entry
 
     def _check_patterns(self, value_raw: str, value: str, src: str, patterns: List[str]):
-        """Pass."""
+        """Check that a value matches a list of regex patterns.
+
+        Args:
+            value_raw: raw unparsed value where value came from
+            value: value to check patterns against
+            src: identifier of what value represents
+            patterns: list of regex patterns to check value against
+
+        Raises:
+            :exc:`axonius_api_client.exceptions.WizardError`:
+                if value is empty or does not match one of the patterns
+        """
         if not value:
             raise WizardError(f"Empty required {src} as {value!r} from value '{value_raw}'")
 
@@ -432,5 +592,5 @@ class Wizard:
             )
 
     def _init(self):
-        """Pass."""
+        """Post init setup."""
         pass

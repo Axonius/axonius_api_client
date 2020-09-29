@@ -4,16 +4,17 @@ import os
 
 import dotenv
 import pytest
-
 from axonius_api_client.api import dashboard, enforcements, instances, system
 from axonius_api_client.api.adapters import Adapters
 from axonius_api_client.api.adapters.cnx import Cnx
-from axonius_api_client.api.assets import Devices, Users, fields, labels, saved_query
+from axonius_api_client.api.assets import (Devices, Users, fields, labels,
+                                           saved_query)
 from axonius_api_client.api.signup import Signup
 from axonius_api_client.constants import CSV_ADAPTER, DEFAULT_NODE
 
 from .meta import CSV_FILECONTENT_STR, CSV_FILENAME
-from .utils import check_apiobj, check_apiobj_children, check_apiobj_xref, get_auth, get_url
+from .utils import (check_apiobj, check_apiobj_children, check_apiobj_xref,
+                    get_auth, get_url)
 
 dotenv.load_dotenv()
 

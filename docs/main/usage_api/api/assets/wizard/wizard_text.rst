@@ -1,7 +1,7 @@
-Query wizard constants
+Wizard for text files
 ###############################################
 
-.. automodule:: axonius_api_client.wizard.constants
+.. automodule:: axonius_api_client.api.wizard.wizard_text
    :members:
    :show-inheritance:
    :inherited-members:

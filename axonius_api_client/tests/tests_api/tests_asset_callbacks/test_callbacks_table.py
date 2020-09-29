@@ -5,14 +5,17 @@ import copy
 import io
 
 import pytest
-
 from axonius_api_client.exceptions import ApiError
 
 from ...utils import get_rows_exist, get_schema
-from .callbacks import Callbacks
+from .test_callbacks import Callbacks
 
 
-class CallbacksTable(Callbacks):
+class TestCallbacksTable(Callbacks):
+    @pytest.fixture(params=["api_devices", "api_users"])
+    def apiobj(self, request):
+        return request.getfixturevalue(request.param)
+
     @pytest.fixture(scope="class")
     def cbexport(self):
         return "table"
@@ -62,15 +65,3 @@ class CallbacksTable(Callbacks):
         cbobj.check_stop()
         assert cbobj.STATE["stop_fetch"]
         assert cbobj.STATE["stop_msg"]
-
-
-class TestDevicesCallbacksTable(CallbacksTable):
-    @pytest.fixture(scope="class")
-    def apiobj(self, api_devices):
-        return api_devices
-
-
-class TestUsersCallbacksTable(CallbacksTable):
-    @pytest.fixture(scope="class")
-    def apiobj(self, api_users):
-        return api_users

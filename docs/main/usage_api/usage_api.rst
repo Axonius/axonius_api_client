@@ -17,5 +17,4 @@ Using the API library
    api/signup
    api/library/index
    library/index
-   wizard/index
    openapi

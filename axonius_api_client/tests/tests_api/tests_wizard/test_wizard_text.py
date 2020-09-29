@@ -2,9 +2,9 @@
 """Test suite for axonius_api_client.query_wizard."""
 
 import pytest
+from axonius_api_client.api.wizard import ValueParser, WizardText
+from axonius_api_client.api.wizard.constants import Entry, Results, Types
 from axonius_api_client.exceptions import WizardError
-from axonius_api_client.wizard import ValueParser, WizardText
-from axonius_api_client.wizard.constants import Entry, Results, Types
 
 from .test_wizard import TestData
 

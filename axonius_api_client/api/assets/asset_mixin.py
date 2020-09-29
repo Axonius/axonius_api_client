@@ -8,10 +8,10 @@ from typing import Generator, List, Optional, Union
 from ...constants import MAX_PAGE_SIZE, PAGE_SIZE
 from ...exceptions import ApiError, JsonError, NotFoundError
 from ...tools import dt_now, dt_parse_tmpl, dt_sec_ago, json_dump, listify
-from ...wizard import Wizard, WizardCsv, WizardText
 from ..adapters import Adapters
 from ..asset_callbacks import Base, get_callbacks_cls
 from ..mixins import ModelMixins
+from ..wizard import Wizard, WizardCsv, WizardText
 from .fields import Fields
 from .labels import Labels
 from .saved_query import SavedQuery
@@ -123,12 +123,13 @@ class AssetMixin(ModelMixins):
             fields_fuzzy: string to fuzzy match of fields to return for each asset
             fields_default: include the default fields in :attr:`fields_default`
             fields_root: include all fields of an adapter that are not complex sub-fields
-            max_rows: only return N assets
+            max_rows: only return N rows
             max_pages: only return N pages
-            page_size: fetch N assets per page
+            row_start: start at row N
+            page_size: fetch N rows per page
             page_start: start at page N
             page_sleep: sleep for N seconds between each page fetch
-            use_cursor: use the endpoint that fetches assets using a DB cursor
+            use_cursor: use the endpoint that fetches rows using a DB cursor
             export: export assets using a callback method
             include_details: include details fields showing the adapter source of agg values
             sort_field: sort the returned assets on a given field
@@ -211,10 +212,10 @@ class AssetMixin(ModelMixins):
                 break
 
             for row in rows:
-                row_items = callbacks.process_row(row=row)
+                proc_rows = callbacks.process_row(row=row)
 
-                for row_item in listify(obj=row_items):
-                    yield row_item
+                for proc_row in listify(obj=proc_rows):
+                    yield proc_row
 
                 if state["stop_fetch"]:  # pragma: no cover
                     break

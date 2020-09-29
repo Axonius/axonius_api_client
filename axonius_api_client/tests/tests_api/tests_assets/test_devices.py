@@ -3,7 +3,7 @@
 import pytest
 
 from ...utils import check_assets, get_field_vals, get_rows_exist
-from .base_assets import AssetsPrivate, AssetsPublic, ModelMixinsBase
+from .test_base_assets import AssetsPrivate, AssetsPublic, ModelMixinsBase
 
 
 class TestDevices(AssetsPrivate, AssetsPublic, ModelMixinsBase):

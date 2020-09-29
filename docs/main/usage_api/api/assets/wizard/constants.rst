@@ -1,7 +1,7 @@
-Query wizard value parser
+Constants
 ###############################################
 
-.. automodule:: axonius_api_client.wizard.value_parser
+.. automodule:: axonius_api_client.api.wizard.constants
    :members:
    :show-inheritance:
    :inherited-members:

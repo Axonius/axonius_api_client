@@ -5,10 +5,14 @@ import copy
 import pytest
 
 from ...utils import get_rows_exist
-from .callbacks import Callbacks
+from .test_callbacks import Callbacks
 
 
-class CallbacksBase(Callbacks):
+class TestCallbacksBase(Callbacks):
+    @pytest.fixture(params=["api_devices", "api_users"])
+    def apiobj(self, request):
+        return request.getfixturevalue(request.param)
+
     @pytest.fixture(scope="class")
     def cbexport(self):
         return "base"
@@ -47,15 +51,3 @@ class CallbacksBase(Callbacks):
 
         assert rows_proc != rows_orig
         cbobj.stop()
-
-
-class TestDevicesCallbacksBase(CallbacksBase):
-    @pytest.fixture(scope="class")
-    def apiobj(self, api_devices):
-        return api_devices
-
-
-class TestUsersCallbacksBase(CallbacksBase):
-    @pytest.fixture(scope="class")
-    def apiobj(self, api_users):
-        return api_users

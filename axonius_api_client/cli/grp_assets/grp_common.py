@@ -2,20 +2,13 @@
 """Command line interface for Axonius API Client."""
 import tabulate
 
-from ...constants import FIELD_JOINER, FIELD_TRIM_LEN, TABLE_FORMAT, TABLE_MAX_ROWS
+from ...api.wizard.constants import Results, Types
+from ...constants import (FIELD_JOINER, FIELD_TRIM_LEN, TABLE_FORMAT,
+                          TABLE_MAX_ROWS)
 from ...tools import path_read
-from ...wizard import WizardText
-from ...wizard.constants import Results, Types
 from ..context import CONTEXT_SETTINGS, click
-from ..options import (
-    AUTH,
-    EXPORT,
-    FIELDS_SELECT,
-    PAGING,
-    add_options,
-    get_option_fields_default,
-    get_option_help,
-)
+from ..options import (AUTH, EXPORT, FIELDS_SELECT, PAGING, add_options,
+                       get_option_fields_default, get_option_help)
 
 HISTORY_DATE = click.option(
     "--history-date",
@@ -418,6 +411,7 @@ GET_BY_VALUE_FIELD = click.option(
 
 
 def load_whitelist(fh):
+    """Pass."""
     if fh:
         return [x.strip() for x in fh.readlines() if x.strip()]
     return None
@@ -445,9 +439,9 @@ def gen_get_by_cmd(options, doc, cmd_name, method):
 
 
 def load_wiz(apiobj, wizard_content, kwargs, exprs=False):
+    """Pass."""
     if wizard_content:
-        wizard = WizardText(apiobj=apiobj)
-        result = wizard.parse(content=wizard_content)
+        result = apiobj.wizard_text.parse(content=wizard_content)
         query = result[Results.QUERY]
         click.secho(f"Wizard built a query: {query}", err=True, fg="green")
         kwargs["query"] = query

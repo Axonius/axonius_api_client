@@ -3,9 +3,10 @@
 import codecs
 
 import pytest
+from axonius_api_client.api.wizard import ValueParser, WizardCsv
+from axonius_api_client.api.wizard.constants import (Entry, EntrySq, Results,
+                                                     Types)
 from axonius_api_client.exceptions import WizardError
-from axonius_api_client.wizard import ValueParser, WizardCsv
-from axonius_api_client.wizard.constants import Entry, EntrySq, Results, Types
 
 from .test_wizard import TestData
 
@@ -191,12 +192,12 @@ class TestProcessSqNewSq(TestWizardCsv, TestData):
             EntrySq.DESC: SRC,
         }
         wizard._new_sq(entry=entry)
-        assert wizard._sq == exp
-        assert exp in wizard._sqs
-        assert wizard._sq_entries == []
+        assert wizard.SQ == exp
+        assert exp in wizard.SQS
+        assert wizard.SQ_ENTRIES == []
 
         wizard._process_sq_entries()
-        assert exp in wizard._sqs_done
+        assert exp in wizard.SQS_DONE
 
     def test_with_entries(self, wizard, test_data1):
         entry = {Entry.VALUE: "badwolf", EntrySq.TAGS: "tag1,tag2", EntrySq.DESC: SRC}
@@ -208,18 +209,18 @@ class TestProcessSqNewSq(TestWizardCsv, TestData):
             EntrySq.DESC: SRC,
         }
         wizard._new_sq(entry=entry)
-        assert wizard._sq == exp
-        assert exp in wizard._sqs
-        assert wizard._sq_entries == []
+        assert wizard.SQ == exp
+        assert exp in wizard.SQS
+        assert wizard.SQ_ENTRIES == []
 
         entries, exp_exprs, exp_query = test_data1
-        wizard._sq_entries = entries
+        wizard.SQ_ENTRIES = entries
         wizard._process_sq_entries()
         exp[Results.EXPRS] = exp_exprs
         exp[Results.QUERY] = exp_query
 
-        assert exp == wizard._sq
-        assert exp in wizard._sqs_done
+        assert exp == wizard.SQ
+        assert exp in wizard.SQS_DONE
 
 
 class TestProcessSq(TestWizardCsv):
@@ -248,8 +249,8 @@ class TestProcessSq(TestWizardCsv):
         exp1_entries = []
         ret1 = wizard._process_sq(entry=entry1, is_last=False)
         assert ret1 == exp1_ret
-        assert wizard._sq == exp_sq
-        assert wizard._sq_entries == exp1_entries
+        assert wizard.SQ == exp_sq
+        assert wizard.SQ_ENTRIES == exp1_entries
 
     def test_sq_entries_is_last_true(self, wizard):
         entry1 = {
@@ -270,8 +271,8 @@ class TestProcessSq(TestWizardCsv):
         exp1_ret = 1
         ret1 = wizard._process_sq(entry=entry1, is_last=False)
         assert ret1 == exp1_ret
-        assert wizard._sq == exp1_sq
-        assert wizard._sq_entries == exp1_entries
+        assert wizard.SQ == exp1_sq
+        assert wizard.SQ_ENTRIES == exp1_entries
 
         simple = wizard.APIOBJ.FIELD_SIMPLE
 
@@ -322,8 +323,8 @@ class TestProcessSq(TestWizardCsv):
         exp2_ret = 2
         ret2 = wizard._process_sq(entry=entry2, is_last=True)
         assert ret2 == exp2_ret
-        assert wizard._sq == exp2_sq
-        assert wizard._sq_entries == exp2_entries
+        assert wizard.SQ == exp2_sq
+        assert wizard.SQ_ENTRIES == exp2_entries
 
     def test_sq_entries_sq(self, wizard):
         entry1 = {
@@ -344,8 +345,8 @@ class TestProcessSq(TestWizardCsv):
         exp1_ret = 1
         ret1 = wizard._process_sq(entry=entry1, is_last=False)
         assert ret1 == exp1_ret
-        assert wizard._sq == exp1_sq
-        assert wizard._sq_entries == exp1_entries
+        assert wizard.SQ == exp1_sq
+        assert wizard.SQ_ENTRIES == exp1_entries
 
         simple = wizard.APIOBJ.FIELD_SIMPLE
 
@@ -365,8 +366,8 @@ class TestProcessSq(TestWizardCsv):
         exp2_ret = 3
         ret2 = wizard._process_sq(entry=entry2, is_last=False)
         assert ret2 == exp2_ret
-        assert wizard._sq == exp2_sq
-        assert wizard._sq_entries == exp2_entries
+        assert wizard.SQ == exp2_sq
+        assert wizard.SQ_ENTRIES == exp2_entries
 
         entry3 = {
             Entry.TYPE: Types.SAVED_QUERY,
@@ -386,8 +387,8 @@ class TestProcessSq(TestWizardCsv):
         exp3_ret = 0
         ret3 = wizard._process_sq(entry=entry3, is_last=False)
         assert ret3 == exp3_ret
-        assert wizard._sq == exp3_sq
-        assert wizard._sq_entries == exp3_entries
+        assert wizard.SQ == exp3_sq
+        assert wizard.SQ_ENTRIES == exp3_entries
 
 
 class TestProcessSqs(TestWizardCsv):

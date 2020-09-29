@@ -107,4 +107,4 @@ class JsonError(ResponseError):
 
 
 class WizardError(ApiError):
-    """Errors in :obj:`axonius_api_client.wizard.wizard.Wizard`."""
+    """Errors in query wizards."""

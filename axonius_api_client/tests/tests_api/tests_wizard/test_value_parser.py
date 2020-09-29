@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
 """Test suite."""
 import pytest
-
 from axonius_api_client.api.parsers.constants import Parsers
+from axonius_api_client.api.wizard import ValueParser
 from axonius_api_client.exceptions import WizardError
-from axonius_api_client.wizard import ValueParser
 
 
 def patch_cnx_labels(value_parser, monkeypatch, values):

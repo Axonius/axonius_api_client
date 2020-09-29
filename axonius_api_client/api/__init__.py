@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """API library package."""
 from . import (adapters, assets, dashboard, enforcements, instances, mixins,
-               parsers, routers, signup, system)
+               parsers, routers, signup, system, wizard)
 from .adapters import Adapters, Cnx
 from .assets import AssetMixin, Devices, Fields, Labels, SavedQuery, Users
 from .dashboard import Dashboard
@@ -11,6 +11,7 @@ from .mixins import (ChildMixins, Model, ModelMixins, PageSizeMixin,
                      PagingMixinsObject)
 from .signup import Signup
 from .system import System
+from .wizard import ValueParser, Wizard, WizardCsv, WizardText
 
 __all__ = (
     "Users",
@@ -35,6 +36,7 @@ __all__ = (
     "system",
     "parsers",
     "signup",
+    "wizard",
     "instances",
     "dashboard",
     "Model",
@@ -42,4 +44,8 @@ __all__ = (
     "ModelMixins",
     "PagingMixinsObject",
     "ChildMixins",
+    "Wizard",
+    "WizardText",
+    "WizardCsv",
+    "ValueParser",
 )

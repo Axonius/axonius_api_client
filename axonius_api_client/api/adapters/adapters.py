@@ -17,19 +17,16 @@ class Adapters(ModelMixins):
     """API object for working with adapters.
 
     Examples:
-        All examples assume a connection using :obj:`axonius_api_client.connect.Connect` as
-        ``client``.
+        First, create a ``client`` using :obj:`axonius_api_client.connect.Connect`.
 
-        Get an adapter by name
-
+        >>> # Get an adapter by name
         >>> adapter = client.adapters.get_by_name(name="aws")
         >>> print(adapter['status'])  # overall adapter status
         >>> print(adapter['cnx_count_total'])  # total connection count
         >>> print(adapter['cnx_count_broken'])  # broken connection count
         >>> print(adapter['cnx_count_working'])  # working connection count
-
-        Look at each connection
-
+        >>>
+        >>> # Get details of each connection of the adapter
         >>> for cnx in adapter["cnx"]:
         ...     print(cnx)
         ...     print(cnx["working"])  # bool if connection is working or not
@@ -37,25 +34,21 @@ class Adapters(ModelMixins):
         ...     print(cnx["config"])  # configuration of connection
         ...     print(cnx["id"])  # ID of connection
         ...     print(cnx["uuid"])  # UUID of connection
-
-        Update the generic advanced settings
-
+        >>>
+        >>> # Update the generic advanced settings for the adapter
         >>> updated_config = client.adapters.config_update(
         ...     name="aws", last_seen_threshold_hours=24
         ... )
-
-        Update the adapter specific advanced settings
-
+        >>>
+        >>> # Update the adapter specific advanced settings
         >>> updated_config = client.adapters.config_update(
         ...     name="aws", config_type="specific", fetch_s3=True
         ... )
-
-        Update the discover advanced settings
-
+        >>>
+        >>> # Update the discover advanced settings
         >>> # XXX currently broken!
-
-        Upload a file for use in a connection
-
+        >>>
+        >>> #Upload a file for use in a connection
         >>> file_uuid = client.adapters.file_upload_path(path="test.csv")
 
     """
@@ -214,7 +207,9 @@ class Adapters(ModelMixins):
 
     def _init(self, **kwargs):
         """Post init method for subclasses to use for extra setup."""
-        self.cnx = Cnx(parent=self)
+        self.cnx: Cnx = Cnx(parent=self)
+        """Work with adapter connections"""
+
         super(Adapters, self)._init(**kwargs)
 
     def _get(self) -> dict:

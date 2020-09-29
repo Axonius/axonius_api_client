@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
-"""Python API Client for Axonius."""
+"""Query builder wizards."""
+from . import value_parser, wizard, wizard_csv, wizard_text
 from .value_parser import ValueParser
 from .wizard import Wizard
 from .wizard_csv import WizardCsv
@@ -10,4 +11,8 @@ __all__ = (
     "WizardText",
     "WizardCsv",
     "ValueParser",
+    "wizard",
+    "wizard_csv",
+    "wizard_text",
+    "value_parser",
 )
