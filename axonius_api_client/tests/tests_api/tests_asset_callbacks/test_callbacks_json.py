@@ -7,10 +7,14 @@ import json
 import pytest
 
 from ...utils import get_rows_exist
-from .callbacks import Callbacks
+from .test_callbacks import Callbacks
 
 
-class CallbacksJson(Callbacks):
+class TestCallbacksJson(Callbacks):
+    @pytest.fixture(params=["api_devices", "api_users"])
+    def apiobj(self, request):
+        return request.getfixturevalue(request.param)
+
     @pytest.fixture(scope="class")
     def cbexport(self):
         return "json"
@@ -79,15 +83,3 @@ class CallbacksJson(Callbacks):
         assert '"schemas": [' in output
         stop_val = output.splitlines()[-2:]
         assert "]" in stop_val
-
-
-class TestDevicesCallbacksJson(CallbacksJson):
-    @pytest.fixture(scope="class")
-    def apiobj(self, api_devices):
-        return api_devices
-
-
-class TestUsersCallbacksJson(CallbacksJson):
-    @pytest.fixture(scope="class")
-    def apiobj(self, api_users):
-        return api_users

@@ -8,14 +8,13 @@ import sys
 from io import StringIO
 
 import pytest
-from cachetools import TTLCache, cached
-from click.testing import CliRunner
-
 from axonius_api_client import Wizard, api, auth
 from axonius_api_client.cli.context import Context
 from axonius_api_client.constants import AGG_ADAPTER_NAME
 from axonius_api_client.http import Http
 from axonius_api_client.tools import listify
+from cachetools import TTLCache, cached
+from click.testing import CliRunner
 
 IS_WINDOWS = sys.platform == "win32"
 IS_LINUX = sys.platform == "linux"
@@ -46,6 +45,7 @@ def check_asset(row):
 
 
 def exists_query(apiobj, fields=None, not_exist=False):
+    """Pass."""
     if not fields:
         return None
 
@@ -65,6 +65,7 @@ def exists_query(apiobj, fields=None, not_exist=False):
 
 
 def get_schema(apiobj, field, key=None, adapter=AGG_ADAPTER_NAME):
+    """Pass."""
     schemas = get_schemas(apiobj=apiobj, adapter=adapter)
     schema = apiobj.fields.get_field_schema(
         value=field,
@@ -74,14 +75,16 @@ def get_schema(apiobj, field, key=None, adapter=AGG_ADAPTER_NAME):
 
 
 def random_string(length):
+    """Pass."""
     letters = string.ascii_lowercase
     result_str = "".join(random.choice(letters) for i in range(length))
     return result_str
 
 
-def get_rows_exist(apiobj, fields=None, max_rows=1, not_exist=False):
+def get_rows_exist(apiobj, fields=None, max_rows=1, not_exist=False, **kwargs):
+    """Pass."""
     query = exists_query(apiobj=apiobj, fields=fields, not_exist=not_exist)
-    rows = apiobj.get(fields=fields, max_rows=max_rows, query=query)
+    rows = apiobj.get(fields=fields, max_rows=max_rows, query=query, **kwargs)
     if not rows:
         pytest.skip(f"No {apiobj} assets with fields {fields}")
     return rows[0] if max_rows == 1 else rows
@@ -89,6 +92,7 @@ def get_rows_exist(apiobj, fields=None, max_rows=1, not_exist=False):
 
 @cached(cache=CACHE)
 def get_schemas(apiobj, adapter=AGG_ADAPTER_NAME):
+    """Pass."""
     return apiobj.fields.get()[adapter]
 
 

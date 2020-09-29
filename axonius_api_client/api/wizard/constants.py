@@ -1,14 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-"""Utilities for this package."""
+"""Constants for wizards."""
 import re
 from typing import List, Optional, Union
 
 
 class Sources:
-    """Pass."""
+    """Defaults for wizard source argument."""
 
-    CLI_STR: str = "Command Line Interface"
     CSV_STR: str = "csv text string"
     CSV_PATH: str = "csv file {path}"
     TEXT_STR: str = "text string"
@@ -19,19 +18,32 @@ class Sources:
 
 
 class Templates:
-    """Pass."""
+    """Query builder templates."""
 
     LEFT: str = "({query}"
+    """For building a query with a left parentheses"""
+
     RIGHT: str = "{query})"
+    """For building a query with a right parentheses"""
+
     NOT: str = "not {query}"
+    """For building a query with a NOT operator"""
+
     OR: str = "or {query}"
+    """For building a query with an OR operator"""
+
     AND: str = "and {query}"
+    """For building a query with an AND operator"""
+
     COMPLEX: str = "({field} == match([{sub_queries}]))"
+    """For building a query for complex fields"""
+
     SUBS: str = " and "
+    """Joiner for sub fields in a complex field"""
 
 
 class Fields:
-    """Pass."""
+    """Keys and arguments for field schemas."""
 
     NAME: str = "name"
     EXPR_TYPE: str = "expr_field_type"
@@ -43,36 +55,32 @@ class Fields:
 
 
 class Results:
-    """Pass."""
+    """Keys for results returned from wizards."""
 
     EXPRS: str = "expressions"
     QUERY: str = "query"
 
 
 class Patterns:
-    """Pass."""
+    """Regular expression patterns for validation of values."""
 
     FIELD_VALID: str = re.compile(
-        r"""
-(?ix)            # case insensitive and verbose
+        r"""(?ix)            # case insensitive and verbose
 ([^a-z0-9:._\-]) # contains characters that are not one of: a-z 0-9 : . _ -
 """,
     )
     FIELD_FIRST_ALPHA: str = re.compile(
-        r"""
-(?ix)        # case insensitive and verbose
+        r"""(?ix)        # case insensitive and verbose
 (^[^a-zA-Z]) # starts with characters that are not one of: a-z
 """
     )
     OP_ALPHA: str = re.compile(
-        r"""
-(?ix)        # case insensitive and verbose
+        r"""(?ix)        # case insensitive and verbose
 ([^a-z_\-])  # contains characters that are not one of: a-z _ -
 """
     )
     FLAGS: str = re.compile(
-        r"""
-(?ix)                   # case insensitive and verbose
+        r"""(?ix)                   # case insensitive and verbose
 (?P<flags>[^a-z0-9]*)?  # capture optional flags at beginning
 (?P<value>.*)           # capture the rest as the value
 """
@@ -83,7 +91,7 @@ class Patterns:
 
 
 class Flags:
-    """Pass."""
+    """Flag values that can be used in entries."""
 
     NOT: str = "!"
     AND: str = "&"
@@ -104,21 +112,26 @@ class Flags:
 
 
 class Entry:
-    """Pass."""
+    """Entry keys and split values."""
 
     SRC: str = "source"
     WEIGHT: str = "bracket_weight"
     FLAGS: str = "flags"
     VALUE: str = "value"
     TYPE: str = "type"
+
     REQ: List[str] = [VALUE, TYPE]
+    """Required keys for entries"""
 
     SPLIT: str = " "
+    """String to split on for expressions"""
+
     CSPLIT: str = " // "
+    """String to split on for complex expressions"""
 
 
 class EntrySq:
-    """Pass."""
+    """Entry keys for saved query types."""
 
     NAME: str = "name"
     DESC: str = "description"
@@ -127,12 +140,16 @@ class EntrySq:
     DEFAULT: str = "default"
     FDEF: str = "fields_default"
     FMAN: str = "fields_manual"
+
     REQ: List[str] = [*Entry.REQ]
+    """Required keys for saved query types"""
+
     OPT: dict = {DESC: "", TAGS: "", FIELDS: DEFAULT}
+    """Optional keys and their defaults for saved query types"""
 
 
 class Types:
-    """Pass."""
+    """Types of entries."""
 
     SIMPLE: str = "simple"
     COMPLEX: str = "complex"
@@ -140,13 +157,17 @@ class Types:
     FILE: str = "file"
 
     DICT: List[str] = [SIMPLE, COMPLEX]
+    """required keys for the base Wizard class."""
+
     TEXT: List[str] = [*DICT]
+    """required keys for the WizardText class."""
+
     SQ: List[str] = [*DICT, SAVED_QUERY]
-    CLI: List[str] = [FILE, *DICT]
+    """Required keys for the WizardCsv class."""
 
 
 class Docs:
-    """Pass."""
+    """Documentation strings for wizards."""
 
     SUB_OPT: str = f"[{Entry.CSPLIT} ...]"
     OPVAL: str = "FIELD OPERATOR VALUE"
@@ -241,7 +262,7 @@ class Docs:
 
 
 class Expr:
-    """Pass."""
+    """Keys for GUI expressions."""
 
     BRACKET_LEFT: str = "leftBracket"
     BRACKET_RIGHT: str = "rightBracket"
@@ -267,12 +288,20 @@ class Expr:
 
     @classmethod
     def get_query(cls, exprs: List[dict]) -> str:
-        """Pass."""
+        """Get the query for a list of GUI expressions.
+
+        Args:
+            exprs: list of expressions to build query from
+        """
         return " ".join([x[cls.FILTER] for x in exprs])
 
     @classmethod
     def get_subs_query(cls, sub_exprs: List[dict]) -> str:
-        """Pass."""
+        """Get the complex query for a list of GUI child expressions.
+
+        Args:
+            sub_exprs: list of children of a complex expression to build query from
+        """
         return Templates.SUBS.join([x[cls.CONDITION] for x in sub_exprs])
 
     @classmethod
@@ -282,12 +311,23 @@ class Expr:
         query: str,
         field: dict,
         idx: int,
-        value: str,
         op_comp: str,
+        value: Optional[Union[int, str, bool]] = None,
         is_complex: bool = False,
         children: Optional[List[dict]] = None,
     ) -> dict:
-        """Pass."""
+        """Build an expression for the GUI to understand the query.
+
+        Args:
+            entry: entry to build expression from
+            query: AQL string
+            field: schema of field
+            idx: index of this expression
+            value: raw expression value
+            op_comp: comparison operator
+            is_complex: build an expression for a complex filter
+            children: children of a complex filter
+        """
         flags = entry.get(Entry.FLAGS, []) or []
         weight = entry.get(Entry.WEIGHT, 0)
 
@@ -340,10 +380,18 @@ class Expr:
         query: str = "",
         op_comp: str = "",
         field: str = "",
-        value: Optional[Union[int, str]] = None,
+        value: Optional[Union[int, str, bool]] = None,
         idx: int = 0,
     ) -> dict:
-        """Pass."""
+        """Build a child expression to be used in an expression.
+
+        Args:
+            query: AQL of this child expression
+            op_comp: comparison operator
+            field: name of field for this child
+            value: raw expression value
+            idx: index of this expression
+        """
         expression = {}
         expression[cls.CONDITION] = query
         expression[cls.EXPR] = {}

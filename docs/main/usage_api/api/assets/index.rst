@@ -7,4 +7,4 @@ Working with assets
    fields
    labels
    saved_query
-   callbacks/index
+   wizard/index

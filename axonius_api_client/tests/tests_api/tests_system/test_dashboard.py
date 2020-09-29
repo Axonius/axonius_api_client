@@ -13,8 +13,6 @@ class DashboardBase:
 
 
 class TestDashboardPrivate(DashboardBase):
-    """Pass."""
-
     def test_private_lifecycle(self, apiobj):
         """Pass."""
         lifecycle = apiobj._get()

@@ -6,10 +6,14 @@ import io
 import pytest
 
 from ...utils import get_rows_exist, get_schema
-from .callbacks import Callbacks
+from .test_callbacks import Callbacks
 
 
-class CallbacksCsv(Callbacks):
+class TestCallbacksCsv(Callbacks):
+    @pytest.fixture(params=["api_devices", "api_users"])
+    def apiobj(self, request):
+        return request.getfixturevalue(request.param)
+
     @pytest.fixture(scope="class")
     def cbexport(self):
         return "csv"
@@ -75,15 +79,3 @@ class CallbacksCsv(Callbacks):
         cbobj.stop()
         output = io_fd.getvalue()
         assert output.endswith("\n\n")
-
-
-class TestDevicesCallbacksCsv(CallbacksCsv):
-    @pytest.fixture(scope="class")
-    def apiobj(self, api_devices):
-        return api_devices
-
-
-class TestUsersCallbacksCsv(CallbacksCsv):
-    @pytest.fixture(scope="class")
-    def apiobj(self, api_users):
-        return api_users

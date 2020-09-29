@@ -1,29 +1,63 @@
 # -*- coding: utf-8 -*-
-"""Python API Client for Axonius."""
+"""Wizard for CSV files."""
 import codecs
 import csv
 import io
 import pathlib
 from typing import List, Optional, Union
 
-from ..exceptions import WizardError
-from ..tools import check_type, listify, path_read
+from ...exceptions import WizardError
+from ...tools import check_type, kv_dump, listify, path_read
 from .constants import Docs, Entry, EntrySq, Sources, Types
 from .wizard import Wizard
 
 
-def kv_dump(obj: dict) -> str:
-    """Pass."""
-    return "\n  " + "\n  ".join([f"{k}: {v}" for k, v in obj.items()])
-
-
 class WizardCsv(Wizard):
-    """Pass."""
+    """Wizard for CSV files.
+
+    Notes:
+        This wizard can create as many saved queries as you like. The first row of the CSV
+        must always have a type value of "saved_query". All rows under that row will be added to
+        that saved query until another row with a type value of "saved_query" is found.
+        Repeat this pattern as you see fit.
+
+        The description, tags, and fields columns are only used for types of "saved_query"
+
+    Examples:
+        First, create a ``client`` using :obj:`axonius_api_client.connect.Connect`.
+
+        >>> # Define a CSV string to parse
+        >>> content = '''
+        ... type,value,description,tags,fields
+        ... saved_query,name of sq,description  of sq,"tag1,tag2, tag4","os.type,default, aws:aws_device_type"
+        ... simple,hostname contains test,,,
+        ... simple,os.type equals windows,,,
+        ... saved_query,name of second sq,description  of sq,"tag1,tag2, tag4",
+        ... simple,hostname contains test,,,
+        ... simple,os.type equals windows,,,
+        ... complex,installed_software // name contains chrome // version earlier_than 82,,,
+        ... '''
+        >>>
+        >>> # Parse the CSV string into a query and GUI expressions
+        >>> parsed = client.devices.wizard_csv.parse(content=content)
+        >>>
+        >>> # Or parse a CSV file directly
+        >>> parsed = client.devices.wizard_csv.parse(path="~/test.csv")
+        >>>
+        >>> # use the result to create saved queries that the GUI understands
+        >>> sqs = [client.devices.saved_query.add(**sq) for sq in parsed]
+
+    """  # noqa: E501
 
     DOCS: str = Docs.CSV
 
     def parse(self, content: str, source: str = Sources.CSV_STR) -> List[dict]:
-        """Pass."""
+        """Parse a CSV string into a set of saved queries.
+
+        Args:
+            content: CSV string
+            source: where content came from
+        """
         source = source or Sources.CSV_STR
         entries = self._load_csv(content=content, source=source)
         sqs = self._process_sqs(entries=entries)
@@ -32,13 +66,23 @@ class WizardCsv(Wizard):
     def parse_path(
         self, path: Union[str, pathlib.Path], source: str = Sources.CSV_PATH
     ) -> List[dict]:
-        """Pass."""
+        """Parse a CSV file into a set of saved queries.
+
+        Args:
+            path: CSV file
+            source: where csv file came from
+        """
         path, content = path_read(path, encoding="utf-8")
         source = source.format(path=path)
         return self.parse(content=content, source=source)
 
     def _load_csv(self, content: str, source: str) -> List[dict]:
-        """Pass."""
+        """Load a CSV string and parse the rows into entries.
+
+        Args:
+            content: CSV string
+            source: where content came from
+        """
         check_type(value=content, exp=str, name="content")
         content = content.strip()
         if content.startswith(codecs.BOM_UTF8.decode()):
@@ -52,7 +96,13 @@ class WizardCsv(Wizard):
         return entries
 
     def _process_csv(self, rows: List[dict], columns: List[str], source: str) -> List[dict]:
-        """Pass."""
+        """Process and validate the rows and columns from a CSV into entries.
+
+        Args:
+            rows: rows from the CSV
+            columns: columns from the CSV
+            source: where content came from
+        """
         found = [x.strip().lower() for x in columns if x.strip()]
         found_txt = ", ".join(found or ["NONE!"])
 
@@ -77,7 +127,12 @@ class WizardCsv(Wizard):
         return entries
 
     def _rows_to_entries(self, rows: List[dict], source: str) -> List[dict]:
-        """Pass."""
+        """Process and validate the rows from a CSV into entries.
+
+        Args:
+            rows: rows from the CSV
+            source: where content came from
+        """
         entries = []
         for idx, row in enumerate(rows):
             src = f"{source} row #{idx + 1}:{kv_dump(row)}"
@@ -89,7 +144,12 @@ class WizardCsv(Wizard):
         return [x for x in entries if x]
 
     def _row_to_entry(self, row: dict, src: str) -> dict:
-        """Pass."""
+        """Proccess and validate a row from a CSV into an entry.
+
+        Args:
+            row: row from the CSV
+            src: identifier of where the row came from
+        """
         oetype = row.get(Entry.TYPE, "")
         etype = str(oetype or "").strip().lower()
         value = row.get(Entry.VALUE, "") or ""
@@ -112,11 +172,15 @@ class WizardCsv(Wizard):
         return entry
 
     def _process_sqs(self, entries: List[dict]) -> List[dict]:
-        """Pass."""
-        self._sqs = sqs = []
-        self._sq = {}
-        self._sq_entries = []
-        self._sqs_done = []
+        """Process all of the saved queries defined in the CSV.
+
+        Args:
+            entries: the entries produced by parsing the rows
+        """
+        self.SQS = sqs = []
+        self.SQ = {}
+        self.SQ_ENTRIES = []
+        self.SQS_DONE = []
 
         for idx, entry in enumerate(entries):
             is_last = idx + 1 == len(entries)
@@ -130,9 +194,14 @@ class WizardCsv(Wizard):
         return sqs
 
     def _process_sq(self, entry: dict, is_last: bool) -> int:
-        """Pass."""
+        """Process a saved query.
+
+        Args:
+            entry: entry being processed by :meth:`_process_sqs`
+            is_last: entry is the last entry being processed by :meth:`_process_sqs`
+        """
         if entry[Entry.TYPE] == Types.SAVED_QUERY:
-            if self._sq_entries:
+            if self.SQ_ENTRIES:
                 self._process_sq_entries()
                 self._new_sq(entry=entry)
                 return 0
@@ -140,9 +209,9 @@ class WizardCsv(Wizard):
             self._new_sq(entry=entry)
             return 1
         else:
-            self._sq_entries.append(entry)
+            self.SQ_ENTRIES.append(entry)
 
-        if not self._sq:
+        if not self.SQ:
             raise WizardError(
                 f"First row must be type {Types.SAVED_QUERY!r}, not {entry[Entry.TYPE]!r}"
             )
@@ -154,38 +223,56 @@ class WizardCsv(Wizard):
         return 3
 
     def _process_sq_entries(self):
-        if self._sq_entries and self._sq and self._sq not in self._sqs_done:
-            cnt = len(self._sq_entries)
-            self.LOG.debug(f"processing {cnt} entries in for SQ {kv_dump(self._sq)}")
-            parsed = super().parse(entries=self._sq_entries)
-            self._sq.update(parsed)
-        self._sqs_done.append(self._sq)
+        """Process the entries for the current saved query."""
+        if self.SQ_ENTRIES and self.SQ and self.SQ not in self.SQS_DONE:
+            cnt = len(self.SQ_ENTRIES)
+            self.LOG.debug(f"processing {cnt} entries in for SQ {kv_dump(self.SQ)}")
+            parsed = super().parse(entries=self.SQ_ENTRIES)
+            self.SQ.update(parsed)
+        self.SQS_DONE.append(self.SQ)
 
     def _new_sq(self, entry: dict):
-        self._sq = {}
-        self._sq[EntrySq.NAME] = entry[Entry.VALUE]
-        self._sq[EntrySq.FDEF] = False
-        self._sq[EntrySq.FMAN] = self._process_fields(entry=entry)
-        self._sq[EntrySq.TAGS] = self._process_tags(entry=entry)
-        self._sq[EntrySq.DESC] = self._process_desc(entry=entry)
-        self.LOG.debug(f"New {Types.SAVED_QUERY} found {kv_dump(self._sq)}")
+        """Create a new current saved query.
 
-        self._sq_entries = []
-        self._sqs.append(self._sq)
+        Args:
+            entry: entry being processed by :meth:`_process_sqs`
+        """
+        self.SQ = {}
+        self.SQ[EntrySq.NAME] = entry[Entry.VALUE]
+        self.SQ[EntrySq.FDEF] = False
+        self.SQ[EntrySq.FMAN] = self._process_fields(entry=entry)
+        self.SQ[EntrySq.TAGS] = self._process_tags(entry=entry)
+        self.SQ[EntrySq.DESC] = self._process_desc(entry=entry)
+        self.LOG.debug(f"New {Types.SAVED_QUERY} found {kv_dump(self.SQ)}")
+
+        self.SQ_ENTRIES = []
+        self.SQS.append(self.SQ)
 
     def _process_desc(self, entry: dict) -> Optional[str]:
-        """Pass."""
+        """Process the description key of an entry.
+
+        Args:
+            entry: entry being processed by :meth:`_process_sqs`
+        """
         desc = str(entry.get(EntrySq.DESC) or "")
         return desc.strip() or None
 
     def _process_tags(self, entry: dict) -> Optional[List[str]]:
-        """Pass."""
+        """Process the tags key of an entry.
+
+        Args:
+            entry: entry being processed by :meth:`_process_sqs`
+        """
         tags = str(entry.get(EntrySq.TAGS) or "")
         tags = [x.strip() for x in tags.split(",") if x.strip()]
         return tags or None
 
     def _process_fields(self, entry: dict) -> [List[str]]:
-        """Pass."""
+        """Process the fields key of an entry.
+
+        Args:
+            entry: entry being processed by :meth:`_process_sqs`
+        """
         fields = str(entry.get(EntrySq.FIELDS) or EntrySq.DEFAULT)
         fields = [x.strip().lower() for x in fields.split(",") if x.strip()]
 
@@ -200,7 +287,15 @@ class WizardCsv(Wizard):
         return fields
 
     def _init(self):
-        self._sqs: List[dict] = []
-        self._sq: dict = {}
-        self._sq_entries: List[dict] = []
-        self._sqs_done: List[dict] = []
+        """Post init setup."""
+        self.SQS: List[dict] = []
+        """Saved queries produced by this wizard"""
+
+        self.SQ: dict = {}
+        """Current saved query being processed"""
+
+        self.SQ_ENTRIES: List[dict] = []
+        """Entries belonging to current saved query being processed"""
+
+        self.SQS_DONE: List[dict] = []
+        """Saved queries that have been processed"""

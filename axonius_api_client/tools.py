@@ -807,3 +807,12 @@ def parse_ip_network(value: str) -> Union[ipaddress.IPv4Network, ipaddress.IPv6N
         return ipaddress.ip_network(value)
     except Exception as exc:
         raise ToolsError(str(exc))
+
+
+def kv_dump(obj: dict) -> str:
+    """Get a string representation of a dictionaries key value pairs.
+
+    Args:
+        obj: dictionary to get string of
+    """
+    return "\n  " + "\n  ".join([f"{k}: {v}" for k, v in obj.items()])

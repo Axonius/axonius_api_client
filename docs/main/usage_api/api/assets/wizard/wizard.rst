@@ -1,7 +1,7 @@
-Query wizard builder from CSV
+Wizard for list of dictionaries
 ###############################################
 
-.. automodule:: axonius_api_client.wizard.wizard_csv
+.. automodule:: axonius_api_client.api.wizard.wizard
    :members:
    :show-inheritance:
    :inherited-members:

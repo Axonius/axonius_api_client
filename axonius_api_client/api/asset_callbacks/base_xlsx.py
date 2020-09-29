@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""API models for working with device and user assets."""
+"""Excel export callbacks class."""
 from typing import List
 
 import xlsxwriter
@@ -10,14 +10,19 @@ from .base import Base
 
 
 class Xlsx(Base):
-    """Pass."""
+    """Excel export callbacks class."""
 
     CB_NAME: str = "xlsx"
+    """name for this callback"""
+
     CELL_FORMAT: dict = {"text_wrap": True}
+    """Excel cell formatting to use for every cell"""
+
     COLUMN_LENGTH: int = 50
+    """default length to use to every column"""
 
     def _init(self, **kwargs):
-        """Pass."""
+        """Override defaults in GETARGS to make export readable."""
         self.GETARGS["field_null"] = True
         self.GETARGS["field_flatten"] = True
         self.GETARGS["field_join"] = True
@@ -25,12 +30,12 @@ class Xlsx(Base):
             self.GETARGS["field_titles"] = True
 
     def start(self, **kwargs):
-        """Create csvstream and associated file descriptor."""
+        """Start this callbacks object."""
         super(Xlsx, self).start(**kwargs)
         self.do_start(**kwargs)
 
     def do_start(self, **kwargs):
-        """Pass."""
+        """Start this callbacks object."""
         export_file = self.GETARGS.get("export_file", None)
         if export_file:
             if not str(export_file).endswith(".xlsx"):
@@ -53,31 +58,31 @@ class Xlsx(Base):
         self._rowtracker = 1
 
     def stop(self, **kwargs):
-        """Close dictwriter and associated file descriptor."""
+        """Stop this callbacks object."""
         super(Xlsx, self).stop(**kwargs)
         self.do_stop(**kwargs)
 
     def do_stop(self, **kwargs):
-        """Pass."""
+        """Stop this callbacks object."""
         self._workbook.close()
 
     def process_row(self, row: dict) -> List[dict]:
         """Write row to dictwriter and delete it."""
-        self.do_pre_row(row=row)
+        rows = listify(row)
+        rows = self.do_pre_row(rows=rows)
 
-        row_return = [{"internal_axon_id": row["internal_axon_id"]}]
-        new_rows = self.do_row(row=row)
+        row_return = [{"internal_axon_id": row["internal_axon_id"]} for row in rows]
+        rows = self.do_row(rows=rows)
 
-        for new_row in listify(new_rows):
+        for row in listify(rows):
             for idx, column_name in enumerate(self.final_columns):
                 self._worksheet.write(
-                    self._rowtracker, idx, new_row.get(column_name), self._cell_format
+                    self._rowtracker, idx, row.get(column_name), self._cell_format
                 )
 
             self._rowtracker += 1
-            del new_row
+            del row
 
-        del new_rows
-        del row
+        del rows
 
         return row_return

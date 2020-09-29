@@ -43,14 +43,13 @@ Examples:
 
 """
 from . import (api, auth, cli, constants, data, exceptions, http, logs, tools,
-               url_parser, version, wizard)
+               url_parser, version)
 from .api import (Adapters, Dashboard, Devices, Enforcements, Instances,
-                  Signup, System, Users)
+                  Signup, System, Users, Wizard, WizardCsv, WizardText)
 from .auth import ApiKey
 from .connect import Connect
 from .http import Http
 from .url_parser import UrlParser
-from .wizard import Wizard, WizardCsv, WizardText
 
 __version__ = version.__version__
 LOG = logs.LOG
@@ -71,7 +70,6 @@ __all__ = (
     "Signup",
     "Instances",
     "Dashboard",
-    # wizards
     "Wizard",
     "WizardText",
     "WizardCsv",
@@ -87,6 +85,5 @@ __all__ = (
     "cli",
     "logs",
     "data",
-    "wizard",
     "url_parser",
 )

@@ -27,39 +27,34 @@ class SavedQuery(ChildMixins, PagingMixinsObject):
     """API object for working with saved queries for the parent asset type.
 
     Examples:
-        All examples assume a connection using :obj:`axonius_api_client.connect.Connect` as
-        ``client``.
+        First, create a ``client`` using :obj:`axonius_api_client.connect.Connect`.
 
-        Get a saved query for devices
-
+        >>> # Get a saved query
         >>> sq = client.devices.saved_query.get(name="test")
-
-        Look at the fields defined in the saved query
-
+        >>>
+        >>> # See the fields defined in the saved query
         >>> print(sq['view']['fields'])
-
-        Look at the filter defined in the saved query
-
+        >>>
+        >>> # See the filter defined in the saved query
         >>> print(sq['view']['query']['filter'])
-
-        Delete the saved query
-
+        >>>
+        >>> # Delete the saved query
         >>> deleted = client.devices.saved_query.delete(rows=[sq])
-
-        Delete the saved query by name
-
+        >>>
+        >>> # Delete the saved query by name
         >>> deleted = client.devices.saved_query.delete_by_name(name="test")
-
-        Create a saved query using a wizard
-
-        >>> result = devices.wizard_text.parse(content="simple hostname contains blah")
+        >>>
+        >>> # Create a saved query using a :obj:`axonius_api_client.api.wizard.wizard.Wizard`
+        >>> parsed = client.devices.wizard_text.parse(content="simple hostname contains blah")
+        >>> query = parsed["query"]
+        >>> expressions = parsed["expressions"]
         >>> sq = devices.saved_query.add(
-        >>>     name="test",
-        >>>     query=result["query"],
-        >>>     expressions=result["expressions"],
-        >>>     description="meep meep",
-        >>>     tags=["nyuck1", "nyuck2", "nyuck3"],
-        >>> )
+        ...     name="test",
+        ...     query=query,
+        ...     expressions=expressions,
+        ...     description="meep meep",
+        ...     tags=["nyuck1", "nyuck2", "nyuck3"],
+        ... )
 
     """
 
@@ -121,14 +116,14 @@ class SavedQuery(ChildMixins, PagingMixinsObject):
 
         Notes:
             Saved Queries created without expressions will not be editable using the query wizard
-            in the GUI. Use :obj:`axonius_api_client.wizard.wizard.Wizard` to produce a query
+            in the GUI. Use :obj:`axonius_api_client.api.wizard.wizard.Wizard` to produce a query
             and it's accordant expressions for the GUI query wizard.
 
         Args:
             name: name of saved query
             description: description
             tags: list of tags
-            expressions: expressions built by :obj:`axonius_api_client.wizard.wizard.Wizard`
+            expressions: expressions built by :obj:`axonius_api_client.api.wizard.wizard.Wizard`
             query: query built by GUI or the CLI query wizard
             fields: fields to return for each asset (will be validated)
             fields_manual: fields to return for each asset (will NOT be validated)

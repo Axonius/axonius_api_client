@@ -1,4 +1,4 @@
-Working with saved queries for assets
+Working with saved queries
 ###############################################
 
 .. automodule:: axonius_api_client.api.assets.saved_query
