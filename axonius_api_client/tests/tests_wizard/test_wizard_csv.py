@@ -3,7 +3,6 @@
 import codecs
 
 import pytest
-
 from axonius_api_client.exceptions import WizardError
 from axonius_api_client.wizard import ValueParser, WizardCsv
 from axonius_api_client.wizard.constants import Entry, EntrySq, Results, Types
@@ -18,8 +17,8 @@ class TestWizardCsv:
     def wizard(self, request):
         apiobj = request.getfixturevalue(request.param)
         obj = WizardCsv(apiobj=apiobj)
-        assert obj._apiobj == apiobj
-        assert isinstance(obj._value_parser, ValueParser)
+        assert obj.APIOBJ == apiobj
+        assert isinstance(obj.VALUE_PARSER, ValueParser)
         return obj
 
 
@@ -160,23 +159,23 @@ class TestProcessFields(TestWizardCsv):
         ],
     )
     def test_default(self, wizard, entry):
-        exp = wizard._apiobj.fields_default
+        exp = wizard.APIOBJ.fields_default
         ret = wizard._process_fields(entry=entry)
         assert ret == exp
 
     def test_no_default(self, wizard):
-        simple = wizard._apiobj.FIELD_SIMPLE
-        cplex = wizard._apiobj.FIELD_COMPLEX
+        simple = wizard.APIOBJ.FIELD_SIMPLE
+        cplex = wizard.APIOBJ.FIELD_COMPLEX
         entry = {EntrySq.FIELDS: f"{simple},{cplex}"}
         exp = [simple, cplex]
         ret = wizard._process_fields(entry=entry)
         assert ret == exp
 
     def test_with_default(self, wizard):
-        cplex = wizard._apiobj.FIELD_COMPLEX
-        cplex_sub = f"{cplex}.{wizard._apiobj.FIELD_COMPLEX_SUB}"
+        cplex = wizard.APIOBJ.FIELD_COMPLEX
+        cplex_sub = f"{cplex}.{wizard.APIOBJ.FIELD_COMPLEX_SUB}"
         entry = {EntrySq.FIELDS: f"{cplex},{EntrySq.DEFAULT},{cplex_sub}"}
-        exp = [cplex, *wizard._apiobj.fields_default, cplex_sub]
+        exp = [cplex, *wizard.APIOBJ.fields_default, cplex_sub]
         ret = wizard._process_fields(entry=entry)
         assert ret == exp
 
@@ -187,7 +186,7 @@ class TestProcessSqNewSq(TestWizardCsv, TestData):
         exp = {
             EntrySq.NAME: "badwolf",
             EntrySq.FDEF: False,
-            EntrySq.FMAN: wizard._apiobj.fields_default,
+            EntrySq.FMAN: wizard.APIOBJ.fields_default,
             EntrySq.TAGS: ["tag1", "tag2"],
             EntrySq.DESC: SRC,
         }
@@ -204,7 +203,7 @@ class TestProcessSqNewSq(TestWizardCsv, TestData):
         exp = {
             EntrySq.NAME: "badwolf",
             EntrySq.FDEF: False,
-            EntrySq.FMAN: wizard._apiobj.fields_default,
+            EntrySq.FMAN: wizard.APIOBJ.fields_default,
             EntrySq.TAGS: ["tag1", "tag2"],
             EntrySq.DESC: SRC,
         }
@@ -241,7 +240,7 @@ class TestProcessSq(TestWizardCsv):
         exp_sq = {
             EntrySq.NAME: "badwolf",
             EntrySq.FDEF: False,
-            EntrySq.FMAN: wizard._apiobj.fields_default,
+            EntrySq.FMAN: wizard.APIOBJ.fields_default,
             EntrySq.TAGS: ["tag1", "tag2"],
             EntrySq.DESC: SRC,
         }
@@ -263,7 +262,7 @@ class TestProcessSq(TestWizardCsv):
         exp1_sq = {
             EntrySq.NAME: "badwolf",
             EntrySq.FDEF: False,
-            EntrySq.FMAN: wizard._apiobj.fields_default,
+            EntrySq.FMAN: wizard.APIOBJ.fields_default,
             EntrySq.TAGS: ["tag1", "tag2"],
             EntrySq.DESC: SRC,
         }
@@ -274,7 +273,7 @@ class TestProcessSq(TestWizardCsv):
         assert wizard._sq == exp1_sq
         assert wizard._sq_entries == exp1_entries
 
-        simple = wizard._apiobj.FIELD_SIMPLE
+        simple = wizard.APIOBJ.FIELD_SIMPLE
 
         entry2 = {
             Entry.TYPE: Types.SIMPLE,
@@ -337,7 +336,7 @@ class TestProcessSq(TestWizardCsv):
         exp1_sq = {
             EntrySq.NAME: "badwolf",
             EntrySq.FDEF: False,
-            EntrySq.FMAN: wizard._apiobj.fields_default,
+            EntrySq.FMAN: wizard.APIOBJ.fields_default,
             EntrySq.TAGS: ["tag1", "tag2"],
             EntrySq.DESC: SRC,
         }
@@ -348,7 +347,7 @@ class TestProcessSq(TestWizardCsv):
         assert wizard._sq == exp1_sq
         assert wizard._sq_entries == exp1_entries
 
-        simple = wizard._apiobj.FIELD_SIMPLE
+        simple = wizard.APIOBJ.FIELD_SIMPLE
 
         entry2 = {
             Entry.TYPE: Types.SIMPLE,
@@ -379,7 +378,7 @@ class TestProcessSq(TestWizardCsv):
         exp3_sq = {
             EntrySq.NAME: "badwolf3",
             EntrySq.FDEF: False,
-            EntrySq.FMAN: wizard._apiobj.fields_default,
+            EntrySq.FMAN: wizard.APIOBJ.fields_default,
             EntrySq.TAGS: ["tag1", "tag2"],
             EntrySq.DESC: SRC,
         }
@@ -400,7 +399,7 @@ class TestProcessSqs(TestWizardCsv):
         assert "Error parsing entry from" in str(exc.value)
 
     def test_full_barrel(self, wizard):
-        simple = wizard._apiobj.FIELD_SIMPLE
+        simple = wizard.APIOBJ.FIELD_SIMPLE
         entries = [
             {
                 Entry.TYPE: Types.SAVED_QUERY,
@@ -426,7 +425,7 @@ class TestProcessSqs(TestWizardCsv):
             {
                 EntrySq.NAME: "badwolf",
                 EntrySq.FDEF: False,
-                EntrySq.FMAN: wizard._apiobj.fields_default,
+                EntrySq.FMAN: wizard.APIOBJ.fields_default,
                 EntrySq.TAGS: ["tag1", "tag2"],
                 EntrySq.DESC: SRC,
                 Results.EXPRS: [
@@ -461,7 +460,7 @@ class TestProcessSqs(TestWizardCsv):
             {
                 EntrySq.NAME: "badwolf3",
                 EntrySq.FDEF: False,
-                EntrySq.FMAN: wizard._apiobj.fields_default,
+                EntrySq.FMAN: wizard.APIOBJ.fields_default,
                 EntrySq.TAGS: ["tag1", "tag2"],
                 EntrySq.DESC: SRC,
             },
@@ -523,7 +522,7 @@ class TestProcessCsv(TestWizardCsv):
 
 class TestLoadCsv(TestWizardCsv):
     def test_valid(self, wizard):
-        simple = wizard._apiobj.FIELD_SIMPLE
+        simple = wizard.APIOBJ.FIELD_SIMPLE
         bom = codecs.BOM_UTF8.decode()
         content = f"""
 {bom}
@@ -559,7 +558,7 @@ class TestLoadCsv(TestWizardCsv):
 
 class TestParse(TestWizardCsv):
     def test_valid(self, wizard, tmp_path):
-        simple = wizard._apiobj.FIELD_SIMPLE
+        simple = wizard.APIOBJ.FIELD_SIMPLE
         bom = codecs.BOM_UTF8.decode()
         content = f"""
 {bom}
@@ -574,7 +573,7 @@ class TestParse(TestWizardCsv):
             {
                 EntrySq.NAME: "badwolf",
                 EntrySq.FDEF: False,
-                EntrySq.FMAN: wizard._apiobj.fields_default,
+                EntrySq.FMAN: wizard.APIOBJ.fields_default,
                 EntrySq.TAGS: ["tag1", "tag2"],
                 EntrySq.DESC: "it is bad",
                 Results.EXPRS: [

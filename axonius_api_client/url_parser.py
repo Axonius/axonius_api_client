@@ -20,16 +20,16 @@ class UrlParser:
             :exc:`HttpError`: if parsed URL winds up without a hostname, port, or scheme.
 
         """
-        self._init_url: str = url
+        self.INIT_URL: str = url
         """initial URL provided"""
 
-        self._init_scheme: str = default_scheme
+        self.INIT_SCHEME: str = default_scheme
         """default scheme provided"""
 
-        self._init_parsed = urlparse(url)
+        self.INIT_PARSED = urlparse(url)
         """:obj:`urllib.parse.ParseResult`: first pass of parsing URL"""
 
-        self.parsed = self.reparse(parsed=self._init_parsed, default_scheme=default_scheme)
+        self.parsed = self.reparse(parsed=self.INIT_PARSED, default_scheme=default_scheme)
         """:obj:`urllib.parse.ParseResult`:second pass of parsing URL"""
 
         for part in ["hostname", "port", "scheme"]:

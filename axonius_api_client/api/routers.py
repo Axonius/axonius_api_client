@@ -12,39 +12,29 @@ class Router:
         """Object store for REST API routes.
 
         Args:
-            object_type (:obj:`str`): object type for this set of routes
-            base (:obj:`str`): base path for this set of routes
-            version (:obj:`int`): api version for this set of routes
+            object_type: object type for this set of routes
+            base: base path for this set of routes
+            version: api version for this set of routes
             **routes: routes for this object_type
         """
-        self._version = version
-        self._base = base
-        self._object_type = object_type
+        self.VERSION = version
+        self.BASE = base
+        self.OBJ_TYPE = object_type
         self.root = join_url(base, object_type)
-        self._routes = ["root"]
+        self.ROUTES = ["root"]
         for k, v in routes.items():
-            self._routes.append(k)
+            self.ROUTES.append(k)
             items = [base, v] if v.startswith("/") else [self.root, v]
             setattr(self, k, join_url(*items))
 
     def __str__(self) -> str:
-        """Show object info.
-
-        Returns:
-            :obj:`str`
-
-        """
+        """Show object info."""
         msg = "{obj.__class__.__module__}.{obj.__class__.__name__}"
-        msg += "(object_type={obj._object_type!r}, version={obj._version})"
+        msg += "(object_type={obj.OBJ_TYPE!r}, version={obj.VERSION})"
         return msg.format(obj=self)
 
     def __repr__(self) -> str:
-        """Show object info.
-
-        Returns:
-            :obj:`str`
-
-        """
+        """Show object info."""
         return self.__str__()
 
 
@@ -52,7 +42,10 @@ class ApiV1:
     """Routes provided by the Axonius REST API version 1."""
 
     version: int = 1
+    """Version of API."""
+
     base: str = "api/V{version}".format(version=version)
+    """Base URL of endpoints."""
 
     users: Router = Router(
         object_type="users",
@@ -68,6 +61,7 @@ class ApiV1:
         destroy="destroy",
         history_dates="history_dates",
     )
+    """Endpoints for :obj:`axonius_api_client.api.assets.users.Users`"""
 
     devices: Router = Router(
         object_type="devices",
@@ -83,6 +77,7 @@ class ApiV1:
         destroy="destroy",
         history_dates="history_dates",
     )
+    """Endpoints for :obj:`axonius_api_client.api.assets.devices.Devices`"""
 
     actions: Router = Router(
         object_type="actions",
@@ -92,6 +87,7 @@ class ApiV1:
         deploy="deploy",
         upload_file="upload_file",
     )
+    """Endpoints for :mod:`axonius_api_client.api.enforcements.actions`"""
 
     adapters: Router = Router(
         object_type="adapters",
@@ -104,8 +100,10 @@ class ApiV1:
         config_set="{adapter_name_raw}/{adapter_config_name}",
         config_get="{adapter_name_plugin}/{adapter_config_name}",
     )
+    """Endpoints for :mod:`axonius_api_client.api.adapters.adapters`"""
 
     alerts: Router = Router(object_type="alerts", base=base, version=version)
+    """Endpoints for :mod:`axonius_api_client.api.enforcements.enforcements`"""
 
     system: Router = Router(
         object_type="system",
@@ -129,6 +127,7 @@ class ApiV1:
         central_core="central_core",
         central_core_restore="central_core/restore",
     )
+    """Endpoints for :mod:`axonius_api_client.api.system.system`"""
 
     all_objects: List[Router] = [
         users,
@@ -138,13 +137,17 @@ class ApiV1:
         alerts,
         system,
     ]
+    """All endpoint objects."""
 
 
 class ApiV4:
     """Routes provided by the Axonius REST API version 4.0."""
 
     version: float = 4.0
+    """Version of API."""
+
     base: str = "api/V{version}".format(version=version)
+    """Base URL of endpoints."""
 
     users: Router = Router(
         object_type="users",
@@ -160,6 +163,7 @@ class ApiV4:
         destroy="destroy",
         history_dates="history_dates",
     )
+    """Endpoints for :obj:`axonius_api_client.api.assets.users.Users`"""
 
     devices: Router = Router(
         object_type="devices",
@@ -175,6 +179,7 @@ class ApiV4:
         destroy="destroy",
         history_dates="history_dates",
     )
+    """Endpoints for :obj:`axonius_api_client.api.assets.devices.Devices`"""
 
     actions: Router = Router(
         object_type="actions",
@@ -184,6 +189,7 @@ class ApiV4:
         deploy="deploy",
         upload_file="upload_file",
     )
+    """Endpoints for :mod:`axonius_api_client.api.enforcements.actions`"""
 
     adapters: Router = Router(
         object_type="adapters",
@@ -197,6 +203,7 @@ class ApiV4:
         config_set="{adapter_name_raw}/{adapter_config_name}",
         config_get="{adapter_name_plugin}/{adapter_config_name}",
     )
+    """Endpoints for :mod:`axonius_api_client.api.adapters.adapters`"""
 
     alerts: Router = Router(
         object_type="enforcements",
@@ -204,12 +211,14 @@ class ApiV4:
         version=version,
         upload_file="actions/upload_file",
     )
+    """Endpoints for :mod:`axonius_api_client.api.enforcements.enforcements`"""
 
     instances: Router = Router(
         object_type="instances",
         base=base,
         version=version,
     )
+    """Endpoints for :mod:`axonius_api_client.api.instances`"""
 
     dashboard: Router = Router(
         object_type="dashboard",
@@ -217,6 +226,7 @@ class ApiV4:
         version=version,
         lifecycle="lifecycle",
     )
+    """Endpoints for :mod:`axonius_api_client.api.dashboard`"""
 
     system: Router = Router(
         object_type="settings",
@@ -238,14 +248,14 @@ class ApiV4:
         central_core="central_core",
         central_core_restore="central_core/restore",
     )
+    """Endpoints for :mod:`axonius_api_client.api.system.system`"""
 
     signup: Router = Router(
         object_type="signup",
         base=base,
         version=version,
     )
-
-    labels: Router = Router(object_type="labels", base=base, version=version)
+    """Endpoints for :mod:`axonius_api_client.api.signup`"""
 
     all_objects: List[Router] = [
         users,
@@ -256,9 +266,10 @@ class ApiV4:
         instances,
         dashboard,
         system,
-        labels,
         signup,
     ]
+    """All endpoint objects."""
 
 
 API_VERSION = ApiV4
+"""Version of API to use package wide."""

@@ -11,7 +11,7 @@ from ...constants import (DEFAULT_PATH, FIELD_JOINER, FIELD_TRIM_LEN,
 from ...exceptions import ApiError
 from ...tools import (calc_percent, echo_error, echo_ok, echo_warn, get_path,
                       join_kv, listify)
-from ..parsers.fields import schema_custom
+from ..parsers import schema_custom
 
 
 class Base:
@@ -57,7 +57,7 @@ class Base:
         self.TAG_ROWS_REMOVE: List[dict] = []
         """assets to remove tags from in do_tagging."""
 
-        self._custom_cb_exc: List[dict] = []
+        self.CUSTOM_CB_EXC: List[dict] = []
 
         self._init()
 
@@ -136,7 +136,7 @@ class Base:
                 custom_cb(self=self, row=row)
             except Exception as exc:
                 msg = f"Custom callback {custom_cb} failed: {exc}"
-                self._custom_cb_exc.append({"cb": custom_cb, "exc": exc, "msg": msg})
+                self.CUSTOM_CB_EXC.append({"cb": custom_cb, "exc": exc, "msg": msg})
                 self.echo(msg=msg, error="exception", abort=False)
 
     def echo_page_progress(self):

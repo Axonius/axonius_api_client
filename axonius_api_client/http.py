@@ -28,21 +28,6 @@ class Http:
         certwarn: bool = True,
         certverify: bool = False,
         **kwargs,
-        # connect_timeout: int = TIMEOUT_CONNECT,
-        # response_timeout: int = TIMEOUT_RESPONSE,
-        # cert_client_both: Optional[Union[str, pathlib.Path]] = None,
-        # cert_client_cert: Optional[Union[str, pathlib.Path]] = None,
-        # cert_client_key: Optional[Union[str, pathlib.Path]] = None,
-        # http_proxy: Optional[str] = None,
-        # https_proxy: Optional[str] = None,
-        # save_last: bool = True,
-        # save_history: bool = False,
-        # log_level: Union[int, str] = LOG_LEVEL_HTTP,
-        # log_level_urllib: str = "warning",
-        # log_request_attrs: Optional[List[str]] = None,
-        # log_response_attrs: Optional[List[str]] = None,
-        # log_request_body: bool = False,
-        # log_response_body: bool = False,
     ):
         """HTTP client wrapper around :obj:`requests.Session`.
 
@@ -290,8 +275,12 @@ class Http:
         """Value to use in User-Agent header."""
         return f"{__name__}.{self.__class__.__name__}/{__version__}"
 
-    def _do_log_request(self, request: requests.PreparedRequest):
-        """Do it."""
+    def _do_log_request(self, request):
+        """Do it.
+
+        Args:
+            request (:obj:`requests.PreparedRequest`): prepared request to log attrs of
+        """
         if self.log_request_attrs:
             lattrs = ", ".join(self.log_request_attrs).format(
                 url=request.url,
@@ -309,8 +298,12 @@ class Http:
         hidden = self.LOG_HIDE_HEADERS
         return {k: hide if k in hidden else v for k, v in headers.items()}
 
-    def _do_log_response(self, response: requests.Response):
-        """Do it."""
+    def _do_log_response(self, response):
+        """Do it.
+
+        Args:
+            response (:obj:`requests.Response`): response to log attrs of
+        """
         if self.log_response_attrs:
             lattrs = ", ".join(self.log_response_attrs).format(
                 url=response.url,

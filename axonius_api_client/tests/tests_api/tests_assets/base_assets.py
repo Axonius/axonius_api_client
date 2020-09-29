@@ -2,17 +2,11 @@
 """Test suite for assets."""
 import pytest
 import requests
-
 from axonius_api_client.api import mixins
 from axonius_api_client.constants import MAX_PAGE_SIZE
-from axonius_api_client.exceptions import (
-    ApiError,
-    JsonError,
-    JsonInvalid,
-    NotFoundError,
-    ResponseNotOk,
-    ToolsError,
-)
+from axonius_api_client.exceptions import (ApiError, JsonError, JsonInvalid,
+                                           NotFoundError, ResponseNotOk,
+                                           ToolsError)
 
 from ...meta import QUERIES
 from ...utils import check_asset, check_assets, get_field_vals, get_rows_exist
@@ -263,7 +257,7 @@ class AssetsPublic:
         rows = apiobj.get_by_saved_query(name=sq_name, max_rows=1)
         check_assets(rows)
 
-        last_fields = apiobj._LAST_GET["fields"].split(",")
+        last_fields = apiobj.LAST_GET["fields"].split(",")
         assert sq_fields == last_fields
 
     def test_get_bys_value(self, apiobj):

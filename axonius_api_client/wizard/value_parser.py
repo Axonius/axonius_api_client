@@ -5,7 +5,6 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 
 from cachetools import TTLCache, cached
 
-from ..api.assets.asset_mixin import AssetMixin
 from ..exceptions import WizardError
 from ..tools import (check_empty, check_type, coerce_int_float,
                      coerce_str_to_csv, dt_parse_tmpl, get_raw_version,
@@ -17,7 +16,7 @@ CACHE: TTLCache = TTLCache(maxsize=1024, ttl=30)
 class ValueParser:
     """Pass."""
 
-    def __init__(self, apiobj: AssetMixin):
+    def __init__(self, apiobj):
         """Pass."""
         self.apiobj = apiobj
 

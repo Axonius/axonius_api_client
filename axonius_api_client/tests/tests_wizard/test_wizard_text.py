@@ -2,7 +2,6 @@
 """Test suite for axonius_api_client.query_wizard."""
 
 import pytest
-
 from axonius_api_client.exceptions import WizardError
 from axonius_api_client.wizard import ValueParser, WizardText
 from axonius_api_client.wizard.constants import Entry, Results, Types
@@ -15,8 +14,8 @@ class TestWizardText:
     def wizard(self, request):
         apiobj = request.getfixturevalue(request.param)
         obj = WizardText(apiobj=apiobj)
-        assert obj._apiobj == apiobj
-        assert isinstance(obj._value_parser, ValueParser)
+        assert obj.APIOBJ == apiobj
+        assert isinstance(obj.VALUE_PARSER, ValueParser)
         return obj
 
 
@@ -79,9 +78,9 @@ class TestLinesToEntries(TestWizardText):
 
 class TestParse(TestWizardText, TestData):
     def test_valid(self, wizard, test_data1):
-        simple = wizard._apiobj.FIELD_SIMPLE
-        cplex = wizard._apiobj.FIELD_COMPLEX
-        sub = wizard._apiobj.FIELD_COMPLEX_SUB
+        simple = wizard.APIOBJ.FIELD_SIMPLE
+        cplex = wizard.APIOBJ.FIELD_COMPLEX
+        sub = wizard.APIOBJ.FIELD_COMPLEX_SUB
 
         line1_value = f"{simple} exists"
         line1 = f"{Types.SIMPLE} {line1_value}"
@@ -108,9 +107,9 @@ class TestParsePath(TestWizardText, TestData):
     def test_valid(self, wizard, test_data1, tmp_path):
         path = tmp_path / "test.txt"
 
-        simple = wizard._apiobj.FIELD_SIMPLE
-        cplex = wizard._apiobj.FIELD_COMPLEX
-        sub = wizard._apiobj.FIELD_COMPLEX_SUB
+        simple = wizard.APIOBJ.FIELD_SIMPLE
+        cplex = wizard.APIOBJ.FIELD_COMPLEX
+        sub = wizard.APIOBJ.FIELD_COMPLEX_SUB
 
         line1_value = f"{simple} exists"
         line1 = f"{Types.SIMPLE} {line1_value}"

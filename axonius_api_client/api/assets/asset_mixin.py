@@ -8,6 +8,7 @@ from typing import Generator, List, Optional, Union
 from ...constants import MAX_PAGE_SIZE, PAGE_SIZE
 from ...exceptions import ApiError, JsonError, NotFoundError
 from ...tools import dt_now, dt_parse_tmpl, dt_sec_ago, json_dump, listify
+from ...wizard import Wizard, WizardCsv, WizardText
 from ..adapters import Adapters
 from ..asset_callbacks import Base, get_callbacks_cls
 from ..mixins import ModelMixins
@@ -184,7 +185,7 @@ class AssetMixin(ModelMixins):
 
         callbacks_cls = get_callbacks_cls(export=export)
         callbacks = callbacks_cls(apiobj=self, getargs=kwargs, state=state, store=store)
-        self._LAST_CALLBACKS: Base = callbacks
+        self.LAST_CALLBACKS: Base = callbacks
 
         callbacks.start()
 
@@ -317,7 +318,7 @@ class AssetMixin(ModelMixins):
         try:
             return self._get_by_id(id=id)
         except JsonError:
-            otype = self.router._object_type
+            otype = self.router.OBJ_TYPE
             msg = f"Failed to find internal_axon_id {id!r} for {otype}"
             raise NotFoundError(msg)
 
@@ -451,14 +452,31 @@ class AssetMixin(ModelMixins):
         """Post init method for subclasses to use for extra setup."""
         # cross reference
         self.adapters: Adapters = Adapters(auth=self.auth, **kwargs)
+        """Adapters API model for cross reference."""
 
-        # children
         self.labels: Labels = Labels(parent=self)
-        self.saved_query: SavedQuery = SavedQuery(parent=self)
-        self.fields: Fields = Fields(parent=self)
+        """Work with labels (tags) for this asset type."""
 
-        self._LAST_GET: dict = {}
-        self._LAST_CALLBACKS: Base = None
+        self.saved_query: SavedQuery = SavedQuery(parent=self)
+        """Work with saved queries for this asset type."""
+
+        self.fields: Fields = Fields(parent=self)
+        """Work with fields for this asset type."""
+
+        self.wizard: Wizard = Wizard(apiobj=self)
+        """Query wizard builder."""
+
+        self.wizard_text: WizardText = WizardText(apiobj=self)
+        """Query wizard builder from text."""
+
+        self.wizard_csv: WizardCsv = WizardCsv(apiobj=self)
+        """Query wizard builder from CSV."""
+
+        self.LAST_GET: dict = {}
+        """Request object sent for last :meth:`get` request"""
+
+        self.LAST_CALLBACKS: Base = None
+        """Callbacks object used for last :meth:`get` request."""
 
         super(AssetMixin, self)._init(**kwargs)
 
@@ -518,7 +536,7 @@ class AssetMixin(ModelMixins):
 
             params["fields"] = fields
 
-        self._LAST_GET: dict = params
+        self.LAST_GET: dict = params
 
         return self.request(method="post", path=self.router.root, json=params)
 
@@ -565,7 +583,7 @@ class AssetMixin(ModelMixins):
 
             params["fields"] = fields
 
-        self._LAST_GET: dict = params
+        self.LAST_GET: dict = params
         return self.request(method="post", path=self.router.cached, json=params)
 
     def _get_by_id(self, id: str) -> dict:

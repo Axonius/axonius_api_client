@@ -4,7 +4,8 @@ import dataclasses
 import enum
 from typing import Dict, List, Optional
 
-from ...constants import AGG_ADAPTER_NAME, AGG_ADAPTER_TITLE, AGG_EXPR_FIELD_TYPE
+from ...constants import (AGG_ADAPTER_NAME, AGG_ADAPTER_TITLE,
+                          AGG_EXPR_FIELD_TYPE)
 from ...data import BaseData, BaseEnum
 from ...exceptions import NotFoundError
 
@@ -309,9 +310,9 @@ class OperatorTypeMap(BaseData):
     name: str
     operators: List[Operator]
     field_type: Types
-    field_format: Optional[Formats] = None
-    items_type: Optional[Types] = None
-    items_format: Optional[Formats] = None
+    field_format: Formats = None
+    items_type: Types = None
+    items_format: Formats = None
 
 
 @dataclasses.dataclass

@@ -44,8 +44,8 @@ Examples:
 """
 from . import (api, auth, cli, constants, data, exceptions, http, logs, tools,
                url_parser, version, wizard)
-from .api import (Adapters, Devices, Enforcements, Instances, Signup, System,
-                  Users)
+from .api import (Adapters, Dashboard, Devices, Enforcements, Instances,
+                  Signup, System, Users)
 from .auth import ApiKey
 from .connect import Connect
 from .http import Http
@@ -69,11 +69,12 @@ __all__ = (
     "Enforcements",
     "System",
     "Signup",
+    "Instances",
+    "Dashboard",
     # wizards
     "Wizard",
     "WizardText",
     "WizardCsv",
-    "Instances",
     "UrlParser",
     # modules
     "api",

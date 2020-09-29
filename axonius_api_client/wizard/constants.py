@@ -52,25 +52,25 @@ class Results:
 class Patterns:
     """Pass."""
 
-    FIELD_VALID: re.Pattern = re.compile(
+    FIELD_VALID: str = re.compile(
         r"""
 (?ix)            # case insensitive and verbose
 ([^a-z0-9:._\-]) # contains characters that are not one of: a-z 0-9 : . _ -
 """,
     )
-    FIELD_FIRST_ALPHA: re.Pattern = re.compile(
+    FIELD_FIRST_ALPHA: str = re.compile(
         r"""
 (?ix)        # case insensitive and verbose
 (^[^a-zA-Z]) # starts with characters that are not one of: a-z
 """
     )
-    OP_ALPHA: re.Pattern = re.compile(
+    OP_ALPHA: str = re.compile(
         r"""
 (?ix)        # case insensitive and verbose
 ([^a-z_\-])  # contains characters that are not one of: a-z _ -
 """
     )
-    FLAGS: re.Pattern = re.compile(
+    FLAGS: str = re.compile(
         r"""
 (?ix)                   # case insensitive and verbose
 (?P<flags>[^a-z0-9]*)?  # capture optional flags at beginning
@@ -78,8 +78,8 @@ class Patterns:
 """
     )
 
-    FIELD: List[re.Pattern] = [FIELD_VALID, FIELD_FIRST_ALPHA]
-    OP: List[re.Pattern] = [OP_ALPHA]
+    FIELD: List[str] = [FIELD_VALID, FIELD_FIRST_ALPHA]
+    OP: List[str] = [OP_ALPHA]
 
 
 class Flags:
