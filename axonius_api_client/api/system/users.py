@@ -4,7 +4,7 @@ from typing import List, Optional
 
 from ...exceptions import ApiError, NotFoundError
 from ..mixins import ChildMixins
-from ..parsers.config import parse_unchanged
+from ..parsers import parse_unchanged
 
 
 class Users(ChildMixins):  # pragma: no cover

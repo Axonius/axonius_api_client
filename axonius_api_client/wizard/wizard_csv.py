@@ -192,11 +192,11 @@ class WizardCsv(Wizard):
         if EntrySq.DEFAULT in fields:
             lidx = fields.index(EntrySq.DEFAULT)
             ridx = lidx + 1
-            fields[lidx:ridx] = self._apiobj.fields_default
+            fields[lidx:ridx] = self.APIOBJ.fields_default
             fields = [x for x in fields if x != EntrySq.DEFAULT]
 
         if fields != [EntrySq.DEFAULT]:
-            fields = self._apiobj.fields.validate(fields=fields, fields_default=False)
+            fields = self.APIOBJ.fields.validate(fields=fields, fields_default=False)
         return fields
 
     def _init(self):

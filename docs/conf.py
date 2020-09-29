@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
 """Sphinx config."""
+import logging as pylogging
+
 import axonius_api_client as pkg  # noqa
 import sphinx_rtd_theme
+from sphinx.util import logging
 
 # -- Project information -------------------------------------------
 
@@ -17,6 +20,24 @@ pkg_title_strip = pkg_title.replace(" ", "").replace("_", "").strip()
 
 # -- General configuration -----------------------------------------
 
+
+class FilterForIssue123(pylogging.Filter):
+    """Work around for https://github.com/agronholm/sphinx-autodoc-typehints/issues/123.
+
+    When this https://github.com/agronholm/sphinx-autodoc-typehints/pull/153
+    gets merged, we can remove this
+    """
+
+    def filter(self, record: pylogging.LogRecord) -> bool:
+        """Make this check more specific by checking that dataclass name is in the message.
+
+        so that you don't filter out other meaningful warnings
+        """
+        return not record.getMessage().startswith("Cannot treat a function")
+
+
+logging.getLogger("sphinx_autodoc_typehints").logger.addFilter(FilterForIssue123())
+# End of a workaround
 extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.autosectionlabel",
@@ -45,7 +66,10 @@ pygments_style = "monokai"
 #     "show-inheritance": True,
 #     "exclude-members": "__weakref__,__str__,__repr__",
 # }
-
+set_type_checking_flag = True
+typehints_fully_qualified = True
+always_document_param_types = True
+typehints_document_rtype = True
 # -- Options for HTML  ---------------------------------------------
 
 html_theme = "sphinx_rtd_theme"

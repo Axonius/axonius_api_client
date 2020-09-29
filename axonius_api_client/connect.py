@@ -7,9 +7,8 @@ from typing import List, Optional, Union
 
 import requests
 
-from .api import (Dashboard, Devices, Enforcements, Instances, RunAction,
-                  System, Users)
-from .api.adapters import Adapters
+from .api import (Adapters, Dashboard, Devices, Enforcements, Instances,
+                  RunAction, System, Users)
 from .auth import ApiKey
 from .constants import (LOG_FILE_MAX_FILES, LOG_FILE_MAX_MB, LOG_FILE_NAME,
                         LOG_FILE_PATH, LOG_FMT_BRIEF, LOG_FMT_VERBOSE,
@@ -40,31 +39,31 @@ class Connect:
         >>> AX_SECRET = os.environ["AX_SECRET"]
         >>>
         >>> # create a client using the url, key, and secret
-        >>> ctx = Connect(url=AX_URL, key=AX_KEY, secret=AX_SECRET)
+        >>> client = Connect(url=AX_URL, key=AX_KEY, secret=AX_SECRET)
         >>>
         >>> # start the client, will perform login to URL using key & secret
-        >>> ctx.start()
+        >>> client.start()
         >>>
         >>> # work with device assets
-        >>> devices = ctx.devices
+        >>> devices = client.devices
         >>>
         >>> # work with user assets
-        >>> users = ctx.users
+        >>> users = client.users
         >>>
         >>> # work with adapters and adapter connections
-        >>> adapters = ctx.adapters
+        >>> adapters = client.adapters
         >>>
         >>> # work with enforcements
-        >>> enforcements = ctx.enforcements
+        >>> enforcements = client.enforcements
         >>>
         >>> # work with users, roles, global settings, and more
-        >>> system = ctx.system
+        >>> system = client.system
         >>>
         >>> # work with instances
-        >>> instances = ctx.instances
+        >>> instances = client.instances
         >>>
         >>> # work with dashboards and discovery cycles
-        >>> dashboard = ctx.dashboard
+        >>> dashboard = client.dashboard
 
     """
 
@@ -122,7 +121,7 @@ class Connect:
         return self._devices
 
     @property
-    def adapters(self):
+    def adapters(self) -> Adapters:
         """Work with adapters and adapter connections."""
         self.start()
         if not hasattr(self, "_adapters"):
@@ -146,7 +145,7 @@ class Connect:
         return self._dashboard
 
     @property
-    def enforcements(self):
+    def enforcements(self) -> Enforcements:
         """Work with Enforcement Center."""
         self.start()
         if not hasattr(self, "_enforcements"):
@@ -154,7 +153,7 @@ class Connect:
         return self._enforcements
 
     @property
-    def run_actions(self):  # pragma: no cover
+    def run_actions(self) -> RunAction:  # pragma: no cover
         """Work with Enforcement Center actions."""
         self.start()
         if not hasattr(self, "_run_actions"):
@@ -162,7 +161,7 @@ class Connect:
         return self._run_actions
 
     @property
-    def system(self):  # TODO: DOCS???
+    def system(self) -> System:  # TODO: DOCS???
         """Work with users, roles, global settings, and more."""
         self.start()
         if not hasattr(self, "_system"):

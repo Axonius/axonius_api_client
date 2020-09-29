@@ -136,7 +136,7 @@ LOG_LEVEL_WIZARD: str = "info"
 """default logging level for :obj:`axonius_api_client.wizard.wizard.Wizard`"""
 
 LOG_LEVEL_PACKAGE: str = "debug"
-"""default logging level for :mod:`axonius_api_client`"""
+"""default logging level for the entire package"""
 
 LOG_LEVELS_STR: List[str] = ["debug", "info", "warning", "error", "fatal"]
 """list of valid logging level strs"""

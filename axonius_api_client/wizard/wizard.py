@@ -3,7 +3,6 @@
 import logging
 from typing import List, Optional, Tuple, Union
 
-from ..api.assets.asset_mixin import AssetMixin
 from ..api.parsers.constants import (CUSTOM_FIELDS_MAP, Operator,
                                      OperatorTypeMaps)
 from ..constants import ALL_NAME, LOG_LEVEL_WIZARD
@@ -20,11 +19,22 @@ class Wizard:
 
     DOCS: str = Docs.DICT
 
-    def __init__(self, apiobj: AssetMixin, log_level: Union[str, int] = LOG_LEVEL_WIZARD):
-        """Pass."""
+    def __init__(self, apiobj, log_level: Union[str, int] = LOG_LEVEL_WIZARD):
+        """Query wizard builder.
+
+        Args:
+            apiobj: :obj:`axonius_api_client.api.assets.asset_mixin.AssetMixin`: Asset object
+            log_level: logging level for this object
+        """
         self.LOG: logging.Logger = get_obj_log(obj=self, level=log_level)
-        self._apiobj: AssetMixin = apiobj
-        self._value_parser: ValueParser = ValueParser(apiobj=apiobj)
+        """Logger for this object."""
+
+        self.APIOBJ = apiobj  # noqa: F821
+        """:obj:`axonius_api_client.api.assets.asset_mixin.AssetMixin`: Asset object."""
+
+        self.VALUE_PARSER: ValueParser = ValueParser(apiobj=apiobj)
+        """Value parser."""
+
         self._init()
 
     def parse(self, entries: List[dict], source: str = Sources.LOD) -> List[dict]:
@@ -62,7 +72,6 @@ class Wizard:
     def _parse_flags(
         self, entry: dict, idx: int, entries: List[dict], tracker: int, is_open: bool
     ) -> dict:
-        """Pass."""
         """Pass."""
         value_raw = entry[Entry.VALUE]
         flags = listify(entry.get(Entry.FLAGS) or [])
@@ -150,7 +159,7 @@ class Wizard:
         field, operator, value = self._split_simple(value_raw=value_raw)
         field = self._get_field(value=field, value_raw=value_raw)
         operator = self._get_operator(operator=operator, field=field, value_raw=value_raw)
-        aql_value, expr_value = self._value_parser(
+        aql_value, expr_value = self.VALUE_PARSER(
             enum=field.get("enum", []),
             enum_items=field.get("items", {}).get("enum"),
             parser=operator.parser.name,
@@ -213,7 +222,7 @@ class Wizard:
         sub_field = field_subs[sub_field]
 
         operator = self._get_operator(operator=operator, field=sub_field, value_raw=value_raw)
-        aql_value, expr_value = self._value_parser(
+        aql_value, expr_value = self.VALUE_PARSER(
             enum=sub_field.get("enum", []),
             enum_items=sub_field.get("items", {}).get("enum"),
             parser=operator.parser.name,
@@ -332,7 +341,7 @@ class Wizard:
     def _get_field(self, value: str, value_raw: str) -> dict:
         """Pass."""
         try:
-            field = self._apiobj.fields.get_field_name(
+            field = self.APIOBJ.fields.get_field_name(
                 value=value,
                 key=None,
                 fields_custom=CUSTOM_FIELDS_MAP,
@@ -350,7 +359,7 @@ class Wizard:
     def _get_field_complex(self, value: str, value_raw: str) -> dict:
         """Pass."""
         try:
-            field = self._apiobj.fields.get_field_name(
+            field = self.APIOBJ.fields.get_field_name(
                 value=value,
                 key=None,
                 fields_custom=CUSTOM_FIELDS_MAP,
@@ -365,7 +374,7 @@ class Wizard:
         if not field[Fields.IS_COMPLEX]:
             aname = field[Fields.ANAME]
             fname = field[Fields.NAME]
-            afields = self._apiobj.fields.get()[aname]
+            afields = self.APIOBJ.fields.get()[aname]
             schemas = [
                 x
                 for x in afields
@@ -373,7 +382,7 @@ class Wizard:
             ]
             msg = [
                 f"Invalid COMPLEX-FIELD {fname!r} for adapter {aname!r}, valids:",
-                *self._apiobj.fields._prettify_schemas(schemas=schemas),
+                *self.APIOBJ.fields._prettify_schemas(schemas=schemas),
             ]
             raise WizardError("\n".join(msg))
 
@@ -406,6 +415,7 @@ class Wizard:
         return entry
 
     def _check_patterns(self, value_raw: str, value: str, src: str, patterns: List[str]):
+        """Pass."""
         if not value:
             raise WizardError(f"Empty required {src} as {value!r} from value '{value_raw}'")
 
@@ -422,4 +432,5 @@ class Wizard:
             )
 
     def _init(self):
+        """Pass."""
         pass

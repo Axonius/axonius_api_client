@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """Test suite for axonius_api_client.wizard.wizard"""
 import pytest
-
 from axonius_api_client.api.parsers.constants import Operators
 from axonius_api_client.constants import ALL_NAME
 from axonius_api_client.exceptions import NotFoundError, WizardError
@@ -14,8 +13,8 @@ class TestWizard:
     def wizard(self, request):
         apiobj = request.getfixturevalue(request.param)
         obj = Wizard(apiobj=apiobj)
-        assert obj._apiobj == apiobj
-        assert isinstance(obj._value_parser, ValueParser)
+        assert obj.APIOBJ == apiobj
+        assert isinstance(obj.VALUE_PARSER, ValueParser)
         return obj
 
 
@@ -23,9 +22,9 @@ class TestData:
     @pytest.fixture
     def test_data1(self, wizard):
 
-        simple = wizard._apiobj.FIELD_SIMPLE
-        cplex = wizard._apiobj.FIELD_COMPLEX
-        sub = wizard._apiobj.FIELD_COMPLEX_SUB
+        simple = wizard.APIOBJ.FIELD_SIMPLE
+        cplex = wizard.APIOBJ.FIELD_COMPLEX
+        sub = wizard.APIOBJ.FIELD_COMPLEX_SUB
 
         entries = [
             {Entry.TYPE: Types.SIMPLE, Entry.VALUE: f"{simple} exists"},
@@ -201,7 +200,7 @@ class TestGetField(TestWizard):
         assert exc_str in str(exc)
 
     def test_valid(self, wizard):
-        field = wizard._apiobj.FIELD_SIMPLE
+        field = wizard.APIOBJ.FIELD_SIMPLE
         ret = wizard._get_field(value=field, value_raw=f"{field} blah blah")
         assert ret["name_qual"] == field
 
@@ -221,7 +220,7 @@ class TestGetFieldComplex(TestWizard):
         assert exc_str in str(exc)
 
     def test_valid(self, wizard):
-        field = wizard._apiobj.FIELD_COMPLEX
+        field = wizard.APIOBJ.FIELD_COMPLEX
         ret = wizard._get_field_complex(value=field, value_raw=f"{field} blah blah")
         assert ret["name_qual"] == field
 
@@ -661,7 +660,7 @@ class TestParseEntries(TestWizard):
 
 class TestParseSimple(TestWizard):
     def test_valid(self, wizard):
-        field = wizard._apiobj.FIELD_SIMPLE
+        field = wizard.APIOBJ.FIELD_SIMPLE
         entry = {
             Entry.TYPE: "simple",
             Entry.VALUE: f"{field} contains blah",
@@ -697,8 +696,8 @@ class TestParseSimple(TestWizard):
 
 class TestParseComplex(TestWizard):
     def test_valid(self, wizard):
-        field = wizard._apiobj.FIELD_COMPLEX
-        sub = wizard._apiobj.FIELD_COMPLEX_SUB
+        field = wizard.APIOBJ.FIELD_COMPLEX
+        sub = wizard.APIOBJ.FIELD_COMPLEX_SUB
         entry = {
             Entry.TYPE: "complex",
             Entry.VALUE: f"{field} // {sub} contains boom // {sub} exists",
@@ -746,8 +745,8 @@ class TestParseComplex(TestWizard):
         assert ret == exp
 
     def test_invalid(self, wizard):
-        field = wizard._apiobj.FIELD_COMPLEX
-        sub = wizard._apiobj.FIELD_COMPLEX_SUB
+        field = wizard.APIOBJ.FIELD_COMPLEX
+        sub = wizard.APIOBJ.FIELD_COMPLEX_SUB
         entry = {
             Entry.TYPE: "complex",
             Entry.VALUE: f"{field} // {sub} contains boom // badwolf exists",
@@ -760,7 +759,7 @@ class TestParseComplex(TestWizard):
 
 class TestParseExprs(TestWizard):
     def test_valid1(self, wizard):
-        field = wizard._apiobj.FIELD_SIMPLE
+        field = wizard.APIOBJ.FIELD_SIMPLE
         entries = [
             {
                 Entry.TYPE: "simple",
@@ -814,19 +813,19 @@ class TestParse(TestWizard, TestData):
         assert ret_exprs == exp_exprs
 
         # just make sure the REST API can parse the query
-        wizard._apiobj.get(query=ret[Results.QUERY], max_rows=1)
+        wizard.APIOBJ.get(query=ret[Results.QUERY], max_rows=1)
 
         # make sure the REST API can create a saved query
         name = "api wizard test"
 
         try:
-            wizard._apiobj.saved_query.delete_by_name(value=name)
+            wizard.APIOBJ.saved_query.delete_by_name(value=name)
         except Exception:
             pass
 
-        sq = wizard._apiobj.saved_query.add(name=name, query=ret_query, expressions=ret_exprs)
+        sq = wizard.APIOBJ.saved_query.add(name=name, query=ret_query, expressions=ret_exprs)
         assert sq["name"] == name
         assert sq["view"]["query"]["filter"] == exp_query
         assert sq["view"]["query"]["expressions"] == exp_exprs
 
-        wizard._apiobj.saved_query.delete_by_name(value=name)
+        wizard.APIOBJ.saved_query.delete_by_name(value=name)

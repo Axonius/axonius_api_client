@@ -6,7 +6,6 @@ import logging
 import sys
 
 import pytest
-
 from axonius_api_client.api.asset_callbacks import get_callbacks_cls
 from axonius_api_client.constants import FIELD_TRIM_LEN, SCHEMAS_CUSTOM
 from axonius_api_client.exceptions import ApiError
@@ -222,8 +221,8 @@ class Callbacks:
             raise ValueError("boom")
 
         apiobj.get(custom_cbs=[cb1], max_rows=2)
-        assert len(apiobj._LAST_CALLBACKS._custom_cb_exc) == 2
-        for x in apiobj._LAST_CALLBACKS._custom_cb_exc:
+        assert len(apiobj.LAST_CALLBACKS.CUSTOM_CB_EXC) == 2
+        for x in apiobj.LAST_CALLBACKS.CUSTOM_CB_EXC:
             assert isinstance(x["exc"], ValueError)
 
     def test_process_tags_to_add_remove(self, cbexport, apiobj, caplog):

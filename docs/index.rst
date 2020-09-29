@@ -8,9 +8,9 @@ Axonius API Client
 axonius-api-client is an API client for `Axonius`_. You can :doc:`Install it <main/install>` today!
 It provides:
 
-* A powerful :doc:`command line interface <main/usage_cli>` that exposes most of the
+* A powerful :doc:`command line interface <main/usage_cli/usage_cli>` that exposes most of the
   functionality of the underlying python library.
-* A fully modeled :doc:`python API library <main/usage_api>` that makes using
+* A fully modeled :doc:`python API library <main/usage_api/usage_api>` that makes using
   the Axonius REST API easy.
 
 Resources:
@@ -28,8 +28,8 @@ Table of Contents
 
    main/install.rst
    main/axtokens.rst
-   main/usage_cli.rst
-   main/usage_api.rst
+   main/usage_cli/usage_cli.rst
+   main/usage_api/usage_api.rst
    main/contributing.rst
    main/releases.rst
 
