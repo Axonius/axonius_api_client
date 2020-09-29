@@ -1,4 +1,4 @@
 docutils
 sphinx-click
 sphinx-rtd-theme
-sphinx_autodoc_typehints
+sphinx-autodoc-typehints

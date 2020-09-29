@@ -2,23 +2,9 @@
 """Sphinx config."""
 import logging as pylogging
 
-import axonius_api_client as pkg  # noqa
+import axonius_api_client as pkg
 import sphinx_rtd_theme
 from sphinx.util import logging
-
-# -- Project information -------------------------------------------
-
-project = pkg.version.__project__
-copyright = pkg.version.__copyright__.replace("Copyright", "").strip()
-author = pkg.version.__author__
-version = pkg.version.__version__
-release = pkg.version.__version__
-pkg_project = pkg.version.__project__
-pkg_project_strip = pkg_project.replace(" ", "").replace("_", "").strip()
-pkg_title = pkg.version.__title__
-pkg_title_strip = pkg_title.replace(" ", "").replace("_", "").strip()
-
-# -- General configuration -----------------------------------------
 
 
 class FilterForIssue123(pylogging.Filter):
@@ -37,7 +23,19 @@ class FilterForIssue123(pylogging.Filter):
 
 
 logging.getLogger("sphinx_autodoc_typehints").logger.addFilter(FilterForIssue123())
-# End of a workaround
+
+# -- Project information -------------------------------------------
+project = pkg.version.__project__
+copyright = pkg.version.__copyright__.replace("Copyright", "").strip()
+author = pkg.version.__author__
+version = pkg.version.__version__
+release = pkg.version.__version__
+pkg_project = pkg.version.__project__
+pkg_project_strip = pkg_project.replace(" ", "").replace("_", "").strip()
+pkg_title = pkg.version.__title__
+pkg_title_strip = pkg_title.replace(" ", "").replace("_", "").strip()
+
+# -- General configuration -----------------------------------------
 extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.autosectionlabel",
@@ -59,19 +57,7 @@ language = "en"
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 pygments_style = "monokai"
 
-# autodoc_default_options = {
-#     "member-order": "bysource",
-#     "special-members": "__init__,__call__",
-#     "undoc-members": True,
-#     "show-inheritance": True,
-#     "exclude-members": "__weakref__,__str__,__repr__",
-# }
-set_type_checking_flag = True
-typehints_fully_qualified = True
-always_document_param_types = True
-typehints_document_rtype = True
 # -- Options for HTML  ---------------------------------------------
-
 html_theme = "sphinx_rtd_theme"
 html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
 html_theme_options = {
@@ -106,7 +92,6 @@ man_title = "{} Documentation".format(pkg_project)
 man_pages = [(master_doc, pkg_title_strip, man_title, [author], 1)]
 
 # -- Options for texinfo -------------------------------------------
-
 texinfo_title = "{} Documentation".format(pkg_project)
 texinfo_desc = pkg.version.__description__
 texinfo_other = "Miscellaneous"
@@ -123,7 +108,6 @@ texinfo_documents = [
 ]
 
 # -- Options for epub ----------------------------------------------
-
 epub_title = project
 epub_author = author
 epub_publisher = author
@@ -131,7 +115,6 @@ epub_copyright = copyright
 epub_exclude_files = ["search.html"]
 
 # -- Options for intersphinx ---------------------------------------
-
 intersphinx_mapping = {
     "python": ("http://docs.python.org/3", None),
     "requests": ("https://requests.readthedocs.io/en/master/", None),
@@ -140,11 +123,9 @@ intersphinx_mapping = {
 }
 
 # -- Options for todo ----------------------------------------------
-
 todo_include_todos = True
 
 # -- Options for napoleon ------------------------------------------
-
 napoleon_google_docstring = True
 napoleon_numpy_docstring = True
 napoleon_include_init_with_doc = True
@@ -159,5 +140,19 @@ napoleon_use_keyword = True
 napoleon_use_rtype = True
 
 # -- Options for autosectionlabel ----------------------------------
-
 autosectionlabel_prefix_document = True
+
+# -- Options for sphinx_autodoc_typehints --------------------------
+set_type_checking_flag = True
+typehints_fully_qualified = True
+always_document_param_types = True
+typehints_document_rtype = True
+
+# -- Options for sphinx.ext.autodoc --------------------------------
+autodoc_default_options = {
+    # "member-order": "bysource",
+    # "special-members": "__init__,__call__",
+    # "undoc-members": True,
+    # "show-inheritance": True,
+    # "exclude-members": "__weakref__,__str__,__repr__",
+}
