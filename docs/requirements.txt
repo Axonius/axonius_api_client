@@ -1,3 +1,4 @@
+Sphinx>=3.2.1
 docutils
 sphinx-click
 sphinx-rtd-theme
