@@ -67,6 +67,19 @@ class TestCnxPublic(TestCnxBase):
         )
         assert cnx == found
 
+    def test_get_by_label_fail(self, apiobj):
+        with pytest.raises(NotFoundError):
+            apiobj.cnx.get_by_label(value="badwolf", adapter_name="aws")
+
+    def test_get_by_label(self, apiobj):
+        cnx = get_cnx_existing(apiobj)
+        found = apiobj.cnx.get_by_label(
+            value=cnx["config"].get("connection_label") or "",
+            adapter_name=cnx["adapter_name"],
+            adapter_node=cnx["node_name"],
+        )
+        assert cnx == found
+
     def test_test_by_id(self, apiobj):
         cnx = get_cnx_working(apiobj)
         result = apiobj.cnx.test_by_id(

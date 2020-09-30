@@ -35,40 +35,32 @@ class TestLogs:
     """Test logs."""
 
     def test_gmtime(self):
-        """Pass."""
         gmtime()
         assert logging.Formatter.converter == time.gmtime
 
     def test_localtime(self):
-        """Pass."""
         localtime()
         assert logging.Formatter.converter == time.localtime
 
     def test_get_obj_log(self):
-        """Pass."""
         log = get_obj_log(obj=self, level="warning")
         assert log.name == "axonius_api_client.tests.tests_pkg.test_logs.TestLogs"
         assert log.level == logging.WARNING
 
     def test_str_level_int(self):
-        """Pass."""
         assert str_level(level=10) == "DEBUG"
 
     def test_str_level_str_int(self):
-        """Pass."""
         assert str_level(level="10") == "DEBUG"
 
     def test_str_level_str(self):
-        """Pass."""
         assert str_level(level="debug") == "DEBUG"
 
     def test_str_level_fail(self):
-        """Pass."""
         with pytest.raises(ToolsError):
             str_level(level="xx")
 
     def test_add_del_stderr(self):
-        """Pass."""
         h = add_stderr(obj=LOG)
         assert h.name == LOG_NAME_STDERR
         assert str_level(level=h.level).lower() == LOG_LEVEL_CONSOLE
@@ -83,7 +75,6 @@ class TestLogs:
         assert h not in LOG.handlers
 
     def test_add_del_stdout(self):
-        """Pass."""
         h = add_stdout(obj=LOG)
         assert h.name == LOG_NAME_STDOUT
         assert str_level(level=h.level).lower() == LOG_LEVEL_CONSOLE
@@ -98,7 +89,6 @@ class TestLogs:
         assert h not in LOG.handlers
 
     def test_add_del_null(self):
-        """Pass."""
         del_null(obj=LOG)
         h = add_null(obj=LOG)
         assert h.name == "NULL"
@@ -120,7 +110,6 @@ class TestLogs:
         assert h not in LOG.handlers
 
     def test_add_del_file(self):
-        """Pass."""
         h = add_file(obj=LOG)
         assert h.name == LOG_NAME_FILE
         assert str_level(level=h.level).lower() == LOG_LEVEL_FILE

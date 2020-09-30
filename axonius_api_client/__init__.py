@@ -42,10 +42,20 @@ Examples:
     >>> dashboard = ctx.dashboard
 
 """
-from . import (api, auth, cli, constants, data, exceptions, http, logs, tools,
-               url_parser, version)
-from .api import (Adapters, Dashboard, Devices, Enforcements, Instances,
-                  Signup, System, Users, Wizard, WizardCsv, WizardText)
+from . import api, auth, cli, constants, data, exceptions, http, logs, tools, url_parser, version
+from .api import (
+    Adapters,
+    Dashboard,
+    Devices,
+    Enforcements,
+    Instances,
+    Signup,
+    System,
+    Users,
+    Wizard,
+    WizardCsv,
+    WizardText,
+)
 from .auth import ApiKey
 from .connect import Connect
 from .http import Http

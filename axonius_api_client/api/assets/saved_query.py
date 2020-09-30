@@ -35,7 +35,7 @@ class SavedQuery(ChildMixins, PagingMixinsObject):
         >>> # See the fields defined in the saved query
         >>> print(sq['view']['fields'])
         >>>
-        >>> # See the filter defined in the saved query
+        >>> # See the query defined in the saved query
         >>> print(sq['view']['query']['filter'])
         >>>
         >>> # Delete the saved query
@@ -43,8 +43,9 @@ class SavedQuery(ChildMixins, PagingMixinsObject):
         >>>
         >>> # Delete the saved query by name
         >>> deleted = client.devices.saved_query.delete_by_name(name="test")
-        >>>
-        >>> # Create a saved query using a :obj:`axonius_api_client.api.wizard.wizard.Wizard`
+
+        Create a saved query using a :obj:`axonius_api_client.api.wizard.wizard.Wizard`
+
         >>> parsed = client.devices.wizard_text.parse(content="simple hostname contains blah")
         >>> query = parsed["query"]
         >>> expressions = parsed["expressions"]
@@ -57,6 +58,8 @@ class SavedQuery(ChildMixins, PagingMixinsObject):
         ... )
 
     """
+
+    # XXX need update saved query, doc the other methods (get tags, get_by_tags, etc)
 
     def get_by_tags(self, value: Union[str, List[str]], **kwargs) -> List[dict]:
         """Get saved queries by tags.

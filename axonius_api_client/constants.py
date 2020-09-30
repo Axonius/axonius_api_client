@@ -354,7 +354,7 @@ KEY_MAP_CNX: List[Tuple[str, Optional[str], int]] = [
     ("uuid", "UUID", 0),
     ("working", "Working", 0),
     ("error", "Error", 20),
-    ("label", "Label", 0),
+    ("connection_label", "Connection Label", 0),
     ("schemas", None, 0),
 ]
 """Tablize map of field name to user friendly title for adapter connections."""

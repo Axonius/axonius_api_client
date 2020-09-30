@@ -5,6 +5,7 @@ import copy
 import io
 
 import pytest
+
 from axonius_api_client.exceptions import ApiError
 
 from ...utils import get_rows_exist, get_schema

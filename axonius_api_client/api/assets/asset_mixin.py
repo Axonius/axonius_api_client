@@ -21,11 +21,14 @@ class AssetMixin(ModelMixins):
     """API model for working with user and device assets."""
 
     FIELD_TAGS: str = "labels"
-    """Pass."""
+    """Field name for getting tabs (labels)."""
+
     FIELD_AXON_ID: str = "internal_axon_id"
-    """Pass."""
+    """Field name for asset unique ID."""
+
     FIELD_ADAPTERS: str = "adapters"
-    """Pass."""
+    """Field name for list of adapters on an asset."""
+
     FIELD_ADAPTER_LEN: str = "adapter_list_length"
     """Pass."""
     FIELD_LAST_SEEN: str = "specific_data.data.last_seen"

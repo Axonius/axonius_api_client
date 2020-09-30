@@ -11,7 +11,11 @@ JSON_FLAT: bool = False
 
 
 class Json(Base):
-    """JSON export callbacks class."""
+    """JSON export callbacks class.
+
+    Notes:
+        See :meth:`args_map` for the arguments this callbacks class.
+    """
 
     CB_NAME: str = "json"
     """name for this callback"""
@@ -85,10 +89,10 @@ class Json(Base):
             self.write_rows(rows=row)
             del row
 
-    @property
-    def args_map(self) -> List[Tuple[str, str, Optional[Union[list, bool, str, int]]]]:
+    @classmethod
+    def args_map(cls) -> List[Tuple[str, str, Optional[Union[list, bool, str, int]]]]:
         """Argument maps specific to this callbacks class."""
-        args = super(Json, self).args_map
+        args = super(Json, cls).args_map()
         return args + [
             ("json_flat", "Produce flat json:", False),
         ]

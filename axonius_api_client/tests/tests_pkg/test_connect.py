@@ -14,10 +14,7 @@ BAD_CRED = "tardis"
 
 
 class TestConnect:
-    """Pass."""
-
     def test_no_start(self, request):
-        """Pass."""
         ax_url = get_url(request)
 
         c = Connect(url=ax_url, key=BAD_CRED, secret=BAD_CRED)
@@ -28,7 +25,6 @@ class TestConnect:
         assert c.HANDLER_CON is None
 
     def test_no_start_logs(self, request):
-        """Pass."""
         ax_url = get_url(request)
 
         c = Connect(url=ax_url, key=BAD_CRED, secret=BAD_CRED, log_console=True, log_file=True)
@@ -39,7 +35,6 @@ class TestConnect:
         assert isinstance(c.HANDLER_CON, logging.Handler)
 
     def test_start(self, request):
-        """Pass."""
         ax_url = get_url(request)
 
         c = Connect(url=ax_url, certwarn=False, **get_key_creds(request))
@@ -63,7 +58,6 @@ class TestConnect:
         format(c.adapters)
 
     def test_invalid_creds(self, request):
-        """Pass."""
         ax_url = get_url(request)
 
         c = Connect(url=ax_url, key=BAD_CRED, secret=BAD_CRED, certwarn=False)
@@ -76,7 +70,6 @@ class TestConnect:
         assert isinstance(exc.value.exc, InvalidCredentials)
 
     def test_connect_timeout(self):
-        """Pass."""
         c = Connect(url="127.0.0.99", key=BAD_CRED, secret=BAD_CRED, certwarn=False)
 
         c.HTTP.CONNECT_TIMEOUT = 1
@@ -90,7 +83,6 @@ class TestConnect:
             assert isinstance(exc.value.exc, requests.ConnectTimeout)
 
     def test_connect_error(self):
-        """Pass."""
         c = Connect(url="https://127.0.0.1:3919", key=BAD_CRED, secret=BAD_CRED, certwarn=False)
 
         c.HTTP.CONNECT_TIMEOUT = 1
@@ -100,7 +92,6 @@ class TestConnect:
         assert isinstance(exc.value.exc, requests.ConnectionError)
 
     def test_invalid_creds_nowrap(self, request):
-        """Pass."""
         ax_url = get_url(request)
 
         c = Connect(url=ax_url, key=BAD_CRED, secret=BAD_CRED, certwarn=False, wraperror=False)
@@ -111,7 +102,6 @@ class TestConnect:
             c.start()
 
     def test_other_exc(self, request):
-        """Pass."""
         c = Connect(url="127.0.0.1", key=BAD_CRED, secret=BAD_CRED, certwarn=False)
 
         c.HTTP.CONNECT_TIMEOUT = 1
@@ -121,7 +111,6 @@ class TestConnect:
             c.start()
 
     def test_reason(self):
-        """Pass."""
         exc = Exception("badwolf")
 
         reason = Connect._get_exc_reason(exc)

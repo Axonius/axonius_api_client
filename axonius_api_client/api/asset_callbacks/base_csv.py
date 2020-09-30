@@ -9,7 +9,11 @@ from .base import Base
 
 
 class Csv(Base):
-    """CSV export callbacks class."""
+    """CSV export callbacks class.
+
+    Notes:
+        See :meth:`args_map` for the arguments this callbacks class.
+    """
 
     CB_NAME: str = "csv"
     """name for this callback"""

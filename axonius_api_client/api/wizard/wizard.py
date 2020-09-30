@@ -8,8 +8,18 @@ from ...exceptions import WizardError
 from ...logs import get_obj_log
 from ...tools import check_type, listify
 from ..parsers.constants import CUSTOM_FIELDS_MAP, Operator, OperatorTypeMaps
-from .constants import (Docs, Entry, Expr, Fields, Flags, Patterns, Results,
-                        Sources, Templates, Types)
+from .constants import (
+    Docs,
+    Entry,
+    Expr,
+    Fields,
+    Flags,
+    Patterns,
+    Results,
+    Sources,
+    Templates,
+    Types,
+)
 from .value_parser import ValueParser
 
 

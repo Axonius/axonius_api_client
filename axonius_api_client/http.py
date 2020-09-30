@@ -7,8 +7,14 @@ from typing import List, Optional, Union
 
 import requests
 
-from .constants import (LOG_LEVEL_HTTP, MAX_BODY_LEN, REQUEST_ATTR_MAP,
-                        RESPONSE_ATTR_MAP, TIMEOUT_CONNECT, TIMEOUT_RESPONSE)
+from .constants import (
+    LOG_LEVEL_HTTP,
+    MAX_BODY_LEN,
+    REQUEST_ATTR_MAP,
+    RESPONSE_ATTR_MAP,
+    TIMEOUT_CONNECT,
+    TIMEOUT_RESPONSE,
+)
 from .exceptions import HttpError
 from .logs import get_obj_log, set_log_level
 from .tools import join_url, json_reload, listify, path_read

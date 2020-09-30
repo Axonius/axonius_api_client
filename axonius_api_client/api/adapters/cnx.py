@@ -4,18 +4,66 @@ import time
 from typing import List, Optional, Union
 
 from ...constants import CNX_GONE, CNX_RETRY, CNX_SANE_DEFAULTS, DEFAULT_NODE
-from ...exceptions import (CnxAddError, CnxGoneError, CnxTestError,
-                           CnxUpdateError, ConfigInvalidValue, ConfigRequired,
-                           NotFoundError)
+from ...exceptions import (
+    CnxAddError,
+    CnxGoneError,
+    CnxTestError,
+    CnxUpdateError,
+    ConfigInvalidValue,
+    ConfigRequired,
+    NotFoundError,
+)
 from ...tools import json_load, pathlib
 from ..mixins import ChildMixins
-from ..parsers import (config_build, config_default, config_empty, config_info,
-                       config_required, config_unchanged, config_unknown,
-                       tablize_cnxs, tablize_schemas)
+from ..parsers import (
+    config_build,
+    config_default,
+    config_empty,
+    config_info,
+    config_required,
+    config_unchanged,
+    config_unknown,
+    tablize_cnxs,
+    tablize_schemas,
+)
 
 
 class Cnx(ChildMixins):
-    """API for working with adapter connections."""
+    """API for working with adapter connections.
+
+    Notes:
+        All methods use the Core instance by default, but you can add/remove/etc connections
+        for any other instance by using ``adapter_node``.
+
+        Supplying unknown keys/values will throw an error showing the valid keys/values.
+
+    Examples:
+        First, create a ``client`` using :obj:`axonius_api_client.connect.Connect`.
+
+        >>> # Add a connection for an adapter to the Core instance
+        >>> config = dict(dc_name="192.168.1.10", username="svc_user", password="test")
+        >>> cnx = client.adapters.cnx.add(adapter_name="tanium_sq", **config)
+        >>>
+        >>> # Get all connections for an adapter on the Core instance
+        >>> cnxs = client.adapters.cnx.get_by_adapter(adapter_name="aws")
+        >>>
+        >>> # get a single connection by ID
+        >>> cnx = client.adapters.cnx.get_by_id(cnx_id='x', 'active_directory')
+        >>>
+        >>> # get a single connection by connection label
+        >>> cnx = client.adapters.cnx.get_by_label(value='x', 'active_directory')
+        >>>
+        >>> # delete a connection by ID
+        >>> cnx = client.adapters.cnx.delete_by_id(cnx_id='x', 'active_directory')
+        >>>
+        >>> # test the reachability of a connection by ID
+        >>> cnx = client.adapters.cnx.test_by_id(cnx_id='x', 'active_directory')
+        >>>
+        >>> # Test the reachability of a connection without creating the connection
+        >>> config = dict(dc_name="192.168.1.10", username="svc_user", password="test")
+        >>> cnx = client.adapters.cnx.test(adapter_name="tanium_sq", **config)
+
+    """
 
     def add(self, adapter_name: str, adapter_node: str = DEFAULT_NODE, **kwargs) -> dict:
         """Add a connection to an adapter on a node.
@@ -191,7 +239,28 @@ class Cnx(ChildMixins):
             value=cnx_id, adapter_name=adapter_name, adapter_node=adapter_node, **kwargs
         )
 
-    # TBD add get_by_label
+    def get_by_label(self, value: str, adapter_name: str, adapter_node: str = DEFAULT_NODE) -> dict:
+        """Get a connection for an adapter on a node using a specific connection identifier key.
+
+        Args:
+            value: value that connection_label must match for a connection
+            adapter_name: name of adapter
+            adapter_node: name of node running adapter
+        """
+        key = "connection_label"
+        cnxs = self.get_by_adapter(adapter_name=adapter_name, adapter_node=adapter_node)
+        for cnx in cnxs:
+            config = cnx.get("config") or {}
+            label = config.get(key) or ""
+            if label == value:
+                return cnx
+
+        err = (
+            f"No connection found on adapter {adapter_name!r} node {adapter_node!r} "
+            f"with a {key} of {value!r}"
+        )
+        raise NotFoundError(tablize_cnxs(cnxs=cnxs, err=err))
+
     def test_by_id(self, **kwargs) -> str:
         """Test a connection for an adapter on a node by ID.
 
@@ -223,6 +292,10 @@ class Cnx(ChildMixins):
         **kwargs,
     ) -> str:
         """Test a connection to an adapter on a node.
+
+        Notes:
+            This can be used to test the configuration of a connection before creating the
+            connection.
 
         Args:
             adapter_name: name of adapter
@@ -326,6 +399,7 @@ class Cnx(ChildMixins):
             cnx_uuid=old_uuid,
         )
 
+        # XXX need to validate error handling!!!!!!!
         if not isinstance(result, dict) or not result:  # pragma: no cover
             result = {"error": result}
 

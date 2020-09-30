@@ -9,10 +9,7 @@ from ....tools import pathlib
 
 
 class TestCmdWriteConfig(object):
-    """Pass."""
-
     def test_prompt(self, request, monkeypatch):
-        """Pass."""
         runner = CliRunner(mix_stderr=False)
 
         url = request.config.getoption("--ax-url")

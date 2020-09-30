@@ -4,19 +4,13 @@ import pytest
 
 
 class SystemMetaBase:
-    """Pass."""
-
     @pytest.fixture(scope="class")
     def apiobj(self, api_system):
-        """Pass."""
         return api_system.meta
 
 
 class TestSystemMetaPrivate(SystemMetaBase):
-    """Pass."""
-
     def val_entity_sizes(self, data):
-        """Pass."""
         avg_document_size = data("avg_document_size")
         assert isinstance(avg_document_size, int)
         capped = data("capped")
@@ -28,7 +22,6 @@ class TestSystemMetaPrivate(SystemMetaBase):
         assert not data
 
     def val_historical_sizes(self, data):
-        """Pass."""
         disk_free = data.pop("disk_free")
         assert isinstance(disk_free, int) and disk_free
 
@@ -47,7 +40,6 @@ class TestSystemMetaPrivate(SystemMetaBase):
         assert not data
 
     def test_private_about(self, apiobj):
-        """Pass."""
         data = apiobj._about()
         assert isinstance(data, dict)
         keys = ["Build Date", "Installed Version", "Customer ID"]
@@ -60,20 +52,16 @@ class TestSystemMetaPrivate(SystemMetaBase):
                 assert data[key]
 
     def test_private_historical_sizes(self, apiobj):
-        """Pass."""
         data = apiobj._historical_sizes()
         self.val_historical_sizes(data)
 
 
 class TestSystemMetaPublic(SystemMetaBase):
-    """Pass."""
-
     def test_version(self, apiobj):
         data = apiobj.version
         assert isinstance(data, str)
 
     def test_about(self, apiobj):
-        """Pass."""
         data = apiobj.about()
         assert isinstance(data, dict)
 
@@ -87,7 +75,6 @@ class TestSystemMetaPublic(SystemMetaBase):
                 assert data[key]
 
     def test_historical_sizes(self, apiobj):
-        """Pass."""
         data = apiobj.historical_sizes()
         assert isinstance(data["disk_free_mb"], int)
         assert isinstance(data["disk_used_mb"], int)

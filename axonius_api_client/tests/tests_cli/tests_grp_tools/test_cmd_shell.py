@@ -13,10 +13,7 @@ from ...utils import MockError, load_clirunner
 
 
 class TestCmdShell:
-    """Pass."""
-
     def test_prompt(self, request, monkeypatch):
-        """Pass."""
         runner = CliRunner(mix_stderr=False)
 
         url = request.config.getoption("--ax-url")
@@ -54,7 +51,6 @@ class TestCmdShell:
         assert outlines1[2] == "API Secret of user: "
 
     def test_no_prompt(self, request, monkeypatch):
-        """Pass."""
         runner = load_clirunner(request, monkeypatch)
 
         prompt_input = "\n".join(["exit()"])
@@ -81,10 +77,7 @@ class TestCmdShell:
 
 
 class TestCliWriteHistFile:
-    """Pass."""
-
     def test_default(self, monkeypatch):
-        """Pass."""
         runner = CliRunner(mix_stderr=False)
 
         with runner.isolated_filesystem():
@@ -96,10 +89,7 @@ class TestCliWriteHistFile:
 
 
 class TestCliRegisterReadline:
-    """Pass."""
-
     def test_default(self, monkeypatch):
-        """Pass."""
         runner = CliRunner(mix_stderr=False)
 
         with runner.isolated_filesystem():
@@ -111,7 +101,6 @@ class TestCliRegisterReadline:
             assert histfile.is_file(), list(histpath.iterdir())
 
     def test_exc(self, monkeypatch, capsys):
-        """Pass."""
         runner = CliRunner(mix_stderr=False)
 
         with runner.isolated_filesystem():
@@ -133,20 +122,14 @@ class TestCliRegisterReadline:
 
 
 class TestCliJdump:
-    """Pass."""
-
     def test_default(self, capsys):
-        """Pass."""
         cmd_shell.jdump([])
         captured = capsys.readouterr()
         assert captured.out.splitlines()[0] == "[]"
 
 
 class TestCliSpawnShell:
-    """Pass."""
-
     def test_default(self, monkeypatch):
-        """Pass."""
         runner = CliRunner(mix_stderr=False)
 
         monkeypatch.setattr("sys.stdin", io.StringIO("exit()"))
