@@ -4,24 +4,19 @@ import pytest
 
 
 class DashboardBase:
-    """Pass."""
-
     @pytest.fixture(scope="class")
     def apiobj(self, api_dashboard):
-        """Pass."""
         return api_dashboard
 
 
 class TestDashboardPrivate(DashboardBase):
     def test_private_lifecycle(self, apiobj):
-        """Pass."""
         lifecycle = apiobj._get()
         assert isinstance(lifecycle, dict)
         assert "status" in lifecycle
         assert lifecycle["status"] in ["starting", "running", "done"]
 
     def test_private_start_stop(self, apiobj):
-        """Pass."""
         stop = apiobj._stop()
         assert not stop
 
@@ -42,16 +37,12 @@ class TestDashboardPrivate(DashboardBase):
 
 
 class TestDashboardPublic(DashboardBase):
-    """Pass."""
-
     def test_get(self, apiobj):
-        """Pass."""
         lifecycle = apiobj.get()
         assert isinstance(lifecycle, dict)
         assert isinstance(lifecycle["is_running"], bool)
 
     def test_start_stop(self, apiobj):
-        """Pass."""
         if apiobj.is_running:
             stopped = apiobj.stop()
             assert isinstance(stopped, dict)

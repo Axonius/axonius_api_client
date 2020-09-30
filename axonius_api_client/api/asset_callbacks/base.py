@@ -6,16 +6,27 @@ import re
 import sys
 from typing import Generator, List, Optional, Tuple, Union
 
-from ...constants import (DEFAULT_PATH, FIELD_JOINER, FIELD_TRIM_LEN,
-                          FIELD_TRIM_STR, SCHEMAS_CUSTOM)
+from ...constants import DEFAULT_PATH, FIELD_JOINER, FIELD_TRIM_LEN, FIELD_TRIM_STR, SCHEMAS_CUSTOM
 from ...exceptions import ApiError
-from ...tools import (calc_percent, coerce_int, echo_error, echo_ok, echo_warn,
-                      get_path, join_kv, listify)
+from ...tools import (
+    calc_percent,
+    coerce_int,
+    echo_error,
+    echo_ok,
+    echo_warn,
+    get_path,
+    join_kv,
+    listify,
+)
 from ..parsers import schema_custom
 
 
 class Base:
-    """Base export callbacks class."""
+    """Base export callbacks class.
+
+    Notes:
+        See :meth:`args_map` for the arguments this callbacks class.
+    """
 
     CB_NAME: str = "base"
     """name for this callback"""
@@ -847,8 +858,8 @@ class Base:
         amap = {k: list(v) for k, v in amap.items()}
         return amap
 
-    @property
-    def args_map(self) -> List[Tuple[str, str, Optional[Union[list, bool, str, int]]]]:
+    @classmethod
+    def args_map(cls) -> List[Tuple[str, str, Optional[Union[list, bool, str, int]]]]:
         """Get the map of arguments that can be supplied to GETARGS.
 
         Notes:
@@ -876,9 +887,9 @@ class Base:
 
     @property
     def args_strs(self) -> List[str]:
-        """Get a list of strings that describe each arg in :attr:`args_map`."""
+        """Get a list of strings that describe each arg in :meth:`args_map`."""
         lines = []
-        for arg, text, default in self.args_map:
+        for arg, text, default in self.args_map():
             value = self.GETARGS.get(arg, default)
             if isinstance(value, str):
                 value = repr(value)

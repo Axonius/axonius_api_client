@@ -6,10 +6,7 @@ from ...utils import load_clirunner
 
 
 class TestGrpAdaptersCmdGet:
-    """Pass."""
-
     def test_json_full(self, request, monkeypatch):
-        """Pass."""
         runner = load_clirunner(request, monkeypatch)
 
         args1 = ["adapters", "get", "--export-format", "json-full"]
@@ -27,7 +24,6 @@ class TestGrpAdaptersCmdGet:
         assert isinstance(json1, list)
 
     def test_json_basic(self, request, monkeypatch):
-        """Pass."""
         runner = load_clirunner(request, monkeypatch)
 
         args1 = ["adapters", "get", "--export-format", "json"]
@@ -45,7 +41,6 @@ class TestGrpAdaptersCmdGet:
         assert isinstance(json1, list)
 
     def test_table(self, request, monkeypatch):
-        """Pass."""
         runner = load_clirunner(request, monkeypatch)
 
         args1 = ["adapters", "get", "--export-format", "table"]
@@ -60,7 +55,6 @@ class TestGrpAdaptersCmdGet:
         assert exit_code1 == 0
 
     def test_str(self, request, monkeypatch):
-        """Pass."""
         runner = load_clirunner(request, monkeypatch)
 
         args1 = ["adapters", "get", "--export-format", "str"]
@@ -75,7 +69,6 @@ class TestGrpAdaptersCmdGet:
         assert exit_code1 == 0
 
     def test_str_args(self, request, monkeypatch):
-        """Pass."""
         runner = load_clirunner(request, monkeypatch)
 
         args1 = ["adapters", "get", "--export-format", "str-args"]

@@ -9,7 +9,11 @@ from .base_csv import Csv
 
 
 class JsonToCsv(Csv):
-    """JSON to CSV export callbacks class."""
+    """JSON to CSV export callbacks class.
+
+    Notes:
+        See :meth:`args_map` for the arguments this callbacks class.
+    """
 
     CB_NAME: str = "json_to_csv"
     """name for this callback"""

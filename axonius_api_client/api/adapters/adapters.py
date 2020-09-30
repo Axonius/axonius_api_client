@@ -7,8 +7,14 @@ from ...constants import CONFIG_TYPES, DEFAULT_NODE
 from ...exceptions import ApiError, NotFoundError
 from ...tools import path_read
 from ..mixins import ModelMixins
-from ..parsers import (config_build, config_unchanged, config_unknown,
-                       parse_adapters, parse_schema, tablize_adapters)
+from ..parsers import (
+    config_build,
+    config_unchanged,
+    config_unknown,
+    parse_adapters,
+    parse_schema,
+    tablize_adapters,
+)
 from ..routers import API_VERSION, Router
 from .cnx import Cnx
 
@@ -48,7 +54,7 @@ class Adapters(ModelMixins):
         >>> # Update the discover advanced settings
         >>> # XXX currently broken!
         >>>
-        >>> #Upload a file for use in a connection
+        >>> # Upload a file for use in a connection later
         >>> file_uuid = client.adapters.file_upload_path(path="test.csv")
 
     """

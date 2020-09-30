@@ -10,7 +10,11 @@ from .base import Base
 
 
 class Xlsx(Base):
-    """Excel export callbacks class."""
+    """Excel export callbacks class.
+
+    Notes:
+        See :meth:`args_map` for the arguments this callbacks class.
+    """
 
     CB_NAME: str = "xlsx"
     """name for this callback"""

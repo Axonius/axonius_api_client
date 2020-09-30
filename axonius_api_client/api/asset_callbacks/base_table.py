@@ -11,7 +11,11 @@ from .base import Base
 
 
 class Table(Base):
-    """Table export callbacks class."""
+    """Table export callbacks class.
+
+    Notes:
+        See :meth:`args_map` for the arguments this callbacks class.
+    """
 
     CB_NAME: str = "table"
     """name for this callback"""
@@ -97,10 +101,10 @@ class Table(Base):
             msg = f"{fmt!r} is not a valid table format, must be one of {fmts}"
             self.echo(msg=msg, error=ApiError)
 
-    @property
-    def args_map(self) -> List[Tuple[str, str, Optional[Union[list, bool, str, int]]]]:
+    @classmethod
+    def args_map(cls) -> List[Tuple[str, str, Optional[Union[list, bool, str, int]]]]:
         """Argument maps specific to this callbacks class."""
-        args = super(Table, self).args_map
+        args = super(Table, cls).args_map()
         return args + [
             ("table_format", "Use table format:", TABLE_FORMAT),
             ("table_max_rows", "Maximum table rows:", TABLE_MAX_ROWS),

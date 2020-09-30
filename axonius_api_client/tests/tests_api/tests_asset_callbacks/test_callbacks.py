@@ -6,6 +6,7 @@ import logging
 import sys
 
 import pytest
+
 from axonius_api_client.api.asset_callbacks import get_callbacks_cls
 from axonius_api_client.constants import FIELD_TRIM_LEN, SCHEMAS_CUSTOM
 from axonius_api_client.exceptions import ApiError
@@ -28,7 +29,7 @@ def get_cbobj_main(apiobj, cbexport, getargs=None, state=None, store=None):
     assert cbobj.STATE == state
 
     assert isinstance(cbobj.ALL_SCHEMAS, dict) and cbobj.ALL_SCHEMAS
-    assert isinstance(cbobj.args_map, list)
+    assert isinstance(cbobj.args_map(), list)
     assert isinstance(cbobj.args_strs, list)
 
     assert isinstance(cbobj.TAG_ROWS_ADD, list) and not cbobj.TAG_ROWS_ADD

@@ -7,25 +7,21 @@
 
 # from ...meta import TEST_PERM, TEST_ROLE
 
-'''
+"""
 @pytest.mark.skip("Waiting for update to 3.3!")
 class TestSystemRoles:
-    """Pass."""
 
     @pytest.fixture(scope="class")
     def apiobj(self, api_system):
-        """Pass."""
         return api_system.roles
 
     def test__get(self, apiobj):
-        """Pass."""
         data = apiobj._get()
         assert isinstance(data, list)
         for x in data:
             assert isinstance(x, dict)
 
     def test_get_set_default(self, apiobj):
-        """Pass."""
         roles = apiobj.get()
         current_role = apiobj.get_default()
         assert isinstance(current_role, dict)
@@ -38,12 +34,10 @@ class TestSystemRoles:
             assert updated_role["name"] == new_role
 
     def test_add_invalid_perm(self, apiobj):
-        """Pass."""
         with pytest.raises(ApiError):
             apiobj.add("x", "badwolf_itai")
 
     def test_add_get_update_delete(self, apiobj):
-        """Pass."""
         try:
             apiobj.get(name=TEST_ROLE)
         except NotFoundError:
@@ -85,4 +79,4 @@ class TestSystemRoles:
 
         with pytest.raises(NotFoundError):
             apiobj.get(name=TEST_ROLE)
-'''
+"""

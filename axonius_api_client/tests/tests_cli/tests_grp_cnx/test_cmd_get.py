@@ -7,10 +7,7 @@ from ...utils import load_clirunner
 
 
 class TestGrpCnxCmdGet:
-    """Pass."""
-
     def test_json_full(self, request, monkeypatch):
-        """Pass."""
         runner = load_clirunner(request, monkeypatch)
 
         args1 = [
@@ -38,7 +35,6 @@ class TestGrpCnxCmdGet:
         assert isinstance(json1, list)
 
     def test_json_config(self, request, monkeypatch):
-        """Pass."""
         runner = load_clirunner(request, monkeypatch)
 
         args1 = [
@@ -66,7 +62,6 @@ class TestGrpCnxCmdGet:
         assert isinstance(json1, list)
 
     def test_json_basic(self, request, monkeypatch):
-        """Pass."""
         runner = load_clirunner(request, monkeypatch)
 
         args1 = [
@@ -94,7 +89,6 @@ class TestGrpCnxCmdGet:
         assert isinstance(json1, list)
 
     def test_table_schemas(self, request, monkeypatch):
-        """Pass."""
         runner = load_clirunner(request, monkeypatch)
 
         args1 = [
@@ -120,7 +114,6 @@ class TestGrpCnxCmdGet:
         assert exit_code1 == 0
 
     def test_table(self, request, monkeypatch):
-        """Pass."""
         runner = load_clirunner(request, monkeypatch)
 
         args1 = [
@@ -146,7 +139,6 @@ class TestGrpCnxCmdGet:
         assert exit_code1 == 0
 
     def test_str(self, request, monkeypatch):
-        """Pass."""
         runner = load_clirunner(request, monkeypatch)
 
         args1 = [
@@ -172,7 +164,6 @@ class TestGrpCnxCmdGet:
         assert exit_code1 == 0
 
     def test_str_args(self, request, monkeypatch):
-        """Pass."""
         runner = load_clirunner(request, monkeypatch)
 
         args1 = [

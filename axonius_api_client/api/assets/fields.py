@@ -4,15 +4,26 @@ import re
 from typing import List, Optional, Tuple, Union
 
 from cachetools import TTLCache, cached
-from fuzzywuzzy import fuzz
 
-from ...constants import (AGG_ADAPTER_ALTS, AGG_ADAPTER_NAME,
-                          FUZZY_SCHEMAS_KEYS, GET_SCHEMA_KEYS,
-                          GET_SCHEMAS_KEYS)
+from ...constants import (
+    AGG_ADAPTER_ALTS,
+    AGG_ADAPTER_NAME,
+    FUZZY_SCHEMAS_KEYS,
+    GET_SCHEMA_KEYS,
+    GET_SCHEMAS_KEYS,
+)
 from ...exceptions import ApiError, NotFoundError
 from ...tools import listify, split_str, strip_right
 from ..mixins import ChildMixins
 from ..parsers import parse_fields
+
+try:
+    import warnings
+
+    warnings.filterwarnings("ignore", message="Using slow pure-python SequenceMatcher")
+    from fuzzywuzzy import fuzz
+except Exception:
+    raise
 
 CACHE: TTLCache = TTLCache(maxsize=1024, ttl=300)
 
