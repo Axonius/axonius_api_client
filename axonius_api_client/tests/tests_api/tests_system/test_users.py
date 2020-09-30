@@ -10,22 +10,17 @@ from ...meta import TEST_USER
 
 @pytest.mark.skip("Waiting for update to 3.3!")
 class TestSystemUsers:
-    """Pass."""
-
     @pytest.fixture(scope="class")
     def apiobj(self, api_system):
-        """Pass."""
         return api_system.users
 
     def test__get(self, apiobj):
-        """Pass."""
         data = apiobj._get()
         assert isinstance(data, list)
         for x in data:
             assert isinstance(x, dict)
 
     def test__get_limit(self, apiobj):
-        """Pass."""
         data = apiobj._get(limit=1)
         assert isinstance(data, list)
         for x in data:
@@ -33,7 +28,6 @@ class TestSystemUsers:
         assert len(data) == 1
 
     def test__get_limit_skip(self, apiobj):
-        """Pass."""
         all_data = apiobj._get()
         data = apiobj._get(limit=1, skip=1)
         assert isinstance(data, list)
@@ -45,7 +39,6 @@ class TestSystemUsers:
             assert len(data) == 1
 
     def test_add_get_update_delete(self, apiobj):
-        """Pass."""
         try:
             apiobj.get(name=TEST_USER)
         except NotFoundError:
@@ -91,7 +84,6 @@ class TestSystemUsers:
             apiobj.get(name=TEST_USER)
 
     def test_add_bad_role(self, apiobj):
-        """Pass."""
         val = "xxx"
         with pytest.raises(NotFoundError):
             apiobj.add(name=val, password=val, rolename="flimflam")

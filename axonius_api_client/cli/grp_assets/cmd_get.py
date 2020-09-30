@@ -2,8 +2,16 @@
 """Command line interface for Axonius API Client."""
 
 from ..context import CONTEXT_SETTINGS, click
-from ..options import (AUTH, EXPORT, FIELDS_SELECT, PAGING, QUERY, add_options,
-                       get_option_fields_default, get_option_help)
+from ..options import (
+    AUTH,
+    EXPORT,
+    FIELDS_SELECT,
+    PAGING,
+    QUERY,
+    add_options,
+    get_option_fields_default,
+    get_option_help,
+)
 from .grp_common import GET_EXPORT, WIZ, load_whitelist, load_wiz
 
 OPTIONS = [

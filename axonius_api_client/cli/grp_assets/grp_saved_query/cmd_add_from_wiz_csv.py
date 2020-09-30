@@ -1,10 +1,8 @@
 # -*- coding: utf-8 -*-
 """Command line interface for Axonius API Client."""
-from ....wizard import WizardCsv
 from ...context import CONTEXT_SETTINGS, click
 from ...options import AUTH, INPUT_FILE, add_options, get_option_help
-from .grp_common import (ABORT, EXPORT_FORMAT, OVERWRITE, check_sq_exist,
-                         handle_export)
+from .grp_common import ABORT, EXPORT_FORMAT, OVERWRITE, check_sq_exist, handle_export
 
 OPTIONS = [
     *AUTH,
@@ -27,8 +25,7 @@ def cmd(ctx, url, key, secret, input_file, abort, overwrite, export_format, **kw
     p_grp = ctx.parent.parent.command.name
     apiobj = getattr(client, p_grp)
     with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror, abort=abort):
-        wizard = WizardCsv(apiobj=apiobj)
-        sqs = wizard.parse(content=content)
+        sqs = apiobj.wizard_csv.parse(content=content)
         print(len(sqs))
         for sq in sqs:
             name = sq["name"]

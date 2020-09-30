@@ -7,10 +7,7 @@ from ...utils import load_clirunner
 
 
 class TestGrpAdaptersCmdConfigGetUpdate:
-    """Pass."""
-
     def test_json_full(self, request, monkeypatch):
-        """Pass."""
         runner = load_clirunner(request, monkeypatch)
 
         args1 = [
@@ -37,7 +34,6 @@ class TestGrpAdaptersCmdConfigGetUpdate:
         assert isinstance(json1, dict)
 
     def test_json_basic(self, request, monkeypatch):
-        """Pass."""
         runner = load_clirunner(request, monkeypatch)
 
         args1 = [

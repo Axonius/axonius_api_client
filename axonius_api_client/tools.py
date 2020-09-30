@@ -32,19 +32,13 @@ def listify(obj: Any, dictkeys: bool = False) -> list:
         * :obj:`list`: returns as is
         * :obj:`tuple`: convert to list
         * :obj:`None`: returns as an empty list
-        * any of :data:`axonius_api_client.SIMPLE`: return as a list of obj
+        * any of :data:`axonius_api_client.constants.SIMPLE`: return as a list of obj
         * :obj:`dict`: if dictkeys is True, return as list of keys of obj,
           otherwise return as a list of obj
 
     Args:
-        obj (:obj:`object`): object to coerce to list
-        dictkeys (:obj:`bool`, optional): default ``False`` -
-
-            * if ``True`` and obj is dict, return list of keys of obj
-            * if ``False`` and obj is dict, return list of obj
-
-    Returns:
-        :obj:`list`: coerced list
+        obj: object to coerce to list
+        dictkeys: if obj is dict, return list of keys of obj
     """
     if isinstance(obj, list):
         return obj
@@ -65,13 +59,9 @@ def grouper(iterable: Iterable, n: int, fillvalue: Optional[Any] = None) -> Iter
     """Split an iterable into chunks.
 
     Args:
-        iterable (:obj:`typing.Iterable`): iterable to split into chunks of size n
-        n (:obj:`int`): length to split iterable into
-        fillvalue (:obj:`object`, optional): default ``None`` - value to use
-            as filler for last chunk
-
-    Returns:
-        :obj:`typing.Iterator`: an iterator with chunks of length n
+        iterable: iterable to split into chunks of size n
+        n: length to split iterable into
+        fillvalue: value to use as filler for last chunk
     """
     return zip_longest(*([iter(iterable)] * n), fillvalue=fillvalue)
 
@@ -80,10 +70,7 @@ def coerce_int(obj: Any) -> int:
     """Convert an object into int.
 
     Args:
-        obj (:obj:`object`): object to convert to int
-
-    Returns:
-        :obj:`int`: coerced int
+        obj: object to convert to int
 
     Raises:
         :exc:`ToolsError`: if obj is not able to be converted to int
@@ -96,6 +83,14 @@ def coerce_int(obj: Any) -> int:
 
 
 def coerce_int_float(value: Union[int, float, str]) -> Union[int, float]:
+    """Convert an object into int or float.
+
+    Args:
+        obj: object to convert to int or float
+
+    Raises:
+        :exc:`ToolsError`: if obj is not able to be converted to int or float
+    """
     if isinstance(value, float):
         return value
 
@@ -116,15 +111,9 @@ def coerce_int_float(value: Union[int, float, str]) -> Union[int, float]:
 def coerce_bool(obj: Any, errmsg: Optional[str] = None) -> bool:
     """Convert an object into bool.
 
-    Notes:
-        * if obj is str, will check against :data:`axonius_api_client.YES`
-          and :data:`axonius_api_client.NO`
-
     Args:
-        obj (:obj:`object`): object to coerce to bool
-
-    Returns:
-        :obj:`bool`: coerced bool
+        obj: object to coerce to bool, will check against
+            :data:`axonius_api_client.constants.YES` and :data:`axonius_api_client.constants.NO`
 
     Raises:
         :exc:`ToolsError`: obj is not able to be converted to bool
@@ -154,13 +143,8 @@ def is_int(obj: Any, digit: bool = False) -> bool:
     """Check if obj is int typeable.
 
     Args:
-        obj (:obj:`object`): object to check
-        digit (:obj:`bool`, optional): default ``False`` -
-            * if ``True`` obj must be (str/bytes where isdigit is True) or int
-            * if ``False`` obj must be int
-
-    Returns:
-        :obj:`bool`: bool reflecting if obj is int typeable
+        obj: object to check
+        digit: allow checking str/bytes
     """
     if digit:
         if (isinstance(obj, str) or isinstance(obj, bytes)) and obj.isdigit():
@@ -173,11 +157,8 @@ def join_url(url: str, *parts) -> str:
     """Join a URL to any number of parts.
 
     Args:
-        url (:obj:`str`): str to add parts to
-        *parts (:obj:`str`): str(s) to append to url
-
-    Returns:
-        :obj:`str`: url with parts appended
+        url: str to add parts to
+        *parts: str(s) to append to url
     """
     url = url.rstrip("/") + "/"
     for part in parts:
@@ -193,11 +174,8 @@ def strip_right(obj: Union[List[str], str], fix: str) -> Union[List[str], str]:
     """Strip text from the right side of obj.
 
     Args:
-        obj (:obj:`str`) or (:obj:`list` of :obj:`str`): str(s) to strip fix from
-        fix (:obj:`str`): str to remove from obj(s)
-
-    Returns:
-        (:obj:`str`) or (:obj:`list` of :obj:`str`): obj with fix stripped
+        obj: str(s) to strip fix from
+        fix: str to remove from obj(s)
     """
     if isinstance(obj, list) and all([isinstance(x, str) for x in obj]):
         return [strip_right(obj=x, fix=fix) for x in obj]
@@ -215,11 +193,8 @@ def strip_left(obj: Union[List[str], str], fix: str) -> Union[List[str], str]:
     """Strip text from the left side of obj.
 
     Args:
-        obj (:obj:`str`) or (:obj:`list` of :obj:`str`): str(s) to strip fix from
-        fix (:obj:`str`): str to remove from obj(s)
-
-    Returns:
-        (:obj:`str`) or (:obj:`list` of :obj:`str`): obj with fix stripped
+        obj: str(s) to strip fix from
+        fix: str to remove from obj(s)
     """
     if isinstance(obj, list) and all([isinstance(x, str) for x in obj]):
         return [strip_left(obj=x, fix=fix) for x in obj]
@@ -235,26 +210,15 @@ def strip_left(obj: Union[List[str], str], fix: str) -> Union[List[str], str]:
 
 def json_dump(
     obj: Any, indent: int = 2, sort_keys: bool = False, error: bool = True, **kwargs
-) -> str:
+) -> Any:
     """Serialize an object into json str.
 
     Args:
-        obj (:obj:`object`): object to serialize into json str
-        indent (:obj:`int`, optional): default ``2`` - json str indentation
-        sort_keys (:obj:`bool`, optional): default ``False`` -
-
-            * if ``True`` sort keys of dicts
-            * if ``False`` leave keys of dicts sorted as is
-        error (:obj:`bool`, optional): default ``True`` -
-
-            * if ``True`` If json error happens, raise it
-            * if ``False`` If json error happens, return original obj as is
+        obj: object to serialize into json str
+        indent: json str indent level
+        sort_keys: sort dict keys
+        error: if json error happens, raise it
         **kwargs: passed to :func:`json.dumps`
-
-    Returns:
-        (:obj:`str`) or (:obj:`object`):
-            * object: if json error happens and error is false
-            * str: if no json error happens
     """
     if isinstance(obj, bytes):
         obj = obj.decode("utf-8")
@@ -271,15 +235,9 @@ def json_load(obj: str, error: bool = True, **kwargs) -> Any:
     """Deserialize a json str into an object.
 
     Args:
-        obj (:obj:`object`): str to deserialize into obj
-        error (:obj:`bool`, optional): default ``True`` -
-
-            * if ``True`` If json error happens, raise it
-            * if ``False`` If json error happens, return original obj as is
+        obj: str to deserialize into obj
+        error: if json error happens, raise it
         **kwargs: passed to :func:`json.loads`
-
-    Returns:
-        :obj:`object`: json str serialized into python obj
     """
     try:
         return json.loads(obj, **kwargs)
@@ -293,17 +251,9 @@ def json_reload(obj: Any, error: bool = False, trim: int = None, **kwargs) -> st
     """Re-serialize a json str into a pretty json str.
 
     Args:
-        obj (:obj:`object`): str to deserialize into obj and serialize back to str
-        error (:obj:`bool`, optional): default ``False`` -
-
-            * if ``True`` If json error happens, raise it
-            * if ``False`` If json error happens, return original obj as is
+        obj: str to deserialize into obj and serialize back to str
+        error: If json error happens, raise it
         **kwargs: passed to :func:`json_dump`
-
-    Returns:
-        (:obj:`str`) or (:obj:`object`):
-            * object: if json error happens and error is false
-            * str: if no json error happens
     """
     obj = json_load(obj=obj, error=error)
     if not isinstance(obj, str):
@@ -325,11 +275,7 @@ def dt_parse(obj: Union[str, timedelta, datetime]) -> datetime:
         * :obj:`datetime.datetime`: will be re-parsed into datetime obj
 
     Args:
-        obj (:obj:`str` or :obj:`datetime.datetime` or :obj:`datetime.timedelta`):
-            object or list of objects to parse
-
-    Returns:
-        :obj:`datetime.datetime`: parsed datetime
+        obj: object or list of objects to parse into datetime
     """
     if isinstance(obj, list) and all([isinstance(x, str) for x in obj]):
         return [dt_parse(obj=x) for x in obj]
@@ -344,6 +290,12 @@ def dt_parse(obj: Union[str, timedelta, datetime]) -> datetime:
 
 
 def dt_parse_tmpl(obj: Union[str, timedelta, datetime], tmpl: str = "%Y-%m-%d") -> str:
+    """Parse a string into the format used by the REST API.
+
+    Args:
+        obj: date time to parse using :meth:`dt_parse`
+        tmpl: strftime template to convert obj into
+    """
     valid_fmts = [
         "YYYY-MM-DD",
         "YYYYMMDD",
@@ -369,13 +321,8 @@ def dt_now(
     """Get the current datetime in for a specific tz.
 
     Args:
-        delta (:obj:`datetime.timedelta`, optional): default ``None`` -
-            subtract timedelta from now
-        tz (:obj:`datetime.timezone`, optional): default :obj:`dateutil.tz.tzutc`:
-            get now for a specific timezone
-
-    Returns:
-        :obj:`datetime.datetime`: datetime of now
+        delta: convert delta into datetime str instead of returning now
+        tz: timezone to return datetime in
     """
     if isinstance(delta, timedelta):
         return dt_parse(obj=delta)
@@ -386,11 +333,7 @@ def dt_sec_ago(obj: Union[str, timedelta, datetime], exact: bool = False) -> int
     """Get number of seconds ago a given datetime was.
 
     Args:
-        obj (:obj:`object`): will be parsed by :meth:`dt_parse` into a datetime obj
-
-    Returns:
-        :obj:`int`:
-            int of secs ago obj was
+        obj: parsed by :meth:`dt_parse` into a datetime obj
     """
     obj = dt_parse(obj=obj)
     now = dt_now(tz=obj.tzinfo)
@@ -402,10 +345,7 @@ def dt_min_ago(obj: Union[str, timedelta, datetime]) -> int:
     """Get number of minutes ago a given datetime was.
 
     Args:
-        obj (:obj:`object`): will be parsed by :meth:`dt_sec_ago` into seconds ago
-
-    Returns:
-        :obj:`int`: int of minutes ago obj was
+        obj: parsed by :meth:`dt_sec_ago` into seconds ago
     """
     return round(dt_sec_ago(obj=obj) / 60)
 
@@ -417,12 +357,8 @@ def dt_within_min(
     """Check if given datetime is within the past n minutes.
 
     Args:
-        obj (:obj:`object`): will be parsed by :meth:`dt_min_ago` into minutes ago
-        n (:obj:`int` or :obj:`str`, optional): default ``None`` - int of
-            dt_min_ago(obj) should be greater than or equal to
-
-    Returns:
-        :obj:`bool`: bool representing if obj is within the past n minutes
+        obj: parsed by :meth:`dt_min_ago` into minutes ago
+        n: int of :meth:`dt_min_ago` should be greater than or equal to
     """
     if not is_int(obj=n, digit=True):
         return False
@@ -434,11 +370,7 @@ def get_path(obj: Union[str, pathlib.Path]) -> pathlib.Path:
     """Convert a str into a fully resolved & expanded Path object.
 
     Args:
-        obj (:obj:`str` or :obj:`pathlib.Path`): obj to convert into
-            expanded and resolved absolute Path obj
-
-    Returns:
-        :obj:`pathlib.Path`: resolved path
+        obj: obj to convert into expanded and resolved absolute Path obj
     """
     return pathlib.Path(obj).expanduser().resolve()
 
@@ -449,24 +381,14 @@ def path_read(
     """Read data from a file.
 
     Notes:
-        * obj will be parsed by :meth:`path`
         * if path filename ends with ".json", data will be deserialized using
           :meth:`json_load`
 
     Args:
-        obj (:obj:`str` or :obj:`pathlib.Path`): path to read data form
-        binary (:obj:`bool`, optional): default ``False`` -
-
-            * if ``True`` read the data as binary
-            * if ``False`` read the data as str
-        is_json (:obj:`bool`, optional): default ``False`` -
-            * if ``True`` deserialize data using :meth:`json_load`
-            * if ``False`` do not deserialize data
+        obj: path to read data form, parsed by :meth:`get_path`
+        binary: read the data as binary instead of str
+        is_json: deserialize data using :meth:`json_load`
         **kwargs: passed to :meth:`json_load`
-
-    Returns:
-        :obj:`tuple` of (:obj:`pathlib.Path`, :obj:`object`):
-            resolved path and data read from path
 
     Raises:
         :exc:`ToolsError`: path does not exist as file
@@ -499,53 +421,30 @@ def path_write(
     binary_encoding: str = "utf-8",
     is_json: bool = False,
     make_parent: bool = True,
-    protect_file: oct = 0o600,
-    protect_parent: oct = 0o700,
-    # fmt: off
-    **kwargs
-    # fmt: on
+    protect_file=0o600,
+    protect_parent=0o700,
+    **kwargs,
 ) -> Tuple[pathlib.Path, Callable]:
     """Write data to a file.
 
     Notes:
-        * obj will be parsed by :meth:`path`
         * if obj filename ends with ".json", serializes data using :meth:`json_dump`.
 
     Args:
-        obj (:obj:`str` or :obj:`pathlib.Path`): path to write data to
-        data (:obj:`str` or :obj:`bytes` or :obj:`object`): data to write to obj
-        overwrite (:obj:`bool`, optional): default ``False`` -
-
-            * if ``True`` overwrite obj
-            * if ``False`` do not overwrite obj, raise exception if it already exists
-        binary (:obj:`bool`, optional): default ``False`` -
-
-            * if ``True`` write the data as binary
-            * if ``False`` write the data as str
-        binary_encoding (:obj:`str`, optional): default ``"utf-8"`` - encoding to
-            use when switching from str/bytes
-        is_json (:obj:`bool`, optional): default ``False`` -
-
-            * if ``True`` Serialize data using :meth:`json_load` before writing
-            * if ``False`` Do not serialize data before writing
-        make_parent (:obj:`bool`, optional): default ``True`` -
-
-            * if ``True`` If the parent directory does not exist, create it
-            * if ``False`` If the parent directory does not exist, raise exception
-        protect_file (:obj:`oct`): default ``0o600`` (read/write to owner only) -
-            octal mode of permissions to set on file
-        protect_dir (:obj:`oct`): default ``0o700`` (read/write/execute to owner only) -
-            octal mode of permissions to set on parent directory when creating
+        obj: path to write data to, parsed by :meth:`get_path`
+        data: data to write to obj
+        binary: write the data as binary instead of str
+        binary_encoding: encoding to use when switching from str/bytes
+        is_json: serialize data using :meth:`json_load`
+        overwrite: overwrite obj if exists
+        make_parent: If the parent directory does not exist, create it
+        protect_file: octal mode of permissions to set on file
+        protect_dir: octal mode of permissions to set on parent directory when creating
         **kwargs: passed to :meth:`json_dump`
-
-    Returns:
-        :obj:`tuple` of (:obj:`pathlib.Path`, method):
-            tuple of (resolved path obj, method used to write data to file)
 
     Raises:
         :exc:`ToolsError`: path exists as file and overwrite is False
-        :exc:`ToolsError`: if parent path does not exist and make_parent
-            is False
+        :exc:`ToolsError`: if parent path does not exist and make_parent is False
     """
     obj = get_path(obj=obj)
 
@@ -584,7 +483,11 @@ def path_write(
 
 
 def longest_str(obj: List[str]) -> int:
-    """Badwolf."""
+    """Determine the length of the longest string in a list of strings.
+
+    Args:
+        obj: list of strings to calculate length of
+    """
     return round(max([len(x) + 5 for x in obj]), -1)
 
 
@@ -596,7 +499,16 @@ def split_str(
     lower: bool = True,
     empty: bool = False,
 ) -> List[str]:
-    """Split a string or list of strings into a list of strings."""
+    """Split a string or list of strings into a list of strings.
+
+    Args:
+        obj: string or list of strings to split
+        split: character to split on
+        strip: characters to strip
+        do_strip: strip each item from the split
+        lower: lowercase each item from the split
+        empty: remove empty items post split
+    """
     if obj is None:
         return []
 
@@ -630,7 +542,13 @@ def split_str(
 
 
 def echo_ok(msg: str, tmpl: bool = True, **kwargs):  # pragma: no cover
-    """Pass."""
+    """Echo a message to console.
+
+    Args:
+        msg: message to echo
+        tmpl: template to using for echo
+        kwargs: passed to ``click.secho``
+    """
     echoargs = {}
     echoargs.update(OK_ARGS)
     echoargs.update(kwargs)
@@ -642,7 +560,13 @@ def echo_ok(msg: str, tmpl: bool = True, **kwargs):  # pragma: no cover
 
 
 def echo_warn(msg: str, tmpl: bool = True, **kwargs):  # pragma: no cover
-    """Pass."""
+    """Echo a warning message to console.
+
+    Args:
+        msg: message to echo
+        tmpl: template to using for echo
+        kwargs: passed to ``click.secho``
+    """
     echoargs = {}
     echoargs.update(WARN_ARGS)
     echoargs.update(kwargs)
@@ -654,7 +578,14 @@ def echo_warn(msg: str, tmpl: bool = True, **kwargs):  # pragma: no cover
 
 
 def echo_error(msg: str, abort: bool = True, tmpl: bool = True, **kwargs):  # pragma: no cover
-    """Pass."""
+    """Echo an error message to console.
+
+    Args:
+        msg: message to echo
+        tmpl: template to using for echo
+        kwargs: passed to ``click.secho``
+        abort: call sys.exit(1) after echoing message
+    """
     echoargs = {}
     echoargs.update(ERROR_ARGS)
     echoargs.update(kwargs)
@@ -668,7 +599,7 @@ def echo_error(msg: str, abort: bool = True, tmpl: bool = True, **kwargs):  # pr
 
 
 def sysinfo() -> dict:
-    """Pass."""
+    """Gather system information."""
     info = {}
     info["API Client Version"] = VERSION
     info["API Client Package"] = PACKAGE_FILE
@@ -701,7 +632,13 @@ def sysinfo() -> dict:
 
 
 def calc_percent(part: Union[int, float], whole: Union[int, float], places: int = 2) -> float:
-    """Pass."""
+    """Calculate the percentage of part out of whole.
+
+    Args:
+        part: number to get percent of whole
+        whole: number to caclulate against part
+        places: number of decimal places to return
+    """
     if 0 in [part, whole]:
         value = 0.00
     elif part > whole:
@@ -716,7 +653,13 @@ def calc_percent(part: Union[int, float], whole: Union[int, float], places: int 
 def join_kv(
     obj: Union[List[dict], dict], listjoin: str = ", ", tmpl: str = "{k}: {v!r}"
 ) -> List[str]:
-    """Pass."""
+    """Join a dictionary into key value strings.
+
+    Args:
+        obj: dict or list of dicts to stringify
+        listjoin: string to use for joining
+        tmpl: template to format key value pairs of dict
+    """
     if isinstance(obj, list):
         return [join_kv(obj=x, listjoin=listjoin, tmpl=tmpl) for x in obj]
 
@@ -731,15 +674,27 @@ def join_kv(
     return items
 
 
-def get_type_str(obj):
+def get_type_str(obj: Any):
+    """Get the type name of a class.
+
+    Args:
+        obj: class or tuple of classes to get type name(s) of
+    """
     if isinstance(obj, tuple):
         return " or ".join([x.__name__ for x in obj])
     else:
         return obj.__name__
 
 
-def check_type(value, exp, name="", exp_items=None):
-    """Pass."""
+def check_type(value: Any, exp: Any, name: str = "", exp_items: Optional[Any] = None):
+    """Check that a value is the appropriate type.
+
+    Args:
+        value: value to check type of
+        exp: type(s) that value should be
+        name: identifier of what value is for
+        exp_items: if value is a list, type(s) that list items should be
+    """
     name = f" for {name!r}" if name else ""
 
     if not isinstance(value, exp):
@@ -761,8 +716,13 @@ def check_type(value, exp, name="", exp_items=None):
             raise ToolsError(err)
 
 
-def check_empty(value, name=""):
-    """Pass."""
+def check_empty(value: Any, name: str = ""):
+    """Check if a value is empty.
+
+    Args:
+        value: value to check type of
+        name: identifier of what value is for
+    """
     if not value:
         vtype = type(value).__name__
         name = f" for {name!r}" if name else ""
@@ -770,7 +730,12 @@ def check_empty(value, name=""):
         raise ToolsError(err)
 
 
-def get_raw_version(value):
+def get_raw_version(value: str) -> str:
+    """Caclulate the raw bits of a version str.
+
+    Args:
+        value: version to calculate
+    """
     check_type(value=value, exp=str)
     converted = "0"
     version = value
@@ -788,7 +753,12 @@ def get_raw_version(value):
     return converted
 
 
-def coerce_str_to_csv(value):
+def coerce_str_to_csv(value: str) -> List[str]:
+    """Coerce a string into a list of strings.
+
+    Args:
+        value: string to seperate using comma
+    """
     new_value = value
     if isinstance(value, str):
         new_value = [x.strip() for x in value.split(",") if x.strip()]
@@ -806,6 +776,11 @@ def coerce_str_to_csv(value):
 
 
 def parse_ip_address(value: str) -> Union[ipaddress.IPv4Address, ipaddress.IPv6Address]:
+    """Parse a string into an IP address.
+
+    Args:
+        value: ip address
+    """
     try:
         return ipaddress.ip_address(value)
     except Exception as exc:
@@ -813,6 +788,11 @@ def parse_ip_address(value: str) -> Union[ipaddress.IPv4Address, ipaddress.IPv6A
 
 
 def parse_ip_network(value: str) -> Union[ipaddress.IPv4Network, ipaddress.IPv6Network]:
+    """Parse a string into an IP network.
+
+    Args:
+        value: ip network
+    """
     if "/" not in str(value):
         vtype = type(value).__name__
         raise ToolsError(
@@ -825,3 +805,12 @@ def parse_ip_network(value: str) -> Union[ipaddress.IPv4Network, ipaddress.IPv6N
         return ipaddress.ip_network(value)
     except Exception as exc:
         raise ToolsError(str(exc))
+
+
+def kv_dump(obj: dict) -> str:
+    """Get a string representation of a dictionaries key value pairs.
+
+    Args:
+        obj: dictionary to get string of
+    """
+    return "\n  " + "\n  ".join([f"{k}: {v}" for k, v in obj.items()])

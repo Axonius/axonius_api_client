@@ -2,7 +2,7 @@
 """Test suite for assets."""
 import pytest
 
-from .base_assets import AssetsPrivate, AssetsPublic, ModelMixinsBase
+from .test_base_assets import AssetsPrivate, AssetsPublic, ModelMixinsBase
 
 
 class TestUsers(AssetsPrivate, AssetsPublic, ModelMixinsBase):

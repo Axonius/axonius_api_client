@@ -7,10 +7,7 @@ from ...utils import load_clirunner
 
 
 class TestGrpAdaptersFileUpload:
-    """Pass."""
-
     def test_upload(self, request, monkeypatch):
-        """Pass."""
         runner = load_clirunner(request, monkeypatch)
 
         args1 = [

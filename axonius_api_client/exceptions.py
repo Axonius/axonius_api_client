@@ -3,27 +3,27 @@
 
 
 class AxonWarning(Warning):
-    """Warnings for :mod:`axonius_api_client`."""
+    """Base class for all warnings in this package."""
 
 
 class ApiWarning(AxonWarning):
-    """Warnings for :mod:`.api`."""
+    """Warnings for :obj:`axonius_api_client.api.mixins.Model`."""
 
 
 class AxonError(Exception):
-    """Errors for :mod:`axonius_api_client`."""
+    """Base class for all exceptions in this package."""
 
 
 class ApiError(AxonError):
-    """Errors for :mod:`.api`."""
+    """Errors for :obj:`axonius_api_client.api.mixins.Model`."""
 
 
 class ToolsError(AxonError):
-    """Errors for :mod:`.tools`."""
+    """Errors for :mod:`axonius_api_client.tools`."""
 
 
 class AuthError(AxonError):
-    """Errors for :mod:`.auth`."""
+    """Errors for :obj:`axonius_api_client.auth.models.Model`."""
 
 
 class NotFoundError(ApiError):
@@ -43,51 +43,51 @@ class AlreadyLoggedIn(AuthError):
 
 
 class ConnectError(AxonError):
-    """Error in :obj:`.connect.Connect`."""
+    """Error in :obj:`axonius_api_client.connect.Connect`."""
 
 
 class HttpError(AxonError):
-    """Errors for :mod:`.http`."""
+    """Errors for :obj:`axonius_api_client.http.Http`."""
 
 
 class ConfigError(ApiError):
-    """Pass."""
+    """Errors in a configuration."""
 
 
 class ConfigInvalidValue(ConfigError):
-    """Pass."""
+    """Error when a supplied configuration has a bad type or is the wrong choice."""
 
 
 class ConfigUnchanged(ConfigError):
-    """Pass."""
+    """Error when a supplied configuration is no different from the current configuration."""
 
 
 class ConfigUnknown(ConfigError):
-    """Pass."""
+    """Error when an unknown configuration key is supplied."""
 
 
 class ConfigRequired(ConfigError):
-    """Pass."""
+    """Error when a required configuration key is not supplied."""
 
 
 class CnxError(ApiError):
-    """Errors for :obj:`.api.adapters.Cnx`."""
+    """Errors for connections."""
 
 
 class CnxGoneError(CnxError):
-    """Errors for :obj:`.api.adapters.Cnx`."""
+    """Errors when a connection has gone away."""
 
 
 class CnxUpdateError(CnxError):
-    """Pass."""
+    """Errors when updating a connections configuration."""
 
 
 class CnxTestError(CnxError):
-    """Pass."""
+    """Errors when testing a connections configuration."""
 
 
 class CnxAddError(CnxError):
-    """Pass."""
+    """Errors when adding a new connection."""
 
 
 class ResponseError(ApiError):
@@ -107,4 +107,4 @@ class JsonError(ResponseError):
 
 
 class WizardError(ApiError):
-    """Error in wizards."""
+    """Errors in query wizards."""

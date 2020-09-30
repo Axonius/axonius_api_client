@@ -8,9 +8,9 @@ def test_api_v1_routers():
     api_routes = axonapi.api.routers.ApiV1
     for obj in api_routes.all_objects:
         assert isinstance(obj, axonapi.api.routers.Router)
-        assert obj._object_type in format(obj)
-        assert obj._object_type in repr(obj)
-        for route in obj._routes:
+        assert obj.OBJ_TYPE in format(obj)
+        assert obj.OBJ_TYPE in repr(obj)
+        for route in obj.ROUTES:
             assert hasattr(obj, route)
 
 
@@ -19,7 +19,7 @@ def test_api_v4_routers():
     api_routes = axonapi.api.routers.ApiV4
     for obj in api_routes.all_objects:
         assert isinstance(obj, axonapi.api.routers.Router)
-        assert obj._object_type in format(obj)
-        assert obj._object_type in repr(obj)
-        for route in obj._routes:
+        assert obj.OBJ_TYPE in format(obj)
+        assert obj.OBJ_TYPE in repr(obj)
+        for route in obj.ROUTES:
             assert hasattr(obj, route)

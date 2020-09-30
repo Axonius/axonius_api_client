@@ -6,10 +6,7 @@ from ...utils import get_cnx_existing, load_clirunner
 
 
 class TestGrpCnxCmdGetById:
-    """Pass."""
-
     def test_json_full(self, api_adapters, request, monkeypatch):
-        """Pass."""
         cnx = get_cnx_existing(apiobj=api_adapters)
 
         runner = load_clirunner(request, monkeypatch)
@@ -41,7 +38,6 @@ class TestGrpCnxCmdGetById:
         assert isinstance(json1, dict)
 
     def test_json_config(self, api_adapters, request, monkeypatch):
-        """Pass."""
         cnx = get_cnx_existing(apiobj=api_adapters)
 
         runner = load_clirunner(request, monkeypatch)
@@ -73,7 +69,6 @@ class TestGrpCnxCmdGetById:
         assert isinstance(json1, dict)
 
     def test_json_basic(self, api_adapters, request, monkeypatch):
-        """Pass."""
         cnx = get_cnx_existing(apiobj=api_adapters)
 
         runner = load_clirunner(request, monkeypatch)
@@ -105,7 +100,6 @@ class TestGrpCnxCmdGetById:
         assert isinstance(json1, dict)
 
     def test_table_schemas(self, api_adapters, request, monkeypatch):
-        """Pass."""
         cnx = get_cnx_existing(apiobj=api_adapters)
 
         runner = load_clirunner(request, monkeypatch)
@@ -135,7 +129,6 @@ class TestGrpCnxCmdGetById:
         assert exit_code1 == 0
 
     def test_table(self, api_adapters, request, monkeypatch):
-        """Pass."""
         cnx = get_cnx_existing(apiobj=api_adapters)
 
         runner = load_clirunner(request, monkeypatch)
@@ -165,7 +158,6 @@ class TestGrpCnxCmdGetById:
         assert exit_code1 == 0
 
     def test_str(self, api_adapters, request, monkeypatch):
-        """Pass."""
         cnx = get_cnx_existing(apiobj=api_adapters)
 
         runner = load_clirunner(request, monkeypatch)
@@ -195,7 +187,6 @@ class TestGrpCnxCmdGetById:
         assert exit_code1 == 0
 
     def test_str_args(self, api_adapters, request, monkeypatch):
-        """Pass."""
         cnx = get_cnx_existing(apiobj=api_adapters)
 
         runner = load_clirunner(request, monkeypatch)

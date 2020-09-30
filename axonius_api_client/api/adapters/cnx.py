@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-"""API models for working with adapters and connections."""
+"""API for working with adapter connections."""
 import time
-from typing import IO, List, Union
+from typing import List, Optional, Union
 
 from ...constants import CNX_GONE, CNX_RETRY, CNX_SANE_DEFAULTS, DEFAULT_NODE
 from ...exceptions import (
@@ -15,7 +15,7 @@ from ...exceptions import (
 )
 from ...tools import json_load, pathlib
 from ..mixins import ChildMixins
-from ..parsers.config import (
+from ..parsers import (
     config_build,
     config_default,
     config_empty,
@@ -23,15 +23,56 @@ from ..parsers.config import (
     config_required,
     config_unchanged,
     config_unknown,
+    tablize_cnxs,
+    tablize_schemas,
 )
-from ..parsers.tables import tablize_cnxs, tablize_schemas
 
 
 class Cnx(ChildMixins):
-    """API model for working with adapter connections."""
+    """API for working with adapter connections.
+
+    Notes:
+        All methods use the Core instance by default, but you can add/remove/etc connections
+        for any other instance by using ``adapter_node``.
+
+        Supplying unknown keys/values will throw an error showing the valid keys/values.
+
+    Examples:
+        First, create a ``client`` using :obj:`axonius_api_client.connect.Connect`.
+
+        >>> # Add a connection for an adapter to the Core instance
+        >>> config = dict(dc_name="192.168.1.10", username="svc_user", password="test")
+        >>> cnx = client.adapters.cnx.add(adapter_name="tanium_sq", **config)
+        >>>
+        >>> # Get all connections for an adapter on the Core instance
+        >>> cnxs = client.adapters.cnx.get_by_adapter(adapter_name="aws")
+        >>>
+        >>> # get a single connection by ID
+        >>> cnx = client.adapters.cnx.get_by_id(cnx_id='x', 'active_directory')
+        >>>
+        >>> # get a single connection by connection label
+        >>> cnx = client.adapters.cnx.get_by_label(value='x', 'active_directory')
+        >>>
+        >>> # delete a connection by ID
+        >>> cnx = client.adapters.cnx.delete_by_id(cnx_id='x', 'active_directory')
+        >>>
+        >>> # test the reachability of a connection by ID
+        >>> cnx = client.adapters.cnx.test_by_id(cnx_id='x', 'active_directory')
+        >>>
+        >>> # Test the reachability of a connection without creating the connection
+        >>> config = dict(dc_name="192.168.1.10", username="svc_user", password="test")
+        >>> cnx = client.adapters.cnx.test(adapter_name="tanium_sq", **config)
+
+    """
 
     def add(self, adapter_name: str, adapter_node: str = DEFAULT_NODE, **kwargs) -> dict:
-        """Pass."""
+        """Add a connection to an adapter on a node.
+
+        Args:
+            adapter_name: name of adapter
+            adapter_node: name of node running adapter
+            **kwargs: configuration of new connection
+        """
         kwargs_config = kwargs.pop("kwargs_config", {})
         kwargs.update(kwargs_config)
 
@@ -46,7 +87,6 @@ class Cnx(ChildMixins):
 
         new_config = self.build_config(
             cnx_schemas=cnx_schemas,
-            old_config={},
             new_config=kwargs,
             source=source,
             adapter_name=adapter_name,
@@ -96,11 +136,20 @@ class Cnx(ChildMixins):
         return cnx_new
 
     def get_sane_defaults(self, adapter_name: str) -> dict:
-        """Pass."""
+        """Get the API client defined sane defaults for a specific adapter.
+
+        Args:
+            adapter_name: name of adapter
+        """
         return CNX_SANE_DEFAULTS.get(adapter_name, CNX_SANE_DEFAULTS["all"])
 
     def get_by_adapter(self, adapter_name: str, adapter_node: str = DEFAULT_NODE) -> List[dict]:
-        """Get connections from an adapter."""
+        """Get all connections of an adapter on a node.
+
+        Args:
+            adapter_name: name of adapter
+            adapter_node: name of node running adapter
+        """
         adapter = self.parent.get_by_name(name=adapter_name, node=adapter_node)
         cnxs = adapter["cnx"]
 
@@ -118,7 +167,16 @@ class Cnx(ChildMixins):
         retry: int = 0,
         sleep: int = 1,
     ) -> dict:
-        """Pass."""
+        """Get a connection for an adapter on a node using a specific connection identifier key.
+
+        Args:
+            value: value that value_key must match for a connection
+            value_key: name of connection key to search for value of
+            adapter_name: name of adapter
+            adapter_node: name of node running adapter
+            retry: number of times to retry to find the connection using value_key[value]
+            sleep: seconds to sleep in between each retry
+        """
         tries = 1
         cnxs = self.get_by_adapter(adapter_name=adapter_name, adapter_node=adapter_node)
         while True:
@@ -143,13 +201,16 @@ class Cnx(ChildMixins):
         raise NotFoundError(tablize_cnxs(cnxs=cnxs, err=err))
 
     def get_by_uuid(
-        self,
-        cnx_uuid: str,
-        adapter_name: str,
-        adapter_node: str = DEFAULT_NODE,
-        **kwargs,
+        self, cnx_uuid: str, adapter_name: str, adapter_node: str = DEFAULT_NODE, **kwargs
     ) -> dict:
-        """Pass."""
+        """Get a connection for an adapter on a node by UUID.
+
+        Args:
+            cnx_uuid: UUID to search for
+            adapter_name: name of adapter
+            adapter_node: name of node running adapter
+            **kwargs: passed to :meth:`get_by_key`
+        """
         kwargs["value_key"] = "uuid"
         return self.get_by_key(
             value=cnx_uuid,
@@ -161,73 +222,102 @@ class Cnx(ChildMixins):
     def get_by_id(
         self, cnx_id: str, adapter_name: str, adapter_node: str = DEFAULT_NODE, **kwargs
     ) -> dict:
-        """Pass."""
+        """Get a connection for an adapter on a node by ID.
+
+        Notes:
+            ID is constructed from some variance of connection keys, usually "domain"
+            (i.e. for active_directory ``TestDomain.test``)
+
+        Args:
+            cnx_id: connection ID to get
+            adapter_name: name of adapter
+            adapter_node: name of node running adapter
+            **kwargs: passed to :meth:`get_by_key`
+        """
         kwargs["value_key"] = "id"
         return self.get_by_key(
             value=cnx_id, adapter_name=adapter_name, adapter_node=adapter_node, **kwargs
         )
 
-    # TBD add get_by_label
-    def test_by_id(self, cnx_id: str, adapter_name: str, adapter_node: str = DEFAULT_NODE) -> str:
-        """Pass."""
-        cnx_test = self.get_by_id(
-            cnx_id=cnx_id, adapter_name=adapter_name, adapter_node=adapter_node
+    def get_by_label(self, value: str, adapter_name: str, adapter_node: str = DEFAULT_NODE) -> dict:
+        """Get a connection for an adapter on a node using a specific connection identifier key.
+
+        Args:
+            value: value that connection_label must match for a connection
+            adapter_name: name of adapter
+            adapter_node: name of node running adapter
+        """
+        key = "connection_label"
+        cnxs = self.get_by_adapter(adapter_name=adapter_name, adapter_node=adapter_node)
+        for cnx in cnxs:
+            config = cnx.get("config") or {}
+            label = config.get(key) or ""
+            if label == value:
+                return cnx
+
+        err = (
+            f"No connection found on adapter {adapter_name!r} node {adapter_node!r} "
+            f"with a {key} of {value!r}"
         )
-        return self.test_cnx(cnx_test=cnx_test)
+        raise NotFoundError(tablize_cnxs(cnxs=cnxs, err=err))
+
+    def test_by_id(self, **kwargs) -> str:
+        """Test a connection for an adapter on a node by ID.
+
+        Args:
+            **kwargs: passed to :meth:`get_by_id`
+        """
+        cnx = self.get_by_id(**kwargs)
+        return self.test_cnx(cnx_test=cnx)
 
     def test_cnx(self, cnx_test: dict, **kwargs) -> str:
-        """Pass."""
-        test_adapter_meta = {
-            "adapter_name": cnx_test["adapter_name"],
-            "adapter_name_raw": cnx_test["adapter_name_raw"],
-            "adapter_node_id": cnx_test["node_id"],
-            "adapter_node_name": cnx_test["node_name"],
-            "cnx_schemas": cnx_test["schemas"],
-        }
+        """Test a connection for an adapter on a node.
 
-        test_old_config = cnx_test["config"]
-
-        return self.do_test(
-            test_adapter_meta=test_adapter_meta,
-            test_old_config=test_old_config,
-            **kwargs,
+        Args:
+            cnx_test: connection fetched previously
+            **kwargs: passed to :meth:`test`
+        """
+        adapter_name = cnx_test["adapter_name"]
+        adapter_node = cnx_test["node_name"]
+        old_config = cnx_test["config"]
+        return self.test(
+            adapter_name=adapter_name, adapter_node=adapter_node, old_config=old_config, **kwargs
         )
 
-    def test(self, adapter_name: str, adapter_node: str = DEFAULT_NODE, **kwargs) -> str:
-        """Pass."""
+    def test(
+        self,
+        adapter_name: str,
+        adapter_node: str = DEFAULT_NODE,
+        old_config: Optional[dict] = None,
+        **kwargs,
+    ) -> str:
+        """Test a connection to an adapter on a node.
+
+        Notes:
+            This can be used to test the configuration of a connection before creating the
+            connection.
+
+        Args:
+            adapter_name: name of adapter
+            adapter_node: name of node running adapter
+            old_config: old connection configuration
+            **kwargs: configuration of connection to test
+        """
         adapter = self.parent.get_by_name(name=adapter_name, node=adapter_node)
+        adapter_name = adapter["name"]
+        adapter_name_raw = adapter["name_raw"]
+        adapter_node_id = adapter["node_id"]
+        adapter_node_name = adapter["node_name"]
+        cnx_schemas = adapter["schemas"]["cnx"]
 
-        test_adapter_meta = {
-            "adapter_name": adapter["name"],
-            "adapter_name_raw": adapter["name_raw"],
-            "adapter_node_id": adapter["node_id"],
-            "adapter_node_name": adapter["node_name"],
-            "cnx_schemas": adapter["schemas"]["cnx"],
-        }
-
-        test_old_config = {}
-
-        return self.do_test(
-            test_adapter_meta=test_adapter_meta,
-            test_old_config=test_old_config,
-            **kwargs,
-        )
-
-    def do_test(self, test_adapter_meta: dict, test_old_config: dict, **kwargs) -> str:
-        """Pass."""
         kwargs_config = kwargs.pop("kwargs_config", {})
         kwargs.update(kwargs_config)
-        adapter_name = test_adapter_meta["adapter_name"]
-        adapter_name_raw = test_adapter_meta["adapter_name_raw"]
-        adapter_node_id = test_adapter_meta["adapter_node_id"]
-        adapter_node_name = test_adapter_meta["adapter_node_name"]
-        cnx_schemas = test_adapter_meta["cnx_schemas"]
 
         source = f"reachability test for adapter {adapter_name!r}"
 
         new_config = self.build_config(
             cnx_schemas=cnx_schemas,
-            old_config=test_old_config,
+            old_config=old_config,
             new_config=kwargs,
             source=source,
             adapter_name=adapter_name,
@@ -263,7 +353,12 @@ class Cnx(ChildMixins):
         return rtext
 
     def update_cnx(self, cnx_update: dict, **kwargs) -> dict:
-        """Pass."""
+        """Update a connection for an adapter on a node.
+
+        Args:
+            cnx_test: connection fetched previously
+            **kwargs: configuration of connection to update
+        """
         kwargs_config = kwargs.pop("kwargs_config", {})
         kwargs.update(kwargs_config)
 
@@ -304,6 +399,7 @@ class Cnx(ChildMixins):
             cnx_uuid=old_uuid,
         )
 
+        # XXX need to validate error handling!!!!!!!
         if not isinstance(result, dict) or not result:  # pragma: no cover
             result = {"error": result}
 
@@ -347,7 +443,18 @@ class Cnx(ChildMixins):
         return cnx_new
 
     def check_if_gone(self, result: dict, cnx_id: str, adapter_name: str, adapter_node: str):
-        """Pass."""
+        """Check if the result of updating a connection shows that the connection is gone.
+
+        Notes:
+            This happens when a connection is updated by someone in the GUI or the API client
+            causing the connections UUID or ID to change.
+
+        Args:
+            result: JSON response from updating a connection
+            cnx_id: connection ID that was being updated
+            adapter_name: name of adapter
+            adapter_node: name of node running adapter
+        """
         message = result.get("message", "")
         if message == CNX_GONE:
             cnxs = self.get_by_adapter(adapter_name=adapter_name, adapter_node=adapter_node)
@@ -357,14 +464,26 @@ class Cnx(ChildMixins):
     def update_by_id(
         self, cnx_id: str, adapter_name: str, adapter_node: str = DEFAULT_NODE, **kwargs
     ) -> dict:
-        """Pass."""
+        """Update a connection for an adapter on a node by ID.
+
+        Args:
+            cnx_id: connection ID to update
+            adapter_name: name of adapter
+            adapter_node: name of node running adapter
+            **kwargs: passed to :meth:`update_cnx`
+        """
         cnx_update = self.get_by_id(
             cnx_id=cnx_id, adapter_name=adapter_name, adapter_node=adapter_node
         )
         return self.update_cnx(cnx_update=cnx_update, **kwargs)
 
     def delete_cnx(self, cnx_delete: dict, delete_entities: bool = False) -> str:
-        """Pass."""
+        """Delete a connection for an adapter on a node.
+
+        Args:
+            cnx_delete: connection fetched previously
+            delete_entities: delete all asset entities associated with this connection
+        """
         adapter_name_raw = cnx_delete["adapter_name_raw"]
         adapter_node_id = cnx_delete["node_id"]
         cnx_uuid = cnx_delete["uuid"]
@@ -383,7 +502,14 @@ class Cnx(ChildMixins):
         adapter_node: str = DEFAULT_NODE,
         delete_entities: bool = False,
     ) -> str:
-        """Pass."""
+        """Delete a connection for an adapter on a node by connection ID.
+
+        Args:
+            cnx_id: connection ID to delete
+            adapter_name: name of adapter
+            adapter_node: name of node running adapter
+            delete_entities: delete all asset entities associated with this connection
+        """
         cnx_delete = self.get_by_id(
             cnx_id=cnx_id, adapter_name=adapter_name, adapter_node=adapter_node
         )
@@ -392,13 +518,23 @@ class Cnx(ChildMixins):
     def build_config(
         self,
         cnx_schemas: List[dict],
-        old_config: dict,
         new_config: dict,
         source: str,
         adapter_name: str,
         adapter_node: str,
+        old_config: Optional[dict] = None,
     ) -> dict:
-        """Pass."""
+        """Build and parse a configuration for a connection.
+
+        Args:
+            cnx_schemas: configuration schemas for connection
+            new_config: new configuration for connection
+            source: description of what called this method
+            adapter_name: name of adapter
+            adapter_node: name of node running adapter
+            old_config: configuration that is being updated
+        """
+        old_config = old_config or {}
         callbacks = {
             "cb_file": self.cb_file_upload,
             "adapter_name": adapter_name,
@@ -424,12 +560,19 @@ class Cnx(ChildMixins):
 
     def cb_file_upload(
         self,
-        value: Union[str, pathlib.Path, IO, dict],
+        value: Union[str, pathlib.Path, dict],
         schema: dict,
         callbacks: dict,
         source: str,
     ) -> dict:
-        """Pass."""
+        """Config parsing callback to upload a file for a connection.
+
+        Args:
+            value: file to upload
+            schema: connection configuration schema of type "file"
+            callbacks: callbacks supplied
+            source: description of what called this method
+        """
         adapter_name = callbacks["adapter_name"]
         adapter_node = callbacks["adapter_node"]
         field_name = schema["name"]
@@ -480,12 +623,9 @@ class Cnx(ChildMixins):
         """Direct API method to add a connection to an adapter.
 
         Args:
-            adapter: name of adapter
-            node_id: id of node running **adapter**
-            config: configuration values for new connection
-
-        Returns:
-            an empty str
+            adapter_name_raw: raw name of the adapter i.e. ``aws_adapter``
+            adapter_node_id: id of node running adapter
+            new_config: configuration of new connection
         """
         data = {}
         data.update(new_config)
@@ -505,12 +645,9 @@ class Cnx(ChildMixins):
         """Direct API method to add a connection to an adapter.
 
         Args:
-            adapter: name of adapter
-            node_id: id of node running **adapter**
-            config: configuration values to test reachability for
-
-        Returns:
-            an empty str
+            adapter_name_raw: raw name of the adapter i.e. ``aws_adapter``
+            adapter_node_id: id of node running adapter
+            config: configuration to test
         """
         data = {}
         data.update(config)
@@ -530,17 +667,10 @@ class Cnx(ChildMixins):
         """Direct API method to delete a connection from an adapter.
 
         Args:
-            name_raw: name_raw of adapter
-            node_id: id of node running **adapter**
-            uuid: uuid of connection to delete
-            delete_entities: default ``False`` -
-
-                * if ``True`` delete the connection and also delete all asset entities
-                  fetched by this connection
-                * if ``False`` just delete the connection
-
-        Returns:
-            an empty str
+            adapter_name_raw: raw name of the adapter i.e. ``aws_adapter``
+            adapter_node_id: id of node running adapter
+            cnx_uuid: uuid of connection to delete
+            delete_entities: delete all asset entities associated with this connection
         """
         data = {}
         data["instanceName"] = adapter_node_id
@@ -570,13 +700,10 @@ class Cnx(ChildMixins):
         """Direct API method to update a connection on an adapter.
 
         Args:
-            name_raw: name_raw of adapter
-            node_id: id of node running **adapter**
-            config: configuration of connection to update
-            uuid: uuid of connection to update
-
-        Returns:
-            an empty str
+            adapter_name_raw: raw name of the adapter i.e. ``aws_adapter``
+            adapter_node_id: id of node running adapter
+            cnx_uuid: uuid of connection to delete
+            new_config: configuration of connection
         """
         data = {}
         data.update(new_config)

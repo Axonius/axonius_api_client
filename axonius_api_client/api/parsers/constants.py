@@ -309,9 +309,9 @@ class OperatorTypeMap(BaseData):
     name: str
     operators: List[Operator]
     field_type: Types
-    field_format: Optional[Formats] = None
-    items_type: Optional[Types] = None
-    items_format: Optional[Formats] = None
+    field_format: Formats = None
+    items_type: Types = None
+    items_format: Formats = None
 
 
 @dataclasses.dataclass

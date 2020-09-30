@@ -130,20 +130,7 @@ class Devices(AssetMixin):
     def get_by_subnet(
         self, value: str, not_flag: bool = False, pre: str = "", post: str = "", **kwargs
     ) -> Union[Generator[dict, None, None], List[dict]]:
-        """Build a query to get assets where ip in subnet.
-
-        Args:
-            value (:obj:`str`): value to that must match field
-                "network_interfaces.ips_raw"
-            **kwargs: passed to :meth:`AssetMixin.get`
-
-        Yields:
-            :obj:`dict`: asset matching query that is built if generator is True
-
-        Returns:
-            :obj:`list` of :obj:`dict`: assets matching query that is built
-                if generator is False
-        """
+        """Build a query to get assets where ip in subnet."""
         field = self.FIELD_IP_RAW
 
         network = ipaddress.ip_network(value)

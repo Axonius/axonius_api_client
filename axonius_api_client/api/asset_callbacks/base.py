@@ -1,24 +1,38 @@
 # -*- coding: utf-8 -*-
-"""API models for working with device and user assets."""
+"""Base export callbacks class."""
 import copy
 import logging
 import re
 import sys
-from typing import IO, Generator, List, Optional
+from typing import Generator, List, Optional, Tuple, Union
 
-from ...constants import (DEFAULT_PATH, FIELD_JOINER, FIELD_TRIM_LEN,
-                          FIELD_TRIM_STR, SCHEMAS_CUSTOM)
+from ...constants import DEFAULT_PATH, FIELD_JOINER, FIELD_TRIM_LEN, FIELD_TRIM_STR, SCHEMAS_CUSTOM
 from ...exceptions import ApiError
-from ...tools import (calc_percent, echo_error, echo_ok, echo_warn, get_path,
-                      join_kv, listify)
-from ..parsers.fields import schema_custom
+from ...tools import (
+    calc_percent,
+    coerce_int,
+    echo_error,
+    echo_ok,
+    echo_warn,
+    get_path,
+    join_kv,
+    listify,
+)
+from ..parsers import schema_custom
 
 
 class Base:
-    """Object for handling callbacks for assets."""
+    """Base export callbacks class.
+
+    Notes:
+        See :meth:`args_map` for the arguments this callbacks class.
+    """
 
     CB_NAME: str = "base"
+    """name for this callback"""
+
     FIND_KEYS: List[str] = ["name", "name_qual", "column_title", "name_base"]
+    """field schema keys to use when finding a fields schema"""
 
     def __init__(
         self,
@@ -27,12 +41,20 @@ class Base:
         state: Optional[dict] = None,
         getargs: dict = None,
     ):
-        """Object for handling callbacks for assets."""
+        """Callbacks base class for assets.
+
+        Args:
+            apiobj (:obj:`axonius_api_client.api.assets.asset_mixin.AssetMixin`): Asset object
+                that created this callback
+            store: store tracker of assets get method that created this callback
+            state: state tracker of assets get method that created this callback
+            getargs: kwargs passed to assets get method that created this callback
+        """
         self.LOG: logging.Logger = apiobj.LOG.getChild(self.__class__.__name__)
         """logger for this object."""
 
         self.APIOBJ = apiobj
-        """:obj:`AssetMixin`: assets object."""
+        """:obj:`axonius_api_client.api.assets.asset_mixin.AssetMixin`: assets object."""
 
         self.ALL_SCHEMAS: dict = apiobj.fields.get()
         """Map of adapter -> field schemas."""
@@ -43,13 +65,11 @@ class Base:
         self.STORE: dict = store or {}
         """store dict used by get assets method to track arguments."""
 
-        self.CURRENT_ROW: dict = {}
+        self.CURRENT_ROWS: List[dict] = []
+        """current row being processed"""
 
         self.GETARGS: dict = getargs or {}
         """original kwargs supplied to get assets method."""
-
-        self.RAN: List[str] = []
-        """used by callbacks to see if they've run already."""
 
         self.TAG_ROWS_ADD: List[dict] = []
         """assets to add tags to in do_tagging."""
@@ -57,16 +77,17 @@ class Base:
         self.TAG_ROWS_REMOVE: List[dict] = []
         """assets to remove tags from in do_tagging."""
 
-        self._custom_cb_exc: List[dict] = []
+        self.CUSTOM_CB_EXC: List[dict] = []
+        """list of custom callbacks that have been executed"""
 
         self._init()
 
     def _init(self):
-        """Pass."""
+        """Post init setup."""
         pass
 
     def start(self, **kwargs):
-        """Run start callbacks."""
+        """Start this callbacks object."""
         join = "\n   - "
         self.echo(msg=f"Starting {self}")
 
@@ -80,6 +101,7 @@ class Base:
         self.echo(msg=f"Get Arguments: {store}")
 
     def echo_columns(self, **kwargs):
+        """Echo the columns of the fields selected."""
         if getattr(self, "ECHO_DONE", False):
             return
 
@@ -93,54 +115,12 @@ class Base:
         self.ECHO_DONE = True
 
     def stop(self, **kwargs):
-        """Run stop callbacks."""
+        """Stop this callbacks object."""
         self.do_tagging()
         self.echo(msg=f"Stopping {self}")
 
-    def process_row(self, row: dict) -> List[dict]:
-        """Handle callbacks for an asset."""
-        self.do_pre_row(row=row)
-        return self.do_row(row=row)
-
-    def do_pre_row(self, row: dict):
-        """Pass."""
-        self.CURRENT_ROW = row
-        self.STATE.setdefault("rows_processed_total", 0)
-        self.STATE["rows_processed_total"] += 1
-        self.echo_columns()
-        self.echo_page_progress()
-
-    def do_row(self, row: dict) -> List[dict]:
-        """Pass."""
-        self.do_custom_cbs(row=row)
-        self.process_tags_to_add(row=row)
-        self.process_tags_to_remove(row=row)
-        self.add_report_adapters_missing(row=row)
-        self.add_report_software_whitelist(row=row)
-        self.do_excludes(row=row)
-        self.do_add_null_values(row=row)
-        self.do_flatten_fields(row=row)
-
-        new_rows = self.do_explode_field(row=row)
-        for new_row in new_rows:
-            self.do_join_values(row=new_row)
-            self.do_change_field_titles(row=new_row)
-
-        return new_rows
-
-    def do_custom_cbs(self, row: dict):
-        custom_cbs = listify(self.GETARGS.get("custom_cbs", []))
-
-        for custom_cb in custom_cbs:
-            try:
-                custom_cb(self=self, row=row)
-            except Exception as exc:
-                msg = f"Custom callback {custom_cb} failed: {exc}"
-                self._custom_cb_exc.append({"cb": custom_cb, "exc": exc, "msg": msg})
-                self.echo(msg=msg, error="exception", abort=False)
-
     def echo_page_progress(self):
-        """Asset callback to echo progress per N rows using an echo method."""
+        """Echo progress per N rows using an echo method."""
         page_progress = self.GETARGS.get("page_progress", 10000)
         if not page_progress or not isinstance(page_progress, int):
             return
@@ -168,18 +148,102 @@ class Base:
 
         self.echo(msg=f"PROGRESS: {percent} {rows} {pages} in {taken}")
 
-    def do_add_null_values(self, row: dict):
-        """Null out missing fields."""
-        if not self.GETARGS.get("field_null", False):
-            return
+    def do_pre_row(self, rows: Union[List[dict], dict]) -> List[dict]:
+        """Pre-processing callbacks for current row.
 
-        for schema in self.schemas_selected:
-            self._do_add_null_values(row=row, schema=schema)
+        Args:
+            rows: rows to process
+        """
+        rows = listify(rows)
+        self.CURRENT_ROWS = rows
+        self.STATE.setdefault("rows_processed_total", 0)
+        self.STATE["rows_processed_total"] += 1
+        self.echo_columns()
+        self.echo_page_progress()
+        return rows
+
+    def process_row(self, row: Union[List[dict], dict]) -> List[dict]:
+        """Process the callbacks for current row.
+
+        Args:
+            row: row to process
+        """
+        rows = listify(row)
+        rows = self.do_pre_row(rows=rows)
+        rows = self.do_row(rows=rows)
+        return rows
+
+    @property
+    def callbacks(self) -> list:
+        """Get order of callbacks to run."""
+        return [
+            self.do_custom_cbs,
+            self.process_tags_to_add,
+            self.process_tags_to_remove,
+            self.add_report_adapters_missing,
+            self.add_report_software_whitelist,
+            self.do_excludes,
+            self.do_add_null_values,
+            self.do_flatten_fields,
+            self.do_explode_field,
+            self.do_join_values,
+            self.do_change_field_titles,
+        ]
+
+    def do_row(self, rows: Union[List[dict], dict]) -> List[dict]:
+        """Execute the callbacks for current row.
+
+        Args:
+            rows: rows to process
+        """
+        for cb in self.callbacks:
+            rows = cb(rows=rows)
+        return rows
+
+    def do_custom_cbs(self, rows: Union[List[dict], dict]) -> List[dict]:
+        """Execute any custom callbacks for current row.
+
+        Args:
+            rows: rows to process
+        """
+        rows = listify(rows)
+        custom_cbs = listify(self.GETARGS.get("custom_cbs", []))
+
+        for custom_cb in custom_cbs:
+            try:
+                rows = custom_cb(self=self, rows=rows)
+                rows = listify(rows)
+            except Exception as exc:
+                msg = f"Custom callback {custom_cb} failed: {exc}"
+                self.CUSTOM_CB_EXC.append({"cb": custom_cb, "exc": exc, "msg": msg})
+                self.echo(msg=msg, error="exception", abort=False)
+        return rows
+
+    def do_add_null_values(self, rows: Union[List[dict], dict]) -> List[dict]:
+        """Null out missing fields.
+
+        Args:
+            rows: rows to process
+        """
+        rows = listify(rows)
+        if not self.GETARGS.get("field_null", False):
+            return rows
+
+        for row in rows:
+            for schema in self.schemas_selected:
+                self._do_add_null_values(row=row, schema=schema)
+        return rows
 
     def _do_add_null_values(self, row: dict, schema: dict, key: str = "name_qual"):
-        """Null out missing fields."""
+        """Null out missing fields.
+
+        Args:
+            row: row being processed
+            schema: field schema to add null values for
+            key: key of field schema to add null value for in row
+        """
         if self.is_excluded(schema=schema):
-            return
+            return row
 
         null_value = self.GETARGS.get("field_null_value", None)
 
@@ -195,11 +259,26 @@ class Base:
         else:
             row[field] = row.get(field, null_value)
 
-    def do_excludes(self, row: dict):
-        """Asset callback to remove fields from row."""
-        if not self.GETARGS.get("field_excludes", []):
-            return
+    def do_excludes(self, rows: Union[List[dict], dict]) -> List[dict]:
+        """Asset callback to remove fields from row.
 
+        Args:
+            rows: rows to process
+        """
+        rows = listify(rows)
+        if not self.GETARGS.get("field_excludes", []):
+            return rows
+
+        for row in rows:
+            self._do_excludes(row=row)
+        return rows
+
+    def _do_excludes(self, row: dict):
+        """Asset callback to remove fields from row.
+
+        Args:
+            row: row being processed
+        """
         for schema in self.schemas_selected:
             if self.is_excluded(schema=schema):
                 row.pop(schema["name_qual"], None)
@@ -212,46 +291,91 @@ class Base:
                         for item in items:
                             item.pop(sub_schema["name"], None)
 
-    def do_join_values(self, row: dict):
-        """Join values."""
-        if not self.GETARGS.get("field_join", False):
-            return
+    def do_join_values(self, rows: Union[List[dict], dict]) -> List[dict]:
+        """Join values.
 
+        Args:
+            rows: rows to process
+        """
+        rows = listify(rows)
+        if not self.GETARGS.get("field_join", False):
+            return rows
+
+        for row in rows:
+            self._do_join_values(row=row)
+        return rows
+
+    def _do_join_values(self, row: dict):
+        """Join values.
+
+        Args:
+            row: row being processed
+        """
         joiner = str(self.GETARGS.get("field_join_value", FIELD_JOINER))
-        trim_len = self.GETARGS.get("field_join_trim", FIELD_TRIM_LEN)
+        trim_len = coerce_int(self.GETARGS.get("field_join_trim", FIELD_TRIM_LEN))
         trim_str = FIELD_TRIM_STR
 
         for field in row:
             if isinstance(row[field], list):
                 row[field] = joiner.join([str(x) for x in row[field]])
 
-            if trim_len and isinstance(row[field], str):
+            if trim_len and isinstance(row[field], str) and len(row[field]) >= trim_len:
                 field_len = len(row[field])
-                if len(row[field]) >= trim_len:
-                    msg = trim_str.format(field_len=field_len, trim_len=trim_len)
-                    row[field] = joiner.join([row[field][:trim_len], msg])
+                msg = trim_str.format(field_len=field_len, trim_len=trim_len)
+                row[field] = joiner.join([row[field][:trim_len], msg])
 
-    def do_change_field_titles(self, row: dict):
-        """Asset callback to change qual name to title."""
+    def do_change_field_titles(self, rows: Union[List[dict], dict]) -> List[dict]:
+        """Asset callback to change qual name to title.
+
+        Args:
+            rows: rows to process
+        """
+        rows = listify(rows)
         if not self.GETARGS.get("field_titles", False):
-            return
+            return rows
+
+        for row in rows:
+            self._do_change_field_titles(row=row)
+        return rows
+
+    def _do_change_field_titles(self, row: dict):
+        """Asset callback to change qual name to title.
+
+        Args:
+            row: row being processed
+        """
+        null_value = self.GETARGS.get("field_null_value", None)
 
         for schema in self.final_schemas:
-            row[schema["column_title"]] = row.pop(schema["name_qual"], None)
+            title = schema["column_title"]
+            name = schema["name_qual"]
+            is_complex = schema["is_complex"]
+            default = [] if is_complex else null_value
+            row[title] = row.pop(name, default)
 
-    def do_flatten_fields(self, row: dict):
-        """Asset callback to flatten complex fields."""
+    def do_flatten_fields(self, rows: Union[List[dict], dict]) -> List[dict]:
+        """Asset callback to flatten complex fields.
+
+        Args:
+            rows: rows to process
+        """
+        rows = listify(rows)
         if not self.GETARGS.get("field_flatten", False):
-            return
+            return rows
 
-        for schema in self.schemas_selected:
-            if self.schema_to_explode == schema:  # pragma: no cover
-                return
+        for row in rows:
+            for schema in self.schemas_selected:
+                if self.schema_to_explode != schema:
+                    self._do_flatten_fields(row=row, schema=schema)
 
-            self._do_flatten_fields(row=row, schema=schema)
+        return rows
 
     def _do_flatten_fields(self, row: dict, schema: dict):
-        """Pass."""
+        """Asset callback to flatten complex fields.
+
+        Args:
+            row: row being processed
+        """
         if self.is_excluded(schema=schema):
             return
 
@@ -270,16 +394,30 @@ class Base:
                 value = value if isinstance(value, list) else [value]
                 row[sub_schema["name_qual"]] += value
 
-    def do_explode_field(self, row: dict) -> List[dict]:
-        """Explode a field into multiple rows."""
+    def do_explode_field(self, rows: Union[List[dict], dict]) -> List[dict]:
+        """Explode a field into multiple rows.
+
+        Args:
+            row: row being processed
+        """
+        rows = listify(rows)
         explode = self.GETARGS.get("field_explode", "")
+
+        if not explode or self.is_excluded(schema=self.schema_to_explode):
+            return rows
+
+        new_rows = []
+        for row in rows:
+            new_rows += self._do_explode_field(row=row)
+        return new_rows
+
+    def _do_explode_field(self, row: dict) -> List[dict]:
+        """Explode a field into multiple rows.
+
+        Args:
+            row: row being processed
+        """
         null_value = self.GETARGS.get("field_null_value", None)
-
-        if not explode:
-            return [row]
-
-        if self.is_excluded(schema=self.schema_to_explode):
-            return [row]
 
         schema = self.schema_to_explode
         field = schema["name_qual"]
@@ -305,12 +443,12 @@ class Base:
         return [new_rows_map[idx] for idx in new_rows_map]
 
     def do_tagging(self):
-        """Pass."""
+        """Add or remove tags to assets."""
         self.do_tag_add()
         self.do_tag_remove()
 
     def do_tag_add(self):
-        """Pass."""
+        """Add tags to assets."""
         tags_add = listify(self.GETARGS.get("tags_add", []))
         rows_add = self.TAG_ROWS_ADD
         if tags_add and rows_add:
@@ -318,96 +456,109 @@ class Base:
             self.APIOBJ.labels.add(rows=rows_add, labels=tags_add)
 
     def do_tag_remove(self):
-        """Pass."""
+        """Remove tags from assets."""
         tags_remove = listify(self.GETARGS.get("tags_remove", []))
         rows_remove = self.TAG_ROWS_REMOVE
         if tags_remove and rows_remove:
             self.echo(msg=f"Removing tags {tags_remove} from {len(rows_remove)} assets")
             self.APIOBJ.labels.remove(rows=rows_remove, labels=tags_remove)
 
-    def process_tags_to_add(self, row: dict):
-        """Pass."""
+    def process_tags_to_add(self, rows: Union[List[dict], dict]) -> List[dict]:
+        """Add assets to tracker for adding tags.
+
+        Args:
+            rows: rows to process
+        """
+        rows = listify(rows)
         tags = listify(self.GETARGS.get("tags_add", []))
         if not tags:
-            return
+            return rows
 
-        tag_row = {"internal_axon_id": row["internal_axon_id"]}
+        for row in rows:
+            tag_row = {"internal_axon_id": row["internal_axon_id"]}
 
-        if tag_row not in self.TAG_ROWS_ADD:
-            self.TAG_ROWS_ADD.append(tag_row)
+            if tag_row not in self.TAG_ROWS_ADD:
+                self.TAG_ROWS_ADD.append(tag_row)
+        return rows
 
-    def process_tags_to_remove(self, row: dict):
-        """Pass."""
+    def process_tags_to_remove(self, rows: Union[List[dict], dict]) -> List[dict]:
+        """Add assets to tracker for removing tags.
+
+        Args:
+            rows: rows to process
+        """
+        rows = listify(rows)
         tags = listify(self.GETARGS.get("tags_remove", []))
         if not tags:
-            return
+            return rows
 
-        tag_row = {"internal_axon_id": row["internal_axon_id"]}
+        for row in rows:
+            tag_row = {"internal_axon_id": row["internal_axon_id"]}
 
-        if tag_row not in self.TAG_ROWS_REMOVE:
-            self.TAG_ROWS_REMOVE.append(tag_row)
+            if tag_row not in self.TAG_ROWS_REMOVE:
+                self.TAG_ROWS_REMOVE.append(tag_row)
 
-    def add_report_software_whitelist(self, row: dict):
-        """Pass."""
+        return rows
 
-        def whitelist_match(whitelist, sw):
-            name = sw.get("name", "")
-            for whitelist_entry in whitelist:
-                if re.search(whitelist_entry, name, re.I):
-                    return True
-            return False
+    def add_report_software_whitelist(self, rows: Union[List[dict], dict]) -> List[dict]:
+        """Process report: Software whitelist.
 
-        def sw_match(whitelist_entry, sws):
-            for sw in sws:
-                name = sw.get("name", "")
-                if re.search(whitelist_entry, name, re.I):
-                    return True
-            return False  # pragma: no cover
+        Args:
+            rows: rows to process
+        """
+        rows = listify(rows)
 
-        def clean_list(obj):
-            return sorted(list(set(obj)))
+        if not listify(self.GETARGS.get("report_software_whitelist", [])):
+            return rows
 
-        if not self.GETARGS.get("report_software_whitelist", []):
-            return
+        for row in rows:
+            self._add_report_software_whitelist(row=row)
+        return rows
 
+    def _add_report_software_whitelist(self, row: dict):
+        """Process report: Software whitelist.
+
+        Args:
+            row: row being processed
+        """
         sw_field = "specific_data.data.installed_software"
 
         if sw_field not in self.fields_selected:
             msg = f"Must include field (column) {sw_field!r}"
             self.echo(msg=msg, error=ApiError, level="error")
 
+        sws = listify(row.get(sw_field, []))
+        names = [x.get("name") for x in sws if x.get("name") and isinstance(x.get("name"), str)]
+
+        whitelists = listify(self.GETARGS.get("report_software_whitelist", []))
+        extras = [n for n in names if any([re.search(x, n, re.I)] for x in whitelists)]
+        missing = [x for x in whitelists if any([re.search(x, n, re.I) for n in names])]
+
         schemas = SCHEMAS_CUSTOM["report_software_whitelist"]
-        software_missing_schema = schemas["software_missing"]
-        software_missing_name = software_missing_schema["name_qual"]
+        row[schemas["software_missing"]["name_qual"]] = sorted(list(set(missing)))
+        row[schemas["software_whitelist"]["name_qual"]] = whitelists
+        row[schemas["software_extra"]["name_qual"]] = sorted(list(set(extras)))
 
-        software_whitelist_schema = schemas["software_whitelist"]
-        software_whitelist_name = software_whitelist_schema["name_qual"]
+    def add_report_adapters_missing(self, rows: Union[List[dict], dict]) -> List[dict]:
+        """Process report: Missing adapters.
 
-        software_extra_schema = schemas["software_extra"]
-        software_extra_name = software_extra_schema["name_qual"]
-
-        installed_software = listify(row.get(sw_field, []))
-        whitelist = self.GETARGS.get("report_software_whitelist", [])
-
-        row[software_extra_name] = clean_list(
-            [
-                x.get("name")
-                for x in installed_software
-                if x.get("name") and not whitelist_match(whitelist=whitelist, sw=x)
-            ]
-        )
-
-        row[software_missing_name] = clean_list(
-            [x for x in whitelist if not sw_match(whitelist_entry=x, sws=installed_software)]
-        )
-
-        row[software_whitelist_name] = whitelist
-
-    def add_report_adapters_missing(self, row: dict):
-        """Pass."""
+        Args:
+            rows: rows to process
+        """
+        rows = listify(rows)
         if not self.GETARGS.get("report_adapters_missing", False):
-            return
+            return rows
 
+        for row in rows:
+            self._add_report_adapters_missing(row=row)
+        return rows
+
+    def _add_report_adapters_missing(self, row: dict):
+        """Process report: Missing adapters.
+
+        Args:
+            row: row being processed
+        """
         schemas = SCHEMAS_CUSTOM["report_adapters_missing"]
         schema = schemas["adapters_missing"]
 
@@ -430,7 +581,11 @@ class Base:
         row[field_name] = missing
 
     def is_excluded(self, schema: dict) -> bool:
-        """Check if a name supplied to field_excludes matches one of GET_SCHEMA_KEYS."""
+        """Check if a name supplied to field_excludes matches one of FIND_KEYS.
+
+        Args:
+            schema: field schema
+        """
         excludes = listify(self.GETARGS.get("field_excludes", []))
 
         for exclude in excludes:
@@ -441,14 +596,14 @@ class Base:
         return False
 
     def open_fd_arg(self):
-        """Pass."""
+        """Open a file descriptor supplied in GETARGS."""
         self._fd = self.GETARGS["export_fd"]
         self._fd_close = self.GETARGS.get("export_fd_close", False)
         self.echo(msg=f"Exporting to {self._fd}")
         return self._fd
 
     def open_fd_path(self):
-        """Pass."""
+        """Open a file descriptor for a path."""
         self._export_file = self.GETARGS.get("export_file", None)
         self._export_path = self.GETARGS.get("export_path", DEFAULT_PATH)
         self._export_overwrite = self.GETARGS.get("export_overwrite", False)
@@ -474,15 +629,15 @@ class Base:
         self.echo(msg=f"Exporting to file '{fp}' ({mode})")
         return self._fd
 
-    def open_fd_stdout(self) -> IO:
-        """Pass."""
+    def open_fd_stdout(self):
+        """Open a file descriptor to STDOUT."""
         self._file_path = None
         self._fd_close = False
         self._fd = sys.stdout
         self.echo(msg="Exporting to stdout")
         return self._fd
 
-    def open_fd(self) -> IO:
+    def open_fd(self):
         """Open a file descriptor."""
         if "export_fd" in self.GETARGS:
             self.open_fd_arg()
@@ -510,7 +665,17 @@ class Base:
         level_warning: str = "warning",
         abort: bool = True,
     ):
-        """Pass."""
+        """Echo a message to console or log it.
+
+        Args:
+            msg: message to echo
+            error: message is an error
+            warning: message is a warning
+            level: logging level for non error/non warning messages
+            level_error: logging level for error messages
+            level_warning: logging level for warning messages
+            abort: sys.exit(1) if error is true
+        """
         do_echo = self.GETARGS.get("do_echo", False)
 
         if do_echo:
@@ -532,8 +697,12 @@ class Base:
             getattr(self.LOG, level)(msg)
 
     def get_sub_schemas(self, schema: dict) -> Generator[dict, None, None]:
-        """Pass."""
-        sub_schemas = schema["sub_fields"]
+        """Get all the schemas of sub fields for a complex field.
+
+        Args:
+            schema: schema of complex field
+        """
+        sub_schemas = listify(schema.get("sub_fields"))
         for sub_schema in sub_schemas:
             if self.is_excluded(schema=sub_schema) or not sub_schema["is_root"]:
                 continue
@@ -541,7 +710,7 @@ class Base:
 
     @property
     def custom_schemas(self) -> List[dict]:
-        """Pass."""
+        """Get the custom schemas based on GETARGS."""
         schemas = []
         if self.GETARGS.get("report_adapters_missing", False):
             schemas += list(SCHEMAS_CUSTOM["report_adapters_missing"].values())
@@ -551,32 +720,32 @@ class Base:
 
     @property
     def final_schemas(self) -> List[dict]:
-        """Predict the future schemas that will be returned."""
+        """Get the schemas that will be returned."""
         if hasattr(self, "_final_schemas"):
             return self._final_schemas
 
         flat = self.GETARGS.get("field_flatten", False)
-        explode_field_name = self.schema_to_explode.get("name_qual", "")
+        explode_field = self.schema_to_explode.get("name_qual", "")
 
         final = {}
 
         for schema in self.schemas_selected:
             if self.is_excluded(schema=schema):
                 continue
-
-            is_explode_field = schema["name_qual"] == explode_field_name
+            name = schema["name_qual"]
+            is_explode_field = name == explode_field
             if schema["is_complex"] and (is_explode_field or flat):
                 for sub_schema in self.get_sub_schemas(schema=schema):
                     final[sub_schema["name_qual"]] = sub_schema
             else:
-                final.setdefault(schema["name_qual"], schema)
+                final.setdefault(name, schema)
 
         self._final_schemas = list(final.values())
         return self._final_schemas
 
     @property
     def final_columns(self) -> List[str]:
-        """Pass."""
+        """Get the columns that will be returned."""
         if hasattr(self, "_final_columns"):
             return self._final_columns
 
@@ -588,7 +757,7 @@ class Base:
 
     @property
     def fields_selected(self) -> List[str]:
-        """Pass."""
+        """Get the names of the fields that were selected."""
         if hasattr(self, "_fields_selected"):
             return self._fields_selected
 
@@ -608,13 +777,14 @@ class Base:
                 field_details = f"{field}_details"
                 self._fields_selected.append(field_details)
 
-        self._fields_selected += [x for x in self.CURRENT_ROW if x not in self._fields_selected]
+        for row in self.CURRENT_ROWS:
+            self._fields_selected += [x for x in row if x not in self._fields_selected]
 
         return self._fields_selected
 
     @property
     def schemas_selected(self) -> List[dict]:
-        """Pass."""
+        """Get the schemas of the fields that were selected."""
         if hasattr(self, "_schemas_selected"):
             return self._schemas_selected
 
@@ -641,7 +811,7 @@ class Base:
 
     @property
     def schema_to_explode(self) -> dict:
-        """Pass."""
+        """Get the schema of the field that should be exploded."""
         if hasattr(self, "_schema_to_explode"):
             return self._schema_to_explode
 
@@ -669,7 +839,7 @@ class Base:
 
     @property
     def adapter_map(self) -> dict:
-        """Pass."""
+        """Build a map of adapters that have connections."""
         self._adapters_meta = getattr(self, "_adapters_meta", self.APIOBJ.adapters.get())
         amap = {
             "has_cnx": [],
@@ -688,35 +858,38 @@ class Base:
         amap = {k: list(v) for k, v in amap.items()}
         return amap
 
-    @property
-    def args_map(self) -> List[list]:
-        """Pass."""
+    @classmethod
+    def args_map(cls) -> List[Tuple[str, str, Optional[Union[list, bool, str, int]]]]:
+        """Get the map of arguments that can be supplied to GETARGS.
+
+        Notes:
+            Format: [argument name, argument description, argument default]
+        """
         return [
-            ["field_excludes", "Exclude fields:", []],
-            ["field_flatten", "Flatten complex fields:", False],
-            ["field_explode", "Explode field:", None],
-            ["field_titles", "Rename fields to titles:", False],
-            ["field_join", "Join field values:", False],
-            ["field_join_value", "Join field values using:", FIELD_JOINER],
-            ["field_join_trim", "Join field character limit:", FIELD_TRIM_LEN],
-            ["field_null", "Add missing fields:", False],
-            ["field_null_value", "Missing field value:", None],
-            ["tags_add", "Add tags:", []],
-            ["tags_remove", "Remove tags:", []],
-            ["report_adapters_missing", "Report Missing Adapters:", False],
-            ["export_file", "Export to file:", None],
-            ["export_path", "Export file to path:", DEFAULT_PATH],
-            ["export_overwrite", "Export overwrite file:", False],
-            ["export_schema", "Export schema:", False],
-            ["page_progress", "Progress per row count:", 10000],
-            ["json_flat", "Produce flat json:", False],
+            ("field_excludes", "Exclude fields:", []),
+            ("field_flatten", "Flatten complex fields:", False),
+            ("field_explode", "Explode field:", None),
+            ("field_titles", "Rename fields to titles:", False),
+            ("field_join", "Join field values:", False),
+            ("field_join_value", "Join field values using:", FIELD_JOINER),
+            ("field_join_trim", "Join field character limit:", FIELD_TRIM_LEN),
+            ("field_null", "Add missing fields:", False),
+            ("field_null_value", "Missing field value:", None),
+            ("tags_add", "Add tags:", []),
+            ("tags_remove", "Remove tags:", []),
+            ("report_adapters_missing", "Report Missing Adapters:", False),
+            ("export_file", "Export to file:", None),
+            ("export_path", "Export file to path:", DEFAULT_PATH),
+            ("export_overwrite", "Export overwrite file:", False),
+            ("export_schema", "Export schema:", False),
+            ("page_progress", "Progress per row count:", 10000),
         ]
 
     @property
     def args_strs(self) -> List[str]:
-        """Pass."""
+        """Get a list of strings that describe each arg in :meth:`args_map`."""
         lines = []
-        for arg, text, default in self.args_map:
+        for arg, text, default in self.args_map():
             value = self.GETARGS.get(arg, default)
             if isinstance(value, str):
                 value = repr(value)

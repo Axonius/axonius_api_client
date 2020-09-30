@@ -1,27 +1,32 @@
 # -*- coding: utf-8 -*-
-"""API models for working with device and user assets."""
+"""JSON to CSV export callbacks class."""
 import json
 import tempfile
-from typing import List
+from typing import List, Union
 
 from ...tools import listify
 from .base_csv import Csv
 
 
 class JsonToCsv(Csv):
-    """Pass."""
+    """JSON to CSV export callbacks class.
+
+    Notes:
+        See :meth:`args_map` for the arguments this callbacks class.
+    """
 
     CB_NAME: str = "json_to_csv"
+    """name for this callback"""
 
     def start(self, **kwargs):
-        """Create temp file for writing to."""
+        """Start this callbacks object."""
         super(Csv, self).start(**kwargs)
         self.open_fd()
         self._temp_file = tempfile.NamedTemporaryFile(mode="w+", encoding="utf-8")
         self.echo(msg=f"Writing JSON to temporary file {self._temp_file.name!r}")
 
     def stop(self, **kwargs):
-        """Create CSV file, process each row in temp file, then close temp and csv."""
+        """Stop this callbacks object."""
         self.STATE["rows_processed_total"] = 0
         self.do_start(**kwargs)
 
@@ -30,22 +35,29 @@ class JsonToCsv(Csv):
 
         for line in self._temp_file.file.readlines():
             row = json.loads(line.strip())
-            self.do_pre_row(row=row)
-            new_rows = self.do_row(row=row)
-            for new_row in listify(new_rows):
-                self.write_row(row=new_row)
-                del new_row
-            del new_rows
+            rows = listify(row)
+            rows = self.do_pre_row(rows=rows)
+            rows = self.do_row(rows=rows)
+            self.write_rows(rows=rows)
+            del rows, row, line
 
         self.echo(msg=f"Closing and deleting temporary file {self._temp_file.name!r}")
         self._temp_file.file.close()
         super(JsonToCsv, self).stop(**kwargs)
 
-    def process_row(self, row: dict) -> List[dict]:
-        """Write row to temp file with no processing."""
-        self.do_pre_row(row=row)
-        return_row = [{"internal_axon_id": row["internal_axon_id"]}]
-        row = json.dumps(row)
-        self._temp_file.file.write(f"{row}\n")
-        del row
-        return return_row
+    def process_row(self, row: Union[List[dict], dict]) -> List[dict]:
+        """Process the callbacks for current row.
+
+        Args:
+            row: row to process
+        """
+        rows = listify(row)
+
+        row_return = [{"internal_axon_id": row["internal_axon_id"]} for row in rows]
+        rows = self.do_pre_row(rows=rows)
+        for row in rows:
+            value = json.dumps(row)
+            self._temp_file.file.write(f"{value}\n")
+            del row, value
+
+        return row_return
