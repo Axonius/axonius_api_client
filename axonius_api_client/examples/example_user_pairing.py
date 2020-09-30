@@ -17,7 +17,6 @@ DVC_FIELDS = [AGENT_VERSIONS_FIELD]
 AGENT_CHECKS = [
     {
         "name": "CrowdStrike Agent",
-        "status": "normal",
         "version": "5.36.11809.0",
     }
 ]
@@ -94,3 +93,16 @@ if __name__ == "__main__":
 
     for user in assets:
         parse_user(user=user, client=ctx)
+
+    """
+    take in a csv
+    csv has columns: email, first name, last name
+    search for email in users
+    if not hits, search for first and last name
+    if no hits, diaf
+    if hit: find associated devices
+    if no associated devices, include in output csv that we don't know what the associated
+    output columns:
+        users: ass dvcs, user name, display name, mail, domain, first name, last name
+        devices: hostname, asset name, agent versions, MISSING AGENT VERSION, os.full_os_string
+    """
