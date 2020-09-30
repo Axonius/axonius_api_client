@@ -165,6 +165,9 @@ class Types:
     SQ: List[str] = [*DICT, SAVED_QUERY]
     """Required keys for the WizardCsv class."""
 
+    CLI: List[str] = [*DICT]
+    """Required keys for the WizardCsv class."""
+
 
 class Docs:
     """Documentation strings for wizards."""
