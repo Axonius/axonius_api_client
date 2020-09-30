@@ -84,7 +84,7 @@ def tablize_cnxs(
     """Pass."""
     values = []
     for cnx in cnxs:
-        cnx["label"] = cnx["config"].get("connection_label")
+        cnx["connection_label"] = cnx["config"].get("connection_label")
         value = tab_map(value=cnx, key_map=KEY_MAP_CNX, orig=False)
         values.append(value)
 

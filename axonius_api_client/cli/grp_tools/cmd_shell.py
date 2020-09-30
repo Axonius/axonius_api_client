@@ -15,16 +15,18 @@ from ..options import AUTH, add_options
 SHELL_BANNER = """Welcome human. We have some refreshments available for you:
 
     - ctx: Click context object
-    - client/c: Instance of axonius_api_client.connect.Connect
+    - client/c: API Client connection object
     - jdump/j: Helper function to pretty print python objects
     - axonapi: API client package itself
 
 API Objects:
-    - adapters/a: Instance of axonius_api_client.api.Adapters
-    - devices/d: Instance of axonius_api_client.api.Devices
-    - users/u: Instance of axonius_api_client.api.Users
-    - system/s: Instance of axonius_api_client.api.System
-    - enforcements/e: Instance of axonius_api_client.api.Enforcements
+    - devices/d: Work with device assets
+    - users/u: Work with user assets
+    - adapters/a: Work with adapters and adapter connections
+    - system/s: Work with users, roles, global settings, and more
+    - dashboard/db: Work with dashboards and discovery cycle
+    - instances/i: Work with instances
+    - jdump/j: Helper function to pretty print python objects
 """
 
 SHELL_EXIT = """Goodbye human. We hope you enjoyed your stay."""
@@ -50,36 +52,42 @@ def cmd(ctx, url, key, secret):  # noqa: D301
 
     \b
         - ctx: Click context object
-        - client/c: Instance of axonius_api_client.connect.Connect
-        - devices/d: Instance of axonius_api_client.api.Devices
-        - users/u: Instance of axonius_api_client.api.Users
-        - adapters/a: Instance of axonius_api_client.api.Adapters
-        - system/s: Instance of axonius_api_client.api.System
         - axonapi: API Client package itself
+        - client/c: API Client connection object
+        - devices/d: Work with device assets
+        - users/u: Work with user assets
+        - adapters/a: Work with adapters and adapter connections
+        - system/s: Work with users, roles, global settings, and more
+        - dashboard/db: Work with dashboards and discovery cycle
+        - instances/i: Work with instances
         - jdump/j: Helper function to pretty print python objects
 
     """
     client = ctx.obj.start_client(url=url, key=key, secret=secret, save_history=True)
 
-    client._http.save_history = True
+    client.HTTP.save_history = True
 
     shellvars = {
-        "ctx": ctx,
-        "client": client,
-        "c": client,
-        "devices": client.devices,
-        "d": client.devices,
-        "users": client.users,
-        "u": client.users,
         "adapters": client.adapters,
-        "a": client.adapters,
-        "jdump": jdump,
-        "j": jdump,
-        "enforcements": client.enforcements,
-        "e": client.enforcements,
-        "s": client.system,
-        "system": client.system,
         "axonapi": axonapi,
+        "client": client,
+        "ctx": ctx,
+        "dashboard": client.dashboard,
+        "devices": client.devices,
+        "enforcements": client.enforcements,
+        "instances": client.instances,
+        "jdump": jdump,
+        "system": client.system,
+        "users": client.users,
+        "a": client.adapters,
+        "c": client,
+        "d": client.devices,
+        "db": client.dashboard,
+        "e": client.enforcements,
+        "i": client.instances,
+        "j": jdump,
+        "s": client.system,
+        "u": client.users,
     }
 
     spawn_shell(shellvars)

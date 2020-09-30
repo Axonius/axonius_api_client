@@ -11,6 +11,7 @@ from ...tools import dt_now, dt_parse_tmpl, dt_sec_ago, json_dump, listify
 from ..adapters import Adapters
 from ..asset_callbacks import Base, get_callbacks_cls
 from ..mixins import ModelMixins
+from ..wizard import Wizard, WizardCsv, WizardText
 from .fields import Fields
 from .labels import Labels
 from .saved_query import SavedQuery
@@ -20,14 +21,26 @@ class AssetMixin(ModelMixins):
     """API model for working with user and device assets."""
 
     FIELD_TAGS: str = "labels"
+    """Field name for getting tabs (labels)."""
+
     FIELD_AXON_ID: str = "internal_axon_id"
+    """Field name for asset unique ID."""
+
     FIELD_ADAPTERS: str = "adapters"
+    """Field name for list of adapters on an asset."""
+
     FIELD_ADAPTER_LEN: str = "adapter_list_length"
+    """Pass."""
     FIELD_LAST_SEEN: str = "specific_data.data.last_seen"
+    """Pass."""
     FIELD_MAIN: str = FIELD_AXON_ID
+    """Pass."""
     FIELD_SIMPLE: str = FIELD_AXON_ID
+    """Pass."""
     FIELD_COMPLEX: str = None
+    """Pass."""
     FIELD_COMPLEX_SUB: str = None
+    """Pass."""
 
     FIELDS_API: List[str] = [
         FIELD_AXON_ID,
@@ -35,14 +48,11 @@ class AssetMixin(ModelMixins):
         FIELD_TAGS,
         FIELD_ADAPTER_LEN,
     ]
+    """Pass."""
 
     @property
     def fields_default(self) -> List[dict]:
-        """Fields to add to all get calls for this asset type.
-
-        Returns:
-            fields to add to
-        """
+        """Fields to add to all get calls for this asset type."""
         raise NotImplementedError  # pragma: no cover
 
     def destroy(self, destroy: bool, history: bool) -> dict:  # pragma: no cover
@@ -53,14 +63,8 @@ class AssetMixin(ModelMixins):
         """Get the count of assets.
 
         Args:
-            query: default ``None`` -
-
-                * if ``None`` return the count of all assets
-                * if :obj:`str` return the count of assets that match a
-                  query built by the GUI query wizard
-
-        Returns:
-            count of assets matching query
+            query: if supplied, only return the count of assets that match the query
+            history_date: return count for a given historical date
         """
         history_date = self.validate_history_date(value=history_date)
         return self._count(query=query, history_date=history_date)
@@ -69,10 +73,8 @@ class AssetMixin(ModelMixins):
         """Get the count of assets that would be returned by a saved query.
 
         Args:
-            name of saved query to get count of assets from
-
-        Returns:
-            count of assets matching query in saved query
+            name: saved query to get count of assets from
+            history_date: return count for a given historical date
         """
         sq = self.saved_query.get_by_name(value=name)
         history_date = self.validate_history_date(value=history_date)
@@ -85,25 +87,11 @@ class AssetMixin(ModelMixins):
         """Get objects for a given query using paging.
 
         Args:
-            generator: default ``False`` -
-
-                * True: return an iterator for assets that will yield rows
-                  as they are fetched
-                * False: return a list of rows after all have been fetched
+            generator: return an iterator for assets that will yield rows as they are fetched
             **kwargs: passed to :meth:`get_generator`
-
-        Yields:
-            row if generator is True
-
-        Returns:
-            rows if generator is False
         """
         gen = self.get_generator(**kwargs)
-
-        if generator:
-            return gen
-
-        return list(gen)
+        return gen if generator else list(gen)
 
     def get_generator(
         self,
@@ -131,35 +119,26 @@ class AssetMixin(ModelMixins):
         """Get an iterator of objects for a given query using paging.
 
         Args:
-            query (:obj:`str`, optional): default ``None`` -
-
-                * if ``None`` return all assets
-                * if :obj:`str` return the assets that match a query built
-                  by the GUI query wizard
-            fields (:obj:`list` of :obj:`str`, optional): default ``None`` -
-                the fields to include for each asset, will be validated and
-                processed into their fully qualified name using
-                :meth:`Fields.validate`
-            fields_manual (:obj:`list` of :obj:`str`, optional): default ``None`` -
-                list of fully qualified fields to include for each asset
-            fields_regex (:obj:`list` of :obj:`str`, optional): default ``None`` -
-                list of fields to add using regular expression matches, will be
-                validated and process into the matching fully qualified names using
-                :meth:`Fields.validate`
-            fields_default (:obj:`bool`, optional): default ``True`` -
-                Include the fields in _default_fields
-            fields_error (:obj:`bool`, optional): default ``True`` -
-                throw an exception if fields fail to be validated by
-                :meth:`Fields.validate`
-            max_rows (:obj:`int`, optional): default ``None`` - return N assets
-            max_pages (:obj:`int`, optional): default ``None`` - return N pages of assets
-            page_size (:obj:`int`, optional):
-                default default :data:`MAX_PAGE_SIZE` -
-                return N assets per page
-            page_start (:obj:`int`, optional): default ``0`` - start at page N
-
-        Yields:
-            :obj:`dict`: asset matching **query**
+            query: if supplied, only return the assets that match the query
+            fields: fields to return for each asset (will be validated)
+            fields_manual: fields to return for each asset (will NOT be validated)
+            fields_regex: regex of fields to return for each asset
+            fields_fuzzy: string to fuzzy match of fields to return for each asset
+            fields_default: include the default fields in :attr:`fields_default`
+            fields_root: include all fields of an adapter that are not complex sub-fields
+            max_rows: only return N rows
+            max_pages: only return N pages
+            row_start: start at row N
+            page_size: fetch N rows per page
+            page_start: start at page N
+            page_sleep: sleep for N seconds between each page fetch
+            use_cursor: use the endpoint that fetches rows using a DB cursor
+            export: export assets using a callback method
+            include_details: include details fields showing the adapter source of agg values
+            sort_field: sort the returned assets on a given field
+            sort_descending: reverse the sort of the returned assets
+            history_date: return assets for a given historical date
+            **kwargs: passed thru to the asset callback defined in ``export``
         """
         page_size = self._get_page_size(page_size=page_size, max_rows=max_rows)
 
@@ -210,7 +189,7 @@ class AssetMixin(ModelMixins):
 
         callbacks_cls = get_callbacks_cls(export=export)
         callbacks = callbacks_cls(apiobj=self, getargs=kwargs, state=state, store=store)
-        self._LAST_CALLBACKS: Base = callbacks
+        self.LAST_CALLBACKS: Base = callbacks
 
         callbacks.start()
 
@@ -236,10 +215,10 @@ class AssetMixin(ModelMixins):
                 break
 
             for row in rows:
-                row_items = callbacks.process_row(row=row)
+                proc_rows = callbacks.process_row(row=row)
 
-                for row_item in listify(obj=row_items):
-                    yield row_item
+                for proc_row in listify(obj=proc_rows):
+                    yield proc_row
 
                 if state["stop_fetch"]:  # pragma: no cover
                     break
@@ -335,19 +314,15 @@ class AssetMixin(ModelMixins):
         """Get the full metadata of all adapters for a single asset.
 
         Args:
-            id (:obj:`str`): internal_axon_id of asset to get all metadata for
+            id: internal_axon_id of asset to get all metadata for
 
         Raises:
-            :exc:`ValueNotFoundError`: if asset is not found with supplied **id**
-
-        Returns:
-            :obj:`dict`: dict with all metadata for all adapters for asset with
-                **id** of internal_axon_id
+            :exc:`NotFoundError`: if id is not found
         """
         try:
             return self._get_by_id(id=id)
         except JsonError:
-            otype = self.router._object_type
+            otype = self.router.OBJ_TYPE
             msg = f"Failed to find internal_axon_id {id!r} for {otype}"
             raise NotFoundError(msg)
 
@@ -357,14 +332,8 @@ class AssetMixin(ModelMixins):
         """Get assets that would be returned by a saved query.
 
         Args:
-            name (:obj:`str`): name of saved query to get count of assets from
+            name: name of saved query to get count of assets from
             **kwargs: passed to :meth:`get`
-
-        Yields:
-            :obj:`dict`: asset matching **query** if generator is True
-
-        Returns:
-            :obj:`list` of :obj:`dict`: assets matching **query** if generator is False
         """
         sq = self.saved_query.get_by_name(value=name)
         kwargs["query"] = sq["view"]["query"]["filter"]
@@ -487,14 +456,31 @@ class AssetMixin(ModelMixins):
         """Post init method for subclasses to use for extra setup."""
         # cross reference
         self.adapters: Adapters = Adapters(auth=self.auth, **kwargs)
+        """Adapters API model for cross reference."""
 
-        # children
         self.labels: Labels = Labels(parent=self)
-        self.saved_query: SavedQuery = SavedQuery(parent=self)
-        self.fields: Fields = Fields(parent=self)
+        """Work with labels (tags) for this asset type."""
 
-        self._LAST_GET: dict = {}
-        self._LAST_CALLBACKS: Base = None
+        self.saved_query: SavedQuery = SavedQuery(parent=self)
+        """Work with saved queries for this asset type."""
+
+        self.fields: Fields = Fields(parent=self)
+        """Work with fields for this asset type."""
+
+        self.wizard: Wizard = Wizard(apiobj=self)
+        """Query wizard builder."""
+
+        self.wizard_text: WizardText = WizardText(apiobj=self)
+        """Query wizard builder from text."""
+
+        self.wizard_csv: WizardCsv = WizardCsv(apiobj=self)
+        """Query wizard builder from CSV."""
+
+        self.LAST_GET: dict = {}
+        """Request object sent for last :meth:`get` request"""
+
+        self.LAST_CALLBACKS: Base = None
+        """Callbacks object used for last :meth:`get` request."""
 
         super(AssetMixin, self)._init(**kwargs)
 
@@ -506,14 +492,8 @@ class AssetMixin(ModelMixins):
         """Direct API method to get the count of assets.
 
         Args:
-            query (:obj:`str`, optional): default ``None`` -
-
-                * if ``None`` return the count of all assets
-                * if :obj:`str` return the count of assets that match a
-                  query built by the GUI query wizard
-
-        Returns:
-            :obj:`int`: count of assets matching query
+            query: if supplied, only return the count of assets that match the query
+            history_date: return count for a given historical date
         """
         params = {}
         params["filter"] = query
@@ -534,23 +514,14 @@ class AssetMixin(ModelMixins):
         """Direct API method to get a page of assets.
 
         Args:
-            query (:obj:`str`, optional): default ``None`` -
-
-                * if ``None`` return all assets
-                * if :obj:`str` return the assets that match a query built
-                  by the GUI query wizard
-            fields (:obj:`list` of :obj:`str` or :obj:`str`): default ``None`` -
-
-                * if :obj:`str` CSV seperated list of fields (columns) to include in
-                  return
-                * if :obj:`list` of :obj:`str` the strs of fields (columns) to include
-                  in return
-            row_start (:obj:`int`, optional): default ``0`` - for paging, skip N rows
-            page_size (:obj:`int`, optional): default ``0`` - for paging, return N rows
-
-        Returns:
-            :obj:`list` of :obj:`dict`: assets matching **query** with key/value pairs
-                requested as per **fields**
+            query: if supplied, only return the assets that match the query
+            fields: CSV or list of fields to include in return
+            row_start: start at row N
+            page_size: fetch N assets
+            include_details: include details fields showing the adapter source of agg values
+            sort_field: sort the returned assets on a given field
+            sort_descending: reverse the sort of the returned assets
+            history_date: return assets for a given historical date
         """
         page_size = self._get_page_size(page_size=page_size, max_rows=None)
 
@@ -569,7 +540,7 @@ class AssetMixin(ModelMixins):
 
             params["fields"] = fields
 
-        self._LAST_GET: dict = params
+        self.LAST_GET: dict = params
 
         return self.request(method="post", path=self.router.root, json=params)
 
@@ -585,7 +556,19 @@ class AssetMixin(ModelMixins):
         sort_field: Optional[str] = None,
         sort_descending: bool = False,
     ) -> dict:
-        """Get a page for a given query."""
+        """Get a page for a given query.
+
+        Args:
+            query: if supplied, only return the assets that match the query
+            fields: CSV or list of fields to include in return
+            row_start: start at row N
+            page_size: fetch N assets
+            include_details: include details fields showing the adapter source of agg values
+            sort_field: sort the returned assets on a given field
+            sort_descending: reverse the sort of the returned assets
+            history_date: return assets for a given historical date
+            cursor: cursor returned by previous call to continue paging through
+        """
         page_size = self._get_page_size(page_size=page_size, max_rows=None)
 
         params = {}
@@ -604,18 +587,14 @@ class AssetMixin(ModelMixins):
 
             params["fields"] = fields
 
-        self._LAST_GET: dict = params
+        self.LAST_GET: dict = params
         return self.request(method="post", path=self.router.cached, json=params)
 
     def _get_by_id(self, id: str) -> dict:
         """Direct API method to get the full metadata of all adapters for a single asset.
 
         Args:
-            id (:obj:`str`): internal_axon_id of asset to get all metadata for
-
-        Returns:
-            :obj:`dict`: dict with all metadata for all adapters for asset with
-                **id** of internal_axon_id
+            id: internal_axon_id of asset to get all metadata for
         """
         path = self.router.by_id.format(id=id)
         return self.request(method="get", path=path)

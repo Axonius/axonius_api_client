@@ -44,14 +44,11 @@ class RunAction(ModelMixins):
         """Deploy an action.
 
         Args:
-            name (:obj:`str`): name of action to deploy
-            ids (:obj:`list` of :obj:`str`): internal_axon_ids of devices to process
-            uuid (:obj:`str`): UUID of binary to use in deployment
-            filename (:obj:`str`): filename of binary to use in deployment
-            params (:obj:`str`, optional): parameters to pass to action
-
-        Returns:
-            :obj:`object`: response from deploying action
+            name: name of action to deploy
+            ids: internal_axon_ids of devices to process
+            uuid: UUID of binary to use in deployment
+            filename: filename of binary to use in deployment
+            params: parameters to pass to action
         """
         data = {}
         data["action_name"] = action_name
@@ -69,12 +66,9 @@ class RunAction(ModelMixins):
         """Run an action.
 
         Args:
-            action_name (:obj:`str`): name of action to run
-            ids (:obj:`list` of :obj:`str`): internal_axon_ids of devices to process
-            command (:obj:`str`): command to run
-
-        Returns:
-            :obj:`object`: response from running action
+            action_name: name of action to run
+            ids: internal_axon_ids of devices to process
+            command: command to run
         """
         data = {}
         data["action_name"] = action_name
@@ -90,15 +84,12 @@ class RunAction(ModelMixins):
         content: IO,
         content_type: Optional[str] = None,
         headers: Optional[dict] = None,
-    ):
-        """Upload a file to the system for use in deployment.
+    ) -> str:
+        """Upload a file to the system for use in deployment and get the UUID of new file.
 
         Args:
-            binary (:obj:`io.BytesIO`): binary bits of file to upload
-            filename (:obj:`str`): name of file to upload
-
-        Returns:
-            :obj:`str`: UUID of uploaded file.
+            binary: binary bits of file to upload
+            filename: name of file to upload
         """
         data = {"field_name": "binary"}
         files = {"userfile": (name, content, content_type, headers)}

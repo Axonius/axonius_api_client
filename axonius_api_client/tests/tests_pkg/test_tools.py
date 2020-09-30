@@ -50,14 +50,12 @@ class TestCoerce:
     """Test axonius_api_client.join_url."""
 
     def test_int(self):
-        """Pass."""
         with pytest.raises(ToolsError):
             coerce_int("badwolf")
 
         assert coerce_int("456") == 456
 
     def test_bool(self):
-        """Pass."""
         with pytest.raises(ToolsError):
             coerce_bool("badwolf")
 
@@ -325,7 +323,6 @@ class TestPathWrite:
             path_write(obj=path, data=data, make_parent=False)
 
     def test_noperm_parent(self):
-        """Pass."""
         tmpdir = pathlib.Path(tempfile.gettempdir())
         path = tmpdir / "file.txt"
         data = "abc\n123\n"
@@ -937,17 +934,14 @@ class TestDtNow:
     """Test dt_*."""
 
     def test_now(self):
-        """Pass."""
         now = dt_now()
         assert now.tzinfo
 
     def test_now_notz(self):
-        """Pass."""
         now = dt_now(tz=None)
         assert not now.tzinfo
 
     def test_now_delta(self):
-        """Pass."""
         then = dt_now(delta=timedelta(minutes=5))
         assert dt_min_ago(then) == 5
 
@@ -961,12 +955,10 @@ class TestDtParse:
         scope="class",
     )
     def test_val(self, val):
-        """Pass."""
         now = dt_parse(obj=val)
         assert isinstance(now, datetime)
 
     def test_list(self):
-        """Pass."""
         now = [format(dt_now())]
         now = dt_parse(obj=now)
         assert isinstance(now, list)
@@ -978,12 +970,10 @@ class TestDtWithinMin:
 
     @pytest.mark.parametrize("val", [None, "x", False, True, {}, [], 6, "8", b"9"], scope="class")
     def test_bad(self, val):
-        """Pass."""
         then = dt_now(delta=timedelta(minutes=5))
         assert dt_within_min(obj=then, n=val) is False
 
     @pytest.mark.parametrize("val", [0, 4, "1", b"2"], scope="class")
     def test_ok(self, val):
-        """Pass."""
         then = dt_now(delta=timedelta(minutes=5))
         assert dt_within_min(obj=then, n=val) is True

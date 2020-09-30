@@ -174,16 +174,12 @@ These options are useful for debugging purposes.
 
 * Log request bodies at DEBUG level:
   :option:`axonshell -reqbody / --log-request-body <axonshell --log-request-body>`
-* Log request attributes in brief form at DEBUG level:
-  :option:`axonshell -reqb / --log-request-attrs-brief <axonshell --log-request-attrs-verbose>`
-* Log request attributes in verbose form at DEBUG level:
-  :option:`axonshell -reqv --log-request-attrs-verbose <axonshell --log-request-attrs-verbose>`
 * Log response bodies at DEBUG level:
   :option:`axonshell -respbody / --log-response-body <axonshell --log-response-body>`
-* Log response attributes in brief form at DEBUG level:
-  :option:`axonshell -respb / --log-response-attrs-brief <axonshell --log-response-attrs-verbose>`
-* Log response attributes in verbose form at DEBUG level:
-  :option:`axonshell -respv --log-response-attrs-verbose <axonshell --log-response-attrs-verbose>`
+* Control with request attributes get logged:
+  :option:`axonshell -reqattr / --log-request-attrs <axonshell --log-request-attrs>`
+* Control with response attributes get logged:
+  :option:`axonshell -respattr --log-response-attrs <axonshell --log-response-attrs>`
 
 .. note::
 

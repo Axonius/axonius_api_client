@@ -10,18 +10,6 @@ to CSV or JSON.
 
     :ref:`shellhell` for how to deal with quoting the query value in various shells.
 
-Output feeds
-===============================================
-
-The output from this command is able to be supplied as input to these commands:
-
-* :doc:`../grp_assets_reports_cmds/cmd_missing_adapters` to build a report of
-  missing adapters for all assets returned from this command.
-* :doc:`../grp_assets_labels_cmds/cmd_add` to add labels to all assets returned from
-  this command.
-* :doc:`../grp_assets_labels_cmds/cmd_remove` to remove labels from all assets returned
-  from this command.
-
 Common Options
 ===============================================
 

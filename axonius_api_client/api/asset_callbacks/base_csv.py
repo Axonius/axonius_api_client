@@ -1,20 +1,25 @@
 # -*- coding: utf-8 -*-
-"""API models for working with device and user assets."""
+"""CSV export callbacks class."""
 import codecs
 import csv
-from typing import List
+from typing import List, Union
 
 from ...tools import listify
 from .base import Base
 
 
 class Csv(Base):
-    """Pass."""
+    """CSV export callbacks class.
+
+    Notes:
+        See :meth:`args_map` for the arguments this callbacks class.
+    """
 
     CB_NAME: str = "csv"
+    """name for this callback"""
 
     def _init(self, **kwargs):
-        """Pass."""
+        """Override defaults in GETARGS to make export readable."""
         self.GETARGS["field_null"] = True
         self.GETARGS["field_flatten"] = True
         self.GETARGS["field_join"] = True
@@ -22,19 +27,20 @@ class Csv(Base):
             self.GETARGS["field_titles"] = True
 
     def start(self, **kwargs):
-        """Create csvstream and associated file descriptor."""
+        """Start this callbacks object."""
         super(Csv, self).start(**kwargs)
         self.open_fd()
 
     def do_start(self, **kwargs):
-        """Pass."""
+        """Create the CSV writer and write the columns."""
         if getattr(self, "_stream", None):
             return
 
         restval = self.GETARGS.get("csv_key_miss", None)
         extras = self.GETARGS.get("csv_key_extras", "ignore")
-        dialect = self.get_csv_dialect()
-        quote = self.get_csv_quote()
+        dialect = self.GETARGS.get("csv_dialect", "excel")
+        quote = self.GETARGS.get("csv_quoting", "nonnumeric")
+        quote = getattr(csv, f"QUOTE_{quote.upper()}")
 
         try:
             self._fd.write(codecs.BOM_UTF8.decode("utf-8"))
@@ -55,49 +61,44 @@ class Csv(Base):
         self.do_export_schema()
 
     def stop(self, **kwargs):
-        """Close dictwriter and associated file descriptor."""
+        """Stop this callbacks object."""
         super(Csv, self).stop(**kwargs)
         self.do_stop(**kwargs)
 
     def do_stop(self, **kwargs):
-        """Pass."""
+        """Close the file descriptor."""
         self._fd.write("\n")
         self.close_fd()
 
-    def write_row(self, row: dict):
-        self._stream.fieldnames += [x for x in row if x not in self._stream.fieldnames]
-        self._stream.writerow(row)
+    def write_rows(self, rows: Union[List[dict], dict]):
+        """Write rows to the file descriptor.
 
-    def process_row(self, row: dict) -> List[dict]:
-        """Write row to dictwriter and delete it."""
-        self.do_pre_row(row=row)
+        Args:
+            rows: rows to process
+        """
+        rows = listify(rows)
+        for row in rows:
+            self._stream.fieldnames += [x for x in row if x not in self._stream.fieldnames]
+            self._stream.writerow(row)
+
+    def process_row(self, row: Union[List[dict], dict]) -> List[dict]:
+        """Process the callbacks for current row.
+
+        Args:
+            row: row to process
+        """
+        rows = listify(row)
         self.do_start()
 
-        row_return = [{"internal_axon_id": row["internal_axon_id"]}]
-        new_rows = self.do_row(row=row)
-
-        for new_row in listify(new_rows):
-            self.write_row(row=new_row)
-            del new_row
-
-        del new_rows
-        del row
-
+        row_return = [{"internal_axon_id": row["internal_axon_id"]} for row in rows]
+        rows = self.do_pre_row(rows=rows)
+        rows = self.do_row(rows=rows)
+        self.write_rows(rows=rows)
+        del rows, row
         return row_return
 
-    def get_csv_dialect(self) -> str:
-        """Pass."""
-        dialect = self.GETARGS.get("csv_dialect", "excel")
-        return dialect
-
-    def get_csv_quote(self) -> int:
-        """Pass."""
-        quote = self.GETARGS.get("csv_quoting", "nonnumeric")
-        quote = getattr(csv, f"QUOTE_{quote.upper()}")
-        return quote
-
     def do_export_schema(self):
-        """Pass."""
+        """Add schema rows to the output."""
         export_schema = self.GETARGS.get("export_schema", True)
 
         if export_schema:

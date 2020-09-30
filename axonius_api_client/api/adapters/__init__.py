@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
-"""API models package."""
+"""APIs for working with adapters and adapter connections."""
 from . import adapters, cnx
 from .adapters import Adapters
+from .cnx import Cnx
 
-__all__ = ("Adapters", "adapters", "cnx")
+__all__ = ("Adapters", "adapters", "cnx", "Cnx")

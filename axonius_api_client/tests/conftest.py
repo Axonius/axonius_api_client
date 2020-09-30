@@ -98,7 +98,7 @@ def api_users(request):
 
 @pytest.fixture(scope="session")
 def api_enforcements(request):
-    """Pass."""
+    """Test utility."""
     auth = get_auth(request)
     obj = enforcements.Enforcements(auth=auth)
     check_apiobj(authobj=auth, apiobj=obj)
@@ -107,7 +107,7 @@ def api_enforcements(request):
 
 @pytest.fixture(scope="session")
 def api_run_action(request):
-    """Pass."""
+    """Test utility."""
     auth = get_auth(request)
     obj = enforcements.actions.RunAction(auth=auth)
     check_apiobj(authobj=auth, apiobj=obj)
@@ -116,7 +116,7 @@ def api_run_action(request):
 
 @pytest.fixture(scope="session")
 def api_adapters(request):
-    """Pass."""
+    """Test utility."""
     auth = get_auth(request)
     obj = Adapters(auth=auth)
     check_apiobj(authobj=auth, apiobj=obj)
@@ -126,7 +126,7 @@ def api_adapters(request):
 
 @pytest.fixture(scope="session")
 def api_dashboard(request):
-    """Pass."""
+    """Test utility."""
     auth = get_auth(request)
     obj = dashboard.Dashboard(auth=auth)
     check_apiobj(authobj=auth, apiobj=obj)
@@ -135,7 +135,7 @@ def api_dashboard(request):
 
 @pytest.fixture(scope="session")
 def api_instances(request):
-    """Pass."""
+    """Test utility."""
     auth = get_auth(request)
     obj = instances.Instances(auth=auth)
     check_apiobj(authobj=auth, apiobj=obj)
@@ -144,7 +144,7 @@ def api_instances(request):
 
 @pytest.fixture(scope="session")
 def api_system(request):
-    """Pass."""
+    """Test utility."""
     auth = get_auth(request)
     obj = system.System(auth=auth)
     check_apiobj(authobj=auth, apiobj=obj)
@@ -162,14 +162,14 @@ def api_system(request):
 
 @pytest.fixture(scope="session")
 def api_signup(request):
-    """Pass."""
+    """Test utility."""
     obj = Signup(url=get_url(request))
     return obj
 
 
 @pytest.fixture(scope="session")
 def csv_file_path(api_adapters):
-    """Pass."""
+    """Test utility."""
     data = api_adapters.file_upload(
         name=CSV_ADAPTER,
         node=DEFAULT_NODE,
@@ -185,7 +185,7 @@ def csv_file_path(api_adapters):
 
 @pytest.fixture(scope="session")
 def csv_file_path_broken(api_adapters):
-    """Pass."""
+    """Test utility."""
     data = api_adapters.file_upload(
         name=CSV_ADAPTER,
         node=DEFAULT_NODE,

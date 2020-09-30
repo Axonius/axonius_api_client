@@ -9,20 +9,65 @@ from ..mixins import ChildMixins, PagingMixinsObject
 
 
 def check_gui_page_size(size: Optional[int] = None) -> int:
-    """Pass."""
-    if size:
-        if size not in GUI_PAGE_SIZES:
-            raise ApiError(f"gui_page_size of {size} is invalid, must be one of {GUI_PAGE_SIZES}")
-    else:
-        size = GUI_PAGE_SIZES[0]
+    """Check page size to see if it one of the valid GUI page sizes.
+
+    Args:
+        size: page size to check
+
+    Raises:
+        :exc:`ApiError`: if size is not one of :data:`axonius_api_client.constants.GUI_PAGE_SIZES`
+    """
+    size = size or GUI_PAGE_SIZES[0]
+    if size not in GUI_PAGE_SIZES:
+        raise ApiError(f"gui_page_size of {size} is invalid, must be one of {GUI_PAGE_SIZES}")
     return size
 
 
 class SavedQuery(ChildMixins, PagingMixinsObject):
-    """ChildMixins API model for working with saved queries for the parent asset type."""
+    """API object for working with saved queries for the parent asset type.
+
+    Examples:
+        First, create a ``client`` using :obj:`axonius_api_client.connect.Connect`.
+
+        >>> # Get a saved query
+        >>> sq = client.devices.saved_query.get(name="test")
+        >>>
+        >>> # See the fields defined in the saved query
+        >>> print(sq['view']['fields'])
+        >>>
+        >>> # See the query defined in the saved query
+        >>> print(sq['view']['query']['filter'])
+        >>>
+        >>> # Delete the saved query
+        >>> deleted = client.devices.saved_query.delete(rows=[sq])
+        >>>
+        >>> # Delete the saved query by name
+        >>> deleted = client.devices.saved_query.delete_by_name(name="test")
+
+        Create a saved query using a :obj:`axonius_api_client.api.wizard.wizard.Wizard`
+
+        >>> parsed = client.devices.wizard_text.parse(content="simple hostname contains blah")
+        >>> query = parsed["query"]
+        >>> expressions = parsed["expressions"]
+        >>> sq = devices.saved_query.add(
+        ...     name="test",
+        ...     query=query,
+        ...     expressions=expressions,
+        ...     description="meep meep",
+        ...     tags=["nyuck1", "nyuck2", "nyuck3"],
+        ... )
+
+    """
+
+    # XXX need update saved query, doc the other methods (get tags, get_by_tags, etc)
 
     def get_by_tags(self, value: Union[str, List[str]], **kwargs) -> List[dict]:
-        """Get saved queries by tags."""
+        """Get saved queries by tags.
+
+        Args:
+            value: list of tags
+            **kwargs: passed to :meth:`get`
+        """
         value = listify(value)
         rows = self.get(**kwargs)
         matches = []
@@ -41,7 +86,11 @@ class SavedQuery(ChildMixins, PagingMixinsObject):
         return matches
 
     def get_tags(self, **kwargs) -> List[str]:
-        """Get all tags for saved queries."""
+        """Get all tags for saved queries.
+
+        Args:
+            **kwargs: passed to :meth:`get`
+        """
         rows = self.get(**kwargs)
         tags = [y for x in rows for y in x.get("tags", [])]
         return sorted(list(set(tags)))
@@ -50,53 +99,48 @@ class SavedQuery(ChildMixins, PagingMixinsObject):
         self,
         name: str,
         query: Optional[str] = None,
-        query_expr: Optional[str] = None,
         tags: Optional[List[str]] = None,
         description: Optional[str] = None,
         expressions: Optional[List[str]] = None,
         fields: Optional[Union[List[str], str]] = None,
-        fields_regex: Optional[Union[List[str], str]] = None,
         fields_manual: Optional[Union[List[str], str]] = None,
+        fields_regex: Optional[Union[List[str], str]] = None,
+        fields_fuzzy: Optional[Union[List[str], str]] = None,
         fields_default: bool = True,
+        fields_root: Optional[str] = None,
         sort_field: Optional[str] = None,
         sort_descending: bool = True,
         column_filters: Optional[dict] = None,
         gui_page_size: Optional[int] = None,
         private: bool = False,
         **kwargs,
-    ):
+    ) -> dict:
         """Create a saved query.
 
-        Warning:
-            Queries created with this method will NOT show the filters in the
-            query wizard!
+        Notes:
+            Saved Queries created without expressions will not be editable using the query wizard
+            in the GUI. Use :obj:`axonius_api_client.api.wizard.wizard.Wizard` to produce a query
+            and it's accordant expressions for the GUI query wizard.
 
         Args:
-            name (:obj:`str`): name of saved query to create
-            query (:obj:`str`): query built by GUI query wizard
-            fields (:obj:`object`): fields/columns
-            fields_manual (:obj:`list` of :obj:`str`, optional): default ``None`` -
-                list of fully qualified fields to include for each asset
-            fields_regex (:obj:`list` of :obj:`str`, optional): default ``None`` -
-                list of fields to add using regular expression matches, will be
-                validated and process into the matching fully qualified names using
-                :meth:`Fields.validate`
-            fields_default (:obj:`bool`, optional): default ``True`` -
-                Include the fields in _default_fields
-            fields_error (:obj:`bool`, optional): default ``True`` -
-                throw an exception if fields fail to be validated by
-                :meth:`Fields.validate`
-            sort (:obj:`str`, optional): default ``None`` - field to sort results on
-            sort_descending (:obj:`bool`, optional): default ``True`` - sort on
-                **field** in descending order
-            column_filters (:obj:`dict`, optional): default ``None`` - column
-                filters keyed as field_name:value
-            gui_page_size (:obj:`int`, optional): default ``None`` -
-                show N rows per page in GUI
-
-        Returns:
-            :obj:`dict`: metadata of saved query that was created
+            name: name of saved query
+            description: description
+            tags: list of tags
+            expressions: expressions built by :obj:`axonius_api_client.api.wizard.wizard.Wizard`
+            query: query built by GUI or the CLI query wizard
+            fields: fields to return for each asset (will be validated)
+            fields_manual: fields to return for each asset (will NOT be validated)
+            fields_regex: regex of fields to return for each asset
+            fields_fuzzy: string to fuzzy match of fields to return for each asset
+            fields_default: include the default fields defined in the parent asset object
+            fields_root: include all fields of an adapter that are not complex sub-fields
+            sort_field: sort the returned assets on a given field
+            sort_descending: reverse the sort of the returned assets
+            column_filters: column filters keyed as field_name:value
+            gui_page_size: show N rows per page in GUI
+            private: make this saved query private to current user
         """
+        query_expr: Optional[str] = kwargs.get("query_expr", None) or query
         gui_page_size = check_gui_page_size(size=gui_page_size)
 
         fields = self.parent.fields.validate(
@@ -104,12 +148,12 @@ class SavedQuery(ChildMixins, PagingMixinsObject):
             fields_manual=fields_manual,
             fields_regex=fields_regex,
             fields_default=fields_default,
+            fields_root=fields_root,
+            fields_fuzzy=fields_fuzzy,
         )
 
         if sort_field:
             sort_field = self.parent.fields.get_field_name(value=sort_field)
-
-        query_expr = query_expr or query  # TBD
 
         data_column_filters = {}
         if column_filters:
@@ -150,17 +194,13 @@ class SavedQuery(ChildMixins, PagingMixinsObject):
         data["private"] = private
 
         added = self._add(data=data)
-        kwargs["value"] = added
-        return self.get_by_uuid(**kwargs)
+        return self.get_by_uuid(value=added)
 
     def delete(self, rows: List[dict]) -> List[dict]:
-        """Delete saved queries returned from get.
+        """Delete saved queries.
 
         Args:
-            rows (:obj:`list` of :obj:`dict`): metadata of saved queries to delete
-
-        Returns:
-            :obj:`list` of :obj:`dict`: saved queries deleted
+            rows: previously fetched saved queries to delete
         """
         rows = listify(rows)
         ids = [x["uuid"] for x in rows]
@@ -168,13 +208,11 @@ class SavedQuery(ChildMixins, PagingMixinsObject):
         return rows
 
     def delete_by_name(self, value: str, **kwargs) -> dict:
-        """Delete saved queries returned from get.
+        """Delete a saved query by name.
 
         Args:
-            rows (:obj:`list` of :obj:`dict`): metadata of saved queries to delete
-
-        Returns:
-            :obj:`list` of :obj:`dict`: saved queries deleted
+            value: name of saved query to delete
+            **kwargs: passed to :meth:`get_by_name`
         """
         row = self.get_by_name(value=value, **kwargs)
         self.delete(rows=[row])
@@ -183,12 +221,8 @@ class SavedQuery(ChildMixins, PagingMixinsObject):
     def _add(self, data: dict) -> str:
         """Direct API method to create a saved query.
 
-        Warning:
-            Queries created with this method will NOT show the filters in the
-            query wizard!
-
-        Returns:
-            :obj:`str`: ID of the saved query that was created
+        Args:
+            data: saved query metadata
         """
         path = self.router.views
         return self.request(method="put", path=path, json=data)
@@ -197,10 +231,7 @@ class SavedQuery(ChildMixins, PagingMixinsObject):
         """Direct API method to delete saved queries.
 
         Args:
-            ids (:obj:`list` of :obj:`str`): list of saved query uuid's to delete
-
-        Returns:
-            :obj:`str`: empty string
+            ids: list of uuid's to delete
         """
         data = {"ids": listify(ids)}
         path = f"{self.router.views}/saved"
@@ -212,14 +243,9 @@ class SavedQuery(ChildMixins, PagingMixinsObject):
         """Direct API method to get saved queries.
 
         Args:
-            query (:obj:`str`, optional): default ``None`` - filter rows to return
-
-                This is NOT a query built by the query wizard!
-            row_start (:obj:`int`, optional): default ``0`` - for paging, skip N rows
-            page_size (:obj:`int`, optional): default ``0`` - for paging, return N rows
-
-        Returns:
-            :obj:`list` of :obj:`dict`: list of saved query metadata
+            query: filter rows to return
+            row_start: start at row N
+            page_size: fetch N assets
         """
         params = {}
         params["limit"] = page_size

@@ -15,17 +15,13 @@ GUI_SUB_KEYS = ["disable_remember_me", "enabled", "timeout"]
 
 
 class SettingsBasePublic:
-    """Pass."""
-
     def val_schemas(self, schemas, config):
-        """Pass."""
         for name, schema in schemas.items():
             assert schema["name"] == name
             assert schema["name"] in config
             assert isinstance(schema["required"], bool)
 
     def val_sub_section(self, name, meta, settings):
-        """Pass."""
         assert isinstance(meta, dict) and meta
         assert meta["settings_title"] == settings["settings_title"]
         assert meta["name"] == name
@@ -42,7 +38,6 @@ class SettingsBasePublic:
         self.val_schemas(schemas=meta["schemas"], config=meta["config"])
 
     def val_section(self, name, meta, settings):
-        """Pass."""
         assert isinstance(meta, dict) and meta
         assert meta["settings_title"] == settings["settings_title"]
         assert meta["name"] == name
@@ -59,7 +54,6 @@ class SettingsBasePublic:
             self.val_sub_section(name=sub_name, meta=sub_meta, settings=settings)
 
     def test_get(self, apiobj):
-        """Pass."""
         settings = apiobj.get()
         assert isinstance(settings, dict)
 
@@ -73,21 +67,16 @@ class SettingsBasePublic:
 
 
 class TestSettingsGui(SettingsBasePublic):
-    """Pass."""
-
     @pytest.fixture(scope="class")
     def apiobj(self, api_system):
-        """Pass."""
         return api_system.settings_gui
 
     def test_get_section_full_config_true(self, apiobj):
-        """Pass."""
         result = apiobj.get_section(section=GUI_SECTION_WITH_SUBS, full_config=True)
         assert isinstance(result, dict)
         assert "full_config" in result
 
     def test_get_sub_section_full_config_true(self, apiobj):
-        """Pass."""
         result = apiobj.get_sub_section(
             section=GUI_SECTION_WITH_SUBS, sub_section=GUI_SUB_SECTION, full_config=True
         )
@@ -95,13 +84,11 @@ class TestSettingsGui(SettingsBasePublic):
         assert "full_config" in result
 
     def test_get_section_full_config_false(self, apiobj):
-        """Pass."""
         result = apiobj.get_section(section=GUI_SECTION_WITH_SUBS, full_config=False)
         assert isinstance(result, dict)
         assert "full_config" not in result
 
     def test_get_sub_section_full_config_false(self, apiobj):
-        """Pass."""
         result = apiobj.get_sub_section(
             section=GUI_SECTION_WITH_SUBS, sub_section=GUI_SUB_SECTION, full_config=False
         )
@@ -109,22 +96,18 @@ class TestSettingsGui(SettingsBasePublic):
         assert "full_config" not in result
 
     def test_get_section_error(self, apiobj):
-        """Pass."""
         with pytest.raises(NotFoundError):
             apiobj.get_section(section="badwolf")
 
     def test_get_sub_section_error(self, apiobj):
-        """Pass."""
         with pytest.raises(NotFoundError):
             apiobj.get_sub_section(section=GUI_SECTION_WITH_SUBS, sub_section="badwolf")
 
     def test_get_sub_section_no_subsections(self, apiobj):
-        """Pass."""
         with pytest.raises(ApiError):
             apiobj.get_sub_section(section=GUI_SECTION_NO_SUBS, sub_section="badwolf")
 
     def test_update_section(self, apiobj):
-        """Pass."""
         old_section = apiobj.get_section(section=GUI_SECTION_WITH_SUBS)
         old_config = old_section["config"]
         old_value = old_config[GUI_NON_SUB_SECTION]
@@ -142,7 +125,6 @@ class TestSettingsGui(SettingsBasePublic):
         assert reset_value == old_value and reset_value != new_value
 
     def test_update_sub_section(self, apiobj):
-        """Pass."""
         old_section = apiobj.get_sub_section(
             section=GUI_SECTION_WITH_SUBS, sub_section=GUI_SUB_SECTION
         )
@@ -167,18 +149,12 @@ class TestSettingsGui(SettingsBasePublic):
 
 
 class TestSettingsCore(SettingsBasePublic):
-    """Pass."""
-
     @pytest.fixture(scope="class")
     def apiobj(self, api_system):
-        """Pass."""
         return api_system.settings_core
 
 
 class TestSettingsLifecycle(SettingsBasePublic):
-    """Pass."""
-
     @pytest.fixture(scope="class")
     def apiobj(self, api_system):
-        """Pass."""
         return api_system.settings_lifecycle
