@@ -6,7 +6,8 @@ import click
 import requests
 
 from ..connect import Connect
-from ..tools import echo_error, echo_ok, echo_warn, json_load
+from ..tools import (bom_strip, echo_error, echo_ok, echo_warn, json_load,
+                     read_stream)
 
 CONTEXT_SETTINGS = {"auto_envvar_prefix": "AX"}
 SSLWARN_CLS = requests.urllib3.exceptions.InsecureRequestWarning
@@ -161,20 +162,14 @@ class Context:
 
         return self.client
 
-    def read_stream(self, stream):
+    def read_stream(self, stream, strip_bom=True):
         """Pass."""
-        stream_name = format(getattr(stream, "name", stream))
-
-        if stream.isatty():
-            self.echo_error(msg=f"No input provided on {stream_name!r}", abort=True)
-
-        # its STDIN with input or a file
-        content = stream.read().strip()
-        self.echo_ok(msg=f"Read {len(content)} bytes from {stream_name!r}")
-
-        if not content:
-            self.echo_error(msg=f"Empty content supplied to {stream_name!r}", abort=True)
-
+        try:
+            content = read_stream(stream=stream)
+        except Exception as exc:
+            self.echo_error(msg=f"Unable to read from input stream: {exc}", abort=True)
+        if strip_bom:
+            content = bom_strip(content=content)
         return content
 
     def read_stream_json(self, stream, expect):
