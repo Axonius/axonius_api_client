@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """Constants for wizards."""
 import re
@@ -157,16 +156,16 @@ class Types:
     FILE: str = "file"
 
     DICT: List[str] = [SIMPLE, COMPLEX]
-    """required keys for the base Wizard class."""
+    """valid types for the base Wizard class."""
 
     TEXT: List[str] = [*DICT]
-    """required keys for the WizardText class."""
+    """valid types for the WizardText class."""
 
     SQ: List[str] = [*DICT, SAVED_QUERY]
-    """Required keys for the WizardCsv class."""
+    """valid types for the WizardCsv class."""
 
-    CLI: List[str] = [*DICT]
-    """Required keys for the WizardCsv class."""
+    CLI: List[str] = [*DICT, FILE]
+    """valid types for the CLI."""
 
 
 class Docs:
