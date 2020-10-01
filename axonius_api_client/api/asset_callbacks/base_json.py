@@ -2,28 +2,49 @@
 """JSON export callbacks class."""
 import json
 import textwrap
-from typing import List, Optional, Tuple, Union
+from typing import List, Union
 
 from ...tools import listify
 from .base import Base
-
-JSON_FLAT: bool = False
 
 
 class Json(Base):
     """JSON export callbacks class.
 
-    Notes:
-        See :meth:`args_map` for the arguments this callbacks class.
+    See Also:
+        See :meth:`args_map` and :meth:`args_map_custom` for details on the extra kwargs that can
+        be passed to :meth:`axonius_api_client.api.assets.users.Users.get` or
+        :meth:`axonius_api_client.api.assets.devices.Devices.get`
+
     """
 
     CB_NAME: str = "json"
     """name for this callback"""
 
+    @classmethod
+    def args_map_custom(cls) -> dict:
+        """Get the custom argument names and their defaults for this callbacks object.
+
+        See Also:
+            :meth:`args_map_export` for the export arguments for this callbacks object.
+
+            :meth:`args_map` for the arguments for all callback objects.
+
+        Notes:
+            These arguments can be supplied as extra kwargs passed to
+            :meth:`axonius_api_client.api.assets.users.Users.get` or
+            :meth:`axonius_api_client.api.assets.devices.Devices.get`
+
+        """
+        args = {}
+        args.update(cls.args_map_export())
+        args.update({"json_flat": False})
+        return args
+
     def start(self, **kwargs):
         """Start this callbacks object."""
         super(Json, self).start(**kwargs)
-        flat = self.GETARGS.get("json_flat", JSON_FLAT)
+        flat = self.get_arg_value("json_flat")
 
         self._first_row = True
         self.open_fd()
@@ -33,7 +54,7 @@ class Json(Base):
     def stop(self, **kwargs):
         """Stop this callbacks object."""
         super(Json, self).stop(**kwargs)
-        flat = self.GETARGS.get("json_flat", JSON_FLAT)
+        flat = self.get_arg_value("json_flat")
 
         self.do_export_schema()
         end = "" if flat else "\n]"
@@ -61,7 +82,7 @@ class Json(Base):
             rows: rows to process
         """
         rows = listify(rows)
-        flat = self.GETARGS.get("json_flat", JSON_FLAT)
+        flat = self.get_arg_value("json_flat")
 
         indent = None if flat else 2
         prefix = " " * indent if indent else ""
@@ -82,17 +103,9 @@ class Json(Base):
 
     def do_export_schema(self):
         """Add schema rows to the output."""
-        export_schema = self.GETARGS.get("export_schema", False)
+        export_schema = self.get_arg_value("export_schema")
 
         if export_schema:
             row = {"schemas": self.final_schemas}
             self.write_rows(rows=row)
             del row
-
-    @classmethod
-    def args_map(cls) -> List[Tuple[str, str, Optional[Union[list, bool, str, int]]]]:
-        """Argument maps specific to this callbacks class."""
-        args = super(Json, cls).args_map()
-        return args + [
-            ("json_flat", "Produce flat json:", False),
-        ]

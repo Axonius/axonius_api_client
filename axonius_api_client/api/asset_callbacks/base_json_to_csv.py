@@ -11,8 +11,11 @@ from .base_csv import Csv
 class JsonToCsv(Csv):
     """JSON to CSV export callbacks class.
 
-    Notes:
-        See :meth:`args_map` for the arguments this callbacks class.
+    See Also:
+        See :meth:`args_map` and :meth:`args_map_custom` for details on the extra kwargs that can
+        be passed to :meth:`axonius_api_client.api.assets.users.Users.get` or
+        :meth:`axonius_api_client.api.assets.devices.Devices.get`
+
     """
 
     CB_NAME: str = "json_to_csv"

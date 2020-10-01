@@ -1,15 +1,16 @@
 # -*- coding: utf-8 -*-
-"""API models for working with device and user assets."""
-import datetime
+"""API base class for devices and users."""
 import math
 import time
+from datetime import datetime, timedelta
 from typing import Generator, List, Optional, Union
 
 from ...constants import MAX_PAGE_SIZE, PAGE_SIZE
 from ...exceptions import ApiError, JsonError, NotFoundError
 from ...tools import dt_now, dt_parse_tmpl, dt_sec_ago, json_dump, listify
 from ..adapters import Adapters
-from ..asset_callbacks import Base, get_callbacks_cls
+from ..asset_callbacks import Base
+from ..asset_callbacks.tools import DEFAULT_CALLBACKS_CLS, get_callbacks_cls
 from ..mixins import ModelMixins
 from ..wizard import Wizard, WizardCsv, WizardText
 from .fields import Fields
@@ -18,7 +19,7 @@ from .saved_query import SavedQuery
 
 
 class AssetMixin(ModelMixins):
-    """API model for working with user and device assets."""
+    """API model for device and user assets."""
 
     FIELD_TAGS: str = "labels"
     """Field name for getting tabs (labels)."""
@@ -30,17 +31,22 @@ class AssetMixin(ModelMixins):
     """Field name for list of adapters on an asset."""
 
     FIELD_ADAPTER_LEN: str = "adapter_list_length"
-    """Pass."""
+    """Field name for count of adapters on an asset."""
+
     FIELD_LAST_SEEN: str = "specific_data.data.last_seen"
-    """Pass."""
+    """Field name for last time an adapter saw the asset."""
+
     FIELD_MAIN: str = FIELD_AXON_ID
-    """Pass."""
+    """Field name of the main identifier."""
+
     FIELD_SIMPLE: str = FIELD_AXON_ID
-    """Pass."""
+    """Field name of a simple field."""
+
     FIELD_COMPLEX: str = None
-    """Pass."""
+    """Field name of a complex field."""
+
     FIELD_COMPLEX_SUB: str = None
-    """Pass."""
+    """Field name of a complex sub field."""
 
     FIELDS_API: List[str] = [
         FIELD_AXON_ID,
@@ -48,33 +54,103 @@ class AssetMixin(ModelMixins):
         FIELD_TAGS,
         FIELD_ADAPTER_LEN,
     ]
-    """Pass."""
+    """Field names that are always returned by the REST API no matter what fields are selected."""
+
+    adapters: Adapters = None
+    """Adapters API model for cross reference."""
+
+    labels: Labels = None
+    """Work with labels (tags)."""
+
+    saved_query: SavedQuery = None
+    """Work with saved queries."""
+
+    fields: Fields = None
+    """Work with fields."""
+
+    wizard: Wizard = None
+    """Query wizard builder."""
+
+    wizard_text: WizardText = None
+    """Query wizard builder from text."""
+
+    wizard_csv: WizardCsv = None
+    """Query wizard builder from CSV."""
+
+    LAST_GET: dict = None
+    """Request object sent for last :meth:`get` request"""
+
+    LAST_CALLBACKS: Base = None
+    """Callbacks object used for last :meth:`get` request."""
 
     @property
     def fields_default(self) -> List[dict]:
-        """Fields to add to all get calls for this asset type."""
+        """Fields to add to all get calls."""
         raise NotImplementedError  # pragma: no cover
 
     def destroy(self, destroy: bool, history: bool) -> dict:  # pragma: no cover
-        """Destroy ALL assets."""
+        """Delete ALL assets.
+
+        Notes:
+            Enable the ``Enable API destroy endpoints`` setting under
+            ``Settings > Global Settings > API Settings > Enable advanced API settings``
+            for this method to function.
+
+        Args:
+            destroy: Must be true in order to actually perform the delete
+            history: Also delete all historical information
+        """
         return self._destroy(destroy=destroy, history=history)
 
-    def count(self, query: Optional[str] = None, history_date: Optional[str] = None) -> int:
-        """Get the count of assets.
+    def count(
+        self,
+        query: Optional[str] = None,
+        history_date: Optional[Union[str, timedelta, datetime]] = None,
+        wiz_entries: Optional[List[dict]] = None,
+    ) -> int:
+        """Get the count of assets from a query.
 
         Args:
             query: if supplied, only return the count of assets that match the query
-            history_date: return count for a given historical date
+                if not supplied, the count of all assets will be returned
+            history_date: return asset count for a given historical date
+            wiz_entries: wizard expressions to create query from
+
+        Examples:
+            >>> # get count of all assets
+            >>> count = apiobj.count()
+            >>>
+            >>> # get count of all assets for a given date
+            >>> count = apiobj.count(history_date="2020-09-29")
+            >>>
+            >>> # get count of assets matching a query built by the GUI query wizard
+            >>> query='(specific_data.data.name == "test")'
+            >>> count = apiobj.count(query=query)
+            >>>
+            >>> # get count of assets matching a query built by the API client query wizard
+            >>> entries=[{'type': 'simple', 'value': 'name equals test'}]
+            >>> count = apiobj.count(wiz_entries=entries)
+
         """
+        query = self.wizard.parse(entries=wiz_entries)["query"] if wiz_entries else query
         history_date = self.validate_history_date(value=history_date)
         return self._count(query=query, history_date=history_date)
 
-    def count_by_saved_query(self, name: str, history_date: Optional[str] = None) -> int:
-        """Get the count of assets that would be returned by a saved query.
+    def count_by_saved_query(
+        self, name: str, history_date: Optional[Union[str, timedelta, datetime]] = None
+    ) -> int:
+        """Get the count of assets for a query defined in a saved query.
 
         Args:
             name: saved query to get count of assets from
             history_date: return count for a given historical date
+
+        Examples:
+            >>> # get count of assets returned from a saved query
+            >>> count = apiobj.count_by_saved_query(name="test")
+            >>>
+            >>> # get count of assets returned from a saved query for a given date
+            >>> count = apiobj.count_by_saved_query(name="test", history_date="2020-09-29")
         """
         sq = self.saved_query.get_by_name(value=name)
         history_date = self.validate_history_date(value=history_date)
@@ -84,7 +160,63 @@ class AssetMixin(ModelMixins):
     def get(
         self, generator: bool = False, **kwargs
     ) -> Union[Generator[dict, None, None], List[dict]]:
-        """Get objects for a given query using paging.
+        r"""Get assets from a query.
+
+        Examples:
+            >>> # get all assets with the default fields defined in the API client
+            >>> assets = apiobj.get()
+            >>>
+            >>> # get all assets using an iterator
+            >>> assets = [x for x in apiobj.get(generator=True)]
+            >>>
+            >>> # get all assets with fields that equal names
+            >>> assets = apiobj.get(fields=["os.type", "aws:aws_device_type"])
+            >>>
+            >>> # get all assets with fields that fuzzy match names and no default fields
+            >>> assets = apiobj.get(fields_fuzzy=["last", "os"], fields_default=False)
+            >>>
+            >>> # get all assets with fields that regex match names a
+            >>> assets = apiobj.get(fields_regex=["^os\."])
+            >>>
+            >>> # get all assets with all root fields for an adapter
+            >>> assets = apiobj.get(fields_root="aws")
+            >>>
+            >>> # get all assets for a given date in history and sort the rows on a field
+            >>> assets = apiobj.get(history_date="2020-09-29", sort_field="name")
+            >>>
+            >>> # get all assets with details of which adapter connection provided the agg data
+            >>> assets = apiobj.get(include_details=True)
+            >>>
+            >>> # get assets matching a query built by the GUI query wizard
+            >>> query='(specific_data.data.name == "test")'
+            >>> assets = apiobj.get(query=query)
+            >>>
+            >>> # get assets matching a query built by the API client query wizard
+            >>> entries=[{'type': 'simple', 'value': 'name equals test'}]
+            >>> assets = apiobj.get(wiz_entries=entries)
+
+        Notes:
+            This method is used by all other get* methods under the hood and their kwargs are
+            passed thru to this method and passed to :meth:`get_generator` which are then passed
+            to whatever callback is used based on the ``export`` argument.
+
+            If ``export`` is not supplied, see
+            :meth:`axonius_api_client.api.asset_callbacks.base.Base.args_map`.
+
+            If ``export`` equals ``json``, see
+            :meth:`axonius_api_client.api.asset_callbacks.base_json.Json.args_map`.
+
+            If ``export`` equals ``csv``, see
+            :meth:`axonius_api_client.api.asset_callbacks.base_csv.Csv.args_map`.
+
+            If ``export`` equals ``json_to_csv``, see
+            :meth:`axonius_api_client.api.asset_callbacks.base_json_to_csv.JsonToCsv.args_map`.
+
+            If ``export`` equals ``table``, see
+            :meth:`axonius_api_client.api.asset_callbacks.base_table.Table.args_map`.
+
+            If ``export`` equals ``xlsx``, see
+            :meth:`axonius_api_client.api.asset_callbacks.base_xlsx.Xlsx.args_map`.
 
         Args:
             generator: return an iterator for assets that will yield rows as they are fetched
@@ -109,17 +241,18 @@ class AssetMixin(ModelMixins):
         page_start: int = 0,
         page_sleep: int = 0,
         use_cursor: bool = True,
-        export: Optional[str] = None,
+        export: str = DEFAULT_CALLBACKS_CLS,
         include_details: bool = False,
         sort_field: Optional[str] = None,
         sort_descending: bool = False,
-        history_date: Optional[Union[str, datetime.datetime]] = None,
+        history_date: Optional[Union[str, timedelta, datetime]] = None,
+        wiz_entries: Optional[List[dict]] = None,
         **kwargs,
     ) -> Generator[dict, None, None]:
-        """Get an iterator of objects for a given query using paging.
+        """Get assets from a query.
 
         Args:
-            query: if supplied, only return the assets that match the query
+            query: if supplied, only get the assets that match the query
             fields: fields to return for each asset (will be validated)
             fields_manual: fields to return for each asset (will NOT be validated)
             fields_regex: regex of fields to return for each asset
@@ -138,8 +271,10 @@ class AssetMixin(ModelMixins):
             sort_field: sort the returned assets on a given field
             sort_descending: reverse the sort of the returned assets
             history_date: return assets for a given historical date
+            wiz_entries: wizard expressions to create query from
             **kwargs: passed thru to the asset callback defined in ``export``
         """
+        query = self.wizard.parse(entries=wiz_entries)["query"] if wiz_entries else query
         page_size = self._get_page_size(page_size=page_size, max_rows=max_rows)
 
         fields = self.fields.validate(
@@ -251,73 +386,17 @@ class AssetMixin(ModelMixins):
 
         callbacks.stop()
 
-    def _get_page_cursor(self, state: dict, store: dict) -> dict:
-        page_start_dt = dt_now()
-
-        page = self._get_cursor(
-            query=store["query"],
-            fields=store["fields"],
-            row_start=state["rows_fetched_total"],
-            page_size=state["page_size"],
-            cursor=state["page_cursor"],
-            include_details=store["include_details"],
-            sort_field=store["sort_field"],
-            sort_descending=store["sort_descending"],
-            history_date=store["history_date"],
-        )
-
-        state["fetch_seconds_this_page"] = dt_sec_ago(obj=page_start_dt, exact=True)
-        state["fetch_seconds_total"] += state["fetch_seconds_this_page"]
-
-        # only first page has totalResources with integer when cursor paging!!
-        rows_to_fetch_total = page["page"]["totalResources"]
-
-        if rows_to_fetch_total is not None:
-            state["rows_to_fetch_total"] = rows_to_fetch_total
-
-        state["rows_fetched_this_page"] = len(page["assets"])
-        state["rows_fetched_total"] += state["rows_fetched_this_page"]
-        state["rows_to_fetch_left"] = state["rows_to_fetch_total"] - state["rows_fetched_total"]
-        state["pages_to_fetch_total"] = math.ceil(state["rows_to_fetch_total"] / state["page_size"])
-        state["pages_to_fetch_left"] = math.ceil(state["rows_to_fetch_left"] / state["page_size"])
-
-        state["page_cursor"] = page.get("cursor")
-        return page
-
-    def _get_page_normal(self, state: dict, store: dict) -> dict:
-        page_start_dt = dt_now()
-
-        page = self._get(
-            query=store["query"],
-            fields=store["fields"],
-            row_start=state["rows_fetched_total"],
-            page_size=state["page_size"],
-            include_details=store["include_details"],
-            sort_field=store["sort_field"],
-            sort_descending=store["sort_descending"],
-            history_date=store["history_date"],
-        )
-
-        state["fetch_seconds_this_page"] = dt_sec_ago(obj=page_start_dt, exact=True)
-        state["fetch_seconds_total"] += state["fetch_seconds_this_page"]
-
-        state["rows_to_fetch_total"] = page["page"]["totalResources"]
-        state["rows_fetched_this_page"] = len(page["assets"])
-        state["rows_fetched_total"] += state["rows_fetched_this_page"]
-        state["rows_to_fetch_left"] = state["rows_to_fetch_total"] - state["rows_fetched_total"]
-        state["page_number"] = page["page"]["number"]
-        state["pages_to_fetch_total"] = page["page"]["totalPages"]
-        state["pages_to_fetch_left"] = state["pages_to_fetch_total"] - state["page_number"]
-        return page
-
     def get_by_id(self, id: str) -> dict:
-        """Get the full metadata of all adapters for a single asset.
+        """Get the full data set of all adapters for a single asset.
 
         Args:
-            id: internal_axon_id of asset to get all metadata for
+            id: internal_axon_id of asset to get all data set for
 
         Raises:
             :exc:`NotFoundError`: if id is not found
+
+        Examples:
+            >>> asset = apiobj.get_by_id(id="3d69adf54879faade7a44068e4ecea6e")
         """
         try:
             return self._get_by_id(id=id)
@@ -417,10 +496,10 @@ class AssetMixin(ModelMixins):
         return self.get(**kwargs)
 
     def history_dates(self) -> dict:
-        """Get all known historical dates for this asset type."""
+        """Get all known historical dates."""
         return self._history_dates()
 
-    def validate_history_date(self, value: str) -> str:
+    def validate_history_date(self, value: Union[str, timedelta, datetime]) -> str:
         """Validate that a given date is known historical date."""
         if not value:
             return None
@@ -454,18 +533,17 @@ class AssetMixin(ModelMixins):
 
     def _init(self, **kwargs):
         """Post init method for subclasses to use for extra setup."""
-        # cross reference
         self.adapters: Adapters = Adapters(auth=self.auth, **kwargs)
         """Adapters API model for cross reference."""
 
         self.labels: Labels = Labels(parent=self)
-        """Work with labels (tags) for this asset type."""
+        """Work with labels (tags)."""
 
         self.saved_query: SavedQuery = SavedQuery(parent=self)
-        """Work with saved queries for this asset type."""
+        """Work with saved queries."""
 
         self.fields: Fields = Fields(parent=self)
-        """Work with fields for this asset type."""
+        """Work with fields."""
 
         self.wizard: Wizard = Wizard(apiobj=self)
         """Query wizard builder."""
@@ -484,21 +562,64 @@ class AssetMixin(ModelMixins):
 
         super(AssetMixin, self)._init(**kwargs)
 
-    def _count(
-        self,
-        query: Optional[str] = None,
-        history_date: Optional[str] = None,
-    ) -> int:
-        """Direct API method to get the count of assets.
+    def _get_page_cursor(self, state: dict, store: dict) -> dict:
+        page_start_dt = dt_now()
 
-        Args:
-            query: if supplied, only return the count of assets that match the query
-            history_date: return count for a given historical date
-        """
-        params = {}
-        params["filter"] = query
-        params["history"] = history_date
-        return self.request(method="post", path=self.router.count, json=params)
+        page = self._get_cursor(
+            query=store["query"],
+            fields=store["fields"],
+            row_start=state["rows_fetched_total"],
+            page_size=state["page_size"],
+            cursor=state["page_cursor"],
+            include_details=store["include_details"],
+            sort_field=store["sort_field"],
+            sort_descending=store["sort_descending"],
+            history_date=store["history_date"],
+        )
+
+        state["fetch_seconds_this_page"] = dt_sec_ago(obj=page_start_dt, exact=True)
+        state["fetch_seconds_total"] += state["fetch_seconds_this_page"]
+
+        # only first page has totalResources with integer when cursor paging!!
+        rows_to_fetch_total = page["page"]["totalResources"]
+
+        if rows_to_fetch_total is not None:
+            state["rows_to_fetch_total"] = rows_to_fetch_total
+
+        state["rows_fetched_this_page"] = len(page["assets"])
+        state["rows_fetched_total"] += state["rows_fetched_this_page"]
+        state["rows_to_fetch_left"] = state["rows_to_fetch_total"] - state["rows_fetched_total"]
+        state["pages_to_fetch_total"] = math.ceil(state["rows_to_fetch_total"] / state["page_size"])
+        state["pages_to_fetch_left"] = math.ceil(state["rows_to_fetch_left"] / state["page_size"])
+
+        state["page_cursor"] = page.get("cursor")
+        return page
+
+    def _get_page_normal(self, state: dict, store: dict) -> dict:
+        page_start_dt = dt_now()
+
+        page = self._get(
+            query=store["query"],
+            fields=store["fields"],
+            row_start=state["rows_fetched_total"],
+            page_size=state["page_size"],
+            include_details=store["include_details"],
+            sort_field=store["sort_field"],
+            sort_descending=store["sort_descending"],
+            history_date=store["history_date"],
+        )
+
+        state["fetch_seconds_this_page"] = dt_sec_ago(obj=page_start_dt, exact=True)
+        state["fetch_seconds_total"] += state["fetch_seconds_this_page"]
+
+        state["rows_to_fetch_total"] = page["page"]["totalResources"]
+        state["rows_fetched_this_page"] = len(page["assets"])
+        state["rows_fetched_total"] += state["rows_fetched_this_page"]
+        state["rows_to_fetch_left"] = state["rows_to_fetch_total"] - state["rows_fetched_total"]
+        state["page_number"] = page["page"]["number"]
+        state["pages_to_fetch_total"] = page["page"]["totalPages"]
+        state["pages_to_fetch_left"] = state["pages_to_fetch_total"] - state["page_number"]
+        return page
 
     def _get(
         self,
@@ -599,13 +720,34 @@ class AssetMixin(ModelMixins):
         path = self.router.by_id.format(id=id)
         return self.request(method="get", path=path)
 
+    def _count(
+        self,
+        query: Optional[str] = None,
+        history_date: Optional[str] = None,
+    ) -> int:
+        """Direct API method to get the count of assets.
+
+        Args:
+            query: if supplied, only return the count of assets that match the query
+            history_date: return count for a given historical date
+        """
+        params = {}
+        params["filter"] = query
+        params["history"] = history_date
+        return self.request(method="post", path=self.router.count, json=params)
+
     def _destroy(self, destroy: bool, history: bool) -> dict:  # pragma: no cover
-        """Destroy ALL assets."""
+        """Destroy ALL assets.
+
+        Args:
+            destroy: Must be true in order to actually perform the delete
+            history: Also delete all historical information
+        """
         data = {"destroy": destroy, "history": history}
         path = self.router.destroy
         return self.request(method="post", path=path, json=data)
 
     def _history_dates(self) -> dict:
-        """Get all known historical dates for this asset type."""
+        """Get all known historical dates."""
         path = self.router.history_dates
         return self.request(method="get", path=path)
