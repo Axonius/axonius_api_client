@@ -607,6 +607,7 @@ class Base:
 
         for sub_schema in self.get_sub_schemas(schema=schema):
             row[sub_schema["name_qual"]] = []
+            # TBD: handle complex sub-fields
 
             for item in items:
                 value = item.pop(sub_schema["name"], null_value)

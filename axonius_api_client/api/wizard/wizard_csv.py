@@ -1,13 +1,12 @@
 # -*- coding: utf-8 -*-
 """Wizard for CSV files."""
-import codecs
 import csv
 import io
 import pathlib
 from typing import List, Optional, Union
 
 from ...exceptions import WizardError
-from ...tools import check_type, kv_dump, listify, path_read
+from ...tools import bom_strip, check_type, kv_dump, listify, path_read
 from .constants import Docs, Entry, EntrySq, Sources, Types
 from .wizard import Wizard
 
@@ -84,10 +83,7 @@ class WizardCsv(Wizard):
             source: where content came from
         """
         check_type(value=content, exp=str, name="content")
-        content = content.strip()
-        if content.startswith(codecs.BOM_UTF8.decode()):
-            content = content[1:]
-        content = content.strip()
+        content = bom_strip(content=content)
         fh = io.StringIO(content)
         reader = csv.DictReader(fh)
         rows = list(reader)

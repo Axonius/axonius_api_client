@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Utilities and tools."""
+import codecs
 import ipaddress
 import json
 import logging
@@ -8,7 +9,8 @@ import platform
 import sys
 from datetime import datetime, timedelta, timezone
 from itertools import zip_longest
-from typing import Any, Callable, Iterable, Iterator, List, Optional, Tuple, Union
+from typing import (Any, Callable, Iterable, Iterator, List, Optional, Tuple,
+                    Union)
 from urllib.parse import urljoin
 
 import click
@@ -18,7 +20,8 @@ import dateutil.tz
 
 from . import __file__ as PACKAGE_FILE
 from . import __package__ as PACKAGE_ROOT
-from .constants import ERROR_ARGS, ERROR_TMPL, NO, OK_ARGS, OK_TMPL, WARN_ARGS, WARN_TMPL, YES
+from .constants import (ERROR_ARGS, ERROR_TMPL, NO, OK_ARGS, OK_TMPL,
+                        WARN_ARGS, WARN_TMPL, YES)
 from .exceptions import ToolsError
 from .version import VERSION
 
@@ -814,3 +817,39 @@ def kv_dump(obj: dict) -> str:
         obj: dictionary to get string of
     """
     return "\n  " + "\n  ".join([f"{k}: {v}" for k, v in obj.items()])
+
+
+def bom_strip(content: str, strip=True) -> str:
+    """Remove the UTF-8 BOM marker from the beginning of a string.
+
+    Args:
+        content: string to remove BOM marker from if found
+        strip: remove whitespace before & after removing BOM marker
+    """
+    if strip:
+        content = content.strip()
+    if content.startswith(codecs.BOM_UTF8.decode()):
+        content = content[1:]
+    if strip:
+        content = content.strip()
+    return content
+
+
+def read_stream(stream) -> str:
+    """Try to read input from a stream.
+
+    Args:
+        stream: stdin or a file descriptor to read input from
+    """
+    stream_name = format(getattr(stream, "name", stream))
+
+    if stream.isatty():
+        raise ToolsError(f"No input provided on {stream_name!r}")
+
+    # its STDIN with input or a file
+    content = stream.read().strip()
+
+    if not content:
+        raise ToolsError(msg=f"Empty content supplied to {stream_name!r}")
+
+    return content
