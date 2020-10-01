@@ -6,7 +6,6 @@ import logging
 import sys
 
 import pytest
-
 from axonius_api_client.api.asset_callbacks import get_callbacks_cls
 from axonius_api_client.constants import FIELD_TRIM_LEN, SCHEMAS_CUSTOM
 from axonius_api_client.exceptions import ApiError
@@ -29,7 +28,9 @@ def get_cbobj_main(apiobj, cbexport, getargs=None, state=None, store=None):
     assert cbobj.STATE == state
 
     assert isinstance(cbobj.ALL_SCHEMAS, dict) and cbobj.ALL_SCHEMAS
-    assert isinstance(cbobj.args_map(), list)
+    assert isinstance(cbobj.args_map(), dict)
+    assert isinstance(cbobj.args_map_custom(), dict)
+    assert isinstance(cbobj.args_map_export(), dict)
     assert isinstance(cbobj.args_strs, list)
 
     assert isinstance(cbobj.TAG_ROWS_ADD, list) and not cbobj.TAG_ROWS_ADD
@@ -735,6 +736,91 @@ class Callbacks:
         schema = cbobj.schema_to_explode
         assert schema["name_qual"] == field
 
+    def test_echo_ok_doecho_yes(self, cbexport, apiobj, capsys, caplog):
+        entry = "xxxxxxx"
+
+        cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs={"do_echo": True})
+        cbobj.echo(msg=entry)
+        capture = capsys.readouterr()
+        assert f"{entry}\n" in capture.err
+        assert not capture.out
+        log_check(caplog=caplog, entries=[entry], exists=True)
+
+    def test_echo_error_doecho_yes(self, cbexport, apiobj, capsys, caplog):
+        entry = "xxxxxxx"
+
+        cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs={"do_echo": True})
+        with pytest.raises(SystemExit):
+            cbobj.echo(msg=entry, error=ApiError)
+
+        capture = capsys.readouterr()
+        assert f"{entry}\n" in capture.err
+        assert not capture.out
+        log_check(caplog=caplog, entries=[entry], exists=True)
+
+    def test_echo_ok_doecho_no(self, cbexport, apiobj, capsys, caplog):
+        entry = "xxxxxxx"
+
+        cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs={"do_echo": False})
+        cbobj.echo(msg=entry)
+        capture = capsys.readouterr()
+        assert not capture.err
+        assert not capture.out
+        log_check(caplog=caplog, entries=[entry], exists=True)
+
+    def test_echo_error_doecho_no(self, cbexport, apiobj, capsys, caplog):
+        entry = "xxxxxxx"
+
+        cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs={"do_echo": False})
+        with pytest.raises(ApiError):
+            cbobj.echo(msg=entry, error=ApiError)
+
+        capture = capsys.readouterr()
+        assert not capture.err
+        assert not capture.out
+        log_check(caplog=caplog, entries=[entry], exists=True)
+
+    def test_get_callbacks_cls_error(self):
+        with pytest.raises(ApiError):
+            get_callbacks_cls(export="badwolf")
+
+    def test_sw_whitelist_fail_no_sw_field(self, cbexport, apiobj, caplog):
+        whitelist = ["chrome"]
+        rows = apiobj.get(max_rows=1)
+
+        cbobj = self.get_cbobj(
+            apiobj=apiobj,
+            cbexport=cbexport,
+            getargs={"report_software_whitelist": whitelist},
+        )
+
+        for row in rows:
+            with pytest.raises(ApiError):
+                cbobj.add_report_software_whitelist(rows=row)
+
+    def test_sw_whitelist(self, cbexport, api_devices):
+        field = "specific_data.data.installed_software"
+        whitelist = ["chrome"]
+        query = '(specific_data.data.installed_software.name == regex("chrome", "i"))'
+        rows = api_devices.get(fields=field, query=query, max_rows=1)
+
+        cbobj = self.get_cbobj(
+            apiobj=api_devices,
+            cbexport=cbexport,
+            store={"fields": field},
+            getargs={"report_software_whitelist": whitelist},
+        )
+
+        for row in rows:
+            proc_rows = cbobj.add_report_software_whitelist(rows=row)
+            assert isinstance(proc_rows, list)
+            assert len(proc_rows) == 1
+            for schema in SCHEMAS_CUSTOM["report_software_whitelist"].values():
+                assert schema["name_qual"] in row
+                assert field in row
+
+
+class Exports:
     def test_fd_stdout_open_no_close(self, cbexport, apiobj):
         cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport)
 
@@ -861,86 +947,3 @@ class Callbacks:
 
         with pytest.raises(ApiError):
             cbobj.open_fd()
-
-    def test_echo_ok_doecho_yes(self, cbexport, apiobj, capsys, caplog):
-        entry = "xxxxxxx"
-
-        cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs={"do_echo": True})
-        cbobj.echo(msg=entry)
-        capture = capsys.readouterr()
-        assert f"{entry}\n" in capture.err
-        assert not capture.out
-        log_check(caplog=caplog, entries=[entry], exists=True)
-
-    def test_echo_error_doecho_yes(self, cbexport, apiobj, capsys, caplog):
-        entry = "xxxxxxx"
-
-        cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs={"do_echo": True})
-        with pytest.raises(SystemExit):
-            cbobj.echo(msg=entry, error=ApiError)
-
-        capture = capsys.readouterr()
-        assert f"{entry}\n" in capture.err
-        assert not capture.out
-        log_check(caplog=caplog, entries=[entry], exists=True)
-
-    def test_echo_ok_doecho_no(self, cbexport, apiobj, capsys, caplog):
-        entry = "xxxxxxx"
-
-        cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs={"do_echo": False})
-        cbobj.echo(msg=entry)
-        capture = capsys.readouterr()
-        assert not capture.err
-        assert not capture.out
-        log_check(caplog=caplog, entries=[entry], exists=True)
-
-    def test_echo_error_doecho_no(self, cbexport, apiobj, capsys, caplog):
-        entry = "xxxxxxx"
-
-        cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs={"do_echo": False})
-        with pytest.raises(ApiError):
-            cbobj.echo(msg=entry, error=ApiError)
-
-        capture = capsys.readouterr()
-        assert not capture.err
-        assert not capture.out
-        log_check(caplog=caplog, entries=[entry], exists=True)
-
-    def test_get_callbacks_cls_error(self):
-        with pytest.raises(ApiError):
-            get_callbacks_cls(export="badwolf")
-
-    def test_sw_whitelist_fail_no_sw_field(self, cbexport, apiobj, caplog):
-        whitelist = ["chrome"]
-        rows = apiobj.get(max_rows=1)
-
-        cbobj = self.get_cbobj(
-            apiobj=apiobj,
-            cbexport=cbexport,
-            getargs={"report_software_whitelist": whitelist},
-        )
-
-        for row in rows:
-            with pytest.raises(ApiError):
-                cbobj.add_report_software_whitelist(rows=row)
-
-    def test_sw_whitelist(self, cbexport, api_devices):
-        field = "specific_data.data.installed_software"
-        whitelist = ["chrome"]
-        query = '(specific_data.data.installed_software.name == regex("chrome", "i"))'
-        rows = api_devices.get(fields=field, query=query, max_rows=1)
-
-        cbobj = self.get_cbobj(
-            apiobj=api_devices,
-            cbexport=cbexport,
-            store={"fields": field},
-            getargs={"report_software_whitelist": whitelist},
-        )
-
-        for row in rows:
-            proc_rows = cbobj.add_report_software_whitelist(rows=row)
-            assert isinstance(proc_rows, list)
-            assert len(proc_rows) == 1
-            for schema in SCHEMAS_CUSTOM["report_software_whitelist"].values():
-                assert schema["name_qual"] in row
-                assert field in row

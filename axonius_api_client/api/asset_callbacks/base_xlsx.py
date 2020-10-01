@@ -12,26 +12,53 @@ from .base import Base
 class Xlsx(Base):
     """Excel export callbacks class.
 
-    Notes:
-        See :meth:`args_map` for the arguments this callbacks class.
+    See Also:
+        See :meth:`args_map` and :meth:`args_map_custom` for details on the extra kwargs that can
+        be passed to :meth:`axonius_api_client.api.assets.users.Users.get` or
+        :meth:`axonius_api_client.api.assets.devices.Devices.get`
     """
 
     CB_NAME: str = "xlsx"
     """name for this callback"""
 
-    CELL_FORMAT: dict = {"text_wrap": True}
-    """Excel cell formatting to use for every cell"""
+    @classmethod
+    def args_map_custom(cls) -> dict:
+        """Get the custom argument names and their defaults for this callbacks object.
 
-    COLUMN_LENGTH: int = 50
-    """default length to use to every column"""
+        See Also:
+            :meth:`args_map_export` for the export arguments for this callbacks object.
+
+            :meth:`args_map` for the arguments for all callback objects.
+
+        Notes:
+            This callbacks object forces the following arguments to True in order to make the
+            output usable in the exported format: ``field_null``, ``field_flatten``,
+            and ``field_join``
+
+            These arguments can be supplied as extra kwargs passed to
+            :meth:`axonius_api_client.api.assets.users.Users.get` or
+            :meth:`axonius_api_client.api.assets.devices.Devices.get`
+
+        """
+        args = {}
+        args.update(cls.args_map_export())
+        args.update(
+            {
+                "field_titles": True,
+                "field_flatten": True,
+                "field_join": True,
+                "field_null": True,
+                "xlsx_column_length": 50,
+                "xlsx_cell_format": {"text_wrap": True},
+            }
+        )
+        return args
 
     def _init(self, **kwargs):
-        """Override defaults in GETARGS to make export readable."""
-        self.GETARGS["field_null"] = True
-        self.GETARGS["field_flatten"] = True
-        self.GETARGS["field_join"] = True
-        if self.GETARGS.get("field_titles", None) is None:
-            self.GETARGS["field_titles"] = True
+        """Override defaults to make export readable."""
+        self.set_arg_value("field_null", True)
+        self.set_arg_value("field_flatten", True)
+        self.set_arg_value("field_join", True)
 
     def start(self, **kwargs):
         """Start this callbacks object."""
@@ -40,10 +67,13 @@ class Xlsx(Base):
 
     def do_start(self, **kwargs):
         """Start this callbacks object."""
-        export_file = self.GETARGS.get("export_file", None)
+        export_file = self.get_arg_value("export_file")
+        cell_format = self.get_arg_value("xlsx_cell_format")
+        column_length = self.get_arg_value("xlsx_column_length")
+
         if export_file:
             if not str(export_file).endswith(".xlsx"):
-                self.GETARGS["export_file"] = f"{export_file}.xlsx"
+                self.set_arg_value("export_file", f"{export_file}.xlsx")
             self.open_fd_path()
             self._fd.close()
         else:
@@ -51,14 +81,14 @@ class Xlsx(Base):
             self.echo(msg=msg, error=ApiError, level="error")
 
         self._workbook = xlsxwriter.Workbook(str(self._file_path), {"constant_memory": True})
-        self._cell_format = self._workbook.add_format(self.CELL_FORMAT)
+        self._cell_format = self._workbook.add_format(cell_format)
 
         worksheet = f"{self.APIOBJ.__class__.__name__}"
         self._worksheet = self._workbook.add_worksheet(worksheet)
 
         for idx, column_name in enumerate(self.final_columns):
             self._worksheet.write(0, idx, column_name, self._cell_format)
-            self._worksheet.set_column(idx, idx, self.COLUMN_LENGTH)
+            self._worksheet.set_column(idx, idx, column_length)
         self._rowtracker = 1
 
     def stop(self, **kwargs):

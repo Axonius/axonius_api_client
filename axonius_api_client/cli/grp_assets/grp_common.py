@@ -3,18 +3,12 @@
 import tabulate
 
 from ...api.wizard.constants import Results, Types
-from ...constants import FIELD_JOINER, FIELD_TRIM_LEN, TABLE_FORMAT, TABLE_MAX_ROWS
+from ...constants import (FIELD_JOINER, FIELD_TRIM_LEN, TABLE_FORMAT,
+                          TABLE_MAX_ROWS)
 from ...tools import path_read
 from ..context import CONTEXT_SETTINGS, click
-from ..options import (
-    AUTH,
-    EXPORT,
-    FIELDS_SELECT,
-    PAGING,
-    add_options,
-    get_option_fields_default,
-    get_option_help,
-)
+from ..options import (AUTH, EXPORT, FIELDS_SELECT, PAGING, add_options,
+                       get_option_fields_default, get_option_help)
 
 HISTORY_DATE = click.option(
     "--history-date",

@@ -1,4 +1,4 @@
-Table export callbacks
+Table callbacks
 ###############################################
 
 .. automodule:: axonius_api_client.api.asset_callbacks.base_table

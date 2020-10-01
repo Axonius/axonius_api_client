@@ -11,20 +11,56 @@ from .base import Base
 class Csv(Base):
     """CSV export callbacks class.
 
-    Notes:
-        See :meth:`args_map` for the arguments this callbacks class.
+    See Also:
+        See :meth:`args_map` and :meth:`args_map_custom` for details on the extra kwargs that can
+        be passed to :meth:`axonius_api_client.api.assets.users.Users.get` or
+        :meth:`axonius_api_client.api.assets.devices.Devices.get`
+
     """
 
     CB_NAME: str = "csv"
     """name for this callback"""
 
+    @classmethod
+    def args_map_custom(cls) -> dict:
+        """Get the custom argument names and their defaults for this callbacks object.
+
+        See Also:
+            :meth:`args_map_export` for the export arguments for this callbacks object.
+
+            :meth:`args_map` for the arguments for all callback objects.
+
+        Notes:
+            This callbacks object forces the following arguments to True in order to make the
+            output usable in the exported format: ``field_null``, ``field_flatten``,
+            and ``field_join``
+
+            These arguments can be supplied as extra kwargs passed to
+            :meth:`axonius_api_client.api.assets.users.Users.get` or
+            :meth:`axonius_api_client.api.assets.devices.Devices.get`
+
+        """
+        args = {}
+        args.update(cls.args_map_export())
+        args.update(
+            {
+                "field_titles": True,
+                "field_flatten": True,
+                "field_join": True,
+                "field_null": True,
+                "csv_key_miss": None,
+                "csv_key_extras": "ignore",
+                "csv_dialect": "excel",
+                "csv_quoting": "nonnumeric",
+            }
+        )
+        return args
+
     def _init(self, **kwargs):
-        """Override defaults in GETARGS to make export readable."""
-        self.GETARGS["field_null"] = True
-        self.GETARGS["field_flatten"] = True
-        self.GETARGS["field_join"] = True
-        if self.GETARGS.get("field_titles", None) is None:
-            self.GETARGS["field_titles"] = True
+        """Override arguments to make export readable."""
+        self.set_arg_value("field_null", True)
+        self.set_arg_value("field_flatten", True)
+        self.set_arg_value("field_join", True)
 
     def start(self, **kwargs):
         """Start this callbacks object."""
@@ -36,10 +72,10 @@ class Csv(Base):
         if getattr(self, "_stream", None):
             return
 
-        restval = self.GETARGS.get("csv_key_miss", None)
-        extras = self.GETARGS.get("csv_key_extras", "ignore")
-        dialect = self.GETARGS.get("csv_dialect", "excel")
-        quote = self.GETARGS.get("csv_quoting", "nonnumeric")
+        restval = self.get_arg_value("csv_key_miss")
+        extras = self.get_arg_value("csv_key_extras")
+        dialect = self.get_arg_value("csv_dialect")
+        quote = self.get_arg_value("csv_quoting")
         quote = getattr(csv, f"QUOTE_{quote.upper()}")
 
         try:
@@ -99,13 +135,14 @@ class Csv(Base):
 
     def do_export_schema(self):
         """Add schema rows to the output."""
-        export_schema = self.GETARGS.get("export_schema", True)
+        export_schema = self.get_arg_value("export_schema")
+        field_titles = self.get_arg_value("field_titles")
 
         if export_schema:
             titles = [x["column_title"] for x in self.final_schemas]
             names = [x["name_qual"] for x in self.final_schemas]
             types = [x["type_norm"] for x in self.final_schemas]
-            if self.GETARGS["field_titles"]:
+            if field_titles:
                 self._stream.writerow(dict(zip(self.final_columns, names)))
                 self._stream.writerow(dict(zip(self.final_columns, types)))
             else:

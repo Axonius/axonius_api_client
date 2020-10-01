@@ -5,14 +5,13 @@ import copy
 import io
 
 import pytest
-
 from axonius_api_client.exceptions import ApiError
 
 from ...utils import get_rows_exist, get_schema
-from .test_callbacks import Callbacks
+from .test_callbacks import Callbacks, Exports
 
 
-class TestCallbacksTable(Callbacks):
+class TestCallbacksTable(Callbacks, Exports):
     @pytest.fixture(params=["api_devices", "api_users"])
     def apiobj(self, request):
         return request.getfixturevalue(request.param)
@@ -36,7 +35,7 @@ class TestCallbacksTable(Callbacks):
             apiobj=apiobj,
             cbexport=cbexport,
             store={"fields": [field_complex]},
-            getargs={"export_fd": io_fd},
+            getargs={"export_fd": io_fd, "export_fd_close": False},
         )
         cbobj.start()
 

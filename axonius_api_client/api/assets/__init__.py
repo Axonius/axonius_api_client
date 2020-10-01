@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""API models package."""
+"""APIs for working with assets, saved queries, fields, and tags."""
 from . import asset_mixin, devices, fields, labels, saved_query, users
 from .asset_mixin import AssetMixin
 from .devices import Devices

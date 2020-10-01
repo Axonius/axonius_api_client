@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""API models for working with device and user assets."""
+"""API for working with device assets."""
 import ipaddress
 from typing import Generator, List, Union
 
@@ -8,7 +8,22 @@ from .asset_mixin import AssetMixin
 
 
 class Devices(AssetMixin):
-    """Device related API methods."""
+    """API for working with device assets.
+
+    Examples:
+        For all examples for this asset type,
+        create a ``client`` using :obj:`axonius_api_client.connect.Connect` and assume ``apiobj``
+        is ``client.devices``
+
+        >>> apiobj = client.devices
+
+    See Also:
+        * :meth:`count`
+        * :meth:`count_by_saved_query`
+        * :meth:`get`
+        * :meth:`get_by_saved_query`
+        * :meth:`get_by_id`
+    """
 
     FIELD_ASSET_NAME: str = "specific_data.data.name"
     FIELD_HOSTNAME: str = "specific_data.data.hostname"
@@ -21,15 +36,6 @@ class Devices(AssetMixin):
     FIELD_SIMPLE: str = FIELD_HOSTNAME
     FIELD_COMPLEX: str = "specific_data.data.network_interfaces"
     FIELD_COMPLEX_SUB: str = "name"
-
-    FIELDS_SPECIFIC: List[str] = [
-        FIELD_ASSET_NAME,
-        FIELD_HOSTNAME,
-        FIELD_IP,
-        FIELD_MAC,
-        FIELD_SUBNET,
-        FIELD_OS_TYPE,
-    ]
 
     @property
     def fields_default(self) -> List[str]:

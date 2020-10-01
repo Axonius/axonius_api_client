@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""API models for working with device and user assets."""
+"""API for working with user assets."""
 from typing import Generator, List, Union
 
 from ..routers import API_VERSION, Router
@@ -7,7 +7,23 @@ from .asset_mixin import AssetMixin
 
 
 class Users(AssetMixin):
-    """User related API methods."""
+    """API for working with user assets.
+
+    Examples:
+        For getting a count of assets
+
+            * :meth:`count`
+            * :meth:`count_by_saved_query`
+
+        For getting assets
+
+            * :meth:`get`
+            * :meth:`get_by_saved_query`
+            * :meth:`get_by_values`
+            * :meth:`get_by_value`
+            * :meth:`get_by_value_regex`
+            * :meth:`get_by_id`
+    """
 
     FIELD_USERNAME: str = "specific_data.data.username"
     FIELD_MAIL: str = "specific_data.data.mail"
@@ -16,13 +32,6 @@ class Users(AssetMixin):
     FIELD_SIMPLE: str = FIELD_USERNAME
     FIELD_COMPLEX: str = "specific_data.data.associated_devices"
     FIELD_COMPLEX_SUB: str = "device_caption"
-
-    FIELDS_SPECIFIC: List[str] = [
-        FIELD_USERNAME,
-        FIELD_DOMAIN,
-        FIELD_MAIL,
-        FIELD_IS_ADMIN,
-    ]
 
     @property
     def fields_default(self) -> List[str]:

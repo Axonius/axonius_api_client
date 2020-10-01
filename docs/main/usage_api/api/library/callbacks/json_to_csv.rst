@@ -1,4 +1,4 @@
-JSON to CSV export callbacks
+JSON to CSV callbacks
 ###############################################
 
 .. automodule:: axonius_api_client.api.asset_callbacks.base_json_to_csv

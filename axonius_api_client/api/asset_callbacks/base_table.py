@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """Table export callbacks class."""
-from typing import List, Optional, Tuple, Union
+from typing import List, Union
 
 import tabulate
 
@@ -13,33 +13,63 @@ from .base import Base
 class Table(Base):
     """Table export callbacks class.
 
-    Notes:
-        See :meth:`args_map` for the arguments this callbacks class.
+    See Also:
+        See :meth:`args_map` and :meth:`args_map_custom` for details on the extra kwargs that can
+        be passed to :meth:`axonius_api_client.api.assets.users.Users.get` or
+        :meth:`axonius_api_client.api.assets.devices.Devices.get`
+
     """
 
     CB_NAME: str = "table"
     """name for this callback"""
 
+    @classmethod
+    def args_map_custom(cls) -> dict:
+        """Get the custom argument names and their defaults for this callbacks object.
+
+        See Also:
+            :meth:`args_map_export` for the export arguments for this callbacks object.
+
+            :meth:`args_map` for the arguments for all callback objects.
+
+        Notes:
+            This callbacks object forces the following arguments to True in order to make the
+            output usable in the exported format: ``field_null``, ``field_flatten``,
+            and ``field_join``
+
+            These arguments can be supplied as extra kwargs passed to
+            :meth:`axonius_api_client.api.assets.users.Users.get` or
+            :meth:`axonius_api_client.api.assets.devices.Devices.get`
+
+        """
+        args = {}
+        args.update(cls.args_map_export())
+        args.update(
+            {
+                "field_titles": True,
+                "field_flatten": True,
+                "field_join": True,
+                "field_null": True,
+                "table_format": TABLE_FORMAT,
+                "table_max_rows": TABLE_MAX_ROWS,
+                "table_api_fields": False,
+            }
+        )
+        return args
+
     def _init(self):
-        """Override defaults in GETARGS to make table export readable."""
-        self.GETARGS["field_null"] = True
-        self.GETARGS["field_flatten"] = True
-        self.GETARGS["field_join"] = True
+        """Override defaults to make export readable."""
+        self.set_arg_value("field_null", True)
+        self.set_arg_value("field_flatten", True)
+        self.set_arg_value("field_join", True)
 
-        if self.GETARGS.get("field_titles", None) is None:
-            self.GETARGS["field_titles"] = True
-
-        table_api_fields = self.GETARGS.get("table_api_fields", False)
+        table_api_fields = self.get_arg_value("table_api_fields")
         if not table_api_fields:
-            field_excludes = listify(self.GETARGS.get("field_excludes", []))
-            self.GETARGS["field_excludes"] = field_excludes + self.APIOBJ.FIELDS_API
+            field_excludes = listify(self.get_arg_value("field_excludes"))
+            self.set_arg_value("field_excludes", field_excludes + self.APIOBJ.FIELDS_API)
 
-        table_max_rows = self.GETARGS.get("table_max_rows", TABLE_MAX_ROWS)
-        self.GETARGS["table_max_rows"] = table_max_rows
-
-        table_format = self.GETARGS.get("table_format", TABLE_FORMAT) or TABLE_FORMAT
-        self.check_table_format(fmt=table_format)
-        self.GETARGS["table_format"] = table_format
+        table_format = self.get_arg_value("table_format")
+        self.set_arg_value("table_format", self.check_table_format(fmt=table_format))
 
     def start(self, **kwargs):
         """Start this callbacks object."""
@@ -50,7 +80,7 @@ class Table(Base):
     def stop(self, **kwargs):
         """Stop this callbacks object."""
         super(Table, self).stop(**kwargs)
-        tablefmt = self.GETARGS["table_format"]
+        tablefmt = self.get_arg_value("table_format")
         rows = getattr(self, "_rows", [])
 
         table = tabulate.tabulate(
@@ -80,7 +110,7 @@ class Table(Base):
 
     def check_stop(self):
         """Check if rows processed is greater than table_max_rows."""
-        max_rows = self.GETARGS["table_max_rows"]
+        max_rows = self.get_arg_value("table_max_rows")
         rows_processed = self.STATE.get("rows_processed_total", 0)
 
         if all([rows_processed, max_rows]) and rows_processed >= max_rows:
@@ -100,13 +130,3 @@ class Table(Base):
             fmts = ", ".join(tabulate.tabulate_formats)
             msg = f"{fmt!r} is not a valid table format, must be one of {fmts}"
             self.echo(msg=msg, error=ApiError)
-
-    @classmethod
-    def args_map(cls) -> List[Tuple[str, str, Optional[Union[list, bool, str, int]]]]:
-        """Argument maps specific to this callbacks class."""
-        args = super(Table, cls).args_map()
-        return args + [
-            ("table_format", "Use table format:", TABLE_FORMAT),
-            ("table_max_rows", "Maximum table rows:", TABLE_MAX_ROWS),
-            ("table_api_fields", "Include API fields:", False),
-        ]
