@@ -1,106 +1,111 @@
 # -*- coding: utf-8 -*-
 """API models for working with adapters and connections."""
+import copy
 from typing import List
 
 from ...constants import DISCOVERY_NAME, GENERIC_NAME
 from ...tools import strip_right
 from .config import parse_schema
 
+CNX_LABEL_SCHEMA = {
+    "name": "connection_label",
+    "title": "Connection Label",
+    "type": "string",
+    "required": False,
+}
+
 
 def parse_adapters(raw: dict) -> List[dict]:
     """Parser to turn adapters metadata into a more friendly format."""
     parsed = []
 
-    for name, raws in raw.items():
-        for raw in raws:
-            adapter = parse_adapter(name=name, raw=raw)
+    for name, adapters in raw.items():
+        for adapter in adapters:
+            adapter = parse_adapter(name=name, adapter=adapter)
             parsed.append(adapter)
-
     return parsed
 
 
-def parse_adapter(name: str, raw: dict) -> dict:
+def parse_adapter(name: str, adapter: dict) -> dict:
     """Parse a single adapter."""
-    parsed = {
-        "name": strip_right(obj=name, fix="_adapter"),
-        "name_raw": name,
-        "name_plugin": raw["unique_plugin_name"],
-        "node_name": raw["node_name"],
-        "node_id": raw["node_id"],
-        "status": raw["status"],
-        "features": raw["supported_features"],
+    adapter = copy.deepcopy(adapter)
+    unique_plugin_name = adapter.pop("unique_plugin_name")
+    node_name = adapter.pop("node_name")
+    node_id = adapter.pop("node_id")
+    status = adapter.pop("status")
+    supported_features = adapter.pop("supported_features")
+    config = adapter.get("config", {})
+    cnxs = adapter.pop("clients")
+    cnx_schema = adapter.pop("schema")
+
+    cnx_schema = parse_schema(raw=cnx_schema)
+    # FYI old hack, may not be needed anymore
+    cnx_schema["connection_label"] = cnx_schema.get("connection_label", CNX_LABEL_SCHEMA)
+
+    adapter["name"] = strip_right(obj=name, fix="_adapter")
+    adapter["name_raw"] = name
+    adapter["name_plugin"] = unique_plugin_name
+    adapter["node_name"] = node_name
+    adapter["node_id"] = node_id
+    adapter["status"] = status
+    adapter["features"] = supported_features
+    adapter["schemas"] = {"cnx": cnx_schema}
+    adapter["config"] = {}
+
+    advanced_schema_names = {
+        "generic": GENERIC_NAME,
+        "discovery": DISCOVERY_NAME,
+        "specific": get_specific_name(config=config),
     }
 
-    generic_name = GENERIC_NAME
-    discovery_name = DISCOVERY_NAME
+    for adv_key, adv_name in advanced_schema_names.items():
+        adv_root = config.get(adv_name, {})
+        adv_schema = adv_root.pop("schema", {})
+        adv_config = adv_root.pop("config", {})
+        adapter["schemas"][f"{adv_key}_name"] = adv_name
+        adapter["schemas"][adv_key] = parse_schema(raw=adv_schema)
+        adapter["config"][adv_key] = adv_config
 
-    specific_name = get_specific_name(raw=raw)
-    config = raw["config"]
+    adapter["cnx"] = parse_cnxs(cnxs=cnxs, adapter=adapter)
+    adapter["cnx_count_total"] = len(adapter["cnx"])
+    adapter["cnx_count_broken"] = len([x for x in adapter["cnx"] if not x["working"]])
+    adapter["cnx_count_working"] = len([x for x in adapter["cnx"] if x["working"]])
 
-    specific_schema = config.get(specific_name, {}).get("schema", {})
-    specific_schema = parse_schema(raw=specific_schema)
-
-    generic_schema = config[generic_name]["schema"]
-    generic_schema = parse_schema(raw=generic_schema)
-
-    discovery_schema = config[discovery_name]["schema"]
-    discovery_schema = parse_schema(raw=discovery_schema)
-
-    cnx_schema = parse_schema(raw=raw["schema"])
-    cnx_schema["connection_label"] = {
-        "name": "connection_label",
-        "title": "Connection Label",
-        "type": "string",
-        "required": False,
-    }
-
-    parsed["schemas"] = {
-        "cnx": cnx_schema,
-        "specific": specific_schema,
-        "generic": generic_schema,
-        "discovery": discovery_schema,
-        "generic_name": generic_name,
-        "specific_name": specific_name,
-        "discovery_name": discovery_name,
-    }
-
-    parsed["config"] = {
-        "specific": raw["config"].get(specific_name, {}).get("config", {}),
-        "generic": raw["config"].get(generic_name, {}).get("config", {}),
-        "discovery": raw["config"].get(discovery_name, {}).get("config", {}),
-    }
-
-    parsed["cnx"] = parse_cnx(raw=raw, parsed=parsed)
-    parsed["cnx_count_total"] = len(parsed["cnx"])
-    parsed["cnx_count_broken"] = len([x for x in parsed["cnx"] if not x["working"]])
-    parsed["cnx_count_working"] = len([x for x in parsed["cnx"] if x["working"]])
-
-    return parsed
+    return adapter
 
 
-def get_specific_name(raw: dict) -> str:
+def get_specific_name(config: dict) -> str:
     """Pass."""
-    found = [x for x in raw["config"] if x not in [GENERIC_NAME, DISCOVERY_NAME]]
+    found = [x for x in config if x not in [GENERIC_NAME, DISCOVERY_NAME]]
     return found[0] if found else ""
 
 
-def parse_cnx(raw: dict, parsed: dict) -> List[dict]:
+def parse_cnxs(cnxs: List[dict], adapter: dict) -> List[dict]:
+    """Parse the connections metadata for this adapter."""
+    return [parse_cnx(cnx=x, adapter=adapter) for x in cnxs]
+
+
+def parse_cnx(cnx: dict, adapter: dict) -> List[dict]:
     """Parse the connection metadata for this adapter."""
-    cnx = []
+    status = cnx.pop("status")
+    error = cnx.pop("error")
+    client_config = cnx.pop("client_config")
+    client_id = cnx.pop("client_id")
+    uuid = cnx.pop("uuid")
+    date_fetched = cnx.pop("date_fetched")
 
-    for cnx_raw in raw["clients"]:
-        cnx_parsed = {}
-        cnx_parsed["config"] = cnx_raw["client_config"]
-        cnx_parsed["adapter_name"] = parsed["name"]
-        cnx_parsed["adapter_name_raw"] = parsed["name_raw"]
-        cnx_parsed["node_name"] = parsed["node_name"]
-        cnx_parsed["node_id"] = parsed["node_id"]
-        cnx_parsed["status"] = cnx_raw["status"]
-        cnx_parsed["working"] = cnx_raw["status"] == "success" and not cnx_raw["error"]
-        cnx_parsed["id"] = cnx_raw["client_id"]
-        cnx_parsed["uuid"] = cnx_raw["uuid"]
-        cnx_parsed["date_fetched"] = cnx_raw["date_fetched"]
-        cnx_parsed["error"] = cnx_raw["error"]
-        cnx.append(cnx_parsed)
+    # FYI gone 3.10 ??
+    error = cnx.pop("error", "")
 
+    cnx["config"] = client_config
+    cnx["adapter_name"] = adapter["name"]
+    cnx["adapter_name_raw"] = adapter["name_raw"]
+    cnx["node_name"] = adapter["node_name"]
+    cnx["node_id"] = adapter["node_id"]
+    cnx["status"] = status
+    cnx["working"] = status == "success" and not error
+    cnx["id"] = client_id
+    cnx["uuid"] = uuid
+    cnx["date_fetched"] = date_fetched
+    cnx["error"] = error
     return cnx

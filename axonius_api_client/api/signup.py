@@ -45,6 +45,7 @@ class Signup:
             "userName": "admin",
             "newPassword": password,
             "confirmNewPassword": password,
+            "api_keys": True,
         }
         response = self.http(method="post", path=self.router.root, json=data)
         return response.json()

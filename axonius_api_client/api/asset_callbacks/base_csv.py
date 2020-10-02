@@ -30,7 +30,38 @@ class Csv(Base):
 
             :meth:`args_map` for the arguments for all callback objects.
 
+        Examples:
+            First, create a ``client`` using :obj:`axonius_api_client.connect.Connect` and assume
+            ``apiobj`` is either ``client.devices`` or ``client.users``
+
+            >>> apiobj = client.devices
+
+            Use 'missing' instead of None for rows that are missing a column.
+
+            >>> assets = apiobj.get(export="csv", export_file="test.csv", csv_key_miss='missing')
+
+            Use 'missing' instead of None for rows that are missing a column.
+
+            >>> assets = apiobj.get(export="csv", export_file="test.csv", csv_key_miss='missing')
+
+            Throw an error if an unknown column is found in a row. Must be one of: 'ignore' or
+            'raise'.
+
+            >>> assets = apiobj.get(export="csv", export_file="test.csv", csv_key_extras='raise')
+
+            Use 'excel-tab' csv format instead of 'excel'. Must be one of 'excel', 'excel-tab', or
+            'unix'.
+
+            >>> assets = apiobj.get(export="csv", export_file="test.csv", csv_dialect='excel-tab')
+
+            Quote all items instead of just non-numeric. Must be one of 'all', 'minimal',
+            'nonnumeric', or 'none'.
+
+            >>> assets = apiobj.get(export="csv", export_file="test.csv", csv_quoting='all')
+
         Notes:
+            If ``export_file`` is not supplied, the default is to print the output to STDOUT.
+
             This callbacks object forces the following arguments to True in order to make the
             output usable in the exported format: ``field_null``, ``field_flatten``,
             and ``field_join``
@@ -73,9 +104,16 @@ class Csv(Base):
             return
 
         restval = self.get_arg_value("csv_key_miss")
+
         extras = self.get_arg_value("csv_key_extras")
+        # TBD: valid choice check
+
         dialect = self.get_arg_value("csv_dialect")
+        # TBD: valid choice check
+
         quote = self.get_arg_value("csv_quoting")
+        # TBD: valid choice check
+
         quote = getattr(csv, f"QUOTE_{quote.upper()}")
 
         try:
