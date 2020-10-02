@@ -1,24 +1,20 @@
 # -*- coding: utf-8 -*-
 """API models for working with device and user assets."""
 import re
+import warnings
 from typing import List, Optional, Tuple, Union
 
 from cachetools import TTLCache, cached
 
-from ...constants import (
-    AGG_ADAPTER_ALTS,
-    AGG_ADAPTER_NAME,
-    FUZZY_SCHEMAS_KEYS,
-    GET_SCHEMA_KEYS,
-    GET_SCHEMAS_KEYS,
-)
+from ...constants import (AGG_ADAPTER_ALTS, AGG_ADAPTER_NAME,
+                          FUZZY_SCHEMAS_KEYS, GET_SCHEMA_KEYS,
+                          GET_SCHEMAS_KEYS)
 from ...exceptions import ApiError, NotFoundError
 from ...tools import listify, split_str, strip_right
 from ..mixins import ChildMixins
 from ..parsers import parse_fields
 
 try:
-    import warnings
 
     warnings.filterwarnings("ignore", message="Using slow pure-python SequenceMatcher")
     from fuzzywuzzy import fuzz
@@ -29,7 +25,15 @@ CACHE: TTLCache = TTLCache(maxsize=1024, ttl=300)
 
 
 class Fields(ChildMixins):
-    """Child API model for working with fields for the parent asset type."""
+    """API object for working with fields for the parent asset type.
+
+    Examples:
+        First, create a ``client`` using :obj:`axonius_api_client.connect.Connect` and assume
+        ``apiobj`` is either ``client.devices`` or ``client.users``
+
+        >>> apiobj = client.devices
+
+    """
 
     @staticmethod
     def fuzzy_filter(
@@ -40,8 +44,22 @@ class Fields(ChildMixins):
         token_score: int = 70,
         partial_score: int = 50,
         names: bool = False,
+        fuzzy_keys: List[str] = FUZZY_SCHEMAS_KEYS,
         **kwargs,
     ) -> List[dict]:
+        """Perform a fuzzy search against a set of field schemas.
+
+        Args:
+            search: string to search for against the keys in fuzzy_keys
+            schemas: field schemas to search through
+            root_only: only search against schemas of root fields
+            do_contains: allow matches based on the search string is in fuzzy_keys
+            token_score: fuzzy scoring needed for a token match
+            partial_score: fuzzy scoring needed for a partial match
+            names: return the fully qualified field names instead of the field schemas
+            fuzzy_keys: list of keys to check search against in each field schema
+        """
+
         def do_skip():
             if schema in matches:
                 return True
@@ -61,7 +79,7 @@ class Fields(ChildMixins):
             return False
 
         def is_match(method, **kwargs):
-            for key in keys:
+            for key in fuzzy_keys:
                 if method(search, schema[key], **kwargs):
                     return True
 
@@ -75,8 +93,6 @@ class Fields(ChildMixins):
 
         def contains(search, value, **kwargs):
             return search.strip().lower() in value.strip().lower()
-
-        keys = kwargs.get("fuzzy_keys", FUZZY_SCHEMAS_KEYS)
 
         matches = []
 
@@ -96,15 +112,18 @@ class Fields(ChildMixins):
 
     @cached(cache=CACHE)
     def get(self) -> dict:
-        """Get the schema of all adapters and their fields.
-
-        Returns:
-            :obj:`dict`: parsed output from :meth:`ParserFields.parse`
-        """
+        """Get the schema of all adapters and their fields."""
         return parse_fields(raw=self._get())
 
     def get_adapter_names(self, value: str) -> List[str]:
-        """Find an adapter by name regex."""
+        """Find adapter names that regex match a value.
+
+        Args:
+            value: regex of adapter to match
+
+        Raises:
+            :exc:`NotFoundError`: when no adapter name matches supplied value
+        """
         fields = self.get()
 
         search = strip_right(obj=value.lower().strip(), fix="_adapter")
@@ -123,7 +142,14 @@ class Fields(ChildMixins):
         return matches
 
     def get_adapter_name(self, value: str) -> str:
-        """Find an adapter by name."""
+        """Find an adapter name that equals a value.
+
+        Args:
+            value: name of adapter
+
+        Raises:
+            :exc:`NotFoundError`: when no adapter name equals supplied value
+        """
         fields = self.get()
 
         search = strip_right(obj=value.lower().strip(), fix="_adapter")
@@ -138,9 +164,16 @@ class Fields(ChildMixins):
         msg = msg.format(value, "\n  ".join(list(fields)))
         raise NotFoundError(msg)
 
-    def get_field_schemas(self, value: str, schemas: List[dict], **kwargs) -> List[dict]:
-        """Find a schema for a field by regex of name."""
-        keys = kwargs.get("keys", GET_SCHEMAS_KEYS)
+    def get_field_schemas(
+        self, value: str, schemas: List[dict], keys: List[str] = GET_SCHEMAS_KEYS
+    ) -> List[dict]:
+        """Find field schemes that regex match a value.
+
+        Args:
+            value: regex of name to match
+            schemas: list of field schemas to search through
+            keys: list of keys to check regex value against
+        """
         search = re.compile(value.lower().strip(), re.I)
 
         matches = []
@@ -154,11 +187,25 @@ class Fields(ChildMixins):
                     matches.append(schema)
         return matches
 
-    def get_field_schema(self, value: str, schemas: List[dict], **kwargs) -> dict:
-        """Find a schema for a field by name."""
-        keys = kwargs.get("keys", GET_SCHEMA_KEYS)
-        keys_fuzzy = kwargs.get("keys_fuzzy", FUZZY_SCHEMAS_KEYS)
+    def get_field_schema(
+        self,
+        value: str,
+        schemas: List[dict],
+        keys: List[str] = GET_SCHEMA_KEYS,
+        **kwargs,
+    ) -> dict:
+        """Find a field name that equals a value.
 
+        Args:
+            value: name of field
+            schemas: list of field schemas to search through
+            keys: list of keys to check if value equals
+            **kwargs: passed to :meth:`fuzzy_filter` to print fuzzy matches in error
+                if no matches found
+
+        Raises:
+            :exc:`NotFoundError`: when no field name equals supplied value
+        """
         search = value.lower().strip()
 
         schemas = [x for x in schemas if x.get("selectable", True)]
@@ -168,13 +215,13 @@ class Fields(ChildMixins):
                 if search.lower().strip() == schema[key].lower():
                     return schema
 
-        err = "No fuzzy matches, all valid fields:"
-
         kwargs["search"] = value
         kwargs["schemas"] = schemas
         fuzzy = self.fuzzy_filter(**kwargs)
+
+        err = "No fuzzy matches, all valid fields:"
         if fuzzy:
-            keys = keys_fuzzy
+            keys = kwargs.get("keys_fuzzy", FUZZY_SCHEMAS_KEYS)
             err = "Maybe you meant one of these fuzzy matches:"
 
         ktxt = " or ".join(keys)
@@ -349,16 +396,12 @@ class Fields(ChildMixins):
 
         return adapter_split, fields
 
-    def _get(self) -> dict:
-        """Direct API method to get the schema of all fields.
-
-        Returns:
-            :obj:`dict`: schema of all fields
-        """
-        return self.request(method="get", path=self.router.fields)
-
     def _prettify_schemas(self, schemas: List[dict]) -> List[str]:
         """Pass."""
         stmpl = "{adapter_name}:{name_base:{name_base_len}} -> {column_title}".format
         name_base_len = max([len(x["name_base"]) for x in schemas])
         return [stmpl(name_base_len=name_base_len, **x) for x in schemas]
+
+    def _get(self) -> dict:
+        """Private API method to get the schema of all fields."""
+        return self.request(method="get", path=self.router.fields)
