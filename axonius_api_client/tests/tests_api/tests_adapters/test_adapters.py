@@ -4,18 +4,12 @@ import copy
 import warnings
 
 import pytest
-
 from axonius_api_client.constants import CSV_ADAPTER, DEFAULT_NODE
-from axonius_api_client.exceptions import ApiError, ConfigUnchanged, ConfigUnknown, NotFoundError
+from axonius_api_client.exceptions import (ApiError, ConfigUnchanged,
+                                           ConfigUnknown, NotFoundError)
 
-from ...meta import (
-    CSV_FILECONTENT_BYTES,
-    CSV_FILECONTENT_STR,
-    CSV_FILENAME,
-    FIELD_FORMATS,
-    NO_TITLES,
-    SCHEMA_TYPES,
-)
+from ...meta import (CSV_FILECONTENT_BYTES, CSV_FILECONTENT_STR, CSV_FILENAME,
+                     FIELD_FORMATS, NO_TITLES, SCHEMA_TYPES)
 
 
 def val_parsed_schema(schema):
@@ -191,6 +185,10 @@ class TestAdaptersPrivate(TestAdaptersBase):
 
         last_fetch_time = client.pop("last_fetch_time")
         assert last_fetch_time is None or isinstance(last_fetch_time, str)
+
+        # added in 3.10
+        active = client.pop("active", True)
+        assert isinstance(active, bool)
 
         assert not client
 
@@ -542,6 +540,19 @@ class TestAdaptersPublic(TestAdaptersBase):
 
         uuid = cnx.pop("uuid")
         assert isinstance(uuid, str) and uuid
+
+        # TBD: bust out dict?
+        # FYI: added in 3.8?
+        connection_discovery = cnx.pop("connection_discovery")
+        assert isinstance(connection_discovery, dict)
+
+        # FYI: added in 3.8?
+        last_fetch_time = cnx.pop("last_fetch_time")
+        assert last_fetch_time is None or isinstance(last_fetch_time, str)
+
+        # FYI added in 3.10
+        active = cnx.pop("active", True)
+        assert isinstance(active, bool)
 
         assert not cnx
 

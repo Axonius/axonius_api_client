@@ -2,16 +2,12 @@
 """API models for working with adapters and connections."""
 import copy
 import pathlib
+import warnings
 from typing import Any, List, Optional, Tuple, Union
 
 from ...constants import NO, SETTING_UNCHANGED, YES
-from ...exceptions import (
-    ApiError,
-    ConfigInvalidValue,
-    ConfigRequired,
-    ConfigUnchanged,
-    ConfigUnknown,
-)
+from ...exceptions import (ApiError, ConfigInvalidValue, ConfigRequired,
+                           ConfigUnchanged, ConfigUnknown)
 from ...tools import is_int, join_kv, json_load
 from .tables import tablize_schemas
 
@@ -309,20 +305,45 @@ def is_uploaded_file(value: Union[str, dict]) -> Tuple[bool, Union[str, dict]]:
     return False, value
 
 
+# def parse_schema(raw: dict) -> dict:
+#     """Pass."""
+#     parsed = raw
+#     if not raw:
+#         return parsed
+
+#     schemas = raw.pop("items")
+#     required = raw["required"]
+
+#     for schema in schemas:
+#         schema_name = schema["name"]
+#         parsed[schema_name] = schema
+#         schema["required"] = schema_name in required
+
+#     return parsed
+
+
 def parse_schema(raw: dict) -> dict:
     """Pass."""
     parsed = {}
     if not raw:
         return parsed
 
-    schemas = raw["items"]
-    required = raw["required"]
+    schemas = raw.pop("items")
+    required = raw.pop("required")
+    raw.pop("type", "")
+    raw.pop("pretty_name", "")
+    cnx_label = raw.pop("connection_label", {})
+
+    if cnx_label:
+        parsed["connection_label"] = cnx_label
 
     for schema in schemas:
         schema_name = schema["name"]
         parsed[schema_name] = schema
         schema["required"] = schema_name in required
 
+    if raw:  # pragma: no cover
+        warnings.warn(f"SCHEMA CHANGE? leftover items: {raw}")
     return parsed
 
 
@@ -334,6 +355,7 @@ def parse_schema_enum(schema: dict):
         schema["enum"] = {x["name"]: x for x in schema["enum"]}
 
 
+# TBD: re-tool to return cleaned up 'raw'
 def parse_section(raw: dict, raw_config: dict, parent: dict, settings: dict) -> dict:
     """Pass."""
     # FYI has no title:
@@ -397,6 +419,7 @@ def parse_section(raw: dict, raw_config: dict, parent: dict, settings: dict) -> 
     return parsed
 
 
+# TBD: re-tool to return cleaned up 'raw'
 def parse_settings(raw: dict, title: str = "") -> dict:
     """Pass."""
     # FYI missing pretty_name:
