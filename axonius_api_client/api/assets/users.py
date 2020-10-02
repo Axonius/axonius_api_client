@@ -10,28 +10,43 @@ class Users(AssetMixin):
     """API for working with user assets.
 
     Examples:
-        For getting a count of assets
+        For all examples for this asset type,
+        create a ``client`` using :obj:`axonius_api_client.connect.Connect` and assume ``apiobj``
+        is ``client.users``
 
-            * :meth:`count`
-            * :meth:`count_by_saved_query`
+        >>> apiobj = client.users
 
-        For getting assets
-
-            * :meth:`get`
-            * :meth:`get_by_saved_query`
-            * :meth:`get_by_values`
-            * :meth:`get_by_value`
-            * :meth:`get_by_value_regex`
-            * :meth:`get_by_id`
+    See Also:
+        * :meth:`count`
+        * :meth:`count_by_saved_query`
+        * :meth:`get`
+        * :meth:`get_by_saved_query`
+        * :meth:`get_by_id`
     """
 
     FIELD_USERNAME: str = "specific_data.data.username"
+    """User Name field."""
+
     FIELD_MAIL: str = "specific_data.data.mail"
+    """Mail field."""
+
     FIELD_DOMAIN: str = "specific_data.data.domain"
+    """Domain field."""
+
     FIELD_IS_ADMIN: str = "specific_data.data.is_admin"
+    """Is Admin field."""
+
+    FIELD_MAIN: str = FIELD_USERNAME
+    """Field name of the main identifier."""
+
     FIELD_SIMPLE: str = FIELD_USERNAME
+    """Field name of a simple field."""
+
     FIELD_COMPLEX: str = "specific_data.data.associated_devices"
+    """Field name of a complex field."""
+
     FIELD_COMPLEX_SUB: str = "device_caption"
+    """Field name of a complex sub field."""
 
     @property
     def fields_default(self) -> List[str]:
@@ -54,7 +69,12 @@ class Users(AssetMixin):
     def get_by_usernames(
         self, values: List[str], **kwargs
     ) -> Union[Generator[dict, None, None], List[dict]]:
-        """Build a query to get assets where username in values."""
+        """Build a query to get assets where :attr:`FIELD_USERNAME` in values.
+
+        Args:
+            values: list of usernames
+            **kwargs: passed to :meth:`get_by_values`
+        """
         kwargs["field"] = self.FIELD_USERNAME
         kwargs["field_manual"] = True
         kwargs["values"] = values
@@ -63,7 +83,12 @@ class Users(AssetMixin):
     def get_by_username_regex(
         self, value: str, **kwargs
     ) -> Union[Generator[dict, None, None], List[dict]]:
-        """Build a query to get assets where username regex matches value."""
+        """Build a query to get assets where :attr:`FIELD_USERNAME` regex matches value.
+
+        Args:
+            value: regex of username to match
+            **kwargs: passed to :meth:`get_by_value_regex`
+        """
         kwargs["field"] = self.FIELD_USERNAME
         kwargs["field_manual"] = True
         kwargs["value"] = value
@@ -72,7 +97,12 @@ class Users(AssetMixin):
     def get_by_username(
         self, value: str, **kwargs
     ) -> Union[Generator[dict, None, None], List[dict]]:
-        """Build a query to get assets where username == value."""
+        """Build a query to get assets where :attr:`FIELD_USERNAME` == value.
+
+        Args:
+            value: username
+            **kwargs: passed to :meth:`get_by_value`
+        """
         kwargs["field"] = self.FIELD_USERNAME
         kwargs["field_manual"] = True
         kwargs["value"] = value
@@ -81,7 +111,12 @@ class Users(AssetMixin):
     def get_by_mails(
         self, values: List[str], **kwargs
     ) -> Union[Generator[dict, None, None], List[dict]]:
-        """Build a query to get assets where mail in values."""
+        """Build a query to get assets where :attr:`FIELD_MAIL` in values.
+
+        Args:
+            values: list of email addressses
+            **kwargs: passed to :meth:`get_by_values`
+        """
         kwargs["field"] = self.FIELD_MAIL
         kwargs["field_manual"] = True
         kwargs["values"] = values
@@ -90,14 +125,24 @@ class Users(AssetMixin):
     def get_by_mail_regex(
         self, value: str, **kwargs
     ) -> Union[Generator[dict, None, None], List[dict]]:
-        """Build a query to get assets where mail regex matches value."""
+        """Build a query to get assets where :attr:`FIELD_MAIL` regex matches value.
+
+        Args:
+            value: regex of email address to match
+            **kwargs: passed to :meth:`get_by_value_regex`
+        """
         kwargs["field"] = self.FIELD_MAIL
         kwargs["field_manual"] = True
         kwargs["value"] = value
         return self.get_by_value_regex(**kwargs)
 
     def get_by_mail(self, value: str, **kwargs) -> Union[Generator[dict, None, None], List[dict]]:
-        """Build a query to get assets where mail == value."""
+        """Build a query to get assets where :attr:`FIELD_MAIL` == value.
+
+        Args:
+            value: email address
+            **kwargs: passed to :meth:`get_by_value`
+        """
         kwargs["field"] = self.FIELD_MAIL
         kwargs["field_manual"] = True
         kwargs["value"] = value

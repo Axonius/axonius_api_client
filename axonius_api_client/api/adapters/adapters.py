@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""API for working with adapters."""
+"""Working with adapters."""
 import pathlib
 from typing import List, Optional, Union
 
@@ -7,62 +7,30 @@ from ...constants import CONFIG_TYPES, DEFAULT_NODE
 from ...exceptions import ApiError, NotFoundError
 from ...tools import path_read
 from ..mixins import ModelMixins
-from ..parsers import (
-    config_build,
-    config_unchanged,
-    config_unknown,
-    parse_adapters,
-    parse_schema,
-    tablize_adapters,
-)
+from ..parsers import (config_build, config_unchanged, config_unknown,
+                       parse_adapters, parse_schema, tablize_adapters)
 from ..routers import API_VERSION, Router
 from .cnx import Cnx
 
 
 class Adapters(ModelMixins):
-    """API object for working with adapters.
+    """API model for working with adapters.
 
-    Examples:
-        First, create a ``client`` using :obj:`axonius_api_client.connect.Connect`.
+    Notes:
+        All methods use the Core instance by default, but you can work with another instance by
+        passing the name of the instance to ``node``.
 
-        >>> # Get an adapter by name
-        >>> adapter = client.adapters.get_by_name(name="aws")
-        >>> print(adapter['status'])  # overall adapter status
-        >>> print(adapter['cnx_count_total'])  # total connection count
-        >>> print(adapter['cnx_count_broken'])  # broken connection count
-        >>> print(adapter['cnx_count_working'])  # working connection count
-        >>>
-        >>> # Get details of each connection of the adapter
-        >>> for cnx in adapter["cnx"]:
-        ...     print(cnx)
-        ...     print(cnx["working"])  # bool if connection is working or not
-        ...     print(cnx["error"])  # error from last fetch attempt
-        ...     print(cnx["config"])  # configuration of connection
-        ...     print(cnx["id"])  # ID of connection
-        ...     print(cnx["uuid"])  # UUID of connection
-        >>>
-        >>> # Update the generic advanced settings for the adapter
-        >>> updated_config = client.adapters.config_update(
-        ...     name="aws", last_seen_threshold_hours=24
-        ... )
-        >>>
-        >>> # Update the adapter specific advanced settings
-        >>> updated_config = client.adapters.config_update(
-        ...     name="aws", config_type="specific", fetch_s3=True
-        ... )
-        >>>
-        >>> # Update the discover advanced settings
-        >>> # XXX currently broken!
-        >>>
-        >>> # Upload a file for use in a connection later
-        >>> file_uuid = client.adapters.file_upload_path(path="test.csv")
+        Supplying unknown keys/values for configurations will throw an error showing the
+        valid keys/values.
 
+    See Also:
+        Examples can be found inline at:
+
+        * :meth:`get_by_name`
+        * :meth:`config_update`
+        * :meth:`file_upload`
+        * :meth:`file_upload_path`
     """
-
-    @property
-    def router(self) -> Router:
-        """Router for this API model."""
-        return API_VERSION.adapters
 
     def get(self) -> List[dict]:
         """Get all adapters on all nodes."""
@@ -73,9 +41,32 @@ class Adapters(ModelMixins):
     def get_by_name(self, name: str, node: str = DEFAULT_NODE) -> dict:
         """Get an adapter by name on a single node.
 
+        Examples:
+            First, create a ``client`` using :obj:`axonius_api_client.connect.Connect`.
+
+            Get an adapter by name
+
+            >>> adapter = client.adapters.get_by_name(name="aws")
+            >>> print(adapter['status'])  # overall adapter status
+            >>> print(adapter['cnx_count_total'])  # total connection count
+            >>> print(adapter['cnx_count_broken'])  # broken connection count
+            >>> print(adapter['cnx_count_working'])  # working connection count
+
+            Get details of each connection of the adapter
+
+            >>> for cnx in adapter["cnx"]:
+            ...     print(cnx["working"])  # bool if connection is working or not
+            ...     print(cnx["error"])  # error from last fetch attempt
+            ...     print(cnx["config"])  # configuration of connection
+            ...     print(cnx["id"])  # ID of connection
+            ...     print(cnx["uuid"])  # UUID of connection
+
         Args:
             name: name of adapter to get
             node: name of node to get adapter from
+
+        Raises:
+            :exc:`NotFoundError`: when no node found or when no adapter found on node
         """
         adapters = self.get()
 
@@ -111,6 +102,9 @@ class Adapters(ModelMixins):
         Args:
             adapter: adapter previously fetched from :meth:`get_by_name`
             config_type: One of generic, specific, or discover
+
+        Raises:
+            :exc:`ApiError`: when adapter does not have the supplied config_type
         """
         schemas = adapter["schemas"]
         name_config = f"{config_type}_name"
@@ -132,6 +126,24 @@ class Adapters(ModelMixins):
         self, name: str, node: str = DEFAULT_NODE, config_type: str = "generic", **kwargs
     ) -> dict:
         """Update the advanced settings for an adapter.
+
+        Examples:
+            First, create a ``client`` using :obj:`axonius_api_client.connect.Connect`.
+
+            Update the generic advanced settings for the adapter
+
+            >>> updated_config = client.adapters.config_update(
+            ...     name="aws", last_seen_threshold_hours=24
+            ... )
+
+            Update the adapter specific advanced settings
+
+            >>> updated_config = client.adapters.config_update(
+            ...     name="aws", config_type="specific", fetch_s3=True
+            ... )
+
+            Update the discover advanced settings
+            >>> # XXX currently broken!
 
         Args:
             name: name of adapter to update advanced settings of
@@ -179,6 +191,19 @@ class Adapters(ModelMixins):
     ) -> dict:
         """Upload a file to a specific adapter on a specific node.
 
+        Examples:
+            First, create a ``client`` using :obj:`axonius_api_client.connect.Connect`.
+
+            Upload content as a file for use in a connection later
+
+            >>> content = "content of file to upload"
+            >>> file_uuid = client.adapters.file_upload(
+            ...     name="aws",
+            ...     file_name="name_of_file",
+            ...     file_content=content,
+            ...     field_name="name_of_field",
+            ... )
+
         Args:
             name: name of adapter to upload file to
             node: name of node to to upload file to
@@ -201,6 +226,13 @@ class Adapters(ModelMixins):
     def file_upload_path(self, path: Union[str, pathlib.Path], **kwargs):
         """Upload the contents of a file to a specific adapter on a specific node.
 
+        Examples:
+            First, create a ``client`` using :obj:`axonius_api_client.connect.Connect`.
+
+            Upload a file for use in a connection later
+
+            >>> file_uuid = client.adapters.file_upload_path(name="aws", path="test.csv")
+
         Args:
             path: path to file containing contents to upload
             **kwargs: passed to :meth:`file_upload`
@@ -218,13 +250,18 @@ class Adapters(ModelMixins):
 
         super(Adapters, self)._init(**kwargs)
 
+    @property
+    def router(self) -> Router:
+        """Router for this API model."""
+        return API_VERSION.adapters
+
     def _get(self) -> dict:
-        """Direct API method to get all adapters."""
+        """Private API method to get all adapters."""
         path = self.router.root
         return self.request(method="get", path=path)
 
     def _config_update(self, name_raw: str, name_config: str, new_config: dict) -> str:
-        """Direct API method to set advanced settings for an adapter.
+        """Private API method to set advanced settings for an adapter.
 
         Args:
             name_raw: raw name of the adapter i.e. ``aws_adapter``
@@ -241,7 +278,7 @@ class Adapters(ModelMixins):
         return self.request(method="post", path=path, json=new_config, error_json_invalid=False)
 
     def _config_get(self, name_plugin: str, name_config: str) -> dict:
-        """Direct API method to set advanced settings for an adapter.
+        """Private API method to set advanced settings for an adapter.
 
         Args:
             name_plugin: plugin name of the adapter i.e. ``aws_adapter_0``
@@ -266,7 +303,7 @@ class Adapters(ModelMixins):
         file_content_type: Optional[str] = None,
         file_headers: Optional[dict] = None,
     ) -> dict:
-        """Direct API method to upload a file to a specific adapter on a specifc node.
+        """Private API method to upload a file to a specific adapter on a specifc node.
 
         Args:
             name_raw: raw name of the adapter i.e. ``aws_adapter``

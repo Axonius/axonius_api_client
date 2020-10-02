@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Asset export callbacks."""
+"""Callbacks for exporting assets."""
 from . import base, base_csv, base_json, base_table, base_xlsx, tools
 from .base import Base
 from .base_csv import Csv

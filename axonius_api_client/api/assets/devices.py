@@ -26,16 +26,37 @@ class Devices(AssetMixin):
     """
 
     FIELD_ASSET_NAME: str = "specific_data.data.name"
+    """Asset Name field."""
+
     FIELD_HOSTNAME: str = "specific_data.data.hostname"
+    """Hostname field."""
+
     FIELD_IP: str = "specific_data.data.network_interfaces.ips"
+    """Network Interfaces IPs field."""
+
     FIELD_IP_RAW: str = "specific_data.data.network_interfaces.ips_raw"
+    """Network Interfaces IPs raw field."""
+
     FIELD_MAC: str = "specific_data.data.network_interfaces.mac"
+    """Network Interfaces MACs field."""
+
     FIELD_SUBNET: str = "specific_data.data.network_interfaces.subnets"
+    """Network Interfaces Subnets field."""
+
     FIELD_OS_TYPE: str = "specific_data.data.os.type"
+    """OS Type field."""
+
     FIELD_MAIN: str = FIELD_HOSTNAME
+    """Field name of the main identifier."""
+
     FIELD_SIMPLE: str = FIELD_HOSTNAME
+    """Field name of a simple field."""
+
     FIELD_COMPLEX: str = "specific_data.data.network_interfaces"
+    """Field name of a complex field."""
+
     FIELD_COMPLEX_SUB: str = "name"
+    """Field name of a complex sub field."""
 
     @property
     def fields_default(self) -> List[str]:
@@ -59,7 +80,12 @@ class Devices(AssetMixin):
     def get_by_hostnames(
         self, values: List[str], **kwargs
     ) -> Union[Generator[dict, None, None], List[dict]]:
-        """Build a query to get assets where hostname in values."""
+        """Build a query to get assets where :attr:`FIELD_HOSTNAME` in values.
+
+        Args:
+            values: list of hostnames
+            **kwargs: passed to :meth:`get_by_values`
+        """
         kwargs["field"] = self.FIELD_HOSTNAME
         kwargs["field_manual"] = True
         kwargs["values"] = values
@@ -68,7 +94,12 @@ class Devices(AssetMixin):
     def get_by_hostname_regex(
         self, value: str, **kwargs
     ) -> Union[Generator[dict, None, None], List[dict]]:
-        """Build a query to get assets where hostname regex matches value."""
+        """Build a query to get assets where :attr:`FIELD_HOSTNAME` regex matches value.
+
+        Args:
+            value: regex of hostname to match
+            **kwargs: passed to :meth:`get_by_value_regex`
+        """
         kwargs["field"] = self.FIELD_HOSTNAME
         kwargs["field_manual"] = True
         kwargs["value"] = value
@@ -77,7 +108,12 @@ class Devices(AssetMixin):
     def get_by_hostname(
         self, value: str, **kwargs
     ) -> Union[Generator[dict, None, None], List[dict]]:
-        """Build a query to get assets where hostname == value."""
+        """Build a query to get assets where :attr:`FIELD_HOSTNAME` == value.
+
+        Args:
+            value: hostname
+            **kwargs: passed to :meth:`get_by_value`
+        """
         kwargs["field"] = self.FIELD_HOSTNAME
         kwargs["field_manual"] = True
         kwargs["value"] = value
@@ -86,7 +122,12 @@ class Devices(AssetMixin):
     def get_by_macs(
         self, values: List[str], **kwargs
     ) -> Union[Generator[dict, None, None], List[dict]]:
-        """Build a query to get assets where mac in values."""
+        """Build a query to get assets where :attr:`FIELD_MAC` in values.
+
+        Args:
+            values: list of mac addresss
+            **kwargs: passed to :meth:`get_by_values`
+        """
         kwargs["field"] = self.FIELD_MAC
         kwargs["field_manual"] = True
         kwargs["values"] = values
@@ -95,14 +136,24 @@ class Devices(AssetMixin):
     def get_by_mac_regex(
         self, value: str, **kwargs
     ) -> Union[Generator[dict, None, None], List[dict]]:
-        """Build a query to get assets where mac regex matches value."""
+        """Build a query to get assets where :attr:`FIELD_MAC` regex matches value.
+
+        Args:
+            value: regex of mac adress to match
+            **kwargs: passed to :meth:`get_by_value_regex`
+        """
         kwargs["field"] = self.FIELD_MAC
         kwargs["field_manual"] = True
         kwargs["value"] = value
         return self.get_by_value_regex(**kwargs)
 
     def get_by_mac(self, value: str, **kwargs) -> Union[Generator[dict, None, None], List[dict]]:
-        """Build a query to get assets where mac == value."""
+        """Build a query to get assets where :attr:`FIELD_MAC` == value.
+
+        Args:
+            value: mac adress
+            **kwargs: passed to :meth:`get_by_value`
+        """
         kwargs["field"] = self.FIELD_MAC
         kwargs["field_manual"] = True
         kwargs["value"] = value
@@ -111,7 +162,12 @@ class Devices(AssetMixin):
     def get_by_ips(
         self, values: List[str], **kwargs
     ) -> Union[Generator[dict, None, None], List[dict]]:
-        """Build a query to get assets where ip in values."""
+        """Build a query to get assets where :attr:`FIELD_IP` in values.
+
+        Args:
+            values: list of ip address
+            **kwargs: passed to :meth:`get_by_values`
+        """
         kwargs["field"] = self.FIELD_IP
         kwargs["field_manual"] = True
         kwargs["values"] = values
@@ -120,14 +176,24 @@ class Devices(AssetMixin):
     def get_by_ip_regex(
         self, value: str, **kwargs
     ) -> Union[Generator[dict, None, None], List[dict]]:
-        """Build a query to get assets where ip regex matches value."""
+        """Build a query to get assets where :attr:`FIELD_IP` regex matches value.
+
+        Args:
+            values: regex of ip address to match to match
+            **kwargs: passed to :meth:`get_by_value_regex`
+        """
         kwargs["field"] = self.FIELD_IP
         kwargs["field_manual"] = True
         kwargs["value"] = value
         return self.get_by_value_regex(**kwargs)
 
     def get_by_ip(self, value: str, **kwargs) -> Union[Generator[dict, None, None], List[dict]]:
-        """Build a query to get assets where ip == value."""
+        """Build a query to get assets where :attr:`FIELD_IP` == value.
+
+        Args:
+            value: ip address
+            **kwargs: passed to :meth:`get_by_value`
+        """
         kwargs["field"] = self.FIELD_IP
         kwargs["field_manual"] = True
         kwargs["value"] = value
@@ -136,7 +202,12 @@ class Devices(AssetMixin):
     def get_by_subnet(
         self, value: str, not_flag: bool = False, pre: str = "", post: str = "", **kwargs
     ) -> Union[Generator[dict, None, None], List[dict]]:
-        """Build a query to get assets where ip in subnet."""
+        """Build a query to get assets where ip address is in :attr:`FIELD_IP_RAW`.
+
+        Args:
+            value: subnet
+            **kwargs: passed to :meth:`get`
+        """
         field = self.FIELD_IP_RAW
 
         network = ipaddress.ip_network(value)
