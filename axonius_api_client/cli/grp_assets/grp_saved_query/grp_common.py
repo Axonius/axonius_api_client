@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """Command line interface for Axonius API Client."""
-from ....constants import GUI_PAGE_SIZES
+from ....constants.api import GUI_PAGE_SIZES
 from ....tools import json_dump, listify
 from ...context import SplitEquals, click
 from ...options import int_callback

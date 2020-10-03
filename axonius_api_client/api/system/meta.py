@@ -2,11 +2,17 @@
 """API model for working with system configuration."""
 import math
 
-from ..mixins import ChildMixins, Model
+from ..mixins import ModelMixins
+from ..routers import API_VERSION, Router
 
 
-class Meta(ChildMixins):
+class Meta(ModelMixins):
     """Child API model for working with instance metadata."""
+
+    @property
+    def router(self) -> Router:
+        """Router for this API model."""
+        return API_VERSION.system
 
     def about(self) -> dict:
         """Get about page metadata.
@@ -39,14 +45,6 @@ class Meta(ChildMixins):
         """Get the version of Axonius."""
         about = self.about()
         return about["Version"]
-
-    def _init(self, parent: Model):
-        """Post init method for subclasses to use for extra setup.
-
-        Args:
-            parent (:obj:`.api.mixins.Model`): parent API model of this child
-        """
-        super(Meta, self)._init(parent=parent)
 
     def _about(self) -> dict:
         """Direct API method to get the About page.

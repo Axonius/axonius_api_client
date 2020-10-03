@@ -2,11 +2,17 @@
 """API model for working with system configuration."""
 from typing import Optional
 
-from ..mixins import ChildMixins
+from ..mixins import ModelMixins
+from ..routers import API_VERSION, Router
 
 
-class CentralCore(ChildMixins):
+class CentralCore(ModelMixins):
     """Child API model for working with instance metadata."""
+
+    @property
+    def router(self) -> Router:
+        """Router for this API model."""
+        return API_VERSION.system
 
     def get(self) -> dict:
         """Get the current central core configuration."""

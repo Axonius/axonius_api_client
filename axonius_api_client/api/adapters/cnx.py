@@ -3,7 +3,8 @@
 import time
 from typing import List, Optional, Union
 
-from ...constants import CNX_GONE, CNX_RETRY, CNX_SANE_DEFAULTS, DEFAULT_NODE
+from ...constants.adapters import (CNX_GONE, CNX_RETRY, CNX_SANE_DEFAULTS,
+                                   DEFAULT_NODE)
 from ...exceptions import (CnxAddError, CnxGoneError, CnxTestError,
                            CnxUpdateError, ConfigInvalidValue, ConfigRequired,
                            NotFoundError)

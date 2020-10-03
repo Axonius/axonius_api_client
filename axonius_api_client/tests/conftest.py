@@ -2,20 +2,18 @@
 """Conf for py.test."""
 import os
 
-import dotenv
 import pytest
-
-from axonius_api_client.api import dashboard, enforcements, instances, system
-from axonius_api_client.api.adapters import Adapters
-from axonius_api_client.api.adapters.cnx import Cnx
-from axonius_api_client.api.assets import Devices, Users, fields, labels, saved_query
-from axonius_api_client.api.signup import Signup
-from axonius_api_client.constants import CSV_ADAPTER, DEFAULT_NODE
+from axonius_api_client.api import (Adapters, Dashboard, Devices, Enforcements,
+                                    Instances, Meta, RunAction, SettingsCore,
+                                    SettingsGui, SettingsLifecycle, Signup,
+                                    System, SystemRoles, SystemUsers, Users)
+from axonius_api_client.api.adapters import Cnx
+from axonius_api_client.api.assets import Fields, Labels, SavedQuery
+from axonius_api_client.constants.adapters import CSV_ADAPTER, DEFAULT_NODE
 
 from .meta import CSV_FILECONTENT_STR, CSV_FILENAME
-from .utils import check_apiobj, check_apiobj_children, check_apiobj_xref, get_auth, get_url
-
-dotenv.load_dotenv()
+from .utils import (check_apiobj, check_apiobj_children, check_apiobj_xref,
+                    get_auth, get_url)
 
 AX_URL = os.environ.get("AX_URL", None) or None
 AX_KEY = os.environ.get("AX_KEY", None) or None
@@ -65,9 +63,9 @@ def api_devices(request):
 
     check_apiobj_children(
         apiobj=obj,
-        labels=labels.Labels,
-        saved_query=saved_query.SavedQuery,
-        fields=fields.Fields,
+        labels=Labels,
+        saved_query=SavedQuery,
+        fields=Fields,
     )
 
     check_apiobj_xref(apiobj=obj, adapters=Adapters)
@@ -87,9 +85,9 @@ def api_users(request):
 
     check_apiobj_children(
         apiobj=obj,
-        labels=labels.Labels,
-        saved_query=saved_query.SavedQuery,
-        fields=fields.Fields,
+        labels=Labels,
+        saved_query=SavedQuery,
+        fields=Fields,
     )
 
     check_apiobj_xref(apiobj=obj, adapters=Adapters)
@@ -100,7 +98,7 @@ def api_users(request):
 def api_enforcements(request):
     """Test utility."""
     auth = get_auth(request)
-    obj = enforcements.Enforcements(auth=auth)
+    obj = Enforcements(auth=auth)
     check_apiobj(authobj=auth, apiobj=obj)
     return obj
 
@@ -109,7 +107,7 @@ def api_enforcements(request):
 def api_run_action(request):
     """Test utility."""
     auth = get_auth(request)
-    obj = enforcements.actions.RunAction(auth=auth)
+    obj = RunAction(auth=auth)
     check_apiobj(authobj=auth, apiobj=obj)
     return obj
 
@@ -128,7 +126,7 @@ def api_adapters(request):
 def api_dashboard(request):
     """Test utility."""
     auth = get_auth(request)
-    obj = dashboard.Dashboard(auth=auth)
+    obj = Dashboard(auth=auth)
     check_apiobj(authobj=auth, apiobj=obj)
     return obj
 
@@ -137,7 +135,7 @@ def api_dashboard(request):
 def api_instances(request):
     """Test utility."""
     auth = get_auth(request)
-    obj = instances.Instances(auth=auth)
+    obj = Instances(auth=auth)
     check_apiobj(authobj=auth, apiobj=obj)
     return obj
 
@@ -146,16 +144,17 @@ def api_instances(request):
 def api_system(request):
     """Test utility."""
     auth = get_auth(request)
-    obj = system.System(auth=auth)
+    obj = System(auth=auth)
     check_apiobj(authobj=auth, apiobj=obj)
-    check_apiobj_children(
+
+    check_apiobj_xref(
         apiobj=obj,
-        settings_core=system.settings.SettingsCore,
-        settings_gui=system.settings.SettingsGui,
-        settings_lifecycle=system.settings.SettingsLifecycle,
-        meta=system.meta.Meta,
-        users=system.users.Users,
-        roles=system.roles.Roles,
+        settings_core=SettingsCore,
+        settings_gui=SettingsGui,
+        settings_lifecycle=SettingsLifecycle,
+        meta=Meta,
+        users=SystemUsers,
+        roles=SystemRoles,
     )
     return obj
 

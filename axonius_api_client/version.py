@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """Version information for this package."""
-__version__ = "4.0.2"
+__version__ = "4.0.3"
 VERSION: str = __version__
 """:obj:`str`: Version of package."""
 

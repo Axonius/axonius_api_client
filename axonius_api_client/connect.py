@@ -7,28 +7,20 @@ from typing import List, Optional, Union
 
 import requests
 
-from .api import Adapters, Dashboard, Devices, Enforcements, Instances, RunAction, System, Users
+from .api import (Adapters, CentralCore, Dashboard, Devices, Enforcements,
+                  Instances, Meta, RunAction, SettingsCore, SettingsGui,
+                  SettingsLifecycle, System, SystemRoles, SystemUsers, Users)
 from .auth import ApiKey
-from .constants import (
-    LOG_FILE_MAX_FILES,
-    LOG_FILE_MAX_MB,
-    LOG_FILE_NAME,
-    LOG_FILE_PATH,
-    LOG_FMT_BRIEF,
-    LOG_FMT_VERBOSE,
-    LOG_LEVEL_API,
-    LOG_LEVEL_AUTH,
-    LOG_LEVEL_CONSOLE,
-    LOG_LEVEL_FILE,
-    LOG_LEVEL_HTTP,
-    LOG_LEVEL_PACKAGE,
-    TIMEOUT_CONNECT,
-    TIMEOUT_RESPONSE,
-)
+from .constants.api import TIMEOUT_CONNECT, TIMEOUT_RESPONSE
+from .constants.logs import (LOG_FILE_MAX_FILES, LOG_FILE_MAX_MB,
+                             LOG_FILE_NAME, LOG_FILE_PATH, LOG_FMT_BRIEF,
+                             LOG_FMT_VERBOSE, LOG_LEVEL_API, LOG_LEVEL_AUTH,
+                             LOG_LEVEL_CONSOLE, LOG_LEVEL_FILE, LOG_LEVEL_HTTP,
+                             LOG_LEVEL_PACKAGE)
 from .exceptions import ConnectError, InvalidCredentials
 from .http import Http
 from .logs import LOG, add_file, add_stderr, get_obj_log, set_log_level
-from .tools import json_dump, sysinfo
+from .tools import coerce_bool, coerce_int, json_dump, json_reload, sysinfo
 from .version import __version__ as VERSION
 
 
@@ -36,44 +28,36 @@ class Connect:
     """Easy all-in-one connection handler for using the API client.
 
     Examples:
-        >>> import os
+        >>> #!/usr/bin/env python
+        >>> # -*- coding: utf-8 -*-
+        >>> '''Base example for setting up the API client.'''
+        >>> import axonius_api_client as axonapi
+
+        >>> # get the URL, API key and API secret from a ".env" file and override env vars
+        >>> client_args = axonapi.get_connect_env(override=True)
+
+        >>> # turn off warnings about insecure certs
+        >>> client_args["certwarn"] = False
         >>>
-        >>> import axonius_api_client as axonapi  # noqa: F401
-        >>> from axonius_api_client.connect import Connect
-        >>> from axonius_api_client.constants import load_dotenv
-        >>>
-        >>> # read the API key, API secret, and URL from a ".env" file
-        >>> load_dotenv()
-        >>> AX_URL = os.environ["AX_URL"]
-        >>> AX_KEY = os.environ["AX_KEY"]
-        >>> AX_SECRET = os.environ["AX_SECRET"]
-        >>>
-        >>> # create a client using the url, key, and secret
-        >>> client = Connect(url=AX_URL, key=AX_KEY, secret=AX_SECRET)
-        >>>
-        >>> # start the client, will perform login to URL using key & secret
-        >>> client.start()
-        >>>
-        >>> # work with device assets
-        >>> devices = client.devices
-        >>>
-        >>> # work with user assets
-        >>> users = client.users
-        >>>
-        >>> # work with adapters and adapter connections
-        >>> adapters = client.adapters
-        >>>
-        >>> # work with enforcements
-        >>> enforcements = client.enforcements
-        >>>
-        >>> # work with users, roles, global settings, and more
-        >>> system = client.system
-        >>>
-        >>> # work with instances
-        >>> instances = client.instances
-        >>>
-        >>> # work with dashboards and discovery cycles
-        >>> dashboard = client.dashboard
+        >>> # create a client using the url, key, and secret from OS env
+        >>> client = axonapi.Connect(**client_args)
+
+        >>> j = client.jdump  # json dump helper
+
+        >>> client.start()  # connect to axonius
+        >>> devices = client.devices  # work with device assets
+        >>> users = client.users  # work with user assets
+        >>> adapters = client.adapters  # work with adapters and adapter connections
+        >>> enforcements = client.enforcements  # work with enforcements
+        >>> instances = client.instances  # work with instances
+        >>> dashboard = client.dashboard  # work with dashboards and discovery cycles
+        >>> system_users = client.system_users  # work with system users
+        >>> system_roles = client.system_roles  # work with system roles
+        >>> central_core = client.central_core  # work with central core configuration
+        >>> meta = client.meta  # work with instance meta data
+        >>> settings_core = client.settings_core  # work with core system settings
+        >>> settings_gui = client.settings_gui  # work with gui system settings
+        >>> settings_lifecycle = client.settings_lifecycle  # work with lifecycle system settings
 
     """
 
@@ -163,12 +147,12 @@ class Connect:
         return self._enforcements
 
     @property
-    def run_actions(self) -> RunAction:  # pragma: no cover
+    def run_action(self) -> RunAction:  # pragma: no cover
         """Work with Enforcement Center actions."""
         self.start()
-        if not hasattr(self, "_run_actions"):
-            self._run_actions = RunAction(**self.API_ARGS)
-        return self._run_actions
+        if not hasattr(self, "_run_action"):
+            self._run_action = RunAction(**self.API_ARGS)
+        return self._run_action
 
     @property
     def system(self) -> System:  # TODO: DOCS???
@@ -177,6 +161,62 @@ class Connect:
         if not hasattr(self, "_system"):
             self._system = System(**self.API_ARGS)
         return self._system
+
+    @property
+    def system_users(self) -> System:
+        """Work with system users."""
+        self.start()
+        if not hasattr(self, "_system_users"):
+            self._system_users = SystemUsers(**self.API_ARGS)
+        return self._system_users
+
+    @property
+    def system_roles(self) -> System:
+        """Work with system roles."""
+        self.start()
+        if not hasattr(self, "_system_roles"):
+            self._system_roles = SystemRoles(**self.API_ARGS)
+        return self._system_roles
+
+    @property
+    def central_core(self) -> System:
+        """Work with central core configuration."""
+        self.start()
+        if not hasattr(self, "_central_core"):
+            self._central_core = CentralCore(**self.API_ARGS)
+        return self._central_core
+
+    @property
+    def meta(self) -> System:
+        """Work with instance metadata."""
+        self.start()
+        if not hasattr(self, "_meta"):
+            self._meta = Meta(**self.API_ARGS)
+        return self._meta
+
+    @property
+    def settings_core(self) -> System:
+        """Work with core system settings."""
+        self.start()
+        if not hasattr(self, "_settings_core"):
+            self._settings_core = SettingsCore(**self.API_ARGS)
+        return self._settings_core
+
+    @property
+    def settings_gui(self) -> System:
+        """Work with gui system settings."""
+        self.start()
+        if not hasattr(self, "_settings_gui"):
+            self._settings_gui = SettingsGui(**self.API_ARGS)
+        return self._settings_gui
+
+    @property
+    def settings_lifecycle(self) -> System:
+        """Work with lifecycle system settings."""
+        self.start()
+        if not hasattr(self, "_settings_lifecycle"):
+            self._settings_lifecycle = SettingsLifecycle(**self.API_ARGS)
+        return self._settings_lifecycle
 
     def __init__(
         self,
@@ -208,10 +248,15 @@ class Connect:
         self.url: str = url
         """URL of Axonius instance to use"""
 
-        self.TIMEOUT_CONNECT: int = kwargs.get("timeout_connect", TIMEOUT_CONNECT)
+        certwarn = coerce_bool(certwarn)
+        certverify = coerce_bool(certverify)
+        log_console = coerce_bool(log_console)
+        log_file = coerce_bool(log_file)
+
+        self.TIMEOUT_CONNECT: int = coerce_int(kwargs.get("timeout_connect", TIMEOUT_CONNECT))
         """Seconds to wait for connections to open to :attr:`url` ``kwargs=timeout_connect``"""
 
-        self.TIMEOUT_RESPONSE: int = kwargs.get("timeout_response", TIMEOUT_RESPONSE)
+        self.TIMEOUT_RESPONSE: int = coerce_int(kwargs.get("timeout_response", TIMEOUT_RESPONSE))
         """Seconds to wait for responses from :attr:`url` ``kwargs=timeout_response``"""
 
         self.CERT_CLIENT_KEY: Optional[Union[str, pathlib.Path]] = kwargs.get(
@@ -238,11 +283,11 @@ class Connect:
         """log level for this class ``kwargs=log_level``"""
 
         self.LOG_REQUEST_ATTRS: Optional[List[str]] = kwargs.get("log_request_attrs", None)
-        """request attrs to log :attr:`axonius_api_client.constants.REQUEST_ATTR_MAP`
+        """request attrs to log :attr:`axonius_api_client.constants.logs.REQUEST_ATTR_MAP`
         ``kwargs=log_request_attrs``"""
 
         self.LOG_RESPONSE_ATTRS: Optional[List[str]] = kwargs.get("log_response_attrs", None)
-        """response attrs to log :attr:`axonius_api_client.constants.RESPONSE_ATTR_MAP`
+        """response attrs to log :attr:`axonius_api_client.constants.logs.RESPONSE_ATTR_MAP`
         ``kwargs=log_response_attrs``"""
 
         self.LOG_REQUEST_BODY: bool = kwargs.get("log_request_body", False)
@@ -291,7 +336,7 @@ class Connect:
         self.LOG_FILE_MAX_FILES: int = kwargs.get("log_file_max_files", LOG_FILE_MAX_FILES)
         """number of rollover file logs to keep ``kwargs=log_file_max_files``"""
 
-        self.WRAPERROR: bool = kwargs.get("wraperror", True)
+        self.WRAPERROR: bool = coerce_bool(kwargs.get("wraperror", True))
         """wrap errors in human friendly way or show full traceback ``kwargs=wraperror``"""
 
         self.LOG: logging.Logger = get_obj_log(obj=self, level=self.LOG_LEVEL)
@@ -387,3 +432,8 @@ class Connect:
             if reason_re.search(reason):
                 return reason_re.sub(r"\1", reason).rstrip("')")
         return reason
+
+    @staticmethod
+    def jdump(obj, **kwargs):
+        """JSON dump utility."""
+        print(json_reload(obj, **kwargs))

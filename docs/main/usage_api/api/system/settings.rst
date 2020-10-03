@@ -1,4 +1,4 @@
-Working with system settings
+Settings
 ###########################################################
 
 .. automodule:: axonius_api_client.api.system.settings

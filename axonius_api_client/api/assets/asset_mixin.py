@@ -5,22 +5,20 @@ import time
 from datetime import datetime, timedelta
 from typing import Generator, List, Optional, Union
 
-from ...constants import MAX_PAGE_SIZE, PAGE_SIZE
+from ...constants.api import MAX_PAGE_SIZE, PAGE_SIZE
 from ...exceptions import ApiError, JsonError, NotFoundError
 from ...tools import dt_now, dt_parse_tmpl, dt_sec_ago, json_dump, listify
 from ..adapters import Adapters
 from ..asset_callbacks import Base
 from ..asset_callbacks.tools import DEFAULT_CALLBACKS_CLS, get_callbacks_cls
 from ..mixins import ModelMixins
-from ..wizard import Wizard, WizardCsv, WizardText
+from ..wizards import Wizard, WizardCsv, WizardText
 from .fields import Fields
 from .labels import Labels
 from .saved_query import SavedQuery
 
 
 class AssetMixin(ModelMixins):
-    """API model for device and user assets."""
-
     """API model for device and user assets."""
 
     FIELD_TAGS: str = "labels"

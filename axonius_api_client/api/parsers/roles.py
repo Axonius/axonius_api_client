@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 """API models for working with adapters and connections."""
-# from ...constants import ROLE_ACTIONS
-# from ...tools import strip_left
 
 
 def parse_permissions(raw, default_perm=False):  # pragma: no cover

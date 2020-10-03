@@ -1,4 +1,4 @@
-Working with fields (columns)
+Fields (columns)
 ###############################################
 
 .. automodule:: axonius_api_client.api.assets.fields

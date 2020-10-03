@@ -2,7 +2,7 @@
 """Test suite."""
 
 import pytest
-from axonius_api_client.constants import CSV_ADAPTER, DEFAULT_NODE
+from axonius_api_client.constants.adapters import CSV_ADAPTER, DEFAULT_NODE
 from axonius_api_client.exceptions import (CnxAddError, CnxGoneError,
                                            CnxTestError, CnxUpdateError,
                                            ConfigInvalidValue, ConfigRequired,

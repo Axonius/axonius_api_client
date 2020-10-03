@@ -2,7 +2,7 @@
 """Command line interface for Axonius API Client."""
 import click
 
-from ...api.signup import Signup
+from ...api import Signup
 from ...tools import json_dump
 from ..options import URL, add_options
 

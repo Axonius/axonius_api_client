@@ -1,4 +1,4 @@
-Package wide exceptions and warnings
+Exceptions and warnings
 ###############################################
 
 .. automodule:: axonius_api_client.exceptions

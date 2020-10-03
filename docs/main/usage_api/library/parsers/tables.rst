@@ -1,4 +1,4 @@
-Parsers for tables
+Tables
 ###############################################
 
 .. automodule:: axonius_api_client.api.parsers.tables

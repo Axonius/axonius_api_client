@@ -1,4 +1,4 @@
-Package wide tools and utilities
+Tools and utilities
 ###############################################
 
 .. automodule:: axonius_api_client.tools

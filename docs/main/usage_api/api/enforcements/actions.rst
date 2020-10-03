@@ -1,4 +1,4 @@
-Working with enforcement actions
+Actions
 ###############################################
 
 .. automodule:: axonius_api_client.api.enforcements.actions

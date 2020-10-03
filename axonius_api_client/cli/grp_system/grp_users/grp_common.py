@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 """Command line interface for Axonius API Client."""
-# from ....constants import DEFAULT_PERM, PERM_SETS, VALID_PERMS
 from ....tools import dt_parse, json_dump, listify
 from ...context import click
 

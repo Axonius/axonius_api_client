@@ -1,4 +1,4 @@
-Parsers for field schemas
+Field schemas
 ###############################################
 
 .. automodule:: axonius_api_client.api.parsers.fields

@@ -4,7 +4,7 @@ import copy
 import warnings
 
 import pytest
-from axonius_api_client.constants import CSV_ADAPTER, DEFAULT_NODE
+from axonius_api_client.constants.adapters import CSV_ADAPTER, DEFAULT_NODE
 from axonius_api_client.exceptions import (ApiError, ConfigUnchanged,
                                            ConfigUnknown, NotFoundError)
 

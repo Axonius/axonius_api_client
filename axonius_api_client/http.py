@@ -7,14 +7,9 @@ from typing import List, Optional, Union
 
 import requests
 
-from .constants import (
-    LOG_LEVEL_HTTP,
-    MAX_BODY_LEN,
-    REQUEST_ATTR_MAP,
-    RESPONSE_ATTR_MAP,
-    TIMEOUT_CONNECT,
-    TIMEOUT_RESPONSE,
-)
+from .constants.api import TIMEOUT_CONNECT, TIMEOUT_RESPONSE
+from .constants.logs import (LOG_LEVEL_HTTP, MAX_BODY_LEN, REQUEST_ATTR_MAP,
+                             RESPONSE_ATTR_MAP)
 from .exceptions import HttpError
 from .logs import get_obj_log, set_log_level
 from .tools import join_url, json_reload, listify, path_read
@@ -100,11 +95,11 @@ class Http:
         """HTTPS proxy to use. ``kwargs=https_proxy``"""
 
         self.LOG_REQUEST_ATTRS: Optional[List[str]] = kwargs.get("log_request_attrs", None)
-        """request attrs to log :attr:`axonius_api_client.constants.REQUEST_ATTR_MAP`
+        """request attrs to log :attr:`axonius_api_client.constants.logs.REQUEST_ATTR_MAP`
         ``kwargs=log_request_attrs``"""
 
         self.LOG_RESPONSE_ATTRS: Optional[List[str]] = kwargs.get("log_response_attrs", None)
-        """response attrs to log :attr:`axonius_api_client.constants.RESPONSE_ATTR_MAP`
+        """response attrs to log :attr:`axonius_api_client.constants.logs.RESPONSE_ATTR_MAP`
         ``kwargs=log_response_attrs``"""
 
         self.LOG_LEVEL_URLLIB: str = kwargs.get("log_level_urllib", "warning")

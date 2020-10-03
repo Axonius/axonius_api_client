@@ -3,7 +3,7 @@
 import pathlib
 from typing import List, Optional, Union
 
-from ...constants import CONFIG_TYPES, DEFAULT_NODE
+from ...constants.adapters import CONFIG_TYPES, DEFAULT_NODE
 from ...exceptions import ApiError, NotFoundError
 from ...tools import path_read
 from ..mixins import ModelMixins

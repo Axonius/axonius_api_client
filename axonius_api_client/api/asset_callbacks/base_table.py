@@ -4,7 +4,7 @@ from typing import List, Union
 
 import tabulate
 
-from ...constants import TABLE_FORMAT, TABLE_MAX_ROWS
+from ...constants.api import TABLE_FORMAT, TABLE_MAX_ROWS
 from ...exceptions import ApiError
 from ...tools import listify
 from .base import Base

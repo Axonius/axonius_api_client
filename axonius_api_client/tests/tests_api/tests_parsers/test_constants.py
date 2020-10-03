@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 """Test suite."""
 import pytest
-
-from axonius_api_client.api.parsers.constants import Operators, OperatorTypeMaps
+from axonius_api_client.constants.fields import Operators, OperatorTypeMaps
 from axonius_api_client.exceptions import NotFoundError
 
 

@@ -1,4 +1,4 @@
-Parsers for configuration schemas
+Configuration schemas
 ###############################################
 
 .. automodule:: axonius_api_client.api.parsers.config

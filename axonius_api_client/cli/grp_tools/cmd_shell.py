@@ -3,11 +3,10 @@
 import atexit
 import os
 
+import axonius_api_client as axonapi
 import click
 
-import axonius_api_client as axonapi
-
-from ...constants import PY36
+from ...constants.general import PY36
 from ...tools import echo_error, json_reload, pathlib
 from ..context import CONTEXT_SETTINGS
 from ..options import AUTH, add_options
@@ -26,7 +25,13 @@ API Objects:
     - system/s: Work with users, roles, global settings, and more
     - dashboard/db: Work with dashboards and discovery cycle
     - instances/i: Work with instances
-    - jdump/j: Helper function to pretty print python objects
+    - system_users/su: Work with system users
+    - system_roles/sr: Work with system roles
+    - central_core/cc: Work with central core configuration
+    - meta/m: Work with instance metadata
+    - settings_core/sc: Work with Global system settings
+    - settings_gui/sg: Work with GUI system settings
+    - settings_lifecycle/sl: Work with Lifecyle system settings
 """
 
 SHELL_EXIT = """Goodbye human. We hope you enjoyed your stay."""
@@ -60,6 +65,13 @@ def cmd(ctx, url, key, secret):  # noqa: D301
         - system/s: Work with users, roles, global settings, and more
         - dashboard/db: Work with dashboards and discovery cycle
         - instances/i: Work with instances
+        - system_users/su: Work with system users
+        - system_roles/sr: Work with system roles
+        - central_core/cc: Work with central core configuration
+        - meta/m: Work with instance metadata
+        - settings_core/sc: Work with Global system settings
+        - settings_gui/sg: Work with GUI system settings
+        - settings_lifecycle/sl: Work with Lifecyle system settings
         - jdump/j: Helper function to pretty print python objects
 
     """
@@ -79,6 +91,13 @@ def cmd(ctx, url, key, secret):  # noqa: D301
         "jdump": jdump,
         "system": client.system,
         "users": client.users,
+        "system_users": client.system_users,
+        "system_roles": client.system_roles,
+        "central_core": client.central_core,
+        "meta": client.meta,
+        "settings_core": client.settings_core,
+        "settings_gui": client.settings_gui,
+        "settings_lifecycle": client.settings_lifecycle,
         "a": client.adapters,
         "c": client,
         "d": client.devices,
@@ -88,6 +107,13 @@ def cmd(ctx, url, key, secret):  # noqa: D301
         "j": jdump,
         "s": client.system,
         "u": client.users,
+        "su": client.system_users,
+        "sr": client.system_roles,
+        "cc": client.central_core,
+        "m": client.meta,
+        "sc": client.settings_core,
+        "sg": client.settings_gui,
+        "sl": client.settings_lifecycle,
     }
 
     spawn_shell(shellvars)

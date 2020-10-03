@@ -1,4 +1,4 @@
-Parsers for system roles
+Roles
 ###############################################
 
 .. automodule:: axonius_api_client.api.parsers.roles

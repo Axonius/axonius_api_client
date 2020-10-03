@@ -3,7 +3,7 @@
 import copy
 from typing import List
 
-from ...constants import DISCOVERY_NAME, GENERIC_NAME
+from ...constants.adapters import DISCOVERY_NAME, GENERIC_NAME
 from ...tools import strip_right
 from .config import parse_schema
 

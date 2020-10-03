@@ -6,7 +6,7 @@ from typing import List, Optional, Union
 
 import tabulate
 
-from ...constants import KEY_MAP_ADAPTER, KEY_MAP_CNX, KEY_MAP_SCHEMA
+from ...constants.adapters import KEY_MAP_ADAPTER, KEY_MAP_CNX, KEY_MAP_SCHEMA
 from ...tools import json_dump
 
 

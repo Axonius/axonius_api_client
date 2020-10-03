@@ -1,4 +1,4 @@
-Parsers for adapter schemas
+Adapter schemas
 ###############################################
 
 .. automodule:: axonius_api_client.api.parsers.adapters

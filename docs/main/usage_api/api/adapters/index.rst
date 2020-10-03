@@ -1,12 +1,6 @@
-Working with adapters and adapter connections
+Adapters and connections
 ###############################################
 
 .. toctree::
+    adapters
     cnx
-
-
-.. automodule:: axonius_api_client.api.adapters.adapters
-   :members:
-   :show-inheritance:
-   :inherited-members:
-   :undoc-members:
