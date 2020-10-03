@@ -4,9 +4,9 @@ from ..mixins import ModelMixins
 from ..routers import API_VERSION, Router
 from .central_core import CentralCore
 from .meta import Meta
-from .roles import Roles
 from .settings import SettingsCore, SettingsGui, SettingsLifecycle
-from .users import Users
+from .system_roles import SystemRoles
+from .system_users import SystemUsers
 
 
 class System(ModelMixins):
@@ -14,20 +14,19 @@ class System(ModelMixins):
 
     @property
     def router(self) -> Router:
-        """Router for this API model.
-
-        Returns:
-            :obj:`.routers.Router`: REST API route defs
-        """
+        """Router for this API model."""
         return API_VERSION.system
 
     def _init(self, **kwargs):
-        """Post init method for subclasses to use for extra setup."""
-        self.settings_core = SettingsCore(parent=self)
-        self.settings_gui = SettingsGui(parent=self)
-        self.settings_lifecycle = SettingsLifecycle(parent=self)
-        self.meta = Meta(parent=self)
-        self.users = Users(parent=self)
-        self.roles = Roles(parent=self)
-        self.central_core = CentralCore(parent=self)
-        super(System, self)._init(**kwargs)
+        """Mixins for API Models.
+
+        Args:
+            **kwargs: passed to each thing
+        """
+        self.settings_core = SettingsCore(auth=self.auth, **kwargs)
+        self.settings_gui = SettingsGui(auth=self.auth, **kwargs)
+        self.settings_lifecycle = SettingsLifecycle(auth=self.auth, **kwargs)
+        self.users = SystemUsers(auth=self.auth, **kwargs)
+        self.roles = SystemRoles(auth=self.auth, **kwargs)
+        self.meta = Meta(auth=self.auth, **kwargs)
+        self.central_core = CentralCore(auth=self.auth, **kwargs)

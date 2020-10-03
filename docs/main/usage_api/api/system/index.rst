@@ -1,15 +1,13 @@
-Working with system users, roles, global settings, and more
+System
 ###########################################################
 
 .. toctree::
     settings
-    roles
-    users
+    system_roles
+    system_users
     meta
     central_core
-
-.. automodule:: axonius_api_client.api.system.system
-   :members:
-   :show-inheritance:
-   :inherited-members:
-   :undoc-members:
+    instances
+    signup
+    dashboard
+    system

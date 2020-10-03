@@ -1,4 +1,4 @@
-Working with system meta data
+Meta data
 ###########################################################
 
 .. automodule:: axonius_api_client.api.system.meta

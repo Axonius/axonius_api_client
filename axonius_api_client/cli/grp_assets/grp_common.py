@@ -2,9 +2,9 @@
 """Command line interface for Axonius API Client."""
 import tabulate
 
-from ...api.wizard.constants import Results, Types
-from ...constants import (FIELD_JOINER, FIELD_TRIM_LEN, TABLE_FORMAT,
-                          TABLE_MAX_ROWS)
+from ...constants.api import (FIELD_JOINER, FIELD_TRIM_LEN, TABLE_FORMAT,
+                              TABLE_MAX_ROWS)
+from ...constants.wizards import Results, Types
 from ...tools import path_read
 from ..context import CONTEXT_SETTINGS, click
 from ..options import (AUTH, EXPORT, FIELDS_SELECT, PAGING, add_options,

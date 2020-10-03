@@ -7,7 +7,8 @@ import sys
 
 import pytest
 from axonius_api_client.api.asset_callbacks import get_callbacks_cls
-from axonius_api_client.constants import FIELD_TRIM_LEN, SCHEMAS_CUSTOM
+from axonius_api_client.constants.api import FIELD_TRIM_LEN
+from axonius_api_client.constants.fields import SCHEMAS_CUSTOM
 from axonius_api_client.exceptions import ApiError
 
 from ...utils import get_rows_exist, get_schema, log_check, random_string

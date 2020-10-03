@@ -18,12 +18,10 @@ import dateutil.parser
 import dateutil.relativedelta
 import dateutil.tz
 
-from . import __file__ as PACKAGE_FILE
-from . import __package__ as PACKAGE_ROOT
-from .constants import (ERROR_ARGS, ERROR_TMPL, NO, OK_ARGS, OK_TMPL,
-                        WARN_ARGS, WARN_TMPL, YES)
+from . import PACKAGE_FILE, PACKAGE_ROOT, VERSION
+from .constants.general import (ERROR_ARGS, ERROR_TMPL, NO, OK_ARGS, OK_TMPL,
+                                WARN_ARGS, WARN_TMPL, YES)
 from .exceptions import ToolsError
-from .version import VERSION
 
 LOG: logging.Logger = logging.getLogger(PACKAGE_ROOT).getChild("tools")
 
@@ -35,7 +33,7 @@ def listify(obj: Any, dictkeys: bool = False) -> list:
         * :obj:`list`: returns as is
         * :obj:`tuple`: convert to list
         * :obj:`None`: returns as an empty list
-        * any of :data:`axonius_api_client.constants.SIMPLE`: return as a list of obj
+        * any of :data:`axonius_api_client.constants.general.SIMPLE`: return as a list of obj
         * :obj:`dict`: if dictkeys is True, return as list of keys of obj,
           otherwise return as a list of obj
 
@@ -116,7 +114,8 @@ def coerce_bool(obj: Any, errmsg: Optional[str] = None) -> bool:
 
     Args:
         obj: object to coerce to bool, will check against
-            :data:`axonius_api_client.constants.YES` and :data:`axonius_api_client.constants.NO`
+            :data:`axonius_api_client.constants.general.YES` and
+            :data:`axonius_api_client.constants.general.NO`
 
     Raises:
         :exc:`ToolsError`: obj is not able to be converted to bool

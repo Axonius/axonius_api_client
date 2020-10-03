@@ -1,4 +1,4 @@
-Working with tags (labels)
+Tags (labels)
 ###############################################
 
 .. automodule:: axonius_api_client.api.assets.labels

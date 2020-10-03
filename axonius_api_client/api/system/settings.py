@@ -3,14 +3,21 @@
 from typing import Optional
 
 from ...exceptions import ApiError, NotFoundError
-from ..mixins import ChildMixins
-from ..parsers import config_build, config_unchanged, config_unknown, parse_settings, tablize
+from ..mixins import ModelMixins
+from ..parsers import (config_build, config_unchanged, config_unknown,
+                       parse_settings, tablize)
+from ..routers import API_VERSION, Router
 
 
-class SettingsChild(ChildMixins):
+class SettingsChild(ModelMixins):
     """Child API object to work with system settings."""
 
     TITLE: str = ""
+
+    @property
+    def router(self) -> Router:
+        """Router for this API model."""
+        return API_VERSION.system
 
     @property
     def router_path(self) -> str:
@@ -174,7 +181,7 @@ class SettingsCore(SettingsChild):
     @property
     def router_path(self) -> str:
         """Route path for this setting object."""
-        return self.parent.router.settings_core
+        return self.router.settings_core
 
 
 class SettingsLifecycle(SettingsChild):
@@ -185,7 +192,7 @@ class SettingsLifecycle(SettingsChild):
     @property
     def router_path(self) -> str:
         """Route path for this setting object."""
-        return self.parent.router.settings_lifecycle
+        return self.router.settings_lifecycle
 
 
 class SettingsGui(SettingsChild):
@@ -196,4 +203,4 @@ class SettingsGui(SettingsChild):
     @property
     def router_path(self) -> str:
         """Route path for this setting object."""
-        return self.parent.router.settings_gui
+        return self.router.settings_gui

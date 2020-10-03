@@ -6,9 +6,9 @@ from typing import List, Optional, Tuple, Union
 
 from cachetools import TTLCache, cached
 
-from ...constants import (AGG_ADAPTER_ALTS, AGG_ADAPTER_NAME,
-                          FUZZY_SCHEMAS_KEYS, GET_SCHEMA_KEYS,
-                          GET_SCHEMAS_KEYS)
+from ...constants.fields import (AGG_ADAPTER_ALTS, AGG_ADAPTER_NAME,
+                                 FUZZY_SCHEMAS_KEYS, GET_SCHEMA_KEYS,
+                                 GET_SCHEMAS_KEYS)
 from ...exceptions import ApiError, NotFoundError
 from ...tools import listify, split_str, strip_right
 from ..mixins import ChildMixins
@@ -20,8 +20,6 @@ try:
     from fuzzywuzzy import fuzz
 except Exception:
     raise
-
-CACHE: TTLCache = TTLCache(maxsize=1024, ttl=300)
 
 
 class Fields(ChildMixins):
@@ -110,7 +108,7 @@ class Fields(ChildMixins):
 
         return [x["name_qual"] for x in matches] if names else matches
 
-    @cached(cache=CACHE)
+    @cached(cache=TTLCache(maxsize=1024, ttl=300))
     def get(self) -> dict:
         """Get the schema of all adapters and their fields."""
         return parse_fields(raw=self._get())

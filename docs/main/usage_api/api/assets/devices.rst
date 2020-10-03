@@ -1,4 +1,4 @@
-Working with device assets
+Device assets
 ###############################################
 
 .. automodule:: axonius_api_client.api.assets.devices

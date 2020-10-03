@@ -218,7 +218,7 @@ class ApiV4:
         base=base,
         version=version,
     )
-    """Endpoints for :mod:`axonius_api_client.api.instances`"""
+    """Endpoints for :mod:`axonius_api_client.api.system.instances`"""
 
     dashboard: Router = Router(
         object_type="dashboard",
@@ -226,7 +226,7 @@ class ApiV4:
         version=version,
         lifecycle="lifecycle",
     )
-    """Endpoints for :mod:`axonius_api_client.api.dashboard`"""
+    """Endpoints for :mod:`axonius_api_client.api.system.dashboard`"""
 
     system: Router = Router(
         object_type="settings",
@@ -255,7 +255,7 @@ class ApiV4:
         base=base,
         version=version,
     )
-    """Endpoints for :mod:`axonius_api_client.api.signup`"""
+    """Endpoints for :mod:`axonius_api_client.api.system.signup`"""
 
     all_objects: List[Router] = [
         users,

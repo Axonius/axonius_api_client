@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Test suite."""
 from axonius_api_client.api.parsers.fields import schema_custom
-from axonius_api_client.api.wizard.constants import Entry, Expr
+from axonius_api_client.constants.wizards import Entry, Expr
 
 
 class TestExpr:

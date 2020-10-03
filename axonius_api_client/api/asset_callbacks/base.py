@@ -6,8 +6,9 @@ import re
 import sys
 from typing import Generator, List, Optional, Union
 
-from ...constants import (DEFAULT_PATH, FIELD_JOINER, FIELD_TRIM_LEN,
-                          FIELD_TRIM_STR, SCHEMAS_CUSTOM)
+from ... import DEFAULT_PATH
+from ...constants.api import FIELD_JOINER, FIELD_TRIM_LEN, FIELD_TRIM_STR
+from ...constants.fields import SCHEMAS_CUSTOM
 from ...exceptions import ApiError
 from ...tools import (calc_percent, coerce_int, echo_error, echo_ok, echo_warn,
                       get_path, join_kv, listify, longest_str)
@@ -103,7 +104,7 @@ class Base:
             >>> assets = apiobj.get(export="csv")
 
             Export the output to a file in the default path
-            :attr:`axonius_api_client.constants.DEFAULT_PATH`.
+            :attr:`axonius_api_client.setup_env.DEFAULT_PATH`.
 
             >>> assets = apiobj.get(export="csv", export_file="test.csv")
 

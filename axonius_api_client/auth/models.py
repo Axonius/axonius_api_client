@@ -4,7 +4,7 @@ import abc
 import logging
 
 from ..api.routers import API_VERSION
-from ..constants import LOG_LEVEL_AUTH
+from ..constants.logs import LOG_LEVEL_AUTH
 from ..exceptions import AuthError, InvalidCredentials, NotLoggedIn
 from ..http import Http
 from ..logs import get_obj_log

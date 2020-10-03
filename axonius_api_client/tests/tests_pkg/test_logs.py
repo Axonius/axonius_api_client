@@ -5,30 +5,15 @@ import pathlib
 import time
 
 import pytest
-
-from axonius_api_client.constants import (
-    LOG_LEVEL_CONSOLE,
-    LOG_LEVEL_FILE,
-    LOG_NAME_FILE,
-    LOG_NAME_STDERR,
-    LOG_NAME_STDOUT,
-)
+from axonius_api_client.constants.logs import (LOG_LEVEL_CONSOLE,
+                                               LOG_LEVEL_FILE, LOG_NAME_FILE,
+                                               LOG_NAME_STDERR,
+                                               LOG_NAME_STDOUT)
 from axonius_api_client.exceptions import ToolsError
-from axonius_api_client.logs import (
-    LOG,
-    add_file,
-    add_null,
-    add_stderr,
-    add_stdout,
-    del_file,
-    del_null,
-    del_stderr,
-    del_stdout,
-    get_obj_log,
-    gmtime,
-    localtime,
-    str_level,
-)
+from axonius_api_client.logs import (LOG, add_file, add_null, add_stderr,
+                                     add_stdout, del_file, del_null,
+                                     del_stderr, del_stdout, get_obj_log,
+                                     gmtime, localtime, str_level)
 
 
 class TestLogs:

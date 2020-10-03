@@ -2,7 +2,7 @@
 """API models for working with device and user assets."""
 from typing import List, Optional, Union
 
-from ...constants import GUI_PAGE_SIZES, PAGE_SIZE
+from ...constants.api import GUI_PAGE_SIZES, PAGE_SIZE
 from ...exceptions import ApiError, NotFoundError
 from ...tools import listify
 from ..mixins import ChildMixins, PagingMixinsObject
@@ -15,7 +15,9 @@ def check_gui_page_size(size: Optional[int] = None) -> int:
         size: page size to check
 
     Raises:
-        :exc:`ApiError`: if size is not one of :data:`axonius_api_client.constants.GUI_PAGE_SIZES`
+        :exc:`ApiError`: if size is not one of
+            :data:`axonius_api_client.constants.api.GUI_PAGE_SIZES`
+
     """
     size = size or GUI_PAGE_SIZES[0]
     if size not in GUI_PAGE_SIZES:
@@ -44,7 +46,7 @@ class SavedQuery(ChildMixins, PagingMixinsObject):
         >>> # Delete the saved query by name
         >>> deleted = client.devices.saved_query.delete_by_name(name="test")
 
-        Create a saved query using a :obj:`axonius_api_client.api.wizard.wizard.Wizard`
+        Create a saved query using a :obj:`axonius_api_client.api.wizards.wizard.Wizard`
 
         >>> parsed = client.devices.wizard_text.parse(content="simple hostname contains blah")
         >>> query = parsed["query"]
@@ -119,14 +121,14 @@ class SavedQuery(ChildMixins, PagingMixinsObject):
 
         Notes:
             Saved Queries created without expressions will not be editable using the query wizard
-            in the GUI. Use :obj:`axonius_api_client.api.wizard.wizard.Wizard` to produce a query
+            in the GUI. Use :obj:`axonius_api_client.api.wizards.wizard.Wizard` to produce a query
             and it's accordant expressions for the GUI query wizard.
 
         Args:
             name: name of saved query
             description: description
             tags: list of tags
-            expressions: expressions built by :obj:`axonius_api_client.api.wizard.wizard.Wizard`
+            expressions: expressions built by :obj:`axonius_api_client.api.wizards.wizard.Wizard`
             query: query built by GUI or the CLI query wizard
             fields: fields to return for each asset (will be validated)
             fields_manual: fields to return for each asset (will NOT be validated)

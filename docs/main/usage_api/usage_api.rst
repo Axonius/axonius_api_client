@@ -12,9 +12,5 @@ Using the API library
    api/adapters/index
    api/system/index
    api/enforcements/index
-   api/dashboard
-   api/instances
-   api/signup
-   api/library/index
    library/index
    openapi

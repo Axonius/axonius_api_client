@@ -6,7 +6,8 @@ import time
 from typing import Any, Generator, List, Optional, Union
 
 from .. import auth
-from ..constants import LOG_LEVEL_API, MAX_BODY_LEN, MAX_PAGE_SIZE
+from ..constants.api import MAX_PAGE_SIZE
+from ..constants.logs import LOG_LEVEL_API, MAX_BODY_LEN
 from ..exceptions import JsonError, JsonInvalid, NotFoundError, ResponseNotOk
 from ..logs import get_obj_log
 from ..tools import dt_now, dt_sec_ago, json_dump, json_load, json_reload

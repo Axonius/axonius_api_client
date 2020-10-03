@@ -1,11 +1,11 @@
-Parsers for API models
+Parsers
 ###############################################
 
 .. toctree::
    adapters
    config
-   constants
    fields
    roles
    tables
    url_parser
+   wizards

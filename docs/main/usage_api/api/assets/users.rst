@@ -1,4 +1,4 @@
-Working with user assets
+User assets
 ###############################################
 
 .. automodule:: axonius_api_client.api.assets.users

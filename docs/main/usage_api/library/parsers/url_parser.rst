@@ -1,4 +1,4 @@
-URL Parser
+URLs
 ###############################################
 
 .. automodule:: axonius_api_client.url_parser
