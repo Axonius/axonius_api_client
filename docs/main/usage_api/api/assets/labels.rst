@@ -6,3 +6,4 @@ Tags (labels)
    :show-inheritance:
    :inherited-members:
    :undoc-members:
+   :member-order: bysource

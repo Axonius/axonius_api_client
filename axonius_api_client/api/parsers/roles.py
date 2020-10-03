@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""API models for working with adapters and connections."""
+"""Parsers for system roles."""
 
 
 def parse_permissions(raw, default_perm=False):  # pragma: no cover

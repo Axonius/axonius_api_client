@@ -1,7 +1,7 @@
-Wizards
+HTTP Client
 ###############################################
 
-.. automodule:: axonius_api_client.constants.wizards
+.. automodule:: axonius_api_client.http
    :members:
    :show-inheritance:
    :inherited-members:

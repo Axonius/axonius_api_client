@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-"""Asset export callbacks."""
-from typing import Dict, Optional
+"""Tools for loading callbacks."""
+from typing import Dict
 
 from ...exceptions import ApiError
 from .base import Base
@@ -21,13 +21,15 @@ CALLBACKS_MAP: Dict[str, Base] = {
     "json_to_csv": JsonToCsv,
     "xlsx": Xlsx,
 }
+"""Map of export name to callbacks class."""
 
 
-def get_callbacks_cls(export: Optional[str] = None) -> Base:
+def get_callbacks_cls(export: str = DEFAULT_CALLBACKS_CLS) -> Base:
     """Get a callback class.
 
     Args:
         export: export format from asset object get method to map to a callback object
+            must be one of :data:`CALLBACKS_MAP`
     """
     export = export or DEFAULT_CALLBACKS_CLS
     if export in CALLBACKS_MAP:

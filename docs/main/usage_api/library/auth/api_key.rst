@@ -1,4 +1,4 @@
-Authenticating with API Key and API Secret
+Authenticating
 ###############################################
 
 .. automodule:: axonius_api_client.auth.api_key
@@ -6,3 +6,4 @@ Authenticating with API Key and API Secret
    :show-inheritance:
    :inherited-members:
    :undoc-members:
+   :member-order: bysource

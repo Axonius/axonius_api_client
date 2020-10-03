@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""API models package."""
+"""APIs for working with system components."""
 from .central_core import CentralCore
 from .dashboard import Dashboard
 from .instances import Instances

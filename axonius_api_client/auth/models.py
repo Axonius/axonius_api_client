@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Authentication methods."""
+"""Authentication models."""
 import abc
 import logging
 

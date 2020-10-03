@@ -31,7 +31,6 @@ def get_cbobj_main(apiobj, cbexport, getargs=None, state=None, store=None):
     assert isinstance(cbobj.ALL_SCHEMAS, dict) and cbobj.ALL_SCHEMAS
     assert isinstance(cbobj.args_map(), dict)
     assert isinstance(cbobj.args_map_custom(), dict)
-    assert isinstance(cbobj.args_map_export(), dict)
     assert isinstance(cbobj.args_strs, list)
 
     assert isinstance(cbobj.TAG_ROWS_ADD, list) and not cbobj.TAG_ROWS_ADD

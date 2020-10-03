@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Working with adapter connections."""
+"""API for working with adapter connections."""
 import time
 from typing import List, Optional, Union
 

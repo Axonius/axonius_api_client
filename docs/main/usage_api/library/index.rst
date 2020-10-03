@@ -2,14 +2,9 @@ Library backend
 ###############################################
 
 .. toctree::
-    http
+    api/index
     auth/index
     constants/index
-    exceptions
-    logs
-    tools
-    version
-    data
     parsers/index
-    api/index
-    setup_env
+    tools/index
+    version

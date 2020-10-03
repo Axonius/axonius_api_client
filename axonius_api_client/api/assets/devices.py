@@ -25,39 +25,6 @@ class Devices(AssetMixin):
         * :meth:`get_by_id`
     """
 
-    FIELD_ASSET_NAME: str = "specific_data.data.name"
-    """Asset Name field."""
-
-    FIELD_HOSTNAME: str = "specific_data.data.hostname"
-    """Hostname field."""
-
-    FIELD_IP: str = "specific_data.data.network_interfaces.ips"
-    """Network Interfaces IPs field."""
-
-    FIELD_IP_RAW: str = "specific_data.data.network_interfaces.ips_raw"
-    """Network Interfaces IPs raw field."""
-
-    FIELD_MAC: str = "specific_data.data.network_interfaces.mac"
-    """Network Interfaces MACs field."""
-
-    FIELD_SUBNET: str = "specific_data.data.network_interfaces.subnets"
-    """Network Interfaces Subnets field."""
-
-    FIELD_OS_TYPE: str = "specific_data.data.os.type"
-    """OS Type field."""
-
-    FIELD_MAIN: str = FIELD_HOSTNAME
-    """Field name of the main identifier."""
-
-    FIELD_SIMPLE: str = FIELD_HOSTNAME
-    """Field name of a simple field."""
-
-    FIELD_COMPLEX: str = "specific_data.data.network_interfaces"
-    """Field name of a complex field."""
-
-    FIELD_COMPLEX_SUB: str = "name"
-    """Field name of a complex sub field."""
-
     @property
     def fields_default(self) -> List[str]:
         """Fields to use by default for getting assets."""
@@ -225,3 +192,36 @@ class Devices(AssetMixin):
         )
 
         return self.get(**kwargs)
+
+    FIELD_ASSET_NAME: str = "specific_data.data.name"
+    """Asset Name field."""
+
+    FIELD_HOSTNAME: str = "specific_data.data.hostname"
+    """Hostname field."""
+
+    FIELD_IP: str = "specific_data.data.network_interfaces.ips"
+    """Network Interfaces IPs field."""
+
+    FIELD_IP_RAW: str = "specific_data.data.network_interfaces.ips_raw"
+    """Network Interfaces IPs raw field."""
+
+    FIELD_MAC: str = "specific_data.data.network_interfaces.mac"
+    """Network Interfaces MACs field."""
+
+    FIELD_SUBNET: str = "specific_data.data.network_interfaces.subnets"
+    """Network Interfaces Subnets field."""
+
+    FIELD_OS_TYPE: str = "specific_data.data.os.type"
+    """OS Type field."""
+
+    FIELD_MAIN: str = FIELD_HOSTNAME
+    """Field name of the main identifier."""
+
+    FIELD_SIMPLE: str = FIELD_HOSTNAME
+    """Field name of a simple field."""
+
+    FIELD_COMPLEX: str = "specific_data.data.network_interfaces"
+    """Field name of a complex field."""
+
+    FIELD_COMPLEX_SUB: str = "name"
+    """Field name of a complex sub field."""

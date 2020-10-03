@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Constants."""
+"""Constants for logging."""
 import logging
 import os
 from typing import List

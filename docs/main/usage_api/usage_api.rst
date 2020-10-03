@@ -13,4 +13,3 @@ Using the API library
    api/system/index
    api/enforcements/index
    library/index
-   openapi

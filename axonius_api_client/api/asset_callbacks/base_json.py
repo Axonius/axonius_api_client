@@ -1,33 +1,55 @@
 # -*- coding: utf-8 -*-
-"""JSON export callbacks class."""
+"""JSON export callbacks."""
 import json
 import textwrap
 from typing import List, Union
 
 from ...tools import listify
-from .base import Base
+from .base import ExportMixins
 
 
-class Json(Base):
-    """JSON export callbacks class.
-
-    See Also:
-        See :meth:`args_map` and :meth:`args_map_custom` for details on the extra kwargs that can
-        be passed to :meth:`axonius_api_client.api.assets.users.Users.get` or
-        :meth:`axonius_api_client.api.assets.devices.Devices.get`
-
-    """
-
-    CB_NAME: str = "json"
-    """name for this callback"""
+class Json(ExportMixins):
+    """Callbacks that can export asset data in JSON format."""
 
     @classmethod
     def args_map_custom(cls) -> dict:
         """Get the custom argument names and their defaults for this callbacks object.
 
-        See Also:
-            :meth:`args_map_export` for the export arguments for this callbacks object.
+        Examples:
+            First, create a ``client`` using :obj:`axonius_api_client.connect.Connect` and assume
+            ``apiobj`` is either ``client.devices`` or ``client.users``
 
+            >>> apiobj = client.devices
+
+            Export the output to STDOUT. If ``export_file`` is not supplied, the default is to
+            print the output to STDOUT.
+
+            >>> assets = apiobj.get(export="json")
+
+            Export the output to a file in the default path
+            :attr:`axonius_api_client.setup_env.DEFAULT_PATH`.
+
+            >>> assets = apiobj.get(export="json", export_file="test.json")
+
+            Export the output to an absolute path file (ignoring ``export_path``) and overwrite
+            the file if it exists.
+
+            >>> assets = apiobj.get(
+            ...     export="json",
+            ...     export_file="/tmp/output.json",
+            ...     export_overwrite=True,
+            ... )
+
+            Export the output to a file in a specific dir.
+
+            >>> assets = apiobj.get(export="json", export_file="output.json", export_path="/tmp")
+
+            Return each asset as one dictionary per line (with no indenting) instead of a list
+            of dictionaries.
+
+            >>> assets = apiobj.get(export="json", export_file="test.json", json_flat=True)
+
+        See Also:
             :meth:`args_map` for the arguments for all callback objects.
 
         Notes:
@@ -109,3 +131,6 @@ class Json(Base):
             row = {"schemas": self.final_schemas}
             self.write_rows(rows=row)
             del row
+
+    CB_NAME: str = "json"
+    """name for this callback"""

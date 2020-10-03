@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""API models for working with device and user assets."""
+"""API models for working with fields for assets."""
 import re
 import warnings
 from typing import List, Optional, Tuple, Union

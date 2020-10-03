@@ -1,34 +1,19 @@
 # -*- coding: utf-8 -*-
-"""CSV export callbacks class."""
+"""CSV export callbacks."""
 import codecs
 import csv
 from typing import List, Union
 
 from ...tools import listify
-from .base import Base
+from .base import ExportMixins
 
 
-class Csv(Base):
-    """CSV export callbacks class.
-
-    See Also:
-        See :meth:`args_map` and :meth:`args_map_custom` for details on the extra kwargs that can
-        be passed to :meth:`axonius_api_client.api.assets.users.Users.get` or
-        :meth:`axonius_api_client.api.assets.devices.Devices.get`
-
-    """
-
-    CB_NAME: str = "csv"
-    """name for this callback"""
+class Csv(ExportMixins):
+    """Callbacks that can export asset data in CSV format."""
 
     @classmethod
     def args_map_custom(cls) -> dict:
         """Get the custom argument names and their defaults for this callbacks object.
-
-        See Also:
-            :meth:`args_map_export` for the export arguments for this callbacks object.
-
-            :meth:`args_map` for the arguments for all callback objects.
 
         Examples:
             First, create a ``client`` using :obj:`axonius_api_client.connect.Connect` and assume
@@ -36,9 +21,38 @@ class Csv(Base):
 
             >>> apiobj = client.devices
 
-            Use 'missing' instead of None for rows that are missing a column.
+            Export the output to STDOUT. If ``export_file`` is not supplied, the default is to
+            print the output to STDOUT.
 
-            >>> assets = apiobj.get(export="csv", export_file="test.csv", csv_key_miss='missing')
+            >>> assets = apiobj.get(export="csv")
+
+            Export the output to a file in the default path
+            :attr:`axonius_api_client.setup_env.DEFAULT_PATH`.
+
+            >>> assets = apiobj.get(export="csv", export_file="test.csv")
+
+            Export the output to an absolute path file (ignoring ``export_path``) and overwrite
+            the file if it exists.
+
+            >>> assets = apiobj.get(
+            ...     export="csv",
+            ...     export_file="/tmp/output.csv",
+            ...     export_overwrite=True,
+            ... )
+
+            Export the output to a file in a specific dir.
+
+            >>> assets = apiobj.get(export="csv", export_file="output.csv", export_path="/tmp")
+
+            Include the schema of all selected fields in the output.
+
+            >>> assets = apiobj.get(export="csv", export_schema=True)
+
+            Export the output to a specific file descriptor and do not close the file descriptor
+            when finished.
+
+            >>> fd = io.StringIO()
+            >>> assets = apiobj.get(export="csv", export_fd=fd, export_fd_close=False)
 
             Use 'missing' instead of None for rows that are missing a column.
 
@@ -49,7 +63,7 @@ class Csv(Base):
 
             >>> assets = apiobj.get(export="csv", export_file="test.csv", csv_key_extras='raise')
 
-            Use 'excel-tab' csv format instead of 'excel'. Must be one of 'excel', 'excel-tab', or
+            Use 'excel-tab' format instead of 'excel'. Must be one of 'excel', 'excel-tab', or
             'unix'.
 
             >>> assets = apiobj.get(export="csv", export_file="test.csv", csv_dialect='excel-tab')
@@ -59,9 +73,10 @@ class Csv(Base):
 
             >>> assets = apiobj.get(export="csv", export_file="test.csv", csv_quoting='all')
 
-        Notes:
-            If ``export_file`` is not supplied, the default is to print the output to STDOUT.
+        See Also:
+            :meth:`args_map` for the arguments for all callback objects.
 
+        Notes:
             This callbacks object forces the following arguments to True in order to make the
             output usable in the exported format: ``field_null``, ``field_flatten``,
             and ``field_join``
@@ -186,3 +201,6 @@ class Csv(Base):
             else:
                 self._stream.writerow(dict(zip(self.final_columns, titles)))
                 self._stream.writerow(dict(zip(self.final_columns, types)))
+
+    CB_NAME: str = "csv"
+    """name for this callback"""

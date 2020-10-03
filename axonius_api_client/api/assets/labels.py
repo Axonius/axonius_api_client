@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""API models for working with device and user assets."""
+"""API models for working with labels for assets."""
 from typing import List
 
 from ...tools import grouper
@@ -7,7 +7,7 @@ from ..mixins import ChildMixins
 
 
 class Labels(ChildMixins):
-    """ChildMixins API model for working with labels/tags for the parent asset type."""
+    """ChildMixins API model for working with labels for the parent asset type."""
 
     def add(self, rows: List[dict], labels: List[str]) -> int:
         """Add labels/tags to assets.

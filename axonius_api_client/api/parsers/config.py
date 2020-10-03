@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""API models for working with adapters and connections."""
+"""Parsers for configuration schemas."""
 import copy
 import pathlib
 import warnings

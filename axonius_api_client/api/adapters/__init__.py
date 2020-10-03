@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Working with adapters and adapter connections."""
+"""APIs for working with adapters and connections."""
 from .adapters import Adapters
 from .cnx import Cnx
 

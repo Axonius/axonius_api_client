@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Base export callbacks class."""
+"""Base callbacks."""
 import copy
 import logging
 import re
@@ -16,156 +16,11 @@ from ..parsers import schema_custom
 
 
 class Base:
-    """Base export callbacks class.
-
-    See Also:
-        See :meth:`args_map` and :meth:`args_map_custom` for details on the extra kwargs that can
-        be passed to :meth:`axonius_api_client.api.assets.users.Users.get` or
-        :meth:`axonius_api_client.api.assets.devices.Devices.get`
-
-    """
-
-    CB_NAME: str = "base"
-    """name for this callback"""
-
-    FIND_KEYS: List[str] = ["name", "name_qual", "column_title", "name_base"]
-    """field schema keys to use when finding a fields schema"""
-
-    APIOBJ = None
-    """:obj:`axonius_api_client.api.assets.asset_mixin.AssetMixin`: assets object."""
-
-    ALL_SCHEMAS: dict = None
-    """Map of adapter -> field schemas."""
-
-    STATE: dict = None
-    """state dict used by get assets method to track paging."""
-
-    STORE: dict = None
-    """store dict used by get assets method to track arguments."""
-
-    CURRENT_ROWS: None
-    """current rows being processed"""
-
-    GETARGS: dict = None
-    """original kwargs supplied to get assets method."""
-
-    TAG_ROWS_ADD: List[dict] = None
-    """tracker of assets to add tags to in :meth:`do_tagging`."""
-
-    TAG_ROWS_REMOVE: List[dict] = None
-    """tracker of assets to remove tags from in :meth:`do_tagging`."""
-
-    CUSTOM_CB_EXC: List[dict] = None
-    """tracker of custom callbacks that have been executed by :meth:`do_custom_cbs`"""
-
-    @classmethod
-    def args_map_base(cls) -> dict:
-        """Get the map of arguments that can be supplied to GETARGS."""
-        return {
-            "field_excludes": [],
-            "field_flatten": False,
-            "field_explode": None,
-            "field_titles": False,
-            "field_join": False,
-            "field_join_value": FIELD_JOINER,
-            "field_join_trim": FIELD_TRIM_LEN,
-            "field_null": False,
-            "field_null_value": None,
-            "field_null_value_complex": [],
-            "tags_add": [],
-            "tags_remove": [],
-            "report_adapters_missing": False,
-            "report_software_whitelist": [],
-            "page_progress": 10000,
-            "do_echo": False,
-            "custom_cbs": [],
-        }
-
-    @classmethod
-    def args_map_export(cls) -> dict:
-        """Get the export argument names and their defaults for this callbacks object.
-
-        See Also:
-            :meth:`args_map_custom` for the arguments specific to this callback object.
-
-            :meth:`args_map` for the arguments for all callback objects.
-
-        Examples:
-            First, create a ``client`` using :obj:`axonius_api_client.connect.Connect` and assume
-            ``apiobj`` is either ``client.devices`` or ``client.users``
-
-            >>> apiobj = client.devices
-
-            These examples use ``csv`` as the export callback - replace accordingly with ``json``,
-            ``json_to_csv``, ``csv``, ``table``, or ``xlsx``.
-
-            Export the output to STDOUT.
-
-            >>> assets = apiobj.get(export="csv")
-
-            Export the output to a file in the default path
-            :attr:`axonius_api_client.setup_env.DEFAULT_PATH`.
-
-            >>> assets = apiobj.get(export="csv", export_file="test.csv")
-
-            Export the output to an absolute path file (ignoring ``export_path``) and overwrite
-            the file if it exists.
-
-            >>> assets = apiobj.get(
-            ...     export="csv",
-            ...     export_file="/tmp/output.csv",
-            ...     export_overwrite=True,
-            ... )
-
-            Export the output to a file in a specific dir.
-
-            >>> assets = apiobj.get(export="csv", export_file="output.csv", export_path="/tmp")
-
-            Include the schema of all selected fields in the output.
-
-            >>> assets = apiobj.get(export="csv", export_schema=True)
-
-            Export the output to a specific file descriptor and do not close the file descriptor
-            when finished.
-
-            >>> fd = io.StringIO()
-            >>> assets = apiobj.get(export="csv", export_fd=fd, export_fd_close=False)
-
-        Notes:
-            If ``export_file`` is not supplied, the default is to print the output to STDOUT.
-
-            These arguments can be supplied as extra kwargs passed to
-            :meth:`axonius_api_client.api.assets.users.Users.get` or
-            :meth:`axonius_api_client.api.assets.devices.Devices.get`
-
-        """
-        return {
-            "export_file": None,
-            "export_path": DEFAULT_PATH,
-            "export_overwrite": False,
-            "export_schema": False,
-            "export_fd": None,
-            "export_fd_close": True,
-        }
-
-    @classmethod
-    def args_map_custom(cls) -> dict:
-        """Get the custom argument names and their defaults for this callbacks object.
-
-        See Also:
-            :meth:`args_map` for the arguments for all callback objects.
-
-        Notes:
-            This callback object has no custom arguments.
-        """
-        return {}
+    """Callbacks that can format asset data."""
 
     @classmethod
     def args_map(cls) -> dict:
         """Get all of the argument names and their defaults for this callbacks object.
-
-        See Also:
-            :meth:`args_map_custom` for the arguments specific to this callback object.
 
         Examples:
             First, create a ``client`` using :obj:`axonius_api_client.connect.Connect` and assume
@@ -176,7 +31,7 @@ class Base:
             Flatten complex fields -  Will take all sub fields of complex fields and put them
             on the root level with their values index correlated to each other.
 
-            >>> assets = apiobj.get(field_flatten=True)
+            >>> assets = apiobj.get(fields=["network_interfaces"], field_flatten=True)
 
             Explode a single field - will take that field and create new rows for list item.
 
@@ -240,6 +95,7 @@ class Base:
             >>> def custom_cb1(self, rows):
             ...     for row in rows:
             ...         row["internal_axon_id"] = row["internal_axon_id"].upper()
+            ...     return rows
             ...
             >>> assets = apiobj.get(custom_cbs=[custom_cb1])
 
@@ -253,6 +109,41 @@ class Base:
         args.update(cls.args_map_base())
         args.update(cls.args_map_custom())
         return args
+
+    @classmethod
+    def args_map_custom(cls) -> dict:
+        """Get the custom argument names and their defaults for this callbacks object.
+
+        See Also:
+            :meth:`args_map` for the arguments for all callback objects.
+
+        Notes:
+            This callback object has no custom arguments.
+        """
+        return {}
+
+    @classmethod
+    def args_map_base(cls) -> dict:
+        """Get the map of arguments that can be supplied to GETARGS."""
+        return {
+            "field_excludes": [],
+            "field_flatten": False,
+            "field_explode": None,
+            "field_titles": False,
+            "field_join": False,
+            "field_join_value": FIELD_JOINER,
+            "field_join_trim": FIELD_TRIM_LEN,
+            "field_null": False,
+            "field_null_value": None,
+            "field_null_value_complex": [],
+            "tags_add": [],
+            "tags_remove": [],
+            "report_adapters_missing": False,
+            "report_software_whitelist": [],
+            "page_progress": 10000,
+            "do_echo": False,
+            "custom_cbs": [],
+        }
 
     def get_arg_value(self, arg: str) -> Union[str, list, bool, int]:
         """Get an argument value.
@@ -804,6 +695,7 @@ class Base:
 
         row[field_name] = missing
 
+    # TBD: make this support normal field selection concepts
     def is_excluded(self, schema: dict) -> bool:
         """Check if a name supplied to field_excludes matches one of FIND_KEYS.
 
@@ -818,66 +710,6 @@ class Base:
                 if (name and exclude) and name == exclude:
                     return True
         return False
-
-    def open_fd_arg(self):
-        """Open a file descriptor supplied in GETARGS."""
-        self._fd = self.get_arg_value("export_fd")
-        self._fd_close = self.get_arg_value("export_fd_close")
-        self.echo(msg=f"Exporting to {self._fd}")
-        return self._fd
-
-    def open_fd_path(self):
-        """Open a file descriptor for a path."""
-        self._export_file = self.get_arg_value("export_file")
-        self._export_path = self.get_arg_value("export_path")
-        self._export_overwrite = self.get_arg_value("export_overwrite")
-
-        file_path = get_path(obj=self._export_path)
-        file_path.mkdir(mode=0o700, parents=True, exist_ok=True)
-        self._file_path = fp = (file_path / self._export_file).resolve()
-
-        if self._file_path.exists():
-            self._file_mode = "overwrote"
-            mode = "overwriting"
-        else:
-            self._file_mode = "created"
-            mode = "creating"
-
-        if self._file_path.exists() and not self._export_overwrite:
-            msg = f"Export file '{fp}' already exists and overwite is False!"
-            self.echo(msg=msg, error=ApiError, level="error")
-
-        self._file_path.touch(mode=0o600)
-        self._fd_close = self.get_arg_value("export_fd_close")
-        self._fd = self._file_path.open(mode="w", encoding="utf-8")
-        self.echo(msg=f"Exporting to file '{fp}' ({mode})")
-        return self._fd
-
-    def open_fd_stdout(self):
-        """Open a file descriptor to STDOUT."""
-        self._file_path = None
-        self._fd_close = False
-        self._fd = sys.stdout
-        self.echo(msg="Exporting to stdout")
-        return self._fd
-
-    def open_fd(self):
-        """Open a file descriptor."""
-        if self.get_arg_value("export_fd"):
-            self.open_fd_arg()
-        elif self.get_arg_value("export_file"):
-            self.open_fd_path()
-        else:
-            self.open_fd_stdout()
-        return self._fd
-
-    def close_fd(self):
-        """Close a file descriptor."""
-        self._fd.write("\n")
-        if getattr(self, "_fd_close", False):
-            name = str(getattr(self._fd, "name", self._fd))
-            self.echo(msg=f"Finished exporting to {name!r}")
-            self._fd.close()
 
     def echo(
         self,
@@ -1064,8 +896,11 @@ class Base:
     @property
     def adapter_map(self) -> dict:
         """Build a map of adapters that have connections."""
+        if getattr(self, "_adapter_map", None):
+            return self._adapter_map
+
         self._adapters_meta = getattr(self, "_adapters_meta", self.APIOBJ.adapters.get())
-        amap = {
+        self._adapter_map = {
             "has_cnx": [],
             "all": [],
             "all_fields": [f"{x}_adapter" for x in self.ALL_SCHEMAS],
@@ -1074,13 +909,13 @@ class Base:
         for adapter in self._adapters_meta:
             name_raw = adapter["name_raw"]
 
-            if adapter not in amap["all"]:
-                amap["all"].append(name_raw)
+            if adapter not in self._adapter_map["all"]:
+                self._adapter_map["all"].append(name_raw)
             if adapter["cnx"]:
-                amap["has_cnx"].append(name_raw)
+                self._adapter_map["has_cnx"].append(name_raw)
 
-        amap = {k: list(v) for k, v in amap.items()}
-        return amap
+        self._adapter_map = {k: list(v) for k, v in self._adapter_map.items()}
+        return self._adapter_map
 
     @property
     def args_strs(self) -> List[str]:
@@ -1095,11 +930,6 @@ class Base:
             if isinstance(value, str):
                 value = repr(value)
 
-            # if isinstance(value, list):
-            #     if value:
-            #         value = ", ".join([str(x) for x in value])
-            #     value = value or None
-
             lines.append(f"{desc:{longest}}{value}")
         return lines
 
@@ -1110,6 +940,122 @@ class Base:
     def __repr__(self) -> str:
         """Show info for this object."""
         return self.__str__()
+
+    CB_NAME: str = "base"
+    """name for this callback"""
+
+    FIND_KEYS: List[str] = ["name", "name_qual", "column_title", "name_base"]
+    """field schema keys to use when finding a fields schema"""
+
+    APIOBJ = None
+    """:obj:`axonius_api_client.api.assets.asset_mixin.AssetMixin`: assets object."""
+
+    ALL_SCHEMAS: dict = None
+    """Map of adapter -> field schemas."""
+
+    STATE: dict = None
+    """state dict used by get assets method to track paging."""
+
+    STORE: dict = None
+    """store dict used by get assets method to track arguments."""
+
+    CURRENT_ROWS: None
+    """current rows being processed"""
+
+    GETARGS: dict = None
+    """original kwargs supplied to get assets method."""
+
+    TAG_ROWS_ADD: List[dict] = None
+    """tracker of assets to add tags to in :meth:`do_tagging`."""
+
+    TAG_ROWS_REMOVE: List[dict] = None
+    """tracker of assets to remove tags from in :meth:`do_tagging`."""
+
+    CUSTOM_CB_EXC: List[dict] = None
+    """tracker of custom callbacks that have been executed by :meth:`do_custom_cbs`"""
+
+
+class ExportMixins(Base):
+    """Export mixins for callbacks."""
+
+    @classmethod
+    def args_map_export(cls) -> dict:
+        """Get the export argument names and their defaults for this callbacks object.
+
+        See Also:
+            :meth:`args_map_custom` for the arguments specific to this callback object.
+
+            :meth:`args_map` for the arguments for all callback objects.
+
+        """
+        return {
+            "export_file": None,
+            "export_path": DEFAULT_PATH,
+            "export_overwrite": False,
+            "export_schema": False,
+            "export_fd": None,
+            "export_fd_close": True,
+        }
+
+    def open_fd_arg(self):
+        """Open a file descriptor supplied in GETARGS."""
+        self._fd = self.get_arg_value("export_fd")
+        self._fd_close = self.get_arg_value("export_fd_close")
+        self.echo(msg=f"Exporting to {self._fd}")
+        return self._fd
+
+    def open_fd_path(self):
+        """Open a file descriptor for a path."""
+        self._export_file = self.get_arg_value("export_file")
+        self._export_path = self.get_arg_value("export_path")
+        self._export_overwrite = self.get_arg_value("export_overwrite")
+
+        file_path = get_path(obj=self._export_path)
+        file_path.mkdir(mode=0o700, parents=True, exist_ok=True)
+        self._file_path = fp = (file_path / self._export_file).resolve()
+
+        if self._file_path.exists():
+            self._file_mode = "overwrote"
+            mode = "overwriting"
+        else:
+            self._file_mode = "created"
+            mode = "creating"
+
+        if self._file_path.exists() and not self._export_overwrite:
+            msg = f"Export file '{fp}' already exists and overwite is False!"
+            self.echo(msg=msg, error=ApiError, level="error")
+
+        self._file_path.touch(mode=0o600)
+        self._fd_close = self.get_arg_value("export_fd_close")
+        self._fd = self._file_path.open(mode="w", encoding="utf-8")
+        self.echo(msg=f"Exporting to file '{fp}' ({mode})")
+        return self._fd
+
+    def open_fd_stdout(self):
+        """Open a file descriptor to STDOUT."""
+        self._file_path = None
+        self._fd_close = False
+        self._fd = sys.stdout
+        self.echo(msg="Exporting to stdout")
+        return self._fd
+
+    def open_fd(self):
+        """Open a file descriptor."""
+        if self.get_arg_value("export_fd"):
+            self.open_fd_arg()
+        elif self.get_arg_value("export_file"):
+            self.open_fd_path()
+        else:
+            self.open_fd_stdout()
+        return self._fd
+
+    def close_fd(self):
+        """Close a file descriptor."""
+        self._fd.write("\n")
+        if getattr(self, "_fd_close", False):
+            name = str(getattr(self._fd, "name", self._fd))
+            self.echo(msg=f"Finished exporting to {name!r}")
+            self._fd.close()
 
 
 ARG_DESCRIPTIONS: dict = {

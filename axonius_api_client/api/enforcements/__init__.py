@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""API models package."""
+"""APIs for working with enforcements and actions."""
 from .actions import RunAction
 from .enforcements import Enforcements
 

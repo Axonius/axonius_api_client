@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""API models for working with adapters and connections."""
+"""Parsers for tables."""
 import copy
 import textwrap
 from typing import List, Optional, Union

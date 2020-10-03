@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""API models for working with Enforcement Center."""
+"""API for working with enforcements."""
 from typing import List, Optional
 
 from ...tools import listify

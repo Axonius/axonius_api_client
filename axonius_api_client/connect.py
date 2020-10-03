@@ -32,18 +32,18 @@ class Connect:
         >>> # -*- coding: utf-8 -*-
         >>> '''Base example for setting up the API client.'''
         >>> import axonius_api_client as axonapi
-
+        >>>
         >>> # get the URL, API key and API secret from a ".env" file and override env vars
         >>> client_args = axonapi.get_connect_env(override=True)
-
+        >>>
         >>> # turn off warnings about insecure certs
         >>> client_args["certwarn"] = False
         >>>
         >>> # create a client using the url, key, and secret from OS env
         >>> client = axonapi.Connect(**client_args)
-
+        >>>
         >>> j = client.jdump  # json dump helper
-
+        >>>
         >>> client.start()  # connect to axonius
         >>> devices = client.devices  # work with device assets
         >>> users = client.users  # work with user assets

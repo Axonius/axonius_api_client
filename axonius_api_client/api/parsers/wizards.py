@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Wizard value parsers for the various field types."""
+"""Parser for query wizards."""
 import re
 from typing import Any, Dict, List, Optional, Tuple, Union
 
