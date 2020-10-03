@@ -21,87 +21,6 @@ from .saved_query import SavedQuery
 class AssetMixin(ModelMixins):
     """API model for device and user assets."""
 
-    FIELD_TAGS: str = "labels"
-    """Field name for getting tabs (labels)."""
-
-    FIELD_AXON_ID: str = "internal_axon_id"
-    """Field name for asset unique ID."""
-
-    FIELD_ADAPTERS: str = "adapters"
-    """Field name for list of adapters on an asset."""
-
-    FIELD_ADAPTER_LEN: str = "adapter_list_length"
-    """Field name for count of adapters on an asset."""
-
-    FIELD_LAST_SEEN: str = "specific_data.data.last_seen"
-    """Field name for last time an adapter saw the asset."""
-
-    FIELD_MAIN: str = FIELD_AXON_ID
-    """Field name of the main identifier."""
-
-    FIELD_SIMPLE: str = FIELD_AXON_ID
-    """Field name of a simple field."""
-
-    FIELD_COMPLEX: str = None
-    """Field name of a complex field."""
-
-    FIELD_COMPLEX_SUB: str = None
-    """Field name of a complex sub field."""
-
-    FIELDS_API: List[str] = [
-        FIELD_AXON_ID,
-        FIELD_ADAPTERS,
-        FIELD_TAGS,
-        FIELD_ADAPTER_LEN,
-    ]
-    """Field names that are always returned by the REST API no matter what fields are selected."""
-
-    adapters: Adapters = None
-    """Adapters API model for cross reference."""
-
-    labels: Labels = None
-    """Work with labels (tags)."""
-
-    saved_query: SavedQuery = None
-    """Work with saved queries."""
-
-    fields: Fields = None
-    """Work with fields."""
-
-    wizard: Wizard = None
-    """Query wizard builder."""
-
-    wizard_text: WizardText = None
-    """Query wizard builder from text."""
-
-    wizard_csv: WizardCsv = None
-    """Query wizard builder from CSV."""
-
-    LAST_GET: dict = None
-    """Request object sent for last :meth:`get` request"""
-
-    LAST_CALLBACKS: Base = None
-    """Callbacks object used for last :meth:`get` request."""
-
-    @property
-    def fields_default(self) -> List[dict]:
-        """Fields to add to all get calls."""
-        raise NotImplementedError  # pragma: no cover
-
-    def destroy(self, destroy: bool, history: bool) -> dict:  # pragma: no cover
-        """Delete ALL assets.
-
-        Notes:
-            Enable the ``Enable API destroy endpoints`` setting under
-            ``Settings > Global Settings > API Settings > Enable advanced API settings``
-            for this method to function.
-
-        Args:
-            destroy: Must be true in order to actually perform the delete
-            history: Also delete all historical information
-        """
-        return self._destroy(destroy=destroy, history=history)
-
     def count(
         self,
         query: Optional[str] = None,
@@ -441,6 +360,25 @@ class AssetMixin(ModelMixins):
             otype = self.router.OBJ_TYPE
             msg = f"Failed to find internal_axon_id {id!r} for {otype}"
             raise NotFoundError(msg)
+
+    @property
+    def fields_default(self) -> List[dict]:
+        """Fields to add to all get calls."""
+        raise NotImplementedError  # pragma: no cover
+
+    def destroy(self, destroy: bool, history: bool) -> dict:  # pragma: no cover
+        """Delete ALL assets.
+
+        Notes:
+            Enable the ``Enable API destroy endpoints`` setting under
+            ``Settings > Global Settings > API Settings > Enable advanced API settings``
+            for this method to function.
+
+        Args:
+            destroy: Must be true in order to actually perform the delete
+            history: Also delete all historical information
+        """
+        return self._destroy(destroy=destroy, history=history)
 
     def get_by_saved_query(
         self, name: str, **kwargs
@@ -865,3 +803,65 @@ class AssetMixin(ModelMixins):
         """Private API method to get all known historical dates."""
         path = self.router.history_dates
         return self.request(method="get", path=path)
+
+    FIELD_TAGS: str = "labels"
+    """Field name for getting tabs (labels)."""
+
+    FIELD_AXON_ID: str = "internal_axon_id"
+    """Field name for asset unique ID."""
+
+    FIELD_ADAPTERS: str = "adapters"
+    """Field name for list of adapters on an asset."""
+
+    FIELD_ADAPTER_LEN: str = "adapter_list_length"
+    """Field name for count of adapters on an asset."""
+
+    FIELD_LAST_SEEN: str = "specific_data.data.last_seen"
+    """Field name for last time an adapter saw the asset."""
+
+    FIELD_MAIN: str = FIELD_AXON_ID
+    """Field name of the main identifier."""
+
+    FIELD_SIMPLE: str = FIELD_AXON_ID
+    """Field name of a simple field."""
+
+    FIELD_COMPLEX: str = None
+    """Field name of a complex field."""
+
+    FIELD_COMPLEX_SUB: str = None
+    """Field name of a complex sub field."""
+
+    FIELDS_API: List[str] = [
+        FIELD_AXON_ID,
+        FIELD_ADAPTERS,
+        FIELD_TAGS,
+        FIELD_ADAPTER_LEN,
+    ]
+    """Field names that are always returned by the REST API no matter what fields are selected."""
+
+    adapters: Adapters = None
+    """Adapters API model for cross reference."""
+
+    labels: Labels = None
+    """Work with labels (tags)."""
+
+    saved_query: SavedQuery = None
+    """Work with saved queries."""
+
+    fields: Fields = None
+    """Work with fields."""
+
+    wizard: Wizard = None
+    """Query wizard builder."""
+
+    wizard_text: WizardText = None
+    """Query wizard builder from text."""
+
+    wizard_csv: WizardCsv = None
+    """Query wizard builder from CSV."""
+
+    LAST_GET: dict = None
+    """Request object sent for last :meth:`get` request"""
+
+    LAST_CALLBACKS: Base = None
+    """Callbacks object used for last :meth:`get` request."""

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""API model for unauthenticated endpoints."""
+"""API for performing initial signup."""
 from ...constants.logs import LOG_LEVEL_API
 from ...exceptions import ResponseNotOk
 from ...http import Http

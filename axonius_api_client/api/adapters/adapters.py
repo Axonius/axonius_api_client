@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Working with adapters."""
+"""API for working with adapters."""
 import pathlib
 from typing import List, Optional, Union
 
@@ -22,18 +22,25 @@ class Adapters(ModelMixins):
 
         Supplying unknown keys/values for configurations will throw an error showing the
         valid keys/values.
-
-    See Also:
-        Examples can be found inline at:
-
-        * :meth:`get_by_name`
-        * :meth:`config_update`
-        * :meth:`file_upload`
-        * :meth:`file_upload_path`
     """
 
     def get(self) -> List[dict]:
-        """Get all adapters on all nodes."""
+        """Get all adapters on all nodes.
+
+        Examples:
+            First, create a ``client`` using :obj:`axonius_api_client.connect.Connect`.
+
+            Get all adapters
+
+            >>> adapters = client.adapters.get()
+
+            Get details of each adapter
+
+            >>> for adapter in adapters:
+            ...     print(adapter["name"])  # name of adapter
+            ...     print(adapter["node_name"])  # name of node adapter is running on
+
+        """
         parsed = parse_adapters(raw=self._get())
         parsed = sorted(parsed, key=lambda x: [x["node_name"], x["name"]])
         return parsed
@@ -47,6 +54,9 @@ class Adapters(ModelMixins):
             Get an adapter by name
 
             >>> adapter = client.adapters.get_by_name(name="aws")
+
+            Get details of adapter
+
             >>> print(adapter['status'])  # overall adapter status
             >>> print(adapter['cnx_count_total'])  # total connection count
             >>> print(adapter['cnx_count_broken'])  # broken connection count
@@ -95,32 +105,6 @@ class Adapters(ModelMixins):
         """
         adapter = self.get_by_name(name=name, node=node)
         return self.config_refetch(adapter=adapter, config_type=config_type)
-
-    def config_refetch(self, adapter: dict, config_type: str = "generic") -> dict:
-        """Re-fetch the advanced settings for an adapter.
-
-        Args:
-            adapter: adapter previously fetched from :meth:`get_by_name`
-            config_type: One of generic, specific, or discover
-
-        Raises:
-            :exc:`ApiError`: when adapter does not have the supplied config_type
-        """
-        schemas = adapter["schemas"]
-        name_config = f"{config_type}_name"
-        name_config = schemas.get(name_config)
-        name_plugin = adapter["name_plugin"]
-
-        if not name_config:
-            name = adapter["name"]
-            valid = ", ".join([x for x in CONFIG_TYPES if f"{x}_name" in schemas])
-            raise ApiError(f"Adapter {name} has no config type {config_type!r}, valids: {valid}!")
-
-        data = self._config_get(name_plugin=name_plugin, name_config=name_config)
-
-        data["schema"] = parse_schema(raw=data["schema"])
-
-        return data
 
     def config_update(
         self, name: str, node: str = DEFAULT_NODE, config_type: str = "generic", **kwargs
@@ -242,6 +226,32 @@ class Adapters(ModelMixins):
         kwargs.setdefault("file_name", path.name)
         kwargs["file_content"] = file_content
         return self.file_upload(**kwargs)
+
+    def config_refetch(self, adapter: dict, config_type: str = "generic") -> dict:
+        """Re-fetch the advanced settings for an adapter.
+
+        Args:
+            adapter: adapter previously fetched from :meth:`get_by_name`
+            config_type: One of generic, specific, or discover
+
+        Raises:
+            :exc:`ApiError`: when adapter does not have the supplied config_type
+        """
+        schemas = adapter["schemas"]
+        name_config = f"{config_type}_name"
+        name_config = schemas.get(name_config)
+        name_plugin = adapter["name_plugin"]
+
+        if not name_config:
+            name = adapter["name"]
+            valid = ", ".join([x for x in CONFIG_TYPES if f"{x}_name" in schemas])
+            raise ApiError(f"Adapter {name} has no config type {config_type!r}, valids: {valid}!")
+
+        data = self._config_get(name_plugin=name_plugin, name_config=name_config)
+
+        data["schema"] = parse_schema(raw=data["schema"])
+
+        return data
 
     def _init(self, **kwargs):
         """Post init method for subclasses to use for extra setup."""

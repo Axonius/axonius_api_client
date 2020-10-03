@@ -1,4 +1,4 @@
-Wizard for list of dictionaries
+Python objects
 ###############################################
 
 .. automodule:: axonius_api_client.api.wizards.wizard

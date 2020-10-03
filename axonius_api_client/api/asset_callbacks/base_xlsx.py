@@ -6,31 +6,68 @@ import xlsxwriter
 
 from ...exceptions import ApiError
 from ...tools import listify
-from .base import Base
+from .base import ExportMixins
 
 
-class Xlsx(Base):
-    """Excel export callbacks class.
-
-    See Also:
-        See :meth:`args_map` and :meth:`args_map_custom` for details on the extra kwargs that can
-        be passed to :meth:`axonius_api_client.api.assets.users.Users.get` or
-        :meth:`axonius_api_client.api.assets.devices.Devices.get`
-    """
-
-    CB_NAME: str = "xlsx"
-    """name for this callback"""
+class Xlsx(ExportMixins):
+    """Callbacks that can export asset data in Excel format."""
 
     @classmethod
     def args_map_custom(cls) -> dict:
         """Get the custom argument names and their defaults for this callbacks object.
 
-        See Also:
-            :meth:`args_map_export` for the export arguments for this callbacks object.
+        Examples:
+            First, create a ``client`` using :obj:`axonius_api_client.connect.Connect` and assume
+            ``apiobj`` is either ``client.devices`` or ``client.users``
 
+            Export the output to STDOUT. If ``export_file`` is not supplied, the default is to
+            print the output to STDOUT.
+
+            >>> assets = apiobj.get(export="xlsx")
+
+            Export the output to a file in the default path
+            :attr:`axonius_api_client.setup_env.DEFAULT_PATH`.
+
+            >>> assets = apiobj.get(export="xlsx", export_file="test.xlsx")
+
+            Export the output to an absolute path file (ignoring ``export_path``) and overwrite
+            the file if it exists.
+
+            >>> assets = apiobj.get(
+            ...     export="xlsx",
+            ...     export_file="/tmp/output.xlsx",
+            ...     export_overwrite=True,
+            ... )
+
+            Export the output to a file in a specific dir.
+
+            >>> assets = apiobj.get(export="xlsx", export_file="output.xlsx", export_path="/tmp")
+
+            Change the length of columns in the output.
+
+            >>> assets = apiobj.get(
+            ...     export="xlsx",
+            ...     export_file="test.xlsx",
+            ...     xlsx_column_length=100,
+            ... )
+
+            Provide custom formatting for each cell. See
+            https://xlsxwriter.readthedocs.io/format.html#format-methods-and-format-properties
+            for format properties that can be supplied.
+
+            >>> fmt = {"text_wrap": True, "bold": True, "font_color": "red"}
+            >>> assets = apiobj.get(
+            ...     export="xlsx",
+            ...     export_file="test.xlsx",
+            ...     xlsx_cell_format=fmt,
+            ... )
+
+        See Also:
             :meth:`args_map` for the arguments for all callback objects.
 
         Notes:
+            If ``export_file`` does not end with ``.xlsx``, it will be appended to the filename.
+
             This callbacks object forces the following arguments to True in order to make the
             output usable in the exported format: ``field_null``, ``field_flatten``,
             and ``field_join``
@@ -120,3 +157,6 @@ class Xlsx(Base):
         del rows
 
         return row_return
+
+    CB_NAME: str = "xlsx"
+    """name for this callback"""

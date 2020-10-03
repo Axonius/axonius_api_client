@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Constants."""
+"""Constants for API models."""
 from typing import List
 
 FIELD_TRIM_LEN: int = 32000

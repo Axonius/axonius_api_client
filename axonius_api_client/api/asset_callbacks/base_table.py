@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Table export callbacks class."""
+"""Table export callbacks."""
 from typing import List, Union
 
 import tabulate
@@ -7,32 +7,75 @@ import tabulate
 from ...constants.api import TABLE_FORMAT, TABLE_MAX_ROWS
 from ...exceptions import ApiError
 from ...tools import listify
-from .base import Base
+from .base import ExportMixins
 
 
-class Table(Base):
-    """Table export callbacks class.
-
-    See Also:
-        See :meth:`args_map` and :meth:`args_map_custom` for details on the extra kwargs that can
-        be passed to :meth:`axonius_api_client.api.assets.users.Users.get` or
-        :meth:`axonius_api_client.api.assets.devices.Devices.get`
-
-    """
-
-    CB_NAME: str = "table"
-    """name for this callback"""
+class Table(ExportMixins):
+    """Callbacks that can export asset data in text table format."""
 
     @classmethod
     def args_map_custom(cls) -> dict:
         """Get the custom argument names and their defaults for this callbacks object.
 
-        See Also:
-            :meth:`args_map_export` for the export arguments for this callbacks object.
+        Examples:
+            First, create a ``client`` using :obj:`axonius_api_client.connect.Connect` and assume
+            ``apiobj`` is either ``client.devices`` or ``client.users``
 
+            >>> apiobj = client.devices
+
+            Export the output to STDOUT. If ``export_file`` is not supplied, the default is to
+            print the output to STDOUT.
+
+            >>> assets = apiobj.get(export="table")
+
+            Export the output to a file in the default path
+            :attr:`axonius_api_client.setup_env.DEFAULT_PATH`.
+
+            >>> assets = apiobj.get(export="table", export_file="test.txt")
+
+            Export the output to an absolute path file (ignoring ``export_path``) and overwrite
+            the file if it exists.
+
+            >>> assets = apiobj.get(
+            ...     export="table",
+            ...     export_file="/tmp/output.txt",
+            ...     export_overwrite=True,
+            ... )
+
+            Export the output to a file in a specific dir.
+
+            >>> assets = apiobj.get(export="table", export_file="output.txt", export_path="/tmp")
+
+            Use a different output format.
+
+            >>> assets = apiobj.get(
+            ...     export="table",
+            ...     export_file="test.txt",
+            ...     table_format="mediawiki",
+            ... )
+
+            Specify a specific set of rows to return in the output.
+
+            >>> assets = apiobj.get(
+            ...     export="table",
+            ...     export_file="test.txt",
+            ...     table_max_rows=20,
+            ... )
+
+            Do not exclude API internal fields from table output.
+
+            >>> assets = apiobj.get(
+            ...     export="table",
+            ...     export_file="test.txt",
+            ...     table_api_fields=True,
+            ... )
+
+        See Also:
             :meth:`args_map` for the arguments for all callback objects.
 
         Notes:
+            If ``export_file`` is not supplied, the default is to print the output to STDOUT.
+
             This callbacks object forces the following arguments to True in order to make the
             output usable in the exported format: ``field_null``, ``field_flatten``,
             and ``field_join``
@@ -130,3 +173,6 @@ class Table(Base):
             fmts = ", ".join(tabulate.tabulate_formats)
             msg = f"{fmt!r} is not a valid table format, must be one of {fmts}"
             self.echo(msg=msg, error=ApiError)
+
+    CB_NAME: str = "table"
+    """name for this callback"""

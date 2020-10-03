@@ -1,4 +1,4 @@
-Connecting to Axonius
+Connecting
 ###############################################
 
 .. automodule:: axonius_api_client.connect
@@ -6,3 +6,4 @@ Connecting to Axonius
    :show-inheritance:
    :inherited-members:
    :undoc-members:
+   :member-order: bysource

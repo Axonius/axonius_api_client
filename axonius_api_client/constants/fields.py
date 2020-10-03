@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Constants."""
+"""Constants for field schemas."""
 import dataclasses
 import enum
 from typing import Dict, List, Optional

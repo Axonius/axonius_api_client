@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""API models for working with device and user assets."""
+"""API models for working with saved queries for assets."""
 from typing import List, Optional, Union
 
 from ...constants.api import GUI_PAGE_SIZES, PAGE_SIZE

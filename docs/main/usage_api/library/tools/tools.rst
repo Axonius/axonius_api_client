@@ -1,8 +1,9 @@
-Base data classes
+Utilities
 ###############################################
 
-.. automodule:: axonius_api_client.data
+.. automodule:: axonius_api_client.tools
    :members:
    :show-inheritance:
    :inherited-members:
    :undoc-members:
+   :member-order: bysource

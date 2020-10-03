@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""API model for working with system configuration."""
+"""API for working with instance metadata."""
 import math
 
 from ..mixins import ModelMixins

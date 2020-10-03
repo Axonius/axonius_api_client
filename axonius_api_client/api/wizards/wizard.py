@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Wizard for list of dictionaries."""
+"""Wizard for python objects."""
 import logging
 from typing import List, Optional, Tuple, Union
 
@@ -15,44 +15,50 @@ from ..parsers.wizards import WizardParser
 
 
 class Wizard:
-    """Wizard for list of dictionaries.
+    """Wizard for python objects.
 
     Examples:
         First, create a ``client`` using :obj:`axonius_api_client.connect.Connect`.
 
-        >>> # Define some entries to parse
+        Define some entries to parse
+
         >>> entries = [
-        ...     {
-        ...         'value': 'hostname contains test',
-        ...         'type': 'simple',
-        ...     },
-        ...     {
-        ...         'value': 'installed_software // name contains chrome // version earlier_than 82',
-        ...         'type': 'complex'
-        ...     },
+        ...   {
+        ...     'value': 'hostname contains test',
+        ...     'type': 'simple',
+        ...   },
+        ...   {
+        ...     'value': 'installed_software // name contains chrome // version earlier_than 82',
+        ...     'type': 'complex'
+        ...   },
         ... ]
-        >>>
-        >>> # Parse the entries into a query and GUI expressions
+
+        Parse the entries into a query and GUI expressions
+
         >>> parsed = client.devices.wizard.parse(entries=entries)
-        >>>
-        >>> # get the query produced by the wizard
+
+        Get the query produced by the wizard
+
         >>> query = parsed["query"]
         >>> print(query)
-        >>>
-        >>> # get the GUI expressions produced by the wizard
+
+        Get the GUI expressions produced by the wizard
+
         >>> expressions = parsed["expressions"]
         >>> print(expressions)
-        >>>
-        >>> # use the query to get assets
+
+        Use the query to get assets
+
         >>> assets = client.devices.get(query=query)
-        >>>
-        >>> # use the query to get a count of assets
+
+        Use the query to get a count of assets
         >>> count = client.devices.count(query=query)
-        >>>
-        >>> # use the query and expressions to create a saved query that the GUI understands
+
+        Use the query and expressions to create a saved query that the GUI understands
+
         >>> sq = client.devices.saved_query.add(name="test", query=query, expressions=expressions)
 
-    """  # noqa: E501
+    """
 
     DOCS: str = Docs.DICT
 

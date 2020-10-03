@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Constants."""
+"""Constants for general use."""
 import sys
 from typing import List, Tuple, Type, Union
 

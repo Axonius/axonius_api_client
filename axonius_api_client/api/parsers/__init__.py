@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""API models for working with adapters and connections."""
+"""Parsers for API models."""
 from .adapters import parse_adapters
 from .config import (config_build, config_default, config_empty, config_info,
                      config_required, config_unchanged, config_unknown,

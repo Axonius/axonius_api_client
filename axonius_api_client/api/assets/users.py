@@ -24,30 +24,6 @@ class Users(AssetMixin):
         * :meth:`get_by_id`
     """
 
-    FIELD_USERNAME: str = "specific_data.data.username"
-    """User Name field."""
-
-    FIELD_MAIL: str = "specific_data.data.mail"
-    """Mail field."""
-
-    FIELD_DOMAIN: str = "specific_data.data.domain"
-    """Domain field."""
-
-    FIELD_IS_ADMIN: str = "specific_data.data.is_admin"
-    """Is Admin field."""
-
-    FIELD_MAIN: str = FIELD_USERNAME
-    """Field name of the main identifier."""
-
-    FIELD_SIMPLE: str = FIELD_USERNAME
-    """Field name of a simple field."""
-
-    FIELD_COMPLEX: str = "specific_data.data.associated_devices"
-    """Field name of a complex field."""
-
-    FIELD_COMPLEX_SUB: str = "device_caption"
-    """Field name of a complex sub field."""
-
     @property
     def fields_default(self) -> List[str]:
         """Fields to use by default for getting assets."""
@@ -147,3 +123,27 @@ class Users(AssetMixin):
         kwargs["field_manual"] = True
         kwargs["value"] = value
         return self.get_by_value(**kwargs)
+
+    FIELD_USERNAME: str = "specific_data.data.username"
+    """User Name field."""
+
+    FIELD_MAIL: str = "specific_data.data.mail"
+    """Mail field."""
+
+    FIELD_DOMAIN: str = "specific_data.data.domain"
+    """Domain field."""
+
+    FIELD_IS_ADMIN: str = "specific_data.data.is_admin"
+    """Is Admin field."""
+
+    FIELD_MAIN: str = FIELD_USERNAME
+    """Field name of the main identifier."""
+
+    FIELD_SIMPLE: str = FIELD_USERNAME
+    """Field name of a simple field."""
+
+    FIELD_COMPLEX: str = "specific_data.data.associated_devices"
+    """Field name of a complex field."""
+
+    FIELD_COMPLEX_SUB: str = "device_caption"
+    """Field name of a complex sub field."""

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""API model for working with system configuration."""
+"""API for working with system roles."""
 import re
 
 from ...exceptions import ApiError, NotFoundError
