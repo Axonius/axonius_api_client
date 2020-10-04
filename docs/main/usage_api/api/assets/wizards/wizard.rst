@@ -1,4 +1,4 @@
-Python objects
+From python objects
 ###############################################
 
 .. automodule:: axonius_api_client.api.wizards.wizard

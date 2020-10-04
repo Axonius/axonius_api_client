@@ -57,10 +57,14 @@ class Adapters(ModelMixins):
 
             Get details of adapter
 
-            >>> print(adapter['status'])  # overall adapter status
-            >>> print(adapter['cnx_count_total'])  # total connection count
-            >>> print(adapter['cnx_count_broken'])  # broken connection count
-            >>> print(adapter['cnx_count_working'])  # working connection count
+            >>> adapter['status']               # overall adapter status
+            'success'
+            >>> adapter['cnx_count_total']      # total connection count
+            1
+            >>> adapter['cnx_count_broken']     # broken connection count
+            0
+            >>> adapter['cnx_count_working']    # working connection count
+            1
 
             Get details of each connection of the adapter
 
@@ -98,10 +102,50 @@ class Adapters(ModelMixins):
     def config_get(self, name: str, node: str = DEFAULT_NODE, config_type: str = "generic") -> dict:
         """Get the advanced settings for an adapter.
 
+        Examples:
+            First, create a ``client`` using :obj:`axonius_api_client.connect.Connect`.
+
+            Get the generic advanced settings for an adapter
+
+            >>> config = client.adapters.config_get(name="aws")
+
+            Get the adapter specific advanced settings for an adapter
+
+            >>> config = client.adapters.config_get(name="aws", config_type="specific")
+
+            Get the discovery advanced settings for an adapter
+
+            >>> config = client.adapters.config_get(name="aws", config_type="discovery")
+
+            See the current values of a configuration
+
+            >>> import pprint
+            >>> pprint.pprint(config['config'])
+            {'connect_client_timeout': 300,
+             'fetching_timeout': 43200,
+             'last_fetched_threshold_hours': 48,
+             'last_seen_prioritized': False,
+             'last_seen_threshold_hours': 24,
+             'minimum_time_until_next_fetch': None,
+             'realtime_adapter': False,
+             'user_last_fetched_threshold_hours': 48,
+             'user_last_seen_threshold_hours': None}
+
+            Investigate the schema and current values of a configuration
+
+            >>> for setting, info in config['schema'].items():
+            ...    current_value = config['config'][setting]
+            ...    title = info['title']
+            ...    description = info.get('description')
+            ...    print(f"name of setting: {setting}")
+            ...    print(f"  title of setting in GUI: {title}")
+            ...    print(f"  description of setting: {description}")
+            ...    print(f"  current value of setting: {current_value}")
+
         Args:
             name: name of adapter to get advanced settings of
             node: name of node to get adapter from
-            config_type: One of generic, specific, or discover
+            config_type: One of generic, specific, or discovery
         """
         adapter = self.get_by_name(name=name, node=node)
         return self.config_refetch(adapter=adapter, config_type=config_type)
@@ -126,13 +170,13 @@ class Adapters(ModelMixins):
             ...     name="aws", config_type="specific", fetch_s3=True
             ... )
 
-            Update the discover advanced settings
+            Update the discovery advanced settings
             >>> # XXX currently broken!
 
         Args:
             name: name of adapter to update advanced settings of
             node: name of node to get adapter from
-            config_type: One of generic, specific, or discover
+            config_type: One of generic, specific, or discovery
             **kwargs: configuration to update advanced settings of config_type
         """
         kwargs_config = kwargs.pop("kwargs_config", {})
@@ -187,6 +231,8 @@ class Adapters(ModelMixins):
             ...     file_content=content,
             ...     field_name="name_of_field",
             ... )
+            >>> file_uuid
+            {'uuid': '5f78b7dee33f0a113700a6fc', 'filename': 'name_of_file'}
 
         Args:
             name: name of adapter to upload file to
@@ -216,6 +262,8 @@ class Adapters(ModelMixins):
             Upload a file for use in a connection later
 
             >>> file_uuid = client.adapters.file_upload_path(name="aws", path="test.csv")
+            >>> file_uuid
+            {'uuid': '5f78b674e33f0a113700a6fa', 'filename': 'test.csv'}
 
         Args:
             path: path to file containing contents to upload
@@ -232,14 +280,14 @@ class Adapters(ModelMixins):
 
         Args:
             adapter: adapter previously fetched from :meth:`get_by_name`
-            config_type: One of generic, specific, or discover
+            config_type: One of generic, specific, or discovery
 
         Raises:
             :exc:`ApiError`: when adapter does not have the supplied config_type
         """
         schemas = adapter["schemas"]
-        name_config = f"{config_type}_name"
-        name_config = schemas.get(name_config)
+        config_name = f"{config_type}_name"
+        name_config = schemas.get(config_name)
         name_plugin = adapter["name_plugin"]
 
         if not name_config:
@@ -279,7 +327,7 @@ class Adapters(ModelMixins):
 
                 * ``AdapterBase`` for generic advanced settings
                 * ``AwsSettings`` for adapter specific advanced settings (name changes per adapter)
-                * ``DiscoverySchema`` for discover advanced settings
+                * ``DiscoverySchema`` for discovery advanced settings
             new_config: the advanced configuration key value pairs to set
         """
         path = self.router.config_set.format(
@@ -296,7 +344,7 @@ class Adapters(ModelMixins):
 
                 * ``AdapterBase`` for generic advanced settings
                 * ``AwsSettings`` for adapter specific advanced settings (name changes per adapter)
-                * ``DiscoverySchema`` for discover advanced settings
+                * ``DiscoverySchema`` for discovery advanced settings
         """
         path = self.router.config_get.format(
             adapter_name_plugin=name_plugin, adapter_config_name=name_config

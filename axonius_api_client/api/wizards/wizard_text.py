@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Wizard for text files."""
+"""Parser for AQL queries and GUI expressions from text files."""
 import pathlib
 from typing import List, Union
 
@@ -13,39 +13,64 @@ class WizardText(Wizard):
     """Wizard for text files.
 
     Examples:
-        First, create a ``client`` using :obj:`axonius_api_client.connect.Connect`.
+        Create a ``client`` using :obj:`axonius_api_client.connect.Connect` and assume
+        ``apiobj`` is either ``client.devices`` or ``client.users``
 
-        >>> # Define a text string to parse
+        >>> apiobj = client.devices  # or client.users
+
+        Define a text string to parse
+
         >>> content = '''
         ... simple hostname contains test
         ... simple os.type equals windows
         ... complex installed_software // name contains chrome // version earlier_than 82
         ... '''
-        >>>
-        >>> # Parse the text string into a query and GUI expressions
-        >>> parsed = client.devices.wizard_text.parse(content=content)
-        >>>
-        >>> # Or parse a text file directly
-        >>> parsed = client.devices.wizard_csv.parse(path="~/test.txt")
-        >>>
-        >>> # get the query produced by the wizard
-        >>> query = parsed["query"]
-        >>> print(query)
-        >>>
-        >>> # get the GUI expressions produced by the wizard
-        >>> expressions = parsed["expressions"]
-        >>> print(expressions)
-        >>>
-        >>> # use the query to get assets
-        >>> assets = client.devices.get(query=query)
-        >>>
-        >>> # use the query to get a count of assets
-        >>> count = client.devices.count(query=query)
-        >>>
-        >>> # use the query and expressions to create a saved query that the GUI understands
-        >>> sq = client.devices.saved_query.add(name="test", query=query, expressions=expressions)
 
-    """  # noqa: E501
+        Parse the text string into a query and GUI expressions
+
+        >>> parsed = apiobj.wizard_text.parse(content=content)
+
+        Or parse a text file directly
+
+        >>> parsed = apiobj.wizard_csv.parse(path="~/test.txt")
+        >>> list(parsed)
+        ['expressions', 'query']
+
+        Get the query produced by the wizard
+
+        >>> query = parsed["query"]
+        >>> query[:80]
+        '(specific_data.data.hostname == regex("test", "i")) and (specific_data.data.os.t'
+
+        Get the GUI expressions produced by the wizard
+
+        >>> expressions = parsed["expressions"]
+        >>> expressions[0]['filter']
+        '(specific_data.data.hostname == regex("test", "i"))'
+        >>> expressions[1]['filter'][:80]
+        'and (specific_data.data.os.type == "Windows")'
+
+        Use the query to get assets
+
+        >>> assets = apiobj.get(query=query)
+        >>> len(assets)
+        2
+
+        Use the query to get a count of assets
+
+        >>> count = apiobj.count(query=query)
+        >>> count
+        2
+
+        Use the query and expressions to create a saved query that the GUI understands
+
+        >>> sq = apiobj.saved_query.add(name="test", query=query, expressions=expressions)
+        >>> sq['name']
+        'test'
+        >>> sq['view']['query']['filter'][:80]
+        '(specific_data.data.hostname == regex("test", "i")) and (specific_data.data.os.t'
+
+    """
 
     DOCS: str = Docs.TEXT
 

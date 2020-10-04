@@ -1,26 +1,60 @@
 # -*- coding: utf-8 -*-
-"""API models for working with labels for assets."""
-from typing import List
+"""API for working with tags for assets."""
+from typing import List, Union
 
 from ...tools import grouper
 from ..mixins import ChildMixins
 
 
 class Labels(ChildMixins):
-    """ChildMixins API model for working with labels for the parent asset type."""
+    """API for working with tags for the parent asset type.
 
-    def add(self, rows: List[dict], labels: List[str]) -> int:
-        """Add labels/tags to assets.
+    Examples:
+        Create a ``client`` using :obj:`axonius_api_client.connect.Connect` and assume
+        ``apiobj`` is either ``client.devices`` or ``client.users``
+
+        >>> apiobj = client.devices  # or client.users
+
+        * Get all known tags: :meth:`get`
+        * Add tags to assets: :meth:`add`
+        * Remove tags from assets: :meth:`remove`
+
+    See Also:
+        * Device assets :obj:`axonius_api_client.api.assets.devices.Devices`
+        * User assets :obj:`axonius_api_client.api.assets.users.Users`
+
+    """
+
+    def get(self) -> List[str]:
+        """Get all known tags.
+
+        Examples:
+            Get all known tags for this asset type
+
+            >>> apiobj.labels.get()
+            ['tag1', 'tag2']
+
+        """
+        return self._get()
+
+    def add(self, rows: Union[List[dict], str], labels: List[str]) -> int:
+        """Add tags to assets.
+
+        Examples:
+            Get some assets to tag
+
+            >>> rows = apiobj.get(wiz_entries=[{'type': 'simple', 'value': 'name equals test'}])
+            >>> len(rows)
+            1
+
+            >>> apiobj.labels.add(rows=rows, labels=['api tag 1', 'api tag 2'])
+            1
 
         Args:
-            rows (:obj:`list` of :obj:`dict`): assets returned from :meth:`get`
-                to process
-            labels (:obj:`list` of `str`): labels to process
-
-        Returns:
-            :obj:`int`: number of labels processed
+            rows: list of internal_axon_id strs or list of assets returned from a get method
+            labels: tags to add
         """
-        ids = [row["internal_axon_id"] for row in rows]
+        ids = self._get_ids(rows=rows)
 
         processed = 0
 
@@ -32,26 +66,24 @@ class Labels(ChildMixins):
 
         return processed
 
-    def get(self) -> List[str]:
-        """Get all known labels/tags.
-
-        Returns:
-            :obj:`list` of :obj:`str`: all labels that exist in Axonius
-        """
-        return self._get()
-
     def remove(self, rows: List[dict], labels: List[str]) -> int:
-        """Remove labels/tags from assets.
+        """Remove tags from assets.
+
+        Examples:
+            Get some assets to un-tag
+
+            >>> rows = apiobj.get(wiz_entries=[{'type': 'simple', 'value': 'name equals test'}])
+            >>> len(rows)
+            1
+
+            >>> apiobj.labels.remove(rows=rows, labels=['api tag 1', 'api tag 2'])
+            1
 
         Args:
-            rows (:obj:`list` of :obj:`dict`): assets returned from :meth:`get`
-                to process
-            labels (:obj:`list` of `str`): labels to process
-
-        Returns:
-            :obj:`int`: number of labels processed
+            rows: list of internal_axon_id strs or list of assets returned from a get method
+            labels: tags to remove
         """
-        ids = [row["internal_axon_id"] for row in rows]
+        ids = self._get_ids(rows=rows)
 
         processed = 0
 
@@ -63,15 +95,20 @@ class Labels(ChildMixins):
 
         return processed
 
+    def _get_ids(self, rows: Union[List[dict], str]) -> List[str]:
+        """Get the internal_axon_id from a list of assets.
+
+        Args:
+            rows: list of internal_axon_id strs or list of assets returned from a get method
+        """
+        return [x["internal_axon_id"] if isinstance(x, dict) else x for x in rows]
+
     def _add(self, labels: List[str], ids: List[str]) -> int:
         """Direct API method to add labels/tags to assets.
 
         Args:
-            labels (:obj:`list` of `str`): labels to process
-            ids (:obj:`list` of `str`): internal_axon_id of assets to add **labels** to
-
-        Returns:
-            :obj:`int`: number of labels processed
+            labels: tags to process
+            ids: internal_axon_id of assets to add tags to
         """
         data = {}
         data["entities"] = {}
@@ -82,11 +119,7 @@ class Labels(ChildMixins):
         return self.request(method="post", path=path, json=data)
 
     def _get(self) -> List[str]:
-        """Direct API method to get all known labels/tags.
-
-        Returns:
-            :obj:`list` of :obj:`str`: all labels that exist in Axonius
-        """
+        """Direct API method to get all known labels/tags."""
         path = self.router.labels
         return self.request(method="get", path=path)
 
@@ -94,12 +127,8 @@ class Labels(ChildMixins):
         """Direct API method to remove labels/tags from assets.
 
         Args:
-            labels (:obj:`list` of `str`): labels to process
-            ids (:obj:`list` of `str`): internal_axon_id of assets to remove
-                **labels** from
-
-        Returns:
-            :obj:`int`: number of labels processed
+            labels: tags to process
+            ids: internal_axon_id of assets to remove tags from
         """
         data = {}
         data["entities"] = {}

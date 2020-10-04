@@ -1,4 +1,4 @@
-Text files
+From text files
 ###############################################
 
 .. automodule:: axonius_api_client.api.wizards.wizard_text

@@ -16,17 +16,28 @@ from ..parsers import schema_custom
 
 
 class Base:
-    """Callbacks that can format asset data."""
+    """Callbacks for formatting asset data.
+
+    Examples:
+        Create a ``client`` using :obj:`axonius_api_client.connect.Connect` and assume
+        ``apiobj`` is either ``client.devices`` or ``client.users``
+
+        >>> apiobj = client.devices  # or client.users
+
+        * :meth:`args_map` for callback generic arguments to format assets.
+        * :meth:`args_map_custom` for callback specific arguments to format and export data.
+
+    """
 
     @classmethod
     def args_map(cls) -> dict:
         """Get all of the argument names and their defaults for this callbacks object.
 
         Examples:
-            First, create a ``client`` using :obj:`axonius_api_client.connect.Connect` and assume
-            ``apiobj`` is ``client.devices`` or ``client.users``
+            Create a ``client`` using :obj:`axonius_api_client.connect.Connect` and assume
+            ``apiobj`` is either ``client.devices`` or ``client.users``
 
-            >>> apiobj = client.devices
+            >>> apiobj = client.devices  # or client.users
 
             Flatten complex fields -  Will take all sub fields of complex fields and put them
             on the root level with their values index correlated to each other.
@@ -98,6 +109,9 @@ class Base:
             ...     return rows
             ...
             >>> assets = apiobj.get(custom_cbs=[custom_cb1])
+
+        See Also:
+            * :meth:`args_map_custom` for callback specific arguments to format and export data.
 
         Notes:
             These arguments can be supplied as extra kwargs passed to

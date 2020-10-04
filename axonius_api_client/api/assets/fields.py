@@ -1,37 +1,359 @@
 # -*- coding: utf-8 -*-
-"""API models for working with fields for assets."""
+"""API for working with fields for assets."""
 import re
-import warnings
 from typing import List, Optional, Tuple, Union
 
 from cachetools import TTLCache, cached
 
 from ...constants.fields import (AGG_ADAPTER_ALTS, AGG_ADAPTER_NAME,
                                  FUZZY_SCHEMAS_KEYS, GET_SCHEMA_KEYS,
-                                 GET_SCHEMAS_KEYS)
+                                 GET_SCHEMAS_KEYS, PRETTY_SCHEMA_TMPL)
 from ...exceptions import ApiError, NotFoundError
-from ...tools import listify, split_str, strip_right
+from ...tools import listify, load_fuzz, split_str, strip_right
 from ..mixins import ChildMixins
 from ..parsers import parse_fields
 
-try:
-
-    warnings.filterwarnings("ignore", message="Using slow pure-python SequenceMatcher")
-    from fuzzywuzzy import fuzz
-except Exception:
-    raise
-
 
 class Fields(ChildMixins):
-    """API object for working with fields for the parent asset type.
+    """API for working with fields for the parent asset type.
 
     Examples:
-        First, create a ``client`` using :obj:`axonius_api_client.connect.Connect` and assume
+        Create a ``client`` using :obj:`axonius_api_client.connect.Connect` and assume
         ``apiobj`` is either ``client.devices`` or ``client.users``
 
-        >>> apiobj = client.devices
+        >>> apiobj = client.devices  # or client.users
 
+        * Get schemas of all adapters and their fields: :meth:`get`
+        * Validate field names supplied: :meth:`validate`
+
+    See Also:
+        * Device assets :obj:`axonius_api_client.api.assets.devices.Devices`
+        * User assets :obj:`axonius_api_client.api.assets.users.Users`
     """
+
+    @cached(cache=TTLCache(maxsize=1024, ttl=300))
+    def get(self) -> dict:
+        """Get the schema of all adapters and their fields.
+
+        Examples:
+            Get all fields for all adapters
+
+            >>> fields = apiobj.fields.get()
+
+            See the adapter names
+
+            >>> print(list(fields))
+
+            See the field fully qualified name, short name, and title for all fields of an adapter
+
+            >>> schemas = fields['agg']
+            >>> for schema in schemas:
+            ...     qual = schema['name_qual']
+            ...     name = schema['name_base']
+            ...     title = schema['title']
+            ...     print(f"title {title!r}, qualified name {name!r}, base name {name!r}")
+
+        """
+        return parse_fields(raw=self._get())
+
+    def validate(
+        self,
+        fields: Optional[Union[List[str], str]] = None,
+        fields_regex: Optional[Union[List[str], str]] = None,
+        fields_manual: Optional[Union[List[str], str]] = None,
+        fields_fuzzy: Optional[Union[List[str], str]] = None,
+        fields_default: bool = True,
+        fields_root: Optional[str] = None,
+    ) -> List[dict]:
+        """Get the fully qualified field names for getting asset data.
+
+        Examples:
+            * ``fields`` gets parsed by :meth:`get_field_names_eq`
+            * ``fields_regex`` gets parsed by :meth:`get_field_names_re`
+            * ``fields_fuzzy`` gets parsed by :meth:`get_field_names_fuzzy`
+            * ``fields_root`` gets parsed by :meth:`get_field_names_root`
+            * ``fields_default`` will add
+              :attr:`axonius_api_client.api.assets.users.Users.fields_default` or
+              :attr:`axonius_api_client.api.assets.devices.Devices.fields_default`
+              based on the parent asset type
+
+        Notes:
+            This is used in a number of ways to allow the user to supply fields that
+            are easier to refer to than the fully qualified name or title of a field.
+
+        Args:
+            fields: list of fields that must equal their base name, qual name, or title
+            fields_regex: list of fields to regex match against their base name, qual name, or title
+            fields_manual: list of already fully qualified field names
+            fields_fuzzy: list of fields to fuzzy match against their base name or title
+            fields_default: include the default fields defined in the parent API object
+            fields_root: include all root fields from a single adapter
+
+        Raises:
+            :exc:`ApiError`: if no fields selected after all processing is done
+
+        """
+
+        def add(items):
+            for item in items:
+                if item not in selected:
+                    selected.append(item)
+
+        fields = listify(obj=fields)
+        fields_manual = listify(obj=fields_manual)
+        fields_fuzzy = listify(obj=fields_fuzzy)
+
+        selected = []
+
+        if fields_default and not fields_root:
+            add(self.parent.fields_default)
+
+        if fields_root:
+            add(self.get_field_names_root(adapter=fields_root))
+
+        add(fields_manual)
+        add(self.get_field_names_eq(value=fields))
+        add(self.get_field_names_re(value=fields_regex))
+        add(self.get_field_names_fuzzy(value=fields_fuzzy))
+
+        if not selected:
+            raise ApiError("No fields supplied, must supply at least one field")
+
+        return selected
+
+    def get_field_name(
+        self,
+        value: str,
+        field_manual: bool = False,
+        fields_custom: Optional[dict] = None,
+        key: str = "name_qual",
+    ) -> str:
+        """Get the fully qualified name of a field.
+
+        Examples:
+            First, create a ``client`` using :obj:`axonius_api_client.connect.Connect` and assume
+            ``apiobj`` is either ``client.devices`` or ``client.users``
+
+            >>> apiobj = client.devices
+
+            Get the FQDN of a field on the aggregated adapter
+
+            >>> apiobj.fields.get_field_name(value='hostname')
+            'specific_data.data.hostname'
+            >>> apiobj.fields.get_field_name(value='agg:hostname')
+            'specific_data.data.hostname'
+
+            Get the title of a field on the aggregated adapter
+
+            >>> apiobj.fields.get_field_name(value='hostname', key="title")
+            'Host Name'
+
+            Get the FQDN of a field on the AWS adapter
+
+            >>> apiobj.fields.get_field_name(value='aws:aws_device_type')
+            'adapters_data.aws_adapter.aws_device_type'
+
+        Args:
+            value: field to find in format of ``adapter_name:field_name``
+            field_manual: treat the field name as fully qualified
+            fields_custom: custom schemas to search thru in addition to API schemas
+            key: key of schema to return, or if empty return the schema itself
+
+        Raises:
+            :exc:`ApiError`: if more than one field found in value after splitting it
+        """
+        if field_manual and key:
+            return value
+
+        adapter, fields = self.split_search(value=value)
+
+        if len(fields) != 1:
+            raise ApiError("More than one field supplied to {}".format(value))
+
+        field = fields[0]
+
+        fields = self.get()
+        adapter = self.get_adapter_name(value=adapter)
+        schemas = fields[adapter]
+        if fields_custom and adapter in fields_custom:
+            schemas += fields_custom[adapter]
+        schema = self.get_field_schema(value=field, schemas=schemas)
+        return schema[key] if key else schema
+
+    def get_field_names_re(self, value: Union[str, List[str]], key: str = "name_qual") -> List[str]:
+        """Get field names using regex.
+
+        Examples:
+            First, create a ``client`` using :obj:`axonius_api_client.connect.Connect` and assume
+            ``apiobj`` is either ``client.devices`` or ``client.users``
+
+            >>> apiobj = client.devices
+
+            Get all aggregated field FQDNs that start with host
+
+            >>> apiobj.fields.get_field_names_re('^host')
+            ['specific_data.data.hostname', 'specific_data.data.hostname_preferred']
+
+
+            Get fields names for AWS adapter that start with id and AGG adapter that start with
+            host
+
+            >>> apiobj.fields.get_field_names_re(['aws:^id', '^host'])
+            [
+                'adapters_data.aws_adapter.id',
+                'specific_data.data.hostname',
+                'specific_data.data.hostname_preferred'
+            ]
+
+            Get all aggregated field titles that start with host
+
+            >>> apiobj.fields.get_field_names_re('^host', key="title")
+            ['Host Name', 'Preferred Host Name']
+
+            Get all aggregated field FQDNs that have a title of 'Host Name'
+
+            >>> apiobj.fields.get_field_names_re('Host Name')
+            ['specific_data.data.hostname', 'specific_data.data.hostname_preferred']
+
+            Get all field FQDNs that start with id for all adapters that match regex 'ac'
+
+            >>> apiobj.fields.get_field_names_re('ac:^id')
+            [
+                'adapters_data.active_directory_adapter.id',
+                'adapters_data.carbonblack_defense_adapter.id',
+                'adapters_data.limacharlie_adapter.id'
+            ]
+
+        Args:
+            value: regex to search for fields
+            key: key of schema to return
+        """
+        splits = self.split_searches(value=value)
+        fields = self.get()
+
+        matches = []
+
+        for adapter_re, fields_re in splits:
+            adapters = self.get_adapter_names(value=adapter_re)
+
+            for adapter in adapters:
+                for field_re in fields_re:
+                    fschemas = self.get_field_schemas(value=field_re, schemas=fields[adapter])
+                    names = [x[key] for x in fschemas]
+                    matches += [x for x in names if x not in matches]
+        return matches
+
+    def get_field_names_eq(self, value: Union[str, List[str]], key: str = "name_qual") -> List[str]:
+        """Get field names using that equal a value.
+
+        Examples:
+            First, create a ``client`` using :obj:`axonius_api_client.connect.Connect` and assume
+            ``apiobj`` is either ``client.devices`` or ``client.users``
+
+            >>> apiobj = client.devices
+
+            Get field names that equal aggregated hostname or id and AWS device type
+
+            >>> apiobj.fields.get_field_names_eq(['hostname,id', 'aws:aws_device_type'])
+            [
+                'specific_data.data.hostname',
+                'specific_data.data.id',
+                'adapters_data.aws_adapter.aws_device_type'
+            ]
+
+            Get field names that equal aggregated hostname or id
+
+            >>> apiobj.fields.get_field_names_eq('hostname,id')
+            ['specific_data.data.hostname', 'specific_data.data.id']
+
+        Args:
+            value: value to search for fields
+            key: key of schema to return
+        """
+        splits = self.split_searches(value=value)
+        fields = self.get()
+
+        matches = []
+
+        for adapter_name, names in splits:
+            adapter = self.get_adapter_name(value=adapter_name)
+            for name in names:
+                schemas = fields[adapter]
+                schema = self.get_field_schema(value=name, schemas=schemas)
+                if schema[key] not in matches:
+                    matches.append(schema[key])
+
+        return matches
+
+    def get_field_names_fuzzy(self, value: str, key: str = "name_qual") -> List[str]:
+        """Get field names using that equal a value.
+
+        Examples:
+            First, create a ``client`` using :obj:`axonius_api_client.connect.Connect` and assume
+            ``apiobj`` is either ``client.devices`` or ``client.users``
+
+            >>> apiobj = client.devices
+
+            Get field names that fuzzy match a misspelt version of hostname
+
+            >>> apiobj.fields.get_field_names_fuzzy('hostnme')
+            ['specific_data.data.hostname']
+
+        Args:
+            value: value to search for fields
+            key: key of schema to return
+
+        """
+        splits = self.split_searches(value=value)
+        fields = self.get()
+
+        matches = []
+
+        for adapter_name, names in splits:
+            adapter = self.get_adapter_name(value=adapter_name)
+            for name in names:
+                schemas = fields[adapter]
+                amatches = self.fuzzy_filter(search=name, schemas=schemas, key=key)
+                matches += [x for x in amatches if x not in matches]
+
+        return matches
+
+    def get_field_schemas_root(self, adapter: str) -> List[dict]:
+        """Get schemas of all root fields for a given adapter.
+
+        Args:
+            adapter: name of adapter to get all root fields for
+
+        See Also:
+            :meth:`get_field_names_root`
+
+        Notes:
+            root fields are fields that are fields that are not sub-fields of complex fields
+
+            For instance 'specific_data.data.network_interfaces.ips' is NOT a root field,
+            since it 'ips' is a sub field of 'specific_data.data.network_interfaces'
+
+        """
+        fields = self.get()
+        adapter = self.get_adapter_name(value=adapter)
+        schemas = fields[adapter]
+
+        matches = [x for x in schemas if x.get("selectable") and x.get("is_root")]
+        return matches
+
+    def get_field_names_root(self, adapter: str, key: str = "name_qual") -> List[str]:
+        """Get names of all root fields for a given adapter.
+
+        Args:
+            adapter: name of adapter to get all root fields for
+
+        See Also:
+            :meth:`get_field_schemas_root`
+
+        """
+        schemas = self.get_field_schemas_root(adapter=adapter)
+        names = [x[key] for x in schemas]
+        return names
 
     @staticmethod
     def fuzzy_filter(
@@ -41,7 +363,7 @@ class Fields(ChildMixins):
         do_contains: bool = True,
         token_score: int = 70,
         partial_score: int = 50,
-        names: bool = False,
+        key: str = "name_qual",
         fuzzy_keys: List[str] = FUZZY_SCHEMAS_KEYS,
         **kwargs,
     ) -> List[dict]:
@@ -57,6 +379,7 @@ class Fields(ChildMixins):
             names: return the fully qualified field names instead of the field schemas
             fuzzy_keys: list of keys to check search against in each field schema
         """
+        fuzz = load_fuzz()
 
         def do_skip():
             if schema in matches:
@@ -76,20 +399,20 @@ class Fields(ChildMixins):
 
             return False
 
-        def is_match(method, **kwargs):
+        def is_match(method):
             for key in fuzzy_keys:
-                if method(search, schema[key], **kwargs):
+                if method(search, schema[key]):
                     return True
 
             return False
 
-        def token_set_ratio(search, value, score=70, **kwargs):
+        def token_set_ratio(search, value, score=token_score):
             return fuzz.token_set_ratio(search, value) >= score
 
-        def partial_ratio(search, value, score=50, **kwargs):
+        def partial_ratio(search, value, score=partial_score):
             return fuzz.partial_ratio(search, value) >= score
 
-        def contains(search, value, **kwargs):
+        def contains(search, value):
             return search.strip().lower() in value.strip().lower()
 
         matches = []
@@ -106,12 +429,7 @@ class Fields(ChildMixins):
                 if not do_skip() and is_match(partial_ratio):
                     matches.append(schema)
 
-        return [x["name_qual"] for x in matches] if names else matches
-
-    @cached(cache=TTLCache(maxsize=1024, ttl=300))
-    def get(self) -> dict:
-        """Get the schema of all adapters and their fields."""
-        return parse_fields(raw=self._get())
+        return [x[key] for x in matches] if key else matches
 
     def get_adapter_names(self, value: str) -> List[str]:
         """Find adapter names that regex match a value.
@@ -215,6 +533,7 @@ class Fields(ChildMixins):
 
         kwargs["search"] = value
         kwargs["schemas"] = schemas
+        kwargs["key"] = ""
         fuzzy = self.fuzzy_filter(**kwargs)
 
         err = "No fuzzy matches, all valid fields:"
@@ -227,141 +546,27 @@ class Fields(ChildMixins):
         errs = [pre, err, "", *self._prettify_schemas(schemas=fuzzy or schemas)]
         raise NotFoundError("\n".join(errs))
 
-    def get_field_name(
-        self,
-        value: str,
-        field_manual: bool = False,
-        fields_custom: Optional[dict] = None,
-        key: str = "name_qual",
-    ) -> str:
-        """Pass."""
-        if field_manual:
-            return value
-
-        adapter, fields = self.split_search(value=value)
-
-        if len(fields) != 1:
-            raise ApiError("More than one field supplied to {}".format(value))
-
-        field = fields[0]
-
-        fields = self.get()
-        adapter = self.get_adapter_name(value=adapter)
-        schemas = fields[adapter]
-        if fields_custom and adapter in fields_custom:
-            schemas += fields_custom[adapter]
-        schema = self.get_field_schema(value=field, schemas=schemas)
-        return schema[key] if key else schema
-
-    def get_field_names_re(self, value: str) -> List[str]:
-        """Pass."""
-        splits = self.split_searches(value=value)
-        fields = self.get()
-
-        matches = []
-
-        for adapter_re, fields_re in splits:
-            adapters = self.get_adapter_names(value=adapter_re)
-
-            for adapter in adapters:
-                for field_re in fields_re:
-                    fschemas = self.get_field_schemas(value=field_re, schemas=fields[adapter])
-                    names = [x["name_qual"] for x in fschemas]
-                    matches += [x for x in names if x not in matches]
-        return matches
-
-    def get_field_names_eq(self, value: str) -> List[str]:
-        """Pass."""
-        splits = self.split_searches(value=value)
-        fields = self.get()
-
-        matches = []
-
-        for adapter_name, names in splits:
-            adapter = self.get_adapter_name(value=adapter_name)
-            for name in names:
-                schemas = fields[adapter]
-                schema = self.get_field_schema(value=name, schemas=schemas)
-                if schema["name_qual"] not in matches:
-                    matches.append(schema["name_qual"])
-
-        return matches
-
-    def get_field_names_fuzzy(self, value: str) -> List[str]:
-        """Pass."""
-        splits = self.split_searches(value=value)
-        fields = self.get()
-
-        matches = []
-
-        for adapter_name, names in splits:
-            adapter = self.get_adapter_name(value=adapter_name)
-            for name in names:
-                schemas = fields[adapter]
-                amatches = self.fuzzy_filter(search=name, schemas=schemas, names=True)
-                matches += [x for x in amatches if x not in matches]
-
-        return matches
-
-    def get_field_schemas_root(self, adapter: str) -> List[dict]:
-        """Pass."""
-        fields = self.get()
-        adapter = self.get_adapter_name(value=adapter)
-        schemas = fields[adapter]
-
-        matches = [x for x in schemas if x.get("selectable") and x.get("is_root")]
-        return matches
-
-    def get_field_names_root(self, adapter: str) -> List[str]:
-        """Pass."""
-        schemas = self.get_field_schemas_root(adapter=adapter)
-        names = [x["name_qual"] for x in schemas]
-        return names
-
-    def validate(
-        self,
-        fields: Optional[Union[List[str], str]] = None,
-        fields_regex: Optional[Union[List[str], str]] = None,
-        fields_manual: Optional[Union[List[str], str]] = None,
-        fields_fuzzy: Optional[Union[List[str], str]] = None,
-        fields_default: bool = True,
-        fields_root: Optional[str] = None,
-    ) -> List[dict]:
-        """Validate provided fields."""
-
-        def add(items):
-            for item in items:
-                if item not in selected:
-                    selected.append(item)
-
-        fields = listify(obj=fields)
-        fields_manual = listify(obj=fields_manual)
-        fields_fuzzy = listify(obj=fields_fuzzy)
-
-        selected = []
-
-        if fields_default and not fields_root:
-            add(self.parent.fields_default)
-
-        if fields_root:
-            add(self.get_field_names_root(adapter=fields_root))
-
-        add(fields_manual)
-        add(self.get_field_names_eq(value=fields))
-        add(self.get_field_names_re(value=fields_regex))
-        add(self.get_field_names_fuzzy(value=fields_fuzzy))
-
-        if not selected:
-            raise ApiError("No fields supplied, must supply at least one field")
-
-        return selected
-
     def split_searches(self, value: Union[List[str], str]) -> List[Tuple[str, List[str]]]:
-        """Pass."""
+        """Split a list of strings into adapter:field(s) format.
+
+        Args:
+            value: format of ``'adapter:field1,field2'`` or
+                ``['adapter1:field1', 'adapter2:field2']``
+
+        """
         return [self.split_search(value=x) for x in listify(obj=value)]
 
     def split_search(self, value: str, adapter: str = AGG_ADAPTER_NAME) -> Tuple[str, List[str]]:
-        """Pass."""
+        """Split a string into adapter and field(s).
+
+        Args:
+            value: format of ``'adapter:field1,field2'`` or ``'field1,field2'`` or
+                ``'field1'``
+            adapter: default adapter name to use if no 'adapter:' found in value
+
+        Raises:
+            :exc:`ApiError`: if no fields found after splitting on ':'
+        """
         search = value.strip().lower()
 
         if ":" in search:
@@ -394,11 +599,18 @@ class Fields(ChildMixins):
 
         return adapter_split, fields
 
-    def _prettify_schemas(self, schemas: List[dict]) -> List[str]:
-        """Pass."""
-        stmpl = "{adapter_name}:{name_base:{name_base_len}} -> {column_title}".format
-        name_base_len = max([len(x["name_base"]) for x in schemas])
-        return [stmpl(name_base_len=name_base_len, **x) for x in schemas]
+    def _prettify_schemas(
+        self, schemas: List[dict], tmpl: str = PRETTY_SCHEMA_TMPL, len_key: str = "name_base"
+    ) -> List[str]:
+        """Prettify a set of schemas for output in human friendly format.
+
+        Args:
+            schemas: field schemas to prettify
+            tmpl: template to use to prettify schemas
+            len_key: schema key to get max length of and pass into tmpl as "len_max"
+        """
+        len_max = max([len(x[len_key]) for x in schemas])
+        return [tmpl.format(len_max=len_max, **x) for x in schemas]
 
     def _get(self) -> dict:
         """Private API method to get the schema of all fields."""

@@ -4,18 +4,6 @@ import re
 from typing import List, Optional, Union
 
 
-class Sources:
-    """Defaults for wizard source argument."""
-
-    CSV_STR: str = "csv text string"
-    CSV_PATH: str = "csv file {path}"
-    TEXT_STR: str = "text string"
-    TEXT_PATH: str = "text file {path}"
-    LOD: str = "list of dictionaries"
-    JSON_STR: str = "json string"
-    JSON_PATH: str = "json file {path}"
-
-
 class Templates:
     """Query builder templates."""
 
@@ -41,62 +29,73 @@ class Templates:
     """Joiner for sub fields in a complex field"""
 
 
-class Fields:
-    """Keys and arguments for field schemas."""
-
-    NAME: str = "name"
-    EXPR_TYPE: str = "expr_field_type"
-    ANAME: str = "adapter_name"
-    SUBS: str = "sub_fields"
-    IS_ALL: str = "is_all"
-    IS_DETAILS: str = "is_details"
-    IS_COMPLEX: str = "is_complex"
-
-
 class Results:
     """Keys for results returned from wizards."""
 
     EXPRS: str = "expressions"
+    """key containing the expressions that the GUI query wizard can understand"""
+
     QUERY: str = "query"
+    """key containing the AQL produced by the parser"""
 
 
 class Patterns:
-    """Regular expression patterns for validation of values."""
+    """Regular expression patterns for validation of values in entries."""
 
     FIELD_VALID: str = re.compile(
         r"""(?ix)            # case insensitive and verbose
 ([^a-z0-9:._\-]) # contains characters that are not one of: a-z 0-9 : . _ -
 """,
     )
+    """regex for validating that a field name is valid"""
+
     FIELD_FIRST_ALPHA: str = re.compile(
         r"""(?ix)        # case insensitive and verbose
 (^[^a-zA-Z]) # starts with characters that are not one of: a-z
 """
     )
+    """regex for validating that a field name begins with alpha characters"""
+
     OP_ALPHA: str = re.compile(
         r"""(?ix)        # case insensitive and verbose
 ([^a-z_\-])  # contains characters that are not one of: a-z _ -
 """
     )
+    """regex for validating operators"""
+
     FLAGS: str = re.compile(
         r"""(?ix)                   # case insensitive and verbose
 (?P<flags>[^a-z0-9]*)?  # capture optional flags at beginning
 (?P<value>.*)           # capture the rest as the value
 """
     )
+    """regex for validating flags"""
 
     FIELD: List[str] = [FIELD_VALID, FIELD_FIRST_ALPHA]
+    """regex validators to use for fields"""
+
     OP: List[str] = [OP_ALPHA]
+    """regex validators to use for operators"""
 
 
 class Flags:
-    """Flag values that can be used in entries."""
+    """Flag values that can be used in values for entries."""
 
     NOT: str = "!"
+    """Flag to NOT an entry"""
+
     AND: str = "&"
+    """Flag to AND an entry"""
+
     OR: str = "|"
+    """Flag to OR an entry"""
+
     LEFTB: str = "("
+    """Flag to start a parenthesis"""
+
     RIGHTB: str = ")"
+    """Flag to end a perenthesis, can also be at end of a value"""
+
     FLAGS: dict = {
         AND: "Use and instead of or (default)",
         OR: f"Use or instead of and (overrides {AND})",
@@ -104,8 +103,14 @@ class Flags:
         LEFTB: "Open a parentheses",
         RIGHTB: "Close a parentheses (can also be at end of entry)",
     }
+    """valid flags and their descriptions"""
+
     LFMT: str = "[" + " ".join(list(FLAGS)) + "]"
+    """Doc string to show the flags that can be at the beginning of a value"""
+
     RFMT: str = f"[{RIGHTB}]"
+    """Doc string to show the flags that can be at the end of a value"""
+
     FMT_TEXT: str = "\n# " + "\n# ".join([f"{k}  {v}" for k, v in FLAGS.items()])
     FMT_CSV: str = ", ".join([f"{k} {v}" for k, v in FLAGS.items()])
 
@@ -114,10 +119,19 @@ class Entry:
     """Entry keys and split values."""
 
     SRC: str = "source"
+    """key of the str of where an entry came from"""
+
     WEIGHT: str = "bracket_weight"
+    """key of the bracket weight for levels of filters within parenthesis"""
+
     FLAGS: str = "flags"
+    """key of the flags were supplied in the value for an entry"""
+
     VALUE: str = "value"
+    """key of the value for the entry"""
+
     TYPE: str = "type"
+    """type of entry"""
 
     REQ: List[str] = [VALUE, TYPE]
     """Required keys for entries"""
@@ -133,10 +147,20 @@ class EntrySq:
     """Entry keys for saved query types."""
 
     NAME: str = "name"
+    """key of name of SQ"""
+
     DESC: str = "description"
+    """key of description of SQ"""
+
     TAGS: str = "tags"
+    """key of tags of SQ"""
+
     FIELDS: str = "fields"
+    """key of fields for SQ"""
+
     DEFAULT: str = "default"
+    """if found in FIELDS column, insert asset API object default fields"""
+
     FDEF: str = "fields_default"
     FMAN: str = "fields_manual"
 
@@ -151,9 +175,16 @@ class Types:
     """Types of entries."""
 
     SIMPLE: str = "simple"
+    """simple entry type, similar to 'Aggregated Data' GUI query wizard type"""
+
     COMPLEX: str = "complex"
+    """complex entry type, similar to 'Complex Field' GUI query wizard type"""
+
     SAVED_QUERY: str = "saved_query"
+    """saved query type, used in CSV wizard"""
+
     FILE: str = "file"
+    """file type, used in CLI wizards"""
 
     DICT: List[str] = [SIMPLE, COMPLEX]
     """valid types for the base Wizard class."""
@@ -261,6 +292,30 @@ class Docs:
 # Flags:{Flags.FMT_TEXT}
 """
     CSV: str = f"Example:\n{EX_CSV}"
+
+
+class Sources:
+    """Defaults for wizard source argument."""
+
+    CSV_STR: str = "csv text string"
+    CSV_PATH: str = "csv file {path}"
+    TEXT_STR: str = "text string"
+    TEXT_PATH: str = "text file {path}"
+    LOD: str = "list of dictionaries"
+    JSON_STR: str = "json string"
+    JSON_PATH: str = "json file {path}"
+
+
+class Fields:
+    """Keys and arguments for field schemas."""
+
+    NAME: str = "name"
+    EXPR_TYPE: str = "expr_field_type"
+    ANAME: str = "adapter_name"
+    SUBS: str = "sub_fields"
+    IS_ALL: str = "is_all"
+    IS_DETAILS: str = "is_details"
+    IS_COMPLEX: str = "is_complex"
 
 
 class Expr:

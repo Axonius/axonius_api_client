@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Wizard for CSV files."""
+"""Parser for AQL queries and GUI expressions from CSV files."""
 import csv
 import io
 import pathlib
@@ -12,7 +12,7 @@ from .wizard import Wizard
 
 
 class WizardCsv(Wizard):
-    """Wizard for CSV files.
+    """Parser for AQL queries and GUI expressions from CSV files.
 
     Notes:
         This wizard can create as many saved queries as you like. The first row of the CSV
@@ -23,9 +23,13 @@ class WizardCsv(Wizard):
         The description, tags, and fields columns are only used for types of "saved_query"
 
     Examples:
-        First, create a ``client`` using :obj:`axonius_api_client.connect.Connect`.
+        Create a ``client`` using :obj:`axonius_api_client.connect.Connect` and assume
+        ``apiobj`` is either ``client.devices`` or ``client.users``
 
-        >>> # Define a CSV string to parse
+        >>> apiobj = client.devices  # or client.users
+
+        Define a CSV string to parse
+
         >>> content = '''
         ... type,value,description,tags,fields
         ... saved_query,name of sq,description  of sq,"tag1,tag2, tag4","os.type,default, aws:aws_device_type"
@@ -33,18 +37,43 @@ class WizardCsv(Wizard):
         ... simple,os.type equals windows,,,
         ... saved_query,name of second sq,description  of sq,"tag1,tag2, tag4",
         ... simple,hostname contains test,,,
-        ... simple,os.type equals windows,,,
         ... complex,installed_software // name contains chrome // version earlier_than 82,,,
+        ... simple,os.type equals windows,,,
         ... '''
-        >>>
-        >>> # Parse the CSV string into a query and GUI expressions
-        >>> parsed = client.devices.wizard_csv.parse(content=content)
-        >>>
-        >>> # Or parse a CSV file directly
-        >>> parsed = client.devices.wizard_csv.parse(path="~/test.csv")
-        >>>
-        >>> # use the result to create saved queries that the GUI understands
-        >>> sqs = [client.devices.saved_query.add(**sq) for sq in parsed]
+
+        Parse the CSV string into a query and GUI expressions
+
+        >>> parsed = apiobj.wizard_csv.parse(content=content)
+        >>> for sq in parsed:
+        ...   sq['name']
+        ...   sq['query'][:80]
+        ...   len(sq['expressions'])
+        ...
+        'name of sq'
+        '(specific_data.data.hostname == regex("test", "i")) and (specific_data.data.os.t'
+        2
+        'name of second sq'
+        '(specific_data.data.hostname == regex("test", "i")) and (specific_data.data.inst'
+        3
+
+        Or parse a CSV file directly
+
+        >>> parsed = apiobj.wizard_csv.parse(path="~/test.csv")
+
+        Use the result to create saved queries that the GUI understands
+
+        >>> sqs = [apiobj.saved_query.add(**sq) for sq in parsed]
+        >>> for sq in sqs:
+        ...    sq['name']
+        ...    sq['uuid']
+        ...    sq['view']['query']['filter'][:80]
+        ...
+        'name of sq'
+        '5f79e90be4557d5cbab26344'
+        '(specific_data.data.hostname == regex("test", "i")) and (specific_data.data.os.t'
+        'name of second sq'
+        '5f79e90be4557d5cbab26359'
+        '(specific_data.data.hostname == regex("test", "i")) and (specific_data.data.inst'
 
     """  # noqa: E501
 

@@ -9,18 +9,24 @@ from .base_csv import Csv
 
 
 class JsonToCsv(Csv):
-    """Callbacks that can export asset data in CSV format using an intermediary JSON file."""
+    """Callbacks for formatting asset data and exporting it in CSV format using a temp JSON file.
+
+    Examples:
+        Create a ``client`` using :obj:`axonius_api_client.connect.Connect` and assume
+        ``apiobj`` is either ``client.devices`` or ``client.users``
+
+        >>> apiobj = client.devices  # or client.users
+
+        * :meth:`args_map` for callback generic arguments to format assets.
+        * :meth:`args_map_custom` for callback specific arguments to format and export data.
+
+    """
 
     @classmethod
     def args_map_custom(cls) -> dict:
         """Get the custom argument names and their defaults for this callbacks object.
 
         Examples:
-            First, create a ``client`` using :obj:`axonius_api_client.connect.Connect` and assume
-            ``apiobj`` is either ``client.devices`` or ``client.users``
-
-            >>> apiobj = client.devices
-
             Export the output to STDOUT. If ``export_file`` is not supplied, the default is to
             print the output to STDOUT.
 
@@ -84,7 +90,7 @@ class JsonToCsv(Csv):
             ... )
 
         See Also:
-            :meth:`args_map` for the arguments for all callback objects.
+            * :meth:`args_map` for callback generic arguments to format assets.
 
         Notes:
             This callbacks object forces the following arguments to True in order to make the

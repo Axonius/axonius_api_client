@@ -24,17 +24,6 @@ class Cnx(ChildMixins):
 
         Supplying unknown keys/values for configurations will throw an error showing the
         valid keys/values.
-
-    See Also:
-        Examples can be found inline at:
-
-        * :meth:`add`
-        * :meth:`get_by_id`
-        * :meth:`get_by_label`
-        * :meth:`test`
-        * :meth:`test_by_id`
-        * :meth:`delete_by_id`
-
     """
 
     def add(self, adapter_name: str, adapter_node: str = DEFAULT_NODE, **kwargs) -> dict:
@@ -43,7 +32,7 @@ class Cnx(ChildMixins):
         Examples:
             First, create a ``client`` using :obj:`axonius_api_client.connect.Connect`.
 
-            Add a connection for an adapter to the Core instance
+            Establish a connection dictionary
 
             >>> config = dict(
             ...     dc_name="192.168.1.10",
@@ -55,6 +44,9 @@ class Cnx(ChildMixins):
             ...     is_ad_gc=False,
             ...     connection_label="test label",
             ... )
+
+            Add a connection for an adapter to the Core instance
+
             >>> cnx = client.adapters.cnx.add(adapter_name="active_directory", **config)
 
         Args:
@@ -127,14 +119,6 @@ class Cnx(ChildMixins):
 
         return cnx_new
 
-    def get_sane_defaults(self, adapter_name: str) -> dict:
-        """Get the API client defined sane defaults for a specific adapter.
-
-        Args:
-            adapter_name: name of adapter
-        """
-        return CNX_SANE_DEFAULTS.get(adapter_name, CNX_SANE_DEFAULTS["all"])
-
     def get_by_adapter(self, adapter_name: str, adapter_node: str = DEFAULT_NODE) -> List[dict]:
         """Get all connections of an adapter on a node.
 
@@ -157,55 +141,23 @@ class Cnx(ChildMixins):
 
         return cnxs
 
-    def get_by_key(
-        self,
-        value: str,
-        value_key: str,
-        adapter_name: str,
-        adapter_node: str = DEFAULT_NODE,
-        retry: int = 0,
-        sleep: int = 1,
-    ) -> dict:
-        """Get a connection for an adapter on a node using a specific connection identifier key.
-
-        Args:
-            value: value that value_key must match for a connection
-            value_key: name of connection key to search for value of
-            adapter_name: name of adapter
-            adapter_node: name of node running adapter
-            retry: number of times to retry to find the connection using value_key[value]
-            sleep: seconds to sleep in between each retry
-
-        Raises:
-            :exc:`NotFoundError`: when no connection found where value == cnx[value_key]
-        """
-        tries = 1
-        cnxs = self.get_by_adapter(adapter_name=adapter_name, adapter_node=adapter_node)
-        while True:
-            for cnx in cnxs:
-                if cnx[value_key] == value:
-                    return cnx
-
-            tries += 1
-
-            if tries > retry:
-                break
-
-            time.sleep(sleep)
-
-            cnxs = self.get_by_adapter(adapter_name=adapter_name, adapter_node=adapter_node)
-
-        value_key = value_key.upper()
-        err = (
-            f"No connection found on adapter {adapter_name!r} node {adapter_node!r} "
-            f"with {value_key} of {value!r}"
-        )
-        raise NotFoundError(tablize_cnxs(cnxs=cnxs, err=err))
-
     def get_by_uuid(
         self, cnx_uuid: str, adapter_name: str, adapter_node: str = DEFAULT_NODE, **kwargs
     ) -> dict:
         """Get a connection for an adapter on a node by UUID.
+
+        Examples:
+            First, create a ``client`` using :obj:`axonius_api_client.connect.Connect`.
+
+            Get a single connection by UUID
+
+            >>> cnx = client.adapters.cnx.get_by_uuid(
+            ...     cnx_id='5f76735be4557d5cba94237f', adapter_name='aws'
+            ... )
+
+        Notes:
+            UUID of connections change when a connection configuration is updated,
+            the more persistent way to get a connection is :meth:`get_by_id`.
 
         Args:
             cnx_uuid: UUID to search for
@@ -219,35 +171,6 @@ class Cnx(ChildMixins):
             adapter_name=adapter_name,
             adapter_node=adapter_node,
             **kwargs,
-        )
-
-    def get_by_id(
-        self, cnx_id: str, adapter_name: str, adapter_node: str = DEFAULT_NODE, **kwargs
-    ) -> dict:
-        """Get a connection for an adapter on a node by ID.
-
-        Examples:
-            First, create a ``client`` using :obj:`axonius_api_client.connect.Connect`.
-
-            Get a single connection by ID
-
-            >>> cnx = client.adapters.cnx.get_by_id(
-            ...     cnx_id='192.168.1.10', adapter_name='active_directory'
-            ... )
-
-        Notes:
-            ID is constructed from some variance of connection keys, usually "domain"
-            (i.e. for active_directory ``TestDomain.test``)
-
-        Args:
-            cnx_id: connection ID to get
-            adapter_name: name of adapter
-            adapter_node: name of node running adapter
-            **kwargs: passed to :meth:`get_by_key`
-        """
-        kwargs["value_key"] = "id"
-        return self.get_by_key(
-            value=cnx_id, adapter_name=adapter_name, adapter_node=adapter_node, **kwargs
         )
 
     def get_by_label(self, value: str, adapter_name: str, adapter_node: str = DEFAULT_NODE) -> dict:
@@ -284,6 +207,91 @@ class Cnx(ChildMixins):
         )
         raise NotFoundError(tablize_cnxs(cnxs=cnxs, err=err))
 
+    def get_by_id(
+        self, cnx_id: str, adapter_name: str, adapter_node: str = DEFAULT_NODE, **kwargs
+    ) -> dict:
+        """Get a connection for an adapter on a node by ID.
+
+        Examples:
+            First, create a ``client`` using :obj:`axonius_api_client.connect.Connect`.
+
+            Get a single connection by ID
+
+            >>> cnx = client.adapters.cnx.get_by_id(
+            ...     cnx_id='192.168.1.10', adapter_name='active_directory'
+            ... )
+
+        Notes:
+            ID is constructed from some variance of connection keys, usually "domain"
+            (i.e. for active_directory ``TestDomain.test``)
+
+        Args:
+            cnx_id: connection ID to get
+            adapter_name: name of adapter
+            adapter_node: name of node running adapter
+            **kwargs: passed to :meth:`get_by_key`
+        """
+        kwargs["value_key"] = "id"
+        return self.get_by_key(
+            value=cnx_id, adapter_name=adapter_name, adapter_node=adapter_node, **kwargs
+        )
+
+    def update_by_id(
+        self, cnx_id: str, adapter_name: str, adapter_node: str = DEFAULT_NODE, **kwargs
+    ) -> dict:
+        """Update a connection for an adapter on a node by ID.
+
+        Examples:
+            First, create a ``client`` using :obj:`axonius_api_client.connect.Connect`.
+
+            Change the connection label for a connection
+
+            >>> cnx = client.adapters.cnx.update_by_id(
+            ...     cnx_id='TestDomain.test',
+            ...     adapter_name='active_directory',
+            ...     connection_label="new label",
+            ... )
+
+        Args:
+            cnx_id: connection ID to update
+            adapter_name: name of adapter
+            adapter_node: name of node running adapter
+            **kwargs: passed to :meth:`update_cnx`
+        """
+        cnx_update = self.get_by_id(
+            cnx_id=cnx_id, adapter_name=adapter_name, adapter_node=adapter_node
+        )
+        return self.update_cnx(cnx_update=cnx_update, **kwargs)
+
+    def delete_by_id(
+        self,
+        cnx_id: str,
+        adapter_name: str,
+        adapter_node: str = DEFAULT_NODE,
+        delete_entities: bool = False,
+    ) -> str:
+        """Delete a connection for an adapter on a node by connection ID.
+
+        Examples:
+            First, create a ``client`` using :obj:`axonius_api_client.connect.Connect`.
+
+            Delete a connection by ID
+
+            >>> cnx = client.adapters.cnx.delete_by_id(
+            ...     cnx_id='192.168.1.10', adapter_name='active_directory'
+            ... )
+
+        Args:
+            cnx_id: connection ID to delete
+            adapter_name: name of adapter
+            adapter_node: name of node running adapter
+            delete_entities: delete all asset entities associated with this connection
+        """
+        cnx_delete = self.get_by_id(
+            cnx_id=cnx_id, adapter_name=adapter_name, adapter_node=adapter_node
+        )
+        return self.delete_cnx(cnx_delete=cnx_delete, delete_entities=delete_entities)
+
     def test_by_id(self, **kwargs) -> str:
         """Test a connection for an adapter on a node by ID.
 
@@ -302,28 +310,6 @@ class Cnx(ChildMixins):
         cnx = self.get_by_id(**kwargs)
         return self.test_cnx(cnx_test=cnx)
 
-    def test_cnx(self, cnx_test: dict, **kwargs) -> str:
-        """Test a connection for an adapter on a node.
-
-        Examples:
-            First, create a ``client`` using :obj:`axonius_api_client.connect.Connect`.
-
-            Test the reachability of a connection without creating the connection
-
-            >>> config = dict(dc_name="192.168.1.10", user="svc_user", password="test")
-            >>> cnx = client.adapters.cnx.test(adapter_name="active_directory", **config)
-
-        Args:
-            cnx_test: connection fetched previously
-            **kwargs: passed to :meth:`test`
-        """
-        adapter_name = cnx_test["adapter_name"]
-        adapter_node = cnx_test["node_name"]
-        old_config = cnx_test["config"]
-        return self.test(
-            adapter_name=adapter_name, adapter_node=adapter_node, old_config=old_config, **kwargs
-        )
-
     def test(
         self,
         adapter_name: str,
@@ -332,6 +318,14 @@ class Cnx(ChildMixins):
         **kwargs,
     ) -> str:
         """Test a connection to an adapter on a node.
+
+        Examples:
+            First, create a ``client`` using :obj:`axonius_api_client.connect.Connect`.
+
+            Test the reachability of a connection without creating the connection
+
+            >>> config = dict(dc_name="192.168.1.10", user="svc_user", password="test")
+            >>> cnx = client.adapters.cnx.test(adapter_name="active_directory", **config)
 
         Notes:
             This can be used to test the configuration of a connection before creating the
@@ -396,6 +390,20 @@ class Cnx(ChildMixins):
                 msg = f"Reachability test failed:{rkw}"
                 raise CnxTestError(msg)
         return rtext
+
+    def test_cnx(self, cnx_test: dict, **kwargs) -> str:
+        """Test a connection for an adapter on a node.
+
+        Args:
+            cnx_test: connection fetched previously
+            **kwargs: passed to :meth:`test`
+        """
+        adapter_name = cnx_test["adapter_name"]
+        adapter_node = cnx_test["node_name"]
+        old_config = cnx_test["config"]
+        return self.test(
+            adapter_name=adapter_name, adapter_node=adapter_node, old_config=old_config, **kwargs
+        )
 
     def update_cnx(self, cnx_update: dict, **kwargs) -> dict:
         """Update a connection for an adapter on a node.
@@ -490,41 +498,6 @@ class Cnx(ChildMixins):
 
         return cnx_new
 
-    def check_if_gone(self, result: dict, cnx_id: str, adapter_name: str, adapter_node: str):
-        """Check if the result of updating a connection shows that the connection is gone.
-
-        Args:
-            result: JSON response from updating a connection
-            cnx_id: connection ID that was being updated
-            adapter_name: name of adapter
-            adapter_node: name of node running adapter
-
-        Raises:
-            :exc:`CnxGoneError`: when a connection is updated by someone
-                causing the connections UUID or ID to change
-        """
-        message = result.get("message", "")
-        if message == CNX_GONE:
-            cnxs = self.get_by_adapter(adapter_name=adapter_name, adapter_node=adapter_node)
-            err = f"Connection with ID {cnx_id!r} no longer exists!"
-            raise CnxGoneError(tablize_cnxs(cnxs=cnxs, err=err))
-
-    def update_by_id(
-        self, cnx_id: str, adapter_name: str, adapter_node: str = DEFAULT_NODE, **kwargs
-    ) -> dict:
-        """Update a connection for an adapter on a node by ID.
-
-        Args:
-            cnx_id: connection ID to update
-            adapter_name: name of adapter
-            adapter_node: name of node running adapter
-            **kwargs: passed to :meth:`update_cnx`
-        """
-        cnx_update = self.get_by_id(
-            cnx_id=cnx_id, adapter_name=adapter_name, adapter_node=adapter_node
-        )
-        return self.update_cnx(cnx_update=cnx_update, **kwargs)
-
     def delete_cnx(self, cnx_delete: dict, delete_entities: bool = False) -> str:
         """Delete a connection for an adapter on a node.
 
@@ -543,34 +516,24 @@ class Cnx(ChildMixins):
             delete_entities=delete_entities,
         )
 
-    def delete_by_id(
-        self,
-        cnx_id: str,
-        adapter_name: str,
-        adapter_node: str = DEFAULT_NODE,
-        delete_entities: bool = False,
-    ) -> str:
-        """Delete a connection for an adapter on a node by connection ID.
-
-        Examples:
-            First, create a ``client`` using :obj:`axonius_api_client.connect.Connect`.
-
-            Delete a connection by ID
-
-            >>> cnx = client.adapters.cnx.delete_by_id(
-            ...     cnx_id='192.168.1.10', adapter_name='active_directory'
-            ... )
+    def check_if_gone(self, result: dict, cnx_id: str, adapter_name: str, adapter_node: str):
+        """Check if the result of updating a connection shows that the connection is gone.
 
         Args:
-            cnx_id: connection ID to delete
+            result: JSON response from updating a connection
+            cnx_id: connection ID that was being updated
             adapter_name: name of adapter
             adapter_node: name of node running adapter
-            delete_entities: delete all asset entities associated with this connection
+
+        Raises:
+            :exc:`CnxGoneError`: when a connection is updated by someone
+                causing the connections UUID or ID to change
         """
-        cnx_delete = self.get_by_id(
-            cnx_id=cnx_id, adapter_name=adapter_name, adapter_node=adapter_node
-        )
-        return self.delete_cnx(cnx_delete=cnx_delete, delete_entities=delete_entities)
+        message = result.get("message", "")
+        if message == CNX_GONE:
+            cnxs = self.get_by_adapter(adapter_name=adapter_name, adapter_node=adapter_node)
+            err = f"Connection with ID {cnx_id!r} no longer exists!"
+            raise CnxGoneError(tablize_cnxs(cnxs=cnxs, err=err))
 
     def build_config(
         self,
@@ -614,6 +577,59 @@ class Cnx(ChildMixins):
         )
 
         return new_config
+
+    def get_sane_defaults(self, adapter_name: str) -> dict:
+        """Get the API client defined sane defaults for a specific adapter.
+
+        Args:
+            adapter_name: name of adapter
+        """
+        return CNX_SANE_DEFAULTS.get(adapter_name, CNX_SANE_DEFAULTS["all"])
+
+    def get_by_key(
+        self,
+        value: str,
+        value_key: str,
+        adapter_name: str,
+        adapter_node: str = DEFAULT_NODE,
+        retry: int = 0,
+        sleep: int = 1,
+    ) -> dict:
+        """Get a connection for an adapter on a node using a specific connection identifier key.
+
+        Args:
+            value: value that value_key must match for a connection
+            value_key: name of connection key to search for value of
+            adapter_name: name of adapter
+            adapter_node: name of node running adapter
+            retry: number of times to retry to find the connection using value_key[value]
+            sleep: seconds to sleep in between each retry
+
+        Raises:
+            :exc:`NotFoundError`: when no connection found where value == cnx[value_key]
+        """
+        tries = 1
+        cnxs = self.get_by_adapter(adapter_name=adapter_name, adapter_node=adapter_node)
+        while True:
+            for cnx in cnxs:
+                if cnx[value_key] == value:
+                    return cnx
+
+            tries += 1
+
+            if tries > retry:
+                break
+
+            time.sleep(sleep)
+
+            cnxs = self.get_by_adapter(adapter_name=adapter_name, adapter_node=adapter_node)
+
+        value_key = value_key.upper()
+        err = (
+            f"No connection found on adapter {adapter_name!r} node {adapter_node!r} "
+            f"with {value_key} of {value!r}"
+        )
+        raise NotFoundError(tablize_cnxs(cnxs=cnxs, err=err))
 
     def cb_file_upload(
         self,

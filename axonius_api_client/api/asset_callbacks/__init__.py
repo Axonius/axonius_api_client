@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Callbacks for exporting assets."""
+"""Callbacks for formatting asset data and exporting to various formats."""
 from .base import Base
 from .base_csv import Csv
 from .base_json import Json
