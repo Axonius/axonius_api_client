@@ -7,6 +7,7 @@ import logging
 import pathlib
 import platform
 import sys
+import warnings
 from datetime import datetime, timedelta, timezone
 from itertools import zip_longest
 from typing import (Any, Callable, Iterable, Iterator, List, Optional, Tuple,
@@ -19,6 +20,7 @@ import dateutil.relativedelta
 import dateutil.tz
 
 from . import PACKAGE_FILE, PACKAGE_ROOT, VERSION
+from .constants.api import GUI_PAGE_SIZES
 from .constants.general import (ERROR_ARGS, ERROR_TMPL, NO, OK_ARGS, OK_TMPL,
                                 WARN_ARGS, WARN_TMPL, YES)
 from .exceptions import ToolsError
@@ -852,3 +854,32 @@ def read_stream(stream) -> str:
         raise ToolsError(msg=f"Empty content supplied to {stream_name!r}")
 
     return content
+
+
+def load_fuzz():
+    """Load the fuzzy matching library.
+
+    I do not like this. But fuzzywuzzy has a built in warning on import that can
+    not be shut off any other way
+    """
+    warnings.filterwarnings("ignore", message="Using slow pure-python SequenceMatcher")
+    from fuzzywuzzy import fuzz
+
+    return fuzz
+
+
+def check_gui_page_size(size: Optional[int] = None) -> int:
+    """Check page size to see if it one of the valid GUI page sizes.
+
+    Args:
+        size: page size to check
+
+    Raises:
+        :exc:`ApiError`: if size is not one of
+            :data:`axonius_api_client.constants.api.GUI_PAGE_SIZES`
+
+    """
+    size = size or GUI_PAGE_SIZES[0]
+    if size not in GUI_PAGE_SIZES:
+        raise ToolsError(f"gui_page_size of {size} is invalid, must be one of {GUI_PAGE_SIZES}")
+    return size

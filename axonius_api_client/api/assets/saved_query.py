@@ -1,74 +1,106 @@
 # -*- coding: utf-8 -*-
-"""API models for working with saved queries for assets."""
-from typing import List, Optional, Union
+"""API for working with saved queries for assets."""
+from typing import Generator, List, Optional, Union
 
-from ...constants.api import GUI_PAGE_SIZES, PAGE_SIZE
-from ...exceptions import ApiError, NotFoundError
-from ...tools import listify
+from ...constants.api import PAGE_SIZE
+from ...exceptions import NotFoundError
+from ...tools import check_gui_page_size, listify
 from ..mixins import ChildMixins, PagingMixinsObject
 
 
-def check_gui_page_size(size: Optional[int] = None) -> int:
-    """Check page size to see if it one of the valid GUI page sizes.
-
-    Args:
-        size: page size to check
-
-    Raises:
-        :exc:`ApiError`: if size is not one of
-            :data:`axonius_api_client.constants.api.GUI_PAGE_SIZES`
-
-    """
-    size = size or GUI_PAGE_SIZES[0]
-    if size not in GUI_PAGE_SIZES:
-        raise ApiError(f"gui_page_size of {size} is invalid, must be one of {GUI_PAGE_SIZES}")
-    return size
-
-
+# XXX need update saved query
 class SavedQuery(ChildMixins, PagingMixinsObject):
     """API object for working with saved queries for the parent asset type.
 
     Examples:
-        First, create a ``client`` using :obj:`axonius_api_client.connect.Connect`.
+        Create a ``client`` using :obj:`axonius_api_client.connect.Connect` and assume
+        ``apiobj`` is either ``client.devices`` or ``client.users``
 
-        >>> # Get a saved query
-        >>> sq = client.devices.saved_query.get(name="test")
-        >>>
-        >>> # See the fields defined in the saved query
-        >>> print(sq['view']['fields'])
-        >>>
-        >>> # See the query defined in the saved query
-        >>> print(sq['view']['query']['filter'])
-        >>>
-        >>> # Delete the saved query
-        >>> deleted = client.devices.saved_query.delete(rows=[sq])
-        >>>
-        >>> # Delete the saved query by name
-        >>> deleted = client.devices.saved_query.delete_by_name(name="test")
+        >>> apiobj = client.devices  # or client.users
 
-        Create a saved query using a :obj:`axonius_api_client.api.wizards.wizard.Wizard`
+        * Get saved query by name: :meth:`get_by_name`
+        * Get saved query by UUID: :meth:`get_by_uuid`
+        * Get saved query by tags: :meth:`get_by_tags`
+        * Get all saved query tags: :meth:`get_tags`
+        * Get all saved queries: :meth:`get`
+        * Add a saved query: :meth:`add`
+        * Delete a saved query by name: :meth:`delete_by_name`
+        * Delete a saved query by UUID or SQ object: :meth:`delete`
 
-        >>> parsed = client.devices.wizard_text.parse(content="simple hostname contains blah")
-        >>> query = parsed["query"]
-        >>> expressions = parsed["expressions"]
-        >>> sq = devices.saved_query.add(
-        ...     name="test",
-        ...     query=query,
-        ...     expressions=expressions,
-        ...     description="meep meep",
-        ...     tags=["nyuck1", "nyuck2", "nyuck3"],
-        ... )
+    See Also:
+        * Device assets :obj:`axonius_api_client.api.assets.devices.Devices`
+        * User assets :obj:`axonius_api_client.api.assets.users.Users`
 
     """
 
-    # XXX need update saved query, doc the other methods (get tags, get_by_tags, etc)
+    def get_by_name(self, value: str, **kwargs) -> dict:
+        """Get a saved query by name.
+
+        Examples:
+            Get a saved query by name
+
+            >>> sq = apiobj.saved_query.get_by_name(name="test")
+            >>> sq['tags']
+            ['Unmanaged Devices']
+            >>> sq['description'][:80]
+            'Devices that have been seen by at least one agent or at least one endpoint manag'
+            >>> sq['view']['fields']
+            [
+                'adapters',
+                'specific_data.data.name',
+                'specific_data.data.hostname',
+                'specific_data.data.last_seen',
+                'specific_data.data.network_interfaces.manufacturer',
+                'specific_data.data.network_interfaces.mac',
+                'specific_data.data.network_interfaces.ips',
+                'specific_data.data.os.type',
+                'labels'
+            ]
+            >>> sq['view']['query']['filter'][:80]
+            '(specific_data.data.adapter_properties == "Agent") or (specific_data.data.adapte'
+
+        Args:
+            value: name of saved query
+            **kwargs: passed to :meth:`get`
+        """
+        return super().get_by_name(value=value, **kwargs)
+
+    def get_by_uuid(self, value: str, **kwargs) -> dict:
+        """Get a saved query by uuid.
+
+        Examples:
+            Get a saved query by uuid
+
+            >>> sq = apiobj.saved_query.get_by_uuid(uuid="5f76721ce4557d5cba93f59e")
+
+        Args:
+            value: uuid of saved query
+            **kwargs: passed to :meth:`get`
+        """
+        return super().get_by_uuid(value=value, **kwargs)
 
     def get_by_tags(self, value: Union[str, List[str]], **kwargs) -> List[dict]:
         """Get saved queries by tags.
 
+        Examples:
+            Get all saved queries with tagged with 'AD'
+
+            >>> sqs = apiobj.saved_query.get_by_tags('AD')
+            >>> len(sqs)
+            2
+
+            Get all saved queries with tagged with 'AD' or 'AWS'
+
+            >>> sqs = apiobj.saved_query.get_by_tags(['AD', 'AWS'])
+            >>> len(sqs)
+            5
+
         Args:
             value: list of tags
             **kwargs: passed to :meth:`get`
+
+        Raises:
+            :exc:`NotFoundError`: if no saved queries found tagged with supplied tags
         """
         value = listify(value)
         rows = self.get(**kwargs)
@@ -90,12 +122,37 @@ class SavedQuery(ChildMixins, PagingMixinsObject):
     def get_tags(self, **kwargs) -> List[str]:
         """Get all tags for saved queries.
 
+        Examples:
+            Get all known tags for all saved queries
+
+            >>> tags = apiobj.saved_query.get_tags()
+            >>> len(tags)
+            19
+
         Args:
             **kwargs: passed to :meth:`get`
         """
         rows = self.get(**kwargs)
         tags = [y for x in rows for y in x.get("tags", [])]
         return sorted(list(set(tags)))
+
+    def get(
+        self, generator: bool = False, **kwargs
+    ) -> Union[Generator[dict, None, None], List[dict]]:
+        """Get all saved queries.
+
+        Examples:
+            Get all saved queries
+
+            >>> sqs = apiobj.saved_query.get()
+            >>> len(sqs)
+            39
+
+        Args:
+            generator: return an iterator
+            **kwargs: passed to :meth:`get_generator`
+        """
+        return super().get(generator=generator, **kwargs)
 
     def add(
         self,
@@ -118,6 +175,20 @@ class SavedQuery(ChildMixins, PagingMixinsObject):
         **kwargs,
     ) -> dict:
         """Create a saved query.
+
+        Examples:
+            Create a saved query using a :obj:`axonius_api_client.api.wizards.wizard.Wizard`
+
+            >>> parsed = apiobj.wizard_text.parse(content="simple hostname contains blah")
+            >>> query = parsed["query"]
+            >>> expressions = parsed["expressions"]
+            >>> sq = apiobj.saved_query.add(
+            ...     name="test",
+            ...     query=query,
+            ...     expressions=expressions,
+            ...     description="meep meep",
+            ...     tags=["nyuck1", "nyuck2", "nyuck3"],
+            ... )
 
         Notes:
             Saved Queries created without expressions will not be editable using the query wizard
@@ -198,19 +269,13 @@ class SavedQuery(ChildMixins, PagingMixinsObject):
         added = self._add(data=data)
         return self.get_by_uuid(value=added)
 
-    def delete(self, rows: List[dict]) -> List[dict]:
-        """Delete saved queries.
-
-        Args:
-            rows: previously fetched saved queries to delete
-        """
-        rows = listify(rows)
-        ids = [x["uuid"] for x in rows]
-        self._delete(ids=list(set(ids)))
-        return rows
-
     def delete_by_name(self, value: str, **kwargs) -> dict:
         """Delete a saved query by name.
+
+        Examples:
+            Delete the saved query by name
+
+            >>> deleted = apiobj.saved_query.delete_by_name(name="test")
 
         Args:
             value: name of saved query to delete
@@ -219,6 +284,17 @@ class SavedQuery(ChildMixins, PagingMixinsObject):
         row = self.get_by_name(value=value, **kwargs)
         self.delete(rows=[row])
         return row
+
+    def delete(self, rows: Union[str, List[dict]]) -> List[dict]:
+        """Delete saved queries.
+
+        Args:
+            rows: list of UUIDs or rows previously fetched saved queries to delete
+        """
+        rows = listify(rows)
+        ids = [x["uuid"] if isinstance(x, dict) else x for x in rows]
+        self._delete(ids=list(set(ids)))
+        return rows
 
     def _add(self, data: dict) -> str:
         """Direct API method to create a saved query.

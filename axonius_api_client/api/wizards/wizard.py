@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Wizard for python objects."""
+"""Parser for AQL queries and GUI expressions from python objects."""
 import logging
 from typing import List, Optional, Tuple, Union
 
@@ -15,10 +15,13 @@ from ..parsers.wizards import WizardParser
 
 
 class Wizard:
-    """Wizard for python objects.
+    """Parser for AQL queries and GUI expressions from python objects.
 
     Examples:
-        First, create a ``client`` using :obj:`axonius_api_client.connect.Connect`.
+        Create a ``client`` using :obj:`axonius_api_client.connect.Connect` and assume
+        ``apiobj`` is either ``client.devices`` or ``client.users``
+
+        >>> apiobj = client.devices  # or client.users
 
         Define some entries to parse
 
@@ -35,28 +38,38 @@ class Wizard:
 
         Parse the entries into a query and GUI expressions
 
-        >>> parsed = client.devices.wizard.parse(entries=entries)
+        >>> parsed = apiobj.wizard.parse(entries=entries)
+        >>> list(parsed)
+        ['expressions', 'query']
 
         Get the query produced by the wizard
 
         >>> query = parsed["query"]
-        >>> print(query)
+        >>> query[:80]
+        '(specific_data.data.hostname == regex("test", "i")) and (specific_data.data.inst'
 
         Get the GUI expressions produced by the wizard
 
         >>> expressions = parsed["expressions"]
-        >>> print(expressions)
+        >>> expressions[0]['filter']
+        '(specific_data.data.hostname == regex("test", "i"))'
+        >>> expressions[1]['filter'][:80]
+        'and (specific_data.data.installed_software == match([(name == regex("chrome", "i'
 
         Use the query to get assets
 
-        >>> assets = client.devices.get(query=query)
+        >>> assets = apiobj.get(query=query)
+        >>> len(assets)
+        2
 
         Use the query to get a count of assets
-        >>> count = client.devices.count(query=query)
+        >>> count = apiobj.count(query=query)
+        >>> count
+        2
 
         Use the query and expressions to create a saved query that the GUI understands
 
-        >>> sq = client.devices.saved_query.add(name="test", query=query, expressions=expressions)
+        >>> sq = apiobj.saved_query.add(name="test", query=query, expressions=expressions)
 
     """
 

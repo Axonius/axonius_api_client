@@ -9,18 +9,24 @@ from .base import ExportMixins
 
 
 class Json(ExportMixins):
-    """Callbacks that can export asset data in JSON format."""
+    """Callbacks for formatting asset data and exporting it in JSON format.
+
+    Examples:
+        Create a ``client`` using :obj:`axonius_api_client.connect.Connect` and assume
+        ``apiobj`` is either ``client.devices`` or ``client.users``
+
+        >>> apiobj = client.devices  # or client.users
+
+        * :meth:`args_map` for callback generic arguments to format assets.
+        * :meth:`args_map_custom` for callback specific arguments to format and export data.
+
+    """
 
     @classmethod
     def args_map_custom(cls) -> dict:
         """Get the custom argument names and their defaults for this callbacks object.
 
         Examples:
-            First, create a ``client`` using :obj:`axonius_api_client.connect.Connect` and assume
-            ``apiobj`` is either ``client.devices`` or ``client.users``
-
-            >>> apiobj = client.devices
-
             Export the output to STDOUT. If ``export_file`` is not supplied, the default is to
             print the output to STDOUT.
 
@@ -50,7 +56,7 @@ class Json(ExportMixins):
             >>> assets = apiobj.get(export="json", export_file="test.json", json_flat=True)
 
         See Also:
-            :meth:`args_map` for the arguments for all callback objects.
+            * :meth:`args_map` for callback generic arguments to format assets.
 
         Notes:
             These arguments can be supplied as extra kwargs passed to

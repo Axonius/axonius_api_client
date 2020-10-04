@@ -22,14 +22,30 @@ AGG_EXPR_FIELD_TYPE: str = "axonius"
 AGG_ADAPTER_ALTS: List[str] = ["generic", "general", "specific", "agg", "aggregated"]
 """list of list of alternatives for 'generic' adapter."""
 
-GET_SCHEMAS_KEYS: List[str] = ["name", "name_qual", "name_base", "title"]
+GET_SCHEMAS_KEYS: List[str] = [
+    "name",
+    "name_base",
+    "name_qual",
+    "title",
+]
 """field schema keys to check when finding field schemas"""
 
-GET_SCHEMA_KEYS: List[str] = ["name_base", "name_qual", "name", "title"]
+GET_SCHEMA_KEYS: List[str] = [
+    "name",
+    "name_base",
+    "name_qual",
+    "title",
+]
 """field schema keys to check when finding a single field schema"""
 
-FUZZY_SCHEMAS_KEYS: List[str] = ["name_base", "title"]
+FUZZY_SCHEMAS_KEYS: List[str] = [
+    "name_base",
+    "title",
+]
 """field schema keys to check when fuzzy matching field schemas"""
+
+PRETTY_SCHEMA_TMPL: str = "{adapter_name}:{name_base:{len_max}} -> {column_title}"
+"""template to use when pretty printing schemas."""
 
 SCHEMAS_CUSTOM: Dict[str, dict] = {
     "report_adapters_missing": {

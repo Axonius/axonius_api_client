@@ -16,12 +16,18 @@ class Users(AssetMixin):
 
         >>> apiobj = client.users
 
+        * Get count of assets: :meth:`count`
+        * Get count of assets from a saved query: :meth:`count_by_saved_query`
+        * Get assets: :meth:`get`
+        * Get assets from a saved query: :meth:`get_by_saved_query`
+        * Get the full data set for a single asset: :meth:`get_by_id`
+        * Work with saved queries: :obj:`axonius_api_client.api.assets.saved_query.SavedQuery`
+        * Work with fields: :obj:`axonius_api_client.api.assets.fields.Fields`
+        * Work with tags: :obj:`axonius_api_client.api.assets.labels.Labels`
+
     See Also:
-        * :meth:`count`
-        * :meth:`count_by_saved_query`
-        * :meth:`get`
-        * :meth:`get_by_saved_query`
-        * :meth:`get_by_id`
+        * Device assets :obj:`axonius_api_client.api.assets.devices.Devices`
+
     """
 
     @property

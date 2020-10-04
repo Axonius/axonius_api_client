@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""API base class for devices and users."""
+"""API model mixin for device and user assets."""
 import math
 import time
 from datetime import datetime, timedelta
@@ -19,7 +19,31 @@ from .saved_query import SavedQuery
 
 
 class AssetMixin(ModelMixins):
-    """API model for device and user assets."""
+    """API model mixin for device and user assets.
+
+    Examples:
+        Create a ``client`` using :obj:`axonius_api_client.connect.Connect` and assume
+        ``apiobj`` is either ``client.devices`` or ``client.users``
+
+        >>> apiobj = client.devices  # or client.users
+
+        * Get count of assets: :meth:`count`
+        * Get count of assets from a saved query: :meth:`count_by_saved_query`
+        * Get assets: :meth:`get`
+        * Get assets from a saved query: :meth:`get_by_saved_query`
+        * Get the full data set for a single asset: :meth:`get_by_id`
+        * Work with saved queries: :obj:`axonius_api_client.api.assets.saved_query.SavedQuery`
+        * Work with fields: :obj:`axonius_api_client.api.assets.fields.Fields`
+        * Work with tags: :obj:`axonius_api_client.api.assets.labels.Labels`
+
+    See Also:
+        This object is not usable directly, it only stores the logic that is common for working
+        with device and user assets:
+
+        * Device assets :obj:`axonius_api_client.api.assets.devices.Devices`
+        * User assets :obj:`axonius_api_client.api.assets.users.Users`
+
+    """
 
     def count(
         self,
@@ -30,11 +54,6 @@ class AssetMixin(ModelMixins):
         """Get the count of assets from a query.
 
         Examples:
-            First, create a ``client`` using :obj:`axonius_api_client.connect.Connect` and assume
-            ``apiobj`` is ``client.devices`` or ``client.users``
-
-            >>> apiobj = client.devices
-
             Get count of all assets
 
             >>> count = apiobj.count()
@@ -70,11 +89,6 @@ class AssetMixin(ModelMixins):
         """Get the count of assets for a query defined in a saved query.
 
         Examples:
-            First, create a ``client`` using :obj:`axonius_api_client.connect.Connect` and assume
-            ``apiobj`` is ``client.devices`` or ``client.users``
-
-            >>> apiobj = client.devices
-
             Get count of assets returned from a saved query
 
             >>> count = apiobj.count_by_saved_query(name="test")
@@ -98,11 +112,6 @@ class AssetMixin(ModelMixins):
         r"""Get assets from a query.
 
         Examples:
-            First, create a ``client`` using :obj:`axonius_api_client.connect.Connect` and assume
-            ``apiobj`` is ``client.devices`` or ``client.users``
-
-            >>> apiobj = client.devices
-
             Get all assets with the default fields defined in the API client
 
             >>> assets = apiobj.get()
@@ -145,7 +154,7 @@ class AssetMixin(ModelMixins):
             >>> entries=[{'type': 'simple', 'value': 'name equals test'}]
             >>> assets = apiobj.get(wiz_entries=entries)
 
-        Notes:
+        See Also:
             This method is used by all other get* methods under the hood and their kwargs are
             passed thru to this method and passed to :meth:`get_generator` which are then passed
             to whatever callback is used based on the ``export`` argument.
@@ -336,8 +345,10 @@ class AssetMixin(ModelMixins):
 
         callbacks.stop()
 
-    def get_by_id(self, id: str) -> dict:
-        """Get the full data set of all adapters for a single asset.
+    def get_by_saved_query(
+        self, name: str, **kwargs
+    ) -> Union[Generator[dict, None, None], List[dict]]:
+        """Get assets that would be returned by a saved query.
 
         Examples:
             First, create a ``client`` using :obj:`axonius_api_client.connect.Connect` and assume
@@ -345,6 +356,28 @@ class AssetMixin(ModelMixins):
 
             >>> apiobj = client.devices
 
+            Get assets from a saved query with complex fields flattened
+
+            >>> assets = apiobj.get_by_saved_query(name="test", field_flatten=True)
+
+        Notes:
+            The query and the fields defined in the saved query will be used to
+            get the assets.
+
+        Args:
+            name: name of saved query to get assets from
+            **kwargs: passed to :meth:`get`
+        """
+        sq = self.saved_query.get_by_name(value=name)
+        kwargs["query"] = sq["view"]["query"]["filter"]
+        kwargs["fields_manual"] = sq["view"]["fields"]
+        kwargs.setdefault("fields_default", False)
+        return self.get(**kwargs)
+
+    def get_by_id(self, id: str) -> dict:
+        """Get the full data set of all adapters for a single asset.
+
+        Examples:
             >>> asset = apiobj.get_by_id(id="3d69adf54879faade7a44068e4ecea6e")
 
         Args:
@@ -363,7 +396,7 @@ class AssetMixin(ModelMixins):
 
     @property
     def fields_default(self) -> List[dict]:
-        """Fields to add to all get calls."""
+        """Fields to use by default for getting assets."""
         raise NotImplementedError  # pragma: no cover
 
     def destroy(self, destroy: bool, history: bool) -> dict:  # pragma: no cover
@@ -379,25 +412,6 @@ class AssetMixin(ModelMixins):
             history: Also delete all historical information
         """
         return self._destroy(destroy=destroy, history=history)
-
-    def get_by_saved_query(
-        self, name: str, **kwargs
-    ) -> Union[Generator[dict, None, None], List[dict]]:
-        """Get assets that would be returned by a saved query.
-
-        Notes:
-            The query and the fields defined in the saved query will be used to
-            get the assets.
-
-        Args:
-            name: name of saved query to get count of assets from
-            **kwargs: passed to :meth:`get`
-        """
-        sq = self.saved_query.get_by_name(value=name)
-        kwargs["query"] = sq["view"]["query"]["filter"]
-        kwargs["fields_manual"] = sq["view"]["fields"]
-        kwargs.setdefault("fields_default", False)
-        return self.get(**kwargs)
 
     def get_by_values(
         self,

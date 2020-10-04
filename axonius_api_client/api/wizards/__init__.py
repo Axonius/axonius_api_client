@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Query builder wizards."""
+"""Parsers for AQL queries and GUI expressions."""
 from .wizard import Wizard
 from .wizard_csv import WizardCsv
 from .wizard_text import WizardText
