@@ -127,7 +127,7 @@ class ApiV1:
         central_core="central_core",
         central_core_restore="central_core/restore",
     )
-    """Endpoints for :mod:`axonius_api_client.api.system.system`"""
+    """Endpoints for system APIs"""
 
     all_objects: List[Router] = [
         users,
@@ -217,6 +217,8 @@ class ApiV4:
         object_type="instances",
         base=base,
         version=version,
+        central_core="/settings/central_core",
+        central_core_restore="/settings/central_core/restore",
     )
     """Endpoints for :mod:`axonius_api_client.api.system.instances`"""
 
@@ -225,6 +227,8 @@ class ApiV4:
         base=base,
         version=version,
         lifecycle="lifecycle",
+        discover_stop="/settings/stop_research_phase",
+        discover_start="/settings/run_manual_discovery",
     )
     """Endpoints for :mod:`axonius_api_client.api.system.dashboard`"""
 
@@ -248,7 +252,7 @@ class ApiV4:
         central_core="central_core",
         central_core_restore="central_core/restore",
     )
-    """Endpoints for :mod:`axonius_api_client.api.system.system`"""
+    """Endpoints for system APIs"""
 
     signup: Router = Router(
         object_type="signup",

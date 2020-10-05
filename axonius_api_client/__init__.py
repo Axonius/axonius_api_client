@@ -21,9 +21,16 @@ DEFAULT_PATH: str = setup_env.DEFAULT_PATH
 """default path to use throughout the package."""
 
 load_dotenv = setup_env.load_dotenv
-get_connect_env = setup_env.get_connect_env
+get_env_connect = setup_env.get_env_connect
 
-load_dotenv()
+PRE_DOTENV: dict = setup_env.get_env_ax()
+"""AX.* env variables before loading dotenv."""
+
+INIT_DOTENV: str = load_dotenv()
+"""Initial path to .env file that was loaded"""
+
+POST_DOTENV: dict = setup_env.get_env_ax()
+"""AX.* env variables after loading dotenv."""
 
 try:
     from . import (
@@ -36,7 +43,6 @@ try:
         http,
         logs,
         tools,
-        url_parser,
     )
     from .api import (
         Adapters,
@@ -64,8 +70,7 @@ try:
     from .auth import ApiKey
     from .connect import Connect
     from .http import Http
-    from .url_parser import UrlParser
-except Exception:
+except Exception:  # pragma: no cover
     raise
 
 
@@ -96,7 +101,6 @@ __all__ = (
     "System",
     "SystemRoles",
     "SystemUsers",
-    "UrlParser",
     "Users",
     "Wizard",
     "Wizard",
@@ -114,7 +118,5 @@ __all__ = (
     "http",
     "logs",
     "tools",
-    "url_parser",
     "version",
-    "DEFAULT_PATH",
 )

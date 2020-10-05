@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 """Test suite for axonius_api_client.wizard.wizard"""
 import pytest
-from axonius_api_client.api.parsers.wizards import WizardParser
 from axonius_api_client.api.wizards import Wizard
 from axonius_api_client.constants.fields import ALL_NAME, Operators
 from axonius_api_client.constants.wizards import Entry, Flags, Results, Types
 from axonius_api_client.exceptions import NotFoundError, WizardError
+from axonius_api_client.parsers.wizards import WizardParser
 
 
 class TestWizard:

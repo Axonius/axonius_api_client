@@ -1,7 +1,5 @@
 .. include:: /main/.special.rst
 
-.. _fr_214_3:
-
 Select Fields: Using Regular Expressions Case 1
 ###############################################
 

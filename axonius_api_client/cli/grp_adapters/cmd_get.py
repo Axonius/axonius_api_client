@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """Command line interface for Axonius API Client."""
-from ...api.parsers.tables import tablize_adapters
+from ...parsers.tables import tablize_adapters
 from ...tools import json_dump
 from ..context import CONTEXT_SETTINGS, click
 from ..options import AUTH, add_options

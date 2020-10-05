@@ -3,17 +3,17 @@
 import copy
 from typing import List, Optional
 
-from ...constants.fields import (AGG_ADAPTER_NAME, AGG_ADAPTER_TITLE,
-                                 AGG_EXPR_FIELD_TYPE, ALL_NAME,
-                                 OperatorTypeMaps)
-from ...tools import strip_left, strip_right
+from ..constants.fields import (AGG_ADAPTER_NAME, AGG_ADAPTER_TITLE,
+                                AGG_EXPR_FIELD_TYPE, ALL_NAME,
+                                OperatorTypeMaps)
+from ..tools import strip_left, strip_right
 
 
 def parse_fields(raw: dict) -> dict:
     """Parse all generic and adapter specific fields.
 
-    Returns:
-        :obj:`dict`: parsed generic and adapter specific fields
+    Args:
+        raw: field schemas returned by :meth:`axonius_api_client.api.assets.fields.Fields._get`
     """
     agg_fields: List[dict] = parse_schemas(
         adapter_name=AGG_ADAPTER_NAME,
@@ -56,7 +56,11 @@ def parse_fields(raw: dict) -> dict:
 
 
 def is_complex(field: dict) -> bool:
-    """Determine if a field is complex from its schema."""
+    """Determine if a field is complex from its schema.
+
+    Args:
+        field: field schema to parse
+    """
     field_type = field["type"]
     field_items_type = field.get("items", {}).get("type")
     if field_type == "array" and field_items_type == "array":
@@ -65,13 +69,22 @@ def is_complex(field: dict) -> bool:
 
 
 def is_root(name: str, names: List[str]) -> bool:
-    """Determine if a field is a root field."""
+    """Determine if a field is a root field.
+
+    Args:
+        name: name of current field
+        names: names of all fields
+    """
     dots = name.split(".")
     return not (len(dots) > 1 and dots[0] in names)
 
 
 def parse_complex(field: dict):
-    """Pass."""
+    """Parse a complex field schema.
+
+    Args:
+        field: complex field schema
+    """
     field["is_complex"] = is_complex(field=field)
     if field["is_complex"]:
         col_title = field["column_title"]
@@ -127,7 +140,18 @@ def parse_schemas(
     raw_fields: List[dict],
     agg_base_names: Optional[List[str]] = None,
 ) -> List[dict]:
-    """Parse field schemas for an adapter."""
+    """Parse field schemas for an adapter.
+
+    Args:
+        adapter_name_raw: raw name of current adapter (aws_adapter)
+        adapter_name: user friendly name of current adapter (aws)
+        adapter_prefix: fully qualified prefix of adapter (specific_data.data or
+            adapters_data.aws_adapter)
+        adapter_title: user friendly title of adapter
+        all_field: name to use for all field schema
+        raw_fields: raw unparsed fields for current adapter
+        agg_base_names: used to determine if a field is aggregated or not
+    """
     agg_base_names = agg_base_names or []
     fields = []
 
@@ -255,6 +279,7 @@ def parse_schemas(
 
 
 def schema_custom(name: str, **kwargs) -> dict:
+    """Create a custom field schema."""
     unknown = kwargs.get("unknown", "custom")
     adapter_name = kwargs.get("adapter_name", unknown)
     adapter_name_raw = kwargs.get("adapter_name_raw", unknown)

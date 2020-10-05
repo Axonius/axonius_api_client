@@ -3,7 +3,7 @@
 from typing import Union
 from urllib.parse import urlparse, urlunparse
 
-from .exceptions import HttpError
+from ..exceptions import HttpError
 
 
 class UrlParser:
@@ -18,7 +18,6 @@ class UrlParser:
 
         Raises:
             :exc:`HttpError`: if parsed URL winds up without a hostname, port, or scheme.
-
         """
         self.INIT_URL: str = url
         """initial URL provided"""

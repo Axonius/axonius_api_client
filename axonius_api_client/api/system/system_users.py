@@ -3,8 +3,8 @@
 from typing import List, Optional
 
 from ...exceptions import ApiError, NotFoundError
+from ...parsers.config import parse_unchanged
 from ..mixins import ModelMixins
-from ..parsers import parse_unchanged
 from ..routers import API_VERSION, Router
 
 

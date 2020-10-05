@@ -42,6 +42,6 @@ def cmd(ctx, url, key, secret, **kwargs):
     client = ctx.obj.start_client(url=url, key=key, secret=secret)
 
     with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
-        data = client.system.central_core.update(**kwargs)
+        data = client.central_core.update(**kwargs)
 
     click.secho(json_dump(data))

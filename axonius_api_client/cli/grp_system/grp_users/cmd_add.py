@@ -103,7 +103,7 @@ def cmd(ctx, url, key, secret, export_format, name, **kwargs):
     client = ctx.obj.start_client(url=url, key=key, secret=secret)
 
     with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
-        data = client.system.users.add(name=name, **kwargs)
+        data = client.system_users.add(name=name, **kwargs)
         ctx.obj.echo_ok(f"Added user {name!r}")
 
     handle_export(ctx=ctx, data=data, export_format=export_format, **kwargs)

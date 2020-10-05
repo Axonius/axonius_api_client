@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
 """Constants for logging."""
 import logging
-import os
 from typing import List
 
 from .. import DEFAULT_PATH, PACKAGE_ROOT
-from .general import YES
+from ..setup_env import DEBUG
 
 LOG_FMT_VERBOSE: str = (
     "%(asctime)s %(levelname)-8s [%(name)s:%(funcName)s:%(pathname)s:%(lineno)d] " "%(message)s"
@@ -15,12 +14,9 @@ LOG_FMT_VERBOSE: str = (
 LOG_FMT_BRIEF: str = "%(levelname)-8s %(module)-15s %(message)s"
 """Logging format to use for brief logging."""
 
-DEBUG: str = os.environ.get("AX_DEBUG", "").lower().strip()
-DEBUG: bool = any([DEBUG == x for x in YES])
-"""Enable API wide debug logging, looks at environment variable AX_DEBUG."""
 
 LOG_FMT_CONSOLE: str = LOG_FMT_VERBOSE if DEBUG else LOG_FMT_BRIEF
-"""default logging format for console logs, will be verbose if :attr:`DEBUG` is true"""
+"""default logging format for console logs, will be verbose if package wide debugging is enabled"""
 
 LOG_FMT_FILE: str = LOG_FMT_VERBOSE
 """default logging format for file logs"""

@@ -3,7 +3,13 @@
 
 
 def parse_permissions(raw, default_perm=False):  # pragma: no cover
-    """Pass."""
+    """Parse the permissions for roles.
+
+    Args:
+        raw: role labels returned from
+            :meth:`axonius_api_client.api.system.system_roles.SystemRoles._get_labels`
+        default_perm: default permission to assign for roles
+    """
     actions = {}
     categories = {}
 

@@ -121,6 +121,8 @@ SCHEMAS_CUSTOM: Dict[str, dict] = {
 
 
 class Parsers(BaseEnum):
+    """Names of value parsers."""
+
     to_csv_adapters = enum.auto()
     to_csv_cnx_label = enum.auto()
     to_csv_int = enum.auto()
@@ -143,6 +145,8 @@ class Parsers(BaseEnum):
 
 
 class Types(BaseEnum):
+    """Types of field schemas."""
+
     string = enum.auto()
     boolean = "bool"
     integer = enum.auto()
@@ -151,6 +155,8 @@ class Types(BaseEnum):
 
 
 class Formats(BaseEnum):
+    """Formats of field schemas."""
+
     datetime = "date-time"
     image = enum.auto()
     version = enum.auto()
@@ -165,12 +171,16 @@ class Formats(BaseEnum):
 
 @dataclasses.dataclass
 class OperatorNameMap(BaseData):
+    """Mapping class of an operator name to its GUI expression operator name."""
+
     name: str
     op: str
 
 
 @dataclasses.dataclass
 class OperatorNameMaps(BaseData):
+    """Maps of operator names to their GUI expression operator names."""
+
     contains: OperatorNameMap = OperatorNameMap(name="contains", op="contains")
     count_equals: OperatorNameMap = OperatorNameMap(name="count_equals", op="count_equals")
     count_less_than: OperatorNameMap = OperatorNameMap(name="count_below", op="count_below")
@@ -199,17 +209,22 @@ class OperatorNameMaps(BaseData):
 
 @dataclasses.dataclass
 class Operator(BaseData):
+    """Operator mapto its AQL template, operator name map, and its value parser."""
+
     template: str
     name_map: OperatorNameMap
     parser: Parsers
 
 
 def ops_clean(operators: List[Operator], clean: List[Operator]):
+    """Get a list of operators without those in clean."""
     return [x for x in operators if x not in clean]
 
 
 @dataclasses.dataclass
 class Operators(BaseData):
+    """Operator maps to their AQL templates, operator name map, and their value parsers."""
+
     contains: Operator = Operator(
         name_map=OperatorNameMaps.contains,
         template='({field} == regex("{aql_value}", "i"))',
@@ -417,6 +432,8 @@ class Operators(BaseData):
 
 @dataclasses.dataclass
 class OperatorTypeMap(BaseData):
+    """Operator type map that maps an operator to a specific field schema."""
+
     name: str
     operators: List[Operator]
     field_type: Types
@@ -427,6 +444,8 @@ class OperatorTypeMap(BaseData):
 
 @dataclasses.dataclass
 class OperatorTypeMaps(BaseData):
+    """Operator type map that maps operators to a specific field schemas."""
+
     string_cnx_label: OperatorTypeMap = OperatorTypeMap(
         name="string_cnx_label",
         operators=[
@@ -686,6 +705,7 @@ class OperatorTypeMaps(BaseData):
 
     @classmethod
     def get_operator(cls, field: dict, operator: str, err: Optional[str] = None):
+        """Get an operator for a specific field."""
         operator = operator.lower().strip()
         type_map = cls.get_type_map(field=field)
         ops = {x.name_map.name: x for x in type_map.operators}
@@ -705,20 +725,6 @@ class OperatorTypeMaps(BaseData):
         valid = f"Valid operators for field {fname!r} with type {ftype!r}:{valid}"
         err = err or f"Invalid operator supplied {operator!r}\n"
         raise NotFoundError(f"{err}{valid}")
-
-    # @classmethod
-    # def get_map(cls) -> dict:
-    #     op_map = {}
-
-    #     typemaps = cls.get_fields()
-    #     for typemap in typemaps:
-    #         type_name = typemap.name
-    #         for op in typemap.default.operators:
-    #             op_name = op.name.name
-    #             if op_name not in op_map:
-    #                 op_map[op_name] = []
-    #             op_map[op_name].append(type_name)
-    #     return op_map
 
 
 CUSTOM_FIELDS_MAP: Dict[str, List[dict]] = {
@@ -750,3 +756,4 @@ CUSTOM_FIELDS_MAP: Dict[str, List[dict]] = {
         },
     ]
 }
+"""custom field schemas that are not returned by API but are used by GUI queries."""

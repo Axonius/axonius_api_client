@@ -1,49 +1,76 @@
 # -*- coding: utf-8 -*-
 """Test suite for axonius_api_client."""
+import io
 import tempfile
 
 import pytest
-
+from axonius_api_client.constants.general import IS_WINDOWS
 from axonius_api_client.exceptions import ToolsError
-from axonius_api_client.tools import (
-    calc_percent,
-    check_empty,
-    check_type,
-    coerce_bool,
-    coerce_int,
-    coerce_int_float,
-    coerce_str_to_csv,
-    datetime,
-    dt_min_ago,
-    dt_now,
-    dt_parse,
-    dt_parse_tmpl,
-    dt_within_min,
-    get_path,
-    get_raw_version,
-    get_type_str,
-    grouper,
-    is_int,
-    join_kv,
-    join_url,
-    json_dump,
-    json_load,
-    json_reload,
-    listify,
-    longest_str,
-    parse_ip_address,
-    parse_ip_network,
-    path_read,
-    path_write,
-    pathlib,
-    split_str,
-    strip_left,
-    strip_right,
-    sysinfo,
-    timedelta,
-)
+from axonius_api_client.tools import (calc_percent, check_empty,
+                                      check_gui_page_size, check_type,
+                                      coerce_bool, coerce_int,
+                                      coerce_int_float, coerce_str_to_csv,
+                                      datetime, dt_min_ago, dt_now, dt_parse,
+                                      dt_parse_tmpl, dt_within_min, echo_error,
+                                      echo_ok, echo_warn, get_path,
+                                      get_raw_version, get_type_str, grouper,
+                                      is_int, join_kv, join_url, json_dump,
+                                      json_load, json_reload, listify,
+                                      longest_str, parse_ip_address,
+                                      parse_ip_network, path_read, path_write,
+                                      pathlib, read_stream, split_str,
+                                      strip_left, strip_right, sysinfo,
+                                      timedelta)
 
-from ..utils import IS_WINDOWS
+
+def test_check_gui_page_size_error():
+    gui_page_size = 9999
+    with pytest.raises(ToolsError):
+        check_gui_page_size(size=gui_page_size)
+
+
+class TestEchos:
+    def test_echo(self, capsys):
+        entry = "xxxxxxx"
+        echo_ok(msg=entry)
+        capture = capsys.readouterr()
+        assert entry in capture.err
+        assert not capture.out
+
+    def test_warning(self, capsys):
+        entry = "xxxxxxx"
+        echo_warn(msg=entry)
+        capture = capsys.readouterr()
+        assert entry in capture.err
+        assert not capture.out
+
+    def test_error_no_abort(self, capsys):
+        entry = "xxxxxxx"
+        echo_error(msg=entry, abort=False)
+        capture = capsys.readouterr()
+        assert entry in capture.err
+        assert not capture.out
+
+    def test_error(self, capsys):
+        entry = "xxxxxxx"
+        with pytest.raises(SystemExit):
+            echo_error(msg=entry)
+
+
+class TestReadStream:
+    def test_valid(self):
+        ret = read_stream(io.StringIO("xx"))
+        assert ret == "xx"
+
+    def test_empty_fd(self):
+        with pytest.raises(ToolsError):
+            read_stream(io.StringIO())
+
+    def test_empty_stdin(self, monkeypatch):
+        stream = io.StringIO()
+        monkeypatch.setattr(stream, "isatty", lambda: True)
+        with pytest.raises(ToolsError):
+            read_stream(stream)
 
 
 class TestCoerce:

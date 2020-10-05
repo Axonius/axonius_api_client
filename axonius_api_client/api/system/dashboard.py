@@ -1,35 +1,32 @@
 # -*- coding: utf-8 -*-
-"""API for working with dashboards and disocvery lifecycle."""
-import math
-
-from ...tools import dt_now, dt_parse, timedelta
+"""API for working with dashboards and discovery lifecycle."""
+from ...parsers.dashboard import parse_lifecycle
 from ..mixins import ModelMixins
 from ..routers import API_VERSION, Router
 
 
 class Dashboard(ModelMixins):
-    def _init(self, **kwargs):
-        """Post init method for subclasses to use for extra setup."""
-        super(Dashboard, self)._init(**kwargs)
+    """API for working with dashboards and discovery lifecycle.
 
-    @property
-    def router(self) -> Router:
-        """Router for this API model.
+    Examples:
+        * Get discover lifecycle metadata: :meth:`get`
+        * See if a lifecycle is currently running: :meth:`is_running`
+        * Start a discover lifecycle: :meth:`start`
+        * Stop a discover lifecycle: :meth:`stop`
 
-        Returns:
-            :obj:`.routers.Router`: REST API route defs
-        """
-        return API_VERSION.dashboard
-
-    @property
-    def system_router(self) -> Router:
-        return API_VERSION.system
+    """
 
     def get(self) -> dict:
         """Get lifecycle metadata.
 
-        Returns:
-            :obj:`dict`: discovery cycle metadata
+        Examples:
+            Create a ``client`` using :obj:`axonius_api_client.connect.Connect`
+
+            >>> data = client.dashboard.get()
+            >>> data['next_in_minutes']
+            551
+            >>> data['is_running']
+            False
         """
         return parse_lifecycle(raw=self._get())
 
@@ -37,16 +34,37 @@ class Dashboard(ModelMixins):
     def is_running(self) -> bool:
         """Check if discovery cycle is running.
 
-        Returns:
-            :obj:`bool`: if discovery cycle is running
+        Examples:
+            Create a ``client`` using :obj:`axonius_api_client.connect.Connect`
+
+            >>> data = client.dashboard.is_running
+            False
         """
         return self.get()["is_running"]
 
     def start(self) -> dict:
         """Start a discovery cycle if one is not running.
 
-        Returns:
-            :obj:`dict`: discovery cycle metadata
+        Examples:
+            Create a ``client`` using :obj:`axonius_api_client.connect.Connect`
+
+            >>> data = client.dashboard.start()
+            >>> data['is_running']
+            True
+            >>> j(data['phases_pending'])
+            [
+              "Fetch_Devices",
+              "Fetch_Scanners",
+              "Clean_Devices",
+              "Pre_Correlation",
+              "Run_Correlations",
+              "Post_Correlation",
+              "Run_Queries",
+              "Save_Historical"
+            ]
+            >>> j(data['phases_done'])
+            []
+
         """
         if not self.is_running:
             self._start()
@@ -55,80 +73,33 @@ class Dashboard(ModelMixins):
     def stop(self) -> dict:
         """Stop a discovery cycle if one is running.
 
-        Returns:
-            :obj:`dict`: discovery cycle metadata
+        Examples:
+            Create a ``client`` using :obj:`axonius_api_client.connect.Connect`
+
+            >>> data = client.dashboard.start()
+            >>> data['is_running']
+            True
         """
         if self.is_running:
             self._stop()
         return self.get()
 
     def _get(self) -> dict:
-        """Direct API method to get discovery cycle metadata.
-
-        Returns:
-            :obj:`dict`: discovery cycle metadata
-        """
+        """Direct API method to get discovery cycle metadata."""
         path = self.router.lifecycle
         return self.request(method="get", path=path)
 
     def _start(self) -> str:
         """Direct API method to start a discovery cycle."""
-        path = self.system_router.discover_start
+        path = self.router.discover_start
         return self.request(method="post", path=path)
 
     def _stop(self) -> str:
-        """Direct API method to stop a discovery cycle.
-
-        Returns:
-            :obj:`dict`: discovery cycle metadata
-        """
-        path = self.system_router.discover_stop
+        """Direct API method to stop a discovery cycle."""
+        path = self.router.discover_stop
         return self.request(method="post", path=path)
 
-
-def parse_lifecycle(raw: dict) -> dict:
-    """Pass."""
-    parsed = {}
-
-    finish_dt = raw["last_finished_time"]
-    start_dt = raw["last_start_time"]
-
-    if finish_dt:
-        finish_dt = dt_parse(finish_dt)
-    if start_dt:
-        start_dt = dt_parse(start_dt)
-
-    if (finish_dt and start_dt) and finish_dt >= start_dt:  # pragma: no cover
-        took_seconds = (finish_dt - start_dt).seconds
-        took_minutes = math.ceil(took_seconds / 60)
-    else:
-        took_minutes = -1
-
-    next_seconds = raw["next_run_time"]
-    next_minutes = math.ceil(next_seconds / 60)
-    next_dt = dt_now() + timedelta(seconds=next_seconds)
-
-    parsed["last_start_date"] = str(start_dt)
-    parsed["last_finish_date"] = str(finish_dt)
-    parsed["last_took_minutes"] = took_minutes
-
-    parsed["next_start_date"] = str(next_dt)
-    parsed["next_in_minutes"] = next_minutes
-
-    parsed["is_running"] = not raw["status"] == "done"
-    parsed["phases_done"] = [x["name"] for x in raw["sub_phases"] if x["status"] == 1]
-    parsed["phases_pending"] = [x["name"] for x in raw["sub_phases"] if x["status"] != 1]
-    parsed["phases"] = [parse_sub_phase(raw=x) for x in raw["sub_phases"]]
-    return parsed
-
-
-def parse_sub_phase(raw: dict) -> dict:
-    """Pass."""
-    parsed = {}
-    parsed["is_done"] = raw["status"] == 1
-    parsed["name"] = raw["name"]
-    parsed["progress"] = {}
-    for name, status in raw["additional_data"].items():  # pragma: no cover
-        parsed["progress"][status] = parsed["progress"].get(status)
-        parsed["progress"][status].append(name)
-    return parsed
+    @property
+    def router(self) -> Router:
+        """Router for this API model."""
+        return API_VERSION.dashboard

@@ -18,9 +18,9 @@ class SavedQuery(ChildMixins, PagingMixinsObject):
 
         >>> apiobj = client.devices  # or client.users
 
-        * Get saved query by name: :meth:`get_by_name`
-        * Get saved query by UUID: :meth:`get_by_uuid`
-        * Get saved query by tags: :meth:`get_by_tags`
+        * Get a saved query by name: :meth:`get_by_name`
+        * Get a saved query by UUID: :meth:`get_by_uuid`
+        * Get a saved query by tags: :meth:`get_by_tags`
         * Get all saved query tags: :meth:`get_tags`
         * Get all saved queries: :meth:`get`
         * Add a saved query: :meth:`add`

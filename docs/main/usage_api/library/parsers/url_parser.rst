@@ -1,7 +1,7 @@
 URLs
 ###############################################
 
-.. automodule:: axonius_api_client.url_parser
+.. automodule:: axonius_api_client.parsers.url_parser
    :members:
    :show-inheritance:
    :inherited-members:

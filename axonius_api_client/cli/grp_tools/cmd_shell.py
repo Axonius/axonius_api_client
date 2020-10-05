@@ -22,7 +22,6 @@ API Objects:
     - devices/d: Work with device assets
     - users/u: Work with user assets
     - adapters/a: Work with adapters and adapter connections
-    - system/s: Work with users, roles, global settings, and more
     - dashboard/db: Work with dashboards and discovery cycle
     - instances/i: Work with instances
     - system_users/su: Work with system users
@@ -89,7 +88,6 @@ def cmd(ctx, url, key, secret):  # noqa: D301
         "enforcements": client.enforcements,
         "instances": client.instances,
         "jdump": jdump,
-        "system": client.system,
         "users": client.users,
         "system_users": client.system_users,
         "system_roles": client.system_roles,
@@ -105,7 +103,6 @@ def cmd(ctx, url, key, secret):  # noqa: D301
         "e": client.enforcements,
         "i": client.instances,
         "j": jdump,
-        "s": client.system,
         "u": client.users,
         "su": client.system_users,
         "sr": client.system_roles,

@@ -8,15 +8,29 @@ from ...constants.adapters import (CNX_GONE, CNX_RETRY, CNX_SANE_DEFAULTS,
 from ...exceptions import (CnxAddError, CnxGoneError, CnxTestError,
                            CnxUpdateError, ConfigInvalidValue, ConfigRequired,
                            NotFoundError)
+from ...parsers.config import (config_build, config_default, config_empty,
+                               config_info, config_required, config_unchanged,
+                               config_unknown)
+from ...parsers.tables import tablize_cnxs, tablize_schemas
 from ...tools import json_load, pathlib
 from ..mixins import ChildMixins
-from ..parsers import (config_build, config_default, config_empty, config_info,
-                       config_required, config_unchanged, config_unknown,
-                       tablize_cnxs, tablize_schemas)
 
 
 class Cnx(ChildMixins):
     """API model for working with adapter connections.
+
+    Examples:
+        Create a ``client`` using :obj:`axonius_api_client.connect.Connect`
+
+        * Add a connection: :meth:`add`
+        * Get all connections for an adapter: :meth:`get_by_adapter`
+        * Get a connection for an adapter by UUID: :meth:`get_by_uuid`
+        * Get a connection for an adapter by connection label: :meth:`get_by_label`
+        * Get a connection for an adapter by ID: :meth:`get_by_id`
+        * Update a connection for an adapter by ID: :meth:`update_by_id`
+        * Delete a connection for an adapter by ID: :meth:`delete_by_id`
+        * Test a connections parameters for an adapter without creating the connection: :meth:`test`
+        * Work with adapters :obj:`axonius_api_client.api.adapters.adapters.Adapters`
 
     Notes:
         All methods use the Core instance by default, but you can work with another instance by

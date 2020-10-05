@@ -32,5 +32,5 @@ def cmd(ctx, url, key, secret, name, email, **kwargs):
     client = ctx.obj.start_client(url=url, key=key, secret=secret)
 
     with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
-        data = client.system.users.email_password_reset_link(name=name, email=email)
+        data = client.system_users.email_password_reset_link(name=name, email=email)
         ctx.obj.echo_ok(f"Emailed password reset link for user {name!r} to {data!r}")
