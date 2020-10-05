@@ -19,11 +19,12 @@ import dateutil.parser
 import dateutil.relativedelta
 import dateutil.tz
 
-from . import PACKAGE_FILE, PACKAGE_ROOT, VERSION
+from . import INIT_DOTENV, PACKAGE_FILE, PACKAGE_ROOT, VERSION
 from .constants.api import GUI_PAGE_SIZES
 from .constants.general import (ERROR_ARGS, ERROR_TMPL, NO, OK_ARGS, OK_TMPL,
                                 WARN_ARGS, WARN_TMPL, YES)
 from .exceptions import ToolsError
+from .setup_env import find_dotenv, get_env_ax
 
 LOG: logging.Logger = logging.getLogger(PACKAGE_ROOT).getChild("tools")
 
@@ -545,7 +546,7 @@ def split_str(
     return ret
 
 
-def echo_ok(msg: str, tmpl: bool = True, **kwargs):  # pragma: no cover
+def echo_ok(msg: str, tmpl: bool = True, **kwargs):
     """Echo a message to console.
 
     Args:
@@ -563,7 +564,7 @@ def echo_ok(msg: str, tmpl: bool = True, **kwargs):  # pragma: no cover
     click.secho(msg, **echoargs)
 
 
-def echo_warn(msg: str, tmpl: bool = True, **kwargs):  # pragma: no cover
+def echo_warn(msg: str, tmpl: bool = True, **kwargs):
     """Echo a warning message to console.
 
     Args:
@@ -581,7 +582,7 @@ def echo_warn(msg: str, tmpl: bool = True, **kwargs):  # pragma: no cover
     click.secho(msg, **echoargs)
 
 
-def echo_error(msg: str, abort: bool = True, tmpl: bool = True, **kwargs):  # pragma: no cover
+def echo_error(msg: str, abort: bool = True, tmpl: bool = True, **kwargs):
     """Echo an error message to console.
 
     Args:
@@ -607,6 +608,9 @@ def sysinfo() -> dict:
     info = {}
     info["API Client Version"] = VERSION
     info["API Client Package"] = PACKAGE_FILE
+    info["Init loaded .env file"] = INIT_DOTENV
+    info["Path to .env file"] = find_dotenv()
+    info["OS envs"] = get_env_ax()
     info["Date"] = str(dt_now())
     info["Python System Version"] = ", ".join(sys.version.splitlines())
     platform_attrs = [
@@ -649,6 +653,18 @@ def calc_percent(part: Union[int, float], whole: Union[int, float], places: int 
         value = 100.00
     else:
         value = 100 * (part / whole)
+
+    value = trim_float(value=value, places=places)
+    return value
+
+
+def trim_float(value: float, places: int = 2) -> float:
+    """Trim a float to N places.
+
+    Args:
+        value: float to trim
+        places: decimal places to trim value to
+    """
     if isinstance(places, int):
         value = float(f"{value:.{places}f}")
     return value
@@ -851,7 +867,7 @@ def read_stream(stream) -> str:
     content = stream.read().strip()
 
     if not content:
-        raise ToolsError(msg=f"Empty content supplied to {stream_name!r}")
+        raise ToolsError(f"Empty content supplied to {stream_name!r}")
 
     return content
 
@@ -883,3 +899,47 @@ def check_gui_page_size(size: Optional[int] = None) -> int:
     if size not in GUI_PAGE_SIZES:
         raise ToolsError(f"gui_page_size of {size} is invalid, must be one of {GUI_PAGE_SIZES}")
     return size
+
+
+def calc_gb(value: Union[str, int], places: int = 2, is_kb: bool = True) -> float:
+    """Convert bytes into GB.
+
+    Args:
+        value: bytes
+        places: decimal places to trim value to
+        is_kb: values are in kb or bytes
+    """
+    value = coerce_int_float(value=value)
+    value = value / 1024 / 1024
+    value = (value / 1024) if not is_kb else value
+    value = trim_float(value=value, places=places)
+    return value
+
+
+def calc_perc_gb(
+    obj: dict,
+    whole_key: str,
+    part_key: str,
+    perc_key: Optional[str] = None,
+    places: int = 2,
+    update: bool = True,
+    is_kb: bool = True,
+) -> dict:
+    """Calculate the GB and percent from a dict.
+
+    Args:
+        obj: dict to get whole_key and part_key from
+        whole_key: key to get whole value from and convert to GB and set as whole_key_gb
+        part_key: key to get part value from and convert to GB and set as part_key_gb
+        perc_key: key to set percent in
+        is_kb: values are in kb or bytes
+    """
+    perc_key = perc_key or f"{part_key}_percent"
+    whole = calc_gb(value=obj[whole_key], places=places, is_kb=is_kb)
+    part = calc_gb(value=obj[part_key], places=places, is_kb=is_kb)
+    perc = calc_percent(part=part, whole=whole, places=places)
+    ret = obj if update else {}
+    ret[f"{part_key}_gb"] = part
+    ret[f"{whole_key}_gb"] = whole
+    ret[perc_key] = perc
+    return ret

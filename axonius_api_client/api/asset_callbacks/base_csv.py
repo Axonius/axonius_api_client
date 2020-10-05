@@ -85,7 +85,7 @@ class Csv(ExportMixins):
         Notes:
             This callbacks object forces the following arguments to True in order to make the
             output usable in the exported format: ``field_null``, ``field_flatten``,
-            and ``field_join``
+            ``field_join``, ``export_schema``
 
             These arguments can be supplied as extra kwargs passed to
             :meth:`axonius_api_client.api.assets.users.Users.get` or
@@ -100,6 +100,7 @@ class Csv(ExportMixins):
                 "field_flatten": True,
                 "field_join": True,
                 "field_null": True,
+                "export_schema": True,
                 "csv_key_miss": None,
                 "csv_key_extras": "ignore",
                 "csv_dialect": "excel",

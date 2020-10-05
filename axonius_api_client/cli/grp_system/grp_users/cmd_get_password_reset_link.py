@@ -24,6 +24,6 @@ def cmd(ctx, url, key, secret, name, **kwargs):
     client = ctx.obj.start_client(url=url, key=key, secret=secret)
 
     with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
-        data = client.system.users.get_password_reset_link(name=name)
+        data = client.system_users.get_password_reset_link(name=name)
         ctx.obj.echo_ok(f"Password reset link for user {name!r}:")
         click.echo(data)

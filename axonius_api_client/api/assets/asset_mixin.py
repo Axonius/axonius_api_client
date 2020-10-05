@@ -69,7 +69,7 @@ class AssetMixin(ModelMixins):
 
             Get count of assets matching a query built by the API client query wizard
 
-            >>> entries=[{'type': 'simple', 'value': 'name equals test'}]
+            >>> entries = [{'type': 'simple', 'value': 'name equals test'}]
             >>> count = apiobj.count(wiz_entries=entries)
 
         Args:

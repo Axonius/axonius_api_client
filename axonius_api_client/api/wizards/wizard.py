@@ -10,8 +10,8 @@ from ...constants.wizards import (Docs, Entry, Expr, Fields, Flags, Patterns,
                                   Results, Sources, Templates, Types)
 from ...exceptions import WizardError
 from ...logs import get_obj_log
+from ...parsers.wizards import WizardParser
 from ...tools import check_type, listify
-from ..parsers.wizards import WizardParser
 
 
 class Wizard:
@@ -89,7 +89,7 @@ class Wizard:
         """:obj:`axonius_api_client.api.assets.asset_mixin.AssetMixin`: Asset object."""
 
         self.PARSER = WizardParser(apiobj=apiobj)
-        """:obj:`axonius_api_client.api.parsers.wizards.WizardParser`: Value parser."""
+        """:obj:`axonius_api_client.parsers.wizards.WizardParser`: Value parser."""
 
         self._init()
 

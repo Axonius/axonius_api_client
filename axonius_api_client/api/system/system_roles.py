@@ -3,9 +3,9 @@
 import re
 
 from ...exceptions import ApiError, NotFoundError
+from ...parsers.roles import parse_permissions
 from ...tools import join_kv, longest_str, split_str
 from ..mixins import ModelMixins
-from ..parsers import parse_permissions
 from ..routers import API_VERSION, Router
 
 

@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """Command line interface for Axonius API Client."""
-from ....api.parsers.tables import tablize_cnxs, tablize_schemas
 from ....constants.adapters import CNX_SANE_DEFAULTS
 from ....exceptions import CnxAddError
+from ....parsers.tables import tablize_cnxs, tablize_schemas
 from ....tools import json_dump, listify, pathlib
 from ...context import click
 

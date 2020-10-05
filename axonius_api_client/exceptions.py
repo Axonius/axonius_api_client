@@ -7,7 +7,7 @@ class AxonWarning(Warning):
 
 
 class ApiWarning(AxonWarning):
-    """Warnings for :obj:`axonius_api_client.api.mixins.Model`."""
+    """Warnings for API models."""
 
 
 class AxonError(Exception):
@@ -15,15 +15,15 @@ class AxonError(Exception):
 
 
 class ApiError(AxonError):
-    """Errors for :obj:`axonius_api_client.api.mixins.Model`."""
+    """Errors for API models."""
 
 
 class ToolsError(AxonError):
-    """Errors for :mod:`axonius_api_client.tools`."""
+    """Errors for tools."""
 
 
 class AuthError(AxonError):
-    """Errors for :obj:`axonius_api_client.auth.models.Model`."""
+    """Errors for authentication models."""
 
 
 class NotFoundError(ApiError):
@@ -43,11 +43,11 @@ class AlreadyLoggedIn(AuthError):
 
 
 class ConnectError(AxonError):
-    """Error in :obj:`axonius_api_client.connect.Connect`."""
+    """Error in connect client."""
 
 
 class HttpError(AxonError):
-    """Errors for :obj:`axonius_api_client.http.Http`."""
+    """Errors for HTTP client."""
 
 
 class ConfigError(ApiError):

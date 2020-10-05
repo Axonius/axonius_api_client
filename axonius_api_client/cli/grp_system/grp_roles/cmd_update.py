@@ -21,7 +21,7 @@ def cmd(ctx, url, key, secret, export_format, name, **kwargs):
     client = ctx.obj.start_client(url=url, key=key, secret=secret)
 
     with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
-        data = client.system.roles.update(name=name, **kwargs)
+        data = client.system_roles.update(name=name, **kwargs)
         ctx.obj.echo_ok(f"Updated role {name!r}")
 
     handle_export(ctx=ctx, data=data, export_format=export_format, **kwargs)

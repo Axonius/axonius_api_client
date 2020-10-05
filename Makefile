@@ -43,17 +43,65 @@ pyenv_init:
 	pyenv install $(PYVER) -s || true
 
 lint:
-	pipenv run isort $(PACKAGE) setup.py shell.py
-	pipenv run pipenv run black -l 100 $(PACKAGE) setup.py shell.py
-	pipenv run pydocstyle --match-dir='(?!tests).*' --match-dir='(?!examples).*' $(PACKAGE) setup.py shell.py
-	pipenv run flake8 --max-line-length 100 $(PACKAGE) setup.py shell.py
-	pipenv run bandit -x $(PACKAGE)/examples,$(PACKAGE)/tests --skip B101 -r $(PACKAGE)
+	pipenv run isort \
+		$(PACKAGE) setup.py shell.py
+	pipenv run black \
+		-l 100 \
+		$(PACKAGE) setup.py shell.py
+	pipenv run pydocstyle \
+		--match-dir='(?!tests).*'\
+		--match-dir='(?!examples).*' \
+		$(PACKAGE) setup.py shell.py
+	pipenv run flake8 \
+		--max-line-length 100 \
+		$(PACKAGE) setup.py shell.py
+	pipenv run bandit \
+		-x $(PACKAGE)/examples,$(PACKAGE)/tests \
+		--skip B101 \
+		-r \
+		$(PACKAGE)
 
 test:
-	pipenv run pytest -ra -vv --showlocals --exitfirst --pdb --cov-config=.coveragerc --cov-report xml --cov-report=html:cov_html --cov=$(PACKAGE) $(PACKAGE)/tests
+	pipenv run pytest \
+		-ra \
+		-vv \
+		--showlocals \
+		--exitfirst \
+		--pdb \
+		--cov-config=.coveragerc \
+		--cov-report xml \
+		--cov-report=html:cov_html \
+		--cov=$(PACKAGE) \
+		$(PACKAGE)/tests
 
 test_last:
-	pipenv run pytest -ra -vv --showlocals --exitfirst --last-failed --pdb --cov-config=.coveragerc --cov-report xml --cov-report=html:cov_html --cov=$(PACKAGE) $(PACKAGE)/tests
+	pipenv run pytest \
+		-ra \
+		-vv \
+		--showlocals \
+		--exitfirst \
+		--last-failed \
+		--pdb \
+		--cov-config=.coveragerc \
+		--cov-report xml \
+		--cov-report=html:cov_html \
+		--cov=$(PACKAGE) \
+		$(PACKAGE)/tests
+
+test_last_log:
+	pipenv run pytest \
+		-ra \
+		-vv \
+		--showlocals \
+		--exitfirst \
+		--last-failed \
+		--pdb \
+		--log-cli-level debug \
+		--cov-config=.coveragerc \
+		--cov-report xml \
+		--cov-report=html:cov_html \
+		--cov=$(PACKAGE) \
+		$(PACKAGE)/tests
 
 test_cov_open:
 	open cov_html/index.html

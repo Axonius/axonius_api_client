@@ -41,3 +41,12 @@ YES: List[Union[bool, int, str]] = [True, 1, "1", "true", "t", "yes", "y", "on"]
 
 NO: List[Union[bool, int, str]] = [False, 0, "0", "false", "f", "no", "n", "off"]
 """Values that should be considered as falsey"""
+
+IS_WINDOWS: bool = sys.platform == "win32"
+"""Running on a windows platform"""
+
+IS_LINUX: bool = sys.platform == "linux"
+"""Running on a linux platform"""
+
+IS_MAC: bool = sys.platform == "darwin"
+"""Running on a mac platform"""

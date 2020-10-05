@@ -1,7 +1,7 @@
 Tables
 ###############################################
 
-.. automodule:: axonius_api_client.api.parsers.tables
+.. automodule:: axonius_api_client.parsers.tables
    :members:
    :show-inheritance:
    :inherited-members:

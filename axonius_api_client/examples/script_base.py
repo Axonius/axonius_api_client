@@ -3,11 +3,11 @@
 """Base example for setting up the API client."""
 import axonius_api_client as axonapi
 
-# get the URL, API key and API secret from a ".env" file and override env vars
-client_args = axonapi.get_connect_env(override=True)
+# get the URL, API key, API secret, & certwarn from the default ".env" file
+client_args = axonapi.get_env_connect()
 
-# turn off warnings about insecure certs
-client_args["certwarn"] = False
+# OR override OS env vars with the values from a custom .env file
+# client_args = axonapi.get_env_connect(ax_env="/path/to/envfile", override=True)
 
 # create a client using the url, key, and secret from OS env
 client = axonapi.Connect(**client_args)

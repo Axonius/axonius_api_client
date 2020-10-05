@@ -1,7 +1,7 @@
-Roles
+Dashboards
 ###############################################
 
-.. automodule:: axonius_api_client.parsers.roles
+.. automodule:: axonius_api_client.parsers.dashboard
    :members:
    :show-inheritance:
    :inherited-members:

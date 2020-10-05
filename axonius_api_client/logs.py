@@ -36,9 +36,6 @@ def get_obj_log(obj: object, level: Optional[Union[int, str]] = None, **kwargs) 
         obj: object to get a logger for
         level: level to set
         logger: logger to get child from
-
-    Returns:
-        :obj:`logging.Logger`: created logger child obj
     """
     logger = kwargs.get("logger", logging.getLogger(obj.__class__.__module__))
     log = logger.getChild(obj.__class__.__name__)

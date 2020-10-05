@@ -3,8 +3,8 @@
 import copy
 from typing import List
 
-from ...constants.adapters import DISCOVERY_NAME, GENERIC_NAME
-from ...tools import strip_right
+from ..constants.adapters import DISCOVERY_NAME, GENERIC_NAME
+from ..tools import strip_right
 from .config import parse_schema
 
 CNX_LABEL_SCHEMA = {
@@ -16,7 +16,11 @@ CNX_LABEL_SCHEMA = {
 
 
 def parse_adapters(raw: dict) -> List[dict]:
-    """Parser to turn adapters metadata into a more friendly format."""
+    """Parser to turn adapters metadata into a more friendly format.
+
+    Args:
+        raw: the raw output from :meth:`axonius_api_client.api.adapters.adapters.Adapters._get`
+    """
     parsed = []
 
     for name, adapters in raw.items():
@@ -27,7 +31,12 @@ def parse_adapters(raw: dict) -> List[dict]:
 
 
 def parse_adapter(name: str, adapter: dict) -> dict:
-    """Parse a single adapter."""
+    """Parse a single adapter.
+
+    Args:
+        name: raw name of adapter (aws_adapter)
+        adapter: adapter meta data
+    """
     adapter = copy.deepcopy(adapter)
     unique_plugin_name = adapter.pop("unique_plugin_name")
     node_name = adapter.pop("node_name")
@@ -75,18 +84,32 @@ def parse_adapter(name: str, adapter: dict) -> dict:
 
 
 def get_specific_name(config: dict) -> str:
-    """Pass."""
+    """Get the name of the specific schema for the current adapter.
+
+    Args:
+        config: advanced settings schemas for current adapter
+    """
     found = [x for x in config if x not in [GENERIC_NAME, DISCOVERY_NAME]]
     return found[0] if found else ""
 
 
 def parse_cnxs(cnxs: List[dict], adapter: dict) -> List[dict]:
-    """Parse the connections metadata for this adapter."""
+    """Parse the connections metadata for this adapter.
+
+    Args:
+        cnxs: connections of current adapter
+        adapter: current adapter metadata
+    """
     return [parse_cnx(cnx=x, adapter=adapter) for x in cnxs]
 
 
 def parse_cnx(cnx: dict, adapter: dict) -> List[dict]:
-    """Parse the connection metadata for this adapter."""
+    """Parse the connection metadata for this adapter.
+
+    Args:
+        cnx: current connection
+        adapter: current adapter metadata
+    """
     status = cnx.pop("status")
     error = cnx.pop("error")
     client_config = cnx.pop("client_config")

@@ -10,7 +10,20 @@ from .system_users import SystemUsers
 
 
 class System(ModelMixins):
-    """System methods."""
+    """API for working with system components.
+
+    Warning:
+        This object is deprecated. Use the API objects directly:
+
+            * :obj:`axonius_api_client.api.system.instances.Instances`
+            * :obj:`axonius_api_client.api.system.settings.SettingsCore`
+            * :obj:`axonius_api_client.api.system.settings.SettingsGui`
+            * :obj:`axonius_api_client.api.system.settings.SettingsLifecycle`
+            * :obj:`axonius_api_client.api.system.system_users.SystemUsers`
+            * :obj:`axonius_api_client.api.system.system_roles.SystemRoles`
+            * :obj:`axonius_api_client.api.system.meta.Meta`
+
+    """
 
     @property
     def router(self) -> Router:

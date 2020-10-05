@@ -6,16 +6,26 @@ from typing import List, Optional, Union
 
 import tabulate
 
-from ...constants.adapters import KEY_MAP_ADAPTER, KEY_MAP_CNX, KEY_MAP_SCHEMA
-from ...tools import json_dump
+from ..constants.tables import (KEY_MAP_ADAPTER, KEY_MAP_CNX, KEY_MAP_SCHEMA,
+                                TABLE_FMT)
+from ..tools import json_dump
 
 
 def tablize(
-    value: List[dict], err: Optional[str] = None, fmt: str = "simple", footer: bool = True, **kwargs
+    value: List[dict],
+    err: Optional[str] = None,
+    fmt: str = TABLE_FMT,
+    footer: bool = True,
+    **kwargs
 ) -> str:
-    """Pass."""
-    # value = wrapper(value=value, **kwargs)
+    """Create a table string from a list of dictionaries.
 
+    Args:
+        value: list to create table from
+        err: error string to display at top of table
+        fmt: table format to use
+        footer: include err at bottom too
+    """
     table = tabulate.tabulate(value, tablefmt=fmt, headers="keys")
 
     if footer:
@@ -37,12 +47,22 @@ def tablize_schemas(
     schemas: List[dict],
     config: Optional[dict] = None,
     err: Optional[str] = None,
-    fmt: str = "simple",
+    fmt: str = TABLE_FMT,
     footer: bool = True,
     orig: bool = True,
     orig_width: int = 20,
 ) -> str:
-    """Pass."""
+    """Create a table string for a set of config schemas.
+
+    Args:
+        schemas: config schemas to create a table from
+        config: current config with keys that map to schema names
+        err: error string to show at top
+        fmt: table format to use
+        footer: show err at bottom too
+        orig: show original values in output too
+        orig_width: column width to use for orig values
+    """
     values = []
     config = config or None
     if isinstance(schemas, dict):
@@ -64,10 +84,17 @@ def tablize_schemas(
 def tablize_adapters(
     adapters: List[dict],
     err: Optional[str] = None,
-    fmt: str = "simple",
+    fmt: str = TABLE_FMT,
     footer: bool = True,
 ) -> str:
-    """Pass."""
+    """Create a table string for a set of adapter schemas.
+
+    Args:
+        adapters: adapter schemas to create a table from
+        err: error string to show at top
+        fmt: table format to use
+        footer: show err at bottom too
+    """
     values = []
 
     for adapter in adapters:
@@ -79,9 +106,16 @@ def tablize_adapters(
 
 
 def tablize_cnxs(
-    cnxs: List[dict], err: Optional[str] = None, fmt: str = "simple", footer: bool = True
+    cnxs: List[dict], err: Optional[str] = None, fmt: str = TABLE_FMT, footer: bool = True
 ) -> str:
-    """Pass."""
+    """Create a table string for a set of adapter connection schemas.
+
+    Args:
+        cnxs: connection schemas to create a table from
+        err: error string to show at top
+        fmt: table format to use
+        footer: show err at bottom too
+    """
     values = []
     for cnx in cnxs:
         cnx["connection_label"] = cnx["config"].get("connection_label")
@@ -96,8 +130,15 @@ def tab_map(
     key_map: List[List[Union[str, str, int]]],
     orig: bool = False,
     orig_width: int = 20,
-) -> str:
-    """Pass."""
+) -> dict:
+    """Create a new schema that has columns in a table friendly output format.
+
+    Args:
+        value: schema to parse
+        key_map: key map containing key name -> column title -> column width
+        orig: include values from original schema not in key map
+        orig_width: default column width to use for values from original schema
+    """
     orig_value = copy.deepcopy(value)
 
     new_value = {}

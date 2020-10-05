@@ -27,17 +27,19 @@ from .version import __version__ as VERSION
 class Connect:
     """Easy all-in-one connection handler for using the API client.
 
+    .. _connect_examples:
+
     Examples:
         >>> #!/usr/bin/env python
         >>> # -*- coding: utf-8 -*-
         >>> '''Base example for setting up the API client.'''
         >>> import axonius_api_client as axonapi
         >>>
-        >>> # get the URL, API key and API secret from a ".env" file and override env vars
-        >>> client_args = axonapi.get_connect_env(override=True)
+        >>> # get the URL, API key, API secret, & certwarn from the default ".env" file
+        >>> client_args = axonapi.get_env_connect()
         >>>
-        >>> # turn off warnings about insecure certs
-        >>> client_args["certwarn"] = False
+        >>> # OR override OS env vars with the values from a custom .env file
+        >>> # client_args = axonapi.get_env_connect(ax_env="/path/to/envfile", override=True)
         >>>
         >>> # create a client using the url, key, and secret from OS env
         >>> client = axonapi.Connect(**client_args)
@@ -155,15 +157,23 @@ class Connect:
         return self._run_action
 
     @property
-    def system(self) -> System:  # TODO: DOCS???
-        """Work with users, roles, global settings, and more."""
+    def central_core(self):
+        """Work with central core config DEPRECATED."""
+        self.start()
+        if not hasattr(self, "_central_core"):
+            self._central_core = CentralCore(**self.API_ARGS)
+        return self._central_core
+
+    @property
+    def system(self):
+        """Work with users, roles, global settings, and more DEPRECATED."""
         self.start()
         if not hasattr(self, "_system"):
             self._system = System(**self.API_ARGS)
         return self._system
 
     @property
-    def system_users(self) -> System:
+    def system_users(self) -> SystemUsers:
         """Work with system users."""
         self.start()
         if not hasattr(self, "_system_users"):
@@ -171,7 +181,7 @@ class Connect:
         return self._system_users
 
     @property
-    def system_roles(self) -> System:
+    def system_roles(self) -> SystemRoles:
         """Work with system roles."""
         self.start()
         if not hasattr(self, "_system_roles"):
@@ -179,15 +189,7 @@ class Connect:
         return self._system_roles
 
     @property
-    def central_core(self) -> System:
-        """Work with central core configuration."""
-        self.start()
-        if not hasattr(self, "_central_core"):
-            self._central_core = CentralCore(**self.API_ARGS)
-        return self._central_core
-
-    @property
-    def meta(self) -> System:
+    def meta(self) -> Meta:
         """Work with instance metadata."""
         self.start()
         if not hasattr(self, "_meta"):
@@ -195,7 +197,7 @@ class Connect:
         return self._meta
 
     @property
-    def settings_core(self) -> System:
+    def settings_core(self) -> SettingsCore:
         """Work with core system settings."""
         self.start()
         if not hasattr(self, "_settings_core"):
@@ -203,7 +205,7 @@ class Connect:
         return self._settings_core
 
     @property
-    def settings_gui(self) -> System:
+    def settings_gui(self) -> SettingsGui:
         """Work with gui system settings."""
         self.start()
         if not hasattr(self, "_settings_gui"):
@@ -211,7 +213,7 @@ class Connect:
         return self._settings_gui
 
     @property
-    def settings_lifecycle(self) -> System:
+    def settings_lifecycle(self) -> SettingsLifecycle:
         """Work with lifecycle system settings."""
         self.start()
         if not hasattr(self, "_settings_lifecycle"):
@@ -434,6 +436,6 @@ class Connect:
         return reason
 
     @staticmethod
-    def jdump(obj, **kwargs):
+    def jdump(obj, **kwargs):  # pragma: no cover
         """JSON dump utility."""
         print(json_reload(obj, **kwargs))

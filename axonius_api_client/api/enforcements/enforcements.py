@@ -7,12 +7,12 @@ from ..mixins import ModelMixins, PagingMixinsObject
 from ..routers import API_VERSION, Router
 
 
-class Enforcements(ModelMixins, PagingMixinsObject):
-    """API model for working with enforcement center.
+class Enforcements(ModelMixins, PagingMixinsObject):  # pragma: no cover
+    """API working with enforcements.
 
     Notes:
-        The REST API will need to be updated to allow more power in this library.
-        Until then, this class should be considered **BETA**.
+        Future versions of API client 4.x branch will be expanded quite a bit to make it user
+        friendly. The current incarnation should be considered **BETA** until such time.
     """
 
     def delete(self, rows: List[dict]) -> str:  # pragma: no cover
@@ -21,19 +21,11 @@ class Enforcements(ModelMixins, PagingMixinsObject):
 
     @property
     def router(self) -> Router:
-        """Router for this API model.
-
-        Returns:
-            :obj:`.routers.Router`: REST API route defs
-        """
+        """Router for this API model."""  # pragma: no cover
         return API_VERSION.alerts
 
     def _delete(self, ids: List[str]) -> str:  # pragma: no cover
-        """Delete objects by internal axonius IDs.
-
-        Args:
-            ids (:obj:`list` of :obj:`str`): internal_axon_ids of devices to process
-        """
+        """Delete objects by internal axonius IDs."""
         path = self.router.root
 
         return self.request(method="delete", path=path, json=ids)
@@ -50,20 +42,12 @@ class Enforcements(ModelMixins, PagingMixinsObject):
         """Create an enforcement set.
 
         Args:
-            name (:obj:`str`): name of enforcement to create
-            main (:obj:`dict`): main action
-            success (:obj:`list` of :obj:`dict`, optional): success actions
-            failure (:obj:`list` of :obj:`dict`, optional): failure actions
-            post (:obj:`list` of :obj:`dict`, optional): post actions
-            triggers (:obj:`list` of :obj:`dict`, optional): saved query trigger
-
-        Notes:
-            This will get a public create method once the REST API server has been
-            updated to expose /enforcements/actions, /api/enforcements/actions/saved,
-            and others.
-
-        Returns:
-            :obj:`str`: ID of created enforcement set.
+            name: name of enforcement to create
+            main: main action
+            success: success actions
+            failure: failure actions
+            post: post actions
+            triggers: saved query trigger
         """
         data = {}
         data["name"] = name
@@ -78,7 +62,7 @@ class Enforcements(ModelMixins, PagingMixinsObject):
         return self.request(method="put", path=path, json=data, is_json=False)
 
     def _get(self, query: Optional[str] = None, row_start: int = 0, page_size: int = 0) -> dict:
-        """Get a page for a given query."""
+        """Get a page of enforcements."""
         params = {}
         params["skip"] = row_start
         params["limit"] = page_size

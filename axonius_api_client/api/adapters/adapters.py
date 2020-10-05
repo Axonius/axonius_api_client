@@ -5,16 +5,28 @@ from typing import List, Optional, Union
 
 from ...constants.adapters import CONFIG_TYPES, DEFAULT_NODE
 from ...exceptions import ApiError, NotFoundError
+from ...parsers.adapters import parse_adapters
+from ...parsers.config import (config_build, config_unchanged, config_unknown,
+                               parse_schema)
+from ...parsers.tables import tablize_adapters
 from ...tools import path_read
 from ..mixins import ModelMixins
-from ..parsers import (config_build, config_unchanged, config_unknown,
-                       parse_adapters, parse_schema, tablize_adapters)
 from ..routers import API_VERSION, Router
 from .cnx import Cnx
 
 
 class Adapters(ModelMixins):
     """API model for working with adapters.
+
+    Examples:
+        Create a ``client`` using :obj:`axonius_api_client.connect.Connect`
+
+        * Get metadata of all adapters: :meth:`get`
+        * Get an adapter by name: :meth:`get_by_name`
+        * Get the advanced settings for an adapter: :meth:`config_get`
+        * Update the advanced settings for an adapter: :meth:`config_update`
+        * Upload a file to an adapter: :meth:`file_upload`
+        * Work with adapter connections :obj:`axonius_api_client.api.adapters.cnx.Cnx`
 
     Notes:
         All methods use the Core instance by default, but you can work with another instance by
@@ -28,7 +40,7 @@ class Adapters(ModelMixins):
         """Get all adapters on all nodes.
 
         Examples:
-            First, create a ``client`` using :obj:`axonius_api_client.connect.Connect`.
+            Create a ``client`` using :obj:`axonius_api_client.connect.Connect`.
 
             Get all adapters
 
@@ -49,7 +61,7 @@ class Adapters(ModelMixins):
         """Get an adapter by name on a single node.
 
         Examples:
-            First, create a ``client`` using :obj:`axonius_api_client.connect.Connect`.
+            Create a ``client`` using :obj:`axonius_api_client.connect.Connect`.
 
             Get an adapter by name
 
@@ -103,7 +115,7 @@ class Adapters(ModelMixins):
         """Get the advanced settings for an adapter.
 
         Examples:
-            First, create a ``client`` using :obj:`axonius_api_client.connect.Connect`.
+            Create a ``client`` using :obj:`axonius_api_client.connect.Connect`.
 
             Get the generic advanced settings for an adapter
 
@@ -156,7 +168,7 @@ class Adapters(ModelMixins):
         """Update the advanced settings for an adapter.
 
         Examples:
-            First, create a ``client`` using :obj:`axonius_api_client.connect.Connect`.
+            Create a ``client`` using :obj:`axonius_api_client.connect.Connect`.
 
             Update the generic advanced settings for the adapter
 
@@ -220,7 +232,7 @@ class Adapters(ModelMixins):
         """Upload a file to a specific adapter on a specific node.
 
         Examples:
-            First, create a ``client`` using :obj:`axonius_api_client.connect.Connect`.
+            Create a ``client`` using :obj:`axonius_api_client.connect.Connect`.
 
             Upload content as a file for use in a connection later
 
@@ -257,7 +269,7 @@ class Adapters(ModelMixins):
         """Upload the contents of a file to a specific adapter on a specific node.
 
         Examples:
-            First, create a ``client`` using :obj:`axonius_api_client.connect.Connect`.
+            Create a ``client`` using :obj:`axonius_api_client.connect.Connect`.
 
             Upload a file for use in a connection later
 

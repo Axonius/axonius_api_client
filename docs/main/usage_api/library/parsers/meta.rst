@@ -1,7 +1,7 @@
-Roles
+Product metadata
 ###############################################
 
-.. automodule:: axonius_api_client.parsers.roles
+.. automodule:: axonius_api_client.parsers.meta
    :members:
    :show-inheritance:
    :inherited-members:
