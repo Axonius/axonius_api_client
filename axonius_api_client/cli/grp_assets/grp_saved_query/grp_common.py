@@ -132,6 +132,7 @@ def handle_export(ctx, rows, export_format):
 
 
 def check_sq_exist(ctx, apiobj, name, overwrite):
+    """Pass."""
     try:
         apiobj.saved_query.get_by_name(value=name)
     except Exception:

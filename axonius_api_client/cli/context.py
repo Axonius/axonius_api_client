@@ -6,8 +6,7 @@ import click
 import requests
 
 from ..connect import Connect
-from ..tools import (bom_strip, echo_error, echo_ok, echo_warn, json_load,
-                     read_stream)
+from ..tools import bom_strip, echo_error, echo_ok, echo_warn, json_load, read_stream
 
 CONTEXT_SETTINGS = {"auto_envvar_prefix": "AX"}
 SSLWARN_CLS = requests.urllib3.exceptions.InsecureRequestWarning
@@ -160,7 +159,32 @@ class Context:
             if echo:
                 self.echo_ok(msg=str(self.client))
 
+            self.days_echo(
+                msg="Trial expires in {days} days!!!", days=self.client.instances.trial_days_left
+            )
+            self.days_echo(
+                msg="License expires in {days} days!!!",
+                days=self.client.instances.license_days_left,
+            )
+
         return self.client
+
+    def days_echo(self, msg, days, info=45, warn=30, error=15):
+        """Pass."""
+        if not isinstance(days, int):
+            return
+
+        if days <= error:
+            self.echo_error(msg.format(days=days), abort=False)
+            return
+
+        if days <= warn:
+            self.echo_warn(msg.format(days=days))
+            return
+
+        if days <= info:
+            self.echo_ok(msg.format(days=days))
+            return
 
     def read_stream(self, stream, strip_bom=True):
         """Pass."""

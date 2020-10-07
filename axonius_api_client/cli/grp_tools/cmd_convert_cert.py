@@ -5,6 +5,7 @@ import pathlib
 import click
 import OpenSSL
 
+from ..context import CONTEXT_SETTINGS
 from ..options import add_options
 
 PEM_TYPE = OpenSSL.crypto.FILETYPE_PEM
@@ -24,7 +25,7 @@ PATH = click.option(
 OPTIONS = [PATH]
 
 
-@click.command(name="convert-cert")
+@click.command(name="convert-cert", context_settings=CONTEXT_SETTINGS)
 @add_options(OPTIONS)
 @click.pass_context
 def cmd(ctx, path):

@@ -5,9 +5,14 @@ from typing import List, Optional, Tuple, Union
 
 from cachetools import TTLCache, cached
 
-from ...constants.fields import (AGG_ADAPTER_ALTS, AGG_ADAPTER_NAME,
-                                 FUZZY_SCHEMAS_KEYS, GET_SCHEMA_KEYS,
-                                 GET_SCHEMAS_KEYS, PRETTY_SCHEMA_TMPL)
+from ...constants.fields import (
+    AGG_ADAPTER_ALTS,
+    AGG_ADAPTER_NAME,
+    FUZZY_SCHEMAS_KEYS,
+    GET_SCHEMA_KEYS,
+    GET_SCHEMAS_KEYS,
+    PRETTY_SCHEMA_TMPL,
+)
 from ...exceptions import ApiError, NotFoundError
 from ...parsers.fields import parse_fields
 from ...tools import listify, load_fuzz, split_str, strip_right

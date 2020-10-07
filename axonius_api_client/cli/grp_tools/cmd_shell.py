@@ -3,8 +3,9 @@
 import atexit
 import os
 
-import axonius_api_client as axonapi
 import click
+
+import axonius_api_client as axonapi
 
 from ...constants.general import PY36
 from ...tools import echo_error, json_reload, pathlib
@@ -26,10 +27,9 @@ API Objects:
     - instances/i: Work with instances
     - system_users/su: Work with system users
     - system_roles/sr: Work with system roles
-    - central_core/cc: Work with central core configuration
     - meta/m: Work with instance metadata
-    - settings_core/sc: Work with Global system settings
-    - settings_gui/sg: Work with GUI system settings
+    - settings_global/sgl: Work with Global system settings
+    - settings_gui/sgu: Work with GUI system settings
     - settings_lifecycle/sl: Work with Lifecyle system settings
 """
 
@@ -66,10 +66,9 @@ def cmd(ctx, url, key, secret):  # noqa: D301
         - instances/i: Work with instances
         - system_users/su: Work with system users
         - system_roles/sr: Work with system roles
-        - central_core/cc: Work with central core configuration
         - meta/m: Work with instance metadata
-        - settings_core/sc: Work with Global system settings
-        - settings_gui/sg: Work with GUI system settings
+        - settings_global/sgl: Work with Global system settings
+        - settings_gui/sgu: Work with GUI system settings
         - settings_lifecycle/sl: Work with Lifecyle system settings
         - jdump/j: Helper function to pretty print python objects
 
@@ -91,9 +90,8 @@ def cmd(ctx, url, key, secret):  # noqa: D301
         "users": client.users,
         "system_users": client.system_users,
         "system_roles": client.system_roles,
-        "central_core": client.central_core,
         "meta": client.meta,
-        "settings_core": client.settings_core,
+        "settings_global": client.settings_global,
         "settings_gui": client.settings_gui,
         "settings_lifecycle": client.settings_lifecycle,
         "a": client.adapters,
@@ -106,10 +104,9 @@ def cmd(ctx, url, key, secret):  # noqa: D301
         "u": client.users,
         "su": client.system_users,
         "sr": client.system_roles,
-        "cc": client.central_core,
         "m": client.meta,
-        "sc": client.settings_core,
-        "sg": client.settings_gui,
+        "sgl": client.settings_global,
+        "sgu": client.settings_gui,
         "sl": client.settings_lifecycle,
     }
 

@@ -4,14 +4,22 @@
 import csv
 import io
 
-import axonius_api_client as axonapi  # noqa: F401
 import click
+
+import axonius_api_client as axonapi  # noqa: F401
 from axonius_api_client.cli.context import CONTEXT_SETTINGS
 from axonius_api_client.cli.options import AUTH, INPUT_FILE, add_options
 from axonius_api_client.connect import Connect
-from axonius_api_client.tools import (bom_strip, echo_error, echo_ok,
-                                      echo_warn, json_reload, listify,
-                                      read_stream, strip_left)
+from axonius_api_client.tools import (
+    bom_strip,
+    echo_error,
+    echo_ok,
+    echo_warn,
+    json_reload,
+    listify,
+    read_stream,
+    strip_left,
+)
 
 
 def j(obj, **kwargs):
@@ -103,7 +111,7 @@ class CustomConnect(Connect):
 
             if not ass_dvcs:
                 msg = f"No associated devices found for {username}"
-
+                print(msg)
                 # print(f"NO associated devices found for user {username}")
                 return
 

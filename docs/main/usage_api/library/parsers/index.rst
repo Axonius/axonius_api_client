@@ -4,10 +4,8 @@ Parsers
 .. toctree::
    adapters
    config
-   dashboard
    fields
-   meta
-   roles
+   system
    tables
    url_parser
    wizards

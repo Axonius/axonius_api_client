@@ -1,4 +1,4 @@
-Users
+System Users
 ###########################################################
 
 .. automodule:: axonius_api_client.api.system.system_users

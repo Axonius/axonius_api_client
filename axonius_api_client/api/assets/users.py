@@ -153,3 +153,12 @@ class Users(AssetMixin):
 
     FIELD_COMPLEX_SUB: str = "device_caption"
     """Field name of a complex sub field."""
+
+    wizard: str = None
+    """:obj:`axonius_api_client.api.wizards.wizard.Wizard`: Query wizard for python objects."""
+
+    wizard_text: str = None
+    """:obj:`axonius_api_client.api.wizards.wizard_text.WizardText`: Query wizard for text files."""
+
+    wizard_csv = None
+    """:obj:`axonius_api_client.api.wizards.wizard_csv.WizardCsv`: Query wizard for CSV files."""

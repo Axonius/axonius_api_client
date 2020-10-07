@@ -3,14 +3,25 @@
 import time
 from typing import List, Optional, Union
 
-from ...constants.adapters import (CNX_GONE, CNX_RETRY, CNX_SANE_DEFAULTS,
-                                   DEFAULT_NODE)
-from ...exceptions import (CnxAddError, CnxGoneError, CnxTestError,
-                           CnxUpdateError, ConfigInvalidValue, ConfigRequired,
-                           NotFoundError)
-from ...parsers.config import (config_build, config_default, config_empty,
-                               config_info, config_required, config_unchanged,
-                               config_unknown)
+from ...constants.adapters import CNX_GONE, CNX_RETRY, CNX_SANE_DEFAULTS
+from ...exceptions import (
+    CnxAddError,
+    CnxGoneError,
+    CnxTestError,
+    CnxUpdateError,
+    ConfigInvalidValue,
+    ConfigRequired,
+    NotFoundError,
+)
+from ...parsers.config import (
+    config_build,
+    config_default,
+    config_empty,
+    config_info,
+    config_required,
+    config_unchanged,
+    config_unknown,
+)
 from ...parsers.tables import tablize_cnxs, tablize_schemas
 from ...tools import json_load, pathlib
 from ..mixins import ChildMixins
@@ -40,7 +51,7 @@ class Cnx(ChildMixins):
         valid keys/values.
     """
 
-    def add(self, adapter_name: str, adapter_node: str = DEFAULT_NODE, **kwargs) -> dict:
+    def add(self, adapter_name: str, adapter_node: Optional[str] = None, **kwargs) -> dict:
         """Add a connection to an adapter on a node.
 
         Examples:
@@ -133,7 +144,7 @@ class Cnx(ChildMixins):
 
         return cnx_new
 
-    def get_by_adapter(self, adapter_name: str, adapter_node: str = DEFAULT_NODE) -> List[dict]:
+    def get_by_adapter(self, adapter_name: str, adapter_node: Optional[str] = None) -> List[dict]:
         """Get all connections of an adapter on a node.
 
         Examples:
@@ -156,7 +167,7 @@ class Cnx(ChildMixins):
         return cnxs
 
     def get_by_uuid(
-        self, cnx_uuid: str, adapter_name: str, adapter_node: str = DEFAULT_NODE, **kwargs
+        self, cnx_uuid: str, adapter_name: str, adapter_node: Optional[str] = None, **kwargs
     ) -> dict:
         """Get a connection for an adapter on a node by UUID.
 
@@ -187,7 +198,9 @@ class Cnx(ChildMixins):
             **kwargs,
         )
 
-    def get_by_label(self, value: str, adapter_name: str, adapter_node: str = DEFAULT_NODE) -> dict:
+    def get_by_label(
+        self, value: str, adapter_name: str, adapter_node: Optional[str] = None
+    ) -> dict:
         """Get a connection for an adapter on a node using a specific connection identifier key.
 
         Examples:
@@ -222,7 +235,7 @@ class Cnx(ChildMixins):
         raise NotFoundError(tablize_cnxs(cnxs=cnxs, err=err))
 
     def get_by_id(
-        self, cnx_id: str, adapter_name: str, adapter_node: str = DEFAULT_NODE, **kwargs
+        self, cnx_id: str, adapter_name: str, adapter_node: Optional[str] = None, **kwargs
     ) -> dict:
         """Get a connection for an adapter on a node by ID.
 
@@ -251,7 +264,7 @@ class Cnx(ChildMixins):
         )
 
     def update_by_id(
-        self, cnx_id: str, adapter_name: str, adapter_node: str = DEFAULT_NODE, **kwargs
+        self, cnx_id: str, adapter_name: str, adapter_node: Optional[str] = None, **kwargs
     ) -> dict:
         """Update a connection for an adapter on a node by ID.
 
@@ -281,7 +294,7 @@ class Cnx(ChildMixins):
         self,
         cnx_id: str,
         adapter_name: str,
-        adapter_node: str = DEFAULT_NODE,
+        adapter_node: Optional[str] = None,
         delete_entities: bool = False,
     ) -> str:
         """Delete a connection for an adapter on a node by connection ID.
@@ -327,7 +340,7 @@ class Cnx(ChildMixins):
     def test(
         self,
         adapter_name: str,
-        adapter_node: str = DEFAULT_NODE,
+        adapter_node: Optional[str] = None,
         old_config: Optional[dict] = None,
         **kwargs,
     ) -> str:
@@ -605,7 +618,7 @@ class Cnx(ChildMixins):
         value: str,
         value_key: str,
         adapter_name: str,
-        adapter_node: str = DEFAULT_NODE,
+        adapter_node: Optional[str] = None,
         retry: int = 0,
         sleep: int = 1,
     ) -> dict:

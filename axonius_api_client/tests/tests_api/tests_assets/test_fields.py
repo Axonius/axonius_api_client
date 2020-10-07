@@ -3,8 +3,8 @@
 import copy
 
 import pytest
-from axonius_api_client.constants.fields import (AGG_ADAPTER_ALTS,
-                                                 AGG_ADAPTER_NAME)
+
+from axonius_api_client.constants.fields import AGG_ADAPTER_ALTS, AGG_ADAPTER_NAME
 from axonius_api_client.exceptions import ApiError, NotFoundError
 
 from ...meta import FIELD_FORMATS, SCHEMA_FIELD_FORMATS, SCHEMA_TYPES

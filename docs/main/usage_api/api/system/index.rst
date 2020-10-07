@@ -5,7 +5,9 @@ System
     dashboard
     instances
     meta
-    settings
+    settings_global
+    settings_gui
+    settings_lifecycle
     signup
     system_roles
     system_users

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Test suite for axonius_api_client.tools."""
 from ....cli import cli
-from ....constants.adapters import CSV_ADAPTER, DEFAULT_NODE
+from ....constants.adapters import CSV_ADAPTER
 from ....tools import json_dump, json_load
 from ...utils import load_clirunner
 
@@ -15,8 +15,6 @@ class TestGrpAdaptersCmdConfigGetUpdate:
             "config-get",
             "--name",
             CSV_ADAPTER,
-            "--node-name",
-            DEFAULT_NODE,
             "--export-format",
             "json-full",
         ]
@@ -41,8 +39,6 @@ class TestGrpAdaptersCmdConfigGetUpdate:
             "config-get",
             "--name",
             CSV_ADAPTER,
-            "--node-name",
-            DEFAULT_NODE,
             "--export-format",
             "json",
         ]
@@ -68,8 +64,6 @@ class TestGrpAdaptersCmdConfigGetUpdate:
             "config-update",
             "--name",
             CSV_ADAPTER,
-            "--node-name",
-            DEFAULT_NODE,
             "--export-format",
             "json",
             "--config",
@@ -96,8 +90,6 @@ class TestGrpAdaptersCmdConfigGetUpdate:
             "config-update-from-json",
             "--name",
             CSV_ADAPTER,
-            "--node-name",
-            DEFAULT_NODE,
             "--export-format",
             "json",
             "--input-file",

@@ -44,18 +44,27 @@ class TestConnect:
         assert "Connected" in format(c)
         assert "Connected" in repr(c)
 
-        format(c.system.settings_lifecycle)
-        format(c.system.settings_gui)
-        format(c.system.settings_core)
-        format(c.system.users)
-        format(c.system.roles)
-        format(c.instances)
-        format(c.dashboard)
-        format(c.system.meta)
-        format(c.enforcements)
-        format(c.users)
-        format(c.devices)
-        format(c.adapters)
+        props = [
+            "users",
+            "devices",
+            "adapters",
+            "instances",
+            "dashboard",
+            "enforcements",
+            "run_action",
+            "central_core",
+            "system",
+            "system_users",
+            "system_roles",
+            "meta",
+            "settings_global",
+            "settings_gui",
+            "settings_lifecycle",
+        ]
+        for prop in props:
+            prop_attr = getattr(c, prop)
+            assert format(prop_attr)
+            assert repr(prop_attr)
 
     def test_invalid_creds(self, request):
         ax_url = get_url(request)

@@ -7,16 +7,40 @@ from typing import List, Optional, Union
 
 import requests
 
-from .api import (Adapters, CentralCore, Dashboard, Devices, Enforcements,
-                  Instances, Meta, RunAction, SettingsCore, SettingsGui,
-                  SettingsLifecycle, System, SystemRoles, SystemUsers, Users)
+from .api import (
+    Adapters,
+    CentralCore,
+    Dashboard,
+    Devices,
+    Enforcements,
+    Instances,
+    Meta,
+    RunAction,
+    SettingsGlobal,
+    SettingsGui,
+    SettingsLifecycle,
+    Signup,
+    System,
+    SystemRoles,
+    SystemUsers,
+    Users,
+)
 from .auth import ApiKey
 from .constants.api import TIMEOUT_CONNECT, TIMEOUT_RESPONSE
-from .constants.logs import (LOG_FILE_MAX_FILES, LOG_FILE_MAX_MB,
-                             LOG_FILE_NAME, LOG_FILE_PATH, LOG_FMT_BRIEF,
-                             LOG_FMT_VERBOSE, LOG_LEVEL_API, LOG_LEVEL_AUTH,
-                             LOG_LEVEL_CONSOLE, LOG_LEVEL_FILE, LOG_LEVEL_HTTP,
-                             LOG_LEVEL_PACKAGE)
+from .constants.logs import (
+    LOG_FILE_MAX_FILES,
+    LOG_FILE_MAX_MB,
+    LOG_FILE_NAME,
+    LOG_FILE_PATH,
+    LOG_FMT_BRIEF,
+    LOG_FMT_VERBOSE,
+    LOG_LEVEL_API,
+    LOG_LEVEL_AUTH,
+    LOG_LEVEL_CONSOLE,
+    LOG_LEVEL_FILE,
+    LOG_LEVEL_HTTP,
+    LOG_LEVEL_PACKAGE,
+)
 from .exceptions import ConnectError, InvalidCredentials
 from .http import Http
 from .logs import LOG, add_file, add_stderr, get_obj_log, set_log_level
@@ -26,8 +50,6 @@ from .version import __version__ as VERSION
 
 class Connect:
     """Easy all-in-one connection handler for using the API client.
-
-    .. _connect_examples:
 
     Examples:
         >>> #!/usr/bin/env python
@@ -55,170 +77,12 @@ class Connect:
         >>> dashboard = client.dashboard  # work with dashboards and discovery cycles
         >>> system_users = client.system_users  # work with system users
         >>> system_roles = client.system_roles  # work with system roles
-        >>> central_core = client.central_core  # work with central core configuration
         >>> meta = client.meta  # work with instance meta data
-        >>> settings_core = client.settings_core  # work with core system settings
+        >>> settings_global = client.settings_global  # work with global system settings
         >>> settings_gui = client.settings_gui  # work with gui system settings
         >>> settings_lifecycle = client.settings_lifecycle  # work with lifecycle system settings
 
     """
-
-    REASON_RES: List[str] = [
-        re.compile(r".*?object at.*?\>\: ([a-zA-Z0-9\]\[: ]+)"),
-        re.compile(r".*?\] (.*) "),
-    ]
-    """patterns to look for in exceptions that we can pretty up for user display."""
-
-    def start(self):
-        """Connect to and authenticate with Axonius."""
-        if not self.STARTED:
-            sysinfo_dump = json_dump(sysinfo())
-            LOG.debug(f"SYSTEM INFO: {sysinfo_dump}")
-
-            try:
-                self.AUTH.login()
-            except Exception as exc:
-                if not self.WRAPERROR:
-                    raise
-
-                pre = f"Unable to connect to {self.HTTP.url!r}"
-
-                if isinstance(exc, requests.ConnectTimeout):
-                    timeout = self.HTTP.CONNECT_TIMEOUT
-                    msg = f"{pre}: connection timed out after {timeout} seconds"
-                    cnxexc = ConnectError(msg)
-                elif isinstance(exc, requests.ConnectionError):
-                    reason = self._get_exc_reason(exc=exc)
-                    cnxexc = ConnectError(f"{pre}: {reason}")
-                elif isinstance(exc, InvalidCredentials):
-                    cnxexc = ConnectError(f"{pre}: Invalid Credentials supplied")
-                else:
-                    cnxexc = ConnectError(f"{pre}: {exc}")
-                cnxexc.exc = exc
-                raise cnxexc
-
-            self.STARTED = True
-            LOG.info(str(self))
-
-    @property
-    def users(self) -> Users:
-        """Work with user assets."""
-        self.start()
-        if not hasattr(self, "_users"):
-            self._users = Users(**self.API_ARGS)
-        return self._users
-
-    @property
-    def devices(self) -> Devices:
-        """Work with device assets."""
-        self.start()
-        if not hasattr(self, "_devices"):
-            self._devices = Devices(**self.API_ARGS)
-        return self._devices
-
-    @property
-    def adapters(self) -> Adapters:
-        """Work with adapters and adapter connections."""
-        self.start()
-        if not hasattr(self, "_adapters"):
-            self._adapters = Adapters(**self.API_ARGS)
-        return self._adapters
-
-    @property
-    def instances(self) -> Instances:
-        """Work with instances."""
-        self.start()
-        if not hasattr(self, "_instances"):
-            self._instances = Instances(**self.API_ARGS)
-        return self._instances
-
-    @property
-    def dashboard(self) -> Dashboard:
-        """Work with dashboards and discovery cycles."""
-        self.start()
-        if not hasattr(self, "_dashboard"):
-            self._dashboard = Dashboard(**self.API_ARGS)
-        return self._dashboard
-
-    @property
-    def enforcements(self) -> Enforcements:
-        """Work with Enforcement Center."""
-        self.start()
-        if not hasattr(self, "_enforcements"):
-            self._enforcements = Enforcements(**self.API_ARGS)
-        return self._enforcements
-
-    @property
-    def run_action(self) -> RunAction:  # pragma: no cover
-        """Work with Enforcement Center actions."""
-        self.start()
-        if not hasattr(self, "_run_action"):
-            self._run_action = RunAction(**self.API_ARGS)
-        return self._run_action
-
-    @property
-    def central_core(self):
-        """Work with central core config DEPRECATED."""
-        self.start()
-        if not hasattr(self, "_central_core"):
-            self._central_core = CentralCore(**self.API_ARGS)
-        return self._central_core
-
-    @property
-    def system(self):
-        """Work with users, roles, global settings, and more DEPRECATED."""
-        self.start()
-        if not hasattr(self, "_system"):
-            self._system = System(**self.API_ARGS)
-        return self._system
-
-    @property
-    def system_users(self) -> SystemUsers:
-        """Work with system users."""
-        self.start()
-        if not hasattr(self, "_system_users"):
-            self._system_users = SystemUsers(**self.API_ARGS)
-        return self._system_users
-
-    @property
-    def system_roles(self) -> SystemRoles:
-        """Work with system roles."""
-        self.start()
-        if not hasattr(self, "_system_roles"):
-            self._system_roles = SystemRoles(**self.API_ARGS)
-        return self._system_roles
-
-    @property
-    def meta(self) -> Meta:
-        """Work with instance metadata."""
-        self.start()
-        if not hasattr(self, "_meta"):
-            self._meta = Meta(**self.API_ARGS)
-        return self._meta
-
-    @property
-    def settings_core(self) -> SettingsCore:
-        """Work with core system settings."""
-        self.start()
-        if not hasattr(self, "_settings_core"):
-            self._settings_core = SettingsCore(**self.API_ARGS)
-        return self._settings_core
-
-    @property
-    def settings_gui(self) -> SettingsGui:
-        """Work with gui system settings."""
-        self.start()
-        if not hasattr(self, "_settings_gui"):
-            self._settings_gui = SettingsGui(**self.API_ARGS)
-        return self._settings_gui
-
-    @property
-    def settings_lifecycle(self) -> SettingsLifecycle:
-        """Work with lifecycle system settings."""
-        self.start()
-        if not hasattr(self, "_settings_lifecycle"):
-            self._settings_lifecycle = SettingsLifecycle(**self.API_ARGS)
-        return self._settings_lifecycle
 
     def __init__(
         self,
@@ -403,6 +267,160 @@ class Connect:
         self.API_ARGS: dict = {"auth": self.AUTH, "log_level": self.LOG_LEVEL_API}
         """arguments to use for all API models"""
 
+        self.SIGNUP = Signup(url=self.HTTP.url)
+        """Easy access to signup."""
+
+    def start(self):
+        """Connect to and authenticate with Axonius."""
+        if not self.STARTED:
+            sysinfo_dump = json_dump(sysinfo())
+            LOG.debug(f"SYSTEM INFO: {sysinfo_dump}")
+
+            try:
+                self.AUTH.login()
+            except Exception as exc:
+                if not self.WRAPERROR:
+                    raise
+
+                pre = f"Unable to connect to {self.HTTP.url!r}"
+
+                if isinstance(exc, requests.ConnectTimeout):
+                    timeout = self.HTTP.CONNECT_TIMEOUT
+                    msg = f"{pre}: connection timed out after {timeout} seconds"
+                    cnxexc = ConnectError(msg)
+                elif isinstance(exc, requests.ConnectionError):
+                    reason = self._get_exc_reason(exc=exc)
+                    cnxexc = ConnectError(f"{pre}: {reason}")
+                elif isinstance(exc, InvalidCredentials):
+                    cnxexc = ConnectError(f"{pre}: Invalid Credentials supplied")
+                else:
+                    cnxexc = ConnectError(f"{pre}: {exc}")
+                cnxexc.exc = exc
+                raise cnxexc
+
+            self.STARTED = True
+            LOG.info(str(self))
+
+    @property
+    def users(self) -> Users:
+        """Work with user assets."""
+        self.start()
+        if not hasattr(self, "_users"):
+            self._users = Users(**self.API_ARGS)
+        return self._users
+
+    @property
+    def devices(self) -> Devices:
+        """Work with device assets."""
+        self.start()
+        if not hasattr(self, "_devices"):
+            self._devices = Devices(**self.API_ARGS)
+        return self._devices
+
+    @property
+    def adapters(self) -> Adapters:
+        """Work with adapters and adapter connections."""
+        self.start()
+        if not hasattr(self, "_adapters"):
+            self._adapters = Adapters(**self.API_ARGS)
+        return self._adapters
+
+    @property
+    def instances(self) -> Instances:
+        """Work with instances."""
+        self.start()
+        if not hasattr(self, "_instances"):
+            self._instances = Instances(**self.API_ARGS)
+        return self._instances
+
+    @property
+    def dashboard(self) -> Dashboard:
+        """Work with dashboards and discovery cycles."""
+        self.start()
+        if not hasattr(self, "_dashboard"):
+            self._dashboard = Dashboard(**self.API_ARGS)
+        return self._dashboard
+
+    @property
+    def enforcements(self) -> Enforcements:
+        """Work with Enforcement Center."""
+        self.start()
+        if not hasattr(self, "_enforcements"):
+            self._enforcements = Enforcements(**self.API_ARGS)
+        return self._enforcements
+
+    @property
+    def run_action(self) -> RunAction:  # pragma: no cover
+        """Work with Enforcement Center actions."""
+        self.start()
+        if not hasattr(self, "_run_action"):
+            self._run_action = RunAction(**self.API_ARGS)
+        return self._run_action
+
+    @property
+    def central_core(self):
+        """Work with central core config DEPRECATED."""
+        self.start()
+        if not hasattr(self, "_central_core"):
+            self._central_core = CentralCore(**self.API_ARGS)
+        return self._central_core
+
+    @property
+    def system(self):
+        """Work with users, roles, global settings, and more DEPRECATED."""
+        self.start()
+        if not hasattr(self, "_system"):
+            self._system = System(**self.API_ARGS)
+        return self._system
+
+    @property
+    def system_users(self) -> SystemUsers:
+        """Work with system users."""
+        self.start()
+        if not hasattr(self, "_system_users"):
+            self._system_users = SystemUsers(**self.API_ARGS)
+        return self._system_users
+
+    @property
+    def system_roles(self) -> SystemRoles:
+        """Work with system roles."""
+        self.start()
+        if not hasattr(self, "_system_roles"):
+            self._system_roles = SystemRoles(**self.API_ARGS)
+        return self._system_roles
+
+    @property
+    def meta(self) -> Meta:
+        """Work with instance metadata."""
+        self.start()
+        if not hasattr(self, "_meta"):
+            self._meta = Meta(**self.API_ARGS)
+        return self._meta
+
+    @property
+    def settings_global(self) -> SettingsGlobal:
+        """Work with core system settings."""
+        self.start()
+        if not hasattr(self, "_settings_global"):
+            self._settings_global = SettingsGlobal(**self.API_ARGS)
+        return self._settings_global
+
+    @property
+    def settings_gui(self) -> SettingsGui:
+        """Work with gui system settings."""
+        self.start()
+        if not hasattr(self, "_settings_gui"):
+            self._settings_gui = SettingsGui(**self.API_ARGS)
+        return self._settings_gui
+
+    @property
+    def settings_lifecycle(self) -> SettingsLifecycle:
+        """Work with lifecycle system settings."""
+        self.start()
+        if not hasattr(self, "_settings_lifecycle"):
+            self._settings_lifecycle = SettingsLifecycle(**self.API_ARGS)
+        return self._settings_lifecycle
+
     def __str__(self) -> str:
         """Show object info."""
         client = getattr(self, "HTTP", "")
@@ -412,6 +430,7 @@ class Connect:
             version = about.get("Version", "") or "DEMO"
             version = version.replace("_", ".")
             built = about.get("Build Date", "")
+
             return (
                 f"Connected to {url!r} version {version} (RELEASE DATE: {built})"
                 f" with API Client v{VERSION}"
@@ -439,3 +458,9 @@ class Connect:
     def jdump(obj, **kwargs):  # pragma: no cover
         """JSON dump utility."""
         print(json_reload(obj, **kwargs))
+
+    REASON_RES: List[str] = [
+        re.compile(r".*?object at.*?\>\: ([a-zA-Z0-9\]\[: ]+)"),
+        re.compile(r".*?\] (.*) "),
+    ]
+    """patterns to look for in exceptions that we can pretty up for user display."""

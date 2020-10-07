@@ -10,8 +10,7 @@ import sys
 import warnings
 from datetime import datetime, timedelta, timezone
 from itertools import zip_longest
-from typing import (Any, Callable, Iterable, Iterator, List, Optional, Tuple,
-                    Union)
+from typing import Any, Callable, Iterable, Iterator, List, Optional, Tuple, Union
 from urllib.parse import urljoin
 
 import click
@@ -21,8 +20,16 @@ import dateutil.tz
 
 from . import INIT_DOTENV, PACKAGE_FILE, PACKAGE_ROOT, VERSION
 from .constants.api import GUI_PAGE_SIZES
-from .constants.general import (ERROR_ARGS, ERROR_TMPL, NO, OK_ARGS, OK_TMPL,
-                                WARN_ARGS, WARN_TMPL, YES)
+from .constants.general import (
+    ERROR_ARGS,
+    ERROR_TMPL,
+    NO,
+    OK_ARGS,
+    OK_TMPL,
+    WARN_ARGS,
+    WARN_TMPL,
+    YES,
+)
 from .exceptions import ToolsError
 from .setup_env import find_dotenv, get_env_ax
 
@@ -353,6 +360,20 @@ def dt_min_ago(obj: Union[str, timedelta, datetime]) -> int:
         obj: parsed by :meth:`dt_sec_ago` into seconds ago
     """
     return round(dt_sec_ago(obj=obj) / 60)
+
+
+def dt_days_left(obj: Optional[Union[str, timedelta, datetime]]) -> Optional[int]:
+    """Get number of days left until a given datetime.
+
+    Args:
+        obj: parsed by :meth:`dt_sec_ago` into days left
+    """
+    if obj:
+        obj = dt_parse(obj=obj)
+        now = dt_now(tz=obj.tzinfo)
+        seconds = (obj - now).total_seconds()
+        return round(seconds / 60 / 60 / 24)
+    return None
 
 
 def dt_within_min(
@@ -943,3 +964,9 @@ def calc_perc_gb(
     ret[f"{whole_key}_gb"] = whole
     ret[perc_key] = perc
     return ret
+
+
+def get_subcls(cls) -> list:
+    """Get all subclasses of a class."""
+    subs = [s for c in cls.__subclasses__() for s in get_subcls(c)]
+    return list(set(cls.__subclasses__()).union(subs))

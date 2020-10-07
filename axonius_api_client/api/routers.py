@@ -114,7 +114,7 @@ class ApiV1:
         meta_historical_sizes="meta/historical_sizes",
         settings_lifecycle="settings/lifecycle",
         settings_gui="settings/gui",
-        settings_core="settings/core",
+        settings_global="settings/core",
         discover_lifecycle="discover/lifecycle",
         discover_start="discover/start",
         discover_stop="discover/stop",
@@ -219,6 +219,7 @@ class ApiV4:
         version=version,
         central_core="/settings/central_core",
         central_core_restore="/settings/central_core/restore",
+        feature_flags="/settings/plugins/gui/FeatureFlags",
     )
     """Endpoints for :mod:`axonius_api_client.api.system.instances`"""
 
@@ -240,15 +241,17 @@ class ApiV4:
         meta_historical_sizes="historical_sizes",
         settings_lifecycle="plugins/system_scheduler",
         settings_gui="plugins/gui",
-        settings_core="plugins/core",
+        settings_global="plugins/core",
         discover_start="run_manual_discovery",
         discover_stop="stop_research_phase",
         roles_default="roles/default",
         roles="roles",
         roles_by_uuid="roles/{uuid}",
-        roles_labels="roles/labels",
+        roles_labels="/labels",
         users="users",
         user="users/{uuid}",
+        tokens_generate="users/tokens/generate",
+        tokens_notify="users/tokens/notify",
         central_core="central_core",
         central_core_restore="central_core/restore",
     )
@@ -258,6 +261,7 @@ class ApiV4:
         object_type="signup",
         base=base,
         version=version,
+        tokens_reset="/settings/users/tokens/reset",
     )
     """Endpoints for :mod:`axonius_api_client.api.system.signup`"""
 

@@ -5,17 +5,12 @@ import time
 from datetime import datetime, timedelta
 from typing import Generator, List, Optional, Union
 
-from ...constants.api import MAX_PAGE_SIZE, PAGE_SIZE
+from ...constants.api import DEFAULT_CALLBACKS_CLS, MAX_PAGE_SIZE, PAGE_SIZE
 from ...exceptions import ApiError, JsonError, NotFoundError
 from ...tools import dt_now, dt_parse_tmpl, dt_sec_ago, json_dump, listify
-from ..adapters import Adapters
-from ..asset_callbacks import Base
-from ..asset_callbacks.tools import DEFAULT_CALLBACKS_CLS, get_callbacks_cls
+from ..asset_callbacks.tools import get_callbacks_cls
 from ..mixins import ModelMixins
 from ..wizards import Wizard, WizardCsv, WizardText
-from .fields import Fields
-from .labels import Labels
-from .saved_query import SavedQuery
 
 
 class AssetMixin(ModelMixins):
@@ -283,7 +278,7 @@ class AssetMixin(ModelMixins):
 
         callbacks_cls = get_callbacks_cls(export=export)
         callbacks = callbacks_cls(apiobj=self, getargs=kwargs, state=state, store=store)
-        self.LAST_CALLBACKS: Base = callbacks
+        self.LAST_CALLBACKS = callbacks
 
         callbacks.start()
 
@@ -587,6 +582,12 @@ class AssetMixin(ModelMixins):
 
     def _init(self, **kwargs):
         """Post init method for subclasses to use for extra setup."""
+        from ..adapters import Adapters
+        from ..asset_callbacks import Base
+        from .fields import Fields
+        from .labels import Labels
+        from .saved_query import SavedQuery
+
         self.adapters: Adapters = Adapters(auth=self.auth, **kwargs)
         """Adapters API model for cross reference."""
 
@@ -851,31 +852,13 @@ class AssetMixin(ModelMixins):
         FIELD_TAGS,
         FIELD_ADAPTER_LEN,
     ]
-    """Field names that are always returned by the REST API no matter what fields are selected."""
+    """Field names that are always returned by the REST API no matter what fields are selected"""
 
-    adapters: Adapters = None
-    """Adapters API model for cross reference."""
+    wizard: str = None
+    """:obj:`axonius_api_client.api.wizards.wizard.Wizard`: Query wizard for python objects."""
 
-    labels: Labels = None
-    """Work with labels (tags)."""
+    wizard_text: str = None
+    """:obj:`axonius_api_client.api.wizards.wizard_text.WizardText`: Query wizard for text files."""
 
-    saved_query: SavedQuery = None
-    """Work with saved queries."""
-
-    fields: Fields = None
-    """Work with fields."""
-
-    wizard: Wizard = None
-    """Query wizard builder."""
-
-    wizard_text: WizardText = None
-    """Query wizard builder from text."""
-
-    wizard_csv: WizardCsv = None
-    """Query wizard builder from CSV."""
-
-    LAST_GET: dict = None
-    """Request object sent for last :meth:`get` request"""
-
-    LAST_CALLBACKS: Base = None
-    """Callbacks object used for last :meth:`get` request."""
+    wizard_csv = None
+    """:obj:`axonius_api_client.api.wizards.wizard_csv.WizardCsv`: Query wizard for CSV files."""

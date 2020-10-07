@@ -1,42 +1,31 @@
 # -*- coding: utf-8 -*-
-"""API for working with system components."""
+"""API for working with system components ``[DEPRECATED]``."""
 from ..mixins import ModelMixins
 from ..routers import API_VERSION, Router
 from .central_core import CentralCore
 from .meta import Meta
-from .settings import SettingsCore, SettingsGui, SettingsLifecycle
+from .settings_global import SettingsGlobal
+from .settings_gui import SettingsGui
+from .settings_lifecycle import SettingsLifecycle
 from .system_roles import SystemRoles
 from .system_users import SystemUsers
 
 
-class System(ModelMixins):
-    """API for working with system components.
+class System(ModelMixins):  # pragma: no cover
+    """API for working with system components ``[DEPRECATED]``.
 
     Warning:
-        This object is deprecated. Use the API objects directly:
-
-            * :obj:`axonius_api_client.api.system.instances.Instances`
-            * :obj:`axonius_api_client.api.system.settings.SettingsCore`
-            * :obj:`axonius_api_client.api.system.settings.SettingsGui`
-            * :obj:`axonius_api_client.api.system.settings.SettingsLifecycle`
-            * :obj:`axonius_api_client.api.system.system_users.SystemUsers`
-            * :obj:`axonius_api_client.api.system.system_roles.SystemRoles`
-            * :obj:`axonius_api_client.api.system.meta.Meta`
-
+        This object is deprecated.
     """
 
     @property
-    def router(self) -> Router:
-        """Router for this API model."""
+    def router(self) -> Router:  # pragma: no cover
+        """Router for this API model ``[DEPRECATED]``."""
         return API_VERSION.system
 
-    def _init(self, **kwargs):
-        """Mixins for API Models.
-
-        Args:
-            **kwargs: passed to each thing
-        """
-        self.settings_core = SettingsCore(auth=self.auth, **kwargs)
+    def _init(self, **kwargs):  # pragma: no cover
+        """Do not use ``[DEPRECATED]``."""
+        self.settings_global = SettingsGlobal(auth=self.auth, **kwargs)
         self.settings_gui = SettingsGui(auth=self.auth, **kwargs)
         self.settings_lifecycle = SettingsLifecycle(auth=self.auth, **kwargs)
         self.users = SystemUsers(auth=self.auth, **kwargs)
