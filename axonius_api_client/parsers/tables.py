@@ -6,8 +6,8 @@ from typing import List, Optional, Union
 
 import tabulate
 
-from ..constants.tables import (KEY_MAP_ADAPTER, KEY_MAP_CNX, KEY_MAP_SCHEMA,
-                                TABLE_FMT)
+from ..constants.system import Role, User
+from ..constants.tables import KEY_MAP_ADAPTER, KEY_MAP_CNX, KEY_MAP_SCHEMA, TABLE_FMT
 from ..tools import json_dump
 
 
@@ -16,7 +16,7 @@ def tablize(
     err: Optional[str] = None,
     fmt: str = TABLE_FMT,
     footer: bool = True,
-    **kwargs
+    **kwargs,
 ) -> str:
     """Create a table string from a list of dictionaries.
 
@@ -123,6 +123,68 @@ def tablize_cnxs(
         values.append(value)
 
     return tablize(value=values, err=err, fmt=fmt, footer=footer)
+
+
+def tablize_users(users: List[dict], err: str, fmt: str = TABLE_FMT, footer: bool = True) -> str:
+    """Create a table string for a set of users.
+
+    Args:
+        users: users to create a table from
+        err: error string to show at top
+        fmt: table format to use
+        footer: show err at bottom too
+    """
+    values = [tablize_user(user=x) for x in users]
+    return tablize(value=values, err=err, fmt=fmt, footer=footer)
+
+
+def tablize_user(user: dict) -> dict:
+    """Create a table entry for a user.
+
+    Args:
+        user: user to create a table entry for
+    """
+    value = {k: user.get(v) for k, v in User.TABLES.items()}
+    return value
+
+
+def tablize_roles(
+    roles: List[dict], cat_actions: dict, err: str, fmt: str = TABLE_FMT, footer: bool = True
+) -> str:
+    """Create a table string for a set of roles.
+
+    Args:
+        roles: roles to create a table from
+        cat_actions: category -> actions mapping
+        err: error string to show at top
+        fmt: table format to use
+        footer: show err at bottom too
+    """
+    values = [tablize_role(role=x, cat_actions=cat_actions) for x in roles]
+    return tablize(value=values, err=err, fmt=fmt, footer=footer)
+
+
+def tablize_role(role: dict, cat_actions: dict) -> dict:
+    """Create a table entry for a role.
+
+    Args:
+        role: role to create a table entry for
+        cat_actions: category -> actions mapping
+    """
+    value = {k: role.get(v) for k, v in Role.TABLES.items()}
+
+    perms = role[Role.PERMS_FLAT]
+    value_perms = []
+    for cat, action in perms.items():
+        if all(list(action.values())):
+            has_perms = Role.ALL
+        else:
+            has_perms = ", ".join([k for k, v in action.items() if v])
+        value_perms.append(f"{cat}: {has_perms}")
+
+    value_perms = "\n".join(value_perms)
+    value[Role.TABLES_PERMS] = value_perms
+    return value
 
 
 def tab_map(

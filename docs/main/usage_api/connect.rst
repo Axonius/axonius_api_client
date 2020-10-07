@@ -1,4 +1,4 @@
-Connecting
+Connection Handler
 ###############################################
 
 .. automodule:: axonius_api_client.connect

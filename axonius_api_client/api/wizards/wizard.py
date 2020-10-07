@@ -3,11 +3,20 @@
 import logging
 from typing import List, Optional, Tuple, Union
 
-from ...constants.fields import (ALL_NAME, CUSTOM_FIELDS_MAP, Operator,
-                                 OperatorTypeMaps)
+from ...constants.fields import ALL_NAME, CUSTOM_FIELDS_MAP, Operator, OperatorTypeMaps
 from ...constants.logs import LOG_LEVEL_WIZARD
-from ...constants.wizards import (Docs, Entry, Expr, Fields, Flags, Patterns,
-                                  Results, Sources, Templates, Types)
+from ...constants.wizards import (
+    Docs,
+    Entry,
+    Expr,
+    Fields,
+    Flags,
+    Patterns,
+    Results,
+    Sources,
+    Templates,
+    Types,
+)
 from ...exceptions import WizardError
 from ...logs import get_obj_log
 from ...parsers.wizards import WizardParser

@@ -27,7 +27,7 @@ def cmd(
     new_config = ctx.obj.read_stream_json(stream=input_file, expect=dict)
 
     apiname = ctx.parent.command.name.replace("-", "_")
-    apiobj = getattr(client.system, apiname)
+    apiobj = getattr(client, apiname)
 
     with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
         settings = apiobj.update_sub_section(section=section, sub_section=sub_section, **new_config)

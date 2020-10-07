@@ -19,22 +19,39 @@ init:
 	$(MAKE) pipenv_install_build
 
 pip_install_tools:
-	pip install --quiet --upgrade --requirement requirements-pkg.txt
+	pip install \
+		--quiet \
+		--upgrade \
+		--requirement requirements-pkg.txt
 
 pipenv_install_dev:
-	pipenv run pip install --quiet --upgrade --requirement requirements-dev.txt
+	pipenv run pip install \
+		--quiet \
+		--upgrade \
+		--requirement requirements-dev.txt
 
 pipenv_install_lint:
-	pipenv run pip install --quiet --upgrade --requirement requirements-lint.txt
+	pipenv run pip install \
+		--quiet \
+		--upgrade \
+		--requirement requirements-lint.txt
 
 pipenv_install_build:
-	pipenv run pip install --quiet --upgrade --requirement requirements-build.txt
+	pipenv run pip install \
+		--quiet \
+		--upgrade \
+		--requirement requirements-build.txt
 
 pipenv_install_docs:
-	pipenv run pip install --quiet --upgrade --requirement docs/requirements.txt
+	pipenv run pip install \
+		--quiet \
+		--upgrade \
+		--requirement docs/requirements.txt
 
 pipenv_init:
-	pipenv install --dev --skip-lock
+	pipenv install \
+		--dev \
+		--skip-lock
 
 pipenv_clean:
 	pipenv --rm || true
@@ -117,8 +134,10 @@ docs_dev:
 
 docs_apigen:
 	pip install sphinx -t /tmp/sphinx-latest --quiet --upgrade
-	rm -rf docs/main/api
-	PYTHONPATH=/tmp/sphinx-latest /tmp/sphinx-latest/bin/sphinx-apidoc -e -P -M -f -T -t docs/_templates -o docs/main/api $(PACKAGE) $(PACKAGE)/tests $(PACKAGE)/cli
+	rm -rf /tmp/api
+	PYTHONPATH=/tmp/sphinx-latest /tmp/sphinx-latest/bin/sphinx-apidoc \
+		-e -P -M -f -T -t docs/_templates \
+		-o /tmp/api $(PACKAGE) $(PACKAGE)/tests $(PACKAGE)/cli
 
 docs_open:
 	open docs/_build/html/index.html

@@ -8,13 +8,25 @@ import time
 from typing import Dict, List, Optional, Union
 
 from . import LOG
-from .constants.logs import (LOG_DATEFMT_CONSOLE, LOG_DATEFMT_FILE,
-                             LOG_FILE_MAX_FILES, LOG_FILE_MAX_MB,
-                             LOG_FILE_NAME, LOG_FILE_PATH, LOG_FILE_PATH_MODE,
-                             LOG_FMT_CONSOLE, LOG_FMT_FILE, LOG_LEVEL_CONSOLE,
-                             LOG_LEVEL_FILE, LOG_LEVEL_PACKAGE,
-                             LOG_LEVELS_INT_CSV, LOG_LEVELS_STR_CSV,
-                             LOG_NAME_FILE, LOG_NAME_STDERR, LOG_NAME_STDOUT)
+from .constants.logs import (
+    LOG_DATEFMT_CONSOLE,
+    LOG_DATEFMT_FILE,
+    LOG_FILE_MAX_FILES,
+    LOG_FILE_MAX_MB,
+    LOG_FILE_NAME,
+    LOG_FILE_PATH,
+    LOG_FILE_PATH_MODE,
+    LOG_FMT_CONSOLE,
+    LOG_FMT_FILE,
+    LOG_LEVEL_CONSOLE,
+    LOG_LEVEL_FILE,
+    LOG_LEVEL_PACKAGE,
+    LOG_LEVELS_INT_CSV,
+    LOG_LEVELS_STR_CSV,
+    LOG_NAME_FILE,
+    LOG_NAME_STDERR,
+    LOG_NAME_STDOUT,
+)
 from .exceptions import ToolsError
 from .tools import get_path, is_int
 

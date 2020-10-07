@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """API for working with product metadata."""
 
-from ...parsers.meta import parse_sizes
+from ...parsers.system import parse_sizes
 from ..mixins import ModelMixins
 from ..routers import API_VERSION, Router
 
@@ -53,7 +53,7 @@ class Meta(ModelMixins):
             ['disk_free_mb', 'disk_used_mb', 'historical_sizes_devices', 'historical_sizes_users']
 
         """
-        return parse_sizes(self._historical_sizes())
+        return parse_sizes(raw=self._historical_sizes())
 
     @property
     def version(self) -> str:

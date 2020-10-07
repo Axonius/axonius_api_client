@@ -15,7 +15,7 @@ from . import (
 
 
 @click.group(cls=AliasedGroup)
-def settings_core():
+def settings_global():
     """Group: Global Settings."""
 
 
@@ -40,6 +40,6 @@ CMDS = [
 ]
 
 for cmd in CMDS:
-    settings_core.add_command(cmd.cmd)
+    settings_global.add_command(cmd.cmd)
     settings_lifecycle.add_command(cmd.cmd)
     settings_gui.add_command(cmd.cmd)

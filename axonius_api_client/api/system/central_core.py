@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""API for working with central core configuration."""
+"""API for working with central core configuration ``[DEPRECATED]``."""
 from typing import Optional
 
 from ..mixins import ModelMixins
@@ -7,18 +7,18 @@ from ..routers import API_VERSION, Router
 
 
 class CentralCore(ModelMixins):  # pragma: no cover
-    """API for working with central core configuration.
+    """API for working with central core configuration ``[DEPRECATED]``.
 
     Warning:
         This object is deprecated. Use :obj:`axonius_api_client.api.system.instances.Instances`
     """
 
     def get(self) -> dict:  # pragma: no cover
-        """Get the current central core configuration."""
+        """Get the current central core configuration ``[DEPRECATED]``."""
         return self._get()
 
     def update(self, enabled: bool, delete_backups: bool) -> dict:  # pragma: no cover
-        """Update the current central core configuration."""
+        """Update the current central core configuration ``[DEPRECATED]``."""
         return self._update(enabled=enabled, delete_backups=delete_backups)
 
     def restore_from_aws_s3(
@@ -31,23 +31,7 @@ class CentralCore(ModelMixins):  # pragma: no cover
         allow_re_restore: bool = False,
         delete_backups: bool = False,
     ) -> dict:  # pragma: no cover
-        """Perform a restore on a core from a file in an AWS S3 Bucket.
-
-        Args:
-            key_name: Name of backup file from central core in [bucket_name] to restore to
-                this core
-            bucket_name: Name of bucket in S3 to get [key_name] from
-                (Overrides ``Global Settings > Amazon S3 Settings > Amazon S3 bucket name``)
-            access_key_id: AWS Access Key Id to use to access [bucket_name]
-                (Overrides ``Global Settings > Amazon S3 Settings > AWS Access Key Id``)
-            secret_access_key: AWS Secret Access Key to use to access [bucket_name]
-                (Overrides ``Global Settings > Amazon S3 Settings > AWS Secret Access Key``)
-            preshared_key: Password to use to decrypt [key_name]
-                (Overrides: ``Global Settings > Amazon S3 Settings > Backup encryption passphrase``)
-            allow_re_restore: Restore [key_name] even if it has already been restored
-            delete_backups: Delete [key_name] from [bucket_name] after restore has finished
-                (Overrides the current value of 'delete_backups' in :meth:`get`)
-        """
+        """Perform a restore on a core from a file in an AWS S3 Bucket ``[DEPRECATED]``."""
         restore_opts = {}
         restore_opts["key_name"] = key_name
         restore_opts["allow_re_restore"] = allow_re_restore
@@ -70,20 +54,20 @@ class CentralCore(ModelMixins):  # pragma: no cover
         return self._restore(restore_type="aws", restore_opts=restore_opts)
 
     def _get(self) -> dict:  # pragma: no cover
-        """Get the current central core configuration."""
+        """Get the current central core configuration ``[DEPRECATED]``."""
         path = self.router.central_core
         response = self.request(method="get", path=path)
         return response
 
     def _update(self, enabled: bool, delete_backups: bool) -> dict:  # pragma: no cover
-        """Set the current central core configuration."""
+        """Set the current central core configuration ``[DEPRECATED]``."""
         data = {"enabled": enabled, "delete_backups": delete_backups}
         path = self.router.central_core
         response = self.request(method="post", path=path, json=data)
         return response
 
     def _restore(self, restore_type: str, restore_opts: dict) -> dict:  # pragma: no cover
-        """Perform a central core restore operation."""
+        """Perform a central core restore operation ``[DEPRECATED]``."""
         data = {}
         data["restore_type"] = restore_type
         data.update(restore_opts)
@@ -94,5 +78,5 @@ class CentralCore(ModelMixins):  # pragma: no cover
 
     @property
     def router(self) -> Router:  # pragma: no cover
-        """Router for this API model."""
+        """Router for this API model ``[DEPRECATED]``."""
         return API_VERSION.system

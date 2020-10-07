@@ -103,7 +103,7 @@ System
 * Instances: :obj:`axonius_api_client.api.system.instances.Instances`
 * Meta Data: :obj:`axonius_api_client.api.system.meta.Meta`
 * System Roles: :obj:`axonius_api_client.api.system.system_roles.SystemRoles`
-* System Settings - Core: :obj:`axonius_api_client.api.system.settings.SettingsCore`
-* System Settings - GUI: :obj:`axonius_api_client.api.system.settings.SettingsGui`
-* System Settings - Lifecyle: :obj:`axonius_api_client.api.system.settings.SettingsLifecycle`
+* System Settings - Global Settings: :obj:`axonius_api_client.api.system.settings_global.SettingsGlobal`
+* System Settings - GUI Settings: :obj:`axonius_api_client.api.system.settings_gui.SettingsGui`
+* System Settings - Lifecyle Settings: :obj:`axonius_api_client.api.system.settings_lifecycle.SettingsLifecycle`
 * System Users: :obj:`axonius_api_client.api.system.system_users.SystemUsers`

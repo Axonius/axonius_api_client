@@ -1,7 +1,7 @@
-Settings
+Settings mixins
 ###########################################################
 
-.. automodule:: axonius_api_client.api.system.settings
+.. automodule:: axonius_api_client.api.system.settings_mixins
    :members:
    :show-inheritance:
    :inherited-members:

@@ -2,12 +2,6 @@
 """Constants for adapters and adapter connections."""
 from typing import Dict, List, Optional, Tuple
 
-SETTING_UNCHANGED: List[str] = ["unchanged"]
-"""used by REST API when supplying a password field that is the same in the database"""
-
-DEFAULT_NODE: str = "Master"
-"""default node name to use"""
-
 CSV_ADAPTER: str = "csv"
 """name of csv adapter"""
 

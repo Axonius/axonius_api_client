@@ -2,24 +2,14 @@
 """Tools for loading callbacks."""
 from typing import Dict
 
+from ...constants.api import DEFAULT_CALLBACKS_CLS
 from ...exceptions import ApiError
+from ...tools import get_subcls
 from .base import Base
-from .base_csv import Csv
-from .base_json import Json
-from .base_json_to_csv import JsonToCsv
-from .base_table import Table
-from .base_xlsx import Xlsx
-
-DEFAULT_CALLBACKS_CLS: str = "base"
-"""Default callback object to use"""
 
 CALLBACKS_MAP: Dict[str, Base] = {
-    "json": Json,
-    "csv": Csv,
-    "table": Table,
-    "base": Base,
-    "json_to_csv": JsonToCsv,
-    "xlsx": Xlsx,
+    Base.CB_NAME: Base,
+    **{x.CB_NAME: x for x in get_subcls(cls=Base)},
 }
 """Map of export name to callbacks class."""
 

@@ -3,16 +3,14 @@
 import pathlib
 from typing import List, Optional, Union
 
-from ...constants.adapters import CONFIG_TYPES, DEFAULT_NODE
+from ...constants.adapters import CONFIG_TYPES
 from ...exceptions import ApiError, NotFoundError
 from ...parsers.adapters import parse_adapters
-from ...parsers.config import (config_build, config_unchanged, config_unknown,
-                               parse_schema)
+from ...parsers.config import config_build, config_unchanged, config_unknown, parse_schema
 from ...parsers.tables import tablize_adapters
 from ...tools import path_read
 from ..mixins import ModelMixins
 from ..routers import API_VERSION, Router
-from .cnx import Cnx
 
 
 class Adapters(ModelMixins):
@@ -57,7 +55,7 @@ class Adapters(ModelMixins):
         parsed = sorted(parsed, key=lambda x: [x["node_name"], x["name"]])
         return parsed
 
-    def get_by_name(self, name: str, node: str = DEFAULT_NODE) -> dict:
+    def get_by_name(self, name: str, node: Optional[str] = None) -> dict:
         """Get an adapter by name on a single node.
 
         Examples:
@@ -94,24 +92,25 @@ class Adapters(ModelMixins):
         Raises:
             :exc:`NotFoundError`: when no node found or when no adapter found on node
         """
+        if node:
+            node = self.instances.get_by_name(name=node, key="name")
+        else:
+            node = self.instances.get_core(key="name")
+
         adapters = self.get()
-
-        keys = ["node_name", "node_id"]
-        nodes = [x for x in adapters if node.lower() in [str(x[k]).lower() for k in keys]]
-
-        if not nodes:
-            err = f"No node named {node!r} found"
-            raise NotFoundError(tablize_adapters(adapters=adapters, err=err))
+        adapters = [x for x in adapters if node == x["node_name"]]
 
         keys = ["name", "name_raw", "name_plugin"]
-        for adapter in nodes:
+        for adapter in adapters:
             if any([adapter[k].lower() == name.lower() for k in keys]):
                 return adapter
 
-        err = f"No adapter named {name!r} found on node {node!r}"
+        err = f"No adapter named {name!r} found on instance {node!r}"
         raise NotFoundError(tablize_adapters(adapters=adapters, err=err))
 
-    def config_get(self, name: str, node: str = DEFAULT_NODE, config_type: str = "generic") -> dict:
+    def config_get(
+        self, name: str, node: Optional[str] = None, config_type: str = "generic"
+    ) -> dict:
         """Get the advanced settings for an adapter.
 
         Examples:
@@ -163,7 +162,7 @@ class Adapters(ModelMixins):
         return self.config_refetch(adapter=adapter, config_type=config_type)
 
     def config_update(
-        self, name: str, node: str = DEFAULT_NODE, config_type: str = "generic", **kwargs
+        self, name: str, node: Optional[str] = None, config_type: str = "generic", **kwargs
     ) -> dict:
         """Update the advanced settings for an adapter.
 
@@ -227,7 +226,7 @@ class Adapters(ModelMixins):
         file_name: str,
         file_content: Union[str, bytes],
         file_content_type: Optional[str] = None,
-        node: str = DEFAULT_NODE,
+        node: Optional[str] = None,
     ) -> dict:
         """Upload a file to a specific adapter on a specific node.
 
@@ -315,10 +314,14 @@ class Adapters(ModelMixins):
 
     def _init(self, **kwargs):
         """Post init method for subclasses to use for extra setup."""
+        from ..system.instances import Instances
+        from .cnx import Cnx
+
         self.cnx: Cnx = Cnx(parent=self)
         """Work with adapter connections"""
 
-        super(Adapters, self)._init(**kwargs)
+        self.instances: Instances = Instances(auth=self.auth)
+        """Work with instances"""
 
     @property
     def router(self) -> Router:

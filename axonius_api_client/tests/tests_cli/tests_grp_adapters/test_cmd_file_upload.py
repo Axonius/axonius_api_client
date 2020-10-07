@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Test suite for axonius_api_client.tools."""
 from ....cli import cli
-from ....constants.adapters import CSV_ADAPTER, DEFAULT_NODE
+from ....constants.adapters import CSV_ADAPTER
 from ....tools import json_load
 from ...utils import load_clirunner
 
@@ -15,8 +15,6 @@ class TestGrpAdaptersFileUpload:
             "file-upload",
             "--name",
             CSV_ADAPTER,
-            "--node-name",
-            DEFAULT_NODE,
             "--input-file",
             "-",
         ]

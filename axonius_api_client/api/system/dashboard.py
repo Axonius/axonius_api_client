@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """API for working with dashboards and discovery lifecycle."""
-from ...parsers.dashboard import parse_lifecycle
+from ...parsers.system import parse_lifecycle
 from ..mixins import ModelMixins
 from ..routers import API_VERSION, Router
 

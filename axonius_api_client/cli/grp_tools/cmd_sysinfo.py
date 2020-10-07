@@ -3,6 +3,7 @@
 import click
 
 from ...tools import json_dump, sysinfo
+from ..context import CONTEXT_SETTINGS
 from ..options import add_options
 
 EXPORT = click.option(
@@ -19,7 +20,7 @@ EXPORT = click.option(
 OPTIONS = [EXPORT]
 
 
-@click.command(name="sysinfo")
+@click.command(name="sysinfo", context_settings=CONTEXT_SETTINGS)
 @add_options(OPTIONS)
 @click.pass_context
 def cmd(ctx, export_format):

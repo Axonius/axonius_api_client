@@ -33,17 +33,7 @@ POST_DOTENV: dict = setup_env.get_env_ax()
 """AX.* env variables after loading dotenv."""
 
 try:
-    from . import (
-        api,
-        auth,
-        cli,
-        constants,
-        data,
-        exceptions,
-        http,
-        logs,
-        tools,
-    )
+    from . import api, auth, cli, constants, data, exceptions, http, logs, tools
     from .api import (
         Adapters,
         CentralCore,
@@ -54,7 +44,7 @@ try:
         Instances,
         Meta,
         RunAction,
-        SettingsCore,
+        SettingsGlobal,
         SettingsGui,
         SettingsLifecycle,
         Signup,
@@ -92,9 +82,8 @@ __all__ = (
     "Enforcements",
     "Instances",
     "Meta",
-    "routers",
     "RunAction",
-    "SettingsCore",
+    "SettingsGlobal",
     "SettingsGui",
     "SettingsLifecycle",
     "Signup",
@@ -119,4 +108,5 @@ __all__ = (
     "logs",
     "tools",
     "version",
+    "routers",
 )

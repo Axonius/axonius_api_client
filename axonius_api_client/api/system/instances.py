@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
 """API for working with instances."""
-from typing import List, Optional
+import datetime
+from typing import List, Optional, Union
 
 from ...exceptions import NotFoundError
-from ...tools import calc_perc_gb
+from ...parsers.system import parse_instances
+from ...tools import dt_days_left, dt_parse
 from ..mixins import ModelMixins
 from ..routers import API_VERSION, Router
 
@@ -50,15 +52,9 @@ class Instances(ModelMixins):
             1
 
         """
-        datas = self._get()
-        for instance in datas["instances"]:
-            calc_perc_gb(obj=instance, whole_key="data_disk_size", part_key="data_disk_free_space")
-            calc_perc_gb(obj=instance, whole_key="memory_size", part_key="memory_free_space")
-            calc_perc_gb(obj=instance, whole_key="swap_size", part_key="swap_free_space")
-            calc_perc_gb(obj=instance, whole_key="os_disk_size", part_key="os_disk_free_space")
-        return datas
+        return parse_instances(raw=self._get())
 
-    def get_core(self) -> dict:
+    def get_core(self, key: Optional[str] = None) -> Union[dict, Union[str, bool, int, float]]:
         """Get the core instance.
 
         Examples:
@@ -82,11 +78,14 @@ class Instances(ModelMixins):
             >>> instance['swap_free_space_percent']
             0.0
 
+        Args:
+            key: key to return or just return whole object
+
         """
         instances = self.get()["instances"]
         for instance in instances:
             if instance["is_master"]:
-                return instance
+                return instance[key] if key else instance
 
     def get_collectors(self) -> List[dict]:
         """Get the collector instances.
@@ -102,7 +101,9 @@ class Instances(ModelMixins):
         instances = self.get()["instances"]
         return [x for x in instances if not x.get("is_master")]
 
-    def get_by_name(self, name: str) -> dict:
+    def get_by_name(
+        self, name: str, key: Optional[str] = None
+    ) -> Union[dict, Union[str, bool, int, float]]:
         """Get an instance by name.
 
         Examples:
@@ -124,50 +125,57 @@ class Instances(ModelMixins):
             >>> instance['swap_free_space_percent']
             0.0
 
+        Args:
+            name: name of instance
+            key: key to return or just return whole object
         """
         instances = self.get()["instances"]
         valid = []
         for instance in instances:
-            instance_name = instance["node_name"]
+            instance_name = instance["name"]
             valid.append(instance_name)
             if instance_name == name:
-                return instance
+                return instance[key] if key else instance
 
         valid = "\n - " + "\n - ".join(valid)
-        raise NotFoundError(f"No instance named {name!r} found, valid: {valid}")
+        raise NotFoundError(f"No instance (node) named {name!r} found, valid: {valid}")
 
-    def set_name(self, name: str, value: str) -> dict:
+    def set_name(self, name: str, new_name: str) -> str:
         """Set the name of an instance.
 
         Examples:
             Create a ``client`` using :obj:`axonius_api_client.connect.Connect`
 
+            Get the current name
+
+            >>> orig_value = client.instances.get_core(key='name')
+            >>> orig_value
+            'Master'
+
             Set a new name
 
-            >>> old_name = 'Master'
-            >>> new_name = 'Temp'
-            >>> instance = client.instances.set_name(name=old_name, value=new_name)
-            >>> instance['node_name']
+            >>> new_value = client.instances.set_name(name=orig_value, new_name='Temp')
+            >>> new_value
             'Temp'
 
             Revert back to the original name
 
-            >>> instance = client.instances.set_name(name=new_name, value=old_name)
-            >>> instance['node_name']
+            >>> reset_value = client.instances.set_name(name=new_value, new_name=orig_value)
+            >>> reset_value
             'Master'
 
         Args:
             name: name of instance
-            value: new name to set on instance
+            new_name: new name to set on instance
         """
         instance = self.get_by_name(name=name)
-        node_id = instance["node_id"]
+        node_id = instance["id"]
         hostname = instance["hostname"]
-        self._update(node_id=node_id, node_name=value, hostname=hostname)
-        return self.get_by_name(name=value)
+        self._update(node_id=node_id, node_name=new_name, hostname=hostname)
+        return self.get_by_name(name=new_name, key="name")
 
     def get_hostname(self, name: str) -> str:
-        """Set the host name of an instance.
+        """Get the host name of an instance.
 
         Examples:
             Create a ``client`` using :obj:`axonius_api_client.connect.Connect`
@@ -182,10 +190,9 @@ class Instances(ModelMixins):
             name: name of instance
             value: new hostname to set on instance
         """
-        instance = self.get_by_name(name=name)
-        return instance["hostname"]
+        return self.get_by_name(name=name, key="hostname")
 
-    def set_hostname(self, name: str, value: str) -> dict:
+    def set_hostname(self, name: str, value: str) -> str:
         """Set the hostname of an instance.
 
         Examples:
@@ -193,31 +200,29 @@ class Instances(ModelMixins):
 
             Get the current hostname
 
-            >>> old_hostname = client.instances.get_hostname(name='Master')
-            >>> old_hostname
+            >>> orig_value = client.instances.get_hostname(name='Master')
+            >>> orig_value
             'builds-vm-jim-pre-3-10-1601596999-000'
 
             Set a new hostname
 
-            >>> new_hostname = "hostname"
-            >>> instance = client.instances.set_hostname(name='Master', value=new_hostname)
-            >>> instance['hostname']
+            >>> new_value = client.instances.set_hostname(name='Master', value="hostname")
+            >>> new_value
             "hostname"
 
             Revert to the old hostname
 
-            >>> instance = client.instances.set_hostname(name='Master', value=old_hostname)
-            >>> instance['hostname']
+            >>> reset_value = client.instances.set_hostname(name='Master', value=orig_value)
+            >>> reset_value
             'builds-vm-jim-pre-3-10-1601596999-000'
 
         Args:
             name: name of instance
             value: new hostname to set on instance
         """
-        instance = self.get_by_name(name=name)
-        node_id = instance["node_id"]
+        node_id = self.get_by_name(name=name, key="id")
         self._update(node_id=node_id, node_name=name, hostname=value)
-        return self.get_by_name(name=name)
+        return self.get_hostname(name=name)
 
     def get_is_env_name(self, name: str) -> bool:
         """See if an instance name is being used for the environment name.
@@ -234,10 +239,9 @@ class Instances(ModelMixins):
         Args:
             name: name of instance
         """
-        instance = self.get_by_name(name=name)
-        return instance["use_as_environment_name"]
+        return self.get_by_name(name=name, key="use_as_environment_name")
 
-    def set_is_env_name(self, name: str, enabled: bool) -> dict:
+    def set_is_env_name(self, name: str, enabled: bool) -> bool:
         """Set if an instance name is being used for the environment name.
 
         Examples:
@@ -245,14 +249,12 @@ class Instances(ModelMixins):
 
             Enable an instance name as the environment name
 
-            >>> instance = client.instances.set_is_env_name(name='Master', enabled=True)
-            >>> instance['use_as_environment_name']
+            >>> client.instances.set_is_env_name(name='Master', enabled=True)
             True
 
             Disable an instance name as the environment name
 
-            >>> instance = client.instances.set_is_env_name(name='Master', enabled=False)
-            >>> instance['use_as_environment_name']
+            >>> client.instances.set_is_env_name(name='Master', enabled=False)
             False
 
         Notes:
@@ -263,12 +265,12 @@ class Instances(ModelMixins):
             enabled: enable/disable instance name as the environment name
         """
         instance = self.get_by_name(name=name)
-        node_id = instance["node_id"]
+        node_id = instance["id"]
         hostname = instance["hostname"]
         self._update(
             node_id=node_id, node_name=name, hostname=hostname, use_as_environment_name=enabled
         )
-        return self.get_by_name(name=name)
+        return self.get_is_env_name(name=name)
 
     def get_central_core_mode(self) -> bool:
         """Get a bool that shows if a core is in central core mode.
@@ -281,7 +283,7 @@ class Instances(ModelMixins):
         """
         return self.get_central_core_config()["central_core_enabled"]
 
-    def set_central_core_mode(self, enabled: bool) -> dict:
+    def set_central_core_mode(self, enabled: bool) -> bool:
         """Convert a normal core into a central core.
 
         Examples:
@@ -290,18 +292,18 @@ class Instances(ModelMixins):
             Enable central core mode on a core
 
             >>> client.instances.set_central_core_mode(enabled=True)
-            {'core_delete_backups': False, 'central_core_enabled': True}
+            True
 
             Disable central core mode on a core
 
             >>> client.instances.set_central_core_mode(enabled=False)
-            {'core_delete_backups': False, 'central_core_enabled': False}
+            False
 
         Args:
             enabled: enable/disable central core mode
         """
         self._update_central_core(enabled=enabled, delete_backups=None)
-        return self.get_central_core_config()
+        return self.get_central_core_mode()
 
     def get_core_delete_mode(self) -> bool:
         """Get a bool that shows if a core is in central core mode.
@@ -323,18 +325,18 @@ class Instances(ModelMixins):
             Set backups to delete after restore
 
             >>> client.instances.set_core_delete_mode(enabled=True)
-            {'core_delete_backups': True, 'central_core_enabled': False}
+            True
 
             Set backups to NOT delete after restore
 
-            >>> client.instances.set_core_delete_mode(enabled=True)
-            {'core_delete_backups': False, 'central_core_enabled': False}
+            >>> client.instances.set_core_delete_mode(enabled=False)
+            False
 
         Args:
             enabled: enable/disable deletion of backups after they have been restored by a core
         """
         self._update_central_core(enabled=None, delete_backups=enabled)
-        return self.get_central_core_config()
+        return self.get_core_delete_mode()
 
     def get_central_core_config(self) -> dict:
         """Get the current central core configuration.
@@ -343,7 +345,7 @@ class Instances(ModelMixins):
             Create a ``client`` using :obj:`axonius_api_client.connect.Connect`
 
             >>> client.instances.get_central_core_config()
-            {'delete_backups': False, 'enabled': False}
+            {'core_delete_backups': False, 'central_core_enabled': False}
 
         """
         data = self._get_central_core()
@@ -399,19 +401,56 @@ class Instances(ModelMixins):
 
         return self._restore(restore_type="aws", restore_opts=restore_opts)
 
+    @property
+    def feature_flags(self) -> dict:
+        """Get the feature flags for the core."""
+        return self._feature_flags()
+
+    @property
+    def has_cloud_compliance(self) -> bool:
+        """Get the status of cloud compliance module being enabled."""
+        return self.feature_flags["config"]["cloud_compliance"]["enabled"]
+
+    @property
+    def trial_expiry(self) -> Optional[datetime.datetime]:
+        """Get the trial expiration date."""
+        expiry = self.feature_flags["config"]["trial_end"]
+        return dt_parse(obj=expiry) if expiry else None
+
+    @property
+    def trial_days_left(self) -> Optional[int]:
+        """Get the number of days left for the trial."""
+        return dt_days_left(obj=self.trial_expiry)
+
+    @property
+    def license_expiry(self) -> Optional[datetime.datetime]:
+        """Get the license expiration date."""
+        expiry = self.feature_flags["config"]["expiry_date"]
+        return dt_parse(obj=expiry) if expiry else None
+
+    @property
+    def license_days_left(self) -> Optional[int]:
+        """Get the number of days left for the license."""
+        return dt_days_left(obj=self.license_expiry)
+
     def _get(self) -> dict:
         """Direct API method to get instances."""
         return self.request(method="get", path=self.router.root)
 
     def _delete(self, node_id: str):  # pragma: no cover
-        """Pass."""
+        """Direct API method to delete an instance.
+
+        Notes:
+            Untested!
+
+        Args:
+            node_id: node id of instance
+        """
         data = {"nodeIds": node_id}
         path = self.router.root
         return self.request(method="delete", path=path, json=data)
 
-    def _update(
-        self, node_id: str, node_name: str, hostname: str, **kwargs
-    ) -> dict:  # pragma: no cover
+    def _update(self, node_id: str, node_name: str, hostname: str, **kwargs) -> dict:
         """Direct API method to update an instance.
 
         Args:
@@ -456,6 +495,12 @@ class Instances(ModelMixins):
 
         path = self.router.central_core_restore
         response = self.request(method="post", path=path, json=data, response_timeout=3600)
+        return response
+
+    def _feature_flags(self) -> dict:
+        """Direct API method to get the feature flags for the core."""
+        path = self.router.feature_flags
+        response = self.request(method="get", path=path)
         return response
 
     @property

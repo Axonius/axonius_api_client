@@ -1,7 +1,7 @@
-Product metadata
+System
 ###############################################
 
-.. automodule:: axonius_api_client.parsers.meta
+.. automodule:: axonius_api_client.constants.system
    :members:
    :show-inheritance:
    :inherited-members:

@@ -82,7 +82,13 @@ class ModelMixins(Model, PageSizeMixin):
         error: Optional[str] = None,
         exc: Optional[Exception] = None,
     ) -> str:
-        """Pass."""
+        """Build an error message from a response.
+
+        Args:
+            response (:obj:`requests.Response`): response that originated the error
+            error: error message to include in exception
+            exc: exception that was thrown if any
+        """
         request_size = len(response.request.body or "")
         response_size = len(response.text or "")
         msgs = []
@@ -245,7 +251,7 @@ class ModelMixins(Model, PageSizeMixin):
 
 
 class PagingMixinsObject(PageSizeMixin):
-    """Pass."""
+    """Mixins for API models that support object paging."""
 
     def get_by_uuid(self, value: str, **kwargs) -> dict:
         """Get an object by UUID.

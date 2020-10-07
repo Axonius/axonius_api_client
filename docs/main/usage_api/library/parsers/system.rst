@@ -1,7 +1,7 @@
-Roles
+System
 ###############################################
 
-.. automodule:: axonius_api_client.parsers.roles
+.. automodule:: axonius_api_client.parsers.system
    :members:
    :show-inheritance:
    :inherited-members:

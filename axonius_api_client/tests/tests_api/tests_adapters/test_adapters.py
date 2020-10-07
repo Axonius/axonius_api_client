@@ -4,12 +4,18 @@ import copy
 import warnings
 
 import pytest
-from axonius_api_client.constants.adapters import CSV_ADAPTER, DEFAULT_NODE
-from axonius_api_client.exceptions import (ApiError, ConfigUnchanged,
-                                           ConfigUnknown, NotFoundError)
 
-from ...meta import (CSV_FILECONTENT_BYTES, CSV_FILECONTENT_STR, CSV_FILENAME,
-                     FIELD_FORMATS, NO_TITLES, SCHEMA_TYPES)
+from axonius_api_client.constants.adapters import CSV_ADAPTER
+from axonius_api_client.exceptions import ApiError, ConfigUnchanged, ConfigUnknown, NotFoundError
+
+from ...meta import (
+    CSV_FILECONTENT_BYTES,
+    CSV_FILECONTENT_STR,
+    CSV_FILENAME,
+    FIELD_FORMATS,
+    NO_TITLES,
+    SCHEMA_TYPES,
+)
 
 
 def val_parsed_schema(schema):
@@ -78,7 +84,7 @@ class TestAdaptersBase:
 
     @pytest.fixture(scope="class")
     def adapter(self, apiobj):
-        return apiobj.get_by_name(name=CSV_ADAPTER, node=DEFAULT_NODE)
+        return apiobj.get_by_name(name=CSV_ADAPTER)
 
 
 class TestAdaptersPrivate(TestAdaptersBase):
@@ -557,7 +563,7 @@ class TestAdaptersPublic(TestAdaptersBase):
         assert not cnx
 
     def test_get_by_name(self, apiobj):
-        adapter = apiobj.get_by_name(name=CSV_ADAPTER, node=DEFAULT_NODE)
+        adapter = apiobj.get_by_name(name=CSV_ADAPTER)
         assert "schemas" in adapter
         self.val_parsed_adapter(adapter=adapter)
 
@@ -567,14 +573,14 @@ class TestAdaptersPublic(TestAdaptersBase):
 
     def test_get_by_name_bad_name(self, apiobj):
         with pytest.raises(NotFoundError):
-            apiobj.get_by_name(name="badwolf", node=DEFAULT_NODE)
+            apiobj.get_by_name(name="badwolf")
 
     def test_config_get_bad_config_type(self, apiobj):
         with pytest.raises(ApiError):
-            apiobj.config_get(name=CSV_ADAPTER, node=DEFAULT_NODE, config_type="badwolf")
+            apiobj.config_get(name=CSV_ADAPTER, config_type="badwolf")
 
     def test_config_get_discovery(self, apiobj):
-        data = apiobj.config_get(name="aws", node=DEFAULT_NODE, config_type="discovery")
+        data = apiobj.config_get(name="aws", config_type="discovery")
         assert isinstance(data, dict)
         config = data.pop("config")
         assert isinstance(config, dict) and config
@@ -585,7 +591,7 @@ class TestAdaptersPublic(TestAdaptersBase):
         val_parsed_schema(schema=schema)
 
     def test_config_get_specific(self, apiobj):
-        data = apiobj.config_get(name="aws", node=DEFAULT_NODE, config_type="specific")
+        data = apiobj.config_get(name="aws", config_type="specific")
         assert isinstance(data, dict)
         config = data.pop("config")
         assert isinstance(config, dict) and config
@@ -596,7 +602,7 @@ class TestAdaptersPublic(TestAdaptersBase):
         val_parsed_schema(schema=schema)
 
     def test_config_get_generic(self, apiobj):
-        data = apiobj.config_get(name=CSV_ADAPTER, node=DEFAULT_NODE, config_type="generic")
+        data = apiobj.config_get(name=CSV_ADAPTER, config_type="generic")
         assert isinstance(data, dict)
 
         config = data.pop("config")
@@ -625,7 +631,6 @@ class TestAdaptersPublic(TestAdaptersBase):
 
         data = apiobj.file_upload_path(
             name=CSV_ADAPTER,
-            node=DEFAULT_NODE,
             path=test_path,
         )
         assert isinstance(data, dict)
@@ -636,14 +641,13 @@ class TestAdaptersPublic(TestAdaptersBase):
         with pytest.raises(ConfigUnknown):
             apiobj.config_update(
                 name=CSV_ADAPTER,
-                node=DEFAULT_NODE,
                 config_type="generic",
                 badwolf="badwolf",
             )
 
     def test_config_update_unchanged(self, apiobj):
         with pytest.raises(ConfigUnchanged):
-            apiobj.config_update(name=CSV_ADAPTER, node=DEFAULT_NODE, config_type="generic")
+            apiobj.config_update(name=CSV_ADAPTER, config_type="generic")
 
     def test_config_update_generic(self, apiobj, adapter):
         data = apiobj.config_refetch(adapter=adapter)

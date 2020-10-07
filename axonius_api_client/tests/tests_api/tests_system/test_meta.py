@@ -5,8 +5,8 @@ import pytest
 
 class SystemMetaBase:
     @pytest.fixture(scope="class")
-    def apiobj(self, api_system):
-        return api_system.meta
+    def apiobj(self, api_meta):
+        return api_meta
 
 
 class TestSystemMetaPrivate(SystemMetaBase):

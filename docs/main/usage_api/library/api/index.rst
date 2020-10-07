@@ -5,3 +5,4 @@ API library backend
    api_mixins
    asset_mixins
    routers
+   settings_mixins

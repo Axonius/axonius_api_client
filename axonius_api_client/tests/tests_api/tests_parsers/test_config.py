@@ -3,26 +3,44 @@
 import copy
 
 import pytest
-from axonius_api_client.constants.adapters import SETTING_UNCHANGED
-from axonius_api_client.exceptions import (ApiError, ConfigInvalidValue,
-                                           ConfigRequired, ConfigUnchanged,
-                                           ConfigUnknown)
-from axonius_api_client.parsers.config import (config_check,
-                                               config_check_array,
-                                               config_check_bool,
-                                               config_check_file,
-                                               config_check_int,
-                                               config_check_str,
-                                               config_default, config_empty,
-                                               config_required,
-                                               config_unchanged,
-                                               config_unknown,
-                                               is_uploaded_file, parse_schema)
 
-from ...meta import (SCHEMA_ARRAY, SCHEMA_BOOL, SCHEMA_FILE, SCHEMA_INT,
-                     SCHEMA_NUM, SCHEMA_STR, SCHEMA_STR_ENUM,
-                     SCHEMA_STR_PASSWORD, SCHEMA_UNKNOWN, SCHEMAS,
-                     SCHEMAS_DICT)
+from axonius_api_client.constants.api import SETTING_UNCHANGED
+from axonius_api_client.exceptions import (
+    ApiError,
+    ConfigInvalidValue,
+    ConfigRequired,
+    ConfigUnchanged,
+    ConfigUnknown,
+)
+from axonius_api_client.parsers.config import (
+    config_check,
+    config_check_array,
+    config_check_bool,
+    config_check_file,
+    config_check_int,
+    config_check_str,
+    config_default,
+    config_empty,
+    config_required,
+    config_unchanged,
+    config_unknown,
+    is_uploaded_file,
+    parse_schema,
+)
+
+from ...meta import (
+    SCHEMA_ARRAY,
+    SCHEMA_BOOL,
+    SCHEMA_FILE,
+    SCHEMA_INT,
+    SCHEMA_NUM,
+    SCHEMA_STR,
+    SCHEMA_STR_ENUM,
+    SCHEMA_STR_PASSWORD,
+    SCHEMA_UNKNOWN,
+    SCHEMAS,
+    SCHEMAS_DICT,
+)
 
 
 def test_config_check_str():

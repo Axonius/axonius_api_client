@@ -2,6 +2,9 @@
 """Constants for API models."""
 from typing import List
 
+SETTING_UNCHANGED: List[str] = ["unchanged"]
+"""used by REST API when supplying a password field that is the same in the database"""
+
 FIELD_TRIM_LEN: int = 32000
 """Default length to trim field values to"""
 
@@ -34,3 +37,6 @@ TIMEOUT_CONNECT: int = 5
 
 TIMEOUT_RESPONSE: int = 900
 """seconds to wait for response from API."""
+
+DEFAULT_CALLBACKS_CLS: str = "base"
+"""Default callback object to use"""

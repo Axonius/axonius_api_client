@@ -4,7 +4,9 @@ from .central_core import CentralCore
 from .dashboard import Dashboard
 from .instances import Instances
 from .meta import Meta
-from .settings import SettingsCore, SettingsGui, SettingsLifecycle
+from .settings_global import SettingsGlobal
+from .settings_gui import SettingsGui
+from .settings_lifecycle import SettingsLifecycle
 from .signup import Signup
 from .system import System
 from .system_roles import SystemRoles
@@ -15,7 +17,7 @@ __all__ = (
     "Dashboard",
     "Instances",
     "Meta",
-    "SettingsCore",
+    "SettingsGlobal",
     "SettingsGui",
     "SettingsLifecycle",
     "Signup",

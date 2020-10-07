@@ -3,17 +3,33 @@
 import os
 
 import pytest
-from axonius_api_client.api import (Adapters, Dashboard, Devices, Enforcements,
-                                    Instances, Meta, RunAction, SettingsCore,
-                                    SettingsGui, SettingsLifecycle, Signup,
-                                    System, SystemRoles, SystemUsers, Users)
+
+from axonius_api_client.api import (
+    Adapters,
+    Dashboard,
+    Devices,
+    Enforcements,
+    Instances,
+    Meta,
+    RunAction,
+    SettingsGlobal,
+    SettingsGui,
+    SettingsLifecycle,
+    Signup,
+    SystemRoles,
+    SystemUsers,
+    Users,
+    Wizard,
+    WizardCsv,
+    WizardText,
+)
 from axonius_api_client.api.adapters import Cnx
 from axonius_api_client.api.assets import Fields, Labels, SavedQuery
-from axonius_api_client.constants.adapters import CSV_ADAPTER, DEFAULT_NODE
+from axonius_api_client.constants.adapters import CSV_ADAPTER
+from axonius_api_client.constants.system import Role
 
-from .meta import CSV_FILECONTENT_STR, CSV_FILENAME
-from .utils import (check_apiobj, check_apiobj_children, check_apiobj_xref,
-                    get_auth, get_url)
+from .meta import CSV_FILECONTENT_STR, CSV_FILENAME, USER_NAME
+from .utils import check_apiobj, check_apiobj_children, check_apiobj_xref, get_auth, get_url
 
 AX_URL = os.environ.get("AX_URL", None) or None
 AX_KEY = os.environ.get("AX_KEY", None) or None
@@ -69,6 +85,10 @@ def api_devices(request):
     )
 
     check_apiobj_xref(apiobj=obj, adapters=Adapters)
+    assert isinstance(obj.wizard, Wizard)
+    assert isinstance(obj.wizard_text, WizardText)
+    assert isinstance(obj.wizard_csv, WizardCsv)
+
     return obj
 
 
@@ -91,6 +111,10 @@ def api_users(request):
     )
 
     check_apiobj_xref(apiobj=obj, adapters=Adapters)
+    assert isinstance(obj.wizard, Wizard)
+    assert isinstance(obj.wizard_text, WizardText)
+    assert isinstance(obj.wizard_csv, WizardCsv)
+
     return obj
 
 
@@ -141,21 +165,60 @@ def api_instances(request):
 
 
 @pytest.fixture(scope="session")
-def api_system(request):
+def api_system_roles(request):
     """Test utility."""
     auth = get_auth(request)
-    obj = System(auth=auth)
+    obj = SystemRoles(auth=auth)
     check_apiobj(authobj=auth, apiobj=obj)
+    check_apiobj_xref(apiobj=obj, instances=Instances)
 
-    check_apiobj_xref(
-        apiobj=obj,
-        settings_core=SettingsCore,
-        settings_gui=SettingsGui,
-        settings_lifecycle=SettingsLifecycle,
-        meta=Meta,
-        users=SystemUsers,
-        roles=SystemRoles,
-    )
+    return obj
+
+
+@pytest.fixture(scope="session")
+def api_system_users(request):
+    """Test utility."""
+    auth = get_auth(request)
+    obj = SystemUsers(auth=auth)
+    check_apiobj(authobj=auth, apiobj=obj)
+    check_apiobj_xref(apiobj=obj, roles=SystemRoles)
+
+    return obj
+
+
+@pytest.fixture(scope="session")
+def api_meta(request):
+    """Test utility."""
+    auth = get_auth(request)
+    obj = Meta(auth=auth)
+    check_apiobj(authobj=auth, apiobj=obj)
+    return obj
+
+
+@pytest.fixture(scope="session")
+def api_settings_lifecycle(request):
+    """Test utility."""
+    auth = get_auth(request)
+    obj = SettingsLifecycle(auth=auth)
+    check_apiobj(authobj=auth, apiobj=obj)
+    return obj
+
+
+@pytest.fixture(scope="session")
+def api_settings_global(request):
+    """Test utility."""
+    auth = get_auth(request)
+    obj = SettingsGlobal(auth=auth)
+    check_apiobj(authobj=auth, apiobj=obj)
+    return obj
+
+
+@pytest.fixture(scope="session")
+def api_settings_gui(request):
+    """Test utility."""
+    auth = get_auth(request)
+    obj = SettingsGui(auth=auth)
+    check_apiobj(authobj=auth, apiobj=obj)
     return obj
 
 
@@ -171,7 +234,6 @@ def csv_file_path(api_adapters):
     """Test utility."""
     data = api_adapters.file_upload(
         name=CSV_ADAPTER,
-        node=DEFAULT_NODE,
         field_name="file_path",
         file_name=CSV_FILENAME,
         file_content=CSV_FILECONTENT_STR,
@@ -187,7 +249,6 @@ def csv_file_path_broken(api_adapters):
     """Test utility."""
     data = api_adapters.file_upload(
         name=CSV_ADAPTER,
-        node=DEFAULT_NODE,
         field_name="file_path",
         file_name="BADWOLF",
         file_content="BADWOLF",
@@ -196,3 +257,42 @@ def csv_file_path_broken(api_adapters):
     assert data["uuid"]
     assert data["filename"]
     return data
+
+
+@pytest.fixture()
+def smtp_setup(api_settings_global):
+    """Pass."""
+
+    def setup():
+        try:
+            api_settings_global.update_section(
+                section="email_settings", enabled=True, smtpHost="10.0.2.110", smtpPort=25
+            )
+        except Exception:
+            pass
+
+    def teardown():
+        try:
+            api_settings_global.update_section(
+                section="email_settings", enabled=False, smtpHost=None, smtpPort=None
+            )
+        except Exception:
+            pass
+
+    return setup, teardown
+
+
+@pytest.fixture(scope="function")
+def temp_user(api_system_users):
+    """Pass."""
+    try:
+        api_system_users.delete_by_name(name=USER_NAME)
+    except Exception:
+        pass
+
+    user = api_system_users.add(name=USER_NAME, role_name=Role.R_ADMIN, password=USER_NAME)
+    yield user
+    try:
+        api_system_users.delete_by_name(name=USER_NAME)
+    except Exception:
+        pass
