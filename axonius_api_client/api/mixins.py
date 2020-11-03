@@ -6,11 +6,10 @@ import time
 from typing import Any, Generator, List, Optional, Union
 
 from .. import auth
-from ..constants.api import MAX_PAGE_SIZE
 from ..constants.logs import LOG_LEVEL_API, MAX_BODY_LEN
 from ..exceptions import JsonError, JsonInvalid, NotFoundError, ResponseNotOk
 from ..logs import get_obj_log
-from ..tools import dt_now, dt_sec_ago, json_dump, json_load, json_reload
+from ..tools import dt_now, dt_sec_ago, json_dump, json_load
 from .routers import Router
 
 
@@ -244,7 +243,6 @@ class ModelMixins(Model, PageSizeMixin):
             has_error_status = data.get("status") == "error"
 
             if (has_error or has_error_status) and error_json_bad_status:
-                respexc = JsonError(self._build_err_msg(response=response))
                 respexc.response = response
                 raise respexc
         return data

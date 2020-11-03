@@ -3,25 +3,12 @@
 import click
 
 from ..context import AliasedGroup
-from . import (
-    cmd_count,
-    cmd_count_by_saved_query,
-    cmd_destroy,
-    cmd_get,
-    cmd_get_by_id,
-    cmd_get_by_saved_query,
-    cmd_get_fields,
-    cmd_get_fields_default,
-    cmd_get_tags,
-    grp_saved_query,
-)
-from .grp_common import (
-    GET_BY_VALUE_BUILDERS,
-    GET_BY_VALUE_FIELD,
-    GET_BY_VALUE_REGEX_BUILDERS,
-    GET_BY_VALUES_BUILDERS,
-    gen_get_by_cmd,
-)
+from . import (cmd_count, cmd_count_by_saved_query, cmd_destroy, cmd_get,
+               cmd_get_by_id, cmd_get_by_saved_query, cmd_get_fields,
+               cmd_get_fields_default, cmd_get_tags, grp_saved_query)
+from .grp_common import (GET_BY_VALUE_BUILDERS, GET_BY_VALUE_FIELD,
+                         GET_BY_VALUE_REGEX_BUILDERS, GET_BY_VALUES_BUILDERS,
+                         gen_get_by_cmd)
 
 
 @click.group(cls=AliasedGroup)
@@ -65,7 +52,7 @@ def add_cmds(grp_obj, fields):
         cmd = gen_get_by_cmd(
             options=GET_BY_VALUE_BUILDERS,
             doc=f"Get assets where {field} equals value",
-            cmd_name=method.replace("-", "_"),
+            cmd_name=method.replace("_", "-"),
             method=method,
         )
         add_cmd(grp_obj=grp_obj, method=method, cmd=cmd)
@@ -74,7 +61,7 @@ def add_cmds(grp_obj, fields):
         cmd = gen_get_by_cmd(
             options=GET_BY_VALUES_BUILDERS,
             doc=f"Get assets where {field} equals multiple values",
-            cmd_name=method.replace("-", "_"),
+            cmd_name=method.replace("_", "-"),
             method=method,
         )
         add_cmd(grp_obj=grp_obj, method=method, cmd=cmd)
@@ -83,7 +70,7 @@ def add_cmds(grp_obj, fields):
         cmd = gen_get_by_cmd(
             options=GET_BY_VALUE_REGEX_BUILDERS,
             doc=f"Get assets where {field} matches regex value",
-            cmd_name=method.replace("-", "_"),
+            cmd_name=method.replace("_", "-"),
             method=method,
         )
         add_cmd(grp_obj=grp_obj, method=method, cmd=cmd)
@@ -92,7 +79,7 @@ def add_cmds(grp_obj, fields):
     cmd = gen_get_by_cmd(
         options=[*GET_BY_VALUE_BUILDERS, GET_BY_VALUE_FIELD],
         doc="Get assets where a field equals value",
-        cmd_name=method.replace("-", "_"),
+        cmd_name=method.replace("_", "-"),
         method=method,
     )
     add_cmd(grp_obj=grp_obj, method=method, cmd=cmd)
@@ -101,7 +88,7 @@ def add_cmds(grp_obj, fields):
     cmd = gen_get_by_cmd(
         options=[*GET_BY_VALUES_BUILDERS, GET_BY_VALUE_FIELD],
         doc="Get assets where a field equals multiple values",
-        cmd_name=method.replace("-", "_"),
+        cmd_name=method.replace("_", "-"),
         method=method,
     )
     add_cmd(grp_obj=grp_obj, method=method, cmd=cmd)
@@ -110,7 +97,7 @@ def add_cmds(grp_obj, fields):
     cmd = gen_get_by_cmd(
         options=[*GET_BY_VALUE_REGEX_BUILDERS, GET_BY_VALUE_FIELD],
         doc="Get assets where a field matches regex value",
-        cmd_name=method.replace("-", "_"),
+        cmd_name=method.replace("_", "-"),
         method=method,
     )
     add_cmd(grp_obj=grp_obj, method=method, cmd=cmd)
@@ -123,7 +110,7 @@ method = "get_by_subnet"
 cmd = gen_get_by_cmd(
     options=GET_BY_VALUE_BUILDERS,
     doc="Get assets in subnet",
-    cmd_name=method.replace("-", "_"),
+    cmd_name=method.replace("_", "-"),
     method=method,
 )
 add_cmd(grp_obj=devices, method=method, cmd=cmd)
