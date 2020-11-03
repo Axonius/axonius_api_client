@@ -4,18 +4,12 @@ import copy
 import warnings
 
 import pytest
-
 from axonius_api_client.constants.adapters import CSV_ADAPTER
-from axonius_api_client.exceptions import ApiError, ConfigUnchanged, ConfigUnknown, NotFoundError
+from axonius_api_client.exceptions import (ApiError, ConfigUnchanged,
+                                           ConfigUnknown, NotFoundError)
 
-from ...meta import (
-    CSV_FILECONTENT_BYTES,
-    CSV_FILECONTENT_STR,
-    CSV_FILENAME,
-    FIELD_FORMATS,
-    NO_TITLES,
-    SCHEMA_TYPES,
-)
+from ...meta import (CSV_FILECONTENT_BYTES, CSV_FILECONTENT_STR, CSV_FILENAME,
+                     FIELD_FORMATS, NO_TITLES, SCHEMA_TYPES)
 
 
 def val_parsed_schema(schema):
@@ -73,6 +67,10 @@ def val_parsed_schema(schema):
 
         item_report_id = item.pop("report_id", "")
         assert isinstance(item_report_id, str)
+        item_max = item.pop("max", 0)
+        assert isinstance(item_max, int)
+        item_min = item.pop("min", 0)
+        assert isinstance(item_min, int)
 
         assert not item
 
@@ -256,6 +254,10 @@ class TestAdaptersPrivate(TestAdaptersBase):
 
             item_report_id = item.pop("report_id", "")
             assert isinstance(item_report_id, str)
+            item_max = item.pop("max", 0)
+            assert isinstance(item_max, int)
+            item_min = item.pop("min", 0)
+            assert isinstance(item_min, int)
 
             assert not item
 

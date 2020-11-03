@@ -7,14 +7,9 @@ from typing import Any, List, Optional, Tuple, Union
 
 from ..constants.api import SETTING_UNCHANGED
 from ..constants.general import NO, YES
-from ..exceptions import (
-    ApiError,
-    ConfigInvalidValue,
-    ConfigRequired,
-    ConfigUnchanged,
-    ConfigUnknown,
-)
-from ..tools import is_int, join_kv, json_load
+from ..exceptions import (ApiError, ConfigInvalidValue, ConfigRequired,
+                          ConfigUnchanged, ConfigUnknown)
+from ..tools import coerce_int, is_int, join_kv, json_load
 from .tables import tablize_schemas
 
 
@@ -155,7 +150,9 @@ def config_check_int(
         :exc:`ConfigInvalidValue`: if the supplied value is not an integer
     """
     if is_int(obj=value, digit=True):
-        return int(value)
+        return coerce_int(
+            obj=value, max_value=schema.get("max", None), min_value=schema.get("min", None)
+        )
 
     sinfo = config_info(schema=schema, value=value, source=source)
     raise ConfigInvalidValue(f"{sinfo}\nIs not a valid integer!")

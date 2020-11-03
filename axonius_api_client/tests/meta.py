@@ -72,26 +72,21 @@ oXO3sikOr2yrDS95jHjVzU0iW3xzu8bM9D01swBx0T5kYKWZo4ywpQ==
 
 FIELD_FORMATS = [
     "discrete",
-    "image",
-    "date-time",
-    "table",
-    "ip",
-    "subnet",
-    "version",
-    "password",
-    "time",
     "connection_label",
-]
-SCHEMA_FIELD_FORMATS = [
-    "image",
     "date-time",
-    "table",
-    "logo",
-    "tag",
+    "image",
     "ip",
+    "ip_preferred",
+    "logo",
+    "os-distribution",
+    "password",
     "subnet",
+    "table",
+    "tag",
+    "time",
     "version",
 ]
+SCHEMA_FIELD_FORMATS = FIELD_FORMATS
 SCHEMA_TYPES = ["string", "bool", "array", "integer", "number", "file"]
 TAGS = ["badwolf_tag_1", "badwolf_tag_2"]
 

@@ -10,7 +10,8 @@ import sys
 import warnings
 from datetime import datetime, timedelta, timezone
 from itertools import zip_longest
-from typing import Any, Callable, Iterable, Iterator, List, Optional, Tuple, Union
+from typing import (Any, Callable, Iterable, Iterator, List, Optional, Tuple,
+                    Union)
 from urllib.parse import urljoin
 
 import click
@@ -20,16 +21,8 @@ import dateutil.tz
 
 from . import INIT_DOTENV, PACKAGE_FILE, PACKAGE_ROOT, VERSION
 from .constants.api import GUI_PAGE_SIZES
-from .constants.general import (
-    ERROR_ARGS,
-    ERROR_TMPL,
-    NO,
-    OK_ARGS,
-    OK_TMPL,
-    WARN_ARGS,
-    WARN_TMPL,
-    YES,
-)
+from .constants.general import (ERROR_ARGS, ERROR_TMPL, NO, OK_ARGS, OK_TMPL,
+                                WARN_ARGS, WARN_TMPL, YES)
 from .exceptions import ToolsError
 from .setup_env import find_dotenv, get_env_ax
 
@@ -77,7 +70,7 @@ def grouper(iterable: Iterable, n: int, fillvalue: Optional[Any] = None) -> Iter
     return zip_longest(*([iter(iterable)] * n), fillvalue=fillvalue)
 
 
-def coerce_int(obj: Any) -> int:
+def coerce_int(obj: Any, max_value: Optional[int] = None, min_value: Optional[int] = None) -> int:
     """Convert an object into int.
 
     Args:
@@ -87,10 +80,18 @@ def coerce_int(obj: Any) -> int:
         :exc:`ToolsError`: if obj is not able to be converted to int
     """
     try:
-        return int(obj)
+        value = int(obj)
     except Exception:
         vtype = type(obj).__name__
         raise ToolsError(f"Supplied value {obj!r} of type {vtype} is not an integer.")
+
+    if max_value is not None and value > max_value:
+        raise ToolsError(f"Supplied value {obj!r} is greater than max value of {max_value}.")
+
+    if min_value is not None and value < min_value:
+        raise ToolsError(f"Supplied value {obj!r} is less than min value of {min_value}.")
+
+    return value
 
 
 def coerce_int_float(value: Union[int, float, str]) -> Union[int, float]:

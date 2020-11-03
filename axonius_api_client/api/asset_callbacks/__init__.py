@@ -6,7 +6,8 @@ from .base_json import Json
 from .base_json_to_csv import JsonToCsv
 from .base_table import Table
 from .base_xlsx import Xlsx
-from .tools import get_callbacks_cls
+from .base_xml import Xml
+from .tools import CB_MAP, get_callbacks_cls
 
 __all__ = (
     "Base",
@@ -14,6 +15,8 @@ __all__ = (
     "Json",
     "Table",
     "Xlsx",
+    "Xml",
     "JsonToCsv",
     "get_callbacks_cls",
+    "CB_MAP",
 )
