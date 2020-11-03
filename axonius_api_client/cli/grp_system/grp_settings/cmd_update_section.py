@@ -26,7 +26,7 @@ def cmd(
     new_config = dict(config)
 
     apiname = ctx.parent.command.name.replace("-", "_")
-    apiobj = getattr(client.system, apiname)
+    apiobj = getattr(client, apiname)
 
     with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
         settings = apiobj.update_section(section=section, **new_config)

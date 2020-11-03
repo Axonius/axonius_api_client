@@ -31,7 +31,6 @@ Table of Contents
    main/usage_cli/usage_cli.rst
    main/usage_api/usage_api.rst
    main/contributing.rst
-   main/releases.rst
 
 Indices and tables
 ###############################################

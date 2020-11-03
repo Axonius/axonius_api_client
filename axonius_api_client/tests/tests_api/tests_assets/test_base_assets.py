@@ -4,7 +4,7 @@ import pytest
 import requests
 
 from axonius_api_client.api import mixins
-from axonius_api_client.constants import MAX_PAGE_SIZE
+from axonius_api_client.constants.api import MAX_PAGE_SIZE
 from axonius_api_client.exceptions import (
     ApiError,
     JsonError,

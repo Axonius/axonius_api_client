@@ -1,33 +1,34 @@
 # -*- coding: utf-8 -*-
-"""API model for working with system configuration."""
+"""API for working with system components ``[DEPRECATED]``."""
 from ..mixins import ModelMixins
 from ..routers import API_VERSION, Router
 from .central_core import CentralCore
 from .meta import Meta
-from .roles import Roles
-from .settings import SettingsCore, SettingsGui, SettingsLifecycle
-from .users import Users
+from .settings_global import SettingsGlobal
+from .settings_gui import SettingsGui
+from .settings_lifecycle import SettingsLifecycle
+from .system_roles import SystemRoles
+from .system_users import SystemUsers
 
 
-class System(ModelMixins):
-    """System methods."""
+class System(ModelMixins):  # pragma: no cover
+    """API for working with system components ``[DEPRECATED]``.
+
+    Warning:
+        This object is deprecated.
+    """
 
     @property
-    def router(self) -> Router:
-        """Router for this API model.
-
-        Returns:
-            :obj:`.routers.Router`: REST API route defs
-        """
+    def router(self) -> Router:  # pragma: no cover
+        """Router for this API model ``[DEPRECATED]``."""
         return API_VERSION.system
 
-    def _init(self, **kwargs):
-        """Post init method for subclasses to use for extra setup."""
-        self.settings_core = SettingsCore(parent=self)
-        self.settings_gui = SettingsGui(parent=self)
-        self.settings_lifecycle = SettingsLifecycle(parent=self)
-        self.meta = Meta(parent=self)
-        self.users = Users(parent=self)
-        self.roles = Roles(parent=self)
-        self.central_core = CentralCore(parent=self)
-        super(System, self)._init(**kwargs)
+    def _init(self, **kwargs):  # pragma: no cover
+        """Do not use ``[DEPRECATED]``."""
+        self.settings_global = SettingsGlobal(auth=self.auth, **kwargs)
+        self.settings_gui = SettingsGui(auth=self.auth, **kwargs)
+        self.settings_lifecycle = SettingsLifecycle(auth=self.auth, **kwargs)
+        self.users = SystemUsers(auth=self.auth, **kwargs)
+        self.roles = SystemRoles(auth=self.auth, **kwargs)
+        self.meta = Meta(auth=self.auth, **kwargs)
+        self.central_core = CentralCore(auth=self.auth, **kwargs)

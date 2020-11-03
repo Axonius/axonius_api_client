@@ -4,18 +4,12 @@ import copy
 import warnings
 
 import pytest
+from axonius_api_client.constants.adapters import CSV_ADAPTER
+from axonius_api_client.exceptions import (ApiError, ConfigUnchanged,
+                                           ConfigUnknown, NotFoundError)
 
-from axonius_api_client.constants import CSV_ADAPTER, DEFAULT_NODE
-from axonius_api_client.exceptions import ApiError, ConfigUnchanged, ConfigUnknown, NotFoundError
-
-from ...meta import (
-    CSV_FILECONTENT_BYTES,
-    CSV_FILECONTENT_STR,
-    CSV_FILENAME,
-    FIELD_FORMATS,
-    NO_TITLES,
-    SCHEMA_TYPES,
-)
+from ...meta import (CSV_FILECONTENT_BYTES, CSV_FILECONTENT_STR, CSV_FILENAME,
+                     FIELD_FORMATS, NO_TITLES, SCHEMA_TYPES)
 
 
 def val_parsed_schema(schema):
@@ -73,6 +67,10 @@ def val_parsed_schema(schema):
 
         item_report_id = item.pop("report_id", "")
         assert isinstance(item_report_id, str)
+        item_max = item.pop("max", 0)
+        assert isinstance(item_max, int)
+        item_min = item.pop("min", 0)
+        assert isinstance(item_min, int)
 
         assert not item
 
@@ -84,7 +82,7 @@ class TestAdaptersBase:
 
     @pytest.fixture(scope="class")
     def adapter(self, apiobj):
-        return apiobj.get_by_name(name=CSV_ADAPTER, node=DEFAULT_NODE)
+        return apiobj.get_by_name(name=CSV_ADAPTER)
 
 
 class TestAdaptersPrivate(TestAdaptersBase):
@@ -192,6 +190,10 @@ class TestAdaptersPrivate(TestAdaptersBase):
         last_fetch_time = client.pop("last_fetch_time")
         assert last_fetch_time is None or isinstance(last_fetch_time, str)
 
+        # added in 3.10
+        active = client.pop("active", True)
+        assert isinstance(active, bool)
+
         assert not client
 
     def val_raw_schema(self, name, schema):
@@ -252,6 +254,10 @@ class TestAdaptersPrivate(TestAdaptersBase):
 
             item_report_id = item.pop("report_id", "")
             assert isinstance(item_report_id, str)
+            item_max = item.pop("max", 0)
+            assert isinstance(item_max, int)
+            item_min = item.pop("min", 0)
+            assert isinstance(item_min, int)
 
             assert not item
 
@@ -543,10 +549,23 @@ class TestAdaptersPublic(TestAdaptersBase):
         uuid = cnx.pop("uuid")
         assert isinstance(uuid, str) and uuid
 
+        # TBD: bust out dict?
+        # FYI: added in 3.8?
+        connection_discovery = cnx.pop("connection_discovery")
+        assert isinstance(connection_discovery, dict)
+
+        # FYI: added in 3.8?
+        last_fetch_time = cnx.pop("last_fetch_time")
+        assert last_fetch_time is None or isinstance(last_fetch_time, str)
+
+        # FYI added in 3.10
+        active = cnx.pop("active", True)
+        assert isinstance(active, bool)
+
         assert not cnx
 
     def test_get_by_name(self, apiobj):
-        adapter = apiobj.get_by_name(name=CSV_ADAPTER, node=DEFAULT_NODE)
+        adapter = apiobj.get_by_name(name=CSV_ADAPTER)
         assert "schemas" in adapter
         self.val_parsed_adapter(adapter=adapter)
 
@@ -556,14 +575,14 @@ class TestAdaptersPublic(TestAdaptersBase):
 
     def test_get_by_name_bad_name(self, apiobj):
         with pytest.raises(NotFoundError):
-            apiobj.get_by_name(name="badwolf", node=DEFAULT_NODE)
+            apiobj.get_by_name(name="badwolf")
 
     def test_config_get_bad_config_type(self, apiobj):
         with pytest.raises(ApiError):
-            apiobj.config_get(name=CSV_ADAPTER, node=DEFAULT_NODE, config_type="badwolf")
+            apiobj.config_get(name=CSV_ADAPTER, config_type="badwolf")
 
     def test_config_get_discovery(self, apiobj):
-        data = apiobj.config_get(name="aws", node=DEFAULT_NODE, config_type="discovery")
+        data = apiobj.config_get(name="aws", config_type="discovery")
         assert isinstance(data, dict)
         config = data.pop("config")
         assert isinstance(config, dict) and config
@@ -574,7 +593,7 @@ class TestAdaptersPublic(TestAdaptersBase):
         val_parsed_schema(schema=schema)
 
     def test_config_get_specific(self, apiobj):
-        data = apiobj.config_get(name="aws", node=DEFAULT_NODE, config_type="specific")
+        data = apiobj.config_get(name="aws", config_type="specific")
         assert isinstance(data, dict)
         config = data.pop("config")
         assert isinstance(config, dict) and config
@@ -585,7 +604,7 @@ class TestAdaptersPublic(TestAdaptersBase):
         val_parsed_schema(schema=schema)
 
     def test_config_get_generic(self, apiobj):
-        data = apiobj.config_get(name=CSV_ADAPTER, node=DEFAULT_NODE, config_type="generic")
+        data = apiobj.config_get(name=CSV_ADAPTER, config_type="generic")
         assert isinstance(data, dict)
 
         config = data.pop("config")
@@ -614,7 +633,6 @@ class TestAdaptersPublic(TestAdaptersBase):
 
         data = apiobj.file_upload_path(
             name=CSV_ADAPTER,
-            node=DEFAULT_NODE,
             path=test_path,
         )
         assert isinstance(data, dict)
@@ -625,14 +643,13 @@ class TestAdaptersPublic(TestAdaptersBase):
         with pytest.raises(ConfigUnknown):
             apiobj.config_update(
                 name=CSV_ADAPTER,
-                node=DEFAULT_NODE,
                 config_type="generic",
                 badwolf="badwolf",
             )
 
     def test_config_update_unchanged(self, apiobj):
         with pytest.raises(ConfigUnchanged):
-            apiobj.config_update(name=CSV_ADAPTER, node=DEFAULT_NODE, config_type="generic")
+            apiobj.config_update(name=CSV_ADAPTER, config_type="generic")
 
     def test_config_update_generic(self, apiobj, adapter):
         data = apiobj.config_refetch(adapter=adapter)

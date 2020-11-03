@@ -5,8 +5,8 @@ import pytest
 
 class SystemMetaBase:
     @pytest.fixture(scope="class")
-    def apiobj(self, api_system):
-        return api_system.meta
+    def apiobj(self, api_meta):
+        return api_meta
 
 
 class TestSystemMetaPrivate(SystemMetaBase):
@@ -76,7 +76,7 @@ class TestSystemMetaPublic(SystemMetaBase):
 
     def test_historical_sizes(self, apiobj):
         data = apiobj.historical_sizes()
-        assert isinstance(data["disk_free_mb"], int)
-        assert isinstance(data["disk_used_mb"], int)
+        assert isinstance(data["disk_free_mb"], float)
+        assert isinstance(data["disk_used_mb"], float)
         assert isinstance(data["historical_sizes_devices"], dict)
         assert isinstance(data["historical_sizes_users"], dict)

@@ -19,6 +19,6 @@ def cmd(ctx, url, key, secret, name, **kwargs):
     client = ctx.obj.start_client(url=url, key=key, secret=secret)
 
     with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
-        data = client.system.roles.get_by_name(name=name)
+        data = client.system_roles.get_by_name(name=name)
 
     handle_export(ctx=ctx, data=data, **kwargs)

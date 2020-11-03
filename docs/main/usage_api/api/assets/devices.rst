@@ -1,4 +1,4 @@
-Working with device assets
+Device assets
 ###############################################
 
 .. automodule:: axonius_api_client.api.assets.devices
@@ -6,3 +6,4 @@ Working with device assets
    :show-inheritance:
    :inherited-members:
    :undoc-members:
+   :member-order: bysource

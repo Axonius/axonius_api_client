@@ -87,7 +87,7 @@ def cmd(ctx, url, key, secret, export_format, input_file, continue_on_error, **k
             continue
 
         try:
-            user = client.system.users.add(**row)
+            user = client.system_users.add(**row)
             users.append(user)
             ctx.obj.echo_ok(f"Successfully created user {name} in {rowi}\n")
         except Exception as exc:

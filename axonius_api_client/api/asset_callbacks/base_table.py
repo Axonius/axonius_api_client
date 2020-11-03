@@ -1,45 +1,124 @@
 # -*- coding: utf-8 -*-
-"""Table export callbacks class."""
-from typing import List, Optional, Tuple, Union
+"""Table export callbacks."""
+from typing import List, Union
 
 import tabulate
 
-from ...constants import TABLE_FORMAT, TABLE_MAX_ROWS
+from ...constants.api import TABLE_FORMAT, TABLE_MAX_ROWS
 from ...exceptions import ApiError
 from ...tools import listify
-from .base import Base
+from .base import ExportMixins
 
 
-class Table(Base):
-    """Table export callbacks class.
+class Table(ExportMixins):
+    """Callbacks for formatting asset data and exporting it in text table format.
 
-    Notes:
-        See :meth:`args_map` for the arguments this callbacks class.
+    Examples:
+        Create a ``client`` using :obj:`axonius_api_client.connect.Connect` and assume
+        ``apiobj`` is either ``client.devices`` or ``client.users``
+
+        >>> apiobj = client.devices  # or client.users
+
+        * :meth:`args_map` for callback generic arguments to format assets.
+        * :meth:`args_map_custom` for callback specific arguments to format and export data.
+
     """
 
-    CB_NAME: str = "table"
-    """name for this callback"""
+    @classmethod
+    def args_map_custom(cls) -> dict:
+        """Get the custom argument names and their defaults for this callbacks object.
+
+        Examples:
+            Export the output to STDOUT. If ``export_file`` is not supplied, the default is to
+            print the output to STDOUT.
+
+            >>> assets = apiobj.get(export="table")
+
+            Export the output to a file in the default path
+            :attr:`axonius_api_client.setup_env.DEFAULT_PATH`.
+
+            >>> assets = apiobj.get(export="table", export_file="test.txt")
+
+            Export the output to an absolute path file (ignoring ``export_path``) and overwrite
+            the file if it exists.
+
+            >>> assets = apiobj.get(
+            ...     export="table",
+            ...     export_file="/tmp/output.txt",
+            ...     export_overwrite=True,
+            ... )
+
+            Export the output to a file in a specific dir.
+
+            >>> assets = apiobj.get(export="table", export_file="output.txt", export_path="/tmp")
+
+            Use a different output format.
+
+            >>> assets = apiobj.get(
+            ...     export="table",
+            ...     export_file="test.txt",
+            ...     table_format="mediawiki",
+            ... )
+
+            Specify a specific set of rows to return in the output.
+
+            >>> assets = apiobj.get(
+            ...     export="table",
+            ...     export_file="test.txt",
+            ...     table_max_rows=20,
+            ... )
+
+            Do not exclude API internal fields from table output.
+
+            >>> assets = apiobj.get(
+            ...     export="table",
+            ...     export_file="test.txt",
+            ...     table_api_fields=True,
+            ... )
+
+        See Also:
+            * :meth:`args_map` for callback generic arguments to format assets.
+
+        Notes:
+            If ``export_file`` is not supplied, the default is to print the output to STDOUT.
+
+            This callbacks object forces the following arguments to True in order to make the
+            output usable in the exported format: ``field_null``, ``field_flatten``,
+            and ``field_join``
+
+            These arguments can be supplied as extra kwargs passed to
+            :meth:`axonius_api_client.api.assets.users.Users.get` or
+            :meth:`axonius_api_client.api.assets.devices.Devices.get`
+
+        """
+        args = {}
+        args.update(cls.args_map_export())
+        args.update(
+            {
+                "field_titles": True,
+                "field_flatten": True,
+                "field_join": True,
+                "field_null": True,
+                "table_format": TABLE_FORMAT,
+                "table_max_rows": TABLE_MAX_ROWS,
+                "table_api_fields": False,
+            }
+        )
+        return args
 
     def _init(self):
-        """Override defaults in GETARGS to make table export readable."""
-        self.GETARGS["field_null"] = True
-        self.GETARGS["field_flatten"] = True
-        self.GETARGS["field_join"] = True
+        """Override defaults to make export readable."""
+        self.set_arg_value("field_null", True)
+        self.set_arg_value("field_flatten", True)
+        self.set_arg_value("field_join", True)
 
-        if self.GETARGS.get("field_titles", None) is None:
-            self.GETARGS["field_titles"] = True
-
-        table_api_fields = self.GETARGS.get("table_api_fields", False)
+        table_api_fields = self.get_arg_value("table_api_fields")
         if not table_api_fields:
-            field_excludes = listify(self.GETARGS.get("field_excludes", []))
-            self.GETARGS["field_excludes"] = field_excludes + self.APIOBJ.FIELDS_API
+            field_excludes = listify(self.get_arg_value("field_excludes"))
+            self.set_arg_value("field_excludes", field_excludes + self.APIOBJ.FIELDS_API)
 
-        table_max_rows = self.GETARGS.get("table_max_rows", TABLE_MAX_ROWS)
-        self.GETARGS["table_max_rows"] = table_max_rows
-
-        table_format = self.GETARGS.get("table_format", TABLE_FORMAT) or TABLE_FORMAT
-        self.check_table_format(fmt=table_format)
-        self.GETARGS["table_format"] = table_format
+        table_format = self.get_arg_value("table_format")
+        self.set_arg_value("table_format", self.check_table_format(fmt=table_format))
 
     def start(self, **kwargs):
         """Start this callbacks object."""
@@ -50,7 +129,7 @@ class Table(Base):
     def stop(self, **kwargs):
         """Stop this callbacks object."""
         super(Table, self).stop(**kwargs)
-        tablefmt = self.GETARGS["table_format"]
+        tablefmt = self.get_arg_value("table_format")
         rows = getattr(self, "_rows", [])
 
         table = tabulate.tabulate(
@@ -80,7 +159,7 @@ class Table(Base):
 
     def check_stop(self):
         """Check if rows processed is greater than table_max_rows."""
-        max_rows = self.GETARGS["table_max_rows"]
+        max_rows = self.get_arg_value("table_max_rows")
         rows_processed = self.STATE.get("rows_processed_total", 0)
 
         if all([rows_processed, max_rows]) and rows_processed >= max_rows:
@@ -101,12 +180,5 @@ class Table(Base):
             msg = f"{fmt!r} is not a valid table format, must be one of {fmts}"
             self.echo(msg=msg, error=ApiError)
 
-    @classmethod
-    def args_map(cls) -> List[Tuple[str, str, Optional[Union[list, bool, str, int]]]]:
-        """Argument maps specific to this callbacks class."""
-        args = super(Table, cls).args_map()
-        return args + [
-            ("table_format", "Use table format:", TABLE_FORMAT),
-            ("table_max_rows", "Maximum table rows:", TABLE_MAX_ROWS),
-            ("table_api_fields", "Include API fields:", False),
-        ]
+    CB_NAME: str = "table"
+    """name for this callback"""

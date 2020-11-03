@@ -4,7 +4,7 @@
 import pytest
 
 from axonius_api_client.exceptions import HttpError
-from axonius_api_client.url_parser import UrlParser
+from axonius_api_client.parsers.url_parser import UrlParser
 
 
 class TestUrlParser:

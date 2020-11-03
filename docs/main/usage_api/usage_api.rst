@@ -8,13 +8,8 @@ Using the API library
 
    quickstart.rst
    connect
-   api/assets/index
    api/adapters/index
-   api/system/index
+   api/assets/index
    api/enforcements/index
-   api/dashboard
-   api/instances
-   api/signup
-   api/library/index
+   api/system/index
    library/index
-   openapi

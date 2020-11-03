@@ -1,4 +1,4 @@
-Working with enforcement actions
+Actions
 ###############################################
 
 .. automodule:: axonius_api_client.api.enforcements.actions
@@ -6,3 +6,4 @@ Working with enforcement actions
    :show-inheritance:
    :inherited-members:
    :undoc-members:
+   :member-order: bysource

@@ -1,4 +1,4 @@
-Working with system meta data
+Product metadata
 ###########################################################
 
 .. automodule:: axonius_api_client.api.system.meta
@@ -6,3 +6,4 @@ Working with system meta data
    :show-inheritance:
    :inherited-members:
    :undoc-members:
+   :member-order: bysource

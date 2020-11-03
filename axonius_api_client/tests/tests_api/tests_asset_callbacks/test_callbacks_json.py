@@ -7,10 +7,10 @@ import json
 import pytest
 
 from ...utils import get_rows_exist
-from .test_callbacks import Callbacks
+from .test_callbacks import Callbacks, Exports
 
 
-class TestCallbacksJson(Callbacks):
+class TestCallbacksJson(Callbacks, Exports):
     @pytest.fixture(params=["api_devices", "api_users"])
     def apiobj(self, request):
         return request.getfixturevalue(request.param)
@@ -23,7 +23,9 @@ class TestCallbacksJson(Callbacks):
         io_fd = io.StringIO()
         original_rows = get_rows_exist(apiobj=apiobj, max_rows=5)
 
-        cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs={"export_fd": io_fd})
+        cbobj = self.get_cbobj(
+            apiobj=apiobj, cbexport=cbexport, getargs={"export_fd": io_fd, "export_fd_close": False}
+        )
         cbobj.start()
 
         start_val = io_fd.getvalue().splitlines()[0]
@@ -60,6 +62,7 @@ class TestCallbacksJson(Callbacks):
                 "field_null": True,
                 "report_adapters_missing": True,
                 "export_schema": True,
+                "export_fd_close": False,
             },
         )
         cbobj.start()

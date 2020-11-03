@@ -4,7 +4,15 @@ import copy
 
 import pytest
 
-from axonius_api_client.api.parsers.config import (
+from axonius_api_client.constants.api import SETTING_UNCHANGED
+from axonius_api_client.exceptions import (
+    ApiError,
+    ConfigInvalidValue,
+    ConfigRequired,
+    ConfigUnchanged,
+    ConfigUnknown,
+)
+from axonius_api_client.parsers.config import (
     config_check,
     config_check_array,
     config_check_bool,
@@ -18,14 +26,6 @@ from axonius_api_client.api.parsers.config import (
     config_unknown,
     is_uploaded_file,
     parse_schema,
-)
-from axonius_api_client.constants import SETTING_UNCHANGED
-from axonius_api_client.exceptions import (
-    ApiError,
-    ConfigInvalidValue,
-    ConfigRequired,
-    ConfigUnchanged,
-    ConfigUnknown,
 )
 
 from ...meta import (

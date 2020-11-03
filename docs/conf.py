@@ -150,9 +150,9 @@ typehints_document_rtype = True
 
 # -- Options for sphinx.ext.autodoc --------------------------------
 autodoc_default_options = {
-    # "member-order": "bysource",
-    # "special-members": "__init__,__call__",
-    # "undoc-members": True,
-    # "show-inheritance": True,
-    # "exclude-members": "__weakref__,__str__,__repr__",
+    "member-order": "bysource",
+    "special-members": "__init__,__call__",
+    "undoc-members": True,
+    "show-inheritance": True,
+    "exclude-members": "__weakref__,__str__,__repr__",
 }

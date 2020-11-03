@@ -7,8 +7,8 @@ import sys
 import time
 from typing import Dict, List, Optional, Union
 
-from . import __package__ as PACKAGE_ROOT
-from .constants import (
+from . import LOG
+from .constants.logs import (
     LOG_DATEFMT_CONSOLE,
     LOG_DATEFMT_FILE,
     LOG_FILE_MAX_FILES,
@@ -48,9 +48,6 @@ def get_obj_log(obj: object, level: Optional[Union[int, str]] = None, **kwargs) 
         obj: object to get a logger for
         level: level to set
         logger: logger to get child from
-
-    Returns:
-        :obj:`logging.Logger`: created logger child obj
     """
     logger = kwargs.get("logger", logging.getLogger(obj.__class__.__module__))
     log = logger.getChild(obj.__class__.__name__)
@@ -359,9 +356,6 @@ def find_handlers(
 
     return handlers
 
-
-LOG: logging.Logger = logging.getLogger(PACKAGE_ROOT)
-"""root logger used by entire package, named after package."""
 
 add_null(obj=LOG)
 gmtime()

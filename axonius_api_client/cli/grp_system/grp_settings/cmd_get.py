@@ -16,7 +16,7 @@ def cmd(ctx, url, key, secret, export_format, **kwargs):
     client = ctx.obj.start_client(url=url, key=key, secret=secret)
 
     apiname = ctx.parent.command.name.replace("-", "_")
-    apiobj = getattr(client.system, apiname)
+    apiobj = getattr(client, apiname)
 
     with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
         settings = apiobj.get()

@@ -3,7 +3,7 @@
 
 import pytest
 
-from axonius_api_client.constants import CSV_ADAPTER, DEFAULT_NODE
+from axonius_api_client.constants.adapters import CSV_ADAPTER
 from axonius_api_client.exceptions import (
     CnxAddError,
     CnxGoneError,
@@ -26,7 +26,7 @@ class TestCnxBase:
 
     @pytest.fixture(scope="class")
     def adapter(self, apiobj):
-        return apiobj.get_by_name(name=CSV_ADAPTER, node=DEFAULT_NODE)
+        return apiobj.get_by_name(name=CSV_ADAPTER)
 
 
 class TestCnxPrivate(TestCnxBase):
@@ -35,7 +35,7 @@ class TestCnxPrivate(TestCnxBase):
 
 class TestCnxPublic(TestCnxBase):
     def test_get_by_adapter(self, apiobj):
-        cnxs = apiobj.cnx.get_by_adapter(adapter_name=CSV_ADAPTER, adapter_node=DEFAULT_NODE)
+        cnxs = apiobj.cnx.get_by_adapter(adapter_name=CSV_ADAPTER)
         assert isinstance(cnxs, list)
         for cnx in cnxs:
             assert isinstance(cnx, dict)
@@ -43,7 +43,7 @@ class TestCnxPublic(TestCnxBase):
 
     def test_get_by_adapter_badname(self, apiobj):
         with pytest.raises(NotFoundError):
-            apiobj.cnx.get_by_adapter(adapter_name="badwolf", adapter_node=DEFAULT_NODE)
+            apiobj.cnx.get_by_adapter(adapter_name="badwolf")
 
     def test_get_by_adapter_badnode(self, apiobj):
         with pytest.raises(NotFoundError):
@@ -103,7 +103,6 @@ class TestCnxPublic(TestCnxBase):
         with pytest.raises(CnxTestError):
             apiobj.cnx.test(
                 adapter_name="tanium",
-                adapter_node=DEFAULT_NODE,
                 domain=mpass,
                 username=mpass,
                 password=mpass,
@@ -111,7 +110,7 @@ class TestCnxPublic(TestCnxBase):
 
     def test_test_fail_no_domain(self, apiobj):
         with pytest.raises(ConfigRequired):
-            apiobj.cnx.test(adapter_name="tanium", adapter_node=DEFAULT_NODE, username="x")
+            apiobj.cnx.test(adapter_name="tanium", username="x")
 
     def test_update_cnx_nochange(self, apiobj):
         cnx = get_cnx_broken(apiobj)
@@ -278,14 +277,13 @@ class TestCnxPublic(TestCnxBase):
             # "is_installed_sw": False,
             # "s3_use_ec2_attached_instance_profile": False,
         }
-        cnx_added = apiobj.cnx.add(adapter_name=CSV_ADAPTER, adapter_node=DEFAULT_NODE, **config)
+        cnx_added = apiobj.cnx.add(adapter_name=CSV_ADAPTER, **config)
         for k, v in config.items():
             assert v == cnx_added["config"][k]
 
         del_result = apiobj.cnx.delete_by_id(
             cnx_id=cnx_added["id"],
             adapter_name=CSV_ADAPTER,
-            adapter_node=DEFAULT_NODE,
             delete_entities=True,
         )
 
@@ -295,7 +293,6 @@ class TestCnxPublic(TestCnxBase):
             apiobj.cnx.get_by_id(
                 cnx_id=cnx_added["id"],
                 adapter_name=CSV_ADAPTER,
-                adapter_node=DEFAULT_NODE,
             )
 
     def test_add_remove_path(self, apiobj, tmp_path):
@@ -305,14 +302,13 @@ class TestCnxPublic(TestCnxBase):
             "user_id": "badwolf",
             "file_path": file_path,
         }
-        cnx_added = apiobj.cnx.add(adapter_name=CSV_ADAPTER, adapter_node=DEFAULT_NODE, **config)
+        cnx_added = apiobj.cnx.add(adapter_name=CSV_ADAPTER, **config)
 
         assert isinstance(cnx_added["config"]["file_path"], dict)
 
         del_result = apiobj.cnx.delete_by_id(
             cnx_id=cnx_added["id"],
             adapter_name=CSV_ADAPTER,
-            adapter_node=DEFAULT_NODE,
             delete_entities=True,
         )
 
@@ -322,7 +318,6 @@ class TestCnxPublic(TestCnxBase):
             apiobj.cnx.get_by_id(
                 cnx_id=cnx_added["id"],
                 adapter_name=CSV_ADAPTER,
-                adapter_node=DEFAULT_NODE,
             )
 
     def test_add_remove_path_notexists(self, apiobj, tmp_path):
@@ -332,7 +327,7 @@ class TestCnxPublic(TestCnxBase):
             "file_path": file_path,
         }
         with pytest.raises(ConfigInvalidValue):
-            apiobj.cnx.add(adapter_name=CSV_ADAPTER, adapter_node=DEFAULT_NODE, **config)
+            apiobj.cnx.add(adapter_name=CSV_ADAPTER, **config)
 
     def test_add_remove_error(self, apiobj, csv_file_path_broken):
         config = {
@@ -344,7 +339,7 @@ class TestCnxPublic(TestCnxBase):
             # "s3_use_ec2_attached_instance_profile": False,
         }
         with pytest.raises(CnxAddError) as exc:
-            apiobj.cnx.add(adapter_name=CSV_ADAPTER, adapter_node=DEFAULT_NODE, **config)
+            apiobj.cnx.add(adapter_name=CSV_ADAPTER, **config)
 
         assert getattr(exc.value, "cnx_new", None)
         assert not hasattr(exc.value, "cnx_old")
@@ -354,7 +349,6 @@ class TestCnxPublic(TestCnxBase):
         del_result = apiobj.cnx.delete_by_id(
             cnx_id=cnx_added["id"],
             adapter_name=CSV_ADAPTER,
-            adapter_node=DEFAULT_NODE,
             delete_entities=True,
         )
 
@@ -364,6 +358,5 @@ class TestCnxPublic(TestCnxBase):
             apiobj.cnx.get_by_id(
                 cnx_id=cnx_added["id"],
                 adapter_name=CSV_ADAPTER,
-                adapter_node=DEFAULT_NODE,
                 retry=2,
             )

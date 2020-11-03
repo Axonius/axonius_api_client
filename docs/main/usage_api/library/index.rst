@@ -1,13 +1,10 @@
-Library tools and classes
+Library backend
 ###############################################
 
 .. toctree::
-    http
-    auth/auth
-    constants
-    exceptions
-    logs
-    tools
-    version
-    data
+    api/index
+    auth/index
+    constants/index
     parsers/index
+    tools/index
+    version

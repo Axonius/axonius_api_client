@@ -6,32 +6,104 @@ import xlsxwriter
 
 from ...exceptions import ApiError
 from ...tools import listify
-from .base import Base
+from .base import ExportMixins
 
 
-class Xlsx(Base):
-    """Excel export callbacks class.
+class Xlsx(ExportMixins):
+    """Callbacks for formatting asset data and exporting it in Excel format.
 
-    Notes:
-        See :meth:`args_map` for the arguments this callbacks class.
+    Examples:
+        Create a ``client`` using :obj:`axonius_api_client.connect.Connect` and assume
+        ``apiobj`` is either ``client.devices`` or ``client.users``
+
+        >>> apiobj = client.devices  # or client.users
+
+        * :meth:`args_map` for callback generic arguments to format assets.
+        * :meth:`args_map_custom` for callback specific arguments to format and export data.
+
     """
 
-    CB_NAME: str = "xlsx"
-    """name for this callback"""
+    @classmethod
+    def args_map_custom(cls) -> dict:
+        """Get the custom argument names and their defaults for this callbacks object.
 
-    CELL_FORMAT: dict = {"text_wrap": True}
-    """Excel cell formatting to use for every cell"""
+        Examples:
+            Export the output to STDOUT. If ``export_file`` is not supplied, the default is to
+            print the output to STDOUT.
 
-    COLUMN_LENGTH: int = 50
-    """default length to use to every column"""
+            >>> assets = apiobj.get(export="xlsx")
+
+            Export the output to a file in the default path
+            :attr:`axonius_api_client.setup_env.DEFAULT_PATH`.
+
+            >>> assets = apiobj.get(export="xlsx", export_file="test.xlsx")
+
+            Export the output to an absolute path file (ignoring ``export_path``) and overwrite
+            the file if it exists.
+
+            >>> assets = apiobj.get(
+            ...     export="xlsx",
+            ...     export_file="/tmp/output.xlsx",
+            ...     export_overwrite=True,
+            ... )
+
+            Export the output to a file in a specific dir.
+
+            >>> assets = apiobj.get(export="xlsx", export_file="output.xlsx", export_path="/tmp")
+
+            Change the length of columns in the output.
+
+            >>> assets = apiobj.get(
+            ...     export="xlsx",
+            ...     export_file="test.xlsx",
+            ...     xlsx_column_length=100,
+            ... )
+
+            Provide custom formatting for each cell. See
+            https://xlsxwriter.readthedocs.io/format.html#format-methods-and-format-properties
+            for format properties that can be supplied.
+
+            >>> fmt = {"text_wrap": True, "bold": True, "font_color": "red"}
+            >>> assets = apiobj.get(
+            ...     export="xlsx",
+            ...     export_file="test.xlsx",
+            ...     xlsx_cell_format=fmt,
+            ... )
+
+        See Also:
+            * :meth:`args_map` for callback generic arguments to format assets.
+
+        Notes:
+            If ``export_file`` does not end with ``.xlsx``, it will be appended to the filename.
+
+            This callbacks object forces the following arguments to True in order to make the
+            output usable in the exported format: ``field_null``, ``field_flatten``,
+            and ``field_join``
+
+            These arguments can be supplied as extra kwargs passed to
+            :meth:`axonius_api_client.api.assets.users.Users.get` or
+            :meth:`axonius_api_client.api.assets.devices.Devices.get`
+
+        """
+        args = {}
+        args.update(cls.args_map_export())
+        args.update(
+            {
+                "field_titles": True,
+                "field_flatten": True,
+                "field_join": True,
+                "field_null": True,
+                "xlsx_column_length": 50,
+                "xlsx_cell_format": {"text_wrap": True},
+            }
+        )
+        return args
 
     def _init(self, **kwargs):
-        """Override defaults in GETARGS to make export readable."""
-        self.GETARGS["field_null"] = True
-        self.GETARGS["field_flatten"] = True
-        self.GETARGS["field_join"] = True
-        if self.GETARGS.get("field_titles", None) is None:
-            self.GETARGS["field_titles"] = True
+        """Override defaults to make export readable."""
+        self.set_arg_value("field_null", True)
+        self.set_arg_value("field_flatten", True)
+        self.set_arg_value("field_join", True)
 
     def start(self, **kwargs):
         """Start this callbacks object."""
@@ -40,10 +112,13 @@ class Xlsx(Base):
 
     def do_start(self, **kwargs):
         """Start this callbacks object."""
-        export_file = self.GETARGS.get("export_file", None)
+        export_file = self.get_arg_value("export_file")
+        cell_format = self.get_arg_value("xlsx_cell_format")
+        column_length = self.get_arg_value("xlsx_column_length")
+
         if export_file:
             if not str(export_file).endswith(".xlsx"):
-                self.GETARGS["export_file"] = f"{export_file}.xlsx"
+                self.set_arg_value("export_file", f"{export_file}.xlsx")
             self.open_fd_path()
             self._fd.close()
         else:
@@ -51,14 +126,14 @@ class Xlsx(Base):
             self.echo(msg=msg, error=ApiError, level="error")
 
         self._workbook = xlsxwriter.Workbook(str(self._file_path), {"constant_memory": True})
-        self._cell_format = self._workbook.add_format(self.CELL_FORMAT)
+        self._cell_format = self._workbook.add_format(cell_format)
 
         worksheet = f"{self.APIOBJ.__class__.__name__}"
         self._worksheet = self._workbook.add_worksheet(worksheet)
 
         for idx, column_name in enumerate(self.final_columns):
             self._worksheet.write(0, idx, column_name, self._cell_format)
-            self._worksheet.set_column(idx, idx, self.COLUMN_LENGTH)
+            self._worksheet.set_column(idx, idx, column_length)
         self._rowtracker = 1
 
     def stop(self, **kwargs):
@@ -90,3 +165,6 @@ class Xlsx(Base):
         del rows
 
         return row_return
+
+    CB_NAME: str = "xlsx"
+    """name for this callback"""

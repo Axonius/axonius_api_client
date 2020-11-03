@@ -1,19 +1,24 @@
 # -*- coding: utf-8 -*-
-"""API model for working with system configuration."""
+"""API for working with central core configuration ``[DEPRECATED]``."""
 from typing import Optional
 
-from ..mixins import ChildMixins
+from ..mixins import ModelMixins
+from ..routers import API_VERSION, Router
 
 
-class CentralCore(ChildMixins):
-    """Child API model for working with instance metadata."""
+class CentralCore(ModelMixins):  # pragma: no cover
+    """API for working with central core configuration ``[DEPRECATED]``.
 
-    def get(self) -> dict:
-        """Get the current central core configuration."""
+    Warning:
+        This object is deprecated. Use :obj:`axonius_api_client.api.system.instances.Instances`
+    """
+
+    def get(self) -> dict:  # pragma: no cover
+        """Get the current central core configuration ``[DEPRECATED]``."""
         return self._get()
 
     def update(self, enabled: bool, delete_backups: bool) -> dict:  # pragma: no cover
-        """Update the current central core configuration."""
+        """Update the current central core configuration ``[DEPRECATED]``."""
         return self._update(enabled=enabled, delete_backups=delete_backups)
 
     def restore_from_aws_s3(
@@ -26,7 +31,7 @@ class CentralCore(ChildMixins):
         allow_re_restore: bool = False,
         delete_backups: bool = False,
     ) -> dict:  # pragma: no cover
-        """Perform a restore from a file object in an AWS S3 Bucket."""
+        """Perform a restore on a core from a file in an AWS S3 Bucket ``[DEPRECATED]``."""
         restore_opts = {}
         restore_opts["key_name"] = key_name
         restore_opts["allow_re_restore"] = allow_re_restore
@@ -48,21 +53,21 @@ class CentralCore(ChildMixins):
 
         return self._restore(restore_type="aws", restore_opts=restore_opts)
 
-    def _get(self) -> dict:
-        """Get the current central core configuration."""
+    def _get(self) -> dict:  # pragma: no cover
+        """Get the current central core configuration ``[DEPRECATED]``."""
         path = self.router.central_core
         response = self.request(method="get", path=path)
         return response
 
     def _update(self, enabled: bool, delete_backups: bool) -> dict:  # pragma: no cover
-        """Set the current central core configuration."""
+        """Set the current central core configuration ``[DEPRECATED]``."""
         data = {"enabled": enabled, "delete_backups": delete_backups}
         path = self.router.central_core
         response = self.request(method="post", path=path, json=data)
         return response
 
     def _restore(self, restore_type: str, restore_opts: dict) -> dict:  # pragma: no cover
-        """Perform a central core restore operation."""
+        """Perform a central core restore operation ``[DEPRECATED]``."""
         data = {}
         data["restore_type"] = restore_type
         data.update(restore_opts)
@@ -70,3 +75,8 @@ class CentralCore(ChildMixins):
         path = self.router.central_core_restore
         response = self.request(method="post", path=path, json=data, response_timeout=3600)
         return response
+
+    @property
+    def router(self) -> Router:  # pragma: no cover
+        """Router for this API model ``[DEPRECATED]``."""
+        return API_VERSION.system

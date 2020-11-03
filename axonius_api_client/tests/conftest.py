@@ -2,20 +2,34 @@
 """Conf for py.test."""
 import os
 
-import dotenv
 import pytest
 
-from axonius_api_client.api import dashboard, enforcements, instances, system
-from axonius_api_client.api.adapters import Adapters
-from axonius_api_client.api.adapters.cnx import Cnx
-from axonius_api_client.api.assets import Devices, Users, fields, labels, saved_query
-from axonius_api_client.api.signup import Signup
-from axonius_api_client.constants import CSV_ADAPTER, DEFAULT_NODE
+from axonius_api_client.api import (
+    Adapters,
+    Dashboard,
+    Devices,
+    Enforcements,
+    Instances,
+    Meta,
+    RunAction,
+    SettingsGlobal,
+    SettingsGui,
+    SettingsLifecycle,
+    Signup,
+    SystemRoles,
+    SystemUsers,
+    Users,
+    Wizard,
+    WizardCsv,
+    WizardText,
+)
+from axonius_api_client.api.adapters import Cnx
+from axonius_api_client.api.assets import Fields, Labels, SavedQuery
+from axonius_api_client.constants.adapters import CSV_ADAPTER
+from axonius_api_client.constants.system import Role
 
-from .meta import CSV_FILECONTENT_STR, CSV_FILENAME
+from .meta import CSV_FILECONTENT_STR, CSV_FILENAME, USER_NAME
 from .utils import check_apiobj, check_apiobj_children, check_apiobj_xref, get_auth, get_url
-
-dotenv.load_dotenv()
 
 AX_URL = os.environ.get("AX_URL", None) or None
 AX_KEY = os.environ.get("AX_KEY", None) or None
@@ -65,12 +79,16 @@ def api_devices(request):
 
     check_apiobj_children(
         apiobj=obj,
-        labels=labels.Labels,
-        saved_query=saved_query.SavedQuery,
-        fields=fields.Fields,
+        labels=Labels,
+        saved_query=SavedQuery,
+        fields=Fields,
     )
 
     check_apiobj_xref(apiobj=obj, adapters=Adapters)
+    assert isinstance(obj.wizard, Wizard)
+    assert isinstance(obj.wizard_text, WizardText)
+    assert isinstance(obj.wizard_csv, WizardCsv)
+
     return obj
 
 
@@ -87,12 +105,16 @@ def api_users(request):
 
     check_apiobj_children(
         apiobj=obj,
-        labels=labels.Labels,
-        saved_query=saved_query.SavedQuery,
-        fields=fields.Fields,
+        labels=Labels,
+        saved_query=SavedQuery,
+        fields=Fields,
     )
 
     check_apiobj_xref(apiobj=obj, adapters=Adapters)
+    assert isinstance(obj.wizard, Wizard)
+    assert isinstance(obj.wizard_text, WizardText)
+    assert isinstance(obj.wizard_csv, WizardCsv)
+
     return obj
 
 
@@ -100,7 +122,7 @@ def api_users(request):
 def api_enforcements(request):
     """Test utility."""
     auth = get_auth(request)
-    obj = enforcements.Enforcements(auth=auth)
+    obj = Enforcements(auth=auth)
     check_apiobj(authobj=auth, apiobj=obj)
     return obj
 
@@ -109,7 +131,7 @@ def api_enforcements(request):
 def api_run_action(request):
     """Test utility."""
     auth = get_auth(request)
-    obj = enforcements.actions.RunAction(auth=auth)
+    obj = RunAction(auth=auth)
     check_apiobj(authobj=auth, apiobj=obj)
     return obj
 
@@ -128,7 +150,7 @@ def api_adapters(request):
 def api_dashboard(request):
     """Test utility."""
     auth = get_auth(request)
-    obj = dashboard.Dashboard(auth=auth)
+    obj = Dashboard(auth=auth)
     check_apiobj(authobj=auth, apiobj=obj)
     return obj
 
@@ -137,26 +159,66 @@ def api_dashboard(request):
 def api_instances(request):
     """Test utility."""
     auth = get_auth(request)
-    obj = instances.Instances(auth=auth)
+    obj = Instances(auth=auth)
     check_apiobj(authobj=auth, apiobj=obj)
     return obj
 
 
 @pytest.fixture(scope="session")
-def api_system(request):
+def api_system_roles(request):
     """Test utility."""
     auth = get_auth(request)
-    obj = system.System(auth=auth)
+    obj = SystemRoles(auth=auth)
     check_apiobj(authobj=auth, apiobj=obj)
-    check_apiobj_children(
-        apiobj=obj,
-        settings_core=system.settings.SettingsCore,
-        settings_gui=system.settings.SettingsGui,
-        settings_lifecycle=system.settings.SettingsLifecycle,
-        meta=system.meta.Meta,
-        users=system.users.Users,
-        roles=system.roles.Roles,
-    )
+    check_apiobj_xref(apiobj=obj, instances=Instances)
+
+    return obj
+
+
+@pytest.fixture(scope="session")
+def api_system_users(request):
+    """Test utility."""
+    auth = get_auth(request)
+    obj = SystemUsers(auth=auth)
+    check_apiobj(authobj=auth, apiobj=obj)
+    check_apiobj_xref(apiobj=obj, roles=SystemRoles)
+
+    return obj
+
+
+@pytest.fixture(scope="session")
+def api_meta(request):
+    """Test utility."""
+    auth = get_auth(request)
+    obj = Meta(auth=auth)
+    check_apiobj(authobj=auth, apiobj=obj)
+    return obj
+
+
+@pytest.fixture(scope="session")
+def api_settings_lifecycle(request):
+    """Test utility."""
+    auth = get_auth(request)
+    obj = SettingsLifecycle(auth=auth)
+    check_apiobj(authobj=auth, apiobj=obj)
+    return obj
+
+
+@pytest.fixture(scope="session")
+def api_settings_global(request):
+    """Test utility."""
+    auth = get_auth(request)
+    obj = SettingsGlobal(auth=auth)
+    check_apiobj(authobj=auth, apiobj=obj)
+    return obj
+
+
+@pytest.fixture(scope="session")
+def api_settings_gui(request):
+    """Test utility."""
+    auth = get_auth(request)
+    obj = SettingsGui(auth=auth)
+    check_apiobj(authobj=auth, apiobj=obj)
     return obj
 
 
@@ -172,7 +234,6 @@ def csv_file_path(api_adapters):
     """Test utility."""
     data = api_adapters.file_upload(
         name=CSV_ADAPTER,
-        node=DEFAULT_NODE,
         field_name="file_path",
         file_name=CSV_FILENAME,
         file_content=CSV_FILECONTENT_STR,
@@ -188,7 +249,6 @@ def csv_file_path_broken(api_adapters):
     """Test utility."""
     data = api_adapters.file_upload(
         name=CSV_ADAPTER,
-        node=DEFAULT_NODE,
         field_name="file_path",
         file_name="BADWOLF",
         file_content="BADWOLF",
@@ -197,3 +257,42 @@ def csv_file_path_broken(api_adapters):
     assert data["uuid"]
     assert data["filename"]
     return data
+
+
+@pytest.fixture()
+def smtp_setup(api_settings_global):
+    """Pass."""
+
+    def setup():
+        try:
+            api_settings_global.update_section(
+                section="email_settings", enabled=True, smtpHost="10.0.2.110", smtpPort=25
+            )
+        except Exception:
+            pass
+
+    def teardown():
+        try:
+            api_settings_global.update_section(
+                section="email_settings", enabled=False, smtpHost=None, smtpPort=None
+            )
+        except Exception:
+            pass
+
+    return setup, teardown
+
+
+@pytest.fixture(scope="function")
+def temp_user(api_system_users):
+    """Pass."""
+    try:
+        api_system_users.delete_by_name(name=USER_NAME)
+    except Exception:
+        pass
+
+    user = api_system_users.add(name=USER_NAME, role_name=Role.R_ADMIN, password=USER_NAME)
+    yield user
+    try:
+        api_system_users.delete_by_name(name=USER_NAME)
+    except Exception:
+        pass

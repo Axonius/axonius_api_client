@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Authentication methods."""
+"""Authentication via API key and API secret."""
 from typing import List
 
 from ..exceptions import AlreadyLoggedIn

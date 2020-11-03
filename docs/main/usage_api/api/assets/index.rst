@@ -1,4 +1,4 @@
-Working with assets
+Assets
 ###############################################
 
 .. toctree::
@@ -7,4 +7,5 @@ Working with assets
    fields
    labels
    saved_query
-   wizard/index
+   callbacks/index
+   wizards/index

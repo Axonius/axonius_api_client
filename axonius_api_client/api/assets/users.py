@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""API models for working with device and user assets."""
+"""API for working with user assets."""
 from typing import Generator, List, Union
 
 from ..routers import API_VERSION, Router
@@ -7,22 +7,28 @@ from .asset_mixin import AssetMixin
 
 
 class Users(AssetMixin):
-    """User related API methods."""
+    """API for working with user assets.
 
-    FIELD_USERNAME: str = "specific_data.data.username"
-    FIELD_MAIL: str = "specific_data.data.mail"
-    FIELD_DOMAIN: str = "specific_data.data.domain"
-    FIELD_IS_ADMIN: str = "specific_data.data.is_admin"
-    FIELD_SIMPLE: str = FIELD_USERNAME
-    FIELD_COMPLEX: str = "specific_data.data.associated_devices"
-    FIELD_COMPLEX_SUB: str = "device_caption"
+    Examples:
+        For all examples for this asset type,
+        create a ``client`` using :obj:`axonius_api_client.connect.Connect` and assume ``apiobj``
+        is ``client.users``
 
-    FIELDS_SPECIFIC: List[str] = [
-        FIELD_USERNAME,
-        FIELD_DOMAIN,
-        FIELD_MAIL,
-        FIELD_IS_ADMIN,
-    ]
+        >>> apiobj = client.users
+
+        * Get count of assets: :meth:`count`
+        * Get count of assets from a saved query: :meth:`count_by_saved_query`
+        * Get assets: :meth:`get`
+        * Get assets from a saved query: :meth:`get_by_saved_query`
+        * Get the full data set for a single asset: :meth:`get_by_id`
+        * Work with saved queries: :obj:`axonius_api_client.api.assets.saved_query.SavedQuery`
+        * Work with fields: :obj:`axonius_api_client.api.assets.fields.Fields`
+        * Work with tags: :obj:`axonius_api_client.api.assets.labels.Labels`
+
+    See Also:
+        * Device assets :obj:`axonius_api_client.api.assets.devices.Devices`
+
+    """
 
     @property
     def fields_default(self) -> List[str]:
@@ -45,7 +51,12 @@ class Users(AssetMixin):
     def get_by_usernames(
         self, values: List[str], **kwargs
     ) -> Union[Generator[dict, None, None], List[dict]]:
-        """Build a query to get assets where username in values."""
+        """Build a query to get assets where :attr:`FIELD_USERNAME` in values.
+
+        Args:
+            values: list of usernames
+            **kwargs: passed to :meth:`get_by_values`
+        """
         kwargs["field"] = self.FIELD_USERNAME
         kwargs["field_manual"] = True
         kwargs["values"] = values
@@ -54,7 +65,12 @@ class Users(AssetMixin):
     def get_by_username_regex(
         self, value: str, **kwargs
     ) -> Union[Generator[dict, None, None], List[dict]]:
-        """Build a query to get assets where username regex matches value."""
+        """Build a query to get assets where :attr:`FIELD_USERNAME` regex matches value.
+
+        Args:
+            value: regex of username to match
+            **kwargs: passed to :meth:`get_by_value_regex`
+        """
         kwargs["field"] = self.FIELD_USERNAME
         kwargs["field_manual"] = True
         kwargs["value"] = value
@@ -63,7 +79,12 @@ class Users(AssetMixin):
     def get_by_username(
         self, value: str, **kwargs
     ) -> Union[Generator[dict, None, None], List[dict]]:
-        """Build a query to get assets where username == value."""
+        """Build a query to get assets where :attr:`FIELD_USERNAME` == value.
+
+        Args:
+            value: username
+            **kwargs: passed to :meth:`get_by_value`
+        """
         kwargs["field"] = self.FIELD_USERNAME
         kwargs["field_manual"] = True
         kwargs["value"] = value
@@ -72,7 +93,12 @@ class Users(AssetMixin):
     def get_by_mails(
         self, values: List[str], **kwargs
     ) -> Union[Generator[dict, None, None], List[dict]]:
-        """Build a query to get assets where mail in values."""
+        """Build a query to get assets where :attr:`FIELD_MAIL` in values.
+
+        Args:
+            values: list of email addressses
+            **kwargs: passed to :meth:`get_by_values`
+        """
         kwargs["field"] = self.FIELD_MAIL
         kwargs["field_manual"] = True
         kwargs["values"] = values
@@ -81,15 +107,58 @@ class Users(AssetMixin):
     def get_by_mail_regex(
         self, value: str, **kwargs
     ) -> Union[Generator[dict, None, None], List[dict]]:
-        """Build a query to get assets where mail regex matches value."""
+        """Build a query to get assets where :attr:`FIELD_MAIL` regex matches value.
+
+        Args:
+            value: regex of email address to match
+            **kwargs: passed to :meth:`get_by_value_regex`
+        """
         kwargs["field"] = self.FIELD_MAIL
         kwargs["field_manual"] = True
         kwargs["value"] = value
         return self.get_by_value_regex(**kwargs)
 
     def get_by_mail(self, value: str, **kwargs) -> Union[Generator[dict, None, None], List[dict]]:
-        """Build a query to get assets where mail == value."""
+        """Build a query to get assets where :attr:`FIELD_MAIL` == value.
+
+        Args:
+            value: email address
+            **kwargs: passed to :meth:`get_by_value`
+        """
         kwargs["field"] = self.FIELD_MAIL
         kwargs["field_manual"] = True
         kwargs["value"] = value
         return self.get_by_value(**kwargs)
+
+    FIELD_USERNAME: str = "specific_data.data.username"
+    """User Name field."""
+
+    FIELD_MAIL: str = "specific_data.data.mail"
+    """Mail field."""
+
+    FIELD_DOMAIN: str = "specific_data.data.domain"
+    """Domain field."""
+
+    FIELD_IS_ADMIN: str = "specific_data.data.is_admin"
+    """Is Admin field."""
+
+    FIELD_MAIN: str = FIELD_USERNAME
+    """Field name of the main identifier."""
+
+    FIELD_SIMPLE: str = FIELD_USERNAME
+    """Field name of a simple field."""
+
+    FIELD_COMPLEX: str = "specific_data.data.associated_devices"
+    """Field name of a complex field."""
+
+    FIELD_COMPLEX_SUB: str = "device_caption"
+    """Field name of a complex sub field."""
+
+    wizard: str = None
+    """:obj:`axonius_api_client.api.wizards.wizard.Wizard`: Query wizard for python objects."""
+
+    wizard_text: str = None
+    """:obj:`axonius_api_client.api.wizards.wizard_text.WizardText`: Query wizard for text files."""
+
+    wizard_csv = None
+    """:obj:`axonius_api_client.api.wizards.wizard_csv.WizardCsv`: Query wizard for CSV files."""

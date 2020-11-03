@@ -5,10 +5,10 @@ import io
 import pytest
 
 from ...utils import get_rows_exist
-from .test_callbacks import Callbacks
+from .test_callbacks import Callbacks, Exports
 
 
-class TestCallbacksJsonToCsv(Callbacks):
+class TestCallbacksJsonToCsv(Callbacks, Exports):
     @pytest.fixture(params=["api_devices", "api_users"])
     def apiobj(self, request):
         return request.getfixturevalue(request.param)
@@ -25,7 +25,7 @@ class TestCallbacksJsonToCsv(Callbacks):
             apiobj=apiobj,
             cbexport=cbexport,
             store={"fields": apiobj.fields_default},
-            getargs={"export_fd": io_fd},
+            getargs={"export_fd": io_fd, "export_fd_close": False},
         )
         cbobj.start()
 
