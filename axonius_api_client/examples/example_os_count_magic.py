@@ -9,7 +9,6 @@ import re
 
 import axonius_api_client as axonapi  # noqa: F401
 from axonius_api_client.connect import Connect
-from axonius_api_client.constants import load_dotenv
 from axonius_api_client.tools import json_reload, listify
 
 FIELDS = [
@@ -334,8 +333,6 @@ def jdump(obj, **kwargs):
 j = jdump
 
 if __name__ == "__main__":
-    load_dotenv()
-
     AX_URL = os.environ["AX_URL"]
     AX_KEY = os.environ["AX_KEY"]
     AX_SECRET = os.environ["AX_SECRET"]

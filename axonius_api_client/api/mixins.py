@@ -2,14 +2,16 @@
 """API model base classes and mixins."""
 import abc
 import logging
+import textwrap
 import time
 from typing import Any, Generator, List, Optional, Union
 
 from .. import auth
-from ..constants import LOG_LEVEL_API, MAX_BODY_LEN, MAX_PAGE_SIZE
+from ..constants.api import MAX_PAGE_SIZE
+from ..constants.logs import LOG_LEVEL_API, MAX_BODY_LEN
 from ..exceptions import JsonError, JsonInvalid, NotFoundError, ResponseNotOk
 from ..logs import get_obj_log
-from ..tools import dt_now, dt_sec_ago, json_dump, json_load, json_reload
+from ..tools import dt_now, dt_sec_ago, json_dump, json_load
 from .routers import Router
 
 
@@ -81,55 +83,59 @@ class ModelMixins(Model, PageSizeMixin):
         error: Optional[str] = None,
         exc: Optional[Exception] = None,
     ) -> str:
-        """Pass."""
-        request_size = len(response.request.body or "")
-        response_size = len(response.text or "")
+        """Build an error message from a response.
+
+        Args:
+            response (:obj:`requests.Response`): response that originated the error
+            error: error message to include in exception
+            exc: exception that was thrown if any
+        """
         msgs = []
-        msgs += [f"Original exception: {exc}"] if exc else []
+
+        url = response.url
+        method = response.request.method
+        code = response.status_code
+        reason = response.reason
+        out_len = len(response.request.body or "")
+        in_len = len(response.text or "")
+
         msgs += [
-            "Request Body:",
-            json_reload(obj=response.request.body, error=False, trim=MAX_BODY_LEN),
+            *([f"Original exception: {exc}"] if exc else []),
             "",
-            "Response details:",
-            f"  code: {response.status_code!r}",
-            f"  reason: {response.reason!r}",
-            f"  method={response.request.method!r}",
-            f"  url: {response.url!r}",
-            f"  request_size: {request_size}",
-            f"  response_size: {response_size}",
+            f"URL: {url!r}, METHOD: {method}",
+            f"CODE: {code!r}, REASON: {reason!r}, BYTES OUT: {out_len}, BYTES IN: {in_len}",
+            "",
         ]
 
         response_obj = json_load(obj=response.text, error=False)
 
         if isinstance(response_obj, dict):
-            if "additional_data" in response_obj:
-                msg = json_reload(obj=response_obj.pop("additional_data"), error=False)
-                msgs += ["  ** Additional Data:", msg]
+            msgs.append("Response Object:")
+            for k, v in response_obj.items():
+                msgs.append(
+                    textwrap.fill(
+                        str(v), initial_indent=f" - {k}: ", subsequent_indent="   ", width=80
+                    )
+                )
 
-            if "status" in response_obj:
-                msgs += ["  ** Status: " + response_obj.pop("status")]
-
-            if "message" in response_obj:
-                msgs += ["  ** Message: " + response_obj.pop("message")]
-
-            msgs += [f"Extra: {response_obj}"] if response_obj else []
         else:
-
             msgs += ["Response Body:", str(response_obj)[:MAX_BODY_LEN]]
 
-        msgs += [error] if error else []
+        error = error or "Error in REST API response"
+        msgs = [error, *msgs, "", error]
 
-        return "\n" + "\n".join(msgs)
+        return "\n".join(msgs)
 
     def request(
         self,
         path: str,
-        method: Optional[str] = "get",
-        raw: Optional[bool] = False,
-        is_json: Optional[bool] = True,
-        error_status: Optional[bool] = True,
-        error_json_bad_status: Optional[bool] = True,
-        error_json_invalid: Optional[bool] = True,
+        method: str = "get",
+        raw: bool = False,
+        is_json: bool = True,
+        empty_ok: bool = False,
+        error_status: bool = True,
+        error_json_bad_status: bool = True,
+        error_json_invalid: bool = True,
         **kwargs,
     ) -> Any:
         """Send a REST API request.
@@ -155,6 +161,9 @@ class ModelMixins(Model, PageSizeMixin):
 
         if raw:
             return response
+
+        if empty_ok and not response.text:
+            return response.text
 
         if is_json and response.text:
             data = self._check_response_json(
@@ -184,10 +193,11 @@ class ModelMixins(Model, PageSizeMixin):
             try:
                 response.raise_for_status()
             except Exception as exc:
+                code = response.status_code
                 respexc = ResponseNotOk(
                     self._build_err_msg(
                         response=response,
-                        error="Response has a bad status code!",
+                        error=f"Response has a bad HTTP status code {code}",
                         exc=exc,
                     )
                 )
@@ -223,7 +233,7 @@ class ModelMixins(Model, PageSizeMixin):
             if error_json_invalid:
                 respexc = JsonInvalid(
                     self._build_err_msg(
-                        response=response, error="JSON is not valid in response", exc=exc
+                        response=response, error="REST response object is not valid JSON", exc=exc
                     )
                 )
                 respexc.exc = exc
@@ -237,14 +247,18 @@ class ModelMixins(Model, PageSizeMixin):
             has_error_status = data.get("status") == "error"
 
             if (has_error or has_error_status) and error_json_bad_status:
-                respexc = JsonError(self._build_err_msg(response=response))
+                respexc = JsonError(
+                    self._build_err_msg(
+                        response=response, error="REST response object status key == error"
+                    )
+                )
                 respexc.response = response
                 raise respexc
         return data
 
 
 class PagingMixinsObject(PageSizeMixin):
-    """Pass."""
+    """Mixins for API models that support object paging."""
 
     def get_by_uuid(self, value: str, **kwargs) -> dict:
         """Get an object by UUID.

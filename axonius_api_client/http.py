@@ -7,25 +7,20 @@ from typing import List, Optional, Union
 
 import requests
 
-from .constants import (
-    LOG_LEVEL_HTTP,
-    MAX_BODY_LEN,
-    REQUEST_ATTR_MAP,
-    RESPONSE_ATTR_MAP,
-    TIMEOUT_CONNECT,
-    TIMEOUT_RESPONSE,
-)
+from .constants.api import TIMEOUT_CONNECT, TIMEOUT_RESPONSE
+from .constants.logs import (LOG_LEVEL_HTTP, MAX_BODY_LEN, REQUEST_ATTR_MAP,
+                             RESPONSE_ATTR_MAP)
 from .exceptions import HttpError
 from .logs import get_obj_log, set_log_level
+from .parsers.url_parser import UrlParser
 from .tools import join_url, json_reload, listify, path_read
-from .url_parser import UrlParser
 from .version import __version__
 
 InsecureRequestWarning = requests.urllib3.exceptions.InsecureRequestWarning
 
 
 class Http:
-    """HTTP client wrapper around :obj:`requests.Session`."""
+    """HTTP client that wraps around around :obj:`requests.Session`."""
 
     def __init__(
         self,
@@ -35,7 +30,7 @@ class Http:
         certverify: bool = False,
         **kwargs,
     ):
-        """HTTP client wrapper around :obj:`requests.Session`.
+        """HTTP client that wraps around :obj:`requests.Session`.
 
         Notes:
             * If certpath is supplied, certverify is ignored
@@ -51,9 +46,9 @@ class Http:
 
         Raises:
             :exc:`HttpError`:
+
                 - if either cert_client_cert or cert_client_key are supplied, and the other is
                   not supplied
-
                 - if any of cert_path, cert_client_cert, cert_client_key, or cert_client_both
                   are supplied and the file does not exist
         """
@@ -100,11 +95,11 @@ class Http:
         """HTTPS proxy to use. ``kwargs=https_proxy``"""
 
         self.LOG_REQUEST_ATTRS: Optional[List[str]] = kwargs.get("log_request_attrs", None)
-        """request attrs to log :attr:`axonius_api_client.constants.REQUEST_ATTR_MAP`
+        """request attrs to log :attr:`axonius_api_client.constants.logs.REQUEST_ATTR_MAP`
         ``kwargs=log_request_attrs``"""
 
         self.LOG_RESPONSE_ATTRS: Optional[List[str]] = kwargs.get("log_response_attrs", None)
-        """response attrs to log :attr:`axonius_api_client.constants.RESPONSE_ATTR_MAP`
+        """response attrs to log :attr:`axonius_api_client.constants.logs.RESPONSE_ATTR_MAP`
         ``kwargs=log_response_attrs``"""
 
         self.LOG_LEVEL_URLLIB: str = kwargs.get("log_level_urllib", "warning")
@@ -141,9 +136,12 @@ class Http:
         self.session: requests.Session = requests.Session()
         """:obj:`requests.Session`: session object to use"""
 
+        headers = kwargs.get("headers") or {}
+
         self.session.proxies = {}
         self.session.proxies["https"] = self.HTTPS_PROXY
         self.session.proxies["http"] = self.HTTP_PROXY
+        self.session.headers.update(headers)
 
         if certpath:  # pragma: no cover
             path_read(obj=certpath, binary=True)
@@ -184,42 +182,29 @@ class Http:
         headers: Optional[dict] = None,
         json: Optional[dict] = None,
         files: tuple = None,
-        # fmt: off
-        **kwargs
-        # fmt: on
-    ) -> requests.Response:
+        **kwargs,
+    ):
         """Create, prepare, and then send a request using :attr:`session`.
 
         Args:
-            path (:obj:`str`, optional): default ``None`` - path to append to
-                :attr:`url`
-            route (:obj:`str`, optional): default ``None`` - route to append to
-                :attr:`url`
-            method (:obj:`str`, optional): default ``"get"`` - method to use
-            data (:obj:`str`, optional): default ``None`` - body to send
-            params (:obj:`dict`, optional): default ``None`` - parameters to url encode
-            headers (:obj:`dict`, optional): default ``None`` - headers to send
-            json (:obj:`dict`, optional): default ``None`` - obj to encode as json
-            files (:obj:`tuple` of :obj:`tuple`, optional): default ``None`` - files to
-                send
-            **kwargs:
-                overrides for object attributes
+            path: path to append to :attr:`url`
+            route: route to append to :attr:`url`
+            method: HTTP method to use
+            data: body to send
+            params: parameters to url encode
+            headers: headers to send
+            json: obj to encode as json
+            files: files to send
+            **kwargs: overrides for object attributes
 
-                * connect_timeout (:obj:`int`): default :attr:`CONNECT_TIMEOUT` -
-                  seconds to wait for connection to open to :attr:`url`
-                * response_timeout (:obj:`int`): default :attr:`RESPONSE_TIMEOUT` -
-                  seconds to wait for for response from :attr:`url`
-                * proxies (:obj:`dict`): default ``None`` -
-                  use custom proxies instead of proxies defined in :attr:`session`
-                * verify (:obj:`bool` or :obj:`str`): default ``None`` - use custom
-                  verification of cert offered by :attr:`url` instead of verification
-                  defined in :attr:`session`
-                * certdefault ``None`` - use custom
-                  client cert to offer to :attr:`url` cert defined in :attr:`session`
+                * connect_timeout: seconds to wait for connection to open for this request
+                * response_timeout: seconds to wait for for response for this request
+                * proxies: proxies for this request
+                * verify: verification of cert for this request
+                * cert: client cert to offer for this request
 
         Returns:
-            :obj:`requests.Response`: raw response object
-
+            :obj:`requests.Response`
         """
         url = join_url(self.url, path, route)
 
@@ -282,10 +267,10 @@ class Http:
         return f"{__name__}.{self.__class__.__name__}/{__version__}"
 
     def _do_log_request(self, request):
-        """Do it.
+        """Log attributes and/or body of a request.
 
         Args:
-            request (:obj:`requests.PreparedRequest`): prepared request to log attrs of
+            request (:obj:`requests.PreparedRequest`): prepared request to log attrs/body of
         """
         if self.log_request_attrs:
             lattrs = ", ".join(self.log_request_attrs).format(
@@ -300,15 +285,20 @@ class Http:
             self.log_body(body=request.body, body_type="REQUEST")
 
     def _clean_headers(self, headers: dict) -> dict:
+        """Clean headers with sensitive information.
+
+        Args:
+            headers: headers to clean values of
+        """
         hide = "*********"
         hidden = self.LOG_HIDE_HEADERS
         return {k: hide if k in hidden else v for k, v in headers.items()}
 
     def _do_log_response(self, response):
-        """Do it.
+        """Log attributes and/or body of a response.
 
         Args:
-            response (:obj:`requests.Response`): response to log attrs of
+            response (:obj:`requests.Response`): response to log attrs/body of
         """
         if self.log_response_attrs:
             lattrs = ", ".join(self.log_response_attrs).format(
@@ -350,9 +340,21 @@ class Http:
         self._set_log_attrs(attr_map=attr_map, attr_type=attr_type, value=value)
 
     def _get_log_attrs(self, attr_type: str) -> List[str]:
+        """Get the log attributes for a specific type.
+
+        Args:
+            attr_type: 'request' or 'response'
+        """
         return getattr(self, "_LOG_ATTRS", {}).get(attr_type, [])
 
     def _set_log_attrs(self, attr_map: dict, attr_type: str, value: Union[str, List[str]]):
+        """Set the log attributes for a specific type.
+
+        Args:
+            attr_map: map of attributes to format strings
+            attr_type: 'request' or 'response'
+            value: user supplied attrs to log
+        """
         if not hasattr(self, "_LOG_ATTRS"):
             self._LOG_ATTRS = {"response": [], "request": []}
 
@@ -379,7 +381,12 @@ class Http:
                     log_attrs.append(entry)
 
     def log_body(self, body: str, body_type: str):
-        """Pass."""
+        """Log a request or response body.
+
+        Args:
+            body: content to log
+            body_type: 'request' or 'response'
+        """
         body = body or ""
         body = json_reload(obj=body, error=False, trim=MAX_BODY_LEN)
         self.LOG.debug(f"{body_type} BODY:\n{body}")

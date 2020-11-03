@@ -13,7 +13,7 @@ from click.testing import CliRunner
 
 from axonius_api_client import Wizard, api, auth
 from axonius_api_client.cli.context import Context
-from axonius_api_client.constants import AGG_ADAPTER_NAME
+from axonius_api_client.constants.fields import AGG_ADAPTER_NAME
 from axonius_api_client.http import Http
 from axonius_api_client.tools import listify
 

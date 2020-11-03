@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """Command line interface for Axonius API Client."""
-from ....constants import GUI_PAGE_SIZES
+from ....constants.api import GUI_PAGE_SIZES
 from ....tools import json_dump, listify
 from ...context import SplitEquals, click
 from ...options import int_callback
@@ -132,6 +132,7 @@ def handle_export(ctx, rows, export_format):
 
 
 def check_sq_exist(ctx, apiobj, name, overwrite):
+    """Pass."""
     try:
         apiobj.saved_query.get_by_name(value=name)
     except Exception:

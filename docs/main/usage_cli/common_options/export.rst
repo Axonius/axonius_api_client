@@ -1,8 +1,6 @@
 .. include:: /main/.special.rst
 
 .. _export_options:
-.. _fr_220_1:
-.. _fr_220_2:
 
 Export Options
 ###############################################

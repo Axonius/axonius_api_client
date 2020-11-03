@@ -2,19 +2,12 @@
 """Command line interface for Axonius API Client."""
 import tabulate
 
-from ...api.wizard.constants import Results, Types
-from ...constants import FIELD_JOINER, FIELD_TRIM_LEN, TABLE_FORMAT, TABLE_MAX_ROWS
+from ...api import asset_callbacks
+from ...constants.wizards import Results, Types
 from ...tools import path_read
-from ..context import CONTEXT_SETTINGS, click
-from ..options import (
-    AUTH,
-    EXPORT,
-    FIELDS_SELECT,
-    PAGING,
-    add_options,
-    get_option_fields_default,
-    get_option_help,
-)
+from ..context import CONTEXT_SETTINGS, SplitEquals, click
+from ..options import (AUTH, EXPORT, FIELDS_SELECT, PAGING, add_options,
+                       get_option_fields_default, get_option_help)
 
 HISTORY_DATE = click.option(
     "--history-date",
@@ -66,13 +59,6 @@ WIZ = [
 
 GET_EXPORT = [
     click.option(
-        "--use-cursor/--no-use-cursor",
-        "use_cursor",
-        default=True,
-        help="Use cursor for pagination",
-        hidden=True,
-    ),
-    click.option(
         "--echo/--no-echo",
         "do_echo",
         default=True,
@@ -85,7 +71,7 @@ GET_EXPORT = [
     click.option(
         "--page-progress",
         "page_progress",
-        default=10000,
+        default=asset_callbacks.Base.args_map()["page_progress"],
         help="Print progress every N rows",
         show_envvar=True,
         show_default=True,
@@ -98,15 +84,15 @@ GET_EXPORT = [
         "export",
         default="json",
         help="Formatter to use when exporting asset data",
-        type=click.Choice(["csv", "json", "table", "json_to_csv", "xlsx"]),
+        type=click.Choice(list(asset_callbacks.CB_MAP)),
         show_envvar=True,
         show_default=True,
     ),
     click.option(
         "--table-format",
         "table_format",
-        default=TABLE_FORMAT,
-        help="Table format to use for --export-format=table",
+        default=asset_callbacks.Table.args_map()["table_format"],
+        help="Base format to use for --export-format=table",
         type=click.Choice(tabulate.tabulate_formats),
         show_envvar=True,
         show_default=True,
@@ -115,7 +101,7 @@ GET_EXPORT = [
     click.option(
         "--table-max-rows",
         "table_max_rows",
-        default=TABLE_MAX_ROWS,
+        default=asset_callbacks.Table.args_map()["table_max_rows"],
         help="Only return this many rows for --export-format=table",
         show_envvar=True,
         show_default=True,
@@ -125,7 +111,7 @@ GET_EXPORT = [
     click.option(
         "--table-api-fields/--no-table-api-fields",
         "table_api_fields",
-        default=False,
+        default=asset_callbacks.Table.args_map()["table_api_fields"],
         help="Include API related fields in table output",
         is_flag=True,
         show_envvar=True,
@@ -135,7 +121,7 @@ GET_EXPORT = [
     click.option(
         "--schema/--no-schema",
         "export_schema",
-        default=False,
+        default=asset_callbacks.Json.args_map()["export_schema"],
         help="Add schema information to the export",
         is_flag=True,
         show_envvar=True,
@@ -145,7 +131,7 @@ GET_EXPORT = [
     click.option(
         "--json-flat/--no-json-flat",
         "json_flat",
-        default=False,
+        default=asset_callbacks.Json.args_map()["json_flat"],
         help="Flat JSON output (one line per row)",
         is_flag=True,
         show_envvar=True,
@@ -155,7 +141,7 @@ GET_EXPORT = [
     click.option(
         "--titles/--no-titles",
         "field_titles",
-        default=None,
+        default=asset_callbacks.Base.args_map()["field_titles"],
         help="Rename fields from internal field names to their column titles",
         is_flag=True,
         show_envvar=True,
@@ -163,9 +149,31 @@ GET_EXPORT = [
         hidden=False,
     ),
     click.option(
+        "--field-compress/--no-field-compress",
+        "field_compress",
+        default=asset_callbacks.Base.args_map()["field_compress"],
+        help="Compress field names",
+        is_flag=True,
+        show_envvar=True,
+        show_default=True,
+        hidden=False,
+    ),
+    click.option(
+        "--field-replace",
+        "field_replace",
+        default=asset_callbacks.Base.args_map()["field_replace"],
+        help="Replace characters in field names ex: 'text=replace' (multiples)",
+        type=SplitEquals(),
+        is_flag=False,
+        multiple=True,
+        show_envvar=True,
+        show_default=True,
+        hidden=False,
+    ),
+    click.option(
         "--join/--no-join",
         "field_join",
-        default=None,
+        default=asset_callbacks.Base.args_map()["field_join"],
         help="Join multivalue fields using --join-value",
         is_flag=True,
         show_envvar=True,
@@ -175,7 +183,7 @@ GET_EXPORT = [
     click.option(
         "--join-value",
         "field_join_value",
-        default=FIELD_JOINER,
+        default=asset_callbacks.Base.args_map()["field_join_value"],
         help="Value to use for joining multivalue fields, default: \\n",
         show_envvar=True,
         show_default=True,
@@ -184,7 +192,7 @@ GET_EXPORT = [
     click.option(
         "--join-trim",
         "field_join_trim",
-        default=FIELD_TRIM_LEN,
+        default=asset_callbacks.Base.args_map()["field_join_trim"],
         help="Character length to trim joined multivalue fields",
         show_envvar=True,
         show_default=True,
@@ -194,7 +202,7 @@ GET_EXPORT = [
     click.option(
         "--explode",
         "field_explode",
-        default="",
+        default=asset_callbacks.Base.args_map()["field_explode"],
         help="Flatten and explode a fields values into multiple rows",
         show_envvar=True,
         show_default=True,
@@ -204,7 +212,7 @@ GET_EXPORT = [
     click.option(
         "--flatten/--no-flatten",
         "field_flatten",
-        default=None,
+        default=asset_callbacks.Base.args_map()["field_flatten"],
         help="Remove complex fields and re-add their sub-field values to the row",
         show_envvar=True,
         show_default=True,
@@ -217,7 +225,7 @@ GET_EXPORT = [
         "field_excludes",
         help="Fields to exclude from each row (multiples)",
         multiple=True,
-        default=[],
+        default=asset_callbacks.Base.args_map()["field_excludes"],
         show_envvar=True,
         show_default=True,
         hidden=False,
@@ -226,7 +234,7 @@ GET_EXPORT = [
     click.option(
         "--field-null/--no-field-null",
         "field_null",
-        default=None,
+        default=asset_callbacks.Base.args_map()["field_null"],
         help="Add missing fields with --field-null-value",
         show_envvar=True,
         show_default=True,
@@ -236,7 +244,7 @@ GET_EXPORT = [
     click.option(
         "--field-null-value",
         "field_null_value",
-        default=None,
+        default=asset_callbacks.Base.args_map()["field_null_value"],
         help="Value to use for fields that are not returned",
         show_envvar=True,
         show_default=True,
@@ -245,7 +253,7 @@ GET_EXPORT = [
     click.option(
         "--adapters-missing/--no-adapters-missing",
         "report_adapters_missing",
-        default=False,
+        default=asset_callbacks.Base.args_map()["report_adapters_missing"],
         help="Add a column showing adapters missing from each asset",
         show_envvar=True,
         show_default=True,
@@ -266,7 +274,7 @@ GET_EXPORT = [
         "tags_add",
         help="Tags to add to each asset (multiples)",
         multiple=True,
-        default=[],
+        default=asset_callbacks.Base.args_map()["tags_add"],
         show_envvar=True,
         show_default=True,
         hidden=False,
@@ -277,7 +285,7 @@ GET_EXPORT = [
         "tags_remove",
         help="Tags to remove from each asset (multiples)",
         multiple=True,
-        default=[],
+        default=asset_callbacks.Base.args_map()["tags_remove"],
         show_envvar=True,
         show_default=True,
         hidden=False,
@@ -287,7 +295,7 @@ GET_EXPORT = [
         "--include-details/--no-include-details",
         "-id/-nid",
         "include_details",
-        help="Include details for aggregated fields (req: 3.4 + patch)",
+        help="Include details for aggregated fields",
         is_flag=True,
         default=False,
         show_envvar=True,
@@ -297,7 +305,7 @@ GET_EXPORT = [
         "--sort-descending/--no-sort-descending",
         "-sd/-nsd",
         "sort_descending",
-        help="Sort --sort-field descending (req: 3.4 + patch)",
+        help="Sort --sort-field descending",
         is_flag=True,
         default=False,
         show_envvar=True,
@@ -307,7 +315,7 @@ GET_EXPORT = [
         "--sort-field",
         "-sf",
         "sort_field",
-        help="Sort assets based on a specific field (req: 3.4 + patch)",
+        help="Sort assets based on a specific field",
         default=None,
         show_envvar=True,
         show_default=True,

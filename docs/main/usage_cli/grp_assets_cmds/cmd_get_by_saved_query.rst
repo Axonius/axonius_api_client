@@ -5,8 +5,6 @@ devices/users get-by-saved-query
 
 This command will get assets returned from a saved query for users or devices.
 
-.. _fr_214_5:
-
 Common Options
 ===============================================
 

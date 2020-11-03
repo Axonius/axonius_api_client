@@ -1,35 +1,27 @@
 # -*- coding: utf-8 -*-
-"""API models for working with Enforcement Center."""
-from typing import IO, List, Optional
+"""API for running actions."""
+from typing import List, Optional
 
 from ..mixins import ModelMixins
 from ..routers import API_VERSION, Router
 
 
-class RunAction(ModelMixins):
-    """Child API model for working with actions.
+class RunAction(ModelMixins):  # pragma: no cover
+    """API for running actions.
 
     Notes:
-        The REST API will need to be updated to allow more power in this library.
-        Until then, this class should be considered **BETA**.
+        Future versions of API client 4.x branch will be expanded quite a bit to make it user
+        friendly. The current incarnation should be considered **BETA** until such time.
+
     """
 
     @property
-    def router(self) -> Router:
-        """Router for this API model.
-
-        Returns:
-            :obj:`.routers.Router`: REST API route defs
-        """
+    def router(self) -> Router:  # pragma: no cover
+        """Router for this API model."""
         return API_VERSION.actions
 
-    # sort of pointless
-    def _get(self) -> List[str]:
-        """Direct API method to get all actions.
-
-        Returns:
-            :obj:`list` of :obj:`str`: all actions known to system
-        """
+    def _get(self) -> List[str]:  # pragma: no cover
+        """Direct API method to get all actions."""
         path = self.router.root
         return self.request(method="get", path=path)
 
@@ -40,7 +32,7 @@ class RunAction(ModelMixins):
         file_uuid: str,
         file_name: str,
         params: Optional[str] = None,
-    ) -> dict:
+    ) -> dict:  # pragma: no cover
         """Deploy an action.
 
         Args:
@@ -62,7 +54,7 @@ class RunAction(ModelMixins):
 
         return self.request(method="post", path=path, json=data)
 
-    def _shell(self, action_name: str, ids: List[str], command: str) -> dict:
+    def _shell(self, action_name: str, ids: List[str], command: str) -> dict:  # pragma: no cover
         """Run an action.
 
         Args:
@@ -81,10 +73,10 @@ class RunAction(ModelMixins):
     def _upload_file(
         self,
         name: str,
-        content: IO,
+        content: str,
         content_type: Optional[str] = None,
         headers: Optional[dict] = None,
-    ) -> str:
+    ) -> str:  # pragma: no cover
         """Upload a file to the system for use in deployment and get the UUID of new file.
 
         Args:

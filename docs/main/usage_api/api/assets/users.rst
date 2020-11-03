@@ -1,4 +1,4 @@
-Working with user assets
+User assets
 ###############################################
 
 .. automodule:: axonius_api_client.api.assets.users
@@ -6,3 +6,4 @@ Working with user assets
    :show-inheritance:
    :inherited-members:
    :undoc-members:
+   :member-order: bysource

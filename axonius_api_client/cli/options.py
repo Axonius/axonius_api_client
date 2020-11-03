@@ -2,7 +2,8 @@
 """Command line interface for Axonius API Client."""
 import click
 
-from ..constants import DEFAULT_NODE, DEFAULT_PATH, MAX_PAGE_SIZE
+from .. import DEFAULT_PATH
+from ..constants.api import MAX_PAGE_SIZE
 from ..tools import coerce_int
 from . import context
 from .helps import HELPSTRS
@@ -304,10 +305,10 @@ NODE = [
         "--node-name",
         "-nn",
         "node",
-        default=DEFAULT_NODE,
+        default=None,
         show_envvar=True,
         show_default=True,
-        help="Node name",
+        help="Node name (will default to core instance if not supplied)",
     ),
     click.option(
         "--name",
@@ -326,10 +327,10 @@ NODE_CNX = [
         "--node-name",
         "-nn",
         "adapter_node",
-        default=DEFAULT_NODE,
+        default=None,
         show_envvar=True,
         show_default=True,
-        help="Node name",
+        help="Node name (will default to core instance if not supplied)",
     ),
     click.option(
         "--name",

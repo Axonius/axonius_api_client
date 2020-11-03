@@ -1,38 +1,182 @@
 # -*- coding: utf-8 -*-
-"""Base export callbacks class."""
+"""Base callbacks."""
 import copy
 import logging
 import re
 import sys
 from typing import Generator, List, Optional, Tuple, Union
 
-from ...constants import DEFAULT_PATH, FIELD_JOINER, FIELD_TRIM_LEN, FIELD_TRIM_STR, SCHEMAS_CUSTOM
+from ... import DEFAULT_PATH
+from ...constants.api import FIELD_JOINER, FIELD_TRIM_LEN, FIELD_TRIM_STR
+from ...constants.fields import AGG_ADAPTER_NAME, SCHEMAS_CUSTOM
 from ...exceptions import ApiError
-from ...tools import (
-    calc_percent,
-    coerce_int,
-    echo_error,
-    echo_ok,
-    echo_warn,
-    get_path,
-    join_kv,
-    listify,
-)
-from ..parsers import schema_custom
+from ...parsers.fields import schema_custom
+from ...tools import (calc_percent, coerce_int, echo_error, echo_ok, echo_warn,
+                      get_path, join_kv, listify, longest_str, strip_right)
 
 
 class Base:
-    """Base export callbacks class.
+    """Callbacks for formatting asset data.
 
-    Notes:
-        See :meth:`args_map` for the arguments this callbacks class.
+    Examples:
+        Create a ``client`` using :obj:`axonius_api_client.connect.Connect` and assume
+        ``apiobj`` is either ``client.devices`` or ``client.users``
+
+        >>> apiobj = client.devices  # or client.users
+
+        * :meth:`args_map` for callback generic arguments to format assets.
+        * :meth:`args_map_custom` for callback specific arguments to format and export data.
+
     """
 
-    CB_NAME: str = "base"
-    """name for this callback"""
+    @classmethod
+    def args_map(cls) -> dict:
+        """Get all of the argument names and their defaults for this callbacks object.
 
-    FIND_KEYS: List[str] = ["name", "name_qual", "column_title", "name_base"]
-    """field schema keys to use when finding a fields schema"""
+        Examples:
+            Create a ``client`` using :obj:`axonius_api_client.connect.Connect` and assume
+            ``apiobj`` is either ``client.devices`` or ``client.users``
+
+            >>> apiobj = client.devices  # or client.users
+
+            Flatten complex fields -  Will take all sub fields of complex fields and put them
+            on the root level with their values index correlated to each other.
+
+            >>> assets = apiobj.get(fields=["network_interfaces"], field_flatten=True)
+
+            Explode a single field - will take that field and create new rows for list item.
+
+            >>> assets = apiobj.get(field_explode="hostname")
+
+            Exclude fields - Will remove fields from the final output.
+
+            >>> assets = apiobj.get(field_excludes=["internal_axon_id", "adapter_list_length"])
+
+            Use field titles - Will change internal field names to their titles.
+
+            >>> assets = apiobj.get(field_titles=True)
+
+            Join fields - Will join multi value fields with carriage returns.
+
+            >>> assets = apiobj.get(field_join=True)
+
+            Join fields with no trim and custom join value - Will join multi value fields
+            with ``;;`` and do not trim the joined value to excels maximum cell length.
+
+            >>> assets = apiobj.get(field_join=True, field_join_value=";;", field_join_trim=0)
+
+            Add fields as empty values for fields that did not return.
+
+            >>> assets = apiobj.get(field_null=True)
+
+            Add fields as empty values for fields that did not return with a custom null value.
+
+            >>> assets = apiobj.get(
+            ...     field_null=True,
+            ...     field_null_value="EMPTY",
+            ...     field_null_value_complex="EMPTY LIST",
+            ... )
+
+            Add and remove tags to all assets returned.
+
+            >>> assets = apiobj.get(tags_add=["tag1", "tag2"], tags_remove=["tag3", "tag4"])
+
+            Generate a report of adapters that are missing from each asset.
+
+            >>> assets = apiobj.get(report_adapters_missing=True)
+
+            Generate a report of installed software that does not match a list of regex for each
+            asset.
+
+            >>> assets = apiobj.get(report_software_whitelist=["chrome", "^adobe.*acrobat"])
+
+            Echo to STDERR progress messages.
+
+            >>> assets = apiobj.get(do_echo=True)
+
+            Change the amount of assets that echo page progress if do_echo is true.
+
+            >>> assets = apiobj.get(do_echo=True, page_progress=100)
+
+            Supply a set of custom callbacks to process each row before all builtin callbacks
+            are run. Custom callbacks receive two arguments: ``self`` (the current callback object)
+            and ``rows`` (the current rows being processed). Custom callbacks must return a list of
+            rows.
+
+            >>> def custom_cb1(self, rows):
+            ...     for row in rows:
+            ...         row["internal_axon_id"] = row["internal_axon_id"].upper()
+            ...     return rows
+            ...
+            >>> assets = apiobj.get(custom_cbs=[custom_cb1])
+
+        See Also:
+            * :meth:`args_map_custom` for callback specific arguments to format and export data.
+
+        Notes:
+            These arguments can be supplied as extra kwargs passed to
+            :meth:`axonius_api_client.api.assets.users.Users.get` or
+            :meth:`axonius_api_client.api.assets.devices.Devices.get`
+
+        """
+        args = {}
+        args.update(cls.args_map_base())
+        args.update(cls.args_map_custom())
+        return args
+
+    @classmethod
+    def args_map_custom(cls) -> dict:
+        """Get the custom argument names and their defaults for this callbacks object.
+
+        See Also:
+            :meth:`args_map` for the arguments for all callback objects.
+
+        Notes:
+            This callback object has no custom arguments.
+        """
+        return {}
+
+    @classmethod
+    def args_map_base(cls) -> dict:
+        """Get the map of arguments that can be supplied to GETARGS."""
+        return {
+            "field_excludes": [],
+            "field_flatten": False,
+            "field_explode": None,
+            "field_titles": False,
+            "field_compress": False,
+            "field_replace": [],
+            "field_join": False,
+            "field_join_value": FIELD_JOINER,
+            "field_join_trim": FIELD_TRIM_LEN,
+            "field_null": False,
+            "field_null_value": None,
+            "field_null_value_complex": [],
+            "tags_add": [],
+            "tags_remove": [],
+            "report_adapters_missing": False,
+            "report_software_whitelist": [],
+            "page_progress": 10000,
+            "do_echo": False,
+            "custom_cbs": [],
+        }
+
+    def get_arg_value(self, arg: str) -> Union[str, list, bool, int]:
+        """Get an argument value.
+
+        Args:
+            arg: key to get from :attr:`GETARGS` with a default value from :meth:`args_map`
+        """
+        return self.GETARGS.get(arg, self.args_map()[arg])
+
+    def set_arg_value(self, arg: str, value: Union[str, list, bool, int]):
+        """Set an argument value.
+
+        Args:
+            arg: key to set in :attr:`GETARGS`
+            value: value to set for key
+        """
+        self.GETARGS[arg] = value
 
     def __init__(
         self,
@@ -54,32 +198,14 @@ class Base:
         """logger for this object."""
 
         self.APIOBJ = apiobj
-        """:obj:`axonius_api_client.api.assets.asset_mixin.AssetMixin`: assets object."""
-
         self.ALL_SCHEMAS: dict = apiobj.fields.get()
-        """Map of adapter -> field schemas."""
-
         self.STATE: dict = state or {}
-        """state dict used by get assets method to track paging."""
-
         self.STORE: dict = store or {}
-        """store dict used by get assets method to track arguments."""
-
         self.CURRENT_ROWS: List[dict] = []
-        """current row being processed"""
-
         self.GETARGS: dict = getargs or {}
-        """original kwargs supplied to get assets method."""
-
         self.TAG_ROWS_ADD: List[dict] = []
-        """assets to add tags to in do_tagging."""
-
         self.TAG_ROWS_REMOVE: List[dict] = []
-        """assets to remove tags from in do_tagging."""
-
         self.CUSTOM_CB_EXC: List[dict] = []
-        """list of custom callbacks that have been executed"""
-
         self._init()
 
     def _init(self):
@@ -110,6 +236,11 @@ class Base:
         schemas_pretty = join + join.join(schemas_pretty)
         self.echo(msg=f"Selected Columns: {schemas_pretty}")
 
+        if self.excluded_schemas:
+            schemas_pretty = self.APIOBJ.fields._prettify_schemas(schemas=self.excluded_schemas)
+            schemas_pretty = join + join.join(schemas_pretty)
+            self.echo(msg=f"Excluded Columns: {schemas_pretty}")
+
         final_columns = join + join.join(self.final_columns)
         self.echo(msg=f"Final Columns: {final_columns}")
         self.ECHO_DONE = True
@@ -121,7 +252,7 @@ class Base:
 
     def echo_page_progress(self):
         """Echo progress per N rows using an echo method."""
-        page_progress = self.GETARGS.get("page_progress", 10000)
+        page_progress = self.get_arg_value("page_progress")
         if not page_progress or not isinstance(page_progress, int):
             return
 
@@ -188,6 +319,8 @@ class Base:
             self.do_explode_field,
             self.do_join_values,
             self.do_change_field_titles,
+            self.do_change_field_compress,
+            self.do_change_field_replace,
         ]
 
     def do_row(self, rows: Union[List[dict], dict]) -> List[dict]:
@@ -207,7 +340,7 @@ class Base:
             rows: rows to process
         """
         rows = listify(rows)
-        custom_cbs = listify(self.GETARGS.get("custom_cbs", []))
+        custom_cbs = listify(self.get_arg_value("custom_cbs"))
 
         for custom_cb in custom_cbs:
             try:
@@ -226,7 +359,7 @@ class Base:
             rows: rows to process
         """
         rows = listify(rows)
-        if not self.GETARGS.get("field_null", False):
+        if not self.get_arg_value("field_null"):
             return rows
 
         for row in rows:
@@ -245,13 +378,14 @@ class Base:
         if self.is_excluded(schema=schema):
             return row
 
-        null_value = self.GETARGS.get("field_null_value", None)
+        null_value = self.get_arg_value("field_null_value")
+        complex_null_value = self.get_arg_value("field_null_value_complex")
 
         field = schema[key]
 
         if schema["is_complex"]:
 
-            row[field] = listify(row.get(field, []))
+            row[field] = listify(row.get(field, complex_null_value))
 
             for item in row[field]:
                 for sub_schema in self.get_sub_schemas(schema=schema):
@@ -266,7 +400,7 @@ class Base:
             rows: rows to process
         """
         rows = listify(rows)
-        if not self.GETARGS.get("field_excludes", []):
+        if not self.get_arg_value("field_excludes"):
             return rows
 
         for row in rows:
@@ -298,7 +432,7 @@ class Base:
             rows: rows to process
         """
         rows = listify(rows)
-        if not self.GETARGS.get("field_join", False):
+        if not self.get_arg_value("field_join"):
             return rows
 
         for row in rows:
@@ -311,8 +445,8 @@ class Base:
         Args:
             row: row being processed
         """
-        joiner = str(self.GETARGS.get("field_join_value", FIELD_JOINER))
-        trim_len = coerce_int(self.GETARGS.get("field_join_trim", FIELD_TRIM_LEN))
+        joiner = str(self.get_arg_value("field_join_value"))
+        trim_len = coerce_int(self.get_arg_value("field_join_trim"))
         trim_str = FIELD_TRIM_STR
 
         for field in row:
@@ -324,6 +458,75 @@ class Base:
                 msg = trim_str.format(field_len=field_len, trim_len=trim_len)
                 row[field] = joiner.join([row[field][:trim_len], msg])
 
+    def do_change_field_replace(self, rows: Union[List[dict], dict]) -> List[dict]:
+        """Asset callback to replace characters.
+
+        Args:
+            rows: rows to process
+        """
+        rows = listify(rows)
+        if not self.field_replacements:
+            return rows
+
+        rows = [{self._field_replace(key=k): v for k, v in row.items()} for row in rows]
+        return rows
+
+    def _field_replace(self, key: str) -> str:
+        """Parse fields into required format."""
+        if self.field_replacements:
+            for x, y in self.field_replacements:
+                key = key.replace(x, y)
+        return key
+
+    @property
+    def field_replacements(self) -> List[Tuple[str, str]]:
+        """Parse the supplied list of field name replacements."""
+
+        def parse_replace(replace):
+            if isinstance(replace, str):
+                replace = replace.split("=", maxsplit=1)
+
+            if not isinstance(replace, (tuple, list)) or not replace[0]:
+                replace = []
+
+            if len(replace) == 1:
+                replace = [replace, ""]
+
+            return replace
+
+        if not hasattr(self, "_field_replacements"):
+            replaces = listify(self.get_arg_value("field_replace"))
+            replaces = [parse_replace(x) for x in replaces]
+            self._field_replacements = [x for x in replaces if x]
+        return self._field_replacements
+
+    def do_change_field_compress(self, rows: Union[List[dict], dict]) -> List[dict]:
+        """Asset callback to shorten field names.
+
+        Args:
+            rows: rows to process
+        """
+        rows = listify(rows)
+        if not self.get_arg_value("field_compress"):
+            return rows
+        rows = [{self._field_compress(key=k): v for k, v in row.items()} for row in rows]
+        return rows
+
+    def _field_compress(self, key: str) -> str:
+        """Parse fields into required format."""
+        if not self.get_arg_value("field_compress"):
+            return key
+
+        splits = key.split(".")
+
+        if splits[0] == "specific_data":
+            splits.pop(1)  # get rid of 'data'
+            splits[0] = AGG_ADAPTER_NAME  # replace "specific_data" with "agg"
+        elif splits[0] == "adapters_data":
+            # replace 'aws_adapter' with 'aws'
+            splits[0] = strip_right(obj=splits[0], fix="_adapter")
+        return ".".join(splits)
+
     def do_change_field_titles(self, rows: Union[List[dict], dict]) -> List[dict]:
         """Asset callback to change qual name to title.
 
@@ -331,7 +534,7 @@ class Base:
             rows: rows to process
         """
         rows = listify(rows)
-        if not self.GETARGS.get("field_titles", False):
+        if not self.get_arg_value("field_titles"):
             return rows
 
         for row in rows:
@@ -344,7 +547,7 @@ class Base:
         Args:
             row: row being processed
         """
-        null_value = self.GETARGS.get("field_null_value", None)
+        null_value = self.get_arg_value("field_null_value")
 
         for schema in self.final_schemas:
             title = schema["column_title"]
@@ -360,7 +563,7 @@ class Base:
             rows: rows to process
         """
         rows = listify(rows)
-        if not self.GETARGS.get("field_flatten", False):
+        if not self.get_arg_value("field_flatten"):
             return rows
 
         for row in rows:
@@ -382,12 +585,13 @@ class Base:
         if not schema["is_complex"]:
             return
 
-        null_value = self.GETARGS.get("field_null_value", None)
+        null_value = self.get_arg_value("field_null_value")
 
         items = listify(row.pop(schema["name_qual"], []))
 
         for sub_schema in self.get_sub_schemas(schema=schema):
             row[sub_schema["name_qual"]] = []
+            # TBD: handle complex sub-fields
 
             for item in items:
                 value = item.pop(sub_schema["name"], null_value)
@@ -401,7 +605,7 @@ class Base:
             row: row being processed
         """
         rows = listify(rows)
-        explode = self.GETARGS.get("field_explode", "")
+        explode = self.get_arg_value("field_explode")
 
         if not explode or self.is_excluded(schema=self.schema_to_explode):
             return rows
@@ -417,7 +621,7 @@ class Base:
         Args:
             row: row being processed
         """
-        null_value = self.GETARGS.get("field_null_value", None)
+        null_value = self.get_arg_value("field_null_value")
 
         schema = self.schema_to_explode
         field = schema["name_qual"]
@@ -449,7 +653,7 @@ class Base:
 
     def do_tag_add(self):
         """Add tags to assets."""
-        tags_add = listify(self.GETARGS.get("tags_add", []))
+        tags_add = listify(self.get_arg_value("tags_add"))
         rows_add = self.TAG_ROWS_ADD
         if tags_add and rows_add:
             self.echo(msg=f"Adding tags {tags_add} to {len(rows_add)} assets")
@@ -457,7 +661,7 @@ class Base:
 
     def do_tag_remove(self):
         """Remove tags from assets."""
-        tags_remove = listify(self.GETARGS.get("tags_remove", []))
+        tags_remove = listify(self.get_arg_value("tags_remove"))
         rows_remove = self.TAG_ROWS_REMOVE
         if tags_remove and rows_remove:
             self.echo(msg=f"Removing tags {tags_remove} from {len(rows_remove)} assets")
@@ -470,7 +674,7 @@ class Base:
             rows: rows to process
         """
         rows = listify(rows)
-        tags = listify(self.GETARGS.get("tags_add", []))
+        tags = listify(self.get_arg_value("tags_add"))
         if not tags:
             return rows
 
@@ -488,7 +692,7 @@ class Base:
             rows: rows to process
         """
         rows = listify(rows)
-        tags = listify(self.GETARGS.get("tags_remove", []))
+        tags = listify(self.get_arg_value("tags_remove"))
         if not tags:
             return rows
 
@@ -507,8 +711,9 @@ class Base:
             rows: rows to process
         """
         rows = listify(rows)
+        whitelists = listify(self.get_arg_value("report_software_whitelist"))
 
-        if not listify(self.GETARGS.get("report_software_whitelist", [])):
+        if not whitelists:
             return rows
 
         for row in rows:
@@ -521,6 +726,8 @@ class Base:
         Args:
             row: row being processed
         """
+        whitelists = listify(self.get_arg_value("report_software_whitelist"))
+
         sw_field = "specific_data.data.installed_software"
 
         if sw_field not in self.fields_selected:
@@ -530,7 +737,6 @@ class Base:
         sws = listify(row.get(sw_field, []))
         names = [x.get("name") for x in sws if x.get("name") and isinstance(x.get("name"), str)]
 
-        whitelists = listify(self.GETARGS.get("report_software_whitelist", []))
         extras = [n for n in names if any([re.search(x, n, re.I)] for x in whitelists)]
         missing = [x for x in whitelists if any([re.search(x, n, re.I) for n in names])]
 
@@ -546,7 +752,8 @@ class Base:
             rows: rows to process
         """
         rows = listify(rows)
-        if not self.GETARGS.get("report_adapters_missing", False):
+        missing = self.get_arg_value("report_adapters_missing")
+        if not missing:
             return rows
 
         for row in rows:
@@ -580,80 +787,28 @@ class Base:
 
         row[field_name] = missing
 
+    # TBD: make this support normal field selection concepts
     def is_excluded(self, schema: dict) -> bool:
         """Check if a name supplied to field_excludes matches one of FIND_KEYS.
 
         Args:
             schema: field schema
         """
-        excludes = listify(self.GETARGS.get("field_excludes", []))
-
-        for exclude in excludes:
+        for excluded_schema in self.excluded_schemas:
             for key in self.FIND_KEYS:
-                name = schema.get(key, None)
-                if (name and exclude) and name == exclude:
+                schema_key = schema.get(key, None)
+                excluded_key = excluded_schema.get(key, None)
+                if (schema_key and excluded_schema) and (schema_key == excluded_key):
                     return True
         return False
 
-    def open_fd_arg(self):
-        """Open a file descriptor supplied in GETARGS."""
-        self._fd = self.GETARGS["export_fd"]
-        self._fd_close = self.GETARGS.get("export_fd_close", False)
-        self.echo(msg=f"Exporting to {self._fd}")
-        return self._fd
-
-    def open_fd_path(self):
-        """Open a file descriptor for a path."""
-        self._export_file = self.GETARGS.get("export_file", None)
-        self._export_path = self.GETARGS.get("export_path", DEFAULT_PATH)
-        self._export_overwrite = self.GETARGS.get("export_overwrite", False)
-
-        file_path = get_path(obj=self._export_path)
-        file_path.mkdir(mode=0o700, parents=True, exist_ok=True)
-        self._file_path = fp = (file_path / self._export_file).resolve()
-
-        if self._file_path.exists():
-            self._file_mode = "overwrote"
-            mode = "overwriting"
-        else:
-            self._file_mode = "created"
-            mode = "creating"
-
-        if self._file_path.exists() and not self._export_overwrite:
-            msg = f"Export file '{fp}' already exists and overwite is False!"
-            self.echo(msg=msg, error=ApiError, level="error")
-
-        self._file_path.touch(mode=0o600)
-        self._fd_close = self.GETARGS.get("export_fd_close", True)
-        self._fd = self._file_path.open(mode="w", encoding="utf-8")
-        self.echo(msg=f"Exporting to file '{fp}' ({mode})")
-        return self._fd
-
-    def open_fd_stdout(self):
-        """Open a file descriptor to STDOUT."""
-        self._file_path = None
-        self._fd_close = False
-        self._fd = sys.stdout
-        self.echo(msg="Exporting to stdout")
-        return self._fd
-
-    def open_fd(self):
-        """Open a file descriptor."""
-        if "export_fd" in self.GETARGS:
-            self.open_fd_arg()
-        elif self.GETARGS.get("export_file", None):
-            self.open_fd_path()
-        else:
-            self.open_fd_stdout()
-        return self._fd
-
-    def close_fd(self):
-        """Close a file descriptor."""
-        self._fd.write("\n")
-        if getattr(self, "_fd_close", False):
-            name = str(getattr(self._fd, "name", self._fd))
-            self.echo(msg=f"Finished exporting to {name!r}")
-            self._fd.close()
+    @property
+    def excluded_schemas(self) -> List[dict]:
+        """List of all schemas that should be excluded."""
+        if not hasattr(self, "_excluded_schemas"):
+            excludes = listify(self.get_arg_value("field_excludes"))
+            self._excluded_schemas = self.APIOBJ.fields.get_field_names_eq(value=excludes, key=None)
+        return self._excluded_schemas
 
     def echo(
         self,
@@ -676,7 +831,7 @@ class Base:
             level_warning: logging level for warning messages
             abort: sys.exit(1) if error is true
         """
-        do_echo = self.GETARGS.get("do_echo", False)
+        do_echo = self.get_arg_value("do_echo")
 
         if do_echo:
             if warning:
@@ -712,9 +867,9 @@ class Base:
     def custom_schemas(self) -> List[dict]:
         """Get the custom schemas based on GETARGS."""
         schemas = []
-        if self.GETARGS.get("report_adapters_missing", False):
+        if self.get_arg_value("report_adapters_missing"):
             schemas += list(SCHEMAS_CUSTOM["report_adapters_missing"].values())
-        if self.GETARGS.get("report_software_whitelist", False):
+        if self.get_arg_value("report_software_whitelist"):
             schemas += list(SCHEMAS_CUSTOM["report_software_whitelist"].values())
         return schemas
 
@@ -724,7 +879,7 @@ class Base:
         if hasattr(self, "_final_schemas"):
             return self._final_schemas
 
-        flat = self.GETARGS.get("field_flatten", False)
+        flat = self.get_arg_value("field_flatten")
         explode_field = self.schema_to_explode.get("name_qual", "")
 
         final = {}
@@ -746,13 +901,16 @@ class Base:
     @property
     def final_columns(self) -> List[str]:
         """Get the columns that will be returned."""
+
+        def get_key(s):
+            return self._field_replace(self._field_compress(s[key]))
+
         if hasattr(self, "_final_columns"):
             return self._final_columns
 
-        use_titles = self.GETARGS.get("field_titles", False)
+        use_titles = self.get_arg_value("field_titles")
         key = "column_title" if use_titles else "name_qual"
-        self._final_columns = [x[key] for x in self.final_schemas]
-
+        self._final_columns = [get_key(s) for s in self.final_schemas]
         return self._final_columns
 
     @property
@@ -815,7 +973,7 @@ class Base:
         if hasattr(self, "_schema_to_explode"):
             return self._schema_to_explode
 
-        explode = self.GETARGS.get("field_explode", "")
+        explode = self.get_arg_value("field_explode")
 
         self._schema_to_explode = {}
 
@@ -840,8 +998,11 @@ class Base:
     @property
     def adapter_map(self) -> dict:
         """Build a map of adapters that have connections."""
+        if getattr(self, "_adapter_map", None):
+            return self._adapter_map
+
         self._adapters_meta = getattr(self, "_adapters_meta", self.APIOBJ.adapters.get())
-        amap = {
+        self._adapter_map = {
             "has_cnx": [],
             "all": [],
             "all_fields": [f"{x}_adapter" for x in self.ALL_SCHEMAS],
@@ -850,53 +1011,28 @@ class Base:
         for adapter in self._adapters_meta:
             name_raw = adapter["name_raw"]
 
-            if adapter not in amap["all"]:
-                amap["all"].append(name_raw)
+            if adapter not in self._adapter_map["all"]:
+                self._adapter_map["all"].append(name_raw)
             if adapter["cnx"]:
-                amap["has_cnx"].append(name_raw)
+                self._adapter_map["has_cnx"].append(name_raw)
 
-        amap = {k: list(v) for k, v in amap.items()}
-        return amap
-
-    @classmethod
-    def args_map(cls) -> List[Tuple[str, str, Optional[Union[list, bool, str, int]]]]:
-        """Get the map of arguments that can be supplied to GETARGS.
-
-        Notes:
-            Format: [argument name, argument description, argument default]
-        """
-        return [
-            ("field_excludes", "Exclude fields:", []),
-            ("field_flatten", "Flatten complex fields:", False),
-            ("field_explode", "Explode field:", None),
-            ("field_titles", "Rename fields to titles:", False),
-            ("field_join", "Join field values:", False),
-            ("field_join_value", "Join field values using:", FIELD_JOINER),
-            ("field_join_trim", "Join field character limit:", FIELD_TRIM_LEN),
-            ("field_null", "Add missing fields:", False),
-            ("field_null_value", "Missing field value:", None),
-            ("tags_add", "Add tags:", []),
-            ("tags_remove", "Remove tags:", []),
-            ("report_adapters_missing", "Report Missing Adapters:", False),
-            ("export_file", "Export to file:", None),
-            ("export_path", "Export file to path:", DEFAULT_PATH),
-            ("export_overwrite", "Export overwrite file:", False),
-            ("export_schema", "Export schema:", False),
-            ("page_progress", "Progress per row count:", 10000),
-        ]
+        self._adapter_map = {k: list(v) for k, v in self._adapter_map.items()}
+        return self._adapter_map
 
     @property
     def args_strs(self) -> List[str]:
         """Get a list of strings that describe each arg in :meth:`args_map`."""
         lines = []
-        for arg, text, default in self.args_map():
-            value = self.GETARGS.get(arg, default)
+        arg_desc = {k: v for k, v in ARG_DESCRIPTIONS.items() if k in self.args_map()}
+        longest = longest_str(list(arg_desc.values()))
+        for arg in self.args_map():
+            desc = f"{arg_desc[arg]}:"
+            value = self.get_arg_value(arg)
+
             if isinstance(value, str):
                 value = repr(value)
-            if isinstance(value, list):
-                value = ", ".join(value)
-                value = value or None
-            lines.append(f"{text:30}{value}")
+
+            lines.append(f"{desc:{longest}}{value}")
         return lines
 
     def __str__(self) -> str:
@@ -906,3 +1042,159 @@ class Base:
     def __repr__(self) -> str:
         """Show info for this object."""
         return self.__str__()
+
+    CB_NAME: str = "base"
+    """name for this callback"""
+
+    FIND_KEYS: List[str] = ["name", "name_qual", "column_title", "name_base"]
+    """field schema keys to use when finding a fields schema"""
+
+    APIOBJ = None
+    """:obj:`axonius_api_client.api.assets.asset_mixin.AssetMixin`: assets object."""
+
+    ALL_SCHEMAS: dict = None
+    """Map of adapter -> field schemas."""
+
+    STATE: dict = None
+    """state dict used by get assets method to track paging."""
+
+    STORE: dict = None
+    """store dict used by get assets method to track arguments."""
+
+    CURRENT_ROWS: None
+    """current rows being processed"""
+
+    GETARGS: dict = None
+    """original kwargs supplied to get assets method."""
+
+    TAG_ROWS_ADD: List[dict] = None
+    """tracker of assets to add tags to in :meth:`do_tagging`."""
+
+    TAG_ROWS_REMOVE: List[dict] = None
+    """tracker of assets to remove tags from in :meth:`do_tagging`."""
+
+    CUSTOM_CB_EXC: List[dict] = None
+    """tracker of custom callbacks that have been executed by :meth:`do_custom_cbs`"""
+
+
+class ExportMixins(Base):
+    """Export mixins for callbacks."""
+
+    @classmethod
+    def args_map_export(cls) -> dict:
+        """Get the export argument names and their defaults for this callbacks object.
+
+        See Also:
+            :meth:`args_map_custom` for the arguments specific to this callback object.
+
+            :meth:`args_map` for the arguments for all callback objects.
+
+        """
+        return {
+            "export_file": None,
+            "export_path": DEFAULT_PATH,
+            "export_overwrite": False,
+            "export_schema": False,
+            "export_fd": None,
+            "export_fd_close": True,
+        }
+
+    def open_fd_arg(self):
+        """Open a file descriptor supplied in GETARGS."""
+        self._fd = self.get_arg_value("export_fd")
+        self._fd_close = self.get_arg_value("export_fd_close")
+        self.echo(msg=f"Exporting to {self._fd}")
+        return self._fd
+
+    def open_fd_path(self):
+        """Open a file descriptor for a path."""
+        self._export_file = self.get_arg_value("export_file")
+        self._export_path = self.get_arg_value("export_path")
+        self._export_overwrite = self.get_arg_value("export_overwrite")
+
+        file_path = get_path(obj=self._export_path)
+        file_path.mkdir(mode=0o700, parents=True, exist_ok=True)
+        self._file_path = fp = (file_path / self._export_file).resolve()
+
+        if self._file_path.exists():
+            self._file_mode = "overwrote"
+            mode = "overwriting"
+        else:
+            self._file_mode = "created"
+            mode = "creating"
+
+        if self._file_path.exists() and not self._export_overwrite:
+            msg = f"Export file '{fp}' already exists and overwite is False!"
+            self.echo(msg=msg, error=ApiError, level="error")
+
+        self._file_path.touch(mode=0o600)
+        self._fd_close = self.get_arg_value("export_fd_close")
+        self._fd = self._file_path.open(mode="w", encoding="utf-8")
+        self.echo(msg=f"Exporting to file '{fp}' ({mode})")
+        return self._fd
+
+    def open_fd_stdout(self):
+        """Open a file descriptor to STDOUT."""
+        self._file_path = None
+        self._fd_close = False
+        self._fd = sys.stdout
+        self.echo(msg="Exporting to stdout")
+        return self._fd
+
+    def open_fd(self):
+        """Open a file descriptor."""
+        if self.get_arg_value("export_fd"):
+            self.open_fd_arg()
+        elif self.get_arg_value("export_file"):
+            self.open_fd_path()
+        else:
+            self.open_fd_stdout()
+        return self._fd
+
+    def close_fd(self):
+        """Close a file descriptor."""
+        self._fd.write("\n")
+        if getattr(self, "_fd_close", False):
+            name = str(getattr(self._fd, "name", self._fd))
+            self.echo(msg=f"Finished exporting to {name!r}")
+            self._fd.close()
+
+
+ARG_DESCRIPTIONS: dict = {
+    "field_excludes": "Exclude fields",
+    "field_flatten": "Flatten complex fields",
+    "field_explode": "Explode field",
+    "field_titles": "Rename fields to titles",
+    "field_compress": "Shorten field names",
+    "field_replace": "Replace characters in field names",
+    "field_join": "Join field values",
+    "field_join_value": "Join field values using",
+    "field_join_trim": "Join field character limit",
+    "field_null": "Add missing fields",
+    "field_null_value": "Missing field value",
+    "field_null_value_complex": "Missing complex field value",
+    "tags_add": "Add tags",
+    "tags_remove": "Remove tags",
+    "report_adapters_missing": "Report Missing Adapters",
+    "report_software_whitelist": "Report Missing Software",
+    "page_progress": "Echo page progress every N assets",
+    "do_echo": "Echo messages to console",
+    "custom_cbs": "Custom callbacks to perform on assets",
+    "json_flat": "Produce flat JSON",
+    "csv_key_miss": "Value to use when CSV keys are missing",
+    "csv_key_extras": "What to do with extra CSV columns",
+    "csv_dialect": "Dialect to export CSV as",
+    "csv_quoting": "What quoting to use in CSV export",
+    "export_file": "Export to file",
+    "export_path": "Export file to path",
+    "export_overwrite": "Export overwrite file",
+    "export_schema": "Export schema of fields",
+    "export_fd": "Export to a file descriptor",
+    "export_fd_close": "Close the file descriptor when done",
+    "table_format": "Use table format",
+    "table_max_rows": "Maximum table rows",
+    "table_api_fields": "Include API fields",
+    "xlsx_column_length": "Length to use for every column",
+    "xlsx_cell_format": "Formatting to apply to every cell",
+}
+"""Descriptions of all arguments for all callbacks"""

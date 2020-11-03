@@ -1,14 +1,17 @@
 # -*- coding: utf-8 -*-
 """Utilities and tools."""
+import codecs
 import ipaddress
 import json
 import logging
 import pathlib
 import platform
 import sys
+import warnings
 from datetime import datetime, timedelta, timezone
 from itertools import zip_longest
-from typing import Any, Callable, Iterable, Iterator, List, Optional, Tuple, Union
+from typing import (Any, Callable, Iterable, Iterator, List, Optional, Tuple,
+                    Union)
 from urllib.parse import urljoin
 
 import click
@@ -16,11 +19,12 @@ import dateutil.parser
 import dateutil.relativedelta
 import dateutil.tz
 
-from . import __file__ as PACKAGE_FILE
-from . import __package__ as PACKAGE_ROOT
-from .constants import ERROR_ARGS, ERROR_TMPL, NO, OK_ARGS, OK_TMPL, WARN_ARGS, WARN_TMPL, YES
+from . import INIT_DOTENV, PACKAGE_FILE, PACKAGE_ROOT, VERSION
+from .constants.api import GUI_PAGE_SIZES
+from .constants.general import (ERROR_ARGS, ERROR_TMPL, NO, OK_ARGS, OK_TMPL,
+                                WARN_ARGS, WARN_TMPL, YES)
 from .exceptions import ToolsError
-from .version import VERSION
+from .setup_env import find_dotenv, get_env_ax
 
 LOG: logging.Logger = logging.getLogger(PACKAGE_ROOT).getChild("tools")
 
@@ -32,7 +36,7 @@ def listify(obj: Any, dictkeys: bool = False) -> list:
         * :obj:`list`: returns as is
         * :obj:`tuple`: convert to list
         * :obj:`None`: returns as an empty list
-        * any of :data:`axonius_api_client.constants.SIMPLE`: return as a list of obj
+        * any of :data:`axonius_api_client.constants.general.SIMPLE`: return as a list of obj
         * :obj:`dict`: if dictkeys is True, return as list of keys of obj,
           otherwise return as a list of obj
 
@@ -66,7 +70,7 @@ def grouper(iterable: Iterable, n: int, fillvalue: Optional[Any] = None) -> Iter
     return zip_longest(*([iter(iterable)] * n), fillvalue=fillvalue)
 
 
-def coerce_int(obj: Any) -> int:
+def coerce_int(obj: Any, max_value: Optional[int] = None, min_value: Optional[int] = None) -> int:
     """Convert an object into int.
 
     Args:
@@ -76,10 +80,18 @@ def coerce_int(obj: Any) -> int:
         :exc:`ToolsError`: if obj is not able to be converted to int
     """
     try:
-        return int(obj)
+        value = int(obj)
     except Exception:
         vtype = type(obj).__name__
         raise ToolsError(f"Supplied value {obj!r} of type {vtype} is not an integer.")
+
+    if max_value is not None and value > max_value:
+        raise ToolsError(f"Supplied value {obj!r} is greater than max value of {max_value}.")
+
+    if min_value is not None and value < min_value:
+        raise ToolsError(f"Supplied value {obj!r} is less than min value of {min_value}.")
+
+    return value
 
 
 def coerce_int_float(value: Union[int, float, str]) -> Union[int, float]:
@@ -113,7 +125,8 @@ def coerce_bool(obj: Any, errmsg: Optional[str] = None) -> bool:
 
     Args:
         obj: object to coerce to bool, will check against
-            :data:`axonius_api_client.constants.YES` and :data:`axonius_api_client.constants.NO`
+            :data:`axonius_api_client.constants.general.YES` and
+            :data:`axonius_api_client.constants.general.NO`
 
     Raises:
         :exc:`ToolsError`: obj is not able to be converted to bool
@@ -350,6 +363,20 @@ def dt_min_ago(obj: Union[str, timedelta, datetime]) -> int:
     return round(dt_sec_ago(obj=obj) / 60)
 
 
+def dt_days_left(obj: Optional[Union[str, timedelta, datetime]]) -> Optional[int]:
+    """Get number of days left until a given datetime.
+
+    Args:
+        obj: parsed by :meth:`dt_sec_ago` into days left
+    """
+    if obj:
+        obj = dt_parse(obj=obj)
+        now = dt_now(tz=obj.tzinfo)
+        seconds = (obj - now).total_seconds()
+        return round(seconds / 60 / 60 / 24)
+    return None
+
+
 def dt_within_min(
     obj: Union[str, timedelta, datetime],
     n: Optional[Union[str, int]] = None,
@@ -541,7 +568,7 @@ def split_str(
     return ret
 
 
-def echo_ok(msg: str, tmpl: bool = True, **kwargs):  # pragma: no cover
+def echo_ok(msg: str, tmpl: bool = True, **kwargs):
     """Echo a message to console.
 
     Args:
@@ -559,7 +586,7 @@ def echo_ok(msg: str, tmpl: bool = True, **kwargs):  # pragma: no cover
     click.secho(msg, **echoargs)
 
 
-def echo_warn(msg: str, tmpl: bool = True, **kwargs):  # pragma: no cover
+def echo_warn(msg: str, tmpl: bool = True, **kwargs):
     """Echo a warning message to console.
 
     Args:
@@ -577,7 +604,7 @@ def echo_warn(msg: str, tmpl: bool = True, **kwargs):  # pragma: no cover
     click.secho(msg, **echoargs)
 
 
-def echo_error(msg: str, abort: bool = True, tmpl: bool = True, **kwargs):  # pragma: no cover
+def echo_error(msg: str, abort: bool = True, tmpl: bool = True, **kwargs):
     """Echo an error message to console.
 
     Args:
@@ -603,6 +630,9 @@ def sysinfo() -> dict:
     info = {}
     info["API Client Version"] = VERSION
     info["API Client Package"] = PACKAGE_FILE
+    info["Init loaded .env file"] = INIT_DOTENV
+    info["Path to .env file"] = find_dotenv()
+    info["OS envs"] = get_env_ax()
     info["Date"] = str(dt_now())
     info["Python System Version"] = ", ".join(sys.version.splitlines())
     platform_attrs = [
@@ -645,6 +675,18 @@ def calc_percent(part: Union[int, float], whole: Union[int, float], places: int 
         value = 100.00
     else:
         value = 100 * (part / whole)
+
+    value = trim_float(value=value, places=places)
+    return value
+
+
+def trim_float(value: float, places: int = 2) -> float:
+    """Trim a float to N places.
+
+    Args:
+        value: float to trim
+        places: decimal places to trim value to
+    """
     if isinstance(places, int):
         value = float(f"{value:.{places}f}")
     return value
@@ -814,3 +856,118 @@ def kv_dump(obj: dict) -> str:
         obj: dictionary to get string of
     """
     return "\n  " + "\n  ".join([f"{k}: {v}" for k, v in obj.items()])
+
+
+def bom_strip(content: str, strip=True) -> str:
+    """Remove the UTF-8 BOM marker from the beginning of a string.
+
+    Args:
+        content: string to remove BOM marker from if found
+        strip: remove whitespace before & after removing BOM marker
+    """
+    if strip:
+        content = content.strip()
+    if content.startswith(codecs.BOM_UTF8.decode()):
+        content = content[1:]
+    if strip:
+        content = content.strip()
+    return content
+
+
+def read_stream(stream) -> str:
+    """Try to read input from a stream.
+
+    Args:
+        stream: stdin or a file descriptor to read input from
+    """
+    stream_name = format(getattr(stream, "name", stream))
+
+    if stream.isatty():
+        raise ToolsError(f"No input provided on {stream_name!r}")
+
+    # its STDIN with input or a file
+    content = stream.read().strip()
+
+    if not content:
+        raise ToolsError(f"Empty content supplied to {stream_name!r}")
+
+    return content
+
+
+def load_fuzz():
+    """Load the fuzzy matching library.
+
+    I do not like this. But fuzzywuzzy has a built in warning on import that can
+    not be shut off any other way
+    """
+    warnings.filterwarnings("ignore", message="Using slow pure-python SequenceMatcher")
+    from fuzzywuzzy import fuzz
+
+    return fuzz
+
+
+def check_gui_page_size(size: Optional[int] = None) -> int:
+    """Check page size to see if it one of the valid GUI page sizes.
+
+    Args:
+        size: page size to check
+
+    Raises:
+        :exc:`ApiError`: if size is not one of
+            :data:`axonius_api_client.constants.api.GUI_PAGE_SIZES`
+
+    """
+    size = size or GUI_PAGE_SIZES[0]
+    if size not in GUI_PAGE_SIZES:
+        raise ToolsError(f"gui_page_size of {size} is invalid, must be one of {GUI_PAGE_SIZES}")
+    return size
+
+
+def calc_gb(value: Union[str, int], places: int = 2, is_kb: bool = True) -> float:
+    """Convert bytes into GB.
+
+    Args:
+        value: bytes
+        places: decimal places to trim value to
+        is_kb: values are in kb or bytes
+    """
+    value = coerce_int_float(value=value)
+    value = value / 1024 / 1024
+    value = (value / 1024) if not is_kb else value
+    value = trim_float(value=value, places=places)
+    return value
+
+
+def calc_perc_gb(
+    obj: dict,
+    whole_key: str,
+    part_key: str,
+    perc_key: Optional[str] = None,
+    places: int = 2,
+    update: bool = True,
+    is_kb: bool = True,
+) -> dict:
+    """Calculate the GB and percent from a dict.
+
+    Args:
+        obj: dict to get whole_key and part_key from
+        whole_key: key to get whole value from and convert to GB and set as whole_key_gb
+        part_key: key to get part value from and convert to GB and set as part_key_gb
+        perc_key: key to set percent in
+        is_kb: values are in kb or bytes
+    """
+    perc_key = perc_key or f"{part_key}_percent"
+    whole = calc_gb(value=obj[whole_key], places=places, is_kb=is_kb)
+    part = calc_gb(value=obj[part_key], places=places, is_kb=is_kb)
+    perc = calc_percent(part=part, whole=whole, places=places)
+    ret = obj if update else {}
+    ret[f"{part_key}_gb"] = part
+    ret[f"{whole_key}_gb"] = whole
+    ret[perc_key] = perc
+    return ret
+
+
+def get_subcls(cls) -> list:
+    """Get all subclasses of a class."""
+    subs = [s for c in cls.__subclasses__() for s in get_subcls(c)]
+    return list(set(cls.__subclasses__()).union(subs))

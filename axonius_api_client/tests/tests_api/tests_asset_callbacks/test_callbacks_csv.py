@@ -6,10 +6,10 @@ import io
 import pytest
 
 from ...utils import get_rows_exist, get_schema
-from .test_callbacks import Callbacks
+from .test_callbacks import Callbacks, Exports
 
 
-class TestCallbacksCsv(Callbacks):
+class TestCallbacksCsv(Callbacks, Exports):
     @pytest.fixture(params=["api_devices", "api_users"])
     def apiobj(self, request):
         return request.getfixturevalue(request.param)
@@ -33,7 +33,7 @@ class TestCallbacksCsv(Callbacks):
             apiobj=apiobj,
             cbexport=cbexport,
             store={"fields": [field_complex]},
-            getargs={"export_fd": io_fd},
+            getargs={"export_fd": io_fd, "export_fd_close": False},
         )
         cbobj.start()
 
@@ -64,7 +64,7 @@ class TestCallbacksCsv(Callbacks):
             apiobj=apiobj,
             cbexport=cbexport,
             store={"fields": apiobj.fields_default},
-            getargs={"export_fd": io_fd, "field_titles": False},
+            getargs={"export_fd": io_fd, "field_titles": False, "export_fd_close": False},
         )
         cbobj.start()
         assert cbobj.GETARGS["field_titles"] is False

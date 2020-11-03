@@ -5,17 +5,11 @@ import json
 
 import pytest
 
-from axonius_api_client.api.assets.saved_query import check_gui_page_size
-from axonius_api_client.constants import GUI_PAGE_SIZES, SIMPLE
+from axonius_api_client.constants.api import GUI_PAGE_SIZES
+from axonius_api_client.constants.general import SIMPLE
 from axonius_api_client.exceptions import ApiError, NotFoundError
 
 from ...meta import QUERIES
-
-
-def test_check_gui_page_size_error():
-    gui_page_size = 9999
-    with pytest.raises(ApiError):
-        check_gui_page_size(size=gui_page_size)
 
 
 class SavedQueryPrivate:

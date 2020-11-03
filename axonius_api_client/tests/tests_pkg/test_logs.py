@@ -6,7 +6,7 @@ import time
 
 import pytest
 
-from axonius_api_client.constants import (
+from axonius_api_client.constants.logs import (
     LOG_LEVEL_CONSOLE,
     LOG_LEVEL_FILE,
     LOG_NAME_FILE,

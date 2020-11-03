@@ -1,4 +1,4 @@
-Working with tags (labels)
+Tags
 ###############################################
 
 .. automodule:: axonius_api_client.api.assets.labels
@@ -6,3 +6,4 @@ Working with tags (labels)
    :show-inheritance:
    :inherited-members:
    :undoc-members:
+   :member-order: bysource

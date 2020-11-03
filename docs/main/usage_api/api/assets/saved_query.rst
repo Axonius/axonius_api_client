@@ -1,4 +1,4 @@
-Working with saved queries
+Saved queries
 ###############################################
 
 .. automodule:: axonius_api_client.api.assets.saved_query
@@ -6,3 +6,4 @@ Working with saved queries
    :show-inheritance:
    :inherited-members:
    :undoc-members:
+   :member-order: bysource

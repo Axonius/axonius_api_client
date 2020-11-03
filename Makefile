@@ -19,22 +19,39 @@ init:
 	$(MAKE) pipenv_install_build
 
 pip_install_tools:
-	pip install --quiet --upgrade --requirement requirements-pkg.txt
+	pip install \
+		--quiet \
+		--upgrade \
+		--requirement requirements-pkg.txt
 
 pipenv_install_dev:
-	pipenv run pip install --quiet --upgrade --requirement requirements-dev.txt
+	pipenv run pip install \
+		--quiet \
+		--upgrade \
+		--requirement requirements-dev.txt
 
 pipenv_install_lint:
-	pipenv run pip install --quiet --upgrade --requirement requirements-lint.txt
+	pipenv run pip install \
+		--quiet \
+		--upgrade \
+		--requirement requirements-lint.txt
 
 pipenv_install_build:
-	pipenv run pip install --quiet --upgrade --requirement requirements-build.txt
+	pipenv run pip install \
+		--quiet \
+		--upgrade \
+		--requirement requirements-build.txt
 
 pipenv_install_docs:
-	pipenv run pip install --quiet --upgrade --requirement docs/requirements.txt
+	pipenv run pip install \
+		--quiet \
+		--upgrade \
+		--requirement docs/requirements.txt
 
 pipenv_init:
-	pipenv install --dev --skip-lock
+	pipenv install \
+		--dev \
+		--skip-lock
 
 pipenv_clean:
 	pipenv --rm || true
@@ -43,17 +60,65 @@ pyenv_init:
 	pyenv install $(PYVER) -s || true
 
 lint:
-	pipenv run isort $(PACKAGE) setup.py shell.py
-	pipenv run pipenv run black -l 100 $(PACKAGE) setup.py shell.py
-	pipenv run pydocstyle --match-dir='(?!tests).*' --match-dir='(?!examples).*' $(PACKAGE) setup.py shell.py
-	pipenv run flake8 --max-line-length 100 $(PACKAGE) setup.py shell.py
-	pipenv run bandit -x $(PACKAGE)/examples,$(PACKAGE)/tests --skip B101 -r $(PACKAGE)
+	pipenv run isort \
+		$(PACKAGE) setup.py shell.py
+	pipenv run black \
+		-l 100 \
+		$(PACKAGE) setup.py shell.py
+	pipenv run pydocstyle \
+		--match-dir='(?!tests).*'\
+		--match-dir='(?!examples).*' \
+		$(PACKAGE) setup.py shell.py
+	pipenv run flake8 \
+		--max-line-length 100 \
+		$(PACKAGE) setup.py shell.py
+	pipenv run bandit \
+		-x $(PACKAGE)/examples,$(PACKAGE)/tests \
+		--skip B101 \
+		-r \
+		$(PACKAGE)
 
 test:
-	pipenv run pytest -ra -vv --showlocals --exitfirst --pdb --cov-config=.coveragerc --cov-report xml --cov-report=html:cov_html --cov=$(PACKAGE) $(PACKAGE)/tests
+	pipenv run pytest \
+		-ra \
+		-vv \
+		--showlocals \
+		--exitfirst \
+		--pdb \
+		--cov-config=.coveragerc \
+		--cov-report xml \
+		--cov-report=html:cov_html \
+		--cov=$(PACKAGE) \
+		$(PACKAGE)/tests
 
 test_last:
-	pipenv run pytest -ra -vv --showlocals --exitfirst --last-failed --pdb --cov-config=.coveragerc --cov-report xml --cov-report=html:cov_html --cov=$(PACKAGE) $(PACKAGE)/tests
+	pipenv run pytest \
+		-ra \
+		-vv \
+		--showlocals \
+		--exitfirst \
+		--last-failed \
+		--pdb \
+		--cov-config=.coveragerc \
+		--cov-report xml \
+		--cov-report=html:cov_html \
+		--cov=$(PACKAGE) \
+		$(PACKAGE)/tests
+
+test_last_log:
+	pipenv run pytest \
+		-ra \
+		-vv \
+		--showlocals \
+		--exitfirst \
+		--last-failed \
+		--pdb \
+		--log-cli-level debug \
+		--cov-config=.coveragerc \
+		--cov-report xml \
+		--cov-report=html:cov_html \
+		--cov=$(PACKAGE) \
+		$(PACKAGE)/tests
 
 test_cov_open:
 	open cov_html/index.html
@@ -69,8 +134,10 @@ docs_dev:
 
 docs_apigen:
 	pip install sphinx -t /tmp/sphinx-latest --quiet --upgrade
-	rm -rf docs/main/api
-	PYTHONPATH=/tmp/sphinx-latest /tmp/sphinx-latest/bin/sphinx-apidoc -e -P -M -f -T -t docs/_templates -o docs/main/api $(PACKAGE) $(PACKAGE)/tests $(PACKAGE)/cli
+	rm -rf /tmp/api
+	PYTHONPATH=/tmp/sphinx-latest /tmp/sphinx-latest/bin/sphinx-apidoc \
+		-e -P -M -f -T -t docs/_templates \
+		-o /tmp/api $(PACKAGE) $(PACKAGE)/tests $(PACKAGE)/cli
 
 docs_open:
 	open docs/_build/html/index.html

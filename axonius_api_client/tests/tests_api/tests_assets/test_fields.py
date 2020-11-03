@@ -4,7 +4,7 @@ import copy
 
 import pytest
 
-from axonius_api_client.constants import AGG_ADAPTER_ALTS, AGG_ADAPTER_NAME
+from axonius_api_client.constants.fields import AGG_ADAPTER_ALTS, AGG_ADAPTER_NAME
 from axonius_api_client.exceptions import ApiError, NotFoundError
 
 from ...meta import FIELD_FORMATS, SCHEMA_FIELD_FORMATS, SCHEMA_TYPES
@@ -108,6 +108,10 @@ class FieldsPrivate:
 
             items = field.pop("items", {})
             assert isinstance(items, dict)
+
+            # added in 3.10?
+            filterable = field.pop("filterable")
+            assert isinstance(filterable, bool)
 
             self.val_raw_items(adapter=f"{adapter}:{name}", items=items)
 
@@ -290,6 +294,10 @@ class FieldsPublic:
 
         items = schema.pop("items", {})
         assert isinstance(items, dict)
+
+        # added in 3.10?
+        filterable = schema.pop("filterable", False)
+        assert isinstance(filterable, bool)
 
         if is_complex:
             if name != "all":

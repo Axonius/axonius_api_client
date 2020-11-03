@@ -6,9 +6,9 @@ import logging
 import sys
 
 import pytest
-
 from axonius_api_client.api.asset_callbacks import get_callbacks_cls
-from axonius_api_client.constants import FIELD_TRIM_LEN, SCHEMAS_CUSTOM
+from axonius_api_client.constants.api import FIELD_TRIM_LEN
+from axonius_api_client.constants.fields import SCHEMAS_CUSTOM
 from axonius_api_client.exceptions import ApiError
 
 from ...utils import get_rows_exist, get_schema, log_check, random_string
@@ -29,7 +29,8 @@ def get_cbobj_main(apiobj, cbexport, getargs=None, state=None, store=None):
     assert cbobj.STATE == state
 
     assert isinstance(cbobj.ALL_SCHEMAS, dict) and cbobj.ALL_SCHEMAS
-    assert isinstance(cbobj.args_map(), list)
+    assert isinstance(cbobj.args_map(), dict)
+    assert isinstance(cbobj.args_map_custom(), dict)
     assert isinstance(cbobj.args_strs, list)
 
     assert isinstance(cbobj.TAG_ROWS_ADD, list) and not cbobj.TAG_ROWS_ADD
@@ -343,7 +344,7 @@ class Callbacks:
         original_row = get_rows_exist(apiobj=apiobj)
         test_row = copy.deepcopy(original_row)
 
-        fields = [apiobj.FIELD_AXON_ID, apiobj.FIELD_ADAPTERS, "adapters_list_length"]
+        fields = [apiobj.FIELD_AXON_ID, apiobj.FIELD_ADAPTERS, "adapter_list_length"]
 
         cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs={"field_excludes": fields})
 
@@ -360,13 +361,14 @@ class Callbacks:
         original_row = get_rows_exist(apiobj=apiobj, fields=field_complex)
         test_row = copy.deepcopy(original_row)
 
-        sub_exclude = list(test_row[field_complex][0])[0]
+        sub_name = list(test_row[field_complex][0])[0]
+        sub_exclude = f"{field_complex}.{sub_name}"
         excludes = [apiobj.FIELD_AXON_ID, sub_exclude]
 
         cbobj = self.get_cbobj(
             apiobj=apiobj,
             cbexport=cbexport,
-            store={"fields": [field_complex]},
+            store={"fields": [*apiobj.fields_default, field_complex]},
             getargs={"field_excludes": excludes},
         )
 
@@ -379,7 +381,7 @@ class Callbacks:
             assert field not in test_row
 
         for item in test_row[field_complex]:
-            assert sub_exclude not in item
+            assert sub_name not in item
 
     def test_do_join_values_true(self, cbexport, apiobj):
         original_row = get_rows_exist(apiobj=apiobj)
@@ -559,18 +561,18 @@ class Callbacks:
         original_row = get_rows_exist(apiobj=apiobj, fields=field_complex)
         test_row = copy.deepcopy(original_row)
 
-        sub_name = get_schema(apiobj=apiobj, field=field_complex, key="sub_fields")[0]["name"]
-        sub_name_qual = get_schema(apiobj=apiobj, field=field_complex, key="sub_fields")[0][
-            "name_qual"
-        ]
+        sub_field = get_schema(apiobj=apiobj, field=field_complex, key="sub_fields")[0]
+        sub_name = sub_field["name"]
+        sub_exclude = f"{field_complex}.{sub_name}"
+        excludes = [sub_exclude, apiobj.FIELD_AXON_ID]
 
         cbobj = self.get_cbobj(
             apiobj=apiobj,
             cbexport=cbexport,
-            store={"fields": [field_complex]},
+            store={"fields": [*apiobj.fields_default, field_complex]},
             getargs={
                 "field_flatten": True,
-                "field_excludes": [sub_name, apiobj.FIELD_AXON_ID],
+                "field_excludes": excludes,
             },
         )
 
@@ -578,7 +580,13 @@ class Callbacks:
         assert isinstance(rows, list)
         assert len(rows) == 1
         assert original_row != test_row
-        assert sub_name_qual not in test_row
+        assert sub_field["name_qual"] not in test_row
+        assert sub_name not in test_row
+        for row in rows:
+            for k, v in row.items():
+                if isinstance(v, (list, tuple)):
+                    for i in v:
+                        assert not isinstance(i, dict)
 
     def test_do_flatten_fields_false(self, cbexport, apiobj):
         field_complex = apiobj.FIELD_COMPLEX
@@ -735,6 +743,91 @@ class Callbacks:
         schema = cbobj.schema_to_explode
         assert schema["name_qual"] == field
 
+    def test_echo_ok_doecho_yes(self, cbexport, apiobj, capsys, caplog):
+        entry = "xxxxxxx"
+
+        cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs={"do_echo": True})
+        cbobj.echo(msg=entry)
+        capture = capsys.readouterr()
+        assert f"{entry}\n" in capture.err
+        assert not capture.out
+        log_check(caplog=caplog, entries=[entry], exists=True)
+
+    def test_echo_error_doecho_yes(self, cbexport, apiobj, capsys, caplog):
+        entry = "xxxxxxx"
+
+        cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs={"do_echo": True})
+        with pytest.raises(SystemExit):
+            cbobj.echo(msg=entry, error=ApiError)
+
+        capture = capsys.readouterr()
+        assert f"{entry}\n" in capture.err
+        assert not capture.out
+        log_check(caplog=caplog, entries=[entry], exists=True)
+
+    def test_echo_ok_doecho_no(self, cbexport, apiobj, capsys, caplog):
+        entry = "xxxxxxx"
+
+        cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs={"do_echo": False})
+        cbobj.echo(msg=entry)
+        capture = capsys.readouterr()
+        assert not capture.err
+        assert not capture.out
+        log_check(caplog=caplog, entries=[entry], exists=True)
+
+    def test_echo_error_doecho_no(self, cbexport, apiobj, capsys, caplog):
+        entry = "xxxxxxx"
+
+        cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs={"do_echo": False})
+        with pytest.raises(ApiError):
+            cbobj.echo(msg=entry, error=ApiError)
+
+        capture = capsys.readouterr()
+        assert not capture.err
+        assert not capture.out
+        log_check(caplog=caplog, entries=[entry], exists=True)
+
+    def test_get_callbacks_cls_error(self):
+        with pytest.raises(ApiError):
+            get_callbacks_cls(export="badwolf")
+
+    def test_sw_whitelist_fail_no_sw_field(self, cbexport, apiobj, caplog):
+        whitelist = ["chrome"]
+        rows = apiobj.get(max_rows=1)
+
+        cbobj = self.get_cbobj(
+            apiobj=apiobj,
+            cbexport=cbexport,
+            getargs={"report_software_whitelist": whitelist},
+        )
+
+        for row in rows:
+            with pytest.raises(ApiError):
+                cbobj.add_report_software_whitelist(rows=row)
+
+    def test_sw_whitelist(self, cbexport, api_devices):
+        field = "specific_data.data.installed_software"
+        whitelist = ["chrome"]
+        query = '(specific_data.data.installed_software.name == regex("chrome", "i"))'
+        rows = api_devices.get(fields=field, query=query, max_rows=1)
+
+        cbobj = self.get_cbobj(
+            apiobj=api_devices,
+            cbexport=cbexport,
+            store={"fields": field},
+            getargs={"report_software_whitelist": whitelist},
+        )
+
+        for row in rows:
+            proc_rows = cbobj.add_report_software_whitelist(rows=row)
+            assert isinstance(proc_rows, list)
+            assert len(proc_rows) == 1
+            for schema in SCHEMAS_CUSTOM["report_software_whitelist"].values():
+                assert schema["name_qual"] in row
+                assert field in row
+
+
+class Exports:
     def test_fd_stdout_open_no_close(self, cbexport, apiobj):
         cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport)
 
@@ -861,86 +954,3 @@ class Callbacks:
 
         with pytest.raises(ApiError):
             cbobj.open_fd()
-
-    def test_echo_ok_doecho_yes(self, cbexport, apiobj, capsys, caplog):
-        entry = "xxxxxxx"
-
-        cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs={"do_echo": True})
-        cbobj.echo(msg=entry)
-        capture = capsys.readouterr()
-        assert f"{entry}\n" in capture.err
-        assert not capture.out
-        log_check(caplog=caplog, entries=[entry], exists=True)
-
-    def test_echo_error_doecho_yes(self, cbexport, apiobj, capsys, caplog):
-        entry = "xxxxxxx"
-
-        cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs={"do_echo": True})
-        with pytest.raises(SystemExit):
-            cbobj.echo(msg=entry, error=ApiError)
-
-        capture = capsys.readouterr()
-        assert f"{entry}\n" in capture.err
-        assert not capture.out
-        log_check(caplog=caplog, entries=[entry], exists=True)
-
-    def test_echo_ok_doecho_no(self, cbexport, apiobj, capsys, caplog):
-        entry = "xxxxxxx"
-
-        cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs={"do_echo": False})
-        cbobj.echo(msg=entry)
-        capture = capsys.readouterr()
-        assert not capture.err
-        assert not capture.out
-        log_check(caplog=caplog, entries=[entry], exists=True)
-
-    def test_echo_error_doecho_no(self, cbexport, apiobj, capsys, caplog):
-        entry = "xxxxxxx"
-
-        cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs={"do_echo": False})
-        with pytest.raises(ApiError):
-            cbobj.echo(msg=entry, error=ApiError)
-
-        capture = capsys.readouterr()
-        assert not capture.err
-        assert not capture.out
-        log_check(caplog=caplog, entries=[entry], exists=True)
-
-    def test_get_callbacks_cls_error(self):
-        with pytest.raises(ApiError):
-            get_callbacks_cls(export="badwolf")
-
-    def test_sw_whitelist_fail_no_sw_field(self, cbexport, apiobj, caplog):
-        whitelist = ["chrome"]
-        rows = apiobj.get(max_rows=1)
-
-        cbobj = self.get_cbobj(
-            apiobj=apiobj,
-            cbexport=cbexport,
-            getargs={"report_software_whitelist": whitelist},
-        )
-
-        for row in rows:
-            with pytest.raises(ApiError):
-                cbobj.add_report_software_whitelist(rows=row)
-
-    def test_sw_whitelist(self, cbexport, api_devices):
-        field = "specific_data.data.installed_software"
-        whitelist = ["chrome"]
-        query = '(specific_data.data.installed_software.name == regex("chrome", "i"))'
-        rows = api_devices.get(fields=field, query=query, max_rows=1)
-
-        cbobj = self.get_cbobj(
-            apiobj=api_devices,
-            cbexport=cbexport,
-            store={"fields": field},
-            getargs={"report_software_whitelist": whitelist},
-        )
-
-        for row in rows:
-            proc_rows = cbobj.add_report_software_whitelist(rows=row)
-            assert isinstance(proc_rows, list)
-            assert len(proc_rows) == 1
-            for schema in SCHEMAS_CUSTOM["report_software_whitelist"].values():
-                assert schema["name_qual"] in row
-                assert field in row

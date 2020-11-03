@@ -18,10 +18,9 @@ Reporting Issues
 
 When reporting issues, please include information for:
 
-- Python distribution and version
-- Operating System platform and version
-- `axonius-api-client` version
-- Full tracebacks of any exceptions
+- Output of ``axonshell tools sysinfo``
+- Tracebacks of any exceptions
+- Log file
 
 Submitting Patches
 ===================================================
@@ -29,26 +28,33 @@ Submitting Patches
 All patches should be submitted as pull requests on the `GitHub project`_.
 
 - Clearly explain what you're trying to accomplish.
-
 - Include tests for any changes.
-
 - Ensure the full :ref:`testing-suite` runs without any errors before submitting
   a pull request.
-
 - Ensure the test coverage reports 100% before submitting a pull request.
-
 - Follow :pep:`8`.
-
 - Use `isort`_ and `black`_ to format your code and `flake8`_, `pydocstyle`_,
   and `bandit`_ to lint your code:
 
 .. code-block:: shell
 
-   $ isort -rc -y axonius_api_client setup.py axonshell*.py
-   $ black axonius_api_client setup.py axonshell*.py
-   $ pydocstyle axonius_api_client setup.py axonshell*.py
-   $ flake8 --max-line-length 89 axonius_api_client setup.py axonshell*.py
-   $ bandit --skip B101 -r axonius_api_client
+  $ isort \
+    axonius_api_client setup.py shell.py
+  $ black \
+    -l 100 \
+    axonius_api_client setup.py shell.py
+  $ pydocstyle \
+    --match-dir='(?!tests).*'\
+    --match-dir='(?!examples).*' \
+    axonius_api_client setup.py shell.py
+  $ flake8 \
+    --max-line-length 100 \
+    axonius_api_client setup.py shell.py
+  $ bandit \
+    -x axonius_api_client/examples,axonius_api_client/tests \
+    --skip B101 \
+    -r \
+    axonius_api_client
 
 .. _testing-suite:
 
@@ -86,7 +92,6 @@ to `cov_html/index.html`:
      --exitfirst \
      axonius_api_client/tests
 
-.. _fr_220_4:
 .. _supported_versions:
 
 Supported Python versions
@@ -98,7 +103,7 @@ Supported Python versions
 .. note::
 
    Python 2.7 reached its end-of-life on 01/01/2020, and
-   therefore is no longer supported as of 2.2.0.
+   therefore is no longer supported as of API client v2.2.0.
 
 Tested Python versions
 ----------------------------------------------------------
@@ -133,3 +138,21 @@ Tested Python versions
 .. _isort: https://github.com/timothycrosley/isort
 .. _pydocstyle: https://github.com/PyCQA/pydocstyle/
 .. _bandit: https://github.com/PyCQA/bandit
+
+Release Strategy
+===================================================
+
+Micro releases: 1.0.x
+    A micro release is done for any change that does not modify any existing API method.
+
+    Any scripts that utilize this API library will work with new micro releases with no changes.
+
+Minor releases: 1.x.0:
+    A minor release is only done when an API method is removed or its signature changes.
+
+    Any scripts that utilize this API library will work with new minor releases, although some minor changes may be required.
+
+Major releases: x.0.0:
+    A major release is only done for architectural and model changes to the API client library.
+
+    Any scripts that utilize this API library might not work with new major releases.

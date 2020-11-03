@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""API models package."""
+"""Authenticating with Axonius."""
 from . import api_key, models
 from .api_key import ApiKey
 from .models import Mixins, Model

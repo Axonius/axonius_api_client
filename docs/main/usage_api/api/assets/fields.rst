@@ -1,4 +1,4 @@
-Working with fields (columns)
+Fields
 ###############################################
 
 .. automodule:: axonius_api_client.api.assets.fields
@@ -6,3 +6,4 @@ Working with fields (columns)
    :show-inheritance:
    :inherited-members:
    :undoc-members:
+   :member-order: bysource

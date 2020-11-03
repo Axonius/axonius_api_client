@@ -4,9 +4,10 @@ import codecs
 
 import pytest
 
-from axonius_api_client.api.wizard import ValueParser, WizardCsv
-from axonius_api_client.api.wizard.constants import Entry, EntrySq, Results, Types
+from axonius_api_client.api.wizards import WizardCsv
+from axonius_api_client.constants.wizards import Entry, EntrySq, Results, Types
 from axonius_api_client.exceptions import WizardError
+from axonius_api_client.parsers.wizards import WizardParser
 
 from .test_wizard import TestData
 
@@ -19,7 +20,7 @@ class TestWizardCsv:
         apiobj = request.getfixturevalue(request.param)
         obj = WizardCsv(apiobj=apiobj)
         assert obj.APIOBJ == apiobj
-        assert isinstance(obj.VALUE_PARSER, ValueParser)
+        assert isinstance(obj.PARSER, WizardParser)
         return obj
 
 

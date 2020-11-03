@@ -2,8 +2,8 @@
 """Command line interface for Axonius API Client."""
 import re
 
-from ...api.parsers.tables import tablize
-from ...constants import AGG_ADAPTER_NAME
+from ...constants.fields import AGG_ADAPTER_NAME
+from ...parsers.tables import tablize
 from ...tools import json_dump
 from ..context import CONTEXT_SETTINGS, click
 from ..options import AUTH, add_options
