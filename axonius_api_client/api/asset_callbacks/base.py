@@ -4,24 +4,15 @@ import copy
 import logging
 import re
 import sys
-from typing import Generator, List, Optional, Union
+from typing import Generator, List, Optional, Tuple, Union
 
 from ... import DEFAULT_PATH
 from ...constants.api import FIELD_JOINER, FIELD_TRIM_LEN, FIELD_TRIM_STR
-from ...constants.fields import SCHEMAS_CUSTOM
+from ...constants.fields import AGG_ADAPTER_NAME, SCHEMAS_CUSTOM
 from ...exceptions import ApiError
 from ...parsers.fields import schema_custom
-from ...tools import (
-    calc_percent,
-    coerce_int,
-    echo_error,
-    echo_ok,
-    echo_warn,
-    get_path,
-    join_kv,
-    listify,
-    longest_str,
-)
+from ...tools import (calc_percent, coerce_int, echo_error, echo_ok, echo_warn,
+                      get_path, join_kv, listify, longest_str, strip_right)
 
 
 class Base:
@@ -153,6 +144,8 @@ class Base:
             "field_flatten": False,
             "field_explode": None,
             "field_titles": False,
+            "field_compress": False,
+            "field_replace": [],
             "field_join": False,
             "field_join_value": FIELD_JOINER,
             "field_join_trim": FIELD_TRIM_LEN,
@@ -243,6 +236,11 @@ class Base:
         schemas_pretty = join + join.join(schemas_pretty)
         self.echo(msg=f"Selected Columns: {schemas_pretty}")
 
+        if self.excluded_schemas:
+            schemas_pretty = self.APIOBJ.fields._prettify_schemas(schemas=self.excluded_schemas)
+            schemas_pretty = join + join.join(schemas_pretty)
+            self.echo(msg=f"Excluded Columns: {schemas_pretty}")
+
         final_columns = join + join.join(self.final_columns)
         self.echo(msg=f"Final Columns: {final_columns}")
         self.ECHO_DONE = True
@@ -321,6 +319,8 @@ class Base:
             self.do_explode_field,
             self.do_join_values,
             self.do_change_field_titles,
+            self.do_change_field_compress,
+            self.do_change_field_replace,
         ]
 
     def do_row(self, rows: Union[List[dict], dict]) -> List[dict]:
@@ -457,6 +457,75 @@ class Base:
                 field_len = len(row[field])
                 msg = trim_str.format(field_len=field_len, trim_len=trim_len)
                 row[field] = joiner.join([row[field][:trim_len], msg])
+
+    def do_change_field_replace(self, rows: Union[List[dict], dict]) -> List[dict]:
+        """Asset callback to replace characters.
+
+        Args:
+            rows: rows to process
+        """
+        rows = listify(rows)
+        if not self.field_replacements:
+            return rows
+
+        rows = [{self._field_replace(key=k): v for k, v in row.items()} for row in rows]
+        return rows
+
+    def _field_replace(self, key: str) -> str:
+        """Parse fields into required format."""
+        if self.field_replacements:
+            for x, y in self.field_replacements:
+                key = key.replace(x, y)
+        return key
+
+    @property
+    def field_replacements(self) -> List[Tuple[str, str]]:
+        """Parse the supplied list of field name replacements."""
+
+        def parse_replace(replace):
+            if isinstance(replace, str):
+                replace = replace.split("=", maxsplit=1)
+
+            if not isinstance(replace, (tuple, list)) or not replace[0]:
+                replace = []
+
+            if len(replace) == 1:
+                replace = [replace, ""]
+
+            return replace
+
+        if not hasattr(self, "_field_replacements"):
+            replaces = listify(self.get_arg_value("field_replace"))
+            replaces = [parse_replace(x) for x in replaces]
+            self._field_replacements = [x for x in replaces if x]
+        return self._field_replacements
+
+    def do_change_field_compress(self, rows: Union[List[dict], dict]) -> List[dict]:
+        """Asset callback to shorten field names.
+
+        Args:
+            rows: rows to process
+        """
+        rows = listify(rows)
+        if not self.get_arg_value("field_compress"):
+            return rows
+        rows = [{self._field_compress(key=k): v for k, v in row.items()} for row in rows]
+        return rows
+
+    def _field_compress(self, key: str) -> str:
+        """Parse fields into required format."""
+        if not self.get_arg_value("field_compress"):
+            return key
+
+        splits = key.split(".")
+
+        if splits[0] == "specific_data":
+            splits.pop(1)  # get rid of 'data'
+            splits[0] = AGG_ADAPTER_NAME  # replace "specific_data" with "agg"
+        elif splits[0] == "adapters_data":
+            # replace 'aws_adapter' with 'aws'
+            splits[0] = strip_right(obj=splits[0], fix="_adapter")
+        return ".".join(splits)
 
     def do_change_field_titles(self, rows: Union[List[dict], dict]) -> List[dict]:
         """Asset callback to change qual name to title.
@@ -725,14 +794,21 @@ class Base:
         Args:
             schema: field schema
         """
-        excludes = listify(self.get_arg_value("field_excludes"))
-
-        for exclude in excludes:
+        for excluded_schema in self.excluded_schemas:
             for key in self.FIND_KEYS:
-                name = schema.get(key, None)
-                if (name and exclude) and name == exclude:
+                schema_key = schema.get(key, None)
+                excluded_key = excluded_schema.get(key, None)
+                if (schema_key and excluded_schema) and (schema_key == excluded_key):
                     return True
         return False
+
+    @property
+    def excluded_schemas(self) -> List[dict]:
+        """List of all schemas that should be excluded."""
+        if not hasattr(self, "_excluded_schemas"):
+            excludes = listify(self.get_arg_value("field_excludes"))
+            self._excluded_schemas = self.APIOBJ.fields.get_field_names_eq(value=excludes, key=None)
+        return self._excluded_schemas
 
     def echo(
         self,
@@ -825,13 +901,16 @@ class Base:
     @property
     def final_columns(self) -> List[str]:
         """Get the columns that will be returned."""
+
+        def get_key(s):
+            return self._field_replace(self._field_compress(s[key]))
+
         if hasattr(self, "_final_columns"):
             return self._final_columns
 
         use_titles = self.get_arg_value("field_titles")
         key = "column_title" if use_titles else "name_qual"
-        self._final_columns = [x[key] for x in self.final_schemas]
-
+        self._final_columns = [get_key(s) for s in self.final_schemas]
         return self._final_columns
 
     @property
@@ -1086,6 +1165,8 @@ ARG_DESCRIPTIONS: dict = {
     "field_flatten": "Flatten complex fields",
     "field_explode": "Explode field",
     "field_titles": "Rename fields to titles",
+    "field_compress": "Shorten field names",
+    "field_replace": "Replace characters in field names",
     "field_join": "Join field values",
     "field_join_value": "Join field values using",
     "field_join_trim": "Join field character limit",

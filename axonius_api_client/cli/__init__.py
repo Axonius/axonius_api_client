@@ -6,21 +6,12 @@ import click
 
 from .. import version
 from ..constants.api import TIMEOUT_CONNECT, TIMEOUT_RESPONSE
-from ..constants.logs import (
-    LOG_FILE_MAX_FILES,
-    LOG_FILE_MAX_MB,
-    LOG_FILE_NAME,
-    LOG_FILE_PATH,
-    LOG_LEVEL_API,
-    LOG_LEVEL_AUTH,
-    LOG_LEVEL_CONSOLE,
-    LOG_LEVEL_FILE,
-    LOG_LEVEL_HTTP,
-    LOG_LEVEL_PACKAGE,
-    LOG_LEVELS_STR,
-    REQUEST_ATTR_MAP,
-    RESPONSE_ATTR_MAP,
-)
+from ..constants.logs import (LOG_FILE_MAX_FILES, LOG_FILE_MAX_MB,
+                              LOG_FILE_NAME, LOG_FILE_PATH, LOG_LEVEL_API,
+                              LOG_LEVEL_AUTH, LOG_LEVEL_CONSOLE,
+                              LOG_LEVEL_FILE, LOG_LEVEL_HTTP,
+                              LOG_LEVEL_PACKAGE, LOG_LEVELS_STR,
+                              REQUEST_ATTR_MAP, RESPONSE_ATTR_MAP)
 from ..logs import LOG
 from . import context, grp_adapters, grp_assets, grp_system, grp_tools
 
@@ -40,6 +31,16 @@ All of the options listed above must be supplied BEFORE any commands or groups.
     help="Silence green text.",
     show_envvar=True,
     show_default=True,
+)
+@click.option(
+    "--header",
+    "headers",
+    default=[],
+    help="Additional headers to use in all requests in the format of key=value (multiples)",
+    show_envvar=True,
+    show_default=True,
+    multiple=True,
+    type=context.SplitEquals(),
 )
 @click.option(
     "--log-level-package",
@@ -105,7 +106,7 @@ All of the options listed above must be supplied BEFORE any commands or groups.
     "--log-request-attrs",
     "-reqattr",
     "log_request_attrs",
-    help="Log http client request attributes.",
+    help="Log http client request attributes (multiples)",
     default=["size", "url"],
     multiple=True,
     type=click.Choice(list(REQUEST_ATTR_MAP) + ["all"]),
@@ -116,7 +117,7 @@ All of the options listed above must be supplied BEFORE any commands or groups.
     "-respattr",
     "log_response_attrs",
     default=["size", "url", "status", "elapsed"],
-    help="Log http client response attributes.",
+    help="Log http client response attributes (multiples)",
     multiple=True,
     type=click.Choice(list(RESPONSE_ATTR_MAP) + ["all"]),
     show_envvar=True,
@@ -328,6 +329,7 @@ def cli(
     timeout_connect,
     timeout_response,
     quiet,
+    headers,
 ):
     """Command line interface for the Axonius API Client."""
     LOG.debug(f"sys.argv: {sys.argv}")
@@ -359,6 +361,7 @@ def cli(
     ctx._connect_args["wraperror"] = wraperror
     ctx._connect_args["timeout_connect"] = timeout_connect
     ctx._connect_args["timeout_response"] = timeout_response
+    ctx._connect_args["headers"] = headers
 
 
 cli.add_command(grp_adapters.adapters)

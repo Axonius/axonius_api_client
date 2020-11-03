@@ -8,7 +8,8 @@ from typing import List, Optional, Union
 import requests
 
 from .constants.api import TIMEOUT_CONNECT, TIMEOUT_RESPONSE
-from .constants.logs import LOG_LEVEL_HTTP, MAX_BODY_LEN, REQUEST_ATTR_MAP, RESPONSE_ATTR_MAP
+from .constants.logs import (LOG_LEVEL_HTTP, MAX_BODY_LEN, REQUEST_ATTR_MAP,
+                             RESPONSE_ATTR_MAP)
 from .exceptions import HttpError
 from .logs import get_obj_log, set_log_level
 from .parsers.url_parser import UrlParser
@@ -135,9 +136,12 @@ class Http:
         self.session: requests.Session = requests.Session()
         """:obj:`requests.Session`: session object to use"""
 
+        headers = kwargs.get("headers") or {}
+
         self.session.proxies = {}
         self.session.proxies["https"] = self.HTTPS_PROXY
         self.session.proxies["http"] = self.HTTP_PROXY
+        self.session.headers.update(headers)
 
         if certpath:  # pragma: no cover
             path_read(obj=certpath, binary=True)

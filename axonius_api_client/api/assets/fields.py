@@ -5,14 +5,9 @@ from typing import List, Optional, Tuple, Union
 
 from cachetools import TTLCache, cached
 
-from ...constants.fields import (
-    AGG_ADAPTER_ALTS,
-    AGG_ADAPTER_NAME,
-    FUZZY_SCHEMAS_KEYS,
-    GET_SCHEMA_KEYS,
-    GET_SCHEMAS_KEYS,
-    PRETTY_SCHEMA_TMPL,
-)
+from ...constants.fields import (AGG_ADAPTER_ALTS, AGG_ADAPTER_NAME,
+                                 FUZZY_SCHEMAS_KEYS, GET_SCHEMA_KEYS,
+                                 GET_SCHEMAS_KEYS, PRETTY_SCHEMA_TMPL)
 from ...exceptions import ApiError, NotFoundError
 from ...parsers.fields import parse_fields
 from ...tools import listify, load_fuzz, split_str, strip_right
@@ -249,7 +244,7 @@ class Fields(ChildMixins):
         return matches
 
     def get_field_names_eq(self, value: Union[str, List[str]], key: str = "name_qual") -> List[str]:
-        """Get field names using that equal a value.
+        """Get field names that equal a value.
 
         Examples:
             First, create a ``client`` using :obj:`axonius_api_client.connect.Connect` and assume
@@ -285,8 +280,9 @@ class Fields(ChildMixins):
             for name in names:
                 schemas = fields[adapter]
                 schema = self.get_field_schema(value=name, schemas=schemas)
-                if schema[key] not in matches:
-                    matches.append(schema[key])
+                match = schema[key] if key else schema
+                if match not in matches:
+                    matches.append(match)
 
         return matches
 
@@ -318,7 +314,7 @@ class Fields(ChildMixins):
             adapter = self.get_adapter_name(value=adapter_name)
             for name in names:
                 schemas = fields[adapter]
-                amatches = self.fuzzy_filter(search=name, schemas=schemas, key=key)
+                amatches = self.fuzzy_filter(search=name, schemas=schemas, key=key, root_only=True)
                 matches += [x for x in amatches if x not in matches]
 
         return matches
@@ -364,7 +360,7 @@ class Fields(ChildMixins):
     def fuzzy_filter(
         search: str,
         schemas: List[dict],
-        root_only: bool = True,
+        root_only: bool = False,
         do_contains: bool = True,
         token_score: int = 70,
         partial_score: int = 50,

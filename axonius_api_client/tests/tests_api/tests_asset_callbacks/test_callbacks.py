@@ -6,7 +6,6 @@ import logging
 import sys
 
 import pytest
-
 from axonius_api_client.api.asset_callbacks import get_callbacks_cls
 from axonius_api_client.constants.api import FIELD_TRIM_LEN
 from axonius_api_client.constants.fields import SCHEMAS_CUSTOM
@@ -345,7 +344,7 @@ class Callbacks:
         original_row = get_rows_exist(apiobj=apiobj)
         test_row = copy.deepcopy(original_row)
 
-        fields = [apiobj.FIELD_AXON_ID, apiobj.FIELD_ADAPTERS, "adapters_list_length"]
+        fields = [apiobj.FIELD_AXON_ID, apiobj.FIELD_ADAPTERS, "adapter_list_length"]
 
         cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs={"field_excludes": fields})
 
@@ -362,13 +361,14 @@ class Callbacks:
         original_row = get_rows_exist(apiobj=apiobj, fields=field_complex)
         test_row = copy.deepcopy(original_row)
 
-        sub_exclude = list(test_row[field_complex][0])[0]
+        sub_name = list(test_row[field_complex][0])[0]
+        sub_exclude = f"{field_complex}.{sub_name}"
         excludes = [apiobj.FIELD_AXON_ID, sub_exclude]
 
         cbobj = self.get_cbobj(
             apiobj=apiobj,
             cbexport=cbexport,
-            store={"fields": [field_complex]},
+            store={"fields": [*apiobj.fields_default, field_complex]},
             getargs={"field_excludes": excludes},
         )
 
@@ -381,7 +381,7 @@ class Callbacks:
             assert field not in test_row
 
         for item in test_row[field_complex]:
-            assert sub_exclude not in item
+            assert sub_name not in item
 
     def test_do_join_values_true(self, cbexport, apiobj):
         original_row = get_rows_exist(apiobj=apiobj)
@@ -561,18 +561,18 @@ class Callbacks:
         original_row = get_rows_exist(apiobj=apiobj, fields=field_complex)
         test_row = copy.deepcopy(original_row)
 
-        sub_name = get_schema(apiobj=apiobj, field=field_complex, key="sub_fields")[0]["name"]
-        sub_name_qual = get_schema(apiobj=apiobj, field=field_complex, key="sub_fields")[0][
-            "name_qual"
-        ]
+        sub_field = get_schema(apiobj=apiobj, field=field_complex, key="sub_fields")[0]
+        sub_name = sub_field["name"]
+        sub_exclude = f"{field_complex}.{sub_name}"
+        excludes = [sub_exclude, apiobj.FIELD_AXON_ID]
 
         cbobj = self.get_cbobj(
             apiobj=apiobj,
             cbexport=cbexport,
-            store={"fields": [field_complex]},
+            store={"fields": [*apiobj.fields_default, field_complex]},
             getargs={
                 "field_flatten": True,
-                "field_excludes": [sub_name, apiobj.FIELD_AXON_ID],
+                "field_excludes": excludes,
             },
         )
 
@@ -580,7 +580,13 @@ class Callbacks:
         assert isinstance(rows, list)
         assert len(rows) == 1
         assert original_row != test_row
-        assert sub_name_qual not in test_row
+        assert sub_field["name_qual"] not in test_row
+        assert sub_name not in test_row
+        for row in rows:
+            for k, v in row.items():
+                if isinstance(v, (list, tuple)):
+                    for i in v:
+                        assert not isinstance(i, dict)
 
     def test_do_flatten_fields_false(self, cbexport, apiobj):
         field_complex = apiobj.FIELD_COMPLEX

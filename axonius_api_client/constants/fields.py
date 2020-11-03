@@ -2,6 +2,7 @@
 """Constants for field schemas."""
 import dataclasses
 import enum
+import warnings
 from typing import Dict, List, Optional
 
 from ..data import BaseData, BaseEnum
@@ -167,6 +168,8 @@ class Formats(BaseEnum):
     table = enum.auto()
     tag = enum.auto()
     connection_label = enum.auto()
+    ip_preferred = enum.auto()
+    os_distribution = "os-distribution"
 
 
 @dataclasses.dataclass
@@ -469,6 +472,20 @@ class OperatorTypeMaps(BaseData):
         ],
         field_type=Types.string,
     )
+    string_os_distribution: OperatorTypeMap = OperatorTypeMap(
+        name="string_os_distribution",
+        operators=[
+            Operators.exists,
+            Operators.regex,
+            Operators.contains,
+            Operators.equals_str,
+            Operators.startswith,
+            Operators.endswith,
+            Operators.is_in_str,
+        ],
+        field_type=Types.string,
+        field_format=Formats.os_distribution,
+    )
     string_ip: OperatorTypeMap = OperatorTypeMap(
         name="string_ip",
         operators=[
@@ -667,6 +684,17 @@ class OperatorTypeMaps(BaseData):
         items_type=Types.string,
         items_format=Formats.ip,
     )
+    array_string_ip_preferred: OperatorTypeMap = OperatorTypeMap(
+        name="array_string_ip_preferred",
+        operators=[
+            Operators.exists_array,
+            *ops_clean(string_ip.operators, [Operators.exists]),
+        ],
+        field_type=Types.array,
+        field_format=Formats.ip_preferred,
+        items_type=Types.string,
+        items_format=Formats.ip_preferred,
+    )
 
     @classmethod
     def get_type_map(cls, field: dict) -> OperatorTypeMap:
@@ -679,14 +707,20 @@ class OperatorTypeMaps(BaseData):
             value = getattr(obj, attr, None)
             return value.value if value else value
 
+        name = field["name_qual"]
+        ftype = field["type"]
+        fformat = field.get("format")
         items = field.get("items") or {}
+        itype = items.get("type")
+        iformat = items.get("format")
 
         attrs = {
-            "field_type": field["type"],
-            "field_format": field.get("format"),
-            "items_type": items.get("type"),
-            "items_format": items.get("format"),
+            "field_type": ftype,
+            "field_format": fformat,
+            "items_type": itype,
+            "items_format": iformat,
         }
+        attrs_text = attrs_str(attrs)
 
         valid = {}
 
@@ -698,8 +732,21 @@ class OperatorTypeMaps(BaseData):
                 typemap.default.name = typemap.name
                 return typemap.default
 
-        name = field["name_qual"]
-        err = f"Unable to map field {name!r} with {attrs_str(attrs)}"
+        empty_others = not any([fformat, itype, iformat])
+        if field["type"] == Types.string.value and empty_others:
+            warnings.warn(
+                f"Unexepected string schema in field {name!r} with {attrs_text}, assuming string"
+            )
+            return OperatorTypeMaps.string
+
+        if field["type"] == Types.array.value and empty_others:
+            warnings.warn(
+                f"Unexepected array schema in field {name!r} with {attrs_text}, "
+                f"assuming array of string"
+            )
+            return OperatorTypeMaps.array_string
+
+        err = f"Unable to map field {name!r} with {attrs_text}"
         valid_str = "\n  ".join([f"{k}: {attrs_str(v)}" for k, v in valid.items()])
         raise NotFoundError("\n".join([err, valid_str, err]))
 
