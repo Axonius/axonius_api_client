@@ -6,7 +6,7 @@ Discover a single connection on an adapter
 .. code:: shell
 
    $ axonshell adapters get --name aws | \
-     axonshell adapters cnx get --id AKIAIQIF42V5LZG4EARQus-east-2 | \
+     axonshell adapters cnx get --id xxx-east-2 | \
      axonshell adapters cnx discover --no-error
 
 .. raw:: html
