@@ -376,16 +376,6 @@ class CustomConnect(Connect):
     show_envvar=True,
     show_default=True,
 )
-@click.option(
-    "--overwrite/--no-overwrite",
-    "-ow/-now",
-    "overwrite",
-    default=False,
-    help="If --output-file exists, overwrite it",
-    is_flag=True,
-    show_envvar=True,
-    show_default=True,
-)
 @click.pass_context
 def cli(ctx, url, key, secret, **kwargs):
     """Pass."""
