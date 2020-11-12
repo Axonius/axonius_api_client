@@ -81,7 +81,7 @@ COLS_CHECK = [
 class CustomConnect(Connect):
     """Pass."""
 
-    def run(self, users_csv, checks_csv, col_username, output_file, overwrite, **kwargs):
+    def run(self, users_csv, checks_csv, col_username, output_file, **kwargs):
         """Pass."""
         self.kwargs = kwargs
         self.col_username = col_username
@@ -223,6 +223,7 @@ class CustomConnect(Connect):
 
         if not username:
             self.spew_warn(f"Empty value {row_txt}")
+            user_row[COL_USERLINK] = "Empty username"
             return
 
         found = [x for x in self.user_assets if username in listify(x.get(USERNAME))]
