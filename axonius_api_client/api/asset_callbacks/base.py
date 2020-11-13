@@ -518,14 +518,21 @@ class Base:
             return key
 
         splits = key.split(".")
+        prefix = ""
 
         if splits[0] == "specific_data":
-            splits.pop(1)  # get rid of 'data'
-            splits[0] = AGG_ADAPTER_NAME  # replace "specific_data" with "agg"
+            prefix = AGG_ADAPTER_NAME
+            # remove 'specific_data.data'
+            splits = splits[2:]
         elif splits[0] == "adapters_data":
-            # replace 'aws_adapter' with 'aws'
-            splits[0] = strip_right(obj=splits[0], fix="_adapter")
-        return ".".join(splits)
+            prefix = strip_right(obj=splits[1], fix="_adapter")
+            # remove 'adapters_data.aws_adapter'
+            splits = splits[2:]
+        else:
+            prefix = AGG_ADAPTER_NAME
+
+        new_key = ".".join(splits)
+        return ":".join([x for x in [prefix, new_key] if x])
 
     def do_change_field_titles(self, rows: Union[List[dict], dict]) -> List[dict]:
         """Asset callback to change qual name to title.
