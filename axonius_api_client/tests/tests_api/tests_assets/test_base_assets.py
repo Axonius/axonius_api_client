@@ -2,17 +2,11 @@
 """Test suite for assets."""
 import pytest
 import requests
-
 from axonius_api_client.api import mixins
 from axonius_api_client.constants.api import MAX_PAGE_SIZE
-from axonius_api_client.exceptions import (
-    ApiError,
-    JsonError,
-    JsonInvalid,
-    NotFoundError,
-    ResponseNotOk,
-    ToolsError,
-)
+from axonius_api_client.exceptions import (ApiError, JsonError, JsonInvalid,
+                                           NotFoundError, ResponseNotOk,
+                                           ToolsError)
 
 from ...meta import QUERIES
 from ...utils import check_asset, check_assets, get_field_vals, get_rows_exist
@@ -292,7 +286,7 @@ class AssetsPublic:
         if not_flag:
             assert value not in rows_values
         else:
-            assert len(rows) == 1
+            assert len(rows) >= 1
             assert value in rows_values
 
     def _get_by_values(self, apiobj, method, field, not_flag=False, use_field=None):
