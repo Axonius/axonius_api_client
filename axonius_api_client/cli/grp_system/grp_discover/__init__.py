@@ -3,7 +3,7 @@
 import click
 
 from ...context import AliasedGroup
-from . import cmd_get, cmd_start, cmd_stop
+from . import cmd_get, cmd_is_data_stable, cmd_is_running, cmd_start, cmd_stop
 
 
 @click.group(cls=AliasedGroup)
@@ -14,3 +14,5 @@ def discover():
 discover.add_command(cmd_get.cmd)
 discover.add_command(cmd_start.cmd)
 discover.add_command(cmd_stop.cmd)
+discover.add_command(cmd_is_running.cmd)
+discover.add_command(cmd_is_data_stable.cmd)

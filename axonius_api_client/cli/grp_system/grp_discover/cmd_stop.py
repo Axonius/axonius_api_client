@@ -6,7 +6,7 @@ from .grp_common import EXPORT, handle_export
 
 OPTIONS = [
     *AUTH,
-    EXPORT,
+    *EXPORT,
 ]
 
 
@@ -18,6 +18,6 @@ def cmd(ctx, url, key, secret, **kwargs):
     client = ctx.obj.start_client(url=url, key=key, secret=secret)
 
     with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
-        data = client.dashboard.start()
+        data = client.dashboard.stop()
 
     handle_export(ctx=ctx, data=data, **kwargs)

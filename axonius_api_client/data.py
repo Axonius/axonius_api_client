@@ -12,6 +12,10 @@ class BaseEnum(enum.Enum):
         """Get the next enum value in iterators."""
         return name
 
+    def __str__(self):
+        """Pass."""
+        return str(self.value)
+
 
 @dataclasses.dataclass
 class BaseData:

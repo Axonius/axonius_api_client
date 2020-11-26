@@ -6,7 +6,7 @@ from .grp_common import EXPORT, handle_export
 
 OPTIONS = [
     *AUTH,
-    EXPORT,
+    *EXPORT,
 ]
 
 
