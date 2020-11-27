@@ -1,6 +1,6 @@
 PACKAGE := axonius_api_client
 VERSION := $(shell python get_version.py)
-PYVER := $(cat .python_version)
+PYVER   := $(shell cat .python-version)
 
 .PHONY: build docs
 
@@ -8,7 +8,7 @@ help:
 	@cat Makefile.help
 
 init:
-	@echo ">>>>>>>> INITIALIZING FOR VERSION: $(VERSION)"
+	echo ">>>>>>>> INITIALIZING FOR VERSION: $(VERSION) PYTHON $(PYVER)"
 	$(MAKE) pip_install_tools
 	$(MAKE) clean
 	$(MAKE) pyenv_init
@@ -51,8 +51,7 @@ pipenv_install_docs:
 pipenv_init:
 	pipenv install \
 		--dev \
-		--skip-lock \
-		--python $(PYVER)
+		--skip-lock
 
 pipenv_clean:
 	pipenv --rm || true
