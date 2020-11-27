@@ -3,9 +3,8 @@
 import atexit
 import os
 
-import click
-
 import axonius_api_client as axonapi
+import click
 
 from ...constants.general import PY36
 from ...tools import echo_error, json_reload, pathlib
@@ -115,26 +114,23 @@ def cmd(ctx, url, key, secret):  # noqa: D301
 
 def write_hist_file():
     """Pass."""
-    import readline
+    try:
+        import readline
 
-    histpath = pathlib.Path(HISTPATH)
-    histfile = histpath / HISTFILE
+        histpath = pathlib.Path(HISTPATH)
+        histfile = histpath / HISTFILE
 
-    histpath.mkdir(mode=0o700, exist_ok=True)
-    histfile.touch(mode=0o600, exist_ok=True)
+        histpath.mkdir(mode=0o700, exist_ok=True)
+        histfile.touch(mode=0o600, exist_ok=True)
 
-    readline.write_history_file(format(histfile))
+        readline.write_history_file(format(histfile))
+    except Exception as exc:
+        msg = f"Unable to import readline! {exc}"
+        echo_error(msg, abort=False)
 
 
 def register_readline(shellvars=None):
     """Pass."""
-    try:
-        import readline
-    except Exception:  # pragma: no cover
-        import pyreadline as readline
-
-    import rlcompleter
-
     shellvars = shellvars or {}
 
     histpath = pathlib.Path(HISTPATH)
@@ -144,6 +140,13 @@ def register_readline(shellvars=None):
     histfile.touch(mode=0o600, exist_ok=True)
 
     try:
+        try:
+            import readline
+        except Exception:  # pragma: no cover
+            import pyreadline as readline
+
+        import rlcompleter
+
         readline.read_history_file(format(histfile))
         atexit.register(write_hist_file)
 
@@ -164,7 +167,7 @@ def spawn_shell(shellvars=None):
     import code
 
     shellvars = shellvars or {}
-    register_readline(shellvars)
+    register_readline(shellvars=shellvars)
 
     args = {"local": shellvars, "banner": SHELL_BANNER}
 
