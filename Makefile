@@ -51,7 +51,8 @@ pipenv_install_docs:
 pipenv_init:
 	pipenv install \
 		--dev \
-		--skip-lock
+		--skip-lock \
+		--python $(PYVER)
 
 pipenv_clean:
 	pipenv --rm || true
