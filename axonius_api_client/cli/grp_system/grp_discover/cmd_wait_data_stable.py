@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 """Command line interface for Axonius API Client."""
+import time
+
 from ...context import CONTEXT_SETTINGS, click
 from ...options import AUTH, add_options
 
@@ -12,6 +14,15 @@ OPTIONS = [
         help="Consider data stable only if next discover will not run in less than N minutes",
         type=click.INT,
         default=None,
+        show_envvar=True,
+        show_default=True,
+    ),
+    click.option(
+        "--sleep",
+        "sleep",
+        help="Seconds to wait for each stability check",
+        type=click.INT,
+        default=60,
         show_envvar=True,
         show_default=True,
     ),
@@ -37,17 +48,22 @@ def get_stability(data, for_next_minutes=None, **kwargs):
     return reason, True
 
 
-@click.command(name="is-data-stable", context_settings=CONTEXT_SETTINGS)
+@click.command(name="wait-data-stable", context_settings=CONTEXT_SETTINGS)
 @add_options(OPTIONS)
 @click.pass_context
-def cmd(ctx, url, key, secret, **kwargs):
-    """Return exit code 0 if asset data is stable, 1 if not."""
+def cmd(ctx, url, key, secret, sleep, **kwargs):
+    """Wait until data is stable."""
     client = ctx.obj.start_client(url=url, key=key, secret=secret)
 
-    with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
-        data = client.dashboard.get()
+    while True:
+        with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
+            data = client.dashboard.get()
 
-    reason, is_stable = get_stability(data=data, **kwargs)
+        reason, is_stable = get_stability(data=data, **kwargs)
 
-    click.secho(f"Data is stable: {is_stable}, reason: {reason}")
-    ctx.exit(int(not is_stable))
+        if is_stable:
+            click.secho(f"Data is now stable, reason: {reason}")
+            ctx.exit(1)
+
+        click.secho(f"Data is not yet stable, reason: {reason}, sleeping {sleep} seconds")
+        time.sleep(sleep)

@@ -39,8 +39,11 @@ class DiscoverPhase(BaseData):
 
     def to_dict(self):
         """Pass."""
-        props = ["name", "human_name", "is_done", "progress"]
-        return {k: getattr(self, k) for k in props}
+        return {k: getattr(self, k) for k in self._properties}
+
+    @property
+    def _properties(self):
+        return ["name", "human_name", "is_done", "progress"]
 
     @property
     def name(self) -> str:
@@ -99,6 +102,7 @@ class DiscoverData(BaseData):
             "is_running",
             "is_correlation_finished",
             "status",
+            "current_run_duration_in_minutes",
             "last_run_finish_date",
             "last_run_start_date",
             "last_run_duration_in_minutes",
@@ -144,6 +148,13 @@ class DiscoverData(BaseData):
         """Pass."""
         dt = self.raw["last_start_time"]
         return dt_parse(obj=dt) if dt else None
+
+    @property
+    def current_run_duration_in_minutes(self) -> Optional[float]:
+        """Pass."""
+        if self.is_running:
+            return trim_float(value=(dt_now() - self.last_run_start_date).seconds / 60)
+        return None
 
     @property
     def last_run_duration_in_minutes(self) -> Optional[float]:
@@ -241,7 +252,7 @@ class DiscoverData(BaseData):
 
     def next_run_within_minutes(self, value: int) -> bool:
         """Pass."""
-        return coerce_int(obj=value, min_value=0) >= self.next_run_starts_in_minutes
+        return coerce_int(obj=value, min_value=0) >= int(self.next_run_starts_in_minutes)
 
 
 class Dashboard(ModelMixins):
@@ -288,7 +299,7 @@ class Dashboard(ModelMixins):
             Create a ``client`` using :obj:`axonius_api_client.connect.Connect`
 
             >>> data = client.dashboard.start()
-            >>> data['is_running']
+            >>> data.is_running
             True
             >>> j(data['phases_pending'])
             [
@@ -316,7 +327,7 @@ class Dashboard(ModelMixins):
             Create a ``client`` using :obj:`axonius_api_client.connect.Connect`
 
             >>> data = client.dashboard.start()
-            >>> data['is_running']
+            >>> data.is_running
             True
         """
         if self.is_running:
