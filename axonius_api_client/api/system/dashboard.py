@@ -10,11 +10,6 @@ from ..mixins import ModelMixins
 from ..routers import API_VERSION, Router
 
 
-def human_key(key):
-    """Pass."""
-    return key.replace("_", " ").title()
-
-
 @dataclasses.dataclass
 class DiscoverPhase(BaseData):
     """Pass."""
@@ -53,7 +48,7 @@ class DiscoverPhase(BaseData):
     @property
     def human_name(self) -> str:
         """Pass."""
-        return self.name_map.get(self.name, human_key(self.name))
+        return self.name_map.get(self.name, self._human_key(self.name))
 
     @property
     def is_done(self) -> bool:
@@ -113,7 +108,7 @@ class DiscoverData(BaseData):
 
     def to_str_properties(self) -> List[str]:
         """Pass."""
-        return [f"{human_key(x)}: {getattr(self, x)}" for x in self._properties]
+        return [f"{self._human_key(x)}: {getattr(self, x)}" for x in self._properties]
 
     def to_str_progress(self) -> List[str]:
         """Pass."""
@@ -221,7 +216,7 @@ class DiscoverData(BaseData):
                         "adapter": adapter.get("name", plugin_name),
                         "status": status,
                     }
-                    value["str"] = ", ".join(f"{human_key(k)}: {v}" for k, v in value.items())
+                    value["str"] = ", ".join(f"{self._human_key(k)}: {v}" for k, v in value.items())
                     ret.append(value)
         return ret
 

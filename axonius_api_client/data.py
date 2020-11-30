@@ -25,6 +25,11 @@ class BaseData:
         """Get this dataclass object as a dictionary."""
         return dataclasses.asdict(self)
 
+    @staticmethod
+    def _human_key(key):
+        """Pass."""
+        return key.replace("_", " ").title()
+
     @classmethod
     def get_fields(cls) -> List[dataclasses.Field]:
         """Get a list of fields defined for current this dataclass object."""

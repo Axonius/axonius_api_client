@@ -254,6 +254,7 @@ class ApiV4:
         tokens_notify="users/tokens/notify",
         central_core="central_core",
         central_core_restore="central_core/restore",
+        remote_support="maintenance",
     )
     """Endpoints for system APIs"""
 

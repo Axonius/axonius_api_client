@@ -41,7 +41,7 @@ def get_stability(data, for_next_minutes=None, **kwargs):
 @add_options(OPTIONS)
 @click.pass_context
 def cmd(ctx, url, key, secret, **kwargs):
-    """Return exit code 0 if asset data is stable, 1 if not."""
+    """Return exit code 1 if asset data is stable, 0 if not."""
     client = ctx.obj.start_client(url=url, key=key, secret=secret)
 
     with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
@@ -50,4 +50,4 @@ def cmd(ctx, url, key, secret, **kwargs):
     reason, is_stable = get_stability(data=data, **kwargs)
 
     click.secho(f"Data is stable: {is_stable}, reason: {reason}")
-    ctx.exit(int(not is_stable))
+    ctx.exit(int(is_stable))

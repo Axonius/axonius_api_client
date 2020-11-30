@@ -55,6 +55,7 @@ try:
         Wizard,
         WizardCsv,
         WizardText,
+        RemoteSupport,
         routers,
     )
     from .auth import ApiKey
@@ -82,6 +83,7 @@ __all__ = (
     "Enforcements",
     "Instances",
     "Meta",
+    "RemoteSupport",
     "RunAction",
     "SettingsGlobal",
     "SettingsGui",

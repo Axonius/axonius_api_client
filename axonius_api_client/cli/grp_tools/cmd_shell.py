@@ -19,17 +19,18 @@ SHELL_BANNER = """Welcome human. We have some refreshments available for you:
     - axonapi: API client package itself
 
 API Objects:
-    - devices/d: Work with device assets
-    - users/u: Work with user assets
     - adapters/a: Work with adapters and adapter connections
     - dashboard/db: Work with dashboards and discovery cycle
+    - devices/d: Work with device assets
     - instances/i: Work with instances
-    - system_users/su: Work with system users
-    - system_roles/sr: Work with system roles
     - meta/m: Work with instance metadata
+    - remote_support/rs: Work with configuring system remote support
     - settings_global/sgl: Work with Global system settings
     - settings_gui/sgu: Work with GUI system settings
     - settings_lifecycle/sl: Work with Lifecyle system settings
+    - system_roles/sr: Work with system roles
+    - system_users/su: Work with system users
+    - users/u: Work with user assets
 """
 
 SHELL_EXIT = """Goodbye human. We hope you enjoyed your stay."""
@@ -69,6 +70,7 @@ def cmd(ctx, url, key, secret):  # noqa: D301
         - settings_global/sgl: Work with Global system settings
         - settings_gui/sgu: Work with GUI system settings
         - settings_lifecycle/sl: Work with Lifecyle system settings
+        - remote_support/rs: Work with configuring system remote support
         - jdump/j: Helper function to pretty print python objects
 
     """
@@ -87,6 +89,7 @@ def cmd(ctx, url, key, secret):  # noqa: D301
         "instances": client.instances,
         "jdump": jdump,
         "users": client.users,
+        "remote_support": client.remote_support,
         "system_users": client.system_users,
         "system_roles": client.system_roles,
         "meta": client.meta,
@@ -103,6 +106,7 @@ def cmd(ctx, url, key, secret):  # noqa: D301
         "u": client.users,
         "su": client.system_users,
         "sr": client.system_roles,
+        "rs": client.remote_support,
         "m": client.meta,
         "sgl": client.settings_global,
         "sgu": client.settings_gui,

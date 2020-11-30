@@ -4,6 +4,7 @@ from .central_core import CentralCore
 from .dashboard import Dashboard
 from .instances import Instances
 from .meta import Meta
+from .remote_support import RemoteSupport
 from .settings_global import SettingsGlobal
 from .settings_gui import SettingsGui
 from .settings_lifecycle import SettingsLifecycle
@@ -24,4 +25,5 @@ __all__ = (
     "System",
     "SystemRoles",
     "SystemUsers",
+    "RemoteSupport",
 )
