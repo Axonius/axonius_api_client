@@ -31,7 +31,7 @@ install_requires = [
     "tabulate>=0.8.7",
     "xlsxwriter>=1.3.1",
     "cachetools>=4.1.1",
-    "fuzzywuzzy>=0.18.0",
+    "fuzzyfinder>=2.1.0",
     "dataclasses>=0.8 ; python_version < '3.7'",
 ]
 

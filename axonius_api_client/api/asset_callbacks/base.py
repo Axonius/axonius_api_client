@@ -938,7 +938,7 @@ class Base:
 
         for field in api_fields + fields:
             self._fields_selected.append(field)
-            if include_details and not field.startswith("adapters_data."):  # pragma: no cover
+            if include_details:
                 field_details = f"{field}_details"
                 self._fields_selected.append(field_details)
 

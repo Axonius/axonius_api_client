@@ -506,39 +506,12 @@ class FieldsPublic:
         assert exp == result
 
     def test_validate_fuzzy(self, apiobj):
-        result = apiobj.fields.validate(fields_fuzzy="last seen", fields_default=False)
+        result = apiobj.fields.validate(fields_fuzzy="lastseen", fields_default=False)
         assert "specific_data.data.last_seen" in result
 
     def test_validate_error(self, apiobj):
         with pytest.raises(ApiError):
             apiobj.fields.validate(fields_default=False)
-
-    def test_fuzzy_filter_contains(self, apiobj):
-        schemas = apiobj.fields.get()["agg"]
-        matches = apiobj.fields.fuzzy_filter(search="last", schemas=schemas, names=True)
-        assert isinstance(matches, list) and matches
-        for x in matches:
-            assert isinstance(x, str)
-        assert len(matches) > 1
-        assert "specific_data.data.last_seen" in matches
-
-    def test_fuzzy_filter_token(self, apiobj):
-        schemas = apiobj.fields.get()["agg"]
-        matches = apiobj.fields.fuzzy_filter(search="last seen", schemas=schemas, names=True)
-        assert isinstance(matches, list) and matches
-        for x in matches:
-            assert isinstance(x, str)
-        assert len(matches) > 1
-        assert "specific_data.data.last_seen" in matches
-
-    def test_fuzzy_filter_partial(self, apiobj):
-        schemas = apiobj.fields.get()["agg"]
-        matches = apiobj.fields.fuzzy_filter(search="bd", schemas=schemas, names=True)
-        assert isinstance(matches, list) and matches
-        for x in matches:
-            assert isinstance(x, str)
-        assert len(matches) > 1
-        assert "specific_data.data.id" in matches
 
 
 class TestFieldsDevices(FieldsPrivate, FieldsPublic):

@@ -7,7 +7,6 @@ import logging
 import pathlib
 import platform
 import sys
-import warnings
 from datetime import datetime, timedelta, timezone
 from itertools import zip_longest
 from typing import (Any, Callable, Iterable, Iterator, List, Optional, Tuple,
@@ -892,18 +891,6 @@ def read_stream(stream) -> str:
         raise ToolsError(f"Empty content supplied to {stream_name!r}")
 
     return content
-
-
-def load_fuzz():
-    """Load the fuzzy matching library.
-
-    I do not like this. But fuzzywuzzy has a built in warning on import that can
-    not be shut off any other way
-    """
-    warnings.filterwarnings("ignore", message="Using slow pure-python SequenceMatcher")
-    from fuzzywuzzy import fuzz
-
-    return fuzz
 
 
 def check_gui_page_size(size: Optional[int] = None) -> int:
