@@ -377,19 +377,12 @@ class Fields(ChildMixins):
         """
 
         def do_skip(schema):
-            if schema in matches:
-                return True
+            is_details = schema["name"].endswith("_details")
+            is_all = schema["name"] == "all"
+            not_select = not schema.get("selectable", True)
+            is_root = root_only and not schema["is_root"]
 
-            if schema["name"].endswith("_details"):
-                return True
-
-            if schema["name"] == "all":
-                return True
-
-            if root_only and not schema["is_root"]:
-                return True
-
-            if not schema.get("selectable", True):
+            if any([schema in matches, is_details, is_all, not_select, is_root]):
                 return True
 
             return False
