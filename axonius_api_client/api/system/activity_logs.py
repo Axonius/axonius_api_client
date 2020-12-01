@@ -14,34 +14,38 @@ from ...tools import (coerce_int_float, dt_now, dt_parse, dt_sec_ago,
 from ..mixins import ModelMixins, PageSizeMixin
 from ..routers import API_VERSION, Router
 
+SEARCH_PROPERTIES: List[str] = [
+    "action",
+    "category",
+    "type",
+    "message",
+    "user",
+]
+PROPERTIES: List[str] = [
+    "action",
+    "category",
+    "date",
+    "hours_ago",
+    "message",
+    "type",
+    "user",
+]
+
 
 @dataclasses.dataclass
 class ActivityData(PropsData):
     """Pass."""
 
     raw: dict
+    _str_join: str = ", "
 
     @property
-    def _properties(self):
-        return [
-            "action",
-            "category",
-            "type",
-            "date",
-            "message",
-            "user",
-            "hours_ago",
-        ]
+    def _properties(self) -> List[str]:
+        return PROPERTIES
 
     @property
-    def _match_properties(self):
-        return [
-            "action",
-            "category",
-            "type",
-            "message",
-            "user",
-        ]
+    def _search_properties(self) -> List[str]:
+        return SEARCH_PROPERTIES
 
     @property
     def action(self) -> str:
@@ -76,7 +80,7 @@ class ActivityData(PropsData):
     @property
     def hours_ago(self) -> str:
         """Pass."""
-        return trim_float(value=(dt_now() - self.date).seconds / 60 / 60)
+        return trim_float(value=(dt_now() - self.date).total_seconds() / 60 / 60)
 
     def within_last_hours(self, hours: Optional[Union[int, float]] = None) -> bool:
         """Pass."""
@@ -92,32 +96,36 @@ class ActivityData(PropsData):
         end_match = True
 
         if start:
-            start = dt_parse(obj=start)
+            start = dt_parse(obj=start, default_tz_utc=True)
             start_match = self.date >= start
 
         if end:
-            end = dt_parse(obj=end)
+            end = dt_parse(obj=end, default_tz_utc=True)
             end_match = end >= self.date
 
         return start_match and end_match
 
     def property_searches(self, **kwargs) -> bool:
         """Pass."""
-        if not kwargs:
-            return True
+        valid = self._search_properties
 
-        valid = self._match_properties
-
+        all_searches = []
+        hits = []
         for prop, searches in kwargs.items():
-
             if prop not in valid:
                 err = f"Invalid property {prop!r}, must be one of {', '.join(valid)}"
                 raise ApiError(err)
 
+            searches = listify(searches)
+            all_searches += searches
+
             value = getattr(self, prop) or ""
 
-            if any([re.search(x, value, re.I) for x in listify(searches)]):
-                return True
+            if any([re.search(x, value, re.I) for x in searches]):
+                hits.append({"propery": prop, "value": value})
+
+        if hits or not all_searches:
+            return True
 
         return False
 
@@ -126,14 +134,14 @@ class ActivityLogs(ModelMixins, PageSizeMixin):
     """API for working with activity logs.
 
     Examples:
-        NATCH
+        Pass
 
     """
 
     def get(
         self, generator: bool = False, **kwargs
     ) -> Union[Generator[ActivityData, None, None], List[ActivityData]]:
-        """Get objects for a given query using paging.
+        """Get activity log entries.
 
         Args:
             generator: return an iterator for objects that will yield rows as they are fetched
@@ -154,7 +162,7 @@ class ActivityLogs(ModelMixins, PageSizeMixin):
         within_last_hours: Optional[int] = None,
         **kwargs,
     ) -> Generator[ActivityData, None, None]:
-        """Get saved queries using paging.
+        """Get activity log entries.
 
         Args:
             max_rows: only return N objects
