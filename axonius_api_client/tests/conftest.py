@@ -3,33 +3,20 @@
 import os
 
 import pytest
-
-from axonius_api_client.api import (
-    Adapters,
-    Dashboard,
-    Devices,
-    Enforcements,
-    Instances,
-    Meta,
-    RunAction,
-    SettingsGlobal,
-    SettingsGui,
-    SettingsLifecycle,
-    Signup,
-    SystemRoles,
-    SystemUsers,
-    Users,
-    Wizard,
-    WizardCsv,
-    WizardText,
-)
+from axonius_api_client.api import (ActivityLogs, Adapters, Dashboard, Devices,
+                                    Enforcements, Instances, Meta,
+                                    RemoteSupport, RunAction, SettingsGlobal,
+                                    SettingsGui, SettingsLifecycle, Signup,
+                                    SystemRoles, SystemUsers, Users, Wizard,
+                                    WizardCsv, WizardText)
 from axonius_api_client.api.adapters import Cnx
 from axonius_api_client.api.assets import Fields, Labels, SavedQuery
 from axonius_api_client.constants.adapters import CSV_ADAPTER
 from axonius_api_client.constants.system import Role
 
 from .meta import CSV_FILECONTENT_STR, CSV_FILENAME, USER_NAME
-from .utils import check_apiobj, check_apiobj_children, check_apiobj_xref, get_auth, get_url
+from .utils import (check_apiobj, check_apiobj_children, check_apiobj_xref,
+                    get_auth, get_url)
 
 AX_URL = os.environ.get("AX_URL", None) or None
 AX_KEY = os.environ.get("AX_KEY", None) or None
@@ -226,6 +213,24 @@ def api_settings_gui(request):
 def api_signup(request):
     """Test utility."""
     obj = Signup(url=get_url(request))
+    return obj
+
+
+@pytest.fixture(scope="session")
+def api_remote_support(request):
+    """Test utility."""
+    auth = get_auth(request)
+    obj = RemoteSupport(auth=auth)
+    check_apiobj(authobj=auth, apiobj=obj)
+    return obj
+
+
+@pytest.fixture(scope="session")
+def api_activity_logs(request):
+    """Test utility."""
+    auth = get_auth(request)
+    obj = ActivityLogs(auth=auth)
+    check_apiobj(authobj=auth, apiobj=obj)
     return obj
 
 
