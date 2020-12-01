@@ -32,6 +32,7 @@ install_requires = [
     "xlsxwriter>=1.3.1",
     "cachetools>=4.1.1",
     "fuzzyfinder>=2.1.0",
+    "xmltodict>=0.12.0",
     "dataclasses>=0.8 ; python_version < '3.7'",
 ]
 
