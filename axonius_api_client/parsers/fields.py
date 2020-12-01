@@ -62,9 +62,15 @@ def is_complex(field: dict) -> bool:
         field: field schema to parse
     """
     field_type = field["type"]
-    field_items_type = field.get("items", {}).get("type")
+    field_items = field.get("items", {})
+
+    if not isinstance(field_items, dict):
+        return False
+
+    field_items_type = field_items.get("type")
     if field_type == "array" and field_items_type == "array":
         return True
+
     return False
 
 
