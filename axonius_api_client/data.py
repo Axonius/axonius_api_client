@@ -45,7 +45,7 @@ class PropsData(BaseData):
 
     def __str__(self):
         """Pass."""
-        return "\n".join(self.to_str_properties())
+        return getattr(self, "_str_join", "\n").join(self.to_str_properties())
 
     def __repr__(self):
         """Pass."""

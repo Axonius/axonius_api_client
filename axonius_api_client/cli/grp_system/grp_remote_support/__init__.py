@@ -3,7 +3,8 @@
 import click
 
 from ...context import AliasedGroup
-from . import cmd_configure, cmd_configure_features, cmd_get
+from . import (cmd_configure, cmd_configure_analytics,
+               cmd_configure_remote_access, cmd_get)
 
 
 @click.group(cls=AliasedGroup)
@@ -13,4 +14,5 @@ def remote_support():
 
 remote_support.add_command(cmd_get.cmd)
 remote_support.add_command(cmd_configure.cmd)
-remote_support.add_command(cmd_configure_features.cmd)
+remote_support.add_command(cmd_configure_analytics.cmd)
+remote_support.add_command(cmd_configure_remote_access.cmd)

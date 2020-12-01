@@ -9,6 +9,20 @@ from ...tools import coerce_int, dt_now, dt_parse, trim_float
 from ..mixins import ModelMixins
 from ..routers import API_VERSION, Router
 
+PROPERTIES_PHASE: List[str] = ["name", "human_name", "is_done", "progress"]
+PROPERTIES: List[str] = [
+    "is_running",
+    "is_correlation_finished",
+    "status",
+    "current_run_duration_in_minutes",
+    "last_run_finish_date",
+    "last_run_start_date",
+    "last_run_duration_in_minutes",
+    "last_run_minutes_ago",
+    "next_run_start_date",
+    "next_run_starts_in_minutes",
+]
+
 
 @dataclasses.dataclass
 class DiscoverPhase(PropsData):
@@ -25,8 +39,8 @@ class DiscoverPhase(PropsData):
         return [f"{k}: {', '.join(v)}" for k, v in self.progress.items()]
 
     @property
-    def _properties(self):
-        return ["name", "human_name", "is_done", "progress"]
+    def _properties(self) -> List[str]:
+        return PROPERTIES_PHASE
 
     @property
     def name(self) -> str:
@@ -72,19 +86,8 @@ class DiscoverData(PropsData):
     adapters: List[dict]
 
     @property
-    def _properties(self):
-        return [
-            "is_running",
-            "is_correlation_finished",
-            "status",
-            "current_run_duration_in_minutes",
-            "last_run_finish_date",
-            "last_run_start_date",
-            "last_run_duration_in_minutes",
-            "last_run_minutes_ago",
-            "next_run_start_date",
-            "next_run_starts_in_minutes",
-        ]
+    def _properties(self) -> List[str]:
+        return PROPERTIES
 
     def to_str_progress(self) -> List[str]:
         """Pass."""
@@ -116,26 +119,23 @@ class DiscoverData(PropsData):
     @property
     def current_run_duration_in_minutes(self) -> Optional[float]:
         """Pass."""
-        if self.is_running:
-            return trim_float(value=(dt_now() - self.last_run_start_date).seconds / 60)
-        return None
+        dt = self.last_run_start_date
+        return trim_float(value=(dt_now() - dt).total_seconds() / 60) if self.is_running else None
 
     @property
     def last_run_duration_in_minutes(self) -> Optional[float]:
         """Pass."""
         start = self.last_run_start_date
         finish = self.last_run_finish_date
+        check = (start and finish) and finish >= start
 
-        if (start and finish) and finish >= start:
-            return trim_float(value=(finish - start).seconds / 60)
-
-        return None
+        return trim_float(value=(finish - start).total_seconds() / 60) if check else None
 
     @property
     def last_run_minutes_ago(self) -> Optional[float]:
         """Pass."""
         finish = self.last_run_finish_date
-        return trim_float(value=(dt_now() - finish).seconds / 60) if finish else None
+        return trim_float(value=(dt_now() - finish).total_seconds() / 60) if finish else None
 
     @property
     def next_run_starts_in_minutes(self) -> float:
@@ -178,7 +178,7 @@ class DiscoverData(PropsData):
 
         for phase in self.phases:
             for status, plugin_names in phase.progress.items():
-                for plugin_name in plugin_names:
+                for plugin_name in plugin_names:  # pragma: no cover
                     adapter = plugin_map.get(plugin_name, {})
                     value = {
                         "node": adapter.get("node_name", "unknown"),
@@ -194,7 +194,7 @@ class DiscoverData(PropsData):
         """Pass."""
         self._has_running = False
 
-        def get_status(phase):
+        def get_status(phase):  # pragma: no cover
             if not self.is_running:
                 return "n/a"
 

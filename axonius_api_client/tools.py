@@ -280,7 +280,7 @@ def json_reload(obj: Any, error: bool = False, trim: int = None, **kwargs) -> st
     return obj
 
 
-def dt_parse(obj: Union[str, timedelta, datetime], default_tz_utc: bool = True) -> datetime:
+def dt_parse(obj: Union[str, timedelta, datetime], default_tz_utc: bool = False) -> datetime:
     """Parse a str, datetime, or timedelta into a datetime object.
 
     Notes:

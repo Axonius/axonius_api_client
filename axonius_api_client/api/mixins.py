@@ -162,7 +162,7 @@ class ModelMixins(Model, PageSizeMixin):
         if raw:
             return response
 
-        if empty_ok and not response.text:
+        if empty_ok and not response.text:  # pragma: no cover
             return response.text
 
         if is_json and response.text:
