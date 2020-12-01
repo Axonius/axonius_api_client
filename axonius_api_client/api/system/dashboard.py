@@ -4,25 +4,17 @@ import dataclasses
 import datetime
 from typing import Dict, List, Optional
 
-from ...data import BaseData
+from ...data import PropsData
 from ...tools import coerce_int, dt_now, dt_parse, trim_float
 from ..mixins import ModelMixins
 from ..routers import API_VERSION, Router
 
 
 @dataclasses.dataclass
-class DiscoverPhase(BaseData):
+class DiscoverPhase(PropsData):
     """Pass."""
 
     raw: dict
-
-    def __str__(self):
-        """Pass."""
-        return ", ".join(self.to_str_properties())
-
-    def __repr__(self):
-        """Pass."""
-        return repr(self.__str__())
 
     def to_str_properties(self) -> List[str]:
         """Pass."""
@@ -31,10 +23,6 @@ class DiscoverPhase(BaseData):
     def to_str_progress(self) -> List[str]:
         """Pass."""
         return [f"{k}: {', '.join(v)}" for k, v in self.progress.items()]
-
-    def to_dict(self):
-        """Pass."""
-        return {k: getattr(self, k) for k in self._properties}
 
     @property
     def _properties(self):
@@ -77,19 +65,11 @@ class DiscoverPhase(BaseData):
 
 
 @dataclasses.dataclass
-class DiscoverData(BaseData):
+class DiscoverData(PropsData):
     """Pass."""
 
     raw: dict
     adapters: List[dict]
-
-    def __str__(self):
-        """Pass."""
-        return "\n".join(self.to_str_properties())
-
-    def __repr__(self):
-        """Pass."""
-        return repr(self.__str__())
 
     @property
     def _properties(self):
@@ -106,10 +86,6 @@ class DiscoverData(BaseData):
             "next_run_starts_in_minutes",
         ]
 
-    def to_str_properties(self) -> List[str]:
-        """Pass."""
-        return [f"{self._human_key(x)}: {getattr(self, x)}" for x in self._properties]
-
     def to_str_progress(self) -> List[str]:
         """Pass."""
         return [x["str"] for x in self.progress]
@@ -120,14 +96,7 @@ class DiscoverData(BaseData):
 
     def to_dict(self, dt_obj: bool = False) -> dict:
         """Pass."""
-
-        def get_val(prop):
-            value = getattr(self, prop)
-            if not dt_obj and isinstance(value, datetime.datetime):
-                return str(value)
-            return value
-
-        ret = {k: get_val(k) for k in self._properties}
+        ret = super().to_dict(dt_obj=dt_obj)
         ret["phases"] = [x.to_dict() for x in self.phases]
         ret["progress"] = self.progress
         return ret

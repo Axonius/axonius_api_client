@@ -4,9 +4,10 @@ from . import routers
 from .adapters import Adapters, Cnx
 from .assets import Devices, Users
 from .enforcements import Enforcements, RunAction
-from .system import (CentralCore, Dashboard, Instances, Meta, RemoteSupport,
-                     SettingsGlobal, SettingsGui, SettingsLifecycle, Signup,
-                     System, SystemRoles, SystemUsers)
+from .system import (ActivityLogs, CentralCore, Dashboard, Instances, Meta,
+                     RemoteSupport, SettingsGlobal, SettingsGui,
+                     SettingsLifecycle, Signup, System, SystemRoles,
+                     SystemUsers)
 from .wizards import Wizard, WizardCsv, WizardText
 
 __all__ = (
@@ -32,4 +33,5 @@ __all__ = (
     "Wizard",
     "WizardCsv",
     "WizardText",
+    "ActivityLogs",
 )

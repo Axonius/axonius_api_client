@@ -2,27 +2,19 @@
 """API for working with product metadata."""
 import dataclasses
 import datetime
-from typing import List, Optional
+from typing import Optional
 
-from ...data import BaseData
+from ...data import PropsData
 from ...tools import coerce_bool, coerce_int, dt_now, dt_parse, trim_float
 from ..mixins import ModelMixins
 from ..routers import API_VERSION, Router
 
 
 @dataclasses.dataclass
-class RemoteData(BaseData):
+class RemoteData(PropsData):
     """Pass."""
 
     raw: dict
-
-    def __str__(self):
-        """Pass."""
-        return "\n".join(self.to_str_properties())
-
-    def __repr__(self):
-        """Pass."""
-        return repr(self.__str__())
 
     @property
     def _properties(self):
@@ -36,22 +28,6 @@ class RemoteData(BaseData):
             "analytics_enabled",
             "remote_access_enabled",
         ]
-
-    def to_str_properties(self) -> List[str]:
-        """Pass."""
-        return [f"{self._human_key(x)}: {getattr(self, x)}" for x in self._properties]
-
-    def to_dict(self, dt_obj: bool = False) -> dict:
-        """Pass."""
-
-        def get_val(prop):
-            value = getattr(self, prop)
-            if not dt_obj and isinstance(value, datetime.datetime):
-                return str(value)
-            return value
-
-        ret = {k: get_val(k) for k in self._properties}
-        return ret
 
     @property
     def last_modified(self) -> datetime.datetime:

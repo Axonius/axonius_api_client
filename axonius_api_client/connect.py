@@ -7,10 +7,10 @@ from typing import List, Optional, Union
 
 import requests
 
-from .api import (Adapters, CentralCore, Dashboard, Devices, Enforcements,
-                  Instances, Meta, RemoteSupport, RunAction, SettingsGlobal,
-                  SettingsGui, SettingsLifecycle, Signup, System, SystemRoles,
-                  SystemUsers, Users)
+from .api import (ActivityLogs, Adapters, CentralCore, Dashboard, Devices,
+                  Enforcements, Instances, Meta, RemoteSupport, RunAction,
+                  SettingsGlobal, SettingsGui, SettingsLifecycle, Signup,
+                  System, SystemRoles, SystemUsers, Users)
 from .auth import ApiKey
 from .constants.api import TIMEOUT_CONNECT, TIMEOUT_RESPONSE
 from .constants.logs import (LOG_FILE_MAX_FILES, LOG_FILE_MAX_MB,
@@ -312,6 +312,14 @@ class Connect:
         if not hasattr(self, "_instances"):
             self._instances = Instances(**self.API_ARGS)
         return self._instances
+
+    @property
+    def activity_logs(self) -> ActivityLogs:
+        """Work with activity logs."""
+        self.start()
+        if not hasattr(self, "_activity_logs"):
+            self._activity_logs = ActivityLogs(**self.API_ARGS)
+        return self._activity_logs
 
     @property
     def remote_support(self) -> RemoteSupport:

@@ -255,6 +255,7 @@ class ApiV4:
         central_core="central_core",
         central_core_restore="central_core/restore",
         remote_support="maintenance",
+        audit="audit",
     )
     """Endpoints for system APIs"""
 

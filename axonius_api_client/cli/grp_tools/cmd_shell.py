@@ -13,12 +13,13 @@ from ..options import AUTH, add_options
 
 SHELL_BANNER = """Welcome human. We have some refreshments available for you:
 
-    - ctx: Click context object
-    - client/c: API Client connection object
-    - jdump/j: Helper function to pretty print python objects
     - axonapi: API client package itself
+    - client/c: API Client connection object
+    - ctx: Click context object
+    - jdump/j: Helper function to pretty print python objects
 
 API Objects:
+    - activity_logs/al: Work with activity logs
     - adapters/a: Work with adapters and adapter connections
     - dashboard/db: Work with dashboards and discovery cycle
     - devices/d: Work with device assets
@@ -55,23 +56,25 @@ def cmd(ctx, url, key, secret):  # noqa: D301
     and create the following objects:
 
     \b
-        - ctx: Click context object
         - axonapi: API Client package itself
         - client/c: API Client connection object
-        - devices/d: Work with device assets
-        - users/u: Work with user assets
+        - ctx: Click context object
+        - jdump/j: Helper function to pretty print python objects
+
+        - activity_logs/al: Work with activity logs
         - adapters/a: Work with adapters and adapter connections
-        - system/s: Work with users, roles, global settings, and more
         - dashboard/db: Work with dashboards and discovery cycle
+        - devices/d: Work with device assets
         - instances/i: Work with instances
-        - system_users/su: Work with system users
-        - system_roles/sr: Work with system roles
         - meta/m: Work with instance metadata
+        - remote_support/rs: Work with configuring system remote support
         - settings_global/sgl: Work with Global system settings
         - settings_gui/sgu: Work with GUI system settings
         - settings_lifecycle/sl: Work with Lifecyle system settings
-        - remote_support/rs: Work with configuring system remote support
-        - jdump/j: Helper function to pretty print python objects
+        - system/s: Work with users, roles, global settings, and more
+        - system_roles/sr: Work with system roles
+        - system_users/su: Work with system users
+        - users/u: Work with user assets
 
     """
     client = ctx.obj.start_client(url=url, key=key, secret=secret, save_history=True)
@@ -80,6 +83,7 @@ def cmd(ctx, url, key, secret):  # noqa: D301
 
     shellvars = {
         "adapters": client.adapters,
+        "activity_logs": client.activity_logs,
         "axonapi": axonapi,
         "client": client,
         "ctx": ctx,
@@ -97,6 +101,7 @@ def cmd(ctx, url, key, secret):  # noqa: D301
         "settings_gui": client.settings_gui,
         "settings_lifecycle": client.settings_lifecycle,
         "a": client.adapters,
+        "al": client.activity_logs,
         "c": client,
         "d": client.devices,
         "db": client.dashboard,

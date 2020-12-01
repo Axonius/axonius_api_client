@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """APIs for working with system components."""
+from .activity_logs import ActivityLogs
 from .central_core import CentralCore
 from .dashboard import Dashboard
 from .instances import Instances
@@ -26,4 +27,5 @@ __all__ = (
     "SystemRoles",
     "SystemUsers",
     "RemoteSupport",
+    "ActivityLogs",
 )

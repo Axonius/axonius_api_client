@@ -57,6 +57,7 @@ try:
         WizardText,
         RemoteSupport,
         routers,
+        ActivityLogs,
     )
     from .auth import ApiKey
     from .connect import Connect
@@ -99,6 +100,7 @@ __all__ = (
     "WizardCsv",
     "WizardText",
     "WizardText",
+    "ActivityLogs",
     # modules
     "api",
     "auth",

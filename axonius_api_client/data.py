@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Base classes for data types."""
 import dataclasses
+import datetime
 import enum
 from typing import List
 
@@ -34,3 +35,34 @@ class BaseData:
     def get_fields(cls) -> List[dataclasses.Field]:
         """Get a list of fields defined for current this dataclass object."""
         return dataclasses.fields(cls)
+
+
+@dataclasses.dataclass
+class PropsData(BaseData):
+    """Pass."""
+
+    raw: dict
+
+    def __str__(self):
+        """Pass."""
+        return "\n".join(self.to_str_properties())
+
+    def __repr__(self):
+        """Pass."""
+        return repr(self.__str__())
+
+    def to_str_properties(self) -> List[str]:
+        """Pass."""
+        return [f"{self._human_key(x)}: {getattr(self, x)}" for x in self._properties]
+
+    def to_dict(self, dt_obj: bool = False) -> dict:
+        """Pass."""
+
+        def get_val(prop):
+            value = getattr(self, prop)
+            if not dt_obj and isinstance(value, datetime.datetime):
+                return str(value)
+            return value
+
+        ret = {k: get_val(k) for k in self._properties}
+        return ret

@@ -109,10 +109,12 @@ def coerce_int_float(value: Union[int, float, str]) -> Union[int, float]:
         return value
 
     if isinstance(value, str):
+        value = value.strip()
+
         if value.isdigit():
             return int(value)
 
-        if value.replace(".", "").strip().isdigit():
+        if value.replace(".", "").isdigit():
             return float(value)
 
     vtype = type(value).__name__
@@ -278,7 +280,7 @@ def json_reload(obj: Any, error: bool = False, trim: int = None, **kwargs) -> st
     return obj
 
 
-def dt_parse(obj: Union[str, timedelta, datetime]) -> datetime:
+def dt_parse(obj: Union[str, timedelta, datetime], default_tz_utc: bool = True) -> datetime:
     """Parse a str, datetime, or timedelta into a datetime object.
 
     Notes:
@@ -298,7 +300,12 @@ def dt_parse(obj: Union[str, timedelta, datetime]) -> datetime:
     if isinstance(obj, timedelta):
         obj = str(dt_now() - obj)
 
-    return dateutil.parser.parse(obj)
+    value = dateutil.parser.parse(obj)
+
+    if default_tz_utc and not value.tzinfo:
+        value = value.replace(tzinfo=dateutil.tz.tzutc())
+
+    return value
 
 
 def dt_parse_tmpl(obj: Union[str, timedelta, datetime], tmpl: str = "%Y-%m-%d") -> str:
