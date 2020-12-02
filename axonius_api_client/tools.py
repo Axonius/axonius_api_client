@@ -951,12 +951,14 @@ def calc_perc_gb(
         is_kb: values are in kb or bytes
     """
     perc_key = perc_key or f"{part_key}_percent"
-    whole = calc_gb(value=obj[whole_key], places=places, is_kb=is_kb)
-    part = calc_gb(value=obj[part_key], places=places, is_kb=is_kb)
-    perc = calc_percent(part=part, whole=whole, places=places)
+    whole_value = obj[whole_key] or 0
+    part_value = obj[part_key] or 0
+    whole_gb = calc_gb(value=whole_value, places=places, is_kb=is_kb)
+    part_gb = calc_gb(value=part_value, places=places, is_kb=is_kb)
+    perc = calc_percent(part=part_gb, whole=whole_gb, places=places)
     ret = obj if update else {}
-    ret[f"{part_key}_gb"] = part
-    ret[f"{whole_key}_gb"] = whole
+    ret[f"{part_key}_gb"] = part_gb
+    ret[f"{whole_key}_gb"] = whole_gb
     ret[perc_key] = perc
     return ret
 

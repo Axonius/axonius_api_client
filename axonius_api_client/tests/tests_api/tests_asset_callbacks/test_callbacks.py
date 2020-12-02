@@ -850,7 +850,7 @@ class Callbacks:
         for field in fields:
             assert field in cbobj.final_columns
 
-    def test_do_field_replace_str(self, cbexport, apiobj):
+    def test_do_field_replace_list_str(self, cbexport, apiobj):
         original_row = get_rows_exist(apiobj=apiobj)
         test_row = copy.deepcopy(original_row)
 
@@ -875,7 +875,7 @@ class Callbacks:
                 assert "." not in key
                 assert "i" not in key
 
-    def test_do_field_replace_list(self, cbexport, apiobj):
+    def test_do_field_replace_list_list(self, cbexport, apiobj):
         original_row = get_rows_exist(apiobj=apiobj)
         test_row = copy.deepcopy(original_row)
 
@@ -917,7 +917,7 @@ class Callbacks:
         assert len(rows) == 1
         assert sorted(list(rows[0])) == sorted(list(original_row))
 
-    def test_do_field_replace_missing_rhs(self, cbexport, apiobj):
+    def test_do_field_replace_str_missing_rhs(self, cbexport, apiobj):
         original_row = get_rows_exist(apiobj=apiobj)
         test_row = copy.deepcopy(original_row)
 
