@@ -1,6 +1,6 @@
 PACKAGE := axonius_api_client
 VERSION := $(shell python get_version.py)
-PYVER := $(cat .python_version)
+PYVER   := $(shell cat .python-version)
 
 .PHONY: build docs
 
@@ -8,11 +8,20 @@ help:
 	@cat Makefile.help
 
 init:
-	@echo ">>>>>>>> INITIALIZING FOR VERSION: $(VERSION)"
+	echo ">>>>>>>> INITIALIZING FOR VERSION: $(VERSION) PYTHON $(PYVER)"
 	$(MAKE) pip_install_tools
 	$(MAKE) clean
-	$(MAKE) pyenv_init
 	$(MAKE) pipenv_init
+	$(MAKE) pipenv_install_lint
+	$(MAKE) pipenv_install_dev
+	$(MAKE) pipenv_install_docs
+	$(MAKE) pipenv_install_build
+
+init_ver:
+	echo ">>>>>>>> INITIALIZING FOR VERSION: $(VERSION) PYTHON $(PYVER)"
+	$(MAKE) pip_install_tools
+	$(MAKE) clean
+	$(MAKE) pipenv_init_ver
 	$(MAKE) pipenv_install_lint
 	$(MAKE) pipenv_install_dev
 	$(MAKE) pipenv_install_docs
@@ -53,11 +62,14 @@ pipenv_init:
 		--dev \
 		--skip-lock
 
+pipenv_init_ver:
+	pipenv install \
+		--dev \
+		--skip-lock \
+		--python $(PYVER)
+
 pipenv_clean:
 	pipenv --rm || true
-
-pyenv_init:
-	pyenv install $(PYVER) -s || true
 
 lint:
 	pipenv run isort \

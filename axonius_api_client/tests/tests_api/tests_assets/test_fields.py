@@ -3,8 +3,8 @@
 import copy
 
 import pytest
-
-from axonius_api_client.constants.fields import AGG_ADAPTER_ALTS, AGG_ADAPTER_NAME
+from axonius_api_client.constants.fields import (AGG_ADAPTER_ALTS,
+                                                 AGG_ADAPTER_NAME)
 from axonius_api_client.exceptions import ApiError, NotFoundError
 
 from ...meta import FIELD_FORMATS, SCHEMA_FIELD_FORMATS, SCHEMA_TYPES
@@ -23,11 +23,12 @@ class FieldsPrivate:
         schema = fields.pop("schema")
         assert isinstance(schema, dict)
 
-        generic = fields.pop("generic")
+        generic = fields.pop("generic", [])
         assert isinstance(generic, list)
+
         self.val_raw_adapter_fields(adapter="generic", adapter_fields=generic)
 
-        generic_schema = schema.pop("generic")
+        generic_schema = schema.pop("generic", True)
         assert isinstance(generic_schema, dict)
         self.val_raw_schema(adapter="generic", schema=generic_schema)
 
@@ -113,6 +114,10 @@ class FieldsPrivate:
             filterable = field.pop("filterable")
             assert isinstance(filterable, bool)
 
+            # added in 3.11?
+            generic = field.pop("generic", True)
+            assert isinstance(generic, bool)
+
             self.val_raw_items(adapter=f"{adapter}:{name}", items=items)
 
             assert not field, list(field)
@@ -160,6 +165,10 @@ class FieldsPrivate:
 
             for enum in enums:
                 assert isinstance(enum, str) or isinstance(enum, int)
+
+            # added in 3.11?
+            generic = items.pop("generic", True)
+            assert isinstance(generic, bool)
 
             sub_items = items.pop("items", [])
             assert isinstance(sub_items, list) or isinstance(sub_items, dict)
@@ -299,6 +308,10 @@ class FieldsPublic:
         filterable = schema.pop("filterable", False)
         assert isinstance(filterable, bool)
 
+        # 3.11
+        generic = schema.pop("generic", True)
+        assert isinstance(generic, bool)
+
         if is_complex:
             if name != "all":
                 assert sub_fields
@@ -324,6 +337,10 @@ class FieldsPublic:
 
             for enum in enums:
                 assert isinstance(enum, str) or isinstance(enum, int)
+
+            # 3.11
+            generic = items.pop("generic", True)
+            assert isinstance(generic, bool)
 
             assert not items
 
@@ -489,39 +506,12 @@ class FieldsPublic:
         assert exp == result
 
     def test_validate_fuzzy(self, apiobj):
-        result = apiobj.fields.validate(fields_fuzzy="last seen", fields_default=False)
+        result = apiobj.fields.validate(fields_fuzzy="lastseen", fields_default=False)
         assert "specific_data.data.last_seen" in result
 
     def test_validate_error(self, apiobj):
         with pytest.raises(ApiError):
             apiobj.fields.validate(fields_default=False)
-
-    def test_fuzzy_filter_contains(self, apiobj):
-        schemas = apiobj.fields.get()["agg"]
-        matches = apiobj.fields.fuzzy_filter(search="last", schemas=schemas, names=True)
-        assert isinstance(matches, list) and matches
-        for x in matches:
-            assert isinstance(x, str)
-        assert len(matches) > 1
-        assert "specific_data.data.last_seen" in matches
-
-    def test_fuzzy_filter_token(self, apiobj):
-        schemas = apiobj.fields.get()["agg"]
-        matches = apiobj.fields.fuzzy_filter(search="last seen", schemas=schemas, names=True)
-        assert isinstance(matches, list) and matches
-        for x in matches:
-            assert isinstance(x, str)
-        assert len(matches) > 1
-        assert "specific_data.data.last_seen" in matches
-
-    def test_fuzzy_filter_partial(self, apiobj):
-        schemas = apiobj.fields.get()["agg"]
-        matches = apiobj.fields.fuzzy_filter(search="bd", schemas=schemas, names=True)
-        assert isinstance(matches, list) and matches
-        for x in matches:
-            assert isinstance(x, str)
-        assert len(matches) > 1
-        assert "specific_data.data.id" in matches
 
 
 class TestFieldsDevices(FieldsPrivate, FieldsPublic):

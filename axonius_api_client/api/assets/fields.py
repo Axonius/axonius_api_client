@@ -4,13 +4,14 @@ import re
 from typing import List, Optional, Tuple, Union
 
 from cachetools import TTLCache, cached
+from fuzzyfinder import fuzzyfinder
 
 from ...constants.fields import (AGG_ADAPTER_ALTS, AGG_ADAPTER_NAME,
                                  FUZZY_SCHEMAS_KEYS, GET_SCHEMA_KEYS,
                                  GET_SCHEMAS_KEYS, PRETTY_SCHEMA_TMPL)
 from ...exceptions import ApiError, NotFoundError
 from ...parsers.fields import parse_fields
-from ...tools import listify, load_fuzz, split_str, strip_right
+from ...tools import listify, split_str, strip_right
 from ..mixins import ChildMixins
 
 
@@ -361,9 +362,6 @@ class Fields(ChildMixins):
         search: str,
         schemas: List[dict],
         root_only: bool = False,
-        do_contains: bool = True,
-        token_score: int = 70,
-        partial_score: int = 50,
         key: str = "name_qual",
         fuzzy_keys: List[str] = FUZZY_SCHEMAS_KEYS,
         **kwargs,
@@ -374,60 +372,40 @@ class Fields(ChildMixins):
             search: string to search for against the keys in fuzzy_keys
             schemas: field schemas to search through
             root_only: only search against schemas of root fields
-            do_contains: allow matches based on the search string is in fuzzy_keys
-            token_score: fuzzy scoring needed for a token match
-            partial_score: fuzzy scoring needed for a partial match
-            names: return the fully qualified field names instead of the field schemas
+            key: return the schema key value instead of the field schemas
             fuzzy_keys: list of keys to check search against in each field schema
         """
-        fuzz = load_fuzz()
 
-        def do_skip():
-            if schema in matches:
-                return True
+        def do_skip(schema):
+            is_details = schema["name"].endswith("_details")
+            is_all = schema["name"] == "all"
+            not_select = not schema.get("selectable", True)
+            is_root = root_only and not schema["is_root"]
 
-            if schema["name"].endswith("_details"):
-                return True
-
-            if schema["name"] == "all":
-                return True
-
-            if root_only and not schema["is_root"]:
-                return True
-
-            if not schema.get("selectable", True):
+            if any([schema in matches, is_details, is_all, not_select, is_root]):
                 return True
 
             return False
-
-        def is_match(method):
-            for key in fuzzy_keys:
-                if method(search, schema[key]):
-                    return True
-
-            return False
-
-        def token_set_ratio(search, value, score=token_score):
-            return fuzz.token_set_ratio(search, value) >= score
-
-        def partial_ratio(search, value, score=partial_score):
-            return fuzz.partial_ratio(search, value) >= score
-
-        def contains(search, value):
-            return search.strip().lower() in value.strip().lower()
 
         matches = []
 
         for schema in schemas:
-            if do_contains and not do_skip() and is_match(contains):
+            if do_skip(schema):
+                continue
+
+            values = [schema[x] for x in fuzzy_keys]
+
+            if any([search.strip().lower() in x for x in values]):
                 matches.append(schema)
 
-            if token_score and not do_skip() and is_match(token_set_ratio):
-                matches.append(schema)
-
-        if partial_score and not matches:
+        if not matches:
             for schema in schemas:
-                if not do_skip() and is_match(partial_ratio):
+                if do_skip(schema):
+                    continue
+
+                values = [schema[x] for x in fuzzy_keys]
+
+                if list(fuzzyfinder(search, values)):
                     matches.append(schema)
 
         return [x[key] for x in matches] if key else matches

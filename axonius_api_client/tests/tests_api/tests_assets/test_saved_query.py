@@ -4,7 +4,6 @@ import copy
 import json
 
 import pytest
-
 from axonius_api_client.constants.api import GUI_PAGE_SIZES
 from axonius_api_client.constants.general import SIMPLE
 from axonius_api_client.exceptions import ApiError, NotFoundError
@@ -210,11 +209,11 @@ def validate_qexpr(qexpr, asset):
     idx = qexpr.pop("i", 0)
     assert isinstance(idx, int)
 
-    leftbracket = qexpr.pop("leftBracket")
-    assert isinstance(leftbracket, bool)
+    leftbracket = qexpr.pop("leftBracket", 0)
+    assert isinstance(leftbracket, (int, bool))
 
-    rightbracket = qexpr.pop("rightBracket")
-    assert isinstance(rightbracket, bool)
+    rightbracket = qexpr.pop("rightBracket", 0)
+    assert isinstance(rightbracket, (int, bool))
 
     logicop = qexpr.pop("logicOp")
     assert isinstance(logicop, str)
@@ -324,10 +323,21 @@ def validate_sq(asset):
     updated_by_deleted = updated_by.pop("deleted")
     assert isinstance(updated_by_deleted, bool)
 
-    updated_str_keys = ["username", "source", "first_name", "last_name"]
+    updated_str_keys = [
+        "_id",
+        "first_name",
+        "last_name",
+        "last_updated",
+        "password",
+        "pic_name",
+        "role_id",
+        "salt",
+        "source",
+        "user_name",
+    ]
     for updated_str_key in updated_str_keys:
         val = updated_by.pop(updated_str_key)
-        assert isinstance(val, str)
+        assert isinstance(val, (str, int, float)) or val is None
 
     assert not updated_by
 

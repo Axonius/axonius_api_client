@@ -3,13 +3,9 @@
 import copy
 from typing import List, Optional
 
-from ..constants.fields import (
-    AGG_ADAPTER_NAME,
-    AGG_ADAPTER_TITLE,
-    AGG_EXPR_FIELD_TYPE,
-    ALL_NAME,
-    OperatorTypeMaps,
-)
+from ..constants.fields import (AGG_ADAPTER_NAME, AGG_ADAPTER_TITLE,
+                                AGG_EXPR_FIELD_TYPE, ALL_NAME,
+                                OperatorTypeMaps)
 from ..tools import strip_left, strip_right
 
 
@@ -66,9 +62,13 @@ def is_complex(field: dict) -> bool:
         field: field schema to parse
     """
     field_type = field["type"]
-    field_items_type = field.get("items", {}).get("type")
-    if field_type == "array" and field_items_type == "array":
-        return True
+    field_items = field.get("items", {})
+
+    if isinstance(field_items, dict):
+        field_items_type = field_items.get("type")
+        if field_type == "array" and field_items_type == "array":
+            return True
+
     return False
 
 
@@ -186,57 +186,56 @@ def parse_schemas(
         }
     )
 
-    if adapter_name == AGG_ADAPTER_NAME:
-        fields += [
-            {
-                "adapter_name_raw": adapter_name_raw,
-                "adapter_name": adapter_name,
-                "adapter_title": adapter_title,
-                "adapter_prefix": adapter_prefix,
-                "column_name": f"{adapter_name}:unique_adapter_names_details",
-                "column_title": "Unique Adapter Names Details Index",
-                "sub_fields": [],
-                "is_complex": False,
-                "is_list": True,
-                "is_root": True,
-                "parent": "root",
-                "name": "unique_adapter_names_details",
-                "name_base": "unique_adapter_names_details",
-                "name_qual": "unique_adapter_names_details",
-                "title": "Unique Adapter Names Details Index",
-                "type": "array",
-                "type_norm": "array_string",
-                "selectable": False,
-                "is_agg": True,
-                "expr_field_type": AGG_EXPR_FIELD_TYPE,
-                "is_details": True,
-                "is_all": False,
-            },
-            {
-                "adapter_name_raw": adapter_name_raw,
-                "adapter_name": adapter_name,
-                "adapter_title": adapter_title,
-                "adapter_prefix": adapter_prefix,
-                "column_name": f"{adapter_name}:meta_data.client_used",
-                "column_title": "Adapter Connection Details Index",
-                "sub_fields": [],
-                "is_complex": False,
-                "is_list": True,
-                "is_root": True,
-                "parent": "root",
-                "name": "meta_data.client_used",
-                "name_base": "meta_data.client_used",
-                "name_qual": "meta_data.client_used",
-                "title": "Adapter Connection Details Index",
-                "type": "array",
-                "type_norm": "array_string",
-                "selectable": False,
-                "is_agg": True,
-                "expr_field_type": AGG_EXPR_FIELD_TYPE,
-                "is_details": True,
-                "is_all": False,
-            },
-        ]
+    fields += [
+        {
+            "adapter_name_raw": adapter_name_raw,
+            "adapter_name": adapter_name,
+            "adapter_title": adapter_title,
+            "adapter_prefix": adapter_prefix,
+            "column_name": f"{adapter_name}:unique_adapter_names_details",
+            "column_title": "Unique Adapter Names Details Index",
+            "sub_fields": [],
+            "is_complex": False,
+            "is_list": True,
+            "is_root": True,
+            "parent": "root",
+            "name": "unique_adapter_names_details",
+            "name_base": "unique_adapter_names_details",
+            "name_qual": "unique_adapter_names_details",
+            "title": "Unique Adapter Names Details Index",
+            "type": "array",
+            "type_norm": "array_string",
+            "selectable": False,
+            "is_agg": True,
+            "expr_field_type": AGG_EXPR_FIELD_TYPE,
+            "is_details": True,
+            "is_all": False,
+        },
+        {
+            "adapter_name_raw": adapter_name_raw,
+            "adapter_name": adapter_name,
+            "adapter_title": adapter_title,
+            "adapter_prefix": adapter_prefix,
+            "column_name": f"{adapter_name}:meta_data.client_used",
+            "column_title": "Adapter Connection Details Index",
+            "sub_fields": [],
+            "is_complex": False,
+            "is_list": True,
+            "is_root": True,
+            "parent": "root",
+            "name": "meta_data.client_used",
+            "name_base": "meta_data.client_used",
+            "name_qual": "meta_data.client_used",
+            "title": "Adapter Connection Details Index",
+            "type": "array",
+            "type_norm": "array_string",
+            "selectable": False,
+            "is_agg": True,
+            "expr_field_type": AGG_EXPR_FIELD_TYPE,
+            "is_details": True,
+            "is_all": False,
+        },
+    ]
 
     field_names = [strip_left(obj=f["name"], fix=adapter_prefix).strip(".") for f in raw_fields]
 
@@ -268,16 +267,15 @@ def parse_schemas(
         parse_complex(field=field)
         fields.append(field)
 
-        if adapter_name == AGG_ADAPTER_NAME:
-            field_details = copy.deepcopy(field)
-            field_details["name"] += "_details"
-            field_details["name_base"] += "_details"
-            field_details["name_qual"] += "_details"
-            field_details["column_title"] += " Details"
-            field_details["column_name"] += "_details"
-            field_details["selectable"] = False
-            field_details["is_details"] = True
-            fields.append(field_details)
+        field_details = copy.deepcopy(field)
+        field_details["name"] += "_details"
+        field_details["name_base"] += "_details"
+        field_details["name_qual"] += "_details"
+        field_details["column_title"] += " Details"
+        field_details["column_name"] += "_details"
+        field_details["selectable"] = False
+        field_details["is_details"] = True
+        fields.append(field_details)
 
     return fields
 

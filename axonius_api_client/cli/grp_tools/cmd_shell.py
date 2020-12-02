@@ -3,9 +3,8 @@
 import atexit
 import os
 
-import click
-
 import axonius_api_client as axonapi
+import click
 
 from ...constants.general import PY36
 from ...tools import echo_error, json_reload, pathlib
@@ -14,23 +13,25 @@ from ..options import AUTH, add_options
 
 SHELL_BANNER = """Welcome human. We have some refreshments available for you:
 
-    - ctx: Click context object
-    - client/c: API Client connection object
-    - jdump/j: Helper function to pretty print python objects
     - axonapi: API client package itself
+    - client/c: API Client connection object
+    - ctx: Click context object
+    - jdump/j: Helper function to pretty print python objects
 
 API Objects:
-    - devices/d: Work with device assets
-    - users/u: Work with user assets
+    - activity_logs/al: Work with activity logs
     - adapters/a: Work with adapters and adapter connections
     - dashboard/db: Work with dashboards and discovery cycle
+    - devices/d: Work with device assets
     - instances/i: Work with instances
-    - system_users/su: Work with system users
-    - system_roles/sr: Work with system roles
     - meta/m: Work with instance metadata
+    - remote_support/rs: Work with configuring system remote support
     - settings_global/sgl: Work with Global system settings
     - settings_gui/sgu: Work with GUI system settings
     - settings_lifecycle/sl: Work with Lifecyle system settings
+    - system_roles/sr: Work with system roles
+    - system_users/su: Work with system users
+    - users/u: Work with user assets
 """
 
 SHELL_EXIT = """Goodbye human. We hope you enjoyed your stay."""
@@ -55,22 +56,25 @@ def cmd(ctx, url, key, secret):  # noqa: D301
     and create the following objects:
 
     \b
-        - ctx: Click context object
         - axonapi: API Client package itself
         - client/c: API Client connection object
-        - devices/d: Work with device assets
-        - users/u: Work with user assets
+        - ctx: Click context object
+        - jdump/j: Helper function to pretty print python objects
+
+        - activity_logs/al: Work with activity logs
         - adapters/a: Work with adapters and adapter connections
-        - system/s: Work with users, roles, global settings, and more
         - dashboard/db: Work with dashboards and discovery cycle
+        - devices/d: Work with device assets
         - instances/i: Work with instances
-        - system_users/su: Work with system users
-        - system_roles/sr: Work with system roles
         - meta/m: Work with instance metadata
+        - remote_support/rs: Work with configuring system remote support
         - settings_global/sgl: Work with Global system settings
         - settings_gui/sgu: Work with GUI system settings
         - settings_lifecycle/sl: Work with Lifecyle system settings
-        - jdump/j: Helper function to pretty print python objects
+        - system/s: Work with users, roles, global settings, and more
+        - system_roles/sr: Work with system roles
+        - system_users/su: Work with system users
+        - users/u: Work with user assets
 
     """
     client = ctx.obj.start_client(url=url, key=key, secret=secret, save_history=True)
@@ -79,6 +83,7 @@ def cmd(ctx, url, key, secret):  # noqa: D301
 
     shellvars = {
         "adapters": client.adapters,
+        "activity_logs": client.activity_logs,
         "axonapi": axonapi,
         "client": client,
         "ctx": ctx,
@@ -88,6 +93,7 @@ def cmd(ctx, url, key, secret):  # noqa: D301
         "instances": client.instances,
         "jdump": jdump,
         "users": client.users,
+        "remote_support": client.remote_support,
         "system_users": client.system_users,
         "system_roles": client.system_roles,
         "meta": client.meta,
@@ -95,6 +101,7 @@ def cmd(ctx, url, key, secret):  # noqa: D301
         "settings_gui": client.settings_gui,
         "settings_lifecycle": client.settings_lifecycle,
         "a": client.adapters,
+        "al": client.activity_logs,
         "c": client,
         "d": client.devices,
         "db": client.dashboard,
@@ -104,6 +111,7 @@ def cmd(ctx, url, key, secret):  # noqa: D301
         "u": client.users,
         "su": client.system_users,
         "sr": client.system_roles,
+        "rs": client.remote_support,
         "m": client.meta,
         "sgl": client.settings_global,
         "sgu": client.settings_gui,
@@ -115,26 +123,23 @@ def cmd(ctx, url, key, secret):  # noqa: D301
 
 def write_hist_file():
     """Pass."""
-    import readline
+    try:
+        import readline
 
-    histpath = pathlib.Path(HISTPATH)
-    histfile = histpath / HISTFILE
+        histpath = pathlib.Path(HISTPATH)
+        histfile = histpath / HISTFILE
 
-    histpath.mkdir(mode=0o700, exist_ok=True)
-    histfile.touch(mode=0o600, exist_ok=True)
+        histpath.mkdir(mode=0o700, exist_ok=True)
+        histfile.touch(mode=0o600, exist_ok=True)
 
-    readline.write_history_file(format(histfile))
+        readline.write_history_file(format(histfile))
+    except Exception as exc:
+        msg = f"Unable to import readline! {exc}"
+        echo_error(msg, abort=False)
 
 
 def register_readline(shellvars=None):
     """Pass."""
-    try:
-        import readline
-    except Exception:  # pragma: no cover
-        import pyreadline as readline
-
-    import rlcompleter
-
     shellvars = shellvars or {}
 
     histpath = pathlib.Path(HISTPATH)
@@ -144,6 +149,13 @@ def register_readline(shellvars=None):
     histfile.touch(mode=0o600, exist_ok=True)
 
     try:
+        try:
+            import readline
+        except Exception:  # pragma: no cover
+            import pyreadline as readline
+
+        import rlcompleter
+
         readline.read_history_file(format(histfile))
         atexit.register(write_hist_file)
 
@@ -164,7 +176,7 @@ def spawn_shell(shellvars=None):
     import code
 
     shellvars = shellvars or {}
-    register_readline(shellvars)
+    register_readline(shellvars=shellvars)
 
     args = {"local": shellvars, "banner": SHELL_BANNER}
 

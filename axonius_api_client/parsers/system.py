@@ -4,7 +4,7 @@ import math
 from typing import List
 
 from ..constants.system import Role, User
-from ..tools import calc_gb, calc_perc_gb, dt_now, dt_parse, timedelta
+from ..tools import calc_gb, calc_perc_gb
 
 
 def parse_sizes(raw: dict) -> dict:
@@ -128,6 +128,7 @@ def parse_role_perms(perms: dict) -> dict:
     return parsed
 
 
+'''
 def parse_lifecycle(raw: dict) -> dict:
     """Parse the lifecycle metadata to add more user friendly data.
 
@@ -180,9 +181,10 @@ def parse_sub_phase(raw: dict) -> dict:
     parsed["name"] = raw["name"]
     parsed["progress"] = {}
     for name, status in raw["additional_data"].items():  # pragma: no cover
-        parsed["progress"][status] = parsed["progress"].get(status)
+        parsed["progress"][status] = parsed["progress"].get(status, [])
         parsed["progress"][status].append(name)
     return parsed
+'''
 
 
 def parse_user(user: dict, role_obj: dict) -> dict:

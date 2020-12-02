@@ -690,6 +690,7 @@ class OperatorTypeMaps(BaseData):
             Operators.exists_array,
             *ops_clean(string_ip.operators, [Operators.exists]),
         ],
+        # XXX remove in subnet / not in subnet AX-9222
         field_type=Types.array,
         field_format=Formats.ip_preferred,
         items_type=Types.string,
@@ -733,13 +734,13 @@ class OperatorTypeMaps(BaseData):
                 return typemap.default
 
         empty_others = not any([fformat, itype, iformat])
-        if field["type"] == Types.string.value and empty_others:
+        if field["type"] == Types.string.value and empty_others:  # pragma: no cover
             warnings.warn(
                 f"Unexepected string schema in field {name!r} with {attrs_text}, assuming string"
             )
             return OperatorTypeMaps.string
 
-        if field["type"] == Types.array.value and empty_others:
+        if field["type"] == Types.array.value and empty_others:  # pragma: no cover
             warnings.warn(
                 f"Unexepected array schema in field {name!r} with {attrs_text}, "
                 f"assuming array of string"

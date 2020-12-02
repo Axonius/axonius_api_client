@@ -7,7 +7,6 @@ import logging
 import pathlib
 import platform
 import sys
-import warnings
 from datetime import datetime, timedelta, timezone
 from itertools import zip_longest
 from typing import (Any, Callable, Iterable, Iterator, List, Optional, Tuple,
@@ -110,10 +109,12 @@ def coerce_int_float(value: Union[int, float, str]) -> Union[int, float]:
         return value
 
     if isinstance(value, str):
+        value = value.strip()
+
         if value.isdigit():
             return int(value)
 
-        if value.replace(".", "").strip().isdigit():
+        if value.replace(".", "").isdigit():
             return float(value)
 
     vtype = type(value).__name__
@@ -279,7 +280,7 @@ def json_reload(obj: Any, error: bool = False, trim: int = None, **kwargs) -> st
     return obj
 
 
-def dt_parse(obj: Union[str, timedelta, datetime]) -> datetime:
+def dt_parse(obj: Union[str, timedelta, datetime], default_tz_utc: bool = False) -> datetime:
     """Parse a str, datetime, or timedelta into a datetime object.
 
     Notes:
@@ -299,7 +300,12 @@ def dt_parse(obj: Union[str, timedelta, datetime]) -> datetime:
     if isinstance(obj, timedelta):
         obj = str(dt_now() - obj)
 
-    return dateutil.parser.parse(obj)
+    value = dateutil.parser.parse(obj)
+
+    if default_tz_utc and not value.tzinfo:
+        value = value.replace(tzinfo=dateutil.tz.tzutc())
+
+    return value
 
 
 def dt_parse_tmpl(obj: Union[str, timedelta, datetime], tmpl: str = "%Y-%m-%d") -> str:
@@ -894,18 +900,6 @@ def read_stream(stream) -> str:
     return content
 
 
-def load_fuzz():
-    """Load the fuzzy matching library.
-
-    I do not like this. But fuzzywuzzy has a built in warning on import that can
-    not be shut off any other way
-    """
-    warnings.filterwarnings("ignore", message="Using slow pure-python SequenceMatcher")
-    from fuzzywuzzy import fuzz
-
-    return fuzz
-
-
 def check_gui_page_size(size: Optional[int] = None) -> int:
     """Check page size to see if it one of the valid GUI page sizes.
 
@@ -957,12 +951,14 @@ def calc_perc_gb(
         is_kb: values are in kb or bytes
     """
     perc_key = perc_key or f"{part_key}_percent"
-    whole = calc_gb(value=obj[whole_key], places=places, is_kb=is_kb)
-    part = calc_gb(value=obj[part_key], places=places, is_kb=is_kb)
-    perc = calc_percent(part=part, whole=whole, places=places)
+    whole_value = obj[whole_key] or 0
+    part_value = obj[part_key] or 0
+    whole_gb = calc_gb(value=whole_value, places=places, is_kb=is_kb)
+    part_gb = calc_gb(value=part_value, places=places, is_kb=is_kb)
+    perc = calc_percent(part=part_gb, whole=whole_gb, places=places)
     ret = obj if update else {}
-    ret[f"{part_key}_gb"] = part
-    ret[f"{whole_key}_gb"] = whole
+    ret[f"{part_key}_gb"] = part_gb
+    ret[f"{whole_key}_gb"] = whole_gb
     ret[perc_key] = perc
     return ret
 

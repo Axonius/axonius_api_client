@@ -9,31 +9,11 @@ EXPORT = [
         "-xf",
         "export_format",
         type=click.Choice(["json-raw", "json", "str"]),
-        help="Format of to export data in",
+        help="Format to export data in",
         default="str",
         show_envvar=True,
         show_default=True,
-    ),
-    click.option(
-        "--include-phases/--no-include-phases",
-        "-iph/-niph",
-        "include_phases",
-        help="Include status of phases in string output",
-        is_flag=True,
-        default=True,
-        show_envvar=True,
-        show_default=True,
-    ),
-    click.option(
-        "--include-progress/--no-include-progress",
-        "-ipr/-nipr",
-        "include_progress",
-        help="Include progress of phases in string output",
-        is_flag=True,
-        default=False,
-        show_envvar=True,
-        show_default=True,
-    ),
+    )
 ]
 
 
@@ -57,14 +37,6 @@ def handle_export(ctx, data, export_format, **kwargs):
 
         props = data.to_str_properties()
         lines += [f"Properties:{join(props)}"]
-
-        if kwargs.get("include_phases"):
-            phases = data.to_str_phases()
-            lines += ["", f"Phase Status:{join(phases)}"]
-
-        if kwargs.get("include_progress"):
-            progress = data.to_str_progress() or ["n/a"]
-            lines += ["", f"Phase Progress:{join(progress)}"]
 
         click.secho("\n".join(lines))
 

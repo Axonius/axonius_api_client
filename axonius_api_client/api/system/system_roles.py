@@ -318,7 +318,7 @@ class SystemRoles(ModelMixins):
     def cat_actions(self) -> dict:
         """Get permission categories and their actions."""
         data = parse_cat_actions(raw=self._get_labels())
-        if not self.instances.has_cloud_compliance:
+        if not self.instances.has_cloud_compliance:  # pragma: no cover
             data[Role.CATS].pop(Role.COMP)
             data[Role.ACTS].pop(Role.COMP)
         return data

@@ -10,14 +10,14 @@ OPTIONS = [
 ]
 
 
-@click.command(name="start", context_settings=CONTEXT_SETTINGS)
+@click.command(name="get", context_settings=CONTEXT_SETTINGS)
 @add_options(OPTIONS)
 @click.pass_context
 def cmd(ctx, url, key, secret, **kwargs):
-    """Start the discover cycle."""
+    """Get the remote support configuration."""
     client = ctx.obj.start_client(url=url, key=key, secret=secret)
 
     with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
-        data = client.dashboard.start()
+        data = client.remote_support.get()
 
     handle_export(ctx=ctx, data=data, **kwargs)
