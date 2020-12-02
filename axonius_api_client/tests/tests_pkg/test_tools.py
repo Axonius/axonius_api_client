@@ -4,51 +4,23 @@ import io
 import tempfile
 
 import pytest
-
 from axonius_api_client.constants.general import IS_WINDOWS
 from axonius_api_client.exceptions import ToolsError
-from axonius_api_client.tools import (
-    calc_percent,
-    check_empty,
-    check_gui_page_size,
-    check_type,
-    coerce_bool,
-    coerce_int,
-    coerce_int_float,
-    coerce_str_to_csv,
-    datetime,
-    dt_min_ago,
-    dt_now,
-    dt_parse,
-    dt_parse_tmpl,
-    dt_within_min,
-    echo_error,
-    echo_ok,
-    echo_warn,
-    get_path,
-    get_raw_version,
-    get_type_str,
-    grouper,
-    is_int,
-    join_kv,
-    join_url,
-    json_dump,
-    json_load,
-    json_reload,
-    listify,
-    longest_str,
-    parse_ip_address,
-    parse_ip_network,
-    path_read,
-    path_write,
-    pathlib,
-    read_stream,
-    split_str,
-    strip_left,
-    strip_right,
-    sysinfo,
-    timedelta,
-)
+from axonius_api_client.tools import (calc_percent, check_empty,
+                                      check_gui_page_size, check_type,
+                                      coerce_bool, coerce_int,
+                                      coerce_int_float, coerce_str_to_csv,
+                                      datetime, dt_min_ago, dt_now, dt_parse,
+                                      dt_parse_tmpl, dt_within_min, echo_error,
+                                      echo_ok, echo_warn, get_path,
+                                      get_raw_version, get_type_str, grouper,
+                                      is_int, join_kv, join_url, json_dump,
+                                      json_load, json_reload, listify,
+                                      longest_str, parse_ip_address,
+                                      parse_ip_network, path_read, path_write,
+                                      pathlib, read_stream, split_str,
+                                      strip_left, strip_right, sysinfo,
+                                      timedelta)
 
 
 def test_check_gui_page_size_error():
@@ -139,6 +111,16 @@ class TestCoerce:
         assert coerce_int_float(1) == 1
         assert coerce_int_float("1") == 1
         assert coerce_int_float("1.0") == 1.0
+
+    def test_coerce_int_min_max(self):
+        with pytest.raises(ToolsError):
+            coerce_int(obj=2, min_value=3)
+
+        with pytest.raises(ToolsError):
+            coerce_int(obj=2, max_value=1)
+
+        with pytest.raises(ToolsError):
+            coerce_int(obj=2, min_value=3, max_value=1)
 
 
 class TestJoinUrl:

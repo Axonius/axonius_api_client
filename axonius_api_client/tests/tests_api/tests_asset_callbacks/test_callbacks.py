@@ -826,6 +826,117 @@ class Callbacks:
                 assert schema["name_qual"] in row
                 assert field in row
 
+    def test_do_field_compress_true(self, cbexport, apiobj):
+        agg = "agg:id"
+        specific = "active_directory:id"
+        fields = [specific, agg]
+        original_row = get_rows_exist(apiobj=apiobj, fields=fields)
+        test_row = copy.deepcopy(original_row)
+
+        cbobj = self.get_cbobj(
+            apiobj=apiobj,
+            cbexport=cbexport,
+            store={"fields": fields},
+            getargs={"field_compress": True, "field_titles": False},
+        )
+
+        rows = cbobj.do_change_field_compress(rows=test_row)
+        assert isinstance(rows, list)
+        assert len(rows) == 1
+
+        for row in rows:
+            for field in fields:
+                assert field in row
+        for field in fields:
+            assert field in cbobj.final_columns
+
+    def test_do_field_replace_str(self, cbexport, apiobj):
+        original_row = get_rows_exist(apiobj=apiobj)
+        test_row = copy.deepcopy(original_row)
+
+        cbobj = self.get_cbobj(
+            apiobj=apiobj,
+            cbexport=cbexport,
+            getargs={"field_replace": [".=!!", "i="]},
+        )
+
+        assert cbobj.field_replacements == [[".", "!!"], ["i", ""]]
+
+        for field in cbobj.final_columns:
+            assert "." not in field
+            assert "i" not in field
+
+        rows = cbobj.do_change_field_replace(rows=test_row)
+        assert isinstance(rows, list)
+        assert len(rows) == 1
+
+        for row in rows:
+            for key in row:
+                assert "." not in key
+                assert "i" not in key
+
+    def test_do_field_replace_list(self, cbexport, apiobj):
+        original_row = get_rows_exist(apiobj=apiobj)
+        test_row = copy.deepcopy(original_row)
+
+        cbobj = self.get_cbobj(
+            apiobj=apiobj,
+            cbexport=cbexport,
+            getargs={"field_replace": [[".", "!!"], ["i", ""]]},
+        )
+
+        assert cbobj.field_replacements == [[".", "!!"], ["i", ""]]
+
+        for field in cbobj.final_columns:
+            assert "." not in field
+            assert "i" not in field
+
+        rows = cbobj.do_change_field_replace(rows=test_row)
+        assert isinstance(rows, list)
+        assert len(rows) == 1
+
+        for row in rows:
+            for key in row:
+                assert "." not in key
+                assert "i" not in key
+
+    def test_do_field_replace_bad_types(self, cbexport, apiobj):
+        original_row = get_rows_exist(apiobj=apiobj)
+        test_row = copy.deepcopy(original_row)
+
+        cbobj = self.get_cbobj(
+            apiobj=apiobj,
+            cbexport=cbexport,
+            getargs={"field_replace": [1, ["", ""]]},
+        )
+
+        assert cbobj.field_replacements == []
+
+        rows = cbobj.do_change_field_replace(rows=test_row)
+        assert isinstance(rows, list)
+        assert len(rows) == 1
+        assert sorted(list(rows[0])) == sorted(list(original_row))
+
+    def test_do_field_replace_missing_rhs(self, cbexport, apiobj):
+        original_row = get_rows_exist(apiobj=apiobj)
+        test_row = copy.deepcopy(original_row)
+
+        cbobj = self.get_cbobj(
+            apiobj=apiobj,
+            cbexport=cbexport,
+            getargs={"field_replace": "."},
+        )
+
+        assert cbobj.field_replacements == [[".", ""]]
+
+        rows = cbobj.do_change_field_replace(rows=test_row)
+        assert isinstance(rows, list)
+        assert len(rows) == 1
+
+        for row in rows:
+            for key in row:
+                assert "." not in key
+
 
 class Exports:
     def test_fd_stdout_open_no_close(self, cbexport, apiobj):

@@ -4,7 +4,7 @@
 
 import dataclasses
 
-from axonius_api_client.data import BaseData, BaseEnum
+from axonius_api_client.data import BaseData, BaseEnum, PropsData
 
 
 class TestBaseData:
@@ -62,6 +62,24 @@ class TestBaseData:
         assert obj_defaults == cls_defaults_exp
 
 
+class TestPropsData:
+    def test_str_repr_init(self):
+        @dataclasses.dataclass
+        class BadWolf(PropsData):
+            @property
+            def _properties(self):
+                return ["name"]
+
+            @property
+            def name(self):
+                return self.raw["name"]
+
+        obj = BadWolf(raw={"name": "x"})
+        assert str(obj)
+        assert repr(obj)
+        assert obj.to_dict() == {"name": "x"}
+
+
 class TestBaseEnum:
     def test_iter(self):
         class BadWolf(BaseEnum):
@@ -69,3 +87,4 @@ class TestBaseEnum:
 
         assert [x.name for x in BadWolf] == ["name"]
         assert [x.value for x in BadWolf] == ["badwolf"]
+        assert str(BadWolf.name) == "badwolf"

@@ -490,7 +490,7 @@ class Base:
                 replace = []
 
             if len(replace) == 1:
-                replace = [replace, ""]
+                replace = [replace[0], ""]
 
             return replace
 
@@ -529,7 +529,7 @@ class Base:
             # remove 'adapters_data.aws_adapter'
             splits = splits[2:]
         else:
-            prefix = AGG_ADAPTER_NAME
+            return key
 
         new_key = ".".join(splits)
         return ":".join([x for x in [prefix, new_key] if x])
