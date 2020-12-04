@@ -18,7 +18,6 @@ OPTIONS = [
         required=True,
         show_default=True,
         show_envvar=True,
-        type=bool,
     ),
 ]
 
