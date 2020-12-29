@@ -39,6 +39,12 @@ pipenv_install_dev:
 		--upgrade \
 		--requirement requirements-dev.txt
 
+pip_install_lint:
+	pip install \
+		--quiet \
+		--upgrade \
+		--requirement requirements-lint.txt
+
 pipenv_install_lint:
 	pipenv run pip install \
 		--quiet \

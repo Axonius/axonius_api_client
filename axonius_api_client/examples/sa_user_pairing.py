@@ -40,12 +40,16 @@ class Tags(axonapi.data.BaseEnum):
 
 
 @dataclasses.dataclass
-class UserMap(axonapi.data.BaseData):
+class UserMap(axonapi.data.PropsData):
     """Pass."""
 
     username: str
     axonius_link: str
     asset: dict
+
+    @property
+    def _properties(self):
+        return ["username", "axonius_link", "other_user_name", "is_disabled", "usernames"]
 
     @property
     def other_user_name(self) -> str:
@@ -74,12 +78,16 @@ class UserMap(axonapi.data.BaseData):
 
 
 @dataclasses.dataclass
-class AdminMap(axonapi.data.BaseData):
+class AdminMap(axonapi.data.PropsData):
     """Pass."""
 
     admin: UserMap
     normal: Optional[UserMap] = None
     other: Optional[UserMap] = None
+
+    @property
+    def _properties(self):
+        return ["admin", "normal", "other", "tag", "result"]
 
     @property
     def tag(self) -> Tags:
