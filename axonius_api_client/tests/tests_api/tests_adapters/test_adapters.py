@@ -72,6 +72,10 @@ def val_parsed_schema(schema):
         item_min = item.pop("min", 0)
         assert isinstance(item_min, int)
 
+        # FYI: added in 3.12?
+        dependency = item.pop("dependency", None)
+        assert dependency is None or isinstance(dependency, str)
+
         assert not item
 
 
@@ -259,7 +263,12 @@ class TestAdaptersPrivate(TestAdaptersBase):
             item_min = item.pop("min", 0)
             assert isinstance(item_min, int)
 
+            # FYI: added in 3.12?
+            dependency = item.pop("dependency", None)
+            assert dependency is None or isinstance(dependency, str)
+
             assert not item
+
 
         required = schema.pop("required")
         assert isinstance(required, list)
