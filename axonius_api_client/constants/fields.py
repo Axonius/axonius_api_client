@@ -153,6 +153,7 @@ class Types(BaseEnum):
     integer = enum.auto()
     number = enum.auto()
     array = enum.auto()
+    object = enum.auto()
 
 
 class Formats(BaseEnum):
@@ -737,6 +738,12 @@ class OperatorTypeMaps(BaseData):
         if field["type"] == Types.string.value and empty_others:  # pragma: no cover
             warnings.warn(
                 f"Unexepected string schema in field {name!r} with {attrs_text}, assuming string"
+            )
+            return OperatorTypeMaps.string
+
+        if field["type"] == Types.object.value and empty_others:  # pragma: no cover
+            warnings.warn(
+                f"Unexepected object schema in field {name!r} with {attrs_text}, assuming string"
             )
             return OperatorTypeMaps.string
 

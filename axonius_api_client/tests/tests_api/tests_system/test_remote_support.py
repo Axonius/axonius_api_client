@@ -27,7 +27,7 @@ class TestRemoteSupportPrivate(RemoteSupportBase):
         provision = data.pop("provision")
         assert isinstance(provision, bool)
 
-        timeout = data.pop("timeout")
+        timeout = data.pop("timeout", None)
         assert isinstance(timeout, (str, type(None)))
 
         troubleshooting = data.pop("troubleshooting")
@@ -44,7 +44,7 @@ class TestRemoteSupportPrivate(RemoteSupportBase):
         start_data = apiobj._start_temp(hours=24)
         assert isinstance(start_data, dict)
 
-        timeout = start_data.pop("timeout")
+        timeout = start_data.pop("timeout", None)
         assert isinstance(timeout, str)
 
         assert not start_data

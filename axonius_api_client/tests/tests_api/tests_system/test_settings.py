@@ -2,7 +2,6 @@
 """Test suite."""
 
 import pytest
-
 from axonius_api_client.exceptions import ApiError, NotFoundError
 
 GUI_SECTION_WITH_SUBS = "system_settings"
@@ -16,8 +15,9 @@ class SettingsBasePublic:
     def val_schemas(self, schemas, config):
         for name, schema in schemas.items():
             assert schema["name"] == name
-            assert schema["name"] in config
             assert isinstance(schema["required"], bool)
+            if schema["required"]:
+                assert schema["name"] in config
 
     def val_sub_section(self, name, meta, settings):
         assert isinstance(meta, dict) and meta
