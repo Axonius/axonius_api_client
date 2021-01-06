@@ -292,3 +292,5 @@ blah*
 *.log*
 *.env
 shell.py
+*.csv
+.idea
