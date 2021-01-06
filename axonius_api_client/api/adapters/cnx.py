@@ -1,27 +1,16 @@
 # -*- coding: utf-8 -*-
 """API for working with adapter connections."""
+import pdb
 import time
 from typing import List, Optional, Union
 
 from ...constants.adapters import CNX_GONE, CNX_RETRY, CNX_SANE_DEFAULTS
-from ...exceptions import (
-    CnxAddError,
-    CnxGoneError,
-    CnxTestError,
-    CnxUpdateError,
-    ConfigInvalidValue,
-    ConfigRequired,
-    NotFoundError,
-)
-from ...parsers.config import (
-    config_build,
-    config_default,
-    config_empty,
-    config_info,
-    config_required,
-    config_unchanged,
-    config_unknown,
-)
+from ...exceptions import (CnxAddError, CnxGoneError, CnxTestError,
+                           CnxUpdateError, ConfigInvalidValue, ConfigRequired,
+                           NotFoundError)
+from ...parsers.config import (config_build, config_default, config_empty,
+                               config_info, config_required, config_unchanged,
+                               config_unknown)
 from ...parsers.tables import tablize_cnxs, tablize_schemas
 from ...tools import json_load, pathlib
 from ..mixins import ChildMixins
@@ -51,7 +40,14 @@ class Cnx(ChildMixins):
         valid keys/values.
     """
 
-    def add(self, adapter_name: str, adapter_node: Optional[str] = None, **kwargs) -> dict:
+    def add(
+        self,
+        adapter_name: str,
+        adapter_node: Optional[str] = None,
+        save_and_fetch: bool = True,
+        active: bool = True,
+        **kwargs,
+    ) -> dict:
         """Add a connection to an adapter on a node.
 
         Examples:
@@ -85,49 +81,69 @@ class Cnx(ChildMixins):
         kwargs_config = kwargs.pop("kwargs_config", {})
         kwargs.update(kwargs_config)
 
-        adapter = self.parent.get_by_name(name=adapter_name, node=adapter_node)
-        cnx_schemas = adapter["schemas"]["cnx"]
-        adapter_name = adapter["name"]
-        adapter_node_name = adapter["node_name"]
-        adapter_name_raw = adapter["name_raw"]
-        adapter_node_id = adapter["node_id"]
-
+        adapter_meta = self.parent.get_by_name(name=adapter_name, node=adapter_node)
         source = f"adding connection for adapter {adapter_name!r}"
 
         new_config = self.build_config(
-            cnx_schemas=cnx_schemas,
+            cnx_schemas=adapter_meta["schemas"]["cnx"],
             new_config=kwargs,
             source=source,
-            adapter_name=adapter_name,
-            adapter_node=adapter_node_name,
+            adapter_name=adapter_meta["name"],
+            adapter_node=adapter_meta["node_name"],
         )
 
-        sane_defaults = self.get_sane_defaults(adapter_name=adapter_name)
+        sane_defaults = self.get_sane_defaults(adapter_name=adapter_meta["name"])
 
         config_default(
-            schemas=cnx_schemas,
+            schemas=adapter_meta["schemas"]["cnx"],
             new_config=new_config,
             source=source,
             sane_defaults=sane_defaults,
         )
 
-        config_empty(schemas=cnx_schemas, new_config=new_config, source=source)
+        config_empty(schemas=adapter_meta["schemas"]["cnx"], new_config=new_config, source=source)
 
-        config_required(schemas=cnx_schemas, new_config=new_config, source=source)
-
-        result = self._add(
-            adapter_name_raw=adapter_name_raw,
-            adapter_node_id=adapter_node_id,
-            new_config=new_config,
+        config_required(
+            schemas=adapter_meta["schemas"]["cnx"], new_config=new_config, source=source
         )
 
+        # result = self._add(
+        #     adapter_name_raw=adapter_name_raw,
+        #     adapter_node_id=adapter_node_id,
+        #     new_config=new_config,
+        # )
+
+        result = self._add_v2(
+            connection=new_config,
+            adapter_name_raw=adapter_meta["name_raw"],
+            instance_name=adapter_meta["node_meta"]["name"],
+            instance_id=adapter_meta["node_meta"]["id"],
+            is_instance=not adapter_meta["node_meta"]["is_master"],
+            save_and_fetch=save_and_fetch,
+            active=active,
+        )
+        """
+            def _add_v2(
+            self,
+            connection: dict,
+            instance_id: str,
+            instance_name: str,
+            adapter_name_raw: str,
+            connection_discovery: Optional[dict] = None,
+            is_instance: bool = False,
+            save_and_fetch: bool = True,
+            active: bool = True,
+        ) -> dict:
+        """
+
+        pdb.set_trace()
         error_in_status = result.get("status", "") == "error"
         error_empty = bool(result.get("error", ""))
 
         cnx_new = self.get_by_uuid(
             cnx_uuid=result["id"],
-            adapter_name=adapter_name,
-            adapter_node=adapter_node,
+            adapter_name=adapter_meta["name"],
+            adapter_node=adapter_meta["node_name"],
             retry=CNX_RETRY,
         )
 
@@ -723,7 +739,35 @@ class Cnx(ChildMixins):
         sinfo = config_info(schema=schema, value=str(value), source=source)
         raise ConfigInvalidValue(f"{sinfo}\nFile is not an existing file!")
 
-    # XXX failing with secondary node!!! wrong plugin name?
+    def _add_v2(
+        self,
+        connection: dict,
+        instance_id: str,
+        instance_name: str,
+        adapter_name_raw: str,
+        connection_discovery: Optional[dict] = None,
+        is_instance: bool = False,
+        save_and_fetch: bool = True,
+        active: bool = True,
+    ) -> dict:
+        """Pass."""
+        data = {}
+        data["connection"] = connection
+        data["connection_discovery"] = connection_discovery or {"enabled": False}
+        data["instance"] = instance_id
+        data["instance_name"] = instance_name
+        data["save_and_fetch"] = save_and_fetch
+        data["active"] = active
+
+        path = self.parent.router.cnxs.format(adapter_name_raw=adapter_name_raw)
+
+        return self.parent.request(
+            method="put",
+            path=path,
+            json=data,
+            error_json_bad_status=False,
+        )
+
     def _add(self, adapter_name_raw: str, adapter_node_id: str, new_config: dict) -> str:
         """Private API method to add a connection to an adapter.
 

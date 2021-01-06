@@ -6,7 +6,8 @@ from typing import List, Optional, Union
 from ...constants.adapters import CONFIG_TYPES
 from ...exceptions import ApiError, NotFoundError
 from ...parsers.adapters import parse_adapters
-from ...parsers.config import config_build, config_unchanged, config_unknown, parse_schema
+from ...parsers.config import (config_build, config_unchanged, config_unknown,
+                               parse_schema)
 from ...parsers.tables import tablize_adapters
 from ...tools import path_read
 from ..mixins import ModelMixins
@@ -93,16 +94,18 @@ class Adapters(ModelMixins):
             :exc:`NotFoundError`: when no node found or when no adapter found on node
         """
         if node:
-            node = self.instances.get_by_name(name=node, key="name")
+            node_meta = self.instances.get_by_name(name=node)
         else:
-            node = self.instances.get_core(key="name")
+            node_meta = self.instances.get_core()
 
+        node_name = node_meta["name"]
         adapters = self.get()
-        adapters = [x for x in adapters if node == x["node_name"]]
+        adapters = [x for x in adapters if x["node_name"] == node_name]
 
         keys = ["name", "name_raw", "name_plugin"]
         for adapter in adapters:
             if any([adapter[k].lower() == name.lower() for k in keys]):
+                adapter["node_meta"] = node_meta
                 return adapter
 
         err = f"No adapter named {name!r} found on instance {node!r}"
