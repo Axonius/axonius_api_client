@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 """API for working with adapter connections."""
-import pdb
 import time
 from typing import List, Optional, Union
 
@@ -107,12 +106,6 @@ class Cnx(ChildMixins):
             schemas=adapter_meta["schemas"]["cnx"], new_config=new_config, source=source
         )
 
-        # result = self._add(
-        #     adapter_name_raw=adapter_name_raw,
-        #     adapter_node_id=adapter_node_id,
-        #     new_config=new_config,
-        # )
-
         result = self._add_v2(
             connection=new_config,
             adapter_name_raw=adapter_meta["name_raw"],
@@ -122,21 +115,7 @@ class Cnx(ChildMixins):
             save_and_fetch=save_and_fetch,
             active=active,
         )
-        """
-            def _add_v2(
-            self,
-            connection: dict,
-            instance_id: str,
-            instance_name: str,
-            adapter_name_raw: str,
-            connection_discovery: Optional[dict] = None,
-            is_instance: bool = False,
-            save_and_fetch: bool = True,
-            active: bool = True,
-        ) -> dict:
-        """
 
-        pdb.set_trace()
         error_in_status = result.get("status", "") == "error"
         error_empty = bool(result.get("error", ""))
 
