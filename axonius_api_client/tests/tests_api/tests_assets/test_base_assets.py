@@ -78,17 +78,17 @@ class ModelMixinsBase:
 
 
 class AssetsPrivate:
-    def test_private_get(self, apiobj):
-        data = apiobj._get(page_size=1)
-        assert isinstance(data, dict)
-        assert isinstance(data["assets"], list)
-        assert len(data["assets"]) == 1
-
-    def test_private_get_normal_query(self, apiobj):
-        data = apiobj._get(query=QUERIES["not_last_seen_day"], page_size=1)
-        assert isinstance(data, dict)
-        assert isinstance(data["assets"], list)
-        assert len(data["assets"]) == 1
+    # def test_private_get(self, apiobj):
+    #     data = apiobj._get(page_size=1)
+    #     assert isinstance(data, dict)
+    #     assert isinstance(data["assets"], list)
+    #     assert len(data["assets"]) == 1
+    #
+    # def test_private_get_normal_query(self, apiobj):
+    #     data = apiobj._get(query=QUERIES["not_last_seen_day"], page_size=1)
+    #     assert isinstance(data, dict)
+    #     assert isinstance(data["assets"], list)
+    #     assert len(data["assets"]) == 1
 
     def test_private_get_cursor(self, apiobj):
         data = apiobj._get_cursor(page_size=1)
@@ -189,25 +189,25 @@ class AssetsPublic:
         data = apiobj.count_by_saved_query(name=sq_name)
         assert isinstance(data, int)
 
-    def test_get_cursor_no_generator_no(self, apiobj):
-        rows = apiobj.get(use_cursor=False, generator=False, max_rows=1)
-
-        assert not rows.__class__.__name__ == "generator"
-        assert "cached" not in apiobj.auth.http.LAST_RESPONSE.request.url
-        check_assets(rows)
-        assert len(rows) == 1
-
-    def test_get_cursor_no_generator_yes(self, apiobj):
-        gen = apiobj.get(use_cursor=False, generator=True, max_rows=1)
-
-        assert not isinstance(gen, list)
-        assert gen.__class__.__name__ == "generator"
-
-        rows = [x for x in gen]
-
-        assert "cached" not in apiobj.auth.http.LAST_RESPONSE.request.url
-        check_assets(rows)
-        assert len(rows) == 1
+    # def test_get_cursor_no_generator_no(self, apiobj):
+    #     rows = apiobj.get(use_cursor=False, generator=False, max_rows=1)
+    #
+    #     assert not rows.__class__.__name__ == "generator"
+    #     assert "cached" not in apiobj.auth.http.LAST_RESPONSE.request.url
+    #     check_assets(rows)
+    #     assert len(rows) == 1
+    #
+    # def test_get_cursor_no_generator_yes(self, apiobj):
+    #     gen = apiobj.get(use_cursor=False, generator=True, max_rows=1)
+    #
+    #     assert not isinstance(gen, list)
+    #     assert gen.__class__.__name__ == "generator"
+    #
+    #     rows = [x for x in gen]
+    #
+    #     assert "cached" not in apiobj.auth.http.LAST_RESPONSE.request.url
+    #     check_assets(rows)
+    #     assert len(rows) == 1
 
     def test_get_cursor_yes_generator_no(self, apiobj):
         rows = apiobj.get(use_cursor=True, generator=False, max_rows=1)

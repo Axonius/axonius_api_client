@@ -503,6 +503,9 @@ class TestAdaptersPublic(TestAdaptersBase):
         specific_config = config.pop("specific")
         assert isinstance(specific_config, dict)
 
+        node_meta = adapter.pop("node_meta", {})
+        assert isinstance(node_meta, dict)
+
         assert not adapter
 
     def val_parsed_cnx(
