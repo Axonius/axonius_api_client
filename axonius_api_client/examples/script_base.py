@@ -27,3 +27,9 @@ meta = client.meta  # work with instance meta data
 settings_global = client.settings_global  # work with global system settings
 settings_gui = client.settings_gui  # work with gui system settings
 settings_lifecycle = client.settings_lifecycle  # work with lifecycle system settings
+
+# users.count()
+# devices.count_by_saved_query("AD devices missing agents")
+
+count = devices.count(wiz_entries=[{'type': 'simple', 'value': 'installed_software.name contains chrome'}])
+print(count)

@@ -323,20 +323,26 @@ def validate_sq(asset):
     updated_by_deleted = updated_by.pop("deleted")
     assert isinstance(updated_by_deleted, bool)
 
-    updated_str_keys = [
-        "_id",
+    updated_str_keys_req = [
         "first_name",
         "last_name",
+        "source",
+        "user_name",
+    ]
+    for updated_str_key in updated_str_keys_req:
+        val = updated_by.pop(updated_str_key)
+        assert isinstance(val, (str, int, float)) or val is None
+
+    updated_str_keys_opt = [
+        "_id",
         "last_updated",
         "password",
         "pic_name",
         "role_id",
         "salt",
-        "source",
-        "user_name",
     ]
-    for updated_str_key in updated_str_keys:
-        val = updated_by.pop(updated_str_key)
+    for updated_str_key in updated_str_keys_opt:
+        val = updated_by.pop(updated_str_key, None)
         assert isinstance(val, (str, int, float)) or val is None
 
     assert not updated_by

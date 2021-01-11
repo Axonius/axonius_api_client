@@ -5,7 +5,8 @@ import time
 from datetime import datetime, timedelta
 from typing import Generator, List, Optional, Union
 
-from ...constants.api import DEFAULT_CALLBACKS_CLS, MAX_PAGE_SIZE, PAGE_SIZE
+from ...constants.api import (COUNT_POLLING_ATTEMPTS, COUNT_POLLING_SLEEP,
+                              DEFAULT_CALLBACKS_CLS, MAX_PAGE_SIZE, PAGE_SIZE)
 from ...exceptions import ApiError, JsonError, NotFoundError
 from ...tools import dt_now, dt_parse_tmpl, dt_sec_ago, json_dump, listify
 from ..asset_callbacks.tools import get_callbacks_cls
@@ -257,7 +258,7 @@ class AssetMixin(ModelMixins):
         state = {
             "max_pages": max_pages,
             "max_rows": max_rows,
-            "use_cursor": use_cursor,
+            "use_cursor": True,
             "page_cursor": None,
             "page_sleep": page_sleep,
             "page_size": page_size,
@@ -798,10 +799,35 @@ class AssetMixin(ModelMixins):
             query: if supplied, only return the count of assets that match the query
             history_date: return count for a given historical date
         """
+
         params = {}
         params["filter"] = query
         params["history"] = history_date
-        return self.request(method="post", path=self.router.count, json=params)
+
+        attempt = 0
+        attempt_max = COUNT_POLLING_ATTEMPTS
+        path = self.router.count
+        response = None
+
+        while attempt <= attempt_max:
+            response = self.request(
+                method = "post",
+                path = path,
+                json = params,
+                error_json_bad_status = False,
+                error_json_invalid = False,
+            )
+
+            try:
+                return int(response)
+            except Exception:
+                self.LOG.debug(
+                    f"Non-int {response!r} from {path!r} on attempt #{attempt}/{attempt_max}"
+                )
+                attempt += 1
+                time.sleep(COUNT_POLLING_SLEEP)
+
+        raise ApiError(f"Non-int {response!r} for {path!r} on attempt #{attempt}/{attempt_max}")
 
     def _destroy(self, destroy: bool, history: bool) -> dict:  # pragma: no cover
         """Private API method to destroy ALL assets.

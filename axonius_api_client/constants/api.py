@@ -40,3 +40,9 @@ TIMEOUT_RESPONSE: int = 900
 
 DEFAULT_CALLBACKS_CLS: str = "base"
 """Default callback object to use"""
+
+COUNT_POLLING_ATTEMPTS: int = 1800
+"""Number of attempts count will retry."""
+
+COUNT_POLLING_SLEEP: int = 1
+"""Number of seconds sleep will wait between attempts."""
