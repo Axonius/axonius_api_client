@@ -27,8 +27,8 @@ class TestRemoteSupportPrivate(RemoteSupportBase):
         provision = data.pop("provision")
         assert isinstance(provision, bool)
 
-        timeout = data.pop("timeout")
-        assert isinstance(timeout, (str, type(None)))
+        timeout = data.pop("timeout", None)
+        assert isinstance(timeout, (str,)) or timeout is None
 
         troubleshooting = data.pop("troubleshooting")
         assert isinstance(troubleshooting, bool)

@@ -29,7 +29,7 @@ class TestRunActionPrivate(TestRunActionBase):
     # AND no task shows up in EC
     # BUT: Extended Data Tab shows stuff, but i dont know how to query for that yet
     def test_private_shell(self, apiobj, api_devices):
-        devices = api_devices._get(query=LINUX_QUERY, page_size=1, row_start=0)
+        devices = api_devices._get_cursor(query=LINUX_QUERY, page_size=1, row_start=0)
         ids = [x["internal_axon_id"] for x in devices["assets"]]
 
         if not ids:
@@ -52,7 +52,7 @@ class TestRunActionPrivate(TestRunActionBase):
 
     # returns nadda
     def test_private_upload_deploy(self, apiobj, api_devices, uploaded_file):
-        devices = api_devices._get(query=LINUX_QUERY, page_size=1, row_start=0)
+        devices = api_devices._get_cursor(query=LINUX_QUERY, page_size=1, row_start=0)
         ids = [x["internal_axon_id"] for x in devices["assets"]]
 
         if not ids:

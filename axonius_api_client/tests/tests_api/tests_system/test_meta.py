@@ -32,10 +32,10 @@ class TestSystemMetaPrivate(SystemMetaBase):
         assert isinstance(entity_sizes, dict)
 
         users = entity_sizes.pop("Users", {})
-        assert isinstance(users, dict)
+        assert isinstance(users, dict) or users is None
 
         devices = entity_sizes.pop("Devices", {})
-        assert isinstance(devices, dict)
+        assert isinstance(devices, dict) or users is None
         assert not entity_sizes
         assert not data
 
@@ -78,5 +78,5 @@ class TestSystemMetaPublic(SystemMetaBase):
         data = apiobj.historical_sizes()
         assert isinstance(data["disk_free_mb"], float)
         assert isinstance(data["disk_used_mb"], float)
-        assert isinstance(data["historical_sizes_devices"], dict)
-        assert isinstance(data["historical_sizes_users"], dict)
+        assert isinstance(data["historical_sizes_devices"], dict) or data["historical_sizes_devices"] is None
+        assert isinstance(data["historical_sizes_users"], dict) or data["historical_sizes_users"] is None
