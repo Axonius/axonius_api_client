@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 """Test suite for axonius_api_client.query_wizard."""
-import codecs
-
 import pytest
 
 from axonius_api_client.api.wizards import WizardCsv
@@ -525,9 +523,7 @@ class TestProcessCsv(TestWizardCsv):
 class TestLoadCsv(TestWizardCsv):
     def test_valid(self, wizard):
         simple = wizard.APIOBJ.FIELD_SIMPLE
-        bom = codecs.BOM_UTF8.decode()
         content = f"""
-{bom}
 {Entry.TYPE},{Entry.VALUE},{EntrySq.DESC},{EntrySq.TAGS},{EntrySq.FIELDS}
 "{Types.SAVED_QUERY}","badwolf","it is bad","tag1,tag2",""
 "{Types.SIMPLE}","{simple} contains boom",,,
@@ -561,9 +557,7 @@ class TestLoadCsv(TestWizardCsv):
 class TestParse(TestWizardCsv):
     def test_valid(self, wizard, tmp_path):
         simple = wizard.APIOBJ.FIELD_SIMPLE
-        bom = codecs.BOM_UTF8.decode()
         content = f"""
-{bom}
 {Entry.TYPE},{Entry.VALUE},{EntrySq.DESC},{EntrySq.TAGS},{EntrySq.FIELDS}
 "{Types.SAVED_QUERY}","badwolf","it is bad","tag1,tag2",""
 "{Types.SIMPLE}","{simple} contains boom",,,
