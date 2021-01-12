@@ -11,6 +11,7 @@ from ..constants.api import MAX_PAGE_SIZE
 from ..constants.logs import LOG_LEVEL_API, MAX_BODY_LEN
 from ..exceptions import JsonError, JsonInvalid, NotFoundError, ResponseNotOk
 from ..logs import get_obj_log
+from ..models import ApiResponse
 from ..tools import dt_now, dt_sec_ago, json_dump, json_load
 from .routers import Router
 
@@ -125,6 +126,33 @@ class ModelMixins(Model, PageSizeMixin):
         msgs = [error, *msgs, "", error]
 
         return "\n".join(msgs)
+
+    def request_model(
+        self,
+        path: str,
+        response_cls: ApiResponse,
+        method: str = "get",
+        **kwargs,
+    ):
+        """Pass."""
+        sargs = {}
+        sargs.update(kwargs)
+        sargs.update({"path": path, "method": method})
+
+        response = self.http(**sargs)
+        try:
+            data = response.json()
+        except Exception as exc:
+            respexc = JsonInvalid(
+                self._build_err_msg(
+                    response=response, error="REST response object is not valid JSON", exc=exc
+                )
+            )
+            respexc.exc = exc
+            respexc.response = response
+            raise respexc
+
+        return response_cls(**data)
 
     def request(
         self,

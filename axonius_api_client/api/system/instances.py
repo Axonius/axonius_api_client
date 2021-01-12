@@ -4,6 +4,7 @@ import datetime
 from typing import List, Optional, Union
 
 from ...exceptions import NotFoundError
+from ...models import FeatureFlags
 from ...parsers.system import parse_instances
 from ...tools import dt_days_left, dt_parse
 from ..mixins import ModelMixins
@@ -402,19 +403,19 @@ class Instances(ModelMixins):
         return self._restore(restore_type="aws", restore_opts=restore_opts)
 
     @property
-    def feature_flags(self) -> dict:
+    def feature_flags(self) -> FeatureFlags:
         """Get the feature flags for the core."""
         return self._feature_flags()
 
     @property
     def has_cloud_compliance(self) -> bool:
         """Get the status of cloud compliance module being enabled."""
-        return self.feature_flags["config"]["cloud_compliance"]["enabled"]
+        return self.feature_flags.config["cloud_compliance"]["enabled"]
 
     @property
     def trial_expiry(self) -> Optional[datetime.datetime]:
         """Get the trial expiration date."""
-        expiry = self.feature_flags["config"]["trial_end"]
+        expiry = self.feature_flags.config["trial_end"]
         return dt_parse(obj=expiry) if expiry else None
 
     @property
@@ -425,7 +426,7 @@ class Instances(ModelMixins):
     @property
     def license_expiry(self) -> Optional[datetime.datetime]:
         """Get the license expiration date."""
-        expiry = self.feature_flags["config"]["expiry_date"]
+        expiry = self.feature_flags.config["expiry_date"]
         return dt_parse(obj=expiry) if expiry else None
 
     @property
@@ -497,10 +498,10 @@ class Instances(ModelMixins):
         response = self.request(method="post", path=path, json=data, response_timeout=3600)
         return response
 
-    def _feature_flags(self) -> dict:
+    def _feature_flags(self) -> FeatureFlags:
         """Direct API method to get the feature flags for the core."""
         path = self.router.feature_flags
-        response = self.request(method="get", path=path)
+        response = self.request_model(method="get", path=path, response_cls=FeatureFlags)
         return response
 
     @property
