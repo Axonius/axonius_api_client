@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 """Test suite for axonapi.api.enforcements."""
+'''
+# XXX need to re-flush EC!
 import pytest
 
 # from axonius_api_client.exceptions import NotFoundError
@@ -44,7 +46,6 @@ class TestEnforcementsPublic(TestEnforcementsBase):
         # we can't test for length if there are no enforcements...
         # assert len(found) == 1
 
-    '''
     def test_create_get_delete(self, apiobj, api_users):
         try:
             old_found = apiobj.get_by_name(CREATE_EC_NAME, eq_single=False)
@@ -101,4 +102,4 @@ class TestEnforcementsPublic(TestEnforcementsBase):
 
         with pytest.raises(NotFoundError):
             apiobj.get_by_name(found["name"])
-    '''
+'''

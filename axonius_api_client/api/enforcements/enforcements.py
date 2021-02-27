@@ -1,13 +1,16 @@
 # -*- coding: utf-8 -*-
 """API for working with enforcements."""
-from typing import List, Optional
+from typing import Generator, List, Optional, Union
 
-from ...tools import listify
-from ..mixins import ModelMixins, PagingMixinsObject
-from ..routers import API_VERSION, Router
+from ...constants.api import MAX_PAGE_SIZE
+from ...exceptions import NotFoundError
+from ...parsers.tables import tablize
+from .. import json_api
+from ..api_endpoints import ApiEndpoints
+from ..mixins import ModelMixins
 
 
-class Enforcements(ModelMixins, PagingMixinsObject):  # pragma: no cover
+class Enforcements(ModelMixins):  # pragma: no cover
     """API working with enforcements.
 
     Notes:
@@ -15,20 +18,105 @@ class Enforcements(ModelMixins, PagingMixinsObject):  # pragma: no cover
         friendly. The current incarnation should be considered **BETA** until such time.
     """
 
-    def delete(self, rows: List[dict]) -> str:  # pragma: no cover
-        """Delete an enforcement by name."""
-        return self._delete(ids=[x["uuid"] for x in listify(obj=rows, dictkeys=False)])
+    def get(
+        self, generator: bool = False
+    ) -> Union[
+        Generator[json_api.enforcements.EnforcementDetails, None, None], List[dict]
+    ]:  # pragma: no cover
+        """Get Enforcements.
 
-    @property
-    def router(self) -> Router:
-        """Router for this API model."""  # pragma: no cover
-        return API_VERSION.alerts
+        Args:
+            generator: return an iterator for objects that will yield rows as they are fetched
 
-    def _delete(self, ids: List[str]) -> str:  # pragma: no cover
-        """Delete objects by internal axonius IDs."""
-        path = self.router.root
+        """
+        gen = self.get_generator()
+        return gen if generator else list(gen)
 
-        return self.request(method="delete", path=path, json=ids)
+    def get_generator(
+        self,
+    ) -> Generator[json_api.enforcements.EnforcementDetails, None, None]:  # pragma: no cover
+        """Get Axonius system users using a generator."""
+        offset = 0
+
+        while True:
+            rows = self._get(offset=offset)
+            offset += len(rows)
+
+            if not rows:
+                break
+
+            for row in rows:
+                yield row
+
+    def get_by_name(
+        self, value: str
+    ) -> json_api.enforcements.EnforcementDetails:  # pragma: no cover
+        """Get an enforcement by name.
+
+        Args:
+            value: object name
+
+        Raises:
+            :exc:`NotFoundError`: if not found
+        """
+        data = self.get()
+        found = [x for x in data if x.name == value]
+        if found:
+            return found[0]
+
+        err = f"Enforcement with name of {value!r} not found"
+        raise NotFoundError(tablize(value=[x.to_tablize() for x in data], err=err))
+
+    def get_by_uuid(
+        self, value: str
+    ) -> json_api.enforcements.EnforcementDetails:  # pragma: no cover
+        """Get an enforcement by uuid.
+
+        Raises:
+            :exc:`NotFoundError`: if user not found
+        """
+        data = self.get()
+        found = [x for x in data if x.uuid == value]
+        if found:
+            return found[0]
+
+        err = f"Enforcement with uuid of {value!r} not found"
+        raise NotFoundError(tablize(value=[x.to_tablize() for x in data], err=err))
+
+    # def create(self, name: str, action_name: str, action_type: str, action_config: dict):
+    #     """Pass."""
+    #     enforcements = self.get()
+    #     for enforcement in enforcements:
+    #         if enforcement.name == name:
+    #             raise ApiError(f"Enforcement with name {name!r} already exists:\n{enforcement}")
+
+    #     action_types = self.get_action_types()
+    #     found_action_type = None
+    #     for action_type in action_types:
+    #         if action_type.name == action_type:
+    #             found_action_type = action_type
+
+    #     if not found_action_type:
+    #         valid = "\n".join([x.name for x in action_types])
+    #         msg = f"No action type {action_type!r} found, valid action types:\n{valid}"
+    #         raise NotFoundError(msg)
+
+    #     # TODO: parse action config according to found_action.schema
+
+    #     main = {
+    #         "name": action_name,
+    #         "action": {"action_name": action_type, "config": action_config},
+    #     }
+    #     return self._create(name=name, main=main)
+
+    def get_action_types(self) -> List[json_api.enforcements.Action]:  # pragma: no cover
+        """Pass."""
+        return self._get_action_types()
+
+    def _get_action_types(self) -> List[json_api.enforcements.Action]:  # pragma: no cover
+        """Pass."""
+        api_endpoint = ApiEndpoints.enforcements.get_action_types
+        return api_endpoint.perform_request(http=self.auth.http)
 
     def _create(
         self,
@@ -49,25 +137,25 @@ class Enforcements(ModelMixins, PagingMixinsObject):  # pragma: no cover
             post: post actions
             triggers: saved query trigger
         """
-        data = {}
-        data["name"] = name
-        data["actions"] = {}
-        data["actions"]["main"] = main
-        data["actions"]["success"] = success or []
-        data["actions"]["failure"] = failure or []
-        data["actions"]["post"] = post or []
-        data["triggers"] = triggers or []
+        actions = {
+            "main": main,
+            "success": success or [],
+            "failure": failure or [],
+            "post": post or [],
+        }
+        api_endpoint = ApiEndpoints.enforcements.create
+        request_obj = api_endpoint.load_request(name=name, actions=actions, triggers=triggers or [])
+        return api_endpoint.perform_request(http=self.auth.http, request_obj=request_obj)
 
-        path = self.router.root
-        return self.request(method="put", path=path, json=data, is_json=False)
+    def _get(
+        self, limit: int = MAX_PAGE_SIZE, offset: int = 0
+    ) -> List[json_api.enforcements.EnforcementDetails]:
+        """Direct API method to get enforcements.
 
-    def _get(self, query: Optional[str] = None, row_start: int = 0, page_size: int = 0) -> dict:
-        """Get a page of enforcements."""
-        params = {}
-        params["skip"] = row_start
-        params["limit"] = page_size
-        params["filter"] = query
-
-        path = self.router.root
-
-        return self.request(method="get", path=path, params=params)
+        Args:
+            limit: limit to N rows per page
+            offset: start at row N
+        """
+        api_endpoint = ApiEndpoints.enforcements.get
+        request_obj = api_endpoint.load_request(page={"limit": limit, "offset": offset})
+        return api_endpoint.perform_request(http=self.auth.http, request_obj=request_obj)

@@ -6,16 +6,9 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 from cachetools import TTLCache, cached
 
 from ..exceptions import WizardError
-from ..tools import (
-    check_empty,
-    check_type,
-    coerce_int_float,
-    coerce_str_to_csv,
-    dt_parse_tmpl,
-    get_raw_version,
-    parse_ip_address,
-    parse_ip_network,
-)
+from ..tools import (check_empty, check_type, coerce_int_float,
+                     coerce_str_to_csv, dt_parse_tmpl, get_raw_version,
+                     parse_ip_address, parse_ip_network)
 
 CACHE: TTLCache = TTLCache(maxsize=1024, ttl=30)
 
@@ -403,16 +396,8 @@ class WizardParser:
 
     def _adapter_names(self) -> Dict[str, str]:
         """Get all known adapter names."""
-        return {x["name"]: x["name_raw"] for x in self._adapters() if x["cnx"]}
+        return {x["name"]: x["name_raw"] for x in self._adapters() if x["cnx_count_total"]}
 
     def _cnx_labels(self) -> List[str]:
         """Get all known adapter connection labels."""
-        value = []
-        for adapter in self._adapters():
-            for cnx in adapter["cnx"]:
-                config = cnx.get("config", {})
-                label = config.get("connection_label", "")
-                value.append(label)
-
-        value = list(set([x for x in value if x]))
-        return value
+        return self.apiobj.adapters._get_labels().label_values

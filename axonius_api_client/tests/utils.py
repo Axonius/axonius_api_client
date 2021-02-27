@@ -8,14 +8,13 @@ import sys
 from io import StringIO
 
 import pytest
-from cachetools import TTLCache, cached
-from click.testing import CliRunner
-
 from axonius_api_client import Wizard, api, auth
 from axonius_api_client.cli.context import Context
 from axonius_api_client.constants.fields import AGG_ADAPTER_NAME
 from axonius_api_client.http import Http
 from axonius_api_client.tools import listify
+from cachetools import TTLCache, cached
+from click.testing import CliRunner
 
 IS_WINDOWS = sys.platform == "win32"
 IS_LINUX = sys.platform == "linux"
@@ -114,18 +113,9 @@ def log_check(caplog, entries, exists=True):
 
 
 #
-def get_cnx_existing(apiobj, name=None):
+def get_cnx_existing(apiobj, name=None, reqkeys=None):
     """Test utility."""
-    found = None
-    adapters = apiobj.get()
-    for adapter in adapters:
-        if name and adapter["name"] != name:
-            continue
-        cnxs = adapter["cnx"]
-        for cnx in cnxs:
-            found = cnxs[0]
-            found["schemas"] = adapter["schemas"]["cnx"]
-            break
+    found = get_cnx(apiobj=apiobj, name=name, reqkeys=reqkeys)
 
     if not found:
         pytest.skip("No connections found for any adapter!")
@@ -134,52 +124,58 @@ def get_cnx_existing(apiobj, name=None):
 
 def get_cnx_working(apiobj, name=None, reqkeys=None):
     """Test utility."""
-    problem_children = [
+    problems = [
         "symantec_altiris",  # AX-7165
     ]
-    reqkeys = reqkeys or []
-
-    found = None
-    adapters = apiobj.get()
-    for adapter in adapters:
-        if name and adapter["name"] != name:
-            continue
-        if adapter["name"] in problem_children:
-            continue
-        schema = adapter["schemas"]["cnx"]
-
-        if reqkeys and not [x for x in reqkeys if x in schema]:
-            continue
-
-        cnxs = adapter["cnx"]
-        for cnx in cnxs:
-            if cnx["working"]:
-                found = cnxs[0]
-                found["schemas"] = schema
-                break
+    found = get_cnx(
+        apiobj=apiobj, cntkey="success_count", name=name, reqkeys=reqkeys, problems=problems
+    )
 
     if not found:
         pytest.skip("No working connections found for any adapter!")
     return found
 
 
-def get_cnx_broken(apiobj, name=None):
+def get_cnx_broken(apiobj, name=None, reqkeys=None):
     """Test utility."""
-    found = None
-    adapters = apiobj.get()
-    for adapter in adapters:
-        if name and adapter["name"] != name:
-            continue
-        cnxs = adapter["cnx"]
-        for cnx in cnxs:
-            if not cnx["working"]:
-                found = cnxs[0]
-                found["schemas"] = adapter["schemas"]["cnx"]
-                break
+    found = get_cnx(apiobj=apiobj, cntkey="error_count", name=name, reqkeys=reqkeys)
 
     if not found:
         pytest.skip("No broken connections found for any adapter!")
     return found
+
+
+def get_cnx(apiobj, cntkey="total_count", name=None, reqkeys=None, problems=None):
+    """Pass."""
+    adapters = apiobj._get(get_clients=False)
+    reqkeys = reqkeys or []
+    problems = problems or []
+
+    for adapter in adapters:
+        for adapter_node in adapter.adapter_nodes:
+            if name and adapter_node.adapter_name != name:
+                continue
+
+            if cntkey and not getattr(adapter_node.clients_count, cntkey):
+                continue
+
+            if problems and adapter_node.adapter_name in problems:
+                continue
+
+            cnxs = apiobj.cnx._get(adapter_name=adapter_node.adapter_name_raw)
+
+            has_req = all([x in cnxs.schema_cnx for x in reqkeys])
+            if not has_req:
+                continue
+
+            for cnx in cnxs.cnxs:
+                if cntkey == "total_count":
+                    return cnx.to_dict_old()
+                if cntkey == "success_count" and cnx.working:
+                    return cnx.to_dict_old()
+                if cntkey == "error_count" and not cnx.working:
+                    return cnx.to_dict_old()
+    return None
 
 
 def get_url(request):
@@ -214,7 +210,6 @@ def check_apiobj(authobj, apiobj):
 
     assert isinstance(apiobj.auth, auth.Model)
     assert isinstance(apiobj.http, Http)
-    assert isinstance(apiobj.router, api.routers.Router)
 
 
 def check_apiobj_children(apiobj, **kwargs):
@@ -228,7 +223,6 @@ def check_apiobj_children(apiobj, **kwargs):
 
         assert isinstance(attr.auth, auth.Model)
         assert isinstance(attr.http, Http)
-        assert isinstance(attr.router, api.routers.Router)
         assert isinstance(attr.parent, api.mixins.Model)
         assert attrclsname in format(attr)
         assert attrclsname in repr(attr)

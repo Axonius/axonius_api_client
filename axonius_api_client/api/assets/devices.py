@@ -3,7 +3,6 @@
 import ipaddress
 from typing import Generator, List, Union
 
-from ..routers import API_VERSION, Router
 from .asset_mixin import AssetMixin
 
 
@@ -30,6 +29,8 @@ class Devices(AssetMixin):
         * User assets :obj:`axonius_api_client.api.assets.users.Users`
     """
 
+    ASSET_TYPE: str = "devices"
+
     @property
     def fields_default(self) -> List[str]:
         """Fields to use by default for getting assets."""
@@ -43,11 +44,6 @@ class Devices(AssetMixin):
             self.FIELD_OS_TYPE,
             self.FIELD_TAGS,
         ]
-
-    @property
-    def router(self) -> Router:
-        """Router for this API model."""
-        return API_VERSION.devices
 
     def get_by_hostnames(
         self, values: List[str], **kwargs

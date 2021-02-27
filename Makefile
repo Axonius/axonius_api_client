@@ -100,7 +100,6 @@ test:
 	pipenv run pytest \
 		-ra \
 		-vv \
-		--showlocals \
 		--exitfirst \
 		--pdb \
 		--cov-config=.coveragerc \
@@ -113,7 +112,6 @@ test_last:
 	pipenv run pytest \
 		-ra \
 		-vv \
-		--showlocals \
 		--exitfirst \
 		--last-failed \
 		--pdb \

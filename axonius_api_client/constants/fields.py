@@ -170,6 +170,7 @@ class Formats(BaseEnum):
     connection_label = enum.auto()
     ip_preferred = enum.auto()
     os_distribution = "os-distribution"
+    dynamic_field = enum.auto()
 
 
 @dataclasses.dataclass
@@ -714,6 +715,12 @@ class OperatorTypeMaps(BaseData):
         items = field.get("items") or {}
         itype = items.get("type")
         iformat = items.get("format")
+
+        if fformat == Formats.dynamic_field.value:
+            fformat = None
+
+        if iformat == Formats.dynamic_field.value:
+            iformat = None
 
         attrs = {
             "field_type": ftype,

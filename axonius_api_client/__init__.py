@@ -36,19 +36,16 @@ try:
     from . import api, auth, cli, constants, data, exceptions, http, logs, tools
     from .api import (
         Adapters,
-        CentralCore,
         Cnx,
         Dashboard,
         Devices,
         Enforcements,
         Instances,
         Meta,
-        RunAction,
         SettingsGlobal,
         SettingsGui,
         SettingsLifecycle,
         Signup,
-        System,
         SystemRoles,
         SystemUsers,
         Users,
@@ -56,8 +53,8 @@ try:
         WizardCsv,
         WizardText,
         RemoteSupport,
-        routers,
         ActivityLogs,
+        ApiEndpoints,
     )
     from .auth import ApiKey
     from .connect import Connect
@@ -77,7 +74,6 @@ __all__ = (
     "ApiKey",
     # API
     "Adapters",
-    "CentralCore",
     "Cnx",
     "Dashboard",
     "Devices",
@@ -85,12 +81,10 @@ __all__ = (
     "Instances",
     "Meta",
     "RemoteSupport",
-    "RunAction",
     "SettingsGlobal",
     "SettingsGui",
     "SettingsLifecycle",
     "Signup",
-    "System",
     "SystemRoles",
     "SystemUsers",
     "Users",
@@ -101,6 +95,7 @@ __all__ = (
     "WizardText",
     "WizardText",
     "ActivityLogs",
+    "ApiEndpoints",
     # modules
     "api",
     "auth",
@@ -112,5 +107,4 @@ __all__ = (
     "logs",
     "tools",
     "version",
-    "routers",
 )

@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
 """API model mixin for device and user assets."""
-import math
 import time
 from datetime import datetime, timedelta
 from typing import Generator, List, Optional, Union
 
-from ...constants.api import (COUNT_POLLING_ATTEMPTS, COUNT_POLLING_SLEEP,
-                              DEFAULT_CALLBACKS_CLS, MAX_PAGE_SIZE, PAGE_SIZE)
-from ...exceptions import ApiError, JsonError, NotFoundError
-from ...tools import dt_now, dt_parse_tmpl, dt_sec_ago, json_dump, listify
+from ...constants.api import DEFAULT_CALLBACKS_CLS, MAX_PAGE_SIZE, PAGE_SIZE
+from ...exceptions import ApiError, NotFoundError, ResponseNotOk, StopFetch
+from ...tools import dt_now, json_dump, listify
+from .. import json_api
+from ..api_endpoints import ApiEndpoints
 from ..asset_callbacks.tools import get_callbacks_cls
 from ..mixins import ModelMixins
 from ..wizards import Wizard, WizardCsv, WizardText
@@ -41,11 +41,13 @@ class AssetMixin(ModelMixins):
 
     """
 
+    ASSET_TYPE: str = ""
+
     def count(
         self,
         query: Optional[str] = None,
         history_date: Optional[Union[str, timedelta, datetime]] = None,
-        wiz_entries: Optional[List[dict]] = None,
+        wiz_entries: Optional[Union[List[dict], List[str], dict, str]] = None,
     ) -> int:
         """Get the count of assets from a query.
 
@@ -75,9 +77,20 @@ class AssetMixin(ModelMixins):
             wiz_entries: wizard expressions to create query from
 
         """
-        query = self.wizard.parse(entries=wiz_entries)["query"] if wiz_entries else query
-        history_date = self.validate_history_date(value=history_date)
-        return self._count(query=query, history_date=history_date)
+        wiz_parsed = self._handle_wiz_entries(wiz_entries=wiz_entries)
+
+        if wiz_parsed:
+            query = wiz_parsed["query"]
+
+        value = None
+        use_cache_entry = False
+        while value is None:
+            value = self._count(
+                filter=query, history=history_date, use_cache_entry=use_cache_entry
+            ).value
+            use_cache_entry = True
+
+        return value
 
     def count_by_saved_query(
         self, name: str, history_date: Optional[Union[str, timedelta, datetime]] = None
@@ -98,9 +111,8 @@ class AssetMixin(ModelMixins):
             history_date: return count for a given historical date
         """
         sq = self.saved_query.get_by_name(value=name)
-        history_date = self.validate_history_date(value=history_date)
         query = sq["view"]["query"]["filter"]
-        return self._count(query=query, history_date=history_date)
+        return self.count(query=query, history_date=history_date)
 
     def get(
         self, generator: bool = False, **kwargs
@@ -180,6 +192,27 @@ class AssetMixin(ModelMixins):
         gen = self.get_generator(**kwargs)
         return gen if generator else list(gen)
 
+    def _handle_wiz_entries(
+        self, wiz_entries: Optional[Union[List[dict], List[str], dict, str]] = None
+    ) -> Optional[dict]:
+        """Pass."""
+        if not wiz_entries:
+            return None
+
+        if isinstance(wiz_entries, dict):
+            wiz_entries = [wiz_entries]
+
+        if isinstance(wiz_entries, (list, tuple)):
+            if all([isinstance(x, dict) for x in wiz_entries]):
+                return self.wizard.parse(entries=wiz_entries)
+            if all([isinstance(x, str) for x in wiz_entries]):
+                return self.wizard_text.parse(content=wiz_entries)
+
+        if isinstance(wiz_entries, str):
+            return self.wizard_text.parse(content=wiz_entries)
+
+        raise ApiError("wiz_entries must be a single or list of dict or str")
+
     def get_generator(
         self,
         query: Optional[str] = None,
@@ -195,13 +228,13 @@ class AssetMixin(ModelMixins):
         page_size: int = MAX_PAGE_SIZE,
         page_start: int = 0,
         page_sleep: int = 0,
-        use_cursor: bool = True,
         export: str = DEFAULT_CALLBACKS_CLS,
+        include_notes: bool = False,
         include_details: bool = False,
         sort_field: Optional[str] = None,
         sort_descending: bool = False,
         history_date: Optional[Union[str, timedelta, datetime]] = None,
-        wiz_entries: Optional[List[dict]] = None,
+        wiz_entries: Optional[Union[List[dict], List[str], dict, str]] = None,
         **kwargs,
     ) -> Generator[dict, None, None]:
         """Get assets from a query.
@@ -220,7 +253,6 @@ class AssetMixin(ModelMixins):
             page_size: fetch N rows per page
             page_start: start at page N
             page_sleep: sleep for N seconds between each page fetch
-            use_cursor: use the endpoint that fetches rows using a DB cursor
             export: export assets using a callback method
             include_details: include details fields showing the adapter source of agg values
             sort_field: sort the returned assets on a given field
@@ -229,8 +261,10 @@ class AssetMixin(ModelMixins):
             wiz_entries: wizard expressions to create query from
             **kwargs: passed thru to the asset callback defined in ``export``
         """
-        query = self.wizard.parse(entries=wiz_entries)["query"] if wiz_entries else query
-        page_size = self._get_page_size(page_size=page_size, max_rows=max_rows)
+        wiz_parsed = self._handle_wiz_entries(wiz_entries=wiz_entries)
+
+        if wiz_parsed:
+            query = wiz_parsed["query"]
 
         fields = self.fields.validate(
             fields=fields,
@@ -244,99 +278,73 @@ class AssetMixin(ModelMixins):
         if sort_field:
             sort_field = self.fields.get_field_name(value=sort_field)
 
-        history_date = self.validate_history_date(value=history_date)
-
         store = {
             "query": query,
             "fields": fields,
             "include_details": include_details,
+            "include_notes": include_notes,
             "sort_field": sort_field,
             "sort_descending": sort_descending,
             "history_date": history_date,
         }
 
-        state = {
-            "max_pages": max_pages,
-            "max_rows": max_rows,
-            "use_cursor": True,
-            "page_cursor": None,
-            "page_sleep": page_sleep,
-            "page_size": page_size,
-            "page_number": page_start or 1,
-            "page_start": page_start,
-            "pages_to_fetch_left": None,
-            "pages_to_fetch_total": None,
-            "rows_to_fetch_left": None,
-            "rows_to_fetch_total": None,
-            "rows_fetched_this_page": None,
-            "rows_fetched_total": page_start * page_size if page_start else row_start,
-            "rows_processed_total": 0,
-            "fetch_seconds_total": 0,
-            "fetch_seconds_this_page": None,
-            "stop_fetch": False,
-            "stop_msg": None,
-        }
+        initial_count = self.count(query=query, history_date=history_date)
+
+        state = json_api.assets.AssetsPage.create_state(
+            max_pages=max_pages,
+            max_rows=max_rows,
+            page_sleep=page_sleep,
+            page_size=page_size,
+            page_start=page_start,
+            row_start=row_start,
+            initial_count=initial_count,
+        )
 
         callbacks_cls = get_callbacks_cls(export=export)
         callbacks = callbacks_cls(apiobj=self, getargs=kwargs, state=state, store=store)
         self.LAST_CALLBACKS = callbacks
-
         callbacks.start()
 
         self.LOG.info(f"STARTING FETCH store={json_dump(store)}")
         self.LOG.debug(f"STARTING FETCH state={json_dump(state)}")
 
         while not state["stop_fetch"]:
-            if state["use_cursor"]:
-                page = self._page_cursor(state=state, store=store)
-            else:
-                page = self._page_normal(state=state, store=store)
+            try:
+                start_dt = dt_now()
 
-            rows = page.pop("assets")
+                page = self._get(
+                    include_details=store["include_details"],
+                    include_notes=store["include_notes"],
+                    sort=store["sort_field"],
+                    sort_descending=store["sort_descending"],
+                    history=store["history_date"],
+                    filter=store["query"],
+                    fields=store["fields"],
+                    cursor_id=state["page_cursor"],
+                    offset=state["rows_offset"],
+                    limit=state["page_size"],
+                    always_cached_query=False,
+                    use_cache_entry=False,
+                    get_metadata=True,
+                    use_cursor=True,
+                    excluded_adapters={},
+                    field_filters={},
+                )
 
-            self.LOG.debug(f"FETCHED PAGE: {json_dump(page)}")
-            self.LOG.debug(f"CURRENT PAGING STATE: {json_dump(state)}")
+                state = page.process_page(state=state, start_dt=start_dt, apiobj=self)
 
-            if not rows:
-                stop_msg = "no more rows returned"
-                state["stop_fetch"] = True
-                state["stop_msg"] = stop_msg
-                self.LOG.debug(f"STOPPED FETCH: {stop_msg}")
+                for row in page.assets:
+                    yield from listify(obj=callbacks.process_row(row=row))
+                    state = page.process_row(state=state, apiobj=self)
+
+                state = page.process_loop(state=state, apiobj=self)
+
+                time.sleep(state["page_sleep"])
+            except StopFetch as exc:
+                self.LOG.debug(f"Received {type(exc)}: {exc.reason}")
                 break
 
-            for row in rows:
-                proc_rows = callbacks.process_row(row=row)
-
-                for proc_row in listify(obj=proc_rows):
-                    yield proc_row
-
-                if state["stop_fetch"]:  # pragma: no cover
-                    break
-
-                if state["max_rows"] and state["rows_processed_total"] >= state["max_rows"]:
-                    stop_msg = "'rows_processed_total' greater than 'max_rows'"
-                    state["stop_msg"] = stop_msg
-                    state["stop_fetch"] = True
-                    break
-
-            if state["stop_fetch"]:
-                stop_msg = state["stop_msg"]
-                self.LOG.debug(f"STOPPED FETCH: {stop_msg}")
-                break
-
-            if state["max_pages"] and state["page_number"] >= state["max_pages"]:
-                stop_msg = "'page_number' greater than 'max_pages'"
-                state["stop_msg"] = stop_msg
-                state["stop_fetch"] = True
-                self.LOG.debug(f"STOPPED FETCH: {stop_msg}")
-                break
-
-            if state["use_cursor"]:
-                state["page_number"] += 1
-
-            time.sleep(state["page_sleep"])
-
-        self.LOG.info(f"FINISHED FETCH store={store}")
+        self.LOG.info(f"FINISHED FETCH store={json_dump(store)}")
         self.LOG.debug(f"FINISHED FETCH state={json_dump(state)}")
 
         callbacks.stop()
@@ -384,11 +392,13 @@ class AssetMixin(ModelMixins):
 
         """
         try:
-            return self._get_by_id(id=id)
-        except JsonError:
-            otype = self.router.OBJ_TYPE
-            msg = f"Failed to find internal_axon_id {id!r} for {otype}"
-            raise NotFoundError(msg)
+            return self._get_by_id(id=id).asset
+        except ResponseNotOk as exc:
+            if exc.response.status_code == 404:
+                asset_type = self.ASSET_TYPE
+                msg = f"Failed to find {asset_type} asset with internal_axon_id of {id!r}"
+                raise NotFoundError(msg)
+            raise
 
     @property
     def fields_default(self) -> List[dict]:
@@ -529,31 +539,7 @@ class AssetMixin(ModelMixins):
 
     def history_dates(self) -> dict:
         """Get all known historical dates."""
-        return self._history_dates()
-
-    def validate_history_date(self, value: Union[str, timedelta, datetime]) -> str:
-        """Validate that a given date is known historical date.
-
-        Args:
-            value: date time to validate
-
-        Raises:
-            :exc:`ApiError`: if supplied value is not an available history date to pick from
-        """
-        if not value:
-            return None
-
-        dt = dt_parse_tmpl(obj=value)
-
-        known_dates = self.history_dates()
-        if dt not in known_dates:
-            expl = "known history dates"
-            known = "\n  " + "\n  ".join(list(known_dates))
-            err = f"Unknown history date {dt!r}"
-            msg = f"{err}, {expl}: {known}\n{err}, see above for {expl}"
-            raise ApiError(msg)
-
-        return known_dates[dt]
+        return self._history_dates().value[self.ASSET_TYPE]
 
     def _build_query(
         self, inner: str, not_flag: bool = False, pre: str = "", post: str = ""
@@ -618,134 +604,26 @@ class AssetMixin(ModelMixins):
 
         super(AssetMixin, self)._init(**kwargs)
 
-    def _page_cursor(self, state: dict, store: dict) -> dict:
-        """Get a page of assets using the cursor get method.
-
-        Args:
-            state: current state tracker of :meth:`get`
-            store: current store tracker of :meth:`get`
-        """
-        page_start_dt = dt_now()
-
-        page = self._get_cursor(
-            query=store["query"],
-            fields=store["fields"],
-            row_start=state["rows_fetched_total"],
-            page_size=state["page_size"],
-            cursor=state["page_cursor"],
-            include_details=store["include_details"],
-            sort_field=store["sort_field"],
-            sort_descending=store["sort_descending"],
-            history_date=store["history_date"],
-        )
-
-        state["fetch_seconds_this_page"] = dt_sec_ago(obj=page_start_dt, exact=True)
-        state["fetch_seconds_total"] += state["fetch_seconds_this_page"]
-
-        # only first page has totalResources with integer when cursor paging!!
-        rows_to_fetch_total = page["page"]["totalResources"]
-
-        if rows_to_fetch_total is not None:
-            state["rows_to_fetch_total"] = rows_to_fetch_total
-
-        state["rows_fetched_this_page"] = len(page["assets"])
-        state["rows_fetched_total"] += state["rows_fetched_this_page"]
-        state["rows_to_fetch_left"] = state["rows_to_fetch_total"] - state["rows_fetched_total"]
-        state["pages_to_fetch_total"] = math.ceil(state["rows_to_fetch_total"] / state["page_size"])
-        state["pages_to_fetch_left"] = math.ceil(state["rows_to_fetch_left"] / state["page_size"])
-
-        state["page_cursor"] = page.get("cursor")
-        return page
-
-    def _page_normal(self, state: dict, store: dict) -> dict:
-        """Get a page of assets using the normal get method.
-
-        Args:
-            state: current state tracker of :meth:`get`
-            store: current store tracker of :meth:`get`
-        """
-        page_start_dt = dt_now()
-
-        page = self._get(
-            query=store["query"],
-            fields=store["fields"],
-            row_start=state["rows_fetched_total"],
-            page_size=state["page_size"],
-            include_details=store["include_details"],
-            sort_field=store["sort_field"],
-            sort_descending=store["sort_descending"],
-            history_date=store["history_date"],
-        )
-
-        state["fetch_seconds_this_page"] = dt_sec_ago(obj=page_start_dt, exact=True)
-        state["fetch_seconds_total"] += state["fetch_seconds_this_page"]
-
-        state["rows_to_fetch_total"] = page["page"]["totalResources"]
-        state["rows_fetched_this_page"] = len(page["assets"])
-        state["rows_fetched_total"] += state["rows_fetched_this_page"]
-        state["rows_to_fetch_left"] = state["rows_to_fetch_total"] - state["rows_fetched_total"]
-        state["page_number"] = page["page"]["number"]
-        state["pages_to_fetch_total"] = page["page"]["totalPages"]
-        state["pages_to_fetch_left"] = state["pages_to_fetch_total"] - state["page_number"]
-        return page
-
     def _get(
         self,
-        query: Optional[str] = None,
-        fields: Optional[Union[List[str], str]] = None,
-        row_start: int = 0,
-        page_size: int = PAGE_SIZE,
+        always_cached_query: bool = False,
+        use_cache_entry: bool = False,
         include_details: bool = False,
-        history_date: Optional[str] = None,
-        sort_field: Optional[str] = None,
+        include_notes: bool = False,
+        get_metadata: bool = True,
+        use_cursor: bool = True,
         sort_descending: bool = False,
-    ) -> dict:
+        history: Optional[str] = None,
+        filter: Optional[str] = None,
+        cursor_id: Optional[str] = None,
+        sort: Optional[str] = None,
+        excluded_adapters: Optional[dict] = None,
+        field_filters: Optional[dict] = None,
+        fields: Optional[dict] = None,
+        offset: int = 0,
+        limit: int = PAGE_SIZE,
+    ) -> json_api.assets.AssetsPage:
         """Private API method to get a page of assets.
-
-        Args:
-            query: if supplied, only return the assets that match the query
-            fields: CSV or list of fields to include in return
-            row_start: start at row N
-            page_size: fetch N assets
-            include_details: include details fields showing the adapter source of agg values
-            sort_field: sort the returned assets on a given field
-            sort_descending: reverse the sort of the returned assets
-            history_date: return assets for a given historical date
-        """
-        page_size = self._get_page_size(page_size=page_size, max_rows=None)
-
-        params = {}
-        params["skip"] = row_start
-        params["limit"] = page_size
-        params["include_details"] = include_details
-        params["history"] = history_date
-        params["sort"] = sort_field
-        params["desc"] = "1" if sort_descending else None
-        params["filter"] = query
-
-        if fields:
-            if isinstance(fields, list):
-                fields = ",".join(fields)
-
-            params["fields"] = fields
-
-        self.LAST_GET: dict = params
-
-        return self.request(method="post", path=self.router.root, json=params)
-
-    def _get_cursor(
-        self,
-        query: Optional[str] = None,
-        fields: Optional[Union[List[str], str]] = None,
-        row_start: int = 0,
-        page_size: int = PAGE_SIZE,
-        cursor: Optional[str] = None,
-        include_details: bool = False,
-        history_date: Optional[str] = None,
-        sort_field: Optional[str] = None,
-        sort_descending: bool = False,
-    ) -> dict:
-        """Private API method to get a page of assets using a cursor.
 
         Args:
             query: if supplied, only return the assets that match the query
@@ -758,76 +636,75 @@ class AssetMixin(ModelMixins):
             history_date: return assets for a given historical date
             cursor: cursor returned by previous call to continue paging through
         """
-        page_size = self._get_page_size(page_size=page_size, max_rows=None)
+        asset_type = self.ASSET_TYPE
+        api_endpoint = ApiEndpoints.assets.get
+        request_obj = api_endpoint.load_request(
+            always_cached_query=always_cached_query,
+            use_cache_entry=use_cache_entry,
+            include_details=include_details,
+            include_notes=include_notes,
+            get_metadata=get_metadata,
+            use_cursor=use_cursor,
+            filter=filter,
+            cursor_id=cursor_id,
+            sort=sort,
+            excluded_adapters=excluded_adapters,
+            field_filters=field_filters,
+        )
+        request_obj.set_fields(fields=fields, asset_type=self.ASSET_TYPE)
+        request_obj.set_sort(field=sort, descending=sort_descending, asset_type=asset_type)
+        request_obj.set_page(limit=limit, offset=offset)
 
-        params = {}
-        params["cursor"] = cursor
-        params["skip"] = row_start
-        params["limit"] = page_size
-        params["include_details"] = include_details
-        params["history"] = history_date
-        params["sort"] = sort_field
-        params["desc"] = "1" if sort_descending else None
-        params["filter"] = query
+        if history:
+            request_obj.set_history(
+                history=history, history_dates=self._history_dates(), asset_type=asset_type
+            )
 
-        if fields:
-            if isinstance(fields, list):
-                fields = ",".join(fields)
+        self.LAST_GET_REQUEST_OBJ = request_obj
+        self.LAST_GET = request_obj.to_dict()
+        return api_endpoint.perform_request(
+            http=self.auth.http, request_obj=request_obj, asset_type=asset_type
+        )
 
-            params["fields"] = fields
-
-        self.LAST_GET: dict = params
-        return self.request(method="post", path=self.router.cached, json=params)
-
-    def _get_by_id(self, id: str) -> dict:
+    def _get_by_id(self, id: str) -> json_api.assets.AssetById:
         """Private API method to get the full metadata of all adapters for a single asset.
 
         Args:
-            id: internal_axon_id of asset to get all metadata for
+            id: asset to get all metadata for
         """
-        path = self.router.by_id.format(id=id)
-        return self.request(method="get", path=path)
+        asset_type = self.ASSET_TYPE
+        api_endpoint = ApiEndpoints.assets.get_by_id
+        return api_endpoint.perform_request(
+            http=self.auth.http, asset_type=asset_type, internal_axon_id=id
+        )
 
     def _count(
         self,
-        query: Optional[str] = None,
-        history_date: Optional[str] = None,
-    ) -> int:
+        filter: Optional[str] = None,
+        history: Optional[str] = None,
+        use_cache_entry: bool = False,
+    ) -> json_api.assets.Count:
         """Private API method to get the count of assets.
 
         Args:
-            query: if supplied, only return the count of assets that match the query
-            history_date: return count for a given historical date
+            filter: if supplied, only return the count of assets that match the query
+            history: return count for a given historical date
         """
+        asset_type = self.ASSET_TYPE
+        api_endpoint = ApiEndpoints.assets.count
+        request_obj = api_endpoint.load_request(
+            use_cache_entry=use_cache_entry,
+            filter=filter,
+        )
 
-        params = {}
-        params["filter"] = query
-        params["history"] = history_date
-
-        attempt = 0
-        attempt_max = COUNT_POLLING_ATTEMPTS
-        path = self.router.count
-        response = None
-
-        while attempt <= attempt_max:
-            response = self.request(
-                method = "post",
-                path = path,
-                json = params,
-                error_json_bad_status = False,
-                error_json_invalid = False,
+        if history:
+            request_obj.set_history(
+                history=history, history_dates=self._history_dates(), asset_type=asset_type
             )
 
-            try:
-                return int(response)
-            except Exception:
-                self.LOG.debug(
-                    f"Non-int {response!r} from {path!r} on attempt #{attempt}/{attempt_max}"
-                )
-                attempt += 1
-                time.sleep(COUNT_POLLING_SLEEP)
-
-        raise ApiError(f"Non-int {response!r} for {path!r} on attempt #{attempt}/{attempt_max}")
+        return api_endpoint.perform_request(
+            http=self.auth.http, request_obj=request_obj, asset_type=asset_type
+        )
 
     def _destroy(self, destroy: bool, history: bool) -> dict:  # pragma: no cover
         """Private API method to destroy ALL assets.
@@ -836,14 +713,21 @@ class AssetMixin(ModelMixins):
             destroy: Must be true in order to actually perform the delete
             history: Also delete all historical information
         """
-        data = {"destroy": destroy, "history": history}
-        path = self.router.destroy
-        return self.request(method="post", path=path, json=data)
+        asset_type = self.ASSET_TYPE
+        api_endpoint = ApiEndpoints.assets.destroy
+        request_obj = api_endpoint.load_request(
+            destroy=destroy,
+            history=history,
+        )
 
-    def _history_dates(self) -> dict:
+        return api_endpoint.perform_request(
+            http=self.auth.http, request_obj=request_obj, asset_type=asset_type
+        )
+
+    def _history_dates(self) -> json_api.generic.DictValue:
         """Private API method to get all known historical dates."""
-        path = self.router.history_dates
-        return self.request(method="get", path=path)
+        api_endpoint = ApiEndpoints.assets.history_dates
+        return api_endpoint.perform_request(http=self.auth.http)
 
     FIELD_TAGS: str = "labels"
     """Field name for getting tabs (labels)."""

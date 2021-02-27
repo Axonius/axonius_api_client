@@ -6,8 +6,9 @@ from typing import Dict, List, Optional
 
 from ...data import PropsData
 from ...tools import coerce_int, dt_now, dt_parse, trim_float
+from .. import json_api
+from ..api_endpoints import ApiEndpoints
 from ..mixins import ModelMixins
-from ..routers import API_VERSION, Router
 
 PROPERTIES_PHASE: List[str] = ["name", "human_name", "is_done", "progress"]
 PROPERTIES: List[str] = [
@@ -83,7 +84,7 @@ class DiscoverData(PropsData):
     """Pass."""
 
     raw: dict
-    adapters: List[dict]
+    adapters: List[dict] = dataclasses.field(default_factory=list)
 
     @property
     def _properties(self) -> List[str]:
@@ -242,7 +243,9 @@ class Dashboard(ModelMixins):
             >>> data.is_running
             False
         """
-        return DiscoverData(raw=self._get(), adapters=self.adapters.get())
+        return DiscoverData(
+            raw=self._get().to_dict(), adapters=self.adapters.get(get_clients=False)
+        )
 
     @property
     def is_running(self) -> bool:
@@ -298,25 +301,20 @@ class Dashboard(ModelMixins):
             self._stop()
         return self.get()
 
-    def _get(self) -> dict:
+    def _get(self) -> json_api.lifecycle.Lifecycle:
         """Direct API method to get discovery cycle metadata."""
-        path = self.router.lifecycle
-        return self.request(method="get", path=path)
+        api_endpoint = ApiEndpoints.lifecycle.get
+        return api_endpoint.perform_request(http=self.auth.http)
 
     def _start(self) -> str:
         """Direct API method to start a discovery cycle."""
-        path = self.router.discover_start
-        return self.request(method="post", path=path)
+        api_endpoint = ApiEndpoints.lifecycle.start
+        return api_endpoint.perform_request(http=self.auth.http)
 
     def _stop(self) -> str:
         """Direct API method to stop a discovery cycle."""
-        path = self.router.discover_stop
-        return self.request(method="post", path=path)
-
-    @property
-    def router(self) -> Router:
-        """Router for this API model."""
-        return API_VERSION.dashboard
+        api_endpoint = ApiEndpoints.lifecycle.stop
+        return api_endpoint.perform_request(http=self.auth.http)
 
     def _init(self, **kwargs):
         """Post init method for subclasses to use for extra setup."""

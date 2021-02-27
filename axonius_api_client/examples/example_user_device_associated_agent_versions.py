@@ -35,7 +35,7 @@ AGENT_VERS = "agg:agent_versions"
 OS_STR = "agg:os.os_str"
 LAST_USED_USERS = "agg:last_used_users"
 IPS = "agg:network_interfaces.ips"
-AXID = "agg:internal_axon_id"
+AXID = "internal_axon_id"
 
 FIELDS_USER = [
     ASS_DVC,
@@ -52,13 +52,13 @@ FIELDS_DEVICE = [
 
 COL_USERNAME = "SSO"
 
-COL_USERLINK = "User Link"
-COL_DVCLINK = "Device Link"
-COL_DVCNAME = "Device Asset Name"
-COL_DVCHOSTNAME = "Device Host Name"
-COL_DVCIP = "Device IP"
-COL_DVCOS = "Device OS"
-COL_DVCAGENTS = "Device Agents"
+COL_USERLINK = "Axonius User Link"
+COL_DVCLINK = "Axonius Device Link"
+COL_DVCNAME = "Axonius Device Name"
+COL_DVCHOSTNAME = "Axonius Device Host Name"
+COL_DVCIP = "Axonius Device IP"
+COL_DVCOS = "Axonius Device OS"
+COL_DVCAGENTS = "Axonius Device Agents"
 COLS_OUTPUT = [
     COL_USERLINK,
     COL_DVCLINK,
@@ -76,6 +76,7 @@ COLS_CHECK = [
     COL_CHECKVER,
     COL_CHECKSTAT,
 ]
+VER_OPS = ["equals", "greaterthan", "lessthan"]
 
 
 class CustomConnect(Connect):
@@ -157,6 +158,7 @@ class CustomConnect(Connect):
         check_name = check["name"]
         check_status = check["status"]
         check_version = check["version"]
+        check_version_op = check.get("version_op", "greaterthan")
 
         for agent_ver in agent_vers:
             agent_name = agent_ver.get("adapter_name") or ""
@@ -170,8 +172,18 @@ class CustomConnect(Connect):
                     continue
 
             if check_version:
-                if not pkg_version.parse(agent_version) >= pkg_version.parse(check_version):
-                    continue
+                parsed_agent_version = pkg_version.parse(agent_version)
+                parsed_check_version = pkg_version.parse(check_version)
+
+                if check_version_op == "greaterthan":
+                    if not parsed_agent_version >= parsed_check_version:
+                        continue
+                if check_version_op == "lessthan":
+                    if not parsed_agent_version <= parsed_check_version:
+                        continue
+                if check_version_op == "equals":
+                    if not agent_version == check_version:
+                        continue
             return True
 
         return False
@@ -193,8 +205,10 @@ class CustomConnect(Connect):
         found = []
         for dvc in dvcs:
             wiz_entries = self.dvc_wiz_entries(dvc=dvc)
+            query = self.devices.wizard.parse(wiz_entries)["query"]
+            self.spew_debug(f"Looking for devices searching for {dvc!r} using query {query}")
             dvcs = self.devices.get(
-                wiz_entries=wiz_entries,
+                query=query,
                 field_null=True,
                 fields_default=False,
                 fields=FIELDS_DEVICE,
@@ -209,11 +223,11 @@ class CustomConnect(Connect):
         """Pass."""
         entries = [
             {
-                "value": f"hostname equals {dvc}",
+                "value": f"hostname contains {dvc}",
                 "type": "simple",
             },
-            {"value": f"| name equals {dvc}", "type": "simple"},
-            {"value": f"| id equals {dvc}", "type": "simple"},
+            {"value": f"| name contains {dvc}", "type": "simple"},
+            {"value": f"| id contains {dvc}", "type": "simple"},
         ]
         return entries
 
@@ -254,14 +268,25 @@ class CustomConnect(Connect):
             name = (row.get("Name") or "").strip()
             version = (row.get("Version") or "").strip()
             status = (row.get("Status") or "").strip()
+            version_op = (row.get("Version Operator") or "greaterthan").strip()
+            version_op = version_op.lower().strip().replace(" ", "_")
+
             col_lines = ["Agent Check", f"Name: {name}"]
             if version:
                 col_lines.append(f"Version: {version}")
             if status:
                 col_lines.append(f"Status: {status}")
+            if version_op:
+                col_lines.append(f"Version Operator: {version_op}")
 
             col = "\n".join(col_lines)
-            rtxt = f"for row {idx + 1} with name {name!r}, version {version!r}, status {status!r}"
+            rtxt = (
+                f"for row {idx + 1} with name {name!r}, version {version!r}, status {status!r}, "
+                f"version operator: {version_op!r}"
+            )
+
+            if version_op not in VER_OPS:
+                self.spew_error(f"Invalid version operator, must be one of {VER_OPS} {rtxt}")
 
             if not name:
                 self.spew_error(f"Must supply agent name {rtxt}")
@@ -271,7 +296,15 @@ class CustomConnect(Connect):
                 self.spew_error(f"Invalid agent name {rtxt}, valids:{valids}")
 
             self.spew_debug(f"Add check {rtxt}")
-            checks.append({"name": name, "version": version, "status": status, "col": col})
+            checks.append(
+                {
+                    "name": name,
+                    "version": version,
+                    "status": status,
+                    "col": col,
+                    "version_op": version_op,
+                }
+            )
         return checks
 
     def _read_csv(self, path, required):

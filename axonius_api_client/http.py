@@ -13,7 +13,7 @@ from .constants.logs import (LOG_LEVEL_HTTP, MAX_BODY_LEN, REQUEST_ATTR_MAP,
 from .exceptions import HttpError
 from .logs import get_obj_log, set_log_level
 from .parsers.url_parser import UrlParser
-from .tools import join_url, json_reload, listify, path_read
+from .tools import join_url, json_dump, json_load, listify, path_read
 from .version import __version__
 
 InsecureRequestWarning = requests.urllib3.exceptions.InsecureRequestWarning
@@ -57,6 +57,8 @@ class Http:
 
         self.LOG: logging.Logger = get_obj_log(obj=self, level=self.LOG_LEVEL)
         """Logger for this object."""
+
+        self._MAX_BODY_LEN = MAX_BODY_LEN
 
         if isinstance(url, UrlParser):
             self.URLPARSED: UrlParser = url
@@ -208,19 +210,22 @@ class Http:
         """
         url = join_url(self.url, path, route)
 
-        headers = headers or {}
-        headers.setdefault("User-Agent", self.user_agent)
+        this_headers = {}
+        this_headers.update(headers or {})
+        this_headers.setdefault("User-Agent", self.user_agent)
 
         request = requests.Request(
             url=url,
             method=method,
             data=data,
-            headers=headers,
+            headers=this_headers,
             params=params,
             json=json,
             files=files or [],
         )
         prepped_request = self.session.prepare_request(request=request)
+        if "Content-Type" not in prepped_request.headers:
+            prepped_request.headers["Content-Type"] = "application/vnd.api+json"
 
         if self.SAVE_LAST:
             self.LAST_REQUEST = prepped_request
@@ -282,7 +287,7 @@ class Http:
             self.LOG.debug(f"REQUEST ATTRS: {lattrs}")
 
         if self.LOG_REQUEST_BODY:
-            self.log_body(body=request.body, body_type="REQUEST")
+            self.log_body(body=request.body, body_type="REQUEST", src=request)
 
     def _clean_headers(self, headers: dict) -> dict:
         """Clean headers with sensitive information.
@@ -313,7 +318,7 @@ class Http:
             self.LOG.debug(f"RESPONSE ATTRS: {lattrs}")
 
         if self.LOG_RESPONSE_BODY:
-            self.log_body(body=response.text, body_type="RESPONSE")
+            self.log_body(body=response.text, body_type="RESPONSE", src=response)
 
     @property
     def log_request_attrs(self) -> List[str]:
@@ -380,13 +385,27 @@ class Http:
                 if entry not in log_attrs:
                     log_attrs.append(entry)
 
-    def log_body(self, body: str, body_type: str):
+    def log_body(self, body: str, body_type: str, src=None):
         """Log a request or response body.
 
         Args:
             body: content to log
             body_type: 'request' or 'response'
         """
+        trim = self._MAX_BODY_LEN
         body = body or ""
-        body = json_reload(obj=body, error=False, trim=MAX_BODY_LEN)
+        body = json_load(obj=body, error=False)
+
+        if not isinstance(body, (str, int, float, type(None), bytes)):
+            body = json_dump(obj=body, error=False)
+
+        if isinstance(body, bytes):
+            body = body.decode()
+
+        if isinstance(body, str):
+            body = body.strip()
+
+            if trim and len(body) >= trim:
+                body = body[:trim] + f"\nTrimmed over {trim} characters"
+
         self.LOG.debug(f"{body_type} BODY:\n{body}")

@@ -2,14 +2,17 @@
 """API for working with saved queries for assets."""
 from typing import Generator, List, Optional, Union
 
-from ...constants.api import PAGE_SIZE
+from ...constants.api import MAX_PAGE_SIZE
 from ...exceptions import NotFoundError
+from ...parsers.tables import tablize_sqs
 from ...tools import check_gui_page_size, listify
-from ..mixins import ChildMixins, PagingMixinsObject
+from .. import json_api
+from ..api_endpoints import ApiEndpoints
+from ..mixins import ChildMixins
 
 
 # XXX need update saved query
-class SavedQuery(ChildMixins, PagingMixinsObject):
+class SavedQuery(ChildMixins):
     """API object for working with saved queries for the parent asset type.
 
     Examples:
@@ -33,7 +36,7 @@ class SavedQuery(ChildMixins, PagingMixinsObject):
 
     """
 
-    def get_by_name(self, value: str, **kwargs) -> dict:
+    def get_by_name(self, value: str) -> dict:
         """Get a saved query by name.
 
         Examples:
@@ -61,23 +64,33 @@ class SavedQuery(ChildMixins, PagingMixinsObject):
 
         Args:
             value: name of saved query
-            **kwargs: passed to :meth:`get`
         """
-        return super().get_by_name(value=value, **kwargs)
+        data = self.get()
+        found = [x for x in data if x["name"] == value]
+        if found:
+            return found[0]
 
-    def get_by_uuid(self, value: str, **kwargs) -> dict:
+        err = f"Saved Query with name of {value!r} not found"
+        raise NotFoundError(tablize_sqs(data=data, err=err))
+
+    def get_by_uuid(self, value: str) -> dict:
         """Get a saved query by uuid.
 
         Examples:
             Get a saved query by uuid
 
-            >>> sq = apiobj.saved_query.get_by_uuid(uuid="5f76721ce4557d5cba93f59e")
+            >>> sq = apiobj.saved_query.get_by_uuid(value="5f76721ce4557d5cba93f59e")
 
         Args:
             value: uuid of saved query
-            **kwargs: passed to :meth:`get`
         """
-        return super().get_by_uuid(value=value, **kwargs)
+        data = self.get()
+        found = [x for x in data if x["uuid"] == value]
+        if found:
+            return found[0]
+
+        err = f"Saved Query with UUID of {value!r} not found"
+        raise NotFoundError(tablize_sqs(data=data, err=err))
 
     def get_by_tags(self, value: Union[str, List[str]], **kwargs) -> List[dict]:
         """Get saved queries by tags.
@@ -136,9 +149,7 @@ class SavedQuery(ChildMixins, PagingMixinsObject):
         tags = [y for x in rows for y in x.get("tags", [])]
         return sorted(list(set(tags)))
 
-    def get(
-        self, generator: bool = False, **kwargs
-    ) -> Union[Generator[dict, None, None], List[dict]]:
+    def get(self, generator: bool = False) -> Union[Generator[dict, None, None], List[dict]]:
         """Get all saved queries.
 
         Examples:
@@ -150,9 +161,23 @@ class SavedQuery(ChildMixins, PagingMixinsObject):
 
         Args:
             generator: return an iterator
-            **kwargs: passed to :meth:`get_generator`
         """
-        return super().get(generator=generator, **kwargs)
+        gen = self.get_generator()
+        return gen if generator else list(gen)
+
+    def get_generator(self) -> Generator[dict, None, None]:
+        """Get Saved Queries using a generator."""
+        offset = 0
+
+        while True:
+            rows = self._get(offset=offset)
+            offset += len(rows)
+
+            if not rows:
+                break
+
+            for row in rows:
+                yield row.to_dict()
 
     def add(
         self,
@@ -172,6 +197,7 @@ class SavedQuery(ChildMixins, PagingMixinsObject):
         column_filters: Optional[dict] = None,
         gui_page_size: Optional[int] = None,
         private: bool = False,
+        always_cached: bool = False,
         **kwargs,
     ) -> dict:
         """Create a saved query.
@@ -258,16 +284,23 @@ class SavedQuery(ChildMixins, PagingMixinsObject):
         data_view["colFilters"] = data_column_filters or {}
         data_view["colExcludedAdapters"] = {}  # TBD
 
-        data = {}
-        data["name"] = name
-        data["query_type"] = "saved"
-        data["description"] = description
-        data["view"] = data_view
-        data["tags"] = tags or []
-        data["private"] = private
+        # data = {}
+        # data["name"] = name
+        # data["query_type"] = "saved"
+        # data["description"] = description
+        # data["view"] = data_view
+        # data["tags"] = tags or []
+        # data["private"] = private
 
-        added = self._add(data=data)
-        return self.get_by_uuid(value=added)
+        added = self._add(
+            name=name,
+            description=description,
+            view=data_view,
+            private=private,
+            always_cached=always_cached,
+            tags=tags,
+        )
+        return self.get_by_uuid(value=added.id)
 
     def delete_by_name(self, value: str, **kwargs) -> dict:
         """Delete a saved query by name.
@@ -282,52 +315,76 @@ class SavedQuery(ChildMixins, PagingMixinsObject):
             **kwargs: passed to :meth:`get_by_name`
         """
         row = self.get_by_name(value=value, **kwargs)
-        self.delete(rows=[row])
+        self._delete(uuid=row["uuid"])
         return row
 
-    def delete(self, rows: Union[str, List[dict]]) -> List[dict]:
+    def delete(self, rows: Union[str, List[str], List[dict]]) -> List[str]:
         """Delete saved queries.
 
         Args:
             rows: list of UUIDs or rows previously fetched saved queries to delete
         """
         rows = listify(rows)
-        ids = [x["uuid"] if isinstance(x, dict) else x for x in rows]
-        self._delete(ids=list(set(ids)))
-        return rows
+        deleted = []
+        for row in rows:
+            uuid = row["uuid"] if isinstance(row, dict) else row
+            self._delete(uuid=uuid)
+            deleted.append(uuid)
+        return deleted
 
-    def _add(self, data: dict) -> str:
+    def _add(
+        self,
+        name: str,
+        view: dict,
+        description: Optional[str] = "",
+        always_cached: bool = False,
+        private: bool = False,
+        tags: Optional[List[str]] = None,
+    ) -> str:
         """Direct API method to create a saved query.
 
         Args:
             data: saved query metadata
         """
-        path = self.router.views
-        return self.request(method="put", path=path, json=data)
+        api_endpoint = ApiEndpoints.saved_queries.create
+        request_obj = api_endpoint.load_request(
+            name=name,
+            view=view,
+            description=description,
+            always_cached=always_cached,
+            private=private,
+            tags=tags or [],
+        )
+        return api_endpoint.perform_request(
+            http=self.auth.http, request_obj=request_obj, asset_type=self.parent.ASSET_TYPE
+        )
 
-    def _delete(self, ids: List[str]) -> str:
+    def _delete(self, uuid: str) -> json_api.generic.Metadata:
         """Direct API method to delete saved queries.
 
         Args:
             ids: list of uuid's to delete
         """
-        data = {"ids": listify(ids)}
-        path = f"{self.router.views}/saved"
-        return self.request(method="delete", path=path, json=data)
+        api_endpoint = ApiEndpoints.saved_queries.delete
+        request_obj = api_endpoint.load_request()
+        return api_endpoint.perform_request(
+            http=self.auth.http,
+            request_obj=request_obj,
+            asset_type=self.parent.ASSET_TYPE,
+            uuid=uuid,
+        )
 
     def _get(
-        self, query: Optional[str] = None, row_start: int = 0, page_size: int = PAGE_SIZE
-    ) -> List[dict]:
-        """Direct API method to get saved queries.
+        self, limit: int = MAX_PAGE_SIZE, offset: int = 0
+    ) -> List[json_api.saved_queries.SavedQuery]:
+        """Direct API method to get all users.
 
         Args:
-            query: filter rows to return
-            row_start: start at row N
-            page_size: fetch N assets
+            limit: limit to N rows per page
+            offset: start at row N
         """
-        params = {}
-        params["limit"] = page_size
-        params["skip"] = row_start
-        params["filter"] = query
-        path = f"{self.router.views}/saved"
-        return self.request(method="get", path=path, params=params)
+        api_endpoint = ApiEndpoints.saved_queries.get
+        request_obj = api_endpoint.load_request(page={"limit": limit, "offset": offset})
+        return api_endpoint.perform_request(
+            http=self.auth.http, request_obj=request_obj, asset_type=self.parent.ASSET_TYPE
+        )

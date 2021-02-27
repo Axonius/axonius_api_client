@@ -26,6 +26,10 @@ class BaseData:
         """Get this dataclass object as a dictionary."""
         return dataclasses.asdict(self)
 
+    def replace(self, **kwargs) -> "BaseData":
+        """Pass."""
+        return dataclasses.replace(self, **kwargs)
+
     @staticmethod
     def _human_key(key):
         """Pass."""

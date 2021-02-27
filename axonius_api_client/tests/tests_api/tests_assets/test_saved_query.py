@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
 """Test suite for axonapi.api.assets."""
 import copy
+import datetime
 import json
 
 import pytest
+from axonius_api_client.api import json_api
 from axonius_api_client.constants.api import GUI_PAGE_SIZES
 from axonius_api_client.constants.general import SIMPLE
 from axonius_api_client.exceptions import ApiError, NotFoundError
@@ -14,14 +16,10 @@ from ...meta import QUERIES
 class SavedQueryPrivate:
     def test_private_get(self, apiobj):
         result = apiobj.saved_query._get()
-        assert isinstance(result, dict)
-
-        rows = result["assets"]
-        assert isinstance(rows, list)
-
-        for row in rows:
-            assert isinstance(row, dict)
-            validate_sq(row)
+        assert isinstance(result, list)
+        for item in result:
+            assert isinstance(item, json_api.saved_queries.SavedQuery)
+            validate_sq(item.to_dict())
 
 
 class SavedQueryPublic:
@@ -39,22 +37,6 @@ class SavedQueryPublic:
         assert not isinstance(gen, list)
 
         rows = [x for x in gen]
-        for row in rows:
-            assert isinstance(row, dict)
-            validate_sq(row)
-
-    def test_get_max_pages(self, apiobj):
-        rows = apiobj.saved_query.get(max_pages=1, page_size=2)
-        assert isinstance(rows, list)
-        assert len(rows) == 2
-        for row in rows:
-            assert isinstance(row, dict)
-            validate_sq(row)
-
-    def test_get_max_rows(self, apiobj):
-        rows = apiobj.saved_query.get(max_rows=1)
-        assert isinstance(rows, list)
-        assert len(rows) == 1
         for row in rows:
             assert isinstance(row, dict)
             validate_sq(row)
@@ -140,7 +122,6 @@ class SavedQueryPublic:
         assert row["query_type"] == "saved"
         assert row["tags"] == tags
         assert row["description"] == description
-        assert row["archived"] is False
         assert row["private"] is False
         assert row["view"]["query"]["filter"] == query
         assert row["view"]["query"]["onlyExpressionsFilter"] == query
@@ -290,8 +271,8 @@ def validate_sq(asset):
     date_fetched = asset.pop("date_fetched")
     assert isinstance(date_fetched, str)
 
-    last_updated = asset.pop("last_updated", "")
-    assert isinstance(last_updated, str)
+    last_updated = asset.pop("last_updated", None)
+    assert isinstance(last_updated, (str, datetime.datetime, type(None)))
 
     name = asset.pop("name")
     assert isinstance(name, str)
@@ -309,7 +290,7 @@ def validate_sq(asset):
     assert isinstance(description, str) or description is None
 
     timestamp = asset.pop("timestamp", "")
-    assert isinstance(timestamp, str)
+    assert isinstance(timestamp, (str, type(None)))
 
     archived = asset.pop("archived", False)  # added in 2.15
     assert isinstance(archived, bool)
@@ -418,6 +399,18 @@ def validate_sq(asset):
     # 3.6+
     excluded_adapters = view.pop("colExcludedAdapters", {})
     assert isinstance(excluded_adapters, dict)
+
+    # 4.0
+    always_cached = asset.pop("always_cached")
+    assert isinstance(always_cached, bool)
+    asset_scope = asset.pop("asset_scope")
+    assert isinstance(asset_scope, bool)
+    is_asset_scope_query_ready = asset.pop("is_asset_scope_query_ready")
+    assert isinstance(is_asset_scope_query_ready, bool)
+    is_referenced = asset.pop("is_referenced")
+    assert isinstance(is_referenced, bool)
+    _id = asset.pop("id")
+    assert isinstance(_id, str) and _id
 
     for qexpr in qexprs:
         validate_qexpr(qexpr, asset)

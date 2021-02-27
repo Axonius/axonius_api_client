@@ -4,11 +4,9 @@ import datetime
 from typing import List, Optional, Union
 
 from ...exceptions import NotFoundError
-from ...models import FeatureFlags
-from ...parsers.system import parse_instances
-from ...tools import dt_days_left, dt_parse
+from .. import json_api
+from ..api_endpoints import ApiEndpoints
 from ..mixins import ModelMixins
-from ..routers import API_VERSION, Router
 
 
 class Instances(ModelMixins):
@@ -47,13 +45,11 @@ class Instances(ModelMixins):
             Create a ``client`` using :obj:`axonius_api_client.connect.Connect`
 
             >>> data = client.instances.get()
-            >>> list(data)
-            ['connection_data', 'instances']
-            >>> len(data["instances"])
+            >>> len(data)
             1
 
         """
-        return parse_instances(raw=self._get())
+        return [x.to_dict() for x in self._get()]
 
     def get_core(self, key: Optional[str] = None) -> Union[dict, Union[str, bool, int, float]]:
         """Get the core instance.
@@ -83,7 +79,7 @@ class Instances(ModelMixins):
             key: key to return or just return whole object
 
         """
-        instances = self.get()["instances"]
+        instances = self.get()
         for instance in instances:
             if instance["is_master"]:
                 return instance[key] if key else instance
@@ -99,7 +95,7 @@ class Instances(ModelMixins):
             0
 
         """
-        instances = self.get()["instances"]
+        instances = self.get()
         return [x for x in instances if not x.get("is_master")]
 
     def get_by_name(
@@ -130,7 +126,7 @@ class Instances(ModelMixins):
             name: name of instance
             key: key to return or just return whole object
         """
-        instances = self.get()["instances"]
+        instances = self.get()
         valid = []
         for instance in instances:
             instance_name = instance["name"]
@@ -140,6 +136,30 @@ class Instances(ModelMixins):
 
         valid = "\n - " + "\n - ".join(valid)
         raise NotFoundError(f"No instance (node) named {name!r} found, valid: {valid}")
+
+    def get_by_name_id_core(self, value: Optional[str] = None, serial: bool = True) -> dict:
+        """Pass."""
+        data = None
+        instances = self._get()
+
+        for instance in instances:
+            if not value and instance.is_master:
+                data = instance
+                break
+
+            if instance.name == value or instance.id == value:
+                data = instance
+                break
+
+        if not data:
+            valid = [f"Name: {x.name}, ID: {x.id}" for x in instances]
+            valid = "\n - " + "\n - ".join(valid)
+            raise NotFoundError(f"No instance with ID or name of {value!r} found, valid:{valid}")
+
+        if serial:
+            data = data.to_dict()
+            data = {k: str(v) if isinstance(v, datetime.datetime) else v for k, v in data.items()}
+        return data
 
     def set_name(self, name: str, new_name: str) -> str:
         """Set the name of an instance.
@@ -170,9 +190,12 @@ class Instances(ModelMixins):
             new_name: new name to set on instance
         """
         instance = self.get_by_name(name=name)
-        node_id = instance["id"]
-        hostname = instance["hostname"]
-        self._update(node_id=node_id, node_name=new_name, hostname=hostname)
+        self._update_attrs(
+            node_id=instance["id"],
+            node_name=new_name,
+            hostname=instance["hostname"],
+            use_as_environment_name=instance["use_as_environment_name"],
+        )
         return self.get_by_name(name=new_name, key="name")
 
     def get_hostname(self, name: str) -> str:
@@ -221,8 +244,13 @@ class Instances(ModelMixins):
             name: name of instance
             value: new hostname to set on instance
         """
-        node_id = self.get_by_name(name=name, key="id")
-        self._update(node_id=node_id, node_name=name, hostname=value)
+        instance = self.get_by_name(name=name)
+        self._update_attrs(
+            node_id=instance["id"],
+            node_name=instance["node_name"],
+            hostname=value,
+            use_as_environment_name=instance["use_as_environment_name"],
+        )
         return self.get_hostname(name=name)
 
     def get_is_env_name(self, name: str) -> bool:
@@ -266,10 +294,11 @@ class Instances(ModelMixins):
             enabled: enable/disable instance name as the environment name
         """
         instance = self.get_by_name(name=name)
-        node_id = instance["id"]
-        hostname = instance["hostname"]
-        self._update(
-            node_id=node_id, node_name=name, hostname=hostname, use_as_environment_name=enabled
+        self._update_attrs(
+            node_id=instance["id"],
+            node_name=instance["node_name"],
+            hostname=instance["hostname"],
+            use_as_environment_name=enabled,
         )
         return self.get_is_env_name(name=name)
 
@@ -282,7 +311,8 @@ class Instances(ModelMixins):
             >>> client.instances.get_central_core_mode()
             False
         """
-        return self.get_central_core_config()["central_core_enabled"]
+        data = self.get_central_core_config()
+        return data["enabled"]
 
     def set_central_core_mode(self, enabled: bool) -> bool:
         """Convert a normal core into a central core.
@@ -303,7 +333,8 @@ class Instances(ModelMixins):
         Args:
             enabled: enable/disable central core mode
         """
-        self._update_central_core(enabled=enabled, delete_backups=None)
+        data = self.get_central_core_config()
+        self._update_central_core_config(enabled=enabled, delete_backups=data["delete_backups"])
         return self.get_central_core_mode()
 
     def get_core_delete_mode(self) -> bool:
@@ -315,7 +346,8 @@ class Instances(ModelMixins):
             >>> client.instances.get_core_delete_mode()
             True
         """
-        return self.get_central_core_config()["core_delete_backups"]
+        data = self.get_central_core_config()
+        return data["delete_backups"]
 
     def set_core_delete_mode(self, enabled: bool) -> bool:
         """Configure a normal core to delete backups after they have been restored.
@@ -336,7 +368,8 @@ class Instances(ModelMixins):
         Args:
             enabled: enable/disable deletion of backups after they have been restored by a core
         """
-        self._update_central_core(enabled=None, delete_backups=enabled)
+        data = self.get_central_core_config()
+        self._update_central_core_config(enabled=data["enabled"], delete_backups=enabled)
         return self.get_core_delete_mode()
 
     def get_central_core_config(self) -> dict:
@@ -349,10 +382,8 @@ class Instances(ModelMixins):
             {'core_delete_backups': False, 'central_core_enabled': False}
 
         """
-        data = self._get_central_core()
-        data["core_delete_backups"] = data.pop("delete_backups")
-        data["central_core_enabled"] = data.pop("enabled")
-        return data
+        data = self._get_central_core_config()
+        return data.to_dict()["config"]
 
     def restore_from_aws_s3(
         self,
@@ -361,10 +392,13 @@ class Instances(ModelMixins):
         access_key_id: Optional[str] = None,
         secret_access_key: Optional[str] = None,
         preshared_key: Optional[str] = None,
-        allow_re_restore: bool = False,
-        delete_backups: bool = False,
+        allow_re_restore: Optional[bool] = None,
+        delete_backups: Optional[bool] = None,
     ) -> dict:  # pragma: no cover
         """Perform a restore on a core from a file in an AWS S3 Bucket.
+
+        Notes:
+            Can not run in test suite!
 
         Args:
             key_name: Name of backup file from central core in [bucket_name] to restore to
@@ -384,93 +418,104 @@ class Instances(ModelMixins):
         restore_opts = {}
         restore_opts["key_name"] = key_name
         restore_opts["allow_re_restore"] = allow_re_restore
-
-        if delete_backups is not None:
-            restore_opts["delete_backups"] = delete_backups
-
-        if bucket_name is not None:
-            restore_opts["bucket_name"] = bucket_name
-
-        if access_key_id is not None:
-            restore_opts["access_key_id"] = access_key_id
-
-        if secret_access_key is not None:
-            restore_opts["secret_access_key"] = secret_access_key
-
-        if preshared_key is not None:
-            restore_opts["preshared_key"] = preshared_key
-
-        return self._restore(restore_type="aws", restore_opts=restore_opts)
+        restore_opts["delete_backups"] = delete_backups
+        restore_opts["bucket_name"] = bucket_name
+        restore_opts["access_key_id"] = access_key_id
+        restore_opts["secret_access_key"] = secret_access_key
+        restore_opts["preshared_key"] = preshared_key
+        response = self._restore_aws(**restore_opts)
+        return response.to_dict()
 
     @property
-    def feature_flags(self) -> FeatureFlags:
+    def feature_flags(self) -> json_api.system_settings.FeatureFlags:
         """Get the feature flags for the core."""
         return self._feature_flags()
 
     @property
     def has_cloud_compliance(self) -> bool:
         """Get the status of cloud compliance module being enabled."""
-        return self.feature_flags.config["cloud_compliance"]["enabled"]
+        return self.feature_flags.has_cloud_compliance
 
     @property
     def trial_expiry(self) -> Optional[datetime.datetime]:
         """Get the trial expiration date."""
-        expiry = self.feature_flags.config["trial_end"]
-        return dt_parse(obj=expiry) if expiry else None
+        return self.feature_flags.trial_expiry_dt
 
     @property
     def trial_days_left(self) -> Optional[int]:
         """Get the number of days left for the trial."""
-        return dt_days_left(obj=self.trial_expiry)
+        return self.feature_flags.trial_expiry_in_days
 
     @property
     def license_expiry(self) -> Optional[datetime.datetime]:
         """Get the license expiration date."""
-        expiry = self.feature_flags.config["expiry_date"]
-        return dt_parse(obj=expiry) if expiry else None
+        return self.feature_flags.license_expiry_dt
 
     @property
     def license_days_left(self) -> Optional[int]:
         """Get the number of days left for the license."""
-        return dt_days_left(obj=self.license_expiry)
+        return self.feature_flags.license_expiry_in_days
 
-    def _get(self) -> dict:
+    def _get(self) -> List[json_api.instances.Instance]:
         """Direct API method to get instances."""
-        return self.request(method="get", path=self.router.root)
+        api_endpoint = ApiEndpoints.instances.get
+        return api_endpoint.perform_request(http=self.auth.http)
 
-    def _delete(self, node_id: str):  # pragma: no cover
+    def _delete(self, node_id: str) -> str:  # pragma: no cover
         """Direct API method to delete an instance.
 
         Notes:
-            Untested!
+            Can not run in test suite!
 
         Args:
             node_id: node id of instance
         """
-        data = {"nodeIds": node_id}
-        path = self.router.root
-        return self.request(method="delete", path=path, json=data)
+        api_endpoint = ApiEndpoints.instances.delete
+        request_obj = api_endpoint.load_request(nodeIds=[node_id])
+        return api_endpoint.perform_request(http=self.auth.http, request_obj=request_obj)
 
-    def _update(self, node_id: str, node_name: str, hostname: str, **kwargs) -> dict:
+    def _update_attrs(
+        self, node_id: str, node_name: str, hostname: str, use_as_environment_name: bool
+    ) -> str:
         """Direct API method to update an instance.
 
         Args:
             node_id: node id of instance
             node_name: node name of instance
             hostname: hostname of instance
-            **kwargs: instance metadata configuration
+            use_as_environment_name: instance name is being used for the environment name
         """
-        data = {"nodeIds": node_id, "node_name": node_name, "hostname": hostname, **kwargs}
-        path = self.router.root
-        return self.request(method="post", path=path, json=data)
+        api_endpoint = ApiEndpoints.instances.update_attrs
+        request_obj = api_endpoint.load_request(
+            nodeIds=node_id,
+            node_name=node_name,
+            hostname=hostname,
+            use_as_environment_name=use_as_environment_name,
+        )
+        return api_endpoint.perform_request(http=self.auth.http, request_obj=request_obj)
 
-    def _get_central_core(self) -> dict:
+    def _update_active(self, node_id: str, status: bool) -> str:
+        """Direct API method to update an instance.
+
+        Notes:
+            Can not run in test suite!
+
+        Args:
+            node_id: node id of instance
+            status: enabled or disabled an instance
+        """
+        api_endpoint = ApiEndpoints.instances.update_active
+        request_obj = api_endpoint.load_request(nodeIds=node_id, status=status)
+        return api_endpoint.perform_request(http=self.auth.http, request_obj=request_obj)
+
+    def _get_central_core_config(self) -> json_api.system_settings.SystemSettings:
         """Direct API method to get the current central core configuration."""
-        path = self.router.central_core
-        response = self.request(method="get", path=path)
-        return response
+        api_endpoint = ApiEndpoints.central_core.settings_get
+        return api_endpoint.perform_request(http=self.auth.http)
 
-    def _update_central_core(self, enabled: bool, delete_backups: bool) -> dict:
+    def _update_central_core_config(
+        self, enabled: bool, delete_backups: bool
+    ) -> json_api.system_settings.SystemSettings:
         """Direct API method to set the current central core configuration.
 
         Args:
@@ -478,37 +523,44 @@ class Instances(ModelMixins):
             delete_backups: enable/disable deletion of backups on a core after resture
                 (ignored if not True/False)
         """
-        data = {"enabled": enabled, "delete_backups": delete_backups}
-        path = self.router.central_core
-        response = self.request(method="post", path=path, json=data)
-        return response
+        api_endpoint = ApiEndpoints.central_core.settings_update
+        request_obj = api_endpoint.load_request(enabled=enabled, delete_backups=delete_backups)
+        return api_endpoint.perform_request(http=self.auth.http, request_obj=request_obj)
 
-    def _restore(self, restore_type: str, restore_opts: dict) -> dict:  # pragma: no cover
+    def _restore_aws(
+        self,
+        key_name: str,
+        bucket_name: Optional[str] = None,
+        preshared_key: Optional[str] = None,
+        access_key_id: Optional[str] = None,
+        secret_access_key: Optional[str] = None,
+        delete_backups: Optional[bool] = None,
+        allow_re_restore: Optional[bool] = None,
+    ) -> json_api.central_core.CentralCoreRestore:  # pragma: no cover
         """Direct API method to perform a central core restore operation.
+
+        Notes:
+            Can not run in test suite!
 
         Args:
             restore_type: currently only AWS supported?
-            restore_opts: options specific to restore_type
+            additional_data: options specific to restore_type
         """
-        data = {}
-        data["restore_type"] = restore_type
-        data.update(restore_opts)
+        api_endpoint = ApiEndpoints.central_core.restore_aws
+        request_obj = api_endpoint.load_request(
+            additional_data={
+                "key_name": key_name,
+                "bucket_name": bucket_name,
+                "preshared_key": preshared_key,
+                "access_key_id": access_key_id,
+                "secret_access_key": secret_access_key,
+                "delete_backups": delete_backups,
+                "allow_re_restore": allow_re_restore,
+            }
+        )
+        return api_endpoint.perform_request(http=self.auth.http, request_obj=request_obj)
 
-        path = self.router.central_core_restore
-        response = self.request(method="post", path=path, json=data, response_timeout=3600)
-        return response
-
-    def _feature_flags(self) -> FeatureFlags:
+    def _feature_flags(self) -> json_api.system_settings.FeatureFlags:
         """Direct API method to get the feature flags for the core."""
-        path = self.router.feature_flags
-        response = self.request_model(method="get", path=path, response_cls=FeatureFlags)
-        return response
-
-    @property
-    def router(self) -> Router:
-        """Router for this API model.
-
-        Returns:
-            :obj:`.routers.Router`: REST API route defs
-        """
-        return API_VERSION.instances
+        api_endpoint = ApiEndpoints.system_settings.feature_flags_get
+        return api_endpoint.perform_request(http=self.auth.http)

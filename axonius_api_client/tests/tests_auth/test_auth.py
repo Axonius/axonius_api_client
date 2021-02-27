@@ -1,15 +1,10 @@
 # -*- coding: utf-8 -*-
 """Test suite for axonius_api_client.tools."""
 import pytest
-
 # from axonius_api_client.api.routers import API_VERSION
 from axonius_api_client.auth import ApiKey
-from axonius_api_client.exceptions import (
-    AlreadyLoggedIn,
-    AuthError,
-    InvalidCredentials,
-    NotLoggedIn,
-)
+from axonius_api_client.exceptions import (AlreadyLoggedIn, AuthError,
+                                           InvalidCredentials, NotLoggedIn)
 from axonius_api_client.http import Http
 
 from ..utils import get_key_creds, get_url
@@ -44,14 +39,14 @@ class TestApiKey:
 
         assert not auth.is_logged_in
 
-    def test_old_version(self, request, monkeypatch):
-        """Test exc thrown when login() and login() already called."""
-        monkeypatch.setattr(ApiKey, "_validate_path", "api/badwolf")
+    # def test_old_version(self, request, monkeypatch):
+    #     """Test exc thrown when login() and login() already called."""
+    #     monkeypatch.setattr(ApiKey, "_validate_path", "api/badwolf")
 
-        http = Http(url=get_url(request), certwarn=False)
-        auth = ApiKey(http=http, **get_key_creds(request))
-        with pytest.raises(AuthError):
-            auth.login()
+    #     http = Http(url=get_url(request), certwarn=False)
+    #     auth = ApiKey(http=http, **get_key_creds(request))
+    #     with pytest.raises(AuthError):
+    #         auth.login()
 
     def test_login_already_logged_in(self, request):
         """Test exc thrown when login() and login() already called."""

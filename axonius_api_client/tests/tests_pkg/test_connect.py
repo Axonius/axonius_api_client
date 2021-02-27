@@ -3,7 +3,6 @@
 import logging
 
 import pytest
-
 from axonius_api_client.connect import Connect
 from axonius_api_client.exceptions import ConnectError, InvalidCredentials
 from axonius_api_client.http import requests
@@ -45,21 +44,22 @@ class TestConnect:
         assert "Connected" in repr(c)
 
         props = [
-            "users",
-            "devices",
+            "activity_logs",
             "adapters",
-            "instances",
             "dashboard",
+            "devices",
             "enforcements",
-            "run_action",
-            "central_core",
-            "system",
-            "system_users",
-            "system_roles",
+            "instances",
             "meta",
+            "remote_support",
             "settings_global",
             "settings_gui",
+            "settings_ip",
             "settings_lifecycle",
+            "signup",
+            "system_roles",
+            "system_users",
+            "users",
         ]
         for prop in props:
             prop_attr = getattr(c, prop)

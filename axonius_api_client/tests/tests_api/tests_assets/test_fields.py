@@ -3,6 +3,7 @@
 import copy
 
 import pytest
+from axonius_api_client.api import json_api
 from axonius_api_client.constants.fields import (AGG_ADAPTER_ALTS,
                                                  AGG_ADAPTER_NAME)
 from axonius_api_client.exceptions import ApiError, NotFoundError
@@ -14,7 +15,8 @@ from ...utils import get_schemas
 class FieldsPrivate:
     def test_private_get(self, apiobj):
         fields = apiobj.fields._get()
-        self.val_raw_fields(fields=fields)
+        assert isinstance(fields, json_api.generic.Metadata)
+        self.val_raw_fields(fields=fields.document_meta)
 
     def val_raw_fields(self, fields):
         fields = copy.deepcopy(fields)
@@ -120,6 +122,12 @@ class FieldsPrivate:
 
             self.val_raw_items(adapter=f"{adapter}:{name}", items=items)
 
+            # 4.0
+            dvi = field.pop("dynamic_value_identifier", None)
+            assert isinstance(dvi, str) or dvi is None
+
+            val_source(obj=field)
+
             assert not field, list(field)
 
     def val_raw_items(self, adapter, items):
@@ -172,6 +180,11 @@ class FieldsPrivate:
 
             sub_items = items.pop("items", [])
             assert isinstance(sub_items, list) or isinstance(sub_items, dict)
+
+            # 4.0
+            dvi = items.pop("dynamic_value_identifier", None)
+            assert isinstance(dvi, str) or dvi is None
+
             assert not items, list(items)
 
             if isinstance(sub_items, dict):
@@ -312,6 +325,13 @@ class FieldsPublic:
         generic = schema.pop("generic", True)
         assert isinstance(generic, bool)
 
+        # 4.0
+        val_source(obj=schema)
+
+        # 4.0
+        dvi = schema.pop("dynamic_value_identifier", None)
+        assert isinstance(dvi, str) or dvi is None
+
         if is_complex:
             if name != "all":
                 assert sub_fields
@@ -341,6 +361,10 @@ class FieldsPublic:
             # 3.11
             generic = items.pop("generic", True)
             assert isinstance(generic, bool)
+
+            # 4.0
+            dvi = items.pop("dynamic_value_identifier", None)
+            assert isinstance(dvi, str) or dvi is None
 
             assert not items
 
@@ -534,10 +558,10 @@ def val_source(obj):
         source_key = source.pop("key")
         assert isinstance(source_key, str)
 
-        source_options = source.pop("options")
+        source_options = source.pop("options", {})
         assert isinstance(source_options, dict)
 
-        options_allow = source_options.pop("allow-custom-option")
+        options_allow = source_options.pop("allow-custom-option", False)
         assert isinstance(options_allow, bool)
 
         assert not source, source

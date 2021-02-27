@@ -7,6 +7,9 @@ from ..constants.adapters import DISCOVERY_NAME, GENERIC_NAME
 from ..tools import strip_right
 from .config import parse_schema
 
+# from .. import json_api
+
+
 CNX_LABEL_SCHEMA = {
     "name": "connection_label",
     "title": "Connection Label",
@@ -15,14 +18,15 @@ CNX_LABEL_SCHEMA = {
 }
 
 
-def parse_adapters(raw: dict) -> List[dict]:
+def parse_adapters(raw: List[dict]) -> List[dict]:
     """Parser to turn adapters metadata into a more friendly format.
 
     Args:
         raw: the raw output from :meth:`axonius_api_client.api.adapters.adapters.Adapters._get`
     """
     parsed = []
-
+    for adapter_obj in raw:
+        adapter = adapter_obj.to_dict()
     for name, adapters in raw.items():
         for adapter in adapters:
             adapter = parse_adapter(name=name, adapter=adapter)

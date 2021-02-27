@@ -3,11 +3,12 @@
 from ....exceptions import CnxUpdateError
 from ...context import CONTEXT_SETTINGS, click
 from ...options import AUTH, INPUT_FILE, NODE_CNX, add_options
-from .grp_common import EXPORT, ID_CNX, handle_export
+from .grp_common import EXPORT, ID_CNX, SAVE_AND_FETCH, handle_export
 
 OPTIONS = [
     *AUTH,
     EXPORT,
+    SAVE_AND_FETCH,
     *NODE_CNX,
     INPUT_FILE,
     ID_CNX,
@@ -26,6 +27,7 @@ def cmd(
     adapter_node,
     adapter_name,
     cnx_id,
+    save_and_fetch,
     **kwargs,
 ):
     """Update a connection from a JSON file."""
@@ -38,6 +40,7 @@ def cmd(
                 adapter_name=adapter_name,
                 adapter_node=adapter_node,
                 cnx_id=cnx_id,
+                save_and_fetch=save_and_fetch,
                 **new_config,
             )
             ctx.obj.echo_ok(msg="Connection updated successfully!")

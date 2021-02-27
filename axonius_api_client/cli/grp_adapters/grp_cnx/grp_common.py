@@ -41,6 +41,25 @@ PROMPTS = [
         show_default=True,
     ),
 ]
+ACTIVE = click.option(
+    "--active / --inactive",
+    "active",
+    help="Set connection as active / inactive.",
+    is_flag=True,
+    default=True,
+    show_envvar=True,
+    show_default=True,
+)
+SAVE_AND_FETCH = click.option(
+    "--save-and-fetch / --no-save-and-fetch",
+    "-saf / -nsaf",
+    "save_and_fetch",
+    help="Fetch assets after saving.",
+    is_flag=True,
+    default=True,
+    show_envvar=True,
+    show_default=True,
+)
 
 EXPORT = click.option(
     "--export-format",
@@ -199,13 +218,15 @@ def show_schema(schema, err=True):
     click.secho(message=f"\n***  Configuration schema:{rkw}", fg="blue", err=err)
 
 
-def add_cnx(ctx, client, adapter_name, adapter_node, new_config, **kwargs):
+def add_cnx(ctx, client, adapter_name, adapter_node, new_config, save_and_fetch, active, **kwargs):
     """Pass."""
     with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
         try:
             cnx_new = client.adapters.cnx.add(
                 adapter_name=adapter_name,
                 adapter_node=adapter_node,
+                save_and_fetch=save_and_fetch,
+                active=active,
                 **new_config,
             )
             ctx.obj.echo_ok(msg="Connection added successfully!")

@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 """Test suite."""
+import copy
+
 import pytest
 
 
@@ -8,9 +10,8 @@ class SystemMetaBase:
     def apiobj(self, api_meta):
         return api_meta
 
-
-class TestSystemMetaPrivate(SystemMetaBase):
     def val_entity_sizes(self, data):
+        data = copy.deepcopy(data)
         avg_document_size = data("avg_document_size")
         assert isinstance(avg_document_size, int)
         capped = data("capped")
@@ -22,6 +23,7 @@ class TestSystemMetaPrivate(SystemMetaBase):
         assert not data
 
     def val_historical_sizes(self, data):
+        data = copy.deepcopy(data)
         disk_free = data.pop("disk_free")
         assert isinstance(disk_free, int) and disk_free
 
@@ -39,20 +41,35 @@ class TestSystemMetaPrivate(SystemMetaBase):
         assert not entity_sizes
         assert not data
 
+    def val_about(self, data):
+        """Pass."""
+        data = copy.deepcopy(data)
+        build_date = data.pop("Build Date")
+        assert isinstance(build_date, str) and build_date
+
+        api_version = data.pop("api_client_version")
+        assert isinstance(api_version, str) and api_version
+
+        version = data.pop("Version")
+        assert isinstance(version, str)
+
+        iversion = data.pop("Installed Version")
+        assert isinstance(iversion, str)
+
+        customer_id = data.pop("Customer ID", None)
+        assert isinstance(customer_id, (str, type(None)))
+        assert not data
+
+
+class TestSystemMetaPrivate(SystemMetaBase):
     def test_private_about(self, apiobj):
         data = apiobj._about()
         assert isinstance(data, dict)
-        keys = ["Build Date", "Installed Version", "Customer ID"]
-        empty_ok = ["Installed Version"]
-
-        for key in keys:
-            assert key in data
-            assert isinstance(data[key], str)
-            if key not in empty_ok:
-                assert data[key]
+        self.val_about(data)
 
     def test_private_historical_sizes(self, apiobj):
         data = apiobj._historical_sizes()
+        assert isinstance(data, dict)
         self.val_historical_sizes(data)
 
 
@@ -64,19 +81,17 @@ class TestSystemMetaPublic(SystemMetaBase):
     def test_about(self, apiobj):
         data = apiobj.about()
         assert isinstance(data, dict)
-
-        keys = ["Build Date", "Version", "Customer ID"]
-        empty_ok = ["Version"]
-
-        for key in keys:
-            assert key in data
-            assert isinstance(data[key], str)
-            if key not in empty_ok:
-                assert data[key]
+        self.val_about(data)
 
     def test_historical_sizes(self, apiobj):
         data = apiobj.historical_sizes()
         assert isinstance(data["disk_free_mb"], float)
         assert isinstance(data["disk_used_mb"], float)
-        assert isinstance(data["historical_sizes_devices"], dict) or data["historical_sizes_devices"] is None
-        assert isinstance(data["historical_sizes_users"], dict) or data["historical_sizes_users"] is None
+        assert (
+            isinstance(data["historical_sizes_devices"], dict)
+            or data["historical_sizes_devices"] is None
+        )
+        assert (
+            isinstance(data["historical_sizes_users"], dict)
+            or data["historical_sizes_users"] is None
+        )

@@ -1,20 +1,20 @@
 # -*- coding: utf-8 -*-
 """API for working with system users."""
-from typing import List, Optional, Tuple, Union
+from typing import Generator, List, Optional, Tuple, Union
 
-from ...constants.system import Role, User
+from ...constants.api import MAX_PAGE_SIZE
 from ...exceptions import ApiError, NotFoundError
-from ...parsers.system import parse_user
 from ...parsers.tables import tablize_users
+from .. import json_api
+from ..api_endpoints import ApiEndpoints
 from ..mixins import ModelMixins
-from ..routers import API_VERSION, Router
 
 
 class SystemUsers(ModelMixins):
     """API for working with system users."""
 
-    def get(self) -> List[dict]:
-        """Get all users in the system.
+    def get(self, generator: bool = False) -> Union[Generator[dict, None, None], List[dict]]:
+        """Get Axonius system users.
 
         Examples:
             Create a ``client`` using :obj:`axonius_api_client.connect.Connect`
@@ -23,12 +23,28 @@ class SystemUsers(ModelMixins):
             >>> [x['user_name'] for x in users]
             ['admin']
 
+        Args:
+            generator: return an iterator for objects that will yield rows as they are fetched
+
         """
-        users = self._get()
-        for user in users:
-            role_obj = self.roles.get_by_uuid(uuid=user[User.ROLE_ID])
-            parse_user(user=user, role_obj=role_obj)
-        return users
+        gen = self.get_generator()
+        return gen if generator else list(gen)
+
+    def get_generator(self) -> Generator[dict, None, None]:
+        """Get Axonius system users using a generator."""
+        system_roles = self.roles.get()
+
+        offset = 0
+
+        while True:
+            rows = self._get(offset=offset)
+            offset += len(rows)
+
+            if not rows:
+                break
+
+            for row in rows:
+                yield row.to_dict_old(system_roles=system_roles)
 
     def get_by_name(self, name: str) -> dict:
         """Get a user by name.
@@ -47,7 +63,7 @@ class SystemUsers(ModelMixins):
             :exc:`NotFoundError`: if user not found
         """
         users = self.get()
-        found = [x for x in users if x[User.NAME] == name]
+        found = [x for x in users if x["user_name"] == name]
         if found:
             return found[0]
 
@@ -71,7 +87,7 @@ class SystemUsers(ModelMixins):
             :exc:`NotFoundError`: if user not found
         """
         users = self.get()
-        found = [x for x in users if x[User.UUID] == uuid]
+        found = [x for x in users if x["uuid"] == uuid]
         if found:
             return found[0]
 
@@ -83,9 +99,9 @@ class SystemUsers(ModelMixins):
         name: str,
         password: str,
         role_name: str,
-        first: Optional[str] = None,
-        last: Optional[str] = None,
-        email: Optional[str] = None,
+        first: str = "",
+        last: str = "",
+        email: str = "",
     ) -> dict:
         """Create a user.
 
@@ -125,10 +141,10 @@ class SystemUsers(ModelMixins):
 
         self._add(
             user_name=name,
-            role_id=role[Role.UUID],
+            role_id=role["uuid"],
             password=password,
-            first=first,
-            last=last,
+            first_name=first,
+            last_name=last,
             email=email,
         )
         return self.get_by_name(name=name)
@@ -149,7 +165,7 @@ class SystemUsers(ModelMixins):
         """
         role = self.roles.get_by_name(name=role_name)
         return self._update_user_attr(
-            name=name, must_be_internal=True, attr=User.ROLE_ID, value=role[Role.UUID]
+            name=name, must_be_internal=True, attr="role_id", value=role["uuid"]
         )
 
     def set_first_last(self, name: str, first: str, last: str) -> dict:
@@ -171,8 +187,8 @@ class SystemUsers(ModelMixins):
             first: first name
             last: last name
         """
-        value = {User.FIRST_NAME: first, User.LAST_NAME: last}
-        attr = f"{User.FIRST_NAME} and {User.LAST_NAME}"
+        value = {"first_name": first, "last_name": last}
+        attr = "first_name and last_name"
         return self._update_user_attr(name=name, must_be_internal=True, attr=attr, value=value)
 
     def set_password(self, name: str, password: str) -> dict:
@@ -188,7 +204,7 @@ class SystemUsers(ModelMixins):
             password: password
         """
         return self._update_user_attr(
-            name=name, must_be_internal=True, attr=User.PASSWORD, value=password
+            name=name, must_be_internal=True, attr="password", value=password
         )
 
     def set_email(self, name: str, email: str) -> dict:
@@ -205,9 +221,7 @@ class SystemUsers(ModelMixins):
             name: user name
             email: email
         """
-        return self._update_user_attr(
-            name=name, must_be_internal=True, attr=User.EMAIL, value=email
-        )
+        return self._update_user_attr(name=name, must_be_internal=True, attr="email", value=email)
 
     def set_ignore_role_assignment_rules(self, name: str, enabled: bool) -> dict:
         """Set the ignore role assignment rules flag of an external user.
@@ -224,7 +238,7 @@ class SystemUsers(ModelMixins):
             enabled: enable/disable the flag
         """
         return self._update_user_attr(
-            name=name, must_be_internal=False, attr=User.IGNORE_RULES, value=enabled
+            name=name, must_be_internal=False, attr="ignore_role_assignment_rules", value=enabled
         )
 
     def delete_by_name(self, name: str) -> str:
@@ -241,11 +255,11 @@ class SystemUsers(ModelMixins):
         Raises:
             :exc:`ApiError`: if name is "admin"
         """
-        if name == User.ADMIN_NAME:
+        if name == "admin":
             raise ApiError(f"Unable to delete {name!r} user")
 
         user = self.get_by_name(name=name)
-        return self._delete(uuid=user["uuid"])
+        return self._delete(uuid=user["uuid"]).document_meta
 
     def get_password_reset_link(self, name: str) -> str:
         """Generate a password reset link for a user.
@@ -267,7 +281,7 @@ class SystemUsers(ModelMixins):
 
         """
         user = self.get_by_name(name=name)
-        return self._tokens_generate(uuid=user[User.UUID])
+        return self._tokens_generate(uuid=user["uuid"], user_name=user["user_name"])
 
     def email_password_reset_link(
         self,
@@ -318,45 +332,39 @@ class SystemUsers(ModelMixins):
         """
         user = self.get_by_name(name=name)
         email = email or user.get("email")
-        uuid = user[User.UUID]
 
         if not email:
             raise ApiError(
                 f"User {name!r} has no email address defined, must supply a custom email address"
             )
 
-        link = self._tokens_generate(uuid=uuid)
-        self._tokens_notify(uuid=uuid, email=email, invite=for_new_user)
+        link = self._tokens_generate(uuid=user["uuid"], user_name=user["user_name"])
+        self._tokens_notify(uuid=user["uuid"], email=email, invite=for_new_user)
         return link, email
 
-    def _get(self, limit: Optional[int] = None, skip: Optional[int] = None) -> List[dict]:
+    def _get(
+        self, limit: int = MAX_PAGE_SIZE, offset: int = 0
+    ) -> List[json_api.system_users.SystemUser]:
         """Direct API method to get all users.
 
         Args:
             limit: limit to N rows per page
-            skip: start at row N
+            offset: start at row N
         """
-        data = {}
-
-        if limit is not None:
-            data["limit"] = limit
-
-        if skip is not None:
-            data["skip"] = skip
-
-        path = self.router.users
-        return self.request(method="get", path=path, params=data)
+        api_endpoint = ApiEndpoints.system_users.get
+        request_obj = api_endpoint.load_request(page={"limit": limit, "offset": offset})
+        return api_endpoint.perform_request(http=self.auth.http, request_obj=request_obj)
 
     def _add(
         self,
         user_name: str,
         role_id: str,
-        password: Optional[str] = None,
+        password: str = "",
         auto_generated_password: bool = False,
-        first: Optional[str] = None,
-        last: Optional[str] = None,
-        email: Optional[str] = None,
-    ) -> str:
+        first_name: str = "",
+        last_name: str = "",
+        email: str = "",
+    ) -> json_api.system_users.SystemUser:
         """Direct API method to add a user.
 
         Args:
@@ -366,48 +374,77 @@ class SystemUsers(ModelMixins):
             first: first name
             last: last name
             email: email address
-            auto_generated_password: generate a password (unused!)
+            auto_generated_password: generate a password
         """
-        user = {}
-        user["user_name"] = user_name
-        user["first_name"] = first
-        user["last_name"] = last
-        user["password"] = password
-        user["email"] = email
-        user["role_id"] = role_id
-        user["auto_generated_password"] = auto_generated_password
+        api_endpoint = ApiEndpoints.system_users.create
+        request_obj = api_endpoint.load_request(
+            user_name=user_name,
+            first_name=first_name,
+            last_name=last_name,
+            password=password,
+            email=email,
+            role_id=role_id,
+            auto_generated_password=auto_generated_password,
+        )
+        return api_endpoint.perform_request(http=self.auth.http, request_obj=request_obj)
 
-        path = self.router.users
-        return self.request(method="put", path=path, json=user)
-
-    def _delete(self, uuid: str) -> str:
+    def _delete(self, uuid: str) -> json_api.system_users.SystemUser:
         """Direct API method to delete a user.
 
         Args:
             uuid: user UUID
         """
-        path = self.router.user.format(uuid=uuid)
-        return self.request(method="delete", path=path)
+        api_endpoint = ApiEndpoints.system_users.delete
+        request_obj = api_endpoint.load_request(uuid=uuid)
+        return api_endpoint.perform_request(http=self.auth.http, request_obj=request_obj)
 
-    def _update(self, uuid: str, user: dict) -> dict:
+    def _update(
+        self,
+        uuid: str,
+        user_name: str,
+        role_id: str,
+        password: str,
+        first_name: str,
+        last_name: str,
+        email: str,
+        last_updated: str,
+        source: str,
+        pic_name: str,
+        **kwargs,
+    ) -> json_api.system_users.SystemUser:
         """Direct API method to update a user.
 
         Args:
             uuid: user UUID
             user: user metadata
         """
-        path = self.router.user.format(uuid=uuid)
-        return self.request(method="post", path=path, json=user)
+        api_endpoint = ApiEndpoints.system_users.update
+        request_obj = api_endpoint.load_request(
+            user_name=user_name,
+            first_name=first_name,
+            last_name=last_name,
+            password=password,
+            email=email,
+            role_id=role_id,
+            uuid=uuid,
+            last_updated=last_updated,
+            source=source,
+            pic_name=pic_name,
+        )
+        return api_endpoint.perform_request(http=self.auth.http, request_obj=request_obj)
 
-    def _tokens_generate(self, uuid: str) -> str:
+    def _tokens_generate(self, uuid: str, user_name: str) -> str:
         """Direct API method to generate a password reset link for a user.
 
         Args:
             uuid: user UUID
         """
-        path = self.router.tokens_generate
-        data = {"user_id": uuid}
-        return self.request(method="post", path=path, json=data, error_json_invalid=False)
+        api_endpoint = ApiEndpoints.password_reset.create
+        request_obj = api_endpoint.load_request(
+            user_id=uuid,
+            user_name=user_name,
+        )
+        return api_endpoint.perform_request(http=self.auth.http, request_obj=request_obj)
 
     def _tokens_notify(self, uuid: str, email: str, invite: bool = False) -> str:
         """Direct API method to send a password reset link to a user.
@@ -417,14 +454,13 @@ class SystemUsers(ModelMixins):
             email: email address to send link to
             invite: use welcome template instead of reset password template in email body
         """
-        path = self.router.tokens_notify
-        data = {"user_id": uuid, "email": email, "invite": invite}
-        return self.request(method="POST", path=path, json=data)
-
-    @property
-    def router(self) -> Router:
-        """Router for this API model."""
-        return API_VERSION.system
+        api_endpoint = ApiEndpoints.password_reset.send
+        request_obj = api_endpoint.load_request(
+            user_id=uuid,
+            email=email,
+            invite=invite,
+        )
+        return api_endpoint.perform_request(http=self.auth.http, request_obj=request_obj)
 
     def _init(self, **kwargs):
         """Post init method for subclasses to use for extra setup."""
@@ -452,9 +488,9 @@ class SystemUsers(ModelMixins):
         """
         user = self.get_by_name(name=name)
 
-        source = user.get(User.SOURCE, "")
-        name = user[User.NAME]
-        is_internal = source == User.INTERNAL
+        source = user.get("source", "")
+        name = user["user_name"]
+        is_internal = source == "internal"
 
         pre = f"Unable to set {attr} for user {name!r} with source {source}"
 
@@ -471,5 +507,5 @@ class SystemUsers(ModelMixins):
             user[attr] = value
 
         self.LOG.debug(f"Updating user {name!r} attribute {attr!r}: {value!r}")
-        self._update(uuid=user[User.UUID], user=user)
+        self._update(**user)
         return self.get_by_name(name=name)

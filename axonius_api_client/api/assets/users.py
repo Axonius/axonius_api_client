@@ -2,7 +2,6 @@
 """API for working with user assets."""
 from typing import Generator, List, Union
 
-from ..routers import API_VERSION, Router
 from .asset_mixin import AssetMixin
 
 
@@ -30,6 +29,8 @@ class Users(AssetMixin):
 
     """
 
+    ASSET_TYPE: str = "users"
+
     @property
     def fields_default(self) -> List[str]:
         """Fields to use by default for getting assets."""
@@ -42,11 +43,6 @@ class Users(AssetMixin):
             self.FIELD_LAST_SEEN,
             self.FIELD_TAGS,
         ]
-
-    @property
-    def router(self) -> Router:
-        """Router for this API model."""
-        return API_VERSION.users
 
     def get_by_usernames(
         self, values: List[str], **kwargs

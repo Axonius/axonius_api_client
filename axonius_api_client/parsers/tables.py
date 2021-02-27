@@ -6,9 +6,9 @@ from typing import List, Optional, Union
 
 import tabulate
 
-from ..constants.system import Role, User
-from ..constants.tables import KEY_MAP_ADAPTER, KEY_MAP_CNX, KEY_MAP_SCHEMA, TABLE_FMT
-from ..tools import json_dump
+from ..constants.tables import (KEY_MAP_ADAPTER, KEY_MAP_CNX, KEY_MAP_SCHEMA,
+                                TABLE_FMT)
+from ..tools import json_dump, listify
 
 
 def tablize(
@@ -118,11 +118,37 @@ def tablize_cnxs(
     """
     values = []
     for cnx in cnxs:
-        cnx["connection_label"] = cnx["config"].get("connection_label")
         value = tab_map(value=cnx, key_map=KEY_MAP_CNX, orig=False)
         values.append(value)
 
     return tablize(value=values, err=err, fmt=fmt, footer=footer)
+
+
+def tablize_sqs(data: List[dict], err: str, fmt: str = TABLE_FMT, footer: bool = True) -> str:
+    """Create a table string for a set of sqs.
+
+    Args:
+        data: sqs to create a table from
+        err: error string to show at top
+        fmt: table format to use
+        footer: show err at bottom too
+    """
+    values = [tablize_sq(x) for x in data]
+    return tablize(value=values, err=err, fmt=fmt, footer=footer)
+
+
+def tablize_sq(data: dict) -> dict:
+    """Create a table entry for a sq.
+
+    Args:
+        data: sq to create a table entry for
+    """
+    value = {}
+    value["Name"] = data["name"]  # textwrap.fill(data["name"], width=30)
+    value["UUID"] = data["uuid"]
+    value["Description"] = textwrap.fill(data.get("description") or "", width=30)
+    value["Tags"] = "\n".join(listify(data.get("tags", [])))
+    return value
 
 
 def tablize_users(users: List[dict], err: str, fmt: str = TABLE_FMT, footer: bool = True) -> str:
@@ -144,7 +170,16 @@ def tablize_user(user: dict) -> dict:
     Args:
         user: user to create a table entry for
     """
-    value = {k: user.get(v) for k, v in User.TABLES.items()}
+    tab_map = {
+        "Name": "user_name",
+        "UUID": "uuid",
+        "Full Name": "full_name",
+        "Role Name": "role_name",
+        "Email": "email",
+        "Last Login": "last_login",
+        "Source": "source",
+    }
+    value = {k: user.get(v) for k, v in tab_map.items()}
     return value
 
 
@@ -171,19 +206,20 @@ def tablize_role(role: dict, cat_actions: dict) -> dict:
         role: role to create a table entry for
         cat_actions: category -> actions mapping
     """
-    value = {k: role.get(v) for k, v in Role.TABLES.items()}
+    tab_map = {"Name": "name", "UUID": "uuid"}
+    value = {k: role.get(v) for k, v in tab_map.items()}
 
-    perms = role[Role.PERMS_FLAT]
+    perms = role["permissions_flat"]
     value_perms = []
     for cat, action in perms.items():
         if all(list(action.values())):
-            has_perms = Role.ALL
+            has_perms = "all"
         else:
             has_perms = ", ".join([k for k, v in action.items() if v])
         value_perms.append(f"{cat}: {has_perms}")
 
     value_perms = "\n".join(value_perms)
-    value[Role.TABLES_PERMS] = value_perms
+    value["Categories: actions"] = value_perms
     return value
 
 

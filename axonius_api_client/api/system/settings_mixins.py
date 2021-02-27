@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 """Parent API for working with system settings."""
 from ...exceptions import ApiError, NotFoundError
-from ...parsers.config import config_build, config_unchanged, config_unknown, parse_settings
+from ...parsers.config import (config_build, config_unchanged, config_unknown,
+                               parse_settings)
 from ...parsers.tables import tablize
 from ..mixins import ModelMixins
-from ..routers import API_VERSION, Router
 
 
 class SettingsMixins(ModelMixins):
@@ -12,7 +12,7 @@ class SettingsMixins(ModelMixins):
 
     def get(self) -> dict:
         """Get the current system settings."""
-        return parse_settings(raw=self._get(), title=self.TITLE)
+        return parse_settings(raw=self._get().to_dict(), title=self.TITLE)
 
     def get_section(self, section: str, full_config: bool = False) -> dict:
         """Get the current settings for a section of system settings.
@@ -161,25 +161,3 @@ class SettingsMixins(ModelMixins):
         self._update(new_config=full_config)
 
         return self.get_sub_section(section=section, sub_section=sub_section)
-
-    def _get(self) -> dict:
-        """Direct API method to get the current system settings."""
-        return self.request(method="get", path=self.router_path)
-
-    def _update(self, new_config: dict) -> dict:
-        """Direct API method to update the system settings.
-
-        Args:
-            new_config: new system settings to update
-        """
-        return self.request(method="post", path=self.router_path, json=new_config)
-
-    @property
-    def router(self) -> Router:
-        """Router for this API model."""
-        return API_VERSION.system
-
-    @property
-    def router_path(self) -> str:
-        """Get the path from the router for this setting object."""
-        return getattr(self.router, self.PATH)

@@ -12,6 +12,8 @@ from ...constants.fields import (AGG_ADAPTER_ALTS, AGG_ADAPTER_NAME,
 from ...exceptions import ApiError, NotFoundError
 from ...parsers.fields import parse_fields
 from ...tools import listify, split_str, strip_right
+from .. import json_api
+from ..api_endpoints import ApiEndpoints
 from ..mixins import ChildMixins
 
 
@@ -55,7 +57,7 @@ class Fields(ChildMixins):
             ...     print(f"title {title!r}, qualified name {name!r}, base name {name!r}")
 
         """
-        return parse_fields(raw=self._get())
+        return parse_fields(raw=self._get().document_meta)
 
     def validate(
         self,
@@ -591,6 +593,7 @@ class Fields(ChildMixins):
         len_max = max([len(x[len_key]) for x in schemas])
         return [tmpl.format(len_max=len_max, **x) for x in schemas]
 
-    def _get(self) -> dict:
+    def _get(self) -> json_api.generic.Metadata:
         """Private API method to get the schema of all fields."""
-        return self.request(method="get", path=self.router.fields)
+        api_endpoint = ApiEndpoints.assets.fields
+        return api_endpoint.perform_request(http=self.auth.http, asset_type=self.parent.ASSET_TYPE)
