@@ -92,7 +92,7 @@ lint:
 		$(PACKAGE) setup.py shell.py
 	pipenv run bandit \
 		-x $(PACKAGE)/examples,$(PACKAGE)/tests \
-		--skip B101 \
+		--skip B101,B107 \
 		-r \
 		$(PACKAGE)
 

@@ -359,11 +359,11 @@ class SystemUsers(ModelMixins):
         self,
         user_name: str,
         role_id: str,
-        password: Optional[str] = None,
+        password: str = "",  # nosec
         auto_generated_password: bool = False,
-        first_name: Optional[str] = None,
-        last_name: Optional[str] = None,
-        email: Optional[str] = None,
+        first_name: str = "",
+        last_name: str = "",
+        email: str = "",
     ) -> json_api.system_users.SystemUser:
         """Direct API method to add a user.
 
