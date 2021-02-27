@@ -8,8 +8,7 @@ import marshmallow
 import marshmallow_jsonapi
 
 from .base import BaseModel, BaseSchema, BaseSchemaJson
-from .custom_fields import (SchemaBool, SchemaDatetime, SchemaPassword,
-                            get_field_dc_mm)
+from .custom_fields import SchemaBool, SchemaDatetime, SchemaPassword, get_field_dc_mm
 
 
 class SystemUserSchema(BaseSchemaJson):

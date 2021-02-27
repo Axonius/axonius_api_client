@@ -4,8 +4,7 @@ import dataclasses
 import logging
 from typing import List, Optional, Union
 
-from ..exceptions import (ApiError, InvalidCredentials, JsonInvalid,
-                          ResponseNotOk)
+from ..exceptions import ApiError, InvalidCredentials, JsonInvalid, ResponseNotOk
 from ..http import Http
 from ..logs import get_obj_log
 from ..tools import combo_dicts, json_reload

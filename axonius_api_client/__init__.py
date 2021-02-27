@@ -35,13 +35,16 @@ POST_DOTENV: dict = setup_env.get_env_ax()
 try:
     from . import api, auth, cli, constants, data, exceptions, http, logs, tools
     from .api import (
+        ActivityLogs,
         Adapters,
+        ApiEndpoints,
         Cnx,
         Dashboard,
         Devices,
         Enforcements,
         Instances,
         Meta,
+        RemoteSupport,
         SettingsGlobal,
         SettingsGui,
         SettingsLifecycle,
@@ -52,9 +55,6 @@ try:
         Wizard,
         WizardCsv,
         WizardText,
-        RemoteSupport,
-        ActivityLogs,
-        ApiEndpoints,
     )
     from .auth import ApiKey
     from .connect import Connect

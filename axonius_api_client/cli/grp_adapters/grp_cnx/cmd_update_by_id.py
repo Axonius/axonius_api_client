@@ -2,8 +2,7 @@
 """Command line interface for Axonius API Client."""
 from ....exceptions import CnxUpdateError
 from ...context import CONTEXT_SETTINGS, click
-from ...options import (AUTH, NODE_CNX, SAVE_AND_FETCH, SPLIT_CONFIG_OPT,
-                        add_options)
+from ...options import AUTH, NODE_CNX, SAVE_AND_FETCH, SPLIT_CONFIG_OPT, add_options
 from .grp_common import EXPORT, ID_CNX, handle_export
 
 OPTIONS = [

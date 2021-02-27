@@ -3,8 +3,9 @@
 import atexit
 import os
 
-import axonius_api_client as axonapi
 import click
+
+import axonius_api_client as axonapi
 
 from ...constants.general import PY36
 from ...tools import echo_error, json_reload, pathlib

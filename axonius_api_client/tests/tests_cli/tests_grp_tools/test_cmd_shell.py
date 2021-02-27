@@ -15,7 +15,7 @@ from ...utils import MockError, load_clirunner
 class TestCmdShell:
     def test_prompt(self, request, monkeypatch):
         try:
-            import readline
+            import readline  # noqa
         except Exception:
             pytest.skip("No readline support")
 
@@ -57,7 +57,7 @@ class TestCmdShell:
 
     def test_no_prompt(self, request, monkeypatch):
         try:
-            import readline
+            import readline  # noqa
         except Exception:
             pytest.skip("No readline support")
 
@@ -89,7 +89,7 @@ class TestCmdShell:
 class TestCliWriteHistFile:
     def test_default(self, monkeypatch):
         try:
-            import readline
+            import readline  # noqa
         except Exception:
             pytest.skip("No readline support")
 
@@ -106,7 +106,7 @@ class TestCliWriteHistFile:
 class TestCliRegisterReadline:
     def test_default(self, monkeypatch):
         try:
-            import readline
+            import readline  # noqa
         except Exception:
             pytest.skip("No readline support")
 
@@ -122,7 +122,7 @@ class TestCliRegisterReadline:
 
     def test_exc(self, monkeypatch, capsys):
         try:
-            import readline
+            import readline  # noqa
         except Exception:
             pytest.skip("No readline support")
         runner = CliRunner(mix_stderr=False)

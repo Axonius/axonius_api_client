@@ -11,8 +11,18 @@ from ...constants.api import FIELD_JOINER, FIELD_TRIM_LEN, FIELD_TRIM_STR
 from ...constants.fields import AGG_ADAPTER_NAME, SCHEMAS_CUSTOM
 from ...exceptions import ApiError
 from ...parsers.fields import schema_custom
-from ...tools import (calc_percent, coerce_int, echo_error, echo_ok, echo_warn,
-                      get_path, join_kv, listify, longest_str, strip_right)
+from ...tools import (
+    calc_percent,
+    coerce_int,
+    echo_error,
+    echo_ok,
+    echo_warn,
+    get_path,
+    join_kv,
+    listify,
+    longest_str,
+    strip_right,
+)
 
 
 class Base:

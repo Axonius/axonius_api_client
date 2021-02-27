@@ -3,9 +3,17 @@
 import click
 
 from ..context import AliasedGroup
-from . import (grp_activity_logs, grp_central_core, grp_discover, grp_meta,
-               grp_nodes, grp_remote_support, grp_roles, grp_settings,
-               grp_users)
+from . import (
+    grp_activity_logs,
+    grp_central_core,
+    grp_discover,
+    grp_meta,
+    grp_nodes,
+    grp_remote_support,
+    grp_roles,
+    grp_settings,
+    grp_users,
+)
 
 
 @click.group(cls=AliasedGroup)

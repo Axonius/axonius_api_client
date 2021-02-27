@@ -118,7 +118,7 @@ class ResponseError(ApiError):
             exc: exception that was thrown if any
         """
         from .constants.logs import MAX_BODY_LEN
-        from .tools import json_load, prettify_obj, json_dump
+        from .tools import json_dump, json_load, prettify_obj
 
         msgs = []
 

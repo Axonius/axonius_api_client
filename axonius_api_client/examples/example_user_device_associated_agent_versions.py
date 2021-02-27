@@ -6,15 +6,23 @@ import copy
 import csv
 import io
 
-import axonius_api_client as axonapi  # noqa: F401
 import click
+from packaging import version as pkg_version
+
+import axonius_api_client as axonapi  # noqa: F401
 from axonius_api_client.cli.context import CONTEXT_SETTINGS
 from axonius_api_client.cli.options import AUTH, add_options
 from axonius_api_client.connect import Connect
-from axonius_api_client.tools import (bom_strip, echo_error, echo_ok,
-                                      echo_warn, get_path, json_reload,
-                                      listify, path_read)
-from packaging import version as pkg_version
+from axonius_api_client.tools import (
+    bom_strip,
+    echo_error,
+    echo_ok,
+    echo_warn,
+    get_path,
+    json_reload,
+    listify,
+    path_read,
+)
 
 
 def j(obj, **kwargs):

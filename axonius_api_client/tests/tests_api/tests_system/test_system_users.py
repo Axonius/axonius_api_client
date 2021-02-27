@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Test suite."""
 import pytest
+
 from axonius_api_client.api.json_api.system_users import SystemUser
 from axonius_api_client.constants.api import SETTING_UNCHANGED
 from axonius_api_client.exceptions import ApiError, NotFoundError

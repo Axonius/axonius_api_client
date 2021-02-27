@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Test suite."""
 import pytest
+
 from axonius_api_client.api.json_api.system_roles import SystemRole
 from axonius_api_client.exceptions import ApiError, NotFoundError
 

@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Test suite for axonapi.api.assets."""
 import pytest
+
 from axonius_api_client.api import json_api
 
 

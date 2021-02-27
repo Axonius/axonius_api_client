@@ -2,6 +2,7 @@
 """Test suite."""
 
 import pytest
+
 from axonius_api_client.exceptions import ApiError, NotFoundError
 
 GUI_SECTION_WITH_SUBS = "system_settings"
