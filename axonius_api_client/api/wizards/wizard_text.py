@@ -74,7 +74,7 @@ class WizardText(Wizard):
 
     DOCS: str = Docs.TEXT
 
-    def parse(self, content: str, source: str = Sources.TEXT_STR) -> List[dict]:
+    def parse(self, content: Union[str, List[str]], source: str = Sources.TEXT_STR) -> List[dict]:
         """Parse a CSV string into a query and GUI expressions.
 
         Args:
@@ -97,15 +97,17 @@ class WizardText(Wizard):
         source = source.format(path=path)
         return self.parse(content=content, source=source)
 
-    def _lines_to_entries(self, content: str, source: str) -> List[dict]:
+    def _lines_to_entries(self, content: Union[str, List[str]], source: str) -> List[dict]:
         """Parse the lines from a text file into entries.
 
         Args:
             content: text string
             source: where content came from
         """
-        check_type(value=content, exp=str, name="content")
-        lines: List[str] = content.splitlines()
+        lines = content.splitlines() if isinstance(content, str) else content
+        check_type(value=lines, exp=list, name="content", exp_items=str)
+
+        # lines: List[str] = content.splitlines()
         self.LOG.info(f"Parsing {len(lines)} lines from {source}")
 
         entries = []

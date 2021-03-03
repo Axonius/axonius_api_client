@@ -44,14 +44,14 @@ class TestApiKey:
 
         assert not auth.is_logged_in
 
-    def test_old_version(self, request, monkeypatch):
-        """Test exc thrown when login() and login() already called."""
-        monkeypatch.setattr(ApiKey, "_validate_path", "api/badwolf")
+    # def test_old_version(self, request, monkeypatch):
+    #     """Test exc thrown when login() and login() already called."""
+    #     monkeypatch.setattr(ApiKey, "_validate_path", "api/badwolf")
 
-        http = Http(url=get_url(request), certwarn=False)
-        auth = ApiKey(http=http, **get_key_creds(request))
-        with pytest.raises(AuthError):
-            auth.login()
+    #     http = Http(url=get_url(request), certwarn=False)
+    #     auth = ApiKey(http=http, **get_key_creds(request))
+    #     with pytest.raises(AuthError):
+    #         auth.login()
 
     def test_login_already_logged_in(self, request):
         """Test exc thrown when login() and login() already called."""

@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
 """API for working with product metadata."""
-
-from ...parsers.system import parse_sizes
+from ...tools import calc_gb
+from ..api_endpoints import ApiEndpoints
 from ..mixins import ModelMixins
-from ..routers import API_VERSION, Router
 
 
 class Meta(ModelMixins):
@@ -22,7 +21,7 @@ class Meta(ModelMixins):
         Examples:
             Create a ``client`` using :obj:`axonius_api_client.connect.Connect`
 
-            >>> data = meta.about()
+            >>> data = client.meta.about()
             >>> j(data)
             {
               "Build Date": "Fri Oct 2 00:18:27 UTC 2020",
@@ -33,9 +32,7 @@ class Meta(ModelMixins):
 
         """
         if not hasattr(self, "_about_data"):
-            data = self._about()
-            data["Version"] = self._get_version(about=data)
-            self._about_data = data
+            self._about_data = self._about()
         return self._about_data
 
     def historical_sizes(self) -> dict:
@@ -44,7 +41,7 @@ class Meta(ModelMixins):
         Examples:
             Create a ``client`` using :obj:`axonius_api_client.connect.Connect`
 
-            >>> data = meta.historical_sizes()
+            >>> data = client.meta.historical_sizes()
             >>> data['disk_free_mb']
             70.93
             >>> data['disk_used_mb']
@@ -53,7 +50,12 @@ class Meta(ModelMixins):
             ['disk_free_mb', 'disk_used_mb', 'historical_sizes_devices', 'historical_sizes_users']
 
         """
-        return parse_sizes(raw=self._historical_sizes())
+        data = self._historical_sizes()
+        data["disk_free_mb"] = calc_gb(value=data["disk_free"], is_kb=False)
+        data["disk_used_mb"] = calc_gb(value=data["disk_used"], is_kb=False)
+        data["historical_sizes_devices"] = data["entity_sizes"].get("Devices", {})
+        data["historical_sizes_users"] = data["entity_sizes"].get("Users", {})
+        return data
 
     @property
     def version(self) -> str:
@@ -62,34 +64,18 @@ class Meta(ModelMixins):
         Examples:
             Create a ``client`` using :obj:`axonius_api_client.connect.Connect`
 
-            >>> meta.version
+            >>> client.meta.version
             '3.10'
 
         """
-        about = self.about()
-        return about["Version"]
-
-    def _get_version(self, about: dict) -> str:
-        """Ensure we have a Version key.
-
-        Args:
-            about: raw about data from :meth:`_about`
-        """
-        version = about.pop("Version", "") or about.pop("Installed Version", "")
-        version = version.replace("_", ".")
-        return version
+        return self.about()["Version"]
 
     def _about(self) -> dict:
         """Direct API method to get the About page."""
-        path = self.router.meta_about
-        return self.request(method="get", path=path)
+        api_endpoint = ApiEndpoints.system_settings.meta_about
+        return api_endpoint.perform_request(http=self.auth.http)
 
     def _historical_sizes(self) -> dict:
         """Direct API method to get the metadata about disk usage."""
-        path = self.router.meta_historical_sizes
-        return self.request(method="get", path=path)
-
-    @property
-    def router(self) -> Router:
-        """Router for this API model."""
-        return API_VERSION.system
+        api_endpoint = ApiEndpoints.system_settings.historical_sizes
+        return api_endpoint.perform_request(http=self.auth.http)

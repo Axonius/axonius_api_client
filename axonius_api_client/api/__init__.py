@@ -1,32 +1,41 @@
 # -*- coding: utf-8 -*-
 """API library package."""
-from . import routers
+from . import api_endpoints, json_api
 from .adapters import Adapters, Cnx
+from .api_endpoint import ApiEndpoint
+from .api_endpoints import ApiEndpoints
 from .assets import Devices, Users
-from .enforcements import Enforcements, RunAction
-from .system import (ActivityLogs, CentralCore, Dashboard, Instances, Meta,
-                     RemoteSupport, SettingsGlobal, SettingsGui,
-                     SettingsLifecycle, Signup, System, SystemRoles,
-                     SystemUsers)
+from .enforcements import Enforcements
+from .system import (
+    ActivityLogs,
+    Dashboard,
+    Instances,
+    Meta,
+    RemoteSupport,
+    SettingsGlobal,
+    SettingsGui,
+    SettingsIdentityProviders,
+    SettingsLifecycle,
+    Signup,
+    SystemRoles,
+    SystemUsers,
+)
 from .wizards import Wizard, WizardCsv, WizardText
 
 __all__ = (
     "Adapters",
-    "CentralCore",
     "Cnx",
     "Dashboard",
     "Devices",
     "Enforcements",
     "Instances",
     "Meta",
-    "routers",
     "RemoteSupport",
-    "RunAction",
     "SettingsGlobal",
     "SettingsGui",
     "SettingsLifecycle",
+    "SettingsIdentityProviders",
     "Signup",
-    "System",
     "SystemRoles",
     "SystemUsers",
     "Users",
@@ -34,4 +43,8 @@ __all__ = (
     "WizardCsv",
     "WizardText",
     "ActivityLogs",
+    "api_endpoints",
+    "ApiEndpoints",
+    "ApiEndpoint",
+    "json_api",
 )

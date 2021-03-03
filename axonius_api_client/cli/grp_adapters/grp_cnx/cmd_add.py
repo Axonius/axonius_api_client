@@ -2,11 +2,13 @@
 """Command line interface for Axonius API Client."""
 from ...context import CONTEXT_SETTINGS, click
 from ...options import AUTH, NODE_CNX, SPLIT_CONFIG_OPT, add_options
-from .grp_common import EXPORT, PROMPTS, add_cnx, prompt_config
+from .grp_common import ACTIVE, EXPORT, PROMPTS, SAVE_AND_FETCH, add_cnx, prompt_config
 
 OPTIONS = [
     *AUTH,
     EXPORT,
+    SAVE_AND_FETCH,
+    ACTIVE,
     *NODE_CNX,
     *PROMPTS,
     SPLIT_CONFIG_OPT,

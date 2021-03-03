@@ -11,8 +11,18 @@ from ...constants.api import FIELD_JOINER, FIELD_TRIM_LEN, FIELD_TRIM_STR
 from ...constants.fields import AGG_ADAPTER_NAME, SCHEMAS_CUSTOM
 from ...exceptions import ApiError
 from ...parsers.fields import schema_custom
-from ...tools import (calc_percent, coerce_int, echo_error, echo_ok, echo_warn,
-                      get_path, join_kv, listify, longest_str, strip_right)
+from ...tools import (
+    calc_percent,
+    coerce_int,
+    echo_error,
+    echo_ok,
+    echo_warn,
+    get_path,
+    join_kv,
+    listify,
+    longest_str,
+    strip_right,
+)
 
 
 class Base:
@@ -1008,22 +1018,26 @@ class Base:
         if getattr(self, "_adapter_map", None):
             return self._adapter_map
 
-        self._adapters_meta = getattr(self, "_adapters_meta", self.APIOBJ.adapters.get())
-        self._adapter_map = {
-            "has_cnx": [],
-            "all": [],
-            "all_fields": [f"{x}_adapter" for x in self.ALL_SCHEMAS],
-        }
+        self._adapters_meta = getattr(
+            self, "_adapters_meta", self.APIOBJ.adapters.get(get_clients=False)
+        )
+
+        self._adapter_map = {}
+        self._adapter_map["has_cnx"] = has_cnx = []
+        self._adapter_map["all"] = all_adapters = []
+        self._adapter_map["all_fields"] = [f"{x}_adapter" for x in self.ALL_SCHEMAS]
 
         for adapter in self._adapters_meta:
             name_raw = adapter["name_raw"]
+            cnt = adapter["cnx_count_total"]
 
-            if adapter not in self._adapter_map["all"]:
-                self._adapter_map["all"].append(name_raw)
-            if adapter["cnx"]:
-                self._adapter_map["has_cnx"].append(name_raw)
+            if name_raw not in all_adapters:
+                all_adapters.append(name_raw)
 
-        self._adapter_map = {k: list(v) for k, v in self._adapter_map.items()}
+            if cnt and name_raw not in has_cnx:
+                has_cnx.append(name_raw)
+
+        # self._adapter_map = {k: list(v) for k, v in self._adapter_map.items()}
         return self._adapter_map
 
     @property

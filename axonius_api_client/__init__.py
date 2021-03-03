@@ -35,29 +35,26 @@ POST_DOTENV: dict = setup_env.get_env_ax()
 try:
     from . import api, auth, cli, constants, data, exceptions, http, logs, tools
     from .api import (
+        ActivityLogs,
         Adapters,
-        CentralCore,
+        ApiEndpoints,
         Cnx,
         Dashboard,
         Devices,
         Enforcements,
         Instances,
         Meta,
-        RunAction,
+        RemoteSupport,
         SettingsGlobal,
         SettingsGui,
         SettingsLifecycle,
         Signup,
-        System,
         SystemRoles,
         SystemUsers,
         Users,
         Wizard,
         WizardCsv,
         WizardText,
-        RemoteSupport,
-        routers,
-        ActivityLogs,
     )
     from .auth import ApiKey
     from .connect import Connect
@@ -77,7 +74,6 @@ __all__ = (
     "ApiKey",
     # API
     "Adapters",
-    "CentralCore",
     "Cnx",
     "Dashboard",
     "Devices",
@@ -85,12 +81,10 @@ __all__ = (
     "Instances",
     "Meta",
     "RemoteSupport",
-    "RunAction",
     "SettingsGlobal",
     "SettingsGui",
     "SettingsLifecycle",
     "Signup",
-    "System",
     "SystemRoles",
     "SystemUsers",
     "Users",
@@ -101,6 +95,7 @@ __all__ = (
     "WizardText",
     "WizardText",
     "ActivityLogs",
+    "ApiEndpoints",
     # modules
     "api",
     "auth",
@@ -112,5 +107,4 @@ __all__ = (
     "logs",
     "tools",
     "version",
-    "routers",
 )

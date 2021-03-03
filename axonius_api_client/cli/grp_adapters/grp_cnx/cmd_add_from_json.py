@@ -3,11 +3,13 @@
 # from ....exceptions import CnxAddError
 from ...context import CONTEXT_SETTINGS, click
 from ...options import AUTH, INPUT_FILE, NODE_CNX, add_options
-from .grp_common import EXPORT, add_cnx
+from .grp_common import ACTIVE, EXPORT, SAVE_AND_FETCH, add_cnx
 
 OPTIONS = [
     *AUTH,
     EXPORT,
+    SAVE_AND_FETCH,
+    ACTIVE,
     *NODE_CNX,
     INPUT_FILE,
 ]

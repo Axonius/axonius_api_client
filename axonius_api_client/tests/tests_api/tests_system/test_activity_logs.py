@@ -4,7 +4,8 @@
 import datetime
 
 import pytest
-from axonius_api_client.api.system.activity_logs import ActivityData
+
+from axonius_api_client.api import json_api
 from axonius_api_client.exceptions import ApiError
 
 
@@ -18,14 +19,8 @@ class TestActivityLogsPrivate(ActivityLogsBase):
     def test_get(self, apiobj):
         data = apiobj._get()
         assert isinstance(data, list)
-        props = ["action", "category", "date", "message", "type", "user"]
         for row in data:
-            assert isinstance(row, dict)
-
-            for prop in props:
-                value = row.pop(prop)
-                assert isinstance(value, str)
-            assert not row
+            assert isinstance(row, json_api.audit_logs.AuditLog)
 
 
 class TestActivityLogsPublic(ActivityLogsBase):
@@ -33,7 +28,7 @@ class TestActivityLogsPublic(ActivityLogsBase):
         data = apiobj.get()
         assert isinstance(data, list)
         for row in data:
-            assert isinstance(row, ActivityData)
+            assert isinstance(row, json_api.audit_logs.AuditLog)
             assert str(row)
             assert repr(row)
             assert isinstance(row.action, str)
@@ -59,13 +54,3 @@ class TestActivityLogsPublic(ActivityLogsBase):
         data = apiobj.get(within_last_hours=-1)
         assert isinstance(data, list)
         assert not data
-
-    def test_get_max_rows(self, apiobj):
-        data = apiobj.get(max_rows=1)
-        assert isinstance(data, list)
-        assert len(data) == 1
-
-    def test_get_max_pages(self, apiobj):
-        data = apiobj.get(max_pages=1, page_size=5)
-        assert isinstance(data, list)
-        assert len(data) == 5

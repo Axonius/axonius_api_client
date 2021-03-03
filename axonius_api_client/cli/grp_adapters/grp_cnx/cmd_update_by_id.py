@@ -2,12 +2,13 @@
 """Command line interface for Axonius API Client."""
 from ....exceptions import CnxUpdateError
 from ...context import CONTEXT_SETTINGS, click
-from ...options import AUTH, NODE_CNX, SPLIT_CONFIG_OPT, add_options
+from ...options import AUTH, NODE_CNX, SAVE_AND_FETCH, SPLIT_CONFIG_OPT, add_options
 from .grp_common import EXPORT, ID_CNX, handle_export
 
 OPTIONS = [
     *AUTH,
     EXPORT,
+    SAVE_AND_FETCH,
     *NODE_CNX,
     SPLIT_CONFIG_OPT,
     ID_CNX,
@@ -26,6 +27,7 @@ def cmd(
     adapter_node,
     adapter_name,
     cnx_id,
+    save_and_fetch,
     **kwargs,
 ):
     """Update a connection from arguments."""
@@ -38,6 +40,7 @@ def cmd(
                 adapter_name=adapter_name,
                 adapter_node=adapter_node,
                 cnx_id=cnx_id,
+                save_and_fetch=save_and_fetch,
                 **new_config,
             )
             ctx.obj.echo_ok(msg="Connection updated successfully!")

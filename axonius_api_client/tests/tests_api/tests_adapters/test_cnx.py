@@ -3,6 +3,7 @@
 
 import pytest
 
+from axonius_api_client.api import json_api
 from axonius_api_client.constants.adapters import CSV_ADAPTER
 from axonius_api_client.exceptions import (
     CnxAddError,
@@ -26,7 +27,7 @@ class TestCnxBase:
 
     @pytest.fixture(scope="class")
     def adapter(self, apiobj):
-        return apiobj.get_by_name(name=CSV_ADAPTER)
+        return apiobj.get_by_name(name=CSV_ADAPTER, get_clients=False)
 
 
 class TestCnxPrivate(TestCnxBase):
@@ -87,7 +88,7 @@ class TestCnxPublic(TestCnxBase):
             adapter_name=cnx["adapter_name"],
             adapter_node=cnx["node_name"],
         )
-        assert not result
+        assert result is True
 
     def test_test(self, apiobj):
         cnx = get_cnx_working(apiobj)
@@ -96,7 +97,7 @@ class TestCnxPublic(TestCnxBase):
             adapter_node=cnx["node_name"],
             **cnx["config"],
         )
-        assert not result
+        assert result is True
 
     def test_test_fail(self, apiobj):
         mpass = "badwolf"
@@ -118,49 +119,50 @@ class TestCnxPublic(TestCnxBase):
             apiobj.cnx.update_cnx(cnx_update=cnx)
 
     def test_update_cnx(self, apiobj):
-        cnx = get_cnx_working(apiobj)
-        old_label = cnx["config"].get("connection_label", None)
-        gone_test = "gone test"
-        if old_label == "badwolf":
-            new_label = "badwolf1"
-        else:
-            new_label = "badwolf"
+        cnx = get_cnx_working(apiobj, name="tanium")
+        config_key = "last_reg_mins"
+        value_orig = cnx["config"].get(config_key) or 0
+        value_to_set = 60 if not isinstance(value_orig, int) else value_orig + 10
 
-        cnx_update = apiobj.cnx.update_cnx(cnx_update=cnx, connection_label=new_label)
-        assert cnx_update["config"]["connection_label"] == new_label
+        cnx_update = apiobj.cnx.update_cnx(cnx_update=cnx, **{config_key: value_to_set})
+        assert cnx_update["config"][config_key] == value_to_set
 
         cnx_reset = apiobj.cnx.update_by_id(
             cnx_id=cnx_update["id"],
             adapter_name=cnx_update["adapter_name"],
             adapter_node=cnx_update["node_name"],
-            connection_label=old_label,
+            **{config_key: value_orig or 0},
         )
-        assert cnx_reset["config"]["connection_label"] == old_label
+        assert cnx_reset["config"][config_key] == value_orig
 
         with pytest.raises(CnxGoneError):
-            apiobj.cnx.update_cnx(cnx_update=cnx, connection_label=gone_test)
+            apiobj.cnx.update_cnx(cnx_update=cnx, **{config_key: 9999})
 
         cnx_final = apiobj.cnx.get_by_id(
             cnx_id=cnx_reset["id"], adapter_name=cnx_reset["adapter_name"]
         )
-        assert cnx_final["config"]["connection_label"] == old_label
+        assert cnx_final["config"][config_key] == value_orig
 
     def test_update_cnx_error(self, apiobj):
-        cnx = get_cnx_working(apiobj=apiobj, reqkeys=["https_proxy"])
-        old_https_proxy = cnx["config"].get("https_proxy")
-        new_https_proxy = "badwolf"
+        config_key = "https_proxy"
+
+        cnx = get_cnx_working(apiobj=apiobj, reqkeys=[config_key])
+
+        config_orig = cnx["config"]
+        value_orig = config_orig.get(config_key)
+        value_to_set = "badwolf"
 
         with pytest.raises(CnxUpdateError) as exc:
-            apiobj.cnx.update_cnx(cnx_update=cnx, https_proxy=new_https_proxy)
+            apiobj.cnx.update_cnx(cnx_update=cnx, **{config_key: value_to_set})
 
         assert getattr(exc.value, "cnx_new", None)
         assert getattr(exc.value, "cnx_old", None)
         assert getattr(exc.value, "result", None)
-        assert exc.value.cnx_new["config"]["https_proxy"] == new_https_proxy
-        assert exc.value.cnx_old["config"].get("https_proxy") == old_https_proxy
+        assert exc.value.cnx_new["config"][config_key] == value_to_set
+        assert exc.value.cnx_old["config"].get(config_key) == value_orig
 
-        cnx_reset = apiobj.cnx.update_cnx(cnx_update=exc.value.cnx_new, https_proxy=old_https_proxy)
-        assert cnx_reset["config"]["https_proxy"] == old_https_proxy
+        cnx_reset = apiobj.cnx.update_cnx(cnx_update=exc.value.cnx_new, **{config_key: value_orig})
+        assert cnx_reset["config"][config_key] == value_orig
 
     def test_cb_file_upload_fail(self, apiobj, csv_file_path, monkeypatch):
         mock_return = {"filename": "badwolf", "uuid": "badwolf"}
@@ -287,7 +289,8 @@ class TestCnxPublic(TestCnxBase):
             delete_entities=True,
         )
 
-        assert del_result == {"client_id": "badwolf"}
+        assert isinstance(del_result, json_api.adapters.CnxDelete)
+        assert del_result.client_id == "{'client_id': 'badwolf'}"
 
         with pytest.raises(NotFoundError):
             apiobj.cnx.get_by_id(
@@ -312,7 +315,8 @@ class TestCnxPublic(TestCnxBase):
             delete_entities=True,
         )
 
-        assert del_result == {"client_id": "badwolf"}
+        assert isinstance(del_result, json_api.adapters.CnxDelete)
+        assert del_result.client_id == "{'client_id': 'badwolf'}"
 
         with pytest.raises(NotFoundError):
             apiobj.cnx.get_by_id(
@@ -352,7 +356,8 @@ class TestCnxPublic(TestCnxBase):
             delete_entities=True,
         )
 
-        assert del_result == {"client_id": "badwolf"}
+        assert isinstance(del_result, json_api.adapters.CnxDelete)
+        assert del_result.client_id == "{'client_id': 'badwolf'}"
 
         with pytest.raises(NotFoundError):
             apiobj.cnx.get_by_id(

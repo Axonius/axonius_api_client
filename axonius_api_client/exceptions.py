@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 """Exceptions and warnings."""
+from typing import Optional
+
+import requests
 
 
 class AxonWarning(Warning):
@@ -28,10 +31,6 @@ class AuthError(AxonError):
 
 class NotFoundError(ApiError):
     """Error when something is not found."""
-
-
-class InvalidCredentials(AuthError):
-    """Error when credentials are invalid."""
 
 
 class NotLoggedIn(AuthError):
@@ -93,6 +92,72 @@ class CnxAddError(CnxError):
 class ResponseError(ApiError):
     """Errors when checking responses."""
 
+    def __init__(self, msg: Optional[str] = None, response=None, exc: Optional[Exception] = None):
+        """Error in responses received from REST API.
+
+        Args:
+            response (:obj:`requests.Response`): response that originated the error
+            msg: error message to include in exception
+            exc: original exception that was thrown if any
+        """
+        self.response: requests.Response = response
+        self.exc: Exception = exc
+        self.msg: str = msg
+        self.errmsg: str = self.build_errmsg(response=response, msg=msg, exc=exc)
+        super().__init__(self.errmsg)
+
+    @classmethod
+    def build_errmsg(
+        cls, response, msg: Optional[str] = None, exc: Optional[Exception] = None
+    ) -> str:
+        """Build an error message from a response.
+
+        Args:
+            response (:obj:`requests.Response`): response that originated the error
+            msg: error message to include in exception
+            exc: exception that was thrown if any
+        """
+        from .constants.logs import MAX_BODY_LEN
+        from .tools import json_dump, json_load, prettify_obj
+
+        msgs = []
+
+        url = response.url
+        method = response.request.method
+        code = response.status_code
+        reason = response.reason
+        out_len = len(response.request.body or "")
+        in_len = len(response.text or "")
+
+        msgs += [
+            *([f"Original exception: {exc}"] if exc else []),
+            "",
+            f"URL: {url!r}, METHOD: {method}",
+            f"CODE: {code!r}, REASON: {reason!r}, BYTES OUT: {out_len}, BYTES IN: {in_len}",
+            "",
+        ]
+        request_obj = json_load(obj=response.request.body, error=False)
+        response_obj = json_load(obj=response.text, error=False)
+
+        if isinstance(request_obj, (dict, list, tuple)):
+            msgs += ["Request Object:", json_dump(obj=request_obj, error=False)]
+        else:
+            msgs += ["Request Body:", str(request_obj)[:MAX_BODY_LEN]]
+
+        if isinstance(response_obj, (dict, list, tuple)):
+            msgs += ["Response Object:", *prettify_obj(response_obj)]
+        else:
+            msgs += ["Response Body:", str(response_obj)[:MAX_BODY_LEN]]
+
+        msg = msg or "Error in REST API response"
+        msgs = [msg, *msgs, "", msg]
+
+        return "\n".join(msgs)
+
+
+class InvalidCredentials(ResponseError):
+    """Error when credentials are invalid."""
+
 
 class ResponseNotOk(ResponseError):
     """Error if response has a status code that is an error and error_status is True."""
@@ -108,3 +173,13 @@ class JsonError(ResponseError):
 
 class WizardError(ApiError):
     """Errors in query wizards."""
+
+
+class StopFetch(ApiError):
+    """Pass."""
+
+    def __init__(self, reason: str, state: dict):
+        """Pass."""
+        self.reason = reason
+        self.state = state
+        super().__init__(reason)

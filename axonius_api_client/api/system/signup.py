@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 """API for performing initial signup."""
 from ...constants.logs import LOG_LEVEL_API
-from ...exceptions import ResponseNotOk
+from ...exceptions import ApiError
 from ...http import Http
 from ...logs import get_obj_log
-from ..routers import API_VERSION, Router
+from ...tools import token_parse
+from .. import json_api
+from ..api_endpoints import ApiEndpoints
 
 
 class Signup:
@@ -25,7 +27,7 @@ class Signup:
             >>> signup.is_signed_up
             True
         """
-        return self._signup_get()["signup"]
+        return self._get().value
 
     def signup(self, password: str, company_name: str, contact_email: str) -> dict:
         """Perform the initial signup and get the API key and API secret of admin user.
@@ -43,17 +45,20 @@ class Signup:
             company_name: name of company
             contact_email: email address of company contact
         """
-        response = self._signup_post(
+        response = self._perform(
             password=password, company_name=company_name, contact_email=contact_email
         )
+        return response.to_dict()
 
-        status = response.get("status")
-        message = response.get("message")
-        if status == "error":
-            raise ResponseNotOk(f"{message}")
-        return response  # pragma: no cover
+    def validate_password_reset_token(self, token: str) -> bool:
+        """Pass."""
+        token = token_parse(token)
+        data = self._token_validate(token=token)
+        return data.value
 
-    def use_password_reset_token(self, token: str, password: str) -> str:
+    def use_password_reset_token(
+        self, token: str, password: str
+    ) -> json_api.password_reset.UseResponse:
         """Use a password token reset link to change a users password.
 
         Args:
@@ -69,40 +74,38 @@ class Signup:
         Returns:
             name of user whose password was reset
         """
-        url_check = "token="
-        if url_check in token:
-            idx = token.index(url_check) + len(url_check)
-            token = token[idx:]
+        token = token_parse(token)
+        if not self.validate_password_reset_token(token=token):
+            raise ApiError(f"Password reset token is not valid: {token}")
 
-        response = self._tokens_reset(token=token, password=password)
+        data = self._token_use(token=token, password=password)
+        return data
 
-        message = response.get("message")
-        if message == "token error":
-            raise ResponseNotOk("Password reset token is expired!")
-
-        if message:
-            raise ResponseNotOk(message)
-
-        return response["user_name"]
-
-    def _signup_get(self) -> dict:
+    def _get(self) -> json_api.generic.BoolValue:
         """Direct API method to get the status of initial signup."""
-        path = self.router.root
-        response = self.http(method="get", path=path)
-        return response.json()
+        api_endpoint = ApiEndpoints.signup.get
+        return api_endpoint.perform_request(http=self.http)
 
-    def _tokens_reset(self, token: str, password: str) -> dict:
+    def _token_validate(self, token: str) -> json_api.password_reset.ValidateResponse:
+        """Pass."""
+        api_endpoint = ApiEndpoints.password_reset.validate
+        request_obj = api_endpoint.load_request(token=token)
+        return api_endpoint.perform_request(http=self.http, request_obj=request_obj)
+
+    def _token_use(self, token: str, password: str) -> json_api.password_reset.UseResponse:
         """Direct API method to use a reset token to change a password.
 
         Args:
             token: password reset token
             password: password to set
         """
-        path = self.router.tokens_reset
-        data = {"token": token, "password": password}
-        return self.http(method="post", path=path, json=data).json()
+        api_endpoint = ApiEndpoints.password_reset.use
+        request_obj = api_endpoint.load_request(token=token, password=password)
+        return api_endpoint.perform_request(http=self.http, request_obj=request_obj)
 
-    def _signup_post(self, password: str, company_name: str, contact_email: str) -> dict:
+    def _perform(
+        self, password: str, company_name: str, contact_email: str
+    ) -> json_api.signup.SignupResponse:
         """Direct API method to do the initial signup.
 
         Args:
@@ -110,21 +113,16 @@ class Signup:
             company_name: company name
             contact_email: contact email
         """
-        data = {
-            "companyName": company_name,
-            "contactEmail": contact_email,
-            "userName": "admin",
-            "newPassword": password,
-            "confirmNewPassword": password,
-            "api_keys": True,
-        }
-        path = self.router.root
-        return self.http(method="post", path=path, json=data).json()
-
-    @property
-    def router(self) -> Router:
-        """Router for this API model."""
-        return API_VERSION.signup
+        api_endpoint = ApiEndpoints.signup.perform
+        request_obj = api_endpoint.load_request(
+            company_name=company_name,
+            new_password=password,
+            confirm_new_password=password,
+            contact_email=contact_email,
+            user_name="admin",
+            api_keys=True,
+        )
+        return api_endpoint.perform_request(http=self.http, request_obj=request_obj)
 
     def __init__(self, url, **kwargs):
         """Provide an API for performing initial signup.

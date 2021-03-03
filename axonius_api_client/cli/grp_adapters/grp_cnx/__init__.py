@@ -9,6 +9,8 @@ from . import (
     cmd_delete_by_id,
     cmd_get,
     cmd_get_by_id,
+    cmd_set_active,
+    cmd_set_label,
     cmd_test,
     cmd_test_by_id,
 )
@@ -26,3 +28,5 @@ cnx.add_command(cmd_get_by_id.cmd)
 cnx.add_command(cmd_delete_by_id.cmd)
 cnx.add_command(cmd_test.cmd)
 cnx.add_command(cmd_test_by_id.cmd)
+cnx.add_command(cmd_set_label.cmd)
+cnx.add_command(cmd_set_active.cmd)

@@ -7,20 +7,44 @@ from typing import List, Optional, Union
 
 import requests
 
-from .api import (ActivityLogs, Adapters, CentralCore, Dashboard, Devices,
-                  Enforcements, Instances, Meta, RemoteSupport, RunAction,
-                  SettingsGlobal, SettingsGui, SettingsLifecycle, Signup,
-                  System, SystemRoles, SystemUsers, Users)
+from .api import (
+    ActivityLogs,
+    Adapters,
+    Dashboard,
+    Devices,
+    Enforcements,
+    Instances,
+    Meta,
+    RemoteSupport,
+    SettingsGlobal,
+    SettingsGui,
+    SettingsIdentityProviders,
+    SettingsLifecycle,
+    Signup,
+    SystemRoles,
+    SystemUsers,
+    Users,
+)
 from .auth import ApiKey
 from .constants.api import TIMEOUT_CONNECT, TIMEOUT_RESPONSE
-from .constants.logs import (LOG_FILE_MAX_FILES, LOG_FILE_MAX_MB,
-                             LOG_FILE_NAME, LOG_FILE_PATH, LOG_FMT_BRIEF,
-                             LOG_FMT_VERBOSE, LOG_LEVEL_API, LOG_LEVEL_AUTH,
-                             LOG_LEVEL_CONSOLE, LOG_LEVEL_FILE, LOG_LEVEL_HTTP,
-                             LOG_LEVEL_PACKAGE)
+from .constants.logs import (
+    LOG_FILE_MAX_FILES,
+    LOG_FILE_MAX_MB,
+    LOG_FILE_NAME,
+    LOG_FILE_PATH,
+    LOG_FMT_BRIEF,
+    LOG_FMT_VERBOSE,
+    LOG_LEVEL_API,
+    LOG_LEVEL_AUTH,
+    LOG_LEVEL_CONSOLE,
+    LOG_LEVEL_FILE,
+    LOG_LEVEL_HTTP,
+    LOG_LEVEL_PACKAGE,
+)
 from .exceptions import ConnectError, InvalidCredentials
 from .http import Http
 from .logs import LOG, add_file, add_stderr, get_obj_log, set_log_level
+from .setup_env import get_env_ax
 from .tools import coerce_bool, coerce_int, json_dump, json_reload, sysinfo
 from .version import __version__ as VERSION
 
@@ -45,19 +69,31 @@ class Connect:
         >>>
         >>> j = client.jdump  # json dump helper
         >>>
-        >>> client.start()  # connect to axonius
-        >>> devices = client.devices  # work with device assets
-        >>> users = client.users  # work with user assets
-        >>> adapters = client.adapters  # work with adapters and adapter connections
-        >>> enforcements = client.enforcements  # work with enforcements
-        >>> instances = client.instances  # work with instances
-        >>> dashboard = client.dashboard  # work with dashboards and discovery cycles
-        >>> system_users = client.system_users  # work with system users
-        >>> system_roles = client.system_roles  # work with system roles
-        >>> meta = client.meta  # work with instance meta data
-        >>> settings_global = client.settings_global  # work with global system settings
-        >>> settings_gui = client.settings_gui  # work with gui system settings
-        >>> settings_lifecycle = client.settings_lifecycle  # work with lifecycle system settings
+        >>> client.start()                  # connect to axonius
+        >>>
+        >>> # client.activity_logs          # get audit logs
+        >>> # client.adapters               # get adapters and update adapter settings
+        >>> # client.adapters.cnx           # CRUD for adapter connections
+        >>> # client.dashboard              # get/start/stop discovery cycles
+        >>> # client.devices                # get device assets
+        >>> # client.devices.fields         # get field schemas for device assets
+        >>> # client.devices.labels         # add/remove/get tags for device assets
+        >>> # client.devices.saved_queries  # CRUD for saved queries for device assets
+        >>> # client.enforcements           # CRUD for enforcements
+        >>> # client.instances              # get instances and instance meta data
+        >>> # client.meta                   # get product meta data
+        >>> # client.remote_support         # enable/disable remote support settings
+        >>> # client.settings_global        # get/update global system settings
+        >>> # client.settings_gui           # get/update gui system settings
+        >>> # client.settings_ip            # get/update identity provider system settings
+        >>> # client.settings_lifecycle     # get/update lifecycle system settings
+        >>> # client.signup                 # perform initial signup and use password reset tokens
+        >>> # client.system_roles           # CRUD for system roles
+        >>> # client.system_users           # CRUD for system users
+        >>> # client.users                  # get user assets
+        >>> # client.users.fields           # get field schemas for user assets
+        >>> # client.users.labels           # add/remove/get tags for user assets
+        >>> # client.users.saved_queries    # CRUD for saved queries for user assets
 
     """
 
@@ -247,7 +283,7 @@ class Connect:
         self.API_ARGS: dict = {"auth": self.AUTH, "log_level": self.LOG_LEVEL_API}
         """arguments to use for all API models"""
 
-        self.SIGNUP = Signup(url=self.HTTP.url)
+        self.SIGNUP = Signup(**self.HTTP_ARGS)
         """Easy access to signup."""
 
     def start(self):
@@ -280,6 +316,13 @@ class Connect:
 
             self.STARTED = True
             LOG.info(str(self))
+
+    @property
+    def signup(self) -> Signup:
+        """Work with signup endpoints."""
+        if not hasattr(self, "_signup"):
+            self._signup = Signup(**self.HTTP_ARGS)
+        return self._signup
 
     @property
     def users(self) -> Users:
@@ -346,30 +389,6 @@ class Connect:
         return self._enforcements
 
     @property
-    def run_action(self) -> RunAction:  # pragma: no cover
-        """Work with Enforcement Center actions."""
-        self.start()
-        if not hasattr(self, "_run_action"):
-            self._run_action = RunAction(**self.API_ARGS)
-        return self._run_action
-
-    @property
-    def central_core(self):
-        """Work with central core config DEPRECATED."""
-        self.start()
-        if not hasattr(self, "_central_core"):
-            self._central_core = CentralCore(**self.API_ARGS)
-        return self._central_core
-
-    @property
-    def system(self):
-        """Work with users, roles, global settings, and more DEPRECATED."""
-        self.start()
-        if not hasattr(self, "_system"):
-            self._system = System(**self.API_ARGS)
-        return self._system
-
-    @property
     def system_users(self) -> SystemUsers:
         """Work with system users."""
         self.start()
@@ -392,6 +411,14 @@ class Connect:
         if not hasattr(self, "_meta"):
             self._meta = Meta(**self.API_ARGS)
         return self._meta
+
+    @property
+    def settings_ip(self) -> SettingsIdentityProviders:
+        """Work with identity providers settings."""
+        self.start()
+        if not hasattr(self, "_settings_ip"):
+            self._settings_ip = SettingsIdentityProviders(**self.API_ARGS)
+        return self._settings_ip
 
     @property
     def settings_global(self) -> SettingsGlobal:
@@ -421,18 +448,22 @@ class Connect:
         """Show object info."""
         client = getattr(self, "HTTP", "")
         url = getattr(client, "URL", self.HTTP_ARGS["url"])
+        ax_env = get_env_ax()
+        banner = ax_env.get("AX_BANNER")
+        banner = f"[{banner}]" if banner else ""
+        pkg_ver = f"API Client v{VERSION}"
+
         if self.STARTED:
-            about = self.system.meta.about()
+            about = self.meta.about()
             version = about.get("Version", "") or "DEMO"
             version = version.replace("_", ".")
             built = about.get("Build Date", "")
-
-            return (
-                f"Connected to {url!r} version {version} (RELEASE DATE: {built})"
-                f" with API Client v{VERSION}"
-            )
+            msg = [f"Connected to {url!r}", f"version {version}", f"(RELEASE DATE: {built})"]
         else:
-            return f"Not connected to {url!r}"
+            msg = [f"Not connected to {url!r}"]
+
+        bits = [x for x in [*msg, pkg_ver, banner] if x]
+        return " ".join(bits)
 
     def __repr__(self) -> str:
         """Show object info."""

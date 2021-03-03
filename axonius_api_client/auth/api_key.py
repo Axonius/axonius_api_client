@@ -19,6 +19,12 @@ class ApiKey(Mixins):
             secret: API secret to use in credentials
 
         """
+        if isinstance(key, str):
+            key = key.strip()
+
+        if isinstance(secret, str):
+            secret = secret.strip()
+
         creds = {"key": key, "secret": secret}
         super().__init__(http=http, creds=creds, **kwargs)
 
