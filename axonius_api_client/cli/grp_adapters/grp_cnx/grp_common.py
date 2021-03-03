@@ -287,7 +287,7 @@ def handle_export(ctx, rows, export_format, **kwargs):
         rows = listify(rows)
         lines = "\n".join(
             [
-                "--node-name {node_name} --name {adapter_name} --id {id}".format(**row)
+                "--node-name {node_name!r} --name {adapter_name!r} --id {id!r}".format(**row)
                 for row in rows
             ]
         )

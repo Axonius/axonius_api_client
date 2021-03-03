@@ -83,6 +83,19 @@ class Enforcements(ModelMixins):  # pragma: no cover
         err = f"Enforcement with uuid of {value!r} not found"
         raise NotFoundError(tablize(value=[x.to_tablize() for x in data], err=err))
 
+    """
+
+    enforcement.get_by_name/get_by_uuid()
+    e_obj = OBJECT
+    e_obj.action_main_set(name: str, **config)
+    e_obj.action_add(name: str, type: ["post", "success", "failure"], **config)
+    e_obj.action_remove(name: str)
+    e_obj.trigger_set(asset_type=["users", "devices"], sq="NAME OF SQ", added_only=False)
+    e_obj.trigger_configure(enable=True, schedule=[''], only_added=True/False/None,
+        only_remove=True/False/None)
+    ...
+    """
+
     # def create(self, name: str, action_name: str, action_type: str, action_config: dict):
     #     """Pass."""
     #     enforcements = self.get()

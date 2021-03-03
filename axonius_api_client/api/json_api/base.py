@@ -80,8 +80,8 @@ class UnsupportedVersion(ApiError):
             f"With schema {schema}",
             f"While in {api_endpoint}",
             "",
-            "This version of the API Client only works with Axonius v4.x or later",
-            "You need to use API client v4.2.x for this version of Axonius",
+            "This version of the API Client only works with Axonius v4.1 or later",
+            "You need to use API client v4.10.x for this version of Axonius",
             "",
             pre,
         ]

@@ -49,7 +49,7 @@ all of the requirements as wheel packages:
 
 .. code-block:: console
 
-   $ pip download -d d:\axonshell_pkg axonius-api-client
+   $ pip download -d d:\axonshell_pkg axonius-api-client --only-binary
 
 Copy the contents of d:\axonshell_pkg to the destination server, and then on the
 destination server run:
