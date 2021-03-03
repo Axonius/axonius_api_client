@@ -85,6 +85,7 @@ FIELD_FORMATS = [
     "tag",
     "time",
     "version",
+    "dynamic_field",  # ~3.13
 ]
 SCHEMA_FIELD_FORMATS = FIELD_FORMATS
 SCHEMA_TYPES = ["string", "bool", "array", "integer", "number", "file"]

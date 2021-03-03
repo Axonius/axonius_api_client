@@ -4,13 +4,26 @@ import os
 import pathlib
 
 import pytest
+
 from axonius_api_client import PACKAGE_ROOT
-from axonius_api_client.setup_env import (KEY_CERTWARN, KEY_DEFAULT_PATH,
-                                          KEY_ENV_FILE, KEY_ENV_PATH, KEY_KEY,
-                                          KEY_OVERRIDE, KEY_SECRET, KEY_URL,
-                                          NO, YES, find_dotenv, get_env_ax,
-                                          get_env_bool, get_env_connect,
-                                          get_env_path, get_env_str)
+from axonius_api_client.setup_env import (
+    KEY_CERTWARN,
+    KEY_DEFAULT_PATH,
+    KEY_ENV_FILE,
+    KEY_ENV_PATH,
+    KEY_KEY,
+    KEY_OVERRIDE,
+    KEY_SECRET,
+    KEY_URL,
+    NO,
+    YES,
+    find_dotenv,
+    get_env_ax,
+    get_env_bool,
+    get_env_connect,
+    get_env_path,
+    get_env_str,
+)
 
 
 class TestFindDotEnv:

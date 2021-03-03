@@ -3,8 +3,9 @@
 import atexit
 import os
 
-import axonius_api_client as axonapi
 import click
+
+import axonius_api_client as axonapi
 
 from ...constants.general import PY36
 from ...tools import echo_error, json_reload, pathlib
@@ -29,9 +30,11 @@ API Objects:
     - settings_global/sgl: Work with Global system settings
     - settings_gui/sgu: Work with GUI system settings
     - settings_lifecycle/sl: Work with Lifecyle system settings
+    - settings_ip/sip: Work with Identity Provider system settings
     - system_roles/sr: Work with system roles
     - system_users/su: Work with system users
     - users/u: Work with user assets
+
 """
 
 SHELL_EXIT = """Goodbye human. We hope you enjoyed your stay."""
@@ -71,7 +74,7 @@ def cmd(ctx, url, key, secret):  # noqa: D301
         - settings_global/sgl: Work with Global system settings
         - settings_gui/sgu: Work with GUI system settings
         - settings_lifecycle/sl: Work with Lifecyle system settings
-        - system/s: Work with users, roles, global settings, and more
+        - settings_ip/sip: Work with Identity Provider system settings
         - system_roles/sr: Work with system roles
         - system_users/su: Work with system users
         - users/u: Work with user assets
@@ -100,6 +103,7 @@ def cmd(ctx, url, key, secret):  # noqa: D301
         "settings_global": client.settings_global,
         "settings_gui": client.settings_gui,
         "settings_lifecycle": client.settings_lifecycle,
+        "settings_ip": client.settings_ip,
         "a": client.adapters,
         "al": client.activity_logs,
         "c": client,
@@ -116,6 +120,7 @@ def cmd(ctx, url, key, secret):  # noqa: D301
         "sgl": client.settings_global,
         "sgu": client.settings_gui,
         "sl": client.settings_lifecycle,
+        "sip": client.settings_ip,
     }
 
     spawn_shell(shellvars)

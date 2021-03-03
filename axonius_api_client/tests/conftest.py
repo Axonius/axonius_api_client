@@ -3,20 +3,33 @@
 import os
 
 import pytest
-from axonius_api_client.api import (ActivityLogs, Adapters, Dashboard, Devices,
-                                    Enforcements, Instances, Meta,
-                                    RemoteSupport, RunAction, SettingsGlobal,
-                                    SettingsGui, SettingsLifecycle, Signup,
-                                    SystemRoles, SystemUsers, Users, Wizard,
-                                    WizardCsv, WizardText)
+
+from axonius_api_client.api import (
+    ActivityLogs,
+    Adapters,
+    Dashboard,
+    Devices,
+    Enforcements,
+    Instances,
+    Meta,
+    RemoteSupport,
+    SettingsGlobal,
+    SettingsGui,
+    SettingsLifecycle,
+    Signup,
+    SystemRoles,
+    SystemUsers,
+    Users,
+    Wizard,
+    WizardCsv,
+    WizardText,
+)
 from axonius_api_client.api.adapters import Cnx
 from axonius_api_client.api.assets import Fields, Labels, SavedQuery
 from axonius_api_client.constants.adapters import CSV_ADAPTER
-from axonius_api_client.constants.system import Role
 
 from .meta import CSV_FILECONTENT_STR, CSV_FILENAME, USER_NAME
-from .utils import (check_apiobj, check_apiobj_children, check_apiobj_xref,
-                    get_auth, get_url)
+from .utils import check_apiobj, check_apiobj_children, check_apiobj_xref, get_auth, get_url
 
 AX_URL = os.environ.get("AX_URL", None) or None
 AX_KEY = os.environ.get("AX_KEY", None) or None
@@ -110,15 +123,6 @@ def api_enforcements(request):
     """Test utility."""
     auth = get_auth(request)
     obj = Enforcements(auth=auth)
-    check_apiobj(authobj=auth, apiobj=obj)
-    return obj
-
-
-@pytest.fixture(scope="session")
-def api_run_action(request):
-    """Test utility."""
-    auth = get_auth(request)
-    obj = RunAction(auth=auth)
     check_apiobj(authobj=auth, apiobj=obj)
     return obj
 
@@ -290,14 +294,19 @@ def smtp_setup(api_settings_global):
 @pytest.fixture(scope="function")
 def temp_user(api_system_users):
     """Pass."""
-    try:
-        api_system_users.delete_by_name(name=USER_NAME)
-    except Exception:
-        pass
+    roles = api_system_users.roles._get()
+    users = api_system_users._get()
+    for user in users:
+        if user.user_name == USER_NAME:
+            api_system_users._delete(uuid=user.uuid)
 
-    user = api_system_users.add(name=USER_NAME, role_name=Role.R_ADMIN, password=USER_NAME)
-    yield user
+    role_id = roles[0].uuid
+
+    tuser = api_system_users._add(user_name=USER_NAME, role_id=role_id, password=USER_NAME)
+
+    yield tuser
+
     try:
-        api_system_users.delete_by_name(name=USER_NAME)
+        api_system_users._delete(uuid=tuser.uuid)
     except Exception:
         pass

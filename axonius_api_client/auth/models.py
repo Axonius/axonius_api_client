@@ -3,13 +3,12 @@
 import abc
 import logging
 
-from ..api.routers import API_VERSION
+from ..api.api_endpoint import ApiEndpoint
+from ..api.api_endpoints import ApiEndpoints
 from ..constants.logs import LOG_LEVEL_AUTH
-from ..exceptions import AuthError, InvalidCredentials, NotLoggedIn
+from ..exceptions import AuthError, NotLoggedIn
 from ..http import Http
 from ..logs import get_obj_log
-from ..tools import json_reload
-from ..version import __version__
 
 
 class Model:
@@ -47,7 +46,7 @@ class Mixins(Model):
     _logged_in: bool = False
     """Attribute checked by :meth:`is_logged_in`."""
 
-    _validate_path: str = API_VERSION.system.meta_about
+    _validate_endpoint: ApiEndpoint = ApiEndpoints.system_settings.meta_about
     """Endpoint to use to validate logins."""
 
     def __init__(self, http: Http, creds: dict, **kwargs):
@@ -126,20 +125,10 @@ class Mixins(Model):
 
     def _validate(self):
         """Validate credentials."""
-        response = self.http(method="get", path=self._validate_path)
-        if response.status_code == 404:
-            raise AuthError(
-                f"Unable to access endpoint {self._validate_path}, "
-                f"API client v{__version__} requires Axonius v3.9 or above"
-            )
-
-        body = json_reload(obj=response.text, error=False)
-        self.LOG.debug(f"Received auth path {self._validate_path!r} body:\n{body}")
-
         try:
-            response.raise_for_status()
-        except Exception as exc:
+            self._validate_endpoint.perform_request(http=self.http)
+        except Exception:
             self._logged_in = False
-            raise InvalidCredentials(f"Invalid credentials on {self} -- exception: {exc}")
-
-        self._logged_in = True
+            raise
+        else:
+            self._logged_in = True

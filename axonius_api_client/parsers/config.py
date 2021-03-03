@@ -2,13 +2,17 @@
 """Parsers for configuration schemas."""
 import copy
 import pathlib
-import warnings
 from typing import Any, List, Optional, Tuple, Union
 
 from ..constants.api import SETTING_UNCHANGED
 from ..constants.general import NO, YES
-from ..exceptions import (ApiError, ConfigInvalidValue, ConfigRequired,
-                          ConfigUnchanged, ConfigUnknown)
+from ..exceptions import (
+    ApiError,
+    ConfigInvalidValue,
+    ConfigRequired,
+    ConfigUnchanged,
+    ConfigUnknown,
+)
 from ..tools import coerce_int, is_int, join_kv, json_load
 from .tables import tablize_schemas
 
@@ -293,6 +297,7 @@ def config_unknown(
         :exc:`ConfigUnknown`: if the supplied new config has unknown keys to the schemas
     """
     unknowns = {k: v for k, v in new_config.items() if k not in schemas}
+
     if unknowns:
         unknowns = ["{}: {!r}".format(k, v) for k, v in unknowns.items()]
         unknowns = "\n  " + "\n  ".join(unknowns)
@@ -456,25 +461,16 @@ def parse_schema(raw: dict) -> dict:
         raw: original schema
     """
     parsed = {}
-    if not raw:
-        return parsed
 
-    schemas = raw.pop("items")
-    required = raw.pop("required")
-    raw.pop("type", "")
-    raw.pop("pretty_name", "")
-    cnx_label = raw.pop("connection_label", {})
+    if raw:
+        schemas = raw["items"]
+        required = raw["required"]
 
-    if cnx_label:  # pragma: no cover
-        parsed["connection_label"] = cnx_label
+        for schema in schemas:
+            name = schema["name"]
+            schema["required"] = name in required
+            parsed[name] = schema
 
-    for schema in schemas:
-        schema_name = schema["name"]
-        parsed[schema_name] = schema
-        schema["required"] = schema_name in required
-
-    if raw:  # pragma: no cover
-        warnings.warn(f"SCHEMA CHANGE? leftover items: {raw}")
     return parsed
 
 
@@ -560,10 +556,11 @@ def parse_settings(raw: dict, title: str = "") -> dict:
     # FYI missing pretty_name:
     #   settings_gui
     #   settings_lifecycle
-    title = raw["schema"].get("pretty_name", "") or title
+    schema = raw["document_meta"]["schema"]
+    title = schema.get("pretty_name", "") or title
 
     raw_config = raw["config"]
-    raw_sections = raw["schema"]["items"]
+    raw_sections = schema["items"]
 
     parsed = {}
     parsed["settings_title"] = title

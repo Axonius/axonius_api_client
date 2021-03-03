@@ -34,6 +34,9 @@ install_requires = [
     "fuzzyfinder>=2.1.0",
     "xmltodict>=0.12.0",
     "dataclasses ; python_version < '3.7'",
+    "marshmallow>=3.10.0",
+    "marshmallow-jsonapi>=0.24.0",
+    "dataclasses-json>=0.5.2",
 ]
 
 setup(

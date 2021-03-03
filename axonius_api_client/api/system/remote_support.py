@@ -1,75 +1,10 @@
 # -*- coding: utf-8 -*-
 """API for working with product metadata."""
-import dataclasses
-import datetime
-from typing import List, Optional
+from typing import Optional
 
-from ...data import PropsData
-from ...tools import coerce_bool, coerce_int, dt_now, dt_parse, trim_float
+from .. import json_api
+from ..api_endpoints import ApiEndpoints
 from ..mixins import ModelMixins
-from ..routers import API_VERSION, Router
-
-PROPERTIES: List[str] = [
-    "enabled",
-    "enabled_temporarily",
-    "enabled_permanently",
-    "temporary_expiry_date",
-    "temporary_expires_in_hours",
-    "analytics_enabled",
-    "remote_access_enabled",
-]
-
-
-@dataclasses.dataclass
-class RemoteData(PropsData):
-    """Pass."""
-
-    raw: dict
-
-    @property
-    def _properties(self) -> List[str]:
-        return PROPERTIES
-
-    @property
-    def enabled_permanently(self) -> bool:
-        """Pass."""
-        return self.raw["provision"]
-
-    @property
-    def enabled_temporarily(self) -> bool:
-        """Pass."""
-        return bool(self.raw.get("timeout"))
-
-    @property
-    def enabled(self) -> bool:
-        """Pass."""
-        return self.enabled_permanently or self.enabled_temporarily
-
-    @property
-    def temporary_expiry_date(self) -> Optional[datetime.datetime]:
-        """Pass."""
-        value = self.raw.get("timeout")
-        if value:
-            return dt_parse(value)
-        return None
-
-    @property
-    def temporary_expires_in_hours(self) -> Optional[float]:
-        """Pass."""
-        value = self.temporary_expiry_date
-        if value:
-            return trim_float(value=(value - dt_now()).total_seconds() / 60 / 60)
-        return None
-
-    @property
-    def analytics_enabled(self) -> bool:
-        """Pass."""
-        return self.enabled and self.raw["analytics"]
-
-    @property
-    def remote_access_enabled(self) -> bool:
-        """Pass."""
-        return self.enabled and self.raw["troubleshooting"]
 
 
 class RemoteSupport(ModelMixins):
@@ -80,11 +15,13 @@ class RemoteSupport(ModelMixins):
 
     """
 
-    def get(self) -> RemoteData:
+    def get(self) -> json_api.remote_support.RemoteSupport:
         """Pass."""
-        return RemoteData(raw=self._get())
+        return self._get()
 
-    def configure(self, enable: bool, temp_hours: Optional[int] = None) -> RemoteData:
+    def configure(
+        self, enable: bool, temp_hours: Optional[int] = None
+    ) -> json_api.remote_support.RemoteSupport:
         """Configure remote support.
 
         Args:
@@ -95,69 +32,80 @@ class RemoteSupport(ModelMixins):
 
         def stop_temp():
             if current_data.enabled_temporarily:
-                self._stop_temp()
+                self._stop_temporary()
 
         current_data = self.get()
 
-        if enable:
-            if temp_hours:
-                hours = coerce_int(obj=temp_hours, min_value=1)
-
-                self._update(data={"provision": False})
-                self._start_temp(hours=hours)
-                return self.get()
-
+        if enable and temp_hours:
+            self._update_permanent(provision=False)
+            self._start_temporary(hours=temp_hours)
+        elif enable:
             stop_temp()
-            self._update(data={"provision": True})
-            return self.get()
-
-        stop_temp()
-        self._update(data={"provision": False})
+            self._update_permanent(provision=True)
+        elif not enable:
+            stop_temp()
+            self._update_permanent(provision=False)
         return self.get()
 
-    def configure_analytics(self, enable: bool) -> RemoteData:
+    def configure_analytics(self, enable: bool) -> json_api.remote_support.RemoteSupport:
         """Configure Anonymized Analytics.
 
         Args:
             enable: turn "Remote Support > Anonymized Analytics" on or off
 
         """
-        data = {"analytics": coerce_bool(obj=enable)}
-        self._update(data=data)
+        self._update_analytics(analytics=enable)
         return self.get()
 
-    def configure_remote_access(self, enable: bool) -> RemoteData:
+    def configure_remote_access(self, enable: bool) -> json_api.remote_support.RemoteSupport:
         """Configure Remote Access.
 
         Args:
             enable: turn "Remote Support > Remote Access" on or off
 
         """
-        data = {"troubleshooting": coerce_bool(obj=enable)}
-        self._update(data=data)
+        self._update_troubleshooting(troubleshooting=enable)
         return self.get()
 
-    def _get(self) -> dict:
+    def _get(self) -> json_api.remote_support.RemoteSupport:
         """Direct API method to get the properties for remote support."""
-        path = self.router.remote_support
-        return self.request(method="get", path=path)
+        api_endpoint = ApiEndpoints.remote_support.get
+        return api_endpoint.perform_request(http=self.auth.http)
 
-    def _update(self, data: dict) -> str:
+    def _update_permanent(
+        self,
+        provision: bool,
+    ) -> str:
         """Direct API method to update the properties for remote support."""
-        path = self.router.remote_support
-        return self.request(method="post", path=path, json=data)
+        api_endpoint = ApiEndpoints.remote_support.permanent_update
+        request_obj = api_endpoint.load_request(provision=provision)
+        return api_endpoint.perform_request(http=self.auth.http, request_obj=request_obj)
 
-    def _start_temp(self, hours: int) -> dict:
+    def _update_analytics(
+        self,
+        analytics: bool,
+    ) -> str:
+        """Direct API method to update the properties for remote support."""
+        api_endpoint = ApiEndpoints.remote_support.analytics_update
+        request_obj = api_endpoint.load_request(analytics=analytics)
+        return api_endpoint.perform_request(http=self.auth.http, request_obj=request_obj)
+
+    def _update_troubleshooting(
+        self,
+        troubleshooting: bool,
+    ) -> str:
+        """Direct API method to update the properties for remote support."""
+        api_endpoint = ApiEndpoints.remote_support.troubleshooting_update
+        request_obj = api_endpoint.load_request(troubleshooting=troubleshooting)
+        return api_endpoint.perform_request(http=self.auth.http, request_obj=request_obj)
+
+    def _start_temporary(self, hours: int) -> json_api.remote_support.UpdateTemporaryResponse:
         """Direct API method to enable temporary remote support."""
-        path = self.router.remote_support
-        return self.request(method="put", path=path, json={"duration": hours})
+        api_endpoint = ApiEndpoints.remote_support.temporary_enable
+        request_obj = api_endpoint.load_request(duration=hours)
+        return api_endpoint.perform_request(http=self.auth.http, request_obj=request_obj)
 
-    def _stop_temp(self) -> dict:
+    def _stop_temporary(self) -> str:
         """Direct API method to stop temporary remote support."""
-        path = self.router.remote_support
-        return self.request(method="delete", path=path)
-
-    @property
-    def router(self) -> Router:
-        """Router for this API model."""
-        return API_VERSION.system
+        api_endpoint = ApiEndpoints.remote_support.temporary_disable
+        return api_endpoint.perform_request(http=self.auth.http)

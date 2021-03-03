@@ -9,8 +9,7 @@ import platform
 import sys
 from datetime import datetime, timedelta, timezone
 from itertools import zip_longest
-from typing import (Any, Callable, Iterable, Iterator, List, Optional, Tuple,
-                    Union)
+from typing import Any, Callable, Iterable, Iterator, List, Optional, Tuple, Union
 from urllib.parse import urljoin
 
 import click
@@ -20,8 +19,16 @@ import dateutil.tz
 
 from . import INIT_DOTENV, PACKAGE_FILE, PACKAGE_ROOT, VERSION
 from .constants.api import GUI_PAGE_SIZES
-from .constants.general import (ERROR_ARGS, ERROR_TMPL, NO, OK_ARGS, OK_TMPL,
-                                WARN_ARGS, WARN_TMPL, YES)
+from .constants.general import (
+    ERROR_ARGS,
+    ERROR_TMPL,
+    NO,
+    OK_ARGS,
+    OK_TMPL,
+    WARN_ARGS,
+    WARN_TMPL,
+    YES,
+)
 from .exceptions import ToolsError
 from .setup_env import find_dotenv, get_env_ax
 
@@ -967,3 +974,35 @@ def get_subcls(cls) -> list:
     """Get all subclasses of a class."""
     subs = [s for c in cls.__subclasses__() for s in get_subcls(c)]
     return list(set(cls.__subclasses__()).union(subs))
+
+
+def prettify_obj(obj, indent=0):
+    """Pass."""
+    spaces = " " * indent
+    sub_indent = indent + 2
+    if isinstance(obj, dict):
+        lines = ["", f"{spaces}-----"] if not indent else []
+        for k, v in obj.items():
+            lines += [f"{spaces}- {k}:", *prettify_obj(v, sub_indent)]
+        return lines
+    elif isinstance(obj, list):
+        return [y for x in obj for y in prettify_obj(x, indent)]
+    return [f"{spaces} {obj}"]
+
+
+def token_parse(obj: str) -> str:
+    """Pass."""
+    url_check = "token="
+    if url_check in obj:
+        idx = obj.index(url_check) + len(url_check)
+        obj = obj[idx:]
+    return obj
+
+
+def combo_dicts(*args):
+    """Pass."""
+    ret = {}
+    for x in args:
+        if isinstance(x, dict):
+            ret.update(x)
+    return ret

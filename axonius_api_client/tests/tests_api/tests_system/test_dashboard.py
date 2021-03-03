@@ -3,6 +3,8 @@
 import datetime
 
 import pytest
+
+from axonius_api_client.api import json_api
 from axonius_api_client.api.system.dashboard import DiscoverData, DiscoverPhase
 
 
@@ -15,28 +17,30 @@ class DashboardBase:
 class TestDashboardPrivate(DashboardBase):
     def test_private_lifecycle(self, apiobj):
         lifecycle = apiobj._get()
-        assert isinstance(lifecycle, dict)
-        assert "status" in lifecycle
-        assert lifecycle["status"] in ["starting", "running", "done"]
+        assert isinstance(lifecycle, json_api.lifecycle.Lifecycle)
+        assert lifecycle.status in ["starting", "running", "done"]
 
     def test_private_start_stop(self, apiobj):
         stop = apiobj._stop()
-        assert not stop
+        assert isinstance(stop, str) and not stop
 
         lifecycle = apiobj._get()
-        assert lifecycle["status"] in ["done", "stopping"]
+        assert isinstance(lifecycle, json_api.lifecycle.Lifecycle)
+        assert lifecycle.status in ["done", "stopping"]
 
         start = apiobj._start()
-        assert not start
+        assert isinstance(start, str) and not start
 
         lifecycle = apiobj._get()
-        assert lifecycle["status"] in ["starting", "running"]
+        assert isinstance(lifecycle, json_api.lifecycle.Lifecycle)
+        assert lifecycle.status in ["starting", "running"]
 
         re_stop = apiobj._stop()
-        assert not re_stop
+        assert isinstance(re_stop, str) and not re_stop
 
         lifecycle = apiobj._get()
-        assert lifecycle["status"] in ["done", "stopping"]
+        assert isinstance(lifecycle, json_api.lifecycle.Lifecycle)
+        assert lifecycle.status in ["done", "stopping"]
 
 
 class TestDashboardPublic(DashboardBase):
@@ -76,7 +80,7 @@ class TestDashboardPublic(DashboardBase):
         assert isinstance(data.phases, list)
         for phase in data.phases:
             assert isinstance(phase, DiscoverPhase)
-            assert phase.status in ["n/a", "done", "Pending", "running"]
+            assert phase.status in ["n/a", "done", "pending", "running"]
 
             assert str(phase)
             assert repr(phase)

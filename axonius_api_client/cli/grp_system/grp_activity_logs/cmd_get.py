@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """Command line interface for Axonius API Client."""
-from ....api.system.activity_logs import SEARCH_PROPERTIES
+from ....api.json_api.audit_logs import AuditLog
 from ...context import CONTEXT_SETTINGS, click
 from ...options import AUTH, add_options
 from .grp_common import EXPORT, handle_export
@@ -18,7 +18,7 @@ SEARCH_OPTS = [
         required=False,
         multiple=True,
     )
-    for prop in SEARCH_PROPERTIES
+    for prop in AuditLog._search_properties()
 ]
 
 

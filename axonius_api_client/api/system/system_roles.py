@@ -1,17 +1,17 @@
 # -*- coding: utf-8 -*-
 """API for working with system roles."""
 import copy
-from typing import List, Optional
+import math
+from typing import Generator, List, Optional, Union
 
 from cachetools import TTLCache, cached
 
-from ...constants.system import Role
 from ...exceptions import ApiError, NotFoundError
-from ...parsers.system import parse_cat_actions, parse_roles
 from ...parsers.tables import tablize_roles
 from ...tools import coerce_str_to_csv, json_dump
+from .. import json_api
+from ..api_endpoints import ApiEndpoints
 from ..mixins import ModelMixins
-from ..routers import API_VERSION, Router
 
 
 class SystemRoles(ModelMixins):
@@ -28,8 +28,60 @@ class SystemRoles(ModelMixins):
         * Get a user readable version of the permissions for a role: :meth:`pretty_perms`
     """
 
-    def get(self) -> List[dict]:
-        """Get all roles in the system.
+    @staticmethod
+    def _parse_cat_actions(raw: dict) -> dict:
+        """Parse the permission labels into a layered dict."""
+
+        def set_len(item, target):
+            measure = int(math.ceil(len(item) / 10.0)) * 10
+            if measure > lengths[target]:
+                lengths[target] = measure
+
+        cats = {}
+        cat_actions = {}
+        lengths = {"categories": 0, "actions": 0, "categories_desc": 0, "actions_desc": 0}
+
+        # first pass, get all of the categories
+        for label, desc in raw.items():
+            pre, rest = label.split(".", 1)
+            if pre != "permissions":
+                continue
+
+            split = rest.split(".", 1)
+            cat = split.pop(0)
+
+            if not split:
+                assert cat not in cats
+                assert cat not in cat_actions
+                cats[cat] = desc
+                set_len(item=desc, target="categories_desc")
+                set_len(item=cat, target="categories")
+
+                cat_actions[cat] = {}
+
+        # second pass, get all of the actions
+        for label, desc in raw.items():
+            pre, rest = label.split(".", 1)
+            if pre != "permissions":
+                continue
+
+            split = rest.split(".", 1)
+            cat = split.pop(0)
+
+            if not split:
+                continue
+
+            action = split.pop(0)
+            assert not split
+            assert action not in cat_actions[cat]
+            set_len(item=desc, target="actions_desc")
+            set_len(item=action, target="actions")
+            cat_actions[cat][action] = desc
+
+        return {"categories": cats, "actions": cat_actions, "lengths": lengths}
+
+    def get(self, generator: bool = False) -> Union[Generator[dict, None, None], List[dict]]:
+        """Get Axonius system roles.
 
         Examples:
             Create a ``client`` using :obj:`axonius_api_client.connect.Connect`
@@ -38,8 +90,18 @@ class SystemRoles(ModelMixins):
             >>> [x['name'] for x in roles]
             ['Admin', 'Viewer', 'Restricted', 'No Access', 'abc']
 
+        Args:
+            generator: return an iterator for objects that will yield rows as they are fetched
+
         """
-        return parse_roles(roles=self._get())
+        gen = self.get_generator()
+        return gen if generator else list(gen)
+
+    def get_generator(self) -> Generator[dict, None, None]:
+        """Get Axonius system roles using a generator."""
+        rows = self._get()
+        for row in rows:
+            yield row.to_dict_old()
 
     def get_by_name(self, name: str) -> dict:
         """Get a role by name.
@@ -58,7 +120,7 @@ class SystemRoles(ModelMixins):
             :exc:`NotFoundError`: if role not found
         """
         roles = self.get()
-        found = [x for x in roles if x[Role.NAME] == name]
+        found = [x for x in roles if x["name"] == name]
         if found:
             return found[0]
 
@@ -82,7 +144,7 @@ class SystemRoles(ModelMixins):
             :exc:`NotFoundError`: if role not found
         """
         roles = self.get()
-        found = [x for x in roles if x[Role.UUID] == uuid]
+        found = [x for x in roles if x["uuid"] == uuid]
         if found:
             return found[0]
 
@@ -151,21 +213,21 @@ class SystemRoles(ModelMixins):
             new_name: new name of role
         """
         roles = self.get()
-        found_new = [x for x in roles if x[Role.NAME] == new_name]
+        found_new = [x for x in roles if x["name"] == new_name]
         if found_new:
             raise ApiError(f"Role with new name {new_name!r} already exists!")
 
         if name == new_name:
             raise ApiError(f"New name {new_name!r} must be different than original name {name!r}")
 
-        found = [x for x in roles if x[Role.NAME] == name]
+        found = [x for x in roles if x["name"] == name]
         if not found:
             err = f"Role with name of {name!r} not found"
             raise NotFoundError(tablize_roles(roles=roles, cat_actions=self.cat_actions, err=err))
 
         role = found[0]
         self._check_predefined(role=role)
-        self._update(uuid=role[Role.UUID], name=new_name, permissions=role[Role.PERMS])
+        self._update(uuid=role["uuid"], name=new_name, permissions=role["permissions"])
         return self.get_by_name(name=new_name)
 
     def set_perms(self, name: str, grant: bool = True, **kwargs) -> dict:
@@ -203,7 +265,7 @@ class SystemRoles(ModelMixins):
         """
         role = self.get_by_name(name=name)
         self._check_predefined(role=role)
-        perms_orig = role[Role.PERMS]
+        perms_orig = role["permissions"]
         perms_new = self.cat_actions_to_perms(
             role_perms=perms_orig, grant=grant, src=f"set permissions on role {name!r}", **kwargs
         )
@@ -212,7 +274,7 @@ class SystemRoles(ModelMixins):
             supplied = f"Supplied changes: {json_dump(kwargs)}"
             pretty_perms = self.pretty_perms(role=role)
             raise ApiError("\n".join([err, pretty_perms, "", err, supplied]))
-        self._update(uuid=role[Role.UUID], name=name, permissions=perms_new)
+        self._update(uuid=role["uuid"], name=name, permissions=perms_new)
         return self.get_by_name(name=name)
 
     def delete_by_name(self, name: str) -> dict:
@@ -228,7 +290,7 @@ class SystemRoles(ModelMixins):
         """
         role = self.get_by_name(name=name)
         self._check_predefined(role=role)
-        self._delete(uuid=role[Role.UUID])
+        self._delete(uuid=role["uuid"])
         return role
 
     def pretty_perms(self, role: dict) -> str:
@@ -249,12 +311,13 @@ class SystemRoles(ModelMixins):
             role: role returned from :meth:`get_by_name`, :meth:`get`, or :meth:`get_by_uuid`
         """
         lines = []
-        role_perms = role[Role.PERMS_FLAT]
-        cats = self.cat_actions[Role.CATS]
-        acts = self.cat_actions[Role.ACTS]
-        lens = self.cat_actions[Role.LENS]
-        len_acts = lens[Role.ACTS]
-        len_acts_desc = lens[Role.ACTS_DESC]
+        role_perms = role["permissions_flat"]
+        cat_actions = self.cat_actions
+        cats = cat_actions["categories"]
+        acts = cat_actions["actions"]
+        lens = cat_actions["lengths"]
+        len_acts = lens["actions"]
+        len_acts_desc = lens["actions_desc"]
 
         for category, actions in acts.items():
             cat_desc = cats[category]
@@ -267,60 +330,61 @@ class SystemRoles(ModelMixins):
                 )
         return "\n".join(lines)
 
-    def _get(self):
-        """Direct API method to get all roles."""
-        path = self.router.roles
-        return self.request(method="get", path=path)
+    def _get(self) -> List[json_api.system_roles.SystemRole]:
+        """Direct API method to get all users.
 
-    def _add(self, name, permissions):
+        Args:
+            limit: limit to N rows per page
+            offset: start at row N
+        """
+        api_endpoint = ApiEndpoints.system_roles.get
+        return api_endpoint.perform_request(http=self.auth.http)
+
+    def _add(self, name: str, permissions: dict) -> json_api.system_roles.SystemRole:
         """Direct API method to add a role.
 
         Args:
             name: name of new role
             permissions: permissions for new role
         """
-        data = {"name": name, "permissions": permissions}
-        path = self.router.roles
-        return self.request(method="put", path=path, json=data)
+        api_endpoint = ApiEndpoints.system_roles.create
+        request_obj = api_endpoint.load_request(name=name, permissions=permissions)
+        return api_endpoint.perform_request(http=self.auth.http, request_obj=request_obj)
 
-    def _update(self, uuid, name, permissions):
+    def _update(self, uuid: str, name: str, permissions: dict) -> json_api.system_roles.SystemRole:
         """Direct API method to update a roles permissions.
 
         Args:
             name: name of role to update
             permissions: permissions to update on new role
         """
-        data = {"name": name, "permissions": permissions, "uuid": uuid}
-        path = self.router.roles_by_uuid.format(uuid=uuid)
-        return self.request(method="post", path=path, json=data, error_json_invalid=False)
+        api_endpoint = ApiEndpoints.system_roles.update
+        request_obj = api_endpoint.load_request(name=name, permissions=permissions, uuid=uuid)
+        return api_endpoint.perform_request(http=self.auth.http, request_obj=request_obj)
 
-    def _delete(self, uuid):
+    def _delete(self, uuid: str) -> json_api.system_roles.SystemRole:
         """Direct API method to delete a role.
 
         Args:
             name: name of role to delete
         """
-        path = self.router.roles_by_uuid.format(uuid=uuid)
-        return self.request(method="delete", path=path, error_json_invalid=False)
+        api_endpoint = ApiEndpoints.system_roles.delete
+        request_obj = api_endpoint.load_request(uuid=uuid)
+        return api_endpoint.perform_request(http=self.auth.http, request_obj=request_obj)
 
-    def _get_labels(self):
+    def _get_labels(self) -> dict:
         """Direct API method to get role labels."""
-        path = self.router.roles_labels
-        return self.request(method="get", path=path)
-
-    @property
-    def router(self) -> Router:
-        """Router for this API model."""
-        return API_VERSION.system
+        api_endpoint = ApiEndpoints.system_roles.perms
+        return api_endpoint.perform_request(http=self.auth.http)
 
     @property
     @cached(cache=TTLCache(maxsize=1024, ttl=300))
     def cat_actions(self) -> dict:
         """Get permission categories and their actions."""
-        data = parse_cat_actions(raw=self._get_labels())
+        data = self._parse_cat_actions(raw=self._get_labels())
         if not self.instances.has_cloud_compliance:  # pragma: no cover
-            data[Role.CATS].pop(Role.COMP)
-            data[Role.ACTS].pop(Role.COMP)
+            data["categories"].pop("compliance")
+            data["actions"].pop("compliance")
         return data
 
     def _check_predefined(self, role: dict):
@@ -370,8 +434,8 @@ class SystemRoles(ModelMixins):
                     self.LOG.debug(f"{src} category {category!r} action {action!r} to {value}")
                     role_perms[category][action] = value
 
-        cats = self.cat_actions[Role.CATS]
-        acts = self.cat_actions[Role.ACTS]
+        cats = self.cat_actions["categories"]
+        acts = self.cat_actions["actions"]
 
         role_perms = role_perms or {}
         role_perms = copy.deepcopy(role_perms)
@@ -389,7 +453,7 @@ class SystemRoles(ModelMixins):
             actions = coerce_str_to_csv(value=actions)
             cat_acts = acts[category]
 
-            if Role.ALL in actions:
+            if "all" in actions:
                 for action in cat_acts:
                     add(value=grant, overwrite=True)
                 continue
