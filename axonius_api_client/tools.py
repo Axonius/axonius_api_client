@@ -9,7 +9,8 @@ import platform
 import sys
 from datetime import datetime, timedelta, timezone
 from itertools import zip_longest
-from typing import Any, Callable, Iterable, Iterator, List, Optional, Tuple, Union
+from typing import (Any, Callable, Iterable, Iterator, List, Optional, Tuple,
+                    Union)
 from urllib.parse import urljoin
 
 import click
@@ -19,16 +20,8 @@ import dateutil.tz
 
 from . import INIT_DOTENV, PACKAGE_FILE, PACKAGE_ROOT, VERSION
 from .constants.api import GUI_PAGE_SIZES
-from .constants.general import (
-    ERROR_ARGS,
-    ERROR_TMPL,
-    NO,
-    OK_ARGS,
-    OK_TMPL,
-    WARN_ARGS,
-    WARN_TMPL,
-    YES,
-)
+from .constants.general import (ERROR_ARGS, ERROR_TMPL, NO, OK_ARGS, OK_TMPL,
+                                WARN_ARGS, WARN_TMPL, YES)
 from .exceptions import ToolsError
 from .setup_env import find_dotenv, get_env_ax
 
@@ -648,6 +641,7 @@ def sysinfo() -> dict:
     info["OS envs"] = get_env_ax()
     info["Date"] = str(dt_now())
     info["Python System Version"] = ", ".join(sys.version.splitlines())
+    info["Command Line Args"] = sys.argv
     platform_attrs = [
         "machine",
         "node",
