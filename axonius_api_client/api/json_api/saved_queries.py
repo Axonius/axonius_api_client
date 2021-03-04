@@ -28,8 +28,8 @@ class SavedQuerySchema(BaseSchemaJson):
     tags = marshmallow_jsonapi.fields.List(marshmallow_jsonapi.fields.Str())
     timestamp = marshmallow_jsonapi.fields.Str(allow_none=True)
     last_updated = SchemaDatetime(allow_none=True)
-    updated_by = marshmallow_jsonapi.fields.Str()
-    user_id = marshmallow_jsonapi.fields.Str()
+    updated_by = marshmallow_jsonapi.fields.Str(allow_none=True, missing=None)
+    user_id = marshmallow_jsonapi.fields.Str(allow_none=True, missing=None)
     uuid = marshmallow_jsonapi.fields.Str(allow_none=True, missing=None)
 
     @staticmethod
@@ -51,8 +51,8 @@ class SavedQuery(BaseModel):
     name: str
     view: dict
     query_type: str
-    updated_by: str
-    user_id: str
+    updated_by: Optional[str] = None
+    user_id: Optional[str] = None
     uuid: Optional[str] = None
     date_fetched: Optional[str] = None
     timestamp: Optional[str] = None
