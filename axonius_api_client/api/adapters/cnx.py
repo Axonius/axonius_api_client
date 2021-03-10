@@ -3,24 +3,12 @@
 from typing import Callable, List, Optional, Union
 
 from ...constants.adapters import CNX_SANE_DEFAULTS
-from ...exceptions import (
-    CnxAddError,
-    CnxGoneError,
-    CnxTestError,
-    CnxUpdateError,
-    ConfigInvalidValue,
-    ConfigRequired,
-    NotFoundError,
-)
-from ...parsers.config import (
-    config_build,
-    config_default,
-    config_empty,
-    config_info,
-    config_required,
-    config_unchanged,
-    config_unknown,
-)
+from ...exceptions import (CnxAddError, CnxGoneError, CnxTestError,
+                           CnxUpdateError, ConfigInvalidValue, ConfigRequired,
+                           NotFoundError)
+from ...parsers.config import (config_build, config_default, config_empty,
+                               config_info, config_required, config_unchanged,
+                               config_unknown)
 from ...parsers.tables import tablize_cnxs, tablize_schemas
 from ...tools import json_dump, json_load, listify, pathlib
 from .. import json_api
@@ -58,7 +46,7 @@ class Cnx(ChildMixins):
         adapter_node: Optional[str] = None,
         save_and_fetch: bool = True,
         active: bool = True,
-        label: Optional[str] = None,
+        connection_label: Optional[str] = None,
         kwargs_config: Optional[dict] = None,
         **kwargs,
     ) -> dict:
@@ -136,7 +124,7 @@ class Cnx(ChildMixins):
             is_instances_mode=is_instances_mode,
             save_and_fetch=save_and_fetch,
             active=active,
-            connection_label=label,
+            connection_label=connection_label,
         )
 
         cnx_new = self.get_by_uuid(
