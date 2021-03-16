@@ -6,7 +6,8 @@ import click
 import requests
 
 from ..connect import Connect
-from ..tools import bom_strip, echo_error, echo_ok, echo_warn, json_load, read_stream
+from ..tools import (bom_strip, echo_error, echo_ok, echo_warn, json_load,
+                     read_stream)
 
 CONTEXT_SETTINGS = {"auto_envvar_prefix": "AX"}
 SSLWARN_CLS = requests.urllib3.exceptions.InsecureRequestWarning
@@ -196,7 +197,7 @@ class Context:
             content = bom_strip(content=content)
         return content
 
-    def read_stream_json(self, stream, expect):
+    def read_stream_json(self, stream, expect=None):
         """Pass."""
         content = self.read_stream(stream=stream)
 
@@ -205,7 +206,7 @@ class Context:
         except Exception as exc:
             self.echo_error(msg=f"Invalid JSON supplied: {exc}", abort=True)
 
-        if not isinstance(content, expect):
+        if expect is not None and not isinstance(content, expect):
 
             self.echo_error(
                 msg=f"JSON supplied is {type(content)}, required type is {expect}",

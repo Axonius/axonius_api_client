@@ -189,6 +189,31 @@ Detailed help for selecting fields:
       network_interfaces fields
 """
 
+HELPSTR_MULTI_CNX_JSON = """
+Example JSON input file:
+
+[
+    {
+        "adapter": "ADAPTER_NAME",
+        "config": {"domain": "HOSTNAME", "username": "USERNAME", "password": "PASSWORD"},
+    },
+    {
+        "adapter": "ADAPTER_NAME",
+        "node": "NODE_NAME",
+        "config": {"domain": "HOSTNAME", "username": "USERNAME", "password": "PASSWORD"},
+        "active": "n",
+        "save_and_fetch": "n"
+    }
+]
+
+Tips:
+ - use "axonshell adapters cnx get --name ADAPTER_NAME --export-format table-schemas" to see the
+   values that can be supplied for the "config" dictionary.
+ - the first connection only supplies the required keys, and it will be added to the
+   "Core instance" (usually "Master").
+ - the second connection supplies everything, and does not fetch the connection after adding it
+   and sets the connection as inactive
+"""
 
 HELPSTRS = {}
 HELPSTRS["auth"] = HELPSTR_AUTH
@@ -197,3 +222,4 @@ HELPSTRS["selectfields"] = HELPSTR_SELECT_FIELDS
 HELPSTRS["query"] = HELPSTR_QUERY
 HELPSTRS["wizard"] = Docs.TEXT
 HELPSTRS["wizard_csv"] = Docs.CSV
+HELPSTRS["multiple_cnx_json"] = HELPSTR_MULTI_CNX_JSON
