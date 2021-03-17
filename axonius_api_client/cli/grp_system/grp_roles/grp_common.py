@@ -1,15 +1,17 @@
 # -*- coding: utf-8 -*-
 """Command line interface for Axonius API Client."""
-from ....tools import join_kv, json_dump, listify
-from ...context import click
+import tabulate
+
+from ....tools import json_dump, listify
+from ...context import SplitEquals, click
 
 EXPORT = click.option(
     "--export-format",
     "-xf",
     "export_format",
-    type=click.Choice(["json", "str"]),
+    type=click.Choice(["json", "str", "table"]),
     help="Format of to export data in",
-    default="str",
+    default="table",
     show_envvar=True,
     show_default=True,
 )
@@ -24,35 +26,17 @@ ROLE_NAME = click.option(
     show_default=True,
 )
 
-ALLOW = click.option(
-    "--allow",
-    "-a",
-    "allow",
-    help="Regex of permissions to allow",
+PERMS = click.option(
+    "--perm",
+    "-p",
+    "perms",
+    help="""Permissions like $CATEGORY=$ACTION1,$ACTION2,...
+    Can use $CATEGORY_NAME=all or $CATEGORY_NAME=none (MULTIPLE)""",
     required=True,
     show_envvar=True,
     show_default=True,
-)
-
-DENY = click.option(
-    "--deny",
-    "-d",
-    "deny",
-    help="Regex of permissions to deny",
-    required=True,
-    show_envvar=True,
-    show_default=True,
-)
-
-DEFAULT = click.option(
-    "--default-allow/--default-deny",
-    "-da/-dd",
-    "default",
-    help="Default access to apply to unspecified permissions",
-    required=False,
-    default=False,
-    show_envvar=True,
-    show_default=True,
+    type=SplitEquals(),
+    multiple=True,
 )
 
 
@@ -64,12 +48,39 @@ def handle_export(ctx, data, export_format, **kwargs):
 
     if export_format == "str":
         for item in listify(data):
-            for perm in item["perms"]:
-                perm = {k.title(): v for k, v in perm.items()}
-                click.secho(", ".join(join_kv(obj=perm)))
+            name = item["name"]
+            perms = item["permissions_flat"]
+            grants = []
 
-            click.secho("\n")
+            for category, actions in perms.items():
+                if all([v is True for k, v in actions.items()]):
+                    allows = "all"
+                elif all([v is False for k, v in actions.items()]):
+                    allows = "none"
+                else:
+                    allows = [k for k, v in actions.items() if v]
+                    allows = ",".join(allows)
+                grants.append(f"--perm {category}={allows!r}")
+
+            grants = " ".join(grants)
+            entry = f"--name {name!r} {grants}"
+            click.secho(entry)
 
         ctx.exit(0)
 
+    if export_format == "table":
+        for item in listify(data):
+            name = item["name"]
+            last_updated = item["last_updated"]
+            perms = item["permissions_flat_descriptions"]
+
+            entry = [
+                f"Role {name!r}",
+                f"Updated: {last_updated}",
+            ]
+            entry = ", ".join(entry)
+            table = tabulate.tabulate(perms, tablefmt="simple", headers="keys")
+            click.secho(f"{entry}\n{table}\n")
+
+        ctx.exit(0)
     ctx.exit(1)

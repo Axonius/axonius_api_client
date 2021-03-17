@@ -222,6 +222,17 @@ def strip_left(obj: Union[List[str], str], fix: str) -> Union[List[str], str]:
     return obj
 
 
+class AxJSONEncoder(json.JSONEncoder):
+    """Pass."""
+
+    def default(self, obj):
+        """Pass."""
+        if isinstance(obj, datetime):
+            return obj.isoformat()
+
+        return super().default(obj)
+
+
 def json_dump(
     obj: Any, indent: int = 2, sort_keys: bool = False, error: bool = True, **kwargs
 ) -> Any:
@@ -236,6 +247,9 @@ def json_dump(
     """
     if isinstance(obj, bytes):
         obj = obj.decode("utf-8")
+
+    kwargs.setdefault("cls", AxJSONEncoder)
+    kwargs.setdefault("default", str)
 
     try:
         return json.dumps(obj, indent=indent, sort_keys=sort_keys, **kwargs)

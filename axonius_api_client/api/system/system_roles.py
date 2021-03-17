@@ -1,10 +1,7 @@
 # -*- coding: utf-8 -*-
 """API for working with system roles."""
 import copy
-import math
 from typing import Generator, List, Optional, Union
-
-from cachetools import TTLCache, cached
 
 from ...exceptions import ApiError, NotFoundError
 from ...parsers.tables import tablize_roles
@@ -31,54 +28,7 @@ class SystemRoles(ModelMixins):
     @staticmethod
     def _parse_cat_actions(raw: dict) -> dict:
         """Parse the permission labels into a layered dict."""
-
-        def set_len(item, target):
-            measure = int(math.ceil(len(item) / 10.0)) * 10
-            if measure > lengths[target]:
-                lengths[target] = measure
-
-        cats = {}
-        cat_actions = {}
-        lengths = {"categories": 0, "actions": 0, "categories_desc": 0, "actions_desc": 0}
-
-        # first pass, get all of the categories
-        for label, desc in raw.items():
-            pre, rest = label.split(".", 1)
-            if pre != "permissions":
-                continue
-
-            split = rest.split(".", 1)
-            cat = split.pop(0)
-
-            if not split:
-                assert cat not in cats
-                assert cat not in cat_actions
-                cats[cat] = desc
-                set_len(item=desc, target="categories_desc")
-                set_len(item=cat, target="categories")
-
-                cat_actions[cat] = {}
-
-        # second pass, get all of the actions
-        for label, desc in raw.items():
-            pre, rest = label.split(".", 1)
-            if pre != "permissions":
-                continue
-
-            split = rest.split(".", 1)
-            cat = split.pop(0)
-
-            if not split:
-                continue
-
-            action = split.pop(0)
-            assert not split
-            assert action not in cat_actions[cat]
-            set_len(item=desc, target="actions_desc")
-            set_len(item=action, target="actions")
-            cat_actions[cat][action] = desc
-
-        return {"categories": cats, "actions": cat_actions, "lengths": lengths}
+        return json_api.system_roles.parse_cat_actions(raw=raw)
 
     def get(self, generator: bool = False) -> Union[Generator[dict, None, None], List[dict]]:
         """Get Axonius system roles.
@@ -378,14 +328,9 @@ class SystemRoles(ModelMixins):
         return api_endpoint.perform_request(http=self.auth.http)
 
     @property
-    @cached(cache=TTLCache(maxsize=1024, ttl=300))
     def cat_actions(self) -> dict:
         """Get permission categories and their actions."""
-        data = self._parse_cat_actions(raw=self._get_labels())
-        if not self.instances.has_cloud_compliance:  # pragma: no cover
-            data["categories"].pop("compliance")
-            data["actions"].pop("compliance")
-        return data
+        return json_api.system_roles.cat_actions(http=self.auth.http)
 
     def _check_predefined(self, role: dict):
         """Check if a role is predefined.
@@ -445,17 +390,24 @@ class SystemRoles(ModelMixins):
                 add(value=False, overwrite=False)
 
         for category, actions in kwargs.items():
+            category = category.lower()
             if category not in cats:
                 valid = [f"{k}: {v}" for k, v in cats.items()]
                 valid = "\n - " + "\n - ".join(valid)
                 raise ApiError(f"Invalid category {category!r}, valid:{valid}")
 
             actions = coerce_str_to_csv(value=actions)
+            actions = [x.lower().strip() for x in actions]
             cat_acts = acts[category]
 
             if "all" in actions:
                 for action in cat_acts:
                     add(value=grant, overwrite=True)
+                continue
+
+            if "none" in actions:
+                for action in cat_acts:
+                    add(value=False, overwrite=True)
                 continue
 
             for action in actions:
