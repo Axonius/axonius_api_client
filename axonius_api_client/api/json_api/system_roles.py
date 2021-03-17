@@ -2,13 +2,92 @@
 """Models for API requests & responses."""
 import dataclasses
 import datetime
-from typing import Optional, Type
+import math
+from typing import List, Optional, Type
 
 import marshmallow
 import marshmallow_jsonapi
+from cachetools import TTLCache, cached
 
 from .base import BaseModel, BaseSchema, BaseSchemaJson
 from .custom_fields import SchemaBool, SchemaDatetime, get_field_dc_mm
+
+
+def parse_cat_actions(raw: dict) -> dict:
+    """Parse the permission labels into a layered dict."""
+
+    def set_len(item, target):
+        measure = int(math.ceil(len(item) / 10.0)) * 10
+        if measure > lengths[target]:
+            lengths[target] = measure
+
+    cats = {}
+    cat_actions = {}
+    lengths = {"categories": 0, "actions": 0, "categories_desc": 0, "actions_desc": 0}
+
+    # first pass, get all of the categories
+    for label, desc in raw.items():
+        pre, rest = label.split(".", 1)
+        if pre != "permissions":
+            continue
+
+        split = rest.split(".", 1)
+        cat = split.pop(0)
+
+        if not split:
+            assert cat not in cats
+            assert cat not in cat_actions
+            cats[cat] = desc
+            set_len(item=desc, target="categories_desc")
+            set_len(item=cat, target="categories")
+
+            cat_actions[cat] = {}
+
+    # second pass, get all of the actions
+    for label, desc in raw.items():
+        pre, rest = label.split(".", 1)
+        if pre != "permissions":
+            continue
+
+        split = rest.split(".", 1)
+        cat = split.pop(0)
+
+        if not split:
+            continue
+
+        action = split.pop(0)
+        assert not split
+        assert action not in cat_actions[cat]
+        set_len(item=desc, target="actions_desc")
+        set_len(item=action, target="actions")
+        cat_actions[cat][action] = desc
+
+    return {"categories": cats, "actions": cat_actions, "lengths": lengths}
+
+
+@cached(cache=TTLCache(maxsize=1024, ttl=300))
+def cat_actions(http) -> dict:
+    """Get permission categories and their actions."""
+    from .. import ApiEndpoints
+
+    api_endpoint = ApiEndpoints.system_roles.perms
+    labels = api_endpoint.perform_request(http=http)
+    data = parse_cat_actions(raw=labels)
+
+    flags = feature_flags(http=http)
+
+    if not flags.has_cloud_compliance:  # pragma: no cover
+        data["categories"].pop("compliance")
+        data["actions"].pop("compliance")
+    return data
+
+
+def feature_flags(http):
+    """Direct API method to get the feature flags for the core."""
+    from .. import ApiEndpoints
+
+    api_endpoint = ApiEndpoints.system_settings.feature_flags_get
+    return api_endpoint.perform_request(http=http)
 
 
 class SystemRoleSchema(BaseSchemaJson):
@@ -102,6 +181,7 @@ class SystemRole(BaseModel):
         """Pass."""
         obj = self.to_dict()
         obj["permissions_flat"] = self.permissions_flat()
+        obj["permissions_flat_descriptions"] = self.permissions_flat_descriptions()
         return obj
 
     def permissions_flat(self) -> dict:
@@ -117,6 +197,33 @@ class SystemRole(BaseModel):
 
                 parsed[cat][action] = value
         return parsed
+
+    def permissions_desc(self) -> dict:
+        """Pass."""
+        return cat_actions(http=self.HTTP)
+
+    def permissions_flat_descriptions(self) -> List[dict]:
+        """Pass."""
+        ret = []
+        permissions = self.permissions_flat()
+        descriptions = self.permissions_desc()
+        category_descriptions = descriptions["categories"]
+        action_descriptions = descriptions["actions"]
+
+        for category_name, actions in action_descriptions.items():
+            category_description = category_descriptions.get(category_name)
+
+            for action_name, action_description in actions.items():
+                action_value = permissions.get(category_name, {}).get(action_name)
+                item = {
+                    "Category Name": category_name,
+                    "Category Description": category_description,
+                    "Action Name": action_name,
+                    "Action Description": action_description,
+                    "Value": action_value,
+                }
+                ret.append(item)
+        return ret
 
 
 class SystemRoleCreateSchema(BaseSchemaJson):

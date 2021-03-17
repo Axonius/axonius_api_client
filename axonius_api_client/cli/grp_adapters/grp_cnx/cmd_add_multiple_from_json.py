@@ -45,6 +45,9 @@ def cmd(ctx, url, key, secret, input_file, **kwargs):
     keys_help = f"\nConnection keys help:{keys_help}"
     req_keys = ["adapter", "config"]
     added = []
+    # TBD: split data validation of input file from adding cnx
+    # validate adapter and node name (if supplied)
+    # validate config TOO!!
 
     for idx, item in enumerate(data):
         try:
@@ -54,11 +57,16 @@ def cmd(ctx, url, key, secret, input_file, **kwargs):
             for key in req_keys:
                 if key not in item:
                     raise Exception(f"Missing required key {key!r}{keys_help}")
+
             active = coerce_bool(item.get("active", True))
             save_and_fetch = coerce_bool(item.get("save_and_fetch", True))
             adapter = item.get("adapter")
             node = item.get("node", None)
             config = item.get("config", {})
+
+            if not isinstance(config, dict):
+                raise Exception("Configuration key is not a dictionary!")
+
             if not config:
                 raise Exception("Empty configuration supplied!")
 
