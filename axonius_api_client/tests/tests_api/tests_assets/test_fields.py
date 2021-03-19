@@ -3,9 +3,9 @@
 import copy
 
 import pytest
-
 from axonius_api_client.api import json_api
-from axonius_api_client.constants.fields import AGG_ADAPTER_ALTS, AGG_ADAPTER_NAME
+from axonius_api_client.constants.fields import (AGG_ADAPTER_ALTS,
+                                                 AGG_ADAPTER_NAME)
 from axonius_api_client.exceptions import ApiError, NotFoundError
 
 from ...meta import FIELD_FORMATS, SCHEMA_FIELD_FORMATS, SCHEMA_TYPES
@@ -540,14 +540,14 @@ class FieldsPublic:
 
 class TestFieldsDevices(FieldsPrivate, FieldsPublic):
     @pytest.fixture(scope="class")
-    def apiobj(self, api_devices):
-        return api_devices
+    def apiobj(self, api_client):
+        return api_client.devices
 
 
 class TestFieldsUsers(FieldsPrivate, FieldsPublic):
     @pytest.fixture(scope="class")
-    def apiobj(self, api_users):
-        return api_users
+    def apiobj(self, api_client):
+        return api_client.users
 
 
 def val_source(obj):

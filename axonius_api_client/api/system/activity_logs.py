@@ -6,10 +6,10 @@ from typing import Generator, List, Optional, Union
 from ...constants.api import MAX_PAGE_SIZE
 from .. import json_api
 from ..api_endpoints import ApiEndpoints
-from ..mixins import ModelMixins
+from ..models import ApiModel
 
 
-class ActivityLogs(ModelMixins):
+class ActivityLogs(ApiModel):
     """API for working with activity logs.
 
     Examples:
@@ -81,4 +81,4 @@ class ActivityLogs(ModelMixins):
             date_from=date_from,
             date_to=date_to,
         )
-        return api_endpoint.perform_request(http=self.auth.http, request_obj=request_obj)
+        return api_endpoint.perform_request(client=self.CLIENT, request_obj=request_obj)

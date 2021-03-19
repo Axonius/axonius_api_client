@@ -84,13 +84,13 @@ class Signup:
     def _get(self) -> json_api.generic.BoolValue:
         """Direct API method to get the status of initial signup."""
         api_endpoint = ApiEndpoints.signup.get
-        return api_endpoint.perform_request(http=self.http)
+        return api_endpoint.perform_request(client=self)
 
     def _token_validate(self, token: str) -> json_api.password_reset.ValidateResponse:
         """Pass."""
         api_endpoint = ApiEndpoints.password_reset.validate
         request_obj = api_endpoint.load_request(token=token)
-        return api_endpoint.perform_request(http=self.http, request_obj=request_obj)
+        return api_endpoint.perform_request(client=self, request_obj=request_obj)
 
     def _token_use(self, token: str, password: str) -> json_api.password_reset.UseResponse:
         """Direct API method to use a reset token to change a password.
@@ -101,7 +101,7 @@ class Signup:
         """
         api_endpoint = ApiEndpoints.password_reset.use
         request_obj = api_endpoint.load_request(token=token, password=password)
-        return api_endpoint.perform_request(http=self.http, request_obj=request_obj)
+        return api_endpoint.perform_request(client=self, request_obj=request_obj)
 
     def _perform(
         self, password: str, company_name: str, contact_email: str
@@ -122,7 +122,7 @@ class Signup:
             user_name="admin",
             api_keys=True,
         )
-        return api_endpoint.perform_request(http=self.http, request_obj=request_obj)
+        return api_endpoint.perform_request(client=self, request_obj=request_obj)
 
     def __init__(self, url, **kwargs):
         """Provide an API for performing initial signup.
@@ -133,5 +133,6 @@ class Signup:
         """
         log_level = kwargs.get("log_level", LOG_LEVEL_API)
         self.LOG = get_obj_log(obj=self, level=log_level)
+
         kwargs.setdefault("certwarn", False)
-        self.http = Http(url=url, **kwargs)
+        self.HTTP = Http(url=url, **kwargs)

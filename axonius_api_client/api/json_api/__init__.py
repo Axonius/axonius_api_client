@@ -1,30 +1,12 @@
 # -*- coding: utf-8 -*-
 """Models for API requests & responses."""
 
-from . import (
-    adapters,
-    assets,
-    audit_logs,
-    base,
-    central_core,
-    custom_fields,
-    enforcements,
-    generic,
-    instances,
-    lifecycle,
-    password_reset,
-    remote_support,
-    resources,
-    saved_queries,
-    signup,
-    system_meta,
-    system_roles,
-    system_settings,
-    system_users,
-)
+from . import (adapters, assets, audit_logs, central_core, custom_fields,
+               enforcements, generic, instances, lifecycle, password_reset,
+               remote_support, resources, saved_queries, signup, system_meta,
+               system_roles, system_settings, system_users)
 
 __all__ = (
-    "base",
     "custom_fields",
     "resources",
     "system_users",

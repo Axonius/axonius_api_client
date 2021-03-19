@@ -6,23 +6,18 @@ from typing import List, Optional, Tuple, Union
 from cachetools import TTLCache, cached
 from fuzzyfinder import fuzzyfinder
 
-from ...constants.fields import (
-    AGG_ADAPTER_ALTS,
-    AGG_ADAPTER_NAME,
-    FUZZY_SCHEMAS_KEYS,
-    GET_SCHEMA_KEYS,
-    GET_SCHEMAS_KEYS,
-    PRETTY_SCHEMA_TMPL,
-)
+from ...constants.fields import (AGG_ADAPTER_ALTS, AGG_ADAPTER_NAME,
+                                 FUZZY_SCHEMAS_KEYS, GET_SCHEMA_KEYS,
+                                 GET_SCHEMAS_KEYS, PRETTY_SCHEMA_TMPL)
 from ...exceptions import ApiError, NotFoundError
 from ...parsers.fields import parse_fields
 from ...tools import listify, split_str, strip_right
 from .. import json_api
 from ..api_endpoints import ApiEndpoints
-from ..mixins import ChildMixins
+from .asset_mixin import AssetChildMixin
 
 
-class Fields(ChildMixins):
+class Fields(AssetChildMixin):
     """API for working with fields for the parent asset type.
 
     Examples:
@@ -114,7 +109,7 @@ class Fields(ChildMixins):
         selected = []
 
         if fields_default and not fields_root:
-            add(self.parent.fields_default)
+            add(self.PARENT.fields_default)
 
         if fields_root:
             add(self.get_field_names_root(adapter=fields_root))
@@ -601,4 +596,4 @@ class Fields(ChildMixins):
     def _get(self) -> json_api.generic.Metadata:
         """Private API method to get the schema of all fields."""
         api_endpoint = ApiEndpoints.assets.fields
-        return api_endpoint.perform_request(http=self.auth.http, asset_type=self.parent.ASSET_TYPE)
+        return api_endpoint.perform_request(client=self.CLIENT, asset_type=self.PARENT.ASSET_TYPE)

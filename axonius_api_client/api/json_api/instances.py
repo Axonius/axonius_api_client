@@ -7,11 +7,11 @@ from typing import List, Optional, Type
 import marshmallow_jsonapi
 
 from ...tools import calc_gb, calc_percent
-from .base import BaseModel, BaseSchema, BaseSchemaJson
+from ..models import DataModel, DataSchema, DataSchemaJson
 from .custom_fields import SchemaBool, SchemaDatetime, get_field_dc_mm
 
 
-class InstanceSchema(BaseSchemaJson):
+class InstanceSchema(DataSchemaJson):
     """Pass."""
 
     cpu_core_threads = marshmallow_jsonapi.fields.Int(allow_none=True)
@@ -43,7 +43,7 @@ class InstanceSchema(BaseSchemaJson):
     remaining_snapshots_days = marshmallow_jsonapi.fields.Int(allow_none=True)
 
     @staticmethod
-    def get_model_cls() -> type:
+    def _get_model_cls() -> type:
         """Pass."""
         return Instance
 
@@ -54,7 +54,7 @@ class InstanceSchema(BaseSchemaJson):
 
 
 @dataclasses.dataclass
-class Instance(BaseModel):
+class Instance(DataModel):
     """Pass."""
 
     hostname: str
@@ -135,20 +135,20 @@ class Instance(BaseModel):
         )
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def _get_schema_cls() -> Optional[Type[DataSchema]]:
         """Pass."""
         return InstanceSchema
 
 
 @dataclasses.dataclass
-class InstanceDeleteRequest(BaseModel):
+class InstanceDeleteRequest(DataModel):
     """Pass."""
 
     nodeIds: List[str]
 
 
 @dataclasses.dataclass
-class InstanceUpdateActiveRequest(BaseModel):
+class InstanceUpdateActiveRequest(DataModel):
     """Pass."""
 
     nodeIds: str
@@ -156,7 +156,7 @@ class InstanceUpdateActiveRequest(BaseModel):
 
 
 @dataclasses.dataclass
-class InstanceUpdateAttributesRequest(BaseModel):
+class InstanceUpdateAttributesRequest(DataModel):
     """Pass."""
 
     nodeIds: str

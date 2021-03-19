@@ -3,15 +3,14 @@
 import datetime
 
 import pytest
-
 from axonius_api_client.api import json_api
 from axonius_api_client.api.system.dashboard import DiscoverData, DiscoverPhase
 
 
 class DashboardBase:
     @pytest.fixture(scope="class")
-    def apiobj(self, api_dashboard):
-        return api_dashboard
+    def apiobj(self, api_client):
+        return api_client.dashboard
 
 
 class TestDashboardPrivate(DashboardBase):

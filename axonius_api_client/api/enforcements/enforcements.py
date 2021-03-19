@@ -5,24 +5,18 @@ from typing import Generator, List, Optional, Union
 from ...constants.api import MAX_PAGE_SIZE
 from ...exceptions import NotFoundError
 from ...parsers.tables import tablize
+from ...tools import listify
 from .. import json_api
 from ..api_endpoints import ApiEndpoints
-from ..mixins import ModelMixins
+from ..models import ApiModel
 
 
-class Enforcements(ModelMixins):  # pragma: no cover
-    """API working with enforcements.
-
-    Notes:
-        Future versions of API client 4.x branch will be expanded quite a bit to make it user
-        friendly. The current incarnation should be considered **BETA** until such time.
-    """
+class Enforcements(ApiModel):
+    """API for working with the Enforcement Center."""
 
     def get(
         self, generator: bool = False
-    ) -> Union[
-        Generator[json_api.enforcements.EnforcementDetails, None, None], List[dict]
-    ]:  # pragma: no cover
+    ) -> Union[Generator[json_api.enforcements.EnforcementDetails, None, None], List[dict]]:
         """Get Enforcements.
 
         Args:
@@ -34,7 +28,7 @@ class Enforcements(ModelMixins):  # pragma: no cover
 
     def get_generator(
         self,
-    ) -> Generator[json_api.enforcements.EnforcementDetails, None, None]:  # pragma: no cover
+    ) -> Generator[json_api.enforcements.EnforcementDetails, None, None]:
         """Get Axonius system users using a generator."""
         offset = 0
 
@@ -48,9 +42,12 @@ class Enforcements(ModelMixins):  # pragma: no cover
             for row in rows:
                 yield row
 
-    def get_by_name(
-        self, value: str
-    ) -> json_api.enforcements.EnforcementDetails:  # pragma: no cover
+    def get_names(self) -> List[str]:
+        """Pass."""
+        data = self._get_names()
+        return [x.value for x in data]
+
+    def get_by_name(self, value: str) -> json_api.enforcements.EnforcementDetails:
         """Get an enforcement by name.
 
         Args:
@@ -67,9 +64,7 @@ class Enforcements(ModelMixins):  # pragma: no cover
         err = f"Enforcement with name of {value!r} not found"
         raise NotFoundError(tablize(value=[x.to_tablize() for x in data], err=err))
 
-    def get_by_uuid(
-        self, value: str
-    ) -> json_api.enforcements.EnforcementDetails:  # pragma: no cover
+    def get_by_uuid(self, value: str) -> json_api.enforcements.EnforcementDetails:
         """Get an enforcement by uuid.
 
         Raises:
@@ -122,14 +117,14 @@ class Enforcements(ModelMixins):  # pragma: no cover
     #     }
     #     return self._create(name=name, main=main)
 
-    def get_action_types(self) -> List[json_api.enforcements.Action]:  # pragma: no cover
+    def get_actions(self) -> List[json_api.enforcements.Action]:
         """Pass."""
-        return self._get_action_types()
+        return self._get_actions()
 
-    def _get_action_types(self) -> List[json_api.enforcements.Action]:  # pragma: no cover
+    def _get_actions(self) -> List[json_api.enforcements.Action]:
         """Pass."""
-        api_endpoint = ApiEndpoints.enforcements.get_action_types
-        return api_endpoint.perform_request(http=self.auth.http)
+        api_endpoint = ApiEndpoints.enforcements.get_actions
+        return api_endpoint.perform_request(client=self.CLIENT)
 
     def _create(
         self,
@@ -139,7 +134,7 @@ class Enforcements(ModelMixins):  # pragma: no cover
         failure: Optional[List[dict]] = None,
         post: Optional[List[dict]] = None,
         triggers: Optional[List[dict]] = None,
-    ) -> str:  # pragma: no cover
+    ) -> str:
         """Create an enforcement set.
 
         Args:
@@ -158,7 +153,7 @@ class Enforcements(ModelMixins):  # pragma: no cover
         }
         api_endpoint = ApiEndpoints.enforcements.create
         request_obj = api_endpoint.load_request(name=name, actions=actions, triggers=triggers or [])
-        return api_endpoint.perform_request(http=self.auth.http, request_obj=request_obj)
+        return api_endpoint.perform_request(client=self.CLIENT, request_obj=request_obj)
 
     def _get(
         self, limit: int = MAX_PAGE_SIZE, offset: int = 0
@@ -171,4 +166,21 @@ class Enforcements(ModelMixins):  # pragma: no cover
         """
         api_endpoint = ApiEndpoints.enforcements.get
         request_obj = api_endpoint.load_request(page={"limit": limit, "offset": offset})
-        return api_endpoint.perform_request(http=self.auth.http, request_obj=request_obj)
+        return api_endpoint.perform_request(client=self.CLIENT, request_obj=request_obj)
+
+    def _get_names(self) -> List[json_api.generic.StrValueSchema]:
+        """Pass."""
+        api_endpoint = ApiEndpoints.enforcements.get_names
+        return api_endpoint.perform_request(client=self.CLIENT)
+
+    def _get_by_uuid(self, uuid: str) -> json_api.enforcements.Enforcement:
+        """Pass."""
+        api_endpoint = ApiEndpoints.enforcements.get_full
+        return api_endpoint.perform_request(client=self.CLIENT, uuid=uuid)
+
+    def _delete(self, uuid: str) -> json_api.generic.Deleted:
+        """Pass."""
+        ids = listify(uuid)
+        api_endpoint = ApiEndpoints.enforcements.delete
+        request_obj = api_endpoint.load_request(value={"ids": ids, "include": True})
+        return api_endpoint.perform_request(client=self.CLIENT, request_obj=request_obj)

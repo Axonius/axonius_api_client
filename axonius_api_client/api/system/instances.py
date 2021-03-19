@@ -6,10 +6,10 @@ from typing import List, Optional, Union
 from ...exceptions import NotFoundError
 from .. import json_api
 from ..api_endpoints import ApiEndpoints
-from ..mixins import ModelMixins
+from ..models import ApiModel
 
 
-class Instances(ModelMixins):
+class Instances(ApiModel):
     """API for working with instances.
 
     Examples:
@@ -459,7 +459,7 @@ class Instances(ModelMixins):
     def _get(self) -> List[json_api.instances.Instance]:
         """Direct API method to get instances."""
         api_endpoint = ApiEndpoints.instances.get
-        return api_endpoint.perform_request(http=self.auth.http)
+        return api_endpoint.perform_request(client=self.CLIENT)
 
     def _delete(self, node_id: str) -> str:  # pragma: no cover
         """Direct API method to delete an instance.
@@ -472,7 +472,7 @@ class Instances(ModelMixins):
         """
         api_endpoint = ApiEndpoints.instances.delete
         request_obj = api_endpoint.load_request(nodeIds=[node_id])
-        return api_endpoint.perform_request(http=self.auth.http, request_obj=request_obj)
+        return api_endpoint.perform_request(client=self.CLIENT, request_obj=request_obj)
 
     def _update_attrs(
         self, node_id: str, node_name: str, hostname: str, use_as_environment_name: bool
@@ -492,7 +492,7 @@ class Instances(ModelMixins):
             hostname=hostname,
             use_as_environment_name=use_as_environment_name,
         )
-        return api_endpoint.perform_request(http=self.auth.http, request_obj=request_obj)
+        return api_endpoint.perform_request(client=self.CLIENT, request_obj=request_obj)
 
     def _update_active(self, node_id: str, status: bool) -> str:
         """Direct API method to update an instance.
@@ -506,12 +506,12 @@ class Instances(ModelMixins):
         """
         api_endpoint = ApiEndpoints.instances.update_active
         request_obj = api_endpoint.load_request(nodeIds=node_id, status=status)
-        return api_endpoint.perform_request(http=self.auth.http, request_obj=request_obj)
+        return api_endpoint.perform_request(client=self.CLIENT, request_obj=request_obj)
 
     def _get_central_core_config(self) -> json_api.system_settings.SystemSettings:
         """Direct API method to get the current central core configuration."""
         api_endpoint = ApiEndpoints.central_core.settings_get
-        return api_endpoint.perform_request(http=self.auth.http)
+        return api_endpoint.perform_request(client=self.CLIENT)
 
     def _update_central_core_config(
         self, enabled: bool, delete_backups: bool
@@ -525,7 +525,7 @@ class Instances(ModelMixins):
         """
         api_endpoint = ApiEndpoints.central_core.settings_update
         request_obj = api_endpoint.load_request(enabled=enabled, delete_backups=delete_backups)
-        return api_endpoint.perform_request(http=self.auth.http, request_obj=request_obj)
+        return api_endpoint.perform_request(client=self.CLIENT, request_obj=request_obj)
 
     def _restore_aws(
         self,
@@ -558,9 +558,9 @@ class Instances(ModelMixins):
                 "allow_re_restore": allow_re_restore,
             }
         )
-        return api_endpoint.perform_request(http=self.auth.http, request_obj=request_obj)
+        return api_endpoint.perform_request(client=self.CLIENT, request_obj=request_obj)
 
     def _feature_flags(self) -> json_api.system_settings.FeatureFlags:
         """Direct API method to get the feature flags for the core."""
         api_endpoint = ApiEndpoints.system_settings.feature_flags_get
-        return api_endpoint.perform_request(http=self.auth.http)
+        return api_endpoint.perform_request(client=self.CLIENT)

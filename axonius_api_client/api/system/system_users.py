@@ -7,10 +7,10 @@ from ...exceptions import ApiError, NotFoundError
 from ...parsers.tables import tablize_users
 from .. import json_api
 from ..api_endpoints import ApiEndpoints
-from ..mixins import ModelMixins
+from ..models import ApiModel
 
 
-class SystemUsers(ModelMixins):
+class SystemUsers(ApiModel):
     """API for working with system users."""
 
     def get(self, generator: bool = False) -> Union[Generator[dict, None, None], List[dict]]:
@@ -32,7 +32,7 @@ class SystemUsers(ModelMixins):
 
     def get_generator(self) -> Generator[dict, None, None]:
         """Get Axonius system users using a generator."""
-        system_roles = self.roles.get()
+        system_roles = self.CLIENT.system_roles.get()
 
         offset = 0
 
@@ -132,7 +132,7 @@ class SystemUsers(ModelMixins):
         Raises:
             :exc:`ApiError`: if user already exists matching name
         """
-        role = self.roles.get_by_name(name=role_name)
+        role = self.CLIENT.system_roles.get_by_name(name=role_name)
         try:
             self.get_by_name(name=name)
             raise ApiError(f"User with name of {name!r} already exists")
@@ -163,7 +163,7 @@ class SystemUsers(ModelMixins):
             name: user name
             role_name: name of role
         """
-        role = self.roles.get_by_name(name=role_name)
+        role = self.CLIENT.system_roles.get_by_name(name=role_name)
         return self._update_user_attr(
             name=name, must_be_internal=True, attr="role_id", value=role["uuid"]
         )
@@ -353,7 +353,7 @@ class SystemUsers(ModelMixins):
         """
         api_endpoint = ApiEndpoints.system_users.get
         request_obj = api_endpoint.load_request(page={"limit": limit, "offset": offset})
-        return api_endpoint.perform_request(http=self.auth.http, request_obj=request_obj)
+        return api_endpoint.perform_request(client=self.CLIENT, request_obj=request_obj)
 
     def _add(
         self,
@@ -386,7 +386,7 @@ class SystemUsers(ModelMixins):
             role_id=role_id,
             auto_generated_password=auto_generated_password,
         )
-        return api_endpoint.perform_request(http=self.auth.http, request_obj=request_obj)
+        return api_endpoint.perform_request(client=self.CLIENT, request_obj=request_obj)
 
     def _delete(self, uuid: str) -> json_api.system_users.SystemUser:
         """Direct API method to delete a user.
@@ -396,7 +396,7 @@ class SystemUsers(ModelMixins):
         """
         api_endpoint = ApiEndpoints.system_users.delete
         request_obj = api_endpoint.load_request(uuid=uuid)
-        return api_endpoint.perform_request(http=self.auth.http, request_obj=request_obj)
+        return api_endpoint.perform_request(client=self.CLIENT, request_obj=request_obj)
 
     def _update(
         self,
@@ -431,7 +431,7 @@ class SystemUsers(ModelMixins):
             source=source,
             pic_name=pic_name,
         )
-        return api_endpoint.perform_request(http=self.auth.http, request_obj=request_obj)
+        return api_endpoint.perform_request(client=self.CLIENT, request_obj=request_obj)
 
     def _tokens_generate(self, uuid: str, user_name: str) -> str:
         """Direct API method to generate a password reset link for a user.
@@ -444,7 +444,7 @@ class SystemUsers(ModelMixins):
             user_id=uuid,
             user_name=user_name,
         )
-        return api_endpoint.perform_request(http=self.auth.http, request_obj=request_obj)
+        return api_endpoint.perform_request(client=self.CLIENT, request_obj=request_obj)
 
     def _tokens_notify(self, uuid: str, email: str, invite: bool = False) -> str:
         """Direct API method to send a password reset link to a user.
@@ -460,14 +460,7 @@ class SystemUsers(ModelMixins):
             email=email,
             invite=invite,
         )
-        return api_endpoint.perform_request(http=self.auth.http, request_obj=request_obj)
-
-    def _init(self, **kwargs):
-        """Post init method for subclasses to use for extra setup."""
-        from .system_roles import SystemRoles
-
-        self.roles: SystemRoles = SystemRoles(auth=self.auth)
-        """Work with roles"""
+        return api_endpoint.perform_request(client=self.CLIENT, request_obj=request_obj)
 
     def _update_user_attr(
         self, name: str, must_be_internal: bool, attr: str, value: Union[str, bool, dict]

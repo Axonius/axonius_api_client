@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """Test suite for axonapi.api.enforcements."""
 import pytest
-
 from axonius_api_client.api import json_api
 from axonius_api_client.exceptions import ResponseNotOk
 
@@ -11,8 +10,8 @@ from ..utils import random_string
 
 class TestSignup:
     @pytest.fixture(scope="class")
-    def apiobj(self, api_signup):
-        return api_signup
+    def apiobj(self, api_client):
+        return api_client.signup
 
 
 class TestSignupPrivate(TestSignup):
@@ -38,8 +37,8 @@ class TestSignupPublic(TestSignup):
             apiobj.signup(password="x", company_name="x", contact_email=EMAIL)
         assert "Signup already completed" in str(exc.value)
 
-    def test_use_password_reset_token(self, apiobj, api_system_users, temp_user):
-        token = api_system_users.get_password_reset_link(name=temp_user.user_name)
+    def test_use_password_reset_token(self, apiobj, api_client, temp_user):
+        token = api_client.system_users.get_password_reset_link(name=temp_user.user_name)
         password = random_string(12)
 
         user = apiobj.use_password_reset_token(token=token, password=password)
@@ -48,7 +47,7 @@ class TestSignupPublic(TestSignup):
         val = apiobj.validate_password_reset_token(token=token)
         assert val is False
 
-        token2 = api_system_users.get_password_reset_link(name=temp_user.user_name)
+        token2 = api_client.system_users.get_password_reset_link(name=temp_user.user_name)
 
         with pytest.raises(ResponseNotOk) as exc:
             apiobj.use_password_reset_token(token=token2, password=password)

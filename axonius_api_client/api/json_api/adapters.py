@@ -2,18 +2,19 @@
 """Models for API requests & responses."""
 import dataclasses
 import datetime
-from typing import ClassVar, List, Optional, Type
+from typing import Any, ClassVar, List, Optional, Type
 
 import marshmallow
 import marshmallow_jsonapi
 
+from ...connect import Connect
 from ...constants.adapters import DISCOVERY_NAME, GENERIC_NAME
 from ...exceptions import NotFoundError
-from ...http import Http
 from ...parsers.config import parse_schema
 from ...tools import listify, longest_str, strip_right
-from .base import BaseModel, BaseSchema, BaseSchemaJson
-from .custom_fields import SchemaBool, SchemaDatetime, dump_date, get_field_dc_mm
+from ..models import DataModel, DataSchema, DataSchemaJson
+from .custom_fields import (SchemaBool, SchemaDatetime, dump_date,
+                            get_field_dc_mm)
 from .generic import Metadata, MetadataSchema
 from .system_settings import SystemSettingsUpdateSchema
 
@@ -24,7 +25,7 @@ def get_aname(value: str) -> str:
 
 
 @dataclasses.dataclass
-class AdapterNodeCnx(BaseModel):
+class AdapterNodeCnx(DataModel):
     """Pass."""
 
     active: bool
@@ -93,7 +94,7 @@ class AdapterNodeCnx(BaseModel):
 
 
 @dataclasses.dataclass
-class AdapterClientsCount(BaseModel):
+class AdapterClientsCount(DataModel):
     """Pass."""
 
     error_count: Optional[int] = None
@@ -115,7 +116,7 @@ class AdapterClientsCount(BaseModel):
 
 
 @dataclasses.dataclass
-class AdapterNode(BaseModel):
+class AdapterNode(DataModel):
     """Pass."""
 
     node_id: str
@@ -139,7 +140,7 @@ class AdapterNode(BaseModel):
         def load(client):
             loaded = schema.load(client)
             loaded.AdapterNode = self
-            loaded.HTTP = self.HTTP
+            loaded.CLIENT = self.CLIENT
             return loaded
 
         if not hasattr(self, "_cnxs"):
@@ -299,14 +300,14 @@ class AdapterNode(BaseModel):
         return ret
 
 
-class AdaptersRequestSchema(BaseSchemaJson):
+class AdaptersRequestSchema(DataSchemaJson):
     """Pass."""
 
     filter = marshmallow_jsonapi.fields.Str(allow_none=True)
     get_clients = SchemaBool(missing=True)
 
     @staticmethod
-    def get_model_cls() -> type:
+    def _get_model_cls() -> type:
         """Pass."""
         return AdaptersRequest
 
@@ -317,7 +318,7 @@ class AdaptersRequestSchema(BaseSchemaJson):
 
 
 @dataclasses.dataclass
-class AdaptersRequest(BaseModel):
+class AdaptersRequest(DataModel):
     """Pass."""
 
     filter: Optional[str] = None
@@ -325,18 +326,18 @@ class AdaptersRequest(BaseModel):
     get_clients: bool = True
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def _get_schema_cls() -> Optional[Type[DataSchema]]:
         """Pass."""
         return AdaptersRequestSchema
 
 
-class AdapterSchema(BaseSchemaJson):
+class AdapterSchema(DataSchemaJson):
     """Pass."""
 
     adapters_data = marshmallow_jsonapi.fields.List(marshmallow_jsonapi.fields.Dict())
 
     @staticmethod
-    def get_model_cls() -> type:
+    def _get_model_cls() -> type:
         """Pass."""
         return Adapter
 
@@ -347,7 +348,7 @@ class AdapterSchema(BaseSchemaJson):
 
 
 @dataclasses.dataclass
-class Adapter(BaseModel):
+class Adapter(DataModel):
     """Pass."""
 
     adapters_data: List[dict]
@@ -385,7 +386,7 @@ class Adapter(BaseModel):
         def load(adapter_node):
             loaded = schema.load(adapter_node)
             loaded.Adapter = self
-            loaded.HTTP = self.HTTP
+            loaded.CLIENT = self.CLIENT
             return loaded
 
         if not hasattr(self, "_adapter_nodes"):
@@ -395,7 +396,7 @@ class Adapter(BaseModel):
         return self._adapter_nodes
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def _get_schema_cls() -> Optional[Type[DataSchema]]:
         """Pass."""
         return AdapterSchema
 
@@ -409,7 +410,7 @@ class AdapterSettingsSchema(MetadataSchema):
     """Pass."""
 
     @staticmethod
-    def get_model_cls() -> type:
+    def _get_model_cls() -> type:
         """Pass."""
         return AdapterSettings
 
@@ -419,7 +420,7 @@ class AdapterSettings(Metadata):
     """Pass."""
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def _get_schema_cls() -> Optional[Type[DataSchema]]:
         """Pass."""
         return AdapterSettingsSchema
 
@@ -542,7 +543,7 @@ class AdapterSettings(Metadata):
 
 
 @dataclasses.dataclass
-class AdapterSettingsUpdate(BaseModel):
+class AdapterSettingsUpdate(DataModel):
     """Pass."""
 
     config: dict
@@ -551,7 +552,7 @@ class AdapterSettingsUpdate(BaseModel):
     prefix: str = "adapters"
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def _get_schema_cls() -> Optional[Type[DataSchema]]:
         """Pass."""
         return SystemSettingsUpdateSchema
 
@@ -560,7 +561,7 @@ class AdaptersListSchema(MetadataSchema):
     """Pass."""
 
     @staticmethod
-    def get_model_cls() -> type:
+    def _get_model_cls() -> type:
         """Pass."""
         return AdaptersList
 
@@ -570,7 +571,7 @@ class AdaptersList(Metadata):
     """Pass."""
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def _get_schema_cls() -> Optional[Type[DataSchema]]:
         """Pass."""
         return AdaptersListSchema
 
@@ -600,7 +601,7 @@ class AdaptersList(Metadata):
         return adapters[find_value]
 
 
-class CnxCreateRequestSchema(BaseSchemaJson):
+class CnxCreateRequestSchema(DataSchemaJson):
     """Pass."""
 
     connection = marshmallow_jsonapi.fields.Dict(required=True)  # config of connection
@@ -617,7 +618,7 @@ class CnxCreateRequestSchema(BaseSchemaJson):
     # PBUG: why is this even a thing? can we not rely on instance id in 'instance'?
 
     @staticmethod
-    def get_model_cls() -> type:
+    def _get_model_cls() -> type:
         """Pass."""
         return CnxCreateRequest
 
@@ -647,7 +648,7 @@ class CnxCreateRequestSchema(BaseSchemaJson):
 
 
 @dataclasses.dataclass
-class CnxCreateRequest(BaseModel):
+class CnxCreateRequest(DataModel):
     """Pass."""
 
     connection: dict
@@ -660,7 +661,7 @@ class CnxCreateRequest(BaseModel):
     is_instances_mode: bool = False
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def _get_schema_cls() -> Optional[Type[DataSchema]]:
         """Pass."""
         return CnxCreateRequestSchema
 
@@ -674,14 +675,14 @@ class CnxCreateRequest(BaseModel):
         self._fixit()
 
 
-class CnxTestRequestSchema(BaseSchemaJson):
+class CnxTestRequestSchema(DataSchemaJson):
     """Pass."""
 
     connection = marshmallow_jsonapi.fields.Dict(required=True)  # config of connection
     instance = marshmallow_jsonapi.fields.Str(required=True)  # instance ID
 
     @staticmethod
-    def get_model_cls() -> type:
+    def _get_model_cls() -> type:
         """Pass."""
         return CnxTestRequest
 
@@ -692,14 +693,14 @@ class CnxTestRequestSchema(BaseSchemaJson):
 
 
 @dataclasses.dataclass
-class CnxTestRequest(BaseModel):
+class CnxTestRequest(DataModel):
     """Pass."""
 
     connection: dict
     instance: str
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def _get_schema_cls() -> Optional[Type[DataSchema]]:
         """Pass."""
         return CnxTestRequestSchema
 
@@ -714,7 +715,7 @@ class CnxUpdateRequestSchema(CnxCreateRequestSchema):
     # PBUG: why is this even a thing? can we not rely on instance id in 'instance_prev'?
 
     @staticmethod
-    def get_model_cls() -> type:
+    def _get_model_cls() -> type:
         """Pass."""
         return CnxUpdateRequest
 
@@ -729,7 +730,7 @@ class CnxUpdateRequestSchema(CnxCreateRequestSchema):
 
 
 @dataclasses.dataclass
-class CnxUpdateRequest(BaseModel):
+class CnxUpdateRequest(DataModel):
     """Pass."""
 
     connection: dict
@@ -744,7 +745,7 @@ class CnxUpdateRequest(BaseModel):
     instance_prev_name: Optional[str] = None
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def _get_schema_cls() -> Optional[Type[DataSchema]]:
         """Pass."""
         return CnxUpdateRequestSchema
 
@@ -757,7 +758,7 @@ class CnxUpdateRequest(BaseModel):
             self.instance_prev_name = self.instance_name
 
 
-class CnxModifyResponseSchema(BaseSchemaJson):
+class CnxModifyResponseSchema(DataSchemaJson):
     """Pass."""
 
     active = SchemaBool()
@@ -766,7 +767,7 @@ class CnxModifyResponseSchema(BaseSchemaJson):
     status = marshmallow_jsonapi.fields.Str()
 
     @staticmethod
-    def get_model_cls() -> type:
+    def _get_model_cls() -> type:
         """Pass."""
         return CnxModifyResponse
 
@@ -777,7 +778,7 @@ class CnxModifyResponseSchema(BaseSchemaJson):
 
 
 @dataclasses.dataclass
-class CnxModifyResponse(BaseModel):
+class CnxModifyResponse(DataModel):
     """Pass."""
 
     status: str
@@ -787,7 +788,7 @@ class CnxModifyResponse(BaseModel):
     error: Optional[str] = None
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def _get_schema_cls() -> Optional[Type[DataSchema]]:
         """Pass."""
         return CnxModifyResponseSchema
 
@@ -807,7 +808,7 @@ class CnxModifyResponse(BaseModel):
         return self.status == "success" and not self.error
 
 
-class CnxDeleteRequestSchema(BaseSchemaJson):
+class CnxDeleteRequestSchema(DataSchemaJson):
     """Pass."""
 
     is_instances_mode = SchemaBool(missing=False)
@@ -816,7 +817,7 @@ class CnxDeleteRequestSchema(BaseSchemaJson):
     instance_name = marshmallow_jsonapi.fields.Str()
 
     @staticmethod
-    def get_model_cls() -> type:
+    def _get_model_cls() -> type:
         """Pass."""
         return CnxDeleteRequest
 
@@ -827,7 +828,7 @@ class CnxDeleteRequestSchema(BaseSchemaJson):
 
 
 @dataclasses.dataclass
-class CnxDeleteRequest(BaseModel):
+class CnxDeleteRequest(DataModel):
     """Pass."""
 
     instance: str
@@ -836,18 +837,18 @@ class CnxDeleteRequest(BaseModel):
     delete_entities: bool = False
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def _get_schema_cls() -> Optional[Type[DataSchema]]:
         """Pass."""
         return CnxDeleteRequestSchema
 
 
-class CnxDeleteSchema(BaseSchemaJson):
+class CnxDeleteSchema(DataSchemaJson):
     """Pass."""
 
     client_id = marshmallow_jsonapi.fields.Str()
 
     @staticmethod
-    def get_model_cls() -> type:
+    def _get_model_cls() -> type:
         """Pass."""
         return CnxDelete
 
@@ -858,13 +859,13 @@ class CnxDeleteSchema(BaseSchemaJson):
 
 
 @dataclasses.dataclass
-class CnxDelete(BaseModel):
+class CnxDelete(DataModel):
     """Pass."""
 
     client_id: str
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def _get_schema_cls() -> Optional[Type[DataSchema]]:
         """Pass."""
         return CnxDeleteSchema
 
@@ -873,7 +874,7 @@ class CnxLabelsSchema(MetadataSchema):
     """Pass."""
 
     @staticmethod
-    def get_model_cls() -> type:
+    def _get_model_cls() -> type:
         """Pass."""
         return CnxLabels
 
@@ -890,7 +891,7 @@ class CnxLabels(Metadata):
     document_meta: dict
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def _get_schema_cls() -> Optional[Type[DataSchema]]:
         """Pass."""
         return CnxLabelsSchema
 
@@ -924,7 +925,7 @@ class CnxLabels(Metadata):
 
 
 @dataclasses.dataclass
-class Cnx(BaseModel):
+class Cnx(DataModel):
     """Pass."""
 
     active: bool
@@ -947,7 +948,7 @@ class Cnx(BaseModel):
     adapter_name_raw: ClassVar[str] = None
     connection_label: ClassVar[str] = None
     PARENT: ClassVar["Cnxs"] = None
-    HTTP: ClassVar[Http] = None
+    CLIENT: ClassVar[Any] = None
 
     def __post_init__(self):
         """Pass."""
@@ -984,19 +985,19 @@ class Cnx(BaseModel):
 
 
 @dataclasses.dataclass
-class Cnxs(BaseModel):
+class Cnxs(DataModel):
     """Pass."""
 
     cnxs: List[Cnx]
     meta: dict
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def _get_schema_cls() -> Optional[Type[DataSchema]]:
         """Pass."""
         return None
 
     @classmethod
-    def load_response(cls, data: dict, http: Http, api_endpoint, **kwargs):
+    def _load_response(cls, data: dict, client: Connect, api_endpoint, **kwargs):
         """Pass."""
         cls._check_version(data=data, api_endpoint=api_endpoint)
 
@@ -1006,13 +1007,13 @@ class Cnxs(BaseModel):
 
         schema = cls.schema()
         loaded = cls._load_schema(
-            schema=schema, data=new_data, http=http, api_endpoint=api_endpoint
+            schema=schema, data=new_data, client=client, api_endpoint=api_endpoint
         )
         labels = loaded.get_labels()
 
         for cnx in loaded.cnxs:
             cnx.PARENT = loaded
-            cnx.HTTP = http
+            cnx.CLIENT = client
             cnx.connection_label = labels.get_label(cnx=cnx)
         return loaded
 
@@ -1032,11 +1033,9 @@ class Cnxs(BaseModel):
 
     def get_labels(self, cached: bool = False) -> List[dict]:
         """Pass."""
-        cache = getattr(self, "_get_labels", None)
+        cache = getattr(self, "_labels_cache", None)
         if cached and cache:
             return cache
 
-        from .. import ApiEndpoints
-
-        self._get_labels = ApiEndpoints.adapters.labels_get.perform_request(http=self.HTTP)
-        return self._get_labels
+        self._labels_cache = self.CLIENT.adapters.cnx._get_labels()
+        return self._labels_cache

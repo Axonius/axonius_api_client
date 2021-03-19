@@ -7,8 +7,8 @@ import pytest
 
 class SystemMetaBase:
     @pytest.fixture(scope="class")
-    def apiobj(self, api_meta):
-        return api_meta
+    def apiobj(self, api_client):
+        return api_client.meta
 
     def val_entity_sizes(self, data):
         data = copy.deepcopy(data)

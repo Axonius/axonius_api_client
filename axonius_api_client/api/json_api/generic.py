@@ -5,21 +5,20 @@ from typing import Optional, Type
 
 import marshmallow_jsonapi
 
-from ...http import Http
-from .base import BaseModel, BaseSchema, BaseSchemaJson
+from ..models import DataModel, DataSchema, DataSchemaJson
 from .custom_fields import SchemaBool
 
 
-class MetadataSchema(BaseSchemaJson):
+class MetadataSchema(DataSchemaJson):
     """Pass."""
 
     @staticmethod
-    def get_model_cls() -> type:
+    def _get_model_cls() -> type:
         """Pass."""
         return Metadata
 
     @classmethod
-    def load_response(cls, data: dict, http: Http, api_endpoint, **kwargs):
+    def _load_response(cls, data: dict, client, api_endpoint, **kwargs):
         """Pass."""
         cls._check_version(data=data, api_endpoint=api_endpoint)
 
@@ -27,7 +26,7 @@ class MetadataSchema(BaseSchemaJson):
         if data["data"] is None:
             data["data"] = {"type": cls.Meta.type_, "attributes": {}}
 
-        return super().load_response(data=data, http=http, api_endpoint=api_endpoint, **kwargs)
+        return super()._load_response(data=data, client=client, api_endpoint=api_endpoint, **kwargs)
 
     class Meta:
         """Pass."""
@@ -36,18 +35,18 @@ class MetadataSchema(BaseSchemaJson):
 
 
 @dataclasses.dataclass
-class Metadata(BaseModel):
+class Metadata(DataModel):
     """Pass."""
 
     document_meta: dict = dataclasses.field(default_factory=dict)
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def _get_schema_cls() -> Optional[Type[DataSchema]]:
         """Pass."""
         return MetadataSchema
 
 
-class BoolValueSchema(BaseSchemaJson):
+class BoolValueSchema(DataSchemaJson):
     """Pass."""
 
     value = SchemaBool(required=True)
@@ -58,24 +57,24 @@ class BoolValueSchema(BaseSchemaJson):
         type_ = "bool_value_schema"
 
     @staticmethod
-    def get_model_cls() -> type:
+    def _get_model_cls() -> type:
         """Pass."""
         return BoolValue
 
 
 @dataclasses.dataclass
-class BoolValue(BaseModel):
+class BoolValue(DataModel):
     """Pass."""
 
     value: bool
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def _get_schema_cls() -> Optional[Type[DataSchema]]:
         """Pass."""
         return BoolValueSchema
 
 
-class IntValueSchema(BaseSchemaJson):
+class IntValueSchema(DataSchemaJson):
     """Pass."""
 
     value = marshmallow_jsonapi.fields.Int(required=True)
@@ -86,24 +85,24 @@ class IntValueSchema(BaseSchemaJson):
         type_ = "int_value_schema"
 
     @staticmethod
-    def get_model_cls() -> type:
+    def _get_model_cls() -> type:
         """Pass."""
         return IntValue
 
 
 @dataclasses.dataclass
-class IntValue(BaseModel):
+class IntValue(DataModel):
     """Pass."""
 
     value: int
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def _get_schema_cls() -> Optional[Type[DataSchema]]:
         """Pass."""
         return IntValueSchema
 
 
-class StrValueSchema(BaseSchemaJson):
+class StrValueSchema(DataSchemaJson):
     """Pass."""
 
     value = marshmallow_jsonapi.fields.Str(required=True)
@@ -114,24 +113,24 @@ class StrValueSchema(BaseSchemaJson):
         type_ = "string_value_schema"
 
     @staticmethod
-    def get_model_cls() -> type:
+    def _get_model_cls() -> type:
         """Pass."""
         return StrValue
 
 
 @dataclasses.dataclass
-class StrValue(BaseModel):
+class StrValue(DataModel):
     """Pass."""
 
     value: str
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def _get_schema_cls() -> Optional[Type[DataSchema]]:
         """Pass."""
         return StrValueSchema
 
 
-class DictValueSchema(BaseSchemaJson):
+class DictValueSchema(DataSchemaJson):
     """Pass."""
 
     value = marshmallow_jsonapi.fields.Dict()
@@ -142,24 +141,24 @@ class DictValueSchema(BaseSchemaJson):
         type_ = "dict_value_schema"
 
     @staticmethod
-    def get_model_cls() -> type:
+    def _get_model_cls() -> type:
         """Pass."""
         return DictValue
 
 
 @dataclasses.dataclass
-class DictValue(BaseModel):
+class DictValue(DataModel):
     """Pass."""
 
     value: dict
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def _get_schema_cls() -> Optional[Type[DataSchema]]:
         """Pass."""
         return DictValueSchema
 
 
-class DeletedSchema(BaseSchemaJson):
+class DeletedSchema(DataSchemaJson):
     """Pass."""
 
     deleted = marshmallow_jsonapi.fields.Int()
@@ -170,36 +169,36 @@ class DeletedSchema(BaseSchemaJson):
         type_ = "deleted_schema"
 
     @staticmethod
-    def get_model_cls() -> type:
+    def _get_model_cls() -> type:
         """Pass."""
         return Deleted
 
 
 @dataclasses.dataclass
-class Deleted(BaseModel):
+class Deleted(DataModel):
     """Pass."""
 
     deleted: int
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def _get_schema_cls() -> Optional[Type[DataSchema]]:
         """Pass."""
         return DeletedSchema
 
 
 @dataclasses.dataclass
-class PrivateRequest(BaseModel):
+class PrivateRequest(DataModel):
     """Pass."""
 
     private: bool = False
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def _get_schema_cls() -> Optional[Type[DataSchema]]:
         """Pass."""
         return PrivateRequestSchema
 
 
-class PrivateRequestSchema(BaseSchemaJson):
+class PrivateRequestSchema(DataSchemaJson):
     """Pass."""
 
     private = marshmallow_jsonapi.fields.Bool(missing=False)
@@ -210,6 +209,6 @@ class PrivateRequestSchema(BaseSchemaJson):
         type_ = "private_schema"
 
     @staticmethod
-    def get_model_cls() -> type:
+    def _get_model_cls() -> type:
         """Pass."""
         return PrivateRequest

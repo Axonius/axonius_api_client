@@ -44,6 +44,17 @@ class AlreadyLoggedIn(AuthError):
 class ConnectError(AxonError):
     """Error in connect client."""
 
+    def __init__(self, msg: Optional[str] = None, exc: Optional[Exception] = None):
+        """Error in connect client.
+
+        Args:
+            msg: error message to include in exception
+            exc: original exception that was thrown if any
+        """
+        self.exc: Exception = exc
+        self.msg: str = msg
+        super().__init__(self.msg)
+
 
 class HttpError(AxonError):
     """Errors for HTTP client."""
@@ -183,3 +194,86 @@ class StopFetch(ApiError):
         self.reason = reason
         self.state = state
         super().__init__(reason)
+
+
+class ValidationError(ApiError):
+    """Pass."""
+
+    def __init__(self, obj, schema, exc, api_endpoint, data):
+        """Pass."""
+        from .tools import json_reload, prettify_obj
+
+        self.schema = schema
+        self.exc = exc
+        self.obj = obj
+        self.api_endpoint = api_endpoint
+        self.data = data
+
+        errors = exc.messages
+        if isinstance(errors, dict) and "errors" in errors:
+            errors = errors["errors"]
+        self.schema_errors = prettify_obj(errors)
+        pre = f"Schema Validation Error in {schema}"
+        self.errors = [
+            pre,
+            f"With data\n{json_reload(data)}",
+            f"While in {api_endpoint}",
+            f"From {obj}",
+            *self.schema_errors,
+            pre,
+        ]
+        self.msg = "\n\n".join(self.errors)
+        super().__init__(self.msg)
+
+
+class JsonApiError(ApiError):
+    """Pass."""
+
+    def __init__(self, obj, schema, exc, api_endpoint, data):
+        """Pass."""
+        from .tools import json_reload
+
+        self.schema = schema
+        self.exc = exc
+        self.obj = obj
+        self.api_endpoint = api_endpoint
+        self.data = data
+
+        pre = f"JSON API Error in {schema}: {exc}"
+
+        self.errors = [
+            pre,
+            f"With data:\n{json_reload(data)}",
+            f"While in {api_endpoint}",
+            f"From {obj}",
+            pre,
+        ]
+        self.msg = "\n\n".join(self.errors)
+        super().__init__(self.msg)
+
+
+class UnsupportedVersion(ApiError):
+    """Pass."""
+
+    def __init__(self, schema, data, api_endpoint):
+        """Pass."""
+        from .tools import json_reload
+
+        self.schema = schema
+        self.data = data
+        self.api_endpoint = api_endpoint
+        pre = "API Client version mismatch!"
+        self.errors = [
+            pre,
+            "",
+            f"With data:\n{json_reload(data)}",
+            f"With schema {schema}",
+            f"While in {api_endpoint}",
+            "",
+            "This version of the API Client only works with Axonius v4.1 or later",
+            "You need to use API client v4.10.x for this version of Axonius",
+            "",
+            pre,
+        ]
+        self.msg = "\n".join(self.errors)
+        super().__init__(self.msg)

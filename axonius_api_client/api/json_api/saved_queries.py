@@ -6,11 +6,11 @@ from typing import List, Optional, Type
 
 import marshmallow_jsonapi
 
-from .base import BaseModel, BaseSchema, BaseSchemaJson
+from ..models import DataModel, DataSchema, DataSchemaJson
 from .custom_fields import SchemaBool, SchemaDatetime, get_field_dc_mm
 
 
-class SavedQuerySchema(BaseSchemaJson):
+class SavedQuerySchema(DataSchemaJson):
     """Pass."""
 
     name = marshmallow_jsonapi.fields.Str(required=True)
@@ -33,7 +33,7 @@ class SavedQuerySchema(BaseSchemaJson):
     uuid = marshmallow_jsonapi.fields.Str(allow_none=True, missing=None)
 
     @staticmethod
-    def get_model_cls() -> type:
+    def _get_model_cls() -> type:
         """Pass."""
         return SavedQuery
 
@@ -44,7 +44,7 @@ class SavedQuerySchema(BaseSchemaJson):
 
 
 @dataclasses.dataclass
-class SavedQuery(BaseModel):
+class SavedQuery(DataModel):
     """Pass."""
 
     id: str
@@ -69,12 +69,12 @@ class SavedQuery(BaseModel):
     is_referenced: bool = False
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def _get_schema_cls() -> Optional[Type[DataSchema]]:
         """Pass."""
         return SavedQuerySchema
 
 
-class SavedQueryCreateSchema(BaseSchemaJson):
+class SavedQueryCreateSchema(DataSchemaJson):
     """Pass."""
 
     name = marshmallow_jsonapi.fields.Str(required=True)
@@ -85,7 +85,7 @@ class SavedQueryCreateSchema(BaseSchemaJson):
     tags = marshmallow_jsonapi.fields.List(marshmallow_jsonapi.fields.Str())
 
     @staticmethod
-    def get_model_cls() -> type:
+    def _get_model_cls() -> type:
         """Pass."""
         return SavedQueryCreate
 
@@ -96,7 +96,7 @@ class SavedQueryCreateSchema(BaseSchemaJson):
 
 
 @dataclasses.dataclass
-class SavedQueryCreate(BaseModel):
+class SavedQueryCreate(DataModel):
     """Pass."""
 
     name: str
@@ -107,6 +107,6 @@ class SavedQueryCreate(BaseModel):
     tags: List[str] = dataclasses.field(default_factory=list)
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def _get_schema_cls() -> Optional[Type[DataSchema]]:
         """Pass."""
         return SavedQueryCreateSchema

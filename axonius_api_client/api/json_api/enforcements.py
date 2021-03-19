@@ -8,12 +8,12 @@ import marshmallow
 import marshmallow_jsonapi
 
 from ...tools import json_load
-from .base import BaseModel, BaseSchema, BaseSchemaJson
+from ..models import DataModel, DataSchema, DataSchemaJson
 from .custom_fields import SchemaDatetime, get_field_dc_mm
 from .generic import Deleted
 
 
-class EnforcementDetailsSchema(BaseSchemaJson):
+class EnforcementDetailsSchema(DataSchemaJson):
     """Pass."""
 
     name = marshmallow_jsonapi.fields.Str()
@@ -34,19 +34,19 @@ class EnforcementDetailsSchema(BaseSchemaJson):
         type_ = "enforcements_details_schema"
 
     @staticmethod
-    def get_model_cls() -> type:
+    def _get_model_cls() -> type:
         """Pass."""
         return EnforcementDetails
 
     @marshmallow.pre_load
-    def pre_load_fix(self, data, **kwargs) -> Union[dict, BaseModel]:
+    def pre_load_fix(self, data, **kwargs) -> Union[dict, DataModel]:
         """Pass."""
         data = {k.replace(".", "_"): v for k, v in data.items()}
         return data
 
 
 @dataclasses.dataclass
-class EnforcementDetails(BaseModel):
+class EnforcementDetails(DataModel):
     """Pass."""
 
     id: str
@@ -74,7 +74,7 @@ class EnforcementDetails(BaseModel):
         return self.id
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def _get_schema_cls() -> Optional[Type[DataSchema]]:
         """Pass."""
         return EnforcementDetailsSchema
 
@@ -92,23 +92,16 @@ class EnforcementDetails(BaseModel):
         """Pass."""
         return {self._human_key(k): getattr(self, k, None) for k in self._str_properties()}
 
-    def get_full_object(self) -> "Enforcement":
+    def get_full(self) -> "Enforcement":
         """Pass."""
-        from .. import ApiEndpoints
+        return self.CLIENT.enforcements._get_by_uuid(uuid=self.uuid)
 
-        api_endpoint = ApiEndpoints.enforcements.get_full
-        return api_endpoint.perform_request(http=self.HTTP, uuid=self.uuid)
-
-    def delete_object(self) -> Deleted:
+    def delete(self) -> Deleted:
         """Pass."""
-        from .. import ApiEndpoints
-
-        api_endpoint = ApiEndpoints.enforcements.delete
-        request_obj = api_endpoint.load_request(value={"ids": [self.uuid], "include": True})
-        return api_endpoint.perform_request(http=self.HTTP, request_obj=request_obj)
+        return self.CLIENT.enforcements._delete(uuid=self.uuid)
 
 
-class EnforcementSchema(BaseSchemaJson):
+class EnforcementSchema(DataSchemaJson):
     """Pass."""
 
     name = marshmallow_jsonapi.fields.Str()
@@ -123,13 +116,13 @@ class EnforcementSchema(BaseSchemaJson):
         type_ = "enforcements_details_schema"
 
     @staticmethod
-    def get_model_cls() -> type:
+    def _get_model_cls() -> type:
         """Pass."""
         return Enforcement
 
 
 @dataclasses.dataclass
-class Enforcement(BaseModel):
+class Enforcement(DataModel):
     """Pass."""
 
     id: str
@@ -140,7 +133,7 @@ class Enforcement(BaseModel):
     triggers: List[dict]
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def _get_schema_cls() -> Optional[Type[DataSchema]]:
         """Pass."""
         return EnforcementSchema
 
@@ -153,7 +146,7 @@ class Enforcement(BaseModel):
         ]
 
 
-class EnforcementCreateSchema(BaseSchemaJson):
+class EnforcementCreateSchema(DataSchemaJson):
     """Pass."""
 
     name = marshmallow_jsonapi.fields.Str()
@@ -166,13 +159,13 @@ class EnforcementCreateSchema(BaseSchemaJson):
         type_ = "enforcements_schema"
 
     @staticmethod
-    def get_model_cls() -> type:
+    def _get_model_cls() -> type:
         """Pass."""
         return EnforcementCreate
 
 
 @dataclasses.dataclass
-class EnforcementCreate(BaseModel):
+class EnforcementCreate(DataModel):
     """Pass."""
 
     name: str
@@ -180,12 +173,12 @@ class EnforcementCreate(BaseModel):
     triggers: List[dict]
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def _get_schema_cls() -> Optional[Type[DataSchema]]:
         """Pass."""
         return EnforcementCreateSchema
 
 
-class ActionSchema(BaseSchemaJson):
+class ActionSchema(DataSchemaJson):
     """Pass."""
 
     default = marshmallow_jsonapi.fields.Dict()
@@ -197,13 +190,13 @@ class ActionSchema(BaseSchemaJson):
         type_ = "actions_schema"
 
     @staticmethod
-    def get_model_cls() -> type:
+    def _get_model_cls() -> type:
         """Pass."""
         return Action
 
 
 @dataclasses.dataclass
-class Action(BaseModel):
+class Action(DataModel):
     """Pass."""
 
     id: str
@@ -211,7 +204,7 @@ class Action(BaseModel):
     schema: dict
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def _get_schema_cls() -> Optional[Type[DataSchema]]:
         """Pass."""
         return ActionSchema
 

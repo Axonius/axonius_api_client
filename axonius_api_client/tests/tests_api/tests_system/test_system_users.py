@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """Test suite."""
 import pytest
-
 from axonius_api_client.api.json_api.system_users import SystemUser
 from axonius_api_client.constants.api import SETTING_UNCHANGED
 from axonius_api_client.exceptions import ApiError, NotFoundError
@@ -23,8 +22,8 @@ def cleanup(apiobj):
 
 class TestSystemUsersPrivate:
     @pytest.fixture(scope="class")
-    def apiobj(self, api_system_users):
-        return api_system_users
+    def apiobj(self, api_client):
+        return api_client.system_users
 
     def test_get(self, apiobj):
         users = apiobj._get()
@@ -52,8 +51,8 @@ class TestSystemUsersPrivate:
 
 class TestSystemUsersPublic:
     @pytest.fixture(scope="class")
-    def apiobj(self, api_system_users):
-        return api_system_users
+    def apiobj(self, api_client):
+        return api_client.system_users
 
     def test_get(self, apiobj):
         users = apiobj.get()

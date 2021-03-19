@@ -1,25 +1,13 @@
 # -*- coding: utf-8 -*-
 """API library package."""
-from . import api_endpoints, json_api
+from . import json_api, models
 from .adapters import Adapters, Cnx
-from .api_endpoint import ApiEndpoint
 from .api_endpoints import ApiEndpoints
 from .assets import Devices, Users
 from .enforcements import Enforcements
-from .system import (
-    ActivityLogs,
-    Dashboard,
-    Instances,
-    Meta,
-    RemoteSupport,
-    SettingsGlobal,
-    SettingsGui,
-    SettingsIdentityProviders,
-    SettingsLifecycle,
-    Signup,
-    SystemRoles,
-    SystemUsers,
-)
+from .system import (ActivityLogs, Dashboard, Instances, Meta, RemoteSupport,
+                     SettingsGlobal, SettingsGui, SettingsIdentityProviders,
+                     SettingsLifecycle, Signup, SystemRoles, SystemUsers)
 from .wizards import Wizard, WizardCsv, WizardText
 
 __all__ = (
@@ -43,8 +31,7 @@ __all__ = (
     "WizardCsv",
     "WizardText",
     "ActivityLogs",
-    "api_endpoints",
     "ApiEndpoints",
-    "ApiEndpoint",
+    "models",
     "json_api",
 )

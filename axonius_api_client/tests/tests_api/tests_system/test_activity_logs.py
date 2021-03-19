@@ -4,15 +4,14 @@
 import datetime
 
 import pytest
-
 from axonius_api_client.api import json_api
 from axonius_api_client.exceptions import ApiError
 
 
 class ActivityLogsBase:
     @pytest.fixture(scope="class")
-    def apiobj(self, api_activity_logs):
-        return api_activity_logs
+    def apiobj(self, api_client):
+        return api_client.activity_logs
 
 
 class TestActivityLogsPrivate(ActivityLogsBase):

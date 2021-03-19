@@ -7,7 +7,7 @@ import marshmallow
 import marshmallow_jsonapi
 
 from ...constants.api import MAX_PAGE_SIZE
-from .base import BaseModel, BaseSchema, BaseSchemaJson
+from ..models import DataModel, DataSchema, DataSchemaJson
 from .custom_fields import SchemaBool, get_field_dc_mm
 
 
@@ -19,7 +19,7 @@ class PaginationSchema(marshmallow.Schema):
 
 
 @dataclasses.dataclass
-class PaginationRequest(BaseModel):
+class PaginationRequest(DataModel):
     """Pass."""
 
     offset: Optional[int] = 0
@@ -48,7 +48,7 @@ class PaginationRequest(BaseModel):
 
 
 @dataclasses.dataclass
-class PageSortRequest(BaseModel):
+class PageSortRequest(DataModel):
     """Data attributes for pagination and sort."""
 
     sort: Optional[str] = None
@@ -83,7 +83,7 @@ class PageSortRequest(BaseModel):
             self.page = PaginationRequest()
 
 
-class ResourcesGetSchema(BaseSchemaJson):
+class ResourcesGetSchema(DataSchemaJson):
     """Pass."""
 
     sort = marshmallow_jsonapi.fields.Str()
@@ -92,7 +92,7 @@ class ResourcesGetSchema(BaseSchemaJson):
     get_metadata = SchemaBool(missing=True)
 
     @staticmethod
-    def get_model_cls() -> type:
+    def _get_model_cls() -> type:
         """Pass."""
         return ResourcesGet
 
@@ -117,13 +117,13 @@ class ResourcesGet(PageSortRequest):
     """
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def _get_schema_cls() -> Optional[Type[DataSchema]]:
         """Pass."""
         return ResourcesGetSchema
 
 
 @dataclasses.dataclass
-class ResourceDelete(BaseModel):
+class ResourceDelete(DataModel):
     """Pass."""
 
     uuid: str

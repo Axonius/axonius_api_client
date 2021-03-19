@@ -5,10 +5,10 @@ from typing import List, Optional, Type
 
 import marshmallow_jsonapi
 
-from .base import BaseModel, BaseSchema, BaseSchemaJson
+from ..models import DataModel, DataSchema, DataSchemaJson
 
 
-class LifecycleSchema(BaseSchemaJson):
+class LifecycleSchema(DataSchemaJson):
     """Pass."""
 
     last_finished_time = marshmallow_jsonapi.fields.Str(allow_none=True)
@@ -24,13 +24,13 @@ class LifecycleSchema(BaseSchemaJson):
         type_ = "lifecycle_schema"
 
     @staticmethod
-    def get_model_cls() -> type:
+    def _get_model_cls() -> type:
         """Pass."""
         return Lifecycle
 
 
 @dataclasses.dataclass
-class Lifecycle(BaseModel):
+class Lifecycle(DataModel):
     """Pass."""
 
     last_finished_time: Optional[str] = None
@@ -41,6 +41,6 @@ class Lifecycle(BaseModel):
     tunnel_status: Optional[str] = None
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def _get_schema_cls() -> Optional[Type[DataSchema]]:
         """Pass."""
         return LifecycleSchema

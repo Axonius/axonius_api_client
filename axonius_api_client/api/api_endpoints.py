@@ -4,7 +4,7 @@ import dataclasses
 
 from ..data import BaseData
 from . import json_api
-from .api_endpoint import ApiEndpoint
+from .models import ApiEndpoint
 
 
 @dataclasses.dataclass
@@ -541,6 +541,14 @@ class Enforcements(BaseData):
         request_model_cls=None,
         response_schema_cls=json_api.enforcements.ActionSchema,
         response_model_cls=json_api.enforcements.Action,
+    )
+    get_names: ApiEndpoint = ApiEndpoint(
+        method="get",
+        path="api/V4.0/enforcements/saved",
+        request_schema_cls=None,
+        request_model_cls=None,
+        response_schema_cls=json_api.generic.StrValueSchema,
+        response_model_cls=json_api.generic.StrValue,
     )
 
 

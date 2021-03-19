@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """Test suite."""
 import pytest
-
 from axonius_api_client.api.json_api.system_roles import SystemRole
 from axonius_api_client.exceptions import ApiError, NotFoundError
 
@@ -19,8 +18,8 @@ def cleanup(apiobj):
 
 class TestSystemRolesPrivate:
     @pytest.fixture(scope="class")
-    def apiobj(self, api_system_roles):
-        return api_system_roles
+    def apiobj(self, api_client):
+        return api_client.system_roles
 
     def test_get(self, apiobj):
         roles = apiobj._get()
@@ -46,8 +45,8 @@ class TestSystemRolesPrivate:
 
 class TestSystemRolesPublic:
     @pytest.fixture(scope="class")
-    def apiobj(self, api_system_roles):
-        return api_system_roles
+    def apiobj(self, api_client):
+        return api_client.system_roles
 
     def test_get(self, apiobj):
         roles = apiobj.get()

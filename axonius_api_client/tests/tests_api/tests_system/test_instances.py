@@ -3,15 +3,14 @@
 import datetime
 
 import pytest
-
 from axonius_api_client.api import json_api
 from axonius_api_client.exceptions import NotFoundError
 
 
 class TestInstancesPublic:
     @pytest.fixture(scope="class")
-    def apiobj(self, api_instances):
-        return api_instances
+    def apiobj(self, api_client):
+        return api_client.instances
 
     def test_get(self, apiobj):
         data = apiobj.get()
@@ -122,8 +121,8 @@ class TestInstancesPublic:
 
 class TestInstancesPrivate:
     @pytest.fixture(scope="class")
-    def apiobj(self, api_instances):
-        return api_instances
+    def apiobj(self, api_client):
+        return api_client.instances
 
     def test_get_update(self, apiobj):
         data = apiobj._get()

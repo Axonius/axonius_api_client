@@ -3,7 +3,6 @@
 import logging
 
 import pytest
-
 from axonius_api_client.connect import Connect
 from axonius_api_client.exceptions import ConnectError, InvalidCredentials
 from axonius_api_client.http import requests
@@ -38,6 +37,9 @@ class TestConnect:
         ax_url = get_url(request)
 
         c = Connect(url=ax_url, certwarn=False, **get_key_creds(request))
+
+        assert "Not connected" in format(c)
+        assert "Not connected" in repr(c)
 
         c.start()
 

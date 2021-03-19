@@ -4,14 +4,13 @@
 import datetime
 
 import pytest
-
 from axonius_api_client.api import json_api
 
 
 class RemoteSupportBase:
     @pytest.fixture(scope="class")
-    def apiobj(self, api_remote_support):
-        return api_remote_support
+    def apiobj(self, api_client):
+        return api_client.remote_support
 
 
 class TestRemoteSupportPrivate(RemoteSupportBase):

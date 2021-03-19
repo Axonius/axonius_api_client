@@ -9,15 +9,14 @@ import marshmallow_jsonapi
 
 from ...constants.api import MAX_PAGE_SIZE, PAGE_SIZE
 from ...exceptions import ApiError, StopFetch
-from ...http import Http
 from ...tools import dt_parse, dt_sec_ago, json_dump, listify
-from .base import BaseModel, BaseSchema, BaseSchemaJson
+from ..models import DataModel, DataSchema, DataSchemaJson
 from .custom_fields import SchemaBool, get_field_dc_mm
 from .generic import DictValue
 from .resources import PaginationRequest, PaginationSchema
 
 
-class ModifyTagsSchema(BaseSchemaJson):
+class ModifyTagsSchema(DataSchemaJson):
     """Pass."""
 
     entities = marshmallow_jsonapi.fields.Dict()
@@ -30,13 +29,13 @@ class ModifyTagsSchema(BaseSchemaJson):
         type_ = "add_tags_schema"
 
     @staticmethod
-    def get_model_cls() -> type:
+    def _get_model_cls() -> type:
         """Pass."""
         return ModifyTags
 
 
 @dataclasses.dataclass
-class ModifyTags(BaseModel):
+class ModifyTags(DataModel):
     """Pass."""
 
     labels: List[str] = dataclasses.field(default_factory=list)
@@ -44,7 +43,7 @@ class ModifyTags(BaseModel):
     filter: Optional[str] = None
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def _get_schema_cls() -> Optional[Type[DataSchema]]:
         """Pass."""
         return ModifyTagsSchema
 
@@ -100,7 +99,7 @@ class AssetMixins:
             raise ApiError(msg)
 
 
-class AssetRequestSchema(BaseSchemaJson):
+class AssetRequestSchema(DataSchemaJson):
     """Pass."""
 
     always_cached_query = SchemaBool(missing=False)
@@ -127,7 +126,7 @@ class AssetRequestSchema(BaseSchemaJson):
         type_ = "entity_request_schema"
 
     @staticmethod
-    def get_model_cls() -> type:
+    def _get_model_cls() -> type:
         """Pass."""
         return AssetRequest
 
@@ -139,7 +138,7 @@ class AssetRequestSchema(BaseSchemaJson):
 
 
 @dataclasses.dataclass
-class AssetRequest(BaseModel, AssetMixins):
+class AssetRequest(DataModel, AssetMixins):
     """Pass."""
 
     always_cached_query: bool = False
@@ -170,7 +169,7 @@ class AssetRequest(BaseModel, AssetMixins):
         self.page = self.page or PaginationRequest()
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def _get_schema_cls() -> Optional[Type[DataSchema]]:
         """Pass."""
         return AssetRequestSchema
 
@@ -193,7 +192,7 @@ class AssetRequest(BaseModel, AssetMixins):
 
 
 @dataclasses.dataclass
-class AssetsPage(BaseModel):
+class AssetsPage(DataModel):
     """Pass."""
 
     assets: Optional[List[dict]] = dataclasses.field(default_factory=list)
@@ -201,7 +200,7 @@ class AssetsPage(BaseModel):
     empty_response: bool = False
 
     @classmethod
-    def load_response(cls, data: dict, http: Http, api_endpoint, **kwargs):
+    def _load_response(cls, data: dict, client, api_endpoint, **kwargs):
         """Pass."""
         cls._check_version(data=data, api_endpoint=api_endpoint)
         empty = data.get("data") is None
@@ -209,7 +208,9 @@ class AssetsPage(BaseModel):
         meta = data.get("meta") or {}
         new_data = {"assets": assets, "meta": meta, "empty_response": empty}
         schema = cls.schema()
-        return cls._load_schema(schema=schema, data=new_data, http=http, api_endpoint=api_endpoint)
+        return cls._load_schema(
+            schema=schema, data=new_data, client=client, api_endpoint=api_endpoint
+        )
 
     def __str__(self):
         """Pass."""
@@ -413,19 +414,19 @@ class AssetsPage(BaseModel):
 
 
 @dataclasses.dataclass
-class AssetById(BaseModel):
+class AssetById(DataModel):
     """Pass."""
 
     asset: dict
     id: str
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def _get_schema_cls() -> Optional[Type[DataSchema]]:
         """Pass."""
         return None
 
     @classmethod
-    def load_response(cls, data: dict, http: Http, api_endpoint, **kwargs):
+    def _load_response(cls, data: dict, client, api_endpoint, **kwargs):
         """Pass."""
         cls._check_version(data=data, api_endpoint=api_endpoint)
 
@@ -435,10 +436,12 @@ class AssetById(BaseModel):
         new_data = {"asset": asset, "id": asset_id}
 
         schema = cls.schema()
-        return cls._load_schema(schema=schema, data=new_data, http=http, api_endpoint=api_endpoint)
+        return cls._load_schema(
+            schema=schema, data=new_data, client=client, api_endpoint=api_endpoint
+        )
 
 
-class CountRequestSchema(BaseSchemaJson):
+class CountRequestSchema(DataSchemaJson):
     """Pass."""
 
     use_cache_entry = SchemaBool(missing=False)
@@ -451,7 +454,7 @@ class CountRequestSchema(BaseSchemaJson):
         type_ = "entities_count_schema"
 
     @staticmethod
-    def get_model_cls() -> type:
+    def _get_model_cls() -> type:
         """Pass."""
         return CountRequest
 
@@ -463,7 +466,7 @@ class CountRequestSchema(BaseSchemaJson):
 
 
 @dataclasses.dataclass
-class CountRequest(BaseModel, AssetMixins):
+class CountRequest(DataModel, AssetMixins):
     """Pass."""
 
     use_cache_entry: bool = False
@@ -471,24 +474,24 @@ class CountRequest(BaseModel, AssetMixins):
     filter: Optional[str] = None
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def _get_schema_cls() -> Optional[Type[DataSchema]]:
         """Pass."""
         return CountRequestSchema
 
 
 @dataclasses.dataclass
-class Count(BaseModel):
+class Count(DataModel):
     """Pass."""
 
     value: Optional[int] = None
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def _get_schema_cls() -> Optional[Type[DataSchema]]:
         """Pass."""
         return None
 
     @classmethod
-    def load_response(cls, data: dict, http: Http, api_endpoint, **kwargs):
+    def _load_response(cls, data: dict, client, api_endpoint, **kwargs):
         """Pass."""
         cls._check_version(data=data, api_endpoint=api_endpoint)
 
@@ -498,17 +501,19 @@ class Count(BaseModel):
         new_data = {"value": value}
 
         schema = cls.schema()
-        return cls._load_schema(schema=schema, data=new_data, http=http, api_endpoint=api_endpoint)
+        return cls._load_schema(
+            schema=schema, data=new_data, client=client, api_endpoint=api_endpoint
+        )
 
 
 @dataclasses.dataclass
-class DestroyRequest(BaseModel):
+class DestroyRequest(DataModel):
     """Pass."""
 
     destroy: bool = False
     history: bool = False
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def _get_schema_cls() -> Optional[Type[DataSchema]]:
         """Pass."""
         return None

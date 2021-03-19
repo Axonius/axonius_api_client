@@ -2,10 +2,10 @@
 """API for working with product metadata."""
 from ...tools import calc_gb
 from ..api_endpoints import ApiEndpoints
-from ..mixins import ModelMixins
+from ..models import ApiModel
 
 
-class Meta(ModelMixins):
+class Meta(ApiModel):
     """API for working with product metadata.
 
     Examples:
@@ -73,9 +73,9 @@ class Meta(ModelMixins):
     def _about(self) -> dict:
         """Direct API method to get the About page."""
         api_endpoint = ApiEndpoints.system_settings.meta_about
-        return api_endpoint.perform_request(http=self.auth.http)
+        return api_endpoint.perform_request(client=self.CLIENT)
 
     def _historical_sizes(self) -> dict:
         """Direct API method to get the metadata about disk usage."""
         api_endpoint = ApiEndpoints.system_settings.historical_sizes
-        return api_endpoint.perform_request(http=self.auth.http)
+        return api_endpoint.perform_request(client=self.CLIENT)

@@ -7,11 +7,12 @@ from typing import List, Optional, Type, Union
 import marshmallow
 import marshmallow_jsonapi
 
-from .base import BaseModel, BaseSchema, BaseSchemaJson
-from .custom_fields import SchemaBool, SchemaDatetime, SchemaPassword, get_field_dc_mm
+from ..models import DataModel, DataSchema, DataSchemaJson
+from .custom_fields import (SchemaBool, SchemaDatetime, SchemaPassword,
+                            get_field_dc_mm)
 
 
-class SystemUserSchema(BaseSchemaJson):
+class SystemUserSchema(DataSchemaJson):
     """Pass."""
 
     email = marshmallow_jsonapi.fields.Str(allow_none=True)
@@ -27,7 +28,7 @@ class SystemUserSchema(BaseSchemaJson):
     uuid = marshmallow_jsonapi.fields.Str(required=True)
 
     @staticmethod
-    def get_model_cls() -> type:
+    def _get_model_cls() -> type:
         """Pass."""
         return SystemUser
 
@@ -58,7 +59,7 @@ class SystemUserUpdateSchema(SystemUserSchema):
 
 
 @dataclasses.dataclass
-class PasswordLinkCreateRequest(BaseModel):
+class PasswordLinkCreateRequest(DataModel):
     """Pass."""
 
     user_id: str
@@ -66,7 +67,7 @@ class PasswordLinkCreateRequest(BaseModel):
 
 
 @dataclasses.dataclass
-class PasswordLinkSendRequest(BaseModel):
+class PasswordLinkSendRequest(DataModel):
     """Pass."""
 
     email: str
@@ -75,14 +76,14 @@ class PasswordLinkSendRequest(BaseModel):
 
 
 @dataclasses.dataclass
-class PasswordLinkSendResponse(BaseModel):
+class PasswordLinkSendResponse(DataModel):
     """Pass."""
 
     user_name: str
 
 
 @dataclasses.dataclass
-class PasswordTokenValidateRequest(BaseModel):
+class PasswordTokenValidateRequest(DataModel):
     """Pass."""
 
     token: bool
@@ -93,14 +94,14 @@ class PasswordTokenValidateRequest(BaseModel):
 
 
 @dataclasses.dataclass
-class PasswordTokenValidateResponse(BaseModel):
+class PasswordTokenValidateResponse(DataModel):
     """Pass."""
 
     valid: bool
 
 
 @dataclasses.dataclass
-class SystemUser(BaseModel):
+class SystemUser(DataModel):
     """Pass."""
 
     role_id: str
@@ -122,7 +123,7 @@ class SystemUser(BaseModel):
     source: Optional[str] = None
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def _get_schema_cls() -> Optional[Type[DataSchema]]:
         """Pass."""
         return SystemUserSchema
 
@@ -146,7 +147,7 @@ class SystemUser(BaseModel):
         return obj
 
 
-class SystemUserCreateSchema(BaseSchemaJson):
+class SystemUserCreateSchema(DataSchemaJson):
     """Pass."""
 
     user_name = marshmallow_jsonapi.fields.Str(required=True)
@@ -159,7 +160,7 @@ class SystemUserCreateSchema(BaseSchemaJson):
     password = SchemaPassword(default="")
 
     @staticmethod
-    def get_model_cls() -> type:
+    def _get_model_cls() -> type:
         """Pass."""
         return SystemUserCreate
 
@@ -178,7 +179,7 @@ class SystemUserCreateSchema(BaseSchemaJson):
 
 
 @dataclasses.dataclass
-class SystemUserCreate(BaseModel):
+class SystemUserCreate(DataModel):
     """Pass."""
 
     user_name: str
@@ -191,6 +192,6 @@ class SystemUserCreate(BaseModel):
     password: str = ""
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def _get_schema_cls() -> Optional[Type[DataSchema]]:
         """Pass."""
         return SystemUserCreateSchema
