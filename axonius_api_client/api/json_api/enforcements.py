@@ -7,7 +7,7 @@ from typing import List, Optional, Type, Union
 import marshmallow
 import marshmallow_jsonapi
 
-from ...tools import json_load
+from ...tools import dt_parse, int_days_map, json_load
 from ..models import DataModel, DataSchema, DataSchemaJson
 from .custom_fields import SchemaDatetime, get_field_dc_mm
 from .generic import Deleted
@@ -139,209 +139,88 @@ class Enforcement(DataModel):
     # SAVE_ON_UPDATE: bool = True
     # XXX
 
-    @staticmethod
-    def _get_schema_cls() -> Optional[Type[DataSchema]]:
-        """Pass."""
-        return EnforcementSchema
-
-    def __str__(self) -> List[str]:
-        """Pass."""
-        items = [
-            self._get_name_str(),
-            self._get_updated_str(),
-            self._get_actions_str("main"),
-            self._get_actions_str("success"),
-            self._get_actions_str("failure"),
-            self._get_actions_str("post"),
-            self._get_trigger_str(),
-            self._get_schedule_str(),
-            # "Trigger: SCHEDULE, CONDITIONS",
-            # XXX
-        ]
-        return "\n".join(items)
-
-    def _get_name_str(self) -> str:
-        """Pass."""
-        items = [
-            f"Name: {self.name}",
-            f"UUID: {self.uuid}",
-        ]
-        return "\n".join(items)
-
-    def _get_updated_str(self) -> str:
-        """Pass."""
-        dt_str = self.updated_on.isoformat() if self.updated_on else "Unknown"
-        items = [
-            f"Date: {dt_str}",
-            f"User Name: {self.updated_by}",
-            f"Full Name: {self.updated_by_full_name}",
-        ]
-        return "Updated:\n  " + "\n  ".join(items)
-
-    def _get_trigger_str(self) -> str:
-        """Pass."""
-        name = self.get_trigger_sq_name()
-        asset_type = self.trigger_asset_type
-
-        if name:
-            items = [
-                f"Name: {name}",
-                f"Type: {asset_type.title()}",
-                # f"Only run against newly added assets: {self.only_run_against_new_assets}",
-                # XXX should be conditions...
-            ]
-        else:
-            items = ["None"]
-        return "Trigger:\n  " + "\n  ".join(items)
-
-    def _get_schedule_str(self) -> str:
-        """Pass."""
-        if self.schedule_enabled:
-            items = [
-                f"Type: {self.schedule_type_human}",
-                f"Recurrence: {self.schedule_recurrence_human}",
-            ]
-        else:
-            items = ["None"]
-
-        return "Schedule:\n  " + "\n  ".join(items)
-
     @property
-    def _schedule_type_maps(self) -> dict:
-        return {
-            "never": {"type": "None", "recurrence": "n/a"},
-            "all": {"type": "Every Discovery Cycle", "recurrence": "n/a"},
-            "hourly": {"type": "Every X hours", "recurrence": "every {recurrence} hours"},
-            "daily": {
-                "type": "Every X days",
-                "recurrence": "{time} UTC every {recurrence} days",
-            },
-            "weekly": {
-                "type": "Days of week",
-                "recurrence": "{time} UTC on {recurrence}",
-            },
-            "monthly": {
-                "type": "Days of month",
-                "recurrence": "{time} UTC on days {recurrence}",
-            },
-            "unknown": {
-                "type": "UNKNOWN, API Changed??",
-                "recurrence": "UNKNOWN, API Changed??",
-            },
-        }
-
-    def schedule_type_map(self):
+    def schedule_enabled(self) -> bool:
         """Pass."""
-        return self._schedule_type_maps.get(self.schedule_type, self._schedule_type_maps["unknown"])
-
-    def _get_actions_str(self, category: str) -> str:
-        """Pass."""
-
-        def deets(obj):
-            aname = obj["name"]
-            atype = obj["action"]["action_name"]
-            return f"Name: {aname!r}, Type: {atype!r} "
-
-        cat = category.title()
-        actions = self.actions[category]
-        if isinstance(actions, dict):
-            return f"{cat} Action:\n  {deets(actions)}"
-
-        if not actions:
-            return f"{cat} Actions:\n  None"
-
-        items = [deets(x) for x in actions]
-        return f"{cat} Actions:\n  " + "\n  ".join(items)
-
-    def _check_has_trigger(self):
-        """Pass."""
-
-    @property
-    def _days_of_week_map(self):
-        return self._days_of_week_map
-
-    @property
-    def schedule_enabled(self):
-        """Pass."""
-        return self.schedule_type and self.schedule_type != "never"
+        return self._schedule_type and self._schedule_type != "never"
 
     @property
     def schedule_type(self) -> str:
         """Pass."""
-        return self.trigger_obj.get("period", "")
+        return self._map_schedule_type["type"]
 
     @property
-    def schedule_type_human(self) -> str:
+    def schedule_recurrence(self) -> str:
         """Pass."""
-        return self.schedule_type_map()["type"]
+        type_map = self._map_schedule_type
+        tmpl = type_map["recurrence"]
+        rmapper = type_map.get("recurrence_mapper")
 
-    @property
-    def schedule_recurrence(self) -> Optional[Union[int, str, List[str]]]:
-        """Pass."""
-        return self.trigger_obj.get("period_recurrence")
-
-    @property
-    def schedule_recurrence_human(self) -> str:
-        """Pass."""
-        recurrence = self.schedule_recurrence
         time = self.schedule_time
-        # XXX
-        # if weekly, map ints (but as strs) to day names
-        # if monthly... idfk
-        return self.schedule_type_map()["recurrence"].format(recurrence=recurrence, time=time)
+        recurrence = self._schedule_recurrence
+        recurrence = rmapper(value=recurrence) if rmapper else recurrence
+
+        return tmpl.format(recurrence=recurrence, time=time)
 
     @property
     def schedule_time(self) -> str:
         """Pass."""
-        return self.trigger_obj.get("period_time", "")
+        return self._trigger_obj.get("period_time", "")
 
     @property
-    def trigger_obj(self) -> dict:
+    def trigger_type(self) -> str:
         """Pass."""
-        return self.triggers[0] if self.triggers else {}
-
-    @property
-    def trigger_view(self) -> dict:
-        """Pass."""
-        return self.trigger_obj.get("view", {})
-
-    @property
-    def trigger_asset_type(self) -> str:
-        """Pass."""
-        return self.trigger_view.get("entity", "")
+        return self._trigger_view.get("entity", "")
 
     @property
     def trigger_id(self) -> str:
         """Pass."""
-        return self.trigger_view.get("id", "")
+        return self._trigger_view.get("id", "")
+
+    @property
+    def trigger_name(self) -> str:
+        """Pass."""
+        return self.get_basic().triggers_view_name
+
+    @property
+    def trigger_run_last(self) -> Optional[datetime.datetime]:
+        """Pass."""
+        return self.get_basic().triggers_last_triggered
+
+    @property
+    def trigger_run_count(self) -> int:
+        """Pass."""
+        return self.get_basic().triggers_times_triggered
 
     @property
     def run_on(self) -> str:
         """Pass."""
-        return self.trigger_obj.get("run_on", "")
+        return self._trigger_obj.get("run_on", "")
 
     @property
-    def only_run_against_new_assets(self) -> bool:
+    def run_on_added_entities_only(self) -> bool:
         """Pass."""
         return self.run_on != "AllEntities"
 
-    def get_trigger_sq(self) -> dict:
+    @property
+    def only_run_when_assets_added(self) -> bool:
         """Pass."""
-        if self.trigger_id:
-            apiobj = getattr(self.CLIENT, self.trigger_asset_type)
-            sq = apiobj.saved_query.get_by_uuid(value=self.trigger_id)
-            return sq
-        return {}
+        return self._conditions.get("new_entities", False)
 
-    def get_trigger_sq_name(self) -> str:
+    @property
+    def only_run_when_assets_removed(self) -> bool:
         """Pass."""
-        return self.get_trigger_sq().get("name", "")
+        return self._conditions.get("previous_entities", False)
 
-    def get_basic(self) -> "EnforcementBasic":
+    @property
+    def only_run_when_asset_count_above(self) -> Optional[int]:
         """Pass."""
-        if not getattr(self, "_basic", None):
-            self._basic = self.CLIENT.enforcements.get_by_uuid(value=self.uuid, full=False)
-        return self._basic
+        return self._conditions.get("above", None)
+
+    @property
+    def only_run_when_asset_count_below(self) -> Optional[int]:
+        """Pass."""
+        return self._conditions.get("below", None)
 
     @property
     def updated_on(self) -> datetime.datetime:
@@ -369,20 +248,58 @@ class Enforcement(DataModel):
         items = [self.updated_by_first_name, self.updated_by_last_name]
         return " ".join([x for x in items if x])
 
+    def get(self) -> "Enforcement":
+        """Pass."""
+        return self.CLIENT.enforcements.get_by_uuid(value=self.uuid)
+
+    def save(self) -> "Enforcement":
+        """Pass."""
+
+    def copy(self, name: str) -> "Enforcement":
+        """Pass."""
+        # XXX more details here?
+
+    def delete(self) -> Deleted:
+        """Pass."""
+        return self.CLIENT.enforcements._delete(uuid=self.uuid)
+
+    # def get_trigger_sq(self) -> dict:
+    #     """Pass."""
+    #     if self.trigger_id:
+    #         apiobj = getattr(self.CLIENT, self.trigger_type)
+    #         sq = apiobj.saved_query.get_by_uuid(value=self.trigger_id)
+    #         return sq
+    #     return {}
+
+    def get_tasks(self):
+        """Pass."""
+        # XXX
+
+    def get_basic(self, refresh: bool = False) -> "EnforcementBasic":
+        """Pass."""
+        if not getattr(self, "_basic", None) or refresh:
+            self._basic = self.CLIENT.enforcements.get_by_uuid(value=self.uuid, full=False)
+        return self._basic
+
     def set_name(self, value: str):
         """Pass."""
+        # XXX
 
     def set_main_action(type: str, name: str, **kwargs):
         """Pass."""
+        # XXX
 
     def remove_trigger(self):
         """Pass."""
+        # XXX
 
-    def set_trigger(self, type: str, name: str, only_run_against_new_assets: bool = False):
+    def set_trigger(self, type: str, name: str, run_on_added_entities_only: bool = False):
         """Pass."""
+        # XXX
 
-    def set_only_run_against_new_assets(self, value: bool):
+    def set_run_on_added_entities_only(self, value: bool):
         """Pass."""
+        # XXX
 
     def set_schedule_disabled(self):
         """Pass."""
@@ -394,6 +311,7 @@ class Enforcement(DataModel):
         dont change period_time if it's there
         add period_time as 13:00 if it's not there
         """
+        # XXX
 
     def set_schedule_every_discovery(self):
         """Pass."""
@@ -405,6 +323,7 @@ class Enforcement(DataModel):
         dont change period_time if it's there
         add period_time as 13:00 if it's not there
         """
+        # XXX
 
     def set_schedule_hourly(self, hours: int = 12):
         """Pass."""
@@ -416,6 +335,7 @@ class Enforcement(DataModel):
         dont change period_time if it's there
         add period_time as 13:00 if it's not there
         """
+        # XXX
 
     def set_schedule_monthly(self, days: List[int], hour: int = 13, minute: int = 00):
         """Pass."""
@@ -426,6 +346,7 @@ class Enforcement(DataModel):
 
         GUI shows 29 as "last day", it doesn't have 29 or 30 or 31
         """
+        # XXX
 
     def set_schedule_daily(self, days: int = 1, hour: int = 13, minute: int = 00):
         """Pass."""
@@ -434,6 +355,7 @@ class Enforcement(DataModel):
         period_recurrence: 2 (every 2 days) (MIN: 1)
         period_time: "13:00" (UTC)
         """
+        # XXX
 
     def set_schedule_weekly(
         self,
@@ -453,6 +375,7 @@ class Enforcement(DataModel):
         period_recurrence: ["0", "1", "2", "3", "4", "6"] (every day cept sat)
         period_time: "13:00" (UTC)
         """
+        # XXX
 
     def set_conditions(
         self,
@@ -463,6 +386,7 @@ class Enforcement(DataModel):
     ):
         """Pass."""
         # exception when no trigger
+        # XXX
 
     def add_success_action(self, type: str, name: str, **kwargs):
         """Pass."""
@@ -491,16 +415,175 @@ class Enforcement(DataModel):
     def update_action_config(self, name: str, **kwargs):
         """Pass."""
 
-    def get(self) -> "Enforcement":
+    @staticmethod
+    def _get_schema_cls() -> Optional[Type[DataSchema]]:
         """Pass."""
-        return self.CLIENT.enforcements.get_by_uuid(value=self.uuid)
+        return EnforcementSchema
 
-    def save(self) -> "Enforcement":
+    def __str__(self) -> List[str]:
+        """Pass."""
+        items = [
+            self._get_name_str(),
+            self._get_updated_str(),
+            self._get_actions_str("main"),
+            self._get_actions_str("success"),
+            self._get_actions_str("failure"),
+            self._get_actions_str("post"),
+            self._get_trigger_str(),
+            self._get_schedule_str(),
+        ]
+        return "\n".join(items)
+
+    def _get_name_str(self) -> str:
+        """Pass."""
+        items = [
+            f"Name: {self.name}",
+            f"UUID: {self.uuid}",
+        ]
+        return "\n".join(items)
+
+    def _get_updated_str(self) -> str:
+        """Pass."""
+        dt_str = self.updated_on.isoformat() if self.updated_on else "Unknown"
+        items = [
+            f"Date: {dt_str}",
+            f"User Name: {self.updated_by}",
+            f"Full Name: {self.updated_by_full_name}",
+        ]
+        return "Updated:\n  " + "\n  ".join(items)
+
+    def _get_trigger_str(self) -> str:
+        """Pass."""
+        if self.trigger_name:
+
+            if self.trigger_run_last:
+                last_ran = dt_parse(obj=self.trigger_run_last, default_tz_utc=True).isoformat()
+            else:
+                last_ran = "never"
+
+            items = [
+                f"Type: {self.trigger_type.title()}",
+                f"Name: {self.trigger_name}",
+                f"UUID: {self.trigger_id}",
+                f"Run on added entities only: {self.run_on_added_entities_only}",
+                f"Last ran on: {last_ran}",
+                f"Run count: {self.trigger_run_count}",
+            ]
+        else:
+            items = ["None"]
+        return "Trigger:\n  " + "\n  ".join(items)
+
+    def _get_schedule_str(self) -> str:
+        """Pass."""
+        if self.schedule_enabled:
+            oad = self.only_run_when_assets_added
+            oar = self.only_run_when_assets_removed
+            oca = self.only_run_when_asset_count_above or False
+            ocb = self.only_run_when_asset_count_below or False
+
+            items = [
+                f"Type: {self.schedule_type}",
+                f"Recurrence: {self.schedule_recurrence}",
+                f"Only run when assets have been added since the last execution: {oad}",
+                f"Only run when assets have been removed since the last execution: {oar}",
+                f"Only run when the number of assets is above N: {oca}",
+                f"Only run when the number of assets is below N: {ocb}",
+            ]
+        else:
+            items = ["None"]
+
+        return "Schedule:\n  " + "\n  ".join(items)
+
+    @property
+    def _conditions(self) -> dict:
+        return self._trigger_obj.get("conditions", {})
+
+    @property
+    def _schedule_type_maps(self) -> dict:
+        return {
+            "never": {"type": "None", "recurrence": "n/a"},
+            "all": {"type": "Every Discovery Cycle", "recurrence": "n/a"},
+            "hourly": {"type": "Every X hours", "recurrence": "every {recurrence} hours"},
+            "daily": {
+                "type": "Every X days",
+                "recurrence": "{time} UTC every {recurrence} days",
+            },
+            "weekly": {
+                "type": "Days of week",
+                "recurrence": "{time} UTC on {recurrence}",
+                "recurrence_mapper": self._map_weekly_days,
+            },
+            "monthly": {
+                "type": "Days of month",
+                "recurrence": "{time} UTC on days {recurrence}",
+                "recurrence_mapper": self._map_monthly_days,
+            },
+            "unknown": {
+                "type": "UNKNOWN, API Changed??",
+                "recurrence": "UNKNOWN, API Changed??",
+            },
+        }
+
+    @property
+    def _map_schedule_type(self) -> dict:
+        """Pass."""
+        return self._schedule_type_maps.get(
+            self._schedule_type, self._schedule_type_maps["unknown"]
+        )
+
+    def _map_monthly_days(self, value: List[str]) -> str:
+        """Pass."""
+        if "29" in value:
+            value.pop(value.index("29"))
+            value.append("Last Day")
+        return ", ".join(value)
+
+    def _map_weekly_days(self, value: List[str]) -> str:
+        """Pass."""
+        return ", ".join(int_days_map(value=value))
+
+    def _get_actions_str(self, category: str) -> str:
         """Pass."""
 
-    def delete(self) -> Deleted:
+        def deets(obj):
+            aname = obj["name"]
+            atype = obj["action"]["action_name"]
+            return f"Name: {aname!r}, Type: {atype!r} "
+
+        cat = category.title()
+        actions = self.actions[category]
+        if isinstance(actions, dict):
+            return f"{cat} Action:\n  {deets(actions)}"
+
+        if not actions:
+            return f"{cat} Actions:\n  None"
+
+        items = [deets(x) for x in actions]
+        return f"{cat} Actions:\n  " + "\n  ".join(items)
+
+    @property
+    def _schedule_type(self) -> str:
         """Pass."""
-        return self.CLIENT.enforcements._delete(uuid=self.uuid)
+        return self._trigger_obj.get("period", "")
+
+    @property
+    def _schedule_recurrence(self) -> Optional[Union[int, str, List[str]]]:
+        """Pass."""
+        return self._trigger_obj.get("period_recurrence")
+
+    @property
+    def _trigger_obj(self) -> dict:
+        """Pass."""
+        return self.triggers[0] if self.triggers else {}
+
+    @property
+    def _trigger_view(self) -> dict:
+        """Pass."""
+        return self._trigger_obj.get("view", {})
+
+    def _check_has_trigger(self):
+        """Pass."""
+        # XXX
 
 
 class EnforcementCreateSchema(DataSchemaJson):

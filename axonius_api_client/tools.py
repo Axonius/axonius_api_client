@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Utilities and tools."""
+import calendar
 import codecs
 import ipaddress
 import json
@@ -69,7 +70,12 @@ def grouper(iterable: Iterable, n: int, fillvalue: Optional[Any] = None) -> Iter
     return zip_longest(*([iter(iterable)] * n), fillvalue=fillvalue)
 
 
-def coerce_int(obj: Any, max_value: Optional[int] = None, min_value: Optional[int] = None) -> int:
+def coerce_int(
+    obj: Any,
+    max_value: Optional[int] = None,
+    min_value: Optional[int] = None,
+    src: str = "",
+) -> int:
     """Convert an object into int.
 
     Args:
@@ -82,13 +88,15 @@ def coerce_int(obj: Any, max_value: Optional[int] = None, min_value: Optional[in
         value = int(obj)
     except Exception:
         vtype = type(obj).__name__
-        raise ToolsError(f"Supplied value {obj!r} of type {vtype} is not an integer.")
+        raise ToolsError(f"Supplied value {obj!r}{src} of type {vtype} is not an integer.")
 
-    if max_value is not None and value > max_value:
-        raise ToolsError(f"Supplied value {obj!r} is greater than max value of {max_value}.")
+    if isinstance(max_value, int) and value > max_value:
+        raise ToolsError(
+            f"Supplied value {obj!r}{src} is greater than maximum value of {max_value}."
+        )
 
-    if min_value is not None and value < min_value:
-        raise ToolsError(f"Supplied value {obj!r} is less than min value of {min_value}.")
+    if isinstance(min_value, int) and value < min_value:
+        raise ToolsError(f"Supplied value {obj!r}{src} is less than minimum value of {min_value}.")
 
     return value
 
@@ -1014,3 +1022,12 @@ def combo_dicts(*args):
         if isinstance(x, dict):
             ret.update(x)
     return ret
+
+
+DAYS_MAP: dict = dict(zip(range(7), calendar.day_name))
+
+
+def int_days_map(value: List[int]) -> List[str]:
+    """Pass."""
+    value = [int(i) for i in value]
+    return [v for k, v in DAYS_MAP.items() if k in value]
