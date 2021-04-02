@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """Test suite for axonius_api_client.query_wizard."""
 import pytest
-
 from axonius_api_client.api.wizards import WizardCsv
 from axonius_api_client.constants.wizards import Entry, EntrySq, Results, Types
 from axonius_api_client.exceptions import WizardError
@@ -13,9 +12,10 @@ SRC = "test moo"
 
 
 class TestWizardCsv:
-    @pytest.fixture(params=["api_devices", "api_users"])
-    def wizard(self, request):
-        apiobj = request.getfixturevalue(request.param)
+    @pytest.fixture(params=["devices", "users"])
+    def wizard(self, request, api_client):
+        apiobj = getattr(api_client, request.param)
+
         obj = WizardCsv(apiobj=apiobj)
         assert obj.APIOBJ == apiobj
         assert isinstance(obj.PARSER, WizardParser)

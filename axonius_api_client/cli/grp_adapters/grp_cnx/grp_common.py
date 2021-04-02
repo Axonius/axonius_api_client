@@ -142,6 +142,10 @@ def prompt_schema(schema, new_config, prompt_optional, prompt_default, adapter):
         new_config[name] = default
         return
 
+    if stype == "bool" and required and default is None:
+        new_config[name] = False
+        return
+
     if not required:
         if not prompt_optional:
             return
@@ -162,12 +166,12 @@ def prompt_schema(schema, new_config, prompt_optional, prompt_default, adapter):
         show_schema(schema=schema)
 
     if stype == "file":
-        value = click.prompt(text="Enter value", type=PATH_PROMPT, err=True)
+        value = click.prompt(text="Enter path to file", type=PATH_PROMPT, err=True)
         value = pathlib.Path(value).expanduser().resolve()
 
     if stype == "bool":
         value = click.prompt(
-            text="Enter value",
+            text="Enter boolean value",
             default=default,
             type=click.BOOL,
             err=True,
@@ -177,7 +181,7 @@ def prompt_schema(schema, new_config, prompt_optional, prompt_default, adapter):
 
     if stype in ["number", "integer"]:
         value = click.prompt(
-            text="Enter value",
+            text="Enter integer value",
             default=default,
             type=click.INT,
             err=True,
@@ -187,7 +191,7 @@ def prompt_schema(schema, new_config, prompt_optional, prompt_default, adapter):
 
     if stype == "array":
         value = click.prompt(
-            text="Enter value",
+            text="Enter comma separated value",
             default=default,
             err=True,
             type=str_type,
@@ -199,7 +203,7 @@ def prompt_schema(schema, new_config, prompt_optional, prompt_default, adapter):
 
     if stype == "string":
         value = click.prompt(
-            text="Enter value",
+            text="Enter string value",
             default=default,
             err=True,
             type=str_type,

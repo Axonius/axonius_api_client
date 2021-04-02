@@ -374,6 +374,14 @@ class Connect:
         return self._enforcements
 
     @property
+    def actions(self):
+        """Work with Enforcement Center Actions."""
+        self.start()
+        if not hasattr(self, "_actions"):
+            self._actions = self.API.Actions(**self.API_ARGS)
+        return self._actions
+
+    @property
     def system_users(self):
         """Work with system users."""
         self.start()

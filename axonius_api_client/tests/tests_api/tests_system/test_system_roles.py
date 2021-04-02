@@ -148,7 +148,7 @@ class TestSystemRolesPublic:
         assert isinstance(value, str)
 
     def test_cat_actions(self, apiobj):
-        value = apiobj.cat_actions
+        value = apiobj.cat_actions()
         cats = value["categories"]
         acts = value["actions"]
         lens = value["lengths"]
@@ -173,7 +173,7 @@ class TestSystemRolesPublic:
 
     def test_cat_actions_to_perms_all(self, apiobj):
         perms = {"adapters": "all"}
-        role_perms = apiobj.cat_actions_to_perms(**perms)
+        role_perms = apiobj._cat_actions_to_perms(**perms)
         for k, v in role_perms.items():
             if k in perms:
                 for a, b in v.items():
@@ -190,7 +190,7 @@ class TestSystemRolesPublic:
                     else:
                         assert b is False
 
-        role_perms2 = apiobj.cat_actions_to_perms(
+        role_perms2 = apiobj._cat_actions_to_perms(
             role_perms=role_perms, adapters="get,put", grant=False
         )
         assert role_perms2["adapters"]["connections"]["post"] is True
@@ -202,13 +202,13 @@ class TestSystemRolesPublic:
     def test_cat_actions_to_perms_bad_cat(self, apiobj):
         perms = {"XxXXx": "all"}
         with pytest.raises(ApiError) as exc:
-            apiobj.cat_actions_to_perms(**perms)
+            apiobj._cat_actions_to_perms(**perms)
 
         assert "Invalid category" in str(exc.value)
 
     def test_cat_actions_to_perms_bad_action(self, apiobj):
         perms = {"adapters": "xxxx"}
         with pytest.raises(ApiError) as exc:
-            apiobj.cat_actions_to_perms(**perms)
+            apiobj._cat_actions_to_perms(**perms)
 
         assert "Invalid action" in str(exc.value)

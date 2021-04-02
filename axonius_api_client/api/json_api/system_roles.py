@@ -40,11 +40,11 @@ class SystemRoleUpdateSchema(SystemRoleSchema):
     last_updated = SchemaDatetime(allow_none=True)
 
     @marshmallow.post_load
-    def post_load_fixit(self, data: dict, **kwargs) -> dict:
+    def post_load_fixit(self, data: "SystemRole", **kwargs) -> "SystemRole":
         """Pass."""
-        asr = data.get("asset_scope_restriction", {}) or {}
-        if not asr:
-            data["asset_scope_restriction"] = {"enabled": False}
+        if not data.asset_scope_restriction:
+            data.asset_scope_restriction = {"enabled": False}
+        # PBUG: ASR seems to be quite poorly modeled
         return data
 
     @marshmallow.post_dump
@@ -165,11 +165,10 @@ class SystemRoleCreateSchema(DataSchemaJson):
         type_ = "roles_schema"
 
     @marshmallow.post_load
-    def post_load_fixit(self, data: dict, **kwargs) -> dict:
+    def post_load_fixit(self, data: "SystemRoleCreate", **kwargs) -> "SystemRoleCreate":
         """Pass."""
-        asr = data.get("asset_scope_restriction", {}) or {}
-        if not asr:
-            data["asset_scope_restriction"] = {"enabled": False}
+        if not data.asset_scope_restriction:
+            data.asset_scope_restriction = {"enabled": False}
         # PBUG: ASR seems to be quite poorly modeled
         return data
 

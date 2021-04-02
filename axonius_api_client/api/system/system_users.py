@@ -32,7 +32,7 @@ class SystemUsers(ApiModel):
 
     def get_generator(self) -> Generator[dict, None, None]:
         """Get Axonius system users using a generator."""
-        system_roles = self.CLIENT.system_roles.get()
+        system_roles = self.roles.get()
 
         offset = 0
 
@@ -132,7 +132,7 @@ class SystemUsers(ApiModel):
         Raises:
             :exc:`ApiError`: if user already exists matching name
         """
-        role = self.CLIENT.system_roles.get_by_name(name=role_name)
+        role = self.roles.get_by_name(name=role_name)
         try:
             self.get_by_name(name=name)
             raise ApiError(f"User with name of {name!r} already exists")
@@ -163,7 +163,7 @@ class SystemUsers(ApiModel):
             name: user name
             role_name: name of role
         """
-        role = self.CLIENT.system_roles.get_by_name(name=role_name)
+        role = self.roles.get_by_name(name=role_name)
         return self._update_user_attr(
             name=name, must_be_internal=True, attr="role_id", value=role["uuid"]
         )
@@ -502,3 +502,8 @@ class SystemUsers(ApiModel):
         self.LOG.debug(f"Updating user {name!r} attribute {attr!r}: {value!r}")
         self._update(**user)
         return self.get_by_name(name=name)
+
+    @property
+    def roles(self):
+        """Pass."""
+        return self.CLIENT.system_roles

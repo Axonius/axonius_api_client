@@ -2,7 +2,6 @@
 """Test suite for axonius_api_client.query_wizard."""
 
 import pytest
-
 from axonius_api_client.api.wizards import WizardText
 from axonius_api_client.constants.wizards import Entry, Results, Types
 from axonius_api_client.exceptions import WizardError
@@ -12,9 +11,10 @@ from .test_wizard import TestData
 
 
 class TestWizardText:
-    @pytest.fixture(params=["api_devices", "api_users"])
-    def wizard(self, request):
-        apiobj = request.getfixturevalue(request.param)
+    @pytest.fixture(params=["devices", "users"])
+    def wizard(self, request, api_client):
+        apiobj = getattr(api_client, request.param)
+
         obj = WizardText(apiobj=apiobj)
         assert obj.APIOBJ == apiobj
         assert isinstance(obj.PARSER, WizardParser)

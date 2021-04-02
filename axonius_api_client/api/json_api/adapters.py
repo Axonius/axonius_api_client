@@ -627,23 +627,19 @@ class CnxCreateRequestSchema(DataSchemaJson):
 
         type_ = "create_connection_schema"
 
-    def _fixit(self, data: dict) -> dict:
-        """Pass."""
-        cnx_disco = data.get("connection_discovery", {}) or {}
-        if not cnx_disco:
-            data["connection_discovery"] = {"enabled": False}
-        return data
-
     @marshmallow.post_load
-    def post_load_fixit(self, data: dict, **kwargs) -> dict:
+    def post_load_fixit(self, data: "CnxCreateRequest", **kwargs) -> "CnxCreateRequest":
         """Pass."""
-        data = self._fixit(data=data)
+        if not data.connection_discovery:
+            data.connection_discovery = {"enabled": False}
         return data
 
     @marshmallow.post_dump
     def post_dump_fixit(self, data: dict, **kwargs) -> dict:
         """Pass."""
-        data = self._fixit(data=data)
+        cnx_disco = data.get("connection_discovery", {}) or {}
+        if not cnx_disco:
+            data["connection_discovery"] = {"enabled": False}
         return data
 
 
@@ -719,13 +715,31 @@ class CnxUpdateRequestSchema(CnxCreateRequestSchema):
         """Pass."""
         return CnxUpdateRequest
 
-    def _fixit(self, data: dict) -> dict:
+    @marshmallow.post_load
+    def post_load_fixit(self, data: "CnxCreateRequest", **kwargs) -> "CnxCreateRequest":
         """Pass."""
-        data = super()._fixit(data=data)
+        if not data.connection_discovery:
+            data.connection_discovery = {"enabled": False}
+
+        if not data.instance_prev:
+            data.instance_prev = data.instance
+
+        if not data.instance_prev_name:
+            data.instance_prev_name = data.instance_name
+        return data
+
+    @marshmallow.post_dump
+    def post_dump_fixit(self, data: dict, **kwargs) -> dict:
+        """Pass."""
+        if not data.get("connection_discovery", {}) or {}:
+            data["connection_discovery"] = {"enabled": False}
+
         if not data.get("instance_prev"):
             data["instance_prev"] = data["instance"]
+
         if not data.get("instance_prev_name"):
             data["instance_prev_name"] = data["instance_name"]
+
         return data
 
 
@@ -749,11 +763,11 @@ class CnxUpdateRequest(DataModel):
         """Pass."""
         return CnxUpdateRequestSchema
 
-    def _fixit(self) -> dict:
+    def __post_init__(self):
         """Pass."""
-        super()._fixit()
         if not self.instance_prev:
             self.instance_prev = self.instance
+
         if not self.instance_prev_name:
             self.instance_prev_name = self.instance_name
 
@@ -962,6 +976,9 @@ class Cnx(DataModel):
 
     def to_dict_old(self) -> dict:
         """Pass."""
+        config = {"connection_label": self.connection_label}
+        config.update(self.client_config)
+
         ret = {}
         ret["active"] = self.active
         ret["adapter_name"] = self.adapter_name
@@ -971,7 +988,7 @@ class Cnx(DataModel):
         ret["node_id"] = self.node_id
         ret["node_name"] = self.node_name
         ret["status"] = self.status
-        ret["config"] = self.client_config
+        ret["config"] = config
         ret["config_discovery"] = self.connection_discovery
         ret["date_fetched"] = self.date_fetched
         ret["last_fetched_time"] = dump_date(self.last_fetch_time)

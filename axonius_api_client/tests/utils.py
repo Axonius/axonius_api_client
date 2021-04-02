@@ -112,22 +112,22 @@ def log_check(caplog, entries, exists=True):
 
 
 #
-def get_cnx_existing(apiobj, name=None, reqkeys=None):
+def get_cnx_existing(api_client, name=None, reqkeys=None):
     """Test utility."""
-    found = get_cnx(apiobj=apiobj, name=name, reqkeys=reqkeys)
+    found = get_cnx(api_client=api_client, name=name, reqkeys=reqkeys)
 
     if not found:
         pytest.skip("No connections found for any adapter!")
     return found
 
 
-def get_cnx_working(apiobj, name=None, reqkeys=None):
+def get_cnx_working(api_client, name=None, reqkeys=None):
     """Test utility."""
     problems = [
         "symantec_altiris",  # AX-7165
     ]
     found = get_cnx(
-        apiobj=apiobj, cntkey="success_count", name=name, reqkeys=reqkeys, problems=problems
+        api_client=api_client, cntkey="success_count", name=name, reqkeys=reqkeys, problems=problems
     )
 
     if not found:
@@ -135,18 +135,18 @@ def get_cnx_working(apiobj, name=None, reqkeys=None):
     return found
 
 
-def get_cnx_broken(apiobj, name=None, reqkeys=None):
+def get_cnx_broken(api_client, name=None, reqkeys=None):
     """Test utility."""
-    found = get_cnx(apiobj=apiobj, cntkey="error_count", name=name, reqkeys=reqkeys)
+    found = get_cnx(api_client=api_client, cntkey="error_count", name=name, reqkeys=reqkeys)
 
     if not found:
         pytest.skip("No broken connections found for any adapter!")
     return found
 
 
-def get_cnx(apiobj, cntkey="total_count", name=None, reqkeys=None, problems=None):
+def get_cnx(api_client, cntkey="total_count", name=None, reqkeys=None, problems=None):
     """Pass."""
-    adapters = apiobj.adapters._get(get_clients=False)
+    adapters = api_client.adapters._get(get_clients=False)
     reqkeys = reqkeys or []
     problems = problems or []
 
@@ -161,7 +161,7 @@ def get_cnx(apiobj, cntkey="total_count", name=None, reqkeys=None, problems=None
             if problems and adapter_node.adapter_name in problems:
                 continue
 
-            cnxs = apiobj._get(adapter_name=adapter_node.adapter_name_raw)
+            cnxs = api_client.cnx._get(adapter_name=adapter_node.adapter_name_raw)
 
             has_req = all([x in cnxs.schema_cnx for x in reqkeys])
             if not has_req:

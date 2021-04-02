@@ -110,3 +110,32 @@ class SavedQueryCreate(DataModel):
     def _get_schema_cls() -> Optional[Type[DataSchema]]:
         """Pass."""
         return SavedQueryCreateSchema
+
+
+class SavedQueryDeleteSchema(DataSchemaJson):
+    """Pass."""
+
+    @staticmethod
+    def _get_model_cls() -> type:
+        """Pass."""
+        return SavedQueryDelete
+
+    class Meta:
+        """Pass."""
+
+        type_ = "delete_view_schema"
+
+
+@dataclasses.dataclass
+class SavedQueryDelete(DataModel):
+    """Pass."""
+
+    @staticmethod
+    def _get_schema_cls() -> Optional[Type[DataSchema]]:
+        """Pass."""
+        return SavedQueryDeleteSchema
+
+    # PBUG: why empty jsonapi doc in request
+    def _dump_request(self, **kwargs) -> dict:
+        """Pass."""
+        return {"data": {"attributes": self.to_dict(), "type": self._get_schema_cls().Meta.type_}}

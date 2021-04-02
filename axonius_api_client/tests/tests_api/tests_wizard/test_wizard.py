@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """Test suite for axonius_api_client.wizard.wizard"""
 import pytest
-
 from axonius_api_client.api.wizards import Wizard
 from axonius_api_client.constants.fields import ALL_NAME, Operators
 from axonius_api_client.constants.wizards import Entry, Flags, Results, Types
@@ -10,9 +9,9 @@ from axonius_api_client.parsers.wizards import WizardParser
 
 
 class TestWizard:
-    @pytest.fixture(params=["api_devices", "api_users"])
-    def wizard(self, request):
-        apiobj = request.getfixturevalue(request.param)
+    @pytest.fixture(params=["devices", "users"])
+    def wizard(self, request, api_client):
+        apiobj = getattr(api_client, request.param)
         obj = Wizard(apiobj=apiobj)
         assert obj.APIOBJ == apiobj
         assert isinstance(obj.PARSER, WizardParser)

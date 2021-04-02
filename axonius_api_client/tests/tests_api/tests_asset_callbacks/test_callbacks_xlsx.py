@@ -6,10 +6,9 @@ from axonius_api_client.exceptions import ApiError
 
 
 class TestCallbacksXlsx:
-    @pytest.fixture(params=["devices", "_users"])
+    @pytest.fixture(params=["devices", "users"])
     def apiobj(self, api_client, request):
         return getattr(api_client, request.param)
-        # return request.getfixturevalue(request.param)
 
     @pytest.fixture(scope="class")
     def cbexport(self):

@@ -10,10 +10,9 @@ from .test_callbacks import Callbacks, Exports
 
 
 class TestCallbacksCsv(Callbacks, Exports):
-    @pytest.fixture(params=["devices", "_users"])
+    @pytest.fixture(params=["devices", "users"])
     def apiobj(self, api_client, request):
         return getattr(api_client, request.param)
-        # return request.getfixturevalue(request.param)
 
     @pytest.fixture(scope="class")
     def cbexport(self):

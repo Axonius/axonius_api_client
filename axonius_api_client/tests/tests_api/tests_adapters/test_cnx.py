@@ -44,7 +44,7 @@ class TestCnxPublic(TestCnxBase):
             apiobj.get_by_adapter(adapter_name=CSV_ADAPTER, adapter_node="badwolf")
 
     def test_get_by_uuid(self, apiobj):
-        cnx = get_cnx_existing(apiobj)
+        cnx = get_cnx_existing(apiobj.CLIENT)
         found = apiobj.get_by_uuid(
             cnx_uuid=cnx["uuid"],
             adapter_name=cnx["adapter_name"],
@@ -53,7 +53,7 @@ class TestCnxPublic(TestCnxBase):
         assert cnx == found
 
     def test_get_by_id(self, apiobj):
-        cnx = get_cnx_existing(apiobj)
+        cnx = get_cnx_existing(apiobj.CLIENT)
         found = apiobj.get_by_id(
             cnx_id=cnx["id"],
             adapter_name=cnx["adapter_name"],
@@ -66,7 +66,7 @@ class TestCnxPublic(TestCnxBase):
             apiobj.get_by_label(value="badwolf", adapter_name="aws")
 
     def test_get_by_label(self, apiobj):
-        cnx = get_cnx_existing(apiobj)
+        cnx = get_cnx_existing(apiobj.CLIENT)
         found = apiobj.get_by_label(
             value=cnx["config"].get("connection_label") or "",
             adapter_name=cnx["adapter_name"],
@@ -75,20 +75,16 @@ class TestCnxPublic(TestCnxBase):
         assert cnx == found
 
     def test_test_by_id(self, apiobj):
-        cnx = get_cnx_working(apiobj)
+        cnx = get_cnx_working(apiobj.CLIENT)
         result = apiobj.test_by_id(
-            cnx_id=cnx["id"],
-            adapter_name=cnx["adapter_name"],
-            adapter_node=cnx["node_name"],
+            cnx_id=cnx["id"], adapter_name=cnx["adapter_name"], adapter_node=cnx["node_name"]
         )
         assert result is True
 
     def test_test(self, apiobj):
-        cnx = get_cnx_working(apiobj)
+        cnx = get_cnx_working(apiobj.CLIENT)
         result = apiobj.test(
-            adapter_name=cnx["adapter_name"],
-            adapter_node=cnx["node_name"],
-            **cnx["config"],
+            adapter_name=cnx["adapter_name"], adapter_node=cnx["node_name"], **cnx["config"]
         )
         assert result is True
 
@@ -105,9 +101,11 @@ class TestCnxPublic(TestCnxBase):
     def test_test_fail_no_domain(self, apiobj):
         with pytest.raises(ConfigRequired):
             apiobj.test(adapter_name="tanium", username="x")
+            # PBUG: if no domain, error:
+            # Unhandled exception from route request: 'tuple' object has no attribute 'data'
 
     def test_update_cnx_nochange(self, apiobj):
-        cnx = get_cnx_broken(apiobj)
+        cnx = get_cnx_broken(apiobj.CLIENT)
         with pytest.raises(ConfigUnchanged):
             apiobj.update_cnx(cnx_update=cnx)
 
@@ -137,7 +135,7 @@ class TestCnxPublic(TestCnxBase):
     def test_update_cnx_error(self, apiobj):
         config_key = "https_proxy"
 
-        cnx = get_cnx_working(apiobj=apiobj, reqkeys=[config_key])
+        cnx = get_cnx_working(api_client=apiobj.CLIENT, reqkeys=[config_key])
 
         config_orig = cnx["config"]
         value_orig = config_orig.get(config_key)
@@ -161,7 +159,7 @@ class TestCnxPublic(TestCnxBase):
         def mock_file_upload(name, field_name, file_name, file_content, node):
             return mock_return
 
-        monkeypatch.setattr(apiobj, "file_upload", mock_file_upload)
+        monkeypatch.setattr(apiobj.CLIENT.adapters, "file_upload", mock_file_upload)
         with pytest.raises(ConfigInvalidValue):
             apiobj.cb_file_upload(
                 value=[{"badwolf": "badwolf"}],
@@ -176,7 +174,7 @@ class TestCnxPublic(TestCnxBase):
         def mock_file_upload(name, field_name, file_name, file_content, node):
             return mock_return
 
-        monkeypatch.setattr(apiobj, "file_upload", mock_file_upload)
+        monkeypatch.setattr(apiobj.CLIENT.adapters, "file_upload", mock_file_upload)
         result = apiobj.cb_file_upload(
             value=csv_file_path,
             schema={"name": "badwolf"},
@@ -191,7 +189,7 @@ class TestCnxPublic(TestCnxBase):
         def mock_file_upload(name, field_name, file_name, file_content, node):
             return mock_return
 
-        monkeypatch.setattr(apiobj, "file_upload", mock_file_upload)
+        monkeypatch.setattr(apiobj.CLIENT.adapters, "file_upload", mock_file_upload)
         with pytest.raises(ConfigInvalidValue):
             apiobj.cb_file_upload(
                 value={"badwolf": "badwolf"},
@@ -207,7 +205,7 @@ class TestCnxPublic(TestCnxBase):
         def mock_file_upload(name, field_name, file_name, file_content, node):
             return {"filename": file_name, "uuid": "badwolf"}
 
-        monkeypatch.setattr(apiobj, "file_upload", mock_file_upload)
+        monkeypatch.setattr(apiobj.CLIENT.adapters, "file_upload", mock_file_upload)
         result = apiobj.cb_file_upload(
             value=file_path,
             schema={"name": "badwolf"},
@@ -222,7 +220,7 @@ class TestCnxPublic(TestCnxBase):
         def mock_file_upload(name, field_name, file_name, file_content, node):
             return {"filename": file_name, "uuid": "badwolf"}
 
-        monkeypatch.setattr(apiobj, "file_upload", mock_file_upload)
+        monkeypatch.setattr(apiobj.CLIENT.adapters, "file_upload", mock_file_upload)
         with pytest.raises(ConfigInvalidValue):
             apiobj.cb_file_upload(
                 value=file_path,
@@ -238,7 +236,7 @@ class TestCnxPublic(TestCnxBase):
         def mock_file_upload(name, field_name, file_name, file_content, node):
             return {"filename": file_name, "uuid": "badwolf"}
 
-        monkeypatch.setattr(apiobj, "file_upload", mock_file_upload)
+        monkeypatch.setattr(apiobj.CLIENT.adapters, "file_upload", mock_file_upload)
         result = apiobj.cb_file_upload(
             value=str(file_path),
             schema={"name": "badwolf"},
@@ -253,7 +251,7 @@ class TestCnxPublic(TestCnxBase):
         def mock_file_upload(name, field_name, file_name, file_content, node):
             return {"filename": file_name, "uuid": "badwolf"}
 
-        monkeypatch.setattr(apiobj, "file_upload", mock_file_upload)
+        monkeypatch.setattr(apiobj.CLIENT.adapters, "file_upload", mock_file_upload)
         with pytest.raises(ConfigInvalidValue):
             apiobj.cb_file_upload(
                 value=str(file_path),
@@ -266,9 +264,6 @@ class TestCnxPublic(TestCnxBase):
         config = {
             "user_id": "badwolf",
             "file_path": csv_file_path,
-            # "is_users": False,
-            # "is_installed_sw": False,
-            # "s3_use_ec2_attached_instance_profile": False,
         }
         cnx_added = apiobj.add(adapter_name=CSV_ADAPTER, **config)
         for k, v in config.items():
@@ -284,10 +279,7 @@ class TestCnxPublic(TestCnxBase):
         assert del_result.client_id == "{'client_id': 'badwolf'}"
 
         with pytest.raises(NotFoundError):
-            apiobj.get_by_id(
-                cnx_id=cnx_added["id"],
-                adapter_name=CSV_ADAPTER,
-            )
+            apiobj.get_by_id(cnx_id=cnx_added["id"], adapter_name=CSV_ADAPTER)
 
     def test_add_remove_path(self, apiobj, tmp_path):
         file_path = tmp_path / "test.csv"
@@ -301,19 +293,14 @@ class TestCnxPublic(TestCnxBase):
         assert isinstance(cnx_added["config"]["file_path"], dict)
 
         del_result = apiobj.delete_by_id(
-            cnx_id=cnx_added["id"],
-            adapter_name=CSV_ADAPTER,
-            delete_entities=True,
+            cnx_id=cnx_added["id"], adapter_name=CSV_ADAPTER, delete_entities=True
         )
 
         assert isinstance(del_result, json_api.adapters.CnxDelete)
         assert del_result.client_id == "{'client_id': 'badwolf'}"
 
         with pytest.raises(NotFoundError):
-            apiobj.get_by_id(
-                cnx_id=cnx_added["id"],
-                adapter_name=CSV_ADAPTER,
-            )
+            apiobj.get_by_id(cnx_id=cnx_added["id"], adapter_name=CSV_ADAPTER)
 
     def test_add_remove_path_notexists(self, apiobj, tmp_path):
         file_path = tmp_path / "badtest.csv"
@@ -328,10 +315,6 @@ class TestCnxPublic(TestCnxBase):
         config = {
             "user_id": "badwolf",
             "file_path": csv_file_path_broken,
-            # SANE_DEFAULTS handles these now:
-            # "is_users": False,
-            # "is_installed_sw": False,
-            # "s3_use_ec2_attached_instance_profile": False,
         }
         with pytest.raises(CnxAddError) as exc:
             apiobj.add(adapter_name=CSV_ADAPTER, **config)
@@ -342,17 +325,11 @@ class TestCnxPublic(TestCnxBase):
         cnx_added = exc.value.cnx_new
 
         del_result = apiobj.delete_by_id(
-            cnx_id=cnx_added["id"],
-            adapter_name=CSV_ADAPTER,
-            delete_entities=True,
+            cnx_id=cnx_added["id"], adapter_name=CSV_ADAPTER, delete_entities=True
         )
 
         assert isinstance(del_result, json_api.adapters.CnxDelete)
         assert del_result.client_id == "{'client_id': 'badwolf'}"
 
         with pytest.raises(NotFoundError):
-            apiobj.get_by_id(
-                cnx_id=cnx_added["id"],
-                adapter_name=CSV_ADAPTER,
-                retry=2,
-            )
+            apiobj.get_by_id(cnx_id=cnx_added["id"], adapter_name=CSV_ADAPTER)

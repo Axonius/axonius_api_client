@@ -61,7 +61,7 @@ def api_client(request):
 
 
 @pytest.fixture(scope="session")
-def csv_file_path(api_adapters):
+def csv_file_path(api_client):
     """Test utility."""
     data = api_client.adapters.file_upload(
         name=CSV_ADAPTER,

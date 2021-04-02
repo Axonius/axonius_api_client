@@ -60,7 +60,7 @@ class Assets(BaseData):
     )
     # PBUG: returns 403 status code "You are lacking some permissions for this request"
     # PBUG: REST API0: historical_prefix hardcoded to 'historical_users_'
-    # PBUG: request not modeled
+    # PBUG: request not modeled (all moot since being re-arch)
 
     tags_get: ApiEndpoint = ApiEndpoint(
         method="get",
@@ -124,11 +124,12 @@ class SavedQueries(BaseData):
     delete: ApiEndpoint = ApiEndpoint(
         method="delete",
         path="api/V4.0/{asset_type}/views/view/{uuid}",
-        request_schema_cls=json_api.generic.PrivateRequestSchema,
-        request_model_cls=json_api.generic.PrivateRequest,
+        request_schema_cls=json_api.saved_queries.SavedQueryDeleteSchema,
+        request_model_cls=json_api.saved_queries.SavedQueryDelete,
         response_schema_cls=json_api.generic.MetadataSchema,
         response_model_cls=json_api.generic.Metadata,
     )
+    # PBUG: why take in a request body at all?
 
 
 @dataclasses.dataclass
@@ -493,6 +494,29 @@ class PasswordReset(BaseData):
 
 
 @dataclasses.dataclass
+class Actions(BaseData):
+    """Pass."""
+
+    get: ApiEndpoint = ApiEndpoint(
+        method="get",
+        path="api/V4.0/enforcements/actions/saved",
+        request_schema_cls=None,
+        request_model_cls=None,
+        response_schema_cls=json_api.actions.ActionSchema,
+        response_model_cls=json_api.actions.Action,
+    )
+
+    get_types: ApiEndpoint = ApiEndpoint(
+        method="get",
+        path="api/V4.0/enforcements/actions",
+        request_schema_cls=None,
+        request_model_cls=None,
+        response_schema_cls=json_api.actions.ActionTypeSchema,
+        response_model_cls=json_api.actions.ActionType,
+    )
+
+
+@dataclasses.dataclass
 class Enforcements(BaseData):
     """Pass."""
 
@@ -503,8 +527,8 @@ class Enforcements(BaseData):
         path="api/V4.0/enforcements",
         request_schema_cls=json_api.resources.ResourcesGetSchema,
         request_model_cls=json_api.resources.ResourcesGet,
-        response_schema_cls=json_api.enforcements.EnforcementDetailsSchema,
-        response_model_cls=json_api.enforcements.EnforcementDetails,
+        response_schema_cls=json_api.enforcements.EnforcementBasicSchema,
+        response_model_cls=json_api.enforcements.EnforcementBasic,
     )
 
     get_full: ApiEndpoint = ApiEndpoint(
@@ -533,23 +557,38 @@ class Enforcements(BaseData):
         response_schema_cls=json_api.enforcements.EnforcementSchema,
         response_model_cls=json_api.enforcements.Enforcement,
     )
+    # PBUG: breaks enforcement when:
+    """
+    action_name should be a string, but when it's a dict like below, we get a 500 error code:
+    Unhandled exception from route request: 'tuple' object has no attribute 'data'
+    and the enforcement can not be fetched with 'get_full'
+    "actions": {
+                "main": {
+                    "name": "create1",
+                    "action": {
+                        "action_name": {
+                            "id": "create_notification",
+                            "default": {},
+                            "schema": {}
+                        },
+                        "config": {}
+                    }
+                },
+                "success": [],
+                "failure": [],
+                "post": []
+            },
+    """
 
-    get_actions: ApiEndpoint = ApiEndpoint(
-        method="get",
-        path="api/V4.0/enforcements/actions",
-        request_schema_cls=None,
-        request_model_cls=None,
-        response_schema_cls=json_api.enforcements.ActionSchema,
-        response_model_cls=json_api.enforcements.Action,
+    update: ApiEndpoint = ApiEndpoint(
+        method="put",
+        path="api/V4.0/enforcements/{uuid}",
+        request_schema_cls=json_api.enforcements.EnforcementCreateSchema,
+        request_model_cls=json_api.enforcements.EnforcementCreate,
+        response_schema_cls=json_api.enforcements.EnforcementSchema,
+        response_model_cls=json_api.enforcements.Enforcement,
     )
-    get_names: ApiEndpoint = ApiEndpoint(
-        method="get",
-        path="api/V4.0/enforcements/saved",
-        request_schema_cls=None,
-        request_model_cls=None,
-        response_schema_cls=json_api.generic.StrValueSchema,
-        response_model_cls=json_api.generic.StrValue,
-    )
+    # need to remove "id" when serializing
 
 
 @dataclasses.dataclass
@@ -808,3 +847,4 @@ class ApiEndpoints(BaseData):
     enforcements = Enforcements
     saved_queries = SavedQueries
     assets = Assets
+    actions = Actions

@@ -22,6 +22,12 @@ CNX_SANE_DEFAULTS: Dict[str, dict] = {
         "s3_use_ec2_attached_instance_profile": False,
         "verify_ssl": False,
     },
+    "active_directory": {
+        "do_not_fetch_users": False,
+        "fetch_disabled_devices": False,
+        "fetch_disabled_users": False,
+        "is_ad_gc": False,
+    },
 }
 """Sane connection defaults for adapters."""
 CNX_LABEL_SCHEMA = {

@@ -186,29 +186,30 @@ class Deleted(DataModel):
         return DeletedSchema
 
 
-@dataclasses.dataclass
-class PrivateRequest(DataModel):
-    """Pass."""
+# TBD: gone from cortex 03/22/21
+# @dataclasses.dataclass
+# class PrivateRequest(DataModel):
+#     """Pass."""
 
-    private: bool = False
+#     private: bool = False
 
-    @staticmethod
-    def _get_schema_cls() -> Optional[Type[DataSchema]]:
-        """Pass."""
-        return PrivateRequestSchema
+#     @staticmethod
+#     def _get_schema_cls() -> Optional[Type[DataSchema]]:
+#         """Pass."""
+#         return PrivateRequestSchema
 
 
-class PrivateRequestSchema(DataSchemaJson):
-    """Pass."""
+# class PrivateRequestSchema(DataSchemaJson):
+#     """Pass."""
 
-    private = marshmallow_jsonapi.fields.Bool(missing=False)
+#     private = marshmallow_jsonapi.fields.Bool(missing=False)
 
-    class Meta:
-        """Pass."""
+#     class Meta:
+#         """Pass."""
 
-        type_ = "private_schema"
+#         type_ = "private_schema"
 
-    @staticmethod
-    def _get_model_cls() -> type:
-        """Pass."""
-        return PrivateRequest
+#     @staticmethod
+#     def _get_model_cls() -> type:
+#         """Pass."""
+#         return PrivateRequest

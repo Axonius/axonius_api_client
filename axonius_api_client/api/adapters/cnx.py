@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """API for working with adapter connections."""
+import copy
 from typing import Callable, List, Optional, Union
 
 from ...constants.adapters import CNX_SANE_DEFAULTS
@@ -94,12 +95,12 @@ class Cnx(ApiModel):
         is_instances_mode = not adapter_meta["node_meta"]["is_master"]
 
         cnxs = self._get(adapter_name=adapter_name_raw)
-        cnx_schemas = cnxs.schema_cnx
+        schemas = cnxs.schema_cnx
 
         source = f"adding connection for adapter {adapter_name!r}"
 
         new_config = self.build_config(
-            cnx_schemas=cnx_schemas,
+            cnx_schemas=schemas,
             new_config=new_config,
             source=source,
             adapter_name=adapter_name,
@@ -108,13 +109,13 @@ class Cnx(ApiModel):
 
         sane_defaults = self.get_sane_defaults(adapter_name=adapter_name)
         config_default(
-            schemas=cnx_schemas,
+            schemas=schemas,
             new_config=new_config,
             source=source,
             sane_defaults=sane_defaults,
         )
-        config_empty(schemas=cnx_schemas, new_config=new_config, source=source)
-        config_required(schemas=cnx_schemas, new_config=new_config, source=source)
+        config_empty(schemas=schemas, new_config=new_config, source=source)
+        config_required(schemas=schemas, new_config=new_config, source=source)
 
         result = self._add(
             connection=new_config,
@@ -398,6 +399,7 @@ class Cnx(ApiModel):
         new_config = {}
         new_config.update(kwargs_config or {})
         new_config.update(kwargs)
+        new_config.pop("connection_label", None)
 
         adapter = self.CLIENT.adapters.get_by_name(
             name=adapter_name, node=adapter_node, get_clients=False
@@ -426,7 +428,16 @@ class Cnx(ApiModel):
             adapter_node=node_name,
         )
 
+        sane_defaults = self.get_sane_defaults(adapter_name=adapter_name)
+        config_default(
+            schemas=schemas,
+            new_config=new_config,
+            source=source,
+            sane_defaults=sane_defaults,
+        )
+
         config_empty(schemas=schemas, new_config=new_config, source=source)
+        config_required(schemas=schemas, new_config=new_config, source=source)
 
         test_hook = self._get_test_hook(schemas=schemas, adapter=adapter_name, node=node_name)
         self._test(
@@ -561,21 +572,25 @@ class Cnx(ApiModel):
         new_config.update(kwargs_config or {})
         new_config.update(kwargs)
 
+        old_config = copy.deepcopy(cnx_update["config"])
         adapter_name = cnx_update["adapter_name"]
         adapter_name_raw = cnx_update["adapter_name_raw"]
         node_name = cnx_update["node_name"]
         node_id = cnx_update["node_id"]
         cnx_schemas = cnx_update["schemas"]
         active = cnx_update["active"]
-        label = cnx_update["connection_label"]
+        cid = cnx_update["id"]
         uuid = cnx_update["uuid"]
+
+        old_label = old_config.pop("connection_label", "") or cnx_update.get("connection_label", "")
+
+        if "connection_label" in new_config:
+            label = new_config.pop("connection_label", None)
+        else:
+            label = old_label
 
         node_meta = self.CLIENT.instances.get_by_name(name=node_name)
         is_instances_mode = not node_meta["is_master"]
-
-        old_config = cnx_update["config"]
-        uuid = cnx_update["uuid"]
-        cid = cnx_update["id"]
 
         deets = [
             f"ID: {cid!r}",

@@ -117,7 +117,6 @@ class TestConnect:
         c = Connect(url="127.0.0.1", key=BAD_CRED, secret=BAD_CRED, certwarn=False)
 
         c.HTTP.CONNECT_TIMEOUT = 1
-        c.AUTH._creds = None
 
         with pytest.raises(ConnectError):
             c.start()

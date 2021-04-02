@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """Test suite."""
 import pytest
-
 from axonius_api_client.constants.fields import Parsers
 from axonius_api_client.exceptions import WizardError
 from axonius_api_client.parsers.wizards import WizardParser
@@ -22,9 +21,9 @@ def patch_tags(wizard_parser, monkeypatch, values):
 
 
 class TestWizardParser:
-    @pytest.fixture(params=["api_devices", "api_users"])
-    def wizard_parser(self, request):
-        apiobj = request.getfixturevalue(request.param)
+    @pytest.fixture(params=["devices", "users"])
+    def wizard_parser(self, request, api_client):
+        apiobj = getattr(api_client, request.param)
         obj = WizardParser(apiobj=apiobj)
         assert obj.apiobj == apiobj
         return obj

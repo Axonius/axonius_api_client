@@ -283,7 +283,7 @@ class AssetsPage(DataModel):
         return len(self.assets)
 
     @classmethod
-    def create_state(
+    def _create_state(
         cls,
         max_pages: int = 0,
         max_rows: int = 0,
@@ -348,7 +348,7 @@ class AssetsPage(DataModel):
         }
         return state
 
-    def process_page(self, state: dict, start_dt: datetime.datetime, apiobj) -> dict:
+    def _process_page(self, state: dict, start_dt: datetime.datetime, apiobj) -> dict:
         """Pass."""
         apiobj.LOG.debug(f"FETCHED PAGE: {self}")
 
@@ -379,30 +379,30 @@ class AssetsPage(DataModel):
         state["page_number"] = self.page_number
 
         if not self.assets:
-            state = self.process_stop(state=state, reason="no more rows returned", apiobj=apiobj)
+            state = self._process_stop(state=state, reason="no more rows returned", apiobj=apiobj)
 
         apiobj.LOG.debug(f"CURRENT PAGING STATE: {json_dump(state)}")
         return state
 
-    def process_row(self, state: dict, apiobj) -> dict:
+    def _process_row(self, state: dict, apiobj) -> dict:
         """Pass."""
         if state["max_rows"] and state["rows_processed_total"] >= state["max_rows"]:
-            state = self.process_stop(
+            state = self._process_stop(
                 state=state, reason="'rows_processed_total' greater than 'max_rows'", apiobj=apiobj
             )
 
         return state
 
-    def process_loop(self, state: dict, apiobj) -> dict:
+    def _process_loop(self, state: dict, apiobj) -> dict:
         """Pass."""
         if state["max_pages"] and state["page_number"] >= state["max_pages"]:
-            state = self.process_stop(
+            state = self._process_stop(
                 state=state, reason="'page_number' greater than 'max_pages'", apiobj=apiobj
             )
         state["page_loop"] += 1
         return state
 
-    def process_stop(self, state: dict, reason: str, apiobj):
+    def _process_stop(self, state: dict, reason: str, apiobj):
         """Pass."""
         if state["stop_msg"]:
             reason = f"{state['stop_msg']} and {reason}"

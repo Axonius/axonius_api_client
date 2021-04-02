@@ -43,6 +43,7 @@ class AssetMixin(ApiModel):
 
     ASSET_TYPE: str = ""
 
+    # PBUG: ?? count != len(devices.get())
     def count(
         self,
         query: Optional[str] = None,
@@ -222,6 +223,7 @@ class AssetMixin(ApiModel):
         fields_fuzzy: Optional[Union[List[str], str]] = None,
         fields_default: bool = True,
         fields_root: Optional[str] = None,
+        fields_error: bool = True,
         max_rows: Optional[int] = None,
         max_pages: Optional[int] = None,
         row_start: int = 0,
@@ -273,6 +275,7 @@ class AssetMixin(ApiModel):
             fields_default=fields_default,
             fields_root=fields_root,
             fields_fuzzy=fields_fuzzy,
+            fields_error=fields_error,
         )
 
         if sort_field:
@@ -290,7 +293,7 @@ class AssetMixin(ApiModel):
 
         initial_count = self.count(query=query, history_date=history_date)
 
-        state = json_api.assets.AssetsPage.create_state(
+        state = json_api.assets.AssetsPage._create_state(
             max_pages=max_pages,
             max_rows=max_rows,
             page_sleep=page_sleep,
@@ -331,13 +334,13 @@ class AssetMixin(ApiModel):
                     field_filters={},
                 )
 
-                state = page.process_page(state=state, start_dt=start_dt, apiobj=self)
+                state = page._process_page(state=state, start_dt=start_dt, apiobj=self)
 
                 for row in page.assets:
                     yield from listify(obj=callbacks.process_row(row=row))
-                    state = page.process_row(state=state, apiobj=self)
+                    state = page._process_row(state=state, apiobj=self)
 
-                state = page.process_loop(state=state, apiobj=self)
+                state = page._process_loop(state=state, apiobj=self)
 
                 time.sleep(state["page_sleep"])
             except StopFetch as exc:
@@ -726,6 +729,11 @@ class AssetMixin(ApiModel):
         """Private API method to get all known historical dates."""
         api_endpoint = ApiEndpoints.assets.history_dates
         return api_endpoint.perform_request(client=self.CLIENT)
+
+    @property
+    def adapters(self):
+        """Pass."""
+        return self.CLIENT.adapters
 
     FIELD_TAGS: str = "labels"
     """Field name for getting tabs (labels)."""
