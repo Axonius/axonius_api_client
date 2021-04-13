@@ -128,6 +128,10 @@ class FieldsPrivate:
 
             val_source(obj=field)
 
+            # 4.1
+            are_values_cached = field.pop("are_values_cached", None)
+            assert isinstance(are_values_cached, bool) or are_values_cached is None
+
             assert not field, list(field)
 
     def val_raw_items(self, adapter, items):
@@ -184,6 +188,10 @@ class FieldsPrivate:
             # 4.0
             dvi = items.pop("dynamic_value_identifier", None)
             assert isinstance(dvi, str) or dvi is None
+
+            # 4.1
+            are_values_cached = items.pop("are_values_cached", None)
+            assert isinstance(are_values_cached, bool) or are_values_cached is None
 
             assert not items, list(items)
 
@@ -366,7 +374,15 @@ class FieldsPublic:
             dvi = items.pop("dynamic_value_identifier", None)
             assert isinstance(dvi, str) or dvi is None
 
+            # 4.1
+            are_values_cached = items.pop("are_values_cached", None)
+            assert isinstance(are_values_cached, bool) or are_values_cached is None
+
             assert not items
+
+        # 4.1
+        are_values_cached = schema.pop("are_values_cached", None)
+        assert isinstance(are_values_cached, bool) or are_values_cached is None
 
         assert not schema, list(schema)
 

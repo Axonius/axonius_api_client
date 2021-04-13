@@ -8,39 +8,37 @@ NAME = "badwolf"
 NEW_NAME = "badwolfxxx"
 
 
-def cleanup(apiobj):
-    objs = apiobj._get()
+def cleanup(api_client):
+    objs = api_client.system_roles._get()
     for obj in objs:
         if obj.name in [NAME, NEW_NAME]:
-            apiobj._delete(uuid=obj.uuid)
+            api_client.system_roles._delete(uuid=obj.uuid)
             print(f"deleted {obj}")
 
 
 class TestSystemRolesPrivate:
-    @pytest.fixture(scope="class")
-    def apiobj(self, api_client):
-        return api_client.system_roles
-
-    def test_get(self, apiobj):
-        roles = apiobj._get()
+    def test_get(self, api_client):
+        roles = api_client.system_roles._get()
         assert isinstance(roles, list) and roles
         for role in roles:
             assert isinstance(role, SystemRole)
 
-    def test_add_update_delete(self, apiobj):
-        cleanup(apiobj)
-        role = apiobj._add(name=NAME, permissions={})
+    def test_add_update_delete(self, api_client):
+        cleanup(api_client)
+        role = api_client.system_roles._add(name=NAME, permissions={})
         assert isinstance(role, SystemRole)
 
         assert role.name == NAME
-        updated = apiobj._update(name=NEW_NAME, uuid=role.uuid, permissions=role.permissions)
+        updated = api_client.system_roles._update(
+            name=NEW_NAME, uuid=role.uuid, permissions=role.permissions
+        )
         assert isinstance(updated, SystemRole)
         assert updated.name == NEW_NAME
 
-        deleted = apiobj._delete(uuid=role.uuid)
+        deleted = api_client.system_roles._delete(uuid=role.uuid)
         assert isinstance(role, SystemRole)
         assert deleted.document_meta == {"name": NEW_NAME}
-        cleanup(apiobj)
+        cleanup(api_client)
 
 
 class TestSystemRolesPublic:
@@ -48,107 +46,109 @@ class TestSystemRolesPublic:
     def apiobj(self, api_client):
         return api_client.system_roles
 
-    def test_get(self, apiobj):
-        roles = apiobj.get()
+    def test_get(self, api_client):
+        roles = api_client.system_roles.get()
         assert isinstance(roles, list) and roles
         for role in roles:
             assert isinstance(role, dict)
 
-    def test_add(self, apiobj):
-        cleanup(apiobj)
+    def test_add(self, api_client):
+        cleanup(api_client)
 
-        role = apiobj.add(name=NAME)
+        role = api_client.system_roles.add(name=NAME)
         assert isinstance(role, dict) and role
         assert role["name"] == NAME
-        cleanup(apiobj)
+        cleanup(api_client)
 
-    def test_set_name(self, apiobj):
-        cleanup(apiobj)
+    def test_set_name(self, api_client):
+        cleanup(api_client)
 
-        apiobj.add(name=NAME)
-        updated = apiobj.set_name(name=NAME, new_name=NEW_NAME)
+        api_client.system_roles.add(name=NAME)
+        updated = api_client.system_roles.set_name(name=NAME, new_name=NEW_NAME)
         assert updated["name"] == NEW_NAME
-        cleanup(apiobj)
+        cleanup(api_client)
 
-    def test_set_perms(self, apiobj):
-        cleanup(apiobj)
+    def test_set_perms(self, api_client):
+        cleanup(api_client)
 
-        apiobj.add(name=NAME)
-        updated = apiobj.set_perms(name=NAME, users_assets="all", devices_assets="all")
+        api_client.system_roles.add(name=NAME)
+        updated = api_client.system_roles.set_perms(
+            name=NAME, users_assets="all", devices_assets="all"
+        )
         assert updated["permissions"]["adapters"]["get"] is False
         assert updated["permissions"]["users_assets"]["get"] is True
         assert updated["permissions"]["devices_assets"]["get"] is True
 
-        updated2 = apiobj.set_perms(name=NAME, grant=False, users_assets="get")
+        updated2 = api_client.system_roles.set_perms(name=NAME, grant=False, users_assets="get")
         assert updated2["permissions"]["adapters"]["get"] is False
         assert updated2["permissions"]["users_assets"]["get"] is False
         assert updated2["permissions"]["devices_assets"]["get"] is True
 
-        cleanup(apiobj)
+        cleanup(api_client)
 
-    def test_set_perms_no_changes(self, apiobj):
-        cleanup(apiobj)
+    def test_set_perms_no_changes(self, api_client):
+        cleanup(api_client)
 
-        apiobj.add(name=NAME)
+        api_client.system_roles.add(name=NAME)
         with pytest.raises(ApiError) as exc:
-            apiobj.set_perms(name=NAME)
+            api_client.system_roles.set_perms(name=NAME)
 
         assert "No permission changes" in str(exc.value)
-        cleanup(apiobj)
+        cleanup(api_client)
 
-    def test_add_already_exist(self, apiobj):
-        cleanup(apiobj)
-        apiobj.add(name=NAME)
+    def test_add_already_exist(self, api_client):
+        cleanup(api_client)
+        api_client.system_roles.add(name=NAME)
 
         with pytest.raises(ApiError):
-            apiobj.add(name=NAME)
+            api_client.system_roles.add(name=NAME)
 
-        cleanup(apiobj)
+        cleanup(api_client)
 
-    def test_get_by_uuid(self, apiobj):
-        role = [x for x in apiobj.get()][0]
-        reget = apiobj.get_by_uuid(uuid=role["uuid"])
+    def test_get_by_uuid(self, api_client):
+        role = [x for x in api_client.system_roles.get()][0]
+        reget = api_client.system_roles.get_by_uuid(uuid=role["uuid"])
         assert role == reget
 
-    def test_get_by_name(self, apiobj):
-        role = [x for x in apiobj.get()][0]
-        reget = apiobj.get_by_name(name=role["name"])
+    def test_get_by_name(self, api_client):
+        role = [x for x in api_client.system_roles.get()][0]
+        reget = api_client.system_roles.get_by_name(name=role["name"])
         assert role == reget
 
-    def test_get_by_uuid_not_found(self, apiobj):
+    def test_get_by_uuid_not_found(self, api_client):
         with pytest.raises(NotFoundError):
-            apiobj.get_by_uuid(uuid="XxXxX")
+            api_client.system_roles.get_by_uuid(uuid="XxXxX")
 
-    def test_get_by_name_not_found(self, apiobj):
+    def test_get_by_name_not_found(self, api_client):
         with pytest.raises(NotFoundError):
-            apiobj.get_by_name(name="XxXxX")
+            api_client.system_roles.get_by_name(name="XxXxX")
 
-    def test_set_name_already_exists(self, apiobj):
-        roles = apiobj.get()
+    def test_set_name_already_exists(self, api_client):
+        roles = api_client.system_roles.get()
         role = roles[0]
         with pytest.raises(ApiError):
-            apiobj.set_name(name="XxXxX", new_name=role["name"])
+            api_client.system_roles.set_name(name="XxXxX", new_name=role["name"])
 
-    def test_set_name_same_name(self, apiobj):
+    def test_set_name_same_name(self, api_client):
         with pytest.raises(ApiError):
-            apiobj.set_name(name="XxXxX", new_name="XxXxX")
+            api_client.system_roles.set_name(name="XxXxX", new_name="XxXxX")
 
-    def test_set_name_not_found(self, apiobj):
+    def test_set_name_not_found(self, api_client):
         with pytest.raises(ApiError):
-            apiobj.set_name(name="XxXxX", new_name="AAaAaA")
+            api_client.system_roles.set_name(name="XxXxX", new_name="AAaAaA")
 
-    def test_set_name_predefined(self, apiobj):
-        role = [x for x in apiobj.get() if x.get("predefined")][0]
+    def test_set_name_predefined(self, api_client):
+        role = [x for x in api_client.system_roles.get() if x.get("predefined")][0]
         with pytest.raises(ApiError):
-            apiobj.set_name(name=role["name"], new_name="xXXxxXX")
+            api_client.system_roles.set_name(name=role["name"], new_name="xXXxxXX")
 
-    def test_pretty_perms(self, apiobj):
-        role = apiobj.get()[0]
-        value = apiobj.pretty_perms(role=role)
+    def test_pretty_perms(self, api_client):
+        role = api_client.system_roles.get()[0]
+        value = api_client.system_roles.pretty_perms(role=role)
         assert isinstance(value, str)
 
-    def test_cat_actions(self, apiobj):
-        value = apiobj.cat_actions()
+    def test_cat_actions(self, api_client):
+        value = api_client.system_roles.cat_actions()
         cats = value["categories"]
         acts = value["actions"]
         lens = value["lengths"]
@@ -171,9 +171,9 @@ class TestSystemRolesPublic:
                 assert isinstance(a, str) and a
                 assert isinstance(b, str) and b
 
-    def test_cat_actions_to_perms_all(self, apiobj):
+    def test_cat_actions_to_perms_all(self, api_client):
         perms = {"adapters": "all"}
-        role_perms = apiobj._cat_actions_to_perms(**perms)
+        role_perms = api_client.system_roles._cat_actions_to_perms(**perms)
         for k, v in role_perms.items():
             if k in perms:
                 for a, b in v.items():
@@ -190,7 +190,7 @@ class TestSystemRolesPublic:
                     else:
                         assert b is False
 
-        role_perms2 = apiobj._cat_actions_to_perms(
+        role_perms2 = api_client.system_roles._cat_actions_to_perms(
             role_perms=role_perms, adapters="get,put", grant=False
         )
         assert role_perms2["adapters"]["connections"]["post"] is True
@@ -199,16 +199,16 @@ class TestSystemRolesPublic:
         assert role_perms2["adapters"]["get"] is False
         assert role_perms2["adapters"]["put"] is False
 
-    def test_cat_actions_to_perms_bad_cat(self, apiobj):
+    def test_cat_actions_to_perms_bad_cat(self, api_client):
         perms = {"XxXXx": "all"}
         with pytest.raises(ApiError) as exc:
-            apiobj._cat_actions_to_perms(**perms)
+            api_client.system_roles._cat_actions_to_perms(**perms)
 
         assert "Invalid category" in str(exc.value)
 
-    def test_cat_actions_to_perms_bad_action(self, apiobj):
+    def test_cat_actions_to_perms_bad_action(self, api_client):
         perms = {"adapters": "xxxx"}
         with pytest.raises(ApiError) as exc:
-            apiobj._cat_actions_to_perms(**perms)
+            api_client.system_roles._cat_actions_to_perms(**perms)
 
         assert "Invalid action" in str(exc.value)

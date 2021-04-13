@@ -2,49 +2,46 @@
 """Test suite."""
 import datetime
 
-import pytest
 from axonius_api_client.api import json_api
 from axonius_api_client.api.system.dashboard import DiscoverData, DiscoverPhase
 
 
 class DashboardBase:
-    @pytest.fixture(scope="class")
-    def apiobj(self, api_client):
-        return api_client.dashboard
+    """Pass."""
 
 
 class TestDashboardPrivate(DashboardBase):
-    def test_private_lifecycle(self, apiobj):
-        lifecycle = apiobj._get()
+    def test_private_lifecycle(self, api_client):
+        lifecycle = api_client.dashboard._get()
         assert isinstance(lifecycle, json_api.lifecycle.Lifecycle)
         assert lifecycle.status in ["starting", "running", "done"]
 
-    def test_private_start_stop(self, apiobj):
-        stop = apiobj._stop()
+    def test_private_start_stop(self, api_client):
+        stop = api_client.dashboard._stop()
         assert isinstance(stop, str) and not stop
 
-        lifecycle = apiobj._get()
+        lifecycle = api_client.dashboard._get()
         assert isinstance(lifecycle, json_api.lifecycle.Lifecycle)
         assert lifecycle.status in ["done", "stopping"]
 
-        start = apiobj._start()
+        start = api_client.dashboard._start()
         assert isinstance(start, str) and not start
 
-        lifecycle = apiobj._get()
+        lifecycle = api_client.dashboard._get()
         assert isinstance(lifecycle, json_api.lifecycle.Lifecycle)
         assert lifecycle.status in ["starting", "running"]
 
-        re_stop = apiobj._stop()
+        re_stop = api_client.dashboard._stop()
         assert isinstance(re_stop, str) and not re_stop
 
-        lifecycle = apiobj._get()
+        lifecycle = api_client.dashboard._get()
         assert isinstance(lifecycle, json_api.lifecycle.Lifecycle)
         assert lifecycle.status in ["done", "stopping"]
 
 
 class TestDashboardPublic(DashboardBase):
-    def test_get(self, apiobj):
-        data = apiobj.get()
+    def test_get(self, api_client):
+        data = api_client.dashboard.get()
         assert isinstance(data, DiscoverData)
         assert isinstance(data.is_running, bool)
 
@@ -109,23 +106,23 @@ class TestDashboardPublic(DashboardBase):
             assert isinstance(phase.progress, dict)
             assert isinstance(phase.name_map, dict)
 
-    def test_is_running(self, apiobj):
-        data = apiobj.is_running
+    def test_is_running(self, api_client):
+        data = api_client.dashboard.is_running
         assert isinstance(data, bool)
 
-    def test_start_stop(self, apiobj):
-        if apiobj.is_running:
-            stopped = apiobj.stop()
+    def test_start_stop(self, api_client):
+        if api_client.dashboard.is_running:
+            stopped = api_client.dashboard.stop()
             assert isinstance(stopped, DiscoverData)
             assert not stopped.is_running
             # assert not stopped["status"] == "done"
 
-        started = apiobj.start()
+        started = api_client.dashboard.start()
         assert isinstance(started, DiscoverData)
         assert started.is_running
         # assert started["status"] in ["starting", "running"]
 
-        re_stopped = apiobj.stop()
+        re_stopped = api_client.dashboard.stop()
         assert isinstance(re_stopped, DiscoverData)
         assert not re_stopped.is_running
         # assert re_stopped["status"] == "done"
