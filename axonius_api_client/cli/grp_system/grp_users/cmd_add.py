@@ -61,6 +61,7 @@ FIRST_NAME = click.option(
     required=False,
     show_envvar=True,
     show_default=True,
+    default=""
 )
 LAST_NAME = click.option(
     "--last-name",
@@ -70,6 +71,7 @@ LAST_NAME = click.option(
     required=False,
     show_envvar=True,
     show_default=True,
+    default=""
 )
 EMAIL = click.option(
     "--email",
@@ -79,6 +81,7 @@ EMAIL = click.option(
     required=False,
     show_envvar=True,
     show_default=True,
+    default=""
 )
 
 OPTIONS = [
