@@ -745,6 +745,9 @@ def echo(
     if console:
         if error:
             echo_error(msg=msg, tmpl=tmpl, tmpl_str=tmpl_str, logger=logger, abort=abort)
+            exc = exc or ToolsError
+            raise exc(msg)
+
         elif warning:
             echo_warn(msg=msg, tmpl=tmpl, tmpl_str=tmpl_str, logger=logger)
         elif debug:

@@ -1169,7 +1169,7 @@ class EnforcementActionType(DataModel):
             "name",
         ]
 
-    def config_parser(self, **kwargs):
+    def get_config_parser(self, **kwargs):
         """Pass."""
         from .config_parser import ConfigParser
 

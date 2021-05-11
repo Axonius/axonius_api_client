@@ -54,4 +54,6 @@ client.start()  # connect to axonius
 # client.users.saved_queries    # CRUD for saved queries for user assets
 
 notify = client.enforcement_center.find_action_type("create_notification")
+notify_cp = notify.get_config_parser()
 bq = client.enforcement_center.find_action_type("export_to_google_big_query")
+bq_cp = bq.get_config_parser()

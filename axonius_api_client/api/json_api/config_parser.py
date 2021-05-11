@@ -12,7 +12,7 @@ from ...connect import Connect
 from ...constants.api import SANE_SCHEMA_DEFAULTS
 from ...constants.general import NO, YES
 from ...constants.logs import LOG_LEVEL_PARSE
-from ...exceptions import ConfigInvalidValue, ConfigUnknown
+from ...exceptions import ApiError, ConfigInvalidValue, ConfigUnknown
 from ...logs import get_obj_log
 from ...tools import echo, listify
 from .instances import Instance
@@ -27,6 +27,41 @@ from .instances import Instance
 # XXX instance needs a sane default :)
 # if all optional, prompt for everything
 # array types... fml
+
+
+def prompter(text: str, type: Callable, default: Optional[Any] = None, **kwargs):
+    """Pass."""
+    kwargs.setdefault("err", True)
+    kwargs.setdefault("show_default", True)
+    kwargs.setdefault("show_choices", True)
+    click.secho("")
+    return click.prompt(text=text, default=default, type=type, **kwargs)
+
+
+class StringParam(click.types.StringParamType):
+    """Pass."""
+
+    def __init__(
+        self,
+        empty_as_none: bool = True,
+        max_length: Optional[int] = None,
+    ):
+        """Pass."""
+        self.empty_as_none = empty_as_none
+        self.max_length = max_length
+
+    def convert(self, value, param, ctx):
+        """Pass."""
+        ret = super().convert(value=value, param=param, ctx=ctx)
+
+        if isinstance(self.max_length, int) and len(ret) > self.max_length:
+            msg = f"Over maximum length of {self.max_length} characters"
+            self.fail(msg, param, ctx)
+
+        if self.empty_as_none and not ret.strip():
+            ret = None
+
+        return ret
 
 
 def wrap(value: str, pre: str, width: int = 30) -> str:
@@ -49,6 +84,27 @@ def fill_list(
     new_value = ["", *new_value, ""]
     new_value = "\n".join(new_value)
     return f"{pre}{new_value}"
+
+
+@dataclasses.dataclass
+class ValueStore:
+    """Pass."""
+
+    schema: "ConfigSchema"
+    value: Optional[Any] = None
+    default_src: str = ""
+    do_prompt: bool = False
+
+    def get_prompt_text(self) -> str:
+        """Pass."""
+        table = self.schema.to_tablize_str()
+        text = "Enter value"
+
+        if not self.schema.required and self.default_src:
+            text = f"Default from {self.default_src}\n{text}"
+
+        text = "\n".join(["", table, "", text])
+        return text
 
 
 @dataclasses.dataclass
@@ -80,13 +136,14 @@ class ConfigStore:
                         console=self.parser.prompt_values,
                     )
                 else:
-                    msg = self.parser.get_table(err=msg)
+                    msg = self.parser.to_tablize_str(err=msg)
                     echo(
                         msg=msg,
                         error=True,
                         exc=ConfigUnknown,
                         logger=self.parser.LOG,
                         console=self.parser.prompt_values,
+                        abort=self.parser.abort,
                     )
 
     def get_value_old(self, schema: "ConfigSchema") -> Any:
@@ -146,6 +203,31 @@ class ConfigStore:
         else:
             self.parsed[schema.name] = value
 
+    def get_value_store(self, schema: "ConfigSchema") -> ValueStore:
+        """Pass."""
+        value = None
+        default_src = ""
+        do_prompt = False
+
+        if self.has_value_new(schema=schema):
+            value = self.get_value_new(schema=schema)
+            default_src = "supplied"
+        elif self.has_value_old(schema=schema):
+            value = self.get_value_old(schema=schema)
+            default_src = "previous"
+            if self.parser.prompt_values and self.parser.prompt_old:
+                do_prompt = True
+        elif schema.default_defined:
+            value = schema.default_value
+            default_src = "schema"
+            if self.parser.prompt_values and self.parser.prompt_default:
+                do_prompt = True
+        elif self.parser.prompt_values:
+            do_prompt = True
+
+        print(f"value {value!r} from {default_src} do prompt {do_prompt} for schema {schema}")
+        return ValueStore(value=value, default_src=default_src, do_prompt=do_prompt, schema=schema)
+
 
 @dataclasses.dataclass
 class ConfigSchema:
@@ -155,6 +237,7 @@ class ConfigSchema:
     parser: "ConfigParser"
     idx: int = 0
     parent: Optional["ConfigSchema"] = None
+    TABLEFMT: str = "fancy_grid"
 
     @property
     def name(self) -> str:
@@ -251,6 +334,7 @@ class ConfigSchema:
     @property
     def default_value(self) -> Any:
         """Pass."""
+        # XXX COMBO with default_defined
         if self.name == "instance":
             return self.parser.core_instance.name
 
@@ -354,45 +438,43 @@ class ConfigSchema:
 
         return ""
 
+    def parse_string(self, store: ConfigStore) -> ConfigStore:
+        """Pass."""
+        vstore = store.get_value_store(schema=self)
+        value = vstore.value
+        max_length = self.max_length
+
+        if vstore.do_prompt:
+            value = prompter(
+                text=vstore.get_prompt_text(),
+                default="" if self.required and value is None else value,
+                type=StringParam(max_length=max_length),
+                choices=self.enum,
+            )
+
+        if self.required:
+            if not isinstance(value, str):
+                msg = self._msg_invalid_value(value=value)
+                raise ConfigInvalidValue(msg)
+            elif not value.strip():
+                msg = self._msg_invalid_value(value=value, err="empty")
+                raise ConfigInvalidValue(msg)
+
+        if isinstance(max_length, int) and isinstance(value, str) and len(value) > max_length:
+            msg = self._msg_invalid_value(value=value, err=f"over maximum length of {max_length}")
+            raise ConfigInvalidValue(msg)
+
+        store.set_value(schema=self, value=value)
+        return store
+
     def parse_bool(self, store: ConfigStore) -> ConfigStore:
         """Pass."""
-        do_prompt = False
-        if store.has_value_new(schema=self):
-            value = store.get_value_new(schema=self)
-            default_src = "supplied value"
-        elif store.has_value_old(schema=self):
-            value = store.get_value_old(schema=self)
-            default_src = "previous value"
-            if self.parser.prompt_old:
-                do_prompt = True
-        elif self.default_defined:
-            value = self.default_value
-            default_src = "default value"
-            if self.parser.prompt_default:
-                do_prompt = True
-        else:
-            value = None
-            default_src = ""
-            do_prompt = True
+        vstore = store.get_value_store(schema=self)
+        value = vstore.value
 
-        print(f"value from {default_src} {value!r}")
-
-        if do_prompt and self.parser.prompt_values:
-            table = tabulate.tabulate([self.to_tablize()], tablefmt="fancy_grid", headers="keys")
-            text = f"Enter boolean value for {self.name}"
-
-            if default_src:
-                text = f"{text} (default from {default_src})"
-
-            text = "\n".join([table, "", text])
-
-            value = click.prompt(
-                text=text,
-                default=value,
-                type=click.BOOL,
-                err=True,
-                show_default=True,
-                show_choices=True,
+        if vstore.do_prompt:
+            value = prompter(
+                text=vstore.get_prompt_text(), default=value, type=click.BoolParamType()
             )
 
         value = value.lower().strip() if isinstance(value, str) else value
@@ -411,8 +493,18 @@ class ConfigSchema:
     def parse(self, store: ConfigStore) -> ConfigStore:
         """Pass."""
         if self.type == "bool":
-            self.parse_bool(store)
+            self.parse_bool(store=store)
+        if self.type == "string":
+            self.parse_string(store=store)
+        else:
+            print(f"Unhandled type\n{self.to_tablize_str()}")
         return store
+
+    def to_tablize_str(self, **kwargs) -> str:
+        """Pass."""
+        tablefmt = kwargs.get("tablefmt", self.TABLEFMT)
+        ret = tabulate.tabulate([self.to_tablize()], tablefmt=tablefmt, headers="keys")
+        return ret
 
     def to_tablize(self) -> dict:
         """Pass."""
@@ -443,14 +535,14 @@ class ConfigSchema:
         """Pass."""
         return self.__str__()
 
-    def _msg_invalid_value(self, value: Any) -> str:
+    def _msg_invalid_value(self, value: Any, err: str = "an invalid type") -> str:
         """Pass."""
         vtype = type(value).__name__
         src = self.parser.source
 
-        err = f"Error: Invalid value type supplied for configuration key {self.name!r}"
+        err = f"Error: Supplied value is {err} for configuration key {self.name!r}"
         correct = f"Supplied value {value!r} of type {vtype!r} must be type: {self.type!r}"
-        errs = [err, f"From schema for {src}", ""]
+        errs = [err, f"From schema for {src}"]
 
         if self.type == "bool":
             yes = ", ".join(sorted(list(set([str(x) for x in YES]))))
@@ -463,7 +555,7 @@ class ConfigSchema:
         else:
             errs += ["", correct]
 
-        table = tabulate.tabulate([self.to_tablize()], tablefmt="fancy_grid", headers="keys")
+        table = self.to_tablize_str()
         errs += ["", table]
         return "\n".join(errs)
 
@@ -487,20 +579,17 @@ class ConfigSchema:
 
         if self.conditional_parent:
             pre = "Only usable if: "
-            if self.parent:
-                post = f"{self.conditional_parent}={self.parent.name}"
-            else:
-                post = f"{self.conditional_parent}={self.name}"
-            ret += [pre, f"  {post}", ""]
+            key = self.parent.name if self.parent else self.name
+            ret += [pre, f"  {self.conditional_parent}={key}", ""]
 
         if self.conditional_children:
             pre = "Conditional Values: "
             valid = [repr(x) for x in self.conditional_children]
             ret += [fill_list(value=valid, pre=pre), ""]
 
-        if self.enum and all([isinstance(x, (str, int, float)) for x in self.enum]):
+        if self.valid_values:
             pre = "Valid Values: "
-            valid = [repr(x) for x in self.enum]
+            valid = [repr(x) for x in self.valid_values]
             ret += [fill_list(value=valid, pre=pre), ""]
 
         if self.max_length is not None:
@@ -514,9 +603,16 @@ class ConfigSchema:
 
         return ret
 
+    @property
+    def valid_values(self) -> List[Union[str, int, float]]:
+        """Pass."""
+        return [x for x in self.enum if isinstance(x, (str, int, float))]
+
 
 class ConfigParser:
     """Pass."""
+
+    TABLEFMT: str = "fancy_grid"
 
     def __init__(
         self,
@@ -529,10 +625,11 @@ class ConfigParser:
         file_upload_cb: Optional[Callable] = None,
         prompt_values: bool = True,
         prompt_ignore_unknown: bool = False,  # --prompt-ignore-unknown/--no-prompt-ignore-unknown
-        prompt_optional: bool = True,  # --prompt-optionals / --no-prompt-optionals
-        prompt_default: bool = True,  # --prompt-defaults / --no-prompt-defaults
+        prompt_optional: bool = False,  # --prompt-optionals / --no-prompt-optionals
+        prompt_default: bool = False,  # --prompt-defaults / --no-prompt-defaults
         prompt_old: bool = False,  # --prompt-previous-values/--no-prompt-previous-values
         defaults_bool: Optional[bool] = False,  # --default-for-bool None/yes/no
+        # abort: bool = True,  # XXX
         **kwargs,
     ):
         """Pass."""
@@ -570,7 +667,15 @@ class ConfigParser:
             if instance.is_master:
                 return instance
 
-    def parse(self, old: Optional[dict] = None, new: Optional[dict] = None) -> dict:
+    @property
+    def has_required(self) -> bool:
+        """Pass."""
+        for schema in self.schemas:
+            if schema.required:
+                return True
+        return False
+
+    def parse(self, old: Optional[dict] = None, **new) -> dict:
         """Pass."""
         # --config key=value
         store = ConfigStore(new=new, old=old, parser=self)
@@ -594,11 +699,13 @@ class ConfigParser:
             req.append(schema) if schema.required else opt.append(schema)
         return [x.to_tablize() for x in req + opt + subs]
 
-    def get_table(self, fmt: str = "fancy_grid", err: str = "") -> str:
+    def to_tablize_str(self, err: str = "", **kwargs) -> str:
         """Pass."""
+        tablefmt = kwargs.get("tablefmt", self.TABLEFMT)
         tables = self.to_tablize()
+
         if tables:
-            value = tabulate.tabulate(tables, tablefmt=fmt, headers="keys")
+            value = tabulate.tabulate(tables, tablefmt=tablefmt, headers="keys")
         else:
             value = "-- No configuration keys defined"
 
@@ -620,6 +727,15 @@ class ConfigParser:
             ]
 
         return self._schemas
+
+    def get_schema(self, name: str) -> ConfigSchema:
+        """Pass."""
+        for schema in self.schemas:
+            if schema.name == name:
+                return schema
+
+        valid = "\n - " + "\n - ".join([x.name for x in self.schemas])
+        raise ApiError(f"No schema named {name!r} found, valid: {valid}")
 
     @property
     def _items(self) -> List[str]:
