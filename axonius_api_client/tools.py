@@ -647,6 +647,11 @@ def echo_error(msg: str, abort: bool = True, tmpl: bool = True, **kwargs):
 
 def sysinfo() -> dict:
     """Gather system information."""
+    try:
+        cli_args = sys.argv
+    except Exception:
+        cli_args = "No sys.argv!"
+
     info = {}
     info["API Client Version"] = VERSION
     info["API Client Package"] = PACKAGE_FILE
@@ -655,7 +660,7 @@ def sysinfo() -> dict:
     info["OS envs"] = get_env_ax()
     info["Date"] = str(dt_now())
     info["Python System Version"] = ", ".join(sys.version.splitlines())
-    info["Command Line Args"] = sys.argv
+    info["Command Line Args"] = cli_args
     platform_attrs = [
         "machine",
         "node",
