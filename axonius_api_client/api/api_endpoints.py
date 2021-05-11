@@ -767,6 +767,15 @@ class Signup(BaseData):
         response_model_cls=json_api.signup.SignupResponse,
     )
 
+    status: ApiEndpoint = ApiEndpoint(
+        method="get",
+        path="api/V4.0/status",
+        request_schema_cls=None,
+        request_model_cls=None,
+        response_schema_cls=json_api.signup.SystemStatusSchema,
+        response_model_cls=json_api.signup.SystemStatus,
+    )
+
 
 @dataclasses.dataclass
 class AuditLogs(BaseData):

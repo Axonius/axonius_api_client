@@ -29,6 +29,11 @@ class Signup:
         """
         return self._get().value
 
+    @property
+    def system_status(self) -> json_api.signup.SystemStatus:
+        """Pass."""
+        return self._status()
+
     def signup(self, password: str, company_name: str, contact_email: str) -> dict:
         """Perform the initial signup and get the API key and API secret of admin user.
 
@@ -80,6 +85,11 @@ class Signup:
 
         data = self._token_use(token=token, password=password)
         return data
+
+    def _status(self) -> json_api.signup.SystemStatus:
+        """Direct API method to get the status of the overall system."""
+        api_endpoint = ApiEndpoints.signup.status
+        return api_endpoint.perform_request(http=self.http)
 
     def _get(self) -> json_api.generic.BoolValue:
         """Direct API method to get the status of initial signup."""

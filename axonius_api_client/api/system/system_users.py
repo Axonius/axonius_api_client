@@ -136,11 +136,8 @@ class SystemUsers(ModelMixins):
         Raises:
             :exc:`ApiError`: if user already exists matching name
         """
-
         if not any([password, generate_password_link, email_password_link]):
-            raise ApiError(
-                "Must supply password, generate_password_link, or email_password_link"
-            )
+            raise ApiError("Must supply password, generate_password_link, or email_password_link")
 
         if email_password_link and not email:
             raise ApiError("Must supply email if email_password_link is True")
@@ -160,7 +157,7 @@ class SystemUsers(ModelMixins):
             first_name=first_name,
             last_name=last_name,
             email=email,
-            auto_generated_password=generate_password_link
+            auto_generated_password=generate_password_link,
         )
 
         new_user = self.get_by_name(name)
@@ -170,10 +167,12 @@ class SystemUsers(ModelMixins):
             new_user["password_reset_link"] = password_reset_link
             if email_password_link:
                 try:
-                    self.email_password_reset_link(name, email=email, for_new_user=True, link=password_reset_link)
+                    self.email_password_reset_link(
+                        name, email=email, for_new_user=True, link=password_reset_link
+                    )
                 except Exception as exc:
                     new_user["email_password_link_error"] = (
-                            getattr(getattr(exc, "response", None), "text", None) or exc
+                        getattr(getattr(exc, "response", None), "text", None) or exc
                     )
 
         return new_user
@@ -313,11 +312,7 @@ class SystemUsers(ModelMixins):
         return self._tokens_generate(uuid=user["uuid"], user_name=user["user_name"])
 
     def email_password_reset_link(
-        self,
-        name: str,
-        email: Optional[str] = None,
-        for_new_user: bool = False,
-        link: str = ""
+        self, name: str, email: Optional[str] = None, for_new_user: bool = False, link: str = ""
     ) -> Tuple[str, str]:
         """Email a password reset link for a user.
 
@@ -390,7 +385,7 @@ class SystemUsers(ModelMixins):
         self,
         user_name: str,
         role_id: str,
-        password: str = "",  # nosec
+        password: Optional[str] = None,
         auto_generated_password: bool = False,
         first_name: str = "",
         last_name: str = "",
