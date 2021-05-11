@@ -100,7 +100,6 @@ def prompt_config(
 
     schemas = list(adapter["schemas"]["cnx"].values())
     schemas = reversed(sorted(schemas, key=lambda x: [x["required"], x["name"]]))
-
     for schema in schemas:
         prompt_schema(
             schema=schema,

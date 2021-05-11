@@ -130,6 +130,34 @@ class StrValue(DataModel):
         return StrValueSchema
 
 
+class NameValueSchema(DataSchemaJson):
+    """Pass."""
+
+    name = marshmallow_jsonapi.fields.Str(required=True)
+
+    class Meta:
+        """Pass."""
+
+        type_ = "name_schema"
+
+    @staticmethod
+    def _get_model_cls() -> type:
+        """Pass."""
+        return NameValue
+
+
+@dataclasses.dataclass
+class NameValue(DataModel):
+    """Pass."""
+
+    name: str
+
+    @staticmethod
+    def _get_schema_cls() -> Optional[Type[DataSchema]]:
+        """Pass."""
+        return NameValueSchema
+
+
 class DictValueSchema(DataSchemaJson):
     """Pass."""
 

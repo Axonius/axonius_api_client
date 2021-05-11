@@ -4,7 +4,7 @@ from . import json_api, models
 from .adapters import Adapters, Cnx
 from .api_endpoints import ApiEndpoints
 from .assets import Devices, Users
-from .enforcements import Actions, Enforcements
+from .enforcement_center import EnforcementCenter
 from .system import (ActivityLogs, Dashboard, Instances, Meta, RemoteSupport,
                      SettingsGlobal, SettingsGui, SettingsIdentityProviders,
                      SettingsLifecycle, Signup, SystemRoles, SystemUsers)
@@ -15,8 +15,7 @@ __all__ = (
     "Cnx",
     "Dashboard",
     "Devices",
-    "Actions",
-    "Enforcements",
+    "EnforcementCenter",
     "Instances",
     "Meta",
     "RemoteSupport",

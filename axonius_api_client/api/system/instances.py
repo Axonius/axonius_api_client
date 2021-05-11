@@ -3,10 +3,14 @@
 import datetime
 from typing import List, Optional, Union
 
+from cachetools import TTLCache, cached
+
 from ...exceptions import NotFoundError
 from .. import json_api
 from ..api_endpoints import ApiEndpoints
 from ..models import ApiModel
+
+CACHE_INSTANCES = TTLCache(maxsize=1024, ttl=300)
 
 
 class Instances(ApiModel):
@@ -97,6 +101,11 @@ class Instances(ApiModel):
         """
         instances = self.get()
         return [x for x in instances if not x.get("is_master")]
+
+    @cached(cache=CACHE_INSTANCES)
+    def get_cached(self) -> List[json_api.instances.Instance]:
+        """Pass."""
+        return self._get()
 
     def get_by_name(
         self, name: str, key: Optional[str] = None

@@ -494,53 +494,31 @@ class PasswordReset(BaseData):
 
 
 @dataclasses.dataclass
-class Actions(BaseData):
-    """Pass."""
-
-    get: ApiEndpoint = ApiEndpoint(
-        method="get",
-        path="api/V4.0/enforcements/actions/saved",
-        request_schema_cls=None,
-        request_model_cls=None,
-        response_schema_cls=json_api.actions.ActionSchema,
-        response_model_cls=json_api.actions.Action,
-    )
-
-    get_types: ApiEndpoint = ApiEndpoint(
-        method="get",
-        path="api/V4.0/enforcements/actions",
-        request_schema_cls=None,
-        request_model_cls=None,
-        response_schema_cls=json_api.actions.ActionTypeSchema,
-        response_model_cls=json_api.actions.ActionType,
-    )
-
-
-@dataclasses.dataclass
-class Enforcements(BaseData):
+class EnforcementCenter(BaseData):
     """Pass."""
 
     # PBUG: so many things wrong with this
 
-    get: ApiEndpoint = ApiEndpoint(
+    get_sets: ApiEndpoint = ApiEndpoint(
         method="get",
         path="api/V4.0/enforcements",
         request_schema_cls=json_api.resources.ResourcesGetSchema,
         request_model_cls=json_api.resources.ResourcesGet,
-        response_schema_cls=json_api.enforcements.EnforcementBasicSchema,
-        response_model_cls=json_api.enforcements.EnforcementBasic,
+        response_schema_cls=json_api.enforcement_center.EnforcementSetBasicSchema,
+        response_model_cls=json_api.enforcement_center.EnforcementSetBasic,
     )
+    # PBUG: should have a call to return all full objects in paging
 
-    get_full: ApiEndpoint = ApiEndpoint(
+    get_set_by_uuid: ApiEndpoint = ApiEndpoint(
         method="get",
         path="api/V4.0/enforcements/{uuid}",
         request_schema_cls=None,
         request_model_cls=None,
-        response_schema_cls=json_api.enforcements.EnforcementSchema,
-        response_model_cls=json_api.enforcements.Enforcement,
+        response_schema_cls=json_api.enforcement_center.EnforcementSetSchema,
+        response_model_cls=json_api.enforcement_center.EnforcementSet,
     )
 
-    delete: ApiEndpoint = ApiEndpoint(
+    delete_set: ApiEndpoint = ApiEndpoint(
         method="delete",
         path="api/V4.0/enforcements",
         request_schema_cls=json_api.generic.DictValueSchema,
@@ -549,19 +527,19 @@ class Enforcements(BaseData):
         response_model_cls=json_api.generic.Deleted,
     )
 
-    create: ApiEndpoint = ApiEndpoint(
+    create_set: ApiEndpoint = ApiEndpoint(
         method="post",
         path="api/V4.0/enforcements",
-        request_schema_cls=json_api.enforcements.EnforcementCreateSchema,
-        request_model_cls=json_api.enforcements.EnforcementCreate,
-        response_schema_cls=json_api.enforcements.EnforcementSchema,
-        response_model_cls=json_api.enforcements.Enforcement,
+        request_schema_cls=json_api.enforcement_center.EnforcementSetCreateSchema,
+        request_model_cls=json_api.enforcement_center.EnforcementSetCreate,
+        response_schema_cls=json_api.enforcement_center.EnforcementSetSchema,
+        response_model_cls=json_api.enforcement_center.EnforcementSet,
     )
     # PBUG: breaks enforcement when:
     """
     action_name should be a string, but when it's a dict like below, we get a 500 error code:
     Unhandled exception from route request: 'tuple' object has no attribute 'data'
-    and the enforcement can not be fetched with 'get_full'
+    and the enforcement can not be fetched with 'get_by_uuid'
     "actions": {
                 "main": {
                     "name": "create1",
@@ -579,16 +557,85 @@ class Enforcements(BaseData):
                 "post": []
             },
     """
+    # PBUG: If create fails in REST API after it creates actions (say after an invalid/incomplete
+    # trigger object) the actions hang around and you can't use the name of that action again!!
 
-    update: ApiEndpoint = ApiEndpoint(
+    update_set: ApiEndpoint = ApiEndpoint(
         method="put",
         path="api/V4.0/enforcements/{uuid}",
-        request_schema_cls=json_api.enforcements.EnforcementCreateSchema,
-        request_model_cls=json_api.enforcements.EnforcementCreate,
-        response_schema_cls=json_api.enforcements.EnforcementSchema,
-        response_model_cls=json_api.enforcements.Enforcement,
+        request_schema_cls=json_api.enforcement_center.EnforcementSetUpdateSchema,
+        request_model_cls=json_api.enforcement_center.EnforcementSetUpdate,
+        response_schema_cls=json_api.enforcement_center.EnforcementSetUpdateResponseSchema,
+        response_model_cls=json_api.enforcement_center.EnforcementSetUpdate,
     )
     # need to remove "id" when serializing
+    # PBUG: response has actions dict that looks like:
+    """
+    "actions": {
+        "failure": [],
+        "main": "abc",
+        "post": [],
+        "success": []
+    },
+    SHOULD BE FULL ACTION OBJECTS, not just names
+    """
+    set_has_running_task: ApiEndpoint = ApiEndpoint(
+        method="get",
+        path="api/V4.0/enforcements/{name}/has_running_task",
+        request_schema_cls=None,
+        request_model_cls=None,
+        response_schema_cls=json_api.generic.BoolValueSchema,
+        response_model_cls=json_api.generic.BoolValue,
+    )
+    # PBUG can we get task name & ID in return?
+
+    run_set: ApiEndpoint = ApiEndpoint(
+        method="put",
+        path="api/V4.0/enforcements/{uuid}/trigger",
+        request_schema_cls=json_api.enforcement_center.EnforcementSetRunSchema,
+        request_model_cls=json_api.enforcement_center.EnforcementSetRun,
+        response_schema_cls=json_api.generic.NameValueSchema,
+        response_model_cls=json_api.generic.NameValue,
+    )
+    # PBUG can we get task name & ID in return?
+
+    get_tasks: ApiEndpoint = ApiEndpoint(
+        method="get",
+        path="api/V4.0/enforcements/{uuid}/tasks",
+        request_schema_cls=json_api.resources.ResourcesGetSchema,
+        request_model_cls=json_api.resources.ResourcesGet,
+        response_schema_cls=json_api.enforcement_center.EnforcementTaskBasicSchema,
+        response_model_cls=json_api.enforcement_center.EnforcementTaskBasic,
+    )
+    # PBUG: should have a call to return all full objects in paging
+
+    get_task_by_uuid: ApiEndpoint = ApiEndpoint(
+        method="get",
+        path="api/V4.0/enforcements/tasks/{uuid}",
+        request_schema_cls=None,
+        request_model_cls=None,
+        response_schema_cls=json_api.enforcement_center.EnforcementTaskSchema,
+        response_model_cls=json_api.enforcement_center.EnforcementTask,
+    )
+
+    get_actions: ApiEndpoint = ApiEndpoint(
+        method="get",
+        path="api/V4.0/enforcements/actions/saved",
+        request_schema_cls=None,
+        request_model_cls=None,
+        response_schema_cls=json_api.enforcement_center.EnforcementActionSchema,
+        response_model_cls=json_api.enforcement_center.EnforcementAction,
+    )
+
+    # PBUG: title and category of actions stored statically in javascript for GUI
+    get_action_types: ApiEndpoint = ApiEndpoint(
+        method="get",
+        path="api/V4.0/enforcements/actions",
+        request_schema_cls=None,
+        request_model_cls=None,
+        response_schema_cls=json_api.enforcement_center.EnforcementActionTypeSchema,
+        response_model_cls=json_api.enforcement_center.EnforcementActionType,
+    )
 
 
 @dataclasses.dataclass
@@ -844,7 +891,6 @@ class ApiEndpoints(BaseData):
     signup = Signup
     password_reset = PasswordReset
     audit_logs = AuditLogs
-    enforcements = Enforcements
+    enforcement_center = EnforcementCenter
     saved_queries = SavedQueries
     assets = Assets
-    actions = Actions

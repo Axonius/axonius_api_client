@@ -108,6 +108,8 @@ class Adapters(ApiModel):
         keys = ["name", "name_raw", "name_plugin"]
         for adapter in adapters:
             if any([adapter[k].lower() == name.lower() for k in keys]):
+                cnxs = self.cnx._get(adapter_name=adapter["name_raw"])
+                adapter["schemas"]["cnx"] = cnxs.schema_cnx
                 adapter["node_meta"] = node_meta
                 return adapter
 

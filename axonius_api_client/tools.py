@@ -2,6 +2,7 @@
 """Utilities and tools."""
 import calendar
 import codecs
+import copy
 import ipaddress
 import json
 import logging
@@ -21,8 +22,8 @@ import dateutil.tz
 
 from . import INIT_DOTENV, PACKAGE_FILE, PACKAGE_ROOT, VERSION
 from .constants.api import GUI_PAGE_SIZES
-from .constants.general import (ERROR_ARGS, ERROR_TMPL, NO, OK_ARGS, OK_TMPL,
-                                WARN_ARGS, WARN_TMPL, YES)
+from .constants.general import (DEBUG_TMPL, ERROR_TMPL, NO, OK_TMPL, WARN_TMPL,
+                                YES)
 from .exceptions import ToolsError
 from .setup_env import find_dotenv, get_env_ax
 
@@ -74,6 +75,7 @@ def coerce_int(
     obj: Any,
     max_value: Optional[int] = None,
     min_value: Optional[int] = None,
+    allow_none: bool = False,
     src: str = "",
 ) -> int:
     """Convert an object into int.
@@ -84,6 +86,9 @@ def coerce_int(
     Raises:
         :exc:`ToolsError`: if obj is not able to be converted to int
     """
+    if allow_none and obj is None:
+        return obj
+
     try:
         value = int(obj)
     except Exception:
@@ -101,7 +106,7 @@ def coerce_int(
     return value
 
 
-def coerce_int_float(value: Union[int, float, str]) -> Union[int, float]:
+def coerce_int_float(value: Union[int, float, str], allow_none: bool = False) -> Union[int, float]:
     """Convert an object into int or float.
 
     Args:
@@ -110,6 +115,9 @@ def coerce_int_float(value: Union[int, float, str]) -> Union[int, float]:
     Raises:
         :exc:`ToolsError`: if obj is not able to be converted to int or float
     """
+    if allow_none and value is None:
+        return value
+
     if isinstance(value, float):
         return value
 
@@ -596,7 +604,13 @@ def split_str(
     return ret
 
 
-def echo_ok(msg: str, tmpl: bool = True, **kwargs):
+def echo_debug(
+    msg: str,
+    tmpl: bool = True,
+    tmpl_str: Optional[str] = None,
+    logger: Optional[logging.Logger] = None,
+    **kwargs,
+):
     """Echo a message to console.
 
     Args:
@@ -604,17 +618,53 @@ def echo_ok(msg: str, tmpl: bool = True, **kwargs):
         tmpl: template to using for echo
         kwargs: passed to ``click.secho``
     """
-    echoargs = {}
-    echoargs.update(OK_ARGS)
-    echoargs.update(kwargs)
+    kwargs.setdefault("fg", "blue")
+    kwargs.setdefault("bold", False)
+    kwargs.setdefault("err", True)
+    logger = logger or LOG
+    tmpl_str = tmpl_str or DEBUG_TMPL
+
     if tmpl:
-        msg = OK_TMPL.format(msg=msg)
+        msg = tmpl_str.format(msg=msg)
 
-    LOG.info(msg)
-    click.secho(msg, **echoargs)
+    logger.info(msg)
+    click.secho(msg, **kwargs)
 
 
-def echo_warn(msg: str, tmpl: bool = True, **kwargs):
+def echo_ok(
+    msg: str,
+    tmpl: bool = True,
+    tmpl_str: Optional[str] = None,
+    logger: Optional[logging.Logger] = None,
+    **kwargs,
+):
+    """Echo a message to console.
+
+    Args:
+        msg: message to echo
+        tmpl: template to using for echo
+        kwargs: passed to ``click.secho``
+    """
+    kwargs.setdefault("fg", "yellow")
+    kwargs.setdefault("bold", True)
+    kwargs.setdefault("err", True)
+    logger = logger or LOG
+    tmpl_str = tmpl_str or OK_TMPL
+
+    if tmpl:
+        msg = tmpl_str.format(msg=msg)
+
+    logger.info(msg)
+    click.secho(msg, **kwargs)
+
+
+def echo_warn(
+    msg: str,
+    tmpl: bool = True,
+    tmpl_str: Optional[str] = None,
+    logger: Optional[logging.Logger] = None,
+    **kwargs,
+):
     """Echo a warning message to console.
 
     Args:
@@ -622,17 +672,27 @@ def echo_warn(msg: str, tmpl: bool = True, **kwargs):
         tmpl: template to using for echo
         kwargs: passed to ``click.secho``
     """
-    echoargs = {}
-    echoargs.update(WARN_ARGS)
-    echoargs.update(kwargs)
+    kwargs.setdefault("fg", "yellow")
+    kwargs.setdefault("bold", True)
+    kwargs.setdefault("err", True)
+    logger = logger or LOG
+    tmpl_str = tmpl_str or WARN_TMPL
+
     if tmpl:
-        msg = WARN_TMPL.format(msg=msg)
+        msg = tmpl_str.format(msg=msg)
 
-    LOG.warning(msg)
-    click.secho(msg, **echoargs)
+    logger.warning(msg)
+    click.secho(msg, **kwargs)
 
 
-def echo_error(msg: str, abort: bool = True, tmpl: bool = True, **kwargs):
+def echo_error(
+    msg: str,
+    abort: bool = True,
+    tmpl: bool = True,
+    tmpl_str: Optional[str] = None,
+    logger: Optional[logging.Logger] = None,
+    **kwargs,
+):
     """Echo an error message to console.
 
     Args:
@@ -641,16 +701,68 @@ def echo_error(msg: str, abort: bool = True, tmpl: bool = True, **kwargs):
         kwargs: passed to ``click.secho``
         abort: call sys.exit(1) after echoing message
     """
-    echoargs = {}
-    echoargs.update(ERROR_ARGS)
-    echoargs.update(kwargs)
-    if tmpl:
-        msg = ERROR_TMPL.format(msg=msg)
+    kwargs.setdefault("fg", "red")
+    kwargs.setdefault("bold", True)
+    kwargs.setdefault("err", True)
+    logger = logger or LOG
+    tmpl_str = tmpl_str or ERROR_TMPL
 
-    LOG.error(msg)
-    click.secho(msg, **echoargs)
+    if tmpl:
+        msg = tmpl_str.format(msg=msg)
+
+    logger.error(msg)
+    click.secho(msg, **kwargs)
     if abort:
         sys.exit(1)
+
+
+def echo(
+    msg: str,
+    console: bool = False,
+    error: bool = False,
+    warning: bool = False,
+    debug: bool = False,
+    abort: bool = True,
+    tmpl: bool = True,
+    tmpl_str: Optional[str] = None,
+    exc: Optional[Exception] = None,
+    logger: Optional[logging.Logger] = None,
+    **kwargs,
+):
+    """Echo a message to console or log it.
+
+    Args:
+        msg: message to echo
+        error: msg should be considered an error
+        warning: msg should be considered a warning
+        console: echo the output to console
+        exc: exception to raise
+        abort: sys.exit(1) if console is True and error is not None
+        logger: logger to use to send log message
+    """
+    logger = logger or LOG
+
+    if console:
+        if error:
+            echo_error(msg=msg, tmpl=tmpl, tmpl_str=tmpl_str, logger=logger, abort=abort)
+        elif warning:
+            echo_warn(msg=msg, tmpl=tmpl, tmpl_str=tmpl_str, logger=logger)
+        elif debug:
+            echo_ok(msg=msg, tmpl=tmpl, tmpl_str=tmpl_str, logger=logger)
+        else:
+            echo_ok(msg=msg, tmpl=tmpl, tmpl_str=tmpl_str, logger=logger)
+    else:
+        if error:
+            logger.error(msg)
+        elif warning:
+            logger.warning(msg)
+        elif debug:
+            logger.debug(msg)
+        else:
+            logger.info(msg)
+
+        if exc:
+            raise exc(msg)
 
 
 def sysinfo() -> dict:
@@ -829,7 +941,7 @@ def get_raw_version(value: str) -> str:
     return converted
 
 
-def coerce_str_to_csv(value: str) -> List[str]:
+def coerce_str_to_csv(value: str, coerce_list: bool = False) -> List[str]:
     """Coerce a string into a list of strings.
 
     Args:
@@ -842,11 +954,14 @@ def coerce_str_to_csv(value: str) -> List[str]:
             raise ToolsError(f"Empty value after parsing CSV: {value!r}")
 
     if not isinstance(new_value, (list, tuple)):
-        vtype = type(new_value).__name__
-        raise ToolsError(f"Invalid type {vtype} supplied, must be a list")
+        if coerce_list:
+            new_value = coerce_list(obj=new_value)
+        else:
+            vtype = type(new_value).__name__
+            raise ToolsError(f"Invalid type {vtype} supplied, must be a list")
 
     if not new_value:
-        raise ToolsError(f"Empty list supplied {value}")
+        raise ToolsError(f"Empty CSV string/list supplied {value}")
 
     return new_value
 
@@ -1020,19 +1135,44 @@ def token_parse(obj: str) -> str:
     return obj
 
 
-def combo_dicts(*args):
+def combo_dicts(*args, copies: bool = False) -> dict:
     """Pass."""
     ret = {}
     for x in args:
         if isinstance(x, dict):
-            ret.update(x)
+            ret.update(copy.deepcopy(x) if copies else x)
     return ret
 
 
 DAYS_MAP: dict = dict(zip(range(7), calendar.day_name))
 
 
-def int_days_map(value: List[int]) -> List[str]:
+def int_days_map(value: Union[str, List[Union[str, int]]], names: bool = False) -> List[str]:
     """Pass."""
-    value = [int(i) for i in value]
-    return [v for k, v in DAYS_MAP.items() if k in value]
+    ret = []
+    value = coerce_str_to_csv(value=value, coerce_list=True)
+
+    for item in value:
+        found = False
+        for number, name in DAYS_MAP.items():
+            if isinstance(item, str) and item.lower() == name.lower():
+                ret.append(number)
+                found = True
+
+            if (isinstance(item, str) and item.isdigit()) or isinstance(item, int):
+                item = coerce_int(obj=item, min_value=0, max_value=6)
+                if item == number:
+                    ret.append(number)
+                    found = True
+
+        if not found:
+            valid = ", ".join([f"{v} ({k})" for k, v in DAYS_MAP.items()])
+            item = str(item)
+            raise ToolsError(f"Invalid day {item!r} supplied, valid: {valid}")
+
+    if names:
+        ret = [v for k, v in DAYS_MAP.items() if k in ret]
+    else:
+        ret = [str(k) for k, v in DAYS_MAP.items() if k in ret]
+
+    return ret

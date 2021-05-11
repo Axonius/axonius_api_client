@@ -51,7 +51,7 @@ class Connect:
         >>> # client.devices.fields         # get field schemas for device assets
         >>> # client.devices.labels         # add/remove/get tags for device assets
         >>> # client.devices.saved_queries  # CRUD for saved queries for device assets
-        >>> # client.enforcements           # CRUD for enforcements
+        >>> # client.enforcement_center     # work with Enforcement Sets
         >>> # client.instances              # get instances and instance meta data
         >>> # client.meta                   # get product meta data
         >>> # client.remote_support         # enable/disable remote support settings
@@ -366,20 +366,12 @@ class Connect:
         return self._dashboard
 
     @property
-    def enforcements(self):
+    def enforcement_center(self):
         """Work with Enforcement Center."""
         self.start()
-        if not hasattr(self, "_enforcements"):
-            self._enforcements = self.API.Enforcements(**self.API_ARGS)
-        return self._enforcements
-
-    @property
-    def actions(self):
-        """Work with Enforcement Center Actions."""
-        self.start()
-        if not hasattr(self, "_actions"):
-            self._actions = self.API.Actions(**self.API_ARGS)
-        return self._actions
+        if not hasattr(self, "_enforcement_center"):
+            self._enforcement_center = self.API.EnforcementCenter(**self.API_ARGS)
+        return self._enforcement_center
 
     @property
     def system_users(self):

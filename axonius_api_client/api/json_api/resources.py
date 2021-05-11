@@ -90,6 +90,7 @@ class ResourcesGetSchema(DataSchemaJson):
     page = marshmallow_jsonapi.fields.Nested(PaginationSchema)
     search = marshmallow_jsonapi.fields.Str(default="", missing="")
     get_metadata = SchemaBool(missing=True)
+    filter = marshmallow_jsonapi.fields.Str(default="", missing="")
 
     @staticmethod
     def _get_model_cls() -> type:
@@ -115,6 +116,7 @@ class ResourcesGet(PageSortRequest):
         (name == regex("test", "i"))
         (name == regex("test", "i")) and tags in ["Linux"]
     """
+    filter: Optional[str] = None
 
     @staticmethod
     def _get_schema_cls() -> Optional[Type[DataSchema]]:

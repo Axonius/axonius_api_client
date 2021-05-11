@@ -46,3 +46,26 @@ COUNT_POLLING_ATTEMPTS: int = 1800
 
 COUNT_POLLING_SLEEP: int = 1
 """Number of seconds sleep will wait between attempts."""
+
+
+SANE_SCHEMA_DEFAULTS: dict = {
+    "*": {"verify_ssl": False, "proxy_password": None, "proxy_username": None, "https_proxy": None},
+    "csv": {
+        "is_users": False,
+        "is_installed_sw": False,
+        "s3_use_ec2_attached_instance_profile": False,
+        "verify_ssl": False,
+    },
+    "json": {
+        "is_users": False,
+        "is_installed_sw": False,
+        "s3_use_ec2_attached_instance_profile": False,
+        "verify_ssl": False,
+    },
+    "active_directory": {
+        "do_not_fetch_users": False,
+        "fetch_disabled_devices": False,
+        "fetch_disabled_users": False,
+        "is_ad_gc": False,
+    },
+}

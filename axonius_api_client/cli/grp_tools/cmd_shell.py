@@ -3,9 +3,8 @@
 import atexit
 import os
 
-import click
-
 import axonius_api_client as axonapi
+import click
 
 from ...constants.general import PY36
 from ...tools import echo_error, json_reload, pathlib
@@ -24,6 +23,7 @@ API Objects:
     - adapters/a: Work with adapters and adapter connections
     - dashboard/db: Work with dashboards and discovery cycle
     - devices/d: Work with device assets
+    - enforcement_center/ec: Work with Enforcement Center
     - instances/i: Work with instances
     - meta/m: Work with instance metadata
     - remote_support/rs: Work with configuring system remote support
@@ -68,13 +68,14 @@ def cmd(ctx, url, key, secret):  # noqa: D301
         - adapters/a: Work with adapters and adapter connections
         - dashboard/db: Work with dashboards and discovery cycle
         - devices/d: Work with device assets
+        - enforcement_center/ec: Work with Enforcement Center
         - instances/i: Work with instances
         - meta/m: Work with instance metadata
         - remote_support/rs: Work with configuring system remote support
         - settings_global/sgl: Work with Global system settings
         - settings_gui/sgu: Work with GUI system settings
-        - settings_lifecycle/sl: Work with Lifecyle system settings
         - settings_ip/sip: Work with Identity Provider system settings
+        - settings_lifecycle/sl: Work with Lifecyle system settings
         - system_roles/sr: Work with system roles
         - system_users/su: Work with system users
         - users/u: Work with user assets
@@ -92,7 +93,7 @@ def cmd(ctx, url, key, secret):  # noqa: D301
         "ctx": ctx,
         "dashboard": client.dashboard,
         "devices": client.devices,
-        "enforcements": client.enforcements,
+        "enforcement_center": client.enforcement_center,
         "instances": client.instances,
         "jdump": jdump,
         "users": client.users,
@@ -109,7 +110,7 @@ def cmd(ctx, url, key, secret):  # noqa: D301
         "c": client,
         "d": client.devices,
         "db": client.dashboard,
-        "e": client.enforcements,
+        "ec": client.enforcement_center,
         "i": client.instances,
         "j": jdump,
         "u": client.users,

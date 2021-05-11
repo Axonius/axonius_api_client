@@ -349,7 +349,10 @@ class DataModel(dataclasses_json.DataClassJsonMixin, DataCommon):
     def replace_attrs(self, **kwargs) -> "DataModel":
         """Pass."""
         # TBD: does this do validation?
-        return dataclasses.replace(self, **kwargs)
+        new_obj = dataclasses.replace(self, **kwargs)
+        if hasattr(self, "CLIENT"):
+            new_obj.CLIENT = self.CLIENT
+        return new_obj
 
     @staticmethod
     def _get_schema_cls() -> Optional[Type[DataSchema]]:
@@ -465,3 +468,8 @@ class DataModel(dataclasses_json.DataClassJsonMixin, DataCommon):
     def _get_fields(cls) -> List[dataclasses.Field]:
         """Get a list of fields defined for current this dataclass object."""
         return dataclasses.fields(cls)
+
+    def to_tablize(self) -> dict:
+        """Pass."""
+        props = getattr(self, "_table_properties", self._str_properties)()
+        return {self._human_key(k): getattr(self, k, None) for k in props}
