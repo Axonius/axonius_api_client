@@ -89,6 +89,8 @@ lint:
 		$(PACKAGE) setup.py shell.py
 	pipenv run flake8 \
 		--max-line-length 100 \
+		--exclude $(PACKAGE)/tests \
+		--exclude $(PACKAGE)/examples \
 		$(PACKAGE) setup.py shell.py
 	pipenv run bandit \
 		-x $(PACKAGE)/examples,$(PACKAGE)/tests \

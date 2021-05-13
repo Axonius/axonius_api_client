@@ -2,12 +2,18 @@
 """Test suite."""
 
 import pytest
+
 from axonius_api_client.api import json_api
 from axonius_api_client.constants.adapters import CSV_ADAPTER
-from axonius_api_client.exceptions import (CnxAddError, CnxGoneError,
-                                           CnxTestError, CnxUpdateError,
-                                           ConfigInvalidValue, ConfigRequired,
-                                           ConfigUnchanged, NotFoundError)
+from axonius_api_client.exceptions import CnxAddError  # CnxUpdateError,
+from axonius_api_client.exceptions import (
+    CnxGoneError,
+    CnxTestError,
+    ConfigInvalidValue,
+    ConfigRequired,
+    ConfigUnchanged,
+    NotFoundError,
+)
 
 from ...meta import CSV_FILECONTENT_STR
 from ...utils import get_cnx_broken, get_cnx_existing, get_cnx_working
@@ -155,7 +161,8 @@ class TestCnxPublic(TestCnxBase):
     #     assert exc.value.cnx_new["config"][config_key] == value_to_set
     #     assert exc.value.cnx_old["config"].get(config_key) == value_orig
 
-    #     cnx_reset = apiobj.cnx.update_cnx(cnx_update=exc.value.cnx_new, **{config_key: value_orig})
+    #     cnx_reset = apiobj.cnx.update_cnx(
+    #     cnx_update=exc.value.cnx_new, **{config_key: value_orig})
     #     assert cnx_reset["config"][config_key] == value_orig
 
     def test_cb_file_upload_fail(self, apiobj, csv_file_path, monkeypatch):
