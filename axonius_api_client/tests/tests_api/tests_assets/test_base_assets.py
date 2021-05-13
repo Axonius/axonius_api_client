@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """Test suite for assets."""
 import pytest
-
 from axonius_api_client.api import json_api, mixins
 from axonius_api_client.constants.api import MAX_PAGE_SIZE
 from axonius_api_client.exceptions import NotFoundError
@@ -114,7 +113,7 @@ class AssetsPublic:
 
     def test_history_date(self, apiobj):
         data = apiobj.history_dates()
-        assert isinstance(data, dict) and data
+        assert isinstance(data, dict)
         for short, full in data.items():
             assert isinstance(short, str) and "-" in short
             assert isinstance(full, str) and "-" in full and "T" in full

@@ -219,6 +219,7 @@ class SystemRoles(ModelMixins):
         perms_new = self.cat_actions_to_perms(
             role_perms=perms_orig, grant=grant, src=f"set permissions on role {name!r}", **kwargs
         )
+
         if perms_orig == perms_new:
             err = f"No permission changes for role {name!r}"
             supplied = f"Supplied changes: {json_dump(kwargs)}"
@@ -270,6 +271,9 @@ class SystemRoles(ModelMixins):
         len_acts_desc = lens["actions_desc"]
 
         for category, actions in acts.items():
+            if category not in role_perms:
+                continue
+
             cat_desc = cats[category]
             cat_role_acts = role_perms[category]
             lines += ["", "-" * 70, f"{category:<{len_acts + 2}} {cat_desc}"]

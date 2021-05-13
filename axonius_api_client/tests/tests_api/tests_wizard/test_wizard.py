@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 """Test suite for axonius_api_client.wizard.wizard"""
 import pytest
-
 from axonius_api_client.api.wizards import Wizard
 from axonius_api_client.constants.fields import ALL_NAME, Operators
 from axonius_api_client.constants.wizards import Entry, Flags, Results, Types
 from axonius_api_client.exceptions import NotFoundError, WizardError
 from axonius_api_client.parsers.wizards import WizardParser
+
+from ...utils import get_schema
 
 
 class TestWizard:
@@ -26,6 +27,7 @@ class TestData:
         simple = wizard.APIOBJ.FIELD_SIMPLE
         cplex = wizard.APIOBJ.FIELD_COMPLEX
         sub = wizard.APIOBJ.FIELD_COMPLEX_SUB
+        get_schema(apiobj=wizard.APIOBJ, field=cplex)
 
         entries = [
             {Entry.TYPE: Types.SIMPLE, Entry.VALUE: f"{simple} exists"},
@@ -222,6 +224,7 @@ class TestGetFieldComplex(TestWizard):
 
     def test_valid(self, wizard):
         field = wizard.APIOBJ.FIELD_COMPLEX
+        get_schema(apiobj=wizard.APIOBJ, field=field)
         ret = wizard._get_field_complex(value=field, value_raw=f"{field} blah blah")
         assert ret["name_qual"] == field
 
@@ -698,6 +701,7 @@ class TestParseSimple(TestWizard):
 class TestParseComplex(TestWizard):
     def test_valid(self, wizard):
         field = wizard.APIOBJ.FIELD_COMPLEX
+        get_schema(apiobj=wizard.APIOBJ, field=field)
         sub = wizard.APIOBJ.FIELD_COMPLEX_SUB
         entry = {
             Entry.TYPE: "complex",
@@ -747,6 +751,8 @@ class TestParseComplex(TestWizard):
 
     def test_invalid(self, wizard):
         field = wizard.APIOBJ.FIELD_COMPLEX
+        get_schema(apiobj=wizard.APIOBJ, field=field)
+
         sub = wizard.APIOBJ.FIELD_COMPLEX_SUB
         entry = {
             Entry.TYPE: "complex",
