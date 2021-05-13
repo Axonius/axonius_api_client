@@ -19,4 +19,4 @@ def cmd(ctx, url):
         data = entry.system_status
 
     click.secho(str(data))
-    ctx.exit(0 if data.is_ready else 1)
+    ctx.exit(data.status_code)
