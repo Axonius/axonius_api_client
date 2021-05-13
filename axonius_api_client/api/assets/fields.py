@@ -6,14 +6,9 @@ from typing import List, Optional, Tuple, Union
 from cachetools import TTLCache, cached
 from fuzzyfinder import fuzzyfinder
 
-from ...constants.fields import (
-    AGG_ADAPTER_ALTS,
-    AGG_ADAPTER_NAME,
-    FUZZY_SCHEMAS_KEYS,
-    GET_SCHEMA_KEYS,
-    GET_SCHEMAS_KEYS,
-    PRETTY_SCHEMA_TMPL,
-)
+from ...constants.fields import (AGG_ADAPTER_ALTS, AGG_ADAPTER_NAME,
+                                 FUZZY_SCHEMAS_KEYS, GET_SCHEMA_KEYS,
+                                 GET_SCHEMAS_KEYS, PRETTY_SCHEMA_TMPL)
 from ...exceptions import ApiError, NotFoundError
 from ...parsers.fields import parse_fields
 from ...tools import listify, split_str, strip_right
@@ -595,7 +590,7 @@ class Fields(ChildMixins):
             tmpl: template to use to prettify schemas
             len_key: schema key to get max length of and pass into tmpl as "len_max"
         """
-        len_max = max([len(x[len_key]) for x in schemas])
+        len_max = max([len(x[len_key]) for x in schemas]) if schemas else 0
         return [tmpl.format(len_max=len_max, **x) for x in schemas]
 
     def _get(self) -> json_api.generic.Metadata:
