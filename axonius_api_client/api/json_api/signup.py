@@ -7,7 +7,6 @@ import marshmallow_jsonapi
 
 from .base import BaseModel, BaseSchema, BaseSchemaJson
 from .custom_fields import get_field_str_req
-from .generic import StrValue, StrValueSchema
 
 
 class SignupRequestSchema(BaseSchemaJson):
@@ -29,6 +28,24 @@ class SignupRequestSchema(BaseSchemaJson):
     def get_model_cls() -> type:
         """Pass."""
         return SignupRequest
+
+
+class SystemStatusSchema(BaseSchemaJson):
+    """Pass."""
+
+    msg = marshmallow_jsonapi.fields.Str()
+    is_ready = marshmallow_jsonapi.fields.Bool()
+    status_code = marshmallow_jsonapi.fields.Int()
+
+    @staticmethod
+    def get_model_cls() -> type:
+        """Pass."""
+        return SystemStatus
+
+    class Meta:
+        """Pass."""
+
+        type_ = "machine_status_schema"
 
 
 @dataclasses.dataclass
@@ -78,23 +95,13 @@ class SignupResponse(BaseModel):
         return SignupResponseSchema
 
 
-class SystemStatusSchema(StrValueSchema):
-    """Pass."""
-
-    @staticmethod
-    def get_model_cls() -> type:
-        """Pass."""
-        return SystemStatus
-
-
 @dataclasses.dataclass
-class SystemStatus(StrValue):
+class SystemStatus(BaseModel):
     """Pass."""
 
-    @property
-    def is_ready(self) -> bool:
-        """Pass."""
-        return self.value == "ready"
+    msg: str
+    is_ready: bool
+    status_code: int
 
     @staticmethod
     def get_schema_cls() -> Optional[Type[BaseSchema]]:
@@ -103,4 +110,5 @@ class SystemStatus(StrValue):
 
     def __str__(self) -> str:
         """Pass."""
-        return f"System status: {self.value}"
+        msg = self.msg or "none"
+        return f"System status - ready: {self.is_ready}, message: {msg} (code: {self.status_code})"
