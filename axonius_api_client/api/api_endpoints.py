@@ -182,6 +182,15 @@ class Instances(BaseData):
     # PBUG: response is not jsonapi model
     # TBUG: need testrail integration to automate tests
 
+    factory_reset: ApiEndpoint = ApiEndpoint(
+        method="post",
+        path="api/V4.0/factory_reset",
+        request_schema_cls=json_api.instances.FactoryResetRequestSchema,
+        request_model_cls=json_api.instances.FactoryResetRequest,
+        response_schema_cls=json_api.instances.FactoryResetSchema,
+        response_model_cls=json_api.instances.FactoryReset,
+    )
+
 
 @dataclasses.dataclass
 class CentralCore(BaseData):
