@@ -6,21 +6,12 @@ import click
 
 from .. import version
 from ..constants.api import TIMEOUT_CONNECT, TIMEOUT_RESPONSE
-from ..constants.logs import (
-    LOG_FILE_MAX_FILES,
-    LOG_FILE_MAX_MB,
-    LOG_FILE_NAME,
-    LOG_FILE_PATH,
-    LOG_LEVEL_API,
-    LOG_LEVEL_AUTH,
-    LOG_LEVEL_CONSOLE,
-    LOG_LEVEL_FILE,
-    LOG_LEVEL_HTTP,
-    LOG_LEVEL_PACKAGE,
-    LOG_LEVELS_STR,
-    REQUEST_ATTR_MAP,
-    RESPONSE_ATTR_MAP,
-)
+from ..constants.logs import (LOG_FILE_MAX_FILES, LOG_FILE_MAX_MB,
+                              LOG_FILE_NAME, LOG_FILE_PATH, LOG_LEVEL_API,
+                              LOG_LEVEL_AUTH, LOG_LEVEL_CONSOLE,
+                              LOG_LEVEL_FILE, LOG_LEVEL_HTTP,
+                              LOG_LEVEL_PACKAGE, LOG_LEVELS_STR,
+                              REQUEST_ATTR_MAP, RESPONSE_ATTR_MAP)
 from ..logs import LOG
 from . import context, grp_adapters, grp_assets, grp_system, grp_tools
 
@@ -341,7 +332,12 @@ def cli(
     headers,
 ):
     """Command line interface for the Axonius API Client."""
-    LOG.debug(f"sys.argv: {sys.argv}")
+    try:
+        cli_args = sys.argv
+    except Exception:
+        cli_args = "No sys.argv!"
+
+    LOG.debug(f"sys.argv: {cli_args}")
     ctx._click_ctx = click_ctx
     ctx.QUIET = quiet
     ctx._connect_args["log_level_package"] = log_level_package
