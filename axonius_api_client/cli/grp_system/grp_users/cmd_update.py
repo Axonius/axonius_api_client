@@ -64,12 +64,43 @@ OPTIONS = [*AUTH, EXPORT, FIRST_NAME, LAST_NAME, EMAIL, USER_NAME, PASSWORD, ROL
 @click.command(name="update", context_settings=CONTEXT_SETTINGS)
 @add_options(OPTIONS)
 @click.pass_context
-def cmd(ctx, url, key, secret, export_format, name, **kwargs):
+def cmd(
+    ctx,
+    url,
+    key,
+    secret,
+    export_format,
+    name,
+    password,
+    first_name,
+    last_name,
+    email,
+    role_name,
+    **kwargs,
+):
     """Update a user."""
     client = ctx.obj.start_client(url=url, key=key, secret=secret)
 
+    if not any([password, first_name, last_name, email, role_name]):
+        ctx.obj.echo_error(
+            "Must supply at least one of password, first_name, last_name, email, or role_name"
+        )
+
     with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
-        data = client.system_users.update(name=name, **kwargs)
-        ctx.obj.echo_ok(f"Updated user {name!r}")
+        if any([first_name, last_name]):
+            data = client.system_users.set_first_last(name=name, first=first_name, last=last_name)
+            ctx.obj.echo_ok(f"Updated first and last name of user {name!r}")
+
+        if password:
+            data = client.system_users.set_password(name=name, password=password)
+            ctx.obj.echo_ok(f"Updated password of user {name!r}")
+
+        if email:
+            data = client.system_users.set_email(name=name, email=email)
+            ctx.obj.echo_ok(f"Updated email of user {name!r}")
+
+        if role_name:
+            data = client.system_users.set_role(name=name, role_name=role_name)
+            ctx.obj.echo_ok(f"Updated role of user {name!r}")
 
     handle_export(ctx=ctx, data=data, export_format=export_format, **kwargs)

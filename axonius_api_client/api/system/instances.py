@@ -372,6 +372,19 @@ class Instances(ModelMixins):
         self._update_central_core_config(enabled=data["enabled"], delete_backups=enabled)
         return self.get_core_delete_mode()
 
+    def factory_reset(
+        self, reset: bool = False
+    ) -> json_api.instances.FactoryReset:  # pragma: no cover
+        """Perform a factory reset on an instance.
+
+        Notes:
+            Can not run in test suite!
+
+        Args:
+            reset: actually do it... be careful!
+        """
+        return self._factory_reset(approve_not_recoverable_action=reset)
+
     def get_central_core_config(self) -> dict:
         """Get the current central core configuration.
 
@@ -460,6 +473,23 @@ class Instances(ModelMixins):
         """Direct API method to get instances."""
         api_endpoint = ApiEndpoints.instances.get
         return api_endpoint.perform_request(http=self.auth.http)
+
+    def _factory_reset(
+        self, approve_not_recoverable_action: bool = False
+    ) -> json_api.instances.FactoryReset:  # pragma: no cover
+        """Direct API method to do a factory reset on an instance.
+
+        Notes:
+            Can not run in test suite!
+
+        Args:
+            approve_not_recoverable_action: actually do it... be careful!
+        """
+        api_endpoint = ApiEndpoints.instances.factory_reset
+        request_obj = api_endpoint.load_request(
+            approve_not_recoverable_action=approve_not_recoverable_action
+        )
+        return api_endpoint.perform_request(http=self.auth.http, request_obj=request_obj)
 
     def _delete(self, node_id: str) -> str:  # pragma: no cover
         """Direct API method to delete an instance.

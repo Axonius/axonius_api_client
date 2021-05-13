@@ -13,9 +13,8 @@ import csv
 import dataclasses
 import datetime
 import pathlib
-
-from typing import Dict, Generator, List, Optional, Union
 from collections.abc import MutableMapping
+from typing import Dict, Generator, List, Optional, Union
 
 import axonius_api_client as axonapi
 
@@ -74,9 +73,9 @@ def normalize_bool(value: Union[str, bool]) -> bool:
     if isinstance(value, bool):
         return value
 
-    if value.lower() == 'true':
+    if value.lower() == "true":
         return True
-    elif value.lower() == 'false':
+    elif value.lower() == "false":
         return False
 
 
@@ -257,7 +256,7 @@ class CustomConnect(axonapi.Connect):
         return tag_actions
 
 
-def flatten_dict(d, parent_key='', sep='_'):
+def flatten_dict(d, parent_key="", sep="_"):
     items = []
     for k, v in d.items():
         new_key = parent_key + sep + k if parent_key else k
@@ -322,8 +321,15 @@ if __name__ == "__main__":
     # ]
 
     fields = [
-        'admin_username', 'admin_axonius_link', 'admin_is_disabled', 'admin_usernames', 'normal_username',
-        'normal_usernames', 'normal_axonius_link', 'normal_is_disabled', 'tag'
+        "admin_username",
+        "admin_axonius_link",
+        "admin_is_disabled",
+        "admin_usernames",
+        "normal_username",
+        "normal_usernames",
+        "normal_axonius_link",
+        "normal_is_disabled",
+        "tag",
     ]
 
     labels = axonapi.api.assets.labels.Labels(client.users)

@@ -1,16 +1,15 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import click
 import json
 import sys
-
-import axonius_api_client as axonapi
-
-from click.core import Context
 from dataclasses import dataclass
 from typing import Optional, Union
 
+import click
+from click.core import Context
+
+import axonius_api_client as axonapi
 
 USER_FIELDS = ["mssql:all", "active_directory:all", "cherwell_sql:all"]
 DEVICE_FIELDS = ["mssql:all", "active_directory:all", "cherwell_sql:all"]
@@ -210,7 +209,10 @@ def user_prop_factory_iterator(source, user_obj, search_t, search_v):
                     return items[0]
                 else:
                     # return items
-                    print("Too many results returned; please try to narrow the search criteria.", file=sys.stderr)
+                    print(
+                        "Too many results returned; please try to narrow the search criteria.",
+                        file=sys.stderr,
+                    )
                     sys.exit(1)
             else:
                 return None
@@ -227,8 +229,10 @@ def user_prop_factory(source, user_obj, search_t, search_v):
             if search_v.lower() == props.email.lower():
                 return_props = True
         elif search_t == "name":
-            if search_v.lower() == props.full_name.lower() or \
-                    search_v.lower() == " ".join([props.first_name, props.last_name]).lower():
+            if (
+                search_v.lower() == props.full_name.lower()
+                or search_v.lower() == " ".join([props.first_name, props.last_name]).lower()
+            ):
                 return_props = True
         elif search_t == "generic":
             email_parts = props.email.split("@")
@@ -244,8 +248,10 @@ def user_prop_factory(source, user_obj, search_t, search_v):
             if search_v.lower() == props.email.lower():
                 return_props = True
         elif search_t == "name":
-            if search_v.lower() == ", ".join([props.last_name, props.first_name]).lower() or \
-                    search_v.lower() == " ".join([props.first_name, props.last_name]).lower():
+            if (
+                search_v.lower() == ", ".join([props.last_name, props.first_name]).lower()
+                or search_v.lower() == " ".join([props.first_name, props.last_name]).lower()
+            ):
                 return_props = True
         elif search_t == "generic":
             email_parts = props.email.split("@")
@@ -280,7 +286,9 @@ def find_machine(machines, machine_search_criteria):
         if device.cherwell_props:  # if we matched on cherwell let's grab the AD data
             active_directory = machine.get("adapters_data.active_directory_adapter")
             if active_directory:
-                active_directory_props = machine_prop_factory_iterator("active_directory", active_directory, t, v.lower())
+                active_directory_props = machine_prop_factory_iterator(
+                    "active_directory", active_directory, t, v.lower()
+                )
                 if active_directory_props:
                     device.ad_props = active_directory_props
 
@@ -304,15 +312,15 @@ def machine_prop_factory_iterator(source, machine_obj, search_t, search_v):
                 if len(items) == 1:
                     return items[0]
                 else:
-                    if source == 'cherwell':
+                    if source == "cherwell":
                         in_use = []
                         retired = []
                         other = []
 
                         for m in items:
-                            if m.status.lower() == 'in use':
+                            if m.status.lower() == "in use":
                                 in_use.append(m)
-                            elif m.status.lower() == 'retired':
+                            elif m.status.lower() == "retired":
                                 retired.append(m)
                             else:
                                 other.append(m)
@@ -322,10 +330,16 @@ def machine_prop_factory_iterator(source, machine_obj, search_t, search_v):
                         elif len(in_use) == 1:
                             return in_use[0]
                         else:
-                            print("Too many results returned; please try to narrow the search criteria.", file=sys.stderr)
+                            print(
+                                "Too many results returned; please try to narrow the search criteria.",
+                                file=sys.stderr,
+                            )
                             sys.exit(1)
                     else:
-                        print("Too many results returned; please try to narrow the search criteria.", file=sys.stderr)
+                        print(
+                            "Too many results returned; please try to narrow the search criteria.",
+                            file=sys.stderr,
+                        )
                         sys.exit(1)
 
             else:
@@ -343,7 +357,10 @@ def machine_prop_factory(source, machine_obj, search_t, search_v):
             if search_v.lower() == props.primary_user_email.lower():
                 return_props = True
         elif search_t == "name":
-            if search_v.lower() == props.primary_user_name.lower() or search_v == props.owner.lower():
+            if (
+                search_v.lower() == props.primary_user_name.lower()
+                or search_v == props.owner.lower()
+            ):
                 return_props = True
         elif search_t == "ip":
             if search_v in props.ips:
@@ -405,7 +422,9 @@ def is_email_prefix(search, email):
     return False
 
 
-def three_way_mixer(first_label: str, first_value: str, second_label: str, second_value: str, offset: int) -> str:
+def three_way_mixer(
+    first_label: str, first_value: str, second_label: str, second_value: str, offset: int
+) -> str:
     if first_value and not second_value:
         return f"{' ' * offset}{first_label}: {first_value}"
     elif second_value and not first_value:
@@ -466,7 +485,7 @@ class CustomConnect(axonapi.Connect):
                         if serial not in machine_serials:
                             machine_serials.append(serial)
                         else:
-                            del (machine_matches[i])
+                            del machine_matches[i]
 
                 if len(machine_matches) > 0:
                     print(f"Found Machines ({len(machine_matches)}):")
@@ -476,8 +495,15 @@ class CustomConnect(axonapi.Connect):
                             for part in m.display():
                                 print(f"        {part}")
                             print(f"            Owner: {m.cherwell_props.owner}")
-                            print(three_way_mixer("IPS:", ", ".join(m.cherwell_props.ips), "MAC", m.cherwell_props.mac,
-                                                  12))
+                            print(
+                                three_way_mixer(
+                                    "IPS:",
+                                    ", ".join(m.cherwell_props.ips),
+                                    "MAC",
+                                    m.cherwell_props.mac,
+                                    12,
+                                )
+                            )
                             print(f"            Found VIA: {m.found_via}")
                             print()
 
@@ -498,12 +524,17 @@ class CustomConnect(axonapi.Connect):
                     if m.cherwell_props.primary_user_email:
                         if m.cherwell_props.primary_user_name:
                             print(
-                                f"        Primary User: {m.cherwell_props.primary_user_name} <{m.cherwell_props.primary_user_email}>")
+                                f"        Primary User: {m.cherwell_props.primary_user_name} <{m.cherwell_props.primary_user_email}>"
+                            )
                         else:
                             print(f"        Primary User: {m.cherwell_props.primary_user_email}")
                         if m.cherwell_props.owner:
                             print(f"        Owner: {m.cherwell_props.owner}")
-                    print(three_way_mixer("IPS", ", ".join(m.cherwell_props.ips), "MAC", m.cherwell_props.mac, 8))
+                    print(
+                        three_way_mixer(
+                            "IPS", ", ".join(m.cherwell_props.ips), "MAC", m.cherwell_props.mac, 8
+                        )
+                    )
                     print(f"        Found VIA: {m.found_via}")
                 print()
             if SHOW_IDS:
@@ -519,26 +550,37 @@ class CustomConnect(axonapi.Connect):
 
 class Mutex(click.Option):
     def __init__(self, *args, **kwargs):
-        self.not_required_if:list = kwargs.pop("not_required_if")
+        self.not_required_if: list = kwargs.pop("not_required_if")
 
         assert self.not_required_if, "'not_required_if' parameter required"
-        kwargs["help"] = (kwargs.get("help", "") + " Option is mutually exclusive with " + ", ".join(self.not_required_if) + ".").strip()
+        kwargs["help"] = (
+            kwargs.get("help", "")
+            + " Option is mutually exclusive with "
+            + ", ".join(self.not_required_if)
+            + "."
+        ).strip()
         super(Mutex, self).__init__(*args, **kwargs)
 
     def handle_parse_result(self, ctx, opts, args):
-        current_opt:bool = self.name in opts
+        current_opt: bool = self.name in opts
         for mutex_opt in self.not_required_if:
             if mutex_opt in opts:
                 if current_opt:
-                    raise click.UsageError("Illegal usage: '" + str(self.name) + "' is mutually exclusive with " + str(mutex_opt) + ".")
+                    raise click.UsageError(
+                        "Illegal usage: '"
+                        + str(self.name)
+                        + "' is mutually exclusive with "
+                        + str(mutex_opt)
+                        + "."
+                    )
                 else:
                     self.prompt = None
         return super(Mutex, self).handle_parse_result(ctx, opts, args)
 
 
 @click.command()
-@click.option('--user', help="User to search.", cls=Mutex, not_required_if=['device'])
-@click.option('--device', help="Device to search.", cls=Mutex, not_required_if=['user'])
+@click.option("--user", help="User to search.", cls=Mutex, not_required_if=["device"])
+@click.option("--device", help="Device to search.", cls=Mutex, not_required_if=["user"])
 @click.pass_context
 def main(ctx: Context, user: str, device: str):
     if not user and not device:
@@ -555,9 +597,5 @@ def main(ctx: Context, user: str, device: str):
         client.run(device_search_criteria=device)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
-
-
-
-

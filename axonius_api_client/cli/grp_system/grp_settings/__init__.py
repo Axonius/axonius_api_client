@@ -4,6 +4,7 @@ import click
 
 from ...context import AliasedGroup
 from . import (
+    cmd_configure_destroy,
     cmd_get,
     cmd_get_section,
     cmd_get_subsection,
@@ -43,3 +44,5 @@ for cmd in CMDS:
     settings_global.add_command(cmd.cmd)
     settings_lifecycle.add_command(cmd.cmd)
     settings_gui.add_command(cmd.cmd)
+
+settings_global.add_command(cmd_configure_destroy.cmd)

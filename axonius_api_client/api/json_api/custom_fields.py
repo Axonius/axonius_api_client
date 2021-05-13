@@ -82,6 +82,11 @@ class SchemaDatetime(marshmallow_jsonapi.fields.DateTime):
 class SchemaPassword(marshmallow_jsonapi.fields.Field):
     """Field that serializes to a string or an array and deserializes to a string or an array."""
 
+    """
+    This exists cuz:
+        ["unchanged"]
+    """
+
     def _serialize(self, value, attr, obj, **kwargs):
         return value
 
@@ -110,22 +115,3 @@ def get_field_oneof(
     kwargs["validate"] = marshmallow.validate.OneOf(choices=choices)
     kwargs.setdefault("required", True)
     return field(**kwargs)
-
-
-# class NestedDefaultMixin:
-#     """Pass."""
-
-#     @marshmallow.pre_load
-#     def load_missing_nested(self, data, **kwargs):
-#         """Pass."""
-#         for fieldname, field in self.fields.items():
-#             if (
-#                 fieldname not in data
-#                 and isinstance(field, marshmallow.fields.Nested)
-#                 # and callable(field.missing)
-#             ):
-#                 import pdb
-
-#                 pdb.set_trace()
-#                 data[fieldname] = field.schema.load({})
-#         return data

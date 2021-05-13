@@ -163,3 +163,66 @@ class InstanceUpdateAttributesRequest(BaseModel):
     node_name: str
     hostname: str
     use_as_environment_name: bool
+
+
+class FactoryResetRequestSchema(BaseSchemaJson):
+    """Pass."""
+
+    approve_not_recoverable_action = SchemaBool(required=False, missing=False)
+
+    @staticmethod
+    def get_model_cls() -> type:
+        """Pass."""
+        return FactoryResetRequest
+
+    class Meta:
+        """Pass."""
+
+        type_ = "factory_reset_request_schema"
+
+
+@dataclasses.dataclass
+class FactoryResetRequest(BaseModel):
+    """Pass."""
+
+    approve_not_recoverable_action: bool = False
+
+    @staticmethod
+    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+        """Pass."""
+        return FactoryResetRequestSchema
+
+
+class FactoryResetSchema(BaseSchemaJson):
+    """Pass."""
+
+    triggered = SchemaBool(required=False, missing=False)
+    msg = marshmallow_jsonapi.fields.Str()
+
+    @staticmethod
+    def get_model_cls() -> type:
+        """Pass."""
+        return FactoryReset
+
+    class Meta:
+        """Pass."""
+
+        type_ = "factory_reset_schema"
+
+
+@dataclasses.dataclass
+class FactoryReset(BaseModel):
+    """Pass."""
+
+    triggered: bool = False
+    msg: str = ""
+
+    @staticmethod
+    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+        """Pass."""
+        return FactoryResetSchema
+
+    def __str__(self) -> str:
+        """Pass."""
+        msg = self.msg or "none"
+        return f"Factory reset triggered: {self.triggered}, message: {msg}"

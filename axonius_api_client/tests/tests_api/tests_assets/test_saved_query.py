@@ -12,6 +12,7 @@ from axonius_api_client.constants.general import SIMPLE
 from axonius_api_client.exceptions import ApiError, NotFoundError
 
 from ...meta import QUERIES
+from ...utils import get_schema
 
 
 class SavedQueryPrivate:
@@ -88,6 +89,7 @@ class SavedQueryPublic:
 
     @pytest.fixture(scope="class")
     def sq_fixture(self, apiobj):
+        get_schema(apiobj=apiobj, field="specific_data.data.last_seen")
         field_simple = apiobj.FIELD_SIMPLE
 
         name = "badwolf torked"

@@ -484,15 +484,6 @@ class TestPathWrite:
         ret_path, ret_write = path_write(obj=path, data=data, is_json=False)
         assert ret_path.read_text() == '{\n  "x": 2\n}'
 
-    def test_is_json_true_nonjson(self, tmp_path):
-        """Test is_json=True with .json not in filename and invalid json data."""
-        sub1 = tmp_path / "sub1"
-        sub2 = sub1 / "sub2"
-        path = sub2 / "file.text"
-        data = pytest
-        with pytest.raises(Exception):
-            path_write(obj=path, data=data, is_json=True)
-
     def test_is_json_true_json(self, tmp_path):
         """Test is_json=True with .json not in filename and valid json data."""
         sub1 = tmp_path / "sub1"
@@ -793,18 +784,6 @@ class TestJsonDump:
         x = b"xxx"
         y = json_dump(obj=x)
         assert y == '"xxx"'
-
-    def test_dump_error_false(self):
-        """Simple test."""
-        x = pytest
-        y = json_dump(obj=x, error=False)
-        assert y == pytest
-
-    def test_dump_error_true(self):
-        """Simple test."""
-        x = pytest
-        with pytest.raises(Exception):
-            json_dump(obj=x, error=True)
 
 
 class TestDtParseTmpl:

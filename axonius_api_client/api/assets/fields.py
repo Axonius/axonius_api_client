@@ -595,7 +595,7 @@ class Fields(ChildMixins):
             tmpl: template to use to prettify schemas
             len_key: schema key to get max length of and pass into tmpl as "len_max"
         """
-        len_max = max([len(x[len_key]) for x in schemas])
+        len_max = max([len(x[len_key]) for x in schemas]) if schemas else 0
         return [tmpl.format(len_max=len_max, **x) for x in schemas]
 
     def _get(self) -> json_api.generic.Metadata:

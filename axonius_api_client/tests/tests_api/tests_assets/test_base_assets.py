@@ -114,7 +114,7 @@ class AssetsPublic:
 
     def test_history_date(self, apiobj):
         data = apiobj.history_dates()
-        assert isinstance(data, dict) and data
+        assert isinstance(data, dict)
         for short, full in data.items():
             assert isinstance(short, str) and "-" in short
             assert isinstance(full, str) and "-" in full and "T" in full

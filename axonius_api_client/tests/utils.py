@@ -14,6 +14,7 @@ from click.testing import CliRunner
 from axonius_api_client import Wizard, api, auth
 from axonius_api_client.cli.context import Context
 from axonius_api_client.constants.fields import AGG_ADAPTER_NAME
+from axonius_api_client.exceptions import NotFoundError
 from axonius_api_client.http import Http
 from axonius_api_client.tools import listify
 
@@ -68,10 +69,14 @@ def exists_query(apiobj, fields=None, not_exist=False):
 def get_schema(apiobj, field, key=None, adapter=AGG_ADAPTER_NAME):
     """Test utility."""
     schemas = get_schemas(apiobj=apiobj, adapter=adapter)
-    schema = apiobj.fields.get_field_schema(
-        value=field,
-        schemas=schemas,
-    )
+    try:
+        schema = apiobj.fields.get_field_schema(
+            value=field,
+            schemas=schemas,
+        )
+    except NotFoundError as exc:
+        pytest.skip(f"field {field} not found, exc:\n{exc}")
+
     return schema[key] if key else schema
 
 
@@ -85,7 +90,11 @@ def random_string(length):
 def get_rows_exist(apiobj, fields=None, max_rows=1, not_exist=False, **kwargs):
     """Test utility."""
     query = exists_query(apiobj=apiobj, fields=fields, not_exist=not_exist)
-    rows = apiobj.get(fields=fields, max_rows=max_rows, query=query, **kwargs)
+    try:
+        rows = apiobj.get(fields=fields, max_rows=max_rows, query=query, **kwargs)
+    except NotFoundError as exc:
+        pytest.skip(f"fields {fields} not found, exc:\n{exc}")
+
     if not rows:
         pytest.skip(f"No {apiobj} assets with fields {fields}")
     return rows[0] if max_rows == 1 else rows

@@ -7,6 +7,7 @@ from axonius_api_client.constants.wizards import Entry, EntrySq, Results, Types
 from axonius_api_client.exceptions import WizardError
 from axonius_api_client.parsers.wizards import WizardParser
 
+from ...utils import get_schema
 from .test_wizard import TestData
 
 SRC = "test moo"
@@ -166,6 +167,8 @@ class TestProcessFields(TestWizardCsv):
     def test_no_default(self, wizard):
         simple = wizard.APIOBJ.FIELD_SIMPLE
         cplex = wizard.APIOBJ.FIELD_COMPLEX
+        get_schema(apiobj=wizard.APIOBJ, field=cplex)
+
         entry = {EntrySq.FIELDS: f"{simple},{cplex}"}
         exp = [simple, cplex]
         ret = wizard._process_fields(entry=entry)
@@ -173,6 +176,7 @@ class TestProcessFields(TestWizardCsv):
 
     def test_with_default(self, wizard):
         cplex = wizard.APIOBJ.FIELD_COMPLEX
+        get_schema(apiobj=wizard.APIOBJ, field=cplex)
         cplex_sub = f"{cplex}.{wizard.APIOBJ.FIELD_COMPLEX_SUB}"
         entry = {EntrySq.FIELDS: f"{cplex},{EntrySq.DEFAULT},{cplex_sub}"}
         exp = [cplex, *wizard.APIOBJ.fields_default, cplex_sub]

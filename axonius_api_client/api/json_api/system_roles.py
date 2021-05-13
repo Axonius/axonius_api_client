@@ -74,11 +74,11 @@ def cat_actions(http) -> dict:
     labels = api_endpoint.perform_request(http=http)
     data = parse_cat_actions(raw=labels)
 
-    flags = feature_flags(http=http)
+    # flags = feature_flags(http=http)
 
-    if not flags.has_cloud_compliance:  # pragma: no cover
-        data["categories"].pop("compliance")
-        data["actions"].pop("compliance")
+    # if not flags.has_cloud_compliance:  # pragma: no cover
+    #     data["categories"].pop("compliance")
+    #     data["actions"].pop("compliance")
     return data
 
 
