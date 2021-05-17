@@ -10,8 +10,7 @@ import marshmallow_jsonapi
 
 from ...data import BaseEnum
 from ...exceptions import ApiError
-from ...tools import (coerce_bool, coerce_int, coerce_str_to_csv, dt_parse,
-                      int_days_map, json_load)
+from ...tools import coerce_bool, coerce_int, coerce_str_to_csv, dt_parse, int_days_map, json_load
 from ..models import DataModel, DataSchema, DataSchemaJson
 from .custom_fields import SchemaBool, SchemaDatetime, get_field_dc_mm
 from .generic import Deleted, StrValue, StrValueSchema

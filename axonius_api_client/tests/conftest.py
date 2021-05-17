@@ -3,6 +3,7 @@
 import os
 
 import pytest
+
 from axonius_api_client.connect import Connect
 from axonius_api_client.constants.adapters import CSV_ADAPTER
 

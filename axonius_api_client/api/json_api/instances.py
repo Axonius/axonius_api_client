@@ -165,7 +165,7 @@ class InstanceUpdateAttributesRequest(DataModel):
     use_as_environment_name: bool
 
 
-class FactoryResetRequestSchema(BaseSchemaJson):
+class FactoryResetRequestSchema(DataSchemaJson):
     """Pass."""
 
     approve_not_recoverable_action = SchemaBool(required=False, missing=False)
@@ -182,18 +182,18 @@ class FactoryResetRequestSchema(BaseSchemaJson):
 
 
 @dataclasses.dataclass
-class FactoryResetRequest(BaseModel):
+class FactoryResetRequest(DataModel):
     """Pass."""
 
     approve_not_recoverable_action: bool = False
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> Optional[Type[DataSchema]]:
         """Pass."""
         return FactoryResetRequestSchema
 
 
-class FactoryResetSchema(BaseSchemaJson):
+class FactoryResetSchema(DataSchemaJson):
     """Pass."""
 
     triggered = SchemaBool(required=False, missing=False)
@@ -211,14 +211,14 @@ class FactoryResetSchema(BaseSchemaJson):
 
 
 @dataclasses.dataclass
-class FactoryReset(BaseModel):
+class FactoryReset(DataModel):
     """Pass."""
 
     triggered: bool = False
     msg: str = ""
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> Optional[Type[DataSchema]]:
         """Pass."""
         return FactoryResetSchema
 

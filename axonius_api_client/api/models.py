@@ -11,9 +11,15 @@ import requests
 
 from ..connect import Connect
 from ..constants.logs import LOG_LEVEL_API
-from ..exceptions import (ApiError, InvalidCredentials, JsonApiError,
-                          JsonInvalid, ResponseNotOk, UnsupportedVersion,
-                          ValidationError)
+from ..exceptions import (
+    ApiError,
+    InvalidCredentials,
+    JsonApiError,
+    JsonInvalid,
+    ResponseNotOk,
+    UnsupportedVersion,
+    ValidationError,
+)
 from ..logs import get_obj_log
 from ..tools import combo_dicts, json_reload, listify
 

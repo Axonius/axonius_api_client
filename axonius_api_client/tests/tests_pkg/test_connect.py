@@ -3,6 +3,7 @@
 import logging
 
 import pytest
+
 from axonius_api_client.connect import Connect
 from axonius_api_client.exceptions import ConnectError, InvalidCredentials
 from axonius_api_client.http import requests

@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Test suite for axonius_api_client.query_wizard."""
 import pytest
+
 from axonius_api_client.api.wizards import WizardCsv
 from axonius_api_client.constants.wizards import Entry, EntrySq, Results, Types
 from axonius_api_client.exceptions import WizardError

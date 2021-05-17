@@ -30,7 +30,7 @@ class SignupRequestSchema(DataSchemaJson):
         return SignupRequest
 
 
-class SystemStatusSchema(BaseSchemaJson):
+class SystemStatusSchema(DataSchemaJson):
     """Pass."""
 
     msg = marshmallow_jsonapi.fields.Str()
@@ -96,7 +96,7 @@ class SignupResponse(DataModel):
 
 
 @dataclasses.dataclass
-class SystemStatus(BaseModel):
+class SystemStatus(DataModel):
     """Pass."""
 
     msg: str
@@ -104,7 +104,7 @@ class SystemStatus(BaseModel):
     status_code: int
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> Optional[Type[DataSchema]]:
         """Pass."""
         return SystemStatusSchema
 

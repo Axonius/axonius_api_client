@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 """Parent API for working with system settings."""
 from ...exceptions import ApiError, NotFoundError
-from ...parsers.config import (config_build, config_unchanged, config_unknown,
-                               parse_settings)
+from ...parsers.config import config_build, config_unchanged, config_unknown, parse_settings
 from ...parsers.tables import tablize
 from ..models import ApiModel
 

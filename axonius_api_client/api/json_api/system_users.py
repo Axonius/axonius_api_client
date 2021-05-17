@@ -49,7 +49,7 @@ class SystemUserUpdateSchema(SystemUserSchema):
         type_ = "users_schema"
 
     @marshmallow.pre_load
-    def pre_load_fix(self, data, **kwargs) -> Union[dict, BaseModel]:
+    def pre_load_fix(self, data, **kwargs) -> Union[dict, DataModel]:
         """Pass."""
         data["email"] = data.get("email", "") or ""
         data["first_name"] = data.get("first_name", "") or ""

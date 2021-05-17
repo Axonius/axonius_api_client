@@ -5,9 +5,20 @@ from .adapters import Adapters, Cnx
 from .api_endpoints import ApiEndpoints
 from .assets import Devices, Users
 from .enforcement_center import EnforcementCenter
-from .system import (ActivityLogs, Dashboard, Instances, Meta, RemoteSupport,
-                     SettingsGlobal, SettingsGui, SettingsIdentityProviders,
-                     SettingsLifecycle, Signup, SystemRoles, SystemUsers)
+from .system import (
+    ActivityLogs,
+    Dashboard,
+    Instances,
+    Meta,
+    RemoteSupport,
+    SettingsGlobal,
+    SettingsGui,
+    SettingsIdentityProviders,
+    SettingsLifecycle,
+    Signup,
+    SystemRoles,
+    SystemUsers,
+)
 from .wizards import Wizard, WizardCsv, WizardText
 
 __all__ = (

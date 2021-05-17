@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Test suite."""
 import pytest
+
 from axonius_api_client.constants.fields import Parsers
 from axonius_api_client.exceptions import WizardError
 from axonius_api_client.parsers.wizards import WizardParser

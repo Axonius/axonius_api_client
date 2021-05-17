@@ -6,8 +6,7 @@ from typing import List, Optional, Union
 
 import tabulate
 
-from ..constants.tables import (KEY_MAP_ADAPTER, KEY_MAP_CNX, KEY_MAP_SCHEMA,
-                                TABLE_FMT)
+from ..constants.tables import KEY_MAP_ADAPTER, KEY_MAP_CNX, KEY_MAP_SCHEMA, TABLE_FMT
 from ..exceptions import NotFoundError
 from ..tools import json_dump, listify
 

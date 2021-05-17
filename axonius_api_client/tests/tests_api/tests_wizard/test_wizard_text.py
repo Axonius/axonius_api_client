@@ -2,6 +2,7 @@
 """Test suite for axonius_api_client.query_wizard."""
 
 import pytest
+
 from axonius_api_client.api.wizards import WizardText
 from axonius_api_client.constants.wizards import Entry, Results, Types
 from axonius_api_client.exceptions import WizardError
