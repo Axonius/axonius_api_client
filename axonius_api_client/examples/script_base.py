@@ -35,7 +35,7 @@ j = client.jdump  # json dump helper
 # client.devices.fields  # get field schemas for device assets
 # client.devices.labels  # CRUD for tags for device assets
 # client.devices.saved_queries  # CRUD for saved queries for device assets
-# client.enforcement_center  # CRUD for enforcement sets
+# client.enforcements  # CRUD for enforcement center
 # client.instances  # get instances and instance meta data
 # client.meta  # get product meta data
 # client.remote_support  # enable/disable remote support settings

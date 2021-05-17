@@ -503,7 +503,7 @@ class PasswordReset(BaseData):
 
 
 @dataclasses.dataclass
-class EnforcementCenter(BaseData):
+class Enforcements(BaseData):
     """Pass."""
 
     # PBUG: so many things wrong with this
@@ -513,8 +513,8 @@ class EnforcementCenter(BaseData):
         path="api/V4.0/enforcements",
         request_schema_cls=json_api.resources.ResourcesGetSchema,
         request_model_cls=json_api.resources.ResourcesGet,
-        response_schema_cls=json_api.enforcement_center.EnforcementSetBasicSchema,
-        response_model_cls=json_api.enforcement_center.EnforcementSetBasic,
+        response_schema_cls=json_api.enforcements.EnforcementSetBasicSchema,
+        response_model_cls=json_api.enforcements.EnforcementSetBasic,
     )
     # PBUG: should have a call to return all full objects in paging
 
@@ -523,8 +523,8 @@ class EnforcementCenter(BaseData):
         path="api/V4.0/enforcements/{uuid}",
         request_schema_cls=None,
         request_model_cls=None,
-        response_schema_cls=json_api.enforcement_center.EnforcementSetSchema,
-        response_model_cls=json_api.enforcement_center.EnforcementSet,
+        response_schema_cls=json_api.enforcements.EnforcementSetSchema,
+        response_model_cls=json_api.enforcements.EnforcementSet,
     )
 
     delete_set: ApiEndpoint = ApiEndpoint(
@@ -539,10 +539,10 @@ class EnforcementCenter(BaseData):
     create_set: ApiEndpoint = ApiEndpoint(
         method="post",
         path="api/V4.0/enforcements",
-        request_schema_cls=json_api.enforcement_center.EnforcementSetCreateSchema,
-        request_model_cls=json_api.enforcement_center.EnforcementSetCreate,
-        response_schema_cls=json_api.enforcement_center.EnforcementSetSchema,
-        response_model_cls=json_api.enforcement_center.EnforcementSet,
+        request_schema_cls=json_api.enforcements.EnforcementSetCreateSchema,
+        request_model_cls=json_api.enforcements.EnforcementSetCreate,
+        response_schema_cls=json_api.enforcements.EnforcementSetSchema,
+        response_model_cls=json_api.enforcements.EnforcementSet,
     )
     # PBUG: breaks enforcement when:
     """
@@ -572,10 +572,10 @@ class EnforcementCenter(BaseData):
     update_set: ApiEndpoint = ApiEndpoint(
         method="put",
         path="api/V4.0/enforcements/{uuid}",
-        request_schema_cls=json_api.enforcement_center.EnforcementSetUpdateSchema,
-        request_model_cls=json_api.enforcement_center.EnforcementSetUpdate,
-        response_schema_cls=json_api.enforcement_center.EnforcementSetUpdateResponseSchema,
-        response_model_cls=json_api.enforcement_center.EnforcementSetUpdate,
+        request_schema_cls=json_api.enforcements.EnforcementSetUpdateSchema,
+        request_model_cls=json_api.enforcements.EnforcementSetUpdate,
+        response_schema_cls=json_api.enforcements.EnforcementSetUpdateResponseSchema,
+        response_model_cls=json_api.enforcements.EnforcementSetUpdate,
     )
     # need to remove "id" when serializing
     # PBUG: response has actions dict that looks like:
@@ -601,8 +601,8 @@ class EnforcementCenter(BaseData):
     run_set: ApiEndpoint = ApiEndpoint(
         method="put",
         path="api/V4.0/enforcements/{uuid}/trigger",
-        request_schema_cls=json_api.enforcement_center.EnforcementSetRunSchema,
-        request_model_cls=json_api.enforcement_center.EnforcementSetRun,
+        request_schema_cls=json_api.enforcements.EnforcementSetRunSchema,
+        request_model_cls=json_api.enforcements.EnforcementSetRun,
         response_schema_cls=json_api.generic.NameValueSchema,
         response_model_cls=json_api.generic.NameValue,
     )
@@ -613,8 +613,8 @@ class EnforcementCenter(BaseData):
         path="api/V4.0/enforcements/{uuid}/tasks",
         request_schema_cls=json_api.resources.ResourcesGetSchema,
         request_model_cls=json_api.resources.ResourcesGet,
-        response_schema_cls=json_api.enforcement_center.EnforcementTaskBasicSchema,
-        response_model_cls=json_api.enforcement_center.EnforcementTaskBasic,
+        response_schema_cls=json_api.enforcements.EnforcementTaskBasicSchema,
+        response_model_cls=json_api.enforcements.EnforcementTaskBasic,
     )
     # PBUG: should have a call to return all full objects in paging
 
@@ -623,17 +623,8 @@ class EnforcementCenter(BaseData):
         path="api/V4.0/enforcements/tasks/{uuid}",
         request_schema_cls=None,
         request_model_cls=None,
-        response_schema_cls=json_api.enforcement_center.EnforcementTaskSchema,
-        response_model_cls=json_api.enforcement_center.EnforcementTask,
-    )
-
-    get_actions: ApiEndpoint = ApiEndpoint(
-        method="get",
-        path="api/V4.0/enforcements/actions/saved",
-        request_schema_cls=None,
-        request_model_cls=None,
-        response_schema_cls=json_api.enforcement_center.EnforcementActionSchema,
-        response_model_cls=json_api.enforcement_center.EnforcementAction,
+        response_schema_cls=json_api.enforcements.EnforcementTaskSchema,
+        response_model_cls=json_api.enforcements.EnforcementTask,
     )
 
     # PBUG: title and category of actions stored statically in javascript for GUI
@@ -642,8 +633,8 @@ class EnforcementCenter(BaseData):
         path="api/V4.0/enforcements/actions",
         request_schema_cls=None,
         request_model_cls=None,
-        response_schema_cls=json_api.enforcement_center.EnforcementActionTypeSchema,
-        response_model_cls=json_api.enforcement_center.EnforcementActionType,
+        response_schema_cls=json_api.enforcements.EnforcementActionTypeSchema,
+        response_model_cls=json_api.enforcements.EnforcementActionType,
     )
 
 
@@ -909,6 +900,6 @@ class ApiEndpoints(BaseData):
     signup = Signup
     password_reset = PasswordReset
     audit_logs = AuditLogs
-    enforcement_center = EnforcementCenter
+    enforcements = Enforcements
     saved_queries = SavedQueries
     assets = Assets

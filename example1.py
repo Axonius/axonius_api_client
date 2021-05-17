@@ -37,7 +37,7 @@ client.start()  # connect to axonius
 # client.devices.fields         # get field schemas for device assets
 # client.devices.labels         # CRUD for tags for device assets
 # client.devices.saved_queries  # CRUD for saved queries for device assets
-# client.enforcement_center     # CRUD for enforcement sets
+# client.enforcements           # CRUD for enforcement sets
 # client.instances              # get instances and instance meta data
 # client.meta                   # get product meta data
 # client.remote_support         # enable/disable remote support settings
@@ -53,7 +53,7 @@ client.start()  # connect to axonius
 # client.users.labels           # CRUD for tags for user assets
 # client.users.saved_queries    # CRUD for saved queries for user assets
 
-notify = client.enforcement_center.find_action_type("create_notification")
+notify = client.enforcements.find_action_type("create_notification")
 notify_cp = notify.get_config_parser()
-bq = client.enforcement_center.find_action_type("export_to_google_big_query")
+bq = client.enforcements.find_action_type("export_to_google_big_query")
 bq_cp = bq.get_config_parser()

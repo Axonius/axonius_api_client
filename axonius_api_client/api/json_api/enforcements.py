@@ -10,7 +10,8 @@ import marshmallow_jsonapi
 
 from ...data import BaseEnum
 from ...exceptions import ApiError
-from ...tools import coerce_bool, coerce_int, coerce_str_to_csv, dt_parse, int_days_map, json_load
+from ...tools import (coerce_bool, coerce_int, coerce_str_to_csv, dt_parse,
+                      int_days_map, json_load)
 from ..models import DataModel, DataSchema, DataSchemaJson
 from .custom_fields import SchemaBool, SchemaDatetime, get_field_dc_mm
 from .generic import Deleted, StrValue, StrValueSchema
@@ -72,7 +73,7 @@ class EnforcementSetMixins:
     def get_basic(self, refetch: bool = False) -> SET_BASIC:
         """Pass."""
         if not getattr(self, "_basic", None) or refetch:
-            self._basic = self.CLIENT.enforcement_center.find_set(value=self.uuid, full=False)
+            self._basic = self.CLIENT.enforcements.find_set(value=self.uuid, full=False)
             if isinstance(self, EnforcementSet):
                 self._basic._full = self
         return self._basic
@@ -80,19 +81,19 @@ class EnforcementSetMixins:
     def get_full(self, refetch: bool = False) -> SET_FULL:
         """Pass."""
         if not getattr(self, "_full", None) or refetch:
-            self._full = self.CLIENT.enforcement_center._get_set_by_uuid(uuid=self.uuid)
+            self._full = self.CLIENT.enforcements._get_set_by_uuid(uuid=self.uuid)
             if isinstance(self, EnforcementSetBasic):
                 self._full._basic = self
         return self._full
 
     def delete(self) -> Deleted:
         """Pass."""
-        return self.CLIENT.enforcement_center._delete_set(uuid=self.uuid)
+        return self.CLIENT.enforcements._delete_set(uuid=self.uuid)
 
     def get_tasks(self, full: bool = True, generator: bool = False) -> TASK_UNION:
         """Pass."""
         # XXX add filters like within_days/success_count/fail_count
-        gen = self.CLIENT.enforcement_center._get_tasks_gen(uuid=self.uuid, full=full)
+        gen = self.CLIENT.enforcements._get_tasks_gen(uuid=self.uuid, full=full)
         return gen if generator else list(gen)
 
     # def find_task(self, value: str, full: bool = True) -> TASK_BOTH:
@@ -139,7 +140,7 @@ class EnforcementTaskMixins:
     def get_basic(self, refetch: bool = False) -> TASK_BASIC:
         """Pass."""
         if not getattr(self, "_basic", None) or refetch:
-            self._basic = self.CLIENT.enforcement_center.find_task(value=self.uuid, full=False)
+            self._basic = self.CLIENT.enforcements.find_task(value=self.uuid, full=False)
             if isinstance(self, EnforcementTask):
                 self._basic._full = self
         return self._basic
@@ -147,7 +148,7 @@ class EnforcementTaskMixins:
     def get_full(self, refetch: bool = False) -> TASK_FULL:
         """Pass."""
         if not getattr(self, "_full", None) or refetch:
-            self._full = self.CLIENT.enforcement_center._get_task_by_uuid(uuid=self.uuid)
+            self._full = self.CLIENT.enforcements._get_task_by_uuid(uuid=self.uuid)
             if isinstance(self, EnforcementTaskBasic):
                 self._full._basic = self
         return self._full
@@ -155,9 +156,7 @@ class EnforcementTaskMixins:
     def get_set(self, full: bool = True, refetch: bool = False) -> SET_BOTH:
         """Pass."""
         if not getattr(self, "_enforcement", None) or refetch:
-            self._enforcement = self.CLIENT.enforcement_center.find_set(
-                value=self.enforcement, full=full
-            )
+            self._enforcement = self.CLIENT.enforcements.find_set(value=self.enforcement, full=full)
         return self._enforcement
 
     @staticmethod
@@ -179,6 +178,7 @@ class EnforcementSetBasicSchema(DataSchemaJson):
     last_updated = SchemaDatetime(allow_none=True)
     updated_by = marshmallow_jsonapi.fields.Str(allow_none=True)
     actions_main = marshmallow_jsonapi.fields.Str()
+    actions_main_name = marshmallow_jsonapi.fields.Str()
     actions_main_type = marshmallow_jsonapi.fields.Str()
     triggers_view_name = marshmallow_jsonapi.fields.Str(allow_none=True)
     triggers_last_triggered = marshmallow_jsonapi.fields.Str(allow_none=True)
@@ -340,6 +340,7 @@ class EnforcementSetBasic(EnforcementSetMixins, DataModel):
     date_fetched: str
     updated_by: str
     actions_main_type: str
+    actions_main_name: str
     triggers_period: Optional[str] = None
     triggers_view_name: Optional[str] = None
     last_updated: Optional[datetime.datetime] = get_field_dc_mm(
@@ -497,7 +498,7 @@ class EnforcementSet(EnforcementSetMixins, DataModel):
     @property
     def has_running_task(self) -> bool:
         """Check if this set currently has a running task."""
-        return self.CLIENT.enforcement_center._set_has_running_task(name=self.name).value
+        return self.CLIENT.enforcements._set_has_running_task(name=self.name).value
 
     @property
     def main_action_name(self):
@@ -526,7 +527,7 @@ class EnforcementSet(EnforcementSetMixins, DataModel):
         """Save any changes made to this set."""
         # XXX check for name collisions in actions! use self.action_names
         # we toss the update response away because it doesn't return full objects for actions
-        self.CLIENT.enforcement_center._update_set(
+        self.CLIENT.enforcements._update_set(
             uuid=self.uuid, name=self.name, actions=self.actions, triggers=self.triggers
         )
         return self.get_full(refetch=True)
@@ -534,15 +535,14 @@ class EnforcementSet(EnforcementSetMixins, DataModel):
     def run(self, use_conditions: bool = False, ec_page_run: bool = False) -> SET_FULL:
         """Run this set."""
         self._trigger_obj_copy(msg="run")
-        self.CLIENT.enforcement_center._run_set(
+        self.CLIENT.enforcements._run_set(
             uuid=self.uuid, use_conditions=use_conditions, ec_page_run=ec_page_run
         )
         return self.get_full(refetch=True)
 
     def set_main_action(self, name: str, type: str, **kwargs):
         """Set the main action for this set."""
-        self.CLIENT.enforcement_center._check_action_exists(value=name)
-        action_type = self.CLIENT.enforcement_center.find_action_type(value=type)
+        action_type = self.CLIENT.enforcements.find_action_type(value=type)
         action_config = kwargs  # XXX
         actions = {
             "main": {

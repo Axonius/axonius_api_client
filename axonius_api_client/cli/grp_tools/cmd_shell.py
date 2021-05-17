@@ -3,9 +3,8 @@
 import atexit
 import os
 
-import click
-
 import axonius_api_client as axonapi
+import click
 
 from ...constants.general import PY36
 from ...tools import echo_error, json_reload, pathlib
@@ -24,7 +23,7 @@ API Objects:
     - adapters/a: Work with adapters and adapter connections
     - dashboard/db: Work with dashboards and discovery cycle
     - devices/d: Work with device assets
-    - enforcement_center/ec: Work with Enforcement Center
+    - enforcements/ec: Work with Enforcement Center
     - instances/i: Work with instances
     - meta/m: Work with instance metadata
     - remote_support/rs: Work with configuring system remote support
@@ -69,7 +68,7 @@ def cmd(ctx, url, key, secret):  # noqa: D301
         - adapters/a: Work with adapters and adapter connections
         - dashboard/db: Work with dashboards and discovery cycle
         - devices/d: Work with device assets
-        - enforcement_center/ec: Work with Enforcement Center
+        - enforcements/ec: Work with Enforcement Center
         - instances/i: Work with instances
         - meta/m: Work with instance metadata
         - remote_support/rs: Work with configuring system remote support
@@ -94,7 +93,7 @@ def cmd(ctx, url, key, secret):  # noqa: D301
         "ctx": ctx,
         "dashboard": client.dashboard,
         "devices": client.devices,
-        "enforcement_center": client.enforcement_center,
+        "enforcements": client.enforcements,
         "instances": client.instances,
         "jdump": jdump,
         "users": client.users,
@@ -111,7 +110,7 @@ def cmd(ctx, url, key, secret):  # noqa: D301
         "c": client,
         "d": client.devices,
         "db": client.dashboard,
-        "ec": client.enforcement_center,
+        "ec": client.enforcements,
         "i": client.instances,
         "j": jdump,
         "u": client.users,

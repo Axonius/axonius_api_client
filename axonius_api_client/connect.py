@@ -8,20 +8,11 @@ from typing import List, Optional, Union
 import requests
 
 from .constants.api import TIMEOUT_CONNECT, TIMEOUT_RESPONSE
-from .constants.logs import (
-    LOG_FILE_MAX_FILES,
-    LOG_FILE_MAX_MB,
-    LOG_FILE_NAME,
-    LOG_FILE_PATH,
-    LOG_FMT_BRIEF,
-    LOG_FMT_VERBOSE,
-    LOG_LEVEL_API,
-    LOG_LEVEL_AUTH,
-    LOG_LEVEL_CONSOLE,
-    LOG_LEVEL_FILE,
-    LOG_LEVEL_HTTP,
-    LOG_LEVEL_PACKAGE,
-)
+from .constants.logs import (LOG_FILE_MAX_FILES, LOG_FILE_MAX_MB,
+                             LOG_FILE_NAME, LOG_FILE_PATH, LOG_FMT_BRIEF,
+                             LOG_FMT_VERBOSE, LOG_LEVEL_API, LOG_LEVEL_AUTH,
+                             LOG_LEVEL_CONSOLE, LOG_LEVEL_FILE, LOG_LEVEL_HTTP,
+                             LOG_LEVEL_PACKAGE)
 from .exceptions import ConnectError, InvalidCredentials
 from .http import Http
 from .logs import LOG, add_file, add_stderr, get_obj_log, set_log_level
@@ -60,7 +51,7 @@ class Connect:
         >>> # client.devices.fields         # get field schemas for device assets
         >>> # client.devices.labels         # add/remove/get tags for device assets
         >>> # client.devices.saved_queries  # CRUD for saved queries for device assets
-        >>> # client.enforcement_center     # work with Enforcement Sets
+        >>> # client.enforcements.          # work with Enforcement Center
         >>> # client.instances              # get instances and instance meta data
         >>> # client.meta                   # get product meta data
         >>> # client.remote_support         # enable/disable remote support settings
@@ -375,12 +366,12 @@ class Connect:
         return self._dashboard
 
     @property
-    def enforcement_center(self):
+    def enforcements(self):
         """Work with Enforcement Center."""
         self.start()
-        if not hasattr(self, "_enforcement_center"):
-            self._enforcement_center = self.API.EnforcementCenter(**self.API_ARGS)
-        return self._enforcement_center
+        if not hasattr(self, "_enforcements"):
+            self._enforcements = self.API.Enforcements(**self.API_ARGS)
+        return self._enforcements
 
     @property
     def system_users(self):
