@@ -26,6 +26,7 @@ class SystemUserSchema(DataSchemaJson):
     source = marshmallow_jsonapi.fields.Str()
     user_name = marshmallow_jsonapi.fields.Str(required=True)
     uuid = marshmallow_jsonapi.fields.Str(required=True)
+    ignore_role_assignment_rules = marshmallow_jsonapi.fields.Bool(default=False, missing=False)
 
     @staticmethod
     def _get_model_cls() -> type:
