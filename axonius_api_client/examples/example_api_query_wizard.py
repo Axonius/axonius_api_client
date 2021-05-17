@@ -56,12 +56,12 @@ client.start()  # connect to axonius
 # client.users.saved_queries    # CRUD for saved queries for user assets
 
 wiz_entries = [
-    'simple network_interfaces.ips equals 10.20.30.40',
-    'simple network_interfaces.mac equals 10:DD:B1:DE:8A:E5',
+    "simple network_interfaces.ips equals 10.20.30.40",
+    "simple network_interfaces.mac equals 10:DD:B1:DE:8A:E5",
 ]
 
 parsed_entries = client.devices.wizard_text.parse(content=wiz_entries)
-query = parsed_entries['query']
+query = parsed_entries["query"]
 print(f"Query wizard created: {query}")
 
 devices = client.devices.get(query=query)

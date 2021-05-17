@@ -307,7 +307,7 @@ class WizardCsv(Wizard):
             fields[lidx:ridx] = self.APIOBJ.fields_default
             fields = [x for x in fields if x != EntrySq.DEFAULT]
 
-        if fields != [EntrySq.DEFAULT]:
+        if fields not in [[EntrySq.DEFAULT], self.APIOBJ.fields_default]:
             fields = self.APIOBJ.fields.validate(fields=fields, fields_default=False)
         return fields
 

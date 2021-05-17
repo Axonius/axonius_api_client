@@ -8,6 +8,7 @@ from . import (
     cmd_shell,
     cmd_signup,
     cmd_sysinfo,
+    cmd_system_status,
     cmd_use_token_reset_token,
     cmd_write_config,
 )
@@ -24,3 +25,4 @@ tools.add_command(cmd_sysinfo.cmd)
 tools.add_command(cmd_signup.cmd)
 tools.add_command(cmd_convert_cert.cmd)
 tools.add_command(cmd_use_token_reset_token.cmd)
+tools.add_command(cmd_system_status.cmd)

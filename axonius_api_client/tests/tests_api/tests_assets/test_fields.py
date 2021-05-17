@@ -9,7 +9,7 @@ from axonius_api_client.constants.fields import (AGG_ADAPTER_ALTS,
 from axonius_api_client.exceptions import ApiError, NotFoundError
 
 from ...meta import FIELD_FORMATS, SCHEMA_FIELD_FORMATS, SCHEMA_TYPES
-from ...utils import get_schemas
+from ...utils import get_schema, get_schemas
 
 
 class FieldsPrivate:
@@ -417,16 +417,21 @@ class FieldsPublic:
     def test_get_field_schema(self, apiobj):
         search = "last_seen"
         schemas = get_schemas(apiobj=apiobj)
-        exp = [x for x in schemas if x["name_base"] == search][0]
+        found = [x for x in schemas if x["name_base"] == search]
+        if not found:
+            pytest.skip(f"field {search} not found")
+        exp = found[0]
         result = apiobj.fields.get_field_schema(value=search, schemas=schemas)
         assert exp == result
 
     def test_get_field_names_re(self, apiobj):
         search = ["seen"]
+        get_schema(apiobj=apiobj, field="specific_data.data.last_seen")
         result = apiobj.fields.get_field_names_re(value=search)
         assert "specific_data.data.last_seen" in result
 
     def test_get_field_names_eq(self, apiobj):
+        get_schema(apiobj=apiobj, field="specific_data.data.last_seen")
         search = ["specific_data.data.id", "last_seen"]
         exp = []
         schemas = get_schemas(apiobj=apiobj)
@@ -518,12 +523,16 @@ class FieldsPublic:
             apiobj.fields.get_field_name(value=search)
 
     def test_get_field_name(self, apiobj):
+        get_schema(apiobj=apiobj, field="specific_data.data.last_seen")
         search = "last_seen"
         exp = "specific_data.data.last_seen"
         result = apiobj.fields.get_field_name(value=search)
         assert result == exp
 
     def test_validate(self, apiobj):
+        get_schema(apiobj=apiobj, field="specific_data.data.last_seen")
+        get_schema(apiobj=apiobj, field="specific_data.data.first_fetch_time")
+
         exp = apiobj.fields_default + [
             "specific_data.data",
             "specific_data.data.first_fetch_time",
@@ -546,6 +555,7 @@ class FieldsPublic:
         assert exp == result
 
     def test_validate_fuzzy(self, apiobj):
+        get_schema(apiobj=apiobj, field="specific_data.data.last_seen")
         result = apiobj.fields.validate(fields_fuzzy="lastseen", fields_default=False)
         assert "specific_data.data.last_seen" in result
 

@@ -99,9 +99,11 @@ class SystemUsers(ApiModel):
         name: str,
         password: str,
         role_name: str,
-        first: str = "",
-        last: str = "",
+        first_name: str = "",
+        last_name: str = "",
         email: str = "",
+        generate_password_link: bool = False,
+        email_password_link: bool = False,
     ) -> dict:
         """Create a user.
 
@@ -125,14 +127,23 @@ class SystemUsers(ApiModel):
             name: user name
             password: password
             role_name: role name
-            first: first name
-            last: last name
+            first_name: first name
+            last_name: last name
             email: email address
+            generate_password_link: create a password reset link
+            email_password_link: email the password reset link to a users configured email address
 
         Raises:
             :exc:`ApiError`: if user already exists matching name
         """
+        if not any([password, generate_password_link, email_password_link]):
+            raise ApiError("Must supply password, generate_password_link, or email_password_link")
+
+        if email_password_link and not email:
+            raise ApiError("Must supply email if email_password_link is True")
+
         role = self.roles.get_by_name(name=role_name)
+
         try:
             self.get_by_name(name=name)
             raise ApiError(f"User with name of {name!r} already exists")
@@ -143,11 +154,28 @@ class SystemUsers(ApiModel):
             user_name=name,
             role_id=role["uuid"],
             password=password,
-            first_name=first,
-            last_name=last,
+            first_name=first_name,
+            last_name=last_name,
             email=email,
+            auto_generated_password=generate_password_link,
         )
-        return self.get_by_name(name=name)
+
+        new_user = self.get_by_name(name)
+
+        if generate_password_link or email_password_link:
+            password_reset_link = self.get_password_reset_link(name)
+            new_user["password_reset_link"] = password_reset_link
+            if email_password_link:
+                try:
+                    self.email_password_reset_link(
+                        name, email=email, for_new_user=True, link=password_reset_link
+                    )
+                except Exception as exc:
+                    new_user["email_password_link_error"] = (
+                        getattr(getattr(exc, "response", None), "text", None) or exc
+                    )
+
+        return new_user
 
     def set_role(self, name: str, role_name: str) -> dict:
         """Change the role of a user.
@@ -284,10 +312,7 @@ class SystemUsers(ApiModel):
         return self._tokens_generate(uuid=user["uuid"], user_name=user["user_name"])
 
     def email_password_reset_link(
-        self,
-        name: str,
-        email: Optional[str] = None,
-        for_new_user: bool = False,
+        self, name: str, email: Optional[str] = None, for_new_user: bool = False, link: str = ""
     ) -> Tuple[str, str]:
         """Email a password reset link for a user.
 
@@ -328,7 +353,7 @@ class SystemUsers(ApiModel):
                 address. required if the user has no defined email address.
             for_new_user: use the new user email template instead of the password reset email
                 template
-
+            link: use the specified password reset link vs a newly generated one
         """
         user = self.get_by_name(name=name)
         email = email or user.get("email")
@@ -338,7 +363,8 @@ class SystemUsers(ApiModel):
                 f"User {name!r} has no email address defined, must supply a custom email address"
             )
 
-        link = self._tokens_generate(uuid=user["uuid"], user_name=user["user_name"])
+        if not link:
+            link = self._tokens_generate(uuid=user["uuid"], user_name=user["user_name"])
         self._tokens_notify(uuid=user["uuid"], email=email, invite=for_new_user)
         return link, email
 
@@ -359,7 +385,7 @@ class SystemUsers(ApiModel):
         self,
         user_name: str,
         role_id: str,
-        password: str = "",  # nosec
+        password: Optional[str] = None,
         auto_generated_password: bool = False,
         first_name: str = "",
         last_name: str = "",

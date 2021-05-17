@@ -24,3 +24,19 @@ class SettingsGlobal(SettingsMixins):
         api_endpoint = ApiEndpoints.system_settings.global_update
         request_obj = api_endpoint.load_request(config=new_config)
         return api_endpoint.perform_request(client=self.CLIENT, request_obj=request_obj)
+
+    def configure_destroy(self, enabled: bool, destroy: bool, reset: bool) -> dict:
+        """Enable or disable destroy and factory reset API endpoints.
+
+        Args:
+            enabled: enable or disable destroy endpoints
+            destroy: enable api/devices/destroy and api/users/destroy endpoints
+            reset: enable api/factory_reset endpoint
+        """
+        return self.update_section(
+            section="api_settings",
+            enabled=enabled,
+            enable_factory_reset=reset,
+            enable_destroy=destroy,
+            check_unchanged=False,
+        )

@@ -3,7 +3,7 @@
 import click
 
 from ...context import AliasedGroup
-from . import cmd_get
+from . import cmd_factory_reset, cmd_get
 
 
 @click.group(cls=AliasedGroup)
@@ -12,3 +12,4 @@ def instances():
 
 
 instances.add_command(cmd_get.cmd)
+instances.add_command(cmd_factory_reset.cmd)

@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Test suite."""
 import pytest
+
 from axonius_api_client.api.json_api.system_roles import SystemRole
 from axonius_api_client.exceptions import ApiError, NotFoundError
 
@@ -84,16 +85,6 @@ class TestSystemRolesPublic:
         assert updated2["permissions"]["users_assets"]["get"] is False
         assert updated2["permissions"]["devices_assets"]["get"] is True
 
-        cleanup(api_client)
-
-    def test_set_perms_no_changes(self, api_client):
-        cleanup(api_client)
-
-        api_client.system_roles.add(name=NAME)
-        with pytest.raises(ApiError) as exc:
-            api_client.system_roles.set_perms(name=NAME)
-
-        assert "No permission changes" in str(exc.value)
         cleanup(api_client)
 
     def test_add_already_exist(self, api_client):

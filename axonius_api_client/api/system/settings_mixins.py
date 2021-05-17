@@ -80,7 +80,7 @@ class SettingsMixins(ApiModel):
         )
         raise NotFoundError(tablize(value=valids, err=err))
 
-    def update_section(self, section: str, **kwargs) -> dict:
+    def update_section(self, section: str, check_unchanged: bool = True, **kwargs) -> dict:
         """Update the current settings for a section of system settings.
 
         Args:
@@ -108,12 +108,13 @@ class SettingsMixins(ApiModel):
             new_config=new_config,
             source=source,
         )
-        config_unchanged(
-            schemas=schemas,
-            old_config=old_config,
-            new_config=new_config,
-            source=source,
-        )
+        if check_unchanged:
+            config_unchanged(
+                schemas=schemas,
+                old_config=old_config,
+                new_config=new_config,
+                source=source,
+            )
 
         full_config[section] = new_config
 

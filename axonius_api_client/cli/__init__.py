@@ -341,7 +341,12 @@ def cli(
     headers,
 ):
     """Command line interface for the Axonius API Client."""
-    LOG.debug(f"sys.argv: {sys.argv}")
+    try:
+        cli_args = sys.argv
+    except Exception:
+        cli_args = "No sys.argv!"
+
+    LOG.debug(f"sys.argv: {cli_args}")
     ctx._click_ctx = click_ctx
     ctx.QUIET = quiet
     ctx._connect_args["log_level_package"] = log_level_package

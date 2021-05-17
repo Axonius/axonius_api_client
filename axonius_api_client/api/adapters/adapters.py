@@ -166,7 +166,7 @@ class Adapters(ApiModel):
             node: name of node to get adapter from [NO LONGER USED]
             config_type: One of generic, specific, or discovery
         """
-        adapter = self.get_by_name(name=name, node=node)
+        adapter = self.get_by_name(name=name, node=node, get_clients=False)
         adapters = self._config_get(adapter_name=adapter["name_raw"])
         type_map = adapters.type_map
         if config_type not in type_map:

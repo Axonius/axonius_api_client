@@ -30,6 +30,24 @@ class SignupRequestSchema(DataSchemaJson):
         return SignupRequest
 
 
+class SystemStatusSchema(BaseSchemaJson):
+    """Pass."""
+
+    msg = marshmallow_jsonapi.fields.Str()
+    is_ready = marshmallow_jsonapi.fields.Bool()
+    status_code = marshmallow_jsonapi.fields.Int()
+
+    @staticmethod
+    def get_model_cls() -> type:
+        """Pass."""
+        return SystemStatus
+
+    class Meta:
+        """Pass."""
+
+        type_ = "machine_status_schema"
+
+
 @dataclasses.dataclass
 class SignupRequest(DataModel):
     """Pass."""
@@ -75,3 +93,22 @@ class SignupResponse(DataModel):
     def _get_schema_cls() -> Optional[Type[DataSchema]]:
         """Pass."""
         return SignupResponseSchema
+
+
+@dataclasses.dataclass
+class SystemStatus(BaseModel):
+    """Pass."""
+
+    msg: str
+    is_ready: bool
+    status_code: int
+
+    @staticmethod
+    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+        """Pass."""
+        return SystemStatusSchema
+
+    def __str__(self) -> str:
+        """Pass."""
+        msg = self.msg or "none"
+        return f"System status - ready: {self.is_ready}, message: {msg} (code: {self.status_code})"
