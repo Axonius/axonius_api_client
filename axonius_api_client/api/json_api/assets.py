@@ -357,13 +357,13 @@ class AssetsPage(DataModel):
         this_count = self.asset_count_left
         prev_count = state["rows_to_fetch_total"]
 
-        if init_count:
-            if init_count != this_count:
-                msg = f"Row total count changed from initial {init_count} to {this_count}"
-                apiobj.LOG.warning(msg)
-            if prev_count and prev_count != this_count:
-                msg = f"Row total count changed from previous {prev_count} to {this_count}"
-                apiobj.LOG.warning(msg)
+        if init_count and init_count != this_count:
+            msg = f"Row total count changed from initial {init_count} to {this_count}"
+            apiobj.LOG.warning(msg)
+
+        if prev_count and prev_count != this_count:
+            msg = f"Row total count changed from previous {prev_count} to {this_count}"
+            apiobj.LOG.warning(msg)
 
         state["page"] = self.page
         state["fetch_seconds_this_page"] = this_page_took

@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """Test suite for axonapi.api.assets."""
 import pytest
-
 from axonius_api_client.api import json_api
 
 
@@ -10,7 +9,7 @@ class LabelsPrivate:
         labels = apiobj.labels._get()
         assert isinstance(labels, list)
         for x in labels:
-            assert isinstance(x, str)
+            assert isinstance(x, json_api.generic.StrValue)
 
     def test_private_add_get_remove(self, apiobj):
         labels = ["badwolf1", "badwolf2"]

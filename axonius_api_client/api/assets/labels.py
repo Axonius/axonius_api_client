@@ -59,16 +59,6 @@ class Labels(AssetChildMixin):
         ids = self._get_ids(rows=rows)
         return self._add(labels=labels, ids=ids).value
 
-        # processed = 0
-
-        # # only do 100 labels at a time, more seems to break API
-        # for group in grouper(ids, 100):
-        #     group = [x for x in group if x is not None]
-        #     response = self._add(labels=labels, ids=group)
-        #     processed += response
-
-        # return processed
-
     def remove(self, rows: List[dict], labels: List[str]) -> int:
         """Remove tags from assets.
 

@@ -29,6 +29,7 @@ class Signup:
         """
         return self._get().value
 
+    # XXX when will this actually be in cortex, and when will it actually be in release>????
     @property
     def system_status(self) -> json_api.signup.SystemStatus:
         """Pass."""
@@ -89,7 +90,7 @@ class Signup:
     def _status(self) -> json_api.signup.SystemStatus:
         """Direct API method to get the status of the overall system."""
         api_endpoint = ApiEndpoints.signup.status
-        return api_endpoint.perform_request(http=self.http)
+        return api_endpoint.perform_request(client=self)
 
     def _get(self) -> json_api.generic.BoolValue:
         """Direct API method to get the status of initial signup."""

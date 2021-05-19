@@ -510,19 +510,6 @@ class EnforcementSet(EnforcementSetMixins, DataModel):
         """Get the type of the main action configured for this set."""
         return self.actions["main"]["action"]["action_name"]
 
-    @property
-    def action_names(self) -> dict:
-        """Get a list of the names of all actions configured for this set."""
-        ret = {}
-        for phase, actions in self.actions.items():
-            if isinstance(actions, dict):
-                ret[actions["name"]] = phase
-            elif isinstance(actions, list):
-                for action in actions:
-                    ret[action["name"]] = phase
-        return ret
-        # XXX ????
-
     def save(self) -> SET_FULL:
         """Save any changes made to this set."""
         # XXX check for name collisions in actions! use self.action_names
