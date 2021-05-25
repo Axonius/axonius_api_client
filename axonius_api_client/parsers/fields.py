@@ -3,13 +3,9 @@
 import copy
 from typing import List, Optional
 
-from ..constants.fields import (
-    AGG_ADAPTER_NAME,
-    AGG_ADAPTER_TITLE,
-    AGG_EXPR_FIELD_TYPE,
-    ALL_NAME,
-    OperatorTypeMaps,
-)
+from ..constants.fields import (AGG_ADAPTER_NAME, AGG_ADAPTER_TITLE,
+                                AGG_EXPR_FIELD_TYPE, ALL_NAME, RAW_NAME,
+                                OperatorTypeMaps)
 from ..tools import strip_left, strip_right
 
 
@@ -161,9 +157,7 @@ def parse_schemas(
         agg_base_names: used to determine if a field is aggregated or not
     """
     agg_base_names = agg_base_names or []
-    fields = []
-
-    fields.append(
+    fields = [
         {
             "adapter_name_raw": adapter_name_raw,
             "adapter_name": adapter_name,
@@ -187,10 +181,31 @@ def parse_schemas(
             "expr_field_type": AGG_EXPR_FIELD_TYPE,
             "is_details": False,
             "is_all": True,
-        }
-    )
-
-    fields += [
+        },
+        {
+            "adapter_name_raw": adapter_name_raw,
+            "adapter_name": adapter_name,
+            "adapter_title": adapter_title,
+            "adapter_prefix": adapter_prefix,
+            "column_name": f"{adapter_name}:{RAW_NAME}",
+            "column_title": f"{adapter_title} Raw Data",
+            "sub_fields": [],
+            "is_complex": True,
+            "is_list": True,
+            "is_root": False,
+            "parent": "root",
+            "name": f"{adapter_prefix}.{RAW_NAME}",
+            "name_base": RAW_NAME,
+            "name_qual": f"{adapter_prefix}.{RAW_NAME}",
+            "title": "Adapter Raw Data",
+            "type": "array",
+            "type_norm": "array_object_object",
+            "selectable": True,
+            "is_agg": adapter_name == AGG_ADAPTER_NAME,
+            "expr_field_type": AGG_EXPR_FIELD_TYPE,
+            "is_details": False,
+            "is_all": False,
+        },
         {
             "adapter_name_raw": adapter_name_raw,
             "adapter_name": adapter_name,
