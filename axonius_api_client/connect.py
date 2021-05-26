@@ -24,6 +24,7 @@ from .api import (
     SystemRoles,
     SystemUsers,
     Users,
+    OpenAPISpec,
 )
 from .auth import ApiKey
 from .constants.api import TIMEOUT_CONNECT, TIMEOUT_RESPONSE
@@ -468,6 +469,14 @@ class Connect:
     def __repr__(self) -> str:
         """Show object info."""
         return self.__str__()
+
+    @property
+    def openapi(self) -> OpenAPISpec:
+        """Work with the OpenAPI specification file."""
+        self.start()
+        if not hasattr(self, "_openapi"):
+            self._openapi = OpenAPISpec(**self.API_ARGS)
+        return self._openapi
 
     @classmethod
     def _get_exc_reason(cls, exc: Exception) -> str:

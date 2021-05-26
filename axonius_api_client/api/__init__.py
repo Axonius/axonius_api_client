@@ -21,6 +21,7 @@ from .system import (
     SystemUsers,
 )
 from .wizards import Wizard, WizardCsv, WizardText
+from .openapi import OpenAPISpec
 
 __all__ = (
     "Adapters",
@@ -47,4 +48,5 @@ __all__ = (
     "ApiEndpoints",
     "ApiEndpoint",
     "json_api",
+    "OpenAPISpec",
 )

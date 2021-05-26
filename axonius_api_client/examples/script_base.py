@@ -54,3 +54,4 @@ client.start()  # connect to axonius
 # client.users.fields           # get field schemas for user assets
 # client.users.labels           # add/remove/get tags for user assets
 # client.users.saved_queries    # CRUD for saved queries for user assets
+# client.openapi                # get the OpenAPI specification file

@@ -34,6 +34,7 @@ API Objects:
     - system_roles/sr: Work with system roles
     - system_users/su: Work with system users
     - users/u: Work with user assets
+    - openapi/openapi: Work with the OpenAPI specification file
 
 """
 
@@ -78,6 +79,7 @@ def cmd(ctx, url, key, secret):  # noqa: D301
         - system_roles/sr: Work with system roles
         - system_users/su: Work with system users
         - users/u: Work with user assets
+        - openapi/openapi: Work with the OpenAPI specification file
 
     """
     client = ctx.obj.start_client(url=url, key=key, secret=secret, save_history=True)
@@ -104,6 +106,7 @@ def cmd(ctx, url, key, secret):  # noqa: D301
         "settings_gui": client.settings_gui,
         "settings_lifecycle": client.settings_lifecycle,
         "settings_ip": client.settings_ip,
+        "openapi": client.openapi,
         "a": client.adapters,
         "al": client.activity_logs,
         "c": client,
@@ -121,6 +124,7 @@ def cmd(ctx, url, key, secret):  # noqa: D301
         "sgu": client.settings_gui,
         "sl": client.settings_lifecycle,
         "sip": client.settings_ip,
+        "openapi": client.openapi,
     }
 
     spawn_shell(shellvars)

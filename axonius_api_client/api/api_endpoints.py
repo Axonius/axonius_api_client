@@ -801,6 +801,21 @@ class AuditLogs(BaseData):
 
 
 @dataclasses.dataclass
+class OpenAPISpec(BaseData):
+    """Pass."""
+
+    get_spec: ApiEndpoint = ApiEndpoint(
+        method="get",
+        path="api/open_api_yaml",
+        request_schema_cls=None,
+        request_model_cls=None,
+        response_as_text=True,
+        response_schema_cls=None,
+        response_model_cls=None,
+    )
+
+
+@dataclasses.dataclass
 class ApiEndpoints(BaseData):
     """Pass."""
 
@@ -818,3 +833,4 @@ class ApiEndpoints(BaseData):
     enforcements = Enforcements
     saved_queries = SavedQueries
     assets = Assets
+    openapi = OpenAPISpec
