@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """Test suite for assets."""
 import pytest
-
 from axonius_api_client.api import json_api, mixins
 from axonius_api_client.constants.api import MAX_PAGE_SIZE
 from axonius_api_client.exceptions import NotFoundError
@@ -148,6 +147,14 @@ class AssetsPublic:
         rows = [x for x in gen]
         check_assets(rows)
         assert len(rows) == 1
+
+    def test_get_no_dups(self, apiobj):
+        rows = apiobj.get(generator=True)
+        ids = {}
+        for idx, row in enumerate(rows):
+            id = row["internal_axon_id"]
+            if id in ids:
+                raise Exception(f"Duplicate id {id} at row {idx}")
 
     def test_get_page_size_over_max(self, apiobj):
         rows = apiobj.get(page_size=3000, max_pages=1)

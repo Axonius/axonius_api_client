@@ -41,6 +41,9 @@ KEY_KEY: str = f"{KEY_PRE}KEY"
 KEY_SECRET: str = f"{KEY_PRE}SECRET"
 """OS env to get API secret from"""
 
+KEY_FEATURES: str = f"{KEY_PRE}FEATURES"
+"""OS env to get API features to enable from"""
+
 KEY_CERTWARN: str = f"{KEY_PRE}CERTWARN"
 """OS env to get cert warning bool from"""
 
@@ -223,6 +226,21 @@ def get_env_connect(**kwargs) -> dict:
         "secret": get_env_str(key=KEY_SECRET),
         "certwarn": get_env_bool(key=KEY_CERTWARN, default=DEFAULT_CERTWARN),
     }
+
+
+# def get_env_features(**kwargs) -> dict:
+#     """Get URL, API key, API secret, and certwarn from OS env vars.
+
+#     Args:
+#         **kwargs: passed to :meth:`load_dotenv`
+#     """
+#     load_dotenv(**kwargs)
+#     return {
+#         "url": get_env_str(key=KEY_URL),
+#         "key": get_env_str(key=KEY_KEY),
+#         "secret": get_env_str(key=KEY_SECRET),
+#         "certwarn": get_env_bool(key=KEY_CERTWARN, default=DEFAULT_CERTWARN),
+#     }
 
 
 def get_env_ax():

@@ -8,7 +8,8 @@ import marshmallow
 import marshmallow_jsonapi
 
 from .base import BaseModel, BaseSchema, BaseSchemaJson
-from .custom_fields import SchemaBool, SchemaDatetime, SchemaPassword, get_field_dc_mm
+from .custom_fields import (SchemaBool, SchemaDatetime, SchemaPassword,
+                            get_field_dc_mm)
 
 
 class SystemUserSchema(BaseSchemaJson):
@@ -63,7 +64,6 @@ class SystemUserUpdateSchema(SystemUserSchema):
         data.pop("last_updated", None)
         data.pop("last_login", None)
         data.pop("uuid", None)
-
         return data
 
 
