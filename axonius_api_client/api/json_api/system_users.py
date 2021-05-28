@@ -66,7 +66,7 @@ class SystemUserUpdateSchema(SystemUserSchema):
         data.pop("last_updated", None)
         data.pop("last_login", None)
         data.pop("uuid", None)
-        feature_check = Features.user_schema_4_3.check_enabled()
+        feature_check = Features.system_user_4_3.check_enabled()
         if not feature_check.result:
             data.pop("ignore_role_assignment_rules", None)
         return data
