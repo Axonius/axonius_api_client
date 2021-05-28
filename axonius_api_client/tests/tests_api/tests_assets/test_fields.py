@@ -554,6 +554,13 @@ class FieldsPublic:
         result = apiobj.fields.validate()
         assert exp == result
 
+    def test_validate_no_fields_error(self, apiobj):
+        fields = apiobj.fields.validate(fields_default=False, fields_error=False)
+        assert not fields
+
+        fields = apiobj.fields.validate(fields=["xxx"], fields_default=False, fields_error=False)
+        assert fields == ["xxx"]
+
     def test_validate_fuzzy(self, apiobj):
         get_schema(apiobj=apiobj, field="specific_data.data.last_seen")
         result = apiobj.fields.validate(fields_fuzzy="lastseen", fields_default=False)
