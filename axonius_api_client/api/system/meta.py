@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """API for working with product metadata."""
+from ... import features
 from ...tools import calc_gb
 from ..api_endpoints import ApiEndpoints
 from ..mixins import ModelMixins
@@ -33,6 +34,7 @@ class Meta(ModelMixins):
         """
         if not hasattr(self, "_about_data"):
             self._about_data = self._about()
+            features.PRODUCT_ABOUT = self._about_data
         return self._about_data
 
     def historical_sizes(self) -> dict:

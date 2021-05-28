@@ -3,33 +3,19 @@
 import os
 
 import pytest
-
-from axonius_api_client.api import (
-    ActivityLogs,
-    Adapters,
-    Dashboard,
-    Devices,
-    Enforcements,
-    Instances,
-    Meta,
-    RemoteSupport,
-    SettingsGlobal,
-    SettingsGui,
-    SettingsLifecycle,
-    Signup,
-    SystemRoles,
-    SystemUsers,
-    Users,
-    Wizard,
-    WizardCsv,
-    WizardText,
-)
+from axonius_api_client.api import (ActivityLogs, Adapters, Dashboard, Devices,
+                                    Enforcements, Instances, Meta,
+                                    RemoteSupport, SettingsGlobal, SettingsGui,
+                                    SettingsLifecycle, Signup, SystemRoles,
+                                    SystemUsers, Users, Wizard, WizardCsv,
+                                    WizardText)
 from axonius_api_client.api.adapters import Cnx
 from axonius_api_client.api.assets import Fields, Labels, SavedQuery
 from axonius_api_client.constants.adapters import CSV_ADAPTER
 
 from .meta import CSV_FILECONTENT_STR, CSV_FILENAME, USER_NAME
-from .utils import check_apiobj, check_apiobj_children, check_apiobj_xref, get_auth, get_url
+from .utils import (check_apiobj, check_apiobj_children, check_apiobj_xref,
+                    get_auth, get_url)
 
 AX_URL = os.environ.get("AX_URL", None) or None
 AX_KEY = os.environ.get("AX_KEY", None) or None
@@ -65,6 +51,9 @@ def pytest_configure(config):
     """Ini file additions."""
     config.addinivalue_line("filterwarnings", "error::axonius_api_client.exceptions.AxonWarning")
     config.addinivalue_line("filterwarnings", "ignore::urllib3.exceptions.InsecureRequestWarning")
+    config.addinivalue_line(
+        "filterwarnings", "ignore::marshmallow.warnings.RemovedInMarshmallow4Warning"
+    )
 
 
 @pytest.fixture(scope="session")

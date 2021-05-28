@@ -6,6 +6,7 @@ from typing import List, Optional
 from ..constants.fields import (AGG_ADAPTER_NAME, AGG_ADAPTER_TITLE,
                                 AGG_EXPR_FIELD_TYPE, ALL_NAME, RAW_NAME,
                                 OperatorTypeMaps)
+from ..features import Features
 from ..tools import strip_left, strip_right
 
 
@@ -15,6 +16,7 @@ def parse_fields(raw: dict) -> dict:
     Args:
         raw: field schemas returned by :meth:`axonius_api_client.api.assets.fields.Fields._get`
     """
+    raw_data_feature = Features.raw_data.check_enabled()
     agg_fields: List[dict] = parse_schemas(
         adapter_name=AGG_ADAPTER_NAME,
         adapter_title=AGG_ADAPTER_TITLE,
@@ -22,6 +24,7 @@ def parse_fields(raw: dict) -> dict:
         adapter_prefix="specific_data.data",
         all_field="specific_data",
         raw_fields=raw["generic"],
+        raw_data_feature=raw_data_feature.result,
     )
 
     agg_base_names: List[str] = [x["name_base"] for x in agg_fields]
@@ -48,6 +51,7 @@ def parse_fields(raw: dict) -> dict:
             all_field=prefix,
             raw_fields=raw_fields,
             agg_base_names=agg_base_names,
+            raw_data_feature=raw_data_feature.result,
         )
 
         parsed[name] = fields
@@ -143,6 +147,7 @@ def parse_schemas(
     all_field: str,
     raw_fields: List[dict],
     agg_base_names: Optional[List[str]] = None,
+    raw_data_feature: bool = False,
 ) -> List[dict]:
     """Parse field schemas for an adapter.
 
@@ -181,30 +186,6 @@ def parse_schemas(
             "expr_field_type": AGG_EXPR_FIELD_TYPE,
             "is_details": False,
             "is_all": True,
-        },
-        {
-            "adapter_name_raw": adapter_name_raw,
-            "adapter_name": adapter_name,
-            "adapter_title": adapter_title,
-            "adapter_prefix": adapter_prefix,
-            "column_name": f"{adapter_name}:{RAW_NAME}",
-            "column_title": f"{adapter_title} Raw Data",
-            "sub_fields": [],
-            "is_complex": True,
-            "is_list": True,
-            "is_root": False,
-            "parent": "root",
-            "name": f"{adapter_prefix}.{RAW_NAME}",
-            "name_base": RAW_NAME,
-            "name_qual": f"{adapter_prefix}.{RAW_NAME}",
-            "title": "Adapter Raw Data",
-            "type": "array",
-            "type_norm": "array_object_object",
-            "selectable": True,
-            "is_agg": adapter_name == AGG_ADAPTER_NAME,
-            "expr_field_type": AGG_EXPR_FIELD_TYPE,
-            "is_details": False,
-            "is_all": False,
         },
         {
             "adapter_name_raw": adapter_name_raw,
@@ -255,6 +236,34 @@ def parse_schemas(
             "is_all": False,
         },
     ]
+
+    if raw_data_feature:
+        fields.append(
+            {
+                "adapter_name_raw": adapter_name_raw,
+                "adapter_name": adapter_name,
+                "adapter_title": adapter_title,
+                "adapter_prefix": adapter_prefix,
+                "column_name": f"{adapter_name}:{RAW_NAME}",
+                "column_title": f"{adapter_title} Raw Data",
+                "sub_fields": [],
+                "is_complex": True,
+                "is_list": True,
+                "is_root": False,
+                "parent": "root",
+                "name": f"{adapter_prefix}.{RAW_NAME}",
+                "name_base": RAW_NAME,
+                "name_qual": f"{adapter_prefix}.{RAW_NAME}",
+                "title": "Adapter Raw Data",
+                "type": "array",
+                "type_norm": "array_object_object",
+                "selectable": True,
+                "is_agg": adapter_name == AGG_ADAPTER_NAME,
+                "expr_field_type": AGG_EXPR_FIELD_TYPE,
+                "is_details": False,
+                "is_all": False,
+            },
+        )
 
     field_names = [strip_left(obj=f["name"], fix=adapter_prefix).strip(".") for f in raw_fields]
 

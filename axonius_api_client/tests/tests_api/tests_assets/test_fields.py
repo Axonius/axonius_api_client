@@ -3,9 +3,9 @@
 import copy
 
 import pytest
-
 from axonius_api_client.api import json_api
-from axonius_api_client.constants.fields import AGG_ADAPTER_ALTS, AGG_ADAPTER_NAME
+from axonius_api_client.constants.fields import (AGG_ADAPTER_ALTS,
+                                                 AGG_ADAPTER_NAME)
 from axonius_api_client.exceptions import ApiError, NotFoundError
 
 from ...meta import FIELD_FORMATS, SCHEMA_FIELD_FORMATS, SCHEMA_TYPES
@@ -126,6 +126,10 @@ class FieldsPrivate:
             dvi = field.pop("dynamic_value_identifier", None)
             assert isinstance(dvi, str) or dvi is None
 
+            # 4.3
+            are_values_cached = field.pop("are_values_cached", False)
+            assert isinstance(are_values_cached, bool)
+
             val_source(obj=field)
 
             assert not field, list(field)
@@ -184,6 +188,10 @@ class FieldsPrivate:
             # 4.0
             dvi = items.pop("dynamic_value_identifier", None)
             assert isinstance(dvi, str) or dvi is None
+
+            # 4.3
+            are_values_cached = items.pop("are_values_cached", False)
+            assert isinstance(are_values_cached, bool)
 
             assert not items, list(items)
 
@@ -332,6 +340,10 @@ class FieldsPublic:
         dvi = schema.pop("dynamic_value_identifier", None)
         assert isinstance(dvi, str) or dvi is None
 
+        # 4.3
+        are_values_cached = schema.pop("are_values_cached", False)
+        assert isinstance(are_values_cached, bool)
+
         if is_complex:
             if name != "all":
                 assert sub_fields
@@ -365,6 +377,10 @@ class FieldsPublic:
             # 4.0
             dvi = items.pop("dynamic_value_identifier", None)
             assert isinstance(dvi, str) or dvi is None
+
+            # 4.3
+            are_values_cached = items.pop("are_values_cached", False)
+            assert isinstance(are_values_cached, bool)
 
             assert not items
 

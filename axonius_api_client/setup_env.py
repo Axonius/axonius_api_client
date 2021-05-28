@@ -174,6 +174,7 @@ def get_env_str(
     Args:
         key: OS env key
         default: default to use if not found
+        empty_ok: dont throw an exc if the key's value is empty
         lower: lowercase the value
 
     Raises:
@@ -213,6 +214,22 @@ def get_env_path(
     return value or ""
 
 
+def get_env_csv(
+    key: str, default: Optional[str] = None, empty_ok: bool = False, lower: bool = False
+) -> List[str]:
+    """Get an OS env var as a CSV.
+
+    Args:
+        key: OS env key
+        default: default to use if not found
+        empty_ok: dont throw an exc if the key's value is empty
+        lower: lowercase the value
+    """
+    value = get_env_str(key=key, default=default, empty_ok=empty_ok, lower=lower)
+    value = [y for y in [x.strip() for x in value.split(",")] if y]
+    return value
+
+
 def get_env_connect(**kwargs) -> dict:
     """Get URL, API key, API secret, and certwarn from OS env vars.
 
@@ -228,19 +245,15 @@ def get_env_connect(**kwargs) -> dict:
     }
 
 
-# def get_env_features(**kwargs) -> dict:
-#     """Get URL, API key, API secret, and certwarn from OS env vars.
+def get_env_features(**kwargs) -> List[str]:
+    """Get list of features to enable from OS env vars.
 
-#     Args:
-#         **kwargs: passed to :meth:`load_dotenv`
-#     """
-#     load_dotenv(**kwargs)
-#     return {
-#         "url": get_env_str(key=KEY_URL),
-#         "key": get_env_str(key=KEY_KEY),
-#         "secret": get_env_str(key=KEY_SECRET),
-#         "certwarn": get_env_bool(key=KEY_CERTWARN, default=DEFAULT_CERTWARN),
-#     }
+    Args:
+        **kwargs: passed to :meth:`load_dotenv`
+    """
+    load_dotenv(**kwargs)
+    value = get_env_csv(key=KEY_FEATURES, default="", empty_ok=True, lower=True)
+    return value
 
 
 def get_env_ax():

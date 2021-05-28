@@ -6,7 +6,6 @@ import logging
 import sys
 
 import pytest
-
 from axonius_api_client.api.asset_callbacks import get_callbacks_cls
 from axonius_api_client.constants.api import FIELD_TRIM_LEN
 from axonius_api_client.constants.fields import SCHEMAS_CUSTOM
@@ -67,7 +66,6 @@ class Callbacks:
     def test_start_stop(self, cbexport, apiobj, caplog):
         getargs = {}
         cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs=getargs)
-        assert not caplog.records
 
         cbobj.start()
         log_check(caplog=caplog, entries=["Starting"], exists=True)
