@@ -201,6 +201,40 @@ class AssetsPublic:
         check_assets(rows)
         assert len(rows) == 20
 
+    def test_get_all_agg(self, apiobj):
+        rows = apiobj.get(fields="agg:all", max_rows=5)
+        for row in rows:
+            assert "specific_data" in row
+            all_datas = row["specific_data"]
+            assert isinstance(all_datas, list)
+            for all_data in all_datas:
+                assert isinstance(all_data, dict)
+                assert isinstance(all_data["plugin_name"], str) and all_data["plugin_name"]
+                assert (
+                    isinstance(all_data["accurate_for_datetime"], str)
+                    and all_data["accurate_for_datetime"]
+                )
+
+                if all_data["plugin_name"] != "static_analysis":
+                    assert isinstance(all_data["client_used"], str) and all_data["client_used"]
+
+    def test_get_all_adapter(self, apiobj):
+        rows = apiobj.get(
+            fields="active_directory:all",
+            wiz_entries="simple active_directory:id exists",
+            max_rows=5,
+        )
+        for row in rows:
+            assert "adapters_data.active_directory_adapter" in row
+            all_datas = row["adapters_data.active_directory_adapter"]
+            assert isinstance(all_datas, list)
+            for all_data in all_datas:
+                assert isinstance(all_data, dict)
+                assert (
+                    isinstance(all_data["accurate_for_datetime"], str)
+                    and all_data["accurate_for_datetime"]
+                )
+
     def test_get_id(self, apiobj):
         asset = apiobj.get(max_rows=1)[0]
         id = asset["internal_axon_id"]
