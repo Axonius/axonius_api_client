@@ -22,7 +22,7 @@ from ..constants.logs import (
     RESPONSE_ATTR_MAP,
 )
 from ..logs import LOG
-from . import context, grp_adapters, grp_assets, grp_system, grp_tools
+from . import context, grp_adapters, grp_assets, grp_system, grp_tools, grp_openapi
 
 
 @click.group(
@@ -383,3 +383,4 @@ cli.add_command(grp_assets.devices)
 cli.add_command(grp_assets.users)
 cli.add_command(grp_system.system)
 cli.add_command(grp_tools.tools)
+cli.add_command(grp_openapi.openapi)

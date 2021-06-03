@@ -133,3 +133,12 @@ def temp_user(api_client):
         api_client.system_users._delete(uuid=tuser.uuid)
     except Exception:
         pass
+
+
+@pytest.fixture(scope="session")
+def api_openapi(request):
+    """Test utility."""
+    auth = get_auth(request)
+    obj = OpenAPISpec(auth=auth)
+    check_apiobj(authobj=auth, apiobj=obj)
+    return obj
