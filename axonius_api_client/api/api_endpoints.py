@@ -200,6 +200,36 @@ class Instances(BaseData):
         response_model_cls=json_api.instances.FactoryReset,
     )
 
+    admin_script_upload_start: ApiEndpoint = ApiEndpoint(
+        method="put",
+        path="api/V4.0/settings/configuration/upload_file",
+        request_schema_cls=None,
+        request_model_cls=None,
+        response_schema_cls=None,
+        response_model_cls=None,
+        response_as_text=True,
+    )
+
+    admin_script_upload_chunk: ApiEndpoint = ApiEndpoint(
+        method="patch",
+        path="api/V4.0/settings/configuration/upload_file?patch={uuid}",
+        request_schema_cls=None,
+        request_model_cls=None,
+        response_schema_cls=None,
+        response_model_cls=None,
+        response_as_text=True,
+    )
+
+    admin_script_execute: ApiEndpoint = ApiEndpoint(
+        method="put",
+        path="api/V4.0/settings/configuration/execute/{uuid}",
+        request_schema_cls=None,
+        request_model_cls=None,
+        response_schema_cls=None,
+        response_model_cls=None,
+        response_as_text=True,
+    )
+
 
 @dataclasses.dataclass
 class CentralCore(BaseData):

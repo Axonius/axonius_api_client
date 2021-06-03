@@ -1,92 +1,17 @@
 # -*- coding: utf-8 -*-
 """Models for API requests & responses."""
 import dataclasses
+import warnings
 from typing import List, Optional, Type, Union
 
 import dataclasses_json
 import marshmallow
 import marshmallow_jsonapi
 
-from ...exceptions import ApiError
+from ...exceptions import (JsonApiError, JsonApiIncorrectType,
+                           UnsupportedVersion, ValidationError)
 from ...http import Http
-from ...tools import json_reload, listify, prettify_obj
-
-
-class ValidationError(ApiError):
-    """Pass."""
-
-    def __init__(self, obj, schema, exc, api_endpoint, data):
-        """Pass."""
-        self.schema = schema
-        self.exc = exc
-        self.obj = obj
-        self.api_endpoint = api_endpoint
-        self.data = data
-
-        errors = exc.messages
-        if isinstance(errors, dict) and "errors" in errors:
-            errors = errors["errors"]
-        self.schema_errors = prettify_obj(errors)
-        pre = f"Schema Validation Error in {schema}"
-        self.errors = [
-            pre,
-            f"With data\n{json_reload(data)}",
-            f"While in {api_endpoint}",
-            f"From {obj}",
-            *self.schema_errors,
-            pre,
-        ]
-        self.msg = "\n\n".join(self.errors)
-        super().__init__(self.msg)
-
-
-class JsonApiError(ApiError):
-    """Pass."""
-
-    def __init__(self, obj, schema, exc, api_endpoint, data):
-        """Pass."""
-        self.schema = schema
-        self.exc = exc
-        self.obj = obj
-        self.api_endpoint = api_endpoint
-        self.data = data
-
-        pre = f"JSON API Error in {schema}: {exc}"
-
-        self.errors = [
-            pre,
-            f"With data:\n{json_reload(data)}",
-            f"While in {api_endpoint}",
-            f"From {obj}",
-            pre,
-        ]
-        self.msg = "\n\n".join(self.errors)
-        super().__init__(self.msg)
-
-
-class UnsupportedVersion(ApiError):
-    """Pass."""
-
-    def __init__(self, schema, data, api_endpoint):
-        """Pass."""
-        self.schema = schema
-        self.data = data
-        self.api_endpoint = api_endpoint
-        pre = "API Client version mismatch!"
-        self.errors = [
-            pre,
-            "",
-            f"With data:\n{json_reload(data)}",
-            f"With schema {schema}",
-            f"While in {api_endpoint}",
-            "",
-            "This version of the API Client only works with Axonius v4.1 or later",
-            "You need to use API client v4.10.x for this version of Axonius",
-            "",
-            pre,
-        ]
-        self.msg = "\n".join(self.errors)
-        super().__init__(self.msg)
+from ...tools import listify
 
 
 class BaseCommon:
@@ -164,9 +89,25 @@ class BaseSchemaJson(BaseSchema, marshmallow_jsonapi.Schema):
     @classmethod
     def load_response(cls, data: dict, http: Http, api_endpoint, **kwargs):
         """Pass."""
+
+        def fix_type(item):
+            if isinstance(item, dict) and item.get("type") and item["type"] != cls.Meta.type_:
+                msg = JsonApiIncorrectType.get_msg(
+                    data=data, api_endpoint=api_endpoint, item=item, schema=schema
+                )
+                warnings.warn(message=msg, category=JsonApiIncorrectType)
+                item["type"] = cls.Meta.type_
+            return item
+
         cls._check_version(data=data, api_endpoint=api_endpoint)
         many = isinstance(data["data"], (list, tuple))
         schema = cls(many=many)
+
+        if isinstance(data["data"], (list, tuple)):
+            data["data"] = [fix_type(item=x) for x in data["data"]]
+        elif isinstance(data["data"], dict):
+            data["data"] = fix_type(item=data["data"])
+
         return cls._load_schema(schema=schema, data=data, http=http, api_endpoint=api_endpoint)
 
 

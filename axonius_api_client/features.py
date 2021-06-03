@@ -50,6 +50,8 @@ class Feature(BaseData):
     description: str
     version_client_added: str = ""
     version_product_min: str = ""
+    version_empty: bool = False
+    product_ticket: str = ""
     force: bool = False
 
     def check_enabled(self, about: Optional[dict] = None) -> FeatureEnabled:
@@ -68,6 +70,10 @@ class Feature(BaseData):
             reason = f"force is {self.force}"
             return FeatureEnabled(result=True, reason=reason, **fe_kwargs)
 
+        if f"no_{self.name}" in env_features:
+            reason = f"disabled in OS environment variable {KEY_FEATURES!r}"
+            return FeatureEnabled(result=False, reason=reason, **fe_kwargs)
+
         if self.name in env_features:
             reason = f"enabled in OS environment variable {KEY_FEATURES!r}"
             return FeatureEnabled(result=True, reason=reason, **fe_kwargs)
@@ -77,8 +83,13 @@ class Feature(BaseData):
             return FeatureEnabled(result=True, reason=reason, **fe_kwargs)
 
         if not prod_ver:
-            reason = f"Axonius version is empty: {prod_ver!r}"
-            return FeatureEnabled(result=False, reason=reason, **fe_kwargs)
+            reason = (
+                f"Axonius version is empty: {prod_ver!r} and version_empty is {self.version_empty}"
+            )
+            if self.version_empty:
+                return FeatureEnabled(result=True, reason=reason, **fe_kwargs)
+            else:
+                return FeatureEnabled(result=False, reason=reason, **fe_kwargs)
 
         if prod_ver >= min_ver:
             reason = f"Axonius version {prod_ver!r} >= Feature version {min_ver!r}"
@@ -115,6 +126,7 @@ class Features(BaseData):
         name="raw_data",
         version_product_min="4.4",
         version_client_added="4.10.6",
+        product_ticket="AX-13595",
         description="""
 - Adds ability to get aggregated raw data in API library via:
 ```
@@ -139,24 +151,5 @@ client.users.get(fields=['aws:raw_data'])
 axonshell devices get --field aws:raw_data
 axonshell users get --field aws:raw_data
 ```
-""",
-    )
-
-    system_user_4_3: Feature = Feature(
-        name="system_user_4_3",
-        version_product_min="4.3",
-        version_client_added="4.10.6",
-        description="""
-- Modifies the schema of system user objects to include the
-  'ignore_role_assignment_rules' attribute that is added in Axonius 4.3
-""",
-    )
-
-    sq_delete_4_3: Feature = Feature(
-        name="sq_delete_4_3",
-        version_product_min="4.3",
-        version_client_added="4.10.6",
-        description="""
-- Modifies the schema for deleting saved queries to use the new schema added in Axonius 4.3
 """,
     )

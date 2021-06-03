@@ -13,7 +13,8 @@ from ...http import Http
 from ...parsers.config import parse_schema
 from ...tools import listify, longest_str, strip_right
 from .base import BaseModel, BaseSchema, BaseSchemaJson
-from .custom_fields import SchemaBool, SchemaDatetime, dump_date, get_field_dc_mm
+from .custom_fields import (SchemaBool, SchemaDatetime, dump_date,
+                            get_field_dc_mm)
 from .generic import Metadata, MetadataSchema
 from .system_settings import SystemSettingsUpdateSchema
 
@@ -774,6 +775,24 @@ class CnxModifyResponseSchema(BaseSchemaJson):
         """Pass."""
 
         type_ = "connections_details_schema"
+
+    # @classmethod
+    # def load_response(cls, data: dict, http: Http, api_endpoint, **kwargs):
+    #     """Pass."""
+    #     cls._check_version(data=data, api_endpoint=api_endpoint)
+
+    #     # NEW_IN: 05/31/21 latest cortex/develop
+    #     # now returning type: connection_status_schema
+    #     if (
+    #         isinstance(data, dict)
+    #         and "data" in data
+    #         and isinstance(data["data"], dict)
+    #         and "type" in data["data"]
+    #         and data["data"]["type"] != cls.Meta.type_
+    #     ):
+    #         data["data"]["type"] = cls.Meta.type_
+    #         # XXX THIS COULD BE A GENERIC THING
+    #     return super().load_response(data=data, http=http, api_endpoint=api_endpoint, **kwargs)
 
 
 @dataclasses.dataclass

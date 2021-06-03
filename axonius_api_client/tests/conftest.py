@@ -50,6 +50,9 @@ def pytest_addoption(parser):
 def pytest_configure(config):
     """Ini file additions."""
     config.addinivalue_line("filterwarnings", "error::axonius_api_client.exceptions.AxonWarning")
+    config.addinivalue_line(
+        "filterwarnings", "default::axonius_api_client.exceptions.JsonApiIncorrectType"
+    )
     config.addinivalue_line("filterwarnings", "ignore::urllib3.exceptions.InsecureRequestWarning")
     config.addinivalue_line(
         "filterwarnings", "ignore::marshmallow.warnings.RemovedInMarshmallow4Warning"
