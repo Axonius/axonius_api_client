@@ -5,6 +5,7 @@ from typing import Generator, List, Optional, Tuple, Union
 from ...constants.api import MAX_PAGE_SIZE
 from ...exceptions import ApiError, NotFoundError
 from ...parsers.tables import tablize_users
+from ...tools import coerce_bool
 from .. import json_api
 from ..api_endpoints import ApiEndpoints
 from ..models import ApiModel
@@ -266,7 +267,10 @@ class SystemUsers(ApiModel):
             enabled: enable/disable the flag
         """
         return self._update_user_attr(
-            name=name, must_be_internal=False, attr="ignore_role_assignment_rules", value=enabled
+            name=name,
+            must_be_internal=False,
+            attr="ignore_role_assignment_rules",
+            value=coerce_bool(obj=enabled),
         )
 
     def delete_by_name(self, name: str) -> str:
@@ -430,12 +434,13 @@ class SystemUsers(ApiModel):
         user_name: str,
         role_id: str,
         password: str,
-        first_name: str,
-        last_name: str,
-        email: str,
-        last_updated: str,
-        source: str,
-        pic_name: str,
+        first_name: Optional[str] = None,
+        last_name: Optional[str] = None,
+        email: Optional[str] = None,
+        last_updated: Optional[str] = None,
+        source: Optional[str] = None,
+        pic_name: Optional[str] = None,
+        ignore_role_assignment_rules: Optional[bool] = None,
         **kwargs,
     ) -> json_api.system_users.SystemUser:
         """Direct API method to update a user.
@@ -456,6 +461,7 @@ class SystemUsers(ApiModel):
             last_updated=last_updated,
             source=source,
             pic_name=pic_name,
+            ignore_role_assignment_rules=ignore_role_assignment_rules,
         )
         return api_endpoint.perform_request(client=self.CLIENT, request_obj=request_obj)
 

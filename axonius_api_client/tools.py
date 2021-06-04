@@ -11,7 +11,8 @@ import platform
 import sys
 from datetime import datetime, timedelta, timezone
 from itertools import zip_longest
-from typing import Any, Callable, Iterable, Iterator, List, Optional, Tuple, Union
+from typing import (Any, Callable, Iterable, Iterator, List, Optional, Tuple,
+                    Union)
 from urllib.parse import urljoin
 
 import click
@@ -21,7 +22,8 @@ import dateutil.tz
 
 from . import INIT_DOTENV, PACKAGE_FILE, PACKAGE_ROOT, VERSION
 from .constants.api import GUI_PAGE_SIZES
-from .constants.general import DEBUG_TMPL, ERROR_TMPL, NO, OK_TMPL, WARN_TMPL, YES
+from .constants.general import (DEBUG_TMPL, ERROR_TMPL, NO, OK_TMPL,
+                                URL_STARTS, WARN_TMPL, YES)
 from .exceptions import ToolsError
 from .setup_env import find_dotenv, get_env_ax
 
@@ -1177,3 +1179,8 @@ def int_days_map(value: Union[str, List[Union[str, int]]], names: bool = False) 
         ret = [str(k) for k, v in DAYS_MAP.items() if k in ret]
 
     return ret
+
+
+def is_url(value: str) -> bool:
+    """Pass."""
+    return isinstance(value, str) and any([value.startswith(x) for x in URL_STARTS])

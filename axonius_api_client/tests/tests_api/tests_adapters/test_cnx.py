@@ -2,18 +2,12 @@
 """Test suite."""
 
 import pytest
-
 from axonius_api_client.api import json_api
 from axonius_api_client.constants.adapters import CSV_ADAPTER
-from axonius_api_client.exceptions import (
-    CnxAddError,
-    CnxGoneError,
-    CnxTestError,
-    ConfigInvalidValue,
-    ConfigRequired,
-    ConfigUnchanged,
-    NotFoundError,
-)
+from axonius_api_client.exceptions import (CnxAddError, CnxGoneError,
+                                           CnxTestError, ConfigInvalidValue,
+                                           ConfigRequired, ConfigUnchanged,
+                                           NotFoundError)
 
 from ...meta import CSV_FILECONTENT_STR
 from ...utils import get_cnx_broken, get_cnx_existing, get_cnx_working
