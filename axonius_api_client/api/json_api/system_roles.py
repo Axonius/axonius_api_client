@@ -101,6 +101,9 @@ class SystemRoleSchema(BaseSchemaJson):
     asset_scope_restriction = marshmallow_jsonapi.fields.Dict(required=False)
     # PBUG: not modeled well
 
+    # NEW_IN: 05/31/21 cortex/develop
+    users_count = marshmallow_jsonapi.fields.Int(required=False, missing=0)
+
     @staticmethod
     def get_model_cls() -> type:
         """Pass."""
@@ -135,6 +138,9 @@ class SystemRoleUpdateSchema(SystemRoleSchema):
         data.pop("predefined", None)
         # PBUG: these should really just be ignored by rest api
 
+        # NEW_IN: 05/31/21 cortex/develop
+        data.pop("users_count", None)
+
         asr = data.get("asset_scope_restriction", {}) or {}
         if not asr:
             data["asset_scope_restriction"] = asr = {"enabled": False}
@@ -163,6 +169,9 @@ class SystemRole(BaseModel):
         mm_field=SchemaDatetime(allow_none=True), default=None
     )
     id: Optional[str] = None
+
+    # NEW_IN: 05/31/21 cortex/develop
+    users_count: int = 0
 
     @staticmethod
     def get_schema_cls() -> Optional[Type[BaseSchema]]:

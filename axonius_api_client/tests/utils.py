@@ -8,15 +8,14 @@ import sys
 from io import StringIO
 
 import pytest
-from cachetools import TTLCache, cached
-from click.testing import CliRunner
-
 from axonius_api_client import Wizard, api, auth
 from axonius_api_client.cli.context import Context
 from axonius_api_client.constants.fields import AGG_ADAPTER_NAME
 from axonius_api_client.exceptions import NotFoundError
 from axonius_api_client.http import Http
 from axonius_api_client.tools import listify
+from cachetools import TTLCache, cached
+from click.testing import CliRunner
 
 IS_WINDOWS = sys.platform == "win32"
 IS_LINUX = sys.platform == "linux"
@@ -136,6 +135,7 @@ def get_cnx_working(apiobj, name=None, reqkeys=None):
     """Test utility."""
     problems = [
         "symantec_altiris",  # AX-7165
+        "alibaba",  # noticed in 4.3 that test fails but connection still green
     ]
     found = get_cnx(
         apiobj=apiobj, cntkey="success_count", name=name, reqkeys=reqkeys, problems=problems

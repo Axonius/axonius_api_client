@@ -130,6 +130,15 @@ class SavedQueries(BaseData):
         response_model_cls=json_api.generic.Metadata,
     )
 
+    delete_4_3: ApiEndpoint = ApiEndpoint(
+        method="delete",
+        path="api/V4.0/{asset_type}/views/view/{uuid}",
+        request_schema_cls=json_api.saved_queries.SavedQueryDeleteSchema,
+        request_model_cls=json_api.saved_queries.SavedQueryDelete,
+        response_schema_cls=json_api.generic.MetadataSchema,
+        response_model_cls=json_api.generic.Metadata,
+    )
+
 
 @dataclasses.dataclass
 class Instances(BaseData):
@@ -189,6 +198,36 @@ class Instances(BaseData):
         request_model_cls=json_api.instances.FactoryResetRequest,
         response_schema_cls=json_api.instances.FactoryResetSchema,
         response_model_cls=json_api.instances.FactoryReset,
+    )
+
+    admin_script_upload_start: ApiEndpoint = ApiEndpoint(
+        method="put",
+        path="api/V4.0/settings/configuration/upload_file",
+        request_schema_cls=None,
+        request_model_cls=None,
+        response_schema_cls=None,
+        response_model_cls=None,
+        response_as_text=True,
+    )
+
+    admin_script_upload_chunk: ApiEndpoint = ApiEndpoint(
+        method="patch",
+        path="api/V4.0/settings/configuration/upload_file?patch={uuid}",
+        request_schema_cls=None,
+        request_model_cls=None,
+        response_schema_cls=None,
+        response_model_cls=None,
+        response_as_text=True,
+    )
+
+    admin_script_execute: ApiEndpoint = ApiEndpoint(
+        method="put",
+        path="api/V4.0/settings/configuration/execute/{uuid}",
+        request_schema_cls=None,
+        request_model_cls=None,
+        response_schema_cls=None,
+        response_model_cls=None,
+        response_as_text=True,
     )
 
 
@@ -801,6 +840,21 @@ class AuditLogs(BaseData):
 
 
 @dataclasses.dataclass
+class OpenAPISpec(BaseData):
+    """Pass."""
+
+    get_spec: ApiEndpoint = ApiEndpoint(
+        method="get",
+        path="api/open_api_yaml",
+        request_schema_cls=None,
+        request_model_cls=None,
+        response_as_text=True,
+        response_schema_cls=None,
+        response_model_cls=None,
+    )
+
+
+@dataclasses.dataclass
 class ApiEndpoints(BaseData):
     """Pass."""
 
@@ -818,3 +872,4 @@ class ApiEndpoints(BaseData):
     enforcements = Enforcements
     saved_queries = SavedQueries
     assets = Assets
+    openapi = OpenAPISpec

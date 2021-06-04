@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 """Test suite for assets."""
 import pytest
-
+from axonius_api_client import features
 from axonius_api_client.api import json_api, mixins
 from axonius_api_client.constants.api import MAX_PAGE_SIZE
 from axonius_api_client.exceptions import NotFoundError
+from axonius_api_client.tools import listify
 
 from ...meta import QUERIES
 from ...utils import check_asset, check_assets
@@ -149,6 +150,47 @@ class AssetsPublic:
         check_assets(rows)
         assert len(rows) == 1
 
+    def test_get_no_dups(self, apiobj):
+        rows = apiobj.get(generator=True)
+        ids = {}
+        for idx, row in enumerate(rows):
+            id = row["internal_axon_id"]
+            if id in ids:
+                raise Exception(f"Duplicate id {id} at row {idx}")
+
+    @pytest.fixture(scope="class")
+    def raw_data_feature(self, apiobj, api_meta):
+        api_meta.about()
+        raw_data_feature = features.Features.raw_data.check_enabled()
+        if not raw_data_feature.result:
+            pytest.skip(f"{raw_data_feature}")
+
+    def test_get_agg_raw_data(self, raw_data_feature, apiobj):
+        rows = apiobj.get(fields=["agg:raw_data"])
+        for row in rows:
+            self.validate_raw_data(apiobj=apiobj, row=row, field="specific_data.data.raw_data")
+
+    def validate_raw_data(self, apiobj, row, field):
+        adapters = row["adapters"]
+        raw_datas = row[field]
+        assert isinstance(raw_datas, (dict, list)) and raw_datas
+
+        raw_datas = listify(raw_datas)
+        for raw_data in raw_datas:
+            assert isinstance(raw_data["data"], dict)
+            assert isinstance(raw_data["plugin_name"], str) and raw_data["plugin_name"]
+            assert isinstance(raw_data["client_used"], str) and raw_data["client_used"]
+            assert raw_data["plugin_name"] in adapters
+
+    def test_get_adapter_raw_data(self, raw_data_feature, apiobj):
+        rows = apiobj.get(
+            fields=["active_directory:raw_data"], wiz_entries="simple active_directory:id exists"
+        )
+        for row in rows:
+            self.validate_raw_data(
+                apiobj=apiobj, row=row, field="adapters_data.active_directory_adapter.raw_data"
+            )
+
     def test_get_page_size_over_max(self, apiobj):
         rows = apiobj.get(page_size=3000, max_pages=1)
         check_assets(rows)
@@ -158,6 +200,40 @@ class AssetsPublic:
         rows = apiobj.get(page_size=20, max_pages=1)
         check_assets(rows)
         assert len(rows) == 20
+
+    def test_get_all_agg(self, apiobj):
+        rows = apiobj.get(fields="agg:all", max_rows=5)
+        for row in rows:
+            assert "specific_data" in row
+            all_datas = row["specific_data"]
+            assert isinstance(all_datas, list)
+            for all_data in all_datas:
+                assert isinstance(all_data, dict)
+                assert isinstance(all_data["plugin_name"], str) and all_data["plugin_name"]
+                assert (
+                    isinstance(all_data["accurate_for_datetime"], str)
+                    and all_data["accurate_for_datetime"]
+                )
+
+                if all_data["plugin_name"] != "static_analysis":
+                    assert isinstance(all_data["client_used"], str) and all_data["client_used"]
+
+    def test_get_all_adapter(self, apiobj):
+        rows = apiobj.get(
+            fields="active_directory:all",
+            wiz_entries="simple active_directory:id exists",
+            max_rows=5,
+        )
+        for row in rows:
+            assert "adapters_data.active_directory_adapter" in row
+            all_datas = row["adapters_data.active_directory_adapter"]
+            assert isinstance(all_datas, list)
+            for all_data in all_datas:
+                assert isinstance(all_data, dict)
+                assert (
+                    isinstance(all_data["accurate_for_datetime"], str)
+                    and all_data["accurate_for_datetime"]
+                )
 
     def test_get_id(self, apiobj):
         asset = apiobj.get(max_rows=1)[0]

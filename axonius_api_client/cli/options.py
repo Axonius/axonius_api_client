@@ -174,6 +174,17 @@ FIELDS_SELECT = [
         show_envvar=True,
         show_default=True,
     ),
+    click.option(
+        "--fields-error/--no-fields-error",
+        "-fer/-nfer",
+        "fields_error",
+        help="Throw errors for invalid fields supplied in --field",
+        is_flag=True,
+        default=True,
+        required=False,
+        show_envvar=True,
+        show_default=True,
+    ),
 ]
 
 EXPORT = [

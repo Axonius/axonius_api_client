@@ -2,18 +2,12 @@
 """Test suite."""
 
 import pytest
-
 from axonius_api_client.api import json_api
 from axonius_api_client.constants.adapters import CSV_ADAPTER
-from axonius_api_client.exceptions import CnxAddError  # CnxUpdateError,
-from axonius_api_client.exceptions import (
-    CnxGoneError,
-    CnxTestError,
-    ConfigInvalidValue,
-    ConfigRequired,
-    ConfigUnchanged,
-    NotFoundError,
-)
+from axonius_api_client.exceptions import (CnxAddError, CnxGoneError,
+                                           CnxTestError, ConfigInvalidValue,
+                                           ConfigRequired, ConfigUnchanged,
+                                           NotFoundError)
 
 from ...meta import CSV_FILECONTENT_STR
 from ...utils import get_cnx_broken, get_cnx_existing, get_cnx_working
@@ -97,6 +91,10 @@ class TestCnxPublic(TestCnxBase):
             **cnx["config"],
         )
         assert result is True
+
+    # XXX in 4.1 this can't be relied on
+    # it seems all tests return '{"data":null,"meta":400}\n'
+    # regardless if the test fails or succeeds
 
     def test_test_fail(self, apiobj):
         mpass = "badwolf"
