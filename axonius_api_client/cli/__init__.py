@@ -13,8 +13,7 @@ from ..constants.logs import (LOG_FILE_MAX_FILES, LOG_FILE_MAX_MB,
                               LOG_LEVEL_PACKAGE, LOG_LEVELS_STR,
                               REQUEST_ATTR_MAP, RESPONSE_ATTR_MAP)
 from ..logs import LOG
-from . import (cmd_help_features, context, grp_adapters, grp_assets,
-               grp_system, grp_tools)
+from . import context, grp_adapters, grp_assets, grp_system, grp_tools, grp_openapi, cmd_help_features
 
 
 @click.group(
@@ -375,4 +374,5 @@ cli.add_command(grp_assets.devices)
 cli.add_command(grp_assets.users)
 cli.add_command(grp_system.system)
 cli.add_command(grp_tools.tools)
+cli.add_command(grp_openapi.openapi)
 cli.add_command(cmd_help_features.cmd)

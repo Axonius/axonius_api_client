@@ -3,12 +3,27 @@
 import os
 
 import pytest
-from axonius_api_client.api import (ActivityLogs, Adapters, Dashboard, Devices,
-                                    Enforcements, Instances, Meta,
-                                    RemoteSupport, SettingsGlobal, SettingsGui,
-                                    SettingsLifecycle, Signup, SystemRoles,
-                                    SystemUsers, Users, Wizard, WizardCsv,
-                                    WizardText)
+from axonius_api_client.api import (
+    ActivityLogs,
+    Adapters,
+    Dashboard,
+    Devices,
+    Enforcements,
+    Instances,
+    Meta,
+    RemoteSupport,
+    SettingsGlobal,
+    SettingsGui,
+    SettingsLifecycle,
+    Signup,
+    SystemRoles,
+    SystemUsers,
+    Users,
+    Wizard,
+    WizardCsv,
+    WizardText,
+    OpenAPISpec
+)
 from axonius_api_client.api.adapters import Cnx
 from axonius_api_client.api.assets import Fields, Labels, SavedQuery
 from axonius_api_client.constants.adapters import CSV_ADAPTER
@@ -302,3 +317,12 @@ def temp_user(api_system_users):
         api_system_users._delete(uuid=tuser.uuid)
     except Exception:
         pass
+
+
+@pytest.fixture(scope="session")
+def api_openapi(request):
+    """Test utility."""
+    auth = get_auth(request)
+    obj = OpenAPISpec(auth=auth)
+    check_apiobj(authobj=auth, apiobj=obj)
+    return obj
