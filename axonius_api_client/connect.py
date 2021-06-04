@@ -55,13 +55,13 @@ class Connect:
         >>> # client.enforcements           # work with Enforcement Center
         >>> # client.instances              # get instances and instance meta data
         >>> # client.meta                   # get product meta data
+        >>> # client.openapi                # work with OpenAPI Specification
         >>> # client.remote_support         # enable/disable remote support settings
         >>> # client.settings_global        # get/update global system settings
         >>> # client.settings_gui           # get/update gui system settings
         >>> # client.settings_ip            # get/update identity provider system settings
         >>> # client.settings_lifecycle     # get/update lifecycle system settings
         >>> # client.signup                 # perform initial signup and use password reset tokens
-        >>> # client.openapi                # work with OpenAPI Specification
         >>> # client.system_roles           # CRUD for system roles
         >>> # client.system_users           # CRUD for system users
         >>> # client.users                  # get user assets
