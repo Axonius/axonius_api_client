@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
 """Test suite for axonapi.api.enforcements."""
 import pytest
-
 from axonius_api_client.api import json_api
-from axonius_api_client.exceptions import ResponseNotOk
+from axonius_api_client.exceptions import ApiError, ResponseNotOk
 
 from ..meta import EMAIL
 from ..utils import random_string
@@ -32,9 +31,9 @@ class TestSignupPublic(TestSignup):
         assert isinstance(data, bool) and data
 
     def test_signup(self, api_client):
-        with pytest.raises(ResponseNotOk) as exc:
+        with pytest.raises(ApiError) as exc:
             api_client.signup.signup(password="x", company_name="x", contact_email=EMAIL)
-        assert "Signup already completed" in str(exc.value)
+        assert "Initial signup already performed" in str(exc.value)
 
     def test_use_password_reset_token(self, api_client, temp_user):
         token = api_client.system_users.get_password_reset_link(name=temp_user.user_name)

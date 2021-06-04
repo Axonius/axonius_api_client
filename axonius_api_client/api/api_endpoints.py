@@ -889,6 +889,7 @@ class Signup(BaseData):
         request_model_cls=None,
         response_schema_cls=json_api.generic.BoolValueSchema,
         response_model_cls=json_api.generic.BoolValue,
+        http_args={"headers_auth": False},
     )
 
     perform: ApiEndpoint = ApiEndpoint(
@@ -898,6 +899,7 @@ class Signup(BaseData):
         request_model_cls=json_api.signup.SignupRequest,
         response_schema_cls=json_api.signup.SignupResponseSchema,
         response_model_cls=json_api.signup.SignupResponse,
+        http_args={"headers_auth": False},
     )
 
     status: ApiEndpoint = ApiEndpoint(
@@ -907,6 +909,35 @@ class Signup(BaseData):
         request_model_cls=None,
         response_schema_cls=json_api.signup.SystemStatusSchema,
         response_model_cls=json_api.signup.SystemStatus,
+        http_args={"headers_auth": False},
+    )
+
+    login: ApiEndpoint = ApiEndpoint(
+        method="post",
+        path="api/V4.0/login",
+        request_schema_cls=json_api.signup.LoginRequestSchema,
+        request_model_cls=json_api.signup.LoginRequest,
+        response_schema_cls=json_api.generic.MetadataSchema,
+        response_model_cls=json_api.generic.Metadata,
+        http_args={"headers_auth": False},
+    )
+
+    get_api_keys: ApiEndpoint = ApiEndpoint(
+        method="get",
+        path="api/V4.0/settings/api_key",
+        request_schema_cls=None,
+        request_model_cls=None,
+        response_schema_cls=None,
+        response_model_cls=None,
+    )
+
+    reset_api_keys: ApiEndpoint = ApiEndpoint(
+        method="post",
+        path="api/V4.0/settings/reset_api_key",
+        request_schema_cls=None,
+        request_model_cls=None,
+        response_schema_cls=None,
+        response_model_cls=None,
     )
 
 

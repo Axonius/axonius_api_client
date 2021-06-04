@@ -26,15 +26,16 @@ API Objects:
     - enforcements/ec: Work with Enforcement Center
     - instances/i: Work with instances
     - meta/m: Work with instance metadata
+    - openapi/oas: Work with the OpenAPI specification file
     - remote_support/rs: Work with configuring system remote support
     - settings_global/sgl: Work with Global system settings
     - settings_gui/sgu: Work with GUI system settings
-    - settings_lifecycle/sl: Work with Lifecyle system settings
     - settings_ip/sip: Work with Identity Provider system settings
+    - settings_lifecycle/sl: Work with Lifecyle system settings
+    - signup: Work with signup, system status, etc
     - system_roles/sr: Work with system roles
     - system_users/su: Work with system users
     - users/u: Work with user assets
-    - openapi/openapi: Work with the OpenAPI specification file
 
 """
 
@@ -72,20 +73,19 @@ def cmd(ctx, url, key, secret):  # noqa: D301
         - enforcements/ec: Work with Enforcement Center
         - instances/i: Work with instances
         - meta/m: Work with instance metadata
+        - openapi/oas: Work with the OpenAPI specification file
         - remote_support/rs: Work with configuring system remote support
         - settings_global/sgl: Work with Global system settings
         - settings_gui/sgu: Work with GUI system settings
         - settings_ip/sip: Work with Identity Provider system settings
         - settings_lifecycle/sl: Work with Lifecyle system settings
+        - signup: Work with signup, system status, etc
         - system_roles/sr: Work with system roles
         - system_users/su: Work with system users
         - users/u: Work with user assets
-        - openapi/openapi: Work with the OpenAPI specification file
 
     """
     client = ctx.obj.start_client(url=url, key=key, secret=secret, save_history=True)
-
-    client.HTTP.save_history = True
 
     shellvars = {
         "adapters": client.adapters,
@@ -108,6 +108,7 @@ def cmd(ctx, url, key, secret):  # noqa: D301
         "settings_lifecycle": client.settings_lifecycle,
         "settings_ip": client.settings_ip,
         "openapi": client.openapi,
+        "signup": client.signup,
         "a": client.adapters,
         "al": client.activity_logs,
         "c": client,
@@ -125,7 +126,7 @@ def cmd(ctx, url, key, secret):  # noqa: D301
         "sgu": client.settings_gui,
         "sl": client.settings_lifecycle,
         "sip": client.settings_ip,
-        "openapi": client.openapi,
+        "oas": client.openapi,
     }
 
     spawn_shell(shellvars)

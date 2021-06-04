@@ -115,18 +115,18 @@ class TestInstancesPublic:
         reset_value = api_client.instances.set_name(name=new_value, new_name=orig_value)
         assert reset_value == orig_value
 
-    def test_admin_script_upload_path_file(self, apiobj, tmp_path):
+    def test_admin_script_upload_path_file(self, api_client, tmp_path):
         file_path = tmp_path / "admin_script_test.txt"
         file_path.write_text("badwolf\nbadwolf\nbadwolf")
-        data = apiobj.admin_script_upload_path(path=file_path)
+        data = api_client.instances.admin_script_upload_path(path=file_path)
         assert isinstance(data, dict) and data
         assert data["file_name"] == "admin_script_test.txt"
         assert isinstance(data["file_uuid"], str) and data["file_uuid"]
         assert data["execute_result"] == "file executed"
 
-    def test_admin_script_upload_path_url(self, apiobj):
-        path = f"{apiobj.http.url}/{ApiEndpoints.system_settings.meta_about.path}"
-        data = apiobj.admin_script_upload_path(path=path)
+    def test_admin_script_upload_path_url(self, api_client):
+        path = f"{api_client.HTTP.url}/{ApiEndpoints.system_settings.meta_about.path}"
+        data = api_client.instances.admin_script_upload_path(path=path)
         assert isinstance(data, dict) and data
         assert data["file_name"] == "about"
         assert isinstance(data["file_uuid"], str) and data["file_uuid"]

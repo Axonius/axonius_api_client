@@ -8,7 +8,8 @@ from typing import List, Optional, Union
 import requests
 
 from .constants.api import TIMEOUT_CONNECT, TIMEOUT_RESPONSE
-from .constants.logs import LOG_LEVEL_HTTP, MAX_BODY_LEN, REQUEST_ATTR_MAP, RESPONSE_ATTR_MAP
+from .constants.logs import (LOG_LEVEL_HTTP, MAX_BODY_LEN, REQUEST_ATTR_MAP,
+                             RESPONSE_ATTR_MAP)
 from .exceptions import HttpError
 from .logs import get_obj_log, set_log_level
 from .parsers.url_parser import UrlParser
@@ -71,7 +72,7 @@ class Http:
         """save requests to :attr:`LAST_REQUEST` and responses to :attr:`LAST_RESPONSE`
         ``kwargs=save_last``"""
 
-        self.SAVEHISTORY: bool = kwargs.get("save_history", False)
+        self.SAVE_HISTORY: bool = kwargs.get("save_history", False)
         """Append all responses to :attr:`HISTORY` ``kwargs=save_history``"""
 
         self.CONNECT_TIMEOUT: int = kwargs.get("connect_timeout", TIMEOUT_CONNECT)
@@ -137,12 +138,12 @@ class Http:
         self.session: requests.Session = requests.Session()
         """:obj:`requests.Session`: session object to use"""
 
-        headers = kwargs.get("headers") or {}
+        self.HEADERS: dict = kwargs.get("headers") or {}
+        self.HEADERS_AUTH: dict = kwargs.get("headers_auth") or {}
 
         self.session.proxies = {}
         self.session.proxies["https"] = self.HTTPS_PROXY
         self.session.proxies["http"] = self.HTTP_PROXY
-        self.session.headers.update(headers)
 
         if certpath:  # pragma: no cover
             path_read(obj=certpath, binary=True)
@@ -181,8 +182,10 @@ class Http:
         data: Optional[str] = None,
         params: Optional[dict] = None,
         headers: Optional[dict] = None,
+        headers_auth: bool = True,
         json: Optional[dict] = None,
         files: tuple = None,
+        content_type_json: bool = True,
         **kwargs,
     ):
         """Create, prepare, and then send a request using :attr:`session`.
@@ -194,6 +197,7 @@ class Http:
             data: body to send
             params: parameters to url encode
             headers: headers to send
+            headers_auth: include :attr:`HEADERS` in headers sent with request
             json: obj to encode as json
             files: files to send
             **kwargs: overrides for object attributes
@@ -207,9 +211,12 @@ class Http:
         Returns:
             :obj:`requests.Response`
         """
-        url = join_url(self.url, path, route)
+        url = kwargs.get("url") or join_url(self.url, path, route)
 
         this_headers = {}
+        if headers_auth:
+            this_headers.update(self.HEADERS_AUTH)
+        this_headers.update(self.HEADERS)
         this_headers.update(headers or {})
         this_headers.setdefault("User-Agent", self.user_agent)
 
@@ -223,8 +230,9 @@ class Http:
             files=files or [],
         )
         prepped_request = self.session.prepare_request(request=request)
-        if "Content-Type" not in prepped_request.headers:
-            prepped_request.headers["Content-Type"] = "application/vnd.api+json"
+
+        if content_type_json:
+            prepped_request.headers.setdefault("Content-Type", "application/vnd.api+json")
 
         if self.SAVE_LAST:
             self.LAST_REQUEST = prepped_request
@@ -250,7 +258,7 @@ class Http:
         if self.SAVE_LAST:
             self.LAST_RESPONSE = response
 
-        if self.SAVEHISTORY:
+        if self.SAVE_HISTORY:
             self.HISTORY.append(response)
 
         self._do_log_response(response=response)

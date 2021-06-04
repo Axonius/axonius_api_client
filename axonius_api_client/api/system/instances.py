@@ -8,7 +8,7 @@ from typing import List, Optional, Union
 import requests
 from cachetools import TTLCache, cached
 
-from ...exceptions import NotFoundError
+from ...exceptions import ApiError, NotFoundError
 from ...tools import is_url, path_read
 from .. import json_api
 from ..api_endpoints import ApiEndpoints
@@ -517,6 +517,22 @@ class Instances(ApiModel):
         kwargs["file_content"] = file_content
         return self.admin_script_upload(**kwargs)
 
+    def get_api_keys(self) -> dict:
+        """Get the API key and token."""
+        if not self.CLIENT.signup.is_signed_up:
+            raise ApiError("Initial signup not yet performed!")
+
+        return self._get_api_keys()
+
+    def reset_api_keys(self) -> dict:
+        """Reset the API key and token."""
+        if not self.CLIENT.signup.is_signed_up:
+            raise ApiError("Initial signup not yet performed!")
+
+        response = self._reset_api_keys()
+        self.CLIENT.HTTP.HEADERS_AUTH.update(response)
+        return response
+
     def _get(self) -> List[json_api.instances.Instance]:
         """Direct API method to get instances."""
         api_endpoint = ApiEndpoints.instances.get
@@ -691,3 +707,13 @@ class Instances(ApiModel):
 
         response = api_endpoint.perform_request(client=self.CLIENT, uuid=uuid)
         return response
+
+    def _get_api_keys(self) -> dict:
+        """Get API key and token."""
+        api_endpoint = ApiEndpoints.signup.get_api_keys
+        return api_endpoint.perform_request(client=self.CLIENT)
+
+    def _reset_api_keys(self) -> dict:
+        """Reset API key and token."""
+        api_endpoint = ApiEndpoints.signup.reset_api_keys
+        return api_endpoint.perform_request(client=self.CLIENT)

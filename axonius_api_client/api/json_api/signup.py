@@ -30,6 +30,24 @@ class SignupRequestSchema(DataSchemaJson):
         return SignupRequest
 
 
+class LoginRequestSchema(DataSchemaJson):
+    """Pass."""
+
+    user_name = get_field_str_req()
+    password = get_field_str_req()
+    remember_me = marshmallow_jsonapi.fields.Bool(missing=False)
+
+    class Meta:
+        """Pass."""
+
+        type_ = "login_schema"
+
+    @staticmethod
+    def _get_model_cls() -> type:
+        """Pass."""
+        return LoginRequest
+
+
 class SystemStatusSchema(DataSchemaJson):
     """Pass."""
 
@@ -63,6 +81,20 @@ class SignupRequest(DataModel):
     def _get_schema_cls() -> Optional[Type[DataSchema]]:
         """Pass."""
         return SignupRequestSchema
+
+
+@dataclasses.dataclass
+class LoginRequest(DataModel):
+    """Pass."""
+
+    user_name: str
+    password: str
+    remember_me: bool = True
+
+    @staticmethod
+    def _get_schema_cls() -> Optional[Type[DataSchema]]:
+        """Pass."""
+        return LoginRequestSchema
 
 
 class SignupResponseSchema(DataSchemaJson):

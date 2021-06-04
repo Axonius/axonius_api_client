@@ -49,7 +49,7 @@ class EnforcementsBase:
         return api_client.devices.saved_query.get()[0]
 
 
-class TestEnforcementsPrivate(EnforcementsBase):
+class TxstEnforcementsPrivate(EnforcementsBase):
     def test_set_already_exists(self, api_client, ec_obj):
         with pytest.raises(ApiError):
             api_client.enforcements._check_set_exists(value=ec_obj.name)
@@ -95,7 +95,7 @@ class TestEnforcementsPrivate(EnforcementsBase):
     #     assert data == "AllEntities"
 
 
-class TestEnforcementsPublic(EnforcementsBase):
+class TxstEnforcementsPublic(EnforcementsBase):
     @pytest.fixture(scope="function")
     def ec_trigger_obj(self, api_client, sq_obj):
         self.cleanup(api_client, EC_TRIGGER_NAME)

@@ -230,6 +230,10 @@ class Connect:
 
         headers = kwargs.get("headers") or {}
 
+        headers_auth = kwargs.get("headers_auth") or {}
+        headers_auth["api-key"] = key
+        headers_auth["api-secret"] = secret
+
         self.HTTP_ARGS: dict = {
             "url": url,
             "https_proxy": proxy,
@@ -248,19 +252,17 @@ class Connect:
             "connect_timeout": self.TIMEOUT_CONNECT,
             "response_timeout": self.TIMEOUT_RESPONSE,
             "headers": headers,
+            "headers_auth": headers_auth,
         }
         """arguments to use for creating :attr:`HTTP`"""
 
         self.HTTP = Http(**self.HTTP_ARGS)
         """:obj:`axonius_api_client.http.Http` client to use for :attr:`AUTH`"""
 
-        self.HTTP.session.headers["api-key"] = key
-        self.HTTP.session.headers["api-secret"] = secret
-
         self.API_ARGS: dict = {"client": self, "log_level": self.LOG_LEVEL_API}
         """arguments to use for all API models"""
 
-        self.SIGNUP = self.API.Signup(**self.HTTP_ARGS)
+        self.SIGNUP = self.API.Signup(**self.API_ARGS)
         """Easy access to signup."""
 
     def start(self):
@@ -297,9 +299,7 @@ class Connect:
     @property
     def signup(self):
         """Work with signup endpoints."""
-        if not hasattr(self, "_signup"):
-            self._signup = self.API.Signup(**self.HTTP_ARGS)
-        return self._signup
+        return self.SIGNUP
 
     @property
     def users(self):

@@ -1,16 +1,14 @@
 # -*- coding: utf-8 -*-
 """API for performing initial signup."""
-from ...constants.logs import LOG_LEVEL_API
 from ...exceptions import ApiError
-from ...http import Http
-from ...logs import get_obj_log
 from ...tools import token_parse
 from .. import json_api
 from ..api_endpoints import ApiEndpoints
+from ..models import ApiModel
 
 
-class Signup:
-    """API for performing initial signup.
+class Signup(ApiModel):
+    """API for endpoints that do not require api key and api token.
 
     Examples:
         * Check if initial signup has been done: :meth:`is_signed_up`
@@ -29,11 +27,40 @@ class Signup:
         """
         return self._get().value
 
-    # XXX when will this actually be in cortex, and when will it actually be in release>????
     @property
     def system_status(self) -> json_api.signup.SystemStatus:
-        """Pass."""
+        """Get the status of the Axonius instance (started, ready, loading containers, ...)."""
         return self._status()
+
+    def get_api_keys(self, user_name: str, password: str) -> dict:
+        """Get the API key and token using user name and password credentials.
+
+        Args:
+            user_name: axonius username
+            password: password for user_name
+        """
+        if not self.CLIENT.is_signed_up:
+            raise ApiError("Initial signup not yet performed!")
+
+        login = self._login("admin", "admin")
+        bearer_token = login.document_meta["access_token"]
+        return self._get_api_keys(bearer_token=bearer_token)
+
+    def reset_api_keys(self, user_name: str, password: str) -> dict:
+        """Reset the API key and token using user name and password credentials.
+
+        Args:
+            user_name: axonius username
+            password: password for user_name
+        """
+        if not self.CLIENT.is_signed_up:
+            raise ApiError("Initial signup not yet performed!")
+
+        login = self._login("admin", "admin")
+        bearer_token = login.document_meta["access_token"]
+        response = self._reset_api_keys(bearer_token=bearer_token)
+        self.CLIENT.HTTP.HEADERS_AUTH.update(response)
+        return response
 
     def signup(self, password: str, company_name: str, contact_email: str) -> dict:
         """Perform the initial signup and get the API key and API secret of admin user.
@@ -51,13 +78,16 @@ class Signup:
             company_name: name of company
             contact_email: email address of company contact
         """
+        if self.is_signed_up:
+            raise ApiError("Initial signup already performed!")
+
         response = self._perform(
             password=password, company_name=company_name, contact_email=contact_email
         )
         return response.to_dict()
 
     def validate_password_reset_token(self, token: str) -> bool:
-        """Pass."""
+        """Validate that a password reset token is valid."""
         token = token_parse(token)
         data = self._token_validate(token=token)
         return data.value
@@ -90,18 +120,22 @@ class Signup:
     def _status(self) -> json_api.signup.SystemStatus:
         """Direct API method to get the status of the overall system."""
         api_endpoint = ApiEndpoints.signup.status
-        return api_endpoint.perform_request(client=self)
+        return api_endpoint.perform_request(client=self.CLIENT)
 
     def _get(self) -> json_api.generic.BoolValue:
         """Direct API method to get the status of initial signup."""
         api_endpoint = ApiEndpoints.signup.get
-        return api_endpoint.perform_request(client=self)
+        return api_endpoint.perform_request(client=self.CLIENT)
 
     def _token_validate(self, token: str) -> json_api.password_reset.ValidateResponse:
-        """Pass."""
+        """Direct API method to validate a password reset token.
+
+        Args:
+            token: password reset token to validate
+        """
         api_endpoint = ApiEndpoints.password_reset.validate
         request_obj = api_endpoint.load_request(token=token)
-        return api_endpoint.perform_request(client=self, request_obj=request_obj)
+        return api_endpoint.perform_request(client=self.CLIENT, request_obj=request_obj)
 
     def _token_use(self, token: str, password: str) -> json_api.password_reset.UseResponse:
         """Direct API method to use a reset token to change a password.
@@ -112,7 +146,7 @@ class Signup:
         """
         api_endpoint = ApiEndpoints.password_reset.use
         request_obj = api_endpoint.load_request(token=token, password=password)
-        return api_endpoint.perform_request(client=self, request_obj=request_obj)
+        return api_endpoint.perform_request(client=self.CLIENT, request_obj=request_obj)
 
     def _perform(
         self, password: str, company_name: str, contact_email: str
@@ -133,17 +167,34 @@ class Signup:
             user_name="admin",
             api_keys=True,
         )
-        return api_endpoint.perform_request(client=self, request_obj=request_obj)
+        return api_endpoint.perform_request(client=self.CLIENT, request_obj=request_obj)
 
-    def __init__(self, url, **kwargs):
-        """Provide an API for performing initial signup.
+    def _login(self, user_name: str, password: str, remember_me: bool = False):
+        """Direct API method to perform a login with username and password and get auth tokens.
 
         Args:
-            url: url of instance to perform signup against
-            **kwargs: passed thru to :obj:`axonius_api_client.http.Http`
+            user_name: axonius username to login with
+            password: password for user_name
+            remember_me: smh
         """
-        log_level = kwargs.get("log_level", LOG_LEVEL_API)
-        self.LOG = get_obj_log(obj=self, level=log_level)
+        api_endpoint = ApiEndpoints.signup.login
+        request_obj = api_endpoint.load_request(
+            user_name=user_name,
+            password=password,
+            remember_me=remember_me,
+        )
+        return api_endpoint.perform_request(client=self.CLIENT, request_obj=request_obj)
 
-        kwargs.setdefault("certwarn", False)
-        self.HTTP = Http(url=url, **kwargs)
+    def _get_api_keys(self, bearer_token: str) -> dict:
+        """Get API key and token using a bearer token."""
+        headers = {"authorization": f"Bearer {bearer_token}"}
+        http_args = {"headers": headers, "headers_auth": False}
+        api_endpoint = ApiEndpoints.signup.get_api_keys
+        return api_endpoint.perform_request(client=self.CLIENT, http_args=http_args)
+
+    def _reset_api_keys(self, bearer_token: str) -> dict:
+        """Reset API key and token using a bearer token."""
+        headers = {"authorization": f"Bearer {bearer_token}"}
+        http_args = {"headers": headers, "headers_auth": False}
+        api_endpoint = ApiEndpoints.signup.reset_api_keys
+        return api_endpoint.perform_request(client=self.CLIENT, http_args=http_args)
