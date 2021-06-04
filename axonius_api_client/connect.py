@@ -453,6 +453,14 @@ class Connect:
         """Show object info."""
         return self.__str__()
 
+    @property
+    def openapi(self) -> OpenAPISpec:
+        """Work with the OpenAPI specification file."""
+        self.start()
+        if not hasattr(self, "_openapi"):
+            self._openapi = OpenAPISpec(**self.API_ARGS)
+        return self._openapi
+
     @classmethod
     def _get_exc_reason(cls, exc: Exception) -> str:
         """Trim exceptions down to a more user friendly display.
