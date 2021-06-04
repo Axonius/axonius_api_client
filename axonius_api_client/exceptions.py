@@ -13,6 +13,21 @@ class ApiWarning(AxonWarning):
     """Warnings for API models."""
 
 
+class JsonApiIncorrectType(ApiWarning):
+    """Pass."""
+
+    @staticmethod
+    def get_msg(data, item, schema, api_endpoint):
+        """Pass."""
+        bad_type = item.get("type")
+        msg = [
+            f"JSON API type mismatch in {schema}",
+            f"{schema.Meta.type_} != {bad_type}",
+            f"While in endpoint {api_endpoint}",
+        ]
+        return "\n\n".join(msg)
+
+
 class AxonError(Exception):
     """Base class for all exceptions in this package."""
 
@@ -164,6 +179,20 @@ class ResponseError(ApiError):
         msgs = [msg, *msgs, "", msg]
 
         return "\n".join(msgs)
+
+    @property
+    def is_incorrect_type(self) -> bool:
+        """Pass."""
+        if self.response is not None:
+            try:
+                data = self.response.json()
+            except Exception:
+                return False
+
+            if isinstance(data, dict) and "type" in data and data["type"] == "IncorrectTypeError":
+                return True
+
+        return False
 
 
 class InvalidCredentials(ResponseError):

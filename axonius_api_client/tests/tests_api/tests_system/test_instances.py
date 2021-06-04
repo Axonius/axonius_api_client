@@ -3,8 +3,8 @@
 import datetime
 
 import pytest
-
 from axonius_api_client.api import json_api
+from axonius_api_client.api.api_endpoints import ApiEndpoints
 from axonius_api_client.exceptions import NotFoundError
 
 
@@ -114,6 +114,23 @@ class TestInstancesPublic:
 
         reset_value = api_client.instances.set_name(name=new_value, new_name=orig_value)
         assert reset_value == orig_value
+
+    def test_admin_script_upload_path_file(self, apiobj, tmp_path):
+        file_path = tmp_path / "admin_script_test.txt"
+        file_path.write_text("badwolf\nbadwolf\nbadwolf")
+        data = apiobj.admin_script_upload_path(path=file_path)
+        assert isinstance(data, dict) and data
+        assert data["file_name"] == "admin_script_test.txt"
+        assert isinstance(data["file_uuid"], str) and data["file_uuid"]
+        assert data["execute_result"] == "file executed"
+
+    def test_admin_script_upload_path_url(self, apiobj):
+        path = f"{apiobj.http.url}/{ApiEndpoints.system_settings.meta_about.path}"
+        data = apiobj.admin_script_upload_path(path=path)
+        assert isinstance(data, dict) and data
+        assert data["file_name"] == "about"
+        assert isinstance(data["file_uuid"], str) and data["file_uuid"]
+        assert data["execute_result"] == "file executed"
 
 
 class TestInstancesPrivate:

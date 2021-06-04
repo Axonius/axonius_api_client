@@ -3,7 +3,6 @@
 import os
 
 import pytest
-
 from axonius_api_client.connect import Connect
 from axonius_api_client.constants.adapters import CSV_ADAPTER
 
@@ -43,7 +42,13 @@ def pytest_addoption(parser):
 def pytest_configure(config):
     """Ini file additions."""
     config.addinivalue_line("filterwarnings", "error::axonius_api_client.exceptions.AxonWarning")
+    config.addinivalue_line(
+        "filterwarnings", "default::axonius_api_client.exceptions.JsonApiIncorrectType"
+    )
     config.addinivalue_line("filterwarnings", "ignore::urllib3.exceptions.InsecureRequestWarning")
+    config.addinivalue_line(
+        "filterwarnings", "ignore::marshmallow.warnings.RemovedInMarshmallow4Warning"
+    )
 
 
 @pytest.fixture(scope="session")

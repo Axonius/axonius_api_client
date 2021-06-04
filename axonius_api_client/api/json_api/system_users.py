@@ -26,7 +26,7 @@ class SystemUserSchema(DataSchemaJson):
     source = marshmallow_jsonapi.fields.Str()
     user_name = marshmallow_jsonapi.fields.Str(required=True)
     uuid = marshmallow_jsonapi.fields.Str(required=True)
-    ignore_role_assignment_rules = marshmallow_jsonapi.fields.Bool(default=False, missing=False)
+    ignore_role_assignment_rules = SchemaBool(default=None, missing=None, allow_none=True)
 
     @staticmethod
     def _get_model_cls() -> type:
@@ -65,7 +65,8 @@ class SystemUserUpdateSchema(SystemUserSchema):
         data.pop("last_updated", None)
         data.pop("last_login", None)
         data.pop("uuid", None)
-
+        if not isinstance(data.get("ignore_role_assignment_rules", None), bool):
+            data.pop("ignore_role_assignment_rules", None)
         return data
 
 
@@ -119,7 +120,7 @@ class SystemUser(DataModel):
     user_name: str
     uuid: str
 
-    email: str = None
+    email: Optional[str] = None
     first_name: Optional[str] = None
     id: Optional[str] = None
     last_login: Optional[datetime.datetime] = get_field_dc_mm(
@@ -132,6 +133,7 @@ class SystemUser(DataModel):
     password: Optional[Union[List[str], str]] = None
     pic_name: Optional[str] = None
     source: Optional[str] = None
+    ignore_role_assignment_rules: Optional[bool] = None
 
     @staticmethod
     def _get_schema_cls() -> Optional[Type[DataSchema]]:

@@ -4,24 +4,12 @@ import copy
 from typing import Callable, List, Optional, Union
 
 from ...constants.adapters import CNX_SANE_DEFAULTS
-from ...exceptions import (
-    CnxAddError,
-    CnxGoneError,
-    CnxTestError,
-    CnxUpdateError,
-    ConfigInvalidValue,
-    ConfigRequired,
-    NotFoundError,
-)
-from ...parsers.config import (
-    config_build,
-    config_default,
-    config_empty,
-    config_info,
-    config_required,
-    config_unchanged,
-    config_unknown,
-)
+from ...exceptions import (CnxAddError, CnxGoneError, CnxTestError,
+                           CnxUpdateError, ConfigInvalidValue, ConfigRequired,
+                           NotFoundError)
+from ...parsers.config import (config_build, config_default, config_empty,
+                               config_info, config_required, config_unchanged,
+                               config_unknown)
 from ...parsers.tables import tablize_cnxs, tablize_schemas
 from ...tools import json_dump, json_load, listify, pathlib
 from .. import json_api
@@ -894,10 +882,20 @@ class Cnx(ApiModel):
             response_json = json_dump(obj=data, error=False)
             response_txt = f"Connectivty test failure, response:\n{response_json}"
 
+            status = data.get("status")
+            etype = data.get("type")
+            emsg = data.get("message")
             errors = listify(data.get("errors"))
 
             exc = None
             pre = ""
+
+            if status == "error":
+                exc = ConfigRequired
+                pre = f"Generic error of type {etype!r} with message: {emsg}"
+                msg = f"{pre} {config_txt}"
+                err = tablize_schemas(schemas=cnx_schemas, err=msg)
+                raise exc(f"{response_txt}\n{err}")
 
             # PBUG: this nasty footwork should be server side
             for error in errors:
@@ -918,7 +916,7 @@ class Cnx(ApiModel):
             if not exc and data.get("meta") == 400:
                 pre = "Invalid/missing domain or other connection parameter"
                 exc = ConfigRequired
-                # PBUG: with domain=None, {'data': null, 'meta': 400}
+                # PBUG: sometimes returns {'data': null, 'meta': 400}
 
             if exc:
                 msg = f"{pre} {config_txt}"

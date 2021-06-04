@@ -1,11 +1,15 @@
 # -*- coding: utf-8 -*-
 """API for working with instances."""
 import datetime
+import math
+import pathlib
 from typing import List, Optional, Union
 
+import requests
 from cachetools import TTLCache, cached
 
 from ...exceptions import NotFoundError
+from ...tools import is_url, path_read
 from .. import json_api
 from ..api_endpoints import ApiEndpoints
 from ..models import ApiModel
@@ -478,6 +482,41 @@ class Instances(ApiModel):
         """Get the number of days left for the license."""
         return self.feature_flags.license_expiry_in_days
 
+    def admin_script_upload(self, file_name: str, file_content: Union[str, bytes]) -> dict:
+        """Upload an admin script and execute it.
+
+        Args:
+            file_name: name to give uploaded script file
+            file_content: content to upload
+        """
+        response = self._admin_script_upload(file_name=file_name, file_content=file_content)
+        response["execute_result"] = self._admin_script_execute(uuid=response["file_uuid"])
+        return response
+
+    def admin_script_upload_path(self, path: Union[str, pathlib.Path], **kwargs) -> dict:
+        """Upload an admin script from a file or URL and execute it.
+
+        Args:
+            path: URL or path to file of script to upload and execute
+            **kwargs: passed to :meth:`upload_script`
+        """
+        if is_url(value=path):
+            from ...parsers.url_parser import UrlParser
+
+            parser = UrlParser(url=path)
+            path_part = pathlib.Path(parser.parsed.path)
+            file_name = path_part.name
+
+            response = requests.get(url=path, verify=False)
+            file_content = response.content
+        else:
+            path_part, file_content = path_read(obj=path, binary=True, is_json=False)
+            file_name = path_part.name
+
+        kwargs.setdefault("file_name", file_name)
+        kwargs["file_content"] = file_content
+        return self.admin_script_upload(**kwargs)
+
     def _get(self) -> List[json_api.instances.Instance]:
         """Direct API method to get instances."""
         api_endpoint = ApiEndpoints.instances.get
@@ -498,7 +537,7 @@ class Instances(ApiModel):
         request_obj = api_endpoint.load_request(
             approve_not_recoverable_action=approve_not_recoverable_action
         )
-        return api_endpoint.perform_request(http=self.auth.http, request_obj=request_obj)
+        return api_endpoint.perform_request(client=self.CLIENT, request_obj=request_obj)
 
     def _delete(self, node_id: str) -> str:  # pragma: no cover
         """Direct API method to delete an instance.
@@ -603,3 +642,52 @@ class Instances(ApiModel):
         """Direct API method to get the feature flags for the core."""
         api_endpoint = ApiEndpoints.system_settings.feature_flags_get
         return api_endpoint.perform_request(client=self.CLIENT)
+
+    def _admin_script_upload(
+        self, file_name: str, file_content: Union[bytes, str], chunk_size: int = 1024 * 1024 * 100
+    ) -> dict:
+        """Upload an admin script."""
+        file_size = len(file_content)
+        chunk_count = math.ceil(file_size / chunk_size)
+        chunk_current = 0
+
+        start_endpoint = ApiEndpoints.instances.admin_script_upload_start
+        headers = {"Upload-Length": f"{file_size}"}
+        http_args = {"data": file_name, "headers": headers}
+        file_uuid = start_endpoint.perform_request(client=self.CLIENT, http_args=http_args)
+
+        chunk_responses = []
+        chunk_endpoint = ApiEndpoints.instances.admin_script_upload_chunk
+        while chunk_current < chunk_count:
+            chunk_start = chunk_current * chunk_size
+            chunk_end = chunk_start + chunk_size
+            chunk = file_content[chunk_start:chunk_end]
+
+            headers = {
+                "Content-Type": "application/offset+octet-stream",
+                "Upload-Length": f"{file_size}",
+                "Upload-Name": f"{file_name}",
+                "Upload-Offset": f"{chunk_start}",
+            }
+            http_args = {"data": chunk, "headers": headers}
+            chunk_response = chunk_endpoint.perform_request(
+                client=self.CLIENT, http_args=http_args, uuid=file_uuid
+            )
+            chunk_responses.append({"uuid": chunk_response, "start": chunk_start, "end": chunk_end})
+            chunk_current += 1
+
+        return {
+            "file_name": file_name,
+            "file_uuid": file_uuid,
+            "file_size": file_size,
+            "chunks": chunk_responses,
+            "chunk_count": chunk_count,
+            "chunk_size": chunk_size,
+        }
+
+    def _admin_script_execute(self, uuid: str) -> str:
+        """Upload a script file."""
+        api_endpoint = ApiEndpoints.instances.admin_script_execute
+
+        response = api_endpoint.perform_request(client=self.CLIENT, uuid=uuid)
+        return response

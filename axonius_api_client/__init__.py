@@ -36,6 +36,7 @@ try:
     from . import api, cli, constants, exceptions, http, logs, tools
     from .connect import Connect
     from .http import Http
+    from .features import Features
 except Exception:  # pragma: no cover
     raise
 
@@ -45,6 +46,7 @@ LOG = logs.LOG
 __all__ = (
     "Connect",  # API client
     "Http",  # HTTP client
+    "Features",
     "api",
     "cli",
     "constants",
