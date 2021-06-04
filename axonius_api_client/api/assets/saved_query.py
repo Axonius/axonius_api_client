@@ -367,26 +367,20 @@ class SavedQuery(AssetChildMixin):
             ids: list of uuid's to delete
         """
         # NEW_IN: 05/31/21 cortex/develop
-        try:
-            api_endpoint = ApiEndpoints.saved_queries.delete
-            request_obj = api_endpoint.load_request()
-            return api_endpoint.perform_request(
-                client=self.CLIENT,
-                request_obj=request_obj,
-                asset_type=self.parent.ASSET_TYPE,
-                uuid=uuid,
-            )
-        except ResponseError as exc:
-            if getattr(exc, "is_incorrect_type", None):
-                api_endpoint = ApiEndpoints.saved_queries.delete_4_3
+        api_endpoints = [ApiEndpoints.saved_queries.delete, ApiEndpoints.saved_queries.delete_4_3]
+        for api_endpoint in api_endpoints:
+            try:
                 request_obj = api_endpoint.load_request()
                 return api_endpoint.perform_request(
                     client=self.CLIENT,
                     request_obj=request_obj,
-                    asset_type=self.parent.ASSET_TYPE,
+                    asset_type=self.PARENT.ASSET_TYPE,
                     uuid=uuid,
                 )
-            raise
+            except ResponseError as exc:
+                is_incorrect_type = getattr(exc, "is_incorrect_type", None)
+                if not is_incorrect_type:
+                    raise
 
     def _get(
         self, limit: int = MAX_PAGE_SIZE, offset: int = 0

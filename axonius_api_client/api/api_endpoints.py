@@ -124,8 +124,8 @@ class SavedQueries(BaseData):
     delete: ApiEndpoint = ApiEndpoint(
         method="delete",
         path="api/V4.0/{asset_type}/views/view/{uuid}",
-        request_schema_cls=json_api.saved_queries.SavedQueryDeleteSchema,
-        request_model_cls=json_api.saved_queries.SavedQueryDelete,
+        request_schema_cls=json_api.generic.PrivateRequestSchema,
+        request_model_cls=json_api.generic.PrivateRequest,
         response_schema_cls=json_api.generic.MetadataSchema,
         response_model_cls=json_api.generic.Metadata,
     )
