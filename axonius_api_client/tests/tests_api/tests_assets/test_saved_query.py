@@ -171,14 +171,14 @@ class SavedQueryPublic:
 
 class TestSavedQueryDevices(SavedQueryPrivate, SavedQueryPublic):
     @pytest.fixture(scope="class")
-    def apiobj(self, api_devices):
-        return api_devices
+    def apiobj(self, api_client):
+        return api_client.devices
 
 
 class TestSavedQueryUsers(SavedQueryPrivate, SavedQueryPublic):
     @pytest.fixture(scope="class")
-    def apiobj(self, api_users):
-        return api_users
+    def apiobj(self, api_client):
+        return api_client.users
 
 
 def validate_qexpr(qexpr, asset):

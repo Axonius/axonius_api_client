@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """API for working with adapter connections."""
+import copy
 from typing import Callable, List, Optional, Union
 
 from ...constants.adapters import CNX_SANE_DEFAULTS
@@ -13,10 +14,10 @@ from ...parsers.tables import tablize_cnxs, tablize_schemas
 from ...tools import json_dump, json_load, listify, pathlib
 from .. import json_api
 from ..api_endpoints import ApiEndpoints
-from ..mixins import ChildMixins
+from ..models import ApiModel
 
 
-class Cnx(ChildMixins):
+class Cnx(ApiModel):
     """API model for working with adapter connections.
 
     Examples:
@@ -83,7 +84,7 @@ class Cnx(ChildMixins):
         new_config.update(kwargs_config or {})
         new_config.update(kwargs)
 
-        adapter_meta = self.parent.get_by_name(
+        adapter_meta = self.CLIENT.adapters.get_by_name(
             name=adapter_name, node=adapter_node, get_clients=False
         )
 
@@ -94,12 +95,12 @@ class Cnx(ChildMixins):
         is_instances_mode = not adapter_meta["node_meta"]["is_master"]
 
         cnxs = self._get(adapter_name=adapter_name_raw)
-        cnx_schemas = cnxs.schema_cnx
+        schemas = cnxs.schema_cnx
 
         source = f"adding connection for adapter {adapter_name!r}"
 
         new_config = self.build_config(
-            cnx_schemas=cnx_schemas,
+            cnx_schemas=schemas,
             new_config=new_config,
             source=source,
             adapter_name=adapter_name,
@@ -108,13 +109,13 @@ class Cnx(ChildMixins):
 
         sane_defaults = self.get_sane_defaults(adapter_name=adapter_name)
         config_default(
-            schemas=cnx_schemas,
+            schemas=schemas,
             new_config=new_config,
             source=source,
             sane_defaults=sane_defaults,
         )
-        config_empty(schemas=cnx_schemas, new_config=new_config, source=source)
-        config_required(schemas=cnx_schemas, new_config=new_config, source=source)
+        config_empty(schemas=schemas, new_config=new_config, source=source)
+        config_required(schemas=schemas, new_config=new_config, source=source)
 
         result = self._add(
             connection=new_config,
@@ -156,7 +157,9 @@ class Cnx(ChildMixins):
             adapter_name: name of adapter
             adapter_node: name of node running adapter
         """
-        adapter = self.parent.get_by_name(name=adapter_name, node=adapter_node, get_clients=False)
+        adapter = self.CLIENT.adapters.get_by_name(
+            name=adapter_name, node=adapter_node, get_clients=False
+        )
         node = adapter["node_meta"]
         cnxs_obj = self._get(adapter_name=adapter["name_raw"])
         cnxs = [x for x in cnxs_obj.cnxs if x.node_id == node["node_id"]]
@@ -186,7 +189,9 @@ class Cnx(ChildMixins):
             adapter_node: name of node running adapter
             **kwargs: passed to :meth:`get_by_key`
         """
-        adapter = self.parent.get_by_name(name=adapter_name, node=adapter_node, get_clients=False)
+        adapter = self.CLIENT.adapters.get_by_name(
+            name=adapter_name, node=adapter_node, get_clients=False
+        )
         node = adapter["node_meta"]
         node_id = node["node_id"]
         node_name = node["node_name"]
@@ -225,7 +230,9 @@ class Cnx(ChildMixins):
         Raises:
             :exc:`NotFoundError`: when no connections found with supplied connection label
         """
-        adapter = self.parent.get_by_name(name=adapter_name, node=adapter_node, get_clients=False)
+        adapter = self.CLIENT.adapters.get_by_name(
+            name=adapter_name, node=adapter_node, get_clients=False
+        )
         node = adapter["node_meta"]
         node_id = node["node_id"]
         node_name = node["node_name"]
@@ -267,7 +274,9 @@ class Cnx(ChildMixins):
             adapter_node: name of node running adapter
             **kwargs: passed to :meth:`get_by_key`
         """
-        adapter = self.parent.get_by_name(name=adapter_name, node=adapter_node, get_clients=False)
+        adapter = self.CLIENT.adapters.get_by_name(
+            name=adapter_name, node=adapter_node, get_clients=False
+        )
         node = adapter["node_meta"]
         node_id = node["node_id"]
         node_name = node["node_name"]
@@ -390,8 +399,11 @@ class Cnx(ChildMixins):
         new_config = {}
         new_config.update(kwargs_config or {})
         new_config.update(kwargs)
+        new_config.pop("connection_label", None)
 
-        adapter = self.parent.get_by_name(name=adapter_name, node=adapter_node, get_clients=False)
+        adapter = self.CLIENT.adapters.get_by_name(
+            name=adapter_name, node=adapter_node, get_clients=False
+        )
         adapter_name = adapter["name"]
         adapter_name_raw = adapter["name_raw"]
         node_id = adapter["node_id"]
@@ -416,7 +428,16 @@ class Cnx(ChildMixins):
             adapter_node=node_name,
         )
 
+        sane_defaults = self.get_sane_defaults(adapter_name=adapter_name)
+        config_default(
+            schemas=schemas,
+            new_config=new_config,
+            source=source,
+            sane_defaults=sane_defaults,
+        )
+
         config_empty(schemas=schemas, new_config=new_config, source=source)
+        config_required(schemas=schemas, new_config=new_config, source=source)
 
         test_hook = self._get_test_hook(schemas=schemas, adapter=adapter_name, node=node_name)
         self._test(
@@ -465,7 +486,7 @@ class Cnx(ChildMixins):
         uuid = cnx["uuid"]
         cid = cnx["id"]
 
-        node_meta = self.parent.instance.get_by_name(name=node_name)
+        node_meta = self.CLIENT.instances.get_by_name(name=node_name)
         is_instances_mode = not node_meta["is_master"]
 
         gone_hook = self._get_gone_hook(cid=cid, uuid=uuid, adapter=adapter_name, node=node_name)
@@ -503,7 +524,7 @@ class Cnx(ChildMixins):
         uuid = cnx["uuid"]
         cid = cnx["id"]
 
-        node_meta = self.parent.instances.get_by_name(name=node_name)
+        node_meta = self.CLIENT.instances.get_by_name(name=node_name)
         is_instances_mode = not node_meta["is_master"]
 
         gone_hook = self._get_gone_hook(cid=cid, uuid=uuid, adapter=adapter_name, node=node_name)
@@ -551,21 +572,25 @@ class Cnx(ChildMixins):
         new_config.update(kwargs_config or {})
         new_config.update(kwargs)
 
+        old_config = copy.deepcopy(cnx_update["config"])
         adapter_name = cnx_update["adapter_name"]
         adapter_name_raw = cnx_update["adapter_name_raw"]
         node_name = cnx_update["node_name"]
         node_id = cnx_update["node_id"]
         cnx_schemas = cnx_update["schemas"]
         active = cnx_update["active"]
-        label = cnx_update["connection_label"]
-        uuid = cnx_update["uuid"]
-
-        node_meta = self.parent.instances.get_by_name(name=node_name)
-        is_instances_mode = not node_meta["is_master"]
-
-        old_config = cnx_update["config"]
-        uuid = cnx_update["uuid"]
         cid = cnx_update["id"]
+        uuid = cnx_update["uuid"]
+
+        old_label = old_config.pop("connection_label", "") or cnx_update.get("connection_label", "")
+
+        if "connection_label" in new_config:
+            label = new_config.pop("connection_label", None)
+        else:
+            label = old_label
+
+        node_meta = self.CLIENT.instances.get_by_name(name=node_name)
+        is_instances_mode = not node_meta["is_master"]
 
         deets = [
             f"ID: {cid!r}",
@@ -642,7 +667,7 @@ class Cnx(ChildMixins):
         uuid = cnx_delete["uuid"]
         cid = cnx_delete["id"]
 
-        node = self.parent.instances.get_by_name(name=cnx_delete["node_name"])
+        node = self.CLIENT.instances.get_by_name(name=cnx_delete["node_name"])
         node_id = node["id"]
         node_name = node["name"]
         is_instances_mode = not node["is_master"]
@@ -741,7 +766,7 @@ class Cnx(ChildMixins):
             if not value.is_file():
                 sinfo = config_info(schema=schema, value=str(value), source=source)
                 raise ConfigInvalidValue(f"{sinfo}\nFile does not exist!")
-            return self.parent.file_upload(
+            return self.CLIENT.adapters.file_upload(
                 name=adapter_name,
                 field_name=field_name,
                 file_name=value.name,
@@ -764,7 +789,7 @@ class Cnx(ChildMixins):
                 sinfo = config_info(schema=schema, value=str(value), source=source)
                 raise ConfigInvalidValue(f"{sinfo}\nFile does not exist!")
 
-            return self.parent.file_upload(
+            return self.CLIENT.adapters.file_upload(
                 name=adapter_name,
                 field_name=field_name,
                 file_name=value.name,
@@ -778,7 +803,7 @@ class Cnx(ChildMixins):
     def _get_gone_hook(self, cid: str, uuid: str, adapter: str, node: str):
         """Check if the result of updating a connection shows that the connection is gone."""
 
-        def hook(http, response, **kwargs):
+        def hook(client, response, **kwargs):
             """Pass."""
             apiobj = self
             cnx_cid = cid
@@ -824,7 +849,7 @@ class Cnx(ChildMixins):
     ):
         """Check if the result of testing a connection shows has various failures."""
 
-        def hook(http, response, **kwargs):
+        def hook(client, response, **kwargs):
             """Pass."""
             cnx_schemas = schemas
             cnx_cid = cid
@@ -925,7 +950,7 @@ class Cnx(ChildMixins):
             connection_label=connection_label,
         )
         return api_endpoint.perform_request(
-            http=self.auth.http, request_obj=request_obj, adapter_name=adapter_name
+            client=self.CLIENT, request_obj=request_obj, adapter_name=adapter_name
         )
 
     def _test(
@@ -948,7 +973,7 @@ class Cnx(ChildMixins):
             instance=instance,
         )
         return api_endpoint.perform_request(
-            http=self.auth.http,
+            client=self.CLIENT,
             request_obj=request_obj,
             adapter_name=adapter_name,
             response_status_hook=response_status_hook,
@@ -957,7 +982,7 @@ class Cnx(ChildMixins):
     def _get(self, adapter_name: str) -> json_api.adapters.Cnxs:
         """Pass."""
         api_endpoint = ApiEndpoints.adapters.cnx_get
-        return api_endpoint.perform_request(http=self.auth.http, adapter_name=adapter_name)
+        return api_endpoint.perform_request(client=self.CLIENT, adapter_name=adapter_name)
 
     def _delete(
         self,
@@ -985,7 +1010,7 @@ class Cnx(ChildMixins):
             is_instances_mode=is_instances_mode,
         )
         return api_endpoint.perform_request(
-            http=self.auth.http,
+            client=self.CLIENT,
             request_obj=request_obj,
             adapter_name=adapter_name,
             uuid=uuid,
@@ -1023,9 +1048,19 @@ class Cnx(ChildMixins):
             connection_label=connection_label,
         )
         return api_endpoint.perform_request(
-            http=self.auth.http,
+            client=self.CLIENT,
             request_obj=request_obj,
             adapter_name=adapter_name,
             uuid=uuid,
             response_status_hook=response_status_hook,
         )
+
+    def _get_labels(self) -> List[dict]:
+        """Pass."""
+        api_endpoint = ApiEndpoints.adapters.labels_get
+        return api_endpoint.perform_request(client=self.CLIENT)
+
+    @property
+    def adapters(self):
+        """Pass."""
+        return self.CLIENT.adapters

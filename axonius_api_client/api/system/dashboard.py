@@ -8,7 +8,7 @@ from ...data import PropsData
 from ...tools import coerce_int, dt_now, dt_parse, trim_float
 from .. import json_api
 from ..api_endpoints import ApiEndpoints
-from ..mixins import ModelMixins
+from ..models import ApiModel
 
 PROPERTIES_PHASE: List[str] = ["name", "human_name", "is_done", "progress"]
 PROPERTIES: List[str] = [
@@ -220,7 +220,7 @@ class DiscoverData(PropsData):
         return coerce_int(obj=value, min_value=0) >= int(self.next_run_starts_in_minutes)
 
 
-class Dashboard(ModelMixins):
+class Dashboard(ApiModel):
     """API for working with dashboards and discovery lifecycle.
 
     Examples:
@@ -244,7 +244,7 @@ class Dashboard(ModelMixins):
             False
         """
         return DiscoverData(
-            raw=self._get().to_dict(), adapters=self.adapters.get(get_clients=False)
+            raw=self._get().to_dict(), adapters=self.CLIENT.adapters.get(get_clients=False)
         )
 
     @property
@@ -304,21 +304,14 @@ class Dashboard(ModelMixins):
     def _get(self) -> json_api.lifecycle.Lifecycle:
         """Direct API method to get discovery cycle metadata."""
         api_endpoint = ApiEndpoints.lifecycle.get
-        return api_endpoint.perform_request(http=self.auth.http)
+        return api_endpoint.perform_request(client=self.CLIENT)
 
     def _start(self) -> str:
         """Direct API method to start a discovery cycle."""
         api_endpoint = ApiEndpoints.lifecycle.start
-        return api_endpoint.perform_request(http=self.auth.http)
+        return api_endpoint.perform_request(client=self.CLIENT)
 
     def _stop(self) -> str:
         """Direct API method to stop a discovery cycle."""
         api_endpoint = ApiEndpoints.lifecycle.stop
-        return api_endpoint.perform_request(http=self.auth.http)
-
-    def _init(self, **kwargs):
-        """Post init method for subclasses to use for extra setup."""
-        from ..adapters.adapters import Adapters
-
-        self.adapters: Adapters = Adapters(auth=self.auth)
-        """Work with adapters"""
+        return api_endpoint.perform_request(client=self.CLIENT)

@@ -9,7 +9,7 @@ import marshmallow_jsonapi
 
 from ...exceptions import ApiError
 from ...tools import coerce_int_float, dt_now, dt_parse, listify, trim_float
-from .base import BaseModel, BaseSchema, BaseSchemaJson
+from ..models import DataModel, DataSchema, DataSchemaJson
 from .custom_fields import SchemaDatetime, get_field_dc_mm
 from .resources import ResourcesGet, ResourcesGetSchema
 
@@ -26,7 +26,7 @@ class AuditLogRequestSchema(ResourcesGetSchema):
         type_ = "audit_request_schema"
 
     @staticmethod
-    def get_model_cls() -> type:
+    def _get_model_cls() -> type:
         """Pass."""
         return AuditLogRequest
 
@@ -43,12 +43,12 @@ class AuditLogRequest(ResourcesGet):
     )
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def _get_schema_cls() -> Optional[Type[DataSchema]]:
         """Pass."""
         return AuditLogRequestSchema
 
 
-class AuditLogSchema(BaseSchemaJson):
+class AuditLogSchema(DataSchemaJson):
     """Pass."""
 
     action = marshmallow_jsonapi.fields.Str()
@@ -64,13 +64,13 @@ class AuditLogSchema(BaseSchemaJson):
         type_ = "audit_schema"
 
     @staticmethod
-    def get_model_cls() -> type:
+    def _get_model_cls() -> type:
         """Pass."""
         return AuditLog
 
 
 @dataclasses.dataclass
-class AuditLog(BaseModel):
+class AuditLog(DataModel):
     """Pass."""
 
     action: str

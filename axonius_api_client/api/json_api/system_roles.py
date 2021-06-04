@@ -2,95 +2,16 @@
 """Models for API requests & responses."""
 import dataclasses
 import datetime
-import math
 from typing import List, Optional, Type
 
 import marshmallow
 import marshmallow_jsonapi
-from cachetools import TTLCache, cached
 
-from .base import BaseModel, BaseSchema, BaseSchemaJson
+from ..models import DataModel, DataSchema, DataSchemaJson
 from .custom_fields import SchemaBool, SchemaDatetime, get_field_dc_mm
 
 
-def parse_cat_actions(raw: dict) -> dict:
-    """Parse the permission labels into a layered dict."""
-
-    def set_len(item, target):
-        measure = int(math.ceil(len(item) / 10.0)) * 10
-        if measure > lengths[target]:
-            lengths[target] = measure
-
-    cats = {}
-    cat_actions = {}
-    lengths = {"categories": 0, "actions": 0, "categories_desc": 0, "actions_desc": 0}
-
-    # first pass, get all of the categories
-    for label, desc in raw.items():
-        pre, rest = label.split(".", 1)
-        if pre != "permissions":
-            continue
-
-        split = rest.split(".", 1)
-        cat = split.pop(0)
-
-        if not split:
-            assert cat not in cats
-            assert cat not in cat_actions
-            cats[cat] = desc
-            set_len(item=desc, target="categories_desc")
-            set_len(item=cat, target="categories")
-
-            cat_actions[cat] = {}
-
-    # second pass, get all of the actions
-    for label, desc in raw.items():
-        pre, rest = label.split(".", 1)
-        if pre != "permissions":
-            continue
-
-        split = rest.split(".", 1)
-        cat = split.pop(0)
-
-        if not split:
-            continue
-
-        action = split.pop(0)
-        assert not split
-        assert action not in cat_actions[cat]
-        set_len(item=desc, target="actions_desc")
-        set_len(item=action, target="actions")
-        cat_actions[cat][action] = desc
-
-    return {"categories": cats, "actions": cat_actions, "lengths": lengths}
-
-
-@cached(cache=TTLCache(maxsize=1024, ttl=300))
-def cat_actions(http) -> dict:
-    """Get permission categories and their actions."""
-    from .. import ApiEndpoints
-
-    api_endpoint = ApiEndpoints.system_roles.perms
-    labels = api_endpoint.perform_request(http=http)
-    data = parse_cat_actions(raw=labels)
-
-    # flags = feature_flags(http=http)
-
-    # if not flags.has_cloud_compliance:  # pragma: no cover
-    #     data["categories"].pop("compliance")
-    #     data["actions"].pop("compliance")
-    return data
-
-
-def feature_flags(http):
-    """Direct API method to get the feature flags for the core."""
-    from .. import ApiEndpoints
-
-    api_endpoint = ApiEndpoints.system_settings.feature_flags_get
-    return api_endpoint.perform_request(http=http)
-
-
-class SystemRoleSchema(BaseSchemaJson):
+class SystemRoleSchema(DataSchemaJson):
     """Pass."""
 
     uuid = marshmallow_jsonapi.fields.Str(required=True)
@@ -105,7 +26,7 @@ class SystemRoleSchema(BaseSchemaJson):
     users_count = marshmallow_jsonapi.fields.Int(required=False, missing=0)
 
     @staticmethod
-    def get_model_cls() -> type:
+    def _get_model_cls() -> type:
         """Pass."""
         return SystemRole
 
@@ -122,11 +43,11 @@ class SystemRoleUpdateSchema(SystemRoleSchema):
     last_updated = SchemaDatetime(allow_none=True)
 
     @marshmallow.post_load
-    def post_load_fixit(self, data: dict, **kwargs) -> dict:
+    def post_load_fixit(self, data: "SystemRole", **kwargs) -> "SystemRole":
         """Pass."""
-        asr = data.get("asset_scope_restriction", {}) or {}
-        if not asr:
-            data["asset_scope_restriction"] = {"enabled": False}
+        if not data.asset_scope_restriction:
+            data.asset_scope_restriction = {"enabled": False}
+        # PBUG: ASR seems to be quite poorly modeled
         return data
 
     @marshmallow.post_dump
@@ -156,7 +77,7 @@ class SystemRoleUpdateSchema(SystemRoleSchema):
 
 
 @dataclasses.dataclass
-class SystemRole(BaseModel):
+class SystemRole(DataModel):
     """Pass."""
 
     name: str
@@ -174,7 +95,7 @@ class SystemRole(BaseModel):
     users_count: int = 0
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def _get_schema_cls() -> Optional[Type[DataSchema]]:
         """Pass."""
         return SystemRoleSchema
 
@@ -209,7 +130,7 @@ class SystemRole(BaseModel):
 
     def permissions_desc(self) -> dict:
         """Pass."""
-        return cat_actions(http=self.HTTP)
+        return self.CLIENT.system_roles.cat_actions()
 
     def permissions_flat_descriptions(self) -> List[dict]:
         """Pass."""
@@ -235,7 +156,7 @@ class SystemRole(BaseModel):
         return ret
 
 
-class SystemRoleCreateSchema(BaseSchemaJson):
+class SystemRoleCreateSchema(DataSchemaJson):
     """Pass."""
 
     name = marshmallow_jsonapi.fields.Str(required=True)
@@ -243,7 +164,7 @@ class SystemRoleCreateSchema(BaseSchemaJson):
     asset_scope_restriction = marshmallow_jsonapi.fields.Dict(required=False)
 
     @staticmethod
-    def get_model_cls() -> type:
+    def _get_model_cls() -> type:
         """Pass."""
         return SystemRoleCreate
 
@@ -253,11 +174,10 @@ class SystemRoleCreateSchema(BaseSchemaJson):
         type_ = "roles_schema"
 
     @marshmallow.post_load
-    def post_load_fixit(self, data: dict, **kwargs) -> dict:
+    def post_load_fixit(self, data: "SystemRoleCreate", **kwargs) -> "SystemRoleCreate":
         """Pass."""
-        asr = data.get("asset_scope_restriction", {}) or {}
-        if not asr:
-            data["asset_scope_restriction"] = {"enabled": False}
+        if not data.asset_scope_restriction:
+            data.asset_scope_restriction = {"enabled": False}
         # PBUG: ASR seems to be quite poorly modeled
         return data
 
@@ -273,7 +193,7 @@ class SystemRoleCreateSchema(BaseSchemaJson):
 
 
 @dataclasses.dataclass
-class SystemRoleCreate(BaseModel):
+class SystemRoleCreate(DataModel):
     """Pass."""
 
     name: str
@@ -281,7 +201,7 @@ class SystemRoleCreate(BaseModel):
     asset_scope_restriction: Optional[dict] = dataclasses.field(default_factory=dict)
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def _get_schema_cls() -> Optional[Type[DataSchema]]:
         """Pass."""
         return SystemRoleCreateSchema
 

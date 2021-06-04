@@ -12,9 +12,9 @@ from ...utils import get_schema
 
 
 class TestWizard:
-    @pytest.fixture(params=["api_devices", "api_users"])
-    def wizard(self, request):
-        apiobj = request.getfixturevalue(request.param)
+    @pytest.fixture(params=["devices", "users"])
+    def wizard(self, request, api_client):
+        apiobj = getattr(api_client, request.param)
         obj = Wizard(apiobj=apiobj)
         assert obj.APIOBJ == apiobj
         assert isinstance(obj.PARSER, WizardParser)

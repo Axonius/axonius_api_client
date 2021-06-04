@@ -3,10 +3,10 @@
 from ...exceptions import ApiError, NotFoundError
 from ...parsers.config import config_build, config_unchanged, config_unknown, parse_settings
 from ...parsers.tables import tablize
-from ..mixins import ModelMixins
+from ..models import ApiModel
 
 
-class SettingsMixins(ModelMixins):
+class SettingsMixins(ApiModel):
     """Parent API for working with System Settings."""
 
     def get(self) -> dict:

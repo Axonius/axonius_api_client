@@ -5,11 +5,11 @@ from typing import Optional, Type
 
 import marshmallow_jsonapi
 
-from .base import BaseModel, BaseSchema, BaseSchemaJson
+from ..models import DataModel, DataSchema, DataSchemaJson
 from .custom_fields import SchemaBool
 
 
-class CentralCoreSettingsUpdateSchema(BaseSchemaJson):
+class CentralCoreSettingsUpdateSchema(DataSchemaJson):
     """Pass."""
 
     delete_backups = SchemaBool()
@@ -21,25 +21,25 @@ class CentralCoreSettingsUpdateSchema(BaseSchemaJson):
         type_ = "central_core_settings_schema"
 
     @staticmethod
-    def get_model_cls() -> type:
+    def _get_model_cls() -> type:
         """Pass."""
         return CentralCoreSettingsUpdate
 
 
 @dataclasses.dataclass
-class CentralCoreSettingsUpdate(BaseModel):
+class CentralCoreSettingsUpdate(DataModel):
     """Pass."""
 
     delete_backups: bool
     enabled: bool
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def _get_schema_cls() -> Optional[Type[DataSchema]]:
         """Pass."""
         return CentralCoreSettingsUpdateSchema
 
 
-class AdditionalDataAws(BaseSchema):
+class AdditionalDataAws(DataSchema):
     """Pass."""
 
     key_name = marshmallow_jsonapi.fields.Str(required=True)
@@ -61,7 +61,7 @@ class AdditionalDataAwsSchema(marshmallow_jsonapi.fields.Nested):
         super().__init__(AdditionalDataAws(), data_key="additional_data")
 
 
-class CentralCoreRestoreAwsRequestSchema(BaseSchemaJson):
+class CentralCoreRestoreAwsRequestSchema(DataSchemaJson):
     """Pass."""
 
     restore_type = marshmallow_jsonapi.fields.Str(default="aws")
@@ -73,25 +73,25 @@ class CentralCoreRestoreAwsRequestSchema(BaseSchemaJson):
         type_ = "central_core_restore_request_schema"
 
     @staticmethod
-    def get_model_cls() -> type:
+    def _get_model_cls() -> type:
         """Pass."""
         return CentralCoreRestoreAwsRequest
 
 
 @dataclasses.dataclass
-class CentralCoreRestoreAwsRequest(BaseModel):
+class CentralCoreRestoreAwsRequest(DataModel):
     """Pass."""
 
     additional_data: AdditionalDataAws
     restore_type: str = "aws"
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def _get_schema_cls() -> Optional[Type[DataSchema]]:
         """Pass."""
         return CentralCoreRestoreAwsRequestSchema
 
 
-class CentralCoreRestoreSchema(BaseSchemaJson):
+class CentralCoreRestoreSchema(DataSchemaJson):
     """Pass."""
 
     status = marshmallow_jsonapi.fields.Str(required=True)
@@ -104,13 +104,13 @@ class CentralCoreRestoreSchema(BaseSchemaJson):
         type_ = "central_core_restore_response_schema"
 
     @staticmethod
-    def get_model_cls() -> type:
+    def _get_model_cls() -> type:
         """Pass."""
         return CentralCoreRestore
 
 
 @dataclasses.dataclass
-class CentralCoreRestore(BaseModel):
+class CentralCoreRestore(DataModel):
     """Pass."""
 
     status: str
@@ -118,6 +118,6 @@ class CentralCoreRestore(BaseModel):
     additional_data: dict
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def _get_schema_cls() -> Optional[Type[DataSchema]]:
         """Pass."""
         return CentralCoreRestoreSchema

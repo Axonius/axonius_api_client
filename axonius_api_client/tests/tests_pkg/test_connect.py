@@ -39,6 +39,9 @@ class TestConnect:
 
         c = Connect(url=ax_url, certwarn=False, **get_key_creds(request))
 
+        assert "Not connected" in format(c)
+        assert "Not connected" in repr(c)
+
         c.start()
 
         assert "Connected" in format(c)
@@ -115,7 +118,6 @@ class TestConnect:
         c = Connect(url="127.0.0.1", key=BAD_CRED, secret=BAD_CRED, certwarn=False)
 
         c.HTTP.CONNECT_TIMEOUT = 1
-        c.AUTH._creds = None
 
         with pytest.raises(ConnectError):
             c.start()

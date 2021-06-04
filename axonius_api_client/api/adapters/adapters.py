@@ -9,10 +9,10 @@ from ...parsers.tables import tablize_adapters
 from ...tools import path_read
 from .. import json_api
 from ..api_endpoints import ApiEndpoints
-from ..mixins import ModelMixins
+from ..models import ApiModel
 
 
-class Adapters(ModelMixins):
+class Adapters(ApiModel):
     """API model for working with adapters.
 
     Examples:
@@ -99,7 +99,7 @@ class Adapters(ModelMixins):
         Raises:
             :exc:`NotFoundError`: when no node found or when no adapter found on node
         """
-        node_meta = self.instances.get_by_name_id_core(value=node)
+        node_meta = self.CLIENT.instances.get_by_name_id_core(value=node)
         adapters = self.get(get_clients=get_clients)
 
         node_name = node_meta["name"]
@@ -108,6 +108,8 @@ class Adapters(ModelMixins):
         keys = ["name", "name_raw", "name_plugin"]
         for adapter in adapters:
             if any([adapter[k].lower() == name.lower() for k in keys]):
+                cnxs = self.cnx._get(adapter_name=adapter["name_raw"])
+                adapter["schemas"]["cnx"] = cnxs.schema_cnx
                 adapter["node_meta"] = node_meta
                 return adapter
 
@@ -298,16 +300,10 @@ class Adapters(ModelMixins):
         kwargs["file_content"] = file_content
         return self.file_upload(**kwargs)
 
-    def _init(self, **kwargs):
-        """Post init method for subclasses to use for extra setup."""
-        from ..system.instances import Instances
-        from .cnx import Cnx
-
-        self.cnx: Cnx = Cnx(parent=self)
-        """Work with adapter connections"""
-
-        self.instances: Instances = Instances(auth=self.auth)
-        """Work with instances"""
+    @property
+    def cnx(self):
+        """Pass."""
+        return self.CLIENT.cnx
 
     def _get(
         self, get_clients: bool = True, filter: Optional[str] = None
@@ -315,7 +311,7 @@ class Adapters(ModelMixins):
         """Private API method to get all adapters."""
         api_endpoint = ApiEndpoints.adapters.get
         request_obj = api_endpoint.load_request(get_clients=get_clients, filter=filter)
-        return api_endpoint.perform_request(http=self.auth.http, request_obj=request_obj)
+        return api_endpoint.perform_request(client=self.CLIENT, request_obj=request_obj)
 
     def _config_update(self, adapter_name: str, config_name: str, config: dict) -> str:
         """Private API method to set advanced settings for an adapter.
@@ -334,7 +330,7 @@ class Adapters(ModelMixins):
             pluginId=adapter_name, configName=config_name, config=config
         )
         return api_endpoint.perform_request(
-            http=self.auth.http,
+            client=self.CLIENT,
             request_obj=request_obj,
             adapter_name=adapter_name,
             config_name=config_name,
@@ -343,7 +339,7 @@ class Adapters(ModelMixins):
     def _get_basic(self) -> json_api.generic.Metadata:
         """Pass."""
         api_endpoint = ApiEndpoints.adapters.get_basic
-        return api_endpoint.perform_request(http=self.auth.http)
+        return api_endpoint.perform_request(client=self.CLIENT)
 
     def _config_get(self, adapter_name: str) -> json_api.adapters.AdapterSettings:
         """Private API method to set advanced settings for an adapter.
@@ -352,7 +348,7 @@ class Adapters(ModelMixins):
             adapter_name: raw name of the adapter, i.e. 'aws_adapter'
         """
         api_endpoint = ApiEndpoints.adapters.settings_get
-        return api_endpoint.perform_request(http=self.auth.http, adapter_name=adapter_name)
+        return api_endpoint.perform_request(client=self.CLIENT, adapter_name=adapter_name)
 
     def _file_upload(
         self,
@@ -382,7 +378,7 @@ class Adapters(ModelMixins):
         http_args = {"files": files, "data": data}
 
         response = api_endpoint.perform_request(
-            http=self.auth.http, http_args=http_args, adapter_name=adapter_name, node_id=node_id
+            client=self.CLIENT, http_args=http_args, adapter_name=adapter_name, node_id=node_id
         )
         parsed = {"filename": file_name, "uuid": response["data"]["id"]}
         return parsed
@@ -390,5 +386,5 @@ class Adapters(ModelMixins):
     def _get_labels(self) -> json_api.adapters.CnxLabels:
         """Pass."""
         api_endpoint = ApiEndpoints.adapters.labels_get
-        response = api_endpoint.perform_request(http=self.http)
+        response = api_endpoint.perform_request(client=self.CLIENT)
         return response

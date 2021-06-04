@@ -10,22 +10,20 @@ from axonius_api_client.exceptions import ApiError
 
 
 class ActivityLogsBase:
-    @pytest.fixture(scope="class")
-    def apiobj(self, api_activity_logs):
-        return api_activity_logs
+    """Pass."""
 
 
 class TestActivityLogsPrivate(ActivityLogsBase):
-    def test_get(self, apiobj):
-        data = apiobj._get()
+    def test_get(self, api_client):
+        data = api_client.activity_logs._get()
         assert isinstance(data, list)
         for row in data:
             assert isinstance(row, json_api.audit_logs.AuditLog)
 
 
 class TestActivityLogsPublic(ActivityLogsBase):
-    def test_get(self, apiobj):
-        data = apiobj.get()
+    def test_get(self, api_client):
+        data = api_client.activity_logs.get()
         assert isinstance(data, list)
         for row in data:
             assert isinstance(row, json_api.audit_logs.AuditLog)
@@ -45,12 +43,12 @@ class TestActivityLogsPublic(ActivityLogsBase):
             with pytest.raises(ApiError):
                 row.property_searches(badwolf="x")
 
-    def test_get_within_last_hours(self, apiobj):
-        data = apiobj.get(within_last_hours=12)
+    def test_get_within_last_hours(self, api_client):
+        data = api_client.activity_logs.get(within_last_hours=12)
         assert isinstance(data, list)
         for row in data:
             assert row.hours_ago <= 12
 
-        data = apiobj.get(within_last_hours=-1)
+        data = api_client.activity_logs.get(within_last_hours=-1)
         assert isinstance(data, list)
         assert not data

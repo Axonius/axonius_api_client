@@ -4,10 +4,10 @@ from typing import Optional
 
 from .. import json_api
 from ..api_endpoints import ApiEndpoints
-from ..mixins import ModelMixins
+from ..models import ApiModel
 
 
-class RemoteSupport(ModelMixins):
+class RemoteSupport(ApiModel):
     """API for working with configuring remote support system settings.
 
     Examples:
@@ -70,7 +70,7 @@ class RemoteSupport(ModelMixins):
     def _get(self) -> json_api.remote_support.RemoteSupport:
         """Direct API method to get the properties for remote support."""
         api_endpoint = ApiEndpoints.remote_support.get
-        return api_endpoint.perform_request(http=self.auth.http)
+        return api_endpoint.perform_request(client=self.CLIENT)
 
     def _update_permanent(
         self,
@@ -79,7 +79,7 @@ class RemoteSupport(ModelMixins):
         """Direct API method to update the properties for remote support."""
         api_endpoint = ApiEndpoints.remote_support.permanent_update
         request_obj = api_endpoint.load_request(provision=provision)
-        return api_endpoint.perform_request(http=self.auth.http, request_obj=request_obj)
+        return api_endpoint.perform_request(client=self.CLIENT, request_obj=request_obj)
 
     def _update_analytics(
         self,
@@ -88,7 +88,7 @@ class RemoteSupport(ModelMixins):
         """Direct API method to update the properties for remote support."""
         api_endpoint = ApiEndpoints.remote_support.analytics_update
         request_obj = api_endpoint.load_request(analytics=analytics)
-        return api_endpoint.perform_request(http=self.auth.http, request_obj=request_obj)
+        return api_endpoint.perform_request(client=self.CLIENT, request_obj=request_obj)
 
     def _update_troubleshooting(
         self,
@@ -97,15 +97,15 @@ class RemoteSupport(ModelMixins):
         """Direct API method to update the properties for remote support."""
         api_endpoint = ApiEndpoints.remote_support.troubleshooting_update
         request_obj = api_endpoint.load_request(troubleshooting=troubleshooting)
-        return api_endpoint.perform_request(http=self.auth.http, request_obj=request_obj)
+        return api_endpoint.perform_request(client=self.CLIENT, request_obj=request_obj)
 
     def _start_temporary(self, hours: int) -> json_api.remote_support.UpdateTemporaryResponse:
         """Direct API method to enable temporary remote support."""
         api_endpoint = ApiEndpoints.remote_support.temporary_enable
         request_obj = api_endpoint.load_request(duration=hours)
-        return api_endpoint.perform_request(http=self.auth.http, request_obj=request_obj)
+        return api_endpoint.perform_request(client=self.CLIENT, request_obj=request_obj)
 
     def _stop_temporary(self) -> str:
         """Direct API method to stop temporary remote support."""
         api_endpoint = ApiEndpoints.remote_support.temporary_disable
-        return api_endpoint.perform_request(http=self.auth.http)
+        return api_endpoint.perform_request(client=self.CLIENT)

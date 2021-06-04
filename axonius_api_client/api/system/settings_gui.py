@@ -13,7 +13,7 @@ class SettingsGui(SettingsMixins):
     def _get(self) -> json_api.system_settings.SystemSettings:
         """Direct API method to get the current system settings."""
         api_endpoint = ApiEndpoints.system_settings.gui_get
-        return api_endpoint.perform_request(http=self.auth.http)
+        return api_endpoint.perform_request(client=self.CLIENT)
 
     def _update(self, new_config: dict) -> json_api.system_settings.SystemSettings:
         """Direct API method to update the system settings.
@@ -23,4 +23,4 @@ class SettingsGui(SettingsMixins):
         """
         api_endpoint = ApiEndpoints.system_settings.gui_update
         request_obj = api_endpoint.load_request(config=new_config)
-        return api_endpoint.perform_request(http=self.auth.http, request_obj=request_obj)
+        return api_endpoint.perform_request(client=self.CLIENT, request_obj=request_obj)

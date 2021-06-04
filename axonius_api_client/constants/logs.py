@@ -45,6 +45,9 @@ LOG_LEVEL_API: str = "debug"
 LOG_LEVEL_WIZARD: str = "info"
 """default logging level for :obj:`axonius_api_client.api.wizards.wizard.Wizard`"""
 
+LOG_LEVEL_PARSE: str = "info"
+"""default logging level for parsers"""
+
 LOG_LEVEL_PACKAGE: str = "debug"
 """default logging level for the entire package"""
 

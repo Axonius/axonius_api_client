@@ -7,11 +7,6 @@ from typing import List, Optional, Union
 
 import requests
 
-from .api import (ActivityLogs, Adapters, Dashboard, Devices, Enforcements,
-                  Instances, Meta, RemoteSupport, SettingsGlobal, SettingsGui,
-                  SettingsIdentityProviders, SettingsLifecycle, Signup,
-                  SystemRoles, SystemUsers, Users)
-from .auth import ApiKey
 from .constants.api import TIMEOUT_CONNECT, TIMEOUT_RESPONSE
 from .constants.logs import (LOG_FILE_MAX_FILES, LOG_FILE_MAX_MB,
                              LOG_FILE_NAME, LOG_FILE_PATH, LOG_FMT_BRIEF,
@@ -56,7 +51,7 @@ class Connect:
         >>> # client.devices.fields         # get field schemas for device assets
         >>> # client.devices.labels         # add/remove/get tags for device assets
         >>> # client.devices.saved_queries  # CRUD for saved queries for device assets
-        >>> # client.enforcements           # CRUD for enforcements
+        >>> # client.enforcements.          # work with Enforcement Center
         >>> # client.instances              # get instances and instance meta data
         >>> # client.meta                   # get product meta data
         >>> # client.remote_support         # enable/disable remote support settings
@@ -87,7 +82,7 @@ class Connect:
         proxy: Optional[str] = None,
         **kwargs,
     ):
-        """Easy all-in-one connection handler.
+        """Easy all-in-one connection client.
 
         Args:
             url: URL, hostname, or IP address of Axonius instance
@@ -101,8 +96,16 @@ class Connect:
             proxy: proxy to use when making https requests to :attr:`url`
             **kwargs: documented as properties
         """
+        from . import api
+
+        self.API = api
+        """API Models."""
+
         self.url: str = url
         """URL of Axonius instance to use"""
+
+        self.__key = key
+        self.__secret = secret
 
         certwarn = coerce_bool(certwarn)
         certverify = coerce_bool(certverify)
@@ -248,19 +251,16 @@ class Connect:
         }
         """arguments to use for creating :attr:`HTTP`"""
 
-        self.AUTH_ARGS: dict = {"key": key, "secret": secret, "log_level": self.LOG_LEVEL_AUTH}
-        """arguments to use for creating :attr:`AUTH`"""
-
         self.HTTP = Http(**self.HTTP_ARGS)
         """:obj:`axonius_api_client.http.Http` client to use for :attr:`AUTH`"""
 
-        self.AUTH = ApiKey(http=self.HTTP, **self.AUTH_ARGS)
-        """:obj:`axonius_api_client.auth.api_key.ApiKey` auth method to use for all API models"""
+        self.HTTP.session.headers["api-key"] = key
+        self.HTTP.session.headers["api-secret"] = secret
 
-        self.API_ARGS: dict = {"auth": self.AUTH, "log_level": self.LOG_LEVEL_API}
+        self.API_ARGS: dict = {"client": self, "log_level": self.LOG_LEVEL_API}
         """arguments to use for all API models"""
 
-        self.SIGNUP = Signup(**self.HTTP_ARGS)
+        self.SIGNUP = self.API.Signup(**self.HTTP_ARGS)
         """Easy access to signup."""
 
     def start(self):
@@ -270,7 +270,8 @@ class Connect:
             LOG.debug(f"SYSTEM INFO: {sysinfo_dump}")
 
             try:
-                self.AUTH.login()
+                meta = self.API.Meta(**self.API_ARGS)
+                meta._about()
             except Exception as exc:
                 if not self.WRAPERROR:
                     raise
@@ -279,152 +280,158 @@ class Connect:
 
                 if isinstance(exc, requests.ConnectTimeout):
                     timeout = self.HTTP.CONNECT_TIMEOUT
-                    msg = f"{pre}: connection timed out after {timeout} seconds"
-                    cnxexc = ConnectError(msg)
+                    raise ConnectError(
+                        msg=f"{pre}: connection timed out after {timeout} seconds", exc=exc
+                    )
                 elif isinstance(exc, requests.ConnectionError):
                     reason = self._get_exc_reason(exc=exc)
-                    cnxexc = ConnectError(f"{pre}: {reason}")
+                    raise ConnectError(msg=f"{pre}: {reason}", exc=exc)
                 elif isinstance(exc, InvalidCredentials):
-                    cnxexc = ConnectError(f"{pre}: Invalid Credentials supplied")
-                else:
-                    cnxexc = ConnectError(f"{pre}: {exc}")
-                cnxexc.exc = exc
-                raise cnxexc
+                    raise ConnectError(msg=f"{pre}: Invalid Credentials supplied", exc=exc)
+
+                raise ConnectError(msg=f"{pre}: {exc}", exc=exc)
 
             self.STARTED = True
             LOG.info(str(self))
 
     @property
-    def signup(self) -> Signup:
+    def signup(self):
         """Work with signup endpoints."""
         if not hasattr(self, "_signup"):
-            self._signup = Signup(**self.HTTP_ARGS)
+            self._signup = self.API.Signup(**self.HTTP_ARGS)
         return self._signup
 
     @property
-    def users(self) -> Users:
+    def users(self):
         """Work with user assets."""
         self.start()
         if not hasattr(self, "_users"):
-            self._users = Users(**self.API_ARGS)
+            self._users = self.API.Users(**self.API_ARGS)
         return self._users
 
     @property
-    def devices(self) -> Devices:
+    def devices(self):
         """Work with device assets."""
         self.start()
         if not hasattr(self, "_devices"):
-            self._devices = Devices(**self.API_ARGS)
+            self._devices = self.API.Devices(**self.API_ARGS)
         return self._devices
 
     @property
-    def adapters(self) -> Adapters:
-        """Work with adapters and adapter connections."""
+    def adapters(self):
+        """Work with adapters."""
         self.start()
         if not hasattr(self, "_adapters"):
-            self._adapters = Adapters(**self.API_ARGS)
+            self._adapters = self.API.Adapters(**self.API_ARGS)
         return self._adapters
 
     @property
-    def instances(self) -> Instances:
+    def cnx(self):
+        """Work with adapter connections."""
+        self.start()
+        if not hasattr(self, "_cnx"):
+            self._cnx = self.API.Cnx(**self.API_ARGS)
+        return self._cnx
+
+    @property
+    def instances(self):
         """Work with instances."""
         self.start()
         if not hasattr(self, "_instances"):
-            self._instances = Instances(**self.API_ARGS)
+            self._instances = self.API.Instances(**self.API_ARGS)
         return self._instances
 
     @property
-    def activity_logs(self) -> ActivityLogs:
+    def activity_logs(self):
         """Work with activity logs."""
         self.start()
         if not hasattr(self, "_activity_logs"):
-            self._activity_logs = ActivityLogs(**self.API_ARGS)
+            self._activity_logs = self.API.ActivityLogs(**self.API_ARGS)
         return self._activity_logs
 
     @property
-    def remote_support(self) -> RemoteSupport:
+    def remote_support(self):
         """Work with configuring remote support."""
         self.start()
         if not hasattr(self, "_remote_support"):
-            self._remote_support = RemoteSupport(**self.API_ARGS)
+            self._remote_support = self.API.RemoteSupport(**self.API_ARGS)
         return self._remote_support
 
     @property
-    def dashboard(self) -> Dashboard:
+    def dashboard(self):
         """Work with dashboards and discovery cycles."""
         self.start()
         if not hasattr(self, "_dashboard"):
-            self._dashboard = Dashboard(**self.API_ARGS)
+            self._dashboard = self.API.Dashboard(**self.API_ARGS)
         return self._dashboard
 
     @property
-    def enforcements(self) -> Enforcements:
+    def enforcements(self):
         """Work with Enforcement Center."""
         self.start()
         if not hasattr(self, "_enforcements"):
-            self._enforcements = Enforcements(**self.API_ARGS)
+            self._enforcements = self.API.Enforcements(**self.API_ARGS)
         return self._enforcements
 
     @property
-    def system_users(self) -> SystemUsers:
+    def system_users(self):
         """Work with system users."""
         self.start()
         if not hasattr(self, "_system_users"):
-            self._system_users = SystemUsers(**self.API_ARGS)
+            self._system_users = self.API.SystemUsers(**self.API_ARGS)
         return self._system_users
 
     @property
-    def system_roles(self) -> SystemRoles:
+    def system_roles(self):
         """Work with system roles."""
         self.start()
         if not hasattr(self, "_system_roles"):
-            self._system_roles = SystemRoles(**self.API_ARGS)
+            self._system_roles = self.API.SystemRoles(**self.API_ARGS)
         return self._system_roles
 
     @property
-    def meta(self) -> Meta:
+    def meta(self):
         """Work with instance metadata."""
         self.start()
         if not hasattr(self, "_meta"):
-            self._meta = Meta(**self.API_ARGS)
+            self._meta = self.API.Meta(**self.API_ARGS)
         return self._meta
 
     @property
-    def settings_ip(self) -> SettingsIdentityProviders:
+    def settings_ip(self):
         """Work with identity providers settings."""
         self.start()
         if not hasattr(self, "_settings_ip"):
-            self._settings_ip = SettingsIdentityProviders(**self.API_ARGS)
+            self._settings_ip = self.API.SettingsIdentityProviders(**self.API_ARGS)
         return self._settings_ip
 
     @property
-    def settings_global(self) -> SettingsGlobal:
+    def settings_global(self):
         """Work with core system settings."""
         self.start()
         if not hasattr(self, "_settings_global"):
-            self._settings_global = SettingsGlobal(**self.API_ARGS)
+            self._settings_global = self.API.SettingsGlobal(**self.API_ARGS)
         return self._settings_global
 
     @property
-    def settings_gui(self) -> SettingsGui:
+    def settings_gui(self):
         """Work with gui system settings."""
         self.start()
         if not hasattr(self, "_settings_gui"):
-            self._settings_gui = SettingsGui(**self.API_ARGS)
+            self._settings_gui = self.API.SettingsGui(**self.API_ARGS)
         return self._settings_gui
 
     @property
-    def settings_lifecycle(self) -> SettingsLifecycle:
+    def settings_lifecycle(self):
         """Work with lifecycle system settings."""
         self.start()
         if not hasattr(self, "_settings_lifecycle"):
-            self._settings_lifecycle = SettingsLifecycle(**self.API_ARGS)
+            self._settings_lifecycle = self.API.SettingsLifecycle(**self.API_ARGS)
         return self._settings_lifecycle
 
     def __str__(self) -> str:
         """Show object info."""
-        client = getattr(self, "HTTP", "")
-        url = getattr(client, "URL", self.HTTP_ARGS["url"])
+        url = self.HTTP.url
         ax_env = get_env_ax()
         banner = ax_env.get("AX_BANNER")
         banner = f"[{banner}]" if banner else ""

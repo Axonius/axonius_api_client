@@ -5,10 +5,10 @@ from typing import List, Union
 from ...tools import listify
 from .. import json_api
 from ..api_endpoints import ApiEndpoints
-from ..mixins import ChildMixins
+from .asset_mixin import AssetChildMixin
 
 
-class Labels(ChildMixins):
+class Labels(AssetChildMixin):
     """API for working with tags for the parent asset type.
 
     Examples:
@@ -59,16 +59,6 @@ class Labels(ChildMixins):
         ids = self._get_ids(rows=rows)
         return self._add(labels=labels, ids=ids).value
 
-        # processed = 0
-
-        # # only do 100 labels at a time, more seems to break API
-        # for group in grouper(ids, 100):
-        #     group = [x for x in group if x is not None]
-        #     response = self._add(labels=labels, ids=group)
-        #     processed += response
-
-        # return processed
-
     def remove(self, rows: List[dict], labels: List[str]) -> int:
         """Remove tags from assets.
 
@@ -109,13 +99,13 @@ class Labels(ChildMixins):
         entities = {"ids": listify(ids), "include": True}
         request_obj = api_endpoint.load_request(entities=entities, labels=listify(labels))
         return api_endpoint.perform_request(
-            http=self.auth.http, request_obj=request_obj, asset_type=self.parent.ASSET_TYPE
+            client=self.CLIENT, request_obj=request_obj, asset_type=self.PARENT.ASSET_TYPE
         )
 
     def _get(self) -> List[json_api.generic.StrValue]:
         """Direct API method to get all known labels/tags."""
         api_endpoint = ApiEndpoints.assets.tags_get
-        return api_endpoint.perform_request(http=self.auth.http, asset_type=self.parent.ASSET_TYPE)
+        return api_endpoint.perform_request(client=self.CLIENT, asset_type=self.PARENT.ASSET_TYPE)
 
     def _remove(self, labels: List[str], ids: List[str]) -> json_api.generic.IntValue:
         """Direct API method to remove labels/tags from assets.
@@ -129,5 +119,5 @@ class Labels(ChildMixins):
         entities = {"ids": listify(ids), "include": True}
         request_obj = api_endpoint.load_request(entities=entities, labels=listify(labels))
         return api_endpoint.perform_request(
-            http=self.auth.http, request_obj=request_obj, asset_type=self.parent.ASSET_TYPE
+            client=self.CLIENT, request_obj=request_obj, asset_type=self.PARENT.ASSET_TYPE
         )

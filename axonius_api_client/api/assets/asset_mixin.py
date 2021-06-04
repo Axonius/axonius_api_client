@@ -10,11 +10,11 @@ from ...tools import dt_now, json_dump, listify
 from .. import json_api
 from ..api_endpoints import ApiEndpoints
 from ..asset_callbacks.tools import get_callbacks_cls
-from ..mixins import ModelMixins
+from ..models import ApiModel
 from ..wizards import Wizard, WizardCsv, WizardText
 
 
-class AssetMixin(ModelMixins):
+class AssetMixin(ApiModel):
     """API model mixin for device and user assets.
 
     Examples:
@@ -43,6 +43,7 @@ class AssetMixin(ModelMixins):
 
     ASSET_TYPE: str = ""
 
+    # PBUG: ?? count != len(devices.get())
     def count(
         self,
         query: Optional[str] = None,
@@ -292,7 +293,7 @@ class AssetMixin(ModelMixins):
 
         initial_count = self.count(query=query, history_date=history_date)
 
-        state = json_api.assets.AssetsPage.create_state(
+        state = json_api.assets.AssetsPage._create_state(
             max_pages=max_pages,
             max_rows=max_rows,
             page_sleep=page_sleep,
@@ -333,13 +334,13 @@ class AssetMixin(ModelMixins):
                     field_filters={},
                 )
 
-                state = page.process_page(state=state, start_dt=start_dt, apiobj=self)
+                state = page._process_page(state=state, start_dt=start_dt, apiobj=self)
 
                 for row in page.assets:
                     yield from listify(obj=callbacks.process_row(row=row))
-                    state = page.process_row(state=state, apiobj=self)
+                    state = page._process_row(state=state, apiobj=self)
 
-                state = page.process_loop(state=state, apiobj=self)
+                state = page._process_loop(state=state, apiobj=self)
 
                 time.sleep(state["page_sleep"])
             except StopFetch as exc:
@@ -571,31 +572,29 @@ class AssetMixin(ModelMixins):
 
     def _init(self, **kwargs):
         """Post init method for subclasses to use for extra setup."""
-        from ..adapters import Adapters
         from ..asset_callbacks import Base
         from .fields import Fields
         from .labels import Labels
         from .saved_query import SavedQuery
 
-        self.adapters: Adapters = Adapters(auth=self.auth, **kwargs)
-        """Adapters API model for cross reference."""
-
-        self.labels: Labels = Labels(parent=self)
+        self.labels: Labels = Labels(parent=self, client=self.CLIENT, log_level=self.LOG.level)
         """Work with labels (tags)."""
 
-        self.saved_query: SavedQuery = SavedQuery(parent=self)
+        self.saved_query: SavedQuery = SavedQuery(
+            parent=self, client=self.CLIENT, log_level=self.LOG.level
+        )
         """Work with saved queries."""
 
-        self.fields: Fields = Fields(parent=self)
+        self.fields: Fields = Fields(parent=self, client=self.CLIENT, log_level=self.LOG.level)
         """Work with fields."""
 
-        self.wizard: Wizard = Wizard(apiobj=self)
+        self.wizard: Wizard = Wizard(apiobj=self, log_level=self.LOG.level)
         """Query wizard builder."""
 
-        self.wizard_text: WizardText = WizardText(apiobj=self)
+        self.wizard_text: WizardText = WizardText(apiobj=self, log_level=self.LOG.level)
         """Query wizard builder from text."""
 
-        self.wizard_csv: WizardCsv = WizardCsv(apiobj=self)
+        self.wizard_csv: WizardCsv = WizardCsv(apiobj=self, log_level=self.LOG.level)
         """Query wizard builder from CSV."""
 
         self.LAST_GET: dict = {}
@@ -665,7 +664,7 @@ class AssetMixin(ModelMixins):
         self.LAST_GET_REQUEST_OBJ = request_obj
         self.LAST_GET = request_obj.to_dict()
         return api_endpoint.perform_request(
-            http=self.auth.http, request_obj=request_obj, asset_type=asset_type
+            client=self.CLIENT, request_obj=request_obj, asset_type=asset_type
         )
 
     def _get_by_id(self, id: str) -> json_api.assets.AssetById:
@@ -677,7 +676,7 @@ class AssetMixin(ModelMixins):
         asset_type = self.ASSET_TYPE
         api_endpoint = ApiEndpoints.assets.get_by_id
         return api_endpoint.perform_request(
-            http=self.auth.http, asset_type=asset_type, internal_axon_id=id
+            client=self.CLIENT, asset_type=asset_type, internal_axon_id=id
         )
 
     def _count(
@@ -705,7 +704,7 @@ class AssetMixin(ModelMixins):
             )
 
         return api_endpoint.perform_request(
-            http=self.auth.http, request_obj=request_obj, asset_type=asset_type
+            client=self.CLIENT, request_obj=request_obj, asset_type=asset_type
         )
 
     def _destroy(self, destroy: bool, history: bool) -> dict:  # pragma: no cover
@@ -723,13 +722,18 @@ class AssetMixin(ModelMixins):
         )
 
         return api_endpoint.perform_request(
-            http=self.auth.http, request_obj=request_obj, asset_type=asset_type
+            client=self.CLIENT, request_obj=request_obj, asset_type=asset_type
         )
 
     def _history_dates(self) -> json_api.generic.DictValue:
         """Private API method to get all known historical dates."""
         api_endpoint = ApiEndpoints.assets.history_dates
-        return api_endpoint.perform_request(http=self.auth.http)
+        return api_endpoint.perform_request(client=self.CLIENT)
+
+    @property
+    def adapters(self):
+        """Pass."""
+        return self.CLIENT.adapters
 
     FIELD_TAGS: str = "labels"
     """Field name for getting tabs (labels)."""
@@ -774,3 +778,12 @@ class AssetMixin(ModelMixins):
 
     wizard_csv = None
     """:obj:`axonius_api_client.api.wizards.wizard_csv.WizardCsv`: Query wizard for CSV files."""
+
+
+class AssetChildMixin(ApiModel):
+    """Pass."""
+
+    def _init(self, parent, **kwargs):
+        """Post init method for subclasses to use for extra setup."""
+        self.PARENT = parent
+        self.CLIENT = parent.CLIENT

@@ -59,6 +59,17 @@ class AlreadyLoggedIn(AuthError):
 class ConnectError(AxonError):
     """Error in connect client."""
 
+    def __init__(self, msg: Optional[str] = None, exc: Optional[Exception] = None):
+        """Error in connect client.
+
+        Args:
+            msg: error message to include in exception
+            exc: original exception that was thrown if any
+        """
+        self.exc: Exception = exc
+        self.msg: str = msg
+        super().__init__(self.msg)
+
 
 class HttpError(AxonError):
     """Errors for HTTP client."""

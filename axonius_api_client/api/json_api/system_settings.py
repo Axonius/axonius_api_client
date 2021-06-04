@@ -7,10 +7,10 @@ from typing import Optional, Type
 import marshmallow_jsonapi
 
 from ...tools import dt_days_left, dt_parse
-from .base import BaseModel, BaseSchema, BaseSchemaJson
+from ..models import DataModel, DataSchema, DataSchemaJson
 
 
-class SystemSettingsSchema(BaseSchemaJson):
+class SystemSettingsSchema(DataSchemaJson):
     """Pass."""
 
     config = marshmallow_jsonapi.fields.Dict(required=True)
@@ -20,7 +20,7 @@ class SystemSettingsSchema(BaseSchemaJson):
     prefix = marshmallow_jsonapi.fields.Str(default="", missing="")
 
     @staticmethod
-    def get_model_cls() -> type:
+    def _get_model_cls() -> type:
         """Pass."""
         return SystemSettings
 
@@ -31,7 +31,7 @@ class SystemSettingsSchema(BaseSchemaJson):
 
 
 @dataclasses.dataclass
-class SystemSettings(BaseModel):
+class SystemSettings(DataModel):
     """Pass."""
 
     config: dict
@@ -42,12 +42,12 @@ class SystemSettings(BaseModel):
     document_meta: dict = dataclasses.field(default_factory=dict)
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def _get_schema_cls() -> Optional[Type[DataSchema]]:
         """Pass."""
         return SystemSettingsSchema
 
 
-class SystemSettingsUpdateSchema(BaseSchemaJson):
+class SystemSettingsUpdateSchema(DataSchemaJson):
     """Pass."""
 
     config = marshmallow_jsonapi.fields.Dict(required=True)
@@ -63,7 +63,7 @@ class SystemSettingsUpdateSchema(BaseSchemaJson):
 
 
 @dataclasses.dataclass
-class SystemSettingsGuiUpdate(BaseModel):
+class SystemSettingsGuiUpdate(DataModel):
     """Pass."""
 
     config: dict
@@ -71,13 +71,13 @@ class SystemSettingsGuiUpdate(BaseModel):
     pluginId: str = "gui"
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def _get_schema_cls() -> Optional[Type[DataSchema]]:
         """Pass."""
         return SystemSettingsUpdateSchema
 
 
 @dataclasses.dataclass
-class SystemSettingsIdentityProvidersUpdate(BaseModel):
+class SystemSettingsIdentityProvidersUpdate(DataModel):
     """Pass."""
 
     config: dict
@@ -85,13 +85,13 @@ class SystemSettingsIdentityProvidersUpdate(BaseModel):
     pluginId: str = "gui"
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def _get_schema_cls() -> Optional[Type[DataSchema]]:
         """Pass."""
         return SystemSettingsUpdateSchema
 
 
 @dataclasses.dataclass
-class SystemSettingsLifecycleUpdate(BaseModel):
+class SystemSettingsLifecycleUpdate(DataModel):
     """Pass."""
 
     config: dict
@@ -99,13 +99,13 @@ class SystemSettingsLifecycleUpdate(BaseModel):
     pluginId: str = "system_scheduler"
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def _get_schema_cls() -> Optional[Type[DataSchema]]:
         """Pass."""
         return SystemSettingsUpdateSchema
 
 
 @dataclasses.dataclass
-class SystemSettingsGlobalUpdate(BaseModel):
+class SystemSettingsGlobalUpdate(DataModel):
     """Pass."""
 
     config: dict
@@ -113,7 +113,7 @@ class SystemSettingsGlobalUpdate(BaseModel):
     pluginId: str = "core"
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def _get_schema_cls() -> Optional[Type[DataSchema]]:
         """Pass."""
         return SystemSettingsUpdateSchema
 
@@ -122,7 +122,7 @@ class FeatureFlagsSchema(SystemSettingsSchema):
     """Pass."""
 
     @staticmethod
-    def get_model_cls() -> type:
+    def _get_model_cls() -> type:
         """Pass."""
         return FeatureFlags
 
@@ -132,7 +132,7 @@ class FeatureFlags(SystemSettings):
     """Pass."""
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def _get_schema_cls() -> Optional[Type[DataSchema]]:
         """Pass."""
         return FeatureFlagsSchema
 

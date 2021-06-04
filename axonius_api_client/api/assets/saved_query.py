@@ -9,11 +9,11 @@ from ...parsers.tables import tablize_sqs
 from ...tools import check_gui_page_size, listify
 from .. import json_api
 from ..api_endpoints import ApiEndpoints
-from ..mixins import ChildMixins
+from .asset_mixin import AssetChildMixin
 
 
 # XXX need update saved query
-class SavedQuery(ChildMixins):
+class SavedQuery(AssetChildMixin):
     """API object for working with saved queries for the parent asset type.
 
     Examples:
@@ -243,7 +243,7 @@ class SavedQuery(ChildMixins):
         query_expr: Optional[str] = kwargs.get("query_expr", None) or query
         gui_page_size = check_gui_page_size(size=gui_page_size)
 
-        fields = self.parent.fields.validate(
+        fields = self.PARENT.fields.validate(
             fields=fields,
             fields_manual=fields_manual,
             fields_regex=fields_regex,
@@ -253,12 +253,12 @@ class SavedQuery(ChildMixins):
         )
 
         if sort_field:
-            sort_field = self.parent.fields.get_field_name(value=sort_field)
+            sort_field = self.PARENT.fields.get_field_name(value=sort_field)
 
         data_column_filters = {}
         if column_filters:
             for col_field, col_value in column_filters.items():
-                col_field = self.parent.fields.get_field_name(value=col_field)
+                col_field = self.PARENT.fields.get_field_name(value=col_field)
                 data_column_filters[col_field] = col_value
 
         dmeta = {}  # TBD
@@ -357,7 +357,7 @@ class SavedQuery(ChildMixins):
             tags=tags or [],
         )
         return api_endpoint.perform_request(
-            http=self.auth.http, request_obj=request_obj, asset_type=self.parent.ASSET_TYPE
+            client=self.CLIENT, request_obj=request_obj, asset_type=self.PARENT.ASSET_TYPE
         )
 
     def _delete(self, uuid: str) -> json_api.generic.Metadata:
@@ -371,17 +371,17 @@ class SavedQuery(ChildMixins):
             api_endpoint = ApiEndpoints.saved_queries.delete
             request_obj = api_endpoint.load_request()
             return api_endpoint.perform_request(
-                http=self.auth.http,
+                client=self.CLIENT,
                 request_obj=request_obj,
                 asset_type=self.parent.ASSET_TYPE,
                 uuid=uuid,
             )
         except ResponseError as exc:
-            if exc.is_incorrect_type:
+            if getattr(exc, "is_incorrect_type", None):
                 api_endpoint = ApiEndpoints.saved_queries.delete_4_3
                 request_obj = api_endpoint.load_request()
                 return api_endpoint.perform_request(
-                    http=self.auth.http,
+                    client=self.CLIENT,
                     request_obj=request_obj,
                     asset_type=self.parent.ASSET_TYPE,
                     uuid=uuid,
@@ -400,5 +400,5 @@ class SavedQuery(ChildMixins):
         api_endpoint = ApiEndpoints.saved_queries.get
         request_obj = api_endpoint.load_request(page={"limit": limit, "offset": offset})
         return api_endpoint.perform_request(
-            http=self.auth.http, request_obj=request_obj, asset_type=self.parent.ASSET_TYPE
+            client=self.CLIENT, request_obj=request_obj, asset_type=self.PARENT.ASSET_TYPE
         )

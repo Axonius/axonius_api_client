@@ -11,6 +11,9 @@ OK_ARGS: dict = {"fg": "green", "bold": True, "err": True}
 OK_TMPL: str = "** {msg}"
 """default template for echo_ok"""
 
+DEBUG_TMPL: str = "** {msg}"
+"""default template for echo_ok"""
+
 WARN_ARGS: dict = {"fg": "yellow", "bold": True, "err": True}
 """default arguments for echo_warn"""
 

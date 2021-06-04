@@ -69,8 +69,8 @@ class SettingsBasePublic:
 
 class TestSettingsGui(SettingsBasePublic):
     @pytest.fixture(scope="class")
-    def apiobj(self, api_settings_gui):
-        return api_settings_gui
+    def apiobj(self, api_client):
+        return api_client.settings_gui
 
     def test_get_section_full_config_true(self, apiobj):
         result = apiobj.get_section(section=GUI_SECTION_WITH_SUBS, full_config=True)
@@ -151,11 +151,11 @@ class TestSettingsGui(SettingsBasePublic):
 
 class TestSettingsGlobal(SettingsBasePublic):
     @pytest.fixture(scope="class")
-    def apiobj(self, api_settings_global):
-        return api_settings_global
+    def apiobj(self, api_client):
+        return api_client.settings_global
 
 
 class TestSettingsLifecycle(SettingsBasePublic):
     @pytest.fixture(scope="class")
-    def apiobj(self, api_settings_lifecycle):
-        return api_settings_lifecycle
+    def apiobj(self, api_client):
+        return api_client.settings_lifecycle

@@ -14,10 +14,10 @@ from ...parsers.fields import parse_fields, schema_custom
 from ...tools import listify, split_str, strip_right
 from .. import json_api
 from ..api_endpoints import ApiEndpoints
-from ..mixins import ChildMixins
+from .asset_mixin import AssetChildMixin
 
 
-class Fields(ChildMixins):
+class Fields(AssetChildMixin):
     """API for working with fields for the parent asset type.
 
     Examples:
@@ -110,7 +110,7 @@ class Fields(ChildMixins):
         selected = []
 
         if fields_default and not fields_root:
-            add(self.parent.fields_default)
+            add(self.PARENT.fields_default)
 
         if fields_root:
             add(self.get_field_names_root(adapter=fields_root))
@@ -282,7 +282,13 @@ class Fields(ChildMixins):
         matches = []
 
         for adapter_name, names in splits:
-            adapter = self.get_adapter_name(value=adapter_name)
+            try:
+                adapter = self.get_adapter_name(value=adapter_name)
+            except NotFoundError:
+                if fields_error:
+                    raise
+                adapter = AGG_ADAPTER_NAME
+
             for name in names:
                 schemas = fields[adapter]
                 try:
@@ -605,4 +611,4 @@ class Fields(ChildMixins):
     def _get(self) -> json_api.generic.Metadata:
         """Private API method to get the schema of all fields."""
         api_endpoint = ApiEndpoints.assets.fields
-        return api_endpoint.perform_request(http=self.auth.http, asset_type=self.parent.ASSET_TYPE)
+        return api_endpoint.perform_request(client=self.CLIENT, asset_type=self.PARENT.ASSET_TYPE)

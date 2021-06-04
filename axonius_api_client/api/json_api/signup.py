@@ -5,11 +5,11 @@ from typing import Optional, Type
 
 import marshmallow_jsonapi
 
-from .base import BaseModel, BaseSchema, BaseSchemaJson
+from ..models import DataModel, DataSchema, DataSchemaJson
 from .custom_fields import get_field_str_req
 
 
-class SignupRequestSchema(BaseSchemaJson):
+class SignupRequestSchema(DataSchemaJson):
     """Pass."""
 
     company_name = get_field_str_req()
@@ -25,12 +25,12 @@ class SignupRequestSchema(BaseSchemaJson):
         type_ = "signup_schema"
 
     @staticmethod
-    def get_model_cls() -> type:
+    def _get_model_cls() -> type:
         """Pass."""
         return SignupRequest
 
 
-class SystemStatusSchema(BaseSchemaJson):
+class SystemStatusSchema(DataSchemaJson):
     """Pass."""
 
     msg = marshmallow_jsonapi.fields.Str()
@@ -49,7 +49,7 @@ class SystemStatusSchema(BaseSchemaJson):
 
 
 @dataclasses.dataclass
-class SignupRequest(BaseModel):
+class SignupRequest(DataModel):
     """Pass."""
 
     company_name: str
@@ -60,12 +60,12 @@ class SignupRequest(BaseModel):
     api_keys: bool = True
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def _get_schema_cls() -> Optional[Type[DataSchema]]:
         """Pass."""
         return SignupRequestSchema
 
 
-class SignupResponseSchema(BaseSchemaJson):
+class SignupResponseSchema(DataSchemaJson):
     """Pass."""
 
     api_key = get_field_str_req()
@@ -77,26 +77,26 @@ class SignupResponseSchema(BaseSchemaJson):
         type_ = "signup_response_schema"
 
     @staticmethod
-    def get_model_cls() -> type:
+    def _get_model_cls() -> type:
         """Pass."""
         return SignupResponse
 
 
 @dataclasses.dataclass
-class SignupResponse(BaseModel):
+class SignupResponse(DataModel):
     """Pass."""
 
     api_key: str
     api_secret: str
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def _get_schema_cls() -> Optional[Type[DataSchema]]:
         """Pass."""
         return SignupResponseSchema
 
 
 @dataclasses.dataclass
-class SystemStatus(BaseModel):
+class SystemStatus(DataModel):
     """Pass."""
 
     msg: str
@@ -104,7 +104,7 @@ class SystemStatus(BaseModel):
     status_code: int
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> Optional[Type[DataSchema]]:
         """Pass."""
         return SystemStatusSchema
 

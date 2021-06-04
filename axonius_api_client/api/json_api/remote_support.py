@@ -7,11 +7,11 @@ from typing import List, Optional, Type
 import marshmallow
 
 from ...tools import dt_now, dt_parse, trim_float
-from .base import BaseModel, BaseSchema
+from ..models import DataModel, DataSchema
 from .custom_fields import SchemaBool, SchemaDatetime, get_field_dc_mm
 
 
-class RemoteSupportSchema(BaseSchema):
+class RemoteSupportSchema(DataSchema):
     """Pass."""
 
     provision = SchemaBool()
@@ -22,13 +22,13 @@ class RemoteSupportSchema(BaseSchema):
     _id = marshmallow.fields.Str()
 
     @staticmethod
-    def get_model_cls() -> type:
+    def _get_model_cls() -> type:
         """Pass."""
         return RemoteSupport
 
 
 @dataclasses.dataclass
-class RemoteSupport(BaseModel):
+class RemoteSupport(DataModel):
     """Pass."""
 
     provision: bool
@@ -94,105 +94,105 @@ class RemoteSupport(BaseModel):
         return self.enabled and self.troubleshooting
 
     @staticmethod
-    def get_model_cls() -> type:
+    def _get_model_cls() -> type:
         """Pass."""
         return RemoteSupportSchema
 
 
-class UpdatePermanentRequestSchema(BaseSchema):
+class UpdatePermanentRequestSchema(DataSchema):
     """Pass."""
 
     provision = SchemaBool()
 
     @staticmethod
-    def get_model_cls() -> type:
+    def _get_model_cls() -> type:
         """Pass."""
         return UpdatePermanentRequest
 
 
 @dataclasses.dataclass
-class UpdatePermanentRequest(BaseModel):
+class UpdatePermanentRequest(DataModel):
     """Pass."""
 
     provision: bool
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def _get_schema_cls() -> Optional[Type[DataSchema]]:
         """Pass."""
         return UpdatePermanentRequestSchema
 
 
-class UpdateAnalyticsRequestSchema(BaseSchema):
+class UpdateAnalyticsRequestSchema(DataSchema):
     """Pass."""
 
     analytics = SchemaBool()
 
     @staticmethod
-    def get_model_cls() -> type:
+    def _get_model_cls() -> type:
         """Pass."""
         return UpdateAnalyticsRequest
 
 
 @dataclasses.dataclass
-class UpdateAnalyticsRequest(BaseModel):
+class UpdateAnalyticsRequest(DataModel):
     """Pass."""
 
     analytics: bool
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def _get_schema_cls() -> Optional[Type[DataSchema]]:
         """Pass."""
         return UpdateAnalyticsRequestSchema
 
 
-class UpdateTroubleshootingRequestSchema(BaseSchema):
+class UpdateTroubleshootingRequestSchema(DataSchema):
     """Pass."""
 
     troubleshooting = SchemaBool()
 
     @staticmethod
-    def get_model_cls() -> type:
+    def _get_model_cls() -> type:
         """Pass."""
         return UpdateTroubleshootingRequest
 
 
 @dataclasses.dataclass
-class UpdateTroubleshootingRequest(BaseModel):
+class UpdateTroubleshootingRequest(DataModel):
     """Pass."""
 
     troubleshooting: bool
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def _get_schema_cls() -> Optional[Type[DataSchema]]:
         """Pass."""
         return UpdateTroubleshootingRequestSchema
 
 
-class UpdateTemporaryRequestSchema(BaseSchema):
+class UpdateTemporaryRequestSchema(DataSchema):
     """Pass."""
 
     duration = marshmallow.fields.Int(validate=marshmallow.validate.Range(min=1))
 
     @staticmethod
-    def get_model_cls() -> type:
+    def _get_model_cls() -> type:
         """Pass."""
         return UpdateTemporaryRequest
 
 
 @dataclasses.dataclass
-class UpdateTemporaryRequest(BaseModel):
+class UpdateTemporaryRequest(DataModel):
     """Pass."""
 
     duration: int
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def _get_schema_cls() -> Optional[Type[DataSchema]]:
         """Pass."""
         return UpdateTemporaryRequestSchema
 
 
 @dataclasses.dataclass
-class UpdateTemporaryResponse(BaseModel):
+class UpdateTemporaryResponse(DataModel):
     """Pass."""
 
     timeout: str

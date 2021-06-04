@@ -352,14 +352,23 @@ def config_default(
     sane_defaults = sane_defaults or {}
 
     for name, schema in schemas.items():
+        stype = schema["type"]
+        default = schema.get("default")
+
         if name in new_config:
             continue
 
-        if "default" in schema:
-            new_config[name] = schema["default"]
+        if default is not None:
+            new_config[name] = default
+            continue
 
         if name in sane_defaults:
             new_config[name] = sane_defaults[name]
+            continue
+
+        if stype == "bool":
+            new_config[name] = False
+            continue
 
     return new_config
 

@@ -804,7 +804,8 @@ class Callbacks:
             with pytest.raises(ApiError):
                 cbobj.add_report_software_whitelist(rows=row)
 
-    def test_sw_whitelist(self, cbexport, api_devices):
+    def test_sw_whitelist(self, cbexport, api_client):
+        api_devices = api_client.devices
         field = "specific_data.data.installed_software"
         whitelist = ["chrome"]
         query = '(specific_data.data.installed_software.name == regex("chrome", "i"))'

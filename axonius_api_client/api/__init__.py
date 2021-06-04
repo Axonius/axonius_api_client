@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 """API library package."""
-from . import api_endpoints, json_api
+from . import json_api, models
 from .adapters import Adapters, Cnx
-from .api_endpoint import ApiEndpoint
 from .api_endpoints import ApiEndpoints
 from .assets import Devices, Users
 from .enforcements import Enforcements
@@ -32,8 +31,7 @@ __all__ = (
     "WizardCsv",
     "WizardText",
     "ActivityLogs",
-    "api_endpoints",
     "ApiEndpoints",
-    "ApiEndpoint",
+    "models",
     "json_api",
 )

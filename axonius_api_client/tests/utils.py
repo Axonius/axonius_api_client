@@ -8,11 +8,10 @@ import sys
 from io import StringIO
 
 import pytest
-from axonius_api_client import Wizard, api, auth
+from axonius_api_client.api import Wizard
 from axonius_api_client.cli.context import Context
 from axonius_api_client.constants.fields import AGG_ADAPTER_NAME
 from axonius_api_client.exceptions import NotFoundError
-from axonius_api_client.http import Http
 from axonius_api_client.tools import listify
 from cachetools import TTLCache, cached
 from click.testing import CliRunner
@@ -122,23 +121,23 @@ def log_check(caplog, entries, exists=True):
 
 
 #
-def get_cnx_existing(apiobj, name=None, reqkeys=None):
+def get_cnx_existing(api_client, name=None, reqkeys=None):
     """Test utility."""
-    found = get_cnx(apiobj=apiobj, name=name, reqkeys=reqkeys)
+    found = get_cnx(api_client=api_client, name=name, reqkeys=reqkeys)
 
     if not found:
         pytest.skip("No connections found for any adapter!")
     return found
 
 
-def get_cnx_working(apiobj, name=None, reqkeys=None):
+def get_cnx_working(api_client, name=None, reqkeys=None):
     """Test utility."""
     problems = [
         "symantec_altiris",  # AX-7165
         "alibaba",  # noticed in 4.3 that test fails but connection still green
     ]
     found = get_cnx(
-        apiobj=apiobj, cntkey="success_count", name=name, reqkeys=reqkeys, problems=problems
+        api_client=api_client, cntkey="success_count", name=name, reqkeys=reqkeys, problems=problems
     )
 
     if not found:
@@ -146,18 +145,18 @@ def get_cnx_working(apiobj, name=None, reqkeys=None):
     return found
 
 
-def get_cnx_broken(apiobj, name=None, reqkeys=None):
+def get_cnx_broken(api_client, name=None, reqkeys=None):
     """Test utility."""
-    found = get_cnx(apiobj=apiobj, cntkey="error_count", name=name, reqkeys=reqkeys)
+    found = get_cnx(api_client=api_client, cntkey="error_count", name=name, reqkeys=reqkeys)
 
     if not found:
         pytest.skip("No broken connections found for any adapter!")
     return found
 
 
-def get_cnx(apiobj, cntkey="total_count", name=None, reqkeys=None, problems=None):
+def get_cnx(api_client, cntkey="total_count", name=None, reqkeys=None, problems=None):
     """Pass."""
-    adapters = apiobj._get(get_clients=False)
+    adapters = api_client.adapters._get(get_clients=False)
     reqkeys = reqkeys or []
     problems = problems or []
 
@@ -172,7 +171,7 @@ def get_cnx(apiobj, cntkey="total_count", name=None, reqkeys=None, problems=None
             if problems and adapter_node.adapter_name in problems:
                 continue
 
-            cnxs = apiobj.cnx._get(adapter_name=adapter_node.adapter_name_raw)
+            cnxs = api_client.cnx._get(adapter_name=adapter_node.adapter_name_raw)
 
             has_req = all([x in cnxs.schema_cnx for x in reqkeys])
             if not has_req:
@@ -186,65 +185,6 @@ def get_cnx(apiobj, cntkey="total_count", name=None, reqkeys=None, problems=None
                 if cntkey == "error_count" and not cnx.working:
                     return cnx.to_dict_old()
     return None
-
-
-def get_url(request):
-    """Test utility."""
-    return request.config.getoption("--ax-url").rstrip("/")
-
-
-def get_key_creds(request):
-    """Test utility."""
-    key = request.config.getoption("--ax-key")
-    secret = request.config.getoption("--ax-secret")
-    return {"key": key, "secret": secret}
-
-
-def get_auth(request):
-    """Test utility."""
-    http = Http(url=get_url(request), certwarn=False)
-
-    obj = auth.ApiKey(http=http, **get_key_creds(request))
-    obj.login()
-    return obj
-
-
-def check_apiobj(authobj, apiobj):
-    """Test utility."""
-    url = authobj._http.url
-    authclsname = format(authobj.__class__.__name__)
-    assert authclsname in format(apiobj)
-    assert authclsname in repr(apiobj)
-    assert url in format(apiobj)
-    assert url in repr(apiobj)
-
-    assert isinstance(apiobj.auth, auth.Model)
-    assert isinstance(apiobj.http, Http)
-
-
-def check_apiobj_children(apiobj, **kwargs):
-    """Test utility."""
-    for k, v in kwargs.items():
-        attr = getattr(apiobj, k)
-        attrclsname = format(attr.__class__.__name__)
-
-        assert isinstance(attr, api.mixins.ChildMixins)
-        assert isinstance(attr, v)
-
-        assert isinstance(attr.auth, auth.Model)
-        assert isinstance(attr.http, Http)
-        assert isinstance(attr.parent, api.mixins.Model)
-        assert attrclsname in format(attr)
-        assert attrclsname in repr(attr)
-
-
-def check_apiobj_xref(apiobj, **kwargs):
-    """Test utility."""
-    for k, v in kwargs.items():
-        attr = getattr(apiobj, k)
-
-        assert isinstance(attr, api.mixins.ModelMixins)
-        assert isinstance(attr, v)
 
 
 def load_clirunner(request, monkeypatch):
@@ -302,3 +242,15 @@ def check_csv_cols(content, cols):
         for x in cols:
             assert x in row, "column {!r} not in {}".format(x, list(row))
     return rows
+
+
+def get_url(request):
+    """Test utility."""
+    return request.config.getoption("--ax-url").rstrip("/")
+
+
+def get_key_creds(request):
+    """Test utility."""
+    key = request.config.getoption("--ax-key")
+    secret = request.config.getoption("--ax-secret")
+    return {"key": key, "secret": secret}

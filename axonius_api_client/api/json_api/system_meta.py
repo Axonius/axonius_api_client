@@ -3,10 +3,10 @@
 import marshmallow
 import marshmallow_jsonapi
 
-from .base import BaseSchemaJson
+from ..models import DataSchemaJson
 
 
-class SystemMetaSchema(BaseSchemaJson):
+class SystemMetaSchema(DataSchemaJson):
     """Pass."""
 
     api_client_version = marshmallow_jsonapi.fields.Str()
@@ -31,6 +31,6 @@ class SystemMetaSchema(BaseSchemaJson):
         return data
 
     @staticmethod
-    def get_model_cls() -> type:
+    def _get_model_cls() -> type:
         """Pass."""
         return dict

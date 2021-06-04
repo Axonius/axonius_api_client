@@ -7,7 +7,17 @@ from typing import List, Optional, Union
 import tabulate
 
 from ..constants.tables import KEY_MAP_ADAPTER, KEY_MAP_CNX, KEY_MAP_SCHEMA, TABLE_FMT
+from ..exceptions import NotFoundError
 from ..tools import json_dump, listify
+
+
+def tablize_notfound(found: List[dict], err: str, **kwargs) -> str:
+    """Pass."""
+    if found:
+        msg = tablize(value=[x.to_tablize() for x in found], err=err, **kwargs)
+    else:
+        msg = f"{err} - none exist!"
+    raise NotFoundError(msg)
 
 
 def tablize(

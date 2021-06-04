@@ -2,14 +2,8 @@
 """Test suite."""
 import copy
 
-import pytest
-
 
 class SystemMetaBase:
-    @pytest.fixture(scope="class")
-    def apiobj(self, api_meta):
-        return api_meta
-
     def val_entity_sizes(self, data):
         data = copy.deepcopy(data)
         avg_document_size = data("avg_document_size")
@@ -62,29 +56,29 @@ class SystemMetaBase:
 
 
 class TestSystemMetaPrivate(SystemMetaBase):
-    def test_private_about(self, apiobj):
-        data = apiobj._about()
+    def test_private_about(self, api_client):
+        data = api_client.meta._about()
         assert isinstance(data, dict)
         self.val_about(data)
 
-    def test_private_historical_sizes(self, apiobj):
-        data = apiobj._historical_sizes()
+    def test_private_historical_sizes(self, api_client):
+        data = api_client.meta._historical_sizes()
         assert isinstance(data, dict)
         self.val_historical_sizes(data)
 
 
 class TestSystemMetaPublic(SystemMetaBase):
-    def test_version(self, apiobj):
-        data = apiobj.version
+    def test_version(self, api_client):
+        data = api_client.meta.version
         assert isinstance(data, str)
 
-    def test_about(self, apiobj):
-        data = apiobj.about()
+    def test_about(self, api_client):
+        data = api_client.meta.about()
         assert isinstance(data, dict)
         self.val_about(data)
 
-    def test_historical_sizes(self, apiobj):
-        data = apiobj.historical_sizes()
+    def test_historical_sizes(self, api_client):
+        data = api_client.meta.historical_sizes()
         assert isinstance(data["disk_free_mb"], float)
         assert isinstance(data["disk_used_mb"], float)
         assert (

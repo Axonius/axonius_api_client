@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """Test suite for assets."""
 import pytest
-from axonius_api_client import features
-from axonius_api_client.api import json_api, mixins
+from axonius_api_client import Features
+from axonius_api_client.api import json_api
 from axonius_api_client.constants.api import MAX_PAGE_SIZE
 from axonius_api_client.exceptions import NotFoundError
 from axonius_api_client.tools import listify
@@ -12,10 +12,7 @@ from ...utils import check_asset, check_assets
 
 
 class ModelMixinsBase:
-    def test_model_child(self, apiobj):
-        child = mixins.ChildMixins(parent=apiobj)
-        assert str(apiobj) in str(child)
-        assert repr(apiobj) in repr(child)
+    pass
 
 
 class AssetsPrivate:
@@ -161,7 +158,7 @@ class AssetsPublic:
     @pytest.fixture(scope="class")
     def raw_data_feature(self, apiobj, api_meta):
         api_meta.about()
-        raw_data_feature = features.Features.raw_data.check_enabled()
+        raw_data_feature = Features.raw_data.check_enabled()
         if not raw_data_feature.result:
             pytest.skip(f"{raw_data_feature}")
 

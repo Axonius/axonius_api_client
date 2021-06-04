@@ -3,13 +3,12 @@
 import dataclasses
 from typing import Optional, Type, Union
 
-from ...http import Http
-from .base import BaseModel, BaseSchema
+from ..models import DataModel, DataSchema
 from .generic import BoolValue
 
 
 @dataclasses.dataclass
-class CreateRequest(BaseModel):
+class CreateRequest(DataModel):
     """Pass."""
 
     user_id: str
@@ -17,7 +16,7 @@ class CreateRequest(BaseModel):
 
 
 @dataclasses.dataclass
-class SendRequest(BaseModel):
+class SendRequest(DataModel):
     """Pass."""
 
     email: str
@@ -26,14 +25,14 @@ class SendRequest(BaseModel):
 
 
 @dataclasses.dataclass
-class SendResponse(BaseModel):
+class SendResponse(DataModel):
     """Pass."""
 
     user_name: str
 
 
 @dataclasses.dataclass
-class ValidateRequest(BaseModel):
+class ValidateRequest(DataModel):
     """Pass."""
 
     token: str
@@ -48,29 +47,29 @@ class ValidateResponse(BoolValue):
     """Pass."""
 
     @classmethod
-    def load_response(
+    def _load_response(
         cls,
         data: Union[dict, list],
-        http: Http,
+        client,
         api_endpoint,
-        schema_cls: Optional[Type[BaseSchema]] = None,
+        schema_cls: Optional[Type[DataSchema]] = None,
         **kwargs,
     ):
         """Pass."""
         data = {"value": data["valid"]}
-        return super().load_response(
-            data=data, http=http, schema_cls=schema_cls, api_endpoint=api_endpoint, **kwargs
+        return super()._load_response(
+            data=data, client=client, schema_cls=schema_cls, api_endpoint=api_endpoint, **kwargs
         )
         # PBUG: forced into BoolValue model
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def _get_schema_cls() -> Optional[Type[DataSchema]]:
         """Pass."""
         return None
 
 
 @dataclasses.dataclass
-class UseRequest(BaseModel):
+class UseRequest(DataModel):
     """Pass."""
 
     token: str
@@ -78,7 +77,7 @@ class UseRequest(BaseModel):
 
 
 @dataclasses.dataclass
-class UseResponse(BaseModel):
+class UseResponse(DataModel):
     """Pass."""
 
     user_name: str

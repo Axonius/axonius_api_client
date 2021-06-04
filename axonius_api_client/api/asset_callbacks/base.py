@@ -1019,7 +1019,7 @@ class Base:
             return self._adapter_map
 
         self._adapters_meta = getattr(
-            self, "_adapters_meta", self.APIOBJ.adapters.get(get_clients=False)
+            self, "_adapters_meta", self.APIOBJ.CLIENT.adapters.get(get_clients=False)
         )
 
         self._adapter_map = {}

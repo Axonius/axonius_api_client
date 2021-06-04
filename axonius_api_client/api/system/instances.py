@@ -6,15 +6,18 @@ import pathlib
 from typing import List, Optional, Union
 
 import requests
+from cachetools import TTLCache, cached
 
 from ...exceptions import NotFoundError
 from ...tools import is_url, path_read
 from .. import json_api
 from ..api_endpoints import ApiEndpoints
-from ..mixins import ModelMixins
+from ..models import ApiModel
+
+CACHE_INSTANCES = TTLCache(maxsize=1024, ttl=300)
 
 
-class Instances(ModelMixins):
+class Instances(ApiModel):
     """API for working with instances.
 
     Examples:
@@ -102,6 +105,11 @@ class Instances(ModelMixins):
         """
         instances = self.get()
         return [x for x in instances if not x.get("is_master")]
+
+    @cached(cache=CACHE_INSTANCES)
+    def get_cached(self) -> List[json_api.instances.Instance]:
+        """Pass."""
+        return self._get()
 
     def get_by_name(
         self, name: str, key: Optional[str] = None
@@ -512,7 +520,7 @@ class Instances(ModelMixins):
     def _get(self) -> List[json_api.instances.Instance]:
         """Direct API method to get instances."""
         api_endpoint = ApiEndpoints.instances.get
-        return api_endpoint.perform_request(http=self.auth.http)
+        return api_endpoint.perform_request(client=self.CLIENT)
 
     def _factory_reset(
         self, approve_not_recoverable_action: bool = False
@@ -529,7 +537,7 @@ class Instances(ModelMixins):
         request_obj = api_endpoint.load_request(
             approve_not_recoverable_action=approve_not_recoverable_action
         )
-        return api_endpoint.perform_request(http=self.auth.http, request_obj=request_obj)
+        return api_endpoint.perform_request(client=self.CLIENT, request_obj=request_obj)
 
     def _delete(self, node_id: str) -> str:  # pragma: no cover
         """Direct API method to delete an instance.
@@ -542,7 +550,7 @@ class Instances(ModelMixins):
         """
         api_endpoint = ApiEndpoints.instances.delete
         request_obj = api_endpoint.load_request(nodeIds=[node_id])
-        return api_endpoint.perform_request(http=self.auth.http, request_obj=request_obj)
+        return api_endpoint.perform_request(client=self.CLIENT, request_obj=request_obj)
 
     def _update_attrs(
         self, node_id: str, node_name: str, hostname: str, use_as_environment_name: bool
@@ -562,7 +570,7 @@ class Instances(ModelMixins):
             hostname=hostname,
             use_as_environment_name=use_as_environment_name,
         )
-        return api_endpoint.perform_request(http=self.auth.http, request_obj=request_obj)
+        return api_endpoint.perform_request(client=self.CLIENT, request_obj=request_obj)
 
     def _update_active(self, node_id: str, status: bool) -> str:
         """Direct API method to update an instance.
@@ -576,12 +584,12 @@ class Instances(ModelMixins):
         """
         api_endpoint = ApiEndpoints.instances.update_active
         request_obj = api_endpoint.load_request(nodeIds=node_id, status=status)
-        return api_endpoint.perform_request(http=self.auth.http, request_obj=request_obj)
+        return api_endpoint.perform_request(client=self.CLIENT, request_obj=request_obj)
 
     def _get_central_core_config(self) -> json_api.system_settings.SystemSettings:
         """Direct API method to get the current central core configuration."""
         api_endpoint = ApiEndpoints.central_core.settings_get
-        return api_endpoint.perform_request(http=self.auth.http)
+        return api_endpoint.perform_request(client=self.CLIENT)
 
     def _update_central_core_config(
         self, enabled: bool, delete_backups: bool
@@ -595,7 +603,7 @@ class Instances(ModelMixins):
         """
         api_endpoint = ApiEndpoints.central_core.settings_update
         request_obj = api_endpoint.load_request(enabled=enabled, delete_backups=delete_backups)
-        return api_endpoint.perform_request(http=self.auth.http, request_obj=request_obj)
+        return api_endpoint.perform_request(client=self.CLIENT, request_obj=request_obj)
 
     def _restore_aws(
         self,
@@ -628,12 +636,12 @@ class Instances(ModelMixins):
                 "allow_re_restore": allow_re_restore,
             }
         )
-        return api_endpoint.perform_request(http=self.auth.http, request_obj=request_obj)
+        return api_endpoint.perform_request(client=self.CLIENT, request_obj=request_obj)
 
     def _feature_flags(self) -> json_api.system_settings.FeatureFlags:
         """Direct API method to get the feature flags for the core."""
         api_endpoint = ApiEndpoints.system_settings.feature_flags_get
-        return api_endpoint.perform_request(http=self.auth.http)
+        return api_endpoint.perform_request(client=self.CLIENT)
 
     def _admin_script_upload(
         self, file_name: str, file_content: Union[bytes, str], chunk_size: int = 1024 * 1024 * 100
@@ -646,7 +654,7 @@ class Instances(ModelMixins):
         start_endpoint = ApiEndpoints.instances.admin_script_upload_start
         headers = {"Upload-Length": f"{file_size}"}
         http_args = {"data": file_name, "headers": headers}
-        file_uuid = start_endpoint.perform_request(http=self.auth.http, http_args=http_args)
+        file_uuid = start_endpoint.perform_request(client=self.CLIENT, http_args=http_args)
 
         chunk_responses = []
         chunk_endpoint = ApiEndpoints.instances.admin_script_upload_chunk
@@ -663,7 +671,7 @@ class Instances(ModelMixins):
             }
             http_args = {"data": chunk, "headers": headers}
             chunk_response = chunk_endpoint.perform_request(
-                http=self.auth.http, http_args=http_args, uuid=file_uuid
+                client=self.CLIENT, http_args=http_args, uuid=file_uuid
             )
             chunk_responses.append({"uuid": chunk_response, "start": chunk_start, "end": chunk_end})
             chunk_current += 1
@@ -681,5 +689,5 @@ class Instances(ModelMixins):
         """Upload a script file."""
         api_endpoint = ApiEndpoints.instances.admin_script_execute
 
-        response = api_endpoint.perform_request(http=self.auth.http, uuid=uuid)
+        response = api_endpoint.perform_request(client=self.CLIENT, uuid=uuid)
         return response
