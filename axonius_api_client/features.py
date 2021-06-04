@@ -100,13 +100,20 @@ class Feature(BaseData):
 
     def __str__(self) -> str:
         """Pass."""
+        vmin = self.version_product_min
+        vadd = self.version_client_added
+        name = self.name
         items = [
-            f"Feature name: {self.name}",
-            f"Added in API client version: {self.version_client_added}",
-            f"Available in Axonius product version: {self.version_product_min}",
+            f"Feature name: {name} - Added in API client version: {vadd!r}",
+            f"Enabled if Axonius product version is greater than or equal to: {vmin}",
+            f"Enable in .env by adding a line:\nAX_FEATURES={name}\n"
+            f"Enable in Unix shell via:\nexport AX_FEATURES={name}\n",
+            f"Enable in Windows CMD via:\nset AX_FEATURES={name}\n",
+            f"Enable in python via:\naxonius_api_client.features.Features.{name}.force = True\n",
+            f"Enable in python via:\nimport os; os.environ['AX_FEATURES'] = '{name}'\n",
             f"Description:{self.description}",
         ]
-        return "\n".join(items)
+        return "\n# " + "\n# ".join(items)
 
     def __repr__(self):
         """Pass."""
@@ -129,27 +136,20 @@ class Features(BaseData):
         product_ticket="AX-13595",
         description="""
 - Adds ability to get aggregated raw data in API library via:
-```
 client.devices.get(fields=['agg:raw_data'])
 client.users.get(fields=['agg:raw_data'])
-```
 
 - Adds ability to get aggregated raw data in CLI via:
-```
 axonshell devices get --field agg:raw_data
 axonshell users get --field agg:raw_data
-```
 
 - Adds ability to get adapter specific raw data in API library via:
-```
 client.devices.get(fields=['aws:raw_data'])
 client.users.get(fields=['aws:raw_data'])
-```
 
 - Adds ability to get adapter specific raw data in CLI via:
-```
 axonshell devices get --field aws:raw_data
 axonshell users get --field aws:raw_data
-```
+
 """,
     )
