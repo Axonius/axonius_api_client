@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 """Test suite."""
 
-import pytest
-
 
 def validate_openapi_spec(data):
     assert isinstance(data, str) and data
@@ -16,18 +14,16 @@ def validate_openapi_spec(data):
 
 
 class OpenAPIBase:
-    @pytest.fixture(scope="class")
-    def apiobj(self, api_openapi):
-        return api_openapi
+    pass
 
 
 class TestOpenAPIPrivate(OpenAPIBase):
-    def test_get_spec(self, apiobj):
-        data = apiobj._get_spec()
+    def test_get_spec(self, api_client):
+        data = api_client.openapi._get_spec()
         validate_openapi_spec(data=data)
 
 
 class TestOpenAPIPublic(OpenAPIBase):
-    def test_get_spec(self, apiobj):
-        data = apiobj.get_spec()
+    def test_get_spec(self, api_client):
+        data = api_client.openapi.get_spec()
         validate_openapi_spec(data=data)

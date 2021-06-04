@@ -454,11 +454,11 @@ class Connect:
         return self.__str__()
 
     @property
-    def openapi(self) -> OpenAPISpec:
+    def openapi(self):
         """Work with the OpenAPI specification file."""
         self.start()
         if not hasattr(self, "_openapi"):
-            self._openapi = OpenAPISpec(**self.API_ARGS)
+            self._openapi = self.API.OpenAPISpec(**self.API_ARGS)
         return self._openapi
 
     @classmethod
