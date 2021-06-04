@@ -156,9 +156,8 @@ class AssetsPublic:
                 raise Exception(f"Duplicate id {id} at row {idx}")
 
     @pytest.fixture(scope="class")
-    def raw_data_feature(self, apiobj, api_meta):
-        api_meta.about()
-        raw_data_feature = Features.raw_data.check_enabled()
+    def raw_data_feature(self, apiobj):
+        raw_data_feature = Features.raw_data.check_enabled(about=apiobj.CLIENT.meta.about())
         if not raw_data_feature.result:
             pytest.skip(f"{raw_data_feature}")
 
