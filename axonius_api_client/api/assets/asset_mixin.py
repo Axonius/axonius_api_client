@@ -222,6 +222,7 @@ class AssetMixin(ModelMixins):
         fields_fuzzy: Optional[Union[List[str], str]] = None,
         fields_default: bool = True,
         fields_root: Optional[str] = None,
+        fields_error: bool = True,
         max_rows: Optional[int] = None,
         max_pages: Optional[int] = None,
         row_start: int = 0,
@@ -273,6 +274,7 @@ class AssetMixin(ModelMixins):
             fields_default=fields_default,
             fields_root=fields_root,
             fields_fuzzy=fields_fuzzy,
+            fields_error=fields_error,
         )
 
         if sort_field:

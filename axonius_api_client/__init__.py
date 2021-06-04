@@ -59,6 +59,7 @@ try:
     from .auth import ApiKey
     from .connect import Connect
     from .http import Http
+    from .features import Features
 except Exception:  # pragma: no cover
     raise
 
@@ -96,6 +97,7 @@ __all__ = (
     "WizardText",
     "ActivityLogs",
     "ApiEndpoints",
+    "Features",
     # modules
     "api",
     "auth",

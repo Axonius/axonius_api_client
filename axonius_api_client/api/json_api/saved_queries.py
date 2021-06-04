@@ -8,6 +8,7 @@ import marshmallow_jsonapi
 
 from .base import BaseModel, BaseSchema, BaseSchemaJson
 from .custom_fields import SchemaBool, SchemaDatetime, get_field_dc_mm
+from .generic import PrivateRequest, PrivateRequestSchema
 
 
 class SavedQuerySchema(BaseSchemaJson):
@@ -43,6 +44,41 @@ class SavedQuerySchema(BaseSchemaJson):
         type_ = "views_details_schema"
 
 
+class SavedQueryDeleteSchema(PrivateRequestSchema):
+    """Pass."""
+
+    @staticmethod
+    def get_model_cls() -> type:
+        """Pass."""
+        return SavedQueryDelete
+
+    class Meta:
+        """Pass."""
+
+        type_ = "delete_view_schema"
+
+
+class SavedQueryCreateSchema(BaseSchemaJson):
+    """Pass."""
+
+    name = marshmallow_jsonapi.fields.Str(required=True)
+    view = marshmallow_jsonapi.fields.Dict()
+    description = marshmallow_jsonapi.fields.Str(default="", missing="", allow_none=True)
+    always_cached = SchemaBool(default=False, missing=False)
+    private = marshmallow_jsonapi.fields.Bool(default=False, missing=False)
+    tags = marshmallow_jsonapi.fields.List(marshmallow_jsonapi.fields.Str())
+
+    @staticmethod
+    def get_model_cls() -> type:
+        """Pass."""
+        return SavedQueryCreate
+
+    class Meta:
+        """Pass."""
+
+        type_ = "views_schema"
+
+
 @dataclasses.dataclass
 class SavedQuery(BaseModel):
     """Pass."""
@@ -74,27 +110,6 @@ class SavedQuery(BaseModel):
         return SavedQuerySchema
 
 
-class SavedQueryCreateSchema(BaseSchemaJson):
-    """Pass."""
-
-    name = marshmallow_jsonapi.fields.Str(required=True)
-    view = marshmallow_jsonapi.fields.Dict()
-    description = marshmallow_jsonapi.fields.Str(default="", missing="", allow_none=True)
-    always_cached = SchemaBool(default=False, missing=False)
-    private = marshmallow_jsonapi.fields.Bool(default=False, missing=False)
-    tags = marshmallow_jsonapi.fields.List(marshmallow_jsonapi.fields.Str())
-
-    @staticmethod
-    def get_model_cls() -> type:
-        """Pass."""
-        return SavedQueryCreate
-
-    class Meta:
-        """Pass."""
-
-        type_ = "views_schema"
-
-
 @dataclasses.dataclass
 class SavedQueryCreate(BaseModel):
     """Pass."""
@@ -110,3 +125,13 @@ class SavedQueryCreate(BaseModel):
     def get_schema_cls() -> Optional[Type[BaseSchema]]:
         """Pass."""
         return SavedQueryCreateSchema
+
+
+@dataclasses.dataclass
+class SavedQueryDelete(PrivateRequest):
+    """Pass."""
+
+    @staticmethod
+    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+        """Pass."""
+        return SavedQueryDeleteSchema

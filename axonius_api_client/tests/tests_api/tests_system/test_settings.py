@@ -2,7 +2,6 @@
 """Test suite."""
 
 import pytest
-
 from axonius_api_client.exceptions import ApiError, NotFoundError
 
 GUI_SECTION_WITH_SUBS = "system_settings"
@@ -25,13 +24,17 @@ class SettingsBasePublic:
         assert meta["name"] == name
         assert isinstance(meta["title"], str)
         assert isinstance(meta["schemas"], dict) and meta["schemas"]
-        assert isinstance(meta["sub_sections"], dict) and not meta["sub_sections"]
+        # pre-4.3 sub section "login_settings" of "system_settings" (GUI Settings)
+        # has its own sub section ldap_login
+        assert isinstance(meta["sub_sections"], dict)  # and not meta["sub_sections"]
         assert isinstance(meta["parent_name"], str) and meta["parent_name"]
         assert isinstance(meta["parent_title"], str) and meta["parent_title"]
 
         assert isinstance(meta["config"], dict)
-        for k, v in meta["config"].items():
-            assert not isinstance(v, dict)
+
+        # pre-4.3 sub sections exist so config items can be dicts
+        # for k, v in meta["config"].items():
+        #     assert not isinstance(v, dict)
 
         self.val_schemas(schemas=meta["schemas"], config=meta["config"])
 

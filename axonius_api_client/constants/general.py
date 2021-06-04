@@ -3,6 +3,8 @@
 import sys
 from typing import List, Tuple, Type, Union
 
+URL_STARTS: List[str] = ["https://", "http://"]
+
 OK_ARGS: dict = {"fg": "green", "bold": True, "err": True}
 """default arguments for echo_ok"""
 
