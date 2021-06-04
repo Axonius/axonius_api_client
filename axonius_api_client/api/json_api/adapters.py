@@ -776,24 +776,6 @@ class CnxModifyResponseSchema(BaseSchemaJson):
 
         type_ = "connections_details_schema"
 
-    # @classmethod
-    # def load_response(cls, data: dict, http: Http, api_endpoint, **kwargs):
-    #     """Pass."""
-    #     cls._check_version(data=data, api_endpoint=api_endpoint)
-
-    #     # NEW_IN: 05/31/21 latest cortex/develop
-    #     # now returning type: connection_status_schema
-    #     if (
-    #         isinstance(data, dict)
-    #         and "data" in data
-    #         and isinstance(data["data"], dict)
-    #         and "type" in data["data"]
-    #         and data["data"]["type"] != cls.Meta.type_
-    #     ):
-    #         data["data"]["type"] = cls.Meta.type_
-    #         # XXX THIS COULD BE A GENERIC THING
-    #     return super().load_response(data=data, http=http, api_endpoint=api_endpoint, **kwargs)
-
 
 @dataclasses.dataclass
 class CnxModifyResponse(BaseModel):

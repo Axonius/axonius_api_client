@@ -891,7 +891,7 @@ class Cnx(ChildMixins):
             if not exc and data.get("meta") == 400:
                 pre = "Invalid/missing domain or other connection parameter"
                 exc = ConfigRequired
-                # PBUG: with domain=None, {'data': null, 'meta': 400}
+                # PBUG: sometimes returns {'data': null, 'meta': 400}
 
             if exc:
                 msg = f"{pre} {config_txt}"

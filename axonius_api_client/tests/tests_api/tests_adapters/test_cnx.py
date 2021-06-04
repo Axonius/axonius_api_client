@@ -4,10 +4,10 @@
 import pytest
 from axonius_api_client.api import json_api
 from axonius_api_client.constants.adapters import CSV_ADAPTER
-from axonius_api_client.exceptions import CnxAddError  # CnxUpdateError,
-from axonius_api_client.exceptions import (CnxGoneError, CnxTestError,
-                                           ConfigInvalidValue, ConfigRequired,
-                                           ConfigUnchanged, NotFoundError)
+from axonius_api_client.exceptions import (CnxAddError, CnxGoneError,
+                                           CnxTestError, ConfigInvalidValue,
+                                           ConfigRequired, ConfigUnchanged,
+                                           NotFoundError)
 
 from ...meta import CSV_FILECONTENT_STR
 from ...utils import get_cnx_broken, get_cnx_existing, get_cnx_working
@@ -92,6 +92,10 @@ class TestCnxPublic(TestCnxBase):
         )
         assert result is True
 
+    # XXX in 4.1 this can't be relied on
+    # it seems all tests return '{"data":null,"meta":400}\n'
+    # regardless if the test fails or succeeds
+
     def test_test_fail(self, apiobj):
         mpass = "badwolf"
         with pytest.raises(CnxTestError):
@@ -103,35 +107,6 @@ class TestCnxPublic(TestCnxBase):
             )
 
     def test_test_fail_no_domain(self, apiobj):
-        """against 4.3:
-        E           axonius_api_client.exceptions.ResponseNotOk: Response has a bad HTTP status code 400
-        E           Original exception: 400 Client Error: BAD REQUEST for url: https://10.20.2.188:443/api/V4.0/adapters/tanium_adapter/connections/test
-        E
-        E           URL: 'https://10.20.2.188:443/api/V4.0/adapters/tanium_adapter/connections/test', METHOD: PUT
-        E           CODE: 400, REASON: 'BAD REQUEST', BYTES OUT: 141, BYTES IN: 155
-        E
-        E           Request Object:
-        E           {
-        E             "data": {
-        E               "type": "test_connection_schema",
-        E               "attributes": {
-        E                 "connection": {
-        E                   "username": "x"
-        E                 },
-        E                 "instance": "30079376fe72451a83e463395a710d3e"
-        E               }
-        E             }
-        E           }
-        E           Response Object:
-        E
-        E           -----
-        E           - status:
-        E              error
-        E           - type:
-        E              JSONDecodeError
-        E           - message:
-        E              An error occurred. Please contact Axonius support. AX-ID: 390628d6-52c5-4abf-bad9-9a783323e462
-        """  # noqa
         with pytest.raises(ConfigRequired):
             apiobj.cnx.test(adapter_name="tanium", username="x")
 
