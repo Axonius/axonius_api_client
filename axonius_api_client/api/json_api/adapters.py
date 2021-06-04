@@ -13,7 +13,8 @@ from ...http import Http
 from ...parsers.config import parse_schema
 from ...tools import listify, longest_str, strip_right
 from .base import BaseModel, BaseSchema, BaseSchemaJson
-from .custom_fields import SchemaBool, SchemaDatetime, dump_date, get_field_dc_mm
+from .custom_fields import (SchemaBool, SchemaDatetime, dump_date,
+                            get_field_dc_mm)
 from .generic import Metadata, MetadataSchema
 from .system_settings import SystemSettingsUpdateSchema
 

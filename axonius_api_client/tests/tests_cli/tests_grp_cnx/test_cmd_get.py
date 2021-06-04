@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 """Test suite for axonius_api_client.tools."""
 from ....cli import cli
-from ....constants.adapters import CSV_ADAPTER
 from ....tools import json_load
-from ...utils import load_clirunner
+from ...utils import get_cnx_existing, load_clirunner
 
 
 class TestGrpCnxCmdGet:
-    def test_json_full(self, request, monkeypatch):
+    def test_json_full(self, api_adapters, request, monkeypatch):
+        cnx = get_cnx_existing(apiobj=api_adapters)
         runner = load_clirunner(request, monkeypatch)
 
         args1 = [
@@ -15,7 +15,7 @@ class TestGrpCnxCmdGet:
             "cnx",
             "get",
             "--name",
-            CSV_ADAPTER,
+            cnx["adapter_name"],
             "--export-format",
             "json-full",
         ]
@@ -32,7 +32,8 @@ class TestGrpCnxCmdGet:
         json1 = json_load(stdout1)
         assert isinstance(json1, list)
 
-    def test_json_config(self, request, monkeypatch):
+    def test_json_config(self, api_adapters, request, monkeypatch):
+        cnx = get_cnx_existing(apiobj=api_adapters)
         runner = load_clirunner(request, monkeypatch)
 
         args1 = [
@@ -40,7 +41,7 @@ class TestGrpCnxCmdGet:
             "cnx",
             "get",
             "--name",
-            CSV_ADAPTER,
+            cnx["adapter_name"],
             "--export-format",
             "json-config",
         ]
@@ -57,7 +58,8 @@ class TestGrpCnxCmdGet:
         json1 = json_load(stdout1)
         assert isinstance(json1, list)
 
-    def test_json_basic(self, request, monkeypatch):
+    def test_json_basic(self, api_adapters, request, monkeypatch):
+        cnx = get_cnx_existing(apiobj=api_adapters)
         runner = load_clirunner(request, monkeypatch)
 
         args1 = [
@@ -65,7 +67,7 @@ class TestGrpCnxCmdGet:
             "cnx",
             "get",
             "--name",
-            CSV_ADAPTER,
+            cnx["adapter_name"],
             "--export-format",
             "json",
         ]
@@ -82,7 +84,8 @@ class TestGrpCnxCmdGet:
         json1 = json_load(stdout1)
         assert isinstance(json1, list)
 
-    def test_table_schemas(self, request, monkeypatch):
+    def test_table_schemas(self, api_adapters, request, monkeypatch):
+        cnx = get_cnx_existing(apiobj=api_adapters)
         runner = load_clirunner(request, monkeypatch)
 
         args1 = [
@@ -90,7 +93,7 @@ class TestGrpCnxCmdGet:
             "cnx",
             "get",
             "--name",
-            CSV_ADAPTER,
+            cnx["adapter_name"],
             "--export-format",
             "table-schemas",
         ]
@@ -105,7 +108,8 @@ class TestGrpCnxCmdGet:
         assert stderr1
         assert exit_code1 == 0
 
-    def test_table(self, request, monkeypatch):
+    def test_table(self, api_adapters, request, monkeypatch):
+        cnx = get_cnx_existing(apiobj=api_adapters)
         runner = load_clirunner(request, monkeypatch)
 
         args1 = [
@@ -113,7 +117,7 @@ class TestGrpCnxCmdGet:
             "cnx",
             "get",
             "--name",
-            CSV_ADAPTER,
+            cnx["adapter_name"],
             "--export-format",
             "table",
         ]
@@ -128,7 +132,8 @@ class TestGrpCnxCmdGet:
         assert stderr1
         assert exit_code1 == 0
 
-    def test_str(self, request, monkeypatch):
+    def test_str(self, api_adapters, request, monkeypatch):
+        cnx = get_cnx_existing(apiobj=api_adapters)
         runner = load_clirunner(request, monkeypatch)
 
         args1 = [
@@ -136,7 +141,7 @@ class TestGrpCnxCmdGet:
             "cnx",
             "get",
             "--name",
-            CSV_ADAPTER,
+            cnx["adapter_name"],
             "--export-format",
             "str",
         ]
@@ -151,7 +156,8 @@ class TestGrpCnxCmdGet:
         assert stderr1
         assert exit_code1 == 0
 
-    def test_str_args(self, request, monkeypatch):
+    def test_str_args(self, api_adapters, request, monkeypatch):
+        cnx = get_cnx_existing(apiobj=api_adapters)
         runner = load_clirunner(request, monkeypatch)
 
         args1 = [
@@ -159,7 +165,7 @@ class TestGrpCnxCmdGet:
             "cnx",
             "get",
             "--name",
-            CSV_ADAPTER,
+            cnx["adapter_name"],
             "--export-format",
             "str-args",
         ]

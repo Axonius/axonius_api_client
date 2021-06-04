@@ -17,6 +17,8 @@ AGG_ADAPTER_TITLE: str = "Aggregated"
 ALL_NAME: str = "all"
 """alternative name to use for 'all' field."""
 
+RAW_NAME: str = "raw_data"
+
 AGG_EXPR_FIELD_TYPE: str = "axonius"
 """epxr_field_type to use in saved query expressions for aggregated fields"""
 

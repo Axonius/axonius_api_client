@@ -6,16 +6,11 @@ from typing import List, Optional, Tuple, Union
 from cachetools import TTLCache, cached
 from fuzzyfinder import fuzzyfinder
 
-from ...constants.fields import (
-    AGG_ADAPTER_ALTS,
-    AGG_ADAPTER_NAME,
-    FUZZY_SCHEMAS_KEYS,
-    GET_SCHEMA_KEYS,
-    GET_SCHEMAS_KEYS,
-    PRETTY_SCHEMA_TMPL,
-)
+from ...constants.fields import (AGG_ADAPTER_ALTS, AGG_ADAPTER_NAME,
+                                 FUZZY_SCHEMAS_KEYS, GET_SCHEMA_KEYS,
+                                 GET_SCHEMAS_KEYS, PRETTY_SCHEMA_TMPL)
 from ...exceptions import ApiError, NotFoundError
-from ...parsers.fields import parse_fields
+from ...parsers.fields import parse_fields, schema_custom
 from ...tools import listify, split_str, strip_right
 from .. import json_api
 from ..api_endpoints import ApiEndpoints
@@ -71,6 +66,7 @@ class Fields(ChildMixins):
         fields_manual: Optional[Union[List[str], str]] = None,
         fields_fuzzy: Optional[Union[List[str], str]] = None,
         fields_default: bool = True,
+        fields_error: bool = True,
         fields_root: Optional[str] = None,
     ) -> List[dict]:
         """Get the fully qualified field names for getting asset data.
@@ -120,11 +116,11 @@ class Fields(ChildMixins):
             add(self.get_field_names_root(adapter=fields_root))
 
         add(fields_manual)
-        add(self.get_field_names_eq(value=fields))
+        add(self.get_field_names_eq(value=fields, fields_error=fields_error))
         add(self.get_field_names_re(value=fields_regex))
         add(self.get_field_names_fuzzy(value=fields_fuzzy))
 
-        if not selected:
+        if fields_error and not selected:
             raise ApiError("No fields supplied, must supply at least one field")
 
         return selected
@@ -251,7 +247,9 @@ class Fields(ChildMixins):
                     matches += [x for x in names if x not in matches]
         return matches
 
-    def get_field_names_eq(self, value: Union[str, List[str]], key: str = "name_qual") -> List[str]:
+    def get_field_names_eq(
+        self, value: Union[str, List[str]], key: str = "name_qual", fields_error: bool = True
+    ) -> List[str]:
         """Get field names that equal a value.
 
         Examples:
@@ -287,7 +285,13 @@ class Fields(ChildMixins):
             adapter = self.get_adapter_name(value=adapter_name)
             for name in names:
                 schemas = fields[adapter]
-                schema = self.get_field_schema(value=name, schemas=schemas)
+                try:
+                    schema = self.get_field_schema(value=name, schemas=schemas)
+                except Exception:
+                    if fields_error:
+                        raise
+                    schema = schema_custom(name=name)
+
                 match = schema[key] if key else schema
                 if match not in matches:
                     matches.append(match)

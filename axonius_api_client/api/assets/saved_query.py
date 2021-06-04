@@ -3,7 +3,8 @@
 from typing import Generator, List, Optional, Union
 
 from ...constants.api import MAX_PAGE_SIZE
-from ...exceptions import NotFoundError
+from ...exceptions import NotFoundError, ResponseError
+# from ...features import Features
 from ...parsers.tables import tablize_sqs
 from ...tools import check_gui_page_size, listify
 from .. import json_api
@@ -365,14 +366,27 @@ class SavedQuery(ChildMixins):
         Args:
             ids: list of uuid's to delete
         """
-        api_endpoint = ApiEndpoints.saved_queries.delete
-        request_obj = api_endpoint.load_request()
-        return api_endpoint.perform_request(
-            http=self.auth.http,
-            request_obj=request_obj,
-            asset_type=self.parent.ASSET_TYPE,
-            uuid=uuid,
-        )
+        # NEW_IN: 05/31/21 cortex/develop
+        try:
+            api_endpoint = ApiEndpoints.saved_queries.delete
+            request_obj = api_endpoint.load_request()
+            return api_endpoint.perform_request(
+                http=self.auth.http,
+                request_obj=request_obj,
+                asset_type=self.parent.ASSET_TYPE,
+                uuid=uuid,
+            )
+        except ResponseError as exc:
+            if exc.is_incorrect_type:
+                api_endpoint = ApiEndpoints.saved_queries.delete_4_3
+                request_obj = api_endpoint.load_request()
+                return api_endpoint.perform_request(
+                    http=self.auth.http,
+                    request_obj=request_obj,
+                    asset_type=self.parent.ASSET_TYPE,
+                    uuid=uuid,
+                )
+            raise
 
     def _get(
         self, limit: int = MAX_PAGE_SIZE, offset: int = 0

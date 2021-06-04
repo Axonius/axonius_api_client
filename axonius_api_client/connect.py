@@ -28,20 +28,11 @@ from .api import (
 )
 from .auth import ApiKey
 from .constants.api import TIMEOUT_CONNECT, TIMEOUT_RESPONSE
-from .constants.logs import (
-    LOG_FILE_MAX_FILES,
-    LOG_FILE_MAX_MB,
-    LOG_FILE_NAME,
-    LOG_FILE_PATH,
-    LOG_FMT_BRIEF,
-    LOG_FMT_VERBOSE,
-    LOG_LEVEL_API,
-    LOG_LEVEL_AUTH,
-    LOG_LEVEL_CONSOLE,
-    LOG_LEVEL_FILE,
-    LOG_LEVEL_HTTP,
-    LOG_LEVEL_PACKAGE,
-)
+from .constants.logs import (LOG_FILE_MAX_FILES, LOG_FILE_MAX_MB,
+                             LOG_FILE_NAME, LOG_FILE_PATH, LOG_FMT_BRIEF,
+                             LOG_FMT_VERBOSE, LOG_LEVEL_API, LOG_LEVEL_AUTH,
+                             LOG_LEVEL_CONSOLE, LOG_LEVEL_FILE, LOG_LEVEL_HTTP,
+                             LOG_LEVEL_PACKAGE)
 from .exceptions import ConnectError, InvalidCredentials
 from .http import Http
 from .logs import LOG, add_file, add_stderr, get_obj_log, set_log_level
