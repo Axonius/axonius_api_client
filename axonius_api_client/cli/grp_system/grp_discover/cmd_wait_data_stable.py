@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
 """Command line interface for Axonius API Client."""
-import time
-
 from ...context import CONTEXT_SETTINGS, click
 from ...options import AUTH, add_options
+from .grp_common import do_wait_discover
 
 OPTIONS = [
     *AUTH,
@@ -29,41 +28,11 @@ OPTIONS = [
 ]
 
 
-def get_stability(data, for_next_minutes=None, **kwargs):
-    """Pass."""
-    if data.is_running:
-        if data.is_correlation_finished:
-            return "Discover is running but correlation has finished", True
-
-        return "Discover is running and correlation has NOT finished", False
-
-    next_mins = data.next_run_starts_in_minutes
-    reason = f"Discover is not running and next is in {next_mins} minutes"
-
-    if for_next_minutes:
-        if data.next_run_within_minutes(for_next_minutes):
-            return f"{reason} (less than {for_next_minutes} minutes)", False
-        return f"{reason} (more than {for_next_minutes} minutes)", True
-
-    return reason, True
-
-
 @click.command(name="wait-data-stable", context_settings=CONTEXT_SETTINGS)
 @add_options(OPTIONS)
 @click.pass_context
-def cmd(ctx, url, key, secret, sleep, **kwargs):
+def cmd(ctx, url, key, secret, sleep, for_next_minutes, **kwargs):
     """Wait until data is stable."""
     client = ctx.obj.start_client(url=url, key=key, secret=secret)
-
-    while True:
-        with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
-            data = client.dashboard.get()
-
-        reason, is_stable = get_stability(data=data, **kwargs)
-
-        if is_stable:
-            click.secho(f"Data is now stable, reason: {reason}")
-            ctx.exit(1)
-
-        click.secho(f"Data is not yet stable, reason: {reason}, sleeping {sleep} seconds")
-        time.sleep(sleep)
+    do_wait_discover(ctx=ctx, client=client, sleep=sleep, for_next_minutes=for_next_minutes)
+    ctx.exit(0)

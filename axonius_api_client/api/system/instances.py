@@ -174,6 +174,10 @@ class Instances(ApiModel):
             data = {k: str(v) if isinstance(v, datetime.datetime) else v for k, v in data.items()}
         return data
 
+    def get_env_name(self) -> str:
+        """Get environment name."""
+        return self._get_env_name().value or ""
+
     def set_name(self, name: str, new_name: str) -> str:
         """Set the name of an instance.
 
@@ -711,6 +715,11 @@ class Instances(ApiModel):
     def _get_api_keys(self) -> dict:
         """Get API key and token."""
         api_endpoint = ApiEndpoints.signup.get_api_keys
+        return api_endpoint.perform_request(client=self.CLIENT)
+
+    def _get_env_name(self) -> json_api.generic.StrValue:
+        """Get environment name."""
+        api_endpoint = ApiEndpoints.signup.get_env_name
         return api_endpoint.perform_request(client=self.CLIENT)
 
     def _reset_api_keys(self) -> dict:

@@ -645,7 +645,7 @@ def echo_ok(
         tmpl: template to using for echo
         kwargs: passed to ``click.secho``
     """
-    kwargs.setdefault("fg", "yellow")
+    kwargs.setdefault("fg", "green")
     kwargs.setdefault("bold", True)
     kwargs.setdefault("err", True)
     logger = logger or LOG

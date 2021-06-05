@@ -6,7 +6,8 @@ import click
 import requests
 
 from ..connect import Connect
-from ..tools import bom_strip, echo_error, echo_ok, echo_warn, json_load, read_stream
+from ..tools import (bom_strip, echo_error, echo_ok, echo_warn, json_load,
+                     read_stream)
 
 CONTEXT_SETTINGS = {"auto_envvar_prefix": "AX"}
 SSLWARN_CLS = requests.urllib3.exceptions.InsecureRequestWarning
@@ -168,6 +169,26 @@ class Context:
             )
 
         return self.client
+
+    def get_client(self, url, key="", secret="", echo=True, **kwargs):
+        """Pass."""
+        connect_args = {}
+        connect_args.update(self._connect_args)
+        connect_args.update(kwargs)
+        connect_args["url"] = url
+        connect_args["key"] = key
+        connect_args["secret"] = secret
+
+        with self.exc_wrap(wraperror=self.wraperror):
+            client = Connect(**connect_args)
+
+        # warnings suck.
+        warnings.simplefilter("ignore", SSLWARN_CLS)
+
+        if echo:
+            self.echo_ok(msg=str(client))
+
+        return client
 
     def days_echo(self, msg, days, info=45, warn=30, error=15):
         """Pass."""

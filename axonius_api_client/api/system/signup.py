@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 """API for performing initial signup."""
+from typing import Optional
+
 from ...exceptions import ApiError
 from ...tools import token_parse
 from .. import json_api
@@ -39,7 +41,7 @@ class Signup(ApiModel):
             user_name: axonius username
             password: password for user_name
         """
-        if not self.CLIENT.is_signed_up:
+        if not self.is_signed_up:
             raise ApiError("Initial signup not yet performed!")
 
         login = self._login("admin", "admin")
@@ -53,7 +55,7 @@ class Signup(ApiModel):
             user_name: axonius username
             password: password for user_name
         """
-        if not self.CLIENT.is_signed_up:
+        if not self.is_signed_up:
             raise ApiError("Initial signup not yet performed!")
 
         login = self._login("admin", "admin")
@@ -198,3 +200,15 @@ class Signup(ApiModel):
         http_args = {"headers": headers, "headers_auth": False}
         api_endpoint = ApiEndpoints.signup.reset_api_keys
         return api_endpoint.perform_request(client=self.CLIENT, http_args=http_args)
+
+    def __init__(self, url: Optional[str] = None, **kwargs):
+        """Pass."""
+        # backwards support for old Signup usage
+        if url and not kwargs.get("client"):
+            from ...connect import Connect
+
+            kwargs.setdefault("key", "")
+            kwargs.setdefault("secret", "")
+            kwargs.setdefault("certwarn", False)
+            kwargs["client"] = Connect(url=url, **kwargs)
+        super().__init__(**kwargs)

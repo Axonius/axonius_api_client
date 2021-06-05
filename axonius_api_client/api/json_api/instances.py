@@ -171,7 +171,7 @@ class FactoryResetRequestSchema(DataSchemaJson):
     approve_not_recoverable_action = SchemaBool(required=False, missing=False)
 
     @staticmethod
-    def get_model_cls() -> type:
+    def _get_model_cls() -> type:
         """Pass."""
         return FactoryResetRequest
 
@@ -188,7 +188,7 @@ class FactoryResetRequest(DataModel):
     approve_not_recoverable_action: bool = False
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[DataSchema]]:
+    def _get_schema_cls() -> Optional[Type[DataSchema]]:
         """Pass."""
         return FactoryResetRequestSchema
 
@@ -200,7 +200,7 @@ class FactoryResetSchema(DataSchemaJson):
     msg = marshmallow_jsonapi.fields.Str()
 
     @staticmethod
-    def get_model_cls() -> type:
+    def _get_model_cls() -> type:
         """Pass."""
         return FactoryReset
 
@@ -218,7 +218,7 @@ class FactoryReset(DataModel):
     msg: str = ""
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[DataSchema]]:
+    def _get_schema_cls() -> Optional[Type[DataSchema]]:
         """Pass."""
         return FactoryResetSchema
 

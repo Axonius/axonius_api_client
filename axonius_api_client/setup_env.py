@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 """Tools for getting OS env vars."""
+import datetime
 import logging
 import os
 import pathlib
 from typing import List, Optional, Tuple, Union
 
+import dateutil
 import dotenv
 
 LOGGER = logging.getLogger("axonius_api_client.setup_env")
@@ -19,6 +21,8 @@ NO: List[str] = ["0", "false", "f", "no", "n", "off"]
 
 KEY_PRE: str = "AX_"
 """Prefix for axonapi related OS env vars"""
+
+KEY_LAST_UPDATE: str = f"{KEY_PRE}LAST_UPDATE"
 
 KEY_DEFAULT_PATH: str = f"{KEY_PRE}PATH"
 """OS env to use for :attr:`DEFAULT_PATH` instead of CWD"""
@@ -93,7 +97,7 @@ def find_dotenv(
             * use dotenv.find_dotenv() to walk tree from CWD
             * use dotenv.find_dotenv() to walk tree from package root
     """
-    env_file = get_env_str(key=KEY_ENV_FILE, default=DEFAULT_ENV_FILE)
+    env_file = get_env_dotenv()
     if ax_env:
         found_env = pathlib.Path(ax_env).expanduser().resolve()
         found_env = found_env / env_file if found_env.is_dir() else found_env
@@ -139,6 +143,45 @@ def load_dotenv(ax_env: Optional[Union[str, pathlib.Path]] = None, **kwargs) -> 
         dotenv.load_dotenv(dotenv_path=ax_env, verbose=DEBUG, override=override)
         DEBUG_LOG(f"{KEY_PRE}.* env vars after load dotenv: {get_env_ax()}")
     return ax_env
+
+
+def get_env_dotenv() -> str:
+    """Get the dotenv file to use from AX_ENV OS env var."""
+    return get_env_str(key=KEY_ENV_FILE, default=DEFAULT_ENV_FILE)
+
+
+def convert_key(key: str) -> str:
+    """Ensure a key is in the proper format."""
+    key = key.upper()
+    if not key.startswith(KEY_PRE):
+        key = f"{KEY_PRE}{key}"
+    return key
+
+
+def write_dotenv(
+    key: str,
+    value: str,
+    ax_env: Optional[Union[str, pathlib.Path]] = None,
+    create: bool = True,
+    protect_file=0o600,
+    protect_parent=0o700,
+) -> Tuple[pathlib.Path, str, str]:
+    """Write a key value pair to a .env file, optionally creating it if does not exist."""
+    ax_env = ax_env or get_env_dotenv()
+    ax_env = pathlib.Path(ax_env).expanduser().resolve()
+    if not ax_env.is_file() and create:
+        if not ax_env.parent.is_dir():
+            ax_env.parent.mkdir(mode=protect_parent, parents=True, exist_ok=True)
+
+        ax_env.touch()
+        if isinstance(protect_file, int):
+            ax_env.chmod(protect_file)
+
+    key = convert_key(key=key)
+    dotenv.set_key(dotenv_path=str(ax_env), key_to_set=key, value_to_set=value)
+    updated = datetime.datetime.now(dateutil.tz.tzutc()).isoformat()
+    dotenv.set_key(dotenv_path=str(ax_env), key_to_set=KEY_LAST_UPDATE, value_to_set=updated)
+    return ax_env, key, value
 
 
 def get_env_bool(key: str, default: Optional[bool] = None) -> bool:

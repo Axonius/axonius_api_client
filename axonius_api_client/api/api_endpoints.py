@@ -940,6 +940,15 @@ class Signup(BaseData):
         response_model_cls=None,
     )
 
+    get_env_name: ApiEndpoint = ApiEndpoint(
+        method="get",
+        path="api/V4.0/get_environment_name",
+        request_schema_cls=None,
+        request_model_cls=None,
+        response_schema_cls=json_api.generic.StrValueSchema,
+        response_model_cls=json_api.generic.StrValue,
+    )
+
 
 @dataclasses.dataclass
 class AuditLogs(BaseData):

@@ -4,6 +4,7 @@ import click
 
 from .. import DEFAULT_PATH
 from ..constants.api import MAX_PAGE_SIZE
+from ..setup_env import get_env_dotenv
 from ..tools import coerce_int
 from . import context
 from .helps import HELPSTRS
@@ -71,7 +72,76 @@ URL = click.option(
     show_default=True,
 )
 
+WRITE_ENV = [
+    click.option(
+        "--write-env/--no-write-env",
+        "-we/-nwe",
+        "write_env",
+        help="Write keys to .env file supplied in --env-file",
+        required=False,
+        default=False,
+        show_envvar=True,
+        show_default=True,
+    ),
+    click.option(
+        "--env-file",
+        "-e",
+        "env_file",
+        help=".env file to write keys to if --write-env",
+        metavar="PATH",
+        required=False,
+        default=get_env_dotenv(),
+        show_envvar=True,
+        show_default=True,
+    ),
+    click.option(
+        "--config",
+        "-c",
+        "config",
+        help="Extra keys to write to --env-file in the form of key=value (multiples)",
+        type=context.SplitEquals(),
+        multiple=True,
+        show_envvar=True,
+        show_default=True,
+        required=False,
+    ),
+    click.option(
+        "--export-format",
+        "-xf",
+        "export_format",
+        type=click.Choice(["json", "str"]),
+        help="Format of to export data in",
+        default="str",
+        show_envvar=True,
+        show_default=True,
+    ),
+]
 
+CREDS = [
+    click.option(
+        "--user-name",
+        "-n",
+        "user_name",
+        help="User name",
+        prompt="User name",
+        metavar="USERNAME",
+        required=True,
+        show_envvar=True,
+        show_default=True,
+    ),
+    click.option(
+        "--password",
+        "-p",
+        "password",
+        help="Password",
+        prompt="Password",
+        metavar="PASSWORD",
+        required=True,
+        hide_input=True,
+        show_envvar=True,
+        show_default=True,
+    ),
+]
 AUTH = [
     URL,
     click.option(

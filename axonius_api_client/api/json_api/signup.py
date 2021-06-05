@@ -56,7 +56,7 @@ class SystemStatusSchema(DataSchemaJson):
     status_code = marshmallow_jsonapi.fields.Int()
 
     @staticmethod
-    def get_model_cls() -> type:
+    def _get_model_cls() -> type:
         """Pass."""
         return SystemStatus
 
@@ -136,7 +136,7 @@ class SystemStatus(DataModel):
     status_code: int
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[DataSchema]]:
+    def _get_schema_cls() -> Optional[Type[DataSchema]]:
         """Pass."""
         return SystemStatusSchema
 

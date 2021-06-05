@@ -2,20 +2,10 @@
 """Command line interface for Axonius API Client."""
 import click
 
-from ...api import Signup
-from ...tools import json_dump
-from ..options import URL, add_options
+from ..grp_system.grp_discover.grp_common import do_wait_discover
+from ..options import URL, WRITE_ENV, add_options
+from .grp_common import handle_keys
 
-EXPORT = click.option(
-    "--export-format",
-    "-xf",
-    "export_format",
-    type=click.Choice(["json", "str"]),
-    help="Format of to export data in",
-    default="str",
-    show_envvar=True,
-    show_default=True,
-)
 PASSWORD = click.option(
     "--password",
     "-p",
@@ -49,32 +39,57 @@ CONTACT = click.option(
     show_envvar=True,
     show_default=True,
 )
+START_DISCO = click.option(
+    "--start-discover/--no-start-discover",
+    "-sd/-nsd",
+    "start_discover",
+    help="Start a discover and wait for it to finish after signing up",
+    is_flag=True,
+    default=False,
+    required=False,
+    show_envvar=True,
+    show_default=True,
+)
 
-OPTIONS = [URL, PASSWORD, COMPANY, CONTACT, EXPORT]
+OPTIONS = [URL, PASSWORD, COMPANY, CONTACT, *WRITE_ENV, START_DISCO]
 
 
 @click.command(name="signup")
 @add_options(OPTIONS)
 @click.pass_context
-def cmd(ctx, url, password, company_name, contact_email, export_format):
+def cmd(
+    ctx,
+    url,
+    password,
+    company_name,
+    contact_email,
+    env_file,
+    write_env,
+    config,
+    export_format,
+    start_discover,
+):
     """Perform the initial signup to an instance."""
-    entry = Signup(url=url)
+    client = ctx.obj.get_client(url=url)
     with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
-        data = entry.signup(
+        data = client.signup.signup(
             password=password, company_name=company_name, contact_email=contact_email
         )
 
-    if export_format == "str":
-        lines = [
-            f"AX_URL={url}",
-            f"AX_KEY={data['api_key']}",
-            f"AX_SECRET={data['api_secret']}",
-        ]
-        click.secho("\n".join(lines))
-        ctx.exit(0)
+    handle_keys(
+        ctx=ctx,
+        url=url,
+        data=data,
+        write_env=write_env,
+        env_file=env_file,
+        config=config,
+        export_format=export_format,
+    )
 
-    if export_format == "json":
-        data["url"] = url
-        click.secho(json_dump(data))
+    if start_discover:
+        client = ctx.obj.start_client(url=url, key=data["api_key"], secret=data["api_secret"])
+        data = client.dashboard.start()
+        click.secho("Started discover")
+        do_wait_discover(ctx=ctx, client=client)
 
-    ctx.exit(1)
+    ctx.exit(0)

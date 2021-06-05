@@ -17,4 +17,4 @@ def cmd(ctx, url, key, secret, **kwargs):
         data = client.dashboard.get()
 
     click.secho(f"Is running: {data.is_running}")
-    ctx.exit(int(not data.is_running))
+    ctx.exit(0 if data.is_running else 1)

@@ -436,7 +436,7 @@ class Connect:
         url = self.HTTP.url
         ax_env = get_env_ax()
         banner = ax_env.get("AX_BANNER")
-        banner = f"[{banner}]" if banner else ""
+        banner = f"[BANNER: {banner}]" if banner else ""
         pkg_ver = f"API Client v{VERSION}"
 
         if self.STARTED:
@@ -444,9 +444,16 @@ class Connect:
             version = about.get("Version", "") or "DEMO"
             version = version.replace("_", ".")
             built = about.get("Build Date", "")
-            msg = [f"Connected to {url!r}", f"version {version}", f"(RELEASE DATE: {built})"]
+            env_name = self.instances.get_env_name()
+            env_name = f"(INSTANCE: {env_name!r})" if env_name else ""
+            msg = [
+                f"Connected to {url!r}",
+                f"version {version}",
+                f"(RELEASE DATE: {built})",
+                env_name,
+            ]
         else:
-            msg = [f"Not connected to {url!r}"]
+            msg = [f"Will connect to {url!r}"]
 
         bits = [x for x in [*msg, pkg_ver, banner] if x]
         return " ".join(bits)
