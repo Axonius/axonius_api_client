@@ -3,7 +3,6 @@
 import logging
 
 import pytest
-
 from axonius_api_client.connect import Connect
 from axonius_api_client.exceptions import ConnectError, InvalidCredentials
 from axonius_api_client.http import requests
@@ -19,8 +18,8 @@ class TestConnect:
 
         c = Connect(url=ax_url, key=BAD_CRED, secret=BAD_CRED)
 
-        assert "Not connected" in format(c)
-        assert "Not connected" in repr(c)
+        assert "Will connect" in format(c)
+        assert "Will connect" in repr(c)
         assert c.HANDLER_FILE is None
         assert c.HANDLER_CON is None
 
@@ -29,8 +28,8 @@ class TestConnect:
 
         c = Connect(url=ax_url, key=BAD_CRED, secret=BAD_CRED, log_console=True, log_file=True)
 
-        assert "Not connected" in format(c)
-        assert "Not connected" in repr(c)
+        assert "Will connect" in format(c)
+        assert "Will connect" in repr(c)
         assert isinstance(c.HANDLER_FILE, logging.Handler)
         assert isinstance(c.HANDLER_CON, logging.Handler)
 
@@ -39,8 +38,8 @@ class TestConnect:
 
         c = Connect(url=ax_url, certwarn=False, **get_key_creds(request))
 
-        assert "Not connected" in format(c)
-        assert "Not connected" in repr(c)
+        assert "Will connect" in format(c)
+        assert "Will connect" in repr(c)
 
         c.start()
 
