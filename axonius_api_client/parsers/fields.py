@@ -3,9 +3,14 @@
 import copy
 from typing import List, Optional
 
-from ..constants.fields import (AGG_ADAPTER_NAME, AGG_ADAPTER_TITLE,
-                                AGG_EXPR_FIELD_TYPE, ALL_NAME, RAW_NAME,
-                                OperatorTypeMaps)
+from ..constants.fields import (
+    AGG_ADAPTER_NAME,
+    AGG_ADAPTER_TITLE,
+    AGG_EXPR_FIELD_TYPE,
+    ALL_NAME,
+    RAW_NAME,
+    OperatorTypeMaps,
+)
 from ..features import Features
 from ..tools import strip_left, strip_right
 

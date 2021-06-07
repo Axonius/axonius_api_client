@@ -4,9 +4,7 @@
 from axonius_api_client.cli.context import CONTEXT_SETTINGS, click
 from axonius_api_client.cli.options import AUTH, add_options
 
-OPTIONS = [
-    *AUTH
-]
+OPTIONS = [*AUTH]
 
 
 @click.command(name="get-spec", context_settings=CONTEXT_SETTINGS)

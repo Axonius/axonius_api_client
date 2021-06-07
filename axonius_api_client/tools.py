@@ -11,8 +11,7 @@ import platform
 import sys
 from datetime import datetime, timedelta, timezone
 from itertools import zip_longest
-from typing import (Any, Callable, Iterable, Iterator, List, Optional, Tuple,
-                    Union)
+from typing import Any, Callable, Iterable, Iterator, List, Optional, Tuple, Union
 from urllib.parse import urljoin
 
 import click
@@ -22,8 +21,7 @@ import dateutil.tz
 
 from . import INIT_DOTENV, PACKAGE_FILE, PACKAGE_ROOT, VERSION
 from .constants.api import GUI_PAGE_SIZES
-from .constants.general import (DEBUG_TMPL, ERROR_TMPL, NO, OK_TMPL,
-                                URL_STARTS, WARN_TMPL, YES)
+from .constants.general import DEBUG_TMPL, ERROR_TMPL, NO, OK_TMPL, URL_STARTS, WARN_TMPL, YES
 from .exceptions import ToolsError
 from .setup_env import find_dotenv, get_env_ax
 

@@ -8,13 +8,14 @@ import sys
 from io import StringIO
 
 import pytest
+from cachetools import TTLCache, cached
+from click.testing import CliRunner
+
 from axonius_api_client.api import Wizard
 from axonius_api_client.cli.context import Context
 from axonius_api_client.constants.fields import AGG_ADAPTER_NAME
 from axonius_api_client.exceptions import NotFoundError
 from axonius_api_client.tools import listify
-from cachetools import TTLCache, cached
-from click.testing import CliRunner
 
 IS_WINDOWS = sys.platform == "win32"
 IS_LINUX = sys.platform == "linux"
@@ -22,6 +23,9 @@ IS_MAC = sys.platform == "darwin"
 
 
 CACHE: TTLCache = TTLCache(maxsize=1024, ttl=600)
+
+blah = [1, 2, 3, 4]
+blah = "blah"
 
 
 def get_field_vals(rows, field):

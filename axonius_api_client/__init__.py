@@ -35,8 +35,8 @@ POST_DOTENV: dict = setup_env.get_env_ax()
 try:
     from . import api, cli, constants, exceptions, http, logs, tools
     from .connect import Connect
-    from .http import Http
     from .features import Features
+    from .http import Http
 except Exception:  # pragma: no cover
     raise
 

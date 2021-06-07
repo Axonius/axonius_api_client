@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Test suite for assets."""
 import pytest
+
 from axonius_api_client import Features
 from axonius_api_client.api import json_api
 from axonius_api_client.constants.api import MAX_PAGE_SIZE

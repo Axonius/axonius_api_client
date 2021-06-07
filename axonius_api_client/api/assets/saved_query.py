@@ -4,6 +4,7 @@ from typing import Generator, List, Optional, Union
 
 from ...constants.api import MAX_PAGE_SIZE
 from ...exceptions import NotFoundError, ResponseError
+
 # from ...features import Features
 from ...parsers.tables import tablize_sqs
 from ...tools import check_gui_page_size, listify

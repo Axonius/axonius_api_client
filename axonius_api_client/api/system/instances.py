@@ -511,7 +511,7 @@ class Instances(ApiModel):
             path_part = pathlib.Path(parser.parsed.path)
             file_name = path_part.name
 
-            response = requests.get(url=path, verify=False)
+            response = requests.get(url=path, verify=False)  # nosec
             file_content = response.content
         else:
             path_part, file_content = path_read(obj=path, binary=True, is_json=False)

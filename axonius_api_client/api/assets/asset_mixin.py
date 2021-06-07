@@ -770,6 +770,12 @@ class AssetMixin(ApiModel):
     ]
     """Field names that are always returned by the REST API no matter what fields are selected"""
 
+    FIELDS_DETAILS: List[str] = ["meta_data.client_used", "unique_adapter_names_details"]
+    """Field names that are included if include_details=True."""
+
+    FIELDS_DETAIL_TMPL: str = "{}_details"
+    """Template used to convert a field into a details field."""
+
     wizard: str = None
     """:obj:`axonius_api_client.api.wizards.wizard.Wizard`: Query wizard for python objects."""
 

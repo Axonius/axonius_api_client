@@ -942,15 +942,16 @@ class Base:
         api_fields = [x for x in self.APIOBJ.FIELDS_API if x not in fields]
 
         if include_details:  # pragma: no cover
-            api_fields += ["meta_data.client_used", "unique_adapter_names_details"]
+            api_fields += self.APIOBJ.FIELDS_DETAILS
 
         self._fields_selected = []
 
         for field in api_fields + fields:
             self._fields_selected.append(field)
             if include_details:
-                field_details = f"{field}_details"
-                self._fields_selected.append(field_details)
+                if field not in [self.APIOBJ.FIELD_ADAPTERS]:
+                    field_details = self.APIOBJ.FIELDS_DETAIL_TMPL.format(field)
+                    self._fields_selected.append(field_details)
 
         for row in self.CURRENT_ROWS:
             self._fields_selected += [x for x in row if x not in self._fields_selected]

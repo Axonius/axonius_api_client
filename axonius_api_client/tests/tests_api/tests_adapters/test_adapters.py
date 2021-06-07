@@ -3,10 +3,10 @@
 import copy
 
 import pytest
+
 from axonius_api_client.api import ApiEndpoints, json_api
 from axonius_api_client.constants.adapters import CSV_ADAPTER
-from axonius_api_client.exceptions import (ApiError, ConfigUnchanged,
-                                           ConfigUnknown, NotFoundError)
+from axonius_api_client.exceptions import ApiError, ConfigUnchanged, ConfigUnknown, NotFoundError
 
 from ...meta import CSV_FILECONTENT_BYTES, CSV_FILECONTENT_STR, CSV_FILENAME
 from ...utils import cross_check_endpoint_models, get_cnx_existing

@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """Test suite for axonius_api_client.tools."""
 from ....cli import cli
-from ...utils import load_clirunner
 from ...tests_api.tests_openapi.test_openapi import validate_openapi_spec
+from ...utils import load_clirunner
 
 
 class TestGrpOpenAPIGetSpec:

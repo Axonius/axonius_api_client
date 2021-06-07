@@ -3,9 +3,18 @@
 import click
 
 from ..context import AliasedGroup
-from . import (cmd_convert_cert, cmd_get_tokens_creds, cmd_reset_tokens_creds,
-               cmd_reset_tokens_tokens, cmd_shell, cmd_signup, cmd_sysinfo,
-               cmd_system_status, cmd_use_token_reset_token, cmd_write_config)
+from . import (
+    cmd_convert_cert,
+    cmd_get_tokens_creds,
+    cmd_reset_tokens_creds,
+    cmd_reset_tokens_tokens,
+    cmd_shell,
+    cmd_signup,
+    cmd_sysinfo,
+    cmd_system_status,
+    cmd_use_token_reset_token,
+    cmd_write_config,
+)
 
 
 @click.group(cls=AliasedGroup)
