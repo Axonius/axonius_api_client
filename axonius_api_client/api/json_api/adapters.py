@@ -24,6 +24,232 @@ def get_aname(value: str) -> str:
     return strip_right(obj=str(value or ""), fix="_adapter")
 
 
+class AdaptersRequestSchema(DataSchemaJson):
+    """Pass."""
+
+    filter = marshmallow_jsonapi.fields.Str(allow_none=True)
+    get_clients = SchemaBool(missing=True)
+
+    @staticmethod
+    def _get_model_cls() -> type:
+        """Pass."""
+        return AdaptersRequest
+
+    class Meta:
+        """Pass."""
+
+        type_ = "adapters_request_schema"
+
+
+class AdapterSchema(DataSchemaJson):
+    """Pass."""
+
+    adapters_data = marshmallow_jsonapi.fields.List(marshmallow_jsonapi.fields.Dict())
+
+    @staticmethod
+    def _get_model_cls() -> type:
+        """Pass."""
+        return Adapter
+
+    class Meta:
+        """Pass."""
+
+        type_ = "adapters_schema"
+
+
+class AdapterSettingsSchema(MetadataSchema):
+    """Pass."""
+
+    @staticmethod
+    def _get_model_cls() -> type:
+        """Pass."""
+        return AdapterSettings
+
+
+class AdapterSettingsUpdateSchema(SystemSettingsUpdateSchema):
+    """Pass."""
+
+    @staticmethod
+    def _get_model_cls() -> type:
+        """Pass."""
+        return AdapterSettingsUpdate
+
+
+class AdaptersListSchema(MetadataSchema):
+    """Pass."""
+
+    @staticmethod
+    def _get_model_cls() -> type:
+        """Pass."""
+        return AdaptersList
+
+
+class CnxCreateRequestSchema(DataSchemaJson):
+    """Pass."""
+
+    connection = marshmallow_jsonapi.fields.Dict(required=True)  # config of connection
+    connection_label = marshmallow_jsonapi.fields.Str(required=False, missing="", allow_none=True)
+    instance = marshmallow_jsonapi.fields.Str(required=True)  # instance ID
+    active = SchemaBool(required=False, missing=True)  # set as active or inactive
+    save_and_fetch = SchemaBool(required=False, missing=True)  # perform a fetch after saving
+    connection_discovery = marshmallow_jsonapi.fields.Dict(
+        required=False, missing=None, allow_none=True
+    )  # connection specific discovery scheduling
+    instance_name = marshmallow_jsonapi.fields.Str(required=True)
+    # PBUG: why is this even a thing? can we not rely on instance id in 'instance'?
+    is_instances_mode = SchemaBool(required=False, missing=False)
+    # PBUG: why is this even a thing? can we not rely on instance id in 'instance'?
+
+    @staticmethod
+    def _get_model_cls() -> type:
+        """Pass."""
+        return CnxCreateRequest
+
+    class Meta:
+        """Pass."""
+
+        type_ = "create_connection_schema"
+
+    @marshmallow.post_load
+    def post_load_fixit(self, data: "CnxCreateRequest", **kwargs) -> "CnxCreateRequest":
+        """Pass."""
+        data.connection_discovery = getattr(data, "connection_discovery", None) or {
+            "enabled": False
+        }
+        return data
+
+    @marshmallow.post_dump
+    def post_dump_fixit(self, data: dict, **kwargs) -> dict:
+        """Pass."""
+        data["connection_discovery"] = getattr(data, "connection_discovery", None) or {
+            "enabled": False
+        }
+        return data
+
+
+class CnxTestRequestSchema(DataSchemaJson):
+    """Pass."""
+
+    connection = marshmallow_jsonapi.fields.Dict(required=True)  # config of connection
+    instance = marshmallow_jsonapi.fields.Str(required=True)  # instance ID
+
+    @staticmethod
+    def _get_model_cls() -> type:
+        """Pass."""
+        return CnxTestRequest
+
+    class Meta:
+        """Pass."""
+
+        type_ = "test_connection_schema"
+
+
+class CnxUpdateRequestSchema(CnxCreateRequestSchema):
+    """Pass."""
+
+    instance_prev = marshmallow_jsonapi.fields.Str(required=False, missing=None, allow_none=True)
+    instance_prev_name = marshmallow_jsonapi.fields.Str(
+        required=False, missing=None, allow_none=True
+    )
+    # PBUG: why is this even a thing? can we not rely on instance id in 'instance_prev'?
+
+    @staticmethod
+    def _get_model_cls() -> type:
+        """Pass."""
+        return CnxUpdateRequest
+
+    @marshmallow.post_load
+    def post_load_fixit(self, data: "CnxCreateRequest", **kwargs) -> "CnxCreateRequest":
+        """Pass."""
+        data.connection_discovery = getattr(data, "connection_discovery", None) or {
+            "enabled": False
+        }
+        data.instance_prev = getattr(data, "instance_prev", None) or data.instance
+        data.instance_prev_name = getattr(data, "instance_prev_name", None) or data.instance_name
+        return data
+
+    @marshmallow.post_dump
+    def post_dump_fixit(self, data: dict, **kwargs) -> dict:
+        """Pass."""
+        data["connection_discovery"] = getattr(data, "connection_discovery", None) or {
+            "enabled": False
+        }
+        data["instance_prev"] = getattr(data, "instance_prev", None) or data["instance"]
+        data["instance_prev_name"] = (
+            getattr(data, "instance_prev_name", None) or data["instance_name"]
+        )
+
+        return data
+
+
+class CnxModifyResponseSchema(DataSchemaJson):
+    """Pass."""
+
+    active = SchemaBool()
+    client_id = marshmallow_jsonapi.fields.Str()
+    error = marshmallow_jsonapi.fields.Str(allow_none=True)
+    status = marshmallow_jsonapi.fields.Str()
+
+    @staticmethod
+    def _get_model_cls() -> type:
+        """Pass."""
+        return CnxModifyResponse
+
+    class Meta:
+        """Pass."""
+
+        type_ = "connections_details_schema"
+
+
+class CnxDeleteRequestSchema(DataSchemaJson):
+    """Pass."""
+
+    is_instances_mode = SchemaBool(missing=False)
+    delete_entities = SchemaBool(missing=False)
+    instance = marshmallow_jsonapi.fields.Str()
+    instance_name = marshmallow_jsonapi.fields.Str()
+
+    @staticmethod
+    def _get_model_cls() -> type:
+        """Pass."""
+        return CnxDeleteRequest
+
+    class Meta:
+        """Pass."""
+
+        type_ = "delete_connections_schema"
+
+
+class CnxDeleteSchema(DataSchemaJson):
+    """Pass."""
+
+    client_id = marshmallow_jsonapi.fields.Str()
+
+    @staticmethod
+    def _get_model_cls() -> type:
+        """Pass."""
+        return CnxDelete
+
+    class Meta:
+        """Pass."""
+
+        type_ = "deleted_connections_schema"
+
+
+class CnxLabelsSchema(MetadataSchema):
+    """Pass."""
+
+    @staticmethod
+    def _get_model_cls() -> type:
+        """Pass."""
+        return CnxLabels
+
+    class Meta:
+        """Pass."""
+
+        type_ = "metadata_schema"
+
+
 @dataclasses.dataclass
 class AdapterNodeCnx(DataModel):
     """Pass."""
@@ -300,23 +526,6 @@ class AdapterNode(DataModel):
         return ret
 
 
-class AdaptersRequestSchema(DataSchemaJson):
-    """Pass."""
-
-    filter = marshmallow_jsonapi.fields.Str(allow_none=True)
-    get_clients = SchemaBool(missing=True)
-
-    @staticmethod
-    def _get_model_cls() -> type:
-        """Pass."""
-        return AdaptersRequest
-
-    class Meta:
-        """Pass."""
-
-        type_ = "adapters_request_schema"
-
-
 @dataclasses.dataclass
 class AdaptersRequest(DataModel):
     """Pass."""
@@ -329,22 +538,6 @@ class AdaptersRequest(DataModel):
     def _get_schema_cls() -> Optional[Type[DataSchema]]:
         """Pass."""
         return AdaptersRequestSchema
-
-
-class AdapterSchema(DataSchemaJson):
-    """Pass."""
-
-    adapters_data = marshmallow_jsonapi.fields.List(marshmallow_jsonapi.fields.Dict())
-
-    @staticmethod
-    def _get_model_cls() -> type:
-        """Pass."""
-        return Adapter
-
-    class Meta:
-        """Pass."""
-
-        type_ = "adapters_schema"
 
 
 @dataclasses.dataclass
@@ -404,15 +597,6 @@ class Adapter(DataModel):
     def _str_properties() -> List[str]:
         """Pass."""
         return ["adapter_name", "adapter_nodes"]
-
-
-class AdapterSettingsSchema(MetadataSchema):
-    """Pass."""
-
-    @staticmethod
-    def _get_model_cls() -> type:
-        """Pass."""
-        return AdapterSettings
 
 
 @dataclasses.dataclass
@@ -527,9 +711,7 @@ class AdapterSettings(Metadata):
     @property
     def config_specific(self) -> dict:
         """Pass."""
-        if self.schema_name_specific:
-            return self._meta[self.schema_name_specific]["config"]
-        return {}
+        return self._meta[self.schema_name_specific]["config"] if self.schema_name_specific else {}
 
     @property
     def config_generic(self) -> dict:
@@ -554,16 +736,7 @@ class AdapterSettingsUpdate(DataModel):
     @staticmethod
     def _get_schema_cls() -> Optional[Type[DataSchema]]:
         """Pass."""
-        return SystemSettingsUpdateSchema
-
-
-class AdaptersListSchema(MetadataSchema):
-    """Pass."""
-
-    @staticmethod
-    def _get_model_cls() -> type:
-        """Pass."""
-        return AdaptersList
+        return AdapterSettingsUpdateSchema
 
 
 @dataclasses.dataclass
@@ -601,48 +774,6 @@ class AdaptersList(Metadata):
         return adapters[find_value]
 
 
-class CnxCreateRequestSchema(DataSchemaJson):
-    """Pass."""
-
-    connection = marshmallow_jsonapi.fields.Dict(required=True)  # config of connection
-    connection_label = marshmallow_jsonapi.fields.Str(required=False, missing="", allow_none=True)
-    instance = marshmallow_jsonapi.fields.Str(required=True)  # instance ID
-    active = SchemaBool(required=False, missing=True)  # set as active or inactive
-    save_and_fetch = SchemaBool(required=False, missing=True)  # perform a fetch after saving
-    connection_discovery = marshmallow_jsonapi.fields.Dict(
-        required=False, missing=None, allow_none=True
-    )  # connection specific discovery scheduling
-    instance_name = marshmallow_jsonapi.fields.Str(required=True)
-    # PBUG: why is this even a thing? can we not rely on instance id in 'instance'?
-    is_instances_mode = SchemaBool(required=False, missing=False)
-    # PBUG: why is this even a thing? can we not rely on instance id in 'instance'?
-
-    @staticmethod
-    def _get_model_cls() -> type:
-        """Pass."""
-        return CnxCreateRequest
-
-    class Meta:
-        """Pass."""
-
-        type_ = "create_connection_schema"
-
-    @marshmallow.post_load
-    def post_load_fixit(self, data: "CnxCreateRequest", **kwargs) -> "CnxCreateRequest":
-        """Pass."""
-        if not data.connection_discovery:
-            data.connection_discovery = {"enabled": False}
-        return data
-
-    @marshmallow.post_dump
-    def post_dump_fixit(self, data: dict, **kwargs) -> dict:
-        """Pass."""
-        cnx_disco = data.get("connection_discovery", {}) or {}
-        if not cnx_disco:
-            data["connection_discovery"] = {"enabled": False}
-        return data
-
-
 @dataclasses.dataclass
 class CnxCreateRequest(DataModel):
     """Pass."""
@@ -671,23 +802,6 @@ class CnxCreateRequest(DataModel):
         self._fixit()
 
 
-class CnxTestRequestSchema(DataSchemaJson):
-    """Pass."""
-
-    connection = marshmallow_jsonapi.fields.Dict(required=True)  # config of connection
-    instance = marshmallow_jsonapi.fields.Str(required=True)  # instance ID
-
-    @staticmethod
-    def _get_model_cls() -> type:
-        """Pass."""
-        return CnxTestRequest
-
-    class Meta:
-        """Pass."""
-
-        type_ = "test_connection_schema"
-
-
 @dataclasses.dataclass
 class CnxTestRequest(DataModel):
     """Pass."""
@@ -699,48 +813,6 @@ class CnxTestRequest(DataModel):
     def _get_schema_cls() -> Optional[Type[DataSchema]]:
         """Pass."""
         return CnxTestRequestSchema
-
-
-class CnxUpdateRequestSchema(CnxCreateRequestSchema):
-    """Pass."""
-
-    instance_prev = marshmallow_jsonapi.fields.Str(required=False, missing=None, allow_none=True)
-    instance_prev_name = marshmallow_jsonapi.fields.Str(
-        required=False, missing=None, allow_none=True
-    )
-    # PBUG: why is this even a thing? can we not rely on instance id in 'instance_prev'?
-
-    @staticmethod
-    def _get_model_cls() -> type:
-        """Pass."""
-        return CnxUpdateRequest
-
-    @marshmallow.post_load
-    def post_load_fixit(self, data: "CnxCreateRequest", **kwargs) -> "CnxCreateRequest":
-        """Pass."""
-        if not data.connection_discovery:
-            data.connection_discovery = {"enabled": False}
-
-        if not data.instance_prev:
-            data.instance_prev = data.instance
-
-        if not data.instance_prev_name:
-            data.instance_prev_name = data.instance_name
-        return data
-
-    @marshmallow.post_dump
-    def post_dump_fixit(self, data: dict, **kwargs) -> dict:
-        """Pass."""
-        if not data.get("connection_discovery", {}) or {}:
-            data["connection_discovery"] = {"enabled": False}
-
-        if not data.get("instance_prev"):
-            data["instance_prev"] = data["instance"]
-
-        if not data.get("instance_prev_name"):
-            data["instance_prev_name"] = data["instance_name"]
-
-        return data
 
 
 @dataclasses.dataclass
@@ -765,30 +837,8 @@ class CnxUpdateRequest(DataModel):
 
     def __post_init__(self):
         """Pass."""
-        if not self.instance_prev:
-            self.instance_prev = self.instance
-
-        if not self.instance_prev_name:
-            self.instance_prev_name = self.instance_name
-
-
-class CnxModifyResponseSchema(DataSchemaJson):
-    """Pass."""
-
-    active = SchemaBool()
-    client_id = marshmallow_jsonapi.fields.Str()
-    error = marshmallow_jsonapi.fields.Str(allow_none=True)
-    status = marshmallow_jsonapi.fields.Str()
-
-    @staticmethod
-    def _get_model_cls() -> type:
-        """Pass."""
-        return CnxModifyResponse
-
-    class Meta:
-        """Pass."""
-
-        type_ = "connections_details_schema"
+        self.instance_prev = getattr(self, "instance_prev", None) or self.instance
+        self.instance_prev_name = getattr(self, "instance_prev_name", None) or self.instance_name
 
 
 @dataclasses.dataclass
@@ -822,25 +872,6 @@ class CnxModifyResponse(DataModel):
         return self.status == "success" and not self.error
 
 
-class CnxDeleteRequestSchema(DataSchemaJson):
-    """Pass."""
-
-    is_instances_mode = SchemaBool(missing=False)
-    delete_entities = SchemaBool(missing=False)
-    instance = marshmallow_jsonapi.fields.Str()
-    instance_name = marshmallow_jsonapi.fields.Str()
-
-    @staticmethod
-    def _get_model_cls() -> type:
-        """Pass."""
-        return CnxDeleteRequest
-
-    class Meta:
-        """Pass."""
-
-        type_ = "delete_connections_schema"
-
-
 @dataclasses.dataclass
 class CnxDeleteRequest(DataModel):
     """Pass."""
@@ -856,22 +887,6 @@ class CnxDeleteRequest(DataModel):
         return CnxDeleteRequestSchema
 
 
-class CnxDeleteSchema(DataSchemaJson):
-    """Pass."""
-
-    client_id = marshmallow_jsonapi.fields.Str()
-
-    @staticmethod
-    def _get_model_cls() -> type:
-        """Pass."""
-        return CnxDelete
-
-    class Meta:
-        """Pass."""
-
-        type_ = "deleted_connections_schema"
-
-
 @dataclasses.dataclass
 class CnxDelete(DataModel):
     """Pass."""
@@ -882,20 +897,6 @@ class CnxDelete(DataModel):
     def _get_schema_cls() -> Optional[Type[DataSchema]]:
         """Pass."""
         return CnxDeleteSchema
-
-
-class CnxLabelsSchema(MetadataSchema):
-    """Pass."""
-
-    @staticmethod
-    def _get_model_cls() -> type:
-        """Pass."""
-        return CnxLabels
-
-    class Meta:
-        """Pass."""
-
-        type_ = "metadata_schema"
 
 
 @dataclasses.dataclass
@@ -1044,15 +1045,14 @@ class Cnxs(DataModel):
         """Pass."""
         return parse_schema(self.meta["schema"])
 
-    def find_by_node_id(self, value: str) -> List[Cnx]:
+    def find_by_node(self, value: str) -> List[Cnx]:
         """Pass."""
-        return [x for x in self.cnxs if x.node_id == value]
+        return [x for x in self.cnxs if x.node_id == value or x.node_name == value]
 
-    def get_labels(self, cached: bool = False) -> List[dict]:
+    def get_labels(self, cached: bool = False) -> CnxLabels:
         """Pass."""
         cache = getattr(self, "_labels_cache", None)
-        if cached and cache:
-            return cache
+        if not cache or not cached:
+            self._labels_cache = self.CLIENT.adapters.cnx._get_labels()
 
-        self._labels_cache = self.CLIENT.adapters.cnx._get_labels()
         return self._labels_cache

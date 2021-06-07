@@ -492,6 +492,7 @@ class Cnx(ApiModel):
         gone_hook = self._get_gone_hook(cid=cid, uuid=uuid, adapter=adapter_name, node=node_name)
 
         result = self._update(
+            uuid=uuid,
             connection=config,
             adapter_name=adapter_name_raw,
             instance_name=node_name,
@@ -583,11 +584,8 @@ class Cnx(ApiModel):
         uuid = cnx_update["uuid"]
 
         old_label = old_config.pop("connection_label", "") or cnx_update.get("connection_label", "")
-
-        if "connection_label" in new_config:
-            label = new_config.pop("connection_label", None)
-        else:
-            label = old_label
+        new_label = new_config.pop("connection_label", None)
+        label = new_label if "connection_label" in new_config else old_label
 
         node_meta = self.CLIENT.instances.get_by_name(name=node_name)
         is_instances_mode = not node_meta["is_master"]
@@ -820,22 +818,20 @@ class Cnx(ApiModel):
             deets = ", ".join(deets)
 
             data = json_load(obj=response.text, error=False)
-            if not isinstance(data, dict):
-                return
+            if isinstance(data, dict):
+                errors = listify(data.get("errors"))
 
-            errors = listify(data.get("errors"))
+                for error in errors:
+                    if isinstance(error, dict):
+                        detail = error.get("detail")
 
-            for error in errors:
-                if not isinstance(error, dict):
-                    continue
-
-                detail = error.get("detail")
-
-                if "already gone" in str(detail).lower():
-                    cnxs = apiobj.get_by_adapter(adapter_name=adapter, adapter_node=node)
-                    msg = f"Connection is gone - updated or deleted by someone else!\n{deets}"
-                    err = tablize_cnxs(cnxs=cnxs, err=msg)
-                    raise CnxGoneError(err)
+                        if "already gone" in str(detail).lower():
+                            cnxs = apiobj.get_by_adapter(adapter_name=adapter, adapter_node=node)
+                            msg = (
+                                f"Connection is gone - updated or deleted by someone else!\n{deets}"
+                            )
+                            err = tablize_cnxs(cnxs=cnxs, err=msg)
+                            raise CnxGoneError(err)
 
         return hook
 
@@ -867,61 +863,54 @@ class Cnx(ApiModel):
 
             data = json_load(obj=response.text, error=False)
 
-            if not isinstance(data, dict):
-                return
+            if isinstance(data, dict):
+                request_data = json_load(obj=response.request.body, error=False)
+                request_data_data = request_data.get("data", {})
+                request_data_attr = request_data_data.get("attributes", {})
+                config = request_data_attr.get("connection", {})
+                config_json = json_dump(obj=config, error=False)
+                config_txt = f"on {deets} with configuration:\n{config_json}"
+                response_json = json_dump(obj=data, error=False)
+                response_txt = f"Connectivty test failure, response:\n{response_json}"
 
-            data_request = json_load(obj=response.request.body, error=False)
+                status = data.get("status")
+                etype = data.get("type")
+                emsg = data.get("message")
+                errors = listify(data.get("errors"))
 
-            try:
-                config = data_request["data"]["attributes"]["connection"]
-            except Exception:
-                config = {}
+                exc = None
+                pre = ""
 
-            config_json = json_dump(obj=config, error=False)
-            config_txt = f"on {deets} with configuration:\n{config_json}"
-            response_json = json_dump(obj=data, error=False)
-            response_txt = f"Connectivty test failure, response:\n{response_json}"
+                if status == "error":  # pragma: no cover
+                    exc = ConfigRequired
+                    pre = f"Generic error of type {etype!r} with message: {emsg}"
+                    msg = f"{pre} {config_txt}"
+                    err = tablize_schemas(schemas=cnx_schemas, err=msg)
+                    raise exc(f"{response_txt}\n{err}")
 
-            status = data.get("status")
-            etype = data.get("type")
-            emsg = data.get("message")
-            errors = listify(data.get("errors"))
+                # PBUG: this nasty footwork should be server side
+                for error in errors:
+                    if isinstance(error, dict):
+                        detail = error.get("detail")
 
-            exc = None
-            pre = ""
+                        if "invalid client" in str(detail).lower():  # pragma: no cover
+                            pre = "Invalid/missing domain or other connection parameter"
+                            exc = ConfigRequired
+                            # only happens if connection is empty
 
-            if status == "error":
-                exc = ConfigRequired
-                pre = f"Generic error of type {etype!r} with message: {emsg}"
-                msg = f"{pre} {config_txt}"
-                err = tablize_schemas(schemas=cnx_schemas, err=msg)
-                raise exc(f"{response_txt}\n{err}")
+                        if "not reachable" in str(detail).lower():
+                            pre = "Connectivity test failed"
+                            exc = CnxTestError
 
-            # PBUG: this nasty footwork should be server side
-            for error in errors:
-                if not isinstance(error, dict):
-                    continue
-
-                detail = error.get("detail")
-
-                if "invalid client" in str(detail).lower():
+                if not exc and data.get("meta") == 400:  # pragma: no cover
                     pre = "Invalid/missing domain or other connection parameter"
                     exc = ConfigRequired
-                    # only happens if connection is empty
+                    # PBUG: sometimes returns {'data': null, 'meta': 400}
 
-                if "not reachable" in str(detail).lower():
-                    pre = "Connectivity test failed"
-                    exc = CnxTestError
-
-            if not exc and data.get("meta") == 400:
-                pre = "Invalid/missing domain or other connection parameter"
-                exc = ConfigRequired
-                # PBUG: sometimes returns {'data': null, 'meta': 400}
-
-            if exc:
-                msg = f"{pre} {config_txt}"
-                err = tablize_schemas(schemas=cnx_schemas, err=msg)
-                raise exc(f"{response_txt}\n{err}")
+                if exc:
+                    msg = f"{pre} {config_txt}"
+                    err = tablize_schemas(schemas=cnx_schemas, err=msg)
+                    raise exc(f"{response_txt}\n{err}")
 
         return hook
 

@@ -8,7 +8,12 @@ from .models import ApiEndpoint
 
 
 @dataclasses.dataclass
-class Assets(BaseData):
+class BaseEndpoints(BaseData):
+    """Pass."""
+
+
+@dataclasses.dataclass
+class Assets(BaseEndpoints):
     """Pass."""
 
     get: ApiEndpoint = ApiEndpoint(
@@ -100,7 +105,7 @@ class Assets(BaseData):
 
 
 @dataclasses.dataclass
-class SavedQueries(BaseData):
+class SavedQueries(BaseEndpoints):
     """Pass."""
 
     get: ApiEndpoint = ApiEndpoint(
@@ -142,7 +147,7 @@ class SavedQueries(BaseData):
 
 
 @dataclasses.dataclass
-class Instances(BaseData):
+class Instances(BaseEndpoints):
     """Pass."""
 
     get: ApiEndpoint = ApiEndpoint(
@@ -233,7 +238,7 @@ class Instances(BaseData):
 
 
 @dataclasses.dataclass
-class CentralCore(BaseData):
+class CentralCore(BaseEndpoints):
     """Pass."""
 
     settings_get: ApiEndpoint = ApiEndpoint(
@@ -268,7 +273,7 @@ class CentralCore(BaseData):
 
 
 @dataclasses.dataclass
-class SystemSettings(BaseData):
+class SystemSettings(BaseEndpoints):
     """Pass."""
 
     # PBUG: schema differences between settings update and get
@@ -378,7 +383,7 @@ class SystemSettings(BaseData):
 
 
 @dataclasses.dataclass
-class RemoteSupport(BaseData):
+class RemoteSupport(BaseEndpoints):
     """Pass."""
 
     get: ApiEndpoint = ApiEndpoint(
@@ -451,7 +456,7 @@ class RemoteSupport(BaseData):
 
 
 @dataclasses.dataclass
-class SystemUsers(BaseData):
+class SystemUsers(BaseEndpoints):
     """Pass."""
 
     get: ApiEndpoint = ApiEndpoint(
@@ -492,7 +497,7 @@ class SystemUsers(BaseData):
 
 
 @dataclasses.dataclass
-class PasswordReset(BaseData):
+class PasswordReset(BaseEndpoints):
     """Pass."""
 
     create: ApiEndpoint = ApiEndpoint(
@@ -542,7 +547,7 @@ class PasswordReset(BaseData):
 
 
 @dataclasses.dataclass
-class Enforcements(BaseData):
+class Enforcements(BaseEndpoints):
     """Pass."""
 
     # PBUG: so many things wrong with this
@@ -678,7 +683,7 @@ class Enforcements(BaseData):
 
 
 @dataclasses.dataclass
-class SystemRoles(BaseData):
+class SystemRoles(BaseEndpoints):
     """Pass."""
 
     get: ApiEndpoint = ApiEndpoint(
@@ -731,7 +736,7 @@ class SystemRoles(BaseData):
 
 
 @dataclasses.dataclass
-class Lifecycle(BaseData):
+class Lifecycle(BaseEndpoints):
     """Pass."""
 
     get: ApiEndpoint = ApiEndpoint(
@@ -767,7 +772,7 @@ class Lifecycle(BaseData):
 
 
 @dataclasses.dataclass
-class Adapters(BaseData):
+class Adapters(BaseEndpoints):
     """Pass."""
 
     get: ApiEndpoint = ApiEndpoint(
@@ -802,7 +807,7 @@ class Adapters(BaseData):
     settings_update: ApiEndpoint = ApiEndpoint(
         method="put",
         path="api/V4.0/adapters/{adapter_name}/{config_name}",
-        request_schema_cls=json_api.system_settings.SystemSettingsUpdateSchema,
+        request_schema_cls=json_api.adapters.AdapterSettingsUpdateSchema,
         request_model_cls=json_api.adapters.AdapterSettingsUpdate,
         response_schema_cls=json_api.system_settings.SystemSettingsSchema,
         response_model_cls=json_api.system_settings.SystemSettings,
@@ -879,7 +884,7 @@ class Adapters(BaseData):
 
 
 @dataclasses.dataclass
-class Signup(BaseData):
+class Signup(BaseEndpoints):
     """Pass."""
 
     get: ApiEndpoint = ApiEndpoint(
@@ -951,7 +956,7 @@ class Signup(BaseData):
 
 
 @dataclasses.dataclass
-class AuditLogs(BaseData):
+class AuditLogs(BaseEndpoints):
     """Pass."""
 
     get: ApiEndpoint = ApiEndpoint(
@@ -965,7 +970,7 @@ class AuditLogs(BaseData):
 
 
 @dataclasses.dataclass
-class OpenAPISpec(BaseData):
+class OpenAPISpec(BaseEndpoints):
     """Pass."""
 
     get_spec: ApiEndpoint = ApiEndpoint(
@@ -980,7 +985,7 @@ class OpenAPISpec(BaseData):
 
 
 @dataclasses.dataclass
-class ApiEndpoints(BaseData):
+class ApiEndpoints(BaseEndpoints):
     """Pass."""
 
     instances = Instances

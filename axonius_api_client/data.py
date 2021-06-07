@@ -37,8 +37,13 @@ class BaseData:
 
     @classmethod
     def get_fields(cls) -> List[dataclasses.Field]:
-        """Get a list of fields defined for current this dataclass object."""
+        """Get a list of fields defined for this dataclass."""
         return dataclasses.fields(cls)
+
+    @classmethod
+    def get_fields_dict(cls) -> dict:
+        """Get a dictionary of fields defined for this dataclass."""
+        return {x.name: x.default for x in cls.get_fields()}
 
 
 @dataclasses.dataclass

@@ -2,12 +2,12 @@
 """Test suite."""
 
 import pytest
-from axonius_api_client.api import json_api
+from axonius_api_client.api import Adapters, json_api
 from axonius_api_client.constants.adapters import CSV_ADAPTER
 from axonius_api_client.exceptions import (CnxAddError, CnxGoneError,
-                                           CnxTestError, ConfigInvalidValue,
-                                           ConfigRequired, ConfigUnchanged,
-                                           NotFoundError)
+                                           CnxTestError, CnxUpdateError,
+                                           ConfigInvalidValue, ConfigRequired,
+                                           ConfigUnchanged, NotFoundError)
 
 from ...meta import CSV_FILECONTENT_STR
 from ...utils import get_cnx_broken, get_cnx_existing, get_cnx_working
@@ -20,10 +20,33 @@ class TestCnxBase:
 
 
 class TestCnxPrivate(TestCnxBase):
-    pass
+    def test_get(self, api_client, new_csv_cnx):
+        cnxs = api_client.cnx._get(adapter_name=new_csv_cnx["adapter_name_raw"])
+        assert isinstance(cnxs, json_api.adapters.Cnxs)
+        assert isinstance(cnxs.schema_cnx, dict)
+        assert isinstance(cnxs.schema_discovery, dict)
+        assert any(
+            [x.client_id == new_csv_cnx["id"] and x.uuid == new_csv_cnx["uuid"] for x in cnxs.cnxs]
+        )
+        for cnx in cnxs.cnxs:
+            assert isinstance(cnx, json_api.adapters.Cnx)
+
+        labels = cnxs.get_labels()
+        assert isinstance(labels, json_api.adapters.CnxLabels)
+        find_node_results = cnxs.find_by_node(value=new_csv_cnx["node_name"])
+        assert isinstance(find_node_results, list)
+        assert any(
+            [
+                x.client_id == new_csv_cnx["id"] and x.uuid == new_csv_cnx["uuid"]
+                for x in find_node_results
+            ]
+        )
 
 
 class TestCnxPublic(TestCnxBase):
+    def test_old_attrs(self, api_client):
+        assert isinstance(api_client.cnx.adapters, Adapters)
+
     def test_get_by_adapter(self, api_client):
         cnxs = api_client.cnx.get_by_adapter(adapter_name=CSV_ADAPTER)
         assert isinstance(cnxs, list)
@@ -56,6 +79,26 @@ class TestCnxPublic(TestCnxBase):
             adapter_node=cnx["node_name"],
         )
         assert cnx == found
+
+    def test_set_cnx_active(self, api_client, new_csv_cnx):
+        disabled = api_client.cnx.set_cnx_active(cnx=new_csv_cnx, value=False, save_and_fetch=False)
+        assert isinstance(disabled, dict)
+        assert disabled["active"] is False
+
+        enabled = api_client.cnx.set_cnx_active(cnx=disabled, value=True, save_and_fetch=False)
+        assert isinstance(enabled, dict)
+        assert enabled["active"] is True
+
+    def test_set_cnx_label(self, api_client, new_csv_cnx):
+        updated = api_client.cnx.set_cnx_label(
+            cnx=new_csv_cnx, value="BADWOLF NEW", save_and_fetch=False
+        )
+        assert isinstance(updated, dict)
+        assert updated["connection_label"] == "BADWOLF NEW"
+
+    def test_get_by_uuid_fail(self, api_client):
+        with pytest.raises(NotFoundError):
+            api_client.cnx.get_by_uuid(cnx_uuid="badwolf", adapter_name="aws")
 
     def test_get_by_label_fail(self, api_client):
         with pytest.raises(NotFoundError):
@@ -259,6 +302,55 @@ class TestCnxPublic(TestCnxBase):
                 callbacks={"adapter_name": "badwolf", "adapter_node": "badwolf"},
                 source="badwolf",
             )
+
+    def test_update_error_remove(self, api_client):
+        config = {
+            "domain": "10.0.0.0",
+            "username": "badwolf",
+            "password": "badwolf",
+        }
+        with pytest.raises(CnxAddError) as exc:
+            api_client.cnx.add(adapter_name="tanium", **config)
+
+        cnx_added = exc.value.cnx_new
+        with pytest.raises(CnxUpdateError) as exc:
+            api_client.cnx.update_cnx(
+                cnx_update=cnx_added,
+                domain="10.1.1.1",
+            )
+        cnx_updated = exc.value.cnx_new
+        assert isinstance(cnx_updated, dict)
+
+        cnx_deleted = api_client.cnx.delete_by_id(
+            cnx_id=cnx_updated["id"],
+            adapter_name="tanium",
+            delete_entities=True,
+        )
+        assert isinstance(cnx_deleted, json_api.adapters.CnxDelete)
+
+        with pytest.raises(NotFoundError):
+            api_client.cnx.get_by_id(cnx_id=cnx_updated["id"], adapter_name="tanium")
+
+    def test_add_error_remove(self, api_client):
+        config = {
+            "domain": "10.0.0.0",
+            "username": "badwolf",
+            "password": "badwolf",
+        }
+        with pytest.raises(CnxAddError) as exc:
+            api_client.cnx.add(adapter_name="tanium", **config)
+
+        cnx_added = exc.value.cnx_new
+        del_result = api_client.cnx.delete_by_id(
+            cnx_id=cnx_added["id"],
+            adapter_name="tanium",
+            delete_entities=True,
+        )
+
+        assert isinstance(del_result, json_api.adapters.CnxDelete)
+
+        with pytest.raises(NotFoundError):
+            api_client.cnx.get_by_id(cnx_id=cnx_added["id"], adapter_name="tanium")
 
     def test_add_remove(self, api_client, csv_file_path):
         config = {

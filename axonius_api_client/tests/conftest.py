@@ -3,6 +3,7 @@
 import os
 
 import pytest
+from axonius_api_client.api import json_api
 from axonius_api_client.connect import Connect
 from axonius_api_client.constants.adapters import CSV_ADAPTER
 
@@ -79,6 +80,32 @@ def csv_file_path(api_client):
     assert data["uuid"]
     assert data["filename"]
     return data
+
+
+@pytest.fixture()
+def new_csv_cnx(api_client, csv_file_path):
+    """Pass."""
+    config = {
+        "user_id": "badwolf temp",
+        "file_path": csv_file_path,
+    }
+    label = "BADWOLF TEMP"
+    added = api_client.cnx.add(adapter_name=CSV_ADAPTER, connection_label=label, **config)
+
+    assert added["connection_label"] == label
+    for k, v in config.items():
+        assert v == added["config"][k]
+
+    yield added
+
+    deleted = api_client.cnx.delete_by_id(
+        cnx_id=added["id"],
+        adapter_name=CSV_ADAPTER,
+        delete_entities=True,
+    )
+
+    assert isinstance(deleted, json_api.adapters.CnxDelete)
+    assert deleted.client_id == "{'client_id': 'badwolf temp'}"
 
 
 @pytest.fixture(scope="session")

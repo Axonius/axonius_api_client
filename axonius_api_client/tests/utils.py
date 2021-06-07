@@ -254,3 +254,22 @@ def get_key_creds(request):
     key = request.config.getoption("--ax-key")
     secret = request.config.getoption("--ax-secret")
     return {"key": key, "secret": secret}
+
+
+def cross_check_endpoint_models(name, endpoint, schema_model, data_model, skip=False):
+    """Test utility."""
+    if schema_model is None and data_model is None:
+        if skip:
+            pytest.skip(f"schema_model or data_model is undefined in {name} {endpoint}")
+        return
+    elif schema_model is None and data_model is not None:
+        schema_model_from_data = data_model._get_schema_cls()
+        assert schema_model_from_data is None
+    elif data_model is None and schema_model is not None:
+        data_model_from_schema = schema_model._get_model_cls()
+        assert data_model_from_schema is None
+    else:
+        data_model_from_schema = schema_model._get_model_cls()
+        schema_model_from_data = data_model._get_schema_cls()
+        assert data_model_from_schema == data_model
+        assert schema_model_from_data == schema_model
