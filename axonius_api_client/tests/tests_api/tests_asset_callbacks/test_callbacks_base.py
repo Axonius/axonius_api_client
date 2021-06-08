@@ -52,46 +52,45 @@ class TestCallbacksBase(Callbacks):
         assert rows_proc != rows_orig
         cbobj.stop()
 
-    # def test_fields_selected_include_details(self, cbexport, apiobj, caplog):
-    #     getargs = {
-    #         "report_adapters_missing": True,
-    #     }
-    #     store = {
-    #         "include_details": True,
-    #         "fields": [apiobj.FIELD_SIMPLE],
-    #     }
-    #     cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs=getargs, store=store)
-    #     cbobj.start()
+    def test_fields_selected_include_details(self, cbexport, apiobj, caplog):
+        getargs = {
+            "report_adapters_missing": True,
+        }
+        store = {
+            "include_details": True,
+            "fields": [apiobj.FIELD_SIMPLE],
+        }
+        cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs=getargs, store=store)
+        cbobj.start()
 
-    #     rows = get_rows_exist(
-    #         apiobj=apiobj,
-    #         fields=[apiobj.FIELD_SIMPLE],
-    #         fields_default=False,
-    #         max_rows=5,
-    #         include_details=True,
-    #         fields_null=True,
-    #     )
-    #     exp = [
-    #         *apiobj.FIELDS_API,
-    #         *[
-    #             apiobj.FIELDS_DETAIL_TMPL.format(x)
-    #             for x in apiobj.FIELDS_API
-    #             if x != apiobj.FIELD_ADAPTERS
-    #         ],
-    #         apiobj.FIELD_SIMPLE,
-    #         apiobj.FIELDS_DETAIL_TMPL.format(apiobj.FIELD_SIMPLE),
-    #         *apiobj.FIELDS_DETAILS,
-    #         *[apiobj.FIELDS_DETAIL_TMPL.format(x) for x in apiobj.FIELDS_DETAILS],
-    #     ]
-    #     assert sorted(cbobj.fields_selected) == sorted(exp)
-    #     import pdb
+        rows = get_rows_exist(
+            apiobj=apiobj,
+            fields=[apiobj.FIELD_SIMPLE],
+            fields_default=False,
+            max_rows=5,
+            include_details=True,
+            fields_null=True,
+        )
+        exp = [
+            *apiobj.FIELDS_API,
+            *[
+                apiobj.FIELDS_DETAIL_TMPL.format(x)
+                for x in apiobj.FIELDS_API
+                if x not in apiobj.FIELDS_NON_DETAILS
+            ],
+            apiobj.FIELD_SIMPLE,
+            apiobj.FIELDS_DETAIL_TMPL.format(apiobj.FIELD_SIMPLE),
+            *apiobj.FIELDS_DETAILS,
+        ]
+        assert sorted(cbobj.fields_selected) == sorted(exp)
+        # import pdb
 
-    #     pdb.set_trace()
-    #     for row in rows:
-    #         for f in exp:
-    #             if f != apiobj.FIELD_TAGS:
-    #                 assert f in row
-    #             row.pop(f, None)
-    #         assert not row
+        # pdb.set_trace()
+        for row in rows:
+            for f in exp:
+                if f != apiobj.FIELD_TAGS:
+                    assert f in row
+                row.pop(f, None)
+            assert not row
 
-    #     cbobj.stop()
+        cbobj.stop()

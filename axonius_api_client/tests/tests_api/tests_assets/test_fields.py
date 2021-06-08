@@ -3,9 +3,9 @@
 import copy
 
 import pytest
-
 from axonius_api_client.api import json_api
-from axonius_api_client.constants.fields import AGG_ADAPTER_ALTS, AGG_ADAPTER_NAME
+from axonius_api_client.constants.fields import (AGG_ADAPTER_ALTS,
+                                                 AGG_ADAPTER_NAME)
 from axonius_api_client.exceptions import ApiError, NotFoundError
 
 from ...meta import FIELD_FORMATS, SCHEMA_FIELD_FORMATS, SCHEMA_TYPES
@@ -459,11 +459,19 @@ class FieldsPublic:
         ]
         assert len(result) >= 1
 
-    def test_get_field_schema_error(self, apiobj):
+    def test_get_field_schema_error_no_fuzzy(self, apiobj):
         search = "badwolf"
         schemas = get_schemas(apiobj=apiobj)
-        with pytest.raises(NotFoundError):
+        with pytest.raises(NotFoundError) as exc:
             apiobj.fields.get_field_schema(value=search, schemas=schemas)
+        assert "No fuzzy matches" in str(exc.value)
+
+    def test_get_field_schema_error_fuzzy(self, apiobj):
+        search = "last"
+        schemas = get_schemas(apiobj=apiobj)
+        with pytest.raises(NotFoundError) as exc:
+            apiobj.fields.get_field_schema(value=search, schemas=schemas)
+        assert "Maybe you meant" in str(exc.value)
 
     @pytest.mark.parametrize(
         "test_data",
@@ -562,11 +570,30 @@ class FieldsPublic:
         result = apiobj.fields.validate()
         assert exp == result
 
-    def test_validate_no_fields_error(self, apiobj):
+    def test_validate_fields_error_true_no_fields(self, apiobj):
+        with pytest.raises(ApiError):
+            apiobj.fields.validate(fields_default=False, fields_error=True)
+
+    def test_validate_fields_error_true_bad_adapter(self, apiobj):
+        with pytest.raises(ApiError):
+            apiobj.fields.validate(fields="xxx:xxx", fields_error=True)
+
+    def test_validate_fields_error_true_bad_field(self, apiobj):
+        with pytest.raises(ApiError):
+            apiobj.fields.validate(fields="xxx", fields_error=True)
+
+    def test_validate_fields_error_false_no_fields(self, apiobj):
         fields = apiobj.fields.validate(fields_default=False, fields_error=False)
         assert not fields
 
+    def test_validate_fields_error_false_bad_field(self, apiobj):
         fields = apiobj.fields.validate(fields=["xxx"], fields_default=False, fields_error=False)
+        assert fields == ["xxx"]
+
+    def test_validate_fields_error_false_bad_adapter(self, apiobj):
+        fields = apiobj.fields.validate(
+            fields=["xxx:xxx"], fields_default=False, fields_error=False
+        )
         assert fields == ["xxx"]
 
     def test_validate_fuzzy(self, apiobj):

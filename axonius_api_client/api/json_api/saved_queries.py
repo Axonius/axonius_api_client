@@ -43,18 +43,18 @@ class SavedQuerySchema(DataSchemaJson):
         type_ = "views_details_schema"
 
 
-class SavedQueryDeleteSchema(DataSchemaJson):
-    """Pass."""
+# class SavedQueryDeleteSchema(DataSchemaJson):
+#     """Pass."""
 
-    @staticmethod
-    def _get_model_cls() -> type:
-        """Pass."""
-        return SavedQueryDelete
+#     @staticmethod
+#     def _get_model_cls() -> type:
+#         """Pass."""
+#         return SavedQueryDelete
 
-    class Meta:
-        """Pass."""
+#     class Meta:
+#         """Pass."""
 
-        type_ = "delete_view_schema"
+#         type_ = "delete_view_schema"
 
 
 class SavedQueryCreateSchema(DataSchemaJson):
@@ -126,16 +126,16 @@ class SavedQueryCreate(DataModel):
         return SavedQueryCreateSchema
 
 
-@dataclasses.dataclass
-class SavedQueryDelete(DataModel):
-    """Pass."""
+# @dataclasses.dataclass
+# class SavedQueryDelete(DataModel):
+#     """Pass."""
 
-    @staticmethod
-    def _get_schema_cls() -> Optional[Type[DataSchema]]:
-        """Pass."""
-        return SavedQueryDeleteSchema
+#     @staticmethod
+#     def _get_schema_cls() -> Optional[Type[DataSchema]]:
+#         """Pass."""
+#         return SavedQueryDeleteSchema
 
-    # PBUG: why empty jsonapi doc in request
-    def _dump_request(self, **kwargs) -> dict:
-        """Pass."""
-        return {"data": {"attributes": self.to_dict(), "type": self._get_schema_cls().Meta.type_}}
+#     # PBUG: why empty jsonapi doc in request
+#     def _dump_request(self, **kwargs) -> dict:
+#         """Pass."""
+#         return {"data": {"attributes": self.to_dict(), "type": self._get_schema_cls().Meta.type_}}

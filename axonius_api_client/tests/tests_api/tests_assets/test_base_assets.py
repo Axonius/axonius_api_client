@@ -1,15 +1,14 @@
 # -*- coding: utf-8 -*-
 """Test suite for assets."""
 import pytest
-
 from axonius_api_client import Features
-from axonius_api_client.api import json_api
+from axonius_api_client.api import ApiEndpoints, json_api
 from axonius_api_client.constants.api import MAX_PAGE_SIZE
-from axonius_api_client.exceptions import NotFoundError
+from axonius_api_client.exceptions import ApiError, NotFoundError
 from axonius_api_client.tools import listify
 
 from ...meta import QUERIES
-from ...utils import check_asset, check_assets
+from ...utils import check_asset, check_assets, cross_check_endpoint_models
 
 
 class ModelMixinsBase:
@@ -17,12 +16,43 @@ class ModelMixinsBase:
 
 
 class AssetsPrivate:
+    @pytest.mark.parametrize(
+        "name,endpoint", [[k, v] for k, v in ApiEndpoints.assets.get_fields_dict().items()]
+    )
+    def test_json_api_models_request(self, name, endpoint):
+        cross_check_endpoint_models(
+            name=name,
+            endpoint=endpoint,
+            schema_model=endpoint.request_schema_cls,
+            data_model=endpoint.request_model_cls,
+        )
+
+    @pytest.mark.parametrize(
+        "name,endpoint", [[k, v] for k, v in ApiEndpoints.assets.get_fields_dict().items()]
+    )
+    def test_json_api_models_response(self, name, endpoint):
+        cross_check_endpoint_models(
+            name=name,
+            endpoint=endpoint,
+            schema_model=endpoint.response_schema_cls,
+            data_model=endpoint.response_model_cls,
+        )
+
     def test_private_get(self, apiobj):
         data = apiobj._get(limit=1)
         assert isinstance(data, json_api.assets.AssetsPage)
+        assert "meta" in str(data)
         assert isinstance(data.assets, list)
         assert len(data.assets) == 1
         assert data.asset_count_page == 1
+
+    def test_get_history_date_not_available(self, apiobj):
+        with pytest.raises(ApiError):
+            apiobj.get(history_date="2000-01-01", max_rows=1)
+
+    def test_get_history_date_invalid(self, apiobj):
+        with pytest.raises(ApiError):
+            apiobj.get(history_date="xxx", max_rows=1)
 
     def test_private_get_pages(self, apiobj):
         data1 = apiobj._get(offset=0, limit=5)
@@ -102,6 +132,43 @@ class AssetsPrivate:
         query = apiobj._build_query(inner=inner, pre=pre, post=post, not_flag=True)
         assert query == f"{pre} (not ({inner})) {post}"
 
+    @pytest.mark.parametrize("value", [[], {}, "", None])
+    def test_handle_wiz_entries_empties(self, apiobj, value):
+        data = apiobj._handle_wiz_entries(wiz_entries=value)
+        assert data is None
+
+    def test_handle_wiz_entries_dict(self, apiobj):
+        wiz_entries = {"type": "simple", "value": "active_directory:id exists"}
+        exp = '((adapters_data.active_directory_adapter.id == ({"$exists":true,"$ne":""})))'
+        data = apiobj._handle_wiz_entries(wiz_entries=wiz_entries)
+        assert isinstance(data, dict)
+        assert data["query"] == exp
+
+    def test_handle_wiz_entries_str(self, apiobj):
+        wiz_entries = "\n".join(
+            ["simple active_directory:id exists", "simple active_directory:id contains badwolf"]
+        )
+        exp = '((adapters_data.active_directory_adapter.id == ({"$exists":true,"$ne":""}))) and (adapters_data.active_directory_adapter.id == regex("badwolf", "i"))'  # noqa
+        data = apiobj._handle_wiz_entries(wiz_entries=wiz_entries)
+        assert isinstance(data, dict)
+        assert data["query"] == exp
+
+    def test_handle_wiz_entries_list_str(self, apiobj):
+        wiz_entries = [
+            "simple active_directory:id exists",
+            "simple active_directory:id contains badwolf",
+        ]
+
+        exp = '((adapters_data.active_directory_adapter.id == ({"$exists":true,"$ne":""}))) and (adapters_data.active_directory_adapter.id == regex("badwolf", "i"))'  # noqa
+        data = apiobj._handle_wiz_entries(wiz_entries=wiz_entries)
+        assert isinstance(data, dict)
+        assert data["query"] == exp
+
+    @pytest.mark.parametrize("value", [["x", {}], [[]], [None], 2])
+    def test_handle_wiz_entries_error(self, apiobj, value):
+        with pytest.raises(ApiError):
+            apiobj._handle_wiz_entries(wiz_entries=value)
+
 
 class AssetsPublic:
     def test_sort(self, apiobj):
@@ -127,10 +194,25 @@ class AssetsPublic:
         data = apiobj.count(query=query)
         assert isinstance(data, int)
 
+    def test_count_query_wiz(self, apiobj):
+        data = apiobj.count(wiz_entries="simple active_directory:id exists")
+        assert isinstance(data, int)
+
     def test_count_by_saved_query(self, apiobj):
         sq_name = apiobj.saved_query.get()[0]["name"]
         data = apiobj.count_by_saved_query(name=sq_name)
         assert isinstance(data, int)
+
+    def test_count_history_date(self, apiobj):
+        history_date = list(apiobj.history_dates().items())[0][0]
+        data = apiobj.count(history_date=history_date)
+        assert isinstance(data, int)
+
+    def test_get_history_date(self, apiobj):
+        history_date = list(apiobj.history_dates().items())[0][0]
+        rows = apiobj.get(history_date=history_date, max_rows=1)
+        assert isinstance(rows, list)
+        assert len(rows) == 1
 
     def test_get_generator_no(self, apiobj):
         rows = apiobj.get(generator=False, max_rows=1)

@@ -44,9 +44,10 @@ class Users(AssetMixin):
             self.FIELD_TAGS,
         ]
 
+    # DEPRECATED
     def get_by_usernames(
         self, values: List[str], **kwargs
-    ) -> Union[Generator[dict, None, None], List[dict]]:
+    ) -> Union[Generator[dict, None, None], List[dict]]:  # pragma: no cover
         """Build a query to get assets where :attr:`FIELD_USERNAME` in values.
 
         Args:
@@ -58,9 +59,10 @@ class Users(AssetMixin):
         kwargs["values"] = values
         return self.get_by_values(**kwargs)
 
+    # DEPRECATED
     def get_by_username_regex(
         self, value: str, **kwargs
-    ) -> Union[Generator[dict, None, None], List[dict]]:
+    ) -> Union[Generator[dict, None, None], List[dict]]:  # pragma: no cover
         """Build a query to get assets where :attr:`FIELD_USERNAME` regex matches value.
 
         Args:
@@ -72,9 +74,10 @@ class Users(AssetMixin):
         kwargs["value"] = value
         return self.get_by_value_regex(**kwargs)
 
+    # DEPRECATED
     def get_by_username(
         self, value: str, **kwargs
-    ) -> Union[Generator[dict, None, None], List[dict]]:
+    ) -> Union[Generator[dict, None, None], List[dict]]:  # pragma: no cover
         """Build a query to get assets where :attr:`FIELD_USERNAME` == value.
 
         Args:
@@ -86,9 +89,10 @@ class Users(AssetMixin):
         kwargs["value"] = value
         return self.get_by_value(**kwargs)
 
+    # DEPRECATED
     def get_by_mails(
         self, values: List[str], **kwargs
-    ) -> Union[Generator[dict, None, None], List[dict]]:
+    ) -> Union[Generator[dict, None, None], List[dict]]:  # pragma: no cover
         """Build a query to get assets where :attr:`FIELD_MAIL` in values.
 
         Args:
@@ -100,9 +104,10 @@ class Users(AssetMixin):
         kwargs["values"] = values
         return self.get_by_values(**kwargs)
 
+    # DEPRECATED
     def get_by_mail_regex(
         self, value: str, **kwargs
-    ) -> Union[Generator[dict, None, None], List[dict]]:
+    ) -> Union[Generator[dict, None, None], List[dict]]:  # pragma: no cover
         """Build a query to get assets where :attr:`FIELD_MAIL` regex matches value.
 
         Args:
@@ -114,7 +119,10 @@ class Users(AssetMixin):
         kwargs["value"] = value
         return self.get_by_value_regex(**kwargs)
 
-    def get_by_mail(self, value: str, **kwargs) -> Union[Generator[dict, None, None], List[dict]]:
+    # DEPRECATED
+    def get_by_mail(
+        self, value: str, **kwargs
+    ) -> Union[Generator[dict, None, None], List[dict]]:  # pragma: no cover
         """Build a query to get assets where :attr:`FIELD_MAIL` == value.
 
         Args:

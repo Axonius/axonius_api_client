@@ -422,6 +422,7 @@ class AssetMixin(ApiModel):
         """
         return self._destroy(destroy=destroy, history=history)
 
+    # DEPRECATED
     def get_by_values(
         self,
         values: List[str],
@@ -431,7 +432,7 @@ class AssetMixin(ApiModel):
         post: str = "",
         field_manual: bool = False,
         **kwargs,
-    ) -> Union[Generator[dict, None, None], List[dict]]:
+    ) -> Union[Generator[dict, None, None], List[dict]]:  # pragma: no cover
         """Build a query to get assets where field in values.
 
         Notes:
@@ -464,6 +465,7 @@ class AssetMixin(ApiModel):
 
         return self.get(**kwargs)
 
+    # DEPRECATED
     def get_by_value_regex(
         self,
         value: str,
@@ -474,7 +476,7 @@ class AssetMixin(ApiModel):
         post: str = "",
         field_manual: bool = False,
         **kwargs,
-    ) -> Union[Generator[dict, None, None], List[dict]]:
+    ) -> Union[Generator[dict, None, None], List[dict]]:  # pragma: no cover
         """Build a query to get assets where field regex matches a value.
 
         Notes:
@@ -502,6 +504,7 @@ class AssetMixin(ApiModel):
         )
         return self.get(**kwargs)
 
+    # DEPRECATED
     def get_by_value(
         self,
         value: str,
@@ -511,7 +514,7 @@ class AssetMixin(ApiModel):
         post: str = "",
         field_manual: bool = False,
         **kwargs,
-    ) -> Union[Generator[dict, None, None], List[dict]]:
+    ) -> Union[Generator[dict, None, None], List[dict]]:  # pragma: no cover
         """Build a query to get assets where field equals a value.
 
         Notes:
@@ -544,9 +547,10 @@ class AssetMixin(ApiModel):
         """Get all known historical dates."""
         return self._history_dates().value[self.ASSET_TYPE]
 
+    # DEPRECATED
     def _build_query(
         self, inner: str, not_flag: bool = False, pre: str = "", post: str = ""
-    ) -> str:
+    ) -> str:  # pragma: no cover
         """Query builder with basic functionality.
 
         Notes:
@@ -707,6 +711,7 @@ class AssetMixin(ApiModel):
             client=self.CLIENT, request_obj=request_obj, asset_type=asset_type
         )
 
+    # UNTESTABLE
     def _destroy(self, destroy: bool, history: bool) -> dict:  # pragma: no cover
         """Private API method to destroy ALL assets.
 
@@ -769,9 +774,17 @@ class AssetMixin(ApiModel):
         FIELD_ADAPTER_LEN,
     ]
     """Field names that are always returned by the REST API no matter what fields are selected"""
+    FIELD_CLIENT_USED: str = "meta_data.client_used"
+    """Field included if include_details=True."""
 
-    FIELDS_DETAILS: List[str] = ["meta_data.client_used", "unique_adapter_names_details"]
+    FIELD_UNIQUE_ADAPTERS: str = "unique_adapter_names_details"
+    """Field included if include_details=True."""
+
+    FIELDS_DETAILS: List[str] = [FIELD_CLIENT_USED, FIELD_UNIQUE_ADAPTERS]
     """Field names that are included if include_details=True."""
+
+    FIELDS_NON_DETAILS: List[str] = [FIELD_ADAPTERS, FIELD_TAGS]
+    """Fields that do not ever return a _details version."""
 
     FIELDS_DETAIL_TMPL: str = "{}_details"
     """Template used to convert a field into a details field."""

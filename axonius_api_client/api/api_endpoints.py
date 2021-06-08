@@ -136,14 +136,14 @@ class SavedQueries(BaseEndpoints):
     )
     # PBUG: why take in a request body at all?
 
-    delete_4_3: ApiEndpoint = ApiEndpoint(
-        method="delete",
-        path="api/V4.0/{asset_type}/views/view/{uuid}",
-        request_schema_cls=json_api.saved_queries.SavedQueryDeleteSchema,
-        request_model_cls=json_api.saved_queries.SavedQueryDelete,
-        response_schema_cls=json_api.generic.MetadataSchema,
-        response_model_cls=json_api.generic.Metadata,
-    )
+    # delete_4_3: ApiEndpoint = ApiEndpoint(
+    #     method="delete",
+    #     path="api/V4.0/{asset_type}/views/view/{uuid}",
+    #     request_schema_cls=json_api.saved_queries.SavedQueryDeleteSchema,
+    #     request_model_cls=json_api.saved_queries.SavedQueryDelete,
+    #     response_schema_cls=json_api.generic.MetadataSchema,
+    #     response_model_cls=json_api.generic.Metadata,
+    # )
 
 
 @dataclasses.dataclass

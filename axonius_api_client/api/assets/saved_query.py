@@ -3,9 +3,7 @@
 from typing import Generator, List, Optional, Union
 
 from ...constants.api import MAX_PAGE_SIZE
-from ...exceptions import NotFoundError, ResponseError
-
-# from ...features import Features
+from ...exceptions import NotFoundError  # , ResponseError
 from ...parsers.tables import tablize_sqs
 from ...tools import check_gui_page_size, listify
 from .. import json_api
@@ -317,7 +315,7 @@ class SavedQuery(AssetChildMixin):
             **kwargs: passed to :meth:`get_by_name`
         """
         row = self.get_by_name(value=value, **kwargs)
-        self._delete(uuid=row["uuid"])
+        self.delete(rows=row)
         return row
 
     def delete(self, rows: Union[str, List[str], List[dict]]) -> List[str]:
@@ -367,6 +365,16 @@ class SavedQuery(AssetChildMixin):
         Args:
             ids: list of uuid's to delete
         """
+        api_endpoint = ApiEndpoints.saved_queries.delete
+        request_obj = api_endpoint.load_request()
+        return api_endpoint.perform_request(
+            client=self.CLIENT,
+            request_obj=request_obj,
+            asset_type=self.PARENT.ASSET_TYPE,
+            uuid=uuid,
+        )
+
+        """
         # NEW_IN: 05/31/21 cortex/develop
         api_endpoints = [ApiEndpoints.saved_queries.delete, ApiEndpoints.saved_queries.delete_4_3]
         for api_endpoint in api_endpoints:
@@ -382,6 +390,7 @@ class SavedQuery(AssetChildMixin):
                 is_incorrect_type = getattr(exc, "is_incorrect_type", None)
                 if not is_incorrect_type:
                     raise
+        """
 
     def _get(
         self, limit: int = MAX_PAGE_SIZE, offset: int = 0

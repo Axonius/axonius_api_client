@@ -5,17 +5,38 @@ import datetime
 import json
 
 import pytest
-
-from axonius_api_client.api import json_api
+from axonius_api_client.api import ApiEndpoints, json_api
 from axonius_api_client.constants.api import GUI_PAGE_SIZES
 from axonius_api_client.constants.general import SIMPLE
 from axonius_api_client.exceptions import ApiError, NotFoundError
 
 from ...meta import QUERIES
-from ...utils import get_schema
+from ...utils import cross_check_endpoint_models, get_schema
 
 
 class SavedQueryPrivate:
+    @pytest.mark.parametrize(
+        "name,endpoint", [[k, v] for k, v in ApiEndpoints.saved_queries.get_fields_dict().items()]
+    )
+    def test_json_api_models_request(self, name, endpoint):
+        cross_check_endpoint_models(
+            name=name,
+            endpoint=endpoint,
+            schema_model=endpoint.request_schema_cls,
+            data_model=endpoint.request_model_cls,
+        )
+
+    @pytest.mark.parametrize(
+        "name,endpoint", [[k, v] for k, v in ApiEndpoints.saved_queries.get_fields_dict().items()]
+    )
+    def test_json_api_models_response(self, name, endpoint):
+        cross_check_endpoint_models(
+            name=name,
+            endpoint=endpoint,
+            schema_model=endpoint.response_schema_cls,
+            data_model=endpoint.response_model_cls,
+        )
+
     def test_private_get(self, apiobj):
         result = apiobj.saved_query._get()
         assert isinstance(result, list)

@@ -11,18 +11,8 @@ from ...constants.api import FIELD_JOINER, FIELD_TRIM_LEN, FIELD_TRIM_STR
 from ...constants.fields import AGG_ADAPTER_NAME, SCHEMAS_CUSTOM
 from ...exceptions import ApiError
 from ...parsers.fields import schema_custom
-from ...tools import (
-    calc_percent,
-    coerce_int,
-    echo_error,
-    echo_ok,
-    echo_warn,
-    get_path,
-    join_kv,
-    listify,
-    longest_str,
-    strip_right,
-)
+from ...tools import (calc_percent, coerce_int, echo_error, echo_ok, echo_warn,
+                      get_path, join_kv, listify, longest_str, strip_right)
 
 
 class Base:
@@ -941,7 +931,7 @@ class Base:
         fields = listify(self.STORE.get("fields", []))
         api_fields = [x for x in self.APIOBJ.FIELDS_API if x not in fields]
 
-        if include_details:  # pragma: no cover
+        if include_details:
             api_fields += self.APIOBJ.FIELDS_DETAILS
 
         self._fields_selected = []
@@ -949,7 +939,7 @@ class Base:
         for field in api_fields + fields:
             self._fields_selected.append(field)
             if include_details:
-                if field not in [self.APIOBJ.FIELD_ADAPTERS]:
+                if field not in self.APIOBJ.FIELDS_DETAILS + self.APIOBJ.FIELDS_NON_DETAILS:
                     field_details = self.APIOBJ.FIELDS_DETAIL_TMPL.format(field)
                     self._fields_selected.append(field_details)
 

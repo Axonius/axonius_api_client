@@ -58,22 +58,20 @@ class AssetMixins:
         asset_type: str,
     ) -> str:
         """Pass."""
-        if not history:
-            return
+        if history:
+            history = self._history_dt_fmt(dt=history)
 
-        history = self._history_dt_fmt(dt=history)
+            valid_dates = history_dates.value[asset_type]
 
-        valid_dates = history_dates.value[asset_type]
+            if history not in valid_dates:
+                known = "\n  " + "\n  ".join(list(valid_dates))
+                expl = "known history dates"
+                err = f"Unknown history date {history!r}"
+                msg = f"{err}, {expl}: {known}\n{err}, see above for {expl}"
+                raise ApiError(msg)
 
-        if history not in valid_dates:
-            known = "\n  " + "\n  ".join(list(valid_dates))
-            expl = "known history dates"
-            err = f"Unknown history date {history!r}"
-            msg = f"{err}, {expl}: {known}\n{err}, see above for {expl}"
-            raise ApiError(msg)
-
-        self.history = valid_dates[history]
-        return self.history
+            self.history = valid_dates[history]
+            return self.history
 
     @staticmethod
     def _history_dt_fmt(
@@ -296,13 +294,11 @@ class AssetsPage(DataModel):
         """Pass."""
 
         def check_int(value, default=0, min_value=None, max_value=None):
-            if not isinstance(value, int):
-                value = default
-
-            if min_value is not None and value < min_value:
-                value = default
-
-            if max_value is not None and value > max_value:
+            if (
+                not isinstance(value, int)
+                or (min_value is not None and value < min_value)
+                or (max_value is not None and value > max_value)
+            ):
                 value = default
 
             return value
@@ -319,8 +315,7 @@ class AssetsPage(DataModel):
         if max_rows and max_rows < page_size:
             page_size = max_rows
 
-        if page_start and not row_start:
-            row_start = page_start * page_size
+        row_start = page_start * page_size if page_start and not row_start else row_start
 
         state = {
             "max_pages": max_pages,
@@ -357,11 +352,11 @@ class AssetsPage(DataModel):
         this_count = self.asset_count_left
         prev_count = state["rows_to_fetch_total"]
 
-        if init_count and init_count != this_count:
+        if init_count and init_count != this_count:  # pragma: no cover
             msg = f"Row total count changed from initial {init_count} to {this_count}"
             apiobj.LOG.warning(msg)
 
-        if prev_count and prev_count != this_count:
+        if prev_count and prev_count != this_count:  # pragma: no cover
             msg = f"Row total count changed from previous {prev_count} to {this_count}"
             apiobj.LOG.warning(msg)
 
@@ -404,9 +399,8 @@ class AssetsPage(DataModel):
 
     def _process_stop(self, state: dict, reason: str, apiobj):
         """Pass."""
-        if state["stop_msg"]:
-            reason = f"{state['stop_msg']} and {reason}"
-
+        stop_msg = state["stop_msg"]
+        reason = f"{stop_msg} and {reason}" if stop_msg else reason
         state["stop_msg"] = reason
         state["stop_fetch"] = True
         apiobj.LOG.info(f"Issuing stop of fetch due to {reason}")

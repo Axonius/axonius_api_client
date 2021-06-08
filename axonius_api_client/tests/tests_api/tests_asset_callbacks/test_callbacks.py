@@ -6,7 +6,6 @@ import logging
 import sys
 
 import pytest
-
 from axonius_api_client.api.asset_callbacks import get_callbacks_cls
 from axonius_api_client.constants.api import FIELD_TRIM_LEN
 from axonius_api_client.constants.fields import SCHEMAS_CUSTOM
@@ -678,6 +677,29 @@ class Callbacks:
         for row in rows:
             assert field_complex not in row
 
+    def test_do_explode_field_complex_single_val(self, cbexport, apiobj):
+        field = apiobj.FIELD_COMPLEX
+        sub_field = apiobj.FIELD_COMPLEX_SUB
+
+        original_row = get_rows_exist(apiobj=apiobj, fields=field)
+        original_row[field] = original_row[field][:1]
+
+        test_row = copy.deepcopy(original_row)
+
+        cbobj = self.get_cbobj(
+            apiobj=apiobj,
+            cbexport=cbexport,
+            store={"fields": [field]},
+            getargs={"field_explode": field},
+        )
+
+        rows = cbobj.do_explode_field(rows=test_row)
+        assert isinstance(rows, list)
+        assert original_row not in rows
+        for row in rows:
+            assert field not in row
+            assert f"{field}.{sub_field}" in row
+
     def test_do_explode_field_simple(self, cbexport, apiobj):
         original_row = get_rows_exist(apiobj=apiobj)
         test_row = copy.deepcopy(original_row)
@@ -700,6 +722,27 @@ class Callbacks:
             value = row[key]
             assert isinstance(value, str)
             assert value == row_val[idx]
+
+    def test_do_explode_field_simple_single_val(self, cbexport, apiobj):
+        key = apiobj.FIELD_ADAPTERS
+
+        original_row = get_rows_exist(apiobj=apiobj)
+        original_row[key] = original_row[key][:1]
+        test_row = copy.deepcopy(original_row)
+
+        cbobj = self.get_cbobj(
+            apiobj=apiobj,
+            cbexport=cbexport,
+            getargs={"field_explode": key, "table_api_fields": True},
+        )
+
+        rows = cbobj.do_explode_field(rows=test_row)
+        assert isinstance(rows, list)
+        assert original_row in rows
+        assert len(rows) == 1
+        for idx, row in enumerate(rows):
+            value = row[key]
+            assert len(value) == 1
 
     def test_do_explode_field_exclude(self, cbexport, apiobj):
         original_row = get_rows_exist(apiobj=apiobj)

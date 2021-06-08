@@ -376,7 +376,6 @@ class Adapters(ApiModel):
         data = {"field_name": field_name}
         files = {"userfile": (file_name, file_content, file_content_type, file_headers)}
         http_args = {"files": files, "data": data}
-
         response = api_endpoint.perform_request(
             client=self.CLIENT, http_args=http_args, adapter_name=adapter_name, node_id=node_id
         )

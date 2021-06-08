@@ -4,24 +4,12 @@ import copy
 from typing import Callable, List, Optional, Union
 
 from ...constants.adapters import CNX_SANE_DEFAULTS
-from ...exceptions import (
-    CnxAddError,
-    CnxGoneError,
-    CnxTestError,
-    CnxUpdateError,
-    ConfigInvalidValue,
-    ConfigRequired,
-    NotFoundError,
-)
-from ...parsers.config import (
-    config_build,
-    config_default,
-    config_empty,
-    config_info,
-    config_required,
-    config_unchanged,
-    config_unknown,
-)
+from ...exceptions import (CnxAddError, CnxGoneError, CnxTestError,
+                           CnxUpdateError, ConfigInvalidValue, ConfigRequired,
+                           NotFoundError)
+from ...parsers.config import (config_build, config_default, config_empty,
+                               config_info, config_required, config_unchanged,
+                               config_unknown)
 from ...parsers.tables import tablize_cnxs, tablize_schemas
 from ...tools import json_dump, json_load, listify, pathlib
 from .. import json_api
