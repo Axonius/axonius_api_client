@@ -44,6 +44,11 @@ def cmd(ctx, url, key, secret, input_file, abort, **kwargs):
         apiobj = getattr(client, p_grp)
 
         sq_name = new_sq["name"]
+        sq_view = new_sq["view"]
+        sq_description = new_sq.get("description", "")
+        sq_always_cached = new_sq.get("always_cached", False)
+        sq_private = new_sq.get("private", False)
+        sq_tags = new_sq.get("tags", None)
 
         try:
             apiobj.saved_query.get_by_name(value=sq_name)
@@ -56,7 +61,14 @@ def cmd(ctx, url, key, secret, input_file, abort, **kwargs):
             ctx.obj.echo_ok(f"Saved query {sq_name!r} does not exist, will add")
 
         with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror, abort=abort):
-            sq_uuid = apiobj.saved_query._add(data=new_sq)
+            sq_uuid = apiobj.saved_query._add(
+                name=sq_name,
+                view=sq_view,
+                description=sq_description,
+                always_cached=sq_always_cached,
+                private=sq_private,
+                tags=sq_tags
+            )
             ctx.obj.echo_ok(f"Successfully created saved query: {sq_name} with UUID {sq_uuid}")
 
     ctx.exit(0)
