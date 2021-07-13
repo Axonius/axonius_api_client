@@ -34,7 +34,7 @@ class BaseCommon:
     def _load_schema(cls, schema, data: dict, http: Http, api_endpoint, **kwargs):
         """Pass."""
         try:
-            kwargs["loaded"] = loaded = schema.load(data)
+            kwargs["loaded"] = loaded = schema.load(data, unknown=INCLUDE)
         except marshmallow.ValidationError as exc:
             raise ValidationError(
                 schema=schema, exc=exc, api_endpoint=api_endpoint, obj=cls, data=data
