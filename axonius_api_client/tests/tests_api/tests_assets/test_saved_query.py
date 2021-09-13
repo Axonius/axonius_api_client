@@ -5,7 +5,6 @@ import datetime
 import json
 
 import pytest
-
 from axonius_api_client.api import json_api
 from axonius_api_client.constants.api import GUI_PAGE_SIZES
 from axonius_api_client.constants.general import SIMPLE
@@ -96,7 +95,7 @@ class SavedQueryPublic:
         fields = ["adapters", "last_seen", "id", field_simple]
 
         sort_field = field_simple
-        colfilters = {field_simple: "a"}
+        # colfilters = {field_simple: "a"}
         sort_desc = False
         gui_page_size = GUI_PAGE_SIZES[-1]
         tags = ["badwolf1", "badwolf2"]
@@ -113,7 +112,7 @@ class SavedQueryPublic:
             fields=fields,
             sort_field=sort_field,
             sort_descending=sort_desc,
-            column_filters=colfilters,
+            # column_filters=colfilters,
             gui_page_size=gui_page_size,
             tags=tags,
             description=description,
@@ -130,7 +129,7 @@ class SavedQueryPublic:
         assert row["view"]["query"]["onlyExpressionsFilter"] == query
         assert row["view"]["query"]["expressions"] == []
         assert row["view"]["pageSize"] == gui_page_size
-        assert row["view"]["colFilters"] == colfilters
+        # assert row["view"]["colFilters"] == colfilters
         assert row["view"]["sort"]["field"] == sort_field
         assert row["view"]["sort"]["desc"] == sort_desc
 
@@ -307,6 +306,14 @@ def validate_sq(asset):
     updated_by_deleted = updated_by.pop("deleted")
     assert isinstance(updated_by_deleted, bool)
 
+    # 4.5
+    updated_by_is_first_login = updated_by.pop("is_first_login", False)
+    assert isinstance(updated_by_is_first_login, bool)
+
+    # 4.5
+    updated_by_permanent = updated_by.pop("permanent", False)
+    assert isinstance(updated_by_permanent, bool)
+
     updated_str_keys_req = [
         "first_name",
         "last_name",
@@ -375,11 +382,52 @@ def validate_sq(asset):
     query = view.pop("query")
     assert isinstance(query, dict)
 
+    """ changed in 4.5
     colfilters = view.pop("colFilters", {})
     assert isinstance(colfilters, dict)
     for k, v in colfilters.items():
         assert isinstance(k, str)
         assert isinstance(v, str)
+    """
+
+    # 4.5
+    """ structure:
+    [
+        {
+            "columnFilter": {
+                "aqlExpression": '("specific_data.data.name" == ' 'regexMatch("a", "i"))',
+                "arrayFields": [],
+                "complexNestedFields": [],
+                "complexParentToUnwind": None,
+                "fieldPath": "specific_data.data.name",
+                "fieldType": "string",
+                "filterExpressions": [
+                    {
+                        "bracketWeight": 0,
+                        "children": [],
+                        "compOp": "columnFilterContains",
+                        "field": "specific_data.data.name",
+                        "fieldType": "axonius",
+                        "filter": '("specific_data.data.name" ' '== regexMatch("a", "i"))',
+                        "leftBracket": 0,
+                        "logicOp": "",
+                        "not": False,
+                        "rightBracket": 0,
+                        "value": "a",
+                    }
+                ],
+                "isComplexField": False,
+                "isComplexNestedField": False,
+                "nestedFilteredFields": [],
+            },
+            "fieldPath": "specific_data.data.name",
+        }
+    ]
+    """
+    colfilters = view.pop("colFilters", [])
+    assert isinstance(colfilters, list)
+    for colfilter in colfilters:
+        assert isinstance(colfilter, dict)
 
     qfilter = query.pop("filter")
     assert isinstance(qfilter, str) or qfilter is None
@@ -399,9 +447,19 @@ def validate_sq(asset):
     historical = view.pop("historical", None)
     assert historical is None or isinstance(historical, SIMPLE)
 
+    """ changed in 4.5
     # 3.6+
     excluded_adapters = view.pop("colExcludedAdapters", {})
     assert isinstance(excluded_adapters, dict)
+    """
+    # 4.5
+    """ structure
+    [{"exclude": ["chef_adapter"], "fieldPath": "specific_data.data.name"}]
+    """
+    excluded_adapters = view.pop("colExcludedAdapters", [])
+    assert isinstance(excluded_adapters, list)
+    for excluded_adapter in excluded_adapters:
+        assert isinstance(excluded_adapter, dict)
 
     # 4.0
     always_cached = asset.pop("always_cached")

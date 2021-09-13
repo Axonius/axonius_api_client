@@ -34,7 +34,7 @@ class BaseCommon:
     def _load_schema(cls, schema, data: dict, http: Http, api_endpoint, **kwargs):
         """Pass."""
         try:
-            kwargs["loaded"] = loaded = schema.load(data)
+            kwargs["loaded"] = loaded = schema.load(data, unknown=marshmallow.INCLUDE)
         except marshmallow.ValidationError as exc:
             raise ValidationError(
                 schema=schema, exc=exc, api_endpoint=api_endpoint, obj=cls, data=data
@@ -69,7 +69,12 @@ class BaseSchema(BaseCommon, marshmallow.Schema):
         model_cls = self.get_model_cls()
         data = data or {}
         if hasattr(model_cls, "from_dict"):
+            fields_known = [x.name for x in dataclasses.fields(model_cls)]
+            # fields_unknown = [x for x in data if x not in fields_known]
+            extra = {k: data.pop(k) for k in list(data) if k not in fields_known}
             obj = model_cls.from_dict(data)
+            # obj.extra_attributes = {k: v for k, v in data.items() if k in fields_unknown}
+            obj.extra_attributes = extra
         else:
             obj = model_cls(**data)
         return obj

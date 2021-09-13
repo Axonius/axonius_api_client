@@ -89,7 +89,14 @@ class FieldsPrivate:
             assert isinstance(description, str)
 
             sort = field.pop("sort", False)
-            assert isinstance(sort, bool)
+            if isinstance(sort, dict):
+                sort_desc = sort.pop("desc")
+                assert isinstance(sort_desc, bool)
+                sort_field = sort.pop("field")
+                assert isinstance(sort_field, str)
+                assert not sort
+            else:
+                assert isinstance(sort, bool)
 
             unique = field.pop("unique", False)
             assert isinstance(unique, bool)
@@ -129,6 +136,13 @@ class FieldsPrivate:
             # 4.3
             are_values_cached = field.pop("are_values_cached", False)
             assert isinstance(are_values_cached, bool)
+
+            # 4.5
+            parse_json_attrs = field.pop("parse_json_attrs", False)
+            assert isinstance(parse_json_attrs, bool)
+
+            show_all_results = field.pop("show_all_results", False)
+            assert isinstance(show_all_results, bool)
 
             val_source(obj=field)
 
@@ -192,6 +206,13 @@ class FieldsPrivate:
             # 4.3
             are_values_cached = items.pop("are_values_cached", False)
             assert isinstance(are_values_cached, bool)
+
+            # 4.5
+            parse_json_attrs = items.pop("parse_json_attrs", False)
+            assert isinstance(parse_json_attrs, bool)
+
+            show_all_results = items.pop("show_all_results", False)
+            assert isinstance(show_all_results, bool)
 
             assert not items, list(items)
 
@@ -287,7 +308,14 @@ class FieldsPublic:
         assert isinstance(description, str)
 
         sort = schema.pop("sort", False)
-        assert isinstance(sort, bool)
+        if isinstance(sort, dict):
+            sort_desc = sort.pop("desc")
+            assert isinstance(sort_desc, bool)
+            sort_field = sort.pop("field")
+            assert isinstance(sort_field, str)
+            assert not sort
+        else:
+            assert isinstance(sort, bool)
 
         unique = schema.pop("unique", False)
         assert isinstance(unique, bool)
@@ -344,6 +372,13 @@ class FieldsPublic:
         are_values_cached = schema.pop("are_values_cached", False)
         assert isinstance(are_values_cached, bool)
 
+        # 4.5
+        parse_json_attrs = schema.pop("parse_json_attrs", False)
+        assert isinstance(parse_json_attrs, bool)
+
+        show_all_results = schema.pop("show_all_results", False)
+        assert isinstance(show_all_results, bool)
+
         if is_complex:
             if name != "all":
                 assert sub_fields
@@ -381,6 +416,13 @@ class FieldsPublic:
             # 4.3
             are_values_cached = items.pop("are_values_cached", False)
             assert isinstance(are_values_cached, bool)
+
+            # 4.5
+            parse_json_attrs = items.pop("parse_json_attrs", False)
+            assert isinstance(parse_json_attrs, bool)
+
+            show_all_results = items.pop("show_all_results", False)
+            assert isinstance(show_all_results, bool)
 
             assert not items
 

@@ -282,8 +282,10 @@ class SavedQuery(ChildMixins):
         data_view["sort"] = data_sort
         data_view["fields"] = fields
         data_view["pageSize"] = gui_page_size
-        data_view["colFilters"] = data_column_filters or {}
-        data_view["colExcludedAdapters"] = {}  # TBD
+        # 4.5 SEMI_BREAKING_CHANGE: now a list of dict
+        data_view["colFilters"] = listify(data_column_filters or {})
+        # 4.5 SEMI_BREAKING_CHANGE: now a list of dict
+        data_view["colExcludedAdapters"] = listify({})  # TBD
 
         # data = {}
         # data["name"] = name

@@ -34,6 +34,10 @@ class TestInstancesPublic:
             v = data.pop(i)
             assert isinstance(v, bool)
 
+        # new in 4.5
+        now_offset = data.pop("now_offset")
+        assert isinstance(now_offset, int)
+
         assert not data
 
     def test_get_set_core_delete_mode(self, apiobj):
@@ -178,26 +182,24 @@ class TestInstancesPrivate:
         assert reget is use_env
 
     def test_get_update_central_core(self, apiobj):
-        settings = apiobj._get_central_core_config()
-        assert isinstance(settings, json_api.system_settings.SystemSettings)
+        original = apiobj._get_central_core_config()
+        assert isinstance(original, json_api.system_settings.SystemSettings)
 
-        config_key = "delete_backups"
-        value_orig = settings.config[config_key]
-        value_to_set = not value_orig
+        value_original = original.config["delete_backups"]
+        value_to_set = not value_original
 
-        to_update = {}
-        to_update.update(settings.config)
-        to_update[config_key] = value_to_set
-        updated = apiobj._update_central_core_config(**to_update)
+        updated = apiobj._update_central_core_config(
+            delete_backups=value_to_set, enabled=original.config["enabled"]
+        )
         assert isinstance(updated, json_api.system_settings.SystemSettings)
-        assert updated.config == to_update
+        assert updated.config["delete_backups"] == value_to_set
+        assert updated.config["enabled"] == original.config["enabled"]
 
-        to_restore = {}
-        to_restore.update(settings.config)
-        to_restore[config_key] = value_orig
-
-        restored = apiobj._update_central_core_config(**to_restore)
-        assert restored.config == settings.config
+        restored = apiobj._update_central_core_config(
+            delete_backups=value_original, enabled=original.config["enabled"]
+        )
+        assert restored.config["delete_backups"] == value_original
+        assert restored.config["enabled"] == original.config["enabled"]
 
     def test_feature_flags(self, apiobj):
         value = apiobj._feature_flags()

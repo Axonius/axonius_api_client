@@ -999,22 +999,33 @@ class Cnxs(BaseModel):
     @classmethod
     def load_response(cls, data: dict, http: Http, api_endpoint, **kwargs):
         """Pass."""
+        cnx_fields = [x.name for x in dataclasses.fields(Cnx)]
+        cnx_schema = Cnx.schema()
+
+        def load_cnx(obj):
+            attrs = obj.get("attributes")
+            loaded = None
+            if attrs:
+                extra = {k: attrs.pop(k, None) for k in list(attrs) if k not in cnx_fields}
+                loaded = cnx_schema.load(attrs)
+                loaded.extra_attributes = extra
+            return loaded
+
         cls._check_version(data=data, api_endpoint=api_endpoint)
 
-        cnxs = [x["attributes"] for x in listify(data["data"]) if x.get("attributes")]
         meta = data["meta"]
-        new_data = {"cnxs": cnxs, "meta": meta}
+        cnxs_raw = listify(data["data"])
+        cnxs = [y for y in [load_cnx(x) for x in cnxs_raw] if y]
 
-        schema = cls.schema()
-        loaded = cls._load_schema(
-            schema=schema, data=new_data, http=http, api_endpoint=api_endpoint
-        )
+        loaded = cls(cnxs=cnxs, meta=meta)
+        loaded.HTTP = http
         labels = loaded.get_labels()
 
         for cnx in loaded.cnxs:
             cnx.PARENT = loaded
-            cnx.HTTP = http
+            cnx.HTTP = loaded.HTTP
             cnx.connection_label = labels.get_label(cnx=cnx)
+
         return loaded
 
     @property

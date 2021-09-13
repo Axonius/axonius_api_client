@@ -173,6 +173,7 @@ class Formats(BaseEnum):
     ip_preferred = enum.auto()
     os_distribution = "os-distribution"
     dynamic_field = enum.auto()
+    date = enum.auto()  # added 4.5
 
 
 @dataclasses.dataclass
@@ -518,6 +519,20 @@ class OperatorTypeMaps(BaseData):
         ],
         field_type=Types.string,
         field_format=Formats.datetime,
+    )
+    string_date: OperatorTypeMap = OperatorTypeMap(
+        name="string_date",
+        operators=[
+            Operators.exists,
+            Operators.less_than_date,
+            Operators.more_than_date,
+            Operators.last_hours,
+            Operators.next_hours,
+            Operators.last_days,
+            Operators.next_days,
+        ],
+        field_type=Types.string,
+        field_format=Formats.date,
     )
     string_image: OperatorTypeMap = OperatorTypeMap(
         name="string_image",

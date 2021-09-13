@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 """Base callbacks."""
-import copy
 import logging
 import re
 import sys
@@ -11,18 +10,9 @@ from ...constants.api import FIELD_JOINER, FIELD_TRIM_LEN, FIELD_TRIM_STR
 from ...constants.fields import AGG_ADAPTER_NAME, SCHEMAS_CUSTOM
 from ...exceptions import ApiError
 from ...parsers.fields import schema_custom
-from ...tools import (
-    calc_percent,
-    coerce_int,
-    echo_error,
-    echo_ok,
-    echo_warn,
-    get_path,
-    join_kv,
-    listify,
-    longest_str,
-    strip_right,
-)
+from ...tools import (calc_percent, coerce_int, dt_now, echo_error, echo_ok,
+                      echo_warn, get_path, join_kv, listify, longest_str,
+                      strip_right)
 
 
 class Base:
@@ -169,6 +159,7 @@ class Base:
             "page_progress": 10000,
             "do_echo": False,
             "custom_cbs": [],
+            "debug_timing": False,
         }
 
     def get_arg_value(self, arg: str) -> Union[str, list, bool, int]:
@@ -339,8 +330,21 @@ class Base:
         Args:
             rows: rows to process
         """
+        debug_timing = self.get_arg_value("debug_timing")
+        p_start = dt_now()
+
         for cb in self.callbacks:
+            cb_start = dt_now()
             rows = cb(rows=rows)
+
+            if debug_timing:
+                cb_delta = dt_now() - cb_start
+                self.LOG.debug(f"CALLBACK {cb} took {cb_delta} for {len(rows)} rows")
+
+        if debug_timing:
+            p_delta = dt_now() - p_start
+            self.LOG.debug(f"CALLBACKS TOOK {p_delta} for {len(rows)} rows")
+
         return rows
 
     def do_custom_cbs(self, rows: Union[List[dict], dict]) -> List[dict]:
@@ -650,15 +654,16 @@ class Base:
         items = listify(row.pop(field, []))
         new_rows_map = {}
 
-        if schema["is_complex"]:
-            for sub_schema in self.get_sub_schemas(schema=schema):
-                for idx, item in enumerate(items):
-                    new_rows_map.setdefault(idx, copy.deepcopy(row))
+        sub_schemas = self.get_sub_schemas(schema=schema)
+
+        for idx, item in enumerate(items):
+            new_rows_map[idx] = dict(row)
+
+            if schema["is_complex"]:
+                for sub_schema in sub_schemas:
                     value = item.pop(sub_schema["name"], null_value)
                     new_rows_map[idx][sub_schema["name_qual"]] = value
-        else:
-            for idx, item in enumerate(items):
-                new_rows_map.setdefault(idx, copy.deepcopy(row))
+            else:
                 new_rows_map[idx][schema["name_qual"]] = item
 
         return [new_rows_map[idx] for idx in new_rows_map]
@@ -1175,10 +1180,18 @@ class ExportMixins(Base):
     def close_fd(self):
         """Close a file descriptor."""
         self._fd.write("\n")
-        if getattr(self, "_fd_close", False):
-            name = str(getattr(self._fd, "name", self._fd))
-            self.echo(msg=f"Finished exporting to {name!r}")
-            self._fd.close()
+        close = getattr(self, "_fd_close", False)
+        closer = getattr(self._fd, "close", None)
+        name = str(getattr(self._fd, "name", self._fd))
+
+        if not close:
+            return
+
+        if not callable(closer):
+            return
+
+        self.echo(msg=f"Finished exporting to {name!r}")
+        closer()
 
 
 ARG_DESCRIPTIONS: dict = {
@@ -1217,5 +1230,6 @@ ARG_DESCRIPTIONS: dict = {
     "table_api_fields": "Include API fields",
     "xlsx_column_length": "Length to use for every column",
     "xlsx_cell_format": "Formatting to apply to every cell",
+    "debug_timing": "Enable logging of time taken for each callback",
 }
 """Descriptions of all arguments for all callbacks"""

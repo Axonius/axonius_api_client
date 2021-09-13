@@ -336,8 +336,9 @@ class AssetMixin(ModelMixins):
                 state = page.process_page(state=state, start_dt=start_dt, apiobj=self)
 
                 for row in page.assets:
+                    state = page.start_row(state=state, apiobj=self, row=row)
                     yield from listify(obj=callbacks.process_row(row=row))
-                    state = page.process_row(state=state, apiobj=self)
+                    state = page.process_row(state=state, apiobj=self, row=row)
 
                 state = page.process_loop(state=state, apiobj=self)
 
