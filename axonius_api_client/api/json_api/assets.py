@@ -10,7 +10,7 @@ import marshmallow_jsonapi
 from ...constants.api import MAX_PAGE_SIZE, PAGE_SIZE
 from ...exceptions import ApiError, StopFetch
 from ...http import Http
-from ...tools import dt_parse, dt_sec_ago, json_dump, listify
+from ...tools import dt_now, dt_parse, dt_sec_ago, json_dump, listify
 from .base import BaseModel, BaseSchema, BaseSchemaJson
 from .custom_fields import SchemaBool, get_field_dc_mm
 from .generic import DictValue
@@ -200,6 +200,10 @@ class AssetsPage(BaseModel):
     meta: Optional[dict] = dataclasses.field(default_factory=dict)
     empty_response: bool = False
 
+    def __post_init__(self):
+        """Pass."""
+        self.page_start = dt_now()
+
     @classmethod
     def load_response(cls, data: dict, http: Http, api_endpoint, **kwargs):
         """Pass."""
@@ -383,13 +387,18 @@ class AssetsPage(BaseModel):
         apiobj.LOG.debug(f"CURRENT PAGING STATE: {json_dump(state)}")
         return state
 
-    def process_row(self, state: dict, apiobj) -> dict:
+    def start_row(self, state: dict, apiobj, row: dict) -> dict:
+        """Pass."""
+        self.row_start = dt_now()
+        return state
+
+    def process_row(self, state: dict, apiobj, row: dict) -> dict:
         """Pass."""
         if state["max_rows"] and state["rows_processed_total"] >= state["max_rows"]:
             state = self.process_stop(
                 state=state, reason="'rows_processed_total' greater than 'max_rows'", apiobj=apiobj
             )
-
+        state["process_seconds_row"] = dt_sec_ago(obj=self.row_start, exact=True)
         return state
 
     def process_loop(self, state: dict, apiobj) -> dict:
@@ -399,6 +408,8 @@ class AssetsPage(BaseModel):
                 state=state, reason="'page_number' greater than 'max_pages'", apiobj=apiobj
             )
         state["page_loop"] += 1
+        process_page_took = dt_sec_ago(obj=self.page_start, exact=True)
+        apiobj.LOG.debug(f"Processing page took {process_page_took} seconds")
         return state
 
     def process_stop(self, state: dict, reason: str, apiobj):

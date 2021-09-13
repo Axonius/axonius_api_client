@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 """Test suite."""
 import pytest
-
-from axonius_api_client.api.json_api.system_roles import SystemRole
+from axonius_api_client.api import json_api
 from axonius_api_client.exceptions import ApiError, NotFoundError
 
 NAME = "badwolf"
@@ -26,20 +25,79 @@ class TestSystemRolesPrivate:
         roles = apiobj._get()
         assert isinstance(roles, list) and roles
         for role in roles:
-            assert isinstance(role, SystemRole)
+            assert isinstance(role, (json_api.system_roles.SystemRole,))
 
     def test_add_update_delete(self, apiobj):
         cleanup(apiobj)
-        role = apiobj._add(name=NAME, permissions={})
-        assert isinstance(role, SystemRole)
+        role = apiobj._add(
+            name=NAME,
+            permissions={
+                "adapters": {
+                    "connections": {"delete": True, "post": True, "put": True, "terminate": True},
+                    "get": True,
+                    "put": True,
+                },
+                "api_access": {"api_access_enabled": True, "reset_api_key": True},
+                "compliance": {"exclusions_and_comments": {"put": True}, "get": True, "put": True},
+                "dashboard": {
+                    "charts": {"delete": True, "post": True, "put": True},
+                    "get": True,
+                    "spaces": {"delete": True, "post": True, "refresh": True},
+                },
+                "devices_assets": {
+                    "get": True,
+                    "put": True,
+                    "saved_queries": {"delete": True, "post": True, "put": True, "run": True},
+                },
+                "enforcements": {
+                    "delete": True,
+                    "duplicate": True,
+                    "get": True,
+                    "post": True,
+                    "put": True,
+                    "run": True,
+                    "tasks": {"get": True, "terminate": True},
+                },
+                "general_actions": {"export_csv": True},
+                "instances": {"get": True, "put": True, "run": True},
+                "queries_history": {"get": True},
+                "reports": {
+                    "deactivate": True,
+                    "delete": True,
+                    "get": True,
+                    "post": True,
+                    "private": True,
+                    "put": True,
+                },
+                "settings": {
+                    "audit": {"get": True},
+                    "data_scope": True,
+                    "get": True,
+                    "get_users_and_roles": True,
+                    "manage_admin_users": True,
+                    "manage_service_accounts": True,
+                    "notifications": {"get": True},
+                    "put": True,
+                    "roles": {"delete": True, "post": True, "put": True},
+                    "run_manual_discovery": True,
+                    "users": {"delete": True, "post": True, "put": True},
+                },
+                "users_assets": {
+                    "get": True,
+                    "put": True,
+                    "saved_queries": {"delete": True, "post": True, "put": True, "run": True},
+                },
+            },
+        )
+        assert isinstance(role, (json_api.system_roles.SystemRole,))
 
         assert role.name == NAME
         updated = apiobj._update(name=NEW_NAME, uuid=role.uuid, permissions=role.permissions)
-        assert isinstance(updated, SystemRole)
+        assert isinstance(updated, (json_api.system_roles.SystemRole,))
         assert updated.name == NEW_NAME
 
         deleted = apiobj._delete(uuid=role.uuid)
-        assert isinstance(role, SystemRole)
+        assert isinstance(role, (json_api.system_roles.SystemRole,))
         assert deleted.document_meta == {"name": NEW_NAME}
         cleanup(apiobj)
 

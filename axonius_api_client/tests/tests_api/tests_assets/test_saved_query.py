@@ -307,11 +307,11 @@ def validate_sq(asset):
     assert isinstance(updated_by_deleted, bool)
 
     # 4.5
-    updated_by_is_first_login = updated_by.pop("is_first_login")
+    updated_by_is_first_login = updated_by.pop("is_first_login", False)
     assert isinstance(updated_by_is_first_login, bool)
 
     # 4.5
-    updated_by_permanent = updated_by.pop("permanent")
+    updated_by_permanent = updated_by.pop("permanent", False)
     assert isinstance(updated_by_permanent, bool)
 
     updated_str_keys_req = [
