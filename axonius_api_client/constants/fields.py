@@ -145,6 +145,7 @@ class Parsers(BaseEnum):
     to_str_escaped_regex = enum.auto()
     to_str_subnet = enum.auto()
     to_str_tags = enum.auto()
+    to_str_sq_name = enum.auto()
 
 
 class Types(BaseEnum):
@@ -174,6 +175,7 @@ class Formats(BaseEnum):
     os_distribution = "os-distribution"
     dynamic_field = enum.auto()
     date = enum.auto()  # added 4.5
+    sq_name = enum.auto()
 
 
 @dataclasses.dataclass
@@ -276,6 +278,11 @@ class Operators(BaseData):
         name_map=OperatorNameMaps.equals,
         template='({field} == "{aql_value}")',
         parser=Parsers.to_str_cnx_label,
+    )
+    equals_str_sq_name: Operator = Operator(
+        name_map=OperatorNameMaps.equals,
+        template="({{{{QueryID={aql_value}}}}})",
+        parser=Parsers.to_str_sq_name,
     )
     equals_ip: Operator = Operator(
         name_map=OperatorNameMaps.equals,
@@ -453,6 +460,14 @@ class OperatorTypeMap(BaseData):
 class OperatorTypeMaps(BaseData):
     """Operator type map that maps operators to a specific field schemas."""
 
+    string_sq_name: OperatorTypeMap = OperatorTypeMap(
+        name="string_sq_name",
+        operators=[
+            Operators.equals_str_sq_name,
+        ],
+        field_type=Types.string,
+        field_format=Formats.sq_name,
+    )
     string_cnx_label: OperatorTypeMap = OperatorTypeMap(
         name="string_cnx_label",
         operators=[
@@ -807,7 +822,32 @@ CUSTOM_FIELDS_MAP: Dict[str, List[dict]] = {
             "format": "connection_label",
             "type_norm": "string_cnx_label",
             "is_agg": True,
-            "selectable": False,
+            "selectable": True,
+            "expr_field_type": AGG_EXPR_FIELD_TYPE,
+            "is_details": False,
+            "is_all": False,
+        },
+        {
+            "adapter_name_raw": f"{AGG_ADAPTER_NAME}_adapter",
+            "adapter_name": AGG_ADAPTER_NAME,
+            "adapter_title": AGG_ADAPTER_TITLE,
+            "adapter_prefix": "specific_data",
+            "column_name": f"{AGG_ADAPTER_NAME}:sq",
+            "column_title": f"{AGG_ADAPTER_TITLE}: Saved Query Name",
+            "sub_fields": [],
+            "is_complex": False,
+            "is_list": False,
+            "is_root": True,
+            "parent": "root",
+            "name": "specific_data.sq",
+            "name_base": "sq",
+            "name_qual": "specific_data.sq",
+            "title": "Saved Query Name",
+            "type": "string",
+            "format": "sq_name",
+            "type_norm": "string_sq_name",
+            "is_agg": True,
+            "selectable": True,
             "expr_field_type": AGG_EXPR_FIELD_TYPE,
             "is_details": False,
             "is_all": False,

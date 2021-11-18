@@ -6,18 +6,12 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 from cachetools import TTLCache, cached
 
 from ..exceptions import WizardError
-from ..tools import (
-    check_empty,
-    check_type,
-    coerce_int_float,
-    coerce_str_to_csv,
-    dt_parse_tmpl,
-    get_raw_version,
-    parse_ip_address,
-    parse_ip_network,
-)
+from ..tools import (check_empty, check_type, coerce_int_float,
+                     coerce_str_to_csv, dt_parse_tmpl, get_raw_version,
+                     parse_ip_address, parse_ip_network)
 
 CACHE: TTLCache = TTLCache(maxsize=1024, ttl=30)
+SQ_CACHE: TTLCache = TTLCache(maxsize=1024, ttl=30)
 
 
 class WizardParser:
@@ -246,6 +240,24 @@ class WizardParser:
         )
         return aql_value, aql_value
 
+    def value_to_str_sq_name(
+        self,
+        value: Any,
+        enum: Optional[List[str]] = None,
+        enum_items: Optional[List[str]] = None,
+    ) -> Tuple[str, str]:
+        """Parse a value as a valid name of Saved Query."""
+        check_type(value=value, exp=str)
+        check_empty(value=value)
+        aql_value = self.check_enum(
+            value=value,
+            enum=enum,
+            enum_items=enum_items,
+            enum_custom=self._sq_names(),
+            custom_id="saved query name",
+        )
+        return aql_value, aql_value
+
     def value_to_str_cnx_label(
         self,
         value: Any,
@@ -408,3 +420,12 @@ class WizardParser:
     def _cnx_labels(self) -> List[str]:
         """Get all known adapter connection labels."""
         return self.apiobj.adapters._get_labels().label_values
+
+    @cached(cache=SQ_CACHE)
+    def _sqs(self) -> List[dict]:
+        """Get all Saved Query objects for this asset type."""
+        return self.apiobj.saved_query.get()
+
+    def _sq_names(self) -> Dict[str, str]:
+        """Get all known saved query name -> ID mappings."""
+        return {x["name"]: x["id"] for x in self._sqs()}
