@@ -732,6 +732,7 @@ class OperatorTypeMaps(BaseData):
         items = field.get("items") or {}
         itype = items.get("type")
         iformat = items.get("format")
+        is_array = bool(itype or iformat)
 
         if fformat == Formats.dynamic_field.value:
             fformat = None
@@ -747,33 +748,18 @@ class OperatorTypeMaps(BaseData):
         }
         attrs_text = attrs_str(attrs)
 
-        valid = {}
-
         typemaps = cls.get_fields()
         for typemap in typemaps:
             type_attrs = {k: enum_val(typemap.default, k) for k in attrs}
-            valid[typemap.name] = type_attrs
             if type_attrs == attrs:
                 typemap.default.name = typemap.name
                 return typemap.default
 
-        empty_others = not any([fformat, itype, iformat])
-        if field["type"] == Types.string.value and empty_others:  # pragma: no cover
-            warnings.warn(
-                f"Unexepected string schema in field {name!r} with {attrs_text}, assuming string"
-            )
-            return OperatorTypeMaps.string
-
-        if field["type"] == Types.array.value and empty_others:  # pragma: no cover
-            warnings.warn(
-                f"Unexepected array schema in field {name!r} with {attrs_text}, "
-                f"assuming array of string"
-            )
-            return OperatorTypeMaps.array_string
-
-        err = f"Unable to map field {name!r} with {attrs_text}"
-        valid_str = "\n  ".join([f"{k}: {attrs_str(v)}" for k, v in valid.items()])
-        raise NotFoundError("\n".join([err, valid_str, err]))
+        assume = "array of string" if is_array else "string"
+        warnings.warn(
+            f"Unexepected schema in field {name!r} with {attrs_text}, falling back to {assume}"
+        )
+        return OperatorTypeMaps.array_string if is_array else OperatorTypeMaps.string
 
     @classmethod
     def get_operator(cls, field: dict, operator: str, err: Optional[str] = None):
