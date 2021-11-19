@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
 """Test suite."""
 import pytest
-
 from axonius_api_client.constants.fields import Operators, OperatorTypeMaps
-from axonius_api_client.exceptions import NotFoundError
+from axonius_api_client.exceptions import NotFoundError, UnknownFieldSchema
 
 
 class TestOperatorTypeMaps:
@@ -14,7 +13,7 @@ class TestOperatorTypeMaps:
 
     def test_get_type_map_invalid(self):
         field = {"type": "badwolf", "name_qual": "badwolf"}
-        with pytest.raises(NotFoundError):
+        with pytest.warns(UnknownFieldSchema):
             OperatorTypeMaps.get_type_map(field=field)
 
     def test_get_operator(self):

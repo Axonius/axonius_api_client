@@ -13,6 +13,10 @@ class ApiWarning(AxonWarning):
     """Warnings for API models."""
 
 
+class UnknownFieldSchema(ApiWarning):
+    """Warning for unknown field schema mappings."""
+
+
 class JsonApiIncorrectType(ApiWarning):
     """Pass."""
 

@@ -38,6 +38,10 @@ class SystemMetaBase:
 
         devices = entity_sizes.pop("Devices", {})
         assert isinstance(devices, dict) or users is None
+
+        resources = entity_sizes.pop("Resources", None)  # 4.5
+        assert isinstance(resources, dict) or resources is None
+
         assert not entity_sizes
         assert not data
 

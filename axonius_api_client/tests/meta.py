@@ -87,6 +87,7 @@ FIELD_FORMATS = [
     "version",
     "dynamic_field",  # ~3.13
     "date",  # 4.5
+    "sq_name",
 ]
 SCHEMA_FIELD_FORMATS = FIELD_FORMATS
 SCHEMA_TYPES = ["string", "bool", "array", "integer", "number", "file"]

@@ -6,7 +6,7 @@ import warnings
 from typing import Dict, List, Optional
 
 from ..data import BaseData, BaseEnum
-from ..exceptions import NotFoundError
+from ..exceptions import NotFoundError, UnknownFieldSchema
 
 AGG_ADAPTER_NAME: str = "agg"
 """Short name to use for aggregated adapter"""
@@ -771,9 +771,8 @@ class OperatorTypeMaps(BaseData):
                 return typemap.default
 
         assume = "array of string" if is_array else "string"
-        warnings.warn(
-            f"Unexepected schema in field {name!r} with {attrs_text}, falling back to {assume}"
-        )
+        msg = f"Unexepected schema in field {name!r} with {attrs_text}, falling back to {assume}"
+        warnings.warn(message=msg, category=UnknownFieldSchema)
         return OperatorTypeMaps.array_string if is_array else OperatorTypeMaps.string
 
     @classmethod
