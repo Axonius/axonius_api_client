@@ -281,19 +281,19 @@ class TestCnxPublic(TestCnxBase):
         cnx_added = apiobj.cnx.add(adapter_name=CSV_ADAPTER, **config)
         for k, v in config.items():
             assert v == cnx_added["config"][k]
+        client_id = cnx_added["id"]
 
         del_result = apiobj.cnx.delete_by_id(
-            cnx_id=cnx_added["id"],
+            cnx_id=client_id,
             adapter_name=CSV_ADAPTER,
             delete_entities=True,
         )
-
         assert isinstance(del_result, json_api.adapters.CnxDelete)
-        assert del_result.client_id == "{'client_id': 'badwolf'}"
+        assert del_result.client_id == f"{{'client_id': '{client_id}'}}"
 
         with pytest.raises(NotFoundError):
             apiobj.cnx.get_by_id(
-                cnx_id=cnx_added["id"],
+                cnx_id=client_id,
                 adapter_name=CSV_ADAPTER,
             )
 
@@ -305,21 +305,22 @@ class TestCnxPublic(TestCnxBase):
             "file_path": file_path,
         }
         cnx_added = apiobj.cnx.add(adapter_name=CSV_ADAPTER, **config)
+        client_id = cnx_added["id"]
 
         assert isinstance(cnx_added["config"]["file_path"], dict)
 
         del_result = apiobj.cnx.delete_by_id(
-            cnx_id=cnx_added["id"],
+            cnx_id=client_id,
             adapter_name=CSV_ADAPTER,
             delete_entities=True,
         )
 
         assert isinstance(del_result, json_api.adapters.CnxDelete)
-        assert del_result.client_id == "{'client_id': 'badwolf'}"
+        assert del_result.client_id == f"{{'client_id': '{client_id}'}}"
 
         with pytest.raises(NotFoundError):
             apiobj.cnx.get_by_id(
-                cnx_id=cnx_added["id"],
+                cnx_id=client_id,
                 adapter_name=CSV_ADAPTER,
             )
 
@@ -348,19 +349,19 @@ class TestCnxPublic(TestCnxBase):
         assert not hasattr(exc.value, "cnx_old")
         assert getattr(exc.value, "result", None)
         cnx_added = exc.value.cnx_new
-
+        client_id = cnx_added["id"]
         del_result = apiobj.cnx.delete_by_id(
-            cnx_id=cnx_added["id"],
+            cnx_id=client_id,
             adapter_name=CSV_ADAPTER,
             delete_entities=True,
         )
 
         assert isinstance(del_result, json_api.adapters.CnxDelete)
-        assert del_result.client_id == "{'client_id': 'badwolf'}"
+        assert del_result.client_id == f"{{'client_id': '{client_id}'}}"
 
         with pytest.raises(NotFoundError):
             apiobj.cnx.get_by_id(
-                cnx_id=cnx_added["id"],
+                cnx_id=client_id,
                 adapter_name=CSV_ADAPTER,
                 retry=2,
             )
