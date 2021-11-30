@@ -102,6 +102,11 @@ class AdapterFetchHistory(BaseModel):
     def _get_schema_cls() -> Optional[Type[BaseSchema]]:
         return None
 
+    def to_tablize(self) -> dict:
+        """Pass."""
+        props = getattr(self, "_table_properties", self._str_properties)()
+        return {self._human_key(k): getattr(self, k, None) for k in props}
+
 
 class FetchHistory(ModelMixins):
     """Handle all of the interactions."""
