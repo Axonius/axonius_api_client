@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
 """API for working with saved queries for assets."""
+import warnings
+
 from typing import Generator, List, Optional, Union
 
 from ...constants.api import MAX_PAGE_SIZE
-from ...exceptions import NotFoundError, ResponseError
+from ...exceptions import NotFoundError, ResponseError, ApiWarning
 # from ...features import Features
 from ...parsers.tables import tablize_sqs
 from ...tools import check_gui_page_size, listify
@@ -283,9 +285,12 @@ class SavedQuery(ChildMixins):
         data_view["fields"] = fields
         data_view["pageSize"] = gui_page_size
         # 4.5 SEMI_BREAKING_CHANGE: now a list of dict
-        data_view["colFilters"] = listify(data_column_filters or {})
+        # data_view["colFilters"] = listify(data_column_filters or {})
+        if data_column_filters:
+            msg = f"Column filters structure has changed and is currently not supported by the API client."
+            warnings.warn(message=msg, category=ApiWarning)
         # 4.5 SEMI_BREAKING_CHANGE: now a list of dict
-        data_view["colExcludedAdapters"] = listify({})  # TBD
+        # data_view["colExcludedAdapters"] = listify({})  # TBD
 
         # data = {}
         # data["name"] = name
