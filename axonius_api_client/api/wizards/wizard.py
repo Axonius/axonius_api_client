@@ -272,6 +272,7 @@ class Wizard:
             idx=idx,
             value=expr_value,
             op_comp=operator.name_map.op,
+            field_name_override=operator.field_name_override,
             query=query,
         )
         return expr

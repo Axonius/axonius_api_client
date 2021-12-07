@@ -196,6 +196,7 @@ class OperatorNameMaps(BaseData):
     count_more_than: OperatorNameMap = OperatorNameMap(name="count_above", op="count_above")
     endswith: OperatorNameMap = OperatorNameMap(name="endswith", op="ends")
     equals: OperatorNameMap = OperatorNameMap(name="equals", op="equals")
+    equals_empty: OperatorNameMap = OperatorNameMap(name="equals", op="")
     exists: OperatorNameMap = OperatorNameMap(name="exists", op="exists")
     is_false: OperatorNameMap = OperatorNameMap(name="false", op="false")
     is_true: OperatorNameMap = OperatorNameMap(name="true", op="true")
@@ -223,6 +224,7 @@ class Operator(BaseData):
     template: str
     name_map: OperatorNameMap
     parser: Parsers
+    field_name_override: Optional[str] = None
 
 
 def ops_clean(operators: List[Operator], clean: List[Operator]):
@@ -280,9 +282,10 @@ class Operators(BaseData):
         parser=Parsers.to_str_cnx_label,
     )
     equals_str_sq_name: Operator = Operator(
-        name_map=OperatorNameMaps.equals,
+        name_map=OperatorNameMaps.equals_empty,
         template="({{{{QueryID={aql_value}}}}})",
         parser=Parsers.to_str_sq_name,
+        field_name_override="saved_query",
     )
     equals_ip: Operator = Operator(
         name_map=OperatorNameMaps.equals,
