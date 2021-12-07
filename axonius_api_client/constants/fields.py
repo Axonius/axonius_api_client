@@ -224,6 +224,7 @@ class Operator(BaseData):
     template: str
     name_map: OperatorNameMap
     parser: Parsers
+    field_name_override: Optional[str] = None
 
 
 def ops_clean(operators: List[Operator], clean: List[Operator]):
@@ -284,6 +285,7 @@ class Operators(BaseData):
         name_map=OperatorNameMaps.equals_empty,
         template="({{{{QueryID={aql_value}}}}})",
         parser=Parsers.to_str_sq_name,
+        field_name_override="saved_query",
     )
     equals_ip: Operator = Operator(
         name_map=OperatorNameMaps.equals,

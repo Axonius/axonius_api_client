@@ -369,6 +369,7 @@ class Expr:
         field: dict,
         idx: int,
         op_comp: str,
+        field_name_override: Optional[str] = None,
         value: Optional[Union[int, str, bool]] = None,
         is_complex: bool = False,
         children: Optional[List[dict]] = None,
@@ -380,6 +381,7 @@ class Expr:
             query: AQL string
             field: schema of field
             idx: index of this expression
+            field_name_override: value to use as name of field in expr instead of 'name' key from field dict
             value: raw expression value
             op_comp: comparison operator
             is_complex: build an expression for a complex filter
@@ -412,11 +414,16 @@ class Expr:
         else:
             op_logic = cls.OP_IDX0
 
+        if isinstance(field_name_override, str):
+            field_name = field_name_override
+        else:
+            field_name = field[Fields.NAME]
+
         expression = {}
         expression[cls.BRACKET_WEIGHT] = weight
         expression[cls.CHILDREN] = children or [cls.build_child()]
         expression[cls.OP_COMP] = op_comp
-        expression[cls.FIELD] = field[Fields.NAME]
+        expression[cls.FIELD] = field_name
         expression[cls.FIELD_TYPE] = field[Fields.EXPR_TYPE]
         expression[cls.FILTER] = query
         expression[cls.FILTER_ADAPTERS] = None
