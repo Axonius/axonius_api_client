@@ -432,6 +432,8 @@ class Expr:
         expression[cls.NOT] = is_not
         expression[cls.BRACKET_RIGHT] = is_right
         expression[cls.VALUE] = value
+        if idx:
+            expression[cls.IDX] = idx
 
         if is_complex:
             expression[cls.CONTEXT] = cls.CONTEXT_OBJ
