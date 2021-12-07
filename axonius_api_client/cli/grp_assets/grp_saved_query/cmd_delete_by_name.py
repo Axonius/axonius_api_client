@@ -31,6 +31,6 @@ def cmd(ctx, url, key, secret, **kwargs):
         rows = apiobj.saved_query.get_by_name(**kwargs)
         apiobj.saved_query.delete(rows=rows)
 
-    ctx.obj.echo_ok("Successfully deleted saved query: rows['name']")
+    ctx.obj.echo_ok(f"Successfully deleted saved query: {rows['name']}")
 
     ctx.exit(0)
