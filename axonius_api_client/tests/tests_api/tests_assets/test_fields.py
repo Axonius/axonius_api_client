@@ -4,8 +4,7 @@ import copy
 
 import pytest
 from axonius_api_client.api import json_api
-from axonius_api_client.constants.fields import (AGG_ADAPTER_ALTS,
-                                                 AGG_ADAPTER_NAME)
+from axonius_api_client.constants.fields import AGG_ADAPTER_ALTS, AGG_ADAPTER_NAME
 from axonius_api_client.exceptions import ApiError, NotFoundError
 
 from ...meta import FIELD_FORMATS, SCHEMA_FIELD_FORMATS, SCHEMA_TYPES
@@ -43,7 +42,9 @@ class FieldsPrivate:
         for adapter, adapter_fields in specific.items():
             self.val_raw_adapter_fields(adapter=adapter, adapter_fields=adapter_fields)
             adapter_schema = specific_schema.pop(adapter)
-            self.val_raw_schema(adapter=adapter, schema=adapter_schema)
+            # TBD: in 4.6 some of the schemas are None, investigating
+            if adapter_schema is not None:
+                self.val_raw_schema(adapter=adapter, schema=adapter_schema)
 
         assert not fields
         assert not schema
@@ -146,6 +147,13 @@ class FieldsPrivate:
 
             val_source(obj=field)
 
+            # 4.6 {'base_table_name': None, 'part_of_table': True}
+            base_table_name = field.pop("base_table_name", None)
+            assert isinstance(base_table_name, str) or base_table_name is None
+
+            part_of_table = field.pop("part_of_table", False)
+            assert isinstance(part_of_table, bool)
+
             assert not field, list(field)
 
     def val_raw_items(self, adapter, items):
@@ -213,6 +221,13 @@ class FieldsPrivate:
 
             show_all_results = items.pop("show_all_results", False)
             assert isinstance(show_all_results, bool)
+
+            # 4.6 {'base_table_name': None, 'part_of_table': True}
+            base_table_name = items.pop("base_table_name", None)
+            assert isinstance(base_table_name, str) or base_table_name is None
+
+            part_of_table = items.pop("part_of_table", False)
+            assert isinstance(part_of_table, bool)
 
             assert not items, list(items)
 
@@ -379,6 +394,13 @@ class FieldsPublic:
         show_all_results = schema.pop("show_all_results", False)
         assert isinstance(show_all_results, bool)
 
+        # 4.6 {'base_table_name': None, 'part_of_table': True}
+        base_table_name = schema.pop("base_table_name", None)
+        assert isinstance(base_table_name, str) or base_table_name is None
+
+        part_of_table = schema.pop("part_of_table", False)
+        assert isinstance(part_of_table, bool)
+
         if is_complex:
             if name != "all":
                 assert sub_fields
@@ -420,6 +442,13 @@ class FieldsPublic:
             # 4.5
             parse_json_attrs = items.pop("parse_json_attrs", False)
             assert isinstance(parse_json_attrs, bool)
+
+            # 4.6 {'base_table_name': None, 'part_of_table': True}
+            base_table_name = items.pop("base_table_name", None)
+            assert isinstance(base_table_name, str) or base_table_name is None
+
+            part_of_table = items.pop("part_of_table", False)
+            assert isinstance(part_of_table, bool)
 
             show_all_results = items.pop("show_all_results", False)
             assert isinstance(show_all_results, bool)

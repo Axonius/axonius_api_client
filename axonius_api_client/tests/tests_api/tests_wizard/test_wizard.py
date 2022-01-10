@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """Test suite for axonius_api_client.wizard.wizard"""
 import pytest
-
 from axonius_api_client.api.wizards import Wizard
 from axonius_api_client.constants.fields import ALL_NAME, Operators
 from axonius_api_client.constants.wizards import Entry, Flags, Results, Types
@@ -85,6 +84,7 @@ class TestData:
                 "fieldType": "axonius",
                 "filter": f'and ({simple} == regex("test", "i"))',
                 "filteredAdapters": None,
+                "i": 1,
                 "leftBracket": False,
                 "logicOp": "and",
                 "not": False,
@@ -110,6 +110,7 @@ class TestData:
                 "fieldType": "axonius",
                 "filter": f'or ({simple} == regex("dev", "i"))',
                 "filteredAdapters": None,
+                "i": 2,
                 "leftBracket": False,
                 "logicOp": "or",
                 "not": False,
@@ -137,6 +138,7 @@ class TestData:
                     f'and (({cplex} == ({{"$exists":true,"$ne":[]}})) and ' f"{cplex} != [])"
                 ),
                 "filteredAdapters": None,
+                "i": 3,
                 "leftBracket": False,
                 "logicOp": "and",
                 "not": False,
@@ -162,6 +164,7 @@ class TestData:
                 "fieldType": "axonius",
                 "filter": (f'and not ({cplex} == match([({sub} == regex("boom", "i"))]))'),
                 "filteredAdapters": None,
+                "i": 4,
                 "leftBracket": False,
                 "logicOp": "and",
                 "not": True,

@@ -176,6 +176,7 @@ class Formats(BaseEnum):
     dynamic_field = enum.auto()
     date = enum.auto()  # added 4.5
     sq_name = enum.auto()
+    expirable_tag = "expirable-tag"
 
 
 @dataclasses.dataclass
@@ -496,17 +497,15 @@ class OperatorTypeMaps(BaseData):
     )
     string_os_distribution: OperatorTypeMap = OperatorTypeMap(
         name="string_os_distribution",
-        operators=[
-            Operators.exists,
-            Operators.regex,
-            Operators.contains,
-            Operators.equals_str,
-            Operators.startswith,
-            Operators.endswith,
-            Operators.is_in_str,
-        ],
+        operators=string.operators,
         field_type=Types.string,
         field_format=Formats.os_distribution,
+    )
+    string_expirable_tag: OperatorTypeMap = OperatorTypeMap(
+        name="string_os_expirable_tag",
+        operators=string.operators,
+        field_type=Types.string,
+        field_format=Formats.expirable_tag,
     )
     string_ip: OperatorTypeMap = OperatorTypeMap(
         name="string_ip",

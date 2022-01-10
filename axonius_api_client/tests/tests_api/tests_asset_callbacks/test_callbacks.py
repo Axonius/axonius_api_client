@@ -807,6 +807,8 @@ class Callbacks:
     def test_sw_whitelist(self, cbexport, api_devices):
         field = "specific_data.data.installed_software"
         whitelist = ["chrome"]
+        get_schema(apiobj=api_devices, field=field)
+
         query = '(specific_data.data.installed_software.name == regex("chrome", "i"))'
         rows = api_devices.get(fields=field, query=query, max_rows=1)
 

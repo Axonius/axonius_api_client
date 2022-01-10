@@ -358,26 +358,31 @@ def validate_sq(asset):
     for x in colsizes:
         assert isinstance(x, int)
 
-    fields = view.pop("fields")
-    assert isinstance(fields, list)
-
-    for x in fields:
-        assert isinstance(x, str)
-
     page = view.pop("page", 0)
     assert isinstance(page, int)
 
     pagesize = view.pop("pageSize", 0)
     assert isinstance(pagesize, int)
 
-    sort = view.pop("sort")
-    assert isinstance(sort, dict)
+    # in 4.6 SQ 'New devices seen in the last day' has no sort key
+    if "sort" in view:
+        sort = view.pop("sort")
+        assert isinstance(sort, dict)
 
-    sort_desc = sort.pop("desc")
-    assert isinstance(sort_desc, bool)
+        sort_desc = sort.pop("desc")
+        assert isinstance(sort_desc, bool)
 
-    sort_field = sort.pop("field")
-    assert isinstance(sort_field, str)
+        sort_field = sort.pop("field")
+        assert isinstance(sort_field, str)
+        assert not sort
+
+    # in 4.6 SQ 'New devices seen in the last day' has no fields key
+    if "fields" in view:
+        fields = view.pop("fields")
+        assert isinstance(fields, list)
+
+        for x in fields:
+            assert isinstance(x, str)
 
     query = view.pop("query")
     assert isinstance(query, dict)
@@ -477,6 +482,5 @@ def validate_sq(asset):
         validate_qexpr(qexpr, asset)
 
     assert not query, list(query)
-    assert not sort, list(sort)
     assert not view, list(view)
     assert not asset, list(asset)

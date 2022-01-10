@@ -42,6 +42,9 @@ class SystemMetaBase:
         resources = entity_sizes.pop("Resources", None)  # 4.5
         assert isinstance(resources, dict) or resources is None
 
+        vulns = entity_sizes.pop("Vulnerabilities", None)  # 4.6
+        assert isinstance(vulns, dict) or vulns is None
+
         assert not entity_sizes
         assert not data
 

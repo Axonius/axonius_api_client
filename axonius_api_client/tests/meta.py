@@ -88,6 +88,7 @@ FIELD_FORMATS = [
     "dynamic_field",  # ~3.13
     "date",  # 4.5
     "sq_name",
+    "expirable-tag",  # 4.6
 ]
 SCHEMA_FIELD_FORMATS = FIELD_FORMATS
 SCHEMA_TYPES = ["string", "bool", "array", "integer", "number", "file"]
