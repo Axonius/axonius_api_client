@@ -10,6 +10,14 @@ class SettingsGui(SettingsMixins):
 
     TITLE: str = "GUI Settings"
 
+    @property
+    def title(self) -> str:
+        return self.TITLE
+
+    @property
+    def plugin_name(self) -> str:
+        return "gui"
+
     def _get(self) -> json_api.system_settings.SystemSettings:
         """Direct API method to get the current system settings."""
         api_endpoint = ApiEndpoints.system_settings.gui_get

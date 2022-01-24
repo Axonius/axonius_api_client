@@ -8,7 +8,15 @@ from .settings_mixins import SettingsMixins
 class SettingsLifecycle(SettingsMixins):
     """API for working with System Settings -> Lifecycle Settings."""
 
-    TITLE: str = "Lifecycle Settings"
+    TITLE = "Lifecycle Settings"
+
+    @property
+    def title(self) -> str:
+        return self.TITLE
+
+    @property
+    def plugin_name(self) -> str:
+        return "system_scheduler"
 
     def _get(self) -> json_api.system_settings.SystemSettings:
         """Direct API method to get the current system settings."""

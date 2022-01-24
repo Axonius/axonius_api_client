@@ -375,6 +375,34 @@ class SystemSettings(BaseData):
     )
     # PBUG: response is not jsonapi model
 
+    file_upload: ApiEndpoint = ApiEndpoint(
+        method="put",
+        path="api/V4.0/settings/plugins/{plugin}/upload_file",
+        request_schema_cls=None,
+        request_model_cls=None,
+        response_schema_cls=json_api.generic.ApiBaseSchema,
+        response_model_cls=json_api.generic.ApiBase,
+        http_args_required=["files", "data"],
+    )
+
+    ssl_update: ApiEndpoint = ApiEndpoint(
+        method="put",
+        path="api/V4.0/certificate/global_ssl",
+        request_schema_cls=None,
+        request_model_cls=json_api.system_settings.SSLUpdateRequest,
+        response_schema_cls=None,
+        response_model_cls=None,
+    )
+
+    ssl_certificate_details: ApiEndpoint = ApiEndpoint(
+        method="get",
+        path="api/V4.0/certificate/details",
+        request_schema_cls=None,
+        request_model_cls=None,
+        response_schema_cls=json_api.system_settings.SSLCertificateSchema,
+        response_model_cls=json_api.system_settings.SSLCertificate,
+    )
+
 
 @dataclasses.dataclass
 class RemoteSupport(BaseData):

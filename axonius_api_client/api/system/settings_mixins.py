@@ -1,17 +1,34 @@
 # -*- coding: utf-8 -*-
 """Parent API for working with system settings."""
+import abc
+import pathlib
+from typing import Union, Optional
+
 from ...exceptions import ApiError, NotFoundError
 from ...parsers.config import config_build, config_unchanged, config_unknown, parse_settings
 from ...parsers.tables import tablize
+from ...tools import path_read
 from ..mixins import ModelMixins
+from ..api_endpoints import ApiEndpoints
+from .. import json_api
 
 
-class SettingsMixins(ModelMixins):
+class SettingsMixins(ModelMixins, metaclass=abc.ABCMeta):
     """Parent API for working with System Settings."""
+
+    @property
+    @abc.abstractmethod
+    def title(self) -> str:
+        raise NotImplementedError()
+
+    @property
+    @abc.abstractmethod
+    def plugin_name(self) -> str:
+        raise NotImplementedError()
 
     def get(self) -> dict:
         """Get the current system settings."""
-        return parse_settings(raw=self._get().to_dict(), title=self.TITLE)
+        return parse_settings(raw=self._get().to_dict(), title=self.title)
 
     def get_section(self, section: str, full_config: bool = False) -> dict:
         """Get the current settings for a section of system settings.
@@ -161,3 +178,48 @@ class SettingsMixins(ModelMixins):
         self._update(new_config=full_config)
 
         return self.get_sub_section(section=section, sub_section=sub_section)
+
+    def file_upload(
+        self,
+        field_name: str,
+        file_name: str,
+        file_content: Union[str, bytes],
+        file_content_type: Optional[str] = None,
+    ) -> json_api.generic.ApiBase:
+        """Pass."""
+        return self._file_upload(
+            file_name=file_name,
+            field_name=field_name,
+            file_content=file_content,
+            file_content_type=file_content_type,
+        )
+
+    def file_upload_path(self, field_name: str, path: Union[str, pathlib.Path], **kwargs):
+        """Pass."""
+        path, file_content = path_read(obj=path, binary=True, is_json=False)
+        if path.suffix == ".csv":
+            kwargs.setdefault("file_content_type", "text/csv")
+        kwargs.setdefault("file_name", path.name)
+        kwargs["file_content"] = file_content
+        return self.file_upload(field_name=field_name, **kwargs)
+
+    def _file_upload(
+        self,
+        field_name: str,
+        file_name: str,
+        file_content: Union[bytes, str],
+        file_content_type: Optional[str] = None,
+        file_headers: Optional[dict] = None,
+    ) -> json_api.generic.ApiBase:
+        """Pass."""
+        api_endpoint = ApiEndpoints.system_settings.file_upload
+
+        data = {"field_name": field_name}
+        files = {"userfile": (file_name, file_content, file_content_type, file_headers)}
+        http_args = {"files": files, "data": data}
+
+        response = api_endpoint.perform_request(
+            http=self.auth.http, http_args=http_args, plugin=self.plugin_name
+        )
+        response.filename = file_name
+        return response

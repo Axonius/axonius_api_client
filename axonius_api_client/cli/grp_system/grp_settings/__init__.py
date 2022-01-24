@@ -12,6 +12,8 @@ from . import (
     cmd_update_section_from_json,
     cmd_update_subsection,
     cmd_update_subsection_from_json,
+    cmd_update_ssl_cert,
+    cmd_get_ssl_cert_details,
 )
 
 
@@ -46,3 +48,5 @@ for cmd in CMDS:
     settings_gui.add_command(cmd.cmd)
 
 settings_global.add_command(cmd_configure_destroy.cmd)
+settings_global.add_command(cmd_update_ssl_cert.cmd)
+settings_global.add_command(cmd_get_ssl_cert_details.cmd)
