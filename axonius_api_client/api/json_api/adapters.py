@@ -13,8 +13,7 @@ from ...http import Http
 from ...parsers.config import parse_schema
 from ...tools import listify, longest_str, strip_right
 from .base import BaseModel, BaseSchema, BaseSchemaJson
-from .custom_fields import (SchemaBool, SchemaDatetime, dump_date,
-                            get_field_dc_mm)
+from .custom_fields import SchemaBool, SchemaDatetime, dump_date, get_field_dc_mm
 from .generic import Metadata, MetadataSchema
 from .system_settings import SystemSettingsUpdateSchema
 
@@ -138,12 +137,15 @@ class AdapterNode(BaseModel):
         """Pass."""
 
         def load(client):
+            extra = {k: client.pop(k) for k in list(client) if k not in fields_known}
             loaded = schema.load(client)
             loaded.AdapterNode = self
             loaded.HTTP = self.HTTP
+            loaded.extra_attributes = extra
             return loaded
 
         if not hasattr(self, "_cnxs"):
+            fields_known = [x.name for x in dataclasses.fields(AdapterNodeCnx)]
             schema = AdapterNodeCnx.schema()
             self._cnxs = [load(x) for x in self.clients]
 
@@ -359,9 +361,9 @@ class Adapter(BaseModel):
         """Pass."""
         self.adapter_name_raw = self.id
         self.adapter_name = get_aname(self.id)
-        if self.document_meta:
-            self.document_meta = self.document_meta.pop(self.id)
-        """
+        if isinstance(self.document_meta, dict):
+            self.document_meta = self.document_meta.get(self.id, {})
+        """   
         document_meta: {}
             config: {} - adapter advanced settings
                 ActiveDirectoryAdapter: {} - adapter specific advanced settings
