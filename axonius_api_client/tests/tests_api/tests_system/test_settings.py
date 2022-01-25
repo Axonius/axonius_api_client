@@ -1,7 +1,11 @@
 # -*- coding: utf-8 -*-
 """Test suite."""
 
+import os
 import pytest
+import subprocess
+
+from axonius_api_client.api.json_api.system_settings import SSLCertificate
 from axonius_api_client.exceptions import ApiError, NotFoundError
 
 GUI_SECTION_WITH_SUBS = "system_settings"
@@ -153,6 +157,48 @@ class TestSettingsGlobal(SettingsBasePublic):
     @pytest.fixture(scope="class")
     def apiobj(self, api_settings_global):
         return api_settings_global
+
+    def test_ssl_update_path(self, apiobj, common_name="axonius"):
+        subprocess.call(
+            [
+                "openssl",
+                "req",
+                "-x509",
+                "-nodes",
+                "-days",
+                "365",
+                "-newkey",
+                "rsa:2048",
+                "-subj",
+                f"/C=US/ST=New York/L=New York City/O=Axonius, Inc/OU=axonius/CN={common_name}/emailAddress=support@axonius.com",
+                # "-addext",
+                # "subjectAltName = DNS:axonius",
+                "-keyout",
+                "axonius.key",
+                "-out",
+                "axonius.crt",
+            ]
+        )
+
+        result = apiobj.ssl_update_path(
+            cert_file_path="axonius.crt",
+            key_file_path="axonius.key",
+            hostname=common_name,
+            enabled=True,
+            passphrase="",
+        )
+
+        if os.path.exists("axonius.crt"):
+            os.remove("axonius.crt")
+        if os.path.exists("axonius.key"):
+            os.remove("axonius.key")
+
+        assert result
+
+    def test_ssl_cert_details(self, apiobj):
+        result = apiobj.ssl_certificate_details()
+        assert isinstance(result, SSLCertificate)
+        assert "sha1_fingerprint" in result.to_dict()
 
 
 class TestSettingsLifecycle(SettingsBasePublic):

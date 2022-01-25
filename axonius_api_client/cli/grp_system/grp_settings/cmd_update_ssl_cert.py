@@ -24,7 +24,7 @@ def cmd(
     passphrase,
     **kwargs,
 ):
-    """Update a section from arguments."""
+    """Update the SSL certificate."""
     client = ctx.obj.start_client(url=url, key=key, secret=secret)
 
     apiname = ctx.parent.command.name.replace("-", "_")

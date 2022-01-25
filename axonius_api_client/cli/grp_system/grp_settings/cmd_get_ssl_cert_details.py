@@ -11,7 +11,7 @@ OPTIONS = [*AUTH, SSL_CERT_EXPORT]
 @add_options(OPTIONS)
 @click.pass_context
 def cmd(ctx, url, key, secret, export_format, **kwargs):
-    """Get all settings."""
+    """Get installed SSL certificate details."""
     client = ctx.obj.start_client(url=url, key=key, secret=secret)
 
     apiname = ctx.parent.command.name.replace("-", "_")
