@@ -406,7 +406,7 @@ class BaseModel(dataclasses_json.DataClassJsonMixin, BaseCommon):
                     cls_args[fname] = value
                     continue
 
-                if ftype_origin == list or list in ftype_args:
+                if ftype_origin in [list, List] or list in ftype_args:
                     if value is None:
                         value = []
                     if not isinstance(value, (list, tuple)):
