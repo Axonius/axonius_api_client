@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 """API for working with saved queries for assets."""
-import copy
 import warnings
 from typing import Generator, List, Optional, Union
 
@@ -60,9 +59,8 @@ class SavedQuery(ChildMixins):
         """
         sq = self.get_by_multi(sq=sq, as_dataclass=True)
         self._check_name_exists(value=value)
-        update = copy.deepcopy(sq)
-        update.set_name(value=value)
-        return self._update_handler(sq=update, as_dataclass=as_dataclass)
+        sq.set_name(value=value)
+        return self._update_handler(sq=sq, as_dataclass=as_dataclass)
 
     def update_description(
         self, sq: MULTI, value: str, append: bool = False, as_dataclass: bool = AS_DATACLASS
@@ -80,9 +78,8 @@ class SavedQuery(ChildMixins):
         """
         sq = self.get_by_multi(sq=sq, as_dataclass=True)
         value = f"{sq.description}{value}" if sq.description and append else value
-        update = copy.deepcopy(sq)
-        update.set_description(value=value)
-        return self._update_handler(sq=update, as_dataclass=as_dataclass)
+        sq.set_description(value=value)
+        return self._update_handler(sq=sq, as_dataclass=as_dataclass)
 
     def update_page_size(self, sq: MULTI, value: int, as_dataclass: bool = AS_DATACLASS) -> BOTH:
         """Update the GUI page size of a Saved Query.
@@ -96,9 +93,8 @@ class SavedQuery(ChildMixins):
             BOTH: saved query dataclass or dict
         """
         sq = self.get_by_multi(sq=sq, as_dataclass=True)
-        update = copy.deepcopy(sq)
-        update.page_size = value
-        return self._update_handler(sq=update, as_dataclass=as_dataclass)
+        sq.page_size = value
+        return self._update_handler(sq=sq, as_dataclass=as_dataclass)
 
     def update_sort(
         self,
@@ -125,10 +121,9 @@ class SavedQuery(ChildMixins):
         else:
             field = ""
 
-        update = copy.deepcopy(sq)
-        update.sort_field = field
-        update.sort_descending = descending
-        return self._update_handler(sq=update, as_dataclass=as_dataclass)
+        sq.sort_field = field
+        sq.sort_descending = descending
+        return self._update_handler(sq=sq, as_dataclass=as_dataclass)
 
     def update_tags(
         self,
@@ -161,9 +156,8 @@ class SavedQuery(ChildMixins):
         elif append:
             value = sq.tags + [x for x in value if x not in sq.tags]
 
-        update = copy.deepcopy(sq)
-        update.set_tags(value=value)
-        return self._update_handler(sq=update, as_dataclass=as_dataclass)
+        sq.set_tags(value=value)
+        return self._update_handler(sq=sq, as_dataclass=as_dataclass)
 
     def update_always_cached(
         self, sq: MULTI, value: bool, as_dataclass: bool = AS_DATACLASS
@@ -244,9 +238,8 @@ class SavedQuery(ChildMixins):
         elif append:
             value = sq.fields + [x for x in value if x not in sq.fields]
 
-        update = copy.deepcopy(sq)
-        update.fields = value
-        return self._update_handler(sq=update, as_dataclass=as_dataclass)
+        sq.fields = value
+        return self._update_handler(sq=sq, as_dataclass=as_dataclass)
 
     def update_query(
         self,
@@ -309,11 +302,10 @@ class SavedQuery(ChildMixins):
                 )
                 warnings.warn(message=msg, category=GuiQueryWizardWarning)
 
-        update = copy.deepcopy(sq)
-        update.query = query
-        update.query_expr = query
+        sq.query = query
+        sq.query_expr = query
         if isinstance(expressions, list):
-            update.expressions = expressions
+            sq.expressions = expressions
         elif not append:
             msg = "\n".join(
                 [
@@ -324,7 +316,7 @@ class SavedQuery(ChildMixins):
             )
             warnings.warn(message=msg, category=GuiQueryWizardWarning)
 
-        return self._update_handler(sq=update, as_dataclass=as_dataclass)
+        return self._update_handler(sq=sq, as_dataclass=as_dataclass)
 
     def copy(
         self,
@@ -825,9 +817,8 @@ class SavedQuery(ChildMixins):
         """
         sq = self.get_by_multi(sq=sq, as_dataclass=True)
         value = coerce_bool(obj=value, errmsg=f"{attr} requires a valid boolean")
-        update = copy.deepcopy(sq)
-        setattr(update, attr, value)
-        return self._update_handler(sq=update, as_dataclass=as_dataclass)
+        setattr(sq, attr, value)
+        return self._update_handler(sq=sq, as_dataclass=as_dataclass)
 
     def _update_handler(self, sq: MODEL, as_dataclass: bool = AS_DATACLASS) -> BOTH:
         """Update a SQ.
