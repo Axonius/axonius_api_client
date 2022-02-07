@@ -193,6 +193,7 @@ class TestProcessSqNewSq(TestWizardCsv, TestData):
             EntrySq.FMAN: wizard.APIOBJ.fields_default,
             EntrySq.TAGS: ["tag1", "tag2"],
             EntrySq.DESC: SRC,
+            **EntrySq.OPT_ENTRY,
         }
         wizard._new_sq(entry=entry)
         assert wizard.SQ == exp
@@ -210,6 +211,7 @@ class TestProcessSqNewSq(TestWizardCsv, TestData):
             EntrySq.FMAN: wizard.APIOBJ.fields_default,
             EntrySq.TAGS: ["tag1", "tag2"],
             EntrySq.DESC: SRC,
+            **EntrySq.OPT_ENTRY,
         }
         wizard._new_sq(entry=entry)
         assert wizard.SQ == exp
@@ -247,6 +249,7 @@ class TestProcessSq(TestWizardCsv):
             EntrySq.FMAN: wizard.APIOBJ.fields_default,
             EntrySq.TAGS: ["tag1", "tag2"],
             EntrySq.DESC: SRC,
+            **EntrySq.OPT_ENTRY,
         }
         exp1_ret = 1
         exp1_entries = []
@@ -269,6 +272,7 @@ class TestProcessSq(TestWizardCsv):
             EntrySq.FMAN: wizard.APIOBJ.fields_default,
             EntrySq.TAGS: ["tag1", "tag2"],
             EntrySq.DESC: SRC,
+            **EntrySq.OPT_ENTRY,
         }
         exp1_entries = []
         exp1_ret = 1
@@ -303,7 +307,7 @@ class TestProcessSq(TestWizardCsv):
                 "compOp": "equals",
                 "field": f"{simple}",
                 "fieldType": "axonius",
-                "filter": f'({simple} == "boom")',
+                "filter": f'("{simple}" == "boom")',
                 "filteredAdapters": None,
                 "leftBracket": False,
                 "logicOp": "",
@@ -312,7 +316,7 @@ class TestProcessSq(TestWizardCsv):
                 "value": "boom",
             }
         ]
-        exp2_sq[Results.QUERY] = f'({simple} == "boom")'
+        exp2_sq[Results.QUERY] = f'("{simple}" == "boom")'
 
         exp2_entries = [
             {
@@ -343,6 +347,7 @@ class TestProcessSq(TestWizardCsv):
             EntrySq.FMAN: wizard.APIOBJ.fields_default,
             EntrySq.TAGS: ["tag1", "tag2"],
             EntrySq.DESC: SRC,
+            **EntrySq.OPT_ENTRY,
         }
         exp1_entries = []
         exp1_ret = 1
@@ -385,6 +390,7 @@ class TestProcessSq(TestWizardCsv):
             EntrySq.FMAN: wizard.APIOBJ.fields_default,
             EntrySq.TAGS: ["tag1", "tag2"],
             EntrySq.DESC: SRC,
+            **EntrySq.OPT_ENTRY,
         }
         exp3_entries = []
         exp3_ret = 0
@@ -450,7 +456,7 @@ class TestProcessSqs(TestWizardCsv):
                         "compOp": "equals",
                         "field": f"{simple}",
                         "fieldType": "axonius",
-                        "filter": f'({simple} == "boom")',
+                        "filter": f'("{simple}" == "boom")',
                         "filteredAdapters": None,
                         "leftBracket": False,
                         "logicOp": "",
@@ -459,7 +465,8 @@ class TestProcessSqs(TestWizardCsv):
                         "value": "boom",
                     }
                 ],
-                Results.QUERY: f'({simple} == "boom")',
+                Results.QUERY: f'("{simple}" == "boom")',
+                **EntrySq.OPT_ENTRY,
             },
             {
                 EntrySq.NAME: "badwolf3",
@@ -467,6 +474,7 @@ class TestProcessSqs(TestWizardCsv):
                 EntrySq.FMAN: wizard.APIOBJ.fields_default,
                 EntrySq.TAGS: ["tag1", "tag2"],
                 EntrySq.DESC: SRC,
+                **EntrySq.OPT_ENTRY,
             },
         ]
         ret = wizard._process_sqs(entries=entries)
@@ -544,6 +552,7 @@ class TestLoadCsv(TestWizardCsv):
                 EntrySq.DESC: "it is bad",
                 EntrySq.TAGS: "tag1,tag2",
                 EntrySq.FIELDS: EntrySq.OPT[EntrySq.FIELDS],
+                **EntrySq.OPT_ENTRY,
             },
             {
                 Entry.TYPE: Types.SIMPLE,
@@ -594,7 +603,7 @@ class TestParse(TestWizardCsv):
                         "compOp": "contains",
                         "field": f"{simple}",
                         "fieldType": "axonius",
-                        "filter": f'({simple} == regex("boom", "i"))',
+                        "filter": f'("{simple}" == regex("boom", "i"))',
                         "filteredAdapters": None,
                         "leftBracket": False,
                         "logicOp": "",
@@ -603,7 +612,8 @@ class TestParse(TestWizardCsv):
                         "value": "boom",
                     }
                 ],
-                Results.QUERY: f'({simple} == regex("boom", "i"))',
+                Results.QUERY: f'("{simple}" == regex("boom", "i"))',
+                **EntrySq.OPT_ENTRY,
             }
         ]
         ret_str = wizard.parse(content=content, source=SRC)

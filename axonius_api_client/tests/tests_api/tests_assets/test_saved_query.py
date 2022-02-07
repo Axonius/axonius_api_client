@@ -5,25 +5,124 @@ import datetime
 import json
 
 import pytest
+
 from axonius_api_client.api import json_api
 from axonius_api_client.constants.api import GUI_PAGE_SIZES
 from axonius_api_client.constants.general import SIMPLE
-from axonius_api_client.exceptions import ApiError, NotFoundError
+from axonius_api_client.exceptions import (
+    AlreadyExists,
+    ApiAttributeTypeError,
+    ApiError,
+    GuiQueryWizardWarning,
+    SavedQueryNotFoundError,
+)
 
-from ...meta import QUERIES
-from ...utils import get_schema
+from ...utils import get_schema, random_string
+
+
+class FixtureData:
+
+    name = "badwolf torked"
+    fields = [
+        "adapters",
+        "last_seen",
+        "id",
+    ]
+    sort_desc = False
+    gui_page_size = GUI_PAGE_SIZES[-1]
+    tags = ["badwolf1", "badwolf2"]
+    description = "badwolf torked"
+    query = 'not ("specific_data.data.last_seen" >= date("NOW - 1d"))'
+    wiz_name = "badwolf torked wiz"
+    wiz_entries = "simple !last_seen last_days 1"
 
 
 class SavedQueryPrivate:
-    def test_private_get(self, apiobj):
+    def test_get(self, apiobj):
         result = apiobj.saved_query._get()
         assert isinstance(result, list)
         for item in result:
             assert isinstance(item, json_api.saved_queries.SavedQuery)
             validate_sq(item.to_dict())
 
+    def test_add(self, apiobj):
+        name = "badwolfvvv"
+        view = {
+            "query": {
+                "filter": "",
+                "expressions": [],
+                "search": None,
+                "meta": {"enforcementFilter": None, "uniqueAdapters": False},
+            },
+            "sort": {"desc": True, "field": ""},
+            "fields": [
+                "adapters",
+                "labels",
+            ],
+            "pageSize": 20,
+        }
+
+        try:
+            apiobj.saved_query.delete_by_name(value=name)
+        except Exception:
+            pass
+
+        result = apiobj.saved_query._add(name=name, view=view)
+        assert isinstance(result, json_api.saved_queries.SavedQuery)
+        assert result.name == name
+        assert result.view == view
+        assert result.fields == view["fields"]
+
+        result.set_name(value="xxx")
+        assert result.name == "xxx"
+
+        with pytest.raises(ApiAttributeTypeError):
+            result.set_name("")
+
+        with pytest.raises(ApiAttributeTypeError):
+            result.set_name(1111)
+
+        with pytest.raises(ApiAttributeTypeError):
+            result.set_description(1111)
+
+        with pytest.raises(ApiAttributeTypeError):
+            result.set_tags(1111)
+
+        with pytest.raises(ApiAttributeTypeError):
+            result.sort_field = 1111
+
+        with pytest.raises(ApiAttributeTypeError):
+            result.fields = 1111
+
+        with pytest.raises(ApiAttributeTypeError):
+            result.reindex_expressions(["x"])
+
+        with pytest.raises(ApiAttributeTypeError):
+            result.expressions = ["x"]
+
+        table = result.to_tablize()
+        assert isinstance(table, dict)
+
+        try:
+            apiobj.saved_query.delete_by_name(value=name)
+        except Exception:
+            pass
+
 
 class SavedQueryPublic:
+    def test__check_name_exists(self, apiobj, sq_fixture):
+        with pytest.raises(AlreadyExists):
+            apiobj.saved_query._check_name_exists(value=sq_fixture["name"])
+
+    def test__check_asset_scope_enabled(self, apiobj):
+        assert apiobj.saved_query._check_asset_scope_enabled(value=False) is None
+        flags = apiobj.instances._feature_flags()
+        if not flags.asset_scopes_enabled:
+            with pytest.raises(ApiError):
+                apiobj.saved_query._check_asset_scope_enabled(value=True)
+        else:
+            assert apiobj.saved_query._check_asset_scope_enabled(value=True) is None
+
     def test_get_no_generator(self, apiobj):
         rows = apiobj.saved_query.get(generator=False)
         assert not rows.__class__.__name__ == "generator"
@@ -57,7 +156,7 @@ class SavedQueryPublic:
 
     def test_get_by_name_error(self, apiobj):
         value = "badwolf_yyyyyyyyyyyy"
-        with pytest.raises(NotFoundError):
+        with pytest.raises(SavedQueryNotFoundError):
             apiobj.saved_query.get_by_name(value=value)
 
     def test_get_by_uuid(self, apiobj):
@@ -69,7 +168,7 @@ class SavedQueryPublic:
 
     def test_get_by_uuid_error(self, apiobj):
         value = "badwolf_xxxxxxxxxxxxx"
-        with pytest.raises(NotFoundError):
+        with pytest.raises(SavedQueryNotFoundError):
             apiobj.saved_query.get_by_uuid(value=value)
 
     def test_get_by_tags(self, apiobj):
@@ -83,61 +182,315 @@ class SavedQueryPublic:
 
     def test_get_by_tags_error(self, apiobj):
         value = "badwolf_wwwwwwww"
-        with pytest.raises(NotFoundError):
+        with pytest.raises(SavedQueryNotFoundError):
             apiobj.saved_query.get_by_tags(value=value)
 
-    @pytest.fixture(scope="class")
-    def sq_fixture(self, apiobj):
+    def test_update_name(self, apiobj, sq_fixture):
+        add = random_string(6)
+        old_value = sq_fixture["name"]
+        new_value = f"{old_value} {add}"
+        updated = apiobj.saved_query.update_name(sq=sq_fixture, value=new_value)
+        assert updated["name"] == new_value
+
+    def test_update_always_cached(self, apiobj, sq_fixture):
+        old_value = sq_fixture["always_cached"]
+        new_value = not old_value
+        updated = apiobj.saved_query.update_always_cached(sq=sq_fixture, value=new_value)
+        assert updated["always_cached"] == new_value
+
+    def test_update_private(self, apiobj, sq_fixture):
+        old_value = sq_fixture["private"]
+        new_value = not old_value
+        updated = apiobj.saved_query.update_private(sq=sq_fixture, value=new_value)
+        assert updated["private"] == new_value
+
+    def test_update_description(self, apiobj, sq_fixture):
+        add = random_string(6)
+        old_value = sq_fixture["description"]
+        new_value = f"{old_value} {add}"
+        updated = apiobj.saved_query.update_description(sq=sq_fixture, value=new_value)
+        assert updated["description"] == new_value
+
+    def test_update_page_size(self, apiobj, sq_fixture):
+        new_value = GUI_PAGE_SIZES[0]
+        updated = apiobj.saved_query.update_page_size(sq=sq_fixture, value=new_value)
+        assert updated["view"]["pageSize"] == new_value
+
+    def test_update_tags_badtype(self, apiobj):
+        with pytest.raises(ApiError):
+            apiobj.saved_query.update_tags(sq=None, value=1)
+
+    def test_update_tags(self, apiobj, sq_fixture):
+        value_set = ["badwolf1_set", "badwolf2_set", "badwolf3_set"]
+        updated_set = apiobj.saved_query.update_tags(
+            sq=sq_fixture, value=value_set, append=False, remove=False, as_dataclass=True
+        )
+        assert updated_set.tags == value_set
+
+        value_remove = [value_set[0], "badwolf4_ignore"]
+        value_remove_exp = value_set[1:]
+        updated_remove = apiobj.saved_query.update_tags(
+            sq=sq_fixture, value=value_remove, append=False, remove=True, as_dataclass=True
+        )
+        assert updated_remove.tags == value_remove_exp
+
+        value_append = ["badwolf3_append"]
+        value_append_exp = value_remove_exp + value_append
+        updated_append = apiobj.saved_query.update_tags(
+            sq=sq_fixture, value=value_append, append=True, remove=False, as_dataclass=True
+        )
+        assert updated_append.tags == value_append_exp
+
+        updated_wipe = apiobj.saved_query.update_tags(
+            sq=sq_fixture, value=[], append=False, remove=False, as_dataclass=True
+        )
+        assert updated_wipe.tags == []
+
+    def test_update_fields(self, apiobj, sq_fixture):
+        value_set = apiobj.fields_default
+        updated_set = apiobj.saved_query.update_fields(
+            sq=sq_fixture, fields=value_set, append=False, remove=False, as_dataclass=True
+        )
+        assert updated_set.fields == value_set
+
+        value_remove = [apiobj.FIELD_LAST_SEEN]
+        value_remove_exp = [x for x in value_set if x != apiobj.FIELD_LAST_SEEN]
+        updated_remove = apiobj.saved_query.update_fields(
+            sq=sq_fixture, fields=value_remove, append=False, remove=True, as_dataclass=True
+        )
+        assert updated_remove.fields == value_remove_exp
+
+        value_append = value_remove
+        value_append_exp = value_remove_exp + value_remove
+        updated_append = apiobj.saved_query.update_fields(
+            sq=sq_fixture, fields=value_append, append=True, remove=False, as_dataclass=True
+        )
+        assert updated_append.fields == value_append_exp
+
+    def test_update_query_empty_expressions_append(self, apiobj, sq_fixture):
+        wiz_entries = f"simple {apiobj.FIELD_SIMPLE} contains a"
+        wiz_parsed = apiobj._handle_wiz_entries(wiz_entries=wiz_entries)
+
+        with pytest.warns(GuiQueryWizardWarning):
+            apiobj.saved_query.update_query(sq=sq_fixture, query=wiz_parsed["query"], append=True)
+
+    def test_update_query_empty_query_append(self, apiobj, sq_fixture):
+        with pytest.raises(ApiError):
+            apiobj.saved_query.update_query(sq=sq_fixture, query=None, append=True)
+
+    def test_update_query(self, apiobj, sq_fixture):
+        wiz_set_entries = f"simple {apiobj.FIELD_SIMPLE} contains a"
+        wiz_set = apiobj._handle_wiz_entries(wiz_entries=wiz_set_entries)
+        with pytest.warns(GuiQueryWizardWarning):
+            updated_set = apiobj.saved_query.update_query(
+                sq=FixtureData.name,
+                query=wiz_set["query"],
+                append=False,
+                append_and_flag=False,
+                append_not_flag=False,
+                as_dataclass=True,
+            )
+        assert updated_set.query == wiz_set["query"]
+        assert updated_set.expressions == []
+
+        updated_set_wiz = apiobj.saved_query.update_query(
+            sq=FixtureData.name,
+            wiz_entries=wiz_set_entries,
+            append=False,
+            append_and_flag=False,
+            append_not_flag=False,
+            as_dataclass=True,
+        )
+        assert updated_set_wiz.query == wiz_set["query"]
+        assert updated_set_wiz.expressions == wiz_set["expressions"]
+
+        wiz_append_entries = f"simple {apiobj.FIELD_SIMPLE} contains b"
+        wiz_append = apiobj._handle_wiz_entries(wiz_entries=wiz_append_entries)
+        wiz_append_exp_query = f'{wiz_set["query"]} or {wiz_append["query"]}'
+        updated_append = apiobj.saved_query.update_query(
+            sq=FixtureData.name,
+            wiz_entries=wiz_append_entries,
+            append=True,
+            append_and_flag=False,
+            append_not_flag=False,
+            as_dataclass=True,
+        )
+        assert updated_append.query == wiz_append_exp_query
+
+        wiz_append_and_entries = f"simple {apiobj.FIELD_LAST_SEEN} last_days 30"
+        wiz_append_and = apiobj._handle_wiz_entries(wiz_entries=wiz_append_and_entries)
+        wiz_append_and_exp_query = f"{wiz_append_exp_query} and {wiz_append_and['query']}"
+        updated_append_and = apiobj.saved_query.update_query(
+            sq=FixtureData.name,
+            wiz_entries=wiz_append_and_entries,
+            append=True,
+            append_and_flag=True,
+            append_not_flag=False,
+            as_dataclass=True,
+        )
+        assert updated_append_and.query == wiz_append_and_exp_query
+
+        wiz_append_and_not_entries = f"simple {apiobj.FIELD_LAST_SEEN} last_days 90"
+        wiz_append_and_not = apiobj._handle_wiz_entries(wiz_entries=wiz_append_and_not_entries)
+        wiz_append_and_not_exp_query = (
+            f"{wiz_append_and_exp_query} and not {wiz_append_and_not['query']}"
+        )
+        updated_append_and_not = apiobj.saved_query.update_query(
+            sq=FixtureData.name,
+            wiz_entries=wiz_append_and_not_entries,
+            append=True,
+            append_and_flag=True,
+            append_not_flag=True,
+            as_dataclass=True,
+        )
+        assert updated_append_and_not.query == wiz_append_and_not_exp_query
+
+    def test_update_sort(self, apiobj, sq_fixture):
+        field = "specific_data.data.last_seen"
+        get_schema(apiobj=apiobj, field=field)
+
+        updated = apiobj.saved_query.update_sort(sq=sq_fixture, field=field, descending=False)
+        assert updated["view"]["sort"]["field"] == field
+        assert updated["view"]["sort"]["desc"] is False
+
+    def test_update_sort_empty(self, apiobj, sq_fixture):
+        updated = apiobj.saved_query.update_sort(sq=sq_fixture, field="", descending=True)
+        assert updated["view"]["sort"]["field"] == ""
+        assert updated["view"]["sort"]["desc"] is True
+
+    def test_update_copy(self, apiobj, sq_fixture):
+        add = random_string(6)
+        new_value = f"{FixtureData.name} {add}"
+        updated = apiobj.saved_query.copy(
+            sq=FixtureData.name, name=new_value, private=True, asset_scope=False, as_dataclass=True
+        )
+        assert updated.name == new_value
+        assert updated.private is True
+        apiobj.saved_query.delete_by_name(value=updated.name)
+
+    def test_get_by_multi_not_found(self, apiobj, sq_fixture):
+        with pytest.raises(SavedQueryNotFoundError):
+            apiobj.saved_query.get_by_multi(sq="i do not exist, therefore i am not")
+
+    def test_get_by_multi_bad_type(self, apiobj, sq_fixture):
+        with pytest.raises(ApiError):
+            apiobj.saved_query.get_by_multi(sq=222222222)
+
+    def test_get_by_multi(self, apiobj, sq_fixture):
+        sqs = apiobj.saved_query.get(as_dataclass=True)
+        by_name_str = apiobj.saved_query.get_by_multi(
+            sq=sq_fixture["name"], sqs=sqs, as_dataclass=True
+        )
+        assert by_name_str.uuid == sq_fixture["uuid"]
+
+        by_uuid_str = apiobj.saved_query.get_by_multi(
+            sq=sq_fixture["uuid"], sqs=sqs, as_dataclass=True
+        )
+        assert by_uuid_str.uuid == sq_fixture["uuid"]
+
+        by_dict = apiobj.saved_query.get_by_multi(sq=sq_fixture, sqs=sqs, as_dataclass=True)
+        assert by_dict.uuid == sq_fixture["uuid"]
+
+        by_dataclass = apiobj.saved_query.get_by_multi(sq=by_dict, sqs=sqs, as_dataclass=True)
+        assert by_dataclass.uuid == sq_fixture["uuid"]
+
+    def test_delete_not_found(self, apiobj):
+        with pytest.raises(SavedQueryNotFoundError):
+            apiobj.saved_query.delete(rows="i do not exist, therefore i am not")
+
+    def test_delete_not_found_no_errors(self, apiobj):
+        ret = apiobj.saved_query.delete(rows="i do not exist, therefore i am not", errors=False)
+        assert ret == []
+
+    def test_delete(self, apiobj, sq_fixture_wiz):
+        sq_fixture_wiz.document_meta = {}
+        ret = apiobj.saved_query.delete(
+            rows=[sq_fixture_wiz, sq_fixture_wiz.name], as_dataclass=True
+        )
+        for x in ret:
+            x.document_meta = {}
+        assert isinstance(ret, list) and len(ret) == 1
+        assert ret[0] == sq_fixture_wiz
+
+    @pytest.fixture(scope="function")
+    def sq_fixture_wiz(self, apiobj):
         get_schema(apiobj=apiobj, field="specific_data.data.last_seen")
-        field_simple = apiobj.FIELD_SIMPLE
-
-        name = "badwolf torked"
-        fields = ["adapters", "last_seen", "id", field_simple]
-
-        sort_field = field_simple
-        # colfilters = {field_simple: "a"}
-        sort_desc = False
-        gui_page_size = GUI_PAGE_SIZES[-1]
-        tags = ["badwolf1", "badwolf2"]
-        description = "badwolf torked"
-        query = QUERIES["not_last_seen_day"]
 
         try:
-            apiobj.saved_query.delete_by_name(value=name)
-        except NotFoundError:
+            apiobj.saved_query.delete_by_name(value=FixtureData.wiz_name)
+        except SavedQueryNotFoundError:
             pass
 
         row = apiobj.saved_query.add(
-            name=name,
-            fields=fields,
-            sort_field=sort_field,
-            sort_descending=sort_desc,
-            # column_filters=colfilters,
-            gui_page_size=gui_page_size,
-            tags=tags,
-            description=description,
-            query=query,
+            name=FixtureData.wiz_name,
+            fields=FixtureData.fields + [apiobj.FIELD_SIMPLE],
+            sort_field=apiobj.FIELD_SIMPLE,
+            sort_descending=FixtureData.sort_desc,
+            gui_page_size=FixtureData.gui_page_size,
+            tags=FixtureData.tags,
+            description=FixtureData.description,
+            wiz_entries=FixtureData.wiz_entries,
+            as_dataclass=True,
         )
-        validate_sq(row)
 
-        assert row["name"] == name
-        assert row["query_type"] == "saved"
-        assert row["tags"] == tags
-        assert row["description"] == description
-        assert row["private"] is False
-        assert row["view"]["query"]["filter"] == query
-        assert row["view"]["query"]["onlyExpressionsFilter"] == query
-        assert row["view"]["query"]["expressions"] == []
-        assert row["view"]["pageSize"] == gui_page_size
-        # assert row["view"]["colFilters"] == colfilters
-        assert row["view"]["sort"]["field"] == sort_field
-        assert row["view"]["sort"]["desc"] == sort_desc
+        assert row.name == FixtureData.wiz_name
+        assert row.tags == FixtureData.tags
+        assert row.description == FixtureData.description
+        assert row.private is False
+        assert row.query == FixtureData.query
+        assert row.query_expr == FixtureData.query
+        assert row.expressions
+        assert row.page_size == FixtureData.gui_page_size
+        assert row.sort_field == apiobj.FIELD_SIMPLE
+        assert row.sort_descending == FixtureData.sort_desc
 
         yield row
 
         try:
-            apiobj.saved_query.delete_by_name(value=name)
-        except NotFoundError:
+            apiobj.saved_query._delete(uuid=row.uuid)
+        except Exception:
+            pass
+
+    @pytest.fixture(scope="function")
+    def sq_fixture(self, apiobj):
+        get_schema(apiobj=apiobj, field="specific_data.data.last_seen")
+
+        try:
+            apiobj.saved_query.delete_by_name(value=FixtureData.name)
+        except SavedQueryNotFoundError:
+            pass
+
+        row = apiobj.saved_query.add(
+            name=FixtureData.name,
+            fields=FixtureData.fields + [apiobj.FIELD_SIMPLE],
+            sort_field=apiobj.FIELD_SIMPLE,
+            sort_descending=FixtureData.sort_desc,
+            gui_page_size=FixtureData.gui_page_size,
+            tags=FixtureData.tags,
+            description=FixtureData.description,
+            query=FixtureData.query,
+        )
+
+        uuid = row["uuid"]
+        validate_sq(row)
+
+        assert row["name"] == FixtureData.name
+        assert row["query_type"] == "saved"
+        assert row["tags"] == FixtureData.tags
+        assert row["description"] == FixtureData.description
+        assert row["private"] is False
+        assert row["view"]["query"]["filter"] == FixtureData.query
+        assert row["view"]["query"]["onlyExpressionsFilter"] == FixtureData.query
+        assert row["view"]["query"]["expressions"] == []
+        assert row["view"]["pageSize"] == FixtureData.gui_page_size
+        assert row["view"]["sort"]["field"] == apiobj.FIELD_SIMPLE
+        assert row["view"]["sort"]["desc"] == FixtureData.sort_desc
+
+        yield row
+
+        try:
+            apiobj.saved_query._delete(uuid=uuid)
+        except Exception:
             pass
 
     def test_add_remove(self, apiobj, sq_fixture):
@@ -145,7 +498,7 @@ class SavedQueryPublic:
         assert isinstance(row, dict)
         assert row["uuid"] == sq_fixture["uuid"]
 
-        with pytest.raises(NotFoundError):
+        with pytest.raises(SavedQueryNotFoundError):
             apiobj.saved_query.get_by_name(value=sq_fixture["name"])
 
     def test_add_error_no_fields(self, apiobj):
@@ -160,21 +513,26 @@ class SavedQueryPublic:
         with pytest.raises(ApiError):
             apiobj.saved_query.add(name=name, fields=fields, sort_field=sort_field)
 
-    def test_add_error_bad_colfilter(self, apiobj):
-        name = "badwolf_ttttttttttt"
-        fields = "last_seen"
-        colfilters = {"badwolf": "badwolf"}
-        with pytest.raises(ApiError):
-            apiobj.saved_query.add(name=name, fields=fields, column_filters=colfilters)
 
-
-class TestSavedQueryDevices(SavedQueryPrivate, SavedQueryPublic):
+class TestSavedQueryDevicesPrivate(SavedQueryPrivate):
     @pytest.fixture(scope="class")
     def apiobj(self, api_devices):
         return api_devices
 
 
-class TestSavedQueryUsers(SavedQueryPrivate, SavedQueryPublic):
+class TestSavedQueryDevicesPublic(SavedQueryPublic):
+    @pytest.fixture(scope="class")
+    def apiobj(self, api_devices):
+        return api_devices
+
+
+class TestSavedQueryUsersPrivate(SavedQueryPrivate):
+    @pytest.fixture(scope="class")
+    def apiobj(self, api_users):
+        return api_users
+
+
+class TestSavedQueryUsersPublic(SavedQueryPublic):
     @pytest.fixture(scope="class")
     def apiobj(self, api_users):
         return api_users
@@ -481,6 +839,16 @@ def validate_sq(asset):
     for qexpr in qexprs:
         validate_qexpr(qexpr, asset)
 
+    # 4.5: 2022/02/07
+    assetConditionExpressions = view.pop("assetConditionExpressions", [])
+    assert isinstance(assetConditionExpressions, list)
+    assetExcludeAdapters = view.pop("assetExcludeAdapters", [])
+    assert isinstance(assetExcludeAdapters, list)
+
     assert not query, list(query)
     assert not view, list(view)
+
+    document_meta = asset.pop("document_meta", {})
+    assert isinstance(document_meta, dict)
+
     assert not asset, list(asset)

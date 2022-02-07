@@ -3,6 +3,7 @@
 import copy
 
 import pytest
+
 from axonius_api_client.api import json_api
 from axonius_api_client.constants.fields import AGG_ADAPTER_ALTS, AGG_ADAPTER_NAME
 from axonius_api_client.exceptions import ApiError, NotFoundError
@@ -402,7 +403,7 @@ class FieldsPublic:
         assert isinstance(part_of_table, bool)
 
         if is_complex:
-            if name != "all":
+            if name != "all" and not name.endswith("raw_data"):
                 assert sub_fields
 
             for sub_field in sub_fields:
@@ -625,7 +626,14 @@ class FieldsPublic:
         result = apiobj.fields.validate()
         assert exp == result
 
-    def test_validate_no_fields_error(self, apiobj):
+    def test_validate_fields_error_true(self, apiobj):
+        with pytest.raises(ApiError):
+            apiobj.fields.validate(fields_default=False, fields_error=True)
+
+        with pytest.raises(NotFoundError):
+            apiobj.fields.validate(fields=["xxx"], fields_default=False, fields_error=True)
+
+    def test_validate_fields_error_false(self, apiobj):
         fields = apiobj.fields.validate(fields_default=False, fields_error=False)
         assert not fields
 
@@ -642,13 +650,35 @@ class FieldsPublic:
             apiobj.fields.validate(fields_default=False)
 
 
-class TestFieldsDevices(FieldsPrivate, FieldsPublic):
+class TestFieldsDevicesPrivate(FieldsPrivate):
+    @pytest.fixture(scope="class")
+    def apiobj(self, api_devices):
+        return api_devices
+
+    def test_validate_fuzzy_str(self, apiobj):
+        get_schema(apiobj=apiobj, field="specific_data.data.os.type")
+        result = apiobj.fields.validate(fields_fuzzy="os.type", fields_default=False)
+        assert all(["os.type" in x for x in result])
+
+    def test_validate_fuzzy_fail(self, apiobj):
+        with pytest.raises(NotFoundError) as exc:
+            apiobj.fields.validate(fields="os", fields_default=False)
+        assert "Maybe you meant" in str(exc.value)
+
+
+class TestFieldsDevicesPublic(FieldsPublic):
     @pytest.fixture(scope="class")
     def apiobj(self, api_devices):
         return api_devices
 
 
-class TestFieldsUsers(FieldsPrivate, FieldsPublic):
+class TestFieldsUsersPrivate(FieldsPrivate):
+    @pytest.fixture(scope="class")
+    def apiobj(self, api_users):
+        return api_users
+
+
+class TestFieldsUsersPublic(FieldsPublic):
     @pytest.fixture(scope="class")
     def apiobj(self, api_users):
         return api_users

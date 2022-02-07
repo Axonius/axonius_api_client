@@ -81,6 +81,11 @@ class AuditLog(BaseModel):
     user: str
 
     @staticmethod
+    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+        """Pass."""
+        return AuditLogSchema
+
+    @staticmethod
     def _search_properties() -> List[str]:
         return [
             "action",
@@ -140,22 +145,17 @@ class AuditLog(BaseModel):
         """Pass."""
         valid = self._search_properties()
 
+        invalids = [x for x in kwargs if x not in valid]
+        if invalids:
+            raise ApiError(f"Invalid properties {invalids!r}, must be one of {', '.join(valid)}")
+
         all_searches = []
         hits = []
         for prop, searches in kwargs.items():
-            if prop not in valid:
-                err = f"Invalid property {prop!r}, must be one of {', '.join(valid)}"
-                raise ApiError(err)
-
             searches = listify(searches)
             all_searches += searches
-
             value = getattr(self, prop) or ""
-
             if any([re.search(x, value, re.I) for x in searches]):
                 hits.append({"propery": prop, "value": value})
 
-        if hits or not all_searches:
-            return True
-
-        return False
+        return True if (hits or not all_searches) else False

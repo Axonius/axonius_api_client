@@ -13,7 +13,7 @@ LOGGER = logging.getLogger("axonius_api_client.features")
 
 
 @dataclasses.dataclass
-class FeatureEnabled(BaseData):
+class FeatureEnabled(BaseData):  # pragma: no cover
     """Pass."""
 
     result: bool
@@ -43,7 +43,7 @@ class FeatureEnabled(BaseData):
 
 
 @dataclasses.dataclass
-class Feature(BaseData):
+class Feature(BaseData):  # pragma: no cover
     """Pass."""
 
     name: str
@@ -121,7 +121,7 @@ class Feature(BaseData):
 
 
 @dataclasses.dataclass
-class Features(BaseData):
+class Features(BaseData):  # pragma: no cover
     """Pass."""
 
     @classmethod
@@ -129,6 +129,8 @@ class Features(BaseData):
         """Pass."""
         return [x.default for x in cls.get_fields()]
 
+    # built into product as of 4.4
+    '''
     raw_data: Feature = Feature(
         name="raw_data",
         version_product_min="4.4",
@@ -153,3 +155,4 @@ axonshell users get --field aws:raw_data
 
 """,
     )
+    '''

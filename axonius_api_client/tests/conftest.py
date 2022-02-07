@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 """Conf for py.test."""
 import os
+import pathlib
 
 import pytest
+
 from axonius_api_client.api import (
     ActivityLogs,
     Adapters,
@@ -11,9 +13,11 @@ from axonius_api_client.api import (
     Enforcements,
     Instances,
     Meta,
+    OpenAPISpec,
     RemoteSupport,
     SettingsGlobal,
     SettingsGui,
+    SettingsIdentityProviders,
     SettingsLifecycle,
     Signup,
     SystemRoles,
@@ -22,19 +26,19 @@ from axonius_api_client.api import (
     Wizard,
     WizardCsv,
     WizardText,
-    OpenAPISpec
 )
 from axonius_api_client.api.adapters import Cnx
 from axonius_api_client.api.assets import Fields, Labels, SavedQuery
 from axonius_api_client.constants.adapters import CSV_ADAPTER
 
 from .meta import CSV_FILECONTENT_STR, CSV_FILENAME, USER_NAME
-from .utils import (check_apiobj, check_apiobj_children, check_apiobj_xref,
-                    get_auth, get_url)
+from .utils import check_apiobj, check_apiobj_children, check_apiobj_xref, get_auth, get_url
 
 AX_URL = os.environ.get("AX_URL", None) or None
 AX_KEY = os.environ.get("AX_KEY", None) or None
 AX_SECRET = os.environ.get("AX_SECRET", None) or None
+ARTIFACTS = pathlib.Path(__file__).parent.parent.parent / "artifacts"
+os.environ.setdefault("AX_LOG_FILE_PATH", str(ARTIFACTS))
 
 
 def pytest_addoption(parser):
@@ -59,18 +63,6 @@ def pytest_addoption(parser):
         default=AX_SECRET,
         required=not bool(AX_SECRET),
         help="API secret for Axonius API",
-    )
-
-
-def pytest_configure(config):
-    """Ini file additions."""
-    config.addinivalue_line("filterwarnings", "error::axonius_api_client.exceptions.AxonWarning")
-    config.addinivalue_line(
-        "filterwarnings", "default::axonius_api_client.exceptions.JsonApiIncorrectType"
-    )
-    config.addinivalue_line("filterwarnings", "ignore::urllib3.exceptions.InsecureRequestWarning")
-    config.addinivalue_line(
-        "filterwarnings", "ignore::marshmallow.warnings.RemovedInMarshmallow4Warning"
     )
 
 
@@ -216,6 +208,15 @@ def api_settings_gui(request):
     """Test utility."""
     auth = get_auth(request)
     obj = SettingsGui(auth=auth)
+    check_apiobj(authobj=auth, apiobj=obj)
+    return obj
+
+
+@pytest.fixture(scope="session")
+def api_settings_ip(request):
+    """Test utility."""
+    auth = get_auth(request)
+    obj = SettingsIdentityProviders(auth=auth)
     check_apiobj(authobj=auth, apiobj=obj)
     return obj
 

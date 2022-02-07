@@ -33,6 +33,3 @@ KEY_MAP_SCHEMA: List[Tuple[str, Optional[str], int]] = [
     ("format", "Format", 0),
 ]
 """Tablize map of field name to user friendly title for config schemas."""
-
-TABLE_FMT: str = "simple"
-"""Default table format to use."""

@@ -16,6 +16,8 @@ from ..exceptions import (
 from ..tools import coerce_int, is_int, join_kv, json_load
 from .tables import tablize_schemas
 
+HIDDEN_KEYS = ["secret", "key", "password"]
+
 
 def config_check(
     value: str,
@@ -276,7 +278,7 @@ def config_build(
             new_config[name] = old_config[name]
         elif name in new_config:
             value = new_config[name]
-            if check:
+            if check:  # pragma: no cover
                 value = config_check(value=value, schema=schema, source=source, callbacks=callbacks)
             new_config[name] = value
     return new_config
@@ -460,16 +462,20 @@ def parse_schema(raw: dict) -> dict:
     Args:
         raw: original schema
     """
+    if not raw:  # pragma: no cover
+        return {}
+
     parsed = {}
+    schemas = raw["items"]
+    required = raw["required"]
 
-    if raw:
-        schemas = raw["items"]
-        required = raw["required"]
-
-        for schema in schemas:
-            name = schema["name"]
-            schema["required"] = name in required
-            parsed[name] = schema
+    for schema in schemas:
+        name = schema["name"]
+        schema["required"] = name in required
+        schema["hide_value"] = (
+            schema.get("format", "") == "password" or schema["name"] in HIDDEN_KEYS
+        )
+        parsed[name] = schema
 
     return parsed
 

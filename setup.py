@@ -37,6 +37,7 @@ install_requires = [
     "marshmallow>=3.10.0",
     "marshmallow-jsonapi>=0.24.0",
     "dataclasses-json>=0.5.2",
+    "pyOpenSSL>=21.0.0",
 ]
 
 setup(

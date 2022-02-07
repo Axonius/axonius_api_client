@@ -19,15 +19,13 @@ class MetadataSchema(BaseSchemaJson):
         return Metadata
 
     @classmethod
-    def load_response(cls, data: dict, http: Http, api_endpoint, **kwargs):
+    def load_response(cls, data: dict, http: Http, **kwargs):
         """Pass."""
-        cls._check_version(data=data, api_endpoint=api_endpoint)
-
         # PBUG: Metadata returns None for data
         if data["data"] is None:
             data["data"] = {"type": cls.Meta.type_, "attributes": {}}
 
-        return super().load_response(data=data, http=http, api_endpoint=api_endpoint, **kwargs)
+        return super().load_response(data=data, http=http, **kwargs)
 
     class Meta:
         """Pass."""
@@ -202,7 +200,7 @@ class PrivateRequest(BaseModel):
 class PrivateRequestSchema(BaseSchemaJson):
     """Pass."""
 
-    private = marshmallow_jsonapi.fields.Bool(missing=False)
+    private = marshmallow_jsonapi.fields.Bool(load_default=False, dump_default=False)
 
     class Meta:
         """Pass."""

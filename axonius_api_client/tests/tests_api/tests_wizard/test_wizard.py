@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Test suite for axonius_api_client.wizard.wizard"""
 import pytest
+
 from axonius_api_client.api.wizards import Wizard
 from axonius_api_client.constants.fields import ALL_NAME, Operators
 from axonius_api_client.constants.wizards import Entry, Flags, Results, Types
@@ -57,7 +58,7 @@ class TestData:
                 "compOp": "exists",
                 "field": f"{simple}",
                 "fieldType": "axonius",
-                "filter": f'(({simple} == ({{"$exists":true,"$ne":""}})))',
+                "filter": f'(("{simple}" == ({{"$exists":true,"$ne":""}})))',
                 "filteredAdapters": None,
                 "leftBracket": False,
                 "logicOp": "",
@@ -82,7 +83,7 @@ class TestData:
                 "compOp": "contains",
                 "field": f"{simple}",
                 "fieldType": "axonius",
-                "filter": f'and ({simple} == regex("test", "i"))',
+                "filter": f'and ("{simple}" == regex("test", "i"))',
                 "filteredAdapters": None,
                 "i": 1,
                 "leftBracket": False,
@@ -108,7 +109,7 @@ class TestData:
                 "compOp": "contains",
                 "field": f"{simple}",
                 "fieldType": "axonius",
-                "filter": f'or ({simple} == regex("dev", "i"))',
+                "filter": f'or ("{simple}" == regex("dev", "i"))',
                 "filteredAdapters": None,
                 "i": 2,
                 "leftBracket": False,
@@ -135,7 +136,7 @@ class TestData:
                 "field": f"{cplex}",
                 "fieldType": "axonius",
                 "filter": (
-                    f'and (({cplex} == ({{"$exists":true,"$ne":[]}})) and ' f"{cplex} != [])"
+                    f'and (("{cplex}" == ({{"$exists":true,"$ne":[]}})) and "{cplex}" != [])'
                 ),
                 "filteredAdapters": None,
                 "i": 3,
@@ -149,7 +150,7 @@ class TestData:
                 "bracketWeight": 0,
                 "children": [
                     {
-                        "condition": f'({sub} == regex("boom", "i"))',
+                        "condition": f'("{sub}" == regex("boom", "i"))',
                         "expression": {
                             "compOp": "contains",
                             "field": f"{sub}",
@@ -162,7 +163,7 @@ class TestData:
                 "compOp": "",
                 "field": f"{cplex}",
                 "fieldType": "axonius",
-                "filter": (f'and not ({cplex} == match([({sub} == regex("boom", "i"))]))'),
+                "filter": (f'and not ("{cplex}" == match([("{sub}" == regex("boom", "i"))]))'),
                 "filteredAdapters": None,
                 "i": 4,
                 "leftBracket": False,
@@ -174,10 +175,10 @@ class TestData:
             },
         ]
         exp_query = (
-            f'(({simple} == ({{"$exists":true,"$ne":""}}))) and ({simple} == '
-            f'regex("test", "i")) or ({simple} == regex("dev", "i")) and (({cplex} '
-            f'== ({{"$exists":true,"$ne":[]}})) and {cplex} != []) and not ({cplex} '
-            f'== match([({sub} == regex("boom", "i"))]))'
+            f'(("{simple}" == ({{"$exists":true,"$ne":""}}))) and ("{simple}" == '
+            f'regex("test", "i")) or ("{simple}" == regex("dev", "i")) and (("{cplex}" '
+            f'== ({{"$exists":true,"$ne":[]}})) and "{cplex}" != []) and not ("{cplex}" '
+            f'== match([("{sub}" == regex("boom", "i"))]))'
         )
         return entries, exp_exprs, exp_query
 
@@ -690,7 +691,7 @@ class TestParseSimple(TestWizard):
             "compOp": "contains",
             "field": field,
             "fieldType": "axonius",
-            "filter": f'({field} == regex("blah", "i"))',
+            "filter": f'("{field}" == regex("blah", "i"))',
             "filteredAdapters": None,
             "leftBracket": False,
             "logicOp": "",
@@ -715,7 +716,7 @@ class TestParseComplex(TestWizard):
             "bracketWeight": 0,
             "children": [
                 {
-                    "condition": f'({sub} == regex("boom", "i"))',
+                    "condition": f'("{sub}" == regex("boom", "i"))',
                     "expression": {
                         "compOp": "contains",
                         "field": sub,
@@ -725,7 +726,7 @@ class TestParseComplex(TestWizard):
                     "i": 0,
                 },
                 {
-                    "condition": f'(({sub} == ({{"$exists":true,"$ne":""}})))',
+                    "condition": f'(("{sub}" == ({{"$exists":true,"$ne":""}})))',
                     "expression": {
                         "compOp": "exists",
                         "field": sub,
@@ -739,7 +740,7 @@ class TestParseComplex(TestWizard):
             "field": field,
             "fieldType": "axonius",
             "filter": (
-                f'({field} == match([({sub} == regex("boom", "i")) and (({sub} == '
+                f'("{field}" == match([("{sub}" == regex("boom", "i")) and (("{sub}" == '
                 '({"$exists":true,"$ne":""})))]))'
             ),
             "filteredAdapters": None,
@@ -795,7 +796,7 @@ class TestParseExprs(TestWizard):
                 "compOp": "contains",
                 "field": field,
                 "fieldType": "axonius",
-                "filter": f'({field} == regex("blah", "i"))',
+                "filter": f'("{field}" == regex("blah", "i"))',
                 "filteredAdapters": None,
                 "leftBracket": False,
                 "logicOp": "",

@@ -2,8 +2,7 @@
 """Command line interface for Axonius API Client."""
 import click
 
-from ...context import AliasedGroup
-from . import cmd_get
+from ...context import AliasedGroup, load_cmds
 
 
 @click.group(cls=AliasedGroup)
@@ -11,4 +10,4 @@ def activity_logs():
     """Group: Work with Activity Logs."""
 
 
-activity_logs.add_command(cmd_get.cmd)
+load_cmds(path=__file__, package=__package__, group=activity_logs)

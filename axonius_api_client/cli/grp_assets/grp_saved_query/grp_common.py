@@ -1,144 +1,128 @@
 # -*- coding: utf-8 -*-
 """Command line interface for Axonius API Client."""
-from ....constants.api import GUI_PAGE_SIZES
-from ....tools import json_dump, listify
-from ...context import SplitEquals, click
-from ...options import int_callback
 
-EXPORT_FORMAT = click.option(
+from ....constants.api import TABLE_FORMAT
+from ....parsers.tables import tablize
+from ....tools import json_dump, listify
+from ...context import click
+from ...options import TABLE_FMT
+
+
+def export_str_names(data, **kwargs):
+    """Pass."""
+    return "\n".join([x.name for x in listify(data)])
+
+
+def export_str(data, **kwargs):
+    """Pass."""
+
+    def getstr(obj):
+        return "\n".join(
+            [
+                "-----------------------------------------------",
+                f"Name: {obj.name}",
+                f"UUID: {obj.uuid}",
+                f"Description: {obj.description}",
+                f"Query: {obj.query}",
+                f"Tags: {obj.tags}",
+                f"Fields: {obj.fields}",
+                f"Flags: {', '.join(obj.flags_txt)}",
+                f"Updated: {obj.last_updated_str}",
+            ]
+        )
+
+    return "\n".join(getstr(x) for x in listify(data))
+
+
+def export_table(data, table_format=TABLE_FORMAT, **kwargs):
+    """Pass."""
+    return tablize(value=[x.to_tablize() for x in listify(data)], fmt=table_format)
+
+
+def export_json(data, **kwargs):
+    """Pass."""
+    data = data[0] if isinstance(data, list) and len(data) == 1 else data
+    return json_dump([x.to_dict() for x in data] if isinstance(data, list) else data.to_dict())
+
+
+EXPORT_FORMATS: dict = {
+    "json": export_json,
+    "str-names": export_str_names,
+    "str": export_str,
+    "table": export_table,
+}
+
+OPT_EXPORT = click.option(
     "--export-format",
     "-xf",
     "export_format",
-    type=click.Choice(["json", "str", "str-names"]),
+    type=click.Choice(list(EXPORT_FORMATS)),
     help="Format of to export data in",
-    default="str",
+    default="table",
     show_envvar=True,
     show_default=True,
 )
-OVERWRITE = click.option(
+
+OPTS_EXPORT = [
+    OPT_EXPORT,
+    TABLE_FMT,
+]
+
+OPT_OVERWRITE = click.option(
     "--overwrite/--no-overwrite",
     "-ow/-now",
     "overwrite",
     default=False,
-    help="Overwrite pre-existing query.",
-    is_flag=True,
+    help="If a Saved Query exists with same name, overwrite it.",
     show_envvar=True,
     show_default=True,
 )
-ABORT = click.option(
-    "--abort/--no-abort",
+
+OPT_UPDATE_SQ = click.option(
+    "--saved-query",
+    "-sq",
+    "sq",
+    help="Name or UUID of saved query to update",
+    required=True,
+    show_envvar=True,
+    show_default=True,
+)
+OPT_SQ_SELECT_OLD = click.option(
+    "--name",
+    "-n",
+    "value",
+    help="Name or UUID of saved query",
+    required=True,
+    show_envvar=True,
+    show_default=True,
+)
+
+OPT_UPDATE_VALUE = click.option(
+    "--value",
+    "-v",
+    "value",
+    help="Value to update",
+    required=True,
+    show_envvar=True,
+    show_default=True,
+)
+
+OPT_UPDATE_APPEND = click.option(
+    "--append/--no-append",
     "-a/-na",
-    "abort",
-    help="Stop adding saved queries if an error happens",
-    required=False,
-    default=True,
+    "append",
+    default=False,
+    help="Append supplied value to value from existing Saved Query.",
     show_envvar=True,
     show_default=True,
 )
-SQ_OPTS = [
-    click.option(
-        "--tag",
-        "-t",
-        "tags",
-        help="Tags to set for saved query",
-        multiple=True,
-        show_envvar=True,
-        show_default=True,
-    ),
-    click.option(
-        "--sort-field",
-        "-sf",
-        "sort_field",
-        help="Column to sort data on.",
-        metavar="ADAPTER:FIELD",
-        show_envvar=True,
-        show_default=True,
-    ),
-    click.option(
-        "--sort-ascending",
-        "-sd",
-        "sort_descending",
-        default=True,
-        help="Sort --sort-field ascending.",
-        is_flag=True,
-        show_envvar=True,
-    ),
-    click.option(
-        "--column-filter",
-        "-cf",
-        "column_filters",
-        help="Columns to filter in the format of adapter:field=value.",
-        metavar="ADAPTER:FIELD=value",
-        type=SplitEquals(),
-        multiple=True,
-        show_envvar=True,
-    ),
-    click.option(
-        "--gui-page-size",
-        "-gps",
-        default=format(GUI_PAGE_SIZES[0]),
-        help="Number of rows to show per page in GUI.",
-        type=click.Choice([format(x) for x in GUI_PAGE_SIZES]),
-        callback=int_callback,
-        show_envvar=True,
-        show_default=True,
-    ),
-    click.option(
-        "--description",
-        "-d",
-        "description",
-        help="Description to set on saved query",
-        show_envvar=True,
-        show_default=True,
-        default=None,
-    ),
-]
 
-
-def handle_export(ctx, rows, export_format):
-    """Pass."""
-    if export_format == "json":
-        # convert the list into a single item if only one item
-        if isinstance(rows, list) and len(rows) == 1:
-            rows = rows[0]
-
-        click.secho(json_dump(rows))
-        return 0
-
-    if export_format == "str-names":
-        names = "\n".join([x["name"] for x in listify(rows)])
-        click.secho(names)
-        return 0
-
-    if export_format == "str":
-        for row in listify(rows):
-            name = row["name"]
-            description = row.get("description", "")
-            query = row["view"].get("query", {}).get("filter", None)
-
-            tags = "\n  " + "\n  ".join(row.get("tags", []))
-            fields = "\n  " + "\n  ".join(row["view"].get("fields", []))
-
-            click.secho("\n-----------------------------------------------")
-            click.secho(f"Name: {name}")
-            click.secho(f"Description: {description}")
-            click.secho(f"Query: {query}")
-            click.secho(f"Tags: {tags}")
-            click.secho(f"Fields: {fields}")
-
-        return 0
-
-    return 1
-
-
-def check_sq_exist(ctx, apiobj, name, overwrite):
-    """Pass."""
-    try:
-        apiobj.saved_query.get_by_name(value=name)
-    except Exception:
-        ctx.obj.echo_ok(f"Saved query {name!r} does not exist, will add")
-    else:
-        if not overwrite:
-            ctx.obj.echo_error(f"Saved Query named {name!r} exists and overwrite is False")
-        else:
-            ctx.obj.echo_ok(f"Saved query {name!r} exists and overwrite is True, will add")
+OPT_UPDATE_REMOVE = click.option(
+    "--remove/--no-remove",
+    "-r/-nr",
+    "remove",
+    default=False,
+    help="Remove any supplied values from existing Saved Query.",
+    show_envvar=True,
+    show_default=True,
+)

@@ -8,14 +8,15 @@ import datetime
 import io
 from typing import Generator, List, Optional, Type, Union
 
-import axonius_api_client as axonapi
 import click
 import tabulate
+
+import axonius_api_client as axonapi
 from axonius_api_client.api import ApiEndpoint
 from axonius_api_client.api.json_api.base import BaseModel, BaseSchema
-from axonius_api_client.api.json_api.custom_fields import (SchemaDatetime,
-                                                           get_field_dc_mm)
+from axonius_api_client.api.json_api.custom_fields import SchemaDatetime, get_field_dc_mm
 from axonius_api_client.api.mixins import ModelMixins
+
 # from axonius_api_client.api.models import (ApiEndpoint, Model, BaseModel,
 #                                            BaseSchema)
 from axonius_api_client.cli import cli, grp_adapters
@@ -24,8 +25,7 @@ from axonius_api_client.cli.options import AUTH, add_options
 from axonius_api_client.constants.tables import TABLE_FMT
 from axonius_api_client.exceptions import NotFoundError
 from axonius_api_client.parsers.tables import tablize
-from axonius_api_client.tools import (coerce_bool, coerce_int, dt_now,
-                                      dt_parse, json_dump, listify)
+from axonius_api_client.tools import coerce_bool, coerce_int, dt_now, dt_parse, json_dump, listify
 
 CLI_MODE: bool = True
 """This controls whether to use the click cli or run as a standard program."""

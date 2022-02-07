@@ -12,10 +12,8 @@ OPTIONS = [*AUTH]
 def cmd(ctx, url, key, secret, **kwargs):
     """Get the default fields (columns) for assets."""
     p_grp = ctx.parent.command.name
-
     client = ctx.obj.start_client(url=url, key=key, secret=secret)
     apiobj = getattr(client, p_grp)
-    rows = apiobj.fields_default
-
-    for row in rows:
-        click.secho(row)
+    content = "\n".join(apiobj.fields_default)
+    click.secho(content)
+    ctx.exit(0)

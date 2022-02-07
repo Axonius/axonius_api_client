@@ -1,8 +1,15 @@
 # -*- coding: utf-8 -*-
 """Exceptions and warnings."""
-from typing import Optional
+from typing import List, Optional, Union
 
 import requests
+
+
+def get_exc_str(exc: Optional[Exception] = None) -> str:
+    """Pass."""
+    if exc:
+        return f"Original exception {type(exc)}: {exc}"
+    return ""
 
 
 class AxonWarning(Warning):
@@ -13,23 +20,12 @@ class ApiWarning(AxonWarning):
     """Warnings for API models."""
 
 
-class UnknownFieldSchema(ApiWarning):
-    """Warning for unknown field schema mappings."""
-
-
-class JsonApiIncorrectType(ApiWarning):
+class GuiQueryWizardWarning(ApiWarning):
     """Pass."""
 
-    @staticmethod
-    def get_msg(data, item, schema, api_endpoint):
-        """Pass."""
-        bad_type = item.get("type")
-        msg = [
-            f"JSON API type mismatch in {schema}",
-            f"{schema.Meta.type_} != {bad_type}",
-            f"While in endpoint {api_endpoint}",
-        ]
-        return "\n\n".join(msg)
+
+class UnknownFieldSchema(ApiWarning):
+    """Warning for unknown field schema mappings."""
 
 
 class AxonError(Exception):
@@ -50,6 +46,38 @@ class AuthError(AxonError):
 
 class NotFoundError(ApiError):
     """Error when something is not found."""
+
+
+class SavedQueryNotFoundError(NotFoundError):
+    """Error when something is not found."""
+
+    def __init__(self, details: str, sqs: List[Union[dict, object]]):
+        """Pass."""
+        from .parsers.tables import tablize_sqs
+
+        self.sqs = sqs
+        self.details = details
+        self.msg = f"Saved Query not found with {details}"
+        self.tablemsg = tablize_sqs(data=sqs, err=self.msg)
+        super().__init__(self.tablemsg)
+
+
+class SavedQueryTagsNotFoundError(SavedQueryNotFoundError):
+    """Error when something is not found."""
+
+    def __init__(self, value: List[str], valid: List[str]):
+        """Pass."""
+        self.value = value
+        self.valid = valid
+
+        value_txt = ", ".join(value)
+        valid_txt = "\n" + "\n".join(valid)
+        self.msg = f"Saved Query not found with tags: {value_txt}, valid tags:{valid_txt}"
+        super(NotFoundError, self).__init__(self.msg)
+
+
+class AlreadyExists(ApiError):
+    """Error when something exists with same name."""
 
 
 class NotLoggedIn(AuthError):
@@ -136,10 +164,7 @@ class ResponseError(ApiError):
             msg: error message to include in exception
             exc: exception that was thrown if any
         """
-        from .constants.logs import MAX_BODY_LEN
-        from .tools import json_dump, json_load, prettify_obj
-
-        msgs = []
+        from .tools import json_log
 
         url = response.url
         method = response.request.method
@@ -148,44 +173,21 @@ class ResponseError(ApiError):
         out_len = len(response.request.body or "")
         in_len = len(response.text or "")
 
-        msgs += [
-            *([f"Original exception: {exc}"] if exc else []),
-            "",
+        msg = msg or "Error in REST API response"
+        pre = [
+            msg,
+            get_exc_str(exc=exc),
             f"URL: {url!r}, METHOD: {method}",
             f"CODE: {code!r}, REASON: {reason!r}, BYTES OUT: {out_len}, BYTES IN: {in_len}",
-            "",
         ]
-        request_obj = json_load(obj=response.request.body, error=False)
-        response_obj = json_load(obj=response.text, error=False)
-
-        if isinstance(request_obj, (dict, list, tuple)):
-            msgs += ["Request Object:", json_dump(obj=request_obj, error=False)]
-        else:
-            msgs += ["Request Body:", str(request_obj)[:MAX_BODY_LEN]]
-
-        if isinstance(response_obj, (dict, list, tuple)):
-            msgs += ["Response Object:", *prettify_obj(response_obj)]
-        else:
-            msgs += ["Response Body:", str(response_obj)[:MAX_BODY_LEN]]
-
-        msg = msg or "Error in REST API response"
-        msgs = [msg, *msgs, "", msg]
-
+        middle = [
+            "Request Object:",
+            json_log(obj=response.request.body),
+            "Response Object:",
+            json_log(obj=response.text),
+        ]
+        msgs = [*pre, "", *middle, "", *pre]
         return "\n".join(msgs)
-
-    @property
-    def is_incorrect_type(self) -> bool:
-        """Pass."""
-        if self.response is not None:
-            try:
-                data = self.response.json()
-            except Exception:
-                return False
-
-            if isinstance(data, dict) and "type" in data and data["type"] == "IncorrectTypeError":
-                return True
-
-        return False
 
 
 class InvalidCredentials(ResponseError):
@@ -196,7 +198,7 @@ class ResponseNotOk(ResponseError):
     """Error if response has a status code that is an error and error_status is True."""
 
 
-class JsonInvalid(ResponseError):
+class JsonInvalidError(ResponseError):
     """Error when response has invalid JSON."""
 
 
@@ -206,6 +208,22 @@ class JsonError(ResponseError):
 
 class WizardError(ApiError):
     """Errors in query wizards."""
+
+
+class ApiAttributeExtraWarning(ApiWarning):
+    """Pass."""
+
+
+class ApiAttributeError(ApiError):
+    """Pass."""
+
+
+class ApiAttributeTypeError(ApiAttributeError):
+    """Pass."""
+
+
+class ApiAttributeMissingError(ApiAttributeError):
+    """Pass."""
 
 
 class StopFetch(ApiError):
@@ -218,84 +236,92 @@ class StopFetch(ApiError):
         super().__init__(reason)
 
 
-class ValidationError(ApiError):
+class SchemaError(ApiError):
     """Pass."""
 
-    def __init__(self, obj, schema, exc, api_endpoint, data):
+    def __init__(self, obj, schema, exc, data):
         """Pass."""
-        from .tools import json_reload, prettify_obj
+        from .tools import json_log, prettify_obj
 
         self.schema = schema
         self.exc = exc
         self.obj = obj
-        self.api_endpoint = api_endpoint
         self.data = data
 
-        errors = exc.messages
-        if isinstance(errors, dict) and "errors" in errors:
-            errors = errors["errors"]
-        self.schema_errors = prettify_obj(errors)
+        errors = []
+        if hasattr(exc, "messages"):
+            errors = exc.messages
+            if isinstance(errors, dict) and "errors" in errors:
+                errors = errors["errors"]
+            errors = prettify_obj(errors)
+
         pre = f"Schema Validation Error in {schema}"
         self.errors = [
             pre,
-            f"With data\n{json_reload(data)}",
-            f"While in {api_endpoint}",
-            f"From {obj}",
-            *self.schema_errors,
-            pre,
-        ]
-        self.msg = "\n\n".join(self.errors)
-        super().__init__(self.msg)
-
-
-class JsonApiError(ApiError):
-    """Pass."""
-
-    def __init__(self, obj, schema, exc, api_endpoint, data):
-        """Pass."""
-        from .tools import json_reload
-
-        self.schema = schema
-        self.exc = exc
-        self.obj = obj
-        self.api_endpoint = api_endpoint
-        self.data = data
-
-        pre = f"JSON API Error in {schema}: {exc}"
-
-        self.errors = [
-            pre,
-            f"With data:\n{json_reload(data)}",
-            f"While in {api_endpoint}",
-            f"From {obj}",
-            pre,
-        ]
-        self.msg = "\n\n".join(self.errors)
-        super().__init__(self.msg)
-
-
-class UnsupportedVersion(ApiError):
-    """Pass."""
-
-    def __init__(self, schema, data, api_endpoint):
-        """Pass."""
-        from .tools import json_reload
-
-        self.schema = schema
-        self.data = data
-        self.api_endpoint = api_endpoint
-        pre = "API Client version mismatch!"
-        self.errors = [
-            pre,
+            f"From object: {obj}",
+            get_exc_str(exc=exc),
             "",
-            f"With data:\n{json_reload(data)}",
-            f"With schema {schema}",
-            f"While in {api_endpoint}",
-            "",
-            "This version of the API Client only works with Axonius v4.1 or later",
-            "You need to use API client v4.10.x for this version of Axonius",
+            "While trying to load data:",
+            f"{json_log(data)}",
+            *errors,
             "",
             pre,
         ]
         self.msg = "\n".join(self.errors)
         super().__init__(self.msg)
+
+
+class RequestError(ApiError):
+    """Pass."""
+
+    def __init__(
+        self,
+        api_endpoint,
+        err: str,
+        details: Optional[List[str]] = None,
+        exc: Optional[Exception] = None,
+    ):
+        """Pass."""
+        self.api_endpoint = api_endpoint
+        self.err = err
+        self.details = details or []
+        self.exc = exc
+        self.errors = [
+            err,
+            get_exc_str(exc=exc),
+            f"While in {api_endpoint}",
+            "",
+            *details,
+            "",
+            err,
+        ]
+        self.msg = "\n".join(self.errors)
+        super().__init__(self.msg)
+
+
+class RequestMissingArgsError(RequestError):
+    """Pass."""
+
+
+class RequestObjectTypeError(RequestError):
+    """Pass."""
+
+
+class RequestFormatError(RequestError):
+    """Pass."""
+
+
+class RequestFormatPathError(RequestFormatError):
+    """Pass."""
+
+
+class RequestFormatObjectError(RequestFormatError):
+    """Pass."""
+
+
+class RequestLoadObjectError(RequestError):
+    """Pass."""
+
+
+class ResponseLoadObjectError(RequestError):
+    """Pass."""

@@ -3,7 +3,7 @@
 import pytest
 
 from axonius_api_client.api import json_api
-from axonius_api_client.exceptions import ResponseNotOk
+from axonius_api_client.exceptions import ApiError, ResponseNotOk
 
 from ..meta import EMAIL
 from ..utils import random_string
@@ -27,11 +27,21 @@ class TestSignupPrivate(TestSignup):
 
         assert "Signup already completed" in str(exc.value)
 
+    def test_status(self, apiobj):
+        ret = apiobj._status()
+        assert isinstance(ret, json_api.signup.SystemStatus)
+        assert str(ret)
+
 
 class TestSignupPublic(TestSignup):
     def test_is_signed_up(self, apiobj):
         data = apiobj.is_signed_up
         assert isinstance(data, bool) and data
+
+    def test_system_status(self, apiobj):
+        ret = apiobj.system_status
+        assert isinstance(ret, json_api.signup.SystemStatus)
+        assert str(ret)
 
     def test_signup(self, apiobj):
         with pytest.raises(ResponseNotOk) as exc:
@@ -49,6 +59,9 @@ class TestSignupPublic(TestSignup):
         assert val is False
 
         token2 = api_system_users.get_password_reset_link(name=temp_user.user_name)
+
+        with pytest.raises(ApiError) as exc:
+            apiobj.use_password_reset_token(token="XXXXXXX", password=password)
 
         with pytest.raises(ResponseNotOk) as exc:
             apiobj.use_password_reset_token(token=token2, password=password)

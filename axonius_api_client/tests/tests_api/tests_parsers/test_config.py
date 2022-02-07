@@ -247,14 +247,14 @@ def test_config_check_none_bad(schema):
 
 def test_parse_schema_req_true():
     schema = {"items": [{"name": "x"}], "required": ["x"]}
-    exp = {"x": {"name": "x", "required": True}}
+    exp = {"x": {"name": "x", "required": True, "hide_value": False}}
     result = parse_schema(raw=schema)
     assert result == exp
 
 
 def test_parse_schema_req_false():
     schema = {"items": [{"name": "x"}], "required": []}
-    exp = {"x": {"name": "x", "required": False}}
+    exp = {"x": {"name": "x", "required": False, "hide_value": False}}
     result = parse_schema(raw=schema)
     assert result == exp
 

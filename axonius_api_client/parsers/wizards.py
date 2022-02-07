@@ -6,9 +6,16 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 from cachetools import TTLCache, cached
 
 from ..exceptions import WizardError
-from ..tools import (check_empty, check_type, coerce_int_float,
-                     coerce_str_to_csv, dt_parse_tmpl, get_raw_version,
-                     parse_ip_address, parse_ip_network)
+from ..tools import (
+    check_empty,
+    check_type,
+    coerce_int_float,
+    coerce_str_to_csv,
+    dt_parse_tmpl,
+    get_raw_version,
+    parse_ip_address,
+    parse_ip_network,
+)
 
 CACHE: TTLCache = TTLCache(maxsize=1024, ttl=30)
 SQ_CACHE: TTLCache = TTLCache(maxsize=1024, ttl=30)
@@ -253,7 +260,7 @@ class WizardParser:
             value=value,
             enum=enum,
             enum_items=enum_items,
-            enum_custom=self._sq_names(),
+            enum_custom=self._sq_enum(),
             custom_id="saved query name",
         )
         return aql_value, aql_value
@@ -426,6 +433,10 @@ class WizardParser:
         """Get all Saved Query objects for this asset type."""
         return self.apiobj.saved_query.get()
 
-    def _sq_names(self) -> Dict[str, str]:
+    def _sq_enum(self) -> Dict[str, str]:
         """Get all known saved query name -> ID mappings."""
-        return {x["name"]: x["id"] for x in self._sqs()}
+        ret = {}
+        for sq in self._sqs():
+            ret[sq["name"]] = sq["id"]
+            ret[sq["uuid"]] = sq["id"]
+        return ret

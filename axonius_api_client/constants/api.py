@@ -29,7 +29,7 @@ PAGE_SIZE: int = MAX_PAGE_SIZE
 PAGE_SLEEP: int = 0
 """API wide default number of seconds to sleep between in page."""
 
-GUI_PAGE_SIZES: List[int] = [25, 50, 100]
+GUI_PAGE_SIZES: List[int] = [20, 50, 100]
 """valid page sizes for GUI page sizes for saved queries"""
 
 TIMEOUT_CONNECT: int = 5
@@ -46,3 +46,6 @@ COUNT_POLLING_ATTEMPTS: int = 1800
 
 COUNT_POLLING_SLEEP: int = 1
 """Number of seconds sleep will wait between attempts."""
+
+AS_DATACLASS: bool = False
+"""Global default for returning objects as dataclass instead of dict."""

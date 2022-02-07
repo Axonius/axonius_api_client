@@ -194,12 +194,12 @@ Example JSON input file:
 
 [
     {
-        "adapter": "ADAPTER_NAME",
+        "adapter_name": "ADAPTER_NAME",
         "config": {"domain": "HOSTNAME", "username": "USERNAME", "password": "PASSWORD"},
     },
     {
-        "adapter": "ADAPTER_NAME",
-        "node": "NODE_NAME",
+        "adapter_name": "ADAPTER_NAME",
+        "node_name": "NODE_NAME",
         "config": {"domain": "HOSTNAME", "username": "USERNAME", "password": "PASSWORD"},
         "active": "n",
         "save_and_fetch": "n"
@@ -213,6 +213,9 @@ Tips:
    "Core instance" (usually "Master").
  - the second connection supplies everything, and does not fetch the connection after adding it
    and sets the connection as inactive
+ - The schema format for this file was changed slightly in 4.20
+    - adapter key now needs to be 'adapter_name'
+    - node key now needs to be 'node_name'
 """
 
 HELPSTRS = {}

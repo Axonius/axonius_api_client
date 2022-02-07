@@ -22,23 +22,48 @@ class TestAdaptersBase:
 
 
 class TestAdaptersPrivate(TestAdaptersBase):
-    # TAKES FOREVER
-    # def test_private_get(self, apiobj):
-    #     adapters = apiobj._get()
-    #     assert isinstance(adapters, list) and adapters
-    #     for adapter in adapters:
-    #         assert isinstance(adapter, json_api.adapters.Adapter)
-    #         for adapter_node in adapter.adapter_nodes:
-    #             assert isinstance(adapter_node, json_api.adapters.AdapterNode)
-    #             an_serial = adapter_node.to_dict_old()
-    #             generic = an_serial["schemas"]["generic"]
-    #             discovery = an_serial["schemas"]["discovery"]
-    #             assert isinstance(generic, dict) and generic
-    #             assert isinstance(discovery, dict) and discovery
-    #             for adapter_node_cnx in adapter_node.cnxs:
-    #                 assert isinstance(adapter_node_cnx, json_api.adapters.AdapterNodeCnx)
-    #                 anc_serial = adapter_node_cnx.to_dict_old()
-    #                 assert isinstance(anc_serial, dict)
+    def test_private_get(self, apiobj):
+        adapters = apiobj._get(get_clients=True)
+        assert isinstance(adapters, list) and adapters
+        for adapter in adapters:
+            assert isinstance(adapter, json_api.adapters.Adapter)
+            assert str(adapter)
+            assert repr(adapter)
+            for adapter_node in adapter.adapter_nodes:
+                assert isinstance(adapter_node, json_api.adapters.AdapterNode)
+                assert str(adapter_node)
+                assert repr(adapter_node)
+
+                an_serial = adapter_node.to_dict_old()
+                generic = an_serial["schemas"]["generic"]
+                discovery = an_serial["schemas"]["discovery"]
+                assert isinstance(generic, dict)
+                assert isinstance(discovery, dict)
+                assert generic
+                assert discovery
+
+                for adapter_node_cnx in adapter_node.cnxs:
+                    assert isinstance(adapter_node_cnx, json_api.adapters.AdapterNodeCnx)
+                    anc_serial = adapter_node_cnx.to_dict_old()
+                    assert isinstance(anc_serial, dict)
+                    assert isinstance(adapter_node_cnx.label, str)
+                    assert (
+                        isinstance(adapter_node_cnx.schema_cnx, dict)
+                        and adapter_node_cnx.schema_cnx
+                    )
+                    assert (
+                        isinstance(adapter_node_cnx.schema_cnx_discovery, dict)
+                        and adapter_node_cnx.schema_cnx_discovery
+                    )
+                    assert str(adapter_node_cnx)
+                    assert repr(adapter_node_cnx)
+
+    def test_get_labels(self, apiobj):
+        ret = apiobj._get_labels()
+        assert isinstance(ret, json_api.adapters.CnxLabels)
+        assert isinstance(ret.labels, list)
+        for x in ret.labels:
+            assert isinstance(x, dict)
 
     def test_private_get_no_clients(self, apiobj):
         adapters = apiobj._get(get_clients=False)
@@ -113,15 +138,40 @@ class TestAdaptersPrivate(TestAdaptersBase):
         assert isinstance(reset_response, json_api.system_settings.SystemSettings)
         assert reset_response.config[config_key] == generic[config_key]
 
+    def test_get_basic(self, apiobj):
+        data = apiobj._get_basic()
+        assert isinstance(data, json_api.adapters.AdaptersList)
+        adapter = data.find_by_name(value=CSV_ADAPTER)
+        assert adapter == {"title": "CSV", "name_raw": "csv_adapter", "name": "csv"}
+
+        with pytest.raises(NotFoundError):
+            data.find_by_name("badwolf")
+
 
 class TestAdaptersPublic(TestAdaptersBase):
-    def test_get(self, apiobj):
+    def test_get_clients_false(self, apiobj):
         adapters = apiobj.get(get_clients=False)
-        assert all(["schemas" in x for x in adapters])
+        for adapter in adapters:
+            assert not adapter["cnx"]
+            assert not adapter["schemas"]["generic"]
+            assert not adapter["schemas"]["specific"]
+            assert not adapter["schemas"]["cnx"]
+
+    def test_get_clients_true(self, apiobj):
+        adapters = apiobj.get(get_clients=True)
+        for adapter in adapters:
+            assert adapter["schemas"]["generic"]
+            if adapter["schemas"]["specific_name"]:
+                assert adapter["schemas"]["specific"]
+            assert adapter["schemas"]["cnx"]
 
     def test_get_by_name(self, apiobj):
         adapter = apiobj.get_by_name(name=CSV_ADAPTER, get_clients=False)
         assert "schemas" in adapter
+
+    def test_get_by_name_basic(self, apiobj):
+        adapter = apiobj.get_by_name_basic(value=CSV_ADAPTER)
+        assert adapter == {"title": "CSV", "name_raw": "csv_adapter", "name": "csv"}
 
     def test_get_by_name_bad_node(self, apiobj):
         with pytest.raises(NotFoundError):

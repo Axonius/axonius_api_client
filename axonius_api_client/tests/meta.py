@@ -1,10 +1,12 @@
 """Test meta data."""
 import time
 
+from axonius_api_client.tools import csv_writer
+
 QUERIES = {
-    "not_last_seen_day": '(not (specific_data.data.last_seen >= date("NOW - 1d")))',
-    "exist_complex": '((({f} == ({{"$exists":true,"$ne":[]}})) and {f} != []))',
-    "exist_simple": '(({f} == ({{"$exists":true,"$ne":""}})))',
+    "not_last_seen_day": '(not ("specific_data.data.last_seen" >= date("NOW - 1d")))',
+    "exist_complex": '((("{f}" == ({{"$exists":true,"$ne":[]}})) and "{f}" != []))',
+    "exist_simple": '(("{f}" == ({{"$exists":true,"$ne":""}})))',
 }
 
 TEST_CLIENT_CERT_NAME = "client_cert.crt"
@@ -191,3 +193,56 @@ NO_TITLES = ["system_research_date", "system_research_weekdays"]
 USER_NAME = "badwolf"
 EMAIL = "jim@axonius.com"
 EMAIL_ALT = "james@axonius.com"
+
+
+class CsvKeys:
+    """Pass."""
+
+    user_id: str = "user_id"
+    file_path: str = "file_path"
+    verify_ssl: str = "verify_ssl"
+
+
+class CsvData:
+    """Pass."""
+
+    adapter_name: str = "csv"
+    adapter_name_raw: str = "csv_adapter"
+    file_field_name: str = "file_path"
+    file_name: str = "badwolfzzzzzzzz.csv"
+    user_id: str = "badwolfzzzzzzzz"
+    rows = [
+        {
+            "name": "why",
+            "mac_address": "01:37:53:9E:82:7C",
+            "extra_field": "foo1",
+        },
+        {
+            "name": "cuz",
+            "mac_address": "01:37:53:9E:82:8C",
+            "extra_field": "foo2",
+        },
+    ]
+    file_contents: str = csv_writer(rows=rows)
+    config: dict = {CsvKeys.user_id: user_id, CsvKeys.verify_ssl: False}
+
+
+class TanKeys:
+    """Pass."""
+
+    domain: str = "domain"
+    username: str = "username"
+    password: str = "password"
+
+
+class TanData:
+    """Pass."""
+
+    adapter_name: str = "tanium"
+    adapter_name_raw: str = "tanium_adapter"
+    bad_val: str = "dumdum"
+    config_bad: dict = {
+        TanKeys.domain: bad_val,
+        TanKeys.username: bad_val,
+        TanKeys.password: bad_val,
+    }

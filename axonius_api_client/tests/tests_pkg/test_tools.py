@@ -1,13 +1,19 @@
 # -*- coding: utf-8 -*-
 """Test suite for axonius_api_client."""
+import codecs
 import io
 import tempfile
 
+import dateutil.tz
 import pytest
 
+from axonius_api_client.api.json_api.generic import IntValue
+from axonius_api_client.constants.api import GUI_PAGE_SIZES
 from axonius_api_client.constants.general import IS_WINDOWS
 from axonius_api_client.exceptions import ToolsError
 from axonius_api_client.tools import (
+    bom_strip,
+    calc_perc_gb,
     calc_percent,
     check_empty,
     check_gui_page_size,
@@ -15,8 +21,11 @@ from axonius_api_client.tools import (
     coerce_bool,
     coerce_int,
     coerce_int_float,
+    coerce_str,
     coerce_str_to_csv,
+    combo_dicts,
     datetime,
+    dt_days_left,
     dt_min_ago,
     dt_now,
     dt_parse,
@@ -30,31 +39,135 @@ from axonius_api_client.tools import (
     get_type_str,
     grouper,
     is_int,
+    is_url,
     join_kv,
     join_url,
     json_dump,
     json_load,
     json_reload,
+    kv_dump,
     listify,
     longest_str,
+    parse_int_min_max,
     parse_ip_address,
     parse_ip_network,
     path_read,
     path_write,
     pathlib,
+    prettify_obj,
     read_stream,
     split_str,
     strip_left,
     strip_right,
+    strip_str,
     sysinfo,
     timedelta,
+    token_parse,
 )
+
+BOM_BYTES = codecs.BOM_UTF8
+BOM_STR = BOM_BYTES.decode()
+
+
+def test_coerce_str():
+    assert coerce_str(value=b"") == ""
+    assert coerce_str(value=" x ") == "x"
+    assert coerce_str(value=" xxxxxx ", trim=4).startswith("xxxx\n")
+    assert coerce_str(value=None) == ""
+    assert coerce_str(value=2) == "2"
+
+
+def test_dt_days_left():
+    assert dt_days_left(datetime.utcnow() + timedelta(days=100)) == 100
+
+
+def test_kv_dump():
+    assert kv_dump({"k": "v", "a": "b"}) == "\n  k: v\n  a: b"
+
+
+def test_bom_strip_str():
+    assert bom_strip(content=f" {BOM_STR}test") == "test"
+
+
+def test_bom_strip_bytes():
+    assert bom_strip(content=b" " + BOM_BYTES + b"test") == b"test"
+
+
+@pytest.mark.parametrize(
+    "value,exp",
+    [
+        [{}, ["", "-----"]],
+        [{"str": "foo"}, ["", "-----", "- str:", "   foo"]],
+        [{"list_str": ["foo1", "foo2"]}, ["", "-----", "- list_str:", "   foo1", "   foo2"]],
+    ],
+)
+def test_prettify_obj(value, exp):
+    assert prettify_obj(value) == exp
+
+
+def test_parse_int_min_max():
+    ret = parse_int_min_max(value="4", default=0)
+    assert ret == 4
+
+    ret = parse_int_min_max(value=4, default=0)
+    assert ret == 4
+
+    ret = parse_int_min_max(value="x", default=0)
+    assert ret == 0
+
+    ret = parse_int_min_max(value="4", default=0, min_value=5)
+    assert ret == 0
+
+    ret = parse_int_min_max(value="4", default=0, max_value=3)
+    assert ret == 0
+
+
+@pytest.mark.parametrize("value,exp", [["token=sadpanda", "sadpanda"], ["boo", "boo"]])
+def test_token_parse(value, exp):
+    assert token_parse(value) == exp
+
+
+@pytest.mark.parametrize("value,exp", [[" boo ", "boo"], ["boo", "boo"], [1, 1]])
+def test_strip_str(value, exp):
+    assert strip_str(value) == exp
+
+
+@pytest.mark.parametrize("value,exp", [["https://blah.com", True], ["blah.com", False]])
+def test_is_url(value, exp):
+    assert is_url(value) == exp
+
+
+def test_combo_dicts():
+    d1 = {1: 2}
+    d2 = {3: 4}
+    d3 = {5: 6}
+    d4 = {1: 4}
+    exp = {1: 4, 3: 4, 5: 6}
+    ret = combo_dicts(d1, d2, d3, d4)
+    assert ret == exp
+
+
+def test_calc_perc_gb():
+    obj = {"available": 200000, "total": 500000}
+    exp = {
+        "available": 200000,
+        "total": 500000,
+        "available_gb": 0.19,
+        "total_gb": 0.48,
+        "available_percent": 39.58,
+    }
+    ret = calc_perc_gb(obj=obj, whole_key="total", part_key="available")
+    assert ret == exp
 
 
 def test_check_gui_page_size_error():
     gui_page_size = 9999
     with pytest.raises(ToolsError):
         check_gui_page_size(size=gui_page_size)
+
+
+def test_check_gui_page_size():
+    assert check_gui_page_size(size=f"{GUI_PAGE_SIZES[0]}") == GUI_PAGE_SIZES[0]
 
 
 class TestEchos:
@@ -785,6 +898,23 @@ class TestJsonDump:
         y = json_dump(obj=x)
         assert y == '"xxx"'
 
+    def test_serial(self):
+        dc = IntValue(value=1111)
+        now = datetime.utcnow()
+        obj = {"foo": json_dump, "now": now, "dc": dc}
+        exp = [
+            "{",
+            f'  "foo": "{json_dump}",',
+            f'  "now": "{now.isoformat()}",',
+            '  "dc": {',
+            '    "value": 1111',
+            "  }",
+            "}",
+        ]
+
+        ret = json_dump(obj)
+        assert ret.splitlines() == exp
+
 
 class TestDtParseTmpl:
     def test_valid(self):
@@ -928,9 +1058,10 @@ class TestJsonReload:
 
     def test_re_load_trim(self):
         """Simple test."""
-        x = '{{"x": {}}}'.format("a" * 50)
-        y = json_reload(obj=x, trim=20)
-        assert y == '{"x": aaaaaaaaaaaaaa\nTrimmed over 20 characters'
+        obj = '{"x": "{aaaaaaaaaaaaaaaaaaaaaaaaa}"}'
+        exp = '{\n  "x": "{aaaaaaaaa\nTrimmed 40 characters down to 20'
+        ret = json_reload(obj=obj, trim=20)
+        assert ret == exp
 
     def test_re_load_error_false(self):
         """Simple test."""
@@ -1007,6 +1138,12 @@ class TestDtParse:
         now = dt_parse(obj=now)
         assert isinstance(now, list)
         assert [isinstance(x, datetime) for x in now]
+
+    def test_default_tz(self):
+        now = datetime.now()
+        assert not now.tzinfo
+        ret = dt_parse(obj=now, default_tz_utc=True)
+        assert ret.tzinfo == dateutil.tz.tzutc()
 
 
 class TestDtWithinMin:

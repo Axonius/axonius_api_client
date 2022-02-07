@@ -5,7 +5,7 @@ from typing import Generator, List, Optional, Union
 
 from ...exceptions import ApiError, NotFoundError
 from ...parsers.tables import tablize_roles
-from ...tools import coerce_str_to_csv, json_dump
+from ...tools import coerce_str_to_csv
 from .. import json_api
 from ..api_endpoints import ApiEndpoints
 from ..mixins import ModelMixins
@@ -26,7 +26,7 @@ class SystemRoles(ModelMixins):
     """
 
     @staticmethod
-    def _parse_cat_actions(raw: dict) -> dict:
+    def _parse_cat_actions(raw: dict) -> dict:  # pragma: no cover
         """Parse the permission labels into a layered dict."""
         return json_api.system_roles.parse_cat_actions(raw=raw)
 
@@ -219,12 +219,6 @@ class SystemRoles(ModelMixins):
         perms_new = self.cat_actions_to_perms(
             role_perms=perms_orig, grant=grant, src=f"set permissions on role {name!r}", **kwargs
         )
-
-        if perms_orig == perms_new:
-            err = f"No permission changes for role {name!r}"
-            supplied = f"Supplied changes: {json_dump(kwargs)}"
-            pretty_perms = self.pretty_perms(role=role)
-            raise ApiError("\n".join([err, pretty_perms, "", err, supplied]))
         self._update(uuid=role["uuid"], name=name, permissions=perms_new)
         return self.get_by_name(name=name)
 
@@ -271,17 +265,15 @@ class SystemRoles(ModelMixins):
         len_acts_desc = lens["actions_desc"]
 
         for category, actions in acts.items():
-            if category not in role_perms:
-                continue
-
-            cat_desc = cats[category]
-            cat_role_acts = role_perms[category]
-            lines += ["", "-" * 70, f"{category:<{len_acts + 2}} {cat_desc}"]
-            for action, action_desc in actions.items():
-                cat_role_act = cat_role_acts[action]
-                lines.append(
-                    f"  {action:<{len_acts}} {action_desc:<{len_acts_desc}} {cat_role_act}"
-                )
+            if category in role_perms:
+                cat_desc = cats[category]
+                cat_role_acts = role_perms[category]
+                lines += ["", "-" * 70, f"{category:<{len_acts + 2}} {cat_desc}"]
+                for action, action_desc in actions.items():
+                    cat_role_act = cat_role_acts[action]
+                    lines.append(
+                        f"  {action:<{len_acts}} {action_desc:<{len_acts_desc}} {cat_role_act}"
+                    )
         return "\n".join(lines)
 
     def _get(self) -> List[json_api.system_roles.SystemRole]:
@@ -326,7 +318,7 @@ class SystemRoles(ModelMixins):
         request_obj = api_endpoint.load_request(uuid=uuid)
         return api_endpoint.perform_request(http=self.auth.http, request_obj=request_obj)
 
-    def _get_labels(self) -> dict:
+    def _get_labels(self) -> dict:  # pragma: no cover
         """Direct API method to get role labels."""
         api_endpoint = ApiEndpoints.system_roles.perms
         return api_endpoint.perform_request(http=self.auth.http)

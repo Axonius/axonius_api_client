@@ -1,32 +1,51 @@
 # -*- coding: utf-8 -*-
 """Command line interface for Axonius API Client."""
-import tabulate
-
 from ...api import asset_callbacks
 from ...constants.wizards import Results, Types
-from ...tools import path_read
+from ...tools import echo_error, path_read
 from ..context import CONTEXT_SETTINGS, SplitEquals, click
 from ..options import (
     AUTH,
     EXPORT,
     FIELDS_SELECT,
     PAGING,
+    TABLE_FMT,
     add_options,
     get_option_fields_default,
     get_option_help,
 )
 
-HISTORY_DATE = click.option(
-    "--history-date",
-    "-hd",
-    "history_date",
-    default=None,
-    help="Return results for a given date in history",
-    show_envvar=True,
-    show_default=True,
-    hidden=False,
-    metavar="YYYY-MM-DD",
-)
+HISTORY = [
+    click.option(
+        "--history-date",
+        "-hd",
+        "history_date",
+        default=None,
+        help="Return results for a given date in history",
+        show_envvar=True,
+        show_default=True,
+        hidden=False,
+        metavar="YYYY-MM-DD",
+    ),
+    click.option(
+        "--history-days-ago",
+        "-hda",
+        "history_days_ago",
+        default=None,
+        help="Return results for a history snapshot N days ago",
+        show_envvar=True,
+        show_default=True,
+    ),
+    click.option(
+        "--history-exact/--no-history-exact",
+        "-hex/-nhex",
+        "history_exact",
+        default=False,
+        help="Date supplied in history-date or history-days-ago is an exact date",
+        show_envvar=True,
+        show_default=True,
+    ),
+]
 
 
 def wiz_callback(ctx, param, value):
@@ -35,13 +54,11 @@ def wiz_callback(ctx, param, value):
     if value:
         for i in value:
             etype = i[0].strip().lower()
-            if etype not in Types.CLI:
+            if etype not in Types.CLI:  # pragma: no cover
                 types = ", ".join(Types.CLI)
-                msg = f"Invalid expression type {etype!r}, valid types: {types}"
-                click.secho(msg, err=True, fg="red")
-                ctx.exit(1)
+                echo_error(msg=f"Invalid expression type {etype!r}, valid types: {types}")
             expr = i[1]
-            if etype == Types.FILE:
+            if etype == Types.FILE:  # pragma: no cover
                 contents += path_read(obj=expr)[1].strip().splitlines()
             else:
                 contents.append(f"{etype} {expr}")
@@ -91,20 +108,11 @@ GET_EXPORT = [
         "export",
         default="json",
         help="Formatter to use when exporting asset data",
-        type=click.Choice(list(asset_callbacks.CB_MAP)),
+        type=click.Choice([x for x in asset_callbacks.CB_MAP if x not in ["base"]]),
         show_envvar=True,
         show_default=True,
     ),
-    click.option(
-        "--table-format",
-        "table_format",
-        default=asset_callbacks.Table.args_map()["table_format"],
-        help="Base format to use for --export-format=table",
-        type=click.Choice(tabulate.tabulate_formats),
-        show_envvar=True,
-        show_default=True,
-        hidden=False,
-    ),
+    TABLE_FMT,
     click.option(
         "--table-max-rows",
         "table_max_rows",
@@ -327,7 +335,6 @@ GET_EXPORT = [
         show_envvar=True,
         show_default=True,
     ),
-    HISTORY_DATE,
 ]
 
 GET_BUILDERS = [
@@ -335,6 +342,7 @@ GET_BUILDERS = [
     *PAGING,
     *EXPORT,
     *GET_EXPORT,
+    *HISTORY,
     *FIELDS_SELECT,
     get_option_fields_default(default=True),
     click.option(
@@ -433,9 +441,7 @@ GET_BY_VALUE_FIELD = click.option(
 
 def load_whitelist(fh):
     """Pass."""
-    if fh:
-        return [x.strip() for x in fh.readlines() if x.strip()]
-    return None
+    return [x.strip() for x in fh.readlines() if x.strip()] if fh else None
 
 
 def gen_get_by_cmd(options, doc, cmd_name, method):
@@ -445,13 +451,17 @@ def gen_get_by_cmd(options, doc, cmd_name, method):
     @add_options(options)
     @click.pass_context
     def cmd(ctx, url, key, secret, whitelist=None, get_method=method, **kwargs):
+        ctx.obj.echo_warn(
+            (
+                "This command is deprecated and will be removed in the next major version"
+                "- Use get with --wiz instead!)"
+            )
+        )
         client = ctx.obj.start_client(url=url, key=key, secret=secret)
         kwargs["report_software_whitelist"] = load_whitelist(whitelist)
-
         p_grp = ctx.parent.command.name
         apiobj = getattr(client, p_grp)
         apimethod = getattr(apiobj, get_method)
-
         with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
             apimethod(**kwargs)
 

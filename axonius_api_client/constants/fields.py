@@ -239,47 +239,47 @@ class Operators(BaseData):
 
     contains: Operator = Operator(
         name_map=OperatorNameMaps.contains,
-        template='({field} == regex("{aql_value}", "i"))',
+        template='("{field}" == regex("{aql_value}", "i"))',
         parser=Parsers.to_str_escaped_regex,
     )
     count_equals: Operator = Operator(
         name_map=OperatorNameMaps.count_equals,
-        template="({field} == size({aql_value}))",
+        template='("{field}" == size({aql_value}))',
         parser=Parsers.to_int,
     )
     count_less_than: Operator = Operator(
         name_map=OperatorNameMaps.count_less_than,
-        template="({field} < size({aql_value}))",
+        template='("{field}" < size({aql_value}))',
         parser=Parsers.to_int,
     )
     count_more_than: Operator = Operator(
         name_map=OperatorNameMaps.count_more_than,
-        template="({field} > size({aql_value}))",
+        template='("{field}" > size({aql_value}))',
         parser=Parsers.to_int,
     )
     endswith: Operator = Operator(
         name_map=OperatorNameMaps.endswith,
-        template='({field} == regex("{aql_value}$", "i"))',
+        template='("{field}" == regex("{aql_value}$", "i"))',
         parser=Parsers.to_str_escaped_regex,
     )
     equals_str: Operator = Operator(
         name_map=OperatorNameMaps.equals,
-        template='({field} == "{aql_value}")',
+        template='("{field}" == "{aql_value}")',
         parser=Parsers.to_str,
     )
     equals_str_tag: Operator = Operator(
         name_map=OperatorNameMaps.equals,
-        template='({field} == "{aql_value}")',
+        template='("{field}" == "{aql_value}")',
         parser=Parsers.to_str_tags,
     )
     equals_str_adapter: Operator = Operator(
         name_map=OperatorNameMaps.equals,
-        template='({field} == "{aql_value}")',
+        template='("{field}" == "{aql_value}")',
         parser=Parsers.to_str_adapters,
     )
     equals_str_cnx_label: Operator = Operator(
         name_map=OperatorNameMaps.equals,
-        template='({field} == "{aql_value}")',
+        template='("{field}" == "{aql_value}")',
         parser=Parsers.to_str_cnx_label,
     )
     equals_str_sq_name: Operator = Operator(
@@ -290,160 +290,162 @@ class Operators(BaseData):
     )
     equals_ip: Operator = Operator(
         name_map=OperatorNameMaps.equals,
-        template='({field} == "{aql_value}")',
+        template='("{field}" == "{aql_value}")',
         parser=Parsers.to_ip,
     )
     equals_subnet: Operator = Operator(
         name_map=OperatorNameMaps.equals,
-        template='({field} == "{aql_value}")',
+        template='("{field}" == "{aql_value}")',
         parser=Parsers.to_str_subnet,
     )
     equals_int: Operator = Operator(
         name_map=OperatorNameMaps.equals,
-        template="({field} == {aql_value})",
+        template='("{field}" == {aql_value})',
         parser=Parsers.to_int,
     )
     exists: Operator = Operator(
         name_map=OperatorNameMaps.exists,
-        template='(({field} == ({{"$exists":true,"$ne":""}})))',
+        template='(("{field}" == ({{"$exists":true,"$ne":""}})))',
         parser=Parsers.to_none,
     )
     exists_array: Operator = Operator(
         name_map=OperatorNameMaps.exists,
-        template='(({field} == ({{"$exists":true,"$ne":[]}})))',
+        template='(("{field}" == ({{"$exists":true,"$ne":[]}})))',
         parser=Parsers.to_none,
     )
     exists_array_object: Operator = Operator(
         name_map=OperatorNameMaps.exists,
-        template='(({field} == ({{"$exists":true,"$ne":[]}})) and {field} != [])',
+        template='(("{field}" == ({{"$exists":true,"$ne":[]}})) and "{field}" != [])',
         parser=Parsers.to_none,
     )
     ip_in_subnet: Operator = Operator(
         name_map=OperatorNameMaps.is_in_subnet,
-        template=('({field}_raw == match({{"$gte": {aql_value[0]}, "$lte": ' "{aql_value[1]}}}))"),
+        template=(
+            '("{field}_raw" == match({{"$gte": {aql_value[0]}, "$lte": ' "{aql_value[1]}}}))"
+        ),
         parser=Parsers.to_in_subnet,
     )
     ip_not_in_subnet: Operator = Operator(
         name_map=OperatorNameMaps.is_not_in_subnet,
         template=(
-            '(({field}_raw == match({{"$gte": 0, "$lte": {aql_value[0]}}}) or '
-            '{field}_raw == match({{"$gte": {aql_value[1]}, "$lte": 4294967295}})))'
+            '(("{field}_raw" == match({{"$gte": 0, "$lte": {aql_value[0]}}}) or '
+            '"{field}_raw" == match({{"$gte": {aql_value[1]}, "$lte": 4294967295}})))'
         ),
         parser=Parsers.to_in_subnet,
     )
     ipv4: Operator = Operator(
         name_map=OperatorNameMaps.is_ipv4,
-        template='({field} == regex("\\."))',
+        template='("{field}" == regex("\\."))',
         parser=Parsers.to_none,
     )
     ipv6: Operator = Operator(
         name_map=OperatorNameMaps.is_ipv6,
-        template='({field} == regex(":"))',
+        template='("{field}" == regex(":"))',
         parser=Parsers.to_none,
     )
     is_in_str: Operator = Operator(
         name_map=OperatorNameMaps.is_in,
-        template="({field} in [{aql_value}])",
+        template='("{field}" in [{aql_value}])',
         parser=Parsers.to_csv_str,
     )
     is_in_str_tag: Operator = Operator(
         name_map=OperatorNameMaps.is_in,
-        template="({field} in [{aql_value}])",
+        template='("{field}" in [{aql_value}])',
         parser=Parsers.to_csv_tags,
     )
     is_in_str_adapter: Operator = Operator(
         name_map=OperatorNameMaps.is_in,
-        template="({field} in [{aql_value}])",
+        template='("{field}" in [{aql_value}])',
         parser=Parsers.to_csv_adapters,
     )
     is_in_str_cnx_label: Operator = Operator(
         name_map=OperatorNameMaps.is_in,
-        template="({field} in [{aql_value}])",
+        template='("{field}" in [{aql_value}])',
         parser=Parsers.to_csv_cnx_label,
     )
     is_in_int: Operator = Operator(
         name_map=OperatorNameMaps.is_in,
-        template="{field} in [{aql_value}]",
+        template='"{field}" in [{aql_value}]',
         parser=Parsers.to_csv_int,
     )
     is_in_ip: Operator = Operator(
         name_map=OperatorNameMaps.is_in,
-        template="({field} in [{aql_value}])",
+        template='("{field}" in [{aql_value}])',
         parser=Parsers.to_csv_ip,
     )
     is_in_subnet: Operator = Operator(
         name_map=OperatorNameMaps.is_in,
-        template="({field} in [{aql_value}])",
+        template='("{field}" in [{aql_value}])',
         parser=Parsers.to_csv_subnet,
     )
     is_false: Operator = Operator(
         name_map=OperatorNameMaps.is_false,
-        template="({field} == false)",
+        template='("{field}" == false)',
         parser=Parsers.to_none,
     )
     is_true: Operator = Operator(
         name_map=OperatorNameMaps.is_true,
-        template="({field} == true)",
+        template='("{field}" == true)',
         parser=Parsers.to_none,
     )
     last_hours: Operator = Operator(
         name_map=OperatorNameMaps.last_hours,
-        template='({field} >= date("NOW - {aql_value}h"))',
+        template='("{field}" >= date("NOW - {aql_value}h"))',
         parser=Parsers.to_int,
     )
     last_days: Operator = Operator(
         name_map=OperatorNameMaps.last_days,
-        template='({field} >= date("NOW - {aql_value}d"))',
+        template='("{field}" >= date("NOW - {aql_value}d"))',
         parser=Parsers.to_int,
     )
     less_than_date: Operator = Operator(
         name_map=OperatorNameMaps.less_than,
-        template='({field} < date("{aql_value}"))',
+        template='("{field}" < date("{aql_value}"))',
         parser=Parsers.to_dt,
     )
     less_than_int: Operator = Operator(
         name_map=OperatorNameMaps.less_than,
-        template="({field} < {aql_value})",
+        template='("{field}" < {aql_value})',
         parser=Parsers.to_int,
     )
     earlier_than_version: Operator = Operator(
         name_map=OperatorNameMaps.earlier_than,
-        template="({field}_raw < '{aql_value}')",
+        template="(\"{field}_raw\" < '{aql_value}')",
         parser=Parsers.to_raw_version,
     )
     more_than_date: Operator = Operator(
         name_map=OperatorNameMaps.more_than,
-        template='({field} > date("{aql_value}"))',
+        template='("{field}" > date("{aql_value}"))',
         parser=Parsers.to_dt,
     )
     more_than_int: Operator = Operator(
         name_map=OperatorNameMaps.more_than,
-        template="({field} < {aql_value})",
+        template='("{field}" < {aql_value})',
         parser=Parsers.to_int,
     )
     later_than_version: Operator = Operator(
         name_map=OperatorNameMaps.later_than,
-        template="({field}_raw > '{aql_value}')",
+        template="(\"{field}_raw\" > '{aql_value}')",
         parser=Parsers.to_raw_version,
     )
     next_hours: Operator = Operator(
         name_map=OperatorNameMaps.next_hours,
-        template='({field} >= date("NOW + {aql_value}h"))',
+        template='("{field}" >= date("NOW + {aql_value}h"))',
         parser=Parsers.to_int,
     )
     next_days: Operator = Operator(
         name_map=OperatorNameMaps.next_days,
-        template='({field} >= date("NOW + {aql_value}d"))',
+        template='("{field}" >= date("NOW + {aql_value}d"))',
         parser=Parsers.to_int,
     )
     regex: Operator = Operator(
         name_map=OperatorNameMaps.regex,
-        template='({field} == regex("{aql_value}", "i"))',
+        template='("{field}" == regex("{aql_value}", "i"))',
         parser=Parsers.to_str,
     )
     startswith: Operator = Operator(
         name_map=OperatorNameMaps.startswith,
-        template='({field} == regex("^{aql_value}", "i"))',
+        template='("{field}" == regex("^{aql_value}", "i"))',
         parser=Parsers.to_str_escaped_regex,
     )
 
@@ -751,11 +753,8 @@ class OperatorTypeMaps(BaseData):
         iformat = items.get("format")
         is_array = bool(itype or iformat)
 
-        if fformat == Formats.dynamic_field.value:
-            fformat = None
-
-        if iformat == Formats.dynamic_field.value:
-            iformat = None
+        fformat = None if fformat == Formats.dynamic_field.value else fformat
+        iformat = None if iformat == Formats.dynamic_field.value else iformat
 
         attrs = {
             "field_type": ftype,

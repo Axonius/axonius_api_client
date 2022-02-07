@@ -2,9 +2,11 @@
 """Command line interface for Axonius API Client."""
 from ...context import CONTEXT_SETTINGS, click
 from ...options import AUTH, add_options
+from .grp_common import EXPORT_FORMATS, OPTS_EXPORT
 
 OPTIONS = [
     *AUTH,
+    *OPTS_EXPORT,
     click.option(
         "--for-next-minutes",
         "-fnm",
@@ -18,36 +20,17 @@ OPTIONS = [
 ]
 
 
-def get_stability(data, for_next_minutes=None, **kwargs):
-    """Pass."""
-    if data.is_running:
-        if data.is_correlation_finished:
-            return "Discover is running but correlation has finished", True
-
-        return "Discover is running and correlation has NOT finished", False
-
-    next_mins = data.next_run_starts_in_minutes
-    reason = f"Discover is not running and next is in {next_mins} minutes"
-
-    if for_next_minutes:
-        if data.next_run_within_minutes(for_next_minutes):
-            return f"{reason} (less than {for_next_minutes} minutes)", False
-        return f"{reason} (more than {for_next_minutes} minutes)", True
-
-    return reason, True
-
-
 @click.command(name="is-data-stable", context_settings=CONTEXT_SETTINGS)
 @add_options(OPTIONS)
 @click.pass_context
-def cmd(ctx, url, key, secret, **kwargs):
-    """Return exit code 1 if asset data is stable, 0 if not."""
+def cmd(ctx, url, key, secret, for_next_minutes, export_format, phases, progress):
+    """Return exit code 0 of data is not stable, 1 if it is."""
     client = ctx.obj.start_client(url=url, key=key, secret=secret)
 
     with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
         data = client.dashboard.get()
 
-    reason, is_stable = get_stability(data=data, **kwargs)
-
-    click.secho(f"Data is stable: {is_stable}, reason: {reason}")
+    click.secho(EXPORT_FORMATS[export_format](data=data, phases=phases, progress=progress))
+    reason, is_stable = data.get_stability(for_next_minutes=for_next_minutes)
+    ctx.obj.echo_ok(f"Data is stable: {is_stable}, reason: {reason}")
     ctx.exit(int(is_stable))

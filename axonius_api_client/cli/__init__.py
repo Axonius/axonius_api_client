@@ -6,14 +6,23 @@ import click
 
 from .. import version
 from ..constants.api import TIMEOUT_CONNECT, TIMEOUT_RESPONSE
-from ..constants.logs import (LOG_FILE_MAX_FILES, LOG_FILE_MAX_MB,
-                              LOG_FILE_NAME, LOG_FILE_PATH, LOG_LEVEL_API,
-                              LOG_LEVEL_AUTH, LOG_LEVEL_CONSOLE,
-                              LOG_LEVEL_FILE, LOG_LEVEL_HTTP,
-                              LOG_LEVEL_PACKAGE, LOG_LEVELS_STR,
-                              REQUEST_ATTR_MAP, RESPONSE_ATTR_MAP)
+from ..constants.logs import (
+    LOG_FILE_MAX_FILES,
+    LOG_FILE_MAX_MB,
+    LOG_FILE_NAME,
+    LOG_FILE_PATH,
+    LOG_LEVEL_API,
+    LOG_LEVEL_AUTH,
+    LOG_LEVEL_CONSOLE,
+    LOG_LEVEL_FILE,
+    LOG_LEVEL_HTTP,
+    LOG_LEVEL_PACKAGE,
+    LOG_LEVELS_STR,
+    REQUEST_ATTR_MAP,
+    RESPONSE_ATTR_MAP,
+)
 from ..logs import LOG
-from . import context, grp_adapters, grp_assets, grp_system, grp_tools, grp_openapi, cmd_help_features
+from . import context, grp_adapters, grp_assets, grp_openapi, grp_system, grp_tools
 
 
 @click.group(
@@ -159,6 +168,15 @@ All of the options listed above must be supplied BEFORE any commands or groups.
     show_envvar=True,
 )
 @click.option(
+    "--log-file-rotate/--no-log-file-rotate",
+    "-fr/-nfr",
+    "log_file_rotate",
+    default=True,
+    help="Force the log file to rotate.",
+    is_flag=True,
+    show_envvar=True,
+)
+@click.option(
     "--log-file-name",
     "-fn",
     "log_file_name",
@@ -299,74 +317,17 @@ All of the options listed above must be supplied BEFORE any commands or groups.
 @click.version_option(version.__version__)
 @context.pass_context
 @click.pass_context
-def cli(
-    click_ctx,
-    ctx,
-    log_level_package,
-    log_level_http,
-    log_level_auth,
-    log_level_api,
-    log_level_console,
-    log_level_file,
-    log_console,
-    log_file,
-    log_request_attrs,
-    log_response_attrs,
-    log_request_body,
-    log_response_body,
-    log_file_name,
-    log_file_path,
-    log_file_max_mb,
-    log_file_max_files,
-    cert_client_cert,
-    cert_client_key,
-    cert_client_both,
-    proxy,
-    certpath,
-    certverify,
-    certwarn,
-    wraperror,
-    timeout_connect,
-    timeout_response,
-    quiet,
-    headers,
-):
+def cli(click_ctx, ctx, quiet, **kwargs):
     """Command line interface for the Axonius API Client."""
     try:
         cli_args = sys.argv
-    except Exception:
+    except Exception:  # pragma: no cover
         cli_args = "No sys.argv!"
 
     LOG.debug(f"sys.argv: {cli_args}")
     ctx._click_ctx = click_ctx
     ctx.QUIET = quiet
-    ctx._connect_args["log_level_package"] = log_level_package
-    ctx._connect_args["log_level_http"] = log_level_http
-    ctx._connect_args["log_level_auth"] = log_level_auth
-    ctx._connect_args["log_level_api"] = log_level_api
-    ctx._connect_args["log_level_console"] = log_level_console
-    ctx._connect_args["log_level_file"] = log_level_file
-    ctx._connect_args["log_console"] = log_console
-    ctx._connect_args["log_file"] = log_file
-    ctx._connect_args["log_request_attrs"] = log_request_attrs
-    ctx._connect_args["log_response_attrs"] = log_response_attrs
-    ctx._connect_args["log_request_body"] = log_request_body
-    ctx._connect_args["log_response_body"] = log_response_body
-    ctx._connect_args["log_file_name"] = log_file_name
-    ctx._connect_args["log_file_path"] = log_file_path
-    ctx._connect_args["log_file_max_mb"] = log_file_max_mb
-    ctx._connect_args["log_file_max_files"] = log_file_max_files
-    ctx._connect_args["proxy"] = proxy
-    ctx._connect_args["cert_client_cert"] = cert_client_cert
-    ctx._connect_args["cert_client_key"] = cert_client_key
-    ctx._connect_args["cert_client_both"] = cert_client_both
-    ctx._connect_args["certpath"] = certpath
-    ctx._connect_args["certverify"] = certverify
-    ctx._connect_args["certwarn"] = certwarn
-    ctx._connect_args["wraperror"] = wraperror
-    ctx._connect_args["timeout_connect"] = timeout_connect
-    ctx._connect_args["timeout_response"] = timeout_response
-    ctx._connect_args["headers"] = headers
+    ctx._connect_args.update(kwargs)
 
 
 cli.add_command(grp_adapters.adapters)
@@ -375,4 +336,3 @@ cli.add_command(grp_assets.users)
 cli.add_command(grp_system.system)
 cli.add_command(grp_tools.tools)
 cli.add_command(grp_openapi.openapi)
-cli.add_command(cmd_help_features.cmd)

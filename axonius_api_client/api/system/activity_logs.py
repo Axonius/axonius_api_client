@@ -4,6 +4,8 @@ import datetime
 from typing import Generator, List, Optional, Union
 
 from ...constants.api import MAX_PAGE_SIZE
+from ...exceptions import StopFetch
+from ...tools import json_dump
 from .. import json_api
 from ..api_endpoints import ApiEndpoints
 from ..mixins import ModelMixins
@@ -36,6 +38,7 @@ class ActivityLogs(ModelMixins):
         start_date: Optional[Union[str, datetime.datetime]] = None,
         end_date: Optional[Union[str, datetime.datetime]] = None,
         within_last_hours: Optional[int] = None,
+        max_rows: Optional[int] = None,
         **kwargs,
     ) -> Generator[json_api.audit_logs.AuditLog, None, None]:
         """Get activity log entries.
@@ -46,24 +49,48 @@ class ActivityLogs(ModelMixins):
             within_last_hours: only return records that happened N hours ago
             **kwargs: only return records that regex match properties as keys
         """
-        offset = 0
+        state = {}
+        state["total_rows_fetched"] = 0
+        state["page_row_start"] = 0
+        state["page_rows_fetched"] = None
+        state["page_number"] = 1
+        state["max_rows"] = max_rows
+        state["start_date"] = start_date
+        state["end_date"] = end_date
+        state["within_last_hours"] = within_last_hours
+        state["property_searches"] = kwargs
 
         while True:
-            rows = self._get(offset=offset)
-            offset += len(rows)
+            self.LOG.debug(f"Fetching page state={json_dump(state)}")
+            try:
+                rows = self._get(offset=state["page_row_start"])
+                state["page_rows_fetched"] = len(rows)
+                state["page_row_start"] += len(rows)
+                state["page_number"] += 1
 
-            if not rows:
+                if not rows:
+                    raise StopFetch(reason="empty rows returned", state=state)
+
+                for row in rows:
+                    if (
+                        isinstance(state["max_rows"], int)
+                        and state["total_rows_fetched"] >= state["max_rows"]
+                    ):
+                        raise StopFetch(reason="reached max_rows", state=state)
+
+                    state["total_rows_fetched"] += 1
+
+                    if (
+                        not row.within_dates(start=start_date, end=end_date)
+                        or not row.within_last_hours(hours=within_last_hours)
+                        or not row.property_searches(**kwargs)
+                    ):
+                        continue
+
+                    yield row
+            except StopFetch as exc:
+                self.LOG.info(f"{type(exc)}(reason={exc}) -- state:\n{json_dump(exc.state)}")
                 break
-
-            for row in rows:
-                dt_match = row.within_dates(start=start_date, end=end_date)
-                hrs_match = row.within_last_hours(hours=within_last_hours)
-                props_match = row.property_searches(**kwargs)
-
-                if not all([dt_match, hrs_match, props_match]):
-                    continue
-
-                yield row
 
     def _get(
         self,

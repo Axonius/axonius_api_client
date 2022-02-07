@@ -1,47 +1,179 @@
 # -*- coding: utf-8 -*-
 """Command line interface for Axonius API Client."""
-from ....constants.adapters import CNX_SANE_DEFAULTS
-from ....exceptions import CnxAddError
 from ....parsers.tables import tablize_cnxs, tablize_schemas
-from ....tools import json_dump, listify, pathlib
-from ...context import click
+from ....tools import json_dump, listify
+from ...context import SplitEquals, click
+from .parsing import Defaults, Schema, SchemaBool
 
-PATH_PROMPT = click.Path(
-    exists=True,
-    file_okay=True,
-    dir_okay=False,
-    writable=False,
-    readable=True,
-    resolve_path=True,
-    allow_dash=False,
-    path_type=None,
+
+def export_json_full(data):
+    """Pass."""
+    return json_dump(data)
+
+
+def export_json_config(data):
+    """Pass."""
+
+    def parse(obj):
+        return obj["config"]
+
+    data = [parse(x) for x in data] if isinstance(data, list) else parse(data)
+    return json_dump(data)
+
+
+def export_json(data):
+    """Pass."""
+
+    def parse(obj):
+        obj.pop("schemas", None)
+        return obj
+
+    data = [parse(x) for x in data] if isinstance(data, list) else parse(data)
+    return json_dump(data)
+
+
+def export_table(data):
+    """Pass."""
+    data = listify(data)
+    return tablize_cnxs(cnxs=data)
+
+
+def export_table_schemas(data):
+    """Pass."""
+
+    def parse(obj):
+        return obj["schemas"]
+
+    schemas = parse(data[0]) if isinstance(data, list) else parse(data)
+    return tablize_schemas(
+        schemas=schemas,
+        err=None,
+        footer=True,
+        orig=True,
+        orig_width=20,
+    )
+
+
+def export_str(data):
+    """Pass."""
+    data = listify(data)
+    tmpl = "{id}".format
+    return "\n".join([tmpl(**x) for x in data])
+
+
+def export_str_args(data):
+    """Pass."""
+    data = listify(data)
+    tmpl = "--node-name {node_name!r} --name {adapter_name!r} --id {id!r}".format
+    return "\n".join([tmpl(**x) for x in data])
+
+
+EXPORT_FORMATS: dict = {
+    "json-full": export_json_full,
+    "json-config": export_json_config,
+    "json": export_json,
+    "table": export_table,
+    "table-schemas": export_table_schemas,
+    "str": export_str,
+    "str-args": export_str_args,
+}
+
+OPT_DELETE_ENTITIES = click.option(
+    "--delete-entities / --no-delete-entities",
+    "-de/-nde",
+    "delete_entities",
+    help="When deleting connection, also remove all assets created by connection.",
+    is_flag=True,
+    default=False,
+    show_envvar=True,
+    show_default=True,
 )
-
-HIDDEN = ["secret", "key", "password"]
-
-PROMPTS = [
-    click.option(
-        "--prompt-optional / --no-prompt-optional",
-        "-po / -npo",
-        "prompt_optional",
-        help="Prompt for optional items that are not supplied.",
-        is_flag=True,
-        default=True,
-        show_envvar=True,
-        show_default=True,
+OPT_SPLIT_CONFIG = click.option(
+    "--config",
+    "-c",
+    "config",
+    help=(
+        "Configuration in the form of key=value "
+        f"(value as {Schema.USE_DEFAULT} to use the default value) (multiples)"
     ),
-    click.option(
-        "--prompt-default / --no-prompt-default",
-        "-pd / -npd",
-        "prompt_default",
-        help="Prompt for items that have a default.",
-        is_flag=True,
-        default=True,
-        show_envvar=True,
-        show_default=True,
+    type=SplitEquals(),
+    multiple=True,
+    show_envvar=True,
+    show_default=True,
+    required=False,
+)
+OPT_IGNORE_UNKNOWNS = click.option(
+    "--ignore-unknowns / --no-ignore-unknowns",
+    "-iu/-niu",
+    "ignore_unknowns",
+    help="Do not error if unknown config keys supplied.",
+    is_flag=True,
+    default=Defaults.ignore_unknowns,
+    show_envvar=True,
+    show_default=True,
+)
+OPT_USE_SANE_DEFAULTS = click.option(
+    "--use-sane-defaults / --no-use-sane-defaults",
+    "-usd/-nusd",
+    "use_sane_defaults",
+    help=(
+        "Use sane defaults from API Client"
+        f" (will use {SchemaBool.SANE_DEFAULT} as default for boolean types)."
     ),
-]
-ACTIVE = click.option(
+    is_flag=True,
+    default=Defaults.use_sane_defaults,
+    show_envvar=True,
+    show_default=True,
+)
+OPT_PROMPT_FOR_DEFAULT = click.option(
+    "--prompt-default / --no-prompt-default",
+    "-pd / -npd",
+    "prompt_for_default",
+    help="Prompt for items that have a default.",
+    is_flag=True,
+    default=Defaults.prompt_for_default,
+    show_envvar=True,
+    show_default=True,
+)
+OPT_PROMPT_FOR_PREVIOUS = click.option(
+    "--prompt-previous / --no-prompt-previous",
+    "-pp / -npp",
+    "prompt_for_previous",
+    help="Prompt for all items in current connection config but not supplied in --config.",
+    is_flag=True,
+    default=Defaults.prompt_for_previous,
+    show_envvar=True,
+    show_default=True,
+)
+OPT_PROMPT_FOR_OPTIONALS = click.option(
+    "--prompt-optional / --no-prompt-optional",
+    "-po / -npo",
+    "prompt_for_optional",
+    help="Prompt for optional items that are not supplied.",
+    is_flag=True,
+    default=Defaults.prompt_for_optional,
+    show_envvar=True,
+    show_default=True,
+)
+OPT_SHOW_SCHEMAS = click.option(
+    "--show-schemas / --no-show-schemas",
+    "show_schemas",
+    help="Print the schemas and exit.",
+    is_flag=True,
+    default=Defaults.show_schemas,
+    show_envvar=True,
+    show_default=True,
+)
+OPT_SHOW_DEFAULTS = click.option(
+    "--show-defaults / --no-show-defaults",
+    "show_defaults",
+    help="Print the schema defaults and sane defaults and exit.",
+    is_flag=True,
+    default=Defaults.show_defaults,
+    show_envvar=True,
+    show_default=True,
+)
+OPT_ACTIVE = click.option(
     "--active / --inactive",
     "active",
     help="Set connection as active / inactive.",
@@ -50,7 +182,7 @@ ACTIVE = click.option(
     show_envvar=True,
     show_default=True,
 )
-SAVE_AND_FETCH = click.option(
+OPT_SAVE_AND_FETCH = click.option(
     "--save-and-fetch / --no-save-and-fetch",
     "-saf / -nsaf",
     "save_and_fetch",
@@ -60,20 +192,17 @@ SAVE_AND_FETCH = click.option(
     show_envvar=True,
     show_default=True,
 )
-
-EXPORT = click.option(
+OPT_EXPORT = click.option(
     "--export-format",
     "-xf",
     "export_format",
-    type=click.Choice(
-        ["json-full", "json-config", "json", "table", "table-schemas", "str", "str-args"]
-    ),
+    type=click.Choice(list(EXPORT_FORMATS)),
     help="Format of to export data in",
-    default="json-config",
+    default="table",
     show_envvar=True,
     show_default=True,
 )
-ID_CNX = click.option(
+OPT_ID_CNX = click.option(
     "--id",
     "-i",
     "cnx_id",
@@ -83,221 +212,18 @@ ID_CNX = click.option(
     show_default=True,
 )
 
+OPTS_PROMPTS = [
+    OPT_PROMPT_FOR_OPTIONALS,
+    OPT_PROMPT_FOR_DEFAULT,
+    OPT_USE_SANE_DEFAULTS,
+    OPT_IGNORE_UNKNOWNS,
+]
 
-def prompt_config(
-    ctx,
-    client,
-    new_config,
-    adapter_name,
-    adapter_node,
-    prompt_optional,
-    prompt_default,
-    **kwargs,
-):
-    """Pass."""
-    with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
-        adapter = client.adapters.get_by_name(name=adapter_name, node=adapter_node)
-
-    schemas = list(adapter["schemas"]["cnx"].values())
-    schemas = reversed(sorted(schemas, key=lambda x: [x["required"], x["name"]]))
-
-    for schema in schemas:
-        prompt_schema(
-            schema=schema,
-            new_config=new_config,
-            prompt_optional=prompt_optional,
-            prompt_default=prompt_default,
-            adapter=adapter,
-        )
-
-
-def prompt_schema(schema, new_config, prompt_optional, prompt_default, adapter):
-    """Pass."""
-    name = schema["name"]
-    required = schema["required"]
-    stype = schema["type"]
-    default = schema.get("default", None)
-    fmt = schema.get("format", "")
-    enum = schema.get("enum", [])
-
-    if enum:
-        str_type = click.Choice(choices=enum, case_sensitive=True)
-    else:
-        str_type = None
-
-    schema["hide_input"] = hide_input = fmt == "password" or name in HIDDEN
-
-    if name in new_config:
-        if new_config[name].lower().strip() == "_empty_":
-            new_config[name] = None
-        if stype == "file":
-            new_config[name] = pathlib.Path(new_config[name]).expanduser().resolve()
-        return
-
-    sane_defaults = CNX_SANE_DEFAULTS.get(adapter["name"], CNX_SANE_DEFAULTS["all"])
-    if name in sane_defaults and default is None:
-        default = sane_defaults[name]
-
-    if not prompt_default and default is not None:
-        new_config[name] = default
-        return
-
-    if not required:
-        if not prompt_optional:
-            return
-
-        show_schema(schema=schema)
-
-        do_prompt = click.prompt(
-            text="Prompt for this optional item?",
-            default=True,
-            type=click.BOOL,
-            err=True,
-            show_default=True,
-        )
-
-        if not do_prompt:
-            return
-    else:
-        show_schema(schema=schema)
-
-    if stype == "file":
-        value = click.prompt(text="Enter value", type=PATH_PROMPT, err=True)
-        value = pathlib.Path(value).expanduser().resolve()
-
-    if stype == "bool":
-        value = click.prompt(
-            text="Enter value",
-            default=default,
-            type=click.BOOL,
-            err=True,
-            show_default=True,
-            show_choices=True,
-        )
-
-    if stype in ["number", "integer"]:
-        value = click.prompt(
-            text="Enter value",
-            default=default,
-            type=click.INT,
-            err=True,
-            show_default=True,
-            show_choices=True,
-        )
-
-    if stype == "array":
-        value = click.prompt(
-            text="Enter value",
-            default=default,
-            err=True,
-            type=str_type,
-            hide_input=hide_input,
-            show_default=True,
-            show_choices=True,
-        )
-        value = [x.strip() for x in value.strip().split(",") if x.strip()]
-
-    if stype == "string":
-        value = click.prompt(
-            text="Enter value",
-            default=default,
-            err=True,
-            type=str_type,
-            hide_input=hide_input,
-            show_default=True,
-            show_choices=True,
-        )
-
-    new_config[name] = value
-
-
-def show_schema(schema, err=True):
-    """Pass."""
-    rkw = ["{}: {}".format(k, v) for k, v in schema.items()]
-    rkw = "\n  " + "\n  ".join(rkw)
-    click.secho(message=f"\n***  Configuration schema:{rkw}", fg="blue", err=err)
-
-
-def add_cnx(ctx, client, adapter_name, adapter_node, new_config, save_and_fetch, active, **kwargs):
-    """Pass."""
-    with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
-        try:
-            cnx_new = client.adapters.cnx.add(
-                adapter_name=adapter_name,
-                adapter_node=adapter_node,
-                save_and_fetch=save_and_fetch,
-                active=active,
-                **new_config,
-            )
-            ctx.obj.echo_ok(msg="Connection added successfully!")
-
-        except CnxAddError as exc:
-            ctx.obj.echo_error(msg=f"{exc}", abort=False)
-            cnx_new = exc.cnx_new
-
-    handle_export(ctx=ctx, rows=cnx_new, **kwargs)
-
-
-def handle_export(ctx, rows, export_format, **kwargs):
-    """Pass."""
-    if export_format == "json":
-        if isinstance(rows, list):
-            for row in rows:
-                row.pop("schemas")
-        else:
-            rows.pop("schemas")
-        click.secho(json_dump(rows))
-        ctx.exit(0)
-
-    if export_format == "json-config":
-        if isinstance(rows, list):
-            rows = [x["config"] for x in rows]
-        else:
-            rows = rows["config"]
-        click.secho(json_dump(rows))
-        ctx.exit(0)
-
-    if export_format == "json-full":
-        click.secho(json_dump(rows))
-        ctx.exit(0)
-
-    if export_format == "table":
-        rows = listify(rows)
-        click.secho(tablize_cnxs(cnxs=rows))
-        ctx.exit(0)
-
-    if export_format == "table-schemas":
-        if isinstance(rows, list):
-            schemas = rows[0]["schemas"]
-        else:
-            schemas = rows["schemas"]
-        click.secho(
-            tablize_schemas(
-                schemas=schemas,
-                err=None,
-                fmt="simple",
-                footer=True,
-                orig=True,
-                orig_width=20,
-            )
-        )
-        ctx.exit(0)
-
-    if export_format == "str-args":
-        rows = listify(rows)
-        lines = "\n".join(
-            [
-                "--node-name {node_name!r} --name {adapter_name!r} --id {id!r}".format(**row)
-                for row in rows
-            ]
-        )
-        click.secho(lines)
-        ctx.exit(0)
-
-    if export_format == "str":
-        rows = listify(rows)
-        lines = "\n".join(["{id}".format(**row) for row in rows])
-        click.secho(lines)
-        ctx.exit(0)
-
-    ctx.exit(1)
+OPTS_FLAGS = [
+    OPT_ACTIVE,
+    OPT_SAVE_AND_FETCH,
+]
+OPTS_SHOWS = [
+    OPT_SHOW_SCHEMAS,
+    OPT_SHOW_DEFAULTS,
+]

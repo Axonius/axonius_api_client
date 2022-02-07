@@ -3,6 +3,8 @@
 from ...exceptions import ApiError, NotFoundError
 from ...parsers.config import config_build, config_unchanged, config_unknown, parse_settings
 from ...parsers.tables import tablize
+from .. import json_api
+from ..api_endpoints import ApiEndpoints
 from ..mixins import ModelMixins
 
 
@@ -161,3 +163,75 @@ class SettingsMixins(ModelMixins):
         self._update(new_config=full_config)
 
         return self.get_sub_section(section=section, sub_section=sub_section)
+
+    def _get(self) -> json_api.system_settings.SystemSettings:
+        """Direct API method to get the current system settings."""
+        api_endpoint = ApiEndpoints.system_settings.settings_get
+        return api_endpoint.perform_request(
+            http=self.auth.http, plugin_name=self.PLUGIN_NAME, config_name=self.CONFIG_NAME
+        )
+
+    def _update(self, new_config: dict) -> json_api.system_settings.SystemSettings:
+        """Direct API method to update the system settings.
+
+        Args:
+            new_config: new system settings to update
+        """
+        api_endpoint = ApiEndpoints.system_settings.settings_update
+        request_obj = api_endpoint.load_request(
+            config=new_config, configNmae=self.CONFIG_NAME, pluginId=self.PLUGIN_NAME
+        )
+        return api_endpoint.perform_request(
+            http=self.auth.http,
+            request_obj=request_obj,
+            plugin_name=self.PLUGIN_NAME,
+            config_name=self.CONFIG_NAME,
+        )
+
+
+class SettingsGlobal(SettingsMixins):
+    """API for working with System Settings -> Global Settings."""
+
+    TITLE: str = "Global Settings"
+    PLUGIN_NAME: str = "core"
+    CONFIG_NAME: str = "CoreService"
+
+    def configure_destroy(self, enabled: bool, destroy: bool, reset: bool) -> dict:
+        """Enable or disable destroy and factory reset API endpoints.
+
+        Args:
+            enabled: enable or disable destroy endpoints
+            destroy: enable api/devices/destroy and api/users/destroy endpoints
+            reset: enable api/factory_reset endpoint
+        """
+        return self.update_section(
+            section="api_settings",
+            enabled=enabled,
+            enable_factory_reset=reset,
+            enable_destroy=destroy,
+            check_unchanged=False,
+        )
+
+
+class SettingsGui(SettingsMixins):
+    """API for working with System Settings -> GUI Settings."""
+
+    TITLE: str = "GUI Settings"
+    PLUGIN_NAME: str = "gui"
+    CONFIG_NAME: str = "GuiService"
+
+
+class SettingsIdentityProviders(SettingsMixins):
+    """API for working with System Settings -> Identity Providers Settings."""
+
+    TITLE: str = "Identity Providers Settings"
+    PLUGIN_NAME: str = "gui"
+    CONFIG_NAME: str = "IdentityProviders"
+
+
+class SettingsLifecycle(SettingsMixins):
+    """API for working with System Settings -> Lifecycle Settings."""
+
+    TITLE: str = "Lifecycle Settings"
+    PLUGIN_NAME: str = "system_scheduler"
+    CONFIG_NAME: str = "SystemSchedulerService"

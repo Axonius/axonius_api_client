@@ -10,9 +10,19 @@ from ...constants.api import FIELD_JOINER, FIELD_TRIM_LEN, FIELD_TRIM_STR
 from ...constants.fields import AGG_ADAPTER_NAME, SCHEMAS_CUSTOM
 from ...exceptions import ApiError
 from ...parsers.fields import schema_custom
-from ...tools import (calc_percent, coerce_int, dt_now, echo_error, echo_ok,
-                      echo_warn, get_path, join_kv, listify, longest_str,
-                      strip_right)
+from ...tools import (
+    calc_percent,
+    coerce_int,
+    dt_now,
+    echo_error,
+    echo_ok,
+    echo_warn,
+    get_path,
+    join_kv,
+    listify,
+    longest_str,
+    strip_right,
+)
 
 
 class Base:
@@ -337,11 +347,11 @@ class Base:
             cb_start = dt_now()
             rows = cb(rows=rows)
 
-            if debug_timing:
+            if debug_timing:  # pragma: no cover
                 cb_delta = dt_now() - cb_start
                 self.LOG.debug(f"CALLBACK {cb} took {cb_delta} for {len(rows)} rows")
 
-        if debug_timing:
+        if debug_timing:  # pragma: no cover
             p_delta = dt_now() - p_start
             self.LOG.debug(f"CALLBACKS TOOK {p_delta} for {len(rows)} rows")
 
@@ -647,20 +657,18 @@ class Base:
         schema = self.schema_to_explode
         field = schema["name_qual"]
 
-        if len(listify(row.get(field, []))) <= 1:
+        if len(listify(row.get(field, []))) <= 1:  # pragma: no cover
             self._do_flatten_fields(row=row, schema=schema)
             return [row]
 
         items = listify(row.pop(field, []))
         new_rows_map = {}
 
-        sub_schemas = self.get_sub_schemas(schema=schema)
-
         for idx, item in enumerate(items):
             new_rows_map[idx] = dict(row)
 
             if schema["is_complex"]:
-                for sub_schema in sub_schemas:
+                for sub_schema in self.get_sub_schemas(schema=schema):
                     value = item.pop(sub_schema["name"], null_value)
                     new_rows_map[idx][sub_schema["name_qual"]] = value
             else:
@@ -953,7 +961,7 @@ class Base:
 
         for field in api_fields + fields:
             self._fields_selected.append(field)
-            if include_details:
+            if include_details:  # pragma: no cover
                 field_details = f"{field}_details"
                 self._fields_selected.append(field_details)
 
@@ -1184,14 +1192,9 @@ class ExportMixins(Base):
         closer = getattr(self._fd, "close", None)
         name = str(getattr(self._fd, "name", self._fd))
 
-        if not close:
-            return
-
-        if not callable(closer):
-            return
-
-        self.echo(msg=f"Finished exporting to {name!r}")
-        closer()
+        if close and callable(closer):
+            self.echo(msg=f"Finished exporting to {name!r}")
+            closer()
 
 
 ARG_DESCRIPTIONS: dict = {

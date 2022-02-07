@@ -147,20 +147,20 @@ class UrlParser:
                 host = netloc
 
         scheme = scheme or default_scheme
-        if not scheme and port:
-            if format(port) == "443":
-                scheme = "https"
-            elif format(port) == "80":
-                scheme = "http"
+        if not scheme and port and format(port) in self.port_scheme_map:
+            scheme = self.port_scheme_map[format(port)]
 
-        if not port:
-            if scheme == "https":
-                netloc = self.make_netloc(host, "443")
-            elif scheme == "http":
-                netloc = self.make_netloc(host, "80")
+        scheme_port_map = {v: k for k, v in self.port_scheme_map.items()}
+        if not port and scheme in scheme_port_map:
+            netloc = self.make_netloc(host, scheme_port_map[scheme])
 
         pass2 = urlunparse((scheme, netloc, path, params, query, fragment))
         return urlparse(pass2)
+
+    @property
+    def port_scheme_map(self) -> dict:
+        """Get the schemes to use based on port."""
+        return {"443": "https", "80": "http"}
 
     def unparse_base(self, parsed_result) -> str:
         """Unparse a parsed URL into just the scheme, hostname, and port parts.

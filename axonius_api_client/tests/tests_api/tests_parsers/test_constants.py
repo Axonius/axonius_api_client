@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Test suite."""
 import pytest
+
 from axonius_api_client.constants.fields import Operators, OperatorTypeMaps
 from axonius_api_client.exceptions import NotFoundError, UnknownFieldSchema
 
@@ -34,5 +35,18 @@ class TestOperatorTypeMaps:
             "name": "badwolf",
             "parent": "moo",
         }
-        with pytest.raises(NotFoundError):
+        with pytest.raises(NotFoundError) as exc:
             OperatorTypeMaps.get_operator(field=field, operator="equax")
+
+        assert "sub field of" in str(exc.value)
+
+    def test_get_operator_invalid_root(self):
+        field = {
+            "type": "string",
+            "name_qual": "badwolf",
+            "name": "badwolf",
+            "parent": "root",
+        }
+        with pytest.raises(NotFoundError) as exc:
+            OperatorTypeMaps.get_operator(field=field, operator="equax")
+        assert "sub field of" not in str(exc.value)

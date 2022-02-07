@@ -3,6 +3,8 @@
 import re
 from typing import List, Optional, Union
 
+from .api import GUI_PAGE_SIZES
+
 
 class Templates:
     """Query builder templates."""
@@ -22,7 +24,7 @@ class Templates:
     AND: str = "and {query}"
     """For building a query with an AND operator"""
 
-    COMPLEX: str = "({field} == match([{sub_queries}]))"
+    COMPLEX: str = '("{field}" == match([{sub_queries}]))'
     """For building a query for complex fields"""
 
     SUBS: str = " and "
@@ -164,11 +166,29 @@ class EntrySq:
     FDEF: str = "fields_default"
     FMAN: str = "fields_manual"
 
+    PRIVATE: str = "private"
+    ASSET_SCOPE: str = "asset_scope"
+    ALWAYS_CACHED: str = "always_cached"
+    PAGE_SIZE: str = "gui_page_size"
+
     REQ: List[str] = [*Entry.REQ]
     """Required keys for saved query types"""
 
-    OPT: dict = {DESC: "", TAGS: "", FIELDS: DEFAULT}
+    OPT_ENTRY: dict = {
+        PRIVATE: False,
+        ALWAYS_CACHED: False,
+        ASSET_SCOPE: False,
+        PAGE_SIZE: GUI_PAGE_SIZES[0],
+    }
+    OPT: dict = {
+        DESC: "",
+        TAGS: "",
+        FIELDS: DEFAULT,
+        **OPT_ENTRY,
+    }
     """Optional keys and their defaults for saved query types"""
+    BOOLS: List[str] = [PRIVATE, ASSET_SCOPE, ALWAYS_CACHED]
+    INTS: List[str] = [PAGE_SIZE]
 
 
 class Types:
@@ -249,12 +269,13 @@ class Docs:
 ]
 """
     EX_FIELDS: str = "os.distribution,os.os_str,aws:aws_device_type"
-
+    GUI_PAGE_SIZES_STR = " or ".join([str(x) for x in GUI_PAGE_SIZES]) + " (default 20 if empty)"
+    OPT_BOOL = "Optional: True or False (default False if empty)"
     EX_CSV: str = f"""
-{Entry.TYPE},{Entry.VALUE},{EntrySq.DESC},{EntrySq.TAGS},{EntrySq.FIELDS}
+{Entry.TYPE},{Entry.VALUE},{EntrySq.DESC},{EntrySq.TAGS},{EntrySq.FIELDS},{EntrySq.ASSET_SCOPE},{EntrySq.PRIVATE},{EntrySq.ALWAYS_CACHED},{EntrySq.PAGE_SIZE}
 "# If {Entry.TYPE} column is empty or begins with # it is ignored",,,,
 "# {Entry.TYPE} of {Types.SIMPLE} or {Types.COMPLEX} will belong to the {Types.SAVED_QUERY} they are under",,,,
-"# Column descriptions for {Entry.TYPE} of {Types.SAVED_QUERY}","Name of Saved Query","Description of Saved Query","Tags to apply to Saved Query","Columns to display in Saved Query"
+"# Column descriptions for {Entry.TYPE} of {Types.SAVED_QUERY}","Name of Saved Query","Description of Saved Query","Tags to apply to Saved Query","Columns to display in Saved Query",{OPT_BOOL},{OPT_BOOL},{OPT_BOOL},"{GUI_PAGE_SIZES_STR}",
 "# Column descriptions for {Entry.TYPE} of {Types.SIMPLE}","Format -- [] represents optional items: {FMT_SIMPLE}","Description: {DESC_SIMPLE}","Only uses columns {Entry.TYPE} and {Entry.VALUE}",
 "# Column descriptions for {Entry.TYPE} of {Types.COMPLEX}","Format -- [] represents optional items: {FMT_COMPLEX}","Description: {DESC_COMPLEX}","Only uses columns {Entry.TYPE} and {Entry.VALUE}",
 "# Value Flags for {Entry.TYPE} of {Types.SIMPLE} or {Types.COMPLEX}","{Flags.FMT_CSV}",,,
@@ -291,7 +312,7 @@ class Docs:
 
 # Flags:{Flags.FMT_TEXT}
 """
-    CSV: str = f"Example:\n{EX_CSV}"
+    CSV: str = f"{EX_CSV}"
 
 
 class Sources:
@@ -381,7 +402,8 @@ class Expr:
             query: AQL string
             field: schema of field
             idx: index of this expression
-            field_name_override: value to use as name of field in expr instead of 'name' key from field dict
+            field_name_override: value to use as name of field in expr instead of 'name' key from
+                field dict
             value: raw expression value
             op_comp: comparison operator
             is_complex: build an expression for a complex filter
@@ -414,10 +436,9 @@ class Expr:
         else:
             op_logic = cls.OP_IDX0
 
-        if isinstance(field_name_override, str):
-            field_name = field_name_override
-        else:
-            field_name = field[Fields.NAME]
+        field_name = (
+            field_name_override if isinstance(field_name_override, str) else field[Fields.NAME]
+        )
 
         expression = {}
         expression[cls.BRACKET_WEIGHT] = weight

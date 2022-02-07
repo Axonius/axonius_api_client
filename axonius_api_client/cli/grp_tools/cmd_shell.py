@@ -87,8 +87,8 @@ def cmd(ctx, url, key, secret):  # noqa: D301
     client.HTTP.save_history = True
 
     shellvars = {
-        "adapters": client.adapters,
         "activity_logs": client.activity_logs,
+        "adapters": client.adapters,
         "axonapi": axonapi,
         "client": client,
         "ctx": ctx,
@@ -97,16 +97,16 @@ def cmd(ctx, url, key, secret):  # noqa: D301
         "enforcements": client.enforcements,
         "instances": client.instances,
         "jdump": jdump,
-        "users": client.users,
-        "remote_support": client.remote_support,
-        "system_users": client.system_users,
-        "system_roles": client.system_roles,
         "meta": client.meta,
+        "openapi": client.openapi,
+        "remote_support": client.remote_support,
         "settings_global": client.settings_global,
         "settings_gui": client.settings_gui,
-        "settings_lifecycle": client.settings_lifecycle,
         "settings_ip": client.settings_ip,
-        "openapi": client.openapi,
+        "settings_lifecycle": client.settings_lifecycle,
+        "system_roles": client.system_roles,
+        "system_users": client.system_users,
+        "users": client.users,
         "a": client.adapters,
         "al": client.activity_logs,
         "c": client,
@@ -115,16 +115,16 @@ def cmd(ctx, url, key, secret):  # noqa: D301
         "e": client.enforcements,
         "i": client.instances,
         "j": jdump,
-        "u": client.users,
-        "su": client.system_users,
-        "sr": client.system_roles,
-        "rs": client.remote_support,
         "m": client.meta,
+        "oas": client.openapi,
+        "rs": client.remote_support,
         "sgl": client.settings_global,
         "sgu": client.settings_gui,
-        "sl": client.settings_lifecycle,
         "sip": client.settings_ip,
-        "openapi": client.openapi,
+        "sl": client.settings_lifecycle,
+        "sr": client.system_roles,
+        "su": client.system_users,
+        "u": client.users,
     }
 
     spawn_shell(shellvars)
@@ -142,7 +142,7 @@ def write_hist_file():
         histfile.touch(mode=0o600, exist_ok=True)
 
         readline.write_history_file(format(histfile))
-    except Exception as exc:
+    except Exception as exc:  # pragma: no cover
         msg = f"Unable to import readline! {exc}"
         echo_error(msg, abort=False)
 
@@ -189,7 +189,7 @@ def spawn_shell(shellvars=None):
 
     args = {"local": shellvars, "banner": SHELL_BANNER}
 
-    if PY36:
+    if PY36:  # pragma: no cover
         args["exitmsg"] = SHELL_EXIT
 
     code.interact(**args)

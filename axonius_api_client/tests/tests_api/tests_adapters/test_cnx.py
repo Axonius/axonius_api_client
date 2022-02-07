@@ -2,20 +2,118 @@
 """Test suite."""
 
 import pytest
+
 from axonius_api_client.api import json_api
 from axonius_api_client.constants.adapters import CSV_ADAPTER
-from axonius_api_client.exceptions import CnxAddError  # CnxGoneError,; ConfigUnchanged,
 from axonius_api_client.exceptions import (
+    CnxAddError,
     CnxTestError,
+    CnxUpdateError,
     ConfigInvalidValue,
     ConfigRequired,
+    ConfigUnchanged,
     NotFoundError,
 )
+from axonius_api_client.tools import combo_dicts
 
-from ...meta import CSV_FILECONTENT_STR
-
-# from ...utils import get_cnx_broken, get_cnx_existing, get_cnx_working
+from ...meta import CSV_FILECONTENT_STR, CsvData, CsvKeys, TanData, TanKeys
 from ...utils import get_cnx_existing, get_cnx_working
+
+"""
+cnx errors
+ adapters.cnx._delete(
+    uuid='x',
+    adapter_name='tanium_adapter',
+    instance_id=core['id'],
+    instance_name=core['name'],
+)
+{
+    "status": "error",
+    "type": "InvalidId",
+    "message": "An error occurred. Please contact Axonius support. AX-ID: ",
+}
+
+
+ adapters.cnx._delete(
+    uuid='61eae13dc44696465eacb18a',
+    adapter_name='tanium_adapter',
+    instance_id=core['id'],
+    instance_name=core['name'],
+)
+{
+    "errors": [
+        {
+            "additional_data": None,
+            "detail": "Server is already gone, please try again after refreshing the page",
+        }
+    ]
+}
+
+ adapters.cnx._delete(
+    uuid='61eae13dc44696465eacb18a',
+    adapter_name='x',
+    instance_id=core['id'],
+    instance_name=core['name'],
+)
+{
+    "errors": [
+        {
+            "additional_data": None,
+            "detail": "Adapter tanium_adapter with Instance None or x not found",
+        }
+    ]
+}
+
+adapters.cnx._test(
+    adapter_name='tanium_adapter',
+    instance=instances.get_core()["id"],
+    connection={}
+)
+{
+    "errors": [
+        {
+            "additional_data": None,
+            "detail": "Adapter name and connection data are required",
+        },
+    ]
+}
+adapters.cnx._test(
+    adapter_name='tanium_adapter',
+    instance=instances.get_core()["id"],
+    connection={"d": "x"}
+)
+
+adapters.cnx._test(
+    adapter_name='tanium_adapter',
+    instance=instances.get_core()["id"],
+    connection={"username": "x"}
+)
+{
+    "status": "error",
+    "type": "JSONDecodeError",
+    "message": "An error occurred. Please contact Axonius support. AX-ID: ",
+}
+
+
+
+adapters.cnx._test(
+    adapter_name="tanium_adapter",
+    instance="53ccf92e6a1940ed9493c277312bbc6b",
+    connection={"domain": "dumdum", "username": "dumdum", "password": "dumdum"},
+)
+{
+    "errors": [
+        {
+            "additional_data": {
+                "additional_data": None,
+                "message": "Client is not reachable.",
+                "status": "error",
+            },
+            "detail": "Client is not reachable.",
+        }
+    ]
+}
+"""
 
 
 class TestCnxBase:
@@ -27,12 +125,130 @@ class TestCnxBase:
     def adapter(self, apiobj):
         return apiobj.get_by_name(name=CSV_ADAPTER, get_clients=False)
 
+    @pytest.fixture(scope="function")
+    def csv_cnx(self, apiobj):
+        uploaded_file = apiobj.file_upload(
+            name=CsvData.adapter_name_raw,
+            field_name=CsvData.file_field_name,
+            file_name=CsvData.file_name,
+            file_content=CsvData.file_contents,
+        )
+        assert isinstance(uploaded_file, dict)
+        assert uploaded_file["uuid"]
+        assert uploaded_file["filename"]
+        config = combo_dicts(CsvData.config, file_path=uploaded_file)
+        core_instance = apiobj.instances.get_core()
+        added = apiobj.cnx._add(
+            connection=config,
+            instance_id=core_instance["id"],
+            instance_name=core_instance["name"],
+            adapter_name=CsvData.adapter_name_raw,
+        )
+        fetched = [
+            x
+            for x in apiobj.cnx._get(adapter_name=CsvData.adapter_name_raw).cnxs
+            if x.uuid == added.id
+        ][0]
+        yield fetched
+
+        cnxs = apiobj.cnx._get(adapter_name=CsvData.adapter_name_raw).cnxs
+        for cnx in cnxs:
+            user_id = cnx.client_config.get(CsvKeys.user_id) or ""
+            if user_id == CsvData.user_id:
+                try:
+                    apiobj.cnx._delete(
+                        uuid=cnx.uuid,
+                        adapter_name=cnx.adapter_name_raw,
+                        instance_id=cnx.node_id,
+                        instance_name=cnx.node_name,
+                    )
+                except Exception:
+                    print(f"Unable to delete connection: {cnx}")
+                break
+
 
 class TestCnxPrivate(TestCnxBase):
     pass
 
 
 class TestCnxPublic(TestCnxBase):
+    def test_add_update_fail(self, apiobj):
+        with pytest.raises(CnxAddError) as exc:
+            apiobj.cnx.add(adapter_name=TanData.adapter_name, **TanData.config_bad)
+
+        cnx_new = exc.value.cnx_new
+        assert isinstance(cnx_new, dict)
+        assert cnx_new["uuid"]
+        assert cnx_new["id"]
+
+        config_to_update = combo_dicts(TanData.config_bad, **{TanKeys.password: "moo"})
+        with pytest.raises(CnxUpdateError) as exc:
+            apiobj.cnx.update_by_id(
+                cnx_id=cnx_new["id"], adapter_name=TanData.adapter_name, **config_to_update
+            )
+
+        cnx_updated = exc.value.cnx_new
+        assert isinstance(cnx_updated, dict)
+        assert cnx_updated["uuid"] == cnx_new["uuid"]
+        assert cnx_updated["id"] == cnx_new["id"]
+
+        cnx_deleted = apiobj.cnx.delete_by_id(
+            cnx_id=cnx_new["id"], adapter_name=TanData.adapter_name
+        )
+        assert cnx_deleted.client_id == cnx_new["id"]
+
+    def test_update_cnx_err_unchanged(self, apiobj, csv_cnx):
+        with pytest.raises(ConfigUnchanged):
+            apiobj.cnx.update_cnx(cnx_update=csv_cnx.to_dict_old())
+
+    def test_update_cnx(self, apiobj, csv_cnx):
+
+        config_old = csv_cnx.client_config
+        value_old = config_old[CsvKeys.verify_ssl]
+        value_new = not value_old
+        config_to_update = {CsvKeys.verify_ssl: value_new}
+
+        cnx_updated = apiobj.cnx.update_cnx(cnx_update=csv_cnx.to_dict_old(), **config_to_update)
+        config_updated = cnx_updated["config"]
+        assert config_updated[CsvKeys.verify_ssl] == value_new
+
+        config_to_revert = {CsvKeys.verify_ssl: value_old}
+        cnx_reverted = apiobj.cnx.update_cnx(cnx_update=cnx_updated, **config_to_revert)
+        config_reverted = cnx_reverted["config"]
+        assert config_reverted[CsvKeys.verify_ssl] == value_old
+
+    def test_update_by_id(self, apiobj, csv_cnx):
+        config_old = csv_cnx.client_config
+        value_old = config_old[CsvKeys.verify_ssl]
+        value_new = not value_old
+        config_to_update = {CsvKeys.verify_ssl: value_new}
+
+        cnx_updated = apiobj.cnx.update_by_id(
+            cnx_id=csv_cnx.client_id, adapter_name=CsvData.adapter_name, **config_to_update
+        )
+        config_updated = cnx_updated["config"]
+        assert config_updated[CsvKeys.verify_ssl] == value_new
+
+    def test_set_cnx_active(self, apiobj, csv_cnx):
+        old_value = csv_cnx.active
+        new_value = not old_value
+        updated = apiobj.cnx.set_cnx_active(
+            cnx=csv_cnx.to_dict_old(), value=new_value, save_and_fetch=False
+        )
+        assert updated["active"] == new_value
+        reverted = apiobj.cnx.set_cnx_active(cnx=updated, value=old_value, save_and_fetch=False)
+        assert reverted["active"] == old_value
+
+    def test_set_cnx_label(self, apiobj, csv_cnx):
+        old_value = csv_cnx.connection_label
+        new_value = "badwolf123"
+        updated = apiobj.cnx.set_cnx_label(
+            cnx=csv_cnx.to_dict_old(), value=new_value, save_and_fetch=False
+        )
+        assert updated["connection_label"] == new_value
+        reverted = apiobj.cnx.set_cnx_label(cnx=updated, value=old_value, save_and_fetch=False)
+        assert reverted["connection_label"] == old_value
+
     def test_get_by_adapter(self, apiobj):
         cnxs = apiobj.cnx.get_by_adapter(adapter_name=CSV_ADAPTER)
         assert isinstance(cnxs, list)
@@ -56,6 +272,10 @@ class TestCnxPublic(TestCnxBase):
             adapter_node=cnx["node_name"],
         )
         assert cnx == found
+
+    def test_get_by_uuid_fail(self, apiobj):
+        with pytest.raises(NotFoundError):
+            apiobj.cnx.get_by_uuid(cnx_uuid="badwolf", adapter_name="aws")
 
     def test_get_by_id(self, apiobj):
         cnx = get_cnx_existing(apiobj)
@@ -81,25 +301,24 @@ class TestCnxPublic(TestCnxBase):
 
     def test_test_by_id(self, apiobj):
         cnx = get_cnx_working(apiobj)
+        exp = {"data": None}
+
         result = apiobj.cnx.test_by_id(
             cnx_id=cnx["id"],
             adapter_name=cnx["adapter_name"],
             adapter_node=cnx["node_name"],
         )
-        assert result is True
+        assert result == exp
 
     def test_test(self, apiobj):
         cnx = get_cnx_working(apiobj)
+        exp = {"data": None}
         result = apiobj.cnx.test(
             adapter_name=cnx["adapter_name"],
             adapter_node=cnx["node_name"],
             **cnx["config"],
         )
-        assert result is True
-
-    # XXX in 4.1 this can't be relied on
-    # it seems all tests return '{"data":null,"meta":400}\n'
-    # regardless if the test fails or succeeds
+        assert result == exp
 
     def test_test_fail(self, apiobj):
         mpass = "badwolf"
@@ -114,61 +333,6 @@ class TestCnxPublic(TestCnxBase):
     def test_test_fail_no_domain(self, apiobj):
         with pytest.raises(ConfigRequired):
             apiobj.cnx.test(adapter_name="tanium", username="x")
-
-    # fails due to unknown SSL config, perhaps cnx specific
-    # def test_update_cnx_nochange(self, apiobj):
-    #     cnx = get_cnx_broken(apiobj)
-    #     with pytest.raises(ConfigUnchanged):
-    #         apiobj.cnx.update_cnx(cnx_update=cnx)
-
-    def test_update_cnx(self, apiobj):
-        cnx = get_cnx_working(apiobj, name="tanium")
-        config_key = "last_reg_mins"
-        value_orig = cnx["config"].get(config_key) or 0
-        value_to_set = 60 if not isinstance(value_orig, int) else value_orig + 10
-
-        cnx_update = apiobj.cnx.update_cnx(cnx_update=cnx, **{config_key: value_to_set})
-        assert cnx_update["config"][config_key] == value_to_set
-
-        cnx_reset = apiobj.cnx.update_by_id(
-            cnx_id=cnx_update["id"],
-            adapter_name=cnx_update["adapter_name"],
-            adapter_node=cnx_update["node_name"],
-            **{config_key: value_orig or 0},
-        )
-        assert cnx_reset["config"][config_key] == value_orig
-
-        # no longer happens, ID does not change on update anymore??
-        # with pytest.raises(CnxGoneError):
-        #     apiobj.cnx.update_cnx(cnx_update=cnx, **{config_key: 9999})
-
-        cnx_final = apiobj.cnx.get_by_id(
-            cnx_id=cnx_reset["id"], adapter_name=cnx_reset["adapter_name"]
-        )
-        assert cnx_final["config"][config_key] == value_orig
-
-    # XXX this needs work
-    # def test_update_cnx_error(self, apiobj):
-    #     config_key = "https_proxy"
-
-    #     cnx = get_cnx_working(apiobj=apiobj, reqkeys=["domain", config_key])
-
-    #     config_orig = cnx["config"]
-    #     value_orig = config_orig.get(config_key)
-    #     value_to_set = "badwolf"
-
-    #     with pytest.raises(CnxUpdateError) as exc:
-    #         apiobj.cnx.update_cnx(cnx_update=cnx, **{config_key: value_to_set})
-
-    #     assert getattr(exc.value, "cnx_new", None)
-    #     assert getattr(exc.value, "cnx_old", None)
-    #     assert getattr(exc.value, "result", None)
-    #     assert exc.value.cnx_new["config"][config_key] == value_to_set
-    #     assert exc.value.cnx_old["config"].get(config_key) == value_orig
-
-    #     cnx_reset = apiobj.cnx.update_cnx(
-    #     cnx_update=exc.value.cnx_new, **{config_key: value_orig})
-    #     assert cnx_reset["config"][config_key] == value_orig
 
     def test_cb_file_upload_fail(self, apiobj, csv_file_path, monkeypatch):
         mock_return = {"filename": "badwolf", "uuid": "badwolf"}
@@ -281,9 +445,6 @@ class TestCnxPublic(TestCnxBase):
         config = {
             "user_id": "badwolf",
             "file_path": csv_file_path,
-            # "is_users": False,
-            # "is_installed_sw": False,
-            # "s3_use_ec2_attached_instance_profile": False,
         }
         cnx_added = apiobj.cnx.add(adapter_name=CSV_ADAPTER, **config)
         for k, v in config.items():
@@ -296,7 +457,7 @@ class TestCnxPublic(TestCnxBase):
             delete_entities=True,
         )
         assert isinstance(del_result, json_api.adapters.CnxDelete)
-        assert del_result.client_id == f"{{'client_id': '{client_id}'}}"
+        assert del_result.client_id == client_id
 
         with pytest.raises(NotFoundError):
             apiobj.cnx.get_by_id(
@@ -323,7 +484,7 @@ class TestCnxPublic(TestCnxBase):
         )
 
         assert isinstance(del_result, json_api.adapters.CnxDelete)
-        assert del_result.client_id == f"{{'client_id': '{client_id}'}}"
+        assert del_result.client_id == client_id
 
         with pytest.raises(NotFoundError):
             apiobj.cnx.get_by_id(
@@ -344,10 +505,6 @@ class TestCnxPublic(TestCnxBase):
         config = {
             "user_id": "badwolf",
             "file_path": csv_file_path_broken,
-            # SANE_DEFAULTS handles these now:
-            # "is_users": False,
-            # "is_installed_sw": False,
-            # "s3_use_ec2_attached_instance_profile": False,
         }
         with pytest.raises(CnxAddError) as exc:
             apiobj.cnx.add(adapter_name=CSV_ADAPTER, **config)
@@ -364,7 +521,7 @@ class TestCnxPublic(TestCnxBase):
         )
 
         assert isinstance(del_result, json_api.adapters.CnxDelete)
-        assert del_result.client_id == f"{{'client_id': '{client_id}'}}"
+        assert del_result.client_id == client_id
 
         with pytest.raises(NotFoundError):
             apiobj.cnx.get_by_id(

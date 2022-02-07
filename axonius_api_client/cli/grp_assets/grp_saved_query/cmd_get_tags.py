@@ -18,8 +18,8 @@ def cmd(ctx, url, key, secret, **kwargs):
     apiobj = getattr(client, p_grp)
 
     with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
-        rows = listify(apiobj.saved_query.get_tags(**kwargs))
+        data = listify(apiobj.saved_query.get_tags(**kwargs))
 
-    ctx.obj.echo_ok(f"Successfully fetched {len(rows)} saved query tags")
-    click.secho("\n".join(rows))
+    ctx.obj.echo_ok(f"Successfully fetched {len(data)} saved query tags")
+    click.secho("\n".join(data))
     ctx.exit(0)

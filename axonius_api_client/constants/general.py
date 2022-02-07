@@ -11,6 +11,12 @@ OK_ARGS: dict = {"fg": "green", "bold": True, "err": True}
 OK_TMPL: str = "** {msg}"
 """default template for echo_ok"""
 
+DEBUG_ARGS: dict = {"fg": "blue", "bold": False, "err": True}
+"""default arguments for echo_debug"""
+
+DEBUG_TMPL: str = "** {msg}"
+"""default template for echo_debug"""
+
 WARN_ARGS: dict = {"fg": "yellow", "bold": True, "err": True}
 """default arguments for echo_warn"""
 
@@ -35,6 +41,8 @@ COMPLEX: Tuple[Type] = (dict, list, tuple)
 SIMPLE: Tuple[Type] = (str, int, bool, float)
 """types that are considered as simple"""
 
+JSON_TYPES = Union[int, str, float, bool, dict, list, tuple, None]
+
 EMPTY: List[Union[str, list, dict, tuple]] = [None, "", [], {}, ()]
 """Values that should be considered as empty"""
 
@@ -52,3 +60,5 @@ IS_LINUX: bool = sys.platform == "linux"
 
 IS_MAC: bool = sys.platform == "darwin"
 """Running on a mac platform"""
+
+TRIM_MSG: str = "\nTrimmed {value_len} {trim_type} down to {trim}"

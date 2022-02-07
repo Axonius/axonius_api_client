@@ -6,9 +6,14 @@ from typing import List, Optional, Tuple, Union
 from cachetools import TTLCache, cached
 from fuzzyfinder import fuzzyfinder
 
-from ...constants.fields import (AGG_ADAPTER_ALTS, AGG_ADAPTER_NAME,
-                                 FUZZY_SCHEMAS_KEYS, GET_SCHEMA_KEYS,
-                                 GET_SCHEMAS_KEYS, PRETTY_SCHEMA_TMPL)
+from ...constants.fields import (
+    AGG_ADAPTER_ALTS,
+    AGG_ADAPTER_NAME,
+    FUZZY_SCHEMAS_KEYS,
+    GET_SCHEMA_KEYS,
+    GET_SCHEMAS_KEYS,
+    PRETTY_SCHEMA_TMPL,
+)
 from ...exceptions import ApiError, NotFoundError
 from ...parsers.fields import parse_fields, schema_custom
 from ...tools import listify, split_str, strip_right
@@ -63,11 +68,13 @@ class Fields(ChildMixins):
         self,
         fields: Optional[Union[List[str], str]] = None,
         fields_regex: Optional[Union[List[str], str]] = None,
+        fields_regex_root_only: bool = True,
         fields_manual: Optional[Union[List[str], str]] = None,
         fields_fuzzy: Optional[Union[List[str], str]] = None,
         fields_default: bool = True,
         fields_error: bool = True,
         fields_root: Optional[str] = None,
+        empty_ok: bool = False,
     ) -> List[dict]:
         """Get the fully qualified field names for getting asset data.
 
@@ -117,10 +124,10 @@ class Fields(ChildMixins):
 
         add(fields_manual)
         add(self.get_field_names_eq(value=fields, fields_error=fields_error))
-        add(self.get_field_names_re(value=fields_regex))
+        add(self.get_field_names_re(value=fields_regex, root_only=fields_regex_root_only))
         add(self.get_field_names_fuzzy(value=fields_fuzzy))
 
-        if fields_error and not selected:
+        if fields_error and not selected and not empty_ok:
             raise ApiError("No fields supplied, must supply at least one field")
 
         return selected
@@ -184,7 +191,9 @@ class Fields(ChildMixins):
         schema = self.get_field_schema(value=field, schemas=schemas)
         return schema[key] if key else schema
 
-    def get_field_names_re(self, value: Union[str, List[str]], key: str = "name_qual") -> List[str]:
+    def get_field_names_re(
+        self, value: Union[str, List[str]], key: str = "name_qual", root_only: bool = True
+    ) -> List[str]:
         """Get field names using regex.
 
         Examples:
@@ -243,6 +252,10 @@ class Fields(ChildMixins):
             for adapter in adapters:
                 for field_re in fields_re:
                     fschemas = self.get_field_schemas(value=field_re, schemas=fields[adapter])
+                    fschemas = [x for x in fschemas if x["name_base"] not in ["all", "raw_data"]]
+                    if root_only:
+                        fschemas = [x for x in fschemas if x["is_root"]]
+
                     names = [x[key] for x in fschemas]
                     matches += [x for x in names if x not in matches]
         return matches
@@ -341,10 +354,10 @@ class Fields(ChildMixins):
             :meth:`get_field_names_root`
 
         Notes:
-            root fields are fields that are fields that are not sub-fields of complex fields
+            root fields are fields that are fields that are not sub-fields of complex fields
 
             For instance 'specific_data.data.network_interfaces.ips' is NOT a root field,
-            since it 'ips' is a sub field of 'specific_data.data.network_interfaces'
+            since 'ips' is a sub field of 'specific_data.data.network_interfaces'
 
         """
         fields = self.get()
@@ -400,23 +413,19 @@ class Fields(ChildMixins):
 
         matches = []
 
+        # try to do string matches first
         for schema in schemas:
-            if do_skip(schema):
-                continue
-
-            values = [schema[x] for x in fuzzy_keys]
-
-            if any([search.strip().lower() in x for x in values]):
+            if not do_skip(schema) and any(
+                [search.strip().lower() in x for x in [schema[x] for x in fuzzy_keys]]
+            ):
                 matches.append(schema)
 
+        # if no string matches, try to find matches with fuzzyfinder
         if not matches:
             for schema in schemas:
-                if do_skip(schema):
-                    continue
-
-                values = [schema[x] for x in fuzzy_keys]
-
-                if list(fuzzyfinder(search, values)):
+                if not do_skip(schema) and list(
+                    fuzzyfinder(search, [schema[x] for x in fuzzy_keys])
+                ):
                     matches.append(schema)
 
         return [x[key] for x in matches] if key else matches

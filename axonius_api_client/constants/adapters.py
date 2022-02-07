@@ -8,20 +8,36 @@ CSV_ADAPTER: str = "csv"
 CSV_FIELD_NAME: str = "file_path"
 """Field name used by CSV adapter for file."""
 
+ALL_DEFAULTS: dict = {
+    "http_proxy": None,
+    "https_proxy": None,
+    "verify_ssl": False,
+}
+FILE_DEFAULTS: dict = {
+    "azure_blob_name": None,
+    "azure_connection_string": None,
+    "azure_storage_container_name": None,
+    "custom_prefix": None,
+    "encoding": None,
+    "ignore_encoding_errors": False,
+    "is_installed_sw": False,
+    "is_users": False,
+    "list_field_separator": None,
+    "password": None,
+    "request_headers": None,
+    "resource_path": None,
+    "s3_access_key_id": None,
+    "s3_bucket": None,
+    "s3_object_location": None,
+    "s3_secret_access_key": None,
+    "s3_use_ec2_attached_instance_profile": False,
+    "username": None,
+    **ALL_DEFAULTS,
+}
 CNX_SANE_DEFAULTS: Dict[str, dict] = {
-    "all": {"verify_ssl": False},
-    "csv": {
-        "is_users": False,
-        "is_installed_sw": False,
-        "s3_use_ec2_attached_instance_profile": False,
-        "verify_ssl": False,
-    },
-    "json": {
-        "is_users": False,
-        "is_installed_sw": False,
-        "s3_use_ec2_attached_instance_profile": False,
-        "verify_ssl": False,
-    },
+    "all": ALL_DEFAULTS,
+    "csv": FILE_DEFAULTS,
+    "json": FILE_DEFAULTS,
 }
 """Sane connection defaults for adapters."""
 CNX_LABEL_SCHEMA = {

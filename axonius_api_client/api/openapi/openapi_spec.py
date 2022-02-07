@@ -10,10 +10,7 @@ class OpenAPISpec(ModelMixins):
     """API for working with the OpenAPI YAML specification file."""
 
     def get_spec(self) -> str:
-        """
-        Method to get the OpenAPI specification file.
-        """
-
+        """Get the OpenAPI specification file."""
         return self._get_spec()
 
     def _get_spec(self) -> str:

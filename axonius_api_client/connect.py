@@ -15,6 +15,7 @@ from .api import (
     Enforcements,
     Instances,
     Meta,
+    OpenAPISpec,
     RemoteSupport,
     SettingsGlobal,
     SettingsGui,
@@ -24,15 +25,23 @@ from .api import (
     SystemRoles,
     SystemUsers,
     Users,
-    OpenAPISpec,
 )
 from .auth import ApiKey
 from .constants.api import TIMEOUT_CONNECT, TIMEOUT_RESPONSE
-from .constants.logs import (LOG_FILE_MAX_FILES, LOG_FILE_MAX_MB,
-                             LOG_FILE_NAME, LOG_FILE_PATH, LOG_FMT_BRIEF,
-                             LOG_FMT_VERBOSE, LOG_LEVEL_API, LOG_LEVEL_AUTH,
-                             LOG_LEVEL_CONSOLE, LOG_LEVEL_FILE, LOG_LEVEL_HTTP,
-                             LOG_LEVEL_PACKAGE)
+from .constants.logs import (
+    LOG_FILE_MAX_FILES,
+    LOG_FILE_MAX_MB,
+    LOG_FILE_NAME,
+    LOG_FILE_PATH,
+    LOG_FMT_BRIEF,
+    LOG_FMT_VERBOSE,
+    LOG_LEVEL_API,
+    LOG_LEVEL_AUTH,
+    LOG_LEVEL_CONSOLE,
+    LOG_LEVEL_FILE,
+    LOG_LEVEL_HTTP,
+    LOG_LEVEL_PACKAGE,
+)
 from .exceptions import ConnectError, InvalidCredentials
 from .http import Http
 from .logs import LOG, add_file, add_stderr, get_obj_log, set_log_level
@@ -96,6 +105,7 @@ class Connect:
         secret: str,
         log_console: bool = False,
         log_file: bool = False,
+        log_file_rotate: bool = False,
         certpath: Optional[Union[str, pathlib.Path]] = None,
         certverify: bool = False,
         certwarn: bool = True,
@@ -239,6 +249,11 @@ class Connect:
                 max_files=self.LOG_FILE_MAX_FILES,
                 fmt=self.LOG_FILE_FMT,
             )
+            if log_file_rotate:
+                LOG.info("Forcing file logs to rotate")
+                self.HANDLER_FILE.flush()
+                self.HANDLER_FILE.doRollover()
+                LOG.info("Forced file logs to rotate")
 
         headers = kwargs.get("headers") or {}
 
@@ -312,7 +327,7 @@ class Connect:
     @property
     def signup(self) -> Signup:
         """Work with signup endpoints."""
-        if not hasattr(self, "_signup"):
+        if not hasattr(self, "_signup"):  # pragma: no cover
             self._signup = Signup(**self.HTTP_ARGS)
         return self._signup
 
@@ -446,11 +461,11 @@ class Connect:
         pkg_ver = f"API Client v{VERSION}"
 
         if self.STARTED:
-            about = self.meta.about()
-            version = about.get("Version", "") or "DEMO"
-            version = version.replace("_", ".")
-            built = about.get("Build Date", "")
-            msg = [f"Connected to {url!r}", f"version {version}", f"(RELEASE DATE: {built})"]
+            msg = [
+                f"Connected to {url!r}",
+                f"version {self.version}",
+                f"(RELEASE DATE: {self.build_date})",
+            ]
         else:
             msg = [f"Not connected to {url!r}"]
 
@@ -460,6 +475,18 @@ class Connect:
     def __repr__(self) -> str:
         """Show object info."""
         return self.__str__()
+
+    @property
+    def build_date(self) -> str:
+        """Pass."""
+        return self.meta.about().get("Build Date", "")
+
+    @property
+    def version(self) -> str:
+        """Pass."""
+        about = self.meta.about()
+        version = about.get("Version", "") or about.get("Installed Version", "") or "DEMO"
+        return version.replace("_", ".")
 
     @property
     def openapi(self) -> OpenAPISpec:
