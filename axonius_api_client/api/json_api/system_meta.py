@@ -13,10 +13,18 @@ class SystemMetaSchema(BaseSchemaJson):
 
     def __init__(self, *args, **kwargs):
         """Pass."""
-        self._declared_fields["Build Date"] = marshmallow_jsonapi.fields.Str(default="")
-        self._declared_fields["Customer Id"] = marshmallow_jsonapi.fields.Str(default="")
-        self._declared_fields["Installed Version"] = marshmallow_jsonapi.fields.Str(default="")
-        self._declared_fields["Contract Expiry Date"] = marshmallow_jsonapi.fields.Str(default="")
+        self._declared_fields["Build Date"] = marshmallow_jsonapi.fields.Str(
+            load_default="", dump_default=""
+        )
+        self._declared_fields["Customer Id"] = marshmallow_jsonapi.fields.Str(
+            load_default="", dump_default=""
+        )
+        self._declared_fields["Installed Version"] = marshmallow_jsonapi.fields.Str(
+            load_default="", dump_default=""
+        )
+        self._declared_fields["Contract Expiry Date"] = marshmallow_jsonapi.fields.Str(
+            load_default="", dump_default=""
+        )
         super().__init__(*args, **kwargs)
 
     class Meta:

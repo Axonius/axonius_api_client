@@ -83,66 +83,27 @@ lint:
 	pipenv run black \
 		-l 100 \
 		$(PACKAGE) setup.py shell.py
-	pipenv run pydocstyle \
-		--match-dir='(?!tests).*'\
-		--match-dir='(?!examples).*' \
-		$(PACKAGE) setup.py shell.py
 	pipenv run flake8 \
 		--max-line-length 100 \
 		--exclude $(PACKAGE)/tests \
 		--exclude $(PACKAGE)/examples \
 		$(PACKAGE) setup.py shell.py
-	pipenv run bandit \
-		-x $(PACKAGE)/examples,$(PACKAGE)/tests \
-		--skip B101,B107 \
-		-r \
-		$(PACKAGE)
+	# XXX DISABLED FOR NOW
+	# 	pipenv run pydocstyle \
+	# 		--match-dir='(?!tests).*'\
+	# 		--match-dir='(?!examples).*' \
+	# 		$(PACKAGE) setup.py shell.py
+	# 	pipenv run bandit \
+	# 		-x $(PACKAGE)/examples,$(PACKAGE)/tests \
+	# 		--skip B101,B107 \
+	# 		-r \
+	# 		$(PACKAGE)
 
-test:
-	pipenv run pytest \
-		-ra \
-		-vv \
-		--exitfirst \
-		--pdb \
-		--cov-config=.coveragerc \
-		--cov-report xml \
-		--cov-report=html:cov_html \
-		--cov=$(PACKAGE) \
-		$(PACKAGE)/tests
+cov_open:
+	open artifacts/cov_html/index.html
 
-test_last:
-	pipenv run pytest \
-		-ra \
-		-vv \
-		--exitfirst \
-		--last-failed \
-		--pdb \
-		--cov-config=.coveragerc \
-		--cov-report xml \
-		--cov-report=html:cov_html \
-		--cov=$(PACKAGE) \
-		$(PACKAGE)/tests
-
-test_last_log:
-	pipenv run pytest \
-		-ra \
-		-vv \
-		--showlocals \
-		--exitfirst \
-		--last-failed \
-		--pdb \
-		--log-cli-level debug \
-		--cov-config=.coveragerc \
-		--cov-report xml \
-		--cov-report=html:cov_html \
-		--cov=$(PACKAGE) \
-		$(PACKAGE)/tests
-
-test_cov_open:
-	open cov_html/index.html
-
-test_clean:
-	rm -rf .egg .eggs junit-report.xml cov_html .tox .pytest_cache .coverage coverage.xml
+clean_tests:
+	rm -rf .egg .eggs .tox .pytest_cache artifacts/
 
 docs:
 	(cd docs && pipenv run make html SPHINXOPTS="-Wna" && cd ..)
@@ -168,9 +129,6 @@ docs_linkcheck:
 	(cd docs && pipenv run make linkcheck && cd ..)
 	cat docs/_build/linkcheck/output.txt
 
-docs_clean:
-	rm -rf docs/_build
-
 docs_dumprefs:
 	pipenv run python -m sphinx.ext.intersphinx docs/_build/html/objects.inv
 
@@ -187,34 +145,36 @@ pkg_publish:
 	# FUTURE: add check that only master branch can publish / git tag
 	$(MAKE) pkg_build
 	$(MAKE) git_check
-	pipenv run twine upload dist/*
+	pipenv run twine upload artifacts/dist/*
 
 pkg_build:
-	$(MAKE) pkg_clean
+	$(MAKE) clean_pkg
 
 	@echo "*** Building Source and Wheel (universal) distribution"
-	pipenv run python setup.py sdist bdist_wheel --universal
+	pipenv run python setup.py sdist bdist_wheel --universal --dist-dir artifacts/dist --build-base artifacts/build
 
 	@echo "*** Checking package with twine"
-	pipenv run twine check dist/*
+	pipenv run twine check artifacts/dist/*
 
 pkg_install:
 	$(MAKE) pkg_build
-	pip install dist/*.whl --upgrade
+	pip install artifacts/dist/*.whl --upgrade
 
-pkg_clean:
-	rm -rf build dist *.egg-info
+clean_docs:
+	rm -rf docs/_build
 
-files_clean:
+clean_pkg:
+	rm -rf dist build artifacts/dist axonius_api_client.egg-info
+
+clean_files:
 	find . -type d -name "__pycache__" | xargs rm -rf
 	find . -type f -name ".DS_Store" | xargs rm -f
 	find . -type f -name "*.pyc" | xargs rm -f
+	rm -f axonius_api_client.log*
 
 clean:
-	$(MAKE) files_clean
-	$(MAKE) pkg_clean
-	$(MAKE) test_clean
-	$(MAKE) docs_clean
+	$(MAKE) clean_files
+	$(MAKE) clean_pkg
+	$(MAKE) clean_tests
+	$(MAKE) clean_docs
 	$(MAKE) pipenv_clean
-
-# FUTURE: add cov_publish

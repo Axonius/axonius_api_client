@@ -3,23 +3,23 @@
 from ....exceptions import CnxUpdateError
 from ...context import CONTEXT_SETTINGS, click
 from ...options import AUTH, NODE_CNX, add_options
-from .grp_common import EXPORT, ID_CNX, SAVE_AND_FETCH, handle_export
+from .grp_common import EXPORT_FORMATS, OPT_EXPORT, OPT_ID_CNX, OPT_SAVE_AND_FETCH
 
 OPTIONS = [
     *AUTH,
-    EXPORT,
-    SAVE_AND_FETCH,
     *NODE_CNX,
-    ID_CNX,
+    OPT_SAVE_AND_FETCH,
+    OPT_ID_CNX,
     click.option(
         "--label",
         "-l",
         "label",
-        help="Prompt for optional items that are not supplied.",
+        help="New label to set for connection.",
         required=True,
         show_envvar=True,
         show_default=True,
     ),
+    OPT_EXPORT,
 ]
 
 
@@ -36,24 +36,29 @@ def cmd(
     cnx_id,
     label,
     save_and_fetch,
-    **kwargs,
+    export_format,
 ):
     """Set the label for a connection."""
     client = ctx.obj.start_client(url=url, key=key, secret=secret)
 
+    had_error = False
     with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
+        cnx = client.adapters.cnx.get_by_id(
+            adapter_name=adapter_name,
+            adapter_node=adapter_node,
+            cnx_id=cnx_id,
+        )
         try:
-            cnx = client.adapters.cnx.get_by_id(
-                adapter_name=adapter_name,
-                adapter_node=adapter_node,
-                cnx_id=cnx_id,
-            )
-            cnx_new = client.adapters.cnx.set_cnx_label(
+            data = client.adapters.cnx.set_cnx_label(
                 cnx=cnx, value=label, save_and_fetch=save_and_fetch
             )
-            ctx.obj.echo_ok(msg="Connection updated successfully!")
-        except CnxUpdateError as exc:
-            ctx.obj.echo_error(msg=f"{exc}", abort=False)
-            cnx_new = exc.cnx_new
+            ctx.obj.echo_ok(msg="Connection updated with no errors")
+        except CnxUpdateError as exc:  # pragma: no cover
+            had_error = True
+            ctx.obj.echo_error(msg=f"Connection updated with error: {exc}", abort=False)
+            data = exc.cnx_new
+            if not ctx.obj.wraperror:  # pragma: no cover
+                raise
 
-    handle_export(ctx=ctx, rows=cnx_new, **kwargs)
+    click.secho(EXPORT_FORMATS[export_format](data=data))
+    ctx.exit(100 if had_error else 0)

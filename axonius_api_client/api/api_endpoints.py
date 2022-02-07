@@ -1,14 +1,33 @@
 # -*- coding: utf-8 -*-
 """Models for API requests & responses."""
 import dataclasses
+from typing import Dict
 
 from ..data import BaseData
 from . import json_api
 from .api_endpoint import ApiEndpoint
 
 
-@dataclasses.dataclass
-class Assets(BaseData):
+class ApiEndpointGroup(BaseData):
+    """Pass."""
+
+    @classmethod
+    def get_endpoints(cls) -> Dict[str, ApiEndpoint]:
+        """Pass."""
+        return {x.name: x.default for x in cls.get_fields()}
+
+    def __str__(self):
+        """Pass."""
+        names = [x.name for x in self.get_fields()]
+        return f"{self.__class__.__name__}(endpoints={names})"
+
+    def __repr__(self):
+        """Pass."""
+        return self.__str__()
+
+
+@dataclasses.dataclass(repr=False)
+class Assets(ApiEndpointGroup):
     """Pass."""
 
     get: ApiEndpoint = ApiEndpoint(
@@ -94,13 +113,13 @@ class Assets(BaseData):
         path="api/V4.0/dashboard/get_allowed_dates",
         request_schema_cls=None,
         request_model_cls=None,
-        response_schema_cls=json_api.generic.DictValueSchema,
-        response_model_cls=json_api.generic.DictValue,
+        response_schema_cls=json_api.assets.HistoryDatesSchema,
+        response_model_cls=json_api.assets.HistoryDates,
     )
 
 
-@dataclasses.dataclass
-class SavedQueries(BaseData):
+@dataclasses.dataclass(repr=False)
+class SavedQueries(ApiEndpointGroup):
     """Pass."""
 
     get: ApiEndpoint = ApiEndpoint(
@@ -139,9 +158,18 @@ class SavedQueries(BaseData):
         response_model_cls=json_api.generic.Metadata,
     )
 
+    update: ApiEndpoint = ApiEndpoint(
+        method="put",
+        path="api/V4.0/{asset_type}/views/{uuid}",
+        request_schema_cls=json_api.saved_queries.SavedQueryCreateSchema,
+        request_model_cls=json_api.saved_queries.SavedQueryCreate,
+        response_schema_cls=json_api.saved_queries.SavedQuerySchema,
+        response_model_cls=json_api.saved_queries.SavedQuery,
+    )
 
-@dataclasses.dataclass
-class Instances(BaseData):
+
+@dataclasses.dataclass(repr=False)
+class Instances(ApiEndpointGroup):
     """Pass."""
 
     get: ApiEndpoint = ApiEndpoint(
@@ -231,8 +259,8 @@ class Instances(BaseData):
     )
 
 
-@dataclasses.dataclass
-class CentralCore(BaseData):
+@dataclasses.dataclass(repr=False)
+class CentralCore(ApiEndpointGroup):
     """Pass."""
 
     settings_get: ApiEndpoint = ApiEndpoint(
@@ -266,14 +294,32 @@ class CentralCore(BaseData):
     # TBUG: need testrail integration to automate tests
 
 
-@dataclasses.dataclass
-class SystemSettings(BaseData):
+@dataclasses.dataclass(repr=False)
+class SystemSettings(ApiEndpointGroup):
     """Pass."""
 
     # PBUG: schema differences between settings update and get
     # PBUG: no configName returned in get
     # PBUG: update request expects configName and pluginId, which is not returned by get
     # PBUG: update response returns config_name and pluginId, which are not returned by get
+    settings_get: ApiEndpoint = ApiEndpoint(
+        method="get",
+        path="api/V4.0/settings/plugins/{plugin_name}/{config_name}",
+        request_schema_cls=None,
+        request_model_cls=None,
+        response_schema_cls=json_api.system_settings.SystemSettingsSchema,
+        response_model_cls=json_api.system_settings.SystemSettings,
+    )
+
+    settings_update: ApiEndpoint = ApiEndpoint(
+        method="put",
+        path="api/V4.0/settings/plugins/{plugin_name}/{config_name}",
+        request_schema_cls=json_api.system_settings.SystemSettingsUpdateSchema,
+        request_model_cls=json_api.system_settings.SystemSettingsUpdate,
+        response_schema_cls=json_api.system_settings.SystemSettingsSchema,
+        response_model_cls=json_api.system_settings.SystemSettings,
+    )
+
     feature_flags_get: ApiEndpoint = ApiEndpoint(
         method="get",
         path="api/V4.0/settings/plugins/gui/FeatureFlags",
@@ -283,85 +329,13 @@ class SystemSettings(BaseData):
         response_model_cls=json_api.system_settings.FeatureFlags,
     )
 
-    global_get: ApiEndpoint = ApiEndpoint(
-        method="get",
-        path="api/V4.0/settings/plugins/core/CoreService",
-        request_schema_cls=None,
-        request_model_cls=None,
-        response_schema_cls=json_api.system_settings.SystemSettingsSchema,
-        response_model_cls=json_api.system_settings.SystemSettings,
-    )
-
-    global_update: ApiEndpoint = ApiEndpoint(
-        method="put",
-        path="api/V4.0/settings/plugins/core/CoreService",
-        request_schema_cls=json_api.system_settings.SystemSettingsUpdateSchema,
-        request_model_cls=json_api.system_settings.SystemSettingsGlobalUpdate,
-        response_schema_cls=json_api.system_settings.SystemSettingsSchema,
-        response_model_cls=json_api.system_settings.SystemSettings,
-    )
-
-    lifecycle_get: ApiEndpoint = ApiEndpoint(
-        method="get",
-        path="api/V4.0/settings/plugins/system_scheduler/SystemSchedulerService",
-        request_schema_cls=None,
-        request_model_cls=None,
-        response_schema_cls=json_api.system_settings.SystemSettingsSchema,
-        response_model_cls=json_api.system_settings.SystemSettings,
-    )
-
-    lifecycle_update: ApiEndpoint = ApiEndpoint(
-        method="put",
-        path="api/V4.0/settings/plugins/system_scheduler/SystemSchedulerService",
-        request_schema_cls=json_api.system_settings.SystemSettingsUpdateSchema,
-        request_model_cls=json_api.system_settings.SystemSettingsLifecycleUpdate,
-        response_schema_cls=json_api.system_settings.SystemSettingsSchema,
-        response_model_cls=json_api.system_settings.SystemSettings,
-    )
-
-    gui_get: ApiEndpoint = ApiEndpoint(
-        method="get",
-        path="api/V4.0/settings/plugins/gui/GuiService",
-        request_schema_cls=None,
-        request_model_cls=None,
-        response_schema_cls=json_api.system_settings.SystemSettingsSchema,
-        response_model_cls=json_api.system_settings.SystemSettings,
-    )
-
-    gui_update: ApiEndpoint = ApiEndpoint(
-        method="put",
-        path="api/V4.0/settings/plugins/gui/GuiService",
-        request_schema_cls=json_api.system_settings.SystemSettingsUpdateSchema,
-        request_model_cls=json_api.system_settings.SystemSettingsGuiUpdate,
-        response_schema_cls=json_api.system_settings.SystemSettingsSchema,
-        response_model_cls=json_api.system_settings.SystemSettings,
-    )
-
-    identity_providers_get: ApiEndpoint = ApiEndpoint(
-        method="get",
-        path="api/V4.0/settings/plugins/gui/IdentityProviders",
-        request_schema_cls=None,
-        request_model_cls=None,
-        response_schema_cls=json_api.system_settings.SystemSettingsSchema,
-        response_model_cls=json_api.system_settings.SystemSettings,
-    )
-
-    identity_providers_update: ApiEndpoint = ApiEndpoint(
-        method="put",
-        path="api/V4.0/settings/plugins/gui/IdentityProviders",
-        request_schema_cls=json_api.system_settings.SystemSettingsUpdateSchema,
-        request_model_cls=json_api.system_settings.SystemSettingsIdentityProvidersUpdate,
-        response_schema_cls=json_api.system_settings.SystemSettingsSchema,
-        response_model_cls=json_api.system_settings.SystemSettings,
-    )
-
     meta_about: ApiEndpoint = ApiEndpoint(
         method="get",
         path="api/V4.0/settings/meta/about",
         request_schema_cls=None,
         request_model_cls=None,
         response_schema_cls=json_api.system_meta.SystemMetaSchema,
-        response_model_cls=dict,
+        response_model_cls=None,
     )
     # PBUG: meta/about should return no spaces/all lowercase keys
 
@@ -376,8 +350,8 @@ class SystemSettings(BaseData):
     # PBUG: response is not jsonapi model
 
 
-@dataclasses.dataclass
-class RemoteSupport(BaseData):
+@dataclasses.dataclass(repr=False)
+class RemoteSupport(ApiEndpointGroup):
     """Pass."""
 
     get: ApiEndpoint = ApiEndpoint(
@@ -449,8 +423,8 @@ class RemoteSupport(BaseData):
     # PBUG: response is not jsonapi model
 
 
-@dataclasses.dataclass
-class SystemUsers(BaseData):
+@dataclasses.dataclass(repr=False)
+class SystemUsers(ApiEndpointGroup):
     """Pass."""
 
     get: ApiEndpoint = ApiEndpoint(
@@ -484,14 +458,14 @@ class SystemUsers(BaseData):
         method="put",
         path="api/V4.0/settings/users/{uuid}",
         request_schema_cls=json_api.system_users.SystemUserUpdateSchema,
-        request_model_cls=json_api.system_users.SystemUser,
+        request_model_cls=json_api.system_users.SystemUserUpdate,
         response_schema_cls=json_api.system_users.SystemUserSchema,
         response_model_cls=json_api.system_users.SystemUser,
     )
 
 
-@dataclasses.dataclass
-class PasswordReset(BaseData):
+@dataclasses.dataclass(repr=False)
+class PasswordReset(ApiEndpointGroup):
     """Pass."""
 
     create: ApiEndpoint = ApiEndpoint(
@@ -540,8 +514,8 @@ class PasswordReset(BaseData):
     # PBUG: response is not jsonapi model
 
 
-@dataclasses.dataclass
-class Enforcements(BaseData):
+@dataclasses.dataclass(repr=False)
+class Enforcements(ApiEndpointGroup):
     """Pass."""
 
     # PBUG: so many things wrong with this
@@ -592,8 +566,8 @@ class Enforcements(BaseData):
     )
 
 
-@dataclasses.dataclass
-class SystemRoles(BaseData):
+@dataclasses.dataclass(repr=False)
+class SystemRoles(ApiEndpointGroup):
     """Pass."""
 
     get: ApiEndpoint = ApiEndpoint(
@@ -629,7 +603,7 @@ class SystemRoles(BaseData):
         method="put",
         path="api/V4.0/settings/roles/{uuid}",
         request_schema_cls=json_api.system_roles.SystemRoleUpdateSchema,
-        request_model_cls=json_api.system_roles.SystemRole,
+        request_model_cls=json_api.system_roles.SystemRoleUpdate,
         response_schema_cls=json_api.system_roles.SystemRoleSchema,
         response_model_cls=json_api.system_roles.SystemRole,
     )
@@ -645,8 +619,8 @@ class SystemRoles(BaseData):
     # PBUG: response is not jsonapi model
 
 
-@dataclasses.dataclass
-class Lifecycle(BaseData):
+@dataclasses.dataclass(repr=False)
+class Lifecycle(ApiEndpointGroup):
     """Pass."""
 
     get: ApiEndpoint = ApiEndpoint(
@@ -681,8 +655,8 @@ class Lifecycle(BaseData):
     # PBUG: response is not jsonapi model
 
 
-@dataclasses.dataclass
-class Adapters(BaseData):
+@dataclasses.dataclass(repr=False)
+class Adapters(ApiEndpointGroup):
     """Pass."""
 
     get: ApiEndpoint = ApiEndpoint(
@@ -717,7 +691,7 @@ class Adapters(BaseData):
     settings_update: ApiEndpoint = ApiEndpoint(
         method="put",
         path="api/V4.0/adapters/{adapter_name}/{config_name}",
-        request_schema_cls=json_api.system_settings.SystemSettingsUpdateSchema,
+        request_schema_cls=json_api.adapters.AdapterSettingsUpdateSchema,
         request_model_cls=json_api.adapters.AdapterSettingsUpdate,
         response_schema_cls=json_api.system_settings.SystemSettingsSchema,
         response_model_cls=json_api.system_settings.SystemSettings,
@@ -793,8 +767,8 @@ class Adapters(BaseData):
     # "{'client_id': 'https://10.0.0.111_test1'}"
 
 
-@dataclasses.dataclass
-class Signup(BaseData):
+@dataclasses.dataclass(repr=False)
+class Signup(ApiEndpointGroup):
     """Pass."""
 
     get: ApiEndpoint = ApiEndpoint(
@@ -825,8 +799,8 @@ class Signup(BaseData):
     )
 
 
-@dataclasses.dataclass
-class AuditLogs(BaseData):
+@dataclasses.dataclass(repr=False)
+class AuditLogs(ApiEndpointGroup):
     """Pass."""
 
     get: ApiEndpoint = ApiEndpoint(
@@ -839,8 +813,8 @@ class AuditLogs(BaseData):
     )
 
 
-@dataclasses.dataclass
-class OpenAPISpec(BaseData):
+@dataclasses.dataclass(repr=False)
+class OpenAPISpec(ApiEndpointGroup):
     """Pass."""
 
     get_spec: ApiEndpoint = ApiEndpoint(
@@ -854,22 +828,39 @@ class OpenAPISpec(BaseData):
     )
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(repr=False)
 class ApiEndpoints(BaseData):
     """Pass."""
 
-    instances = Instances
-    central_core = CentralCore
-    system_settings = SystemSettings
-    remote_support = RemoteSupport
-    system_users = SystemUsers
-    system_roles = SystemRoles
-    lifecycle = Lifecycle
-    adapters = Adapters
-    signup = Signup
-    password_reset = PasswordReset
-    audit_logs = AuditLogs
-    enforcements = Enforcements
-    saved_queries = SavedQueries
-    assets = Assets
-    openapi = OpenAPISpec
+    instances: ApiEndpointGroup = Instances()
+    central_core: ApiEndpointGroup = CentralCore()
+    system_settings: ApiEndpointGroup = SystemSettings()
+    remote_support: ApiEndpointGroup = RemoteSupport()
+    system_users: ApiEndpointGroup = SystemUsers()
+    system_roles: ApiEndpointGroup = SystemRoles()
+    lifecycle: ApiEndpointGroup = Lifecycle()
+    adapters: ApiEndpointGroup = Adapters()
+    signup: ApiEndpointGroup = Signup()
+    password_reset: ApiEndpointGroup = PasswordReset()
+    audit_logs: ApiEndpointGroup = AuditLogs()
+    enforcements: ApiEndpointGroup = Enforcements()
+    saved_queries: ApiEndpointGroup = SavedQueries()
+    assets: ApiEndpointGroup = Assets()
+    openapi: ApiEndpointGroup = OpenAPISpec()
+
+    @classmethod
+    def get_groups(cls) -> Dict[str, ApiEndpointGroup]:
+        """Pass."""
+        return {x.name: x.default for x in cls.get_fields()}
+
+    def __str__(self):
+        """Pass."""
+        names = [x.name for x in self.get_fields()]
+        return f"{self.__class__.__name__}(groups={names})"
+
+    def __repr__(self):
+        """Pass."""
+        return self.__str__()
+
+
+ApiEndpoints = ApiEndpoints()

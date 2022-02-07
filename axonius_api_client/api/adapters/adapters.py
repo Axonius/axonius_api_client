@@ -310,7 +310,7 @@ class Adapters(ModelMixins):
         """Work with instances"""
 
     def _get(
-        self, get_clients: bool = True, filter: Optional[str] = None
+        self, get_clients: bool = False, filter: Optional[str] = None
     ) -> List[json_api.adapters.Adapter]:
         """Private API method to get all adapters."""
         api_endpoint = ApiEndpoints.adapters.get
@@ -340,7 +340,7 @@ class Adapters(ModelMixins):
             config_name=config_name,
         )
 
-    def _get_basic(self) -> json_api.generic.Metadata:
+    def _get_basic(self) -> json_api.adapters.AdaptersList:
         """Pass."""
         api_endpoint = ApiEndpoints.adapters.get_basic
         return api_endpoint.perform_request(http=self.auth.http)

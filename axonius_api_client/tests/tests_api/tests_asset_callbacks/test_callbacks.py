@@ -6,6 +6,7 @@ import logging
 import sys
 
 import pytest
+
 from axonius_api_client.api.asset_callbacks import get_callbacks_cls
 from axonius_api_client.constants.api import FIELD_TRIM_LEN
 from axonius_api_client.constants.fields import SCHEMAS_CUSTOM
@@ -57,12 +58,16 @@ def get_cbobj_main(apiobj, cbexport, getargs=None, state=None, store=None):
     return cbobj
 
 
+@pytest.mark.slow
+@pytest.mark.trylast
 class Callbacks:
     def get_cbobj(self, apiobj, cbexport, getargs=None, state=None, store=None):
         return get_cbobj_main(
             apiobj=apiobj, cbexport=cbexport, getargs=getargs, state=state, store=store
         )
 
+
+class CallbacksFull(Callbacks):
     def test_start_stop(self, cbexport, apiobj, caplog):
         getargs = {}
         cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs=getargs)
@@ -676,6 +681,8 @@ class Callbacks:
         assert original_row not in rows
         for row in rows:
             assert field_complex not in row
+            for sub_schema in cbobj.get_sub_schemas(schema=cbobj.schema_to_explode):
+                assert sub_schema["name_qual"] in row
 
     def test_do_explode_field_simple(self, cbexport, apiobj):
         original_row = get_rows_exist(apiobj=apiobj)
@@ -807,6 +814,8 @@ class Callbacks:
     def test_sw_whitelist(self, cbexport, api_devices):
         field = "specific_data.data.installed_software"
         whitelist = ["chrome"]
+        get_schema(apiobj=api_devices, field=field)
+
         query = '(specific_data.data.installed_software.name == regex("chrome", "i"))'
         rows = api_devices.get(fields=field, query=query, max_rows=1)
 

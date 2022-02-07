@@ -3,7 +3,7 @@
 import logging
 import pathlib
 import warnings
-from typing import List, Optional, Union
+from typing import Any, List, Optional, Union
 
 import requests
 
@@ -12,7 +12,7 @@ from .constants.logs import LOG_LEVEL_HTTP, MAX_BODY_LEN, REQUEST_ATTR_MAP, RESP
 from .exceptions import HttpError
 from .logs import get_obj_log, set_log_level
 from .parsers.url_parser import UrlParser
-from .tools import join_url, json_dump, json_load, listify, path_read
+from .tools import coerce_str, join_url, json_log, listify, path_read
 from .version import __version__
 
 InsecureRequestWarning = requests.urllib3.exceptions.InsecureRequestWarning
@@ -57,7 +57,7 @@ class Http:
         self.LOG: logging.Logger = get_obj_log(obj=self, level=self.LOG_LEVEL)
         """Logger for this object."""
 
-        self._MAX_BODY_LEN = MAX_BODY_LEN
+        self.LOG_BODY_MAX_LEN = MAX_BODY_LEN
 
         if isinstance(url, UrlParser):
             self.URLPARSED: UrlParser = url
@@ -286,7 +286,7 @@ class Http:
             self.LOG.debug(f"REQUEST ATTRS: {lattrs}")
 
         if self.LOG_REQUEST_BODY:
-            self.log_body(body=request.body, body_type="REQUEST", src=request)
+            self.LOG.debug(self.log_body(body=request.body, body_type="REQUEST", src=request))
 
     def _clean_headers(self, headers: dict) -> dict:
         """Clean headers with sensitive information.
@@ -317,7 +317,7 @@ class Http:
             self.LOG.debug(f"RESPONSE ATTRS: {lattrs}")
 
         if self.LOG_RESPONSE_BODY:
-            self.log_body(body=response.text, body_type="RESPONSE", src=response)
+            self.LOG.debug(self.log_body(body=response.text, body_type="RESPONSE", src=response))
 
     @property
     def log_request_attrs(self) -> List[str]:
@@ -384,27 +384,12 @@ class Http:
                 if entry not in log_attrs:
                     log_attrs.append(entry)
 
-    def log_body(self, body: str, body_type: str, src=None):
-        """Log a request or response body.
+    def log_body(self, body: Any, body_type: str, src=None) -> str:
+        """Get a string for logging a request or response body.
 
         Args:
             body: content to log
             body_type: 'request' or 'response'
         """
-        trim = self._MAX_BODY_LEN
-        body = body or ""
-        body = json_load(obj=body, error=False)
-
-        if not isinstance(body, (str, int, float, type(None), bytes)):
-            body = json_dump(obj=body, error=False)
-
-        if isinstance(body, bytes):
-            body = body.decode()
-
-        if isinstance(body, str):
-            body = body.strip()
-
-            if trim and len(body) >= trim:
-                body = body[:trim] + f"\nTrimmed over {trim} characters"
-
-        self.LOG.debug(f"{body_type} BODY:\n{body}")
+        body = json_log(obj=coerce_str(value=body), trim=self.LOG_BODY_MAX_LEN)
+        return f"{body_type} BODY:\n{body}"

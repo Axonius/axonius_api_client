@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """Command line interface for Axonius API Client."""
-from ..features import Features
-from .context import CONTEXT_SETTINGS, click
-from .options import add_options
+from ...features import Features
+from ..context import CONTEXT_SETTINGS, click
+from ..options import add_options
 
 OPTIONS = [
     click.option(
@@ -23,11 +23,17 @@ OPTIONS = [
 @click.pass_context
 def cmd(ctx, feature_name):
     """Help for using API Advanced Features."""
-    features = Features.get_features()
-    i = "*" * 60
-    for feature in features:
-        if feature_name and feature.name != features:
-            continue
-        click.secho(f"{i}\n{feature}")
 
+    def is_match(obj):
+        return True if not feature_name else feature_name == obj.name
+
+    data = Features.get_features()
+    barrier = "*" * 60
+    content = (
+        [f"{barrier}\n{x}" for x in data if is_match(x)]
+        if data
+        else ["No features currently available"]
+    )
+    content = content or [f"No features matching name {feature_name!r}"]
+    click.secho("\n".join(content))
     ctx.exit(0)

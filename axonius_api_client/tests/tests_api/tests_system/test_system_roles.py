@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Test suite."""
 import pytest
+
 from axonius_api_client.api import json_api
 from axonius_api_client.exceptions import ApiError, NotFoundError
 
@@ -229,6 +230,14 @@ class TestSystemRolesPublic:
             for a, b in v.items():
                 assert isinstance(a, str) and a
                 assert isinstance(b, str) and b
+
+    def test_cat_actions_to_perms_all_none(self, apiobj):
+        perms = {"adapters": "none", "api_access": "all"}
+        role_perms = apiobj.cat_actions_to_perms(**perms)
+        for k, v in role_perms["adapters"].items():
+            assert all([b is False for a, b in v.items()]) if isinstance(v, dict) else v is False
+        for k, v in role_perms["api_access"].items():
+            assert all([b is True for a, b in v.items()]) if isinstance(v, dict) else v is True
 
     def test_cat_actions_to_perms_all(self, apiobj):
         perms = {"adapters": "all"}

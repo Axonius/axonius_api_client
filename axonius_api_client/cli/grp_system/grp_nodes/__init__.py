@@ -2,8 +2,7 @@
 """Command line interface for Axonius API Client."""
 import click
 
-from ...context import AliasedGroup
-from . import cmd_admin_script_upload, cmd_factory_reset, cmd_get
+from ...context import AliasedGroup, load_cmds
 
 
 @click.group(cls=AliasedGroup)
@@ -11,6 +10,4 @@ def instances():
     """Group: Manage Instances."""
 
 
-instances.add_command(cmd_get.cmd)
-instances.add_command(cmd_factory_reset.cmd)
-instances.add_command(cmd_admin_script_upload.cmd)
+load_cmds(path=__file__, package=__package__, group=instances)

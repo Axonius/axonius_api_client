@@ -6,7 +6,7 @@ import io
 
 import pytest
 
-from axonius_api_client.exceptions import ApiError
+from axonius_api_client.exceptions import ApiError, StopFetch
 
 from ...utils import get_rows_exist, get_schema
 from .test_callbacks import Callbacks, Exports
@@ -36,12 +36,16 @@ class TestCallbacksTable(Callbacks, Exports):
             apiobj=apiobj,
             cbexport=cbexport,
             store={"fields": [field_complex]},
-            getargs={"export_fd": io_fd, "export_fd_close": False},
+            getargs={"export_fd": io_fd, "export_fd_close": False, "table_max_rows": 4},
         )
         cbobj.start()
 
-        for row in copy.deepcopy(original_rows):
-            rows_ret = cbobj.process_row(row=copy.deepcopy(row))
+        for idx, row in enumerate(copy.deepcopy(original_rows)):
+            try:
+                rows_ret = cbobj.process_row(row=copy.deepcopy(row))
+            except StopFetch:
+                if not idx >= 3:
+                    raise
             assert len(rows_ret) == 1
             # assert "Aggregated: Asset Unique ID" in rows_ret[0]
             # -> only if table_api_fields = True
@@ -63,6 +67,7 @@ class TestCallbacksTable(Callbacks, Exports):
     def test_check_stop(self, cbexport, apiobj):
         cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs={"table_max_rows": 10})
         cbobj.STATE["rows_processed_total"] = 10
-        cbobj.check_stop()
+        with pytest.raises(StopFetch):
+            cbobj.check_stop()
         assert cbobj.STATE["stop_fetch"]
         assert cbobj.STATE["stop_msg"]

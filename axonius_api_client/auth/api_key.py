@@ -4,6 +4,7 @@ from typing import List
 
 from ..exceptions import AlreadyLoggedIn
 from ..http import Http
+from ..tools import strip_str
 from .models import Mixins
 
 
@@ -19,13 +20,7 @@ class ApiKey(Mixins):
             secret: API secret to use in credentials
 
         """
-        if isinstance(key, str):
-            key = key.strip()
-
-        if isinstance(secret, str):
-            secret = secret.strip()
-
-        creds = {"key": key, "secret": secret}
+        creds = {"key": strip_str(key), "secret": strip_str(secret)}
         super().__init__(http=http, creds=creds, **kwargs)
 
     def login(self):

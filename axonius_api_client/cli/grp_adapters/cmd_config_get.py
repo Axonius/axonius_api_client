@@ -2,7 +2,7 @@
 """Command line interface for Axonius API Client."""
 from ..context import CONTEXT_SETTINGS, click
 from ..options import AUTH, NODE, add_options
-from .grp_common import CONFIG_EXPORT, CONFIG_TYPE, config_export
+from .grp_common import CONFIG_EXPORT, CONFIG_EXPORT_FORMATS, CONFIG_TYPE
 
 OPTIONS = [
     *AUTH,
@@ -21,6 +21,7 @@ def cmd(ctx, url, key, secret, export_format, **kwargs):
     client = ctx.obj.start_client(url=url, key=key, secret=secret)
 
     with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
-        rows = client.adapters.config_get(**kwargs)
+        data = client.adapters.config_get(**kwargs)
 
-    config_export(ctx=ctx, rows=rows, export_format=export_format)
+    click.secho(CONFIG_EXPORT_FORMATS[export_format](data=data))
+    ctx.exit(0)

@@ -58,8 +58,8 @@ try:
     )
     from .auth import ApiKey
     from .connect import Connect
-    from .http import Http
     from .features import Features
+    from .http import Http
 except Exception:  # pragma: no cover
     raise
 

@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 """API model mixin for device and user assets."""
+import datetime
 import time
-from datetime import datetime, timedelta
+
+# from datetime import datetime, timedelta
 from typing import Generator, List, Optional, Union
 
 from ...constants.api import DEFAULT_CALLBACKS_CLS, MAX_PAGE_SIZE, PAGE_SIZE
@@ -12,6 +14,8 @@ from ..api_endpoints import ApiEndpoints
 from ..asset_callbacks.tools import get_callbacks_cls
 from ..mixins import ModelMixins
 from ..wizards import Wizard, WizardCsv, WizardText
+
+GEN_TYPE = Union[Generator[dict, None, None], List[dict]]
 
 
 class AssetMixin(ModelMixins):
@@ -46,8 +50,11 @@ class AssetMixin(ModelMixins):
     def count(
         self,
         query: Optional[str] = None,
-        history_date: Optional[Union[str, timedelta, datetime]] = None,
+        history_date: Optional[Union[str, datetime.timedelta, datetime.datetime]] = None,
+        history_days_ago: Optional[int] = None,
+        history_exact: bool = False,
         wiz_entries: Optional[Union[List[dict], List[str], dict, str]] = None,
+        use_cache_entry: bool = False,
     ) -> int:
         """Get the count of assets from a query.
 
@@ -83,17 +90,24 @@ class AssetMixin(ModelMixins):
             query = wiz_parsed["query"]
 
         value = None
-        use_cache_entry = False
         while value is None:
             value = self._count(
-                filter=query, history=history_date, use_cache_entry=use_cache_entry
+                filter=query,
+                history_date=history_date,
+                history_days_ago=history_days_ago,
+                history_exact=history_exact,
+                use_cache_entry=use_cache_entry,
             ).value
             use_cache_entry = True
 
         return value
 
     def count_by_saved_query(
-        self, name: str, history_date: Optional[Union[str, timedelta, datetime]] = None
+        self,
+        name: str,
+        history_date: Optional[Union[str, datetime.timedelta, datetime.datetime]] = None,
+        history_days_ago: Optional[int] = None,
+        history_exact: bool = False,
     ) -> int:
         """Get the count of assets for a query defined in a saved query.
 
@@ -112,11 +126,14 @@ class AssetMixin(ModelMixins):
         """
         sq = self.saved_query.get_by_name(value=name)
         query = sq["view"]["query"]["filter"]
-        return self.count(query=query, history_date=history_date)
+        return self.count(
+            query=query,
+            history_date=history_date,
+            history_days_ago=history_days_ago,
+            history_exact=history_exact,
+        )
 
-    def get(
-        self, generator: bool = False, **kwargs
-    ) -> Union[Generator[dict, None, None], List[dict]]:
+    def get(self, generator: bool = False, **kwargs) -> GEN_TYPE:
         r"""Get assets from a query.
 
         Examples:
@@ -196,19 +213,14 @@ class AssetMixin(ModelMixins):
         self, wiz_entries: Optional[Union[List[dict], List[str], dict, str]] = None
     ) -> Optional[dict]:
         """Pass."""
+        wiz_entries = listify(wiz_entries) if wiz_entries else []
         if not wiz_entries:
             return None
 
-        if isinstance(wiz_entries, dict):
-            wiz_entries = [wiz_entries]
+        if all([isinstance(x, dict) for x in wiz_entries]):
+            return self.wizard.parse(entries=wiz_entries)
 
-        if isinstance(wiz_entries, (list, tuple)):
-            if all([isinstance(x, dict) for x in wiz_entries]):
-                return self.wizard.parse(entries=wiz_entries)
-            if all([isinstance(x, str) for x in wiz_entries]):
-                return self.wizard_text.parse(content=wiz_entries)
-
-        if isinstance(wiz_entries, str):
+        if all([isinstance(x, str) for x in wiz_entries]):
             return self.wizard_text.parse(content=wiz_entries)
 
         raise ApiError("wiz_entries must be a single or list of dict or str")
@@ -219,6 +231,7 @@ class AssetMixin(ModelMixins):
         fields: Optional[Union[List[str], str]] = None,
         fields_manual: Optional[Union[List[str], str]] = None,
         fields_regex: Optional[Union[List[str], str]] = None,
+        fields_regex_root_only: bool = True,
         fields_fuzzy: Optional[Union[List[str], str]] = None,
         fields_default: bool = True,
         fields_root: Optional[str] = None,
@@ -234,7 +247,9 @@ class AssetMixin(ModelMixins):
         include_details: bool = False,
         sort_field: Optional[str] = None,
         sort_descending: bool = False,
-        history_date: Optional[Union[str, timedelta, datetime]] = None,
+        history_date: Optional[Union[str, datetime.timedelta, datetime.datetime]] = None,
+        history_days_ago: Optional[int] = None,
+        history_exact: bool = False,
         wiz_entries: Optional[Union[List[dict], List[str], dict, str]] = None,
         **kwargs,
     ) -> Generator[dict, None, None]:
@@ -264,13 +279,14 @@ class AssetMixin(ModelMixins):
         """
         wiz_parsed = self._handle_wiz_entries(wiz_entries=wiz_entries)
 
-        if wiz_parsed:
+        if wiz_parsed and wiz_parsed.get("query"):
             query = wiz_parsed["query"]
 
         fields = self.fields.validate(
             fields=fields,
             fields_manual=fields_manual,
             fields_regex=fields_regex,
+            fields_regex_root_only=fields_regex_root_only,
             fields_default=fields_default,
             fields_root=fields_root,
             fields_fuzzy=fields_fuzzy,
@@ -288,9 +304,16 @@ class AssetMixin(ModelMixins):
             "sort_field": sort_field,
             "sort_descending": sort_descending,
             "history_date": history_date,
+            "history_days_ago": history_days_ago,
+            "history_exact": history_exact,
         }
 
-        initial_count = self.count(query=query, history_date=history_date)
+        initial_count = self.count(
+            query=query,
+            history_date=history_date,
+            history_days_ago=history_days_ago,
+            history_exact=history_exact,
+        )
 
         state = json_api.assets.AssetsPage.create_state(
             max_pages=max_pages,
@@ -304,6 +327,7 @@ class AssetMixin(ModelMixins):
 
         callbacks_cls = get_callbacks_cls(export=export)
         callbacks = callbacks_cls(apiobj=self, getargs=kwargs, state=state, store=store)
+
         self.LAST_CALLBACKS = callbacks
         callbacks.start()
 
@@ -319,7 +343,9 @@ class AssetMixin(ModelMixins):
                     include_notes=store["include_notes"],
                     sort=store["sort_field"],
                     sort_descending=store["sort_descending"],
-                    history=store["history_date"],
+                    history_date=store["history_date"],
+                    history_days_ago=store["history_days_ago"],
+                    history_exact=store["history_exact"],
                     filter=store["query"],
                     fields=store["fields"],
                     cursor_id=state["page_cursor"],
@@ -352,9 +378,7 @@ class AssetMixin(ModelMixins):
 
         callbacks.stop()
 
-    def get_by_saved_query(
-        self, name: str, **kwargs
-    ) -> Union[Generator[dict, None, None], List[dict]]:
+    def get_by_saved_query(self, name: str, **kwargs) -> GEN_TYPE:
         """Get assets that would be returned by a saved query.
 
         Examples:
@@ -401,7 +425,7 @@ class AssetMixin(ModelMixins):
                 asset_type = self.ASSET_TYPE
                 msg = f"Failed to find {asset_type} asset with internal_axon_id of {id!r}"
                 raise NotFoundError(msg)
-            raise
+            raise  # pragma: no cover
 
     @property
     def fields_default(self) -> List[dict]:
@@ -431,7 +455,7 @@ class AssetMixin(ModelMixins):
         post: str = "",
         field_manual: bool = False,
         **kwargs,
-    ) -> Union[Generator[dict, None, None], List[dict]]:
+    ) -> GEN_TYPE:  # pragma: no cover
         """Build a query to get assets where field in values.
 
         Notes:
@@ -474,7 +498,7 @@ class AssetMixin(ModelMixins):
         post: str = "",
         field_manual: bool = False,
         **kwargs,
-    ) -> Union[Generator[dict, None, None], List[dict]]:
+    ) -> GEN_TYPE:  # pragma: no cover
         """Build a query to get assets where field regex matches a value.
 
         Notes:
@@ -511,7 +535,7 @@ class AssetMixin(ModelMixins):
         post: str = "",
         field_manual: bool = False,
         **kwargs,
-    ) -> Union[Generator[dict, None, None], List[dict]]:
+    ) -> GEN_TYPE:  # pragma: no cover
         """Build a query to get assets where field equals a value.
 
         Notes:
@@ -546,7 +570,7 @@ class AssetMixin(ModelMixins):
 
     def _build_query(
         self, inner: str, not_flag: bool = False, pre: str = "", post: str = ""
-    ) -> str:
+    ) -> str:  # pragma: no cover
         """Query builder with basic functionality.
 
         Notes:
@@ -574,11 +598,15 @@ class AssetMixin(ModelMixins):
         """Post init method for subclasses to use for extra setup."""
         from ..adapters import Adapters
         from ..asset_callbacks import Base
+        from ..system import Instances
         from .fields import Fields
         from .labels import Labels
         from .saved_query import SavedQuery
 
         self.adapters: Adapters = Adapters(auth=self.auth, **kwargs)
+        """Adapters API model for cross reference."""
+
+        self.instances: Instances = Instances(auth=self.auth, **kwargs)
         """Adapters API model for cross reference."""
 
         self.labels: Labels = Labels(parent=self)
@@ -616,7 +644,9 @@ class AssetMixin(ModelMixins):
         get_metadata: bool = True,
         use_cursor: bool = True,
         sort_descending: bool = False,
-        history: Optional[str] = None,
+        history_date: Optional[Union[str, datetime.timedelta, datetime.datetime]] = None,
+        history_days_ago: Optional[int] = None,
+        history_exact: bool = False,
         filter: Optional[str] = None,
         cursor_id: Optional[str] = None,
         sort: Optional[str] = None,
@@ -657,11 +687,13 @@ class AssetMixin(ModelMixins):
         request_obj.set_fields(fields=fields, asset_type=self.ASSET_TYPE)
         request_obj.set_sort(field=sort, descending=sort_descending, asset_type=asset_type)
         request_obj.set_page(limit=limit, offset=offset)
-
-        if history:
-            request_obj.set_history(
-                history=history, history_dates=self._history_dates(), asset_type=asset_type
-            )
+        request_obj.set_history(
+            history_date=history_date,
+            history_days_ago=history_days_ago,
+            history_exact=history_exact,
+            history_dates=self._history_dates(),
+            asset_type=asset_type,
+        )
 
         self.LAST_GET_REQUEST_OBJ = request_obj
         self.LAST_GET = request_obj.to_dict()
@@ -684,14 +716,21 @@ class AssetMixin(ModelMixins):
     def _count(
         self,
         filter: Optional[str] = None,
-        history: Optional[str] = None,
+        history_date: Optional[Union[str, datetime.timedelta, datetime.datetime]] = None,
+        history_days_ago: Optional[int] = None,
+        history_exact: bool = False,
         use_cache_entry: bool = False,
     ) -> json_api.assets.Count:
         """Private API method to get the count of assets.
 
         Args:
-            filter: if supplied, only return the count of assets that match the query
-            history: return count for a given historical date
+            filter (Optional[str], optional): if supplied,
+                only return the count of assets that match the query
+            history_date (Optional[Union[str, timedelta, datetime]], optional): Description
+            history_days_ago (Optional[int], optional): Description
+            history_exact (bool, optional): Description
+            use_cache_entry (bool, optional): Description
+
         """
         asset_type = self.ASSET_TYPE
         api_endpoint = ApiEndpoints.assets.count
@@ -700,10 +739,13 @@ class AssetMixin(ModelMixins):
             filter=filter,
         )
 
-        if history:
-            request_obj.set_history(
-                history=history, history_dates=self._history_dates(), asset_type=asset_type
-            )
+        request_obj.set_history(
+            history_date=history_date,
+            history_days_ago=history_days_ago,
+            history_exact=history_exact,
+            history_dates=self._history_dates(),
+            asset_type=asset_type,
+        )
 
         return api_endpoint.perform_request(
             http=self.auth.http, request_obj=request_obj, asset_type=asset_type
@@ -727,7 +769,7 @@ class AssetMixin(ModelMixins):
             http=self.auth.http, request_obj=request_obj, asset_type=asset_type
         )
 
-    def _history_dates(self) -> json_api.generic.DictValue:
+    def _history_dates(self) -> json_api.assets.HistoryDates:
         """Private API method to get all known historical dates."""
         api_endpoint = ApiEndpoints.assets.history_dates
         return api_endpoint.perform_request(http=self.auth.http)

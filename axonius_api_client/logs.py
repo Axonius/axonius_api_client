@@ -64,7 +64,7 @@ def set_log_level(
         obj: object to set lvl on
         level: level to set
     """
-    if level:
+    if isinstance(level, (int, str)):
         obj.setLevel(getattr(logging, str_level(level=level)))
 
 
@@ -77,14 +77,14 @@ def str_level(level: Union[int, str]) -> str:
     Raises:
         :exc:`ToolsError`: if level is not mappable as an int or str to a known logger level
     """
+    # ret = ""
     if is_int(obj=level, digit=True):
         level_mapped = logging.getLevelName(int(level))
         if hasattr(logging, level_mapped):
             return level_mapped
 
-    if isinstance(level, str):
-        if hasattr(logging, level.upper()):
-            return level.upper()
+    if isinstance(level, str) and hasattr(logging, level.upper()):
+        return level.upper()
 
     error = (
         f"Invalid logging level {level!r}, must be one of "
@@ -202,18 +202,16 @@ def add_null(
     found = find_handlers(obj=obj, hname=hname, traverse=traverse)
     if found:
         return None
-    return add_handler(
-        obj=obj, htype=logging.NullHandler, hname=hname, fmt="", datefmt="", level=""
-    )
+    return add_handler(obj=obj, htype=logging.NullHandler, hname=hname)
 
 
 def add_handler(
     obj: logging.Logger,
     htype: logging.Handler,
-    level: Union[str, int],
     hname: str,
-    fmt: str,
-    datefmt: str,
+    fmt: str = LOG_FMT_CONSOLE,
+    datefmt: str = LOG_DATEFMT_CONSOLE,
+    level: Optional[Union[str, int]] = None,
     **kwargs,
 ) -> logging.Handler:
     """Add a handler to a logger obj.
@@ -228,16 +226,9 @@ def add_handler(
         **kwargs: passed to instantiation of htype
     """
     handler = htype(**kwargs)
-
-    if hname:
-        handler.name = hname
-
-    if fmt:
-        handler.setFormatter(logging.Formatter(fmt=fmt, datefmt=datefmt))
-
-    if level:
-        set_log_level(obj=handler, level=level)
-
+    handler.name = hname
+    set_log_level(obj=handler, level=level)
+    handler.setFormatter(logging.Formatter(fmt=fmt, datefmt=datefmt))
     obj.addHandler(handler)
     return handler
 
@@ -347,7 +338,7 @@ def find_handlers(
         if match_name or match_type:
             handlers[obj.name] = handlers.get(obj.name, [])
 
-            if handler not in handlers[obj.name]:
+            if handler not in handlers[obj.name]:  # pragma: no cover
                 handlers[obj.name].append(handler)
 
     if obj.parent and traverse:

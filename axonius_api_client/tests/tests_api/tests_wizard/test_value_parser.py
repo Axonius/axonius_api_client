@@ -21,6 +21,13 @@ def patch_tags(wizard_parser, monkeypatch, values):
     monkeypatch.setattr(wizard_parser, "_tags", _mock)
 
 
+def patch_sq_enum(wizard_parser, monkeypatch, values):
+    def _mock(*args, **kwargs):
+        return values
+
+    monkeypatch.setattr(wizard_parser, "_sq_enum", _mock)
+
+
 class TestWizardParser:
     @pytest.fixture(params=["api_devices", "api_users"])
     def wizard_parser(self, request):
@@ -240,6 +247,25 @@ class TestToCsvTags(TestWizardParser, Common):
         patch_tags(values=[], wizard_parser=wizard_parser, monkeypatch=monkeypatch)
         with pytest.raises(WizardError):
             wizard_parser(value="tag1, tag3, tag2,", parser=parser)
+
+
+class TestToStrSqName(TestWizardParser, Common):
+    @pytest.fixture
+    def parser(self):
+        return Parsers.to_str_sq_name.name
+
+    def test_valid_name(self, wizard_parser, monkeypatch, parser):
+        patch_sq_enum(
+            values={"badwolf1": "uuid", "uuid": "badwolf1"},
+            wizard_parser=wizard_parser,
+            monkeypatch=monkeypatch,
+        )
+        ret = wizard_parser(value="badwolf1", parser=parser)
+        assert ret == ("uuid", "uuid")
+
+    def test_invalid(self, wizard_parser, parser):
+        with pytest.raises(WizardError):
+            wizard_parser(value="badwolf", parser=parser)
 
 
 class TestToDt(TestWizardParser, Common):

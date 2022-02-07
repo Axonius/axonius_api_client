@@ -6,7 +6,7 @@ from typing import Optional, Type
 import marshmallow_jsonapi
 
 from .base import BaseModel, BaseSchema, BaseSchemaJson
-from .custom_fields import get_field_str_req
+from .custom_fields import SchemaBool, get_field_str_req
 
 
 class SignupRequestSchema(BaseSchemaJson):
@@ -17,7 +17,7 @@ class SignupRequestSchema(BaseSchemaJson):
     confirm_new_password = get_field_str_req()
     contact_email = marshmallow_jsonapi.fields.Email(required=True)
     user_name = get_field_str_req()
-    api_keys = marshmallow_jsonapi.fields.Bool(missing=True)
+    api_keys = SchemaBool(load_default=True, dump_default=True)
 
     class Meta:
         """Pass."""
@@ -34,7 +34,7 @@ class SystemStatusSchema(BaseSchemaJson):
     """Pass."""
 
     msg = marshmallow_jsonapi.fields.Str()
-    is_ready = marshmallow_jsonapi.fields.Bool()
+    is_ready = SchemaBool()
     status_code = marshmallow_jsonapi.fields.Int()
 
     @staticmethod
@@ -57,7 +57,12 @@ class SignupRequest(BaseModel):
     new_password: str
     confirm_new_password: str
     user_name: str
-    api_keys: bool = True
+    api_keys: bool = dataclasses.field(
+        default=True,
+        metadata={
+            "dataclasses_json": {"mm_field": SchemaBool(load_default=True, dump_default=True)},
+        },
+    )
 
     @staticmethod
     def get_schema_cls() -> Optional[Type[BaseSchema]]:

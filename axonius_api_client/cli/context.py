@@ -1,12 +1,15 @@
 # -*- coding: utf-8 -*-
 """Command line interface for Axonius API Client."""
+import importlib
+import pathlib
 import warnings
+from typing import Optional
 
 import click
 import requests
 
 from ..connect import Connect
-from ..tools import bom_strip, echo_error, echo_ok, echo_warn, json_load, read_stream
+from ..tools import bom_strip, echo_debug, echo_error, echo_ok, echo_warn, json_load, read_stream
 
 CONTEXT_SETTINGS = {"auto_envvar_prefix": "AX"}
 SSLWARN_CLS = requests.urllib3.exceptions.InsecureRequestWarning
@@ -22,6 +25,17 @@ To silence this message:
 """
 
 
+def load_cmds(path, package, group):
+    """Pass."""
+    path = pathlib.Path(path)
+
+    for item in path.parent.glob("cmd_*.py"):
+        module = importlib.import_module(f".{item.stem}", package=package)
+        module_cmd = getattr(module, "cmd", None)
+        if callable(module_cmd):
+            group.add_command(module_cmd)
+
+
 class SplitEquals(click.ParamType):
     """Pass."""
 
@@ -31,10 +45,8 @@ class SplitEquals(click.ParamType):
         """Pass."""
         split = value.split("=", 1)
 
-        if len(split) != 2:
-            msg = "Need an '=' in --{p} with value {v!r}"
-            msg = msg.format(p=param.name, v=value)
-            self.fail(msg, param, ctx)
+        if len(split) != 2:  # pragma: no cover
+            self.fail(f"Need an '=' in --{param.name} with value {value!r}", param, ctx)
 
         return [x.strip() for x in split]
 
@@ -51,14 +63,10 @@ class AliasedGroup(click.Group):
 
         matches = [x for x in self.list_commands(ctx) if x.startswith(cmd_name)]
 
-        if not matches:
-            return None
-        elif len(matches) == 1:
-            return click.Group.get_command(self, ctx, matches[0])
+        if matches and len(matches) != 1:  # pragma: no cover
+            ctx.fail(f"Too many matches for {cmd_name!r}: {matches}")
 
-        msg = "Too many matches for {v!r}: {matches}"
-        msg = msg.format(v=cmd_name, matches=", ".join(sorted(matches)))
-        ctx.fail(msg)
+        return click.Group.get_command(self, ctx, matches[0]) if len(matches) == 1 else None
 
 
 class exc_wrapper:
@@ -75,9 +83,12 @@ class exc_wrapper:
         """Pass."""
         return self
 
-    def __exit__(self, exc, value, traceback):
+    def __exit__(self, exc, value, traceback):  # pragma: no cover
         """Pass."""
         if value and self.wraperror and not isinstance(value, self.EXCLUDES):
+            self.exc = exc
+            self.value = value
+            self.traceback = traceback
             cls = value.__class__
             msg = f"WRAPPED EXCEPTION: {cls.__module__}.{cls.__name__}\n{value}"
             echo_error(msg=msg, abort=self.abort)
@@ -94,7 +105,7 @@ class Context:
         self.client = None
         self._connect_args = {}
 
-    def __str__(self):
+    def __str__(self):  # pragma: no cover
         """Show object info.
 
         Returns:
@@ -103,7 +114,7 @@ class Context:
         """
         return format(self.client)
 
-    def __repr__(self):
+    def __repr__(self):  # pragma: no cover
         """Show object info.
 
         Returns:
@@ -116,6 +127,11 @@ class Context:
         """Pass."""
         if not getattr(self, "QUIET", False):
             echo_ok(msg=msg, **kwargs)
+
+    def echo_debug(self, msg, **kwargs):  # pragma: no cover
+        """Pass."""
+        if not getattr(self, "QUIET", False):
+            echo_debug(msg=msg, **kwargs)
 
     def echo_error(self, msg, abort=True, **kwargs):
         """Pass."""
@@ -146,7 +162,7 @@ class Context:
                 with warnings.catch_warnings(record=True) as caught_warnings:
                     self.client.start()
 
-                for caught_warning in caught_warnings:
+                for caught_warning in caught_warnings:  # pragma: no cover
                     wmsg = caught_warning.message
                     is_ssl = isinstance(wmsg, SSLWARN_CLS)
                     wmsg = SSLWARN_MSG if is_ssl else wmsg
@@ -169,7 +185,7 @@ class Context:
 
         return self.client
 
-    def days_echo(self, msg, days, info=45, warn=30, error=15):
+    def days_echo(self, msg, days, info=45, warn=30, error=15):  # pragma: no cover
         """Pass."""
         if not isinstance(days, int):
             return
@@ -196,22 +212,48 @@ class Context:
             content = bom_strip(content=content)
         return content
 
-    def read_stream_json(self, stream, expect=None):
+    def read_stream_json(
+        self,
+        stream,
+        expect: Optional[type] = None,
+        expect_items: Optional[type] = None,
+        items_min: Optional[int] = None,
+    ):
         """Pass."""
         content = self.read_stream(stream=stream)
 
         try:
             content = json_load(obj=content, error=True)
-        except Exception as exc:
+        except Exception as exc:  # pragma: no cover
             self.echo_error(msg=f"Invalid JSON supplied: {exc}", abort=True)
 
         if expect is not None and not isinstance(content, expect):
-
             self.echo_error(
                 msg=f"JSON supplied is {type(content)}, required type is {expect}",
                 abort=True,
             )
 
+        if expect_items is not None:  # pragma: no cover
+            errs = []
+            for idx, item in enumerate(content):
+                if not isinstance(item, expect_items):
+                    errs.append(f"Item #{idx + 1}/{len(content)} is type {type(item)}")
+
+            if errs:
+                errs = "\n  " + "\n  ".join(errs)
+                self.echo_error(
+                    msg=f"List items do not match required type {expect_items}:{errs}",
+                    abort=True,
+                )
+
+        if isinstance(items_min, int) and not len(content) >= items_min:
+            self.echo_error(
+                msg=(
+                    f"Must supply at least {items_min} items, but only {len(content)} "
+                    "items supplied"
+                ),
+                abort=True,
+            )
         return content
 
 

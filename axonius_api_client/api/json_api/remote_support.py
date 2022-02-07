@@ -18,7 +18,7 @@ class RemoteSupportSchema(BaseSchema):
     analytics = SchemaBool()
     troubleshooting = SchemaBool()
     timeout = SchemaDatetime(allow_none=True)
-    type = marshmallow.fields.Str(default="maintenance")
+    type = marshmallow.fields.Str(load_default="maintenance", dump_default="maintenance")
     _id = marshmallow.fields.Str()
 
     @staticmethod
@@ -35,7 +35,12 @@ class RemoteSupport(BaseModel):
     analytics: bool
     troubleshooting: bool
     timeout: Optional[datetime.datetime] = get_field_dc_mm(
-        mm_field=SchemaDatetime(allow_none=True), default=None
+        mm_field=SchemaDatetime(
+            allow_none=True,
+            load_default=None,
+            dump_default=None,
+        ),
+        default=None,
     )
     type: str = "maintenance"
     _id: str = ""
@@ -94,7 +99,7 @@ class RemoteSupport(BaseModel):
         return self.enabled and self.troubleshooting
 
     @staticmethod
-    def get_model_cls() -> type:
+    def get_schema_cls() -> type:
         """Pass."""
         return RemoteSupportSchema
 
@@ -196,3 +201,8 @@ class UpdateTemporaryResponse(BaseModel):
     """Pass."""
 
     timeout: str
+
+    @staticmethod
+    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+        """Pass."""
+        return None

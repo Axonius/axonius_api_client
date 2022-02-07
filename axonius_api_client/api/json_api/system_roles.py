@@ -74,20 +74,7 @@ def cat_actions(http) -> dict:
     labels = api_endpoint.perform_request(http=http)
     data = parse_cat_actions(raw=labels)
 
-    # flags = feature_flags(http=http)
-
-    # if not flags.has_cloud_compliance:  # pragma: no cover
-    #     data["categories"].pop("compliance")
-    #     data["actions"].pop("compliance")
     return data
-
-
-def feature_flags(http):
-    """Direct API method to get the feature flags for the core."""
-    from .. import ApiEndpoints
-
-    api_endpoint = ApiEndpoints.system_settings.feature_flags_get
-    return api_endpoint.perform_request(http=http)
 
 
 class SystemRoleSchema(BaseSchemaJson):
@@ -96,13 +83,13 @@ class SystemRoleSchema(BaseSchemaJson):
     uuid = marshmallow_jsonapi.fields.Str(required=True)
     name = marshmallow_jsonapi.fields.Str(required=True)
     permissions = marshmallow_jsonapi.fields.Dict()
-    predefined = SchemaBool(default=False)
+    predefined = SchemaBool(load_default=False, dump_default=False)
     last_updated = SchemaDatetime(allow_none=True)
     asset_scope_restriction = marshmallow_jsonapi.fields.Dict(required=False)
     # PBUG: not modeled well
 
     # NEW_IN: 05/31/21 cortex/develop
-    users_count = marshmallow_jsonapi.fields.Int(required=False, missing=0)
+    users_count = marshmallow_jsonapi.fields.Int(required=False, load_default=0, dump_default=0)
 
     @staticmethod
     def get_model_cls() -> type:
@@ -124,14 +111,13 @@ class SystemRoleUpdateSchema(SystemRoleSchema):
     @marshmallow.post_load
     def post_load_fixit(self, data: dict, **kwargs) -> dict:
         """Pass."""
-        asr = data.get("asset_scope_restriction", {}) or {}
-        if not asr:
-            data["asset_scope_restriction"] = {"enabled": False}
+        data["asset_scope_restriction"] = data.get("asset_scope_restriction") or {"enabled": False}
         return data
 
     @marshmallow.post_dump
     def post_dump_fixit(self, data: dict, **kwargs) -> dict:
         """Pass."""
+        # remove attrs that REST API can not accept for an update request body
         data.pop("last_updated", None)
         data.pop("id", None)
         data.pop("uuid", None)
@@ -141,10 +127,8 @@ class SystemRoleUpdateSchema(SystemRoleSchema):
         # NEW_IN: 05/31/21 cortex/develop
         data.pop("users_count", None)
 
-        asr = data.get("asset_scope_restriction", {}) or {}
-        if not asr:
-            data["asset_scope_restriction"] = asr = {"enabled": False}
-        asr.pop("asset_scope", None)
+        data["asset_scope_restriction"] = data.get("asset_scope_restriction") or {"enabled": False}
+        data["asset_scope_restriction"].pop("asset_scope", None)
         # PBUG: ASR seems to be quite poorly modeled
         return data
 
@@ -153,6 +137,11 @@ class SystemRoleUpdateSchema(SystemRoleSchema):
 
         type_ = "roles_schema"
         # PBUG: why is this called roles_details_schema vs roles_schema?
+
+    @staticmethod
+    def get_model_cls() -> type:
+        """Pass."""
+        return SystemRoleUpdate
 
 
 @dataclasses.dataclass
@@ -180,10 +169,8 @@ class SystemRole(BaseModel):
 
     def __post_init__(self):
         """Pass."""
-        if self.id is None and self.uuid is not None:
-            self.id = self.uuid
-        if not self.asset_scope_restriction:
-            self.asset_scope_restriction = {"enabled": False}
+        self.id = self.uuid if self.id is None and self.uuid is not None else self.id
+        self.asset_scope_restriction = self.asset_scope_restriction or {"enabled": False}
         # PBUG: ASR seems to be quite poorly modeled
 
     def to_dict_old(self):
@@ -235,6 +222,16 @@ class SystemRole(BaseModel):
         return ret
 
 
+@dataclasses.dataclass
+class SystemRoleUpdate(SystemRole):
+    """Pass."""
+
+    @staticmethod
+    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+        """Pass."""
+        return SystemRoleUpdateSchema
+
+
 class SystemRoleCreateSchema(BaseSchemaJson):
     """Pass."""
 
@@ -255,19 +252,15 @@ class SystemRoleCreateSchema(BaseSchemaJson):
     @marshmallow.post_load
     def post_load_fixit(self, data: dict, **kwargs) -> dict:
         """Pass."""
-        asr = data.get("asset_scope_restriction", {}) or {}
-        if not asr:
-            data["asset_scope_restriction"] = {"enabled": False}
+        data["asset_scope_restriction"] = data.get("asset_scope_restriction") or {"enabled": False}
         # PBUG: ASR seems to be quite poorly modeled
         return data
 
     @marshmallow.post_dump
     def post_dump_fixit(self, data: dict, **kwargs) -> dict:
         """Pass."""
-        asr = data.get("asset_scope_restriction", {}) or {}
-        if not asr:
-            data["asset_scope_restriction"] = asr = {"enabled": False}
-        asr.pop("asset_scope", None)
+        data["asset_scope_restriction"] = data.get("asset_scope_restriction") or {"enabled": False}
+        # data["asset_scope_restriction"].pop("asset_scope", None)
         # PBUG: ASR seems to be quite poorly modeled
         return data
 
@@ -287,6 +280,5 @@ class SystemRoleCreate(BaseModel):
 
     def __post_init__(self):
         """Pass."""
-        if not self.asset_scope_restriction:
-            self.asset_scope_restriction = {"enabled": False}
+        self.asset_scope_restriction = self.asset_scope_restriction or {"enabled": False}
         # PBUG: ASR seems to be quite poorly modeled

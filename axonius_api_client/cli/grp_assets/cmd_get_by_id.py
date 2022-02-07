@@ -24,12 +24,10 @@ OPTIONS = [
 def cmd(ctx, url, key, secret, **kwargs):
     """Get ALL data for a single asset."""
     client = ctx.obj.start_client(url=url, key=key, secret=secret)
-
     p_grp = ctx.parent.command.name
     apiobj = getattr(client, p_grp)
-
     with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
-        rows = apiobj.get_by_id(**kwargs)
+        data = apiobj.get_by_id(**kwargs)
 
-    click.secho(json_dump(rows))
+    click.secho(json_dump(data))
     ctx.exit(0)

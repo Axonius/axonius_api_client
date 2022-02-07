@@ -8,8 +8,7 @@ import marshmallow
 import marshmallow_jsonapi
 
 from .base import BaseModel, BaseSchema, BaseSchemaJson
-from .custom_fields import (SchemaBool, SchemaDatetime, SchemaPassword,
-                            get_field_dc_mm)
+from .custom_fields import SchemaBool, SchemaDatetime, SchemaPassword, get_field_dc_mm
 
 
 class SystemUserSchema(BaseSchemaJson):
@@ -20,13 +19,15 @@ class SystemUserSchema(BaseSchemaJson):
     last_login = SchemaDatetime()
     last_name = marshmallow_jsonapi.fields.Str()
     last_updated = SchemaDatetime()
-    password = SchemaPassword(default="", allow_none=True)
+    password = SchemaPassword(load_default="", dump_default="", allow_none=True)
     pic_name = marshmallow_jsonapi.fields.Str()
     role_id = marshmallow_jsonapi.fields.Str(required=True)
     source = marshmallow_jsonapi.fields.Str()
     user_name = marshmallow_jsonapi.fields.Str(required=True)
     uuid = marshmallow_jsonapi.fields.Str(required=True)
-    ignore_role_assignment_rules = SchemaBool(default=None, missing=None, allow_none=True)
+    ignore_role_assignment_rules = SchemaBool(
+        load_default=False, dump_default=False, allow_none=True
+    )
 
     @staticmethod
     def get_model_cls() -> type:
@@ -49,6 +50,11 @@ class SystemUserUpdateSchema(SystemUserSchema):
 
         type_ = "users_schema"
 
+    @staticmethod
+    def get_model_cls() -> type:
+        """Pass."""
+        return SystemUserUpdate
+
     @marshmallow.pre_load
     def pre_load_fix(self, data, **kwargs) -> Union[dict, BaseModel]:
         """Pass."""
@@ -65,51 +71,7 @@ class SystemUserUpdateSchema(SystemUserSchema):
         data.pop("last_updated", None)
         data.pop("last_login", None)
         data.pop("uuid", None)
-        if not isinstance(data.get("ignore_role_assignment_rules", None), bool):
-            data.pop("ignore_role_assignment_rules", None)
         return data
-
-
-@dataclasses.dataclass
-class PasswordLinkCreateRequest(BaseModel):
-    """Pass."""
-
-    user_id: str
-    user_name: str
-
-
-@dataclasses.dataclass
-class PasswordLinkSendRequest(BaseModel):
-    """Pass."""
-
-    email: str
-    user_id: str
-    invite: bool = False
-
-
-@dataclasses.dataclass
-class PasswordLinkSendResponse(BaseModel):
-    """Pass."""
-
-    user_name: str
-
-
-@dataclasses.dataclass
-class PasswordTokenValidateRequest(BaseModel):
-    """Pass."""
-
-    token: bool
-
-    def dump_request_params(self, **kwargs) -> Optional[dict]:
-        """Pass."""
-        return None
-
-
-@dataclasses.dataclass
-class PasswordTokenValidateResponse(BaseModel):
-    """Pass."""
-
-    valid: bool
 
 
 @dataclasses.dataclass
@@ -133,7 +95,7 @@ class SystemUser(BaseModel):
     password: Optional[Union[List[str], str]] = None
     pic_name: Optional[str] = None
     source: Optional[str] = None
-    ignore_role_assignment_rules: Optional[bool] = None
+    ignore_role_assignment_rules: bool = False
 
     @staticmethod
     def get_schema_cls() -> Optional[Type[BaseSchema]]:
@@ -160,17 +122,27 @@ class SystemUser(BaseModel):
         return obj
 
 
+@dataclasses.dataclass
+class SystemUserUpdate(SystemUser):
+    """Pass."""
+
+    @staticmethod
+    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+        """Pass."""
+        return SystemUserUpdateSchema
+
+
 class SystemUserCreateSchema(BaseSchemaJson):
     """Pass."""
 
     user_name = marshmallow_jsonapi.fields.Str(required=True)
     role_id = marshmallow_jsonapi.fields.Str(required=True)
 
-    auto_generated_password = SchemaBool(default=False)
-    email = marshmallow_jsonapi.fields.Str(default="", allow_none=True)
-    first_name = marshmallow_jsonapi.fields.Str(default="", allow_none=True)
-    last_name = marshmallow_jsonapi.fields.Str(default="", allow_none=True)
-    password = SchemaPassword(default="", allow_none=True)
+    auto_generated_password = SchemaBool(load_default=False, dump_default=False)
+    email = marshmallow_jsonapi.fields.Str(load_default="", dump_default="", allow_none=True)
+    first_name = marshmallow_jsonapi.fields.Str(load_default="", dump_default="", allow_none=True)
+    last_name = marshmallow_jsonapi.fields.Str(load_default="", dump_default="", allow_none=True)
+    password = SchemaPassword(load_default="", dump_default="", allow_none=True)
 
     @staticmethod
     def get_model_cls() -> type:
@@ -203,7 +175,7 @@ class SystemUserCreate(BaseModel):
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     password: Optional[str] = get_field_dc_mm(
-        mm_field=SchemaPassword(default="", allow_none=True), default=""
+        mm_field=SchemaPassword(load_default="", dump_default="", allow_none=True), default=""
     )
 
     def __post_init__(self):

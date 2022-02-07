@@ -3,7 +3,7 @@
 from ...tools import json_dump
 from ..context import CONTEXT_SETTINGS, click
 from ..options import AUTH, INPUT_FILE, NODE, add_options
-from .grp_common import CONFIG_EXPORT, CONFIG_TYPE, config_export
+from .grp_common import CONFIG_EXPORT, CONFIG_EXPORT_FORMATS, CONFIG_TYPE
 
 OPTIONS = [*AUTH, CONFIG_EXPORT, CONFIG_TYPE, *NODE, INPUT_FILE]
 
@@ -18,6 +18,7 @@ def cmd(ctx, url, key, secret, export_format, input_file, **kwargs):
     kwargs["kwargs_config"] = contents
 
     with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
-        rows = client.adapters.config_update(**kwargs)
+        data = client.adapters.config_update(**kwargs)
     ctx.obj.echo_ok(f"Updated adapter with config:\n{json_dump(contents)}")
-    config_export(ctx=ctx, rows=rows, export_format=export_format)
+    click.secho(CONFIG_EXPORT_FORMATS[export_format](data=data))
+    ctx.exit(0)

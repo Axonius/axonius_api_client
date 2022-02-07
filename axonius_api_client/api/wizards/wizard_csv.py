@@ -7,7 +7,15 @@ from typing import List, Optional, Union
 
 from ...constants.wizards import Docs, Entry, EntrySq, Sources, Types
 from ...exceptions import WizardError
-from ...tools import bom_strip, check_type, kv_dump, listify, path_read
+from ...tools import (
+    bom_strip,
+    check_gui_page_size,
+    check_type,
+    coerce_bool,
+    kv_dump,
+    listify,
+    path_read,
+)
 from .wizard import Wizard
 
 
@@ -193,7 +201,14 @@ class WizardCsv(Wizard):
         entry[Entry.VALUE] = value.lstrip()
         entry[Entry.SRC] = src
         if entry[Entry.TYPE] == Types.SAVED_QUERY:
-            entry.update({k: str(row.get(k, v) or v) for k, v in EntrySq.OPT.items()})
+            for key, default in EntrySq.OPT.items():
+                if key in row:
+                    value = row[key]
+                    if value in [None, ""]:
+                        value = default
+                else:
+                    value = default
+                entry[key] = value
         return entry
 
     def _process_sqs(self, entries: List[dict]) -> List[dict]:
@@ -268,6 +283,18 @@ class WizardCsv(Wizard):
         self.SQ[EntrySq.FMAN] = self._process_fields(entry=entry)
         self.SQ[EntrySq.TAGS] = self._process_tags(entry=entry)
         self.SQ[EntrySq.DESC] = self._process_desc(entry=entry)
+        self.SQ[EntrySq.PRIVATE] = coerce_bool(
+            entry.get(EntrySq.PRIVATE, EntrySq.OPT[EntrySq.PRIVATE])
+        )
+        self.SQ[EntrySq.ASSET_SCOPE] = coerce_bool(
+            entry.get(EntrySq.ASSET_SCOPE, EntrySq.OPT[EntrySq.ASSET_SCOPE])
+        )
+        self.SQ[EntrySq.ALWAYS_CACHED] = coerce_bool(
+            entry.get(EntrySq.ALWAYS_CACHED, EntrySq.OPT[EntrySq.ALWAYS_CACHED])
+        )
+        self.SQ[EntrySq.PAGE_SIZE] = check_gui_page_size(
+            entry.get(EntrySq.PAGE_SIZE, EntrySq.OPT[EntrySq.PAGE_SIZE])
+        )
         self.LOG.debug(f"New {Types.SAVED_QUERY} found {kv_dump(self.SQ)}")
 
         self.SQ_ENTRIES = []

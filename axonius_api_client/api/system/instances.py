@@ -564,7 +564,7 @@ class Instances(ModelMixins):
         )
         return api_endpoint.perform_request(http=self.auth.http, request_obj=request_obj)
 
-    def _update_active(self, node_id: str, status: bool) -> str:
+    def _update_active(self, node_id: str, status: bool) -> str:  # pragma: no cover
         """Direct API method to update an instance.
 
         Notes:

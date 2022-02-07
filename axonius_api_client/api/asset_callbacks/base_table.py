@@ -5,7 +5,7 @@ from typing import List, Union
 import tabulate
 
 from ...constants.api import TABLE_FORMAT, TABLE_MAX_ROWS
-from ...exceptions import ApiError
+from ...exceptions import ApiError, StopFetch
 from ...tools import listify
 from .base import ExportMixins
 
@@ -117,7 +117,7 @@ class Table(ExportMixins):
             field_excludes = listify(self.get_arg_value("field_excludes"))
             self.set_arg_value("field_excludes", field_excludes + self.APIOBJ.FIELDS_API)
 
-        table_format = self.get_arg_value("table_format")
+        table_format = self.get_arg_value("table_format") or TABLE_FORMAT
         self.set_arg_value("table_format", self.check_table_format(fmt=table_format))
 
     def start(self, **kwargs):
@@ -129,7 +129,7 @@ class Table(ExportMixins):
     def stop(self, **kwargs):
         """Stop this callbacks object."""
         super(Table, self).stop(**kwargs)
-        tablefmt = self.get_arg_value("table_format")
+        tablefmt = self.get_arg_value("table_format") or TABLE_FORMAT
         rows = getattr(self, "_rows", [])
 
         table = tabulate.tabulate(
@@ -163,8 +163,11 @@ class Table(ExportMixins):
         rows_processed = self.STATE.get("rows_processed_total", 0)
 
         if all([rows_processed, max_rows]) and rows_processed >= max_rows:
+            reason = f"table_max_rows of {max_rows}"
             self.STATE["stop_fetch"] = True
-            self.STATE["stop_msg"] = f"table_max_rows of {max_rows}"
+            self.STATE["stop_msg"] = reason
+            self.APIOBJ.LOG.info(f"Issuing stop of fetch due to {reason}")
+            raise StopFetch(reason=reason, state=self.STATE)
 
     def check_table_format(self, fmt: str):
         """Check if table_format is valid choice.
@@ -179,6 +182,7 @@ class Table(ExportMixins):
             fmts = ", ".join(tabulate.tabulate_formats)
             msg = f"{fmt!r} is not a valid table format, must be one of {fmts}"
             self.echo(msg=msg, error=ApiError)
+        return fmt
 
     CB_NAME: str = "table"
     """name for this callback"""

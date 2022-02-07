@@ -1,5 +1,32 @@
 [run]
+# TBD: later branch True
+data_file = artifacts/.coverage
 omit =
     axonius_api_client/tests/*
     axonius_api_client/examples/*
-    axonius_api_client/cli/*
+
+[report]
+skip_covered = True
+skip_empty = True
+sort = -miss
+exclude_lines =
+    pragma: no cover
+    def __repr__
+    raise AssertionError
+    raise NotImplementedError
+    if __name__ == .__main__.:
+    @(abc\.)?abstractmethod
+    def get_schema_cls
+    def get_model_cls
+    def _str_properties
+
+[html]
+directory = artifacts/cov_html
+skip_covered = False
+
+[xml]
+output = artifacts/cov.xml
+
+[json]
+output = artifacts/cov.json
+pretty_print = True

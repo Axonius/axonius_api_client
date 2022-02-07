@@ -50,10 +50,9 @@ class Signup:
             company_name: name of company
             contact_email: email address of company contact
         """
-        response = self._perform(
+        return self._perform(
             password=password, company_name=company_name, contact_email=contact_email
-        )
-        return response.to_dict()
+        ).to_dict()
 
     def validate_password_reset_token(self, token: str) -> bool:
         """Pass."""

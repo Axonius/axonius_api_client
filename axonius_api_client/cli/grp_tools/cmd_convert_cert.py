@@ -3,13 +3,9 @@
 import pathlib
 
 import click
-import OpenSSL
 
 from ..context import CONTEXT_SETTINGS
 from ..options import add_options
-
-PEM_TYPE = OpenSSL.crypto.FILETYPE_PEM
-ASN1_TYPE = OpenSSL.crypto.FILETYPE_ASN1
 
 PATH = click.option(
     "--path",
@@ -40,12 +36,16 @@ def cmd(ctx, path):
 
 def load_der(contents):
     """Load the bytes DER cert file into a python object."""
-    return OpenSSL.crypto.load_certificate(ASN1_TYPE, contents)
+    import OpenSSL
+
+    return OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_ASN1, contents)
 
 
 def der_to_pem(der):
     """Convert a binary bytes DER cert to ascii PEM cert."""
-    return OpenSSL.crypto.dump_certificate(PEM_TYPE, der)
+    import OpenSSL
+
+    return OpenSSL.crypto.dump_certificate(OpenSSL.crypto.FILETYPE_PEM, der)
 
 
 def write_pem_path(ctx, path, pem):

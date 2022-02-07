@@ -11,6 +11,7 @@ from axonius_api_client.setup_env import (
     KEY_DEFAULT_PATH,
     KEY_ENV_FILE,
     KEY_ENV_PATH,
+    KEY_FEATURES,
     KEY_KEY,
     KEY_OVERRIDE,
     KEY_SECRET,
@@ -21,9 +22,25 @@ from axonius_api_client.setup_env import (
     get_env_ax,
     get_env_bool,
     get_env_connect,
+    get_env_csv,
+    get_env_features,
     get_env_path,
     get_env_str,
 )
+
+
+class TestGetEnvCsv:
+    def test_set(self, monkeypatch):
+        monkeypatch.setenv("AX_TEST", "abc,def,ghi")
+        ret = get_env_csv("AX_TEST")
+        assert ret == ["abc", "def", "ghi"]
+
+
+class TestGetEnvFeatures:
+    def test_set(self, monkeypatch):
+        monkeypatch.setenv(KEY_FEATURES, "abc,def,ghi")
+        ret = get_env_features()
+        assert ret == ["abc", "def", "ghi"]
 
 
 class TestFindDotEnv:

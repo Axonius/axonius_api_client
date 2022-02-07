@@ -2,7 +2,8 @@
 """API for working with dashboards and discovery lifecycle."""
 import dataclasses
 import datetime
-from typing import Dict, List, Optional
+import time
+from typing import Dict, List, Optional, Tuple, Union
 
 from ...data import PropsData
 from ...tools import coerce_int, dt_now, dt_parse, trim_float
@@ -84,7 +85,7 @@ class DiscoverData(PropsData):
     """Pass."""
 
     raw: dict
-    adapters: List[dict] = dataclasses.field(default_factory=list)
+    adapters: List[dict] = dataclasses.field(default_factory=list, repr=False)
 
     @property
     def _properties(self) -> List[str]:
@@ -161,9 +162,19 @@ class DiscoverData(PropsData):
         return any([not_running, *[x.name == stage and x.is_done for x in self.phases]])
 
     @property
+    def running_status_map(self) -> dict:
+        """Pass."""
+        return {
+            "done": False,
+            "stopping": False,
+            "starting": True,
+            "running": True,
+        }
+
+    @property
     def is_running(self) -> bool:
         """Pass."""
-        return self.status != "done"
+        return self.running_status_map.get(self.status, False)
 
     @property
     def status(self) -> str:
@@ -218,6 +229,35 @@ class DiscoverData(PropsData):
     def next_run_within_minutes(self, value: int) -> bool:
         """Pass."""
         return coerce_int(obj=value, min_value=0) >= int(self.next_run_starts_in_minutes)
+
+    def get_stability(
+        self, for_next_minutes: Optional[int] = None, start_check: Union[int, float] = 0.5
+    ) -> Tuple[str, bool]:
+        """Pass."""
+        current_run = self.current_run_duration_in_minutes
+
+        if self.is_running:
+            pre = f"Discover is running ({current_run} minutes so far)"
+
+            if (
+                isinstance(current_run, (int, float)) and isinstance(start_check, (int, float))
+            ) and current_run <= start_check:
+                return f"{pre} - started less than {start_check} minutes ago", False
+
+            if self.is_correlation_finished:  # pragma: no cover
+                return f"{pre} - correlation has finished", True
+
+            return f"{pre} - correlation has NOT finished", False
+
+        next_mins = self.next_run_starts_in_minutes
+        reason = f"Discover is not running and next is in {next_mins} minutes"
+
+        if isinstance(for_next_minutes, int):
+            if self.next_run_within_minutes(for_next_minutes):
+                return f"{reason} (less than {for_next_minutes} minutes)", False
+            return f"{reason} (more than {for_next_minutes} minutes)", True
+
+        return reason, True
 
 
 class Dashboard(ModelMixins):
@@ -285,6 +325,7 @@ class Dashboard(ModelMixins):
         """
         if not self.is_running:
             self._start()
+            time.sleep(2)
         return self.get()
 
     def stop(self) -> DiscoverData:
@@ -299,6 +340,7 @@ class Dashboard(ModelMixins):
         """
         if self.is_running:
             self._stop()
+            time.sleep(2)
         return self.get()
 
     def _get(self) -> json_api.lifecycle.Lifecycle:

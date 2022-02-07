@@ -2,7 +2,7 @@
 """Models for API requests & responses."""
 import dataclasses
 import datetime
-from typing import List, Optional, Type, Union
+from typing import Optional, Union
 
 import dataclasses_json
 import dateutil
@@ -64,10 +64,7 @@ class SchemaDatetime(marshmallow_jsonapi.fields.DateTime):
         if value is None and self.allow_none:
             return None
 
-        try:
-            return dump_date(value)
-        except Exception as exc:
-            raise marshmallow.ValidationError(str(exc))
+        return dump_date(value)
 
     def _deserialize(self, value, attr, data, **kwargs):
         if value is None and self.allow_none:
@@ -108,10 +105,10 @@ def get_field_dc_mm(mm_field: marshmallow.fields.Field, **kwargs) -> dataclasses
     return dataclasses.field(**kwargs)
 
 
-def get_field_oneof(
-    choices: List[str], field: Type[marshmallow.fields.Field] = marshmallow.fields.Str, **kwargs
-) -> marshmallow.fields.Field:
-    """Pass."""
-    kwargs["validate"] = marshmallow.validate.OneOf(choices=choices)
-    kwargs.setdefault("required", True)
-    return field(**kwargs)
+# def get_field_oneof(
+#     choices: List[str], field: Type[marshmallow.fields.Field] = marshmallow.fields.Str, **kwargs
+# ) -> marshmallow.fields.Field:
+#     """Pass."""
+#     kwargs["validate"] = marshmallow.validate.OneOf(choices=choices)
+#     kwargs.setdefault("required", True)
+#     return field(**kwargs)

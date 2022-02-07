@@ -39,11 +39,9 @@ OPTIONS = [
 def cmd(ctx, url, key, secret, **kwargs):
     """Delete ALL asset records of this type from the database."""
     client = ctx.obj.start_client(url=url, key=key, secret=secret)
-
     p_grp = ctx.parent.command.name
     apiobj = getattr(client, p_grp)
-
     with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
         data = apiobj.destroy(**kwargs)
-
-    click.secho(json_dump(data))
+    click.secho(json_dump(data))  # pragma: no cover
+    ctx.exit(0)  # pragma: no cover

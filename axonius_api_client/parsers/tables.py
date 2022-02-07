@@ -6,14 +6,15 @@ from typing import List, Optional, Union
 
 import tabulate
 
-from ..constants.tables import KEY_MAP_ADAPTER, KEY_MAP_CNX, KEY_MAP_SCHEMA, TABLE_FMT
+from ..constants.api import TABLE_FORMAT
+from ..constants.tables import KEY_MAP_ADAPTER, KEY_MAP_SCHEMA
 from ..tools import json_dump, listify
 
 
 def tablize(
     value: List[dict],
     err: Optional[str] = None,
-    fmt: str = TABLE_FMT,
+    fmt: str = TABLE_FORMAT,
     footer: bool = True,
     **kwargs,
 ) -> str:
@@ -26,11 +27,11 @@ def tablize(
         footer: include err at bottom too
     """
     table = tabulate.tabulate(value, tablefmt=fmt, headers="keys")
+    use_footer = ""
 
     if footer:
-        if fmt == "simple":
-            header = "\n" + "\n".join(reversed(table.splitlines()[0:2]))
-            table += header
+        if fmt in ["simple", "grid"]:
+            use_footer = "\n".join(reversed(table.splitlines()[0:2]))
 
     if err:
         pre = err + "\n"
@@ -39,14 +40,14 @@ def tablize(
         pre = "\n"
         post = "\n"
 
-    return "\n".join([pre, table, post])
+    return "\n".join([x for x in [pre, table, use_footer, post] if x])
 
 
 def tablize_schemas(
     schemas: List[dict],
     config: Optional[dict] = None,
     err: Optional[str] = None,
-    fmt: str = TABLE_FMT,
+    fmt: str = TABLE_FORMAT,
     footer: bool = True,
     orig: bool = True,
     orig_width: int = 20,
@@ -83,7 +84,7 @@ def tablize_schemas(
 def tablize_adapters(
     adapters: List[dict],
     err: Optional[str] = None,
-    fmt: str = TABLE_FMT,
+    fmt: str = TABLE_FORMAT,
     footer: bool = True,
 ) -> str:
     """Create a table string for a set of adapter schemas.
@@ -105,7 +106,7 @@ def tablize_adapters(
 
 
 def tablize_cnxs(
-    cnxs: List[dict], err: Optional[str] = None, fmt: str = TABLE_FMT, footer: bool = True
+    cnxs: List[dict], err: Optional[str] = None, fmt: str = TABLE_FORMAT, footer: bool = True
 ) -> str:
     """Create a table string for a set of adapter connection schemas.
 
@@ -115,15 +116,56 @@ def tablize_cnxs(
         fmt: table format to use
         footer: show err at bottom too
     """
+    """
+    old key map: [
+        ("id", "ID", 0),
+        ("uuid", "UUID", 0),
+        ("working", "Working", 0),
+        ("active", "Active", 0),
+        ("connection_label", "Label", 0),
+        ("schemas", None, 0),
+    ]
+    """
+
+    def join(obj):
+        return "\n".join(obj)
+
+    def config_str(k, v):
+        ret = f"{k} ({type(v).__name__}): {v}"
+        return ret
+
+    def schema_str(obj):
+        req = "REQUIRED, " if obj["required"] else ""
+        return "{name} ({req}{type})".format(req=req, **obj)
+
     values = []
     for cnx in cnxs:
-        value = tab_map(value=cnx, key_map=KEY_MAP_CNX, orig=False)
+        error = textwrap.fill(cnx["error"] or "", width=30, subsequent_indent=" " * 2)
+        details = [
+            f'Adapter: {cnx["adapter_name"]}',
+            f'Node Name: {cnx["node_name"]}',
+            f'Node ID: {cnx["node_id"]}',
+            f'ID: {cnx["id"]}',
+            f'UUID: {cnx["uuid"]}',
+            f'Label: {cnx["connection_label"]}',
+            f'Active: {cnx["active"]}',
+            f'Working: {cnx["working"]}',
+            f"Error: {error}",
+        ]
+        value = {}
+        value["Details"] = join(details)
+        configs = [config_str(k, v) for k, v in sorted(cnx["config"].items())]
+        value["Config"] = join(configs)
+        # else:  # pragma: no cover
+        #     keys = join([schema_str(v) for _, v in sorted(cnx["schemas"].items())])
+        #     value["Config Keys"] = keys
+
         values.append(value)
 
     return tablize(value=values, err=err, fmt=fmt, footer=footer)
 
 
-def tablize_sqs(data: List[dict], err: str, fmt: str = TABLE_FMT, footer: bool = True) -> str:
+def tablize_sqs(data: List[dict], err: str, fmt: str = TABLE_FORMAT, footer: bool = True) -> str:
     """Create a table string for a set of sqs.
 
     Args:
@@ -142,15 +184,41 @@ def tablize_sq(data: dict) -> dict:
     Args:
         data: sq to create a table entry for
     """
+    data = data.to_dict() if hasattr(data, "to_dict") else data
+
+    name = data["name"]
+    # name = textwrap.fill(name, width=40, subsequent_indent=" " * 2)
+    uuid = data["uuid"]
+    description = data.get("description") or ""
+    description = textwrap.fill(description, width=30)
+    tags = listify(data.get("tags"))
+    tags = "\n  " + "\n  ".join(tags)
+    updated = data.get("last_updated")
+
+    flags = {
+        "is predefined": data.get("predefined", False),
+        "is referenced": data.get("is_referenced", False),
+        "is private": data.get("private", False),
+        "is always cached": data.get("always_cached", False),
+        "is asset scope": data.get("asset_scope", False),
+        "is asset scope ready": data.get("is_asset_scope_query_ready", False),
+    }
+    flags = "\n".join([f"{k}: {v}" for k, v in flags.items()])
+
+    details = [
+        f"Name: {name}",
+        f"UUID: {uuid}",
+        f"Updated: {updated}",
+        f"Tags: {tags}",
+    ]
     value = {}
-    value["Name"] = data["name"]  # textwrap.fill(data["name"], width=30)
-    value["UUID"] = data["uuid"]
-    value["Description"] = textwrap.fill(data.get("description") or "", width=30)
-    value["Tags"] = "\n".join(listify(data.get("tags", [])))
+    value["Details"] = "\n".join(details)
+    value["Description"] = description
+    value["Flags"] = flags
     return value
 
 
-def tablize_users(users: List[dict], err: str, fmt: str = TABLE_FMT, footer: bool = True) -> str:
+def tablize_users(users: List[dict], err: str, fmt: str = TABLE_FORMAT, footer: bool = True) -> str:
     """Create a table string for a set of users.
 
     Args:
@@ -183,7 +251,7 @@ def tablize_user(user: dict) -> dict:
 
 
 def tablize_roles(
-    roles: List[dict], cat_actions: dict, err: str, fmt: str = TABLE_FMT, footer: bool = True
+    roles: List[dict], cat_actions: dict, err: str, fmt: str = TABLE_FORMAT, footer: bool = True
 ) -> str:
     """Create a table string for a set of roles.
 

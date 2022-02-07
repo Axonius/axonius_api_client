@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 """Command line interface for Axonius API Client."""
 import click
+import tabulate
 
 from .. import DEFAULT_PATH
-from ..constants.api import MAX_PAGE_SIZE
+from ..constants.api import MAX_PAGE_SIZE, TABLE_FORMAT
 from ..tools import coerce_int
 from . import context
 from .helps import HELPSTRS
@@ -132,7 +133,7 @@ QUERY = [
     ),
 ]
 
-FIELDS_SELECT = [
+FIELDS_SELECT_BASE = [
     click.option(
         "--field",
         "-f",
@@ -150,6 +151,17 @@ FIELDS_SELECT = [
         help="Regular expressions of fields to include (multiples)",
         metavar="ADAPTER_REGEX:FIELD_REGEX",
         multiple=True,
+        show_envvar=True,
+        show_default=True,
+    ),
+    click.option(
+        "--fields-regex-root-only/--no-fields-regex-root-only",
+        "-frro/-nfrro",
+        "fields_regex_root_only",
+        help="Only include root fields for --field-regex",
+        is_flag=True,
+        default=True,
+        required=False,
         show_envvar=True,
         show_default=True,
     ),
@@ -174,6 +186,10 @@ FIELDS_SELECT = [
         show_envvar=True,
         show_default=True,
     ),
+]
+
+FIELDS_SELECT = [
+    *FIELDS_SELECT_BASE,
     click.option(
         "--fields-error/--no-fields-error",
         "-fer/-nfer",
@@ -186,7 +202,6 @@ FIELDS_SELECT = [
         show_default=True,
     ),
 ]
-
 EXPORT = [
     click.option(
         "--export-file",
@@ -353,3 +368,27 @@ NODE_CNX = [
         help="Adapter name",
     ),
 ]
+
+
+ABORT = click.option(
+    "--abort/--no-abort",
+    "-a/-na",
+    "abort",
+    help="Stop on errors",
+    required=False,
+    default=True,
+    show_envvar=True,
+    show_default=True,
+)
+
+TABLE_FMT = click.option(
+    "--table-format",
+    "-tf",
+    "table_format",
+    default=TABLE_FORMAT,
+    help="Base format to use for --export-format=table",
+    type=click.Choice(tabulate.tabulate_formats),
+    show_envvar=True,
+    show_default=True,
+    hidden=False,
+)
