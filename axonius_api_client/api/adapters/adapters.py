@@ -7,8 +7,9 @@ from ...exceptions import ApiError, NotFoundError
 from ...parsers.config import config_build, config_unchanged, config_unknown
 from ...parsers.tables import tablize_adapters
 from ...tools import path_read
-from .. import json_api
 from ..api_endpoints import ApiEndpoints
+from ..json_api.adapters import Adapter, AdapterSettings, AdaptersList, CnxLabels
+from ..json_api.system_settings import SystemSettings
 from ..mixins import ModelMixins
 
 
@@ -49,6 +50,12 @@ class Adapters(ModelMixins):
             ...     print(adapter["name"])  # name of adapter
             ...     print(adapter["node_name"])  # name of node adapter is running on
 
+        Args:
+            get_clients (bool, optional): Include the connections and schemas in the response
+
+        Returns:
+            List[dict]: list of adapter metadata
+
         """
         basic_data = self._get_basic()
         return [
@@ -58,7 +65,14 @@ class Adapters(ModelMixins):
         ]
 
     def get_by_name_basic(self, value: str) -> dict:
-        """Get an adapter by name."""
+        """Get an adapters basic metadata (including display title) by name.
+
+        Args:
+            value (str): short name of adapter (i.e. ``aws``)
+
+        Returns:
+            dict: adapter basic metadata
+        """
         data = self._get_basic()
         return data.find_by_name(value=value)
 
@@ -93,11 +107,15 @@ class Adapters(ModelMixins):
             ...     print(cnx["uuid"])  # UUID of connection
 
         Args:
-            name: name of adapter to get
-            node: name of node to get adapter from
+            name (str): name of adapter to get
+            node (Optional[str], optional): name of node to get adapter from
+            get_clients (bool, optional): Include the connections and schemas in the response
 
         Raises:
-            :exc:`NotFoundError`: when no node found or when no adapter found on node
+            NotFoundError: when no node found or when no adapter found on node
+
+        Returns:
+            dict: adapter metadata
         """
         node_meta = self.instances.get_by_name_id_core(value=node)
         adapters = self.get(get_clients=get_clients)
@@ -115,7 +133,10 @@ class Adapters(ModelMixins):
         raise NotFoundError(tablize_adapters(adapters=adapters, err=err))
 
     def config_get(
-        self, name: str, node: Optional[str] = None, config_type: str = "generic"
+        self,
+        name: str,
+        node: Optional[str] = None,
+        config_type: str = "generic",
     ) -> dict:
         """Get the advanced settings for an adapter.
 
@@ -160,9 +181,12 @@ class Adapters(ModelMixins):
             ...    print(f"  current value of setting: {current_value}")
 
         Args:
-            name: name of adapter to get advanced settings of
-            node: name of node to get adapter from [NO LONGER USED]
-            config_type: One of generic, specific, or discovery
+            name (str): name of adapter to get advanced settings of
+            node (Optional[str], optional): name of node to get adapter from [NO LONGER USED]
+            config_type (str, optional): One of generic, specific, or discovery
+
+        Returns:
+            dict: configuration for ``config_type``
         """
         adapter = self.get_by_name(name=name, node=node, get_clients=False)
         adapters = self._config_get(adapter_name=adapter["name_raw"])
@@ -199,10 +223,13 @@ class Adapters(ModelMixins):
             >>> # XXX currently broken!
 
         Args:
-            name: name of adapter to update advanced settings of
-            node: name of node to get adapter from
-            config_type: One of generic, specific, or discovery
+            name (str): name of adapter to update advanced settings of
+            node (Optional[str], optional): name of node to get adapter from
+            config_type (str, optional): One of generic, specific, or discovery
             **kwargs: configuration to update advanced settings of config_type
+
+        Returns:
+            dict: updated configuration for ``config_type``
         """
         kwargs_config = kwargs.pop("kwargs_config", {})
         kwargs.update(kwargs_config)
@@ -262,6 +289,9 @@ class Adapters(ModelMixins):
             file_name: name of file to upload
             file_content: content of file to upload
             file_content_type: mime type of file to upload
+
+        Returns:
+            dict: with keys 'filename' and 'uuid'
         """
         adapter = self.get_by_name(name=name, node=node, get_clients=False)
 
@@ -274,7 +304,7 @@ class Adapters(ModelMixins):
             file_content_type=file_content_type,
         )
 
-    def file_upload_path(self, path: Union[str, pathlib.Path], **kwargs):
+    def file_upload_path(self, path: Union[str, pathlib.Path], **kwargs) -> dict:
         """Upload the contents of a file to a specific adapter on a specific node.
 
         Examples:
@@ -287,8 +317,11 @@ class Adapters(ModelMixins):
             {'uuid': '5f78b674e33f0a113700a6fa', 'filename': 'test.csv'}
 
         Args:
-            path: path to file containing contents to upload
+            path (Union[str, pathlib.Path]): path to file containing contents to upload
             **kwargs: passed to :meth:`file_upload`
+
+        Returns:
+            dict: with keys 'filename' and 'uuid'
         """
         path, file_content = path_read(obj=path, binary=True, is_json=False)
         if path.suffix == ".csv":
@@ -309,25 +342,34 @@ class Adapters(ModelMixins):
         self.instances: Instances = Instances(auth=self.auth)
         """Work with instances"""
 
-    def _get(
-        self, get_clients: bool = False, filter: Optional[str] = None
-    ) -> List[json_api.adapters.Adapter]:
-        """Private API method to get all adapters."""
+    def _get(self, get_clients: bool = False, filter: Optional[str] = None) -> List[Adapter]:
+        """Private API method to get all adapters.
+
+        Args:
+            get_clients (bool, optional): Include the connections and schemas in the response
+            filter (Optional[str], optional): unk
+
+        Returns:
+            List[Adapter]: List of Adapter dataclass models
+        """
         api_endpoint = ApiEndpoints.adapters.get
         request_obj = api_endpoint.load_request(get_clients=get_clients, filter=filter)
         return api_endpoint.perform_request(http=self.auth.http, request_obj=request_obj)
 
-    def _config_update(self, adapter_name: str, config_name: str, config: dict) -> str:
+    def _config_update(self, adapter_name: str, config_name: str, config: dict) -> SystemSettings:
         """Private API method to set advanced settings for an adapter.
 
         Args:
-            adapter_name: raw name of the adapter i.e. ``aws_adapter``
-            config_name: name of advanced settings to set
+            adapter_name (str): raw name of the adapter i.e. ``aws_adapter``
+            config_name (str): name of advanced settings to set
 
                 * ``AdapterBase`` for generic advanced settings
                 * ``AwsSettings`` for adapter specific advanced settings (name changes per adapter)
                 * ``DiscoverySchema`` for discovery advanced settings
-            new_config: the advanced configuration key value pairs to set
+            config (dict): the advanced configuration key value pairs to set
+
+        Returns:
+            SystemSettings: dataclass model containing response
         """
         api_endpoint = ApiEndpoints.adapters.settings_update
         request_obj = api_endpoint.load_request(
@@ -340,16 +382,23 @@ class Adapters(ModelMixins):
             config_name=config_name,
         )
 
-    def _get_basic(self) -> json_api.adapters.AdaptersList:
-        """Pass."""
+    def _get_basic(self) -> AdaptersList:
+        """Get the basic metadata for all adapters.
+
+        Returns:
+            AdaptersList: dataclass model containing response
+        """
         api_endpoint = ApiEndpoints.adapters.get_basic
         return api_endpoint.perform_request(http=self.auth.http)
 
-    def _config_get(self, adapter_name: str) -> json_api.adapters.AdapterSettings:
+    def _config_get(self, adapter_name: str) -> AdapterSettings:
         """Private API method to set advanced settings for an adapter.
 
         Args:
-            adapter_name: raw name of the adapter, i.e. 'aws_adapter'
+            adapter_name (str): raw name of the adapter, i.e. 'aws_adapter'
+
+        Returns:
+            AdapterSettings: dataclass model containing response
         """
         api_endpoint = ApiEndpoints.adapters.settings_get
         return api_endpoint.perform_request(http=self.auth.http, adapter_name=adapter_name)
@@ -367,13 +416,16 @@ class Adapters(ModelMixins):
         """Private API method to upload a file to a specific adapter on a specifc node.
 
         Args:
-            adapter_name: raw name of the adapter i.e. ``aws_adapter``
-            node_id: ID of node running adapter
-            field_name: name of field (should match configuration schema key name)
-            file_name: name of file to upload
-            file_content: content of file to upload
-            file_content_type: mime type of file to upload
-            file_headers: headers to use for file
+            adapter_name (str): raw name of the adapter i.e. ``aws_adapter``
+            node_id (str): ID of node running adapter
+            field_name (str): name of field (should match configuration schema key name)
+            file_name (str): name of file to upload
+            file_content (Union[bytes, str]): content of file to upload
+            file_content_type (Optional[str], optional): mime type of file to upload
+            file_headers (Optional[dict], optional): headers to use for file
+
+        Returns:
+            dict: containing filename and uuid keys
         """
         api_endpoint = ApiEndpoints.adapters.file_upload
 
@@ -387,8 +439,12 @@ class Adapters(ModelMixins):
         parsed = {"filename": file_name, "uuid": response["data"]["id"]}
         return parsed
 
-    def _get_labels(self) -> json_api.adapters.CnxLabels:
-        """Pass."""
+    def _get_labels(self) -> CnxLabels:
+        """Get labels metadata for all connections.
+
+        Returns:
+            CnxLabels: dataclass model containing response
+        """
         api_endpoint = ApiEndpoints.adapters.labels_get
         response = api_endpoint.perform_request(http=self.http)
         return response

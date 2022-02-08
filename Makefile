@@ -151,7 +151,7 @@ pkg_build:
 	$(MAKE) clean_pkg
 
 	@echo "*** Building Source and Wheel (universal) distribution"
-	pipenv run python setup.py sdist bdist_wheel --universal --dist-dir artifacts/dist --build-base artifacts/build
+	pipenv run python setup.py sdist bdist_wheel --universal --dist-dir artifacts/dist
 
 	@echo "*** Checking package with twine"
 	pipenv run twine check artifacts/dist/*
