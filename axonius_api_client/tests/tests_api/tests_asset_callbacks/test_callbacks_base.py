@@ -5,10 +5,10 @@ import copy
 import pytest
 
 from ...utils import get_rows_exist
-from .test_callbacks import Callbacks
+from .test_callbacks import CallbacksFull
 
 
-class TestCallbacksBase(Callbacks):
+class TestCallbacksBase(CallbacksFull):
     @pytest.fixture(params=["api_devices", "api_users"])
     def apiobj(self, request):
         return request.getfixturevalue(request.param)

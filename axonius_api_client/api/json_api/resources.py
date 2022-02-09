@@ -6,16 +6,19 @@ from typing import Optional, Type
 import marshmallow
 import marshmallow_jsonapi
 
-from ...constants.api import MAX_PAGE_SIZE
+from ...constants.api import MAX_PAGE_SIZE, PAGE_SIZE
+from ...tools import parse_int_min_max
 from .base import BaseModel, BaseSchema, BaseSchemaJson
-from .custom_fields import SchemaBool, get_field_dc_mm
+from .custom_fields import SchemaBool
 
 
 class PaginationSchema(marshmallow.Schema):
     """Pass."""
 
-    offset = marshmallow_jsonapi.fields.Integer(default=0, missing=0)
-    limit = marshmallow_jsonapi.fields.Integer(default=140, missing=140)
+    offset = marshmallow_jsonapi.fields.Integer(load_default=0, dump_default=0)
+    limit = marshmallow_jsonapi.fields.Integer(
+        load_default=MAX_PAGE_SIZE, dump_default=MAX_PAGE_SIZE
+    )
 
 
 @dataclasses.dataclass
@@ -28,23 +31,17 @@ class PaginationRequest(BaseModel):
     limit: Optional[int] = MAX_PAGE_SIZE
     """Number of rows to return"""
 
+    @staticmethod
+    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+        """Pass."""
+        return None
+
     def __post_init__(self):
         """Pass."""
-        try:
-            self.limit = int(self.limit)
-        except Exception:
-            self.limit = MAX_PAGE_SIZE
-        finally:
-            if self.limit > MAX_PAGE_SIZE or self.limit < 1:
-                self.limit = MAX_PAGE_SIZE
-
-        try:
-            self.offset = int(self.offset)
-        except Exception:
-            self.offset = 0
-        finally:
-            if self.offset < 0:
-                self.offset = 0
+        self.limit = parse_int_min_max(
+            value=self.limit, default=PAGE_SIZE, min_value=1, max_value=MAX_PAGE_SIZE
+        )
+        self.offset = parse_int_min_max(value=self.offset, default=0, min_value=0, max_value=None)
 
 
 @dataclasses.dataclass
@@ -61,8 +58,11 @@ class PageSortRequest(BaseModel):
         for ascending: "field"
     """
 
-    page: Optional[PaginationRequest] = get_field_dc_mm(
-        marshmallow_jsonapi.fields.Nested(PaginationSchema), default=None
+    page: Optional[PaginationRequest] = dataclasses.field(
+        default=None,
+        metadata={
+            "dataclasses_json": {"mm_field": marshmallow_jsonapi.fields.Nested(PaginationSchema)},
+        },
     )
     """Row to start at and number of rows to return.
 
@@ -79,17 +79,21 @@ class PageSortRequest(BaseModel):
 
     def __post_init__(self):
         """Pass."""
-        if self.page is None:
-            self.page = PaginationRequest()
+        self.page = self.page if self.page else PaginationRequest()
+
+    @staticmethod
+    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+        """Pass."""
+        return None
 
 
 class ResourcesGetSchema(BaseSchemaJson):
     """Pass."""
 
-    sort = marshmallow_jsonapi.fields.Str()
+    sort = marshmallow_jsonapi.fields.Str(allow_none=True, load_default=None, dump_default=None)
     page = marshmallow_jsonapi.fields.Nested(PaginationSchema)
-    search = marshmallow_jsonapi.fields.Str(default="", missing="")
-    get_metadata = SchemaBool(missing=True)
+    search = marshmallow_jsonapi.fields.Str(allow_none=True, load_default=None, dump_default=None)
+    get_metadata = SchemaBool(load_default=True, dump_default=True)
 
     @staticmethod
     def get_model_cls() -> type:
@@ -106,7 +110,14 @@ class ResourcesGetSchema(BaseSchemaJson):
 class ResourcesGet(PageSortRequest):
     """Request attributes for getting resources."""
 
-    search: Optional[str] = None
+    search: Optional[str] = dataclasses.field(
+        default=None,
+        metadata={
+            "dataclasses_json": {
+                "mm_field": marshmallow_jsonapi.fields.Str(load_default="", dump_default="")
+            },
+        },
+    )
     """AQL search term
 
     not used by api client (filter using client side logic)
@@ -127,3 +138,8 @@ class ResourceDelete(BaseModel):
     """Pass."""
 
     uuid: str
+
+    @staticmethod
+    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+        """Pass."""
+        return None

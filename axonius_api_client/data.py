@@ -26,7 +26,7 @@ class BaseData:
         """Get this dataclass object as a dictionary."""
         return dataclasses.asdict(self)
 
-    def replace(self, **kwargs) -> "BaseData":
+    def replace(self, **kwargs) -> "BaseData":  # pragma: no cover
         """Pass."""
         return dataclasses.replace(self, **kwargs)
 
@@ -51,7 +51,7 @@ class PropsData(BaseData):
         """Pass."""
         return getattr(self, "_str_join", "\n").join(self.to_str_properties())
 
-    def __repr__(self):
+    def __repr__(self):  # pragma: no cover
         """Pass."""
         return repr(self.__str__())
 

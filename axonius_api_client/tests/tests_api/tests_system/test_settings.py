@@ -2,14 +2,14 @@
 """Test suite."""
 
 import os
-import pytest
 import subprocess
 
+import pytest
 from axonius_api_client.api.json_api.system_settings import SSLCertificate
 from axonius_api_client.exceptions import ApiError, NotFoundError
 
 GUI_SECTION_WITH_SUBS = "system_settings"
-GUI_SECTION_NO_SUBS = "ldap_login_settings"
+GUI_SECTION_NO_SUBS = "mutual_tls_settings"
 GUI_NON_SUB_SECTION = "exactSearch"
 GUI_SUB_SECTION = "timeout_settings"
 GUI_SUB_KEYS = ["disable_remember_me", "enabled", "timeout"]
@@ -101,16 +101,20 @@ class TestSettingsGui(SettingsBasePublic):
         assert "full_config" not in result
 
     def test_get_section_error(self, apiobj):
-        with pytest.raises(NotFoundError):
+        with pytest.raises(NotFoundError) as exc:
             apiobj.get_section(section="badwolf")
+        assert "not found in" in str(exc.value)
 
     def test_get_sub_section_error(self, apiobj):
-        with pytest.raises(NotFoundError):
+        with pytest.raises(NotFoundError) as exc:
             apiobj.get_sub_section(section=GUI_SECTION_WITH_SUBS, sub_section="badwolf")
+        assert "not found in under" in str(exc.value)
+        assert "Sub Section Name" in str(exc.value)
 
     def test_get_sub_section_no_subsections(self, apiobj):
-        with pytest.raises(ApiError):
+        with pytest.raises(ApiError) as exc:
             apiobj.get_sub_section(section=GUI_SECTION_NO_SUBS, sub_section="badwolf")
+        assert "has no sub sections" in str(exc.value)
 
     def test_update_section(self, apiobj):
         old_section = apiobj.get_section(section=GUI_SECTION_WITH_SUBS)
@@ -170,7 +174,7 @@ class TestSettingsGlobal(SettingsBasePublic):
                 "-newkey",
                 "rsa:2048",
                 "-subj",
-                f"/C=US/ST=New York/L=New York City/O=Axonius, Inc/OU=axonius/CN={common_name}/emailAddress=support@axonius.com",
+                f"/C=US/ST=New York/L=New York City/O=Axonius, Inc/OU=axonius/CN={common_name}/emailAddress=support@axonius.com",  # noqa: E501
                 # "-addext",
                 # "subjectAltName = DNS:axonius",
                 "-keyout",
@@ -200,8 +204,72 @@ class TestSettingsGlobal(SettingsBasePublic):
         assert isinstance(result, SSLCertificate)
         assert "sha1_fingerprint" in result.to_dict()
 
+    def test_configure_destroy(self, apiobj):
+        ret = apiobj.configure_destroy(enabled=True, destroy=True, reset=True)
+        assert ret["config"] == {
+            "enable_destroy": True,
+            "enable_factory_reset": True,
+            "enabled": True,
+            "minimize_output": False,
+        }
+        ret = apiobj.configure_destroy(enabled=False, destroy=False, reset=False)
+        assert ret["config"] == {
+            "enable_destroy": False,
+            "enable_factory_reset": False,
+            "enabled": False,
+            "minimize_output": False,
+        }
+        """
+        {
+            "settings_title": "Global Settings",
+            "name": "api_settings",
+            "title": "API Settings",
+            "schemas": {
+                "enabled": {
+                    "name": "enabled",
+                    "title": "Enable advanced API settings",
+                    "type": "bool",
+                    "required": True,
+                },
+                "enable_destroy": {
+                    "name": "enable_destroy",
+                    "title": "Enable API destroy endpoints",
+                    "type": "bool",
+                    "required": True,
+                },
+                "enable_factory_reset": {
+                    "name": "enable_factory_reset",
+                    "title": "Enable factory reset endpoints",
+                    "type": "bool",
+                    "required": True,
+                },
+                "minimize_output": {
+                    "name": "minimize_output",
+                    "title": "Shorten assets response field names",
+                    "type": "bool",
+                    "required": True,
+                },
+            },
+            "sub_sections": {},
+            "parent_name": "",
+            "parent_title": "",
+            "config": {
+                "enable_destroy": True,
+                "enable_factory_reset": True,
+                "enabled": True,
+                "minimize_output": False,
+            },
+        }
+        """
+
 
 class TestSettingsLifecycle(SettingsBasePublic):
     @pytest.fixture(scope="class")
     def apiobj(self, api_settings_lifecycle):
         return api_settings_lifecycle
+
+
+class TestSettingsIdentityProviders(SettingsBasePublic):
+    @pytest.fixture(scope="class")
+    def apiobj(self, api_settings_ip):
+        return api_settings_ip

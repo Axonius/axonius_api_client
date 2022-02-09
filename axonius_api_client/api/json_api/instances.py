@@ -65,7 +65,7 @@ class Instance(BaseModel):
     is_master: bool = get_field_dc_mm(mm_field=SchemaBool())
     use_as_environment_name: bool = get_field_dc_mm(mm_field=SchemaBool())
     ips: List[str] = dataclasses.field(default_factory=list)
-
+    remaining_snapshots_days: Optional[int] = None
     cpu_core_threads: Optional[int] = None
     cpu_cores: Optional[int] = None
     cpu_usage: Optional[int] = None
@@ -146,6 +146,11 @@ class InstanceDeleteRequest(BaseModel):
 
     nodeIds: List[str]
 
+    @staticmethod
+    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+        """Pass."""
+        return None
+
 
 @dataclasses.dataclass
 class InstanceUpdateActiveRequest(BaseModel):
@@ -153,6 +158,11 @@ class InstanceUpdateActiveRequest(BaseModel):
 
     nodeIds: str
     status: bool
+
+    @staticmethod
+    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+        """Pass."""
+        return None
 
 
 @dataclasses.dataclass
@@ -164,11 +174,18 @@ class InstanceUpdateAttributesRequest(BaseModel):
     hostname: str
     use_as_environment_name: bool
 
+    @staticmethod
+    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+        """Pass."""
+        return None
+
 
 class FactoryResetRequestSchema(BaseSchemaJson):
     """Pass."""
 
-    approve_not_recoverable_action = SchemaBool(required=False, missing=False)
+    approve_not_recoverable_action = SchemaBool(
+        required=False, load_default=False, dump_default=False
+    )
 
     @staticmethod
     def get_model_cls() -> type:
@@ -196,7 +213,7 @@ class FactoryResetRequest(BaseModel):
 class FactoryResetSchema(BaseSchemaJson):
     """Pass."""
 
-    triggered = SchemaBool(required=False, missing=False)
+    triggered = SchemaBool(required=False, load_default=False, dump_default=False)
     msg = marshmallow_jsonapi.fields.Str()
 
     @staticmethod
@@ -222,7 +239,7 @@ class FactoryReset(BaseModel):
         """Pass."""
         return FactoryResetSchema
 
-    def __str__(self) -> str:
+    def __str__(self) -> str:  # pragma: no cover
         """Pass."""
         msg = self.msg or "none"
         return f"Factory reset triggered: {self.triggered}, message: {msg}"

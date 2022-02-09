@@ -163,7 +163,7 @@ class SystemUsers(ModelMixins):
 
         new_user = self.get_by_name(name)
 
-        if generate_password_link or email_password_link:
+        if generate_password_link or email_password_link:  # pragma: no cover
             password_reset_link = self.get_password_reset_link(name)
             new_user["password_reset_link"] = password_reset_link
             if email_password_link:

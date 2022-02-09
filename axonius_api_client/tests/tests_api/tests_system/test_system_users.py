@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 """Test suite."""
+import marshmallow
 import pytest
 
-from axonius_api_client.api.json_api.system_users import SystemUser
+from axonius_api_client.api.json_api.system_users import SystemUser, SystemUserCreateSchema
 from axonius_api_client.constants.api import SETTING_UNCHANGED
 from axonius_api_client.exceptions import ApiError, NotFoundError
 
@@ -35,6 +36,18 @@ class TestSystemUsersPrivate:
     def test_add_update_delete(self, apiobj):
         cleanup(apiobj)
         role_id = apiobj.roles.get_by_name("Admin")["uuid"]
+        with pytest.raises(marshmallow.ValidationError) as exc:
+            schema = SystemUserCreateSchema()
+            schema.load(
+                {
+                    "data": {
+                        "type": "create_user_schema",
+                        "attributes": {"user_name": "x", "role_id": "x"},
+                    }
+                }
+            )
+        assert "Must supply a password if " in str(exc.value)
+
         user = apiobj._add(user_name=USER_NAME, role_id=role_id, password=USER_NAME)
         assert isinstance(user, SystemUser)
         assert user.user_name == USER_NAME
@@ -99,6 +112,18 @@ class TestSystemUsersPublic:
             apiobj.add(name=user_name, role_name="Admin", password=USER_NAME)
 
         assert "already exists" in str(exc.value)
+
+    def test_add_err_password(self, apiobj):
+        with pytest.raises(ApiError) as exc:
+            apiobj.add(name="foobar", password="", role_name="")
+        assert "Must supply password" in str(exc.value)
+
+    def test_add_err_email(self, apiobj):
+        with pytest.raises(ApiError) as exc:
+            apiobj.add(
+                name="foobar", password="barfoo", role_name="", email=None, email_password_link=True
+            )
+        assert "Must supply email" in str(exc.value)
 
     def test_delete_admin(self, apiobj):
         with pytest.raises(ApiError) as exc:

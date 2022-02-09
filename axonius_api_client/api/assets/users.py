@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """API for working with user assets."""
-from typing import Generator, List, Union
+from typing import List
 
-from .asset_mixin import AssetMixin
+from .asset_mixin import GEN_TYPE, AssetMixin
 
 
 class Users(AssetMixin):
@@ -44,9 +44,7 @@ class Users(AssetMixin):
             self.FIELD_TAGS,
         ]
 
-    def get_by_usernames(
-        self, values: List[str], **kwargs
-    ) -> Union[Generator[dict, None, None], List[dict]]:
+    def get_by_usernames(self, values: List[str], **kwargs) -> GEN_TYPE:  # pragma: no cover
         """Build a query to get assets where :attr:`FIELD_USERNAME` in values.
 
         Args:
@@ -58,9 +56,7 @@ class Users(AssetMixin):
         kwargs["values"] = values
         return self.get_by_values(**kwargs)
 
-    def get_by_username_regex(
-        self, value: str, **kwargs
-    ) -> Union[Generator[dict, None, None], List[dict]]:
+    def get_by_username_regex(self, value: str, **kwargs) -> GEN_TYPE:  # pragma: no cover
         """Build a query to get assets where :attr:`FIELD_USERNAME` regex matches value.
 
         Args:
@@ -72,9 +68,7 @@ class Users(AssetMixin):
         kwargs["value"] = value
         return self.get_by_value_regex(**kwargs)
 
-    def get_by_username(
-        self, value: str, **kwargs
-    ) -> Union[Generator[dict, None, None], List[dict]]:
+    def get_by_username(self, value: str, **kwargs) -> GEN_TYPE:  # pragma: no cover
         """Build a query to get assets where :attr:`FIELD_USERNAME` == value.
 
         Args:
@@ -86,9 +80,7 @@ class Users(AssetMixin):
         kwargs["value"] = value
         return self.get_by_value(**kwargs)
 
-    def get_by_mails(
-        self, values: List[str], **kwargs
-    ) -> Union[Generator[dict, None, None], List[dict]]:
+    def get_by_mails(self, values: List[str], **kwargs) -> GEN_TYPE:  # pragma: no cover
         """Build a query to get assets where :attr:`FIELD_MAIL` in values.
 
         Args:
@@ -100,9 +92,7 @@ class Users(AssetMixin):
         kwargs["values"] = values
         return self.get_by_values(**kwargs)
 
-    def get_by_mail_regex(
-        self, value: str, **kwargs
-    ) -> Union[Generator[dict, None, None], List[dict]]:
+    def get_by_mail_regex(self, value: str, **kwargs) -> GEN_TYPE:  # pragma: no cover
         """Build a query to get assets where :attr:`FIELD_MAIL` regex matches value.
 
         Args:
@@ -114,7 +104,7 @@ class Users(AssetMixin):
         kwargs["value"] = value
         return self.get_by_value_regex(**kwargs)
 
-    def get_by_mail(self, value: str, **kwargs) -> Union[Generator[dict, None, None], List[dict]]:
+    def get_by_mail(self, value: str, **kwargs) -> GEN_TYPE:  # pragma: no cover
         """Build a query to get assets where :attr:`FIELD_MAIL` == value.
 
         Args:

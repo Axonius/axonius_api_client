@@ -7,7 +7,7 @@ from .. import DEFAULT_PATH, PACKAGE_ROOT
 from ..setup_env import DEBUG
 
 LOG_FMT_VERBOSE: str = (
-    "%(asctime)s %(levelname)-8s [%(name)s:%(funcName)s:%(pathname)s:%(lineno)d] " "%(message)s"
+    "%(asctime)s %(levelname)-8s [%(name)s:%(funcName)s:%(pathname)s:%(lineno)d] %(message)s"
 )
 """Logging format to use for verbose logging."""
 
@@ -42,7 +42,7 @@ LOG_LEVEL_AUTH: str = "debug"
 LOG_LEVEL_API: str = "debug"
 """default logging level for :obj:`axonius_api_client.api.mixins.ModelMixins`"""
 
-LOG_LEVEL_WIZARD: str = "info"
+LOG_LEVEL_WIZARD: str = "debug"
 """default logging level for :obj:`axonius_api_client.api.wizards.wizard.Wizard`"""
 
 LOG_LEVEL_PACKAGE: str = "debug"
@@ -84,7 +84,7 @@ LOG_NAME_STDOUT: str = "handler_stdout"
 LOG_NAME_FILE: str = "handler_file"
 """default handler name for file log"""
 
-MAX_BODY_LEN: int = 100000
+MAX_BODY_LEN: int = 50
 """maximum body length to trim when printing request/response bodies"""
 
 RESPONSE_ATTR_MAP: dict = {

@@ -15,7 +15,6 @@ from ...tools import listify, longest_str, strip_right
 from .base import BaseModel, BaseSchema, BaseSchemaJson
 from .custom_fields import SchemaBool, SchemaDatetime, dump_date, get_field_dc_mm
 from .generic import Metadata, MetadataSchema
-from .system_settings import SystemSettingsUpdateSchema
 
 
 def get_aname(value: str) -> str:
@@ -23,73 +22,239 @@ def get_aname(value: str) -> str:
     return strip_right(obj=str(value or ""), fix="_adapter")
 
 
-@dataclasses.dataclass
-class AdapterNodeCnx(BaseModel):
+class AdapterSchema(BaseSchemaJson):
     """Pass."""
 
-    active: bool
-    adapter_name: str
-    client_id: str
-    id: str
-    node_id: str
-    status: str
-    uuid: str
-    client_config: Optional[dict] = dataclasses.field(default_factory=dict)
-    connection_discovery: Optional[dict] = dataclasses.field(default_factory=dict)
-    date_fetched: Optional[str] = None
-    last_fetch_time: Optional[datetime.datetime] = get_field_dc_mm(
-        mm_field=SchemaDatetime(allow_none=True), default=None
+    adapters_data = marshmallow_jsonapi.fields.List(marshmallow_jsonapi.fields.Dict())
+
+    @staticmethod
+    def get_model_cls() -> type:
+        """Pass."""
+        return Adapter
+
+    class Meta:
+        """Pass."""
+
+        type_ = "adapters_schema"
+
+
+class AdaptersListSchema(MetadataSchema):
+    """Pass."""
+
+    @staticmethod
+    def get_model_cls() -> type:
+        """Pass."""
+        return AdaptersList
+
+
+class AdaptersRequestSchema(BaseSchemaJson):
+    """Pass."""
+
+    filter = marshmallow_jsonapi.fields.Str(allow_none=True)
+    get_clients = SchemaBool(load_default=False, dump_default=False)
+
+    @staticmethod
+    def get_model_cls() -> type:
+        """Pass."""
+        return AdaptersRequest
+
+    class Meta:
+        """Pass."""
+
+        type_ = "adapters_request_schema"
+
+
+class AdapterSettingsSchema(MetadataSchema):
+    """Pass."""
+
+    @staticmethod
+    def get_model_cls() -> type:
+        """Pass."""
+        return AdapterSettings
+
+
+class AdapterSettingsUpdateSchema(BaseSchemaJson):
+    """Pass."""
+
+    config = marshmallow_jsonapi.fields.Dict(required=True)
+    configName = marshmallow_jsonapi.fields.Str(load_default="", dump_default="")
+    pluginId = marshmallow_jsonapi.fields.Str(load_default="", dump_default="")
+    prefix = marshmallow_jsonapi.fields.Str(load_default="adapters", dump_default="adapters")
+
+    class Meta:
+        """Pass."""
+
+        type_ = "settings_schema"
+
+    @staticmethod
+    def get_model_cls() -> Optional[type]:
+        """Pass."""
+        return AdapterSettingsUpdate
+
+
+class CnxCreateRequestSchema(BaseSchemaJson):
+    """Pass."""
+
+    connection = marshmallow_jsonapi.fields.Dict(required=True)  # config of connection
+    connection_label = marshmallow_jsonapi.fields.Str(
+        required=False, load_default="", dump_default="", allow_none=True
     )
-    error: Optional[str] = ""
-    tunnel_id: Optional[str] = None
+    instance = marshmallow_jsonapi.fields.Str(required=True)  # instance ID
+    active = SchemaBool(
+        required=False, load_default=True, dump_default=True
+    )  # set as active or inactive
+    save_and_fetch = SchemaBool(
+        required=False, load_default=True, dump_default=True
+    )  # perform a fetch after saving
+    connection_discovery = marshmallow_jsonapi.fields.Dict(
+        required=False, load_default=None, dump_default=None, allow_none=True
+    )  # connection specific discovery scheduling
+    instance_name = marshmallow_jsonapi.fields.Str(required=True)
+    # PBUG: why is this even a thing? can we not rely on instance id in 'instance'?
+    is_instances_mode = SchemaBool(required=False, load_default=False, dump_default=False)
+    # PBUG: why is this even a thing? can we not rely on instance id in 'instance'?
+
+    @staticmethod
+    def get_model_cls() -> type:
+        """Pass."""
+        return CnxCreateRequest
+
+    class Meta:
+        """Pass."""
+
+        type_ = "create_connection_schema"
+
+    @marshmallow.post_load
+    def post_load_fix_cd(self, data: dict, **kwargs) -> dict:
+        """Pass."""
+        data["connection_discovery"] = data.get("connection_discovery") or {"enabled": False}
+        return data
+
+    @marshmallow.post_dump
+    def post_dump_fix_cd(self, data: dict, **kwargs) -> dict:
+        """Pass."""
+        data["connection_discovery"] = data.get("connection_discovery") or {"enabled": False}
+        return data
+
+
+class CnxTestRequestSchema(BaseSchemaJson):
+    """Pass."""
+
+    connection = marshmallow_jsonapi.fields.Dict(required=True)  # config of connection
+    instance = marshmallow_jsonapi.fields.Str(required=True)  # instance ID
+
+    @staticmethod
+    def get_model_cls() -> type:
+        """Pass."""
+        return CnxTestRequest
+
+    class Meta:
+        """Pass."""
+
+        type_ = "test_connection_schema"
+
+
+class CnxDeleteSchema(BaseSchemaJson):
+    """Pass."""
+
+    client_id = marshmallow_jsonapi.fields.Str()
+
+    @staticmethod
+    def get_model_cls() -> type:
+        """Pass."""
+        return CnxDelete
+
+    class Meta:
+        """Pass."""
+
+        type_ = "deleted_connections_schema"
+
+
+class CnxUpdateRequestSchema(CnxCreateRequestSchema):
+    """Pass."""
+
+    instance_prev = marshmallow_jsonapi.fields.Str(
+        required=False, load_default=None, dump_default=None, allow_none=True
+    )
+    instance_prev_name = marshmallow_jsonapi.fields.Str(
+        required=False, load_default=None, dump_default=None, allow_none=True
+    )
+    # PBUG: why is this even a thing? can we not rely on instance id in 'instance_prev'?
 
     def __post_init__(self):
         """Pass."""
-        self.adapter_name_raw = self.adapter_name
-        self.adapter_name = get_aname(self.adapter_name)
 
-    @property
-    def working(self) -> bool:
+    @staticmethod
+    def get_model_cls() -> type:
         """Pass."""
-        return self.status == "success" and not self.error
+        return CnxUpdateRequest
 
-    @property
-    def node_name(self) -> str:
+    @marshmallow.post_load
+    def post_load_iprev(self, data: dict, **kwargs) -> dict:
         """Pass."""
-        return self.AdapterNode.node_name
+        data["instance_prev"] = data.get("instance_prev") or data["instance"]
+        data["instance_prev_name"] = data.get("instance_prev_name") or data["instance_name"]
+        return data
 
-    @property
-    def label(self) -> str:
+    @marshmallow.post_dump
+    def post_dump_iprev(self, data: dict, **kwargs) -> dict:
         """Pass."""
-        return self.client_config.get("connection_label") or ""
+        data["instance_prev"] = data.get("instance_prev") or data["instance"]
+        data["instance_prev_name"] = data.get("instance_prev_name") or data["instance_name"]
+        return data
 
-    @property
-    def schema_cnx(self) -> dict:
-        """Pass."""
-        return self.AdapterNode.schema_cnx
 
-    @property
-    def schema_cnx_discovery(self) -> dict:
-        """Pass."""
-        return self.AdapterNode.schema_cnx_discovery
+class CnxModifyResponseSchema(BaseSchemaJson):
+    """Pass."""
 
-    def to_dict_old(self) -> dict:
+    active = SchemaBool()
+    client_id = marshmallow_jsonapi.fields.Str()
+    error = marshmallow_jsonapi.fields.Str(allow_none=True)
+    status = marshmallow_jsonapi.fields.Str()
+    failed_connections_limit_exceeded = marshmallow_jsonapi.fields.Int(allow_none=True)
+
+    @staticmethod
+    def get_model_cls() -> type:
         """Pass."""
-        ret = {}
-        ret["config"] = self.client_config
-        ret["config_discovery"] = self.connection_discovery
-        ret["adapter_name"] = self.adapter_name
-        ret["adapter_name_raw"] = self.adapter_name_raw
-        ret["node_name"] = self.node_name
-        ret["node_id"] = self.node_id
-        ret["status"] = self.status
-        ret["error"] = self.error
-        ret["working"] = self.working
-        ret["id"] = self.client_id
-        ret["uuid"] = self.uuid
-        ret["date_fetched"] = self.date_fetched
-        ret["last_fetch_time"] = dump_date(self.last_fetch_time)
-        return ret
+        return CnxModifyResponse
+
+    class Meta:
+        """Pass."""
+
+        type_ = "connections_details_schema"
+
+
+class CnxDeleteRequestSchema(BaseSchemaJson):
+    """Pass."""
+
+    is_instances_mode = SchemaBool(load_default=False, dump_default=False)
+    delete_entities = SchemaBool(load_default=False, dump_default=False)
+    instance = marshmallow_jsonapi.fields.Str()
+    instance_name = marshmallow_jsonapi.fields.Str()
+
+    @staticmethod
+    def get_model_cls() -> type:
+        """Pass."""
+        return CnxDeleteRequest
+
+    class Meta:
+        """Pass."""
+
+        type_ = "delete_connections_schema"
+
+
+class CnxLabelsSchema(MetadataSchema):
+    """Pass."""
+
+    @staticmethod
+    def get_model_cls() -> type:
+        """Pass."""
+        return CnxLabels
+
+    class Meta:
+        """Pass."""
+
+        type_ = "metadata_schema"
 
 
 @dataclasses.dataclass
@@ -112,6 +277,11 @@ class AdapterClientsCount(BaseModel):
             value = getattr(self, count, None)
             if value is None:
                 setattr(self, count, 0)
+
+    @staticmethod
+    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+        """Pass."""
+        return None
 
 
 @dataclasses.dataclass
@@ -136,12 +306,12 @@ class AdapterNode(BaseModel):
     def cnxs(self):
         """Pass."""
 
-        def load(client):
-            extra = {k: client.pop(k) for k in list(client) if k not in fields_known}
-            loaded = schema.load(client)
+        def load(data):
+            extra_attributes = {k: data.pop(k) for k in list(data) if k not in fields_known}
+            loaded = schema.load(data, unknown=marshmallow.INCLUDE)
             loaded.AdapterNode = self
             loaded.HTTP = self.HTTP
-            loaded.extra_attributes = extra
+            loaded.extra_attributes = extra_attributes
             return loaded
 
         if not hasattr(self, "_cnxs"):
@@ -301,52 +471,10 @@ class AdapterNode(BaseModel):
         ret["cnx_count_inactive"] = self.clients_count.inactive_count
         return ret
 
-
-class AdaptersRequestSchema(BaseSchemaJson):
-    """Pass."""
-
-    filter = marshmallow_jsonapi.fields.Str(allow_none=True)
-    get_clients = SchemaBool(missing=True)
-
-    @staticmethod
-    def get_model_cls() -> type:
-        """Pass."""
-        return AdaptersRequest
-
-    class Meta:
-        """Pass."""
-
-        type_ = "adapters_request_schema"
-
-
-@dataclasses.dataclass
-class AdaptersRequest(BaseModel):
-    """Pass."""
-
-    filter: Optional[str] = None
-    # PBUG: how is this even used?
-    get_clients: bool = True
-
     @staticmethod
     def get_schema_cls() -> Optional[Type[BaseSchema]]:
         """Pass."""
-        return AdaptersRequestSchema
-
-
-class AdapterSchema(BaseSchemaJson):
-    """Pass."""
-
-    adapters_data = marshmallow_jsonapi.fields.List(marshmallow_jsonapi.fields.Dict())
-
-    @staticmethod
-    def get_model_cls() -> type:
-        """Pass."""
-        return Adapter
-
-    class Meta:
-        """Pass."""
-
-        type_ = "adapters_schema"
+        return None
 
 
 @dataclasses.dataclass
@@ -361,9 +489,8 @@ class Adapter(BaseModel):
         """Pass."""
         self.adapter_name_raw = self.id
         self.adapter_name = get_aname(self.id)
-        if isinstance(self.document_meta, dict):
-            self.document_meta = self.document_meta.get(self.id, {})
-        """   
+        self.document_meta = self.document_meta.pop(self.id, None)
+        """
         document_meta: {}
             config: {} - adapter advanced settings
                 ActiveDirectoryAdapter: {} - adapter specific advanced settings
@@ -385,13 +512,16 @@ class Adapter(BaseModel):
     def adapter_nodes(self) -> List[AdapterNode]:
         """Pass."""
 
-        def load(adapter_node):
-            loaded = schema.load(adapter_node)
+        def load(data):
+            extra_attributes = {k: data.pop(k) for k in list(data) if k not in fields_known}
+            loaded = schema.load(data, unknown=marshmallow.INCLUDE)
             loaded.Adapter = self
             loaded.HTTP = self.HTTP
+            loaded.extra_attributes = extra_attributes
             return loaded
 
         if not hasattr(self, "_adapter_nodes"):
+            fields_known = [x.name for x in dataclasses.fields(AdapterNode)]
             schema = AdapterNode.schema()
             self._adapter_nodes = [load(x) for x in self.adapters_data]
 
@@ -408,13 +538,95 @@ class Adapter(BaseModel):
         return ["adapter_name", "adapter_nodes"]
 
 
-class AdapterSettingsSchema(MetadataSchema):
+@dataclasses.dataclass
+class AdapterNodeCnx(BaseModel):
     """Pass."""
 
-    @staticmethod
-    def get_model_cls() -> type:
+    active: bool
+    adapter_name: str
+    client_id: str
+    id: str
+    node_id: str
+    status: str
+    uuid: str
+    client_config: Optional[dict] = dataclasses.field(default_factory=dict)
+    connection_advanced_config: Optional[dict] = dataclasses.field(default_factory=dict)
+    failed_connections_attempts: Optional[int] = None
+    failed_connections_limit_exceeded: bool = False
+    connection_discovery: Optional[dict] = dataclasses.field(default_factory=dict)
+    date_fetched: Optional[str] = None
+    last_fetch_time: Optional[datetime.datetime] = get_field_dc_mm(
+        mm_field=SchemaDatetime(allow_none=True), default=None
+    )
+    error: Optional[str] = ""
+    tunnel_id: Optional[str] = None
+
+    def __post_init__(self):
         """Pass."""
-        return AdapterSettings
+        self.adapter_name_raw = self.adapter_name
+        self.adapter_name = get_aname(self.adapter_name)
+
+    @property
+    def working(self) -> bool:
+        """Pass."""
+        return self.status == "success" and not self.error
+
+    @property
+    def node_name(self) -> str:
+        """Pass."""
+        return self.AdapterNode.node_name
+
+    @property
+    def label(self) -> str:
+        """Pass."""
+        return self.client_config.get("connection_label") or ""
+
+    @property
+    def schema_cnx(self) -> dict:
+        """Pass."""
+        return self.AdapterNode.schema_cnx
+
+    @property
+    def schema_cnx_discovery(self) -> dict:
+        """Pass."""
+        return self.AdapterNode.schema_cnx_discovery
+
+    def to_dict_old(self) -> dict:
+        """Pass."""
+        ret = {}
+        ret["config"] = self.client_config
+        ret["config_discovery"] = self.connection_discovery
+        ret["adapter_name"] = self.adapter_name
+        ret["adapter_name_raw"] = self.adapter_name_raw
+        ret["node_name"] = self.node_name
+        ret["node_id"] = self.node_id
+        ret["status"] = self.status
+        ret["error"] = self.error
+        ret["working"] = self.working
+        ret["id"] = self.client_id
+        ret["uuid"] = self.uuid
+        ret["date_fetched"] = self.date_fetched
+        ret["last_fetch_time"] = dump_date(self.last_fetch_time)
+        return ret
+
+    @staticmethod
+    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+        """Pass."""
+        return None
+
+
+@dataclasses.dataclass
+class AdaptersRequest(BaseModel):
+    """Pass."""
+
+    filter: Optional[str] = None
+    # PBUG: how is this even used?
+    get_clients: bool = False
+
+    @staticmethod
+    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+        """Pass."""
+        return AdaptersRequestSchema
 
 
 @dataclasses.dataclass
@@ -429,119 +641,140 @@ class AdapterSettings(Metadata):
     @property
     def type_map(self) -> dict:
         """Pass."""
-        data = {
+        ret = {
             "generic": self.schema_config_generic,
             "discovery": self.schema_config_discovery,
         }
         if self.schema_config_specific:
-            data["specific"] = self.schema_config_specific
-        return data
+            ret["specific"] = self.schema_config_specific
+        return ret
 
     @property
     def schema_config_specific(self) -> dict:
         """Pass."""
+        ret = {}
         if self.schema_specific:
-            return {
+            ret = {
                 "schema": self.schema_specific,
                 "config": self.config_specific,
                 "config_name": self.schema_name_specific,
             }
-        return {}
+        return ret
 
     @property
     def schema_config_discovery(self) -> dict:
         """Pass."""
-        return {
+        ret = {
             "schema": self.schema_discovery,
             "config": self.config_discovery,
             "config_name": self.schema_name_discovery,
         }
+        return ret
 
     @property
     def schema_config_generic(self) -> dict:
         """Pass."""
-        return {
+        ret = {
             "schema": self.schema_generic,
             "config": self.config_generic,
             "config_name": self.schema_name_generic,
         }
+        return ret
 
     @property
     def schema_name_specific(self) -> str:
         """Pass."""
+        ret = ""
         if self._meta:
             for name in self._meta:
                 if name not in [self.schema_name_generic, self.schema_name_discovery]:
-                    return name
-        return ""
+                    ret = name
+                    break
+        return ret
 
     @property
     def schema_name_generic(self) -> str:
         """Pass."""
-        return GENERIC_NAME
+        ret = GENERIC_NAME
+        return ret
 
     @property
     def schema_name_discovery(self) -> str:
         """Pass."""
-        return DISCOVERY_NAME
+        ret = DISCOVERY_NAME
+        return ret
 
     @property
     def _meta(self) -> dict:
         """Pass."""
-        return self.document_meta["advanced_settings"]
+        ret = self.document_meta["advanced_settings"]
+        return ret
 
     @property
     def _schema_specific(self) -> dict:
         """Pass."""
-        name = self.schema_name_specific
-        return self._meta[name]["schema"] if name else {}
+        ret = {}
+        if self.schema_name_specific:
+            ret = self._meta[self.schema_name_specific]["schema"]
+        return ret
 
     @property
     def _schema_generic(self) -> dict:
         """Pass."""
-        name = self.schema_name_generic
-        return self._meta[name]["schema"]
+        ret = {}
+        if self.schema_name_generic:
+            ret = self._meta[self.schema_name_generic]["schema"]
+        return ret
 
     @property
     def _schema_discovery(self) -> dict:
         """Pass."""
-        name = self.schema_name_discovery
-        return self._meta[name]["schema"]
+        ret = {}
+        if self.schema_name_discovery:
+            ret = self._meta[self.schema_name_discovery]["schema"]
+        return ret
 
     @property
     def schema_specific(self) -> dict:
         """Pass."""
-        schema = self._schema_specific
-        return parse_schema(schema) if schema else {}
+        ret = {}
+        if self._schema_specific:
+            ret = parse_schema(self._schema_specific)
+        return ret
 
     @property
     def schema_generic(self) -> dict:
         """Pass."""
-        schema = self._schema_generic
-        return parse_schema(schema)
+        ret = {}
+        if self._schema_generic:
+            ret = parse_schema(self._schema_generic)
+        return ret
 
     @property
     def schema_discovery(self) -> dict:
         """Pass."""
-        schema = self._schema_discovery
-        return parse_schema(schema)
+        ret = parse_schema(self._schema_discovery)
+        return ret
 
     @property
     def config_specific(self) -> dict:
         """Pass."""
+        ret = {}
         if self.schema_name_specific:
-            return self._meta[self.schema_name_specific]["config"]
-        return {}
+            ret = self._meta[self.schema_name_specific]["config"]
+        return ret
 
     @property
     def config_generic(self) -> dict:
         """Pass."""
-        return self._meta[self.schema_name_generic]["config"]
+        ret = self._meta[self.schema_name_generic]["config"]
+        return ret
 
     @property
     def config_discovery(self) -> dict:
         """Pass."""
-        return self._meta[self.schema_name_discovery]["config"]
+        ret = self._meta[self.schema_name_discovery]["config"]
+        return ret
 
 
 @dataclasses.dataclass
@@ -556,16 +789,7 @@ class AdapterSettingsUpdate(BaseModel):
     @staticmethod
     def get_schema_cls() -> Optional[Type[BaseSchema]]:
         """Pass."""
-        return SystemSettingsUpdateSchema
-
-
-class AdaptersListSchema(MetadataSchema):
-    """Pass."""
-
-    @staticmethod
-    def get_model_cls() -> type:
-        """Pass."""
-        return AdaptersList
+        return AdapterSettingsUpdateSchema
 
 
 @dataclasses.dataclass
@@ -581,7 +805,7 @@ class AdaptersList(Metadata):
     def adapters(self) -> dict:
         """Pass."""
         items = self.document_meta["adapter_list"]
-        return {
+        ret = {
             get_aname(x["name"]): {
                 "title": x["title"],
                 "name_raw": x["name"],
@@ -589,6 +813,7 @@ class AdaptersList(Metadata):
             }
             for x in items
         }
+        return ret
 
     def find_by_name(self, value: str) -> dict:
         """Pass."""
@@ -600,53 +825,8 @@ class AdaptersList(Metadata):
             pre = f"No adapter found with name of {value!r}"
             msg = [pre, "", *valid, "", pre]
             raise NotFoundError("\n".join(msg))
-        return adapters[find_value]
-
-
-class CnxCreateRequestSchema(BaseSchemaJson):
-    """Pass."""
-
-    connection = marshmallow_jsonapi.fields.Dict(required=True)  # config of connection
-    connection_label = marshmallow_jsonapi.fields.Str(required=False, missing="", allow_none=True)
-    instance = marshmallow_jsonapi.fields.Str(required=True)  # instance ID
-    active = SchemaBool(required=False, missing=True)  # set as active or inactive
-    save_and_fetch = SchemaBool(required=False, missing=True)  # perform a fetch after saving
-    connection_discovery = marshmallow_jsonapi.fields.Dict(
-        required=False, missing=None, allow_none=True
-    )  # connection specific discovery scheduling
-    instance_name = marshmallow_jsonapi.fields.Str(required=True)
-    # PBUG: why is this even a thing? can we not rely on instance id in 'instance'?
-    is_instances_mode = SchemaBool(required=False, missing=False)
-    # PBUG: why is this even a thing? can we not rely on instance id in 'instance'?
-
-    @staticmethod
-    def get_model_cls() -> type:
-        """Pass."""
-        return CnxCreateRequest
-
-    class Meta:
-        """Pass."""
-
-        type_ = "create_connection_schema"
-
-    def _fixit(self, data: dict) -> dict:
-        """Pass."""
-        cnx_disco = data.get("connection_discovery", {}) or {}
-        if not cnx_disco:
-            data["connection_discovery"] = {"enabled": False}
-        return data
-
-    @marshmallow.post_load
-    def post_load_fixit(self, data: dict, **kwargs) -> dict:
-        """Pass."""
-        data = self._fixit(data=data)
-        return data
-
-    @marshmallow.post_dump
-    def post_dump_fixit(self, data: dict, **kwargs) -> dict:
-        """Pass."""
-        data = self._fixit(data=data)
-        return data
+        ret = adapters[find_value]
+        return ret
 
 
 @dataclasses.dataclass
@@ -667,31 +847,9 @@ class CnxCreateRequest(BaseModel):
         """Pass."""
         return CnxCreateRequestSchema
 
-    def _fixit(self):
-        """Pass."""
-        if not self.connection_discovery:
-            self.connection_discovery = {"enabled": False}
-
     def __post_init__(self):
         """Pass."""
-        self._fixit()
-
-
-class CnxTestRequestSchema(BaseSchemaJson):
-    """Pass."""
-
-    connection = marshmallow_jsonapi.fields.Dict(required=True)  # config of connection
-    instance = marshmallow_jsonapi.fields.Str(required=True)  # instance ID
-
-    @staticmethod
-    def get_model_cls() -> type:
-        """Pass."""
-        return CnxTestRequest
-
-    class Meta:
-        """Pass."""
-
-        type_ = "test_connection_schema"
+        self.connection_discovery = self.connection_discovery or {"enabled": False}
 
 
 @dataclasses.dataclass
@@ -705,30 +863,6 @@ class CnxTestRequest(BaseModel):
     def get_schema_cls() -> Optional[Type[BaseSchema]]:
         """Pass."""
         return CnxTestRequestSchema
-
-
-class CnxUpdateRequestSchema(CnxCreateRequestSchema):
-    """Pass."""
-
-    instance_prev = marshmallow_jsonapi.fields.Str(required=False, missing=None, allow_none=True)
-    instance_prev_name = marshmallow_jsonapi.fields.Str(
-        required=False, missing=None, allow_none=True
-    )
-    # PBUG: why is this even a thing? can we not rely on instance id in 'instance_prev'?
-
-    @staticmethod
-    def get_model_cls() -> type:
-        """Pass."""
-        return CnxUpdateRequest
-
-    def _fixit(self, data: dict) -> dict:
-        """Pass."""
-        data = super()._fixit(data=data)
-        if not data.get("instance_prev"):
-            data["instance_prev"] = data["instance"]
-        if not data.get("instance_prev_name"):
-            data["instance_prev_name"] = data["instance_name"]
-        return data
 
 
 @dataclasses.dataclass
@@ -751,32 +885,10 @@ class CnxUpdateRequest(BaseModel):
         """Pass."""
         return CnxUpdateRequestSchema
 
-    def _fixit(self) -> dict:
+    def __post_init__(self):
         """Pass."""
-        super()._fixit()
-        if not self.instance_prev:
-            self.instance_prev = self.instance
-        if not self.instance_prev_name:
-            self.instance_prev_name = self.instance_name
-
-
-class CnxModifyResponseSchema(BaseSchemaJson):
-    """Pass."""
-
-    active = SchemaBool()
-    client_id = marshmallow_jsonapi.fields.Str()
-    error = marshmallow_jsonapi.fields.Str(allow_none=True)
-    status = marshmallow_jsonapi.fields.Str()
-
-    @staticmethod
-    def get_model_cls() -> type:
-        """Pass."""
-        return CnxModifyResponse
-
-    class Meta:
-        """Pass."""
-
-        type_ = "connections_details_schema"
+        self.instance_prev = self.instance_prev or self.instance
+        self.instance_prev_name = self.instance_prev_name or self.instance_name
 
 
 @dataclasses.dataclass
@@ -788,6 +900,7 @@ class CnxModifyResponse(BaseModel):
     id: str
     active: bool = True
     error: Optional[str] = None
+    failed_connections_limit_exceeded: Optional[int] = None
 
     @staticmethod
     def get_schema_cls() -> Optional[Type[BaseSchema]]:
@@ -810,25 +923,6 @@ class CnxModifyResponse(BaseModel):
         return self.status == "success" and not self.error
 
 
-class CnxDeleteRequestSchema(BaseSchemaJson):
-    """Pass."""
-
-    is_instances_mode = SchemaBool(missing=False)
-    delete_entities = SchemaBool(missing=False)
-    instance = marshmallow_jsonapi.fields.Str()
-    instance_name = marshmallow_jsonapi.fields.Str()
-
-    @staticmethod
-    def get_model_cls() -> type:
-        """Pass."""
-        return CnxDeleteRequest
-
-    class Meta:
-        """Pass."""
-
-        type_ = "delete_connections_schema"
-
-
 @dataclasses.dataclass
 class CnxDeleteRequest(BaseModel):
     """Pass."""
@@ -844,46 +938,23 @@ class CnxDeleteRequest(BaseModel):
         return CnxDeleteRequestSchema
 
 
-class CnxDeleteSchema(BaseSchemaJson):
-    """Pass."""
-
-    client_id = marshmallow_jsonapi.fields.Str()
-
-    @staticmethod
-    def get_model_cls() -> type:
-        """Pass."""
-        return CnxDelete
-
-    class Meta:
-        """Pass."""
-
-        type_ = "deleted_connections_schema"
-
-
 @dataclasses.dataclass
 class CnxDelete(BaseModel):
     """Pass."""
 
     client_id: str
 
+    def __post_init__(self):
+        """Pass."""
+        try:
+            self.client_id = eval(self.client_id)["client_id"]
+        except Exception:  # pragma: no cover
+            pass
+
     @staticmethod
     def get_schema_cls() -> Optional[Type[BaseSchema]]:
         """Pass."""
         return CnxDeleteSchema
-
-
-class CnxLabelsSchema(MetadataSchema):
-    """Pass."""
-
-    @staticmethod
-    def get_model_cls() -> type:
-        """Pass."""
-        return CnxLabels
-
-    class Meta:
-        """Pass."""
-
-        type_ = "metadata_schema"
 
 
 @dataclasses.dataclass
@@ -913,6 +984,7 @@ class CnxLabels(Metadata):
         node = cnx.node_id
         cid = cnx.client_id
         labels = self.labels
+        ret = ""
 
         for item in labels:
             ianame = item["plugin_name"]
@@ -921,12 +993,13 @@ class CnxLabels(Metadata):
             icid = item["client_id"]
 
             if all([ianame == aname, inode == node, icid == cid]):
-                return ilabel
+                ret = ilabel
+                break
 
-        return ""
+        return ret
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(repr=False)
 class Cnx(BaseModel):
     """Pass."""
 
@@ -946,7 +1019,7 @@ class Cnx(BaseModel):
     )
     error: Optional[str] = ""
     tunnel_id: Optional[str] = None
-
+    failed_connections_limit_exceeded: Optional[int] = None
     adapter_name_raw: ClassVar[str] = None
     connection_label: ClassVar[str] = None
     PARENT: ClassVar["Cnxs"] = None
@@ -956,6 +1029,23 @@ class Cnx(BaseModel):
         """Pass."""
         self.adapter_name_raw = self.adapter_name
         self.adapter_name = get_aname(self.adapter_name)
+
+    @staticmethod
+    def _str_properties() -> List[str]:
+        """Pass."""
+        return [
+            "adapter_name",
+            "client_id",
+            "uuid",
+            "node_id",
+            "node_name",
+            "status",
+            "error",
+        ]
+
+    def __repr__(self):
+        """Pass."""
+        return self.__str__()
 
     @property
     def working(self) -> bool:
@@ -985,6 +1075,11 @@ class Cnx(BaseModel):
         ret["connection_label"] = self.connection_label
         return ret
 
+    @staticmethod
+    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+        """Pass."""
+        return None
+
 
 @dataclasses.dataclass
 class Cnxs(BaseModel):
@@ -999,21 +1094,20 @@ class Cnxs(BaseModel):
         return None
 
     @classmethod
-    def load_response(cls, data: dict, http: Http, api_endpoint, **kwargs):
+    def load_response(cls, data: dict, http: Http, **kwargs):
         """Pass."""
-        cnx_fields = [x.name for x in dataclasses.fields(Cnx)]
-        cnx_schema = Cnx.schema()
 
         def load_cnx(obj):
-            attrs = obj.get("attributes")
+            data = obj.get("attributes")
             loaded = None
-            if attrs:
-                extra = {k: attrs.pop(k, None) for k in list(attrs) if k not in cnx_fields}
-                loaded = cnx_schema.load(attrs)
-                loaded.extra_attributes = extra
+            if data:
+                extra_attributes = {k: data.pop(k) for k in list(data) if k not in fields_known}
+                loaded = schema.load(data, unknown=marshmallow.INCLUDE)
+                loaded.extra_attributes = extra_attributes
             return loaded
 
-        cls._check_version(data=data, api_endpoint=api_endpoint)
+        fields_known = [x.name for x in dataclasses.fields(Cnx)]
+        schema = Cnx.schema()
 
         meta = data["meta"]
         cnxs_raw = listify(data["data"])
@@ -1040,17 +1134,17 @@ class Cnxs(BaseModel):
         """Pass."""
         return parse_schema(self.meta["schema"])
 
+    '''
     def find_by_node_id(self, value: str) -> List[Cnx]:
         """Pass."""
         return [x for x in self.cnxs if x.node_id == value]
+    '''
 
     def get_labels(self, cached: bool = False) -> List[dict]:
         """Pass."""
-        cache = getattr(self, "_get_labels", None)
-        if cached and cache:
-            return cache
-
         from .. import ApiEndpoints
 
-        self._get_labels = ApiEndpoints.adapters.labels_get.perform_request(http=self.HTTP)
-        return self._get_labels
+        if not cached or not getattr(self, "_get_labels", None):
+            self._get_labels = ApiEndpoints.adapters.labels_get.perform_request(http=self.HTTP)
+
+        return getattr(self, "_get_labels")

@@ -15,6 +15,11 @@ class CreateRequest(BaseModel):
     user_id: str
     user_name: str
 
+    @staticmethod
+    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+        """Pass."""
+        return None
+
 
 @dataclasses.dataclass
 class SendRequest(BaseModel):
@@ -24,12 +29,22 @@ class SendRequest(BaseModel):
     user_id: str
     invite: bool = False
 
+    @staticmethod
+    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+        """Pass."""
+        return None
+
 
 @dataclasses.dataclass
 class SendResponse(BaseModel):
     """Pass."""
 
     user_name: str
+
+    @staticmethod
+    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+        """Pass."""
+        return None
 
 
 @dataclasses.dataclass
@@ -39,6 +54,11 @@ class ValidateRequest(BaseModel):
     token: str
 
     def dump_request_params(self, **kwargs) -> Optional[dict]:
+        """Pass."""
+        return None
+
+    @staticmethod
+    def get_schema_cls() -> Optional[Type[BaseSchema]]:
         """Pass."""
         return None
 
@@ -52,15 +72,12 @@ class ValidateResponse(BoolValue):
         cls,
         data: Union[dict, list],
         http: Http,
-        api_endpoint,
         schema_cls: Optional[Type[BaseSchema]] = None,
-        **kwargs,
+        **kwargs
     ):
         """Pass."""
         data = {"value": data["valid"]}
-        return super().load_response(
-            data=data, http=http, schema_cls=schema_cls, api_endpoint=api_endpoint, **kwargs
-        )
+        return super().load_response(data=data, http=http, schema_cls=schema_cls, **kwargs)
         # PBUG: forced into BoolValue model
 
     @staticmethod
@@ -76,9 +93,19 @@ class UseRequest(BaseModel):
     token: str
     password: str
 
+    @staticmethod
+    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+        """Pass."""
+        return None
+
 
 @dataclasses.dataclass
 class UseResponse(BaseModel):
     """Pass."""
 
     user_name: str
+
+    @staticmethod
+    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+        """Pass."""
+        return None

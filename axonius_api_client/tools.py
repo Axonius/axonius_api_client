@@ -1,16 +1,19 @@
 # -*- coding: utf-8 -*-
 """Utilities and tools."""
 import codecs
+import csv
+import inspect
+import io
 import ipaddress
 import json
 import logging
 import pathlib
 import platform
+import re
 import sys
 from datetime import datetime, timedelta, timezone
 from itertools import zip_longest
-from typing import (Any, Callable, Iterable, Iterator, List, Optional, Tuple,
-                    Union)
+from typing import Any, Callable, Iterable, Iterator, List, Optional, Pattern, Tuple, Type, Union
 from urllib.parse import urljoin
 
 import click
@@ -20,12 +23,30 @@ import dateutil.tz
 
 from . import INIT_DOTENV, PACKAGE_FILE, PACKAGE_ROOT, VERSION
 from .constants.api import GUI_PAGE_SIZES
-from .constants.general import (ERROR_ARGS, ERROR_TMPL, NO, OK_ARGS, OK_TMPL,
-                                URL_STARTS, WARN_ARGS, WARN_TMPL, YES)
+from .constants.general import (
+    DEBUG_ARGS,
+    DEBUG_TMPL,
+    ERROR_ARGS,
+    ERROR_TMPL,
+    NO,
+    OK_ARGS,
+    OK_TMPL,
+    TRIM_MSG,
+    URL_STARTS,
+    WARN_ARGS,
+    WARN_TMPL,
+    YES,
+)
+from .constants.logs import MAX_BODY_LEN
 from .exceptions import ToolsError
 from .setup_env import find_dotenv, get_env_ax
 
 LOG: logging.Logger = logging.getLogger(PACKAGE_ROOT).getChild("tools")
+EMAIL_RE_STR: str = (
+    r"([-!#-'*+/-9=?A-Z^-~]+(\.[-!#-'*+/-9=?A-Z^-~]+)*|\"([]!#-[^-~ \t]|(\\[\t -~]))+\")"
+    r"@([-!#-'*+/-9=?A-Z^-~]+(\.[-!#-'*+/-9=?A-Z^-~]+)*|\[[\t -Z^-~]*])"
+)
+EMAIL_RE: Pattern = re.compile(EMAIL_RE_STR, re.I)
 
 
 def listify(obj: Any, dictkeys: bool = False) -> list:
@@ -69,7 +90,13 @@ def grouper(iterable: Iterable, n: int, fillvalue: Optional[Any] = None) -> Iter
     return zip_longest(*([iter(iterable)] * n), fillvalue=fillvalue)
 
 
-def coerce_int(obj: Any, max_value: Optional[int] = None, min_value: Optional[int] = None) -> int:
+def coerce_int(
+    obj: Any,
+    max_value: Optional[int] = None,
+    min_value: Optional[int] = None,
+    valid_values: Optional[List[int]] = None,
+    errmsg: Optional[str] = None,
+) -> int:
     """Convert an object into int.
 
     Args:
@@ -78,17 +105,22 @@ def coerce_int(obj: Any, max_value: Optional[int] = None, min_value: Optional[in
     Raises:
         :exc:`ToolsError`: if obj is not able to be converted to int
     """
+    pre = "{errmsg}\n" if errmsg else ""
+
     try:
         value = int(obj)
     except Exception:
         vtype = type(obj).__name__
-        raise ToolsError(f"Supplied value {obj!r} of type {vtype} is not an integer.")
+        raise ToolsError(f"{pre}Supplied value {obj!r} of type {vtype} is not an integer.")
 
     if max_value is not None and value > max_value:
-        raise ToolsError(f"Supplied value {obj!r} is greater than max value of {max_value}.")
+        raise ToolsError(f"{pre}Supplied value {obj!r} is greater than max value of {max_value}.")
 
     if min_value is not None and value < min_value:
-        raise ToolsError(f"Supplied value {obj!r} is less than min value of {min_value}.")
+        raise ToolsError(f"{pre}Supplied value {obj!r} is less than min value of {min_value}.")
+
+    if valid_values and value not in valid_values:
+        raise ToolsError(f"{pre}Supplied value {obj!r} is not one of {valid_values}.")
 
     return value
 
@@ -132,6 +164,10 @@ def coerce_bool(obj: Any, errmsg: Optional[str] = None) -> bool:
     Raises:
         :exc:`ToolsError`: obj is not able to be converted to bool
     """
+
+    def combine(obj):
+        return ", ".join([f"{x!r}" for x in obj])
+
     coerce_obj = obj
 
     if isinstance(obj, str):
@@ -147,10 +183,22 @@ def coerce_bool(obj: Any, errmsg: Optional[str] = None) -> bool:
     msg = listify(errmsg)
     msg += [
         f"Supplied value {coerce_obj!r} of type {vtype} must be one of:",
-        f"  For true: {YES}",
-        f"  For false: {NO}",
+        f"  For True: {combine(YES)}",
+        f"  For False: {combine(NO)}",
     ]
     raise ToolsError("\n".join(msg))
+
+
+def is_str(value: Any, not_empty: bool = True) -> bool:
+    """Check if value is non empty string."""
+    return isinstance(value, str) and (
+        isinstance(value, str) and bool(value.strip()) if not_empty else True
+    )
+
+
+def is_email(value: Any) -> bool:
+    """Check if a value is a valid email."""
+    return is_str(value=value, not_empty=True) and bool(EMAIL_RE.fullmatch(value))
 
 
 def is_int(obj: Any, digit: bool = False) -> bool:
@@ -225,16 +273,39 @@ def strip_left(obj: Union[List[str], str], fix: str) -> Union[List[str], str]:
 class AxJSONEncoder(json.JSONEncoder):
     """Pass."""
 
+    def __init__(self, *args, **kwargs):
+        """Pass."""
+        self.fallback = kwargs.pop("fallback", None)
+        super().__init__(*args, **kwargs)
+
     def default(self, obj):
         """Pass."""
         if isinstance(obj, datetime):
             return obj.isoformat()
 
-        return super().default(obj)
+        if has_to_dict(obj):
+            return obj.to_dict()
+
+        if callable(getattr(self, "fallback", None)):
+            return self.fallback(obj)
+
+        return super().default(obj)  # pragma: no cover
+
+
+def has_to_dict(obj: Any) -> bool:
+    """Pass."""
+    return hasattr(obj, "to_dict") and callable(obj.to_dict)
 
 
 def json_dump(
-    obj: Any, indent: int = 2, sort_keys: bool = False, error: bool = True, **kwargs
+    obj: Any,
+    indent: int = 2,
+    sort_keys: bool = False,
+    error: bool = True,
+    fallback: Any = str,
+    to_dict: bool = True,
+    cls: Type = AxJSONEncoder,
+    **kwargs,
 ) -> Any:
     """Serialize an object into json str.
 
@@ -245,15 +316,16 @@ def json_dump(
         error: if json error happens, raise it
         **kwargs: passed to :func:`json.dumps`
     """
-    if isinstance(obj, bytes):
-        obj = obj.decode("utf-8")
+    obj = bytes_to_str(value=obj)
 
-    kwargs.setdefault("cls", AxJSONEncoder)
-    kwargs.setdefault("default", str)
+    if to_dict and has_to_dict(obj):
+        obj = obj.to_dict()
 
     try:
-        return json.dumps(obj, indent=indent, sort_keys=sort_keys, **kwargs)
-    except Exception:
+        return json.dumps(
+            obj, indent=indent, sort_keys=sort_keys, cls=cls, fallback=fallback, **kwargs
+        )
+    except Exception:  # pragma: no cover
         if error:
             raise
         return obj
@@ -275,7 +347,28 @@ def json_load(obj: str, error: bool = True, **kwargs) -> Any:
         return obj
 
 
-def json_reload(obj: Any, error: bool = False, trim: int = None, **kwargs) -> str:
+def json_log(
+    obj: Any,
+    error: bool = False,
+    trim: Optional[int] = MAX_BODY_LEN,
+    trim_lines: bool = True,
+    trim_msg: str = TRIM_MSG,
+    **kwargs,
+) -> str:
+    """Pass."""
+    return json_reload(
+        obj=obj, error=error, trim=trim, trim_lines=trim_lines, trim_msg=trim_msg, **kwargs
+    )
+
+
+def json_reload(
+    obj: Any,
+    error: bool = False,
+    trim: Optional[int] = None,
+    trim_lines: bool = False,
+    trim_msg: str = TRIM_MSG,
+    **kwargs,
+) -> str:
     """Re-serialize a json str into a pretty json str.
 
     Args:
@@ -286,11 +379,7 @@ def json_reload(obj: Any, error: bool = False, trim: int = None, **kwargs) -> st
     obj = json_load(obj=obj, error=error)
     if not isinstance(obj, str):
         obj = json_dump(obj=obj, error=error, **kwargs)
-    obj = obj or ""
-    if isinstance(obj, str):
-        obj = obj.strip()
-        if trim and len(obj) >= trim:
-            obj = obj[:trim] + f"\nTrimmed over {trim} characters"
+    obj = coerce_str(value=obj, trim=trim, trim_msg=trim_msg, trim_lines=trim_lines)
     return obj
 
 
@@ -389,12 +478,13 @@ def dt_days_left(obj: Optional[Union[str, timedelta, datetime]]) -> Optional[int
     Args:
         obj: parsed by :meth:`dt_sec_ago` into days left
     """
+    ret = None
     if obj:
         obj = dt_parse(obj=obj)
         now = dt_now(tz=obj.tzinfo)
         seconds = (obj - now).total_seconds()
-        return round(seconds / 60 / 60 / 24)
-    return None
+        ret = round(seconds / 60 / 60 / 24)
+    return ret
 
 
 def dt_within_min(
@@ -588,6 +678,24 @@ def split_str(
     return ret
 
 
+def echo_debug(msg: str, tmpl: bool = True, **kwargs):
+    """Echo a message to console.
+
+    Args:
+        msg: message to echo
+        tmpl: template to using for echo
+        kwargs: passed to ``click.secho``
+    """
+    echoargs = {}
+    echoargs.update(DEBUG_ARGS)
+    echoargs.update(kwargs)
+    if tmpl:
+        msg = DEBUG_TMPL.format(msg=msg)
+
+    LOG.debug(msg)
+    click.secho(msg, **echoargs)
+
+
 def echo_ok(msg: str, tmpl: bool = True, **kwargs):
     """Echo a message to console.
 
@@ -649,7 +757,7 @@ def sysinfo() -> dict:
     """Gather system information."""
     try:
         cli_args = sys.argv
-    except Exception:
+    except Exception:  # pragma: no cover
         cli_args = "No sys.argv!"
 
     info = {}
@@ -884,19 +992,25 @@ def kv_dump(obj: dict) -> str:
     return "\n  " + "\n  ".join([f"{k}: {v}" for k, v in obj.items()])
 
 
-def bom_strip(content: str, strip=True) -> str:
+def bom_strip(content: Union[str, bytes], strip=True, bom: bytes = codecs.BOM_UTF8) -> str:
     """Remove the UTF-8 BOM marker from the beginning of a string.
 
     Args:
         content: string to remove BOM marker from if found
         strip: remove whitespace before & after removing BOM marker
     """
-    if strip:
-        content = content.strip()
-    if content.startswith(codecs.BOM_UTF8.decode()):
-        content = content[1:]
-    if strip:
-        content = content.strip()
+    content = content.strip() if strip else content
+
+    if isinstance(bom, bytes) and isinstance(content, str):
+        bom = bom.decode()
+    elif isinstance(bom, str) and isinstance(content, bytes):
+        bom = bom.encode()
+
+    bom_len = len(bom)
+    if content.startswith(bom):
+        content = content[bom_len:]
+
+    content = content.strip() if strip else content
     return content
 
 
@@ -932,6 +1046,7 @@ def check_gui_page_size(size: Optional[int] = None) -> int:
 
     """
     size = size or GUI_PAGE_SIZES[0]
+    size = coerce_int(size)
     if size not in GUI_PAGE_SIZES:
         raise ToolsError(f"gui_page_size of {size} is invalid, must be one of {GUI_PAGE_SIZES}")
     return size
@@ -983,13 +1098,14 @@ def calc_perc_gb(
     return ret
 
 
-def get_subcls(cls) -> list:
+def get_subcls(cls: type, excludes: Optional[List[type]] = None) -> list:
     """Get all subclasses of a class."""
+    excludes = excludes or []
     subs = [s for c in cls.__subclasses__() for s in get_subcls(c)]
-    return list(set(cls.__subclasses__()).union(subs))
+    return [x for x in list(set(cls.__subclasses__()).union(subs)) if x not in excludes]
 
 
-def prettify_obj(obj, indent=0):
+def prettify_obj(obj: Union[dict, list], indent: int = 0) -> List[str]:
     """Pass."""
     spaces = " " * indent
     sub_indent = indent + 2
@@ -1006,21 +1122,139 @@ def prettify_obj(obj, indent=0):
 def token_parse(obj: str) -> str:
     """Pass."""
     url_check = "token="
-    if url_check in obj:
+    if isinstance(obj, str) and url_check in obj:
         idx = obj.index(url_check) + len(url_check)
         obj = obj[idx:]
     return obj
 
 
-def combo_dicts(*args):
+def combo_dicts(*args, **kwargs) -> dict:
     """Pass."""
     ret = {}
     for x in args:
         if isinstance(x, dict):
             ret.update(x)
+
+    ret.update(kwargs)
     return ret
 
 
 def is_url(value: str) -> bool:
     """Pass."""
     return isinstance(value, str) and any([value.startswith(x) for x in URL_STARTS])
+
+
+def bytes_to_str(value: Any) -> Union[str, Any]:
+    """Convert obj to str if it is bytes."""
+    return value.decode() if isinstance(value, bytes) else value
+
+
+def strip_str(value: Any) -> Union[str, Any]:
+    """Strip a value if it is a string."""
+    return value.strip() if isinstance(value, str) else value
+
+
+def coerce_str(
+    value: Any,
+    strip: bool = True,
+    none: Any = "",
+    trim: Optional[int] = None,
+    trim_lines: bool = False,
+    trim_msg: str = TRIM_MSG,
+) -> Union[str, Any]:
+    """Coerce a value to a string."""
+    value = bytes_to_str(value=value)
+    trim_type = "lines" if trim_lines else "characters"
+    if value is None:
+        value = none
+
+    if not isinstance(value, str):
+        value = str(value)
+
+    if strip:
+        value = strip_str(value=value)
+
+    if isinstance(trim, int) and trim > 0:
+        trim_done = False
+        if trim_lines:
+            value = value.splitlines()
+            value_len = len(value)
+            if value_len >= trim:
+                value = value[:trim]
+                trim_done = True
+            value = "\n".join(value)
+        else:
+            value_len = len(value)
+            if value_len >= trim:
+                value = value[:trim]
+                trim_done = True
+
+        if trim_done:
+            value += trim_msg.format(trim_type=trim_type, trim=trim, value_len=value_len)
+
+    return value
+
+
+def get_cls_path(value: Any) -> str:
+    """Pass."""
+    if inspect.isclass(value):
+        cls = value
+    elif hasattr(value, "__class__"):
+        cls = value.__class__
+    else:
+        cls = value
+
+    if hasattr(cls, "__module__") and hasattr(cls, "__name__"):
+        return f"{cls.__module__}.{cls.__name__}"
+
+    return str(value)
+
+
+def csv_writer(
+    rows: List[dict],
+    columns: Optional[List[str]] = None,
+    quotes: str = "nonnumeric",
+    dialect: str = "excel",
+    line_ending: str = "\n",
+    key_extra_error: bool = False,
+    key_missing_value: Optional[Any] = None,
+) -> str:  # pragma: no cover
+    """Pass."""
+    quotes = getattr(csv, f"QUOTE_{quotes.upper()}")
+    if not columns:
+        columns = []
+        for row in rows:
+            columns += [x for x in row if x not in columns]
+
+    stream = io.StringIO()
+    writer = csv.DictWriter(
+        stream,
+        fieldnames=columns,
+        quoting=quotes,
+        lineterminator=line_ending,
+        dialect=dialect,
+        restval=key_missing_value,
+        extrasaction="raise" if key_extra_error else "ignore",
+    )
+    writer.writerow(dict(zip(columns, columns)))
+    writer.writerows(rows)
+    content = stream.getvalue()
+    stream.close()
+    return content
+
+
+def parse_int_min_max(value, default=0, min_value=None, max_value=None):
+    """Pass."""
+    if isinstance(value, str) and value.isdigit():
+        value = int(value)
+
+    if not isinstance(value, int):
+        value = default
+
+    if min_value is not None and value < min_value:
+        value = default
+
+    if max_value is not None and value > max_value:
+        value = default
+
+    return value

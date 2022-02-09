@@ -15,8 +15,7 @@ OPTIONS = [
 def cmd(ctx, url, key, secret, **kwargs):
     """Get the current central core configuration."""
     client = ctx.obj.start_client(url=url, key=key, secret=secret)
-
     with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
-        data = client.central_core.get()
-
+        data = client.instances.get_central_core_config()
     click.secho(json_dump(data))
+    ctx.exit(0)

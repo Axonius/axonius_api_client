@@ -17,10 +17,10 @@ class SystemSettingsSchema(BaseSchemaJson):
     """Pass."""
 
     config = marshmallow_jsonapi.fields.Dict(required=True)
-    configName = marshmallow_jsonapi.fields.Str(default="", missing="")
-    config_name = marshmallow_jsonapi.fields.Str(default="", missing="")
-    pluginId = marshmallow_jsonapi.fields.Str(default="", missing="")
-    prefix = marshmallow_jsonapi.fields.Str(default="", missing="")
+    configName = marshmallow_jsonapi.fields.Str(load_default="", dump_default="")
+    config_name = marshmallow_jsonapi.fields.Str(load_default="", dump_default="")
+    pluginId = marshmallow_jsonapi.fields.Str(load_default="", dump_default="")
+    prefix = marshmallow_jsonapi.fields.Str(load_default="", dump_default="")
 
     @staticmethod
     def get_model_cls() -> type:
@@ -54,66 +54,31 @@ class SystemSettingsUpdateSchema(BaseSchemaJson):
     """Pass."""
 
     config = marshmallow_jsonapi.fields.Dict(required=True)
-    configName = marshmallow_jsonapi.fields.Str(default="", missing="")
-    config_name = marshmallow_jsonapi.fields.Str(default="", missing="")
-    pluginId = marshmallow_jsonapi.fields.Str(default="", missing="")
-    prefix = marshmallow_jsonapi.fields.Str(default="", missing="")
+    configName = marshmallow_jsonapi.fields.Str(load_default="", dump_default="")
+    config_name = marshmallow_jsonapi.fields.Str(load_default="", dump_default="")
+    pluginId = marshmallow_jsonapi.fields.Str(load_default="", dump_default="")
+    prefix = marshmallow_jsonapi.fields.Str(load_default="", dump_default="")
 
     class Meta:
         """Pass."""
 
         type_ = "settings_schema"
 
-
-@dataclasses.dataclass
-class SystemSettingsGuiUpdate(BaseModel):
-    """Pass."""
-
-    config: dict
-    configName: str = "GuiService"
-    pluginId: str = "gui"
-
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_model_cls() -> Optional[type]:
         """Pass."""
-        return SystemSettingsUpdateSchema
+        return SystemSettingsUpdate
 
 
 @dataclasses.dataclass
-class SystemSettingsIdentityProvidersUpdate(BaseModel):
+class SystemSettingsUpdate(BaseModel):
     """Pass."""
 
     config: dict
-    configName: str = "IdentityProviders"
-    pluginId: str = "gui"
-
-    @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
-        """Pass."""
-        return SystemSettingsUpdateSchema
-
-
-@dataclasses.dataclass
-class SystemSettingsLifecycleUpdate(BaseModel):
-    """Pass."""
-
-    config: dict
-    configName: str = "SystemSchedulerService"
-    pluginId: str = "system_scheduler"
-
-    @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
-        """Pass."""
-        return SystemSettingsUpdateSchema
-
-
-@dataclasses.dataclass
-class SystemSettingsGlobalUpdate(BaseModel):
-    """Pass."""
-
-    config: dict
-    configName: str = "CoreService"
-    pluginId: str = "core"
+    configName: str = ""
+    config_name: str = ""
+    pluginId: str = ""
+    prefix: str = ""
 
     @staticmethod
     def get_schema_cls() -> Optional[Type[BaseSchema]]:
@@ -142,7 +107,25 @@ class FeatureFlags(SystemSettings):
     @property
     def has_cloud_compliance(self) -> bool:
         """Get the status of cloud compliance module being enabled."""
-        return self.config["cloud_compliance"]["enabled"]
+        return self._cloud_compliance.get("enabled", False)
+
+    @property
+    def asset_scopes_enabled(self) -> bool:
+        """Get the status of asset scopes being enabled."""
+        return self._asset_scope.get("enabled", False)
+
+    @property
+    def asset_scopes_max(self) -> Optional[int]:
+        """Get the max number of asset scopes allowed."""
+        return self._asset_scope.get("queries_limit", None)
+
+    @property
+    def _asset_scope(self) -> dict:
+        return self.config.get("data_scope") or {}
+
+    @property
+    def _cloud_compliance(self) -> dict:
+        return self.config.get("cloud_compliance") or {}
 
     @property
     def trial_expiry_dt(self) -> Optional[datetime.datetime]:

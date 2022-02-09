@@ -1,3 +1,24 @@
 [build-system]
 requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta:__legacy__"
+
+[tool.pytest.ini_options]
+addopts = "--verbosity=2 -ra --strict-config --strict-markers --showlocals --cov-config=.coveragerc --cov=axonius_api_client --cov-report=html --cov-report=xml --cov-report=term:skip-covered --cov-append"
+testpaths = ["axonius_api_client/tests"]
+log_format = "%(asctime)s %(levelname)-8s [%(name)s:%(funcName)s:%(pathname)s:%(lineno)d] %(message)s"
+log_level = "DEBUG"
+log_file = "artifacts/pytest.log"
+filterwarnings = [
+    "error",
+    'ignore:The distutils package:DeprecationWarning',
+    'ignore:ssl.wrap_socket\(\) is deprecated:DeprecationWarning',
+    'ignore:ssl.PROTOCOL_TLS is deprecated:DeprecationWarning',
+    'ignore:distutils Version classes:DeprecationWarning',
+    "ignore::marshmallow.warnings.RemovedInMarshmallow4Warning",
+    "ignore::urllib3.exceptions.InsecureRequestWarning",
+    "ignore::pytest.PytestUnraisableExceptionWarning",
+    "ignore::pytest.PytestUnhandledThreadExceptionWarning",
+]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+]

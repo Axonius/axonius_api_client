@@ -42,6 +42,9 @@ class SystemMetaBase:
         resources = entity_sizes.pop("Resources", None)  # 4.5
         assert isinstance(resources, dict) or resources is None
 
+        vulns = entity_sizes.pop("Vulnerabilities", None)  # 4.6
+        assert isinstance(vulns, dict) or vulns is None
+
         assert not entity_sizes
         assert not data
 
@@ -60,8 +63,13 @@ class SystemMetaBase:
         iversion = data.pop("Installed Version")
         assert isinstance(iversion, str)
 
-        customer_id = data.pop("Customer ID", None)
+        customer_id = data.pop("Customer ID", None) or data.pop("Customer Id", None)
         assert isinstance(customer_id, (str, type(None)))
+
+        # 2022-01-21
+        contract_expiry = data.pop("Contract Expiry Date", None)
+        assert isinstance(contract_expiry, (str, type(None)))
+
         assert not data
 
 

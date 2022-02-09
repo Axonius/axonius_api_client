@@ -119,14 +119,34 @@ class TestDashboardPublic(DashboardBase):
             stopped = apiobj.stop()
             assert isinstance(stopped, DiscoverData)
             assert not stopped.is_running
-            # assert not stopped["status"] == "done"
 
         started = apiobj.start()
         assert isinstance(started, DiscoverData)
         assert started.is_running
-        # assert started["status"] in ["starting", "running"]
+
+        data = apiobj.get()
+        stable_reason, is_stable = data.get_stability()
+        assert is_stable is False
+        assert "started less than" in stable_reason
+
+        data = apiobj.get()
+        stable_reason, is_stable = data.get_stability(start_check=None)
+        assert is_stable is False
+        assert "correlation has NOT finished" in stable_reason
 
         re_stopped = apiobj.stop()
         assert isinstance(re_stopped, DiscoverData)
         assert not re_stopped.is_running
-        # assert re_stopped["status"] == "done"
+
+        data = apiobj.get()
+        stable_reason, is_stable = data.get_stability()
+        assert is_stable is True
+        assert "is not running" in stable_reason
+
+        stable_reason, is_stable = data.get_stability(for_next_minutes=9999)
+        assert is_stable is False
+        assert "less than" in stable_reason
+
+        stable_reason, is_stable = data.get_stability(for_next_minutes=1)
+        assert is_stable is True
+        assert "more than" in stable_reason

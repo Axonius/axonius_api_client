@@ -2,8 +2,7 @@
 """Command line interface for Axonius API Client."""
 import click
 
-from ...context import AliasedGroup
-from . import cmd_add, cmd_delete, cmd_get, cmd_get_by_name, cmd_update_name, cmd_update_perms
+from ...context import AliasedGroup, load_cmds
 
 
 @click.group(cls=AliasedGroup)
@@ -11,9 +10,4 @@ def roles():
     """Group: Manage Roles."""
 
 
-roles.add_command(cmd_get.cmd)
-roles.add_command(cmd_get_by_name.cmd)
-roles.add_command(cmd_delete.cmd)
-roles.add_command(cmd_add.cmd)
-roles.add_command(cmd_update_name.cmd)
-roles.add_command(cmd_update_perms.cmd)
+load_cmds(path=__file__, package=__package__, group=roles)

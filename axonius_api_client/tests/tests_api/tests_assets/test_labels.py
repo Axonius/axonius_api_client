@@ -10,7 +10,8 @@ class LabelsPrivate:
         labels = apiobj.labels._get()
         assert isinstance(labels, list)
         for x in labels:
-            assert isinstance(x, str)
+            assert isinstance(x, json_api.generic.StrValue)
+            assert x.value
 
     def test_private_add_get_remove(self, apiobj):
         labels = ["badwolf1", "badwolf2"]
@@ -120,13 +121,25 @@ class LabelsPublic:
             assert label not in all_labels_post_remove
 
 
-class TestLabelsDevices(LabelsPrivate, LabelsPublic):
+class TestLabelsDevicesPrivate(LabelsPrivate):
     @pytest.fixture(scope="class")
     def apiobj(self, api_devices):
         return api_devices
 
 
-class TestLabelsUsers(LabelsPrivate, LabelsPublic):
+class TestLabelsUsersPrivate(LabelsPrivate):
+    @pytest.fixture(scope="class")
+    def apiobj(self, api_users):
+        return api_users
+
+
+class TestLabelsDevicesPublic(LabelsPublic):
+    @pytest.fixture(scope="class")
+    def apiobj(self, api_devices):
+        return api_devices
+
+
+class TestLabelsUsersPublic(LabelsPublic):
     @pytest.fixture(scope="class")
     def apiobj(self, api_users):
         return api_users

@@ -27,6 +27,7 @@ from axonius_api_client.logs import (
     get_obj_log,
     gmtime,
     localtime,
+    set_log_level,
     str_level,
 )
 
@@ -47,8 +48,15 @@ class TestLogs:
         assert log.name == "axonius_api_client.tests.tests_pkg.test_logs.TestLogs"
         assert log.level == logging.WARNING
 
+    def test_str_level_const(self):
+        assert str_level(level=logging.DEBUG) == "DEBUG"
+
     def test_str_level_int(self):
         assert str_level(level=10) == "DEBUG"
+
+    def test_str_level_int_fail(self):
+        with pytest.raises(ToolsError):
+            str_level(level=999)
 
     def test_str_level_str_int(self):
         assert str_level(level="10") == "DEBUG"
@@ -56,9 +64,21 @@ class TestLogs:
     def test_str_level_str(self):
         assert str_level(level="debug") == "DEBUG"
 
-    def test_str_level_fail(self):
+    def test_str_level_str_fail(self):
         with pytest.raises(ToolsError):
             str_level(level="xx")
+
+    def test_set_log_level(self):
+        obj = logging.getLogger("test")
+        obj.setLevel(logging.INFO)
+        set_log_level(obj=obj, level="debug")
+        assert obj.level == logging.DEBUG
+
+    def test_set_log_level_none(self):
+        obj = logging.getLogger("test")
+        obj.setLevel(logging.INFO)
+        set_log_level(obj=obj, level=None)
+        assert obj.level == logging.INFO
 
     def test_add_del_stderr(self):
         h = add_stderr(obj=LOG)
