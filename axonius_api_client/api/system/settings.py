@@ -9,7 +9,7 @@ from ...parsers.tables import tablize
 from ...tools import path_read
 from ..api_endpoints import ApiEndpoints
 from ..json_api.generic import ApiBase, BoolValue
-from ..json_api.system_settings import SSLCertificate, SystemSettings
+from ..json_api.system_settings import CertificateDetails, SystemSettings
 from ..mixins import ModelMixins
 
 STR_PATH = Union[str, pathlib.Path]
@@ -279,7 +279,9 @@ class SettingsGlobal(SettingsMixins):
             check_unchanged=False,
         )
 
-    def cert_update_path(self, cert_file_path: STR_PATH, key_file_path: STR_PATH, **kwargs) -> bool:
+    def cert_update_path(
+        self, cert_file_path: STR_PATH, key_file_path: STR_PATH, **kwargs
+    ) -> CertificateDetails:
         """Update the SSL cert in instance from cert & key files.
 
         Args:
@@ -301,13 +303,22 @@ class SettingsGlobal(SettingsMixins):
 
         return self.cert_update(**kwargs)
 
-    def cert_get(self) -> SSLCertificate:
+    def cert_get_details(self) -> CertificateDetails:
         """Get the details for the currently installed SSL cert.
 
         Returns:
-            SSLCertificate: dataclass model with response from API
+            CertificateDetails: dataclass model with response from API
         """
-        return self._cert_get()
+        return self._cert_get_details()
+
+    def cert_reset(self) -> CertificateDetails:
+        """Get the details for the currently installed SSL cert.
+
+        Returns:
+            CertificateDetails: dataclass model with response from API
+        """
+        self._cert_reset()
+        return self.cert_get_details()
 
     def cert_update(
         self,
@@ -318,7 +329,7 @@ class SettingsGlobal(SettingsMixins):
         hostname: str,
         enabled: bool,
         passphrase: str = "",
-    ) -> BoolValue:
+    ) -> CertificateDetails:
         """Update the SSL cert in instance from cert & key strings.
 
         Args:
@@ -342,15 +353,15 @@ class SettingsGlobal(SettingsMixins):
             file_content=key_file_contents,
             file_content_type="application/octet-stream",
         ).to_dict_file_spec()
-        return self._cert_update(
+        self._cert_update(
             hostname=hostname,
             passphrase=passphrase,
             enabled=enabled,
             cert_file=cert_file,
             private_key=key_file,
         )
+        return self.cert_get_details()
 
-    # XXX add "reset_to_defaults" PUT: /api/certificate/reset_to_defaults -> BoolValueSchema
     def _cert_update(self, **kwargs) -> bool:
         """Summary.
 
@@ -364,13 +375,22 @@ class SettingsGlobal(SettingsMixins):
         request_obj = api_endpoint.load_request(**kwargs)
         return api_endpoint.perform_request(http=self.auth.http, request_obj=request_obj)
 
-    def _cert_get(self) -> SSLCertificate:
+    def _cert_reset(self) -> BoolValue:
+        """Summary.
+
+        Returns:
+            bool: Description
+        """
+        api_endpoint = ApiEndpoints.system_settings.cert_reset
+        return api_endpoint.perform_request(http=self.auth.http)
+
+    def _cert_get_details(self) -> CertificateDetails:
         """Get the details for the currently installed SSL cert.
 
         Returns:
-            SSLCertificate: dataclass model with response from API
+            CertificateDetails: dataclass model with response from API
         """
-        api_endpoint = ApiEndpoints.system_settings.cert_get
+        api_endpoint = ApiEndpoints.system_settings.cert_get_details
         return api_endpoint.perform_request(http=self.auth.http)
 
 

@@ -2,15 +2,14 @@
 """Models for API requests & responses."""
 import dataclasses
 import datetime
-from typing import Optional, Type, List
+from typing import List, Optional, Type
 
 import dataclasses_json
 import marshmallow_jsonapi
 
-from .custom_fields import SchemaDatetime, get_field_dc_mm
 from ...tools import dt_days_left, dt_parse
 from .base import BaseModel, BaseSchema, BaseSchemaJson
-from .generic import ApiBase
+from .custom_fields import SchemaDatetime, get_field_dc_mm
 
 
 class SystemSettingsSchema(BaseSchemaJson):
@@ -152,23 +151,24 @@ class FeatureFlags(SystemSettings):
 
 @dataclasses.dataclass
 class FileSpec(dataclasses_json.DataClassJsonMixin):
+    """Pass."""
+
     uuid: str
     filename: str
 
 
 @dataclasses.dataclass
-class SSLUpdateRequest(BaseModel):
+class CertificateUpdateRequest(BaseModel):
     """Pass."""
 
     cert_file: FileSpec
     enabled: bool
     hostname: str
     private_key: FileSpec
-
     passphrase: str = ""
 
 
-class SSLCertificateSchema(BaseSchemaJson):
+class CertificateDetailsSchema(BaseSchemaJson):
     """Pass."""
 
     issued_to = marshmallow_jsonapi.fields.Str()
@@ -185,11 +185,11 @@ class SSLCertificateSchema(BaseSchemaJson):
     @staticmethod
     def get_model_cls() -> Optional[Type[BaseModel]]:
         """Pass."""
-        return SSLCertificate
+        return CertificateDetails
 
 
 @dataclasses.dataclass
-class SSLCertificate(BaseModel):
+class CertificateDetails(BaseModel):
     """Pass."""
 
     issued_to: str
@@ -201,6 +201,11 @@ class SSLCertificate(BaseModel):
     )
 
     @staticmethod
+    def _str_properties() -> List[str]:
+        """Pass."""
+        return ["issued_to", "alternative_names", "issued_by", "sha1_fingerprint", "expires_on"]
+
+    @staticmethod
     def get_schema_cls() -> Optional[Type[BaseSchema]]:
         """Pass."""
-        return SSLCertificateSchema
+        return CertificateDetailsSchema

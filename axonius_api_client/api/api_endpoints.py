@@ -359,23 +359,34 @@ class SystemSettings(ApiEndpointGroup):
         http_args_required=["files", "data"],
     )
 
-    ssl_update: ApiEndpoint = ApiEndpoint(
+    cert_update: ApiEndpoint = ApiEndpoint(
         method="put",
         path="api/V4.0/certificate/global_ssl",
         request_schema_cls=None,
-        request_model_cls=json_api.system_settings.SSLUpdateRequest,
+        request_model_cls=json_api.system_settings.CertificateUpdateRequest,
         response_schema_cls=None,
         response_model_cls=None,
     )
+    # PBUG: not modeled (not even anything, just returns "True")
 
-    ssl_certificate_details: ApiEndpoint = ApiEndpoint(
+    cert_get_details: ApiEndpoint = ApiEndpoint(
         method="get",
         path="api/V4.0/certificate/details",
         request_schema_cls=None,
         request_model_cls=None,
-        response_schema_cls=json_api.system_settings.SSLCertificateSchema,
-        response_model_cls=json_api.system_settings.SSLCertificate,
+        response_schema_cls=json_api.system_settings.CertificateDetailsSchema,
+        response_model_cls=json_api.system_settings.CertificateDetails,
     )
+
+    cert_reset: ApiEndpoint = ApiEndpoint(
+        method="put",
+        path="api/V4.0/certificate/reset_to_defaults",
+        request_schema_cls=None,
+        request_model_cls=None,
+        response_schema_cls=json_api.generic.BoolValueSchema,
+        response_model_cls=json_api.generic.BoolValue,
+    )
+    # PBUG: bool value useless to return here, return cert details or something at least
 
 
 @dataclasses.dataclass(repr=False)
