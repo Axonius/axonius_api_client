@@ -53,6 +53,9 @@ KEY_DEBUG: str = f"{KEY_PRE}DEBUG"
 KEY_DEBUG_PRINT: str = f"{KEY_PRE}DEBUG_PRINT"
 """OS env to use print() instead of LOGGER.debug()"""
 
+KEY_USER_AGENT: str = f"{KEY_PRE}USER_AGENT"
+"""OS env to use a custom User Agent string."""
+
 DEFAULT_DEBUG: str = "no"
 """Default for :attr:`KEY_DEBUG`"""
 
@@ -228,6 +231,12 @@ def get_env_csv(
     value = get_env_str(key=key, default=default, empty_ok=empty_ok, lower=lower)
     value = [y for y in [x.strip() for x in value.split(",")] if y]
     return value
+
+
+def get_env_user_agent(**kwargs) -> str:
+    """Pass."""
+    load_dotenv(**kwargs)
+    return get_env_str(key=KEY_USER_AGENT, default="", empty_ok=True)
 
 
 def get_env_connect(**kwargs) -> dict:

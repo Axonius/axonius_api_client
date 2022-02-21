@@ -12,6 +12,7 @@ from .constants.logs import LOG_LEVEL_HTTP, MAX_BODY_LEN, REQUEST_ATTR_MAP, RESP
 from .exceptions import HttpError
 from .logs import get_obj_log, set_log_level
 from .parsers.url_parser import UrlParser
+from .setup_env import get_env_user_agent
 from .tools import coerce_str, join_url, json_log, listify, path_read
 from .version import __version__
 
@@ -268,7 +269,7 @@ class Http:
     @property
     def user_agent(self) -> str:
         """Value to use in User-Agent header."""
-        return f"{__name__}.{self.__class__.__name__}/{__version__}"
+        return get_env_user_agent() or f"{__name__}.{self.__class__.__name__}/{__version__}"
 
     def _do_log_request(self, request):
         """Log attributes and/or body of a request.
