@@ -5,7 +5,7 @@ import os
 import subprocess
 
 import pytest
-from axonius_api_client.api.json_api.system_settings import SSLCertificate
+from axonius_api_client.api.json_api.system_settings import CertificateDetails
 from axonius_api_client.exceptions import ApiError, NotFoundError
 
 GUI_SECTION_WITH_SUBS = "system_settings"
@@ -201,7 +201,7 @@ class TestSettingsGlobal(SettingsBasePublic):
 
     def test_ssl_cert_details(self, apiobj):
         result = apiobj.ssl_certificate_details()
-        assert isinstance(result, SSLCertificate)
+        assert isinstance(result, CertificateDetails)
         assert "sha1_fingerprint" in result.to_dict()
 
     def test_configure_destroy(self, apiobj):
