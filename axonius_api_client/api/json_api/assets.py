@@ -182,7 +182,7 @@ class AssetTypeHistoryDates(BaseModel):
             if value in self.dates_by_days_ago:
                 return self.dates_by_days_ago[value].date_api_exact
 
-            if exact:
+            if exact and value != 0:
                 nums = sorted(list(self.dates_by_days_ago))
                 err = f"Invalid exact days ago {value!r} (highest={nums[-1]}, lowest={nums[0]})"
                 raise ApiError(f"{err}\n{self}\n\n{err}")

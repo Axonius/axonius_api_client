@@ -11,7 +11,7 @@ import asn1crypto.x509
 from .extensions import Extension
 from .paths import PathLike, find_file_exts, pathlib, read_bytes, write_bytes
 from .ssl_context import get_cert, get_chain
-from .tools import bytes_to_hex, check_type, human_dict, int_to_hex, str_strip_to_int, str_to_bytes
+from .utils import bytes_to_hex, check_type, human_dict, int_to_hex, str_strip_to_int, str_to_bytes
 
 LOG: logging.Logger = logging.getLogger(__name__)
 CERT_TYPE: str = "CERTIFICATE"
@@ -26,8 +26,10 @@ class CertStore:
     EXTS_PEM: List[str] = [".pem", ".ca-bundle"]
     EXTS_PEM_DER: List[str] = [*EXTS_PEM, ".cer", ".crt", ".der"]
     EXTS_PKCS7: List[str] = [".p7b", ".p7r", ".spc"]
+    EXTS_PKCS12: List[str] = [".pfx", ".p12"]
+    # TBD: PKCS#12 not yet supported due to password protection
     EXTS: List[str] = [*EXTS_PEM_DER, *EXTS_PKCS7]
-    """Supported file formats:
+    """File formats:
 
     .cer        B64 or DER  - one or more certs
     .crt        B64 or DER  - one or more certs
@@ -36,11 +38,9 @@ class CertStore:
     .p7b        PKCS#7      - one or more certs
     .p7r        PKCS#7      - one or more certs
     .spc        PKCS#7      - one or more certs
+    .pfx        PKCS#12     - one or more certs
+    .p12        PKCS#12     - one or more certs
     .der        DER         - one cert
-
-    Unsupported features:
-    - Passphrase protected (pycrptodome or cryptography needed as requirements)
-    - PKCS#12 format (.pfx, .p12)
     """
 
     SHORT_TRANS: dict = {
@@ -59,7 +59,7 @@ class CertStore:
         cert_type: str = CERT_TYPE,
         cert_headers: Optional[dict] = None,
         index: int = 0,
-        source: Optional[PathLike] = None,
+        source: Optional[dict] = None,
     ):
         """Pass."""
         self.LOG: logging.Logger = LOG.getChild(self.__class__.__name__)
@@ -68,41 +68,40 @@ class CertStore:
         self.CERT_TYPE: str = cert_type
         self.CERT_HEADERS: Optional[dict] = cert_headers
         self.INDEX: int = index
-        self.SOURCE: Optional[PathLike] = source
+        self.SOURCE: Optional[dict] = source or {"method": "init"}
 
         # XXX try/cls
+        check_type(value=cert, exp=bytes)
         self.ASN: asn1crypto.x509.Certificate = asn1crypto.x509.Certificate.load(encoded_data=cert)
 
     @classmethod
     def from_host_cert(
-        cls, host: str, port: int = 443, source: Optional[PathLike] = None
+        cls, host: str, port: int = 443, source: Optional[dict] = None
     ) -> "CertStore":
         """Pass."""
-        source = source or f"certificate from {host}:{port}"
+        source = source or {"method": "from_host_cert", "host": host, "port": port}
         der: bytes = get_cert(host=host, port=port, as_bytes=True)
         return cls(cert=der, source=source)
 
     @classmethod
     def from_host_chain(
-        cls, host: str, port: int = 443, source: Optional[PathLike] = None
+        cls, host: str, port: int = 443, source: Optional[dict] = None
     ) -> List["CertStore"]:
         """Pass."""
-        source = source or f"certificate chain from {host}:{port}"
+        source = source or {"method": "from_host_chain", "host": host, "port": port}
         ders: List[bytes] = get_chain(host=host, port=port, as_bytes=True)
         return [cls(cert=x, index=idx, source=source) for idx, x in enumerate(ders)]
 
     @classmethod
-    def from_pem(
-        cls, value: Union[str, bytes], source: Optional[PathLike] = None
-    ) -> List["CertStore"]:
+    def from_pem(cls, value: Union[str, bytes], source: Optional[dict] = None) -> List["CertStore"]:
         """Pass."""
-        source = source or f"{type(value).__name__} value from_pem"
+        source = source or {"method": "from_pem", "type": f"{type(value).__name__}"}
         return [cls(**obj) for obj in cls._pem_to_bytes(value=value, source=source)]
 
     @classmethod
-    def from_pkcs7(cls, value: bytes, source: PathLike = None) -> List["CertStore"]:
+    def from_pkcs7(cls, value: bytes, source: Optional[dict] = None) -> List["CertStore"]:
         """Pass."""
-        source = source or f"{type(value).__name__} value from_pkcs7"
+        source = source or {"method": "from_pkcs7", "type": f"{type(value).__name__}"}
         ders: List[bytes] = cls._pkcs7_to_bytes(value=value)
         return [cls(cert=x, source=source, index=idx) for idx, x in enumerate(ders)]
 
@@ -110,14 +109,16 @@ class CertStore:
     def from_path_file(cls, path: PathLike, **kwargs) -> List["CertStore"]:
         """Pass."""
         path, data = read_bytes(path=path, exts=cls.EXTS)
-
+        source = {"method": "from_path_file", "path": path}
         if path.suffix in cls.EXTS_PEM or cls._is_pem(value=data):
-            return cls.from_pem(value=data, source=path)
+            return cls.from_pem(value=data, source=source)
 
         if path.suffix in cls.EXTS_PKCS7:
-            return cls.from_pkcs7(value=data, source=path)
+            return cls.from_pkcs7(value=data, source=source)
 
-        return [cls(cert=data, **kwargs)]
+        kwargs["cert"] = data
+        kwargs["source"] = source
+        return [cls(**kwargs)]
 
     @classmethod
     def from_path_directory(cls, path: PathLike) -> Dict[str, List["CertStore"]]:
@@ -145,7 +146,7 @@ class CertStore:
             return obj.to_pem()
 
         check_type(value=stores, exp=list)
-        kwargs["content"] = "\n".join([get_pem(x) for x in stores])
+        kwargs["content"] = "\n\n".join([get_pem(x) for x in stores])
         return write_bytes(**kwargs)
 
     def to_der(self) -> bytes:
@@ -164,6 +165,7 @@ class CertStore:
             "issuer": self.issuer,
             "subject": self.subject,
             "details": self.details,
+            "source": self.source,
         }
         if with_extensions:
             ret["extensions"] = [x.to_dict() for x in self.get_extensions()]
@@ -213,7 +215,8 @@ class CertStore:
         """Get the properties for the public key section."""
         return {
             "key": self.public_key_hex,
-            "key_size": self.public_key_size,
+            "bit_size": self.public_key_bit_size,
+            "byte_size": self.public_key_byte_size,
             **self.public_key_algorithm,
             "signature": self.signature_hex,
             "signature_algorithm": self.signature_algorithm,
@@ -300,9 +303,14 @@ class CertStore:
         return int_to_hex(value=self.ASN.public_key["public_key"].native["modulus"])
 
     @property
-    def public_key_size(self) -> int:
+    def public_key_bit_size(self) -> int:
         """Pass."""
         return self.ASN.public_key.bit_size
+
+    @property
+    def public_key_byte_size(self) -> int:
+        """Pass."""
+        return self.ASN.public_key.byte_size
 
     @property
     def public_key_algorithm(self) -> dict:
@@ -333,6 +341,12 @@ class CertStore:
             "not_valid_before": self.not_valid_before,
             "not_valid_after": self.not_valid_after,
         }
+
+    @property
+    def source(self) -> dict:
+        """Pass."""
+        src = self.SOURCE if isinstance(self.SOURCE, dict) else {"source": self.SOURCE}
+        return {"index": self.INDEX, **src}
 
     @property
     def not_valid_before(self) -> datetime.datetime:
@@ -372,11 +386,6 @@ class CertStore:
         """Pass."""
         return str_strip_to_int(value=self.ASN["tbs_certificate"]["version"].native)
 
-    @property
-    def source(self) -> str:
-        """Pass."""
-        return "" if self.SOURCE is None else f"{self.SOURCE}"
-
     @classmethod
     def _pem_to_bytes(cls, value: Union[str, bytes], source: Optional[str] = None) -> List[dict]:
         """Pass."""
@@ -384,11 +393,14 @@ class CertStore:
         pem_bytes = str_to_bytes(value=value)
 
         if not cls._is_pem(value=pem_bytes):
-            raise ValueError("No PEM encoded certificate found in supplied value")
+            raise ValueError(f"No PEM encoded certificate found in supplied value from {source}")
 
         keys = ["cert_type", "cert_headers", "cert", "source", "index"]
         gen = enumerate(asn1crypto.pem.unarmor(pem_bytes=pem_bytes, multiple=True))
-        return [dict(zip(keys, [*item, source, idx])) for idx, item in gen]
+        ret = [dict(zip(keys, [*item, source, idx])) for idx, item in gen if item[0] == CERT_TYPE]
+        if not ret:
+            raise ValueError(f"No {CERT_TYPE!r} types found from {source}")
+        return ret
 
     @classmethod
     def _pkcs7_to_bytes(cls, value: bytes, source: Optional[str] = None) -> List[bytes]:
@@ -434,7 +446,7 @@ class CertStore:
             f"INDEX={self.INDEX + 1}",
             f"SUBJECT={self.to_str_subject()!r}",
             f"ISSUER={self.to_str_issuer()!r}",
-            f"SOURCE={self.source!r}",
+            f"SOURCE={self.SOURCE}",
         ]
         return ", ".join(items)
 

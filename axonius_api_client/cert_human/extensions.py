@@ -10,7 +10,7 @@ import asn1crypto.x509
 
 from . import ct_logs
 from .enums import HashAlgorithms, SctVersions, SignatureAlgorithms
-from .tools import (
+from .utils import (
     b64_to_hex,
     bytes_to_b64,
     bytes_to_hex,

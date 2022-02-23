@@ -8,15 +8,19 @@ from typing import Generator, List, Union
 import OpenSSL
 
 
+def resolve_host(host: str) -> str:
+    """Pass."""
+    try:
+        return socket.gethostbyname(host)
+    except Exception as exc:
+        msg = "Unable to resolve" if "nodename nor servname" in str(exc) else str(exc)
+        raise ValueError(f"Failed to get hostname for host {host!r}: {msg}")
+
+
 @contextlib.contextmanager
 def get_cnx(host: str, port: int = 443) -> Generator[OpenSSL.SSL.Connection, None, None]:
     """Context manager to create an OpenSSL wrapped socket."""
-    try:
-        socket.gethostbyname(host)
-    except Exception as exc:
-        msg = "Unable to resolve" if "nodename nor servname" in str(exc) else str(exc)
-        raise ValueError(f"Failed to get address info for host {host!r} port {port!r}: {msg}")
-
+    resolve_host(host=host)
     context = OpenSSL.SSL.Context(OpenSSL.SSL.TLS_METHOD)
     sock = socket.socket()
     cnx = OpenSSL.SSL.Connection(context, sock)

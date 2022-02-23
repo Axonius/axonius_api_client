@@ -167,6 +167,11 @@ class CertificateUpdateRequest(BaseModel):
     private_key: FileSpec
     passphrase: str = ""
 
+    @staticmethod
+    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+        """Pass."""
+        return None
+
 
 class CertificateDetailsSchema(BaseSchemaJson):
     """Pass."""
