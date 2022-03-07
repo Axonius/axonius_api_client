@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 """Command line interface for Axonius API Client."""
+# from ....tools import json_dump
 from ...context import click
 
-EXPORT = click.option(
+OPT_EXPORT_FORMAT = click.option(
     "--export-format",
     "-xf",
     "export_format",
@@ -13,7 +14,7 @@ EXPORT = click.option(
     show_default=True,
 )
 
-SECTION = click.option(
+OPT_SECTION = click.option(
     "--section",
     "-se",
     "section",
@@ -23,7 +24,7 @@ SECTION = click.option(
     show_default=True,
 )
 
-SUB_SECTION = click.option(
+OPT_SUB_SECTION = click.option(
     "--sub-section",
     "-sb",
     "sub_section",

@@ -9,6 +9,11 @@ import logging
 
 from . import setup_env, version
 
+# import sys
+
+
+# print("oh hai")
+# sys.exit()
 PACKAGE_ROOT: str = __package__
 PACKAGE_FILE: str = __file__
 VERSION: str = version.__version__
@@ -33,7 +38,7 @@ POST_DOTENV: dict = setup_env.get_env_ax()
 """AX.* env variables after loading dotenv."""
 
 try:
-    from . import api, auth, cli, constants, data, exceptions, http, logs, tools
+    from . import api, auth, cli, constants, data, exceptions, http, logs, tools, cert_human
     from .api import (
         ActivityLogs,
         Adapters,
@@ -109,4 +114,5 @@ __all__ = (
     "logs",
     "tools",
     "version",
+    "cert_human",
 )

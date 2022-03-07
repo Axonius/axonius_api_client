@@ -101,6 +101,39 @@ class IntValue(BaseModel):
         return IntValueSchema
 
 
+class ApiBaseSchema(BaseSchemaJson):
+    """Pass."""
+
+    id = marshmallow_jsonapi.fields.Str(required=True)
+
+    class Meta:
+        """Pass."""
+
+        type_ = "base_schema"
+
+    @staticmethod
+    def get_model_cls() -> type:
+        """Pass."""
+        return ApiBase
+
+
+@dataclasses.dataclass
+class ApiBase(BaseModel):
+    """Pass."""
+
+    id: str
+    filename: Optional[str] = None
+
+    @staticmethod
+    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+        """Pass."""
+        return ApiBaseSchema
+
+    def to_dict_file_spec(self):
+        """Pass."""
+        return {"uuid": self.id, "filename": self.filename}
+
+
 class StrValueSchema(BaseSchemaJson):
     """Pass."""
 

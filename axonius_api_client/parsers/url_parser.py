@@ -42,7 +42,7 @@ class UrlParser:
     def __str__(self) -> str:
         """Show object info."""
         cls = self.__class__
-        return f"{cls.__module__}.{cls.__name__}({self.parsed_str})"
+        return f"{cls.__name__}({self.parsed_str})"
 
     def __repr__(self) -> str:
         """Show object info."""

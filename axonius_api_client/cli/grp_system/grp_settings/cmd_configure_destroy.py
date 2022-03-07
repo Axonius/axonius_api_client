@@ -44,7 +44,7 @@ OPTIONS = [*AUTH, ENABLED, DESTROY, RESET]
 @click.command(name="configure-destroy", context_settings=CONTEXT_SETTINGS)
 @add_options(OPTIONS)
 @click.pass_context
-def cmd(ctx, url, key, secret, enabled, reset, destroy, **kwargs):
+def cmd(ctx, url, key, secret, enabled, reset, destroy):
     """Enable or disable dangerous API endpoints."""
     client = ctx.obj.start_client(url=url, key=key, secret=secret)
 

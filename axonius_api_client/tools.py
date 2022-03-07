@@ -13,7 +13,7 @@ import re
 import sys
 from datetime import datetime, timedelta, timezone
 from itertools import zip_longest
-from typing import Any, Callable, Iterable, Iterator, List, Optional, Pattern, Tuple, Type, Union
+from typing import Any, Iterable, Iterator, List, Optional, Pattern, Tuple, Type, Union
 from urllib.parse import urljoin
 
 import click
@@ -354,7 +354,7 @@ def json_log(
     trim_lines: bool = True,
     trim_msg: str = TRIM_MSG,
     **kwargs,
-) -> str:
+) -> str:  # pragma: no cover
     """Pass."""
     return json_reload(
         obj=obj, error=error, trim=trim, trim_lines=trim_lines, trim_msg=trim_msg, **kwargs
@@ -449,6 +449,11 @@ def dt_now(
     if isinstance(delta, timedelta):
         return dt_parse(obj=delta)
     return datetime.now(tz)
+
+
+def dt_now_file(fmt: str = "%Y%m%d-%H%M%S", **kwargs):
+    """Pass."""
+    return dt_now(**kwargs).strftime(fmt)
 
 
 def dt_sec_ago(obj: Union[str, timedelta, datetime], exact: bool = False) -> int:
@@ -550,18 +555,97 @@ def path_read(
     return robj, data
 
 
+def get_backup_filename(path: Union[str, pathlib.Path]) -> str:
+    """Pass."""
+    path = get_path(obj=path)
+    return f"{path.stem}_{dt_now_file()}{path.suffix}"
+
+
+def get_backup_path(path: Union[str, pathlib.Path]) -> pathlib.Path:
+    """Pass."""
+    path = get_path(obj=path)
+    return path.parent / get_backup_filename(path=path)
+
+
+def check_path_is_not_dir(path: Union[str, pathlib.Path]) -> pathlib.Path:
+    """Pass."""
+    path = get_path(obj=path)
+    if path.is_dir():
+        raise ToolsError(f"'{path}' is a directory, not a file")
+    return path
+
+
+def path_create_parent_dir(
+    path: Union[str, pathlib.Path], make_parent: bool = True, protect_parent=0o700
+) -> pathlib.Path:
+    """Pass."""
+    path = get_path(obj=path)
+
+    if not path.parent.is_dir():
+        if make_parent:
+            path.parent.mkdir(mode=protect_parent, parents=True, exist_ok=True)
+        else:
+            raise ToolsError(
+                f"Parent directory '{path.parent}' does not exist and make_parent is False"
+            )
+    return path
+
+
+def path_backup_file(
+    path: Union[str, pathlib.Path],
+    backup_path: Optional[Union[str, pathlib.Path]] = None,
+    make_parent: bool = True,
+    protect_parent=0o700,
+) -> pathlib.Path:
+    """Pass."""
+    path = get_path(obj=path)
+    if not path.is_file():
+        raise ToolsError(f"'{path}' does not exist as a file, can not backup")
+
+    if backup_path:
+        backup_path = get_path(obj=backup_path)
+    else:
+        backup_path = get_backup_path(path=path)
+
+    check_path_is_not_dir(path=backup_path)
+
+    if backup_path.is_file():
+        backup_path = get_backup_path(path=backup_path)
+
+    path_create_parent_dir(path=backup_path, make_parent=make_parent, protect_parent=protect_parent)
+    path.rename(backup_path)
+    return backup_path
+
+
+def auto_suffix(
+    path: Union[str, pathlib.Path],
+    data: Union[bytes, str],
+    **kwargs,
+) -> Union[bytes, str]:
+    """Pass."""
+    path = get_path(obj=path)
+
+    if path.suffix == ".json" and not (isinstance(data, str) or isinstance(data, bytes)):
+        kwargs.setdefault("error", False)
+        data = json_dump(obj=data, **kwargs)
+    return data
+
+
 def path_write(
     obj: Union[str, pathlib.Path],
     data: Union[bytes, str],
     overwrite: bool = False,
+    backup: bool = False,
+    backup_path: Optional[Union[str, pathlib.Path]] = None,
     binary: bool = False,
     binary_encoding: str = "utf-8",
     is_json: bool = False,
     make_parent: bool = True,
     protect_file=0o600,
     protect_parent=0o700,
+    suffix_auto: bool = True,
     **kwargs,
-) -> Tuple[pathlib.Path, Callable]:
+) -> Tuple[pathlib.Path, Tuple[int, Optional[pathlib.Path]]]:
     """Write data to a file.
 
     Notes:
@@ -588,9 +672,8 @@ def path_write(
     if is_json:
         data = json_dump(obj=data, **kwargs)
 
-    if obj.suffix == ".json" and not (isinstance(data, str) or isinstance(data, bytes)):
-        kwargs.setdefault("error", False)
-        data = json_dump(obj=data, **kwargs)
+    if suffix_auto:
+        data = auto_suffix(path=obj, data=data)
 
     if binary:
         if isinstance(data, str):
@@ -601,22 +684,26 @@ def path_write(
             data = data.decode(binary_encoding)
         method = obj.write_text
 
-    if obj.is_file() and overwrite is False:
-        raise ToolsError(f"File '{obj}' already exists and overwrite is False")
+    check_path_is_not_dir(path=obj)
 
-    if not obj.parent.is_dir():
-        if make_parent:
-            obj.parent.mkdir(mode=protect_parent, parents=True, exist_ok=True)
-        else:
-            error = f"Directory '{obj.parent}' does not exist and make_parent is False"
-            raise ToolsError(error)
-
-    obj.touch()
+    if obj.is_file():
+        if backup:
+            backup_path = path_backup_file(
+                path=obj,
+                backup_path=backup_path,
+                make_parent=make_parent,
+                protect_parent=protect_parent,
+            )
+        elif overwrite is False:
+            raise ToolsError(f"File '{obj}' already exists and overwrite is False")
+    else:
+        path_create_parent_dir(path=obj, make_parent=make_parent, protect_parent=protect_parent)
+        obj.touch()
 
     if protect_file:
         obj.chmod(protect_file)
 
-    return obj, method(data)
+    return obj, (method(data), backup_path)
 
 
 def longest_str(obj: List[str]) -> int:

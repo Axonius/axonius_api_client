@@ -5,32 +5,6 @@ import pathlib
 
 import pytest
 
-from axonius_api_client.api import (
-    ActivityLogs,
-    Adapters,
-    Dashboard,
-    Devices,
-    Enforcements,
-    Instances,
-    Meta,
-    OpenAPISpec,
-    RemoteSupport,
-    SettingsGlobal,
-    SettingsGui,
-    SettingsIdentityProviders,
-    SettingsLifecycle,
-    Signup,
-    SystemRoles,
-    SystemUsers,
-    Users,
-    Wizard,
-    WizardCsv,
-    WizardText,
-)
-from axonius_api_client.api.adapters import Cnx
-from axonius_api_client.api.assets import Fields, Labels, SavedQuery
-from axonius_api_client.constants.adapters import CSV_ADAPTER
-
 from .meta import CSV_FILECONTENT_STR, CSV_FILENAME, USER_NAME
 from .utils import check_apiobj, check_apiobj_children, check_apiobj_xref, get_auth, get_url
 
@@ -69,6 +43,9 @@ def pytest_addoption(parser):
 @pytest.fixture(scope="session")
 def api_devices(request):
     """Get a fully loaded Devices API object."""
+    from axonius_api_client.api import Devices, Adapters, Wizard, WizardText, WizardCsv
+    from axonius_api_client.api.assets import Fields, Labels, SavedQuery
+
     auth = get_auth(request)
 
     obj = Devices(auth=auth)
@@ -94,6 +71,9 @@ def api_devices(request):
 @pytest.fixture(scope="session")
 def api_users(request):
     """Get a fully loaded Users API object."""
+    from axonius_api_client.api import Users, Adapters, Wizard, WizardText, WizardCsv
+    from axonius_api_client.api.assets import Fields, Labels, SavedQuery
+
     auth = get_auth(request)
 
     obj = Users(auth=auth)
@@ -120,6 +100,8 @@ def api_users(request):
 @pytest.fixture(scope="session")
 def api_enforcements(request):
     """Test utility."""
+    from axonius_api_client.api import Enforcements
+
     auth = get_auth(request)
     obj = Enforcements(auth=auth)
     check_apiobj(authobj=auth, apiobj=obj)
@@ -129,6 +111,8 @@ def api_enforcements(request):
 @pytest.fixture(scope="session")
 def api_adapters(request):
     """Test utility."""
+    from axonius_api_client.api import Adapters, Cnx
+
     auth = get_auth(request)
     obj = Adapters(auth=auth)
     check_apiobj(authobj=auth, apiobj=obj)
@@ -139,6 +123,8 @@ def api_adapters(request):
 @pytest.fixture(scope="session")
 def api_dashboard(request):
     """Test utility."""
+    from axonius_api_client.api import Dashboard
+
     auth = get_auth(request)
     obj = Dashboard(auth=auth)
     check_apiobj(authobj=auth, apiobj=obj)
@@ -148,6 +134,8 @@ def api_dashboard(request):
 @pytest.fixture(scope="session")
 def api_instances(request):
     """Test utility."""
+    from axonius_api_client.api import Instances
+
     auth = get_auth(request)
     obj = Instances(auth=auth)
     check_apiobj(authobj=auth, apiobj=obj)
@@ -157,6 +145,8 @@ def api_instances(request):
 @pytest.fixture(scope="session")
 def api_system_roles(request):
     """Test utility."""
+    from axonius_api_client.api import Instances, SystemRoles
+
     auth = get_auth(request)
     obj = SystemRoles(auth=auth)
     check_apiobj(authobj=auth, apiobj=obj)
@@ -168,6 +158,8 @@ def api_system_roles(request):
 @pytest.fixture(scope="session")
 def api_system_users(request):
     """Test utility."""
+    from axonius_api_client.api import SystemRoles, SystemUsers
+
     auth = get_auth(request)
     obj = SystemUsers(auth=auth)
     check_apiobj(authobj=auth, apiobj=obj)
@@ -179,6 +171,8 @@ def api_system_users(request):
 @pytest.fixture(scope="session")
 def api_meta(request):
     """Test utility."""
+    from axonius_api_client.api import Meta
+
     auth = get_auth(request)
     obj = Meta(auth=auth)
     check_apiobj(authobj=auth, apiobj=obj)
@@ -188,6 +182,8 @@ def api_meta(request):
 @pytest.fixture(scope="session")
 def api_settings_lifecycle(request):
     """Test utility."""
+    from axonius_api_client.api import SettingsLifecycle
+
     auth = get_auth(request)
     obj = SettingsLifecycle(auth=auth)
     check_apiobj(authobj=auth, apiobj=obj)
@@ -197,6 +193,8 @@ def api_settings_lifecycle(request):
 @pytest.fixture(scope="session")
 def api_settings_global(request):
     """Test utility."""
+    from axonius_api_client.api import SettingsGlobal
+
     auth = get_auth(request)
     obj = SettingsGlobal(auth=auth)
     check_apiobj(authobj=auth, apiobj=obj)
@@ -206,6 +204,8 @@ def api_settings_global(request):
 @pytest.fixture(scope="session")
 def api_settings_gui(request):
     """Test utility."""
+    from axonius_api_client.api import SettingsGui
+
     auth = get_auth(request)
     obj = SettingsGui(auth=auth)
     check_apiobj(authobj=auth, apiobj=obj)
@@ -215,6 +215,8 @@ def api_settings_gui(request):
 @pytest.fixture(scope="session")
 def api_settings_ip(request):
     """Test utility."""
+    from axonius_api_client.api import SettingsIdentityProviders
+
     auth = get_auth(request)
     obj = SettingsIdentityProviders(auth=auth)
     check_apiobj(authobj=auth, apiobj=obj)
@@ -224,6 +226,8 @@ def api_settings_ip(request):
 @pytest.fixture(scope="session")
 def api_signup(request):
     """Test utility."""
+    from axonius_api_client.api import Signup
+
     obj = Signup(url=get_url(request))
     return obj
 
@@ -231,6 +235,8 @@ def api_signup(request):
 @pytest.fixture(scope="session")
 def api_remote_support(request):
     """Test utility."""
+    from axonius_api_client.api import RemoteSupport
+
     auth = get_auth(request)
     obj = RemoteSupport(auth=auth)
     check_apiobj(authobj=auth, apiobj=obj)
@@ -240,6 +246,8 @@ def api_remote_support(request):
 @pytest.fixture(scope="session")
 def api_activity_logs(request):
     """Test utility."""
+    from axonius_api_client.api import ActivityLogs
+
     auth = get_auth(request)
     obj = ActivityLogs(auth=auth)
     check_apiobj(authobj=auth, apiobj=obj)
@@ -249,6 +257,8 @@ def api_activity_logs(request):
 @pytest.fixture(scope="session")
 def csv_file_path(api_adapters):
     """Test utility."""
+    from axonius_api_client.constants.adapters import CSV_ADAPTER
+
     data = api_adapters.file_upload(
         name=CSV_ADAPTER,
         field_name="file_path",
@@ -264,6 +274,8 @@ def csv_file_path(api_adapters):
 @pytest.fixture(scope="session")
 def csv_file_path_broken(api_adapters):
     """Test utility."""
+    from axonius_api_client.constants.adapters import CSV_ADAPTER
+
     data = api_adapters.file_upload(
         name=CSV_ADAPTER,
         field_name="file_path",
@@ -323,7 +335,29 @@ def temp_user(api_system_users):
 @pytest.fixture(scope="session")
 def api_openapi(request):
     """Test utility."""
+    from axonius_api_client.api import OpenAPISpec
+
     auth = get_auth(request)
     obj = OpenAPISpec(auth=auth)
     check_apiobj(authobj=auth, apiobj=obj)
     return obj
+
+
+@pytest.fixture
+def datafile(request):
+    """Pass."""
+    markers = {k.name: k for k in request.node.iter_markers()}
+    found = f"found markers {list(markers)}"
+    example = 'like @pytest.mark.use_datafile("file.txt")'
+    if "use_datafile" not in markers:
+        raise ValueError(f"use_datafile marker must exist {example} ({found})")
+    marker = markers["use_datafile"]
+
+    if not marker.args:
+        raise ValueError("use_datafile marker needs a file to load {example} ({found})")
+
+    filename = marker.args[0]
+    path = pathlib.Path(__file__).parent / "datafiles" / filename
+    if not path.is_file():
+        pytest.skip(f"use_datafile {filename!r} not found at path {path}")
+    return path

@@ -146,19 +146,26 @@ class Context:
         """Pass."""
         return self._connect_args.get("wraperror", True)
 
+    def create_client(self, url, key, secret, **kwargs):
+        """Pass."""
+        connect_args = {}
+        connect_args.update(self._connect_args)
+        connect_args.update(kwargs)
+        connect_args["url"] = url
+        connect_args["key"] = key
+        connect_args["secret"] = secret
+
+        with self.exc_wrap(wraperror=self.wraperror):
+            self.client = Connect(**connect_args)
+
+        return self.client
+
     def start_client(self, url, key, secret, echo=True, **kwargs):
         """Pass."""
         if not getattr(self, "client", None):
-            connect_args = {}
-            connect_args.update(self._connect_args)
-            connect_args.update(kwargs)
-            connect_args["url"] = url
-            connect_args["key"] = key
-            connect_args["secret"] = secret
+            self.create_client(url=url, key=key, secret=secret, **kwargs)
 
             with self.exc_wrap(wraperror=self.wraperror):
-                self.client = Connect(**connect_args)
-
                 with warnings.catch_warnings(record=True) as caught_warnings:
                     self.client.start()
 

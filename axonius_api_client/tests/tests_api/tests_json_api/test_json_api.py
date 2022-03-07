@@ -2,10 +2,9 @@ import dataclasses
 
 import marshmallow
 import pytest
-
 from axonius_api_client.api import json_api
 from axonius_api_client.api.json_api.base import BaseModel, BaseSchema, BaseSchemaJson
-from axonius_api_client.exceptions import ApiAttributeExtraWarning, SchemaError
+from axonius_api_client.exceptions import SchemaError
 
 from ..test_api_endpoints import get_model_classes, get_schema_classes
 
@@ -73,12 +72,11 @@ class TestJsonApi:
             )
         assert 'Invalid type. Expected "some_schema"' in str(exc.value)
 
-        with pytest.warns(ApiAttributeExtraWarning):
-            ret = SomeSchema.load_response(
-                data={"data": {"type": "some_schema", "attributes": {"test": 1, "extra": 2}}}
-            )
-            assert ret.test == 1
-            assert ret.extra_attributes == {"extra": 2}
+        ret = SomeSchema.load_response(
+            data={"data": {"type": "some_schema", "attributes": {"test": 1, "extra": 2}}}
+        )
+        assert ret.test == 1
+        assert ret.extra_attributes == {"extra": 2}
 
         exp = SomeModel(test=1)
         ret = SomeSchema.load_response(
@@ -110,10 +108,9 @@ class TestJsonApi:
             SomeSchema.load_response(data=1)
         assert "Data to load must be a dictionary or list" in str(exc.value)
 
-        with pytest.warns(ApiAttributeExtraWarning):
-            ret = SomeSchema.load_response(data={"test": 1, "extra": 2})
-            assert ret.test == 1
-            assert ret.extra_attributes == {"extra": 2}
+        ret = SomeSchema.load_response(data={"test": 1, "extra": 2})
+        assert ret.test == 1
+        assert ret.extra_attributes == {"extra": 2}
 
         exp = SomeModel(test=1)
         ret = SomeSchema.load_response(data={"test": 1})

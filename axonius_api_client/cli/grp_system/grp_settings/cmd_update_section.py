@@ -3,9 +3,9 @@
 from ....tools import json_dump
 from ...context import CONTEXT_SETTINGS, click
 from ...options import AUTH, SPLIT_CONFIG_OPT, add_options
-from .grp_common import EXPORT, SECTION, str_section
+from .grp_common import OPT_EXPORT_FORMAT, OPT_SECTION, str_section
 
-OPTIONS = [*AUTH, EXPORT, SECTION, SPLIT_CONFIG_OPT]
+OPTIONS = [*AUTH, OPT_EXPORT_FORMAT, OPT_SECTION, SPLIT_CONFIG_OPT]
 
 
 @click.command(name="update-section", context_settings=CONTEXT_SETTINGS)
