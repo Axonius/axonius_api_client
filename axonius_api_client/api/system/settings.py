@@ -2,7 +2,7 @@
 """Parent API for working with system settings."""
 import pathlib
 import warnings
-from typing import List, Optional, Tuple, Union
+from typing import Any, List, Optional, Tuple, Union
 
 from ... import cert_human
 from ...constants.api import USE_CA_PATH
@@ -291,9 +291,9 @@ class SettingsGlobal(SettingsMixins):
         return self.ca_get()
 
     @staticmethod
-    def check_cert_is_ca(contents: CONTENT) -> cert_human.Cert:
+    def check_cert_is_ca(contents: CONTENT, source: Any = None) -> cert_human.Cert:
         """Pass."""
-        stores = cert_human.Cert.from_content(value=contents)
+        stores = cert_human.Cert.from_content(value=contents, source=source)
         store = stores[0]
         store.check_is_ca()
         store.check_expired()
@@ -302,11 +302,16 @@ class SettingsGlobal(SettingsMixins):
     def ca_add_path(self, path: pathlib.Path) -> Tuple[pathlib.Path, List[dict]]:
         """Pass."""
         file_path, file_contents = path_read(obj=path, binary=True)
-        return file_path, self.ca_add(name=file_path.name, contents=file_contents)
+        return file_path, self.ca_add(
+            name=file_path.name,
+            contents=file_contents,
+            source={"path": file_path, "method": "ca_add_path"},
+        )
 
-    def ca_add(self, name: str, contents: CONTENT) -> dict:
+    def ca_add(self, name: str, contents: CONTENT, source: Any = None) -> dict:
         """Pass."""
-        store = self.check_cert_is_ca(contents=contents)
+        source = source or {"method": "ca_add"}
+        store = self.check_cert_is_ca(contents=contents, source=source)
 
         settings = self.get_section("ssl_trust_settings")
         cert_file = self._file_upload(

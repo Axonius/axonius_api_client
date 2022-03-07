@@ -108,11 +108,7 @@ class CertRequest(Store):
             source["method"] = "from_content:der"
             return [cls(cert=value, source=source)]
 
-        msgs = (
-            f"Supplied content: {value}",
-            f"No PEM or DER certificate requests found in content from {source}",
-        )
-
+        msgs = (f"No PEM or DER certificate requests found in content from {source}",)
         raise ValueError("\n".join(msgs))
 
     # ABC

@@ -1251,7 +1251,6 @@ def coerce_str(
 ) -> Union[str, Any]:
     """Coerce a value to a string."""
     value = bytes_to_str(value=value)
-    trim_type = "lines" if trim_lines else "characters"
     if value is None:
         value = none
 
@@ -1260,6 +1259,19 @@ def coerce_str(
 
     if strip:
         value = strip_str(value=value)
+
+    value = str_trim(value=value, trim=trim, trim_lines=trim_lines, trim_msg=trim_msg)
+    return value
+
+
+def str_trim(
+    value: str,
+    trim: Optional[int] = None,
+    trim_lines: bool = False,
+    trim_msg: str = TRIM_MSG,
+) -> str:
+    """Pass."""
+    trim_type = "lines" if trim_lines else "characters"
 
     if isinstance(trim, int) and trim > 0:
         trim_done = False
@@ -1278,7 +1290,6 @@ def coerce_str(
 
         if trim_done:
             value += trim_msg.format(trim_type=trim_type, trim=trim, value_len=value_len)
-
     return value
 
 
