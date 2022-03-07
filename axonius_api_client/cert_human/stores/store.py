@@ -27,9 +27,9 @@ class InvalidCertError(CertHumanError):
         self.reason: str = reason
         self.store: Store = store
 
-        msg = f"Certificate {store} is not valid, reason: {reason}"
-        msgs = [msg, store.to_str(), msg]
-        super().__init__("\n\n".join(msgs))
+        items = [f"Invalid Certificate: {store}", f"Invalid Certificate reason: {reason}"]
+        msgs = [*items, "", store.to_str(), "", *items]
+        super().__init__("\n".join(msgs))
 
 
 class Store(abc.ABC):

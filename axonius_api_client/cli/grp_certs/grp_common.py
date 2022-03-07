@@ -330,7 +330,8 @@ def confirm_cert(
 def confirm(prompt, text, default=True, fg="cyan", fg_false="blue", abort=False):
     """Pass."""
     if prompt:
-        prompt = click.confirm(text=click.style(text=text, fg=fg), default=default, err=True)
+        stext = click.style(text=text, fg=fg)
+        prompt = click.confirm(text=stext, default=default, err=True, abort=abort)
     else:
         click.secho(message=f"Prompting disabled, not asking: {text}", fg=fg_false)
     return prompt

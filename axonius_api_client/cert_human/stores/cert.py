@@ -160,7 +160,12 @@ class Cert(Store):
             source["method"] = "from_content:der"
             return [cls(cert=value, source=source)]
 
-        raise ValueError(f"No PEM, PCKS7, or DER certificates found in {source}")
+        msgs = (
+            f"Supplied content: {value}",
+            f"No PEM, PCKS7, or DER certificates found in content from {source}",
+        )
+
+        raise ValueError("\n".join(msgs))
 
     # ABC
     def to_dict(self, with_extensions: bool = True) -> Dict[str, dict]:

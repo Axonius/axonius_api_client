@@ -72,7 +72,13 @@ class AliasedGroup(click.Group):
 class exc_wrapper:
     """Pass."""
 
-    EXCLUDES = (SystemExit, click.exceptions.Exit)
+    EXCLUDES = (
+        SystemExit,
+        RuntimeError,
+        click.exceptions.Exit,
+        click.exceptions.Abort,
+        click.exceptions.ClickException,
+    )
 
     def __init__(self, wraperror=True, abort=True):
         """Pass."""
