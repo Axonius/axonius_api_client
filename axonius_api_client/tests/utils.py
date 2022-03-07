@@ -11,13 +11,6 @@ import pytest
 from cachetools import TTLCache, cached
 from click.testing import CliRunner
 
-from axonius_api_client import Wizard, api, auth
-from axonius_api_client.cli.context import Context
-from axonius_api_client.constants.fields import AGG_ADAPTER_NAME
-from axonius_api_client.exceptions import NotFoundError
-from axonius_api_client.http import Http
-from axonius_api_client.tools import listify
-
 IS_WINDOWS = sys.platform == "win32"
 IS_LINUX = sys.platform == "linux"
 IS_MAC = sys.platform == "darwin"
@@ -28,6 +21,8 @@ CACHE: TTLCache = TTLCache(maxsize=1024, ttl=600)
 
 def get_field_vals(rows, field):
     """Test utility."""
+    from axonius_api_client.tools import listify
+
     values = [x[field] for x in listify(rows) if x.get(field)]
     values = [x for y in values for x in listify(y)]
     return values
@@ -48,6 +43,8 @@ def check_asset(row):
 
 def exists_query(apiobj, fields=None, not_exist=False):
     """Test utility."""
+    from axonius_api_client import Wizard
+
     if not fields:
         return None
 
@@ -66,8 +63,13 @@ def exists_query(apiobj, fields=None, not_exist=False):
     return query
 
 
-def get_schema(apiobj, field, key=None, adapter=AGG_ADAPTER_NAME):
+def get_schema(apiobj, field, key=None, adapter=None):
     """Test utility."""
+    from axonius_api_client.constants.fields import AGG_ADAPTER_NAME
+    from axonius_api_client.exceptions import NotFoundError
+
+    adapter = adapter or AGG_ADAPTER_NAME
+
     schemas = get_schemas(apiobj=apiobj, adapter=adapter)
     try:
         schema = apiobj.fields.get_field_schema(
@@ -89,6 +91,8 @@ def random_string(length):
 
 def get_rows_exist(apiobj, fields=None, max_rows=1, not_exist=False, **kwargs):
     """Test utility."""
+    from axonius_api_client.exceptions import NotFoundError
+
     query = exists_query(apiobj=apiobj, fields=fields, not_exist=not_exist)
     try:
         rows = apiobj.get(fields=fields, max_rows=max_rows, query=query, **kwargs)
@@ -101,8 +105,12 @@ def get_rows_exist(apiobj, fields=None, max_rows=1, not_exist=False, **kwargs):
 
 
 @cached(cache=CACHE)
-def get_schemas(apiobj, adapter=AGG_ADAPTER_NAME):
+def get_schemas(apiobj, adapter=None):
     """Test utility."""
+    from axonius_api_client.constants.fields import AGG_ADAPTER_NAME
+
+    adapter = adapter or AGG_ADAPTER_NAME
+
     return apiobj.fields.get()[adapter]
 
 
@@ -203,6 +211,9 @@ def get_key_creds(request):
 
 def get_auth(request):
     """Test utility."""
+    from axonius_api_client.http import Http
+    from axonius_api_client import auth
+
     http = Http(url=get_url(request), certwarn=False)
 
     obj = auth.ApiKey(http=http, **get_key_creds(request))
@@ -212,6 +223,9 @@ def get_auth(request):
 
 def check_apiobj(authobj, apiobj):
     """Test utility."""
+    from axonius_api_client import auth
+    from axonius_api_client.http import Http
+
     url = authobj._http.url
     authclsname = format(authobj.__class__.__name__)
     assert authclsname in format(apiobj)
@@ -225,6 +239,9 @@ def check_apiobj(authobj, apiobj):
 
 def check_apiobj_children(apiobj, **kwargs):
     """Test utility."""
+    from axonius_api_client import api, auth
+    from axonius_api_client.http import Http
+
     for k, v in kwargs.items():
         attr = getattr(apiobj, k)
         attrclsname = format(attr.__class__.__name__)
@@ -241,6 +258,8 @@ def check_apiobj_children(apiobj, **kwargs):
 
 def check_apiobj_xref(apiobj, **kwargs):
     """Test utility."""
+    from axonius_api_client import api
+
     for k, v in kwargs.items():
         attr = getattr(apiobj, k)
 
@@ -285,6 +304,8 @@ def mock_failure(*args, **kwargs):
 
 def get_mockctx():
     """Test utility."""
+    from axonius_api_client.cli.context import Context
+
     ctx = MockCtx()
     ctx.obj = Context()
     return ctx

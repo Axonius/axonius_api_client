@@ -214,3 +214,37 @@ class CertificateDetails(BaseModel):
     def get_schema_cls() -> Optional[Type[BaseSchema]]:
         """Pass."""
         return CertificateDetailsSchema
+
+
+class CertificateConfigSchema(BaseSchemaJson):
+    """Pass."""
+
+    certificate_verify = marshmallow_jsonapi.fields.Dict(
+        load_default={}, dump_default={}, allow_none=True
+    )
+    mutual_tls = marshmallow_jsonapi.fields.Dict(load_default={}, dump_default={}, allow_none=True)
+    ssl_trust = marshmallow_jsonapi.fields.Dict(load_default={}, dump_default={}, allow_none=True)
+
+    class Meta:
+        """Pass."""
+
+        type_ = "certificate_config_schema"
+
+    @staticmethod
+    def get_model_cls() -> Optional[Type[BaseModel]]:
+        """Pass."""
+        return CertificateConfig
+
+
+@dataclasses.dataclass
+class CertificateConfig(BaseModel):
+    """Pass."""
+
+    certificate_verify: Optional[dict] = dataclasses.field(default_factory=dict)
+    mutual_tls: Optional[dict] = dataclasses.field(default_factory=dict)
+    ssl_trust: Optional[dict] = dataclasses.field(default_factory=dict)
+
+    @staticmethod
+    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+        """Pass."""
+        return CertificateConfigSchema

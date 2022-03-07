@@ -1,9 +1,12 @@
 # -*- coding: utf-8 -*-
 """Parent API for working with system settings."""
 import pathlib
-from typing import Optional, Union
+import warnings
+from typing import List, Optional, Tuple, Union
 
-from ...exceptions import ApiError, NotFoundError
+from ... import cert_human
+from ...constants.api import USE_CA_PATH
+from ...exceptions import ApiError, ApiWarning, NotFoundError
 from ...parsers.config import config_build, config_unchanged, config_unknown, parse_settings
 from ...parsers.tables import tablize
 from ...tools import path_read
@@ -279,9 +282,110 @@ class SettingsGlobal(SettingsMixins):
             check_unchanged=False,
         )
 
+    def ca_enable(self, value: bool) -> dict:
+        """Pass."""
+        settings = self.get_section("ssl_trust_settings")
+        config = settings.get("config", {})
+        config["enabled"] = value
+        self._cert_settings(ssl_trust=config)
+        return self.ca_get()
+
+    @staticmethod
+    def check_cert_is_ca(contents: CONTENT) -> cert_human.Cert:
+        """Pass."""
+        stores = cert_human.Cert.from_content(value=contents)
+        store = stores[0]
+        store.check_is_ca()
+        store.check_expired()
+        return store
+
+    def ca_add_path(self, path: pathlib.Path) -> Tuple[pathlib.Path, List[dict]]:
+        """Pass."""
+        file_path, file_contents = path_read(obj=path, binary=True)
+        return file_path, self.ca_add(name=file_path.name, contents=file_contents)
+
+    def ca_add(self, name: str, contents: CONTENT) -> dict:
+        """Pass."""
+        store = self.check_cert_is_ca(contents=contents)
+
+        settings = self.get_section("ssl_trust_settings")
+        cert_file = self._file_upload(
+            field_name="0",
+            file_name=name,
+            file_content=store.to_pem(with_comments=False),
+            file_content_type="application/x-x509-ca-cert",
+        ).to_dict_file_spec()
+
+        config = settings.get("config", {})
+        ca_files = config.get("ca_files", [])
+        ca_files = [x for x in ca_files if x["filename"] != cert_file["filename"]]
+        ca_files.append(cert_file)
+
+        config["enabled"] = True
+        config["ca_files"] = ca_files
+
+        self._cert_settings(ssl_trust=config)
+        return self.ca_get()
+
+    def cas_to_str(self, config: Optional[dict] = None) -> List[str]:
+        """Pass."""
+        config = config or self.ca_get()
+        ca_files = config.get("ca_files") or []
+        enabled = config.get("enabled", False)
+        return [
+            f"{USE_CA_PATH} is enabled: {enabled}",
+            f"{len(ca_files)} CA Certificates exist",
+            *[f"CA Certificate #{idx +1}: {item}" for idx, item in enumerate(ca_files)],
+        ]
+
+    def ca_remove(self, filename: str) -> dict:
+        """Pass."""
+        settings = self.get_section("ssl_trust_settings")
+        config = settings.get("config", {})
+
+        ca_files = config.get("ca_files") or []
+        filenames = [x["filename"] for x in ca_files]
+        if filename not in filenames:
+            valids = "\n" + "\n".join(self.cas_to_str(ca_files=ca_files))
+            raise NotFoundError(
+                f"CA Certificate with filename of {filename!r} not found, valids:{valids}"
+            )
+
+        config["ca_files"] = [x for x in ca_files if x["filename"] != filename]
+        self._cert_settings(ssl_trust=config)
+        return self.ca_get()
+
+    def ca_get(self, warn: bool = True) -> dict:
+        """Pass."""
+        settings = self.get_section("ssl_trust_settings")
+        config = settings.get("config", {})
+        enabled = config.get("enabled", False)
+
+        if not enabled and warn:
+            warnings.warn(message=f"{USE_CA_PATH} is not enabled", category=ApiWarning)
+
+        return config
+
+    def cert_info(self) -> CertificateDetails:
+        """Get the details for the currently installed SSL cert.
+
+        Returns:
+            CertificateDetails: dataclass model with response from API
+        """
+        return self._cert_info()
+
+    def cert_reset(self) -> List[cert_human.Cert]:
+        """Get the details for the currently installed SSL cert.
+
+        Returns:
+            CertificateDetails: dataclass model with response from API
+        """
+        self._cert_reset()
+        return self.http.get_cert_chain()
+
     def cert_update_path(
         self, cert_file_path: STR_PATH, key_file_path: STR_PATH, **kwargs
-    ) -> CertificateDetails:
+    ) -> List[cert_human.Cert]:
         """Update the SSL cert in instance from cert & key files.
 
         Args:
@@ -294,7 +398,7 @@ class SettingsGlobal(SettingsMixins):
         """
 
         def load_file(path, key_base):
-            file_path, file_contents = path_read(obj=cert_file_path, binary=True)
+            file_path, file_contents = path_read(obj=path, binary=True)
             kwargs[f"{key_base}_file_name"] = file_path.name
             kwargs[f"{key_base}_file_contents"] = file_contents
 
@@ -303,33 +407,15 @@ class SettingsGlobal(SettingsMixins):
 
         return self.cert_update(**kwargs)
 
-    def cert_get_details(self) -> CertificateDetails:
-        """Get the details for the currently installed SSL cert.
-
-        Returns:
-            CertificateDetails: dataclass model with response from API
-        """
-        return self._cert_get_details()
-
-    def cert_reset(self) -> CertificateDetails:
-        """Get the details for the currently installed SSL cert.
-
-        Returns:
-            CertificateDetails: dataclass model with response from API
-        """
-        self._cert_reset()
-        return self.cert_get_details()
-
     def cert_update(
         self,
         cert_file_contents: CONTENT,
         cert_file_name: str,
         key_file_contents: CONTENT,
         key_file_name: str,
-        hostname: str,
-        enabled: bool,
+        host: str,
         passphrase: str = "",
-    ) -> CertificateDetails:
+    ) -> List[cert_human.Cert]:
         """Update the SSL cert in instance from cert & key strings.
 
         Args:
@@ -337,14 +423,16 @@ class SettingsGlobal(SettingsMixins):
             cert_file_name (str): Name of file ``cert_file_contents`` came from
             key_file_contents (CONTENT): Contents of SSL Key
             key_file_name (str): Name of file ``key_file_contents`` came from
-            hostname (str): value supplied as Common Name (CN) in cert
-            enabled (bool): Enable SSL
+            host (str): domain or IP defined in Subject Alternative Names
             passphrase (str, optional): Passphrase for SSL Key, if one defined
         """
+        stores = cert_human.Cert.from_content(value=cert_file_contents)
+        store = stores[0]
+
         cert_file = self._file_upload(
             field_name="cert_file",
             file_name=cert_file_name,
-            file_content=cert_file_contents,
+            file_content=store.to_pem(with_comments=False),
             file_content_type="application/x-x509-ca-cert",
         ).to_dict_file_spec()
         key_file = self._file_upload(
@@ -354,13 +442,68 @@ class SettingsGlobal(SettingsMixins):
             file_content_type="application/octet-stream",
         ).to_dict_file_spec()
         self._cert_update(
-            hostname=hostname,
+            hostname=host,
             passphrase=passphrase,
-            enabled=enabled,
+            enabled=True,
             cert_file=cert_file,
             private_key=key_file,
         )
-        return self.cert_get_details()
+        return self.http.get_cert_chain()
+
+    def csr_get(self, error: bool = True) -> Optional[cert_human.CertRequest]:
+        """Pass."""
+        csr = self._csr_get()
+        if not csr:
+            if error:
+                raise ApiError("No Certificate Signing Request is pending, please create one")
+            return None
+
+        stores = cert_human.CertRequest.from_content(value=csr)
+        store = stores[0]
+        return store
+
+    def csr_create(
+        self,
+        common_name: str,
+        subject_alt_names: Optional[List[str]] = None,
+        country: str = "",
+        state: str = "",
+        locality: str = "",
+        organization: str = "",
+        organizational_unit: str = "",
+        email: str = "",
+        overwrite: bool = False,
+        **kwargs,
+    ) -> cert_human.CertRequest:
+        """Pass."""
+        csr = self.csr_get(error=False)
+        if csr and not overwrite:
+            raise ApiError("Certificate Signing Request is pending and overwrite=False")
+
+        subject_alt_names = subject_alt_names or [common_name]
+        self._csr_create(
+            common_name=common_name,
+            subject_alt_names=";".join(subject_alt_names),
+            country=country,
+            state=state,
+            locality=locality,
+            organization=organization,
+            organizational_unit=organizational_unit,
+            email=email,
+        )
+        return self.csr_get()
+
+    def csr_cancel(self, error: bool = True) -> Optional[cert_human.CertRequest]:
+        """Pass."""
+        csr = self.csr_get(error=error)
+        if csr:
+            self._csr_cancel()
+        return csr
+
+    def _cert_uploaded(self) -> dict:
+        """Pass."""
+        api_endpoint = ApiEndpoints.system_settings.cert_uploaded
+        return api_endpoint.perform_request(http=self.auth.http)
 
     def _cert_update(self, **kwargs) -> bool:
         """Summary.
@@ -384,14 +527,60 @@ class SettingsGlobal(SettingsMixins):
         api_endpoint = ApiEndpoints.system_settings.cert_reset
         return api_endpoint.perform_request(http=self.auth.http)
 
-    def _cert_get_details(self) -> CertificateDetails:
+    def _cert_settings(self, **kwargs) -> BoolValue:
+        """Summary.
+
+        Returns:
+            bool: Description
+        """
+        api_endpoint = ApiEndpoints.system_settings.cert_settings
+        request_obj = api_endpoint.load_request(**kwargs)
+        return api_endpoint.perform_request(http=self.auth.http, request_obj=request_obj)
+
+    def _cert_info(self) -> CertificateDetails:
         """Get the details for the currently installed SSL cert.
 
         Returns:
             CertificateDetails: dataclass model with response from API
         """
-        api_endpoint = ApiEndpoints.system_settings.cert_get_details
+        api_endpoint = ApiEndpoints.system_settings.cert_info
         return api_endpoint.perform_request(http=self.auth.http)
+
+    def _csr_get(self) -> str:
+        """Pass."""
+        api_endpoint = ApiEndpoints.system_settings.csr_get
+        return api_endpoint.perform_request(http=self.auth.http)
+
+    def _csr_cancel(self) -> str:
+        """Pass."""
+        api_endpoint = ApiEndpoints.system_settings.csr_cancel
+        return api_endpoint.perform_request(http=self.auth.http)
+
+    def _csr_create(
+        self,
+        common_name: str,
+        subject_alt_names: str = "",
+        country: str = "",
+        state: str = "",
+        locality: str = "",
+        organization: str = "",
+        organizational_unit: str = "",
+        email: str = "",
+    ) -> BoolValue:
+        """Pass."""
+        api_endpoint = ApiEndpoints.system_settings.csr_create
+        request_obj = {
+            "hostname": common_name,
+            "country": country,
+            "state": state,
+            "location": locality,
+            "organization": organization,
+            "OU": organizational_unit,
+            "email": email,
+            "subject_alt_names": subject_alt_names,
+        }
+        http_args = {"json": request_obj}
+        return api_endpoint.perform_request(http=self.auth.http, http_args=http_args)
 
 
 class SettingsGui(SettingsMixins):

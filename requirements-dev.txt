@@ -1,4 +1,4 @@
-codecov
+# codecov
 pytest
 pytest-cov
 pytest-httpbin

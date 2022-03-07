@@ -9,7 +9,7 @@ HUMAN_KEY_ALIGN: int = 32
 HUMAN_CAP_WORDS: List[str] = ["id", "url", "crl", "sha256", "sha1", "ssl"]
 
 
-def type_str(value: Any, max_len: int = 40, join: Optional[str] = ", ") -> Union[str, List[str]]:
+def type_str(value: Any, max_len: int = 60, join: Optional[str] = ", ") -> Union[str, List[str]]:
     """Pass."""
     length = len(str(value))
     svalue = f"{str(value)[:max_len]}...snip..." if length >= max_len else f"{value}"
@@ -101,7 +101,7 @@ def bytes_to_str(value: Union[str, bytes], strict: bool = True, encoding: str = 
 def bytes_to_hex(value: bytes) -> str:
     """Pass."""
     check_type(value=value, exp=bytes)
-    return " ".join(f"{x:02X}" for x in value)
+    return ":".join(f"{x:02X}" for x in value)
 
 
 def b64_to_hex(value: Union[str, bytes], strict: bool = True) -> str:
@@ -119,7 +119,7 @@ def int_to_hex(value: int) -> str:
     """Pass."""
     check_type(value=value, exp=int)
     value = f"{value:X}".upper()
-    return " ".join([value[i : i + 2] for i in range(0, len(value), 2)])  # noqa: E203
+    return ":".join([value[i : i + 2] for i in range(0, len(value), 2)])  # noqa: E203
 
 
 def str_to_bytes(value: Union[str, bytes], strict: bool = True, encoding: str = "utf-8") -> bytes:
@@ -134,3 +134,20 @@ def str_strip_to_int(value: str) -> Optional[int]:
     check_type(value=value, exp=str)
     digit = "".join([x for x in value if x.isdigit()])
     return int(digit) if digit.isdigit() else None
+
+
+def listify(value: Any, dictkeys: bool = False) -> list:
+    """Force an object into a list."""
+    if isinstance(value, list):
+        return value
+
+    if isinstance(value, tuple):
+        return list(value)
+
+    if value is None:
+        return []
+
+    if isinstance(value, dict) and dictkeys:
+        return list(value)
+
+    return [value]

@@ -7,6 +7,7 @@ from typing import Any, List, Optional, Union
 
 import requests
 
+from . import cert_human
 from .constants.api import TIMEOUT_CONNECT, TIMEOUT_RESPONSE
 from .constants.logs import LOG_LEVEL_HTTP, MAX_BODY_LEN, REQUEST_ATTR_MAP, RESPONSE_ATTR_MAP
 from .exceptions import HttpError
@@ -16,7 +17,7 @@ from .setup_env import get_env_user_agent
 from .tools import coerce_str, join_url, json_log, listify, path_read
 from .version import __version__
 
-InsecureRequestWarning = requests.urllib3.exceptions.InsecureRequestWarning
+cert_human.ssl_capture.inject_into_urllib3()
 
 
 class Http:
@@ -24,7 +25,7 @@ class Http:
 
     def __init__(
         self,
-        url: Union["UrlParser", str],
+        url: Union[UrlParser, str],
         certpath: Optional[Union[str, pathlib.Path]] = None,
         certwarn: bool = True,
         certverify: bool = False,
@@ -59,11 +60,7 @@ class Http:
         """Logger for this object."""
 
         self.LOG_BODY_MAX_LEN = MAX_BODY_LEN
-
-        if isinstance(url, UrlParser):
-            self.URLPARSED: UrlParser = url
-        else:
-            self.URLPARSED: UrlParser = UrlParser(url=url, default_scheme="https")
+        self.URLPARSED: UrlParser = self.parse_url(url=url)
 
         self.url: str = self.URLPARSED.url
         """URL to connect to"""
@@ -132,45 +129,112 @@ class Http:
         self.HISTORY = []
         """:obj:`list` of :obj:`requests.Response`: all responses received."""
 
+        self.CERT_PATH: Optional[Union[str, pathlib.Path]] = certpath
+        self.CERT_VERIFY: bool = certverify
+        self.CERT_WARN: bool = certwarn
+        self.HTTP_HEADERS: dict = kwargs.get("headers") or {}
+
         self.log_request_attrs: Optional[List[str]] = self.LOG_REQUEST_ATTRS
         self.log_response_attrs: Optional[List[str]] = self.LOG_RESPONSE_ATTRS
 
+        self.set_urllib_warnings()
+        self.set_urllib_log()
+        self.new_session()
+
+    def get_cert(self) -> cert_human.Cert:
+        """Pass."""
+        response = self(verify=False)
+        cert = response.raw.captured_cert
+        source = {
+            "url": self.url,
+            "method": f"{self.__class__.__module__}.{self.__class__.__name__}.get_cert",
+        }
+        return cert_human.Cert(cert=cert, source=source)
+
+    def get_cert_chain(self) -> List[cert_human.Cert]:
+        """Pass."""
+        response = self(verify=False)
+        chain = response.raw.captured_chain or [response.raw.captured_cert]
+        source = {
+            "url": self.url,
+            "method": f"{self.__class__.__module__}.{self.__class__.__name__}.get_cert_chain",
+        }
+        return [cert_human.Cert(cert=x, source=source) for x in chain]
+
+    def parse_url(self, url: Union[str, UrlParser]) -> UrlParser:
+        """Pass."""
+        if isinstance(url, UrlParser):
+            ret = url
+            self.LOG.debug(f"Using supplied {ret}")
+        else:
+            ret = UrlParser(url=url, default_scheme="https")
+            self.LOG.debug(f"Parsed {url} into {ret}")
+        return ret
+
+    def new_session(self):
+        """Pass."""
         self.session: requests.Session = requests.Session()
-        """:obj:`requests.Session`: session object to use"""
+        self.set_session_headers()
+        self.set_session_proxies()
+        self.set_session_verify()
+        self.set_session_cert()
 
-        headers = kwargs.get("headers") or {}
+    def set_session_headers(self):
+        """Pass."""
+        self.session.headers.update(self.HTTP_HEADERS)
 
+    def set_session_proxies(self):
+        """Pass."""
         self.session.proxies = {}
         self.session.proxies["https"] = self.HTTPS_PROXY
         self.session.proxies["http"] = self.HTTP_PROXY
-        self.session.headers.update(headers)
 
-        if certpath:  # pragma: no cover
-            path_read(obj=certpath, binary=True)
-            self.session.verify = certpath
+    def set_session_verify(self):
+        """Pass."""
+        if self.CERT_PATH:
+            # TBD: verify cert bundle
+            self.CERT_PATH, _ = path_read(obj=self.CERT_PATH, binary=True)
+            self.LOG.debug(f"Resolved cert verify to {self.CERT_PATH}")
+            self.session.verify = self.CERT_PATH
         else:
-            self.session.verify = certverify
+            self.session.verify = self.CERT_VERIFY
+            self.LOG.debug(f"Resolved cert verify to {self.CERT_VERIFY}")
 
+    def set_session_cert(self):
+        """Pass."""
         if self.CERT_CLIENT_BOTH:
-            path_read(obj=self.CERT_CLIENT_BOTH, binary=True)
+            # TBD: verify cert and key
+            self.CERT_CLIENT_BOTH, _ = path_read(obj=self.CERT_CLIENT_BOTH, binary=True)
+            self.LOG.debug(
+                f"Resolved client cert with both cert and key to {self.CERT_CLIENT_BOTH}"
+            )
             self.session.cert = str(self.CERT_CLIENT_BOTH)
-        elif self.CERT_CLIENT_CERT or self.CERT_CLIENT_KEY:
-            if not all([self.CERT_CLIENT_CERT, self.CERT_CLIENT_KEY]):
-                error = (
-                    "You must supply both a 'cert_client_cert' and 'cert_client_key'"
-                    " or use 'cert_client_both'!"
-                )
-                raise HttpError(error)
 
-            path_read(obj=self.CERT_CLIENT_CERT, binary=True)
-            path_read(obj=self.CERT_CLIENT_KEY, binary=True)
+        if (self.CERT_CLIENT_CERT or self.CERT_CLIENT_KEY) and not (
+            self.CERT_CLIENT_CERT and self.CERT_CLIENT_KEY
+        ):
+            raise HttpError(
+                "Must supply 'cert_client_cert' and 'cert_client_key' or 'cert_client_both'"
+            )
+
+        if self.CERT_CLIENT_CERT and self.CERT_CLIENT_KEY:
+            # TBD: verify cert and key
+            self.CERT_CLIENT_CERT, _ = path_read(obj=self.CERT_CLIENT_CERT, binary=True)
+            self.LOG.debug(f"Resolved client cert with cert only to {self.CERT_CLIENT_CERT}")
+
+            self.CERT_CLIENT_KEY, _ = path_read(obj=self.CERT_CLIENT_KEY, binary=True)
+            self.LOG.debug(f"Resolved client cert with key only to {self.CERT_CLIENT_KEY}")
             self.session.cert = (str(self.CERT_CLIENT_CERT), str(self.CERT_CLIENT_KEY))
 
-        if certwarn is True:
-            warnings.simplefilter("once", InsecureRequestWarning)
-        elif certwarn is False:
-            warnings.simplefilter("ignore", InsecureRequestWarning)
+    def set_urllib_warnings(self):
+        """Pass."""
+        if self.CERT_WARN is True:
+            warnings.simplefilter("once", requests.urllib3.exceptions.InsecureRequestWarning)
+        elif self.CERT_WARN is False:
+            warnings.simplefilter("ignore", requests.urllib3.exceptions.InsecureRequestWarning)
 
+    def set_urllib_log(self):
+        """Pass."""
         urllog = logging.getLogger("urllib3.connectionpool")
         set_log_level(obj=urllog, level=self.LOG_LEVEL_URLLIB)
 
@@ -208,6 +272,9 @@ class Http:
         Returns:
             :obj:`requests.Response`
         """
+        if not hasattr(self, "session") or kwargs.get("session_reset", False) is True:
+            self.new_session()
+
         url = join_url(self.url, path, route)
 
         this_headers = {}

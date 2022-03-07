@@ -2,7 +2,6 @@
 """Models for API requests & responses."""
 import dataclasses
 import logging
-import warnings
 from typing import List, Optional, Type, Union
 
 import dataclasses_json
@@ -10,17 +9,11 @@ import marshmallow
 import marshmallow_jsonapi
 
 from ...constants.general import SIMPLE
-from ...exceptions import (
-    ApiAttributeExtraWarning,
-    ApiAttributeMissingError,
-    ApiAttributeTypeError,
-    ApiError,
-    SchemaError,
-)
+from ...exceptions import ApiAttributeMissingError, ApiAttributeTypeError, ApiError, SchemaError
 from ...http import Http
 from ...tools import coerce_bool, combo_dicts, json_dump, json_load, listify
 
-LOGGER = logging.getLogger(__file__)
+LOGGER = logging.getLogger(__name__)
 
 
 class BaseCommon:
@@ -453,6 +446,5 @@ class BaseModel(dataclasses_json.DataClassJsonMixin, BaseCommon):
     @extra_attributes.setter
     def extra_attributes(self, value: dict):
         if value:
-            msg = f"Extra attributes found:\n{json_dump(value)}"
-            warnings.warn(message=msg, category=ApiAttributeExtraWarning)
+            LOGGER.warning(f"Extra attributes found:\n{json_dump(value)}")
         self._extra_attributes = value

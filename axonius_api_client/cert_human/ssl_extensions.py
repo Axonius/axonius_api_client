@@ -8,12 +8,13 @@ from typing import Any, Generator, List, Optional, Tuple
 
 import asn1crypto.x509
 
-from . import ct_logs
+from .ct_logs import load_ct_logs
 from .enums import HashAlgorithms, SctVersions, SignatureAlgorithms
 from .utils import (
     b64_to_hex,
     bytes_to_b64,
     bytes_to_hex,
+    bytes_to_str,
     check_type,
     get_subcls,
     human_dict,
@@ -24,14 +25,13 @@ from .utils import (
 LOG: logging.Logger = logging.getLogger(__name__)
 
 
-class Extension:
+class SSLExtension:
     """Pass."""
-
-    OBJ: asn1crypto.x509.Extension = None
 
     EXTN_ID: str = ""
     NAME: str = ""
     DOTTED: str = ""
+    BYTES_AS_HEX: bool = True
 
     def __init__(self, ext: asn1crypto.x509.Extension):
         """Pass."""
@@ -47,23 +47,23 @@ class Extension:
         return self.__str__()
 
     @classmethod
-    def load(cls, ext: asn1crypto.x509.Extension) -> "Extension":
+    def load(cls, ext: asn1crypto.x509.Extension, **kwargs) -> "SSLExtension":
         """Pass."""
         check_type(value=ext, exp=asn1crypto.x509.Extension)
         extn_id = ext.native["extn_id"]
-        subcls = get_subcls(Extension)
-        for sub in subcls:
-            if sub.EXTN_ID == extn_id:
-                return sub(ext=ext)
+        dotted = ext.children[0].dotted
+        for subcls in get_subcls(SSLExtension):
+            if subcls.EXTN_ID == extn_id or subcls.DOTTED == dotted:
+                return subcls(ext=ext, **kwargs)
 
-        LOG.getChild(cls.__name__).warning(f"Unmapped extension ID {extn_id}")
-        return cls(ext=ext)
+        LOG.getChild(cls.__name__).warning(f"Unmapped extension ID {extn_id!r} dotted {dotted!r}")
+        return cls(ext=ext, **kwargs)
 
     @classmethod
-    def load_list(cls, exts: List[asn1crypto.x509.Extension]) -> List["Extension"]:
+    def load_list(cls, exts: List[asn1crypto.x509.Extension], **kwargs) -> List["SSLExtension"]:
         """Pass."""
         check_type(value=exts, exp=list)
-        return [cls.load(ext=x) for x in exts]
+        return [cls.load(ext=x, **kwargs) for x in exts]
 
     def to_dict(self) -> dict:
         """Pass."""
@@ -138,13 +138,42 @@ class Extension:
         if isinstance(value, (tuple, list)):
             return [cls.parse_native(value=x) for x in value]
         if isinstance(value, bytes):
-            return bytes_to_hex(value=value)
+            if cls.BYTES_AS_HEX:
+                return bytes_to_hex(value=value)
+            else:
+                return bytes_to_str(value=value, strict=False)
         if isinstance(value, set):
             return list(value)
         return value
 
 
-class AuthorityKeyIdentifier(Extension):
+class CARevocationUrl(SSLExtension):
+    """Pass."""
+
+    EXTN_ID: str = "2.16.840.1.113730.1.4"
+    NAME: str = "Certificate Authority Revocation URL"
+    DOTTED: str = "2.16.840.1.113730.1.4"
+    BYTES_AS_HEX: bool = False
+
+
+class NetscapeCertificateComment(SSLExtension):
+    """Pass."""
+
+    EXTN_ID: str = "2.16.840.1.113730.1.13"
+    NAME: str = "Netscape Certificate Comment"
+    DOTTED: str = "2.16.840.1.113730.1.13"
+    BYTES_AS_HEX: bool = False
+
+
+class NetscapeCertificateType(SSLExtension):
+    """Pass."""
+
+    EXTN_ID: str = "netscape_certificate_type"
+    NAME: str = "Netscape Certificate Type"
+    DOTTED: str = "2.16.840.1.113730.1.1"
+
+
+class AuthorityKeyIdentifier(SSLExtension):
     """Pass."""
 
     EXTN_ID: str = "authority_key_identifier"
@@ -152,7 +181,7 @@ class AuthorityKeyIdentifier(Extension):
     DOTTED: str = "2.5.29.35"
 
 
-class SubjectKeyIdentifier(Extension):
+class SubjectKeyIdentifier(SSLExtension):
     """Pass."""
 
     EXTN_ID: str = "key_identifier"
@@ -160,7 +189,7 @@ class SubjectKeyIdentifier(Extension):
     DOTTED: str = "2.5.29.14"
 
 
-class SubjectAlternativeName(Extension):
+class SubjectAlternativeName(SSLExtension):
     """Pass."""
 
     EXTN_ID: str = "subject_alt_name"
@@ -168,7 +197,7 @@ class SubjectAlternativeName(Extension):
     DOTTED: str = "2.5.29.17"
 
 
-class KeyUsage(Extension):
+class KeyUsage(SSLExtension):
     """Pass."""
 
     EXTN_ID: str = "key_usage"
@@ -176,7 +205,7 @@ class KeyUsage(Extension):
     DOTTED: str = "2.5.29.15"
 
 
-class ExtendedKeyUsage(Extension):
+class ExtendedKeyUsage(SSLExtension):
     """Pass."""
 
     EXTN_ID: str = "extended_key_usage"
@@ -184,7 +213,7 @@ class ExtendedKeyUsage(Extension):
     DOTTED: str = "2.5.29.37"
 
 
-class CRLDistributionPoints(Extension):
+class CRLDistributionPoints(SSLExtension):
     """Pass."""
 
     EXTN_ID: str = "crl_distribution_points"
@@ -192,7 +221,7 @@ class CRLDistributionPoints(Extension):
     DOTTED: str = "2.5.29.31"
 
 
-class CertificatePolicies(Extension):
+class CertificatePolicies(SSLExtension):
     """Pass."""
 
     EXTN_ID: str = "certificate_policies"
@@ -200,7 +229,7 @@ class CertificatePolicies(Extension):
     DOTTED: str = "2.5.29.32"
 
 
-class AuthorityInformationAccess(Extension):
+class AuthorityInformationAccess(SSLExtension):
     """Pass."""
 
     EXTN_ID: str = "authority_information_access"
@@ -208,7 +237,7 @@ class AuthorityInformationAccess(Extension):
     DOTTED: str = "1.3.6.1.5.5.7.1.1"
 
 
-class BasicConstraints(Extension):
+class BasicConstraints(SSLExtension):
     """Pass."""
 
     EXTN_ID: str = "basic_constraints"
@@ -225,7 +254,7 @@ class BasicConstraints(Extension):
         }
 
 
-class SignedCertificateTimestampList(Extension):
+class SignedCertificateTimestampList(SSLExtension):
     """Pass."""
 
     EXTN_ID: str = "signed_certificate_timestamp_list"
@@ -273,15 +302,15 @@ class SctParser:
         """Pass."""
         len_data, data = cls._split_header(data=data)
         return [
-            cls._section_to_model(data=x) for x in cls._split_sections(data=data, len_data=len_data)
+            cls._parse_section(data=x) for x in cls._split_sections(data=data, len_data=len_data)
         ]
 
-    def to_dict(self, refetch: bool = ct_logs.REFETCH, max_days: int = ct_logs.MAX_DAYS) -> dict:
+    def to_dict(self) -> dict:
         """Pass."""
         return {
             "version": self.version,
             "timestamp": self.timestamp,
-            "log_operator": self.get_log_operator(refetch=refetch, max_days=max_days),
+            "log_operator": self.log_operator,
             "log_key_id": self.log_key_id,
             "signature": self.signature,
             "signature_algorithm": self.signature_algorithm,
@@ -326,12 +355,11 @@ class SctParser:
         """Pass."""
         return self.raw_extensions.decode("utf-8", "xmlcharrefreplace")
 
-    def get_log_operator(
-        self, refetch: bool = ct_logs.REFETCH, max_days: int = ct_logs.MAX_DAYS
-    ) -> dict:
+    @property
+    def log_operator(self) -> dict:
         """Pass."""
         lookup = self.log_key_id_base64
-        data = ct_logs.load(refetch=refetch, max_days=max_days)
+        data = load_ct_logs()
         operators: List[dict] = data["operators"]
         for operator in operators:
             logs: List[dict] = operator["logs"]
@@ -347,7 +375,7 @@ class SctParser:
                     return ret
 
         return {
-            "description": f"Unable to find operator for Log Key ID: {lookup!r}",
+            "description": f"Unable to find operator for bas64 Log Key ID: {lookup!r}",
             "log_id": self.log_key_id,
             "key": "",
             "url": "",
@@ -355,7 +383,7 @@ class SctParser:
         }
 
     @classmethod
-    def _section_to_model(cls, data: bytes) -> "SctParser":
+    def _parse_section(cls, data: bytes) -> "SctParser":
         """Pass."""
         packed, data = cls._split_bytes(data, 41)
         raw_version, raw_log_key_id, raw_timestamp = struct.unpack("!B32sQ", packed)

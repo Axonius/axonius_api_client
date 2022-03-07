@@ -130,6 +130,7 @@ class ApiBase(BaseModel):
         return ApiBaseSchema
 
     def to_dict_file_spec(self):
+        """Pass."""
         return {"uuid": self.id, "filename": self.filename}
 
 

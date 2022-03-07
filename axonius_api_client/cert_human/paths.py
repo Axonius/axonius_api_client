@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Tools for working with SSL certificate files."""
+import datetime
 import logging
 import pathlib
 from typing import Any, List, Optional, Tuple, TypeVar, Union
@@ -11,7 +12,9 @@ LOG: logging.Logger = logging.getLogger(__name__)
 PathLike: TypeVar = TypeVar("PathLike", pathlib.Path, str, bytes)
 
 
-def read_bytes(path: PathLike, exts: Optional[List[str]] = None) -> Tuple[pathlib.Path, bytes]:
+def read_bytes(
+    path: PathLike, exts: Optional[List[str]] = None, **kwargs
+) -> Tuple[pathlib.Path, bytes]:
     """Read data from a file as bytes.
 
     Args:
@@ -20,16 +23,18 @@ def read_bytes(path: PathLike, exts: Optional[List[str]] = None) -> Tuple[pathli
     Returns:
         Tuple[pathlib.Path, bytes]: resolved path from value, data from path as bytes
     """
-    path = pathify(path=path, as_file=True, exts=exts)
+    kwargs["as_file"] = True
+    path = pathify(path=path, exts=exts, **kwargs)
     data = path.read_bytes()
     return path, data
 
 
 def find_file_exts(
-    path: PathLike, exts: List[str], error: bool = True
+    path: PathLike, exts: List[str], error: bool = True, **kwargs
 ) -> Tuple[pathlib.Path, List[pathlib.Path]]:
     """Pass."""
-    path = pathify(path=path, as_dir=error)
+    kwargs["as_dir"] = error
+    path = pathify(path=path, **kwargs)
     files = [x for x in path.glob("*") if x.suffix in exts] if path.is_dir() else []
 
     if not files and error:
@@ -39,22 +44,26 @@ def find_file_exts(
 
 
 def write_bytes(
-    path: PathLike, content: Union[str, bytes], strict: bool = True, **kwargs
+    path: PathLike,
+    content: Union[str, bytes],
+    content_strict: bool = True,
+    content_encoding: str = "utf-8",
+    **kwargs,
 ) -> pathlib.Path:
     """Write data to a file."""
-    content = str_to_bytes(value=content, strict=strict)
+    content = str_to_bytes(value=content, strict=content_strict, encoding=content_encoding)
     path = create_file(path=path, **kwargs)
     path.write_bytes(data=content)
     return path
 
 
-def is_existing_file(path: Any) -> bool:
+def is_existing_file(path: Any, **kwargs) -> bool:
     """Check if the supplied value refers to an existing file."""
     if isinstance(path, pathlib.Path) and path.is_file():
         return True
 
     if isinstance(path, (str, bytes)):
-        return pathify(path=path).is_file()
+        return pathify(path=path, **kwargs).is_file()
 
     return False
 
@@ -62,17 +71,11 @@ def is_existing_file(path: Any) -> bool:
 def octify(
     value: Optional[Union[int, str, bytes]],
     allow_empty: bool = False,
-    fallback: Union[Optional[int], Tuple[Optional[int], Optional[str]]] = (None, None),
+    fallback: Tuple[Optional[int], Optional[str]] = (None, None),
     oct_len: int = 5,
     error: bool = True,
 ) -> Tuple[Optional[int], Optional[str]]:
     """Coerce str or bytes into base 8 octal int."""
-
-    def get_fallback():
-        return (
-            fallback if (isinstance(fallback, tuple) and len(fallback) == 2) else (fallback, None)
-        )
-
     str_ex = "like '0700' or '0o700'"
     int_ex = "like 448"
     err = f"Value must be str/bytes {str_ex} or base 8 int {int_ex}, not {type_str(value)}"
@@ -80,7 +83,7 @@ def octify(
     if value is None:
         if not allow_empty:
             raise ValueError(f"{err}\nNone not allowed")
-        return get_fallback()
+        return fallback
 
     try:
         resolved: Union[int, str, bytes] = value
@@ -109,28 +112,28 @@ def octify(
         if error:
             raise
 
-    return get_fallback()
+    return fallback
 
 
 def pathify(
     path: PathLike,
+    path_strict: bool = True,
+    path_encoding: str = "utf-8",
     resolve: bool = True,
     expanduser: bool = True,
     as_file: bool = False,
     as_dir: bool = False,
-    strict: bool = True,
-    encoding: str = "utf-8",
     exts: Optional[List[str]] = None,
 ) -> pathlib.Path:
     """Convert a str into a fully resolved & expanded Path object."""
     check_type(value=path, exp=(str, bytes, pathlib.Path))
 
     if isinstance(path, bytes):
-        path = bytes_to_str(value=path, strict=strict, encoding=encoding)
-
-    if isinstance(path, str):
+        path = bytes_to_str(value=path, strict=path_strict, encoding=path_encoding)
         resolved = pathlib.Path(path.splitlines()[0])
-    else:
+    elif isinstance(path, str):
+        resolved = pathlib.Path(path.splitlines()[0])
+    elif isinstance(path, pathlib.Path):
         resolved = path
 
     if expanduser:
@@ -141,6 +144,7 @@ def pathify(
 
     vstr = f"(supplied {type_str(path)})"
     rstr = f"Resolved path {str(resolved)!r}"
+
     if as_file and not resolved.is_file():
         raise PathNotFoundError(f"{rstr} does not exist as a file {vstr}")
 
@@ -161,6 +165,7 @@ def create_file(
     perm_file: Optional[Union[int, str, bytes]] = "0600",
     perm_parent: Optional[Union[int, str, bytes]] = "0700",
     error: bool = True,
+    **kwargs,
 ) -> pathlib.Path:
     """Create a file at a path.
 
@@ -182,7 +187,7 @@ def create_file(
     Returns:
         pathlib.Path: the resolved path of value
     """
-    resolved = pathify(path=path)
+    resolved = pathify(path=path, **kwargs)
     perm_file_int, perm_file_oct = octify(value=perm_file, allow_empty=True, error=error)
     perm_parent_int, perm_parent_oct = octify(value=perm_parent, allow_empty=True, error=error)
 
@@ -204,11 +209,11 @@ def create_file(
             resolved.touch()
 
         if isinstance(perm_parent_int, int) and resolved.parent.is_dir():
-            LOG.debug(f"{pstr} chmod to {perm_parent_oct}")
+            LOG.debug(f"{pstr} chmod to oct {perm_parent_oct} int {perm_parent_int}")
             resolved.parent.chmod(mode=perm_parent_int)
 
         if isinstance(perm_file_int, int) and resolved.is_file():
-            LOG.debug(f"{rstr} chmod to {perm_file_oct}")
+            LOG.debug(f"{rstr} chmod to oct {perm_file_oct} int {perm_file_int}")
             resolved.chmod(mode=perm_file_int)
 
     except Exception as exc:
@@ -217,3 +222,51 @@ def create_file(
             raise
 
     return resolved
+
+
+class FileInfo:
+    """Pass."""
+
+    def __init__(self, path: PathLike, **kwargs):
+        """Pass."""
+        self.path: pathlib.Path = pathify(path=path, **kwargs)
+
+    def is_modified_days_ago(self, value: Optional[int]) -> bool:
+        """Pass."""
+        mdays = self.modified_days
+        return isinstance(mdays, int) and isinstance(value, int) and mdays >= value
+
+    @property
+    def modified_dt(self) -> Optional[datetime.datetime]:
+        """Pass."""
+        return datetime.datetime.fromtimestamp(self.path.lstat().st_mtime) if self.exists else None
+
+    @property
+    def modified_delta(self) -> Optional[datetime.timedelta]:
+        """Pass."""
+        return (datetime.datetime.now() - self.modified_dt) if self.exists else None
+
+    @property
+    def modified_days(self) -> Optional[int]:
+        """Pass."""
+        return self.modified_delta.days if self.exists else None
+
+    @property
+    def exists(self) -> bool:
+        """Pass."""
+        return self.path.is_file()
+
+    def __str__(self) -> str:
+        """Pass."""
+        info = [
+            f"path={str(self.path)!r}",
+            f"exists={self.exists}",
+            f"modified_dt={str(self.modified_dt)!r}",
+            f"modified_days={self.modified_days}",
+        ]
+        info = ", ".join(info)
+        return f"{self.__class__.__name__}({info})"
+
+    def __repr__(self) -> str:
+        """Pass."""
+        return self.__str__()

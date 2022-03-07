@@ -19,6 +19,15 @@ class Enum(enum.Enum):
         LOG.getChild(cls.__name__).error(f"Unmappable {cls.__name__} value={value!r}")
         return None
 
+    @classmethod
+    def get_value_by_name(cls, value: Any) -> Any:
+        """Pass."""
+        for x in cls:
+            if x.name == value:
+                return x.value
+        LOG.getChild(cls.__name__).error(f"Unmappable {cls.__name__} value={value!r}")
+        return None
+
 
 class SctVersions(Enum):
     """Pass."""
@@ -45,3 +54,19 @@ class HashAlgorithms(Enum):
     SHA256 = 4
     SHA384 = 5
     SHA512 = 6
+
+
+class CertTypes(Enum):
+    """Pass."""
+
+    cert: str = "CERTIFICATE"
+    csr: str = "CERTIFICATE REQUEST"
+
+
+class ChainTypes(Enum):
+    """Pass."""
+
+    server = "server/leaf/end-entity"
+    is_ca = "intermediate/root CA"
+    unknown = "unknown"
+    csr = "signing request"

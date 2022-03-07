@@ -7,6 +7,8 @@ from typing import Generator, List, Union
 
 import OpenSSL
 
+from .convert import x509_to_der
+
 
 def resolve_host(host: str) -> str:
     """Pass."""
@@ -21,10 +23,13 @@ def resolve_host(host: str) -> str:
 def get_cnx(host: str, port: int = 443) -> Generator[OpenSSL.SSL.Connection, None, None]:
     """Context manager to create an OpenSSL wrapped socket."""
     resolve_host(host=host)
+    host = host.encode("utf-8")
+
     context = OpenSSL.SSL.Context(OpenSSL.SSL.TLS_METHOD)
     sock = socket.socket()
+
     cnx = OpenSSL.SSL.Connection(context, sock)
-    cnx.set_tlsext_host_name(host.encode("utf-8"))
+    cnx.set_tlsext_host_name(host)
     cnx.set_connect_state()
     cnx.connect((host, port))
     cnx.do_handshake()
@@ -33,19 +38,6 @@ def get_cnx(host: str, port: int = 443) -> Generator[OpenSSL.SSL.Connection, Non
         yield cnx
     finally:
         cnx.close()
-
-
-def x509_to_der(
-    value: Union[OpenSSL.crypto.X509, List[OpenSSL.crypto.X509]]
-) -> Union[OpenSSL.crypto.X509, List[OpenSSL.crypto.X509]]:
-    """Pass."""
-    if isinstance(value, list):
-        return [x509_to_der(value=x) for x in value]
-
-    if not isinstance(value, OpenSSL.crypto.X509):
-        raise TypeError(f"Supplied value must be type {OpenSSL.crypto.X509}, not {type(value)}")
-
-    return OpenSSL.crypto.dump_certificate(OpenSSL.crypto.FILETYPE_ASN1, value)
 
 
 def get_cert(

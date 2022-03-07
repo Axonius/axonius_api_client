@@ -359,6 +359,15 @@ class SystemSettings(ApiEndpointGroup):
         http_args_required=["files", "data"],
     )
 
+    cert_uploaded: ApiEndpoint = ApiEndpoint(
+        method="get",
+        path="api/V4.0/certificate/global_ssl",
+        request_schema_cls=None,
+        request_model_cls=None,
+        response_schema_cls=None,
+        response_model_cls=None,
+    )
+
     cert_update: ApiEndpoint = ApiEndpoint(
         method="put",
         path="api/V4.0/certificate/global_ssl",
@@ -369,7 +378,7 @@ class SystemSettings(ApiEndpointGroup):
     )
     # PBUG: not modeled (not even anything, just returns "True")
 
-    cert_get_details: ApiEndpoint = ApiEndpoint(
+    cert_info: ApiEndpoint = ApiEndpoint(
         method="get",
         path="api/V4.0/certificate/details",
         request_schema_cls=None,
@@ -387,6 +396,45 @@ class SystemSettings(ApiEndpointGroup):
         response_model_cls=json_api.generic.BoolValue,
     )
     # PBUG: bool value useless to return here, return cert details or something at least
+
+    cert_settings: ApiEndpoint = ApiEndpoint(
+        method="put",
+        path="api/V4.0/certificate/certificate_settings",
+        request_schema_cls=json_api.system_settings.CertificateConfigSchema,
+        request_model_cls=json_api.system_settings.CertificateConfig,
+        response_schema_cls=json_api.generic.BoolValueSchema,
+        response_model_cls=json_api.generic.BoolValue,
+    )
+    # PBUG: dict's not modeled
+    # PBUG: bool value useless
+
+    csr_get: ApiEndpoint = ApiEndpoint(
+        method="get",
+        path="api/V4.0/certificate/csr",
+        request_schema_cls=None,
+        request_model_cls=None,
+        response_schema_cls=None,
+        response_model_cls=None,
+        response_as_text=True,
+    )
+    csr_create: ApiEndpoint = ApiEndpoint(
+        method="put",
+        path="api/V4.0/certificate/csr",
+        request_schema_cls=None,
+        request_model_cls=None,
+        response_schema_cls=json_api.generic.BoolValueSchema,
+        response_model_cls=json_api.generic.BoolValue,
+        http_args_required=["json"],
+    )
+
+    csr_cancel: ApiEndpoint = ApiEndpoint(
+        method="put",
+        path="api/V4.0/certificate/cancel_csr",
+        request_schema_cls=None,
+        request_model_cls=None,
+        response_schema_cls=json_api.generic.BoolValueSchema,
+        response_model_cls=json_api.generic.BoolValue,
+    )
 
 
 @dataclasses.dataclass(repr=False)

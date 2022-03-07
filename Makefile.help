@@ -1,9 +1,9 @@
 # venv
 pip_install_tools       install requirements-pkg.txt into site-packages
-pipenv_install_dev      install requirements-dev.txt into venv
-pipenv_install_lint     install requirements-lint.txt into venv
-pipenv_install_build    install requirements-build.txt into venv
-pipenv_install_docs     install docs/requirements.txt into venv
+pip_install_dev         install requirements-dev.txt into site-packages
+pip_install_lint        install requirements-lint.txt into site-packages
+pip_install_build       install requirements-build.txt into site-packages
+pip_install_docs        install docs/requirements.txt into site-packages
 pipenv_init             build a venv using pipenv
 pipenv_clean            remove the venv built by pipenv
 
