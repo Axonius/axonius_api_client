@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 """Test suite."""
-"""
 import datetime
 import json
 
@@ -132,4 +131,3 @@ class TestCalcRefetch:
 
         refetch = ct_logs.calc_refetch(path=path, modified_days_max=-1)
         assert refetch is True
-"""

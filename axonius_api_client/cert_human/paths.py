@@ -231,10 +231,12 @@ class FileInfo:
         """Pass."""
         self.path: pathlib.Path = pathify(path=path, **kwargs)
 
-    def is_modified_days_ago(self, value: Optional[int]) -> bool:
+    def is_modified_days_ago(self, value: Optional[int]) -> Optional[bool]:
         """Pass."""
-        mdays = self.modified_days
-        return isinstance(mdays, int) and isinstance(value, int) and mdays >= value
+        if not self.exists or not isinstance(value, int):
+            return None
+
+        return self.modified_days >= value
 
     @property
     def modified_dt(self) -> Optional[datetime.datetime]:

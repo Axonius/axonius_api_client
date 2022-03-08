@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 """Test suite."""
-"""
 import OpenSSL
 import pytest
 from axonius_api_client.cert_human import ssl_context
@@ -53,4 +52,3 @@ def test_get_chain_X509():
     assert isinstance(data, list) and data
     for item in data:
         assert isinstance(item, OpenSSL.crypto.X509)
-"""

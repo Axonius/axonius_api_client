@@ -1,8 +1,37 @@
 # -*- coding: utf-8 -*-
 """Test suite."""
-"""
+import datetime
+
 import pytest
 from axonius_api_client.cert_human import paths
+
+
+class TestFileInfo:
+    def test_missing(self, tmp_path):
+        tmp_path.mkdir(exist_ok=True)
+        path = tmp_path / "file.txt"
+        finfo = paths.FileInfo(path=path)
+        assert str(finfo)
+        assert repr(finfo)
+        assert finfo.exists is False
+        assert finfo.modified_days is None
+        assert finfo.modified_delta is None
+        assert finfo.modified_dt is None
+        assert finfo.is_modified_days_ago(value=2) is None
+
+    def test_exists(self, tmp_path):
+        tmp_path.mkdir(exist_ok=True)
+        path = tmp_path / "file.txt"
+        path.touch()
+        finfo = paths.FileInfo(path=path)
+        assert str(finfo)
+        assert repr(finfo)
+        assert finfo.exists is True
+        assert finfo.modified_days == 0
+        assert isinstance(finfo.modified_delta, datetime.timedelta)
+        assert isinstance(finfo.modified_dt, datetime.datetime)
+        assert finfo.is_modified_days_ago(value=2) is False
+        assert finfo.is_modified_days_ago(value=0) is True
 
 
 class TestOctify:
@@ -222,4 +251,3 @@ class TestFindFileExts:
         rpath, data = paths.find_file_exts(path=str(path), exts=[".txt"], error=False)
         assert rpath == path
         assert data == []
-"""

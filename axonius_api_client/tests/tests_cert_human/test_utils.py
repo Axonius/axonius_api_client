@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 """Test suite."""
-"""
 import pytest
 from axonius_api_client.cert_human import utils
 
@@ -137,4 +136,42 @@ class TestBytesToHex:
             b"\x04\xce\xe93\r\x04Sn!a\x1f\xce)\xf0\xf6\xedB\x014\xa6\xd2\xd7\xf0\x82\xce%"
         )
         assert data == exp
-"""
+
+
+class TestListify:
+    """Test listify."""
+
+    def test_dict_keys(self):
+        """Simple test."""
+        x = utils.listify(value={"x": 1, "y": 1}, dictkeys=True)
+        assert x == ["x", "y"]
+
+    def test_dict_notkeys(self):
+        """Simple test."""
+        x = utils.listify(value={"x": 1, "y": 1}, dictkeys=False)
+        assert x == [{"x": 1, "y": 1}]
+
+    def test_tuple(self):
+        """Simple test."""
+        x = utils.listify(value=(1, 2))
+        assert x == [1, 2]
+
+    def test_list(self):
+        """Simple test."""
+        x = utils.listify(value=[1, 2])
+        assert x == [1, 2]
+
+    def test_int(self):
+        """Simple test."""
+        x = utils.listify(value=1)
+        assert x == [1]
+
+    def test_str(self):
+        """Simple test."""
+        x = utils.listify(value="1")
+        assert x == ["1"]
+
+    def test_none(self):
+        """Simple test."""
+        x = utils.listify(value=None)
+        assert x == []
