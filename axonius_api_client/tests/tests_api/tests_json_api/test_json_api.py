@@ -2,6 +2,7 @@ import dataclasses
 
 import marshmallow
 import pytest
+
 from axonius_api_client.api import json_api
 from axonius_api_client.api.json_api.base import BaseModel, BaseSchema, BaseSchemaJson
 from axonius_api_client.exceptions import SchemaError

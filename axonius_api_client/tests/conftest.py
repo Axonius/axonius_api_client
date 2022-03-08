@@ -43,7 +43,7 @@ def pytest_addoption(parser):
 @pytest.fixture(scope="session")
 def api_devices(request):
     """Get a fully loaded Devices API object."""
-    from axonius_api_client.api import Devices, Adapters, Wizard, WizardText, WizardCsv
+    from axonius_api_client.api import Adapters, Devices, Wizard, WizardCsv, WizardText
     from axonius_api_client.api.assets import Fields, Labels, SavedQuery
 
     auth = get_auth(request)
@@ -71,7 +71,7 @@ def api_devices(request):
 @pytest.fixture(scope="session")
 def api_users(request):
     """Get a fully loaded Users API object."""
-    from axonius_api_client.api import Users, Adapters, Wizard, WizardText, WizardCsv
+    from axonius_api_client.api import Adapters, Users, Wizard, WizardCsv, WizardText
     from axonius_api_client.api.assets import Fields, Labels, SavedQuery
 
     auth = get_auth(request)

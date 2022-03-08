@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Test suite."""
 import pytest
+
 from axonius_api_client import cert_human
 
 convert = cert_human.convert

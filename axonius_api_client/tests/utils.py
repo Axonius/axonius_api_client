@@ -211,8 +211,8 @@ def get_key_creds(request):
 
 def get_auth(request):
     """Test utility."""
-    from axonius_api_client.http import Http
     from axonius_api_client import auth
+    from axonius_api_client.http import Http
 
     http = Http(url=get_url(request), certwarn=False)
 

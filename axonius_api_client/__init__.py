@@ -38,7 +38,7 @@ POST_DOTENV: dict = setup_env.get_env_ax()
 """AX.* env variables after loading dotenv."""
 
 try:
-    from . import api, auth, cli, constants, data, exceptions, http, logs, tools, cert_human
+    from . import api, auth, cert_human, cli, constants, data, exceptions, http, logs, tools
     from .api import (
         ActivityLogs,
         Adapters,
