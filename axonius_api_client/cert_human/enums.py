@@ -61,6 +61,7 @@ class CertTypes(Enum):
 
     cert: str = "CERTIFICATE"
     csr: str = "CERTIFICATE REQUEST"
+    pkcs7: str = "PKCS7"
 
 
 class ChainTypes(Enum):

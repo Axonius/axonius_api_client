@@ -12,9 +12,9 @@ from .enums import CertTypes
 from .utils import bytes_to_str, check_type, listify, str_to_bytes
 
 
-def get_der_cert_count(value: bytes) -> int:
+def get_der_cert_count(value: Union[str, bytes]) -> int:
     """Pass."""
-    check_type(value=value, exp=bytes)
+    check_type(value=value, exp=(str, bytes))
     try:
         der_to_asn1_cert(value=value)
     except Exception:
@@ -23,9 +23,9 @@ def get_der_cert_count(value: bytes) -> int:
         return 1
 
 
-def get_der_csr_count(value: bytes) -> int:
+def get_der_csr_count(value: Union[str, bytes]) -> int:
     """Pass."""
-    check_type(value=value, exp=bytes)
+    check_type(value=value, exp=(str, bytes))
     try:
         der_to_asn1_csr(value=value)
     except Exception:
@@ -56,9 +56,9 @@ def get_pem_csr_count(value: Union[str, bytes]) -> int:
         return len(certs)
 
 
-def get_pkcs7_cert_count(value: bytes) -> int:
+def get_pkcs7_cert_count(value: Union[str, bytes]) -> int:
     """Pass."""
-    check_type(value=value, exp=bytes)
+    check_type(value=value, exp=(str, bytes))
     try:
         certs = pkcs7_to_asn1_cert(value=value)
     except Exception:
@@ -112,28 +112,38 @@ def pkcs7_to_asn1_cert(
     value: bytes, source: Optional[str] = None
 ) -> List[asn1crypto.x509.Certificate]:
     """Pass."""
-    obj: asn1crypto.cms.ContentInfo = pkcs7_to_asn1(value=value, source=source)
-    certs: List[asn1crypto.x509.Certificate] = [x.chosen for x in obj["content"]["certificates"]]
+    objs: List[asn1crypto.cms.ContentInfo] = pkcs7_to_asn1(value=value, source=source)
+    certs: List[asn1crypto.x509.Certificate] = []
+    for obj in objs:
+        certs += [x.chosen for x in obj["content"]["certificates"]]
     if not certs:
         raise ValueError(f"No certificates found from {source}")
     return certs
 
 
-def pkcs7_to_asn1(value: bytes, source: Optional[str] = None) -> asn1crypto.cms.ContentInfo:
+def pkcs7_to_asn1(
+    value: Union[str, bytes], source: Optional[str] = None
+) -> List[asn1crypto.cms.ContentInfo]:
     """Pass."""
-    check_type(value=value, exp=bytes)
 
-    try:
-        obj = asn1crypto.cms.ContentInfo.load(encoded_data=value)
-    except Exception as exc:
-        raise ValueError(f"Invalid SSL Certificate in PKCS7 format from {source}: {exc}")
+    def loader(value):
+        try:
+            obj = asn1crypto.cms.ContentInfo.load(encoded_data=value)
+        except Exception as exc:
+            raise ValueError(f"Invalid SSL Certificate in PKCS7 format from {source}: {exc}")
 
-    try:
-        obj.native
-    except Exception as exc:
-        raise ValueError(f"Invalid SSL Certificate in PKCS7 format format from {source}: {exc}")
+        try:
+            obj.native
+        except Exception as exc:
+            raise ValueError(f"Invalid SSL Certificate in PKCS7 format format from {source}: {exc}")
+        return obj
 
-    return obj
+    check_type(value=value, exp=(str, bytes))
+    if detect_is_pem(value=value):
+        objs = pem_to_bytes_types(value=value, types=CertTypes.pkcs7.value, source=source)
+        value = [x["cert"] for x in objs]
+
+    return [loader(x) for x in value] if isinstance(value, list) else [loader(value)]
 
 
 def der_to_asn1_cert(value: bytes, source: Optional[str] = None) -> asn1crypto.x509.Certificate:

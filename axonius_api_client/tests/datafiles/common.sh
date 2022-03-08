@@ -39,3 +39,11 @@ function echo_csr(){
     details=$("${OPENSSL_BIN}" req -in "${file}" -noout -subject)
     echo_ok "${file} details:\n${details}"
 }
+
+function pem_to_pkcs7(){
+    pem="${1}"
+    p7b="${2}"
+    certfile="${3}"
+    "${OPENSSL_BIN}" crl2pkcs7 -nocrl -certfile "${pem}" -out "${p7b}" -certfile "${certfile}"
+    echo_ok "Converted PEM ${pem} to PKCS7 ${p7b}"
+}

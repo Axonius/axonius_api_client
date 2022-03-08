@@ -13,7 +13,7 @@ from ..enums import ChainTypes
 from ..exceptions import InvalidCertError
 from ..paths import PathLike, find_file_exts, pathlib, read_bytes, write_bytes
 from ..ssl_extensions import SSLExtension
-from ..utils import bytes_to_hex, check_type, human_dict, int_to_hex
+from ..utils import bytes_to_hex, check_type, human_dict, int_to_hex, str_to_bytes
 
 LOG: logging.Logger = logging.getLogger(__name__)
 
@@ -312,7 +312,11 @@ class Store(abc.ABC):
             for k, v in self.section_source.items():
                 items.append(f"# source {k}: {v}")
 
-            ret = "\n".join(items) + f"\n{ret}"
+            items = "\n".join(items) + "\n"
+            if isinstance(ret, bytes):
+                items = str_to_bytes(items)
+
+            ret = items + ret
         return ret
 
     def to_pem_file(self, **kwargs) -> pathlib.Path:

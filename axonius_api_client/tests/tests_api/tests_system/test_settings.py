@@ -179,20 +179,20 @@ class TestSettingsGlobal(SettingsBasePublic):
     def get_ca_filenames(config):
         return [x["filename"] for x in config["ca_files"]]
 
-    @pytest.mark.datafiles("certs/server_rsa.crt")
+    @pytest.mark.datafiles("certs/server_rsa.crt.pem")
     def test_file_upload_path(self, apiobj, datafiles):
         datafile = datafiles[0]
         data = apiobj.file_upload_path(field_name="x", path=datafile)
         assert isinstance(data, ApiBase)
         assert data.filename == datafile.name
 
-    @pytest.mark.datafiles("certs/server_rsa.crt")
+    @pytest.mark.datafiles("certs/server_rsa.crt.pem")
     def test_ca_add_non_ca(self, apiobj, datafiles):
         datafile = datafiles[0]
         with pytest.raises(cert_human.exceptions.InvalidCertError):
             apiobj.ca_add_path(path=str(datafile))
 
-    @pytest.mark.datafiles("certs/ca_ec.crt")
+    @pytest.mark.datafiles("certs/ca_ec.crt.pem")
     def test_ca_add_remove_path(self, apiobj, datafiles):
         datafile = datafiles[0]
         path, config = apiobj.ca_add_path(path=str(datafile))
@@ -237,7 +237,7 @@ class TestSettingsGlobal(SettingsBasePublic):
         chain = apiobj.gui_cert_reset(True)
         self.check_chain(chain)
 
-    @pytest.mark.datafiles("certs/server_rsa.crt", "certs/server_rsa.key")
+    @pytest.mark.datafiles("certs/server_rsa.crt.pem", "certs/server_rsa.key.pem")
     def test_gui_cert_update(self, apiobj, datafiles):
         path_cert, path_key = datafiles
         chain = apiobj.gui_cert_update_path(

@@ -1,5 +1,6 @@
 #!/bin/bash -e
 # FUTURE: turn into python
+# ref: https://knowledge.digicert.com/solution/SO26449.html
 SERVER_IP="${1}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CERTS_DIR="${SCRIPT_DIR}/certs"
@@ -34,14 +35,17 @@ SUBJECT_SERVER="${SUBJECT_BASE}/OU=${SUBJECT_SERVER_OU}/CN=${SUBJECT_SERVER_CN}/
 # >>> RSA
 RSA_CA_BASE="${CERTS_DIR}/ca_rsa"
 RSA_CA_KEY_FILE="${RSA_CA_BASE}.key"
-RSA_CA_CERT_FILE="${RSA_CA_BASE}.crt"
+RSA_CA_CERT_FILE="${RSA_CA_BASE}.crt.pem"
 
 RSA_SERVER_BASE="${CERTS_DIR}/server_rsa"
-RSA_SERVER_CSR_FILE="${RSA_SERVER_BASE}.csr"
+RSA_SERVER_CSR_FILE="${RSA_SERVER_BASE}.csr.pem"
 RSA_SERVER_KEY_FILE="${RSA_SERVER_BASE}.key"
-RSA_SERVER_CERT_FILE="${RSA_SERVER_BASE}.crt"
+RSA_SERVER_CERT_FILE="${RSA_SERVER_BASE}.crt.pem"
+RSA_SERVER_CERT_PKCS7_FILE="${RSA_SERVER_BASE}.crt.p7b"
 
 # --- RSA CA
+echo_debug "\n\t\tNow generating RSA certs\n"
+
 echo_debug "Generating ${RSA_CA_KEY_FILE}"
 "${OPENSSL_BIN}" genrsa -out "${RSA_CA_KEY_FILE}" "${ARG_RSA_KEY_SIZE}"
 echo_ok "Generated ${RSA_CA_KEY_FILE}"
@@ -83,17 +87,20 @@ echo_debug "Generating ${RSA_SERVER_CERT_FILE}"
     -days "${ARG_DAYS}" \
     -copy_extensions copy
 echo_cert "${RSA_SERVER_CERT_FILE}"
+pem_to_pkcs7 "${RSA_SERVER_CERT_FILE}" "${RSA_SERVER_CERT_PKCS7_FILE}" "${RSA_CA_CERT_FILE}"
 # <<< RSA
 
 # >>> EC
+echo_debug "\n\t\tNow generating EC certs\n"
 EC_CA_BASE="${CERTS_DIR}/ca_ec"
 EC_CA_KEY_FILE="${EC_CA_BASE}.key"
-EC_CA_CERT_FILE="${EC_CA_BASE}.crt"
+EC_CA_CERT_FILE="${EC_CA_BASE}.crt.pem"
 
 EC_SERVER_BASE="${CERTS_DIR}/server_ec"
-EC_SERVER_CSR_FILE="${EC_SERVER_BASE}.csr"
+EC_SERVER_CSR_FILE="${EC_SERVER_BASE}.csr.pem"
 EC_SERVER_KEY_FILE="${EC_SERVER_BASE}.key"
-EC_SERVER_CERT_FILE="${EC_SERVER_BASE}.crt"
+EC_SERVER_CERT_FILE="${EC_SERVER_BASE}.crt.pem"
+EC_SERVER_CERT_PKCS7_FILE="${EC_SERVER_BASE}.crt.p7b"
 
 # --- EC CA
 echo_debug "Generating ${EC_CA_KEY_FILE}"
@@ -137,4 +144,5 @@ echo_debug "Generating ${EC_SERVER_CERT_FILE}"
     -days "${ARG_DAYS}" \
     -copy_extensions copy
 echo_cert "${EC_SERVER_CERT_FILE}"
+pem_to_pkcs7 "${EC_SERVER_CERT_FILE}" "${EC_SERVER_CERT_PKCS7_FILE}" "${EC_CA_CERT_FILE}"
 # <<< EC
