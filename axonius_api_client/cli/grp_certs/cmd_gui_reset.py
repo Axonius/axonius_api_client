@@ -40,7 +40,7 @@ def cmd(
 
     with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
         confirm_cert_replace(client=client, prompt=prompt)
-        chain = apiobj.cert_reset()
+        chain = apiobj.gui_cert_reset(verified=True)
         leaf_cert, intm_certs = split_leaf(chain=chain)
 
         ctx.obj.echo_ok(f"SSL certificate reset to default: {leaf_cert}")

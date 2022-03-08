@@ -1,12 +1,11 @@
 # -*- coding: utf-8 -*-
 """Parent API for working with system settings."""
 import pathlib
-import warnings
 from typing import Any, List, Optional, Tuple, Union
 
 from ... import cert_human
 from ...constants.api import USE_CA_PATH
-from ...exceptions import ApiError, ApiWarning, NotFoundError
+from ...exceptions import ApiError, NotFoundError
 from ...parsers.config import config_build, config_unchanged, config_unknown, parse_settings
 from ...parsers.tables import tablize
 from ...tools import path_read
@@ -351,7 +350,7 @@ class SettingsGlobal(SettingsMixins):
         ca_files = config.get("ca_files") or []
         filenames = [x["filename"] for x in ca_files]
         if filename not in filenames:
-            valids = "\n" + "\n".join(self.cas_to_str(ca_files=ca_files))
+            valids = "\n" + "\n".join(self.cas_to_str(config=config))
             raise NotFoundError(
                 f"CA Certificate with filename of {filename!r} not found, valids:{valids}"
             )
@@ -360,35 +359,34 @@ class SettingsGlobal(SettingsMixins):
         self._cert_settings(ssl_trust=config)
         return self.ca_get()
 
-    def ca_get(self, warn: bool = True) -> dict:
+    def ca_get(self) -> dict:
         """Pass."""
         settings = self.get_section("ssl_trust_settings")
         config = settings.get("config", {})
-        enabled = config.get("enabled", False)
-
-        if not enabled and warn:
-            warnings.warn(message=f"{USE_CA_PATH} is not enabled", category=ApiWarning)
-
         return config
 
-    def cert_info(self) -> CertificateDetails:
+    def gui_cert_info(self) -> CertificateDetails:
         """Get the details for the currently installed SSL cert.
 
         Returns:
             CertificateDetails: dataclass model with response from API
         """
-        return self._cert_info()
+        return self._gui_cert_info()
 
-    def cert_reset(self) -> List[cert_human.Cert]:
+    def gui_cert_reset(self, verified: bool = False) -> List[cert_human.Cert]:
         """Get the details for the currently installed SSL cert.
 
         Returns:
             CertificateDetails: dataclass model with response from API
         """
-        self._cert_reset()
+        if not verified:
+            raise ApiError("Dangerous command, will replace GUI cert! Must supply verified=True")
+
+        self._gui_cert_reset()
+        self.http.session.verify = False
         return self.http.get_cert_chain()
 
-    def cert_update_path(
+    def gui_cert_update_path(
         self, cert_file_path: STR_PATH, key_file_path: STR_PATH, **kwargs
     ) -> List[cert_human.Cert]:
         """Update the SSL cert in instance from cert & key files.
@@ -410,9 +408,9 @@ class SettingsGlobal(SettingsMixins):
         load_file(path=cert_file_path, key_base="cert")
         load_file(path=key_file_path, key_base="key")
 
-        return self.cert_update(**kwargs)
+        return self.gui_cert_update(**kwargs)
 
-    def cert_update(
+    def gui_cert_update(
         self,
         cert_file_contents: CONTENT,
         cert_file_name: str,
@@ -446,13 +444,14 @@ class SettingsGlobal(SettingsMixins):
             file_content=key_file_contents,
             file_content_type="application/octet-stream",
         ).to_dict_file_spec()
-        self._cert_update(
+        self._gui_cert_update(
             hostname=host,
             passphrase=passphrase,
             enabled=True,
             cert_file=cert_file,
             private_key=key_file,
         )
+        self.http.session.verify = False
         return self.http.get_cert_chain()
 
     def csr_get(self, error: bool = True) -> Optional[cert_human.CertRequest]:
@@ -510,7 +509,7 @@ class SettingsGlobal(SettingsMixins):
         api_endpoint = ApiEndpoints.system_settings.cert_uploaded
         return api_endpoint.perform_request(http=self.auth.http)
 
-    def _cert_update(self, **kwargs) -> bool:
+    def _gui_cert_update(self, **kwargs) -> bool:
         """Summary.
 
         Args:
@@ -519,17 +518,17 @@ class SettingsGlobal(SettingsMixins):
         Returns:
             bool: Description
         """
-        api_endpoint = ApiEndpoints.system_settings.cert_update
+        api_endpoint = ApiEndpoints.system_settings.gui_cert_update
         request_obj = api_endpoint.load_request(**kwargs)
         return api_endpoint.perform_request(http=self.auth.http, request_obj=request_obj)
 
-    def _cert_reset(self) -> BoolValue:
+    def _gui_cert_reset(self) -> BoolValue:
         """Summary.
 
         Returns:
             bool: Description
         """
-        api_endpoint = ApiEndpoints.system_settings.cert_reset
+        api_endpoint = ApiEndpoints.system_settings.gui_cert_reset
         return api_endpoint.perform_request(http=self.auth.http)
 
     def _cert_settings(self, **kwargs) -> BoolValue:
@@ -542,13 +541,13 @@ class SettingsGlobal(SettingsMixins):
         request_obj = api_endpoint.load_request(**kwargs)
         return api_endpoint.perform_request(http=self.auth.http, request_obj=request_obj)
 
-    def _cert_info(self) -> CertificateDetails:
+    def _gui_cert_info(self) -> CertificateDetails:
         """Get the details for the currently installed SSL cert.
 
         Returns:
             CertificateDetails: dataclass model with response from API
         """
-        api_endpoint = ApiEndpoints.system_settings.cert_info
+        api_endpoint = ApiEndpoints.system_settings.gui_cert_info
         return api_endpoint.perform_request(http=self.auth.http)
 
     def _csr_get(self) -> str:

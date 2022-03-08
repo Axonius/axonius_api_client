@@ -368,7 +368,7 @@ class SystemSettings(ApiEndpointGroup):
         response_model_cls=None,
     )
 
-    cert_update: ApiEndpoint = ApiEndpoint(
+    gui_cert_update: ApiEndpoint = ApiEndpoint(
         method="put",
         path="api/V4.0/certificate/global_ssl",
         request_schema_cls=None,
@@ -378,7 +378,7 @@ class SystemSettings(ApiEndpointGroup):
     )
     # PBUG: not modeled (not even anything, just returns "True")
 
-    cert_info: ApiEndpoint = ApiEndpoint(
+    gui_cert_info: ApiEndpoint = ApiEndpoint(
         method="get",
         path="api/V4.0/certificate/details",
         request_schema_cls=None,
@@ -387,7 +387,7 @@ class SystemSettings(ApiEndpointGroup):
         response_model_cls=json_api.system_settings.CertificateDetails,
     )
 
-    cert_reset: ApiEndpoint = ApiEndpoint(
+    gui_cert_reset: ApiEndpoint = ApiEndpoint(
         method="put",
         path="api/V4.0/certificate/reset_to_defaults",
         request_schema_cls=None,

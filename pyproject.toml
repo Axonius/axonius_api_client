@@ -25,5 +25,5 @@ filterwarnings = [
 
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
-    "use_datafile: load a datafile"
+    "datafiles: load a set of datafiles"
 ]

@@ -138,7 +138,7 @@ class CertRequest(Store):
 
     # ABC
     @property
-    def valid_hosts(self) -> List[str]:
+    def sans(self) -> List[str]:
         """Get the subject alternative names for this cert."""
         ext = self.extensions_by_id.get("subject_alt_name")
         return ext.value if isinstance(ext, SSLExtension) else []

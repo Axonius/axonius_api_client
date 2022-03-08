@@ -344,20 +344,32 @@ def api_openapi(request):
 
 
 @pytest.fixture
-def datafile(request):
+def datafiles(request):
     """Pass."""
+
+    def get_datafile(filename):
+        path = pathlib.Path(__file__).parent / "datafiles" / filename
+        if not path.is_file():
+            msg = f"datafile {filename!r} not found at path {path}"
+            if skip_if_missing:
+                pytest.skip(msg)
+            else:
+                raise Exception(msg)
+        return path
+
     markers = {k.name: k for k in request.node.iter_markers()}
     found = f"found markers {list(markers)}"
-    example = 'like @pytest.mark.use_datafile("file.txt")'
-    if "use_datafile" not in markers:
-        raise ValueError(f"use_datafile marker must exist {example} ({found})")
-    marker = markers["use_datafile"]
+    example = 'like @pytest.mark.datafiles("file.txt")'
+    if "datafiles" not in markers:
+        raise ValueError(f"datafiles marker must exist {example} ({found})")
 
-    if not marker.args:
-        raise ValueError("use_datafile marker needs a file to load {example} ({found})")
+    marker = markers["datafiles"]
+    filenames = marker.args
+    kwargs = marker.kwargs
 
-    filename = marker.args[0]
-    path = pathlib.Path(__file__).parent / "datafiles" / filename
-    if not path.is_file():
-        pytest.skip(f"use_datafile {filename!r} not found at path {path}")
-    return path
+    skip_if_missing = kwargs.get("skip_if_missing", False)
+    if not filenames:
+        raise ValueError("datafiles marker needs a file to load {example} ({found})")
+
+    paths = [get_datafile(x) for x in filenames]
+    return paths

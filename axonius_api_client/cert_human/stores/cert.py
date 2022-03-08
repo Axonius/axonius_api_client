@@ -201,7 +201,7 @@ class Cert(Store):
 
     # ABC
     @property
-    def valid_hosts(self) -> List[str]:
+    def sans(self) -> List[str]:
         """Get the subject alternative names for this cert."""
         return self.ASN1.valid_domains + self.ASN1.valid_ips
 

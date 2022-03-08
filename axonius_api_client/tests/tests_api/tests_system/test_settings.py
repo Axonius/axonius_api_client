@@ -5,8 +5,9 @@
 # import subprocess
 
 import pytest
-
-# from axonius_api_client.api.json_api.system_settings import CertificateDetails
+from axonius_api_client import cert_human
+from axonius_api_client.api.json_api.generic import ApiBase
+from axonius_api_client.api.json_api.system_settings import CertificateDetails
 from axonius_api_client.exceptions import ApiError, NotFoundError
 
 GUI_SECTION_WITH_SUBS = "system_settings"
@@ -163,50 +164,121 @@ class TestSettingsGlobal(SettingsBasePublic):
     def apiobj(self, api_settings_global):
         return api_settings_global
 
-    # XXX
-    """
-    def test_ssl_update_path(self, apiobj, common_name="axonius"):
-        subprocess.call(
-            [
-                "openssl",
-                "req",
-                "-x509",
-                "-nodes",
-                "-days",
-                "365",
-                "-newkey",
-                "rsa:2048",
-                "-subj",
-                f"/C=US/ST=New York/L=New York City/O=Axonius, Inc/OU=axonius/CN={common_name}/emailAddress=support@axonius.com",  # noqa: E501
-                # "-addext",
-                # "subjectAltName = DNS:axonius",
-                "-keyout",
-                "axonius.key",
-                "-out",
-                "axonius.crt",
-            ]
+    @staticmethod
+    def check_ca_config(config):
+        assert isinstance(config, dict)
+        assert isinstance(config["ca_files"], list)
+        assert all([isinstance(x, dict) for x in config["ca_files"]])
+
+    @staticmethod
+    def check_chain(chain):
+        assert isinstance(chain, list) and chain
+        assert all([isinstance(x, cert_human.Cert) for x in chain])
+
+    @staticmethod
+    def get_ca_filenames(config):
+        return [x["filename"] for x in config["ca_files"]]
+
+    @pytest.mark.datafiles("certs/server_rsa.crt")
+    def test_file_upload_path(self, apiobj, datafiles):
+        datafile = datafiles[0]
+        data = apiobj.file_upload_path(field_name="x", path=datafile)
+        assert isinstance(data, ApiBase)
+        assert data.filename == datafile.name
+
+    @pytest.mark.datafiles("certs/server_rsa.crt")
+    def test_ca_add_non_ca(self, apiobj, datafiles):
+        datafile = datafiles[0]
+        with pytest.raises(cert_human.exceptions.InvalidCertError):
+            apiobj.ca_add_path(path=str(datafile))
+
+    @pytest.mark.datafiles("certs/ca_ec.crt")
+    def test_ca_add_remove_path(self, apiobj, datafiles):
+        datafile = datafiles[0]
+        path, config = apiobj.ca_add_path(path=str(datafile))
+        self.check_ca_config(config)
+        assert path == datafile
+        assert datafile.name in self.get_ca_filenames(config)
+        assert config["enabled"] is True
+
+        ca_strs = apiobj.cas_to_str(config)
+        assert isinstance(ca_strs, list) and ca_strs
+        assert all([isinstance(x, str) for x in ca_strs])
+        assert "is enabled: True" in ca_strs[0]
+
+        config = apiobj.ca_remove(filename=path.name)
+        self.check_ca_config(config)
+        assert datafile.name not in self.get_ca_filenames(config)
+
+    def test_ca_remove_not_found(self, apiobj):
+        with pytest.raises(NotFoundError):
+            apiobj.ca_remove(filename="badwolf_sney")
+
+    def test_ca_enable_true(self, apiobj):
+        config = apiobj.ca_enable(True)
+        self.check_ca_config(config)
+        assert config["enabled"] is True
+
+    def test_ca_enable_false(self, apiobj):
+        config = apiobj.ca_enable(False)
+        self.check_ca_config(config)
+        assert config["enabled"] is False
+
+    def test_gui_cert_info(self, apiobj):
+        data = apiobj.gui_cert_info()
+        assert isinstance(data, CertificateDetails)
+        assert "Issued To: " in str(data)
+
+    def test_gui_cert_reset_false(self, apiobj):
+        with pytest.raises(ApiError):
+            apiobj.gui_cert_reset()
+
+    def test_gui_cert_reset_true(self, apiobj):
+        chain = apiobj.gui_cert_reset(True)
+        self.check_chain(chain)
+
+    @pytest.mark.datafiles("certs/server_rsa.crt", "certs/server_rsa.key")
+    def test_gui_cert_update(self, apiobj, datafiles):
+        path_cert, path_key = datafiles
+        chain = apiobj.gui_cert_update_path(
+            cert_file_path=path_cert, key_file_path=path_key, host="axonius"
         )
+        self.check_chain(chain)
 
-        result = apiobj.ssl_update_path(
-            cert_file_path="axonius.crt",
-            key_file_path="axonius.key",
-            hostname=common_name,
-            enabled=True,
-            passphrase="",
-        )
+        cert_uploaded = apiobj._cert_uploaded()
+        assert isinstance(cert_uploaded, dict)
+        assert cert_uploaded["enabled"] is True
 
-        if os.path.exists("axonius.crt"):
-            os.remove("axonius.crt")
-        if os.path.exists("axonius.key"):
-            os.remove("axonius.key")
+        chain = apiobj.gui_cert_reset(True)
+        self.check_chain(chain)
 
-        assert result
+    def test_csr_cancel(self, apiobj):
+        current_csr = apiobj.csr_get(error=False)
+        data = apiobj.csr_cancel(error=False)
+        if current_csr is None:
+            assert data is None
+        else:
+            assert isinstance(data, cert_human.CertRequest)
 
-    def test_ssl_cert_details(self, apiobj):
-        result = apiobj.ssl_certificate_details()
-        assert isinstance(result, CertificateDetails)
-        assert "sha1_fingerprint" in result.to_dict()
-    """
+        with pytest.raises(ApiError):
+            apiobj.csr_cancel(error=True)
+
+    def test_csr_create(self, apiobj):
+        cname = "axonius_csr.com"
+        csr = apiobj.csr_create(common_name=cname, overwrite=True)
+        assert isinstance(csr, cert_human.CertRequest)
+        assert csr.section_subject["common_name"] == cname
+
+        with pytest.raises(ApiError):
+            apiobj.csr_create(common_name=cname, overwrite=False)
+
+        csr_get = apiobj.csr_get()
+        assert isinstance(csr_get, cert_human.CertRequest)
+        assert csr_get.section_subject["common_name"] == cname
+
+        csr_cancel = apiobj.csr_cancel()
+        assert isinstance(csr_cancel, cert_human.CertRequest)
+        assert csr_cancel.section_subject["common_name"] == cname
 
     def test_configure_destroy(self, apiobj):
         ret = apiobj.configure_destroy(enabled=True, destroy=True, reset=True)

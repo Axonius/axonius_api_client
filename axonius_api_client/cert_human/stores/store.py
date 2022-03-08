@@ -3,33 +3,19 @@
 import abc
 import datetime
 import logging
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import asn1crypto.algos
 import asn1crypto.keys
 
 from ..convert import asn1_to_der, der_to_pem, pem_to_bytes_types
 from ..enums import ChainTypes
-from ..exceptions import CertHumanError
+from ..exceptions import InvalidCertError
 from ..paths import PathLike, find_file_exts, pathlib, read_bytes, write_bytes
 from ..ssl_extensions import SSLExtension
 from ..utils import bytes_to_hex, check_type, human_dict, int_to_hex
 
 LOG: logging.Logger = logging.getLogger(__name__)
-# TBD: look into storing metadata in headers (source/date/etc)
-
-
-class InvalidCertError(CertHumanError):
-    """Pass."""
-
-    def __init__(self, reason: str, store: "Store"):
-        """Pass."""
-        self.reason: str = reason
-        self.store: Store = store
-
-        items = [f"Invalid Certificate: {store}", f"Invalid Certificate reason: {reason}"]
-        msgs = [*items, "", store.to_str(), "", *items]
-        super().__init__("\n".join(msgs))
 
 
 class Store(abc.ABC):
@@ -81,7 +67,7 @@ class Store(abc.ABC):
 
     @property
     @abc.abstractmethod
-    def valid_hosts(self) -> List[str]:
+    def sans(self) -> List[str]:
         """Get the subject alternative names for this cert."""
         raise NotImplementedError()
 
@@ -96,7 +82,7 @@ class Store(abc.ABC):
     def check_sans(self, error: bool = True) -> bool:
         """Pass."""
         return self._check(
-            check=bool(self.valid_hosts), reason="has no Subject Alternative Names", error=error
+            check=bool(self.sans), reason="has no Subject Alternative Names", error=error
         )
 
     def check_is_ca(self, error: bool = True) -> bool:
@@ -218,7 +204,7 @@ class Store(abc.ABC):
         return {
             "type": self.CERT_TYPE,
             "version": self.version,
-            "valid_hosts": self.valid_hosts,
+            "subject_alternative_names": self.sans,
             "is_certificate_authority": self.is_certificate_authority,
         }
 
@@ -247,7 +233,9 @@ class Store(abc.ABC):
         """Pass."""
         return self._to_str_short(obj=self.section_subject)
 
-    def is_valid_host(self, host: str, error: bool = True) -> bool:
+    def is_valid_host(
+        self, host: str, and_cn: bool = True, error: bool = True
+    ) -> Tuple[bool, List[str]]:
         """Check if a given domain or IP is valid for this cert.
 
         Args:
@@ -260,18 +248,25 @@ class Store(abc.ABC):
         Raises:
             ValueError: If the supplied host is not valid and error is True
         """
-        if not self.valid_hosts and error:
+        valid_hosts = self.get_valid_hosts(and_cn=and_cn)
+        if not valid_hosts and error:
             raise ValueError("No Subject Alternative Names defined for this certificate")
 
-        is_valid = host in self.valid_hosts
+        is_valid = host in valid_hosts
+
         if not is_valid and error:
             msgs = [
                 f"Host {host!r} is not valid for this certificate",
                 "Valid hosts:",
-                *self.valid_hosts,
+                *valid_hosts,
             ]
             raise ValueError("\n".join(msgs))
-        return is_valid
+        return is_valid, valid_hosts
+
+    def get_valid_hosts(self, and_cn: bool = True) -> List[str]:
+        """Pass."""
+        cname = self.section_subject["common_name"]
+        return [cname] if and_cn else [] + self.sans
 
     @classmethod
     def from_pem(
@@ -295,10 +290,10 @@ class Store(abc.ABC):
         return cls.from_content(value=data, source=source)
 
     @classmethod
-    def from_directory(cls, path: PathLike) -> Dict[pathlib.Path, List["Store"]]:
+    def from_directory(cls, path: PathLike) -> Dict[str, List["Store"]]:
         """Pass."""
         path, files = find_file_exts(path=path, exts=cls.get_file_exts(), error=True)
-        return {x: cls.from_file(path=x) for x in files}
+        return {x.name: cls.from_file(path=x) for x in files}
 
     def to_pem(self, as_str: bool = False, with_comments: bool = True) -> Union[str, bytes]:
         """Get the certificate in PEM format (base64 encoded DER)."""
@@ -306,6 +301,7 @@ class Store(abc.ABC):
             value=self.to_der(), cert_type=self.CERT_TYPE, headers=self.CERT_HEADERS, as_str=as_str
         )
         if with_comments:
+            # TBD: look into storing in headers instead of comments
             items = [
                 f"# date exported: {datetime.datetime.utcnow().isoformat()}",
                 f"# subject: {self.subject_short}",

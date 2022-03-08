@@ -15,7 +15,7 @@ def cmd(ctx, url, key, secret):
     apiobj = client.settings_global
 
     with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
-        data = apiobj.cert_info()
+        data = apiobj.gui_cert_info()
 
     click.secho(f"{data}")
     ctx.exit(0)

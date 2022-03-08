@@ -87,14 +87,12 @@ def cmd(
         leaf_cert, _ = split_leaf(chain=chain)
 
         input_file = leaf_cert.SOURCE["path"]
-        leaf_cert.is_valid_host(host=host)
-        ctx.obj.echo_ok(
-            f"Host {host!r} is valid for certificate, is one of: {leaf_cert.valid_hosts}"
-        )
+        _, valid_hosts = leaf_cert.is_valid_host(host=host)
+        ctx.obj.echo_ok(f"Host {host!r} is valid for certificate, is one of: {valid_hosts}")
 
         confirm_cert(cert=leaf_cert, prompt=prompt)
         ctx.obj.echo_ok(f"Uploading new certificate from {input_file}")
-        chain = apiobj.cert_update_path(
+        chain = apiobj.gui_cert_update_path(
             cert_file_path=cert_file_path,
             key_file_path=key_file_path,
             host=host,
@@ -103,5 +101,4 @@ def cmd(
         ctx.obj.echo_ok(f"Successfully uploaded new certificate from {input_file}")
         split_leaf(chain=chain)
         handle_update_env(update_env=update_env, export_file=input_file)
-
     ctx.exit(0)

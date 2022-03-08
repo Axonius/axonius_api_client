@@ -5,7 +5,6 @@ import sys
 
 import pytest
 import requests
-
 from axonius_api_client.exceptions import HttpError
 from axonius_api_client.http import Http
 from axonius_api_client.parsers.url_parser import UrlParser
@@ -155,8 +154,6 @@ class TestHttp:
 
         http()
 
-        assert len(caplog.records) == 1
-
         entries = ["REQUEST ATTRS:.*{}.*headers".format(http.url)]
         log_check(caplog, entries)
 
@@ -170,7 +167,8 @@ class TestHttp:
 
         http()
 
-        assert not caplog.records
+        entries = ["REQUEST ATTRS:"]
+        log_check(caplog, entries, exists=False)
 
     def test_log_resp_attrs_true(self, request, caplog):
         """Test verbose logging of response attrs when log_response_attrs=True."""
@@ -187,8 +185,6 @@ class TestHttp:
 
         http()
 
-        assert len(caplog.records) == 1
-
         entries = ["RESPONSE ATTRS:.*{}.*headers".format(http.url)]
         log_check(caplog, entries)
 
@@ -202,7 +198,8 @@ class TestHttp:
 
         http()
 
-        assert caplog.records
+        entries = ["RESPONSE ATTRS:"]
+        log_check(caplog, entries)
 
     def test_log_response_attrs_none(self, request, caplog):
         """Test no logging of response attrs when log_response_attrs=None."""
@@ -214,7 +211,8 @@ class TestHttp:
 
         http()
 
-        assert not caplog.records
+        entries = ["RESPONSE ATTRS:.*"]
+        log_check(caplog, entries, exists=False)
 
     def test_log_resp_body_true(self, request, caplog):
         """Test logging of response body when log_response_body=True."""
@@ -225,8 +223,6 @@ class TestHttp:
         http = Http(url=ax_url, log_response_body=True, certwarn=False, log_level="debug")
 
         http()
-
-        assert len(caplog.records) == 1
 
         entries = ["RESPONSE BODY:.*"]
         log_check(caplog, entries)
@@ -241,7 +237,8 @@ class TestHttp:
 
         http()
 
-        assert not caplog.records
+        entries = ["RESPONSE BODY:.*"]
+        log_check(caplog, entries, exists=False)
 
     def test_log_req_body_true(self, request, caplog):
         """Test logging of request body when log_request_body=True."""
@@ -252,8 +249,6 @@ class TestHttp:
         http = Http(url=ax_url, log_request_body=True, certwarn=False, log_level="debug")
 
         http()
-
-        assert len(caplog.records) == 1
 
         entries = ["REQUEST BODY:.*"]
         log_check(caplog, entries)
@@ -268,4 +263,5 @@ class TestHttp:
 
         http()
 
-        assert not caplog.records
+        entries = ["REQUEST BODY:.*"]
+        log_check(caplog, entries, exists=False)
