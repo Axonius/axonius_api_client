@@ -17,6 +17,7 @@ from axonius_api_client.tools import (
     calc_percent,
     check_empty,
     check_gui_page_size,
+    check_path_is_not_dir,
     check_type,
     coerce_bool,
     coerce_int,
@@ -28,17 +29,24 @@ from axonius_api_client.tools import (
     dt_days_left,
     dt_min_ago,
     dt_now,
+    dt_now_file,
     dt_parse,
     dt_parse_tmpl,
     dt_within_min,
+    echo_debug,
     echo_error,
     echo_ok,
     echo_warn,
+    get_backup_filename,
+    get_backup_path,
+    get_cls_path,
     get_path,
     get_raw_version,
     get_type_str,
     grouper,
+    is_email,
     is_int,
+    is_str,
     is_url,
     join_kv,
     join_url,
@@ -51,6 +59,8 @@ from axonius_api_client.tools import (
     parse_int_min_max,
     parse_ip_address,
     parse_ip_network,
+    path_backup_file,
+    path_create_parent_dir,
     path_read,
     path_write,
     pathlib,
@@ -69,111 +79,253 @@ BOM_BYTES = codecs.BOM_UTF8
 BOM_STR = BOM_BYTES.decode()
 
 
-def test_coerce_str():
-    assert coerce_str(value=b"") == ""
-    assert coerce_str(value=" x ") == "x"
-    assert coerce_str(value=" xxxxxx ", trim=4).startswith("xxxx\n")
-    assert coerce_str(value=None) == ""
-    assert coerce_str(value=2) == "2"
+class TestIsStr:
+    def test_true(self):
+        assert is_str(value="xxx") is True
+
+    def test_empty(self):
+        assert is_str(value="") is False
+
+    def test_false(self):
+        assert is_str(value=111) is False
 
 
-def test_dt_days_left():
-    assert dt_days_left(datetime.utcnow() + timedelta(days=100)) == 100
+class TestIsEmail:
+    def test_true(self):
+        assert is_email(value="jim@axonius.com") is True
+
+    def test_false(self):
+        assert is_email(value="xxx") is False
 
 
-def test_kv_dump():
-    assert kv_dump({"k": "v", "a": "b"}) == "\n  k: v\n  a: b"
+class TestCoerceStr:
+    @pytest.mark.parametrize(
+        "value,exp",
+        [
+            [b"", ""],
+            [" x ", "x"],
+            [None, ""],
+            [2, "2"],
+        ],
+    )
+    def test_valids(self, value, exp):
+        assert coerce_str(value=value) == exp
+
+    def test_trim(self):
+        value = " xxxxxx "
+        exp = "xxxx\n"
+        assert coerce_str(value=value, trim=4).startswith(exp)
+
+    def test_trim_lines(self):
+        value = "\n".join(["1", "2", "3"])
+        exp = "1\n2\nTrimmed 3 lines down to 2"
+        ret = coerce_str(value=value, trim=2, trim_lines=2)
+        assert ret == exp
 
 
-def test_bom_strip_str():
-    assert bom_strip(content=f" {BOM_STR}test") == "test"
+class TestDtDaysLeft:
+    def test_valid(self):
+        assert dt_days_left(datetime.utcnow() + timedelta(days=100)) == 100
 
 
-def test_bom_strip_bytes():
-    assert bom_strip(content=b" " + BOM_BYTES + b"test") == b"test"
+class TestKvDump:
+    def test_valid(self):
+        assert kv_dump({"k": "v", "a": "b"}) == "\n  k: v\n  a: b"
 
 
-@pytest.mark.parametrize(
-    "value,exp",
-    [
-        [{}, ["", "-----"]],
-        [{"str": "foo"}, ["", "-----", "- str:", "   foo"]],
-        [{"list_str": ["foo1", "foo2"]}, ["", "-----", "- list_str:", "   foo1", "   foo2"]],
-    ],
-)
-def test_prettify_obj(value, exp):
-    assert prettify_obj(value) == exp
+class TestBomStrip:
+    def test__str(self):
+        assert bom_strip(content=f" {BOM_STR}test") == "test"
+
+    def test_bytes(self):
+        assert bom_strip(content=b" " + BOM_BYTES + b"test") == b"test"
 
 
-def test_parse_int_min_max():
-    ret = parse_int_min_max(value="4", default=0)
-    assert ret == 4
-
-    ret = parse_int_min_max(value=4, default=0)
-    assert ret == 4
-
-    ret = parse_int_min_max(value="x", default=0)
-    assert ret == 0
-
-    ret = parse_int_min_max(value="4", default=0, min_value=5)
-    assert ret == 0
-
-    ret = parse_int_min_max(value="4", default=0, max_value=3)
-    assert ret == 0
+class TestPrettifyObj:
+    @pytest.mark.parametrize(
+        "value,exp",
+        [
+            [{}, ["", "-----"]],
+            [{"str": "foo"}, ["", "-----", "- str:", "   foo"]],
+            [{"list_str": ["foo1", "foo2"]}, ["", "-----", "- list_str:", "   foo1", "   foo2"]],
+        ],
+    )
+    def test_valids(self, value, exp):
+        assert prettify_obj(value) == exp
 
 
-@pytest.mark.parametrize("value,exp", [["token=sadpanda", "sadpanda"], ["boo", "boo"]])
-def test_token_parse(value, exp):
-    assert token_parse(value) == exp
+class TestParseIntMinMax:
+    def test_str_int(self):
+        ret = parse_int_min_max(value="4", default=0)
+        assert ret == 4
+
+    def test_int(self):
+        ret = parse_int_min_max(value=4, default=0)
+        assert ret == 4
+
+    def test_str_non_int(self):
+        ret = parse_int_min_max(value="x", default=0)
+        assert ret == 0
+
+    def test_min_fallback(self):
+        ret = parse_int_min_max(value="4", default=0, min_value=5)
+        assert ret == 0
+
+    def test_max_fallback(self):
+        ret = parse_int_min_max(value="4", default=0, max_value=3)
+        assert ret == 0
 
 
-@pytest.mark.parametrize("value,exp", [[" boo ", "boo"], ["boo", "boo"], [1, 1]])
-def test_strip_str(value, exp):
-    assert strip_str(value) == exp
+class TestGetBackupPath:
+    def test_valid(self, tmp_path):
+        path = tmp_path / "exergy.txt"
+        ret = get_backup_path(str(path))
+        parts = ret.stem.split("_")[1].split("-")
+        assert [x.isdigit() for x in parts]
 
 
-@pytest.mark.parametrize("value,exp", [["https://blah.com", True], ["blah.com", False]])
-def test_is_url(value, exp):
-    assert is_url(value) == exp
+class TestGetClsPath:
+    def test_cls(self):
+        class Fun:
+            pass
+
+        exp = "axonius_api_client.tests.tests_pkg.test_tools.Fun"
+        ret = get_cls_path(value=Fun)
+        assert ret == exp
+
+    def test_obj(self):
+        class Fun:
+            pass
+
+        exp = "axonius_api_client.tests.tests_pkg.test_tools.Fun"
+        ret = get_cls_path(value=Fun())
+        assert ret == exp
 
 
-def test_combo_dicts():
-    d1 = {1: 2}
-    d2 = {3: 4}
-    d3 = {5: 6}
-    d4 = {1: 4}
-    exp = {1: 4, 3: 4, 5: 6}
-    ret = combo_dicts(d1, d2, d3, d4)
-    assert ret == exp
+class TestGetBackupFilename:
+    def test_valid(self, tmp_path):
+        path = tmp_path / "exergy.txt"
+        ret = get_backup_filename(str(path))
+        parts = ret.split(".")[0].split("_")[1].split("-")
+        assert [x.isdigit() for x in parts]
 
 
-def test_calc_perc_gb():
-    obj = {"available": 200000, "total": 500000}
-    exp = {
-        "available": 200000,
-        "total": 500000,
-        "available_gb": 0.19,
-        "total_gb": 0.48,
-        "available_percent": 39.58,
-    }
-    ret = calc_perc_gb(obj=obj, whole_key="total", part_key="available")
-    assert ret == exp
+class TestCheckPathIsNotDir:
+    def test_valid(self, tmp_path):
+        path = tmp_path / "oh_hai.txt"
+        path.touch()
+        ret = check_path_is_not_dir(path=str(path))
+        assert ret == path
+
+    def test_invalid(self, tmp_path):
+        path = tmp_path / "oh_hai"
+        path.mkdir()
+        with pytest.raises(ToolsError):
+            check_path_is_not_dir(path=str(path))
 
 
-def test_check_gui_page_size_error():
-    gui_page_size = 9999
-    with pytest.raises(ToolsError):
-        check_gui_page_size(size=gui_page_size)
+class TestPathCreateParentDir:
+    def test_valid(self, tmp_path):
+        path = tmp_path / "d1" / "d2" / "file.txt"
+        ret = path_create_parent_dir(path=path)
+        assert ret.parent.is_dir()
+
+    def test_invalid(self, tmp_path):
+        path = tmp_path / "d1" / "d2" / "file.txt"
+        with pytest.raises(ToolsError):
+            path_create_parent_dir(path=path, make_parent=False)
+        assert not path.parent.is_dir()
 
 
-def test_check_gui_page_size():
-    assert check_gui_page_size(size=f"{GUI_PAGE_SIZES[0]}") == GUI_PAGE_SIZES[0]
+class TestPathBackupFile:
+    def test_not_exists(self, tmp_path):
+        path = tmp_path / "file.txt"
+        with pytest.raises(ToolsError):
+            path_backup_file(path=path)
+
+    def test_backup_path_isdir(self, tmp_path):
+        path = tmp_path / "file.txt"
+        path.touch()
+        backup_path = tmp_path / "backup"
+        backup_path.mkdir()
+        with pytest.raises(ToolsError):
+            path_backup_file(path=path, backup_path=backup_path)
+
+    def test_backup_path_exists(self, tmp_path):
+        path = tmp_path / "d1" / "file.txt"
+        path.parent.mkdir()
+        path.touch()
+        backup_path = tmp_path / "d2" / "backup.txt"
+        backup_path.parent.mkdir()
+        backup_path.touch()
+        ret = path_backup_file(path=path, backup_path=backup_path)
+        assert ret.name != backup_path.name
+        assert ret.parent == backup_path.parent
+
+
+class TestTokenParse:
+    @pytest.mark.parametrize("value,exp", [["token=sadpanda", "sadpanda"], ["boo", "boo"]])
+    def test_valids(self, value, exp):
+        assert token_parse(value) == exp
+
+
+class TestStripStr:
+    @pytest.mark.parametrize("value,exp", [[" boo ", "boo"], ["boo", "boo"], [1, 1]])
+    def test_valids(self, value, exp):
+        assert strip_str(value) == exp
+
+
+class TestIsUrl:
+    @pytest.mark.parametrize("value,exp", [["https://blah.com", True], ["blah.com", False]])
+    def test_valids(self, value, exp):
+        assert is_url(value) == exp
+
+
+class TestComboDicts:
+    def test_valid(self):
+        d1 = {1: 2}
+        d2 = {3: 4}
+        d3 = {5: 6}
+        d4 = {1: 4}
+        exp = {1: 4, 3: 4, 5: 6}
+        ret = combo_dicts(d1, d2, d3, d4)
+        assert ret == exp
+
+
+class TestCalcPercGb:
+    def test_valid(self):
+        obj = {"available": 200000, "total": 500000}
+        exp = {
+            "available": 200000,
+            "total": 500000,
+            "available_gb": 0.19,
+            "total_gb": 0.48,
+            "available_percent": 39.58,
+        }
+        ret = calc_perc_gb(obj=obj, whole_key="total", part_key="available")
+        assert ret == exp
+
+
+class TestCheckGuiPageSize:
+    def test_invalid(self):
+        with pytest.raises(ToolsError):
+            check_gui_page_size(size=9999)
+
+    def test_valid(self):
+        assert check_gui_page_size(size=f"{GUI_PAGE_SIZES[0]}") == GUI_PAGE_SIZES[0]
 
 
 class TestEchos:
-    def test_echo(self, capsys):
+    def test_ok(self, capsys):
         entry = "xxxxxxx"
         echo_ok(msg=entry)
+        capture = capsys.readouterr()
+        assert entry in capture.err
+        assert not capture.out
+
+    def test_debug(self, capsys):
+        entry = "xxxxxxx"
+        echo_debug(msg=entry)
         capture = capsys.readouterr()
         assert entry in capture.err
         assert not capture.out
@@ -214,107 +366,245 @@ class TestReadStream:
             read_stream(stream)
 
 
-class TestCoerce:
-    """Test axonius_api_client.join_url."""
-
-    def test_int(self):
-        with pytest.raises(ToolsError):
-            coerce_int("badwolf")
-
-        assert coerce_int("456") == 456
-
-    def test_bool(self):
+class TestCoerceBool:
+    def test_invalid(self):
         with pytest.raises(ToolsError):
             coerce_bool("badwolf")
 
-        assert coerce_bool("y") is True
-        assert coerce_bool("yes") is True
-        assert coerce_bool("true") is True
-        assert coerce_bool("True") is True
-        assert coerce_bool("1") is True
-        assert coerce_bool(1) is True
-        assert coerce_bool("t") is True
-        assert coerce_bool(True) is True
-        assert coerce_bool("n") is False
-        assert coerce_bool("no") is False
-        assert coerce_bool("false") is False
-        assert coerce_bool("False") is False
-        assert coerce_bool("0") is False
-        assert coerce_bool(0) is False
-        assert coerce_bool("f") is False
-        assert coerce_bool(False) is False
+    @pytest.mark.parametrize(
+        "value,exp",
+        [
+            ["y", True],
+            ["yes", True],
+            ["true", True],
+            ["True", True],
+            ["1", True],
+            [1, True],
+            ["t", True],
+            [True, True],
+            ["n", False],
+            ["no", False],
+            ["false", False],
+            ["False", False],
+            ["0", False],
+            [0, False],
+            ["f", False],
+            [False, False],
+        ],
+    )
+    def test_valids(self, value, exp):
+        assert coerce_bool(value) == exp
 
-    def test_coerce_int_float(self):
+
+class TestCoerceIntFloat:
+    def test_invalid(self):
         with pytest.raises(ToolsError):
             coerce_int_float("1.x")
 
-        assert coerce_int_float(1.0) == 1.0
-        assert coerce_int_float(1) == 1
-        assert coerce_int_float("1") == 1
-        assert coerce_int_float("1.0") == 1.0
+    @pytest.mark.parametrize(
+        "value,exp",
+        [
+            [1.0, 1.0],
+            [1, 1],
+            ["1", 1],
+            ["1.0", 1.0],
+        ],
+    )
+    def test_valids(self, value, exp):
+        assert coerce_int_float(value) == exp
 
-    def test_coerce_int_min_max(self):
+
+class TestCoerceInt:
+    def test_invalid_str(self):
+        with pytest.raises(ToolsError):
+            coerce_int("badwolf")
+
+    def test_valid_str(self):
+        assert coerce_int("456") == 456
+
+    def test_min(self):
         with pytest.raises(ToolsError):
             coerce_int(obj=2, min_value=3)
 
+    def test_max(self):
         with pytest.raises(ToolsError):
             coerce_int(obj=2, max_value=1)
 
+    def test_min_max(self):
         with pytest.raises(ToolsError):
             coerce_int(obj=2, min_value=3, max_value=1)
+
+    def test_invalid_value(self):
+        with pytest.raises(ToolsError):
+            coerce_int(obj=2, valid_values=[1, 3])
+
+    def test_valid(self):
+        ret = coerce_int(obj="1", valid_values=[1, 3])
+        assert ret == 1
 
 
 class TestJoinUrl:
     """Test axonius_api_client.join_url."""
 
-    def test_url(self):
+    @pytest.mark.parametrize(
+        "value,exp",
+        [
+            [("https://test.com",), "https://test.com/"],
+            [("https://test.com/",), "https://test.com/"],
+            [("https://test.com////",), "https://test.com/"],
+            [
+                (
+                    "https://test.com",
+                    "",
+                ),
+                "https://test.com/",
+            ],
+            [
+                (
+                    "https://test.com",
+                    "",
+                    "",
+                ),
+                "https://test.com/",
+            ],
+            [
+                (
+                    "https://test.com",
+                    "/",
+                    "",
+                ),
+                "https://test.com/",
+            ],
+            [
+                (
+                    "https://test.com",
+                    "/",
+                    "/",
+                ),
+                "https://test.com/",
+            ],
+        ],
+    )
+    def test_url(self, value, exp):
         """Test url gets joined properly no matter the slashes."""
-        r = join_url("https://test.com")
-        assert r == "https://test.com/"
-        r = join_url("https://test.com/")
-        assert r == "https://test.com/"
-        r = join_url("https://test.com////")
-        assert r == "https://test.com/"
-        r = join_url("https://test.com", "")
-        assert r == "https://test.com/"
-        r = join_url("https://test.com", "", "")
-        assert r == "https://test.com/"
-        r = join_url("https://test.com", "/", "")
-        assert r == "https://test.com/"
-        r = join_url("https://test.com", "/", "/")
-        assert r == "https://test.com/"
+        assert join_url(*value) == exp
 
-    def test_url_path(self):
+    @pytest.mark.parametrize(
+        "value,exp",
+        [
+            [
+                (
+                    "https://test.com",
+                    "a",
+                ),
+                "https://test.com/a",
+            ],
+            [
+                (
+                    "https://test.com",
+                    "/a",
+                ),
+                "https://test.com/a",
+            ],
+            [
+                (
+                    "https://test.com",
+                    "//a",
+                ),
+                "https://test.com/a",
+            ],
+            [
+                (
+                    "https://test.com",
+                    "a/",
+                ),
+                "https://test.com/a/",
+            ],
+            [
+                (
+                    "https://test.com",
+                    "a/b",
+                ),
+                "https://test.com/a/b",
+            ],
+            [
+                (
+                    "https://test.com",
+                    "a/b",
+                    "",
+                ),
+                "https://test.com/a/b",
+            ],
+            [
+                (
+                    "https://test.com",
+                    "a/b/",
+                    "",
+                ),
+                "https://test.com/a/b/",
+            ],
+            [
+                (
+                    "https://test.com",
+                    "a/b",
+                    "/",
+                ),
+                "https://test.com/a/b/",
+            ],
+            [
+                (
+                    "https://test.com",
+                    "a/b",
+                    "/////",
+                ),
+                "https://test.com/a/b/",
+            ],
+        ],
+    )
+    def test_url_path(self, value, exp):
         """Test url, path gets joined properly no matter the slashes."""
-        r = join_url("https://test.com", "a")
-        assert r == "https://test.com/a"
-        r = join_url("https://test.com", "/a")
-        assert r == "https://test.com/a"
-        r = join_url("https://test.com", "//a")
-        assert r == "https://test.com/a"
-        r = join_url("https://test.com", "a/")
-        assert r == "https://test.com/a/"
-        r = join_url("https://test.com", "a/b")
-        assert r == "https://test.com/a/b"
-        r = join_url("https://test.com", "a/b", "")
-        assert r == "https://test.com/a/b"
-        r = join_url("https://test.com", "a/b/", "")
-        assert r == "https://test.com/a/b/"
-        r = join_url("https://test.com", "a/b", "/")
-        assert r == "https://test.com/a/b/"
-        r = join_url("https://test.com", "a/b", "/////")
-        assert r == "https://test.com/a/b/"
+        assert join_url(*value) == exp
 
-    def test_url_path_route(self):
+    @pytest.mark.parametrize(
+        "value,exp",
+        [
+            [
+                (
+                    "https://test.com",
+                    "a",
+                    "b",
+                ),
+                "https://test.com/a/b",
+            ],
+            [
+                (
+                    "https://test.com",
+                    "/a",
+                    "b",
+                ),
+                "https://test.com/a/b",
+            ],
+            [
+                (
+                    "https://test.com",
+                    "//a",
+                    "b",
+                ),
+                "https://test.com/a/b",
+            ],
+            [
+                (
+                    "https://test.com",
+                    "a",
+                    "b/c/d",
+                ),
+                "https://test.com/a/b/c/d",
+            ],
+        ],
+    )
+    def test_url_path_route(self, value, exp):
         """Test url, path, route gets joined properly no matter the slashes."""
-        r = join_url("https://test.com", "a", "b")
-        assert r == "https://test.com/a/b"
-        r = join_url("https://test.com", "/a", "b")
-        assert r == "https://test.com/a/b"
-        r = join_url("https://test.com", "//a", "b")
-        assert r == "https://test.com/a/b"
-        r = join_url("https://test.com", "a", "b/c/d")
-        assert r == "https://test.com/a/b/c/d"
+        assert join_url(*value) == exp
 
 
 '''
@@ -469,10 +759,12 @@ class TestPathWrite:
         sub2 = sub1 / "sub2"
         path = sub2 / "file.txt"
         data = "abc\n123\n"
-        ret_path, ret_write = path_write(obj=path, data=data)
+        ret_path, ret_info = path_write(obj=path, data=data)
+        ret_write, ret_backup = ret_info
         assert ret_path.read_text() == data
         assert format(ret_path) == format(path)
         assert ret_write == len(data)
+        assert ret_backup is None
         if IS_WINDOWS:
             assert ret_path.stat().st_mode == 33206
             assert ret_path.parent.stat().st_mode == 16895
@@ -486,10 +778,12 @@ class TestPathWrite:
         sub2 = sub1 / "sub2"
         path = sub2 / "file.txt"
         data = "abc\n123\n"
-        ret_path, ret_write = path_write(obj=format(path), data=data)
+        ret_path, ret_info = path_write(obj=format(path), data=data)
+        ret_write, ret_backup = ret_info
         assert ret_path.read_text() == data
         assert format(ret_path) == format(path)
         assert ret_write == len(data)
+        assert ret_backup is None
 
     def test_parent_fail(self, tmp_path):
         """Test simple write with pathlib object."""
@@ -915,6 +1209,17 @@ class TestJsonDump:
         ret = json_dump(obj)
         assert ret.splitlines() == exp
 
+    def test_hasdict(self):
+        class Moofasa:
+            def to_dict(self):
+                return {"x": "v"}
+
+        obj = Moofasa()
+        exp = ["{", '  "x": "v"', "}"]
+
+        ret = json_dump(obj)
+        assert ret.splitlines() == exp
+
 
 class TestDtParseTmpl:
     def test_valid(self):
@@ -926,6 +1231,12 @@ class TestDtParseTmpl:
             dt_parse_tmpl("2019-07-09Txx")
         with pytest.raises(ToolsError):
             dt_parse_tmpl("xxx")
+
+
+class TestDtNowFile:
+    def test_valid(self):
+        ret = dt_now_file()
+        assert isinstance(ret, str) and ret
 
 
 class TestSplitStr:

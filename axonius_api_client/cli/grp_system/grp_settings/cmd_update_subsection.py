@@ -3,9 +3,9 @@
 from ....tools import json_dump
 from ...context import CONTEXT_SETTINGS, click
 from ...options import AUTH, SPLIT_CONFIG_OPT, add_options
-from .grp_common import EXPORT, SECTION, SUB_SECTION, str_section
+from .grp_common import OPT_EXPORT_FORMAT, OPT_SECTION, OPT_SUB_SECTION, str_section
 
-OPTIONS = [*AUTH, EXPORT, SECTION, SUB_SECTION, SPLIT_CONFIG_OPT]
+OPTIONS = [*AUTH, OPT_EXPORT_FORMAT, OPT_SECTION, OPT_SUB_SECTION, SPLIT_CONFIG_OPT]
 
 
 @click.command(name="update-sub-section", context_settings=CONTEXT_SETTINGS)
@@ -20,18 +20,17 @@ def cmd(
     section,
     sub_section,
     export_format,
-    **kwargs,
 ):
     """Update a sub-section from arguments."""
     client = ctx.obj.start_client(url=url, key=key, secret=secret)
-    new_config = dict(config)
+    config = dict(config)
 
     apiname = ctx.parent.command.name.replace("-", "_")
     apiobj = getattr(client, apiname)
 
     with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
-        settings = apiobj.update_sub_section(section=section, sub_section=sub_section, **new_config)
-        ctx.obj.echo_ok(f"Updated {sub_section!r} with configuration {new_config}")
+        settings = apiobj.update_sub_section(section=section, sub_section=sub_section, **config)
+        ctx.obj.echo_ok(f"Updated {sub_section!r} with configuration {config}")
 
     if export_format == "str":
         str_section(meta=settings)

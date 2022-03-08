@@ -2,7 +2,7 @@
 """API for working with adapter connections."""
 import dataclasses
 import re
-from typing import Callable, List, Optional, Union
+from typing import Callable, List, Optional, Type, Union
 
 import requests
 
@@ -29,8 +29,8 @@ from ...parsers.config import (
 )
 from ...parsers.tables import tablize_cnxs, tablize_schemas
 from ...tools import combo_dicts, json_dump, json_load, listify, pathlib, strip_right
-from .. import json_api
 from ..api_endpoints import ApiEndpoints
+from ..json_api.adapters import CnxDelete, CnxModifyResponse, Cnxs
 from ..mixins import ChildMixins
 
 
@@ -69,8 +69,11 @@ class Cnx(ChildMixins):
             >>> cnxs = client.adapters.cnx.get_by_adapter(adapter_name="active_directory")
 
         Args:
-            adapter_name: name of adapter
-            adapter_node: name of node running adapter
+            adapter_name (str): name of adapter
+            adapter_node (Optional[str], optional): name of node running adapter
+
+        Returns:
+            List[dict]: connection metadata for adapter
         """
         adapter = self.parent.get_by_name(name=adapter_name, node=adapter_node, get_clients=False)
         cnxs_obj = self._get(adapter_name=adapter["name_raw"])
@@ -100,6 +103,12 @@ class Cnx(ChildMixins):
             adapter_name: name of adapter
             adapter_node: name of node running adapter
             **kwargs: passed to :meth:`get_by_key`
+
+        Raises:
+            NotFoundError: when no connections found with supplied uuid
+
+        Returns:
+            dict: connection metadata for uuid on adapter
         """
         adapter = self.parent.get_by_name(name=adapter_name, node=adapter_node, get_clients=False)
         node_id = adapter["node_meta"]["node_id"]
@@ -132,12 +141,15 @@ class Cnx(ChildMixins):
             ... )
 
         Args:
-            value: value that connection_label must match for a connection
-            adapter_name: name of adapter
-            adapter_node: name of node running adapter
+            value (str): value that connection_label must match for a connection
+            adapter_name (str): name of adapter
+            adapter_node (Optional[str], optional): name of node running adapter
 
         Raises:
-            :exc:`NotFoundError`: when no connections found with supplied connection label
+            NotFoundError: when no connections found with supplied connection label
+
+        Returns:
+            dict: connection metadata for label on adapter
         """
         adapter = self.parent.get_by_name(name=adapter_name, node=adapter_node, get_clients=False)
         node_id = adapter["node_meta"]["node_id"]
@@ -175,10 +187,16 @@ class Cnx(ChildMixins):
             (i.e. for active_directory ``TestDomain.test``)
 
         Args:
-            cnx_id: connection ID to get
-            adapter_name: name of adapter
-            adapter_node: name of node running adapter
+            cnx_id (str): connection ID to get
+            adapter_name (str): name of adapter
+            adapter_node (Optional[str], optional): name of node running adapter
             **kwargs: passed to :meth:`get_by_key`
+
+        Raises:
+            NotFoundError: when no connections found with supplied id
+
+        Returns:
+            dict: connection metadata for id on adapter
         """
         adapter = self.parent.get_by_name(name=adapter_name, node=adapter_node, get_clients=False)
         node_id = adapter["node_meta"]["node_id"]
@@ -218,6 +236,9 @@ class Cnx(ChildMixins):
             adapter_name: name of adapter
             adapter_node: name of node running adapter
             **kwargs: passed to :meth:`update_cnx`
+
+        Returns:
+            dict: updated connection metadata
         """
         cnx = self.get_by_id(cnx_id=cnx_id, adapter_name=adapter_name, adapter_node=adapter_node)
         return self.update_cnx(cnx_update=cnx, **kwargs)
@@ -244,7 +265,7 @@ class Cnx(ChildMixins):
             cnx_id: connection ID to delete
             adapter_name: name of adapter
             adapter_node: name of node running adapter
-            delete_entities: delete all asset entities associated with this connection
+            delete_entities: delete all assets fetched by this connection
         """
         cnx = self.get_by_id(cnx_id=cnx_id, adapter_name=adapter_name, adapter_node=adapter_node)
         return self.delete_cnx(cnx_delete=cnx, delete_entities=delete_entities)
@@ -388,14 +409,16 @@ class Cnx(ChildMixins):
             hostname/domain/ip address to test a connection.
 
         Args:
-            adapter_name: name of adapter
-            adapter_node: name of node running adapter
-            old_config: old connection configuration
+            adapter_name (str): name of adapter
+            adapter_node (Optional[str], optional): name of node running adapter
+            kwargs_config (Optional[dict], optional): configuration of connection to test
+            new_config (Optional[dict], optional): configuration of connection to test
+            parse_config (bool, optional): parse configuration for unknowns, requireds, etc
             **kwargs: configuration of connection to test
 
         Raises:
-            :exc:`CnxTestError`: When a connection test fails
-            :exc:`ConfigRequired`: When not enough arguments are supplied to test the connection
+            CnxTestError: When a connection test fails
+            ConfigRequired: When not enough arguments are supplied to test the connection
         """
         new_config = combo_dicts(kwargs_config, new_config, kwargs)
         adapter = self.parent.get_by_name(name=adapter_name, node=adapter_node, get_clients=False)
@@ -460,7 +483,10 @@ class Cnx(ChildMixins):
             **kwargs: configuration of connection to update
 
         Raises:
-            :exc:`CnxUpdateError`: When an error occurs while updating the connection
+            CnxUpdateError: When an error occurs while updating the connection
+
+        Returns:
+            dict: updated connection metadata
         """
 
         def get_adapter(node):
@@ -531,12 +557,15 @@ class Cnx(ChildMixins):
 
         return cnx_new
 
-    def delete_cnx(self, cnx_delete: dict, delete_entities: bool = False) -> str:
+    def delete_cnx(self, cnx_delete: dict, delete_entities: bool = False) -> CnxDelete:
         """Delete a connection for an adapter on a node.
 
         Args:
-            cnx_delete: connection fetched previously
-            delete_entities: delete all asset entities associated with this connection
+            cnx_delete (dict): connection fetched previously
+            delete_entities (bool, optional): delete all assets fetched by this connection
+
+        Returns:
+            CnxDelete: dataclass model containing response
         """
         node = self.parent.instances.get_by_name(name=cnx_delete["node_name"])
         response_status_hook = self.get_response_status_hook(cnx=cnx_delete)
@@ -746,7 +775,7 @@ class Cnx(ChildMixins):
         active: bool = True,
         connection_label: Optional[str] = None,
         response_status_hook: Optional[Callable] = None,
-    ) -> json_api.adapters.CnxModifyResponse:
+    ) -> CnxModifyResponse:
         """Pass."""
         api_endpoint = ApiEndpoints.adapters.cnx_create
         request_obj = api_endpoint.load_request(
@@ -773,12 +802,17 @@ class Cnx(ChildMixins):
         connection: dict,
         response_status_hook: Optional[Callable] = None,
     ) -> dict:
-        """Private API method to add a connection to an adapter.
+        """Direct API method to add a connection to an adapter.
 
         Args:
-            adapter_name_raw: raw name of the adapter i.e. ``aws_adapter``
-            adapter_node_id: id of node running adapter
-            config: configuration to test
+            adapter_name (str): raw name of the adapter i.e. ``aws_adapter``
+            instance (str): id of node running adapter
+            connection (dict): configuration to test
+            response_status_hook (Optional[Callable], optional): callable to use when checking
+                status codes of response
+
+        Returns:
+            dict: containing response
         """
         api_endpoint = ApiEndpoints.adapters.cnx_test
         request_obj = api_endpoint.load_request(
@@ -792,8 +826,16 @@ class Cnx(ChildMixins):
             response_status_hook=response_status_hook,
         )
 
-    def _get(self, adapter_name: str) -> json_api.adapters.Cnxs:
-        """Pass."""
+    def _get(self, adapter_name: str) -> Cnxs:
+        """Get all connections for a given adapter.
+
+        Args:
+            adapter_name (str): name of adapter
+
+        Returns:
+            Cnxs: dataclass model containing response
+        """
+        adapter_name += "" if adapter_name.endswith("_adapter") else "_adapter"
         api_endpoint = ApiEndpoints.adapters.cnx_get
         ret = api_endpoint.perform_request(http=self.auth.http, adapter_name=adapter_name)
         ret.adapter_name = strip_right(obj=adapter_name, fix="_adapter")
@@ -808,14 +850,21 @@ class Cnx(ChildMixins):
         delete_entities: bool = False,
         is_instances_mode: bool = False,
         response_status_hook: Optional[Callable] = None,
-    ) -> json_api.adapters.CnxDelete:
-        """Private API method to delete a connection from an adapter.
+    ) -> CnxDelete:
+        """Direct API method to delete a connection from an adapter.
 
         Args:
-            adapter_name_raw: raw name of the adapter i.e. ``aws_adapter``
-            adapter_node_id: id of node running adapter
-            uuid: uuid of connection to delete
-            delete_entities: delete all asset entities associated with this connection
+            uuid (str): uuid of connection
+            adapter_name (str): name of adapter
+            instance_id (str): UUID of instance to delete connection from
+            instance_name (str): NAME of instance to delete connection from
+            delete_entities (bool, optional): delete all assets fetched by this connection
+            is_instances_mode (bool, optional): instance_id & instance_name is NOT the Core instance
+            response_status_hook (Optional[Callable], optional): callable to use when checking
+                status codes of response
+
+        Returns:
+            CnxDelete: dataclass model containing response
         """
         api_endpoint = ApiEndpoints.adapters.cnx_delete
         request_obj = api_endpoint.load_request(
@@ -847,8 +896,29 @@ class Cnx(ChildMixins):
         active: bool = True,
         connection_label: Optional[str] = None,
         response_status_hook: Optional[Callable] = None,
-    ) -> json_api.adapters.CnxModifyResponse:
-        """Pass."""
+    ) -> CnxModifyResponse:
+        """Pass.
+
+        Args:
+            uuid (str): uuid of connection
+            connection (dict): new configuration to apply
+            instance_id (str): UUID of instance to move connection to
+            instance_name (str): NAME of instance to move connection to
+            adapter_name (str): name of adapter
+            instance_prev (Optional[str], optional): UUID of instance to move connection from
+            instance_prev_name (Optional[str], optional): NAME of instance to move connection from
+            connection_discovery (Optional[dict], optional): connection specific discovery settings
+                to update
+            is_instances_mode (bool, optional): instance_id & instance_name is NOT the Core instance
+            save_and_fetch (bool, optional): save and fetch the connection, or just save it
+            active (bool, optional): set connection as active
+            connection_label (Optional[str], optional): label to set on connection
+            response_status_hook (Optional[Callable], optional): callable to use when checking
+                status codes of response
+
+        Returns:
+            CnxModifyResponse: dataclass model containing response
+        """
         api_endpoint = ApiEndpoints.adapters.cnx_update
         request_obj = api_endpoint.load_request(
             connection=connection,
@@ -871,7 +941,14 @@ class Cnx(ChildMixins):
         )
 
     def get_response_status_hook(self, cnx: dict) -> Callable:
-        """Check if the result of updating a connection shows that the connection is gone."""
+        """Check if the result of updating a connection shows that the connection is gone.
+
+        Args:
+            cnx (dict): Connection metadata to use in response hook
+
+        Returns:
+            Callable: response status hook
+        """
 
         def response_status_hook(http: Http, response: requests.Response, **kwargs) -> bool:
             """Pass."""
@@ -885,24 +962,46 @@ class Cnx(ChildMixins):
 
 @dataclasses.dataclass
 class ErrorMap:
-    """Pass."""
+    """Mapping container for use in :meth:`Cnx.get_response_status_hook`."""
 
     response_regexes: List[str]
+    """List of regexes that if they match response body, will throw :attr:`exc`"""
+
     err: str
-    exc: Exception
+    """Error string to include in exception if :attr:`response_regexes` match."""
+
+    exc: Type[Exception]
+    """Exception class to throw if :attr:`response_regexes` match."""
+
     endpoint_regexes: List[str] = dataclasses.field(default_factory=list)
+    """List of regexes that if they match request URL, will check :attr:`response_regexes`."""
+
     with_schemas: bool = True
+    """Include connection configuration schemas in error output."""
+
     with_config: bool = True
+    """Include connection configuration in error output."""
+
     with_cnxs: bool = True
+    """Include all connections for adapter in question in error output."""
+
     skip_status: bool = False
+    """Skip the rest of the built in status checks."""
 
     def __post_init__(self):
-        """Pass."""
+        """Post init dataclass setup."""
         self.response_regexes = [re.compile(x, re.I) for x in listify(self.response_regexes)]
         self.endpoint_regexes = [re.compile(x, re.I) for x in listify(self.endpoint_regexes)]
 
-    def is_response_error(self, response: requests.Response):
-        """Pass."""
+    def is_response_error(self, response: requests.Response) -> bool:
+        """Check if response matches :attr:`endpoint_regexes` and :attr:`response_regexes`.
+
+        Args:
+            response (requests.Response): response object to check
+
+        Returns:
+            bool: if response matches this error map
+        """
 
         def any_match(regexes, value):
             return any([x.search(value) for x in listify(regexes)])
@@ -917,8 +1016,20 @@ class ErrorMap:
 
         return False
 
-    def handle_exc(self, response: requests.Response, cnx: dict, apiobj: Cnx):
-        """Pass."""
+    def handle_exc(self, response: requests.Response, cnx: dict, apiobj: Cnx) -> bool:
+        """Handle raising an exception if :meth:`is_response_error`.
+
+        Args:
+            response (requests.Response): response object to check
+            cnx (dict): connection metadata
+            apiobj (Cnx): API model to use to fetch connections
+
+        Returns:
+            bool: return :attr:`skip_status`
+
+        Raises:
+            Exception: of type :attr:`exc`
+        """
         if self.is_response_error(response=response):
             cnx_strs = get_cnx_strs(
                 cnx=cnx, with_schemas=self.with_schemas, with_config=self.with_config
@@ -952,7 +1063,16 @@ CNX_STRS: dict = {
 
 
 def get_cnx_strs(cnx: dict, with_config: bool = False, with_schemas: bool = False) -> List[str]:
-    """Pass."""
+    """Build a string with details about a connection.
+
+    Args:
+        cnx (dict): connection to build string for
+        with_config (bool, optional): include connection config in output
+        with_schemas (bool, optional): include connection config schemas in output
+
+    Returns:
+        List[str]: connection details
+    """
     ret = [v.format(**cnx) for k, v in CNX_STRS.items() if k in cnx]
 
     if with_config and "config" in cnx:
@@ -964,7 +1084,14 @@ def get_cnx_strs(cnx: dict, with_config: bool = False, with_schemas: bool = Fals
 
 
 def cnx_from_adapter(adapter: dict) -> dict:
-    """Pass."""
+    """Build a base dict for a connection with details from an adapter metadata dict.
+
+    Args:
+        adapter (dict): adapter to get details from
+
+    Returns:
+        dict: base dict for connection
+    """
     ret = {}
     ret["adapter_name"] = adapter["name"]
     ret["adapter_name_raw"] = adapter["name_raw"]
@@ -973,6 +1100,7 @@ def cnx_from_adapter(adapter: dict) -> dict:
     return ret
 
 
+# NB: Could be dataclass
 ERROR_MAPS: List[ErrorMap] = [
     ErrorMap(
         response_regexes="type.*InvalidId",

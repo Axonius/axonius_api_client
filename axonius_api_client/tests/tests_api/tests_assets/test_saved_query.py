@@ -592,6 +592,10 @@ def validate_qexpr(qexpr, asset):
     qfilter = qexpr.pop("filter", "")
     assert isinstance(qfilter, str)
 
+    # 4.5 2022/02/25
+    module = qexpr.pop("module", "")
+    assert isinstance(module, str)
+
     for nested in nesteds:
         validate_nested(nested, asset)
 

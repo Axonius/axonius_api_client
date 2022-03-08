@@ -1,8 +1,6 @@
 """Test meta data."""
 import time
 
-from axonius_api_client.tools import csv_writer
-
 QUERIES = {
     "not_last_seen_day": '(not ("specific_data.data.last_seen" >= date("NOW - 1d")))',
     "exist_complex": '((("{f}" == ({{"$exists":true,"$ne":[]}})) and "{f}" != []))',
@@ -205,6 +203,8 @@ class CsvKeys:
 
 class CsvData:
     """Pass."""
+
+    from axonius_api_client.tools import csv_writer
 
     adapter_name: str = "csv"
     adapter_name_raw: str = "csv_adapter"

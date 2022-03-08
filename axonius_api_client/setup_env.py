@@ -47,11 +47,17 @@ KEY_FEATURES: str = f"{KEY_PRE}FEATURES"
 KEY_CERTWARN: str = f"{KEY_PRE}CERTWARN"
 """OS env to get cert warning bool from"""
 
+KEY_CERTPATH: str = f"{KEY_PRE}CERTPATH"
+"""OS env to get cert warning bool from"""
+
 KEY_DEBUG: str = f"{KEY_PRE}DEBUG"
 """OS env to enable debug logging"""
 
 KEY_DEBUG_PRINT: str = f"{KEY_PRE}DEBUG_PRINT"
 """OS env to use print() instead of LOGGER.debug()"""
+
+KEY_USER_AGENT: str = f"{KEY_PRE}USER_AGENT"
+"""OS env to use a custom User Agent string."""
 
 DEFAULT_DEBUG: str = "no"
 """Default for :attr:`KEY_DEBUG`"""
@@ -230,6 +236,12 @@ def get_env_csv(
     return value
 
 
+def get_env_user_agent(**kwargs) -> str:
+    """Pass."""
+    load_dotenv(**kwargs)
+    return get_env_str(key=KEY_USER_AGENT, default="", empty_ok=True)
+
+
 def get_env_connect(**kwargs) -> dict:
     """Get URL, API key, API secret, and certwarn from OS env vars.
 
@@ -261,6 +273,13 @@ def get_env_ax():
     value = {k: v for k, v in os.environ.items() if k.startswith(KEY_PRE)}
     value = {k: HIDDEN if k in KEYS_HIDDEN else v for k, v in value.items()}
     return value
+
+
+def set_env(key: str, value: str, **kwargs) -> Tuple[str, Tuple[bool, str, str]]:
+    """Set an environment variable in .env file."""
+    from . import INIT_DOTENV as ax_env
+
+    return dotenv.set_key(dotenv_path=ax_env, key_to_set=key, value_to_set=str(value))
 
 
 DEBUG_PRINT: bool = get_env_bool(key=KEY_DEBUG_PRINT, default=DEFAULT_DEBUG_PRINT)

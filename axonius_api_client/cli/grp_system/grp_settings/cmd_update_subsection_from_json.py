@@ -3,9 +3,9 @@
 from ....tools import json_dump
 from ...context import CONTEXT_SETTINGS, click
 from ...options import AUTH, INPUT_FILE, add_options
-from .grp_common import EXPORT, SECTION, SUB_SECTION, str_section
+from .grp_common import OPT_EXPORT_FORMAT, OPT_SECTION, OPT_SUB_SECTION, str_section
 
-OPTIONS = [*AUTH, EXPORT, SECTION, SUB_SECTION, INPUT_FILE]
+OPTIONS = [*AUTH, OPT_EXPORT_FORMAT, OPT_SECTION, OPT_SUB_SECTION, INPUT_FILE]
 
 
 @click.command(name="update-sub-section-from-json", context_settings=CONTEXT_SETTINGS)

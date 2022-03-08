@@ -609,6 +609,7 @@ class Base:
 
         Args:
             row: row being processed
+            schema: schema to use when flattening
         """
         if self.is_excluded(schema=schema):
             return
@@ -633,7 +634,7 @@ class Base:
         """Explode a field into multiple rows.
 
         Args:
-            row: row being processed
+            rows: rows being processed
         """
         rows = listify(rows)
         explode = self.get_arg_value("field_explode")

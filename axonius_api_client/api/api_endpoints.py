@@ -349,6 +349,93 @@ class SystemSettings(ApiEndpointGroup):
     )
     # PBUG: response is not jsonapi model
 
+    file_upload: ApiEndpoint = ApiEndpoint(
+        method="put",
+        path="api/V4.0/settings/plugins/{plugin}/upload_file",
+        request_schema_cls=None,
+        request_model_cls=None,
+        response_schema_cls=json_api.generic.ApiBaseSchema,
+        response_model_cls=json_api.generic.ApiBase,
+        http_args_required=["files", "data"],
+    )
+
+    cert_uploaded: ApiEndpoint = ApiEndpoint(
+        method="get",
+        path="api/V4.0/certificate/global_ssl",
+        request_schema_cls=None,
+        request_model_cls=None,
+        response_schema_cls=None,
+        response_model_cls=None,
+    )
+
+    gui_cert_update: ApiEndpoint = ApiEndpoint(
+        method="put",
+        path="api/V4.0/certificate/global_ssl",
+        request_schema_cls=None,
+        request_model_cls=json_api.system_settings.CertificateUpdateRequest,
+        response_schema_cls=None,
+        response_model_cls=None,
+    )
+    # PBUG: not modeled (not even anything, just returns "True")
+
+    gui_cert_info: ApiEndpoint = ApiEndpoint(
+        method="get",
+        path="api/V4.0/certificate/details",
+        request_schema_cls=None,
+        request_model_cls=None,
+        response_schema_cls=json_api.system_settings.CertificateDetailsSchema,
+        response_model_cls=json_api.system_settings.CertificateDetails,
+    )
+
+    gui_cert_reset: ApiEndpoint = ApiEndpoint(
+        method="put",
+        path="api/V4.0/certificate/reset_to_defaults",
+        request_schema_cls=None,
+        request_model_cls=None,
+        response_schema_cls=json_api.generic.BoolValueSchema,
+        response_model_cls=json_api.generic.BoolValue,
+    )
+    # PBUG: bool value useless to return here, return cert details or something at least
+
+    cert_settings: ApiEndpoint = ApiEndpoint(
+        method="put",
+        path="api/V4.0/certificate/certificate_settings",
+        request_schema_cls=json_api.system_settings.CertificateConfigSchema,
+        request_model_cls=json_api.system_settings.CertificateConfig,
+        response_schema_cls=json_api.generic.BoolValueSchema,
+        response_model_cls=json_api.generic.BoolValue,
+    )
+    # PBUG: dict's not modeled
+    # PBUG: bool value useless
+
+    csr_get: ApiEndpoint = ApiEndpoint(
+        method="get",
+        path="api/V4.0/certificate/csr",
+        request_schema_cls=None,
+        request_model_cls=None,
+        response_schema_cls=None,
+        response_model_cls=None,
+        response_as_text=True,
+    )
+    csr_create: ApiEndpoint = ApiEndpoint(
+        method="put",
+        path="api/V4.0/certificate/csr",
+        request_schema_cls=None,
+        request_model_cls=None,
+        response_schema_cls=json_api.generic.BoolValueSchema,
+        response_model_cls=json_api.generic.BoolValue,
+        http_args_required=["json"],
+    )
+
+    csr_cancel: ApiEndpoint = ApiEndpoint(
+        method="put",
+        path="api/V4.0/certificate/cancel_csr",
+        request_schema_cls=None,
+        request_model_cls=None,
+        response_schema_cls=json_api.generic.BoolValueSchema,
+        response_model_cls=json_api.generic.BoolValue,
+    )
+
 
 @dataclasses.dataclass(repr=False)
 class RemoteSupport(ApiEndpointGroup):

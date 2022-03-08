@@ -2,12 +2,14 @@
 """Models for API requests & responses."""
 import dataclasses
 import datetime
-from typing import Optional, Type
+from typing import List, Optional, Type
 
+import dataclasses_json
 import marshmallow_jsonapi
 
 from ...tools import dt_days_left, dt_parse
 from .base import BaseModel, BaseSchema, BaseSchemaJson
+from .custom_fields import SchemaDatetime, get_field_dc_mm
 
 
 class SystemSettingsSchema(BaseSchemaJson):
@@ -145,3 +147,104 @@ class FeatureFlags(SystemSettings):
     def license_expiry_in_days(self) -> Optional[int]:
         """Get the number of days left for the license."""
         return dt_days_left(obj=self.license_expiry_dt)
+
+
+@dataclasses.dataclass
+class FileSpec(dataclasses_json.DataClassJsonMixin):
+    """Pass."""
+
+    uuid: str
+    filename: str
+
+
+@dataclasses.dataclass
+class CertificateUpdateRequest(BaseModel):
+    """Pass."""
+
+    cert_file: FileSpec
+    enabled: bool
+    hostname: str
+    private_key: FileSpec
+    passphrase: str = ""
+
+    @staticmethod
+    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+        """Pass."""
+        return None
+
+
+class CertificateDetailsSchema(BaseSchemaJson):
+    """Pass."""
+
+    issued_to = marshmallow_jsonapi.fields.Str()
+    alternative_names = marshmallow_jsonapi.fields.List(marshmallow_jsonapi.fields.Str())
+    expires_on = SchemaDatetime(allow_none=True)
+    issued_by = marshmallow_jsonapi.fields.Str()
+    sha1_fingerprint = marshmallow_jsonapi.fields.Str()
+
+    class Meta:
+        """Pass."""
+
+        type_ = "certificate_schema"
+
+    @staticmethod
+    def get_model_cls() -> Optional[Type[BaseModel]]:
+        """Pass."""
+        return CertificateDetails
+
+
+@dataclasses.dataclass
+class CertificateDetails(BaseModel):
+    """Pass."""
+
+    issued_to: str
+    alternative_names: List[str]
+    issued_by: str
+    sha1_fingerprint: str
+    expires_on: Optional[datetime.datetime] = get_field_dc_mm(
+        mm_field=SchemaDatetime(allow_none=True), default=None
+    )
+
+    @staticmethod
+    def _str_properties() -> List[str]:
+        """Pass."""
+        return ["issued_to", "alternative_names", "issued_by", "sha1_fingerprint", "expires_on"]
+
+    @staticmethod
+    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+        """Pass."""
+        return CertificateDetailsSchema
+
+
+class CertificateConfigSchema(BaseSchemaJson):
+    """Pass."""
+
+    certificate_verify = marshmallow_jsonapi.fields.Dict(
+        load_default={}, dump_default={}, allow_none=True
+    )
+    mutual_tls = marshmallow_jsonapi.fields.Dict(load_default={}, dump_default={}, allow_none=True)
+    ssl_trust = marshmallow_jsonapi.fields.Dict(load_default={}, dump_default={}, allow_none=True)
+
+    class Meta:
+        """Pass."""
+
+        type_ = "certificate_config_schema"
+
+    @staticmethod
+    def get_model_cls() -> Optional[Type[BaseModel]]:
+        """Pass."""
+        return CertificateConfig
+
+
+@dataclasses.dataclass
+class CertificateConfig(BaseModel):
+    """Pass."""
+
+    certificate_verify: Optional[dict] = dataclasses.field(default_factory=dict)
+    mutual_tls: Optional[dict] = dataclasses.field(default_factory=dict)
+    ssl_trust: Optional[dict] = dataclasses.field(default_factory=dict)
+
+    @staticmethod
+    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+        """Pass."""
+        return CertificateConfigSchema

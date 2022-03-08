@@ -8,24 +8,15 @@ help:
 	@cat Makefile.help
 
 init:
-	echo ">>>>>>>> INITIALIZING FOR VERSION: $(VERSION) PYTHON $(PYVER)"
-	$(MAKE) pip_install_tools
-	$(MAKE) clean
-	$(MAKE) pipenv_init
-	$(MAKE) pipenv_install_lint
-	$(MAKE) pipenv_install_dev
-	$(MAKE) pipenv_install_docs
-	$(MAKE) pipenv_install_build
-
-init_ver:
-	echo ">>>>>>>> INITIALIZING FOR VERSION: $(VERSION) PYTHON $(PYVER)"
+	@echo ">>>>>>>> INITIALIZING FOR VERSION: $(VERSION) PYTHON $(PYVER)"
 	$(MAKE) pip_install_tools
 	$(MAKE) clean
 	$(MAKE) pipenv_init_ver
-	$(MAKE) pipenv_install_lint
-	$(MAKE) pipenv_install_dev
-	$(MAKE) pipenv_install_docs
-	$(MAKE) pipenv_install_build
+	$(MAKE) pip_install_lint
+	$(MAKE) pip_install_dev
+	$(MAKE) pip_install_docs
+	$(MAKE) pip_install_build
+
 
 pip_install_tools:
 	pip install \
@@ -33,8 +24,8 @@ pip_install_tools:
 		--upgrade \
 		--requirement requirements-pkg.txt
 
-pipenv_install_dev:
-	pipenv run pip install \
+pip_install_dev:
+	pip install \
 		--quiet \
 		--upgrade \
 		--requirement requirements-dev.txt
@@ -45,20 +36,14 @@ pip_install_lint:
 		--upgrade \
 		--requirement requirements-lint.txt
 
-pipenv_install_lint:
-	pipenv run pip install \
-		--quiet \
-		--upgrade \
-		--requirement requirements-lint.txt
-
-pipenv_install_build:
-	pipenv run pip install \
+pip_install_build:
+	pip install \
 		--quiet \
 		--upgrade \
 		--requirement requirements-build.txt
 
-pipenv_install_docs:
-	pipenv run pip install \
+pip_install_docs:
+	pip install \
 		--quiet \
 		--upgrade \
 		--requirement docs/requirements.txt
@@ -151,7 +136,7 @@ pkg_build:
 	$(MAKE) clean_pkg
 
 	@echo "*** Building Source and Wheel (universal) distribution"
-	pipenv run python setup.py sdist bdist_wheel --universal --dist-dir artifacts/dist --build-base artifacts/build
+	pipenv run python setup.py sdist bdist_wheel --universal --dist-dir artifacts/dist
 
 	@echo "*** Checking package with twine"
 	pipenv run twine check artifacts/dist/*

@@ -260,9 +260,11 @@ class AssetMixin(ModelMixins):
             fields: fields to return for each asset (will be validated)
             fields_manual: fields to return for each asset (will NOT be validated)
             fields_regex: regex of fields to return for each asset
+            fields_regex_root_only: only match fields_regex values against root fields
             fields_fuzzy: string to fuzzy match of fields to return for each asset
             fields_default: include the default fields in :attr:`fields_default`
             fields_root: include all fields of an adapter that are not complex sub-fields
+            fields_error: throw validation errors on supplied fields
             max_rows: only return N rows
             max_pages: only return N pages
             row_start: start at row N
@@ -270,10 +272,13 @@ class AssetMixin(ModelMixins):
             page_start: start at page N
             page_sleep: sleep for N seconds between each page fetch
             export: export assets using a callback method
+            include_notes: include any defined notes for each adapter
             include_details: include details fields showing the adapter source of agg values
             sort_field: sort the returned assets on a given field
             sort_descending: reverse the sort of the returned assets
             history_date: return assets for a given historical date
+            history_days_ago: return assets for a history date N days ago
+            history_exact: Use the closest match for history_date and history_days_ago
             wiz_entries: wizard expressions to create query from
             **kwargs: passed thru to the asset callback defined in ``export``
         """
@@ -659,15 +664,27 @@ class AssetMixin(ModelMixins):
         """Private API method to get a page of assets.
 
         Args:
-            query: if supplied, only return the assets that match the query
-            fields: CSV or list of fields to include in return
-            row_start: start at row N
-            page_size: fetch N assets
-            include_details: include details fields showing the adapter source of agg values
-            sort_field: sort the returned assets on a given field
-            sort_descending: reverse the sort of the returned assets
-            history_date: return assets for a given historical date
-            cursor: cursor returned by previous call to continue paging through
+            always_cached_query (bool, optional): UNK
+            use_cache_entry (bool, optional): UNK
+            include_details (bool, optional): include details fields showing the adapter source
+                of agg values
+            include_notes (bool, optional): Description
+            get_metadata (bool, optional): Description
+            use_cursor (bool, optional): Description
+            sort_descending (bool, optional): reverse the sort of the returned assets
+            history_date (Optional[Union[str, datetime.timedelta, datetime.datetime]], optional):
+                return assets for a given historical date
+            history_days_ago (Optional[int], optional): return assets for a history date N days ago
+            history_exact (bool, optional): Description
+            filter (Optional[str], optional): Description
+            cursor_id (Optional[str], optional): Description
+            sort (Optional[str], optional): Description
+            excluded_adapters (Optional[dict], optional): Description
+            field_filters (Optional[dict], optional): Description
+            fields (Optional[dict], optional): CSV or list of fields to include in return
+            offset (int, optional): Description
+            limit (int, optional): Description
+
         """
         asset_type = self.ASSET_TYPE
         api_endpoint = ApiEndpoints.assets.get
@@ -727,7 +744,7 @@ class AssetMixin(ModelMixins):
             filter (Optional[str], optional): if supplied,
                 only return the count of assets that match the query
             history_date (Optional[Union[str, timedelta, datetime]], optional): Description
-            history_days_ago (Optional[int], optional): Description
+            history_days_ago (Optional[int], optional): return assets for a history date N days ago
             history_exact (bool, optional): Description
             use_cache_entry (bool, optional): Description
 

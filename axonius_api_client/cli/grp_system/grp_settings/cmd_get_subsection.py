@@ -3,9 +3,9 @@
 from ....tools import json_dump
 from ...context import CONTEXT_SETTINGS, click
 from ...options import AUTH, add_options
-from .grp_common import EXPORT, SECTION, SUB_SECTION, str_subsection
+from .grp_common import OPT_EXPORT_FORMAT, OPT_SECTION, OPT_SUB_SECTION, str_subsection
 
-OPTIONS = [*AUTH, EXPORT, SECTION, SUB_SECTION]
+OPTIONS = [*AUTH, OPT_EXPORT_FORMAT, OPT_SECTION, OPT_SUB_SECTION]
 
 
 @click.command(name="get-sub-section", context_settings=CONTEXT_SETTINGS)

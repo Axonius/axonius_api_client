@@ -2,6 +2,10 @@
 """Constants for API models."""
 from typing import List
 
+USE_CA_PATH: str = " > ".join(
+    ["Settings", "Certificate Settings", "SSL Trust & CA Settings", "Use custom CA certificate"]
+)
+
 SETTING_UNCHANGED: List[str] = ["unchanged"]
 """used by REST API when supplying a password field that is the same in the database"""
 

@@ -3,42 +3,33 @@
 """Package setup."""
 import codecs
 import os
+from typing import List
 
 from setuptools import find_packages, setup
 
 PROJECT = "axonius_api_client"
 SHELL_CMD = "axonshell"
 HERE = os.path.abspath(os.path.dirname(__file__))
-VERSION_PATH = os.path.join(HERE, PROJECT, "version.py")
+PATH_VERSION = os.path.join(HERE, PROJECT, "version.py")
+PATH_README = os.path.join(HERE, "README.md")
+PATH_REQ = os.path.join(HERE, "requirements.txt")
+
+
+def read(path: str, clean: bool = True) -> List[str]:
+    """Read a file."""
+    with codecs.open(path, "r", "utf-8") as fh:
+        contents = fh.readlines()
+
+    if clean:
+        contents = [x for x in contents if not x.startswith("#") and x.strip()]
+    return contents
 
 
 ABOUT = {}
-with codecs.open(VERSION_PATH, "r", "utf-8") as fh:
-    CONTENTS = "\n".join(a for a in fh.readlines() if not a.startswith("#"))
-    exec(CONTENTS, ABOUT)
-
-
-with codecs.open("README.md", "r", "utf-8") as f:
-    README = f.read()
-
-
-install_requires = [
-    "requests[security,socks]>=2.23.0",
-    "python-dotenv>=0.12.0",
-    "python-dateutil>=2.8.1",
-    "click>=7.1.1",
-    "pyreadline>=2.1 ; platform_system == 'Windows'",
-    "tabulate>=0.8.7",
-    "xlsxwriter>=1.3.1",
-    "cachetools>=4.1.1",
-    "fuzzyfinder>=2.1.0",
-    "xmltodict>=0.12.0",
-    "dataclasses ; python_version < '3.7'",
-    "marshmallow>=3.10.0",
-    "marshmallow-jsonapi>=0.24.0",
-    "dataclasses-json>=0.5.2",
-    "pyOpenSSL>=21.0.0",
-]
+CONTENTS = "\n".join(read(path=PATH_VERSION))
+exec(CONTENTS, ABOUT)
+README = read(path=PATH_README, clean=False)
+INSTALL_REQUIRES = [x.strip() for x in read(path=PATH_REQ)]
 
 setup(
     name=ABOUT["__title__"],
@@ -53,7 +44,7 @@ setup(
     package_data={"": ["LICENSE"]},
     include_package_data=True,
     python_requires=">=3.5",
-    install_requires=install_requires,
+    install_requires=INSTALL_REQUIRES,
     keywords=["Axonius", "API Library"],
     tests_require=["pytest", "pytest-cov", "pytest-httpbin", "coverage"],
     license=ABOUT["__license__"],
