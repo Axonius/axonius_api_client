@@ -26,6 +26,6 @@ OPTIONS = [
 def cmd(ctx, input_file, **kwargs):
     """Display/convert certificates from a PEM, DER, or PKCS7 file."""
     with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
-        chain = from_path(path=input_file)
+        chain = from_path(path=input_file, split=False)
         handle_export(data=chain, **kwargs)
     ctx.exit(0)
