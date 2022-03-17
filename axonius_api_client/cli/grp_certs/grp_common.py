@@ -23,7 +23,12 @@ def export_str(data, **kwargs):
     def dump(obj):
         return obj.to_str()
 
-    return "\n\n".join([dump(x) for x in data]) if isinstance(data, list) else dump(data)
+    barrier = "-" * 80
+    return (
+        f"\n\n{barrier}".join([dump(x) for x in data])
+        if isinstance(data, (tuple, list))
+        else dump(data)
+    )
 
 
 def export_pem(data, **kwargs):

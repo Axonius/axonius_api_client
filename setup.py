@@ -28,7 +28,7 @@ def read(path: str, clean: bool = True) -> List[str]:
 ABOUT = {}
 CONTENTS = "\n".join(read(path=PATH_VERSION))
 exec(CONTENTS, ABOUT)
-README = read(path=PATH_README, clean=False)
+README = "\n".join(read(path=PATH_README, clean=False))
 INSTALL_REQUIRES = [x.strip() for x in read(path=PATH_REQ)]
 
 setup(

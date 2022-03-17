@@ -297,3 +297,4 @@ shell.py
 .idea
 axonius_oas*.yaml
 artifacts/
+/*.pem

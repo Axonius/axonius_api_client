@@ -69,7 +69,7 @@ class Http:
         """save requests to :attr:`LAST_REQUEST` and responses to :attr:`LAST_RESPONSE`
         ``kwargs=save_last``"""
 
-        self.SAVEHISTORY: bool = kwargs.get("save_history", False)
+        self.SAVE_HISTORY: bool = kwargs.get("save_history", False)
         """Append all responses to :attr:`HISTORY` ``kwargs=save_history``"""
 
         self.CONNECT_TIMEOUT: int = kwargs.get("connect_timeout", TIMEOUT_CONNECT)
@@ -195,7 +195,7 @@ class Http:
             # TBD: verify cert bundle
             self.CERT_PATH, _ = path_read(obj=self.CERT_PATH, binary=True)
             self.LOG.debug(f"Resolved cert verify to {self.CERT_PATH}")
-            self.session.verify = self.CERT_PATH
+            self.session.verify = str(self.CERT_PATH)
         else:
             self.session.verify = self.CERT_VERIFY
             self.LOG.debug(f"Resolved cert verify to {self.CERT_VERIFY}")
@@ -281,6 +281,11 @@ class Http:
         this_headers.update(headers or {})
         this_headers.setdefault("User-Agent", self.user_agent)
 
+        timeout = (
+            kwargs.get("connect_timeout", self.CONNECT_TIMEOUT),
+            kwargs.get("response_timeout", self.RESPONSE_TIMEOUT),
+        )
+
         request = requests.Request(
             url=url,
             method=method,
@@ -291,6 +296,8 @@ class Http:
             files=files or [],
         )
         prepped_request = self.session.prepare_request(request=request)
+
+        # TBD: this should be in apiendpoints
         if "Content-Type" not in prepped_request.headers:
             prepped_request.headers["Content-Type"] = "application/vnd.api+json"
 
@@ -299,26 +306,27 @@ class Http:
 
         self._do_log_request(request=prepped_request)
 
+        pre_send_args = {
+            "proxies": kwargs.get("proxies", self.session.proxies),
+            "stream": kwargs.get("stream", self.session.stream),
+            "verify": kwargs.get("verify", self.session.verify),
+            "cert": kwargs.get("cert", self.session.cert),
+        }
+        self.LOG.debug(f"Request arguments before environment merge: {pre_send_args}")
+
         send_args = self.session.merge_environment_settings(
             url=prepped_request.url,
-            proxies=kwargs.get("proxies", {}),
-            stream=kwargs.get("stream", None),
-            verify=kwargs.get("verify", None),
-            cert=kwargs.get("cert", None),
+            **pre_send_args,
         )
 
-        send_args["request"] = prepped_request
-        send_args["timeout"] = (
-            kwargs.get("connect_timeout", self.CONNECT_TIMEOUT),
-            kwargs.get("response_timeout", self.RESPONSE_TIMEOUT),
-        )
+        self.LOG.debug(f"Request arguments after environment merge: {send_args}")
 
-        response = self.session.send(**send_args)
+        response = self.session.send(request=prepped_request, timeout=timeout, **send_args)
 
         if self.SAVE_LAST:
             self.LAST_RESPONSE = response
 
-        if self.SAVEHISTORY:
+        if self.SAVE_HISTORY:
             self.HISTORY.append(response)
 
         self._do_log_response(response=response)

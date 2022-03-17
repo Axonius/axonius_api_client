@@ -5,7 +5,6 @@
 # import subprocess
 
 import pytest
-
 from axonius_api_client import cert_human
 from axonius_api_client.api.json_api.generic import ApiBase
 from axonius_api_client.api.json_api.system_settings import CertificateDetails
@@ -238,7 +237,7 @@ class TestSettingsGlobal(SettingsBasePublic):
         chain = apiobj.gui_cert_reset(True)
         self.check_chain(chain)
 
-    @pytest.mark.datafiles("certs/server_rsa.crt.pem", "certs/server_rsa.key.pem")
+    @pytest.mark.datafiles("certs/server_rsa.crt.pem", "certs/server_rsa.key")
     def test_gui_cert_update(self, apiobj, datafiles):
         path_cert, path_key = datafiles
         chain = apiobj.gui_cert_update_path(
