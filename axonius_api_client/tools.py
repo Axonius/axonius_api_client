@@ -596,6 +596,7 @@ def path_backup_file(
     backup_path: Optional[Union[str, pathlib.Path]] = None,
     make_parent: bool = True,
     protect_parent=0o700,
+    **kwargs,
 ) -> pathlib.Path:
     """Pass."""
     path = get_path(obj=path)
@@ -620,14 +621,14 @@ def path_backup_file(
 def auto_suffix(
     path: Union[str, pathlib.Path],
     data: Union[bytes, str],
+    error: bool = False,
     **kwargs,
 ) -> Union[bytes, str]:
     """Pass."""
     path = get_path(obj=path)
 
     if path.suffix == ".json" and not (isinstance(data, str) or isinstance(data, bytes)):
-        kwargs.setdefault("error", False)
-        data = json_dump(obj=data, **kwargs)
+        data = json_dump(obj=data, error=error, **kwargs)
     return data
 
 
@@ -670,10 +671,10 @@ def path_write(
     obj = get_path(obj=obj)
 
     if is_json:
-        data = json_dump(obj=data, **kwargs)
+        data = json_dump(combo_dicts(kwargs, obj=data))
 
     if suffix_auto:
-        data = auto_suffix(path=obj, data=data)
+        data = auto_suffix(combo_dicts(kwargs, path=obj, data=data))
 
     if binary:
         if isinstance(data, str):
@@ -698,12 +699,14 @@ def path_write(
             raise ToolsError(f"File '{obj}' already exists and overwrite is False")
     else:
         path_create_parent_dir(path=obj, make_parent=make_parent, protect_parent=protect_parent)
-        obj.touch()
+
+    obj.touch()
 
     if protect_file:
         obj.chmod(protect_file)
 
-    return obj, (method(data), backup_path)
+    bytes_written = method(data)
+    return obj, (bytes_written, backup_path)
 
 
 def longest_str(obj: List[str]) -> int:
@@ -1217,6 +1220,7 @@ def token_parse(obj: str) -> str:
 
 def combo_dicts(*args, **kwargs) -> dict:
     """Pass."""
+    # TBD make this descend
     ret = {}
     for x in args:
         if isinstance(x, dict):
