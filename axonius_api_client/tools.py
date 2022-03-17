@@ -671,10 +671,10 @@ def path_write(
     obj = get_path(obj=obj)
 
     if is_json:
-        data = json_dump(combo_dicts(kwargs, obj=data))
+        data = json_dump(**combo_dicts(kwargs, obj=data))
 
     if suffix_auto:
-        data = auto_suffix(combo_dicts(kwargs, path=obj, data=data))
+        data = auto_suffix(**combo_dicts(kwargs, path=obj, data=data))
 
     if binary:
         if isinstance(data, str):
