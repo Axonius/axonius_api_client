@@ -13,7 +13,19 @@ import re
 import sys
 from datetime import datetime, timedelta, timezone
 from itertools import zip_longest
-from typing import Any, Iterable, Iterator, List, Optional, Pattern, Tuple, Type, Union
+from typing import (
+    Any,
+    Dict,
+    Iterable,
+    Iterator,
+    List,
+    Optional,
+    Pattern,
+    Tuple,
+    Type,
+    TypeVar,
+    Union,
+)
 from urllib.parse import urljoin
 
 import click
@@ -28,6 +40,7 @@ from .constants.general import (
     DEBUG_TMPL,
     ERROR_ARGS,
     ERROR_TMPL,
+    FILE_DATE_FMT,
     NO,
     OK_ARGS,
     OK_TMPL,
@@ -47,6 +60,7 @@ EMAIL_RE_STR: str = (
     r"@([-!#-'*+/-9=?A-Z^-~]+(\.[-!#-'*+/-9=?A-Z^-~]+)*|\[[\t -Z^-~]*])"
 )
 EMAIL_RE: Pattern = re.compile(EMAIL_RE_STR, re.I)
+PathLike: TypeVar = TypeVar("PathLike", pathlib.Path, str, bytes)
 
 
 def listify(obj: Any, dictkeys: bool = False) -> list:
@@ -451,7 +465,7 @@ def dt_now(
     return datetime.now(tz)
 
 
-def dt_now_file(fmt: str = "%Y%m%d-%H%M%S", **kwargs):
+def dt_now_file(fmt: str = FILE_DATE_FMT, **kwargs):
     """Pass."""
     return dt_now(**kwargs).strftime(fmt)
 
@@ -508,7 +522,7 @@ def dt_within_min(
     return dt_min_ago(obj=obj) >= int(n)
 
 
-def get_path(obj: Union[str, pathlib.Path]) -> pathlib.Path:
+def get_path(obj: PathLike) -> pathlib.Path:
     """Convert a str into a fully resolved & expanded Path object.
 
     Args:
@@ -518,7 +532,7 @@ def get_path(obj: Union[str, pathlib.Path]) -> pathlib.Path:
 
 
 def path_read(
-    obj: Union[str, pathlib.Path], binary: bool = False, is_json: bool = False, **kwargs
+    obj: PathLike, binary: bool = False, is_json: bool = False, **kwargs
 ) -> Union[bytes, str]:
     """Read data from a file.
 
@@ -555,19 +569,19 @@ def path_read(
     return robj, data
 
 
-def get_backup_filename(path: Union[str, pathlib.Path]) -> str:
+def get_backup_filename(path: PathLike) -> str:
     """Pass."""
     path = get_path(obj=path)
     return f"{path.stem}_{dt_now_file()}{path.suffix}"
 
 
-def get_backup_path(path: Union[str, pathlib.Path]) -> pathlib.Path:
+def get_backup_path(path: PathLike) -> pathlib.Path:
     """Pass."""
     path = get_path(obj=path)
     return path.parent / get_backup_filename(path=path)
 
 
-def check_path_is_not_dir(path: Union[str, pathlib.Path]) -> pathlib.Path:
+def check_path_is_not_dir(path: PathLike) -> pathlib.Path:
     """Pass."""
     path = get_path(obj=path)
     if path.is_dir():
@@ -576,7 +590,7 @@ def check_path_is_not_dir(path: Union[str, pathlib.Path]) -> pathlib.Path:
 
 
 def path_create_parent_dir(
-    path: Union[str, pathlib.Path], make_parent: bool = True, protect_parent=0o700
+    path: PathLike, make_parent: bool = True, protect_parent=0o700
 ) -> pathlib.Path:
     """Pass."""
     path = get_path(obj=path)
@@ -592,8 +606,8 @@ def path_create_parent_dir(
 
 
 def path_backup_file(
-    path: Union[str, pathlib.Path],
-    backup_path: Optional[Union[str, pathlib.Path]] = None,
+    path: PathLike,
+    backup_path: Optional[PathLike] = None,
     make_parent: bool = True,
     protect_parent=0o700,
     **kwargs,
@@ -619,7 +633,7 @@ def path_backup_file(
 
 
 def auto_suffix(
-    path: Union[str, pathlib.Path],
+    path: PathLike,
     data: Union[bytes, str],
     error: bool = False,
     **kwargs,
@@ -633,11 +647,11 @@ def auto_suffix(
 
 
 def path_write(
-    obj: Union[str, pathlib.Path],
+    obj: PathLike,
     data: Union[bytes, str],
     overwrite: bool = False,
     backup: bool = False,
-    backup_path: Optional[Union[str, pathlib.Path]] = None,
+    backup_path: Optional[PathLike] = None,
     binary: bool = False,
     binary_encoding: str = "utf-8",
     is_json: bool = False,
@@ -687,7 +701,7 @@ def path_write(
 
     check_path_is_not_dir(path=obj)
 
-    if obj.is_file():
+    if obj.exists():
         if backup:
             backup_path = path_backup_file(
                 path=obj,
@@ -934,9 +948,18 @@ def join_kv(
 
     items = []
     for k, v in obj.items():
-        if isinstance(v, list):
+        if isinstance(v, (list, tuple)):
             v = listjoin.join([str(i) for i in v])
+            items.append(tmpl.format(k=k, v=v))
+            continue
+
+        if isinstance(v, dict):
+            items.append(f"{k}:")
+            items += join_kv(obj=v, listjoin=listjoin, tmpl="  " + tmpl)
+            continue
+
         items.append(tmpl.format(k=k, v=v))
+
     return items
 
 
@@ -1360,3 +1383,26 @@ def parse_int_min_max(value, default=0, min_value=None, max_value=None):
         value = default
 
     return value
+
+
+def safe_replace(obj: dict, value: str) -> str:
+    """Pass."""
+    for search, replace in obj.items():
+        if isinstance(search, str) and isinstance(replace, str) and search and search in value:
+            value = value.replace(search, replace)
+    return value
+
+
+def safe_format(value: PathLike, mapping: Optional[Dict[str, str]] = None, **kwargs) -> PathLike:
+    """Pass."""
+    is_path = isinstance(value, pathlib.Path)
+    to_update = str(value) if is_path else value
+
+    if not isinstance(to_update, str):
+        return value
+
+    for item in [mapping, kwargs]:
+        if isinstance(item, dict) and item:
+            to_update = safe_replace(obj=item, value=to_update)
+
+    return get_path(to_update) if is_path else to_update

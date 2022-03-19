@@ -271,7 +271,7 @@ class SavedQuery(ChildMixins):
         """
         sq = self.get_by_multi(sq=sq, as_dataclass=True)
 
-        wiz_parsed: dict = self.parent._handle_wiz_entries(wiz_entries=wiz_entries)
+        wiz_parsed: dict = self.parent.get_wiz_entries(wiz_entries=wiz_entries)
 
         if wiz_parsed:
             query = wiz_parsed["query"]
@@ -685,7 +685,7 @@ class SavedQuery(ChildMixins):
         always_cached = coerce_bool(always_cached)
         self._check_asset_scope_enabled(value=asset_scope)
         query_expr: Optional[str] = kwargs.get("query_expr", None) or query
-        wiz_parsed: dict = self.parent._handle_wiz_entries(wiz_entries=wiz_entries)
+        wiz_parsed: dict = self.parent.get_wiz_entries(wiz_entries=wiz_entries)
 
         if wiz_parsed:
             query = wiz_parsed["query"]

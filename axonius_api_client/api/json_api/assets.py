@@ -11,7 +11,7 @@ from ... import LOG
 from ...constants.api import MAX_PAGE_SIZE, PAGE_SIZE
 from ...exceptions import ApiError, StopFetch
 from ...http import Http
-from ...tools import coerce_int, dt_now, dt_parse, dt_sec_ago, json_dump, listify, parse_int_min_max
+from ...tools import coerce_int, dt_now, dt_parse, dt_sec_ago, json_dump, parse_int_min_max
 from .base import BaseModel, BaseSchema, BaseSchemaJson
 from .custom_fields import SchemaBool, get_field_dc_mm
 from .generic import DictValue, DictValueSchema
@@ -232,10 +232,10 @@ class HistoryDates(DictValue):
     def __post_init__(self):
         """Pass."""
         self.parsed = {}
-        for k, v in self.value.items():
-            obj = AssetTypeHistoryDates(asset_type=k, values=v)
-            setattr(self, k, obj)
-            self.parsed[k] = obj
+        for asset_type, values in self.value.items():
+            obj = AssetTypeHistoryDates(asset_type=asset_type, values=values)
+            setattr(self, asset_type, obj)
+            self.parsed[asset_type] = obj
 
     def __str__(self) -> str:
         """Pass."""
@@ -244,21 +244,6 @@ class HistoryDates(DictValue):
 
 class AssetMixins:
     """Pass."""
-
-    def set_history(
-        self,
-        history_dates: HistoryDates,
-        asset_type: str,
-        history_date: Optional[Union[str, datetime.timedelta, datetime.datetime]] = None,
-        history_days_ago: Optional[int] = None,
-        history_exact: bool = False,
-    ) -> Optional[str]:
-        """Pass."""
-        asset_dates = history_dates.parsed[asset_type]
-        self.history = asset_dates.get_date(
-            date=history_date, days_ago=history_days_ago, exact=history_exact
-        )
-        return self.history
 
 
 class AssetRequestSchema(BaseSchemaJson):
@@ -340,19 +325,6 @@ class AssetRequest(AssetMixins, BaseModel):
     def get_schema_cls() -> Optional[Type[BaseSchema]]:
         """Pass."""
         return AssetRequestSchema
-
-    def set_fields(self, asset_type: str, fields: List[str]):
-        """Pass."""
-        self.fields = {asset_type: listify(fields)}
-
-    def set_sort(self, asset_type: str, field: str, descending: bool = False):
-        """Pass."""
-        if isinstance(field, str):
-            field = field[1:] if field.startswith("-") else field
-            field = f"-{field}" if descending else field
-        else:
-            field = None
-        self.sort = field
 
     def set_page(self, limit: int = 0, offset: int = PAGE_SIZE):
         """Pass."""

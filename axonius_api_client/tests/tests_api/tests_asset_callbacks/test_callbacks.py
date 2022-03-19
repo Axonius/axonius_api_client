@@ -6,7 +6,6 @@ import logging
 import sys
 
 import pytest
-
 from axonius_api_client.api.asset_callbacks import get_callbacks_cls
 from axonius_api_client.constants.api import FIELD_TRIM_LEN
 from axonius_api_client.constants.fields import SCHEMAS_CUSTOM
@@ -1011,7 +1010,7 @@ class Exports:
         cbobj.open_fd()
 
         assert cbobj._file_path.name == export_file.name
-        assert cbobj._file_mode == "created"
+        assert cbobj._file_mode == "Created new file"
         assert cbobj._fd_close
 
         cbobj.close_fd()
@@ -1033,7 +1032,7 @@ class Exports:
         cbobj.open_fd()
 
         assert cbobj._file_path.name == export_file.name
-        assert cbobj._file_mode == "created"
+        assert cbobj._file_mode == "Created new file"
         assert not cbobj._fd_close
 
         cbobj.close_fd()
@@ -1055,7 +1054,7 @@ class Exports:
         cbobj.open_fd()
 
         assert cbobj._file_path.name == export_file.name
-        assert cbobj._file_mode == "overwrote"
+        assert cbobj._file_mode == "Overwrote existing file"
         assert cbobj._fd_close
 
         cbobj.close_fd()

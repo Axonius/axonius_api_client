@@ -4,6 +4,7 @@ import codecs
 import csv
 from typing import List, Union
 
+from ...constants.api import FIELD_TRIM_LEN
 from ...tools import listify
 from .base import ExportMixins
 
@@ -100,6 +101,7 @@ class Csv(ExportMixins):
                 "field_flatten": True,
                 "field_join": True,
                 "field_null": True,
+                "field_join_trim": FIELD_TRIM_LEN,
                 "export_schema": True,
                 "csv_key_miss": None,
                 "csv_key_extras": "ignore",

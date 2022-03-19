@@ -1,19 +1,44 @@
 # -*- coding: utf-8 -*-
 """Command line interface for Axonius API Client."""
+from ... import DEFAULT_PATH
 from ...api import asset_callbacks
 from ...constants.wizards import Results, Types
 from ...tools import echo_error, path_read
 from ..context import CONTEXT_SETTINGS, SplitEquals, click
 from ..options import (
     AUTH,
-    EXPORT,
     FIELDS_SELECT,
+    OPT_EXPORT_BACKUP,
+    OPT_EXPORT_OVERWRITE,
     PAGING,
     TABLE_FMT,
     add_options,
     get_option_fields_default,
     get_option_help,
 )
+
+TEMPLATES = "(supports templating: {DATE}, {HISTORY_DATE})"
+OPT_EXPORT_FILE = click.option(
+    "--export-file",
+    "-xf",
+    "export_file",
+    default="",
+    help=f"File to save data to {TEMPLATES}",
+    show_envvar=True,
+    show_default=True,
+    metavar="PATH",
+)
+OPT_EXPORT_PATH = click.option(
+    "--export-path",
+    "-xp",
+    "export_path",
+    default=DEFAULT_PATH,
+    help=f"If --export-file supplied, the directory to write --export_file to {TEMPLATES}",
+    type=click.Path(exists=False, resolve_path=True),
+    show_envvar=True,
+    show_default=True,
+)
+OPTS_EXPORT = [OPT_EXPORT_FILE, OPT_EXPORT_PATH, OPT_EXPORT_OVERWRITE, OPT_EXPORT_BACKUP]
 
 HISTORY = [
     click.option(
@@ -340,7 +365,7 @@ GET_EXPORT = [
 GET_BUILDERS = [
     *AUTH,
     *PAGING,
-    *EXPORT,
+    *OPTS_EXPORT,
     *GET_EXPORT,
     *HISTORY,
     *FIELDS_SELECT,
