@@ -758,6 +758,26 @@ class CallbacksFull(Callbacks):
         assert not capture.out
         log_check(caplog=caplog, entries=[entry], exists=True)
 
+    def test_echo_debug_doecho_yes(self, cbexport, apiobj, capsys, caplog):
+        entry = "xxxxxxx"
+
+        cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs={"do_echo": True})
+        cbobj.echo(msg=entry, debug=True)
+        capture = capsys.readouterr()
+        assert f"{entry}\n" in capture.err
+        assert not capture.out
+        log_check(caplog=caplog, entries=[entry], exists=True)
+
+    def test_echo_warning_doecho_yes(self, cbexport, apiobj, capsys, caplog):
+        entry = "xxxxxxx"
+
+        cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs={"do_echo": True})
+        cbobj.echo(msg=entry, warning=True)
+        capture = capsys.readouterr()
+        assert f"{entry}\n" in capture.err
+        assert not capture.out
+        log_check(caplog=caplog, entries=[entry], exists=True)
+
     def test_echo_error_doecho_yes(self, cbexport, apiobj, capsys, caplog):
         entry = "xxxxxxx"
 
@@ -1040,6 +1060,26 @@ class Exports:
         cbobj._fd.write(" ")
         cbobj._fd.close()
         assert export_file.read_text() == "\n "
+
+    def test_fd_path_backup_true(self, cbexport, apiobj, tmp_path):
+        export_file = tmp_path / "badwolf.txt"
+        export_file.touch()
+
+        cbobj = self.get_cbobj(
+            apiobj=apiobj,
+            cbexport=cbexport,
+            getargs={"export_file": export_file, "export_backup": True},
+        )
+
+        cbobj.open_fd()
+
+        assert cbobj._file_path.name == export_file.name
+        assert cbobj._file_mode == "Renamed existing file and created new file"
+        assert cbobj._fd_close
+        assert cbobj._file_path_backup.is_file()
+
+        cbobj.close_fd()
+        assert export_file.is_file()
 
     def test_fd_path_overwrite_true(self, cbexport, apiobj, tmp_path):
         export_file = tmp_path / "badwolf.txt"

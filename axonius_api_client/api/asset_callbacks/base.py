@@ -1167,40 +1167,47 @@ class ExportMixins(Base):
 
     def open_fd_path(self) -> IO:
         """Open a file descriptor for a path."""
-        self._file_path: pathlib.Path = (self.arg_export_path / self.arg_export_file).resolve()
-        self._fd_close: bool = self.arg_export_fd_close
+        export_path = self.arg_export_path
+        export_file = self.arg_export_file
+        export_fd_close = self.arg_export_fd_close
+        export_backup = self.arg_export_backup
+        export_overwrite = self.arg_export_overwrite
+
+        full_path = pathlib.Path = (export_path / export_file).resolve()
+
+        self._file_path: pathlib.Path = full_path
+        self._file_path_backup: Optional[pathlib.Path] = None
+        self._fd_close: bool = export_fd_close
         self._file_mode: str = "Created new file"
-        self._file_backup: Optional[pathlib.Path] = None
 
         check_path_is_not_dir(path=self._file_path)
 
-        if self._file_path.exists():
-            if self.arg_export_backup:
-                self._file_backup: pathlib.Path = path_backup_file(path=self._file_path)
-                msg = f"Renamed existing file to {str(self._file_backup)!r}"
-                self.echo(msg=msg, debug=True)
-                self._file_mode: str = f"{msg} and created new file"
-            elif not self.arg_export_overwrite:
+        if full_path.exists():
+            if export_backup:
+                self._file_path_backup: pathlib.Path = path_backup_file(path=self._file_path)
+                self._file_mode: str = "Renamed existing file and created new file"
                 self.echo(
-                    msg=(
-                        f"Export file {str(self._file_path)!r} already exists "
-                        "and export_overwite is False!",
-                    ),
+                    msg=f"Renamed existing file to {str(self._file_path_backup)!r}",
+                    debug=True,
+                )
+            elif not export_overwrite:
+                self.echo(
+                    msg=f"Export file {str(full_path)!r} already exists and overwite is False!",
                     error=ApiError,
                     level="error",
                 )
             else:
                 self._file_mode: str = "Overwrote existing file"
 
-        if not self._file_path.parent.is_dir():
-            self._file_path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
-            self.echo(msg=f"Created directory {str(self._file_path.parent)!r}", debug=True)
+        if not full_path.parent.is_dir():
+            full_path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+            self.echo(msg=f"Created directory {str(full_path.parent)!r}", debug=True)
 
-        if not self._file_path.exists():
-            self._file_path.touch(mode=0o600)
-            self.echo(msg=f"Created new file {str(self._file_path)!r}", debug=True)
+        if not full_path.exists():
+            full_path.touch(mode=0o600)
+            self.echo(msg=f"Created new file {str(full_path)!r}", debug=True)
 
-        self._fd_info: str = f"file {str(self._file_path)!r} ({self._file_mode})"
+        self._fd_info: str = f"file {str(full_path)!r} ({self._file_mode})"
         self.echo(msg=f"Exporting to {self._fd_info}")
 
         self._fd: IO = self._file_path.open(mode="w", encoding="utf-8")
@@ -1236,10 +1243,17 @@ class ExportMixins(Base):
         return self.get_arg_value("export_fd")
 
     @property
-    def arg_export_file(self) -> Optional[str]:
+    def arg_export_file(self) -> Optional[pathlib.Path]:
         """Pass."""
         value = self.get_arg_value("export_file")
-        return safe_format(value=value, mapping=self.export_templates)
+        value = safe_format(value=value, mapping=self.export_templates)
+
+        if isinstance(value, str) and value:
+            value = pathlib.Path(value)
+
+        if isinstance(value, pathlib.Path):
+            value = value.expanduser()
+        return value
 
     @property
     def arg_export_path(self) -> pathlib.Path:
