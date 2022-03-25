@@ -5,7 +5,6 @@ import datetime
 import json
 
 import pytest
-
 from axonius_api_client.api import json_api
 from axonius_api_client.constants.api import GUI_PAGE_SIZES
 from axonius_api_client.constants.general import SIMPLE
@@ -269,7 +268,7 @@ class SavedQueryPublic:
 
     def test_update_query_empty_expressions_append(self, apiobj, sq_fixture):
         wiz_entries = f"simple {apiobj.FIELD_SIMPLE} contains a"
-        wiz_parsed = apiobj._handle_wiz_entries(wiz_entries=wiz_entries)
+        wiz_parsed = apiobj.get_wiz_entries(wiz_entries=wiz_entries)
 
         with pytest.warns(GuiQueryWizardWarning):
             apiobj.saved_query.update_query(sq=sq_fixture, query=wiz_parsed["query"], append=True)
@@ -280,7 +279,7 @@ class SavedQueryPublic:
 
     def test_update_query(self, apiobj, sq_fixture):
         wiz_set_entries = f"simple {apiobj.FIELD_SIMPLE} contains a"
-        wiz_set = apiobj._handle_wiz_entries(wiz_entries=wiz_set_entries)
+        wiz_set = apiobj.get_wiz_entries(wiz_entries=wiz_set_entries)
         with pytest.warns(GuiQueryWizardWarning):
             updated_set = apiobj.saved_query.update_query(
                 sq=FixtureData.name,
@@ -305,7 +304,7 @@ class SavedQueryPublic:
         assert updated_set_wiz.expressions == wiz_set["expressions"]
 
         wiz_append_entries = f"simple {apiobj.FIELD_SIMPLE} contains b"
-        wiz_append = apiobj._handle_wiz_entries(wiz_entries=wiz_append_entries)
+        wiz_append = apiobj.get_wiz_entries(wiz_entries=wiz_append_entries)
         wiz_append_exp_query = f'{wiz_set["query"]} or {wiz_append["query"]}'
         updated_append = apiobj.saved_query.update_query(
             sq=FixtureData.name,
@@ -318,7 +317,7 @@ class SavedQueryPublic:
         assert updated_append.query == wiz_append_exp_query
 
         wiz_append_and_entries = f"simple {apiobj.FIELD_LAST_SEEN} last_days 30"
-        wiz_append_and = apiobj._handle_wiz_entries(wiz_entries=wiz_append_and_entries)
+        wiz_append_and = apiobj.get_wiz_entries(wiz_entries=wiz_append_and_entries)
         wiz_append_and_exp_query = f"{wiz_append_exp_query} and {wiz_append_and['query']}"
         updated_append_and = apiobj.saved_query.update_query(
             sq=FixtureData.name,
@@ -331,7 +330,7 @@ class SavedQueryPublic:
         assert updated_append_and.query == wiz_append_and_exp_query
 
         wiz_append_and_not_entries = f"simple {apiobj.FIELD_LAST_SEEN} last_days 90"
-        wiz_append_and_not = apiobj._handle_wiz_entries(wiz_entries=wiz_append_and_not_entries)
+        wiz_append_and_not = apiobj.get_wiz_entries(wiz_entries=wiz_append_and_not_entries)
         wiz_append_and_not_exp_query = (
             f"{wiz_append_and_exp_query} and not {wiz_append_and_not['query']}"
         )

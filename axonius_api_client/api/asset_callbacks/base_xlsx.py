@@ -4,6 +4,7 @@ from typing import List
 
 import xlsxwriter
 
+from ...constants.api import FIELD_TRIM_LEN
 from ...exceptions import ApiError
 from ...tools import listify
 from .base import ExportMixins
@@ -92,6 +93,7 @@ class Xlsx(ExportMixins):
                 "field_titles": True,
                 "field_flatten": True,
                 "field_join": True,
+                "field_join_trim": FIELD_TRIM_LEN,
                 "field_null": True,
                 "xlsx_column_length": 50,
                 "xlsx_cell_format": {"text_wrap": True},
@@ -122,8 +124,9 @@ class Xlsx(ExportMixins):
             self.open_fd_path()
             self._fd.close()
         else:
-            msg = "Must supply export_file for this export method"
-            self.echo(msg=msg, error=ApiError, level="error")
+            self.echo(
+                msg="Must supply export_file for this export method", error=ApiError, level="error"
+            )
 
         self._workbook = xlsxwriter.Workbook(str(self._file_path), {"constant_memory": True})
         self._cell_format = self._workbook.add_format(cell_format)

@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 """Base callbacks."""
 import logging
+import pathlib
 import re
 import sys
-from typing import Generator, List, Optional, Tuple, Union
+from typing import IO, Generator, List, Optional, Tuple, Union
 
 from ... import DEFAULT_PATH
 from ...constants.api import FIELD_JOINER, FIELD_TRIM_LEN, FIELD_TRIM_STR
@@ -11,16 +12,21 @@ from ...constants.fields import AGG_ADAPTER_NAME, SCHEMAS_CUSTOM
 from ...exceptions import ApiError
 from ...parsers.fields import schema_custom
 from ...tools import (
+    PathLike,
     calc_percent,
+    check_path_is_not_dir,
     coerce_int,
     dt_now,
+    echo_debug,
     echo_error,
     echo_ok,
     echo_warn,
     get_path,
+    get_paths_format,
     join_kv,
     listify,
     longest_str,
+    path_backup_file,
     strip_right,
 )
 
@@ -844,9 +850,11 @@ class Base:
     def echo(
         self,
         msg: str,
-        error: bool = False,
+        debug: bool = False,
+        error: Union[bool, Exception] = False,
         warning: bool = False,
         level: str = "info",
+        level_debug: str = "debug",
         level_error: str = "error",
         level_warning: str = "warning",
         abort: bool = True,
@@ -865,22 +873,27 @@ class Base:
         do_echo = self.get_arg_value("do_echo")
 
         if do_echo:
-            if warning:
-                echo_warn(msg=msg)  # pragma: no cover
-            elif error:
+            if error:
                 echo_error(msg=msg, abort=abort)
+            elif warning:
+                echo_warn(msg=msg)
+            elif debug:
+                echo_debug(msg=msg)
             else:
                 echo_ok(msg=msg)
-            return
-
-        if warning:
-            getattr(self.LOG, level_warning)(msg)  # pragma: no cover
-        elif error:
-            getattr(self.LOG, level_error)(msg)
-            if abort:
-                raise error(msg)
         else:
-            getattr(self.LOG, level)(msg)
+            if error:
+                getattr(self.LOG, level_error)(msg)
+                if abort:
+                    if not isinstance(error, Exception):
+                        error = ApiError
+                    raise error(msg)
+            elif warning:
+                getattr(self.LOG, level_warning)(msg)
+            elif debug:
+                getattr(self.LOG, level_debug)(msg)
+            else:
+                getattr(self.LOG, level)(msg)
 
     def get_sub_schemas(self, schema: dict) -> Generator[dict, None, None]:
         """Get all the schemas of sub fields for a complex field.
@@ -1129,61 +1142,84 @@ class ExportMixins(Base):
             "export_file": None,
             "export_path": DEFAULT_PATH,
             "export_overwrite": False,
+            "export_backup": False,
             "export_schema": False,
             "export_fd": None,
             "export_fd_close": True,
         }
 
-    def open_fd_arg(self):
+    def open_fd(self) -> IO:
+        """Open a file descriptor."""
+        if self.arg_export_fd:
+            return self.open_fd_arg()
+        elif self.arg_export_file:
+            return self.open_fd_path()
+        else:
+            return self.open_fd_stdout()
+
+    def open_fd_arg(self) -> IO:
         """Open a file descriptor supplied in GETARGS."""
-        self._fd = self.get_arg_value("export_fd")
-        self._fd_close = self.get_arg_value("export_fd_close")
-        self.echo(msg=f"Exporting to {self._fd}")
+        self._fd: IO = self.arg_export_fd
+        self._fd_close: bool = self.arg_export_fd_close
+        self._fd_info: str = f"{self._fd}"
+        self.echo(msg=f"Exporting to {self._fd_info}")
         return self._fd
 
-    def open_fd_path(self):
-        """Open a file descriptor for a path."""
-        self._export_file = self.get_arg_value("export_file")
-        self._export_path = self.get_arg_value("export_path")
-        self._export_overwrite = self.get_arg_value("export_overwrite")
+    @property
+    def export_full_path(self) -> pathlib.Path:
+        """Pass."""
+        return get_paths_format(
+            self.arg_export_path, self.arg_export_file, mapping=self.export_templates
+        )
 
-        file_path = get_path(obj=self._export_path)
-        file_path.mkdir(mode=0o700, parents=True, exist_ok=True)
-        self._file_path = fp = (file_path / self._export_file).resolve()
+    def open_fd_path(self) -> IO:
+        """Open a file descriptor for a path."""
+        export_fd_close = self.arg_export_fd_close
+        export_backup = self.arg_export_backup
+        export_overwrite = self.arg_export_overwrite
+
+        self._file_path: pathlib.Path = self.export_full_path
+        self._file_path_backup: Optional[pathlib.Path] = None
+        self._fd_close: bool = export_fd_close
+
+        check_path_is_not_dir(path=self._file_path)
 
         if self._file_path.exists():
-            self._file_mode = "overwrote"
-            mode = "overwriting"
+            if export_backup:
+                self._file_path_backup: pathlib.Path = path_backup_file(path=self._file_path)
+                self._file_mode: str = "Renamed existing file and created new file"
+                self.echo(
+                    msg=f"Renamed existing file to {str(self._file_path_backup)!r}",
+                    debug=True,
+                )
+            elif not export_overwrite:
+                msg = f"Export file {str(self._file_path)!r} already exists and overwite is False!"
+                self.echo(msg=msg, error=ApiError, level="error")
+            else:
+                self._file_mode: str = "Overwrote existing file"
         else:
-            self._file_mode = "created"
-            mode = "creating"
+            self._file_mode: str = "Created new file"
 
-        if self._file_path.exists() and not self._export_overwrite:
-            msg = f"Export file '{fp}' already exists and overwite is False!"
-            self.echo(msg=msg, error=ApiError, level="error")
+        if not self._file_path.parent.is_dir():
+            self._file_path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+            self.echo(msg=f"Created directory {str(self._file_path.parent)!r}", debug=True)
 
-        self._file_path.touch(mode=0o600)
-        self._fd_close = self.get_arg_value("export_fd_close")
-        self._fd = self._file_path.open(mode="w", encoding="utf-8")
-        self.echo(msg=f"Exporting to file '{fp}' ({mode})")
+        if not self._file_path.exists():
+            self._file_path.touch(mode=0o600)
+            self.echo(msg=f"Created new file {str(self._file_path)!r}", debug=True)
+
+        self._fd_info: str = f"file {str(self._file_path)!r} ({self._file_mode})"
+        self.echo(msg=f"Exporting to {self._fd_info}")
+
+        self._fd: IO = self._file_path.open(mode="w", encoding="utf-8")
         return self._fd
 
-    def open_fd_stdout(self):
+    def open_fd_stdout(self) -> IO:
         """Open a file descriptor to STDOUT."""
-        self._file_path = None
-        self._fd_close = False
-        self._fd = sys.stdout
-        self.echo(msg="Exporting to stdout")
-        return self._fd
-
-    def open_fd(self):
-        """Open a file descriptor."""
-        if self.get_arg_value("export_fd"):
-            self.open_fd_arg()
-        elif self.get_arg_value("export_file"):
-            self.open_fd_path()
-        else:
-            self.open_fd_stdout()
+        self._fd_close: bool = False
+        self._fd: IO = sys.stdout
+        self._fd_info: str = "stdout"
+        self.echo(msg="Exporting to {self._fd_info}")
         return self._fd
 
     def close_fd(self):
@@ -1191,49 +1227,89 @@ class ExportMixins(Base):
         self._fd.write("\n")
         close = getattr(self, "_fd_close", False)
         closer = getattr(self._fd, "close", None)
-        name = str(getattr(self._fd, "name", self._fd))
 
         if close and callable(closer):
-            self.echo(msg=f"Finished exporting to {name!r}")
             closer()
+
+        self.echo(msg=f"Finished exporting to {self._fd_info}")
+
+    @property
+    def export_templates(self) -> dict:
+        """Pass."""
+        return self.STORE.get("export_templates") or {}
+
+    @property
+    def arg_export_fd(self) -> Optional[IO]:
+        """Pass."""
+        return self.get_arg_value("export_fd")
+
+    @property
+    def arg_export_file(self) -> Optional[PathLike]:
+        """Pass."""
+        value = self.get_arg_value("export_file")
+        if isinstance(value, (str, pathlib.Path)) and value:
+            return value
+        return None
+
+    @property
+    def arg_export_path(self) -> pathlib.Path:
+        """Pass."""
+        value = self.get_arg_value("export_path")
+        return get_path(obj=value)
+
+    @property
+    def arg_export_backup(self) -> bool:
+        """Pass."""
+        return self.get_arg_value("export_backup")
+
+    @property
+    def arg_export_overwrite(self) -> bool:
+        """Pass."""
+        return self.get_arg_value("export_overwrite")
+
+    @property
+    def arg_export_fd_close(self) -> bool:
+        """Pass."""
+        return self.get_arg_value("export_fd_close")
 
 
 ARG_DESCRIPTIONS: dict = {
-    "field_excludes": "Exclude fields",
+    "field_excludes": "Fields to exclude from output",
     "field_flatten": "Flatten complex fields",
-    "field_explode": "Explode field",
+    "field_explode": "Field to explode",
     "field_titles": "Rename fields to titles",
-    "field_compress": "Shorten field names",
-    "field_replace": "Replace characters in field names",
-    "field_join": "Join field values",
-    "field_join_value": "Join field values using",
-    "field_join_trim": "Join field character limit",
-    "field_null": "Add missing fields",
-    "field_null_value": "Missing field value",
-    "field_null_value_complex": "Missing complex field value",
-    "tags_add": "Add tags",
-    "tags_remove": "Remove tags",
-    "report_adapters_missing": "Report Missing Adapters",
-    "report_software_whitelist": "Report Missing Software",
+    "field_compress": "Shorten field names in output to 'adapter:field'",
+    "field_replace": "Field name character replacements",
+    "field_join": "Join list field values",
+    "field_join_value": "Join list field values using",
+    "field_join_trim": "Join list field character limit (0 = None)",
+    "field_null": "Add null values for missing fields",
+    "field_null_value": "Null value to use for missing simple fields",
+    "field_null_value_complex": "Null value to use for missing complex fields",
+    "tags_add": "Tags to add to assets",
+    "tags_remove": "Tags to remove from assets",
+    "report_adapters_missing": "Add Missing Adapters calculation",
+    "report_software_whitelist": "Missing Software to calculate",
     "page_progress": "Echo page progress every N assets",
     "do_echo": "Echo messages to console",
     "custom_cbs": "Custom callbacks to perform on assets",
-    "json_flat": "Produce flat JSON",
-    "csv_key_miss": "Value to use when CSV keys are missing",
-    "csv_key_extras": "What to do with extra CSV columns",
-    "csv_dialect": "Dialect to export CSV as",
-    "csv_quoting": "What quoting to use in CSV export",
-    "export_file": "Export to file",
-    "export_path": "Export file to path",
-    "export_overwrite": "Export overwrite file",
+    "json_flat": "For JSON Export: Use JSONL format",
+    "csv_key_miss": "For CSV Export: Value to use when keys are missing",
+    "csv_key_extras": "For CSV Export: What to do with extra CSV columns",
+    "csv_dialect": "For CSV Export: CSV Dialect to use",
+    "csv_quoting": "For CSV Export: CSV quoting style",
+    "export_file": "File to export data to",
+    "export_path": "Directory to export data to",
+    "export_overwrite": "Overwrite export_file if it exists",
     "export_schema": "Export schema of fields",
     "export_fd": "Export to a file descriptor",
     "export_fd_close": "Close the file descriptor when done",
-    "table_format": "Use table format",
-    "table_max_rows": "Maximum table rows",
-    "table_api_fields": "Include API fields",
-    "xlsx_column_length": "Length to use for every column",
-    "xlsx_cell_format": "Formatting to apply to every cell",
+    "export_backup": "If export_file exists, rename it with the datetime",
+    "table_format": "For Table export: Table format to use",
+    "table_max_rows": "For Table export: Maximum rows to output",
+    "table_api_fields": "For Table export: Include API fields in output",
+    "xlsx_column_length": "For XLSX export: Length to use for every column",
+    "xlsx_cell_format": "For XLSX Export: Formatting to apply to every cell",
     "debug_timing": "Enable logging of time taken for each callback",
 }
 """Descriptions of all arguments for all callbacks"""

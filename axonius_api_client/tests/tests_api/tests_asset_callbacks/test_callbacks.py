@@ -6,7 +6,6 @@ import logging
 import sys
 
 import pytest
-
 from axonius_api_client.api.asset_callbacks import get_callbacks_cls
 from axonius_api_client.constants.api import FIELD_TRIM_LEN
 from axonius_api_client.constants.fields import SCHEMAS_CUSTOM
@@ -759,6 +758,26 @@ class CallbacksFull(Callbacks):
         assert not capture.out
         log_check(caplog=caplog, entries=[entry], exists=True)
 
+    def test_echo_debug_doecho_yes(self, cbexport, apiobj, capsys, caplog):
+        entry = "xxxxxxx"
+
+        cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs={"do_echo": True})
+        cbobj.echo(msg=entry, debug=True)
+        capture = capsys.readouterr()
+        assert f"{entry}\n" in capture.err
+        assert not capture.out
+        log_check(caplog=caplog, entries=[entry], exists=True)
+
+    def test_echo_warning_doecho_yes(self, cbexport, apiobj, capsys, caplog):
+        entry = "xxxxxxx"
+
+        cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs={"do_echo": True})
+        cbobj.echo(msg=entry, warning=True)
+        capture = capsys.readouterr()
+        assert f"{entry}\n" in capture.err
+        assert not capture.out
+        log_check(caplog=caplog, entries=[entry], exists=True)
+
     def test_echo_error_doecho_yes(self, cbexport, apiobj, capsys, caplog):
         entry = "xxxxxxx"
 
@@ -790,6 +809,17 @@ class CallbacksFull(Callbacks):
 
         capture = capsys.readouterr()
         assert not capture.err
+        assert not capture.out
+        log_check(caplog=caplog, entries=[entry], exists=True)
+
+    def test_echo_error_doecho_yes_abort_no(self, cbexport, apiobj, capsys, caplog):
+        entry = "xxxxxxx"
+
+        cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs={"do_echo": True})
+        cbobj.echo(msg=entry, error=ApiError, abort=False)
+
+        capture = capsys.readouterr()
+        assert f"{entry}\n" in capture.err
         assert not capture.out
         log_check(caplog=caplog, entries=[entry], exists=True)
 
@@ -1011,7 +1041,7 @@ class Exports:
         cbobj.open_fd()
 
         assert cbobj._file_path.name == export_file.name
-        assert cbobj._file_mode == "created"
+        assert cbobj._file_mode == "Created new file"
         assert cbobj._fd_close
 
         cbobj.close_fd()
@@ -1033,7 +1063,7 @@ class Exports:
         cbobj.open_fd()
 
         assert cbobj._file_path.name == export_file.name
-        assert cbobj._file_mode == "created"
+        assert cbobj._file_mode == "Created new file"
         assert not cbobj._fd_close
 
         cbobj.close_fd()
@@ -1041,6 +1071,26 @@ class Exports:
         cbobj._fd.write(" ")
         cbobj._fd.close()
         assert export_file.read_text() == "\n "
+
+    def test_fd_path_backup_true(self, cbexport, apiobj, tmp_path):
+        export_file = tmp_path / "badwolf.txt"
+        export_file.touch()
+
+        cbobj = self.get_cbobj(
+            apiobj=apiobj,
+            cbexport=cbexport,
+            getargs={"export_file": export_file, "export_backup": True},
+        )
+
+        cbobj.open_fd()
+
+        assert cbobj._file_path.name == export_file.name
+        assert cbobj._file_mode == "Renamed existing file and created new file"
+        assert cbobj._fd_close
+        assert cbobj._file_path_backup.is_file()
+
+        cbobj.close_fd()
+        assert export_file.is_file()
 
     def test_fd_path_overwrite_true(self, cbexport, apiobj, tmp_path):
         export_file = tmp_path / "badwolf.txt"
@@ -1055,7 +1105,7 @@ class Exports:
         cbobj.open_fd()
 
         assert cbobj._file_path.name == export_file.name
-        assert cbobj._file_mode == "overwrote"
+        assert cbobj._file_mode == "Overwrote existing file"
         assert cbobj._fd_close
 
         cbobj.close_fd()
@@ -1073,3 +1123,26 @@ class Exports:
 
         with pytest.raises(ApiError):
             cbobj.open_fd()
+
+    def test_export_file_create_dir_file(self, cbexport, apiobj, caplog, tmp_path):
+        export_file = tmp_path / "badwolf" / "badwolf.txt"
+
+        cbobj = self.get_cbobj(
+            apiobj=apiobj,
+            cbexport=cbexport,
+            getargs={"export_file": export_file},
+        )
+        cbobj.open_fd()
+
+        cbobj.close_fd()
+        assert export_file.is_file()
+        assert export_file.parent.is_dir()
+        log_check(
+            caplog=caplog,
+            entries=[
+                "Created directory",
+                "Created new file",
+                "Exporting to.*Created new file",
+            ],
+            exists=True,
+        )

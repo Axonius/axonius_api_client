@@ -4,7 +4,6 @@ import datetime
 from typing import Any, List
 
 import pytest
-
 from axonius_api_client.api import json_api, mixins
 from axonius_api_client.constants.api import MAX_PAGE_SIZE
 from axonius_api_client.exceptions import ApiError, NotFoundError, StopFetch
@@ -187,21 +186,21 @@ class AssetsPrivate:
         assert len(page1.assets + page2.assets + page3.assets) == 15
 
     @pytest.mark.parametrize("value", WizData.nones)
-    def test_handle_wiz_entries_none(self, apiobj, value):
-        data = apiobj._handle_wiz_entries(wiz_entries=value)
+    def test_get_wiz_entries_none(self, apiobj, value):
+        data = apiobj.get_wiz_entries(wiz_entries=value)
         assert data is None
 
     @pytest.mark.parametrize("value", WizData.invalids)
-    def test_handle_wiz_entries_wrong_type(self, apiobj, value):
+    def test_get_wiz_entries_wrong_type(self, apiobj, value):
         with pytest.raises(ApiError):
-            apiobj._handle_wiz_entries(wiz_entries=value)
+            apiobj.get_wiz_entries(wiz_entries=value)
 
-    def test_handle_wiz_entries_text(self, apiobj):
-        data = apiobj._handle_wiz_entries(wiz_entries=WizData.wiz_str)
+    def test_get_wiz_entries_text(self, apiobj):
+        data = apiobj.get_wiz_entries(wiz_entries=WizData.wiz_str)
         assert data == WizData.exp
 
-    def test_handle_wiz_entries_dict(self, apiobj):
-        data = apiobj._handle_wiz_entries(wiz_entries=WizData.wiz_dict)
+    def test_get_wiz_entries_dict(self, apiobj):
+        data = apiobj.get_wiz_entries(wiz_entries=WizData.wiz_dict)
         assert data == WizData.exp
 
     def test_get_query(self, apiobj):

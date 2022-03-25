@@ -202,38 +202,49 @@ FIELDS_SELECT = [
         show_default=True,
     ),
 ]
-EXPORT = [
-    click.option(
-        "--export-file",
-        "-xf",
-        "export_file",
-        default="",
-        help="File to send data to",
-        show_envvar=True,
-        show_default=True,
-        metavar="PATH",
-    ),
-    click.option(
-        "--export-path",
-        "-xp",
-        "export_path",
-        default=DEFAULT_PATH,
-        help="If --export-file supplied, the directory to write --export_file to",
-        type=click.Path(exists=False, resolve_path=True),
-        show_envvar=True,
-        show_default=True,
-    ),
-    click.option(
-        "--export-overwrite/--no-export-overwrite",
-        "-xo/-nxo",
-        "export_overwrite",
-        default=False,
-        help="If --export-file supplied and it exists, overwrite it",
-        is_flag=True,
-        show_envvar=True,
-        show_default=True,
-    ),
-]
+OPT_EXPORT_FILE = click.option(
+    "--export-file",
+    "-xf",
+    "export_file",
+    default="",
+    help="File to send data to",
+    show_envvar=True,
+    show_default=True,
+    metavar="PATH",
+)
+OPT_EXPORT_PATH = click.option(
+    "--export-path",
+    "-xp",
+    "export_path",
+    default=DEFAULT_PATH,
+    help="If --export-file supplied, the directory to write --export_file to",
+    type=click.Path(exists=False, resolve_path=True),
+    show_envvar=True,
+    show_default=True,
+)
+OPT_EXPORT_OVERWRITE = click.option(
+    "--export-overwrite/--no-export-overwrite",
+    "-xo/-nxo",
+    "export_overwrite",
+    default=False,
+    help="If --export-file supplied and it exists, overwrite it",
+    is_flag=True,
+    show_envvar=True,
+    show_default=True,
+)
+OPT_EXPORT_BACKUP = click.option(
+    "--export-backup/--no-export-backup",
+    "-xb/-nxb",
+    "export_backup",
+    default=False,
+    help="If --export-file supplied and it exists, rename it with datetime",
+    is_flag=True,
+    show_envvar=True,
+    show_default=True,
+)
+
+EXPORT = [OPT_EXPORT_FILE, OPT_EXPORT_PATH, OPT_EXPORT_OVERWRITE]
+
 
 PAGING = [
     click.option(
