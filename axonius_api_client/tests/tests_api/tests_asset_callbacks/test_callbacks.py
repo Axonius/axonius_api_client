@@ -812,6 +812,17 @@ class CallbacksFull(Callbacks):
         assert not capture.out
         log_check(caplog=caplog, entries=[entry], exists=True)
 
+    def test_echo_error_doecho_yes_abort_no(self, cbexport, apiobj, capsys, caplog):
+        entry = "xxxxxxx"
+
+        cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs={"do_echo": True})
+        cbobj.echo(msg=entry, error=ApiError, abort=False)
+
+        capture = capsys.readouterr()
+        assert f"{entry}\n" in capture.err
+        assert not capture.out
+        log_check(caplog=caplog, entries=[entry], exists=True)
+
     def test_get_callbacks_cls_error(self):
         with pytest.raises(ApiError):
             get_callbacks_cls(export="badwolf")
@@ -1112,3 +1123,26 @@ class Exports:
 
         with pytest.raises(ApiError):
             cbobj.open_fd()
+
+    def test_export_file_create_dir_file(self, cbexport, apiobj, caplog, tmp_path):
+        export_file = tmp_path / "badwolf" / "badwolf.txt"
+
+        cbobj = self.get_cbobj(
+            apiobj=apiobj,
+            cbexport=cbexport,
+            getargs={"export_file": export_file},
+        )
+        cbobj.open_fd()
+
+        cbobj.close_fd()
+        assert export_file.is_file()
+        assert export_file.parent.is_dir()
+        log_check(
+            caplog=caplog,
+            entries=[
+                "Created directory",
+                "Created new file",
+                "Exporting to.*Created new file",
+            ],
+            exists=True,
+        )

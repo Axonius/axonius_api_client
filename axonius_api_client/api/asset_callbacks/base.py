@@ -12,6 +12,7 @@ from ...constants.fields import AGG_ADAPTER_NAME, SCHEMAS_CUSTOM
 from ...exceptions import ApiError
 from ...parsers.fields import schema_custom
 from ...tools import (
+    PathLike,
     calc_percent,
     check_path_is_not_dir,
     coerce_int,
@@ -21,11 +22,11 @@ from ...tools import (
     echo_ok,
     echo_warn,
     get_path,
+    get_paths_format,
     join_kv,
     listify,
     longest_str,
     path_backup_file,
-    safe_format,
     strip_right,
 )
 
@@ -850,9 +851,10 @@ class Base:
         self,
         msg: str,
         debug: bool = False,
-        error: bool = False,
+        error: Union[bool, Exception] = False,
         warning: bool = False,
         level: str = "info",
+        level_debug: str = "debug",
         level_error: str = "error",
         level_warning: str = "warning",
         abort: bool = True,
@@ -873,27 +875,25 @@ class Base:
         if do_echo:
             if error:
                 echo_error(msg=msg, abort=abort)
-                return
-
-            if warning:
+            elif warning:
                 echo_warn(msg=msg)
-                return
-
-            if debug:
+            elif debug:
                 echo_debug(msg=msg)
-                return
-
-            echo_ok(msg=msg)
-            return
-
-        if warning:
-            getattr(self.LOG, level_warning)(msg)  # pragma: no cover
-        elif error:
-            getattr(self.LOG, level_error)(msg)
-            if abort:
-                raise error(msg)
+            else:
+                echo_ok(msg=msg)
         else:
-            getattr(self.LOG, level)(msg)
+            if error:
+                getattr(self.LOG, level_error)(msg)
+                if abort:
+                    if not isinstance(error, Exception):
+                        error = ApiError
+                    raise error(msg)
+            elif warning:
+                getattr(self.LOG, level_warning)(msg)
+            elif debug:
+                getattr(self.LOG, level_debug)(msg)
+            else:
+                getattr(self.LOG, level)(msg)
 
     def get_sub_schemas(self, schema: dict) -> Generator[dict, None, None]:
         """Get all the schemas of sub fields for a complex field.
@@ -1165,24 +1165,26 @@ class ExportMixins(Base):
         self.echo(msg=f"Exporting to {self._fd_info}")
         return self._fd
 
+    @property
+    def export_full_path(self) -> pathlib.Path:
+        """Pass."""
+        return get_paths_format(
+            self.arg_export_path, self.arg_export_file, mapping=self.export_templates
+        )
+
     def open_fd_path(self) -> IO:
         """Open a file descriptor for a path."""
-        export_path = self.arg_export_path
-        export_file = self.arg_export_file
         export_fd_close = self.arg_export_fd_close
         export_backup = self.arg_export_backup
         export_overwrite = self.arg_export_overwrite
 
-        full_path = pathlib.Path = (export_path / export_file).resolve()
-
-        self._file_path: pathlib.Path = full_path
+        self._file_path: pathlib.Path = self.export_full_path
         self._file_path_backup: Optional[pathlib.Path] = None
         self._fd_close: bool = export_fd_close
-        self._file_mode: str = "Created new file"
 
         check_path_is_not_dir(path=self._file_path)
 
-        if full_path.exists():
+        if self._file_path.exists():
             if export_backup:
                 self._file_path_backup: pathlib.Path = path_backup_file(path=self._file_path)
                 self._file_mode: str = "Renamed existing file and created new file"
@@ -1191,23 +1193,22 @@ class ExportMixins(Base):
                     debug=True,
                 )
             elif not export_overwrite:
-                self.echo(
-                    msg=f"Export file {str(full_path)!r} already exists and overwite is False!",
-                    error=ApiError,
-                    level="error",
-                )
+                msg = f"Export file {str(self._file_path)!r} already exists and overwite is False!"
+                self.echo(msg=msg, error=ApiError, level="error")
             else:
                 self._file_mode: str = "Overwrote existing file"
+        else:
+            self._file_mode: str = "Created new file"
 
-        if not full_path.parent.is_dir():
-            full_path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
-            self.echo(msg=f"Created directory {str(full_path.parent)!r}", debug=True)
+        if not self._file_path.parent.is_dir():
+            self._file_path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+            self.echo(msg=f"Created directory {str(self._file_path.parent)!r}", debug=True)
 
-        if not full_path.exists():
-            full_path.touch(mode=0o600)
-            self.echo(msg=f"Created new file {str(full_path)!r}", debug=True)
+        if not self._file_path.exists():
+            self._file_path.touch(mode=0o600)
+            self.echo(msg=f"Created new file {str(self._file_path)!r}", debug=True)
 
-        self._fd_info: str = f"file {str(full_path)!r} ({self._file_mode})"
+        self._fd_info: str = f"file {str(self._file_path)!r} ({self._file_mode})"
         self.echo(msg=f"Exporting to {self._fd_info}")
 
         self._fd: IO = self._file_path.open(mode="w", encoding="utf-8")
@@ -1243,23 +1244,18 @@ class ExportMixins(Base):
         return self.get_arg_value("export_fd")
 
     @property
-    def arg_export_file(self) -> Optional[pathlib.Path]:
+    def arg_export_file(self) -> Optional[PathLike]:
         """Pass."""
         value = self.get_arg_value("export_file")
-        value = safe_format(value=value, mapping=self.export_templates)
-
-        if isinstance(value, str) and value:
-            value = pathlib.Path(value)
-
-        if isinstance(value, pathlib.Path):
-            value = value.expanduser()
-        return value
+        if isinstance(value, (str, pathlib.Path)) and value:
+            return value
+        return None
 
     @property
     def arg_export_path(self) -> pathlib.Path:
         """Pass."""
         value = self.get_arg_value("export_path")
-        return get_path(obj=safe_format(value=value, mapping=self.export_templates))
+        return get_path(obj=value)
 
     @property
     def arg_export_backup(self) -> bool:

@@ -1393,7 +1393,9 @@ def safe_replace(obj: dict, value: str) -> str:
     return value
 
 
-def safe_format(value: PathLike, mapping: Optional[Dict[str, str]] = None, **kwargs) -> PathLike:
+def safe_format(
+    value: PathLike, mapping: Optional[Dict[str, str]] = None, as_path: bool = False, **kwargs
+) -> PathLike:
     """Pass."""
     is_path = isinstance(value, pathlib.Path)
     to_update = str(value) if is_path else value
@@ -1405,4 +1407,30 @@ def safe_format(value: PathLike, mapping: Optional[Dict[str, str]] = None, **kwa
         if isinstance(item, dict) and item:
             to_update = safe_replace(obj=item, value=to_update)
 
-    return get_path(to_update) if is_path else to_update
+    return get_path(to_update) if is_path or as_path else to_update
+
+
+def get_paths_format(*args, mapping: Optional[Dict[str, str]] = None) -> Optional[pathlib.Path]:
+    """Pass."""
+    ret = None
+    for path in args:
+        if isinstance(path, bytes):
+            path = path.decode("utf-8")
+
+        if isinstance(path, pathlib.Path):
+            path = str(path)
+
+        if isinstance(path, str):
+            if isinstance(mapping, dict):
+                path = safe_replace(obj=mapping, value=path)
+
+            path = pathlib.Path(path)
+
+        if isinstance(path, pathlib.Path):
+            path = path.expanduser()
+
+            if ret:
+                ret = ret / path
+            else:
+                ret = path.resolve()
+    return ret
