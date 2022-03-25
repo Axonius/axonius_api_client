@@ -6,7 +6,6 @@ import tempfile
 
 import dateutil.tz
 import pytest
-
 from axonius_api_client.api.json_api.generic import IntValue
 from axonius_api_client.constants.api import GUI_PAGE_SIZES
 from axonius_api_client.constants.general import IS_WINDOWS
@@ -41,6 +40,7 @@ from axonius_api_client.tools import (
     get_backup_path,
     get_cls_path,
     get_path,
+    get_paths_format,
     get_raw_version,
     get_type_str,
     grouper,
@@ -1469,3 +1469,30 @@ class TestDtWithinMin:
     def test_ok(self, val):
         then = dt_now(delta=timedelta(minutes=5))
         assert dt_within_min(obj=then, n=val) is True
+
+
+class TestGetPathsFormat:
+    def test_basic(self):
+        exp = pathlib.Path("/x")
+        ret = get_paths_format("/x")
+        assert exp == ret
+
+    def test_basic2(self):
+        exp = pathlib.Path("/x/y/z")
+        ret = get_paths_format("/x", "y", "z")
+        assert exp == ret
+
+    def test_abs_overwrite(self):
+        exp = pathlib.Path("/z")
+        ret = get_paths_format("/x", "y", "/z")
+        assert exp == ret
+
+    def test_mapping_miss(self):
+        exp = pathlib.Path("/x/{DATE}/z")
+        ret = get_paths_format("/x", "{DATE}", "z", mapping={"NOPE": "xxx"})
+        assert exp == ret
+
+    def test_mapping_hit(self):
+        exp = pathlib.Path("/x/xxx/z/ddd_xxx.txt")
+        ret = get_paths_format("/x", "{DATE}", "z", "ddd_{DATE}.txt", mapping={"{DATE}": "xxx"})
+        assert exp == ret

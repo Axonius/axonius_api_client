@@ -5,6 +5,7 @@ import math
 import pathlib
 from typing import List, Optional, Union
 
+import cachetools
 import requests
 
 from ...exceptions import NotFoundError
@@ -12,6 +13,8 @@ from ...tools import is_url, path_read
 from .. import json_api
 from ..api_endpoints import ApiEndpoints
 from ..mixins import ModelMixins
+
+FEATURE_FLAGS_CACHE = cachetools.TTLCache(maxsize=1, ttl=10)
 
 
 class Instances(ModelMixins):
@@ -445,6 +448,7 @@ class Instances(ModelMixins):
         return response.to_dict()
 
     @property
+    @cachetools.cached(cache=FEATURE_FLAGS_CACHE)
     def feature_flags(self) -> json_api.system_settings.FeatureFlags:
         """Get the feature flags for the core."""
         return self._feature_flags()

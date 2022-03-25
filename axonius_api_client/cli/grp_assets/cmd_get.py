@@ -4,7 +4,6 @@
 from ..context import CONTEXT_SETTINGS, click
 from ..options import (
     AUTH,
-    EXPORT,
     FIELDS_SELECT,
     PAGING,
     QUERY,
@@ -12,12 +11,12 @@ from ..options import (
     get_option_fields_default,
     get_option_help,
 )
-from .grp_common import GET_EXPORT, HISTORY, WIZ, load_whitelist, load_wiz
+from .grp_common import GET_EXPORT, HISTORY, OPTS_EXPORT, WIZ, load_whitelist, load_wiz
 
 OPTIONS = [
     *AUTH,
     *PAGING,
-    *EXPORT,
+    *OPTS_EXPORT,
     *GET_EXPORT,
     *FIELDS_SELECT,
     get_option_fields_default(default=True),

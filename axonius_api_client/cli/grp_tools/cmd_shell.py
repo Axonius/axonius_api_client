@@ -3,9 +3,8 @@
 import atexit
 import os
 
-import click
-
 import axonius_api_client as axonapi
+import click
 
 from ...constants.general import PY36
 from ...tools import echo_error, json_reload, pathlib
@@ -34,7 +33,7 @@ API Objects:
     - system_roles/sr: Work with system roles
     - system_users/su: Work with system users
     - users/u: Work with user assets
-    - openapi/openapi: Work with the OpenAPI specification file
+    - openapi/oas: Work with the OpenAPI specification file
 
 """
 
@@ -79,7 +78,7 @@ def cmd(ctx, url, key, secret):  # noqa: D301
         - system_roles/sr: Work with system roles
         - system_users/su: Work with system users
         - users/u: Work with user assets
-        - openapi/openapi: Work with the OpenAPI specification file
+        - openapi/oas: Work with the OpenAPI specification file
 
     """
     client = ctx.obj.start_client(url=url, key=key, secret=secret, save_history=True)
