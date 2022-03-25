@@ -62,4 +62,4 @@ IS_MAC: bool = sys.platform == "darwin"
 """Running on a mac platform"""
 
 TRIM_MSG: str = "\nTrimmed {value_len} {trim_type} down to {trim}"
-FILE_DATE_FMT: str = "%Y-%m-%dT%H:%M:%S"
+FILE_DATE_FMT: str = "%Y-%m-%dT%H-%M-%S"
