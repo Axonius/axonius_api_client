@@ -965,7 +965,7 @@ class Base:
 
         include_details = self.STORE.get("include_details", False)
 
-        fields = listify(self.STORE.get("fields", []))
+        fields = listify(self.STORE.get("fields_parsed", []))
         api_fields = [x for x in self.APIOBJ.FIELDS_API if x not in fields]
 
         if include_details:  # pragma: no cover
