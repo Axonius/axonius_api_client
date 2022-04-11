@@ -448,6 +448,16 @@ class Instances(ModelMixins):
         return response.to_dict()
 
     @property
+    def api_version(self) -> str:
+        """Pass."""
+        return self._get_api_version().value
+
+    @property
+    def api_versions(self) -> List[str]:
+        """Pass."""
+        return [x.value for x in self._get_api_versions()]
+
+    @property
     @cachetools.cached(cache=FEATURE_FLAGS_CACHE)
     def feature_flags(self) -> json_api.system_settings.FeatureFlags:
         """Get the feature flags for the core."""
@@ -687,3 +697,10 @@ class Instances(ModelMixins):
 
         response = api_endpoint.perform_request(http=self.auth.http, uuid=uuid)
         return response
+
+    def _get_api_version(self) -> json_api.generic.StrValueSchema:
+        """Pass."""
+        return ApiEndpoints.instances.get_api_version.perform_request(http=self.auth.http)
+
+    def _get_api_versions(self) -> json_api.generic.StrValueSchema:
+        return ApiEndpoints.instances.get_api_versions.perform_request(http=self.auth.http)

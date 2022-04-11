@@ -226,6 +226,10 @@ class ApiAttributeMissingError(ApiAttributeError):
     """Pass."""
 
 
+class NoTriggerDefinedError(ApiError):
+    """Pass."""
+
+
 class StopFetch(ApiError):
     """Pass."""
 

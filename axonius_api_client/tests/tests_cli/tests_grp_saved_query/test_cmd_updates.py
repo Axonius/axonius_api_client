@@ -62,8 +62,8 @@ class GrpSavedQueryCmdUpdates:
                 "json",
             ]
             result = runner.invoke(cli=cli, args=args)
-            data = self.check_result(result=result)
-            assert data["private"] is True
+            assert result.exit_code != 0
+            assert "Can't change a public query to be a private query." in result.stderr
 
     def test_cmd_update_name_success(self, apiobj, request, monkeypatch, sq_added):
         value_new = "manananlskafdjl"
