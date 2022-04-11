@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """Test suite for axonapi.api.assets."""
 import pytest
-
 from axonius_api_client.api import json_api
 
 
@@ -15,6 +14,7 @@ class LabelsPrivate:
 
     def test_private_add_get_remove(self, apiobj):
         labels = ["badwolf1", "badwolf2"]
+        labels_str = ",".join(labels)
 
         # get a single asset to add a label to
         asset = apiobj.get(max_rows=1)[0]
@@ -26,7 +26,8 @@ class LabelsPrivate:
         assert add_label_result.value == 1
 
         # re-get the asset and check that it has the label
-        assets_added = apiobj.get_by_values(values=labels, field="labels", fields="labels")
+        wiz_entries = f"simple labels in {labels_str}"
+        assets_added = apiobj.get(wiz_entries=wiz_entries, fields="labels", max_rows=1)
         assets_added_ids = [x["internal_axon_id"] for x in assets_added]
         assert asset_id in assets_added_ids
 
@@ -52,8 +53,13 @@ class LabelsPrivate:
         assert remove_label_result.value >= 1
 
         # re-get the asset and check that it has the label
-        assets_removed = apiobj.get_by_values(values=labels, field="labels", fields="labels")
-        assert not assets_removed
+        wiz_entries = f"simple internal_axon_id equals {asset_id}"
+        assets_removed = apiobj.get(wiz_entries=wiz_entries, fields="labels", max_rows=1)
+
+        # check the each label has been removed
+        for x in assets_removed:
+            for label in labels:
+                assert label not in x.get("labels", [])
 
         # check that the label is not in all the labels on the system
         all_labels_post_remove = apiobj.labels._get()
@@ -72,6 +78,7 @@ class LabelsPublic:
 
     def test_add_get_remove(self, apiobj):
         labels = ["badwolf1", "badwolf2"]
+        labels_str = ",".join(labels)
 
         # get a single asset to add a label to
         asset = apiobj.get(max_rows=1)[0]
@@ -82,11 +89,8 @@ class LabelsPublic:
         assert add_label_result == 1
 
         # re-get the asset and check that it has the label
-        assets_added = apiobj.get_by_values(
-            values=labels,
-            field="labels",
-            fields="labels",
-        )
+        wiz_entries = f"simple labels in {labels_str}"
+        assets_added = apiobj.get(wiz_entries=wiz_entries, fields="labels", max_rows=1)
         assets_added_ids = [x["internal_axon_id"] for x in assets_added]
         assert asset_id in assets_added_ids
 
@@ -110,8 +114,12 @@ class LabelsPublic:
         assert remove_label_result >= 1
 
         # re-get the asset and check that it has the label
-        assets_removed = apiobj.get_by_values(values=labels, field="labels", fields="labels")
-        assert not assets_removed
+        wiz_entries = f"simple internal_axon_id equals {asset_id}"
+        assets_removed = apiobj.get(wiz_entries=wiz_entries, fields="labels", max_rows=1)
+        # check the each label has been removed
+        for x in assets_removed:
+            for label in labels:
+                assert label not in x.get("labels", [])
 
         # check that the label is not in all the labels on the system
         all_labels_post_remove = apiobj.labels.get()

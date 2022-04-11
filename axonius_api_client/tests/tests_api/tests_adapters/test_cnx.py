@@ -2,15 +2,13 @@
 """Test suite."""
 
 import pytest
-
 from axonius_api_client.api import json_api
 from axonius_api_client.constants.adapters import CSV_ADAPTER
 from axonius_api_client.exceptions import (
-    CnxAddError,
+    CnxAddError,  # ConfigRequired,
     CnxTestError,
     CnxUpdateError,
     ConfigInvalidValue,
-    ConfigRequired,
     ConfigUnchanged,
     NotFoundError,
 )
@@ -18,6 +16,7 @@ from axonius_api_client.tools import combo_dicts
 
 from ...meta import CSV_FILECONTENT_STR, CsvData, CsvKeys, TanData, TanKeys
 from ...utils import get_cnx_existing, get_cnx_working
+
 
 """
 cnx errors
@@ -330,9 +329,9 @@ class TestCnxPublic(TestCnxBase):
                 password=mpass,
             )
 
-    def test_test_fail_no_domain(self, apiobj):
-        with pytest.raises(ConfigRequired):
-            apiobj.cnx.test(adapter_name="tanium", username="x")
+    # def test_test_fail_no_domain(self, apiobj):
+    #     with pytest.raises(ConfigRequired):
+    #         apiobj.cnx.test(adapter_name="tanium", username="x")
 
     def test_cb_file_upload_fail(self, apiobj, csv_file_path, monkeypatch):
         mock_return = {"filename": "badwolf", "uuid": "badwolf"}

@@ -13,6 +13,7 @@ from axonius_api_client.exceptions import (
     ApiAttributeTypeError,
     ApiError,
     GuiQueryWizardWarning,
+    ResponseNotOk,
     SavedQueryNotFoundError,
 )
 
@@ -47,6 +48,8 @@ class SavedQueryPrivate:
     def test_add(self, apiobj):
         name = "badwolfvvv"
         view = {
+            "colExcludedAdapters": [],
+            "colFilters": [],
             "query": {
                 "filter": "",
                 "expressions": [],
@@ -200,8 +203,13 @@ class SavedQueryPublic:
     def test_update_private(self, apiobj, sq_fixture):
         old_value = sq_fixture["private"]
         new_value = not old_value
-        updated = apiobj.saved_query.update_private(sq=sq_fixture, value=new_value)
-        assert updated["private"] == new_value
+        if old_value:
+            updated = apiobj.saved_query.update_private(sq=sq_fixture, value=new_value)
+            assert updated["private"] == new_value
+        else:
+            with pytest.raises(ResponseNotOk) as exc:
+                apiobj.saved_query.update_private(sq=sq_fixture, value=new_value)
+            assert "Can't change a public query to be a private query." in str(exc.value)
 
     def test_update_description(self, apiobj, sq_fixture):
         add = random_string(6)

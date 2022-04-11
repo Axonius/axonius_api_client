@@ -3,7 +3,6 @@
 import copy
 
 import pytest
-
 from axonius_api_client.api import json_api
 from axonius_api_client.constants.fields import AGG_ADAPTER_ALTS, AGG_ADAPTER_NAME
 from axonius_api_client.exceptions import ApiError, NotFoundError
@@ -154,6 +153,10 @@ class FieldsPrivate:
 
             part_of_table = field.pop("part_of_table", False)
             assert isinstance(part_of_table, bool)
+
+            # 2022-04-09 {'flatten': True}
+            flatten = field.pop("flatten", False)
+            assert isinstance(flatten, bool)
 
             assert not field, list(field)
 
@@ -401,6 +404,10 @@ class FieldsPublic:
 
         part_of_table = schema.pop("part_of_table", False)
         assert isinstance(part_of_table, bool)
+
+        # 2022-04-09 {'flatten': True}
+        flatten = schema.pop("flatten", False)
+        assert isinstance(flatten, bool)
 
         if is_complex:
             if name != "all" and not name.endswith("raw_data"):

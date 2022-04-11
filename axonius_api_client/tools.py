@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Utilities and tools."""
+import calendar
 import codecs
 import csv
 import inspect
@@ -61,6 +62,7 @@ EMAIL_RE_STR: str = (
 )
 EMAIL_RE: Pattern = re.compile(EMAIL_RE_STR, re.I)
 PathLike: TypeVar = TypeVar("PathLike", pathlib.Path, str, bytes)
+DAYS_MAP: dict = dict(zip(range(7), calendar.day_name))
 
 
 def listify(obj: Any, dictkeys: bool = False) -> list:
@@ -108,6 +110,7 @@ def coerce_int(
     obj: Any,
     max_value: Optional[int] = None,
     min_value: Optional[int] = None,
+    allow_none: bool = False,
     valid_values: Optional[List[int]] = None,
     errmsg: Optional[str] = None,
 ) -> int:
@@ -119,12 +122,15 @@ def coerce_int(
     Raises:
         :exc:`ToolsError`: if obj is not able to be converted to int
     """
-    pre = "{errmsg}\n" if errmsg else ""
+    if allow_none and (obj is None or str(obj).lower().strip() in ["none", "null"]):
+        return None
+
+    pre = f"{errmsg}\n" if errmsg else ""
+    vtype = type(obj).__name__
 
     try:
         value = int(obj)
     except Exception:
-        vtype = type(obj).__name__
         raise ToolsError(f"{pre}Supplied value {obj!r} of type {vtype} is not an integer.")
 
     if max_value is not None and value > max_value:
@@ -1042,24 +1048,33 @@ def get_raw_version(value: str) -> str:
     return converted
 
 
-def coerce_str_to_csv(value: str) -> List[str]:
+def coerce_str_to_csv(
+    value: str,
+    coerce_list: bool = False,
+    errmsg: Optional[str] = None,
+) -> List[str]:
     """Coerce a string into a list of strings.
 
     Args:
         value: string to seperate using comma
     """
+    pre = f"{errmsg}\n" if errmsg else ""
+
     new_value = value
     if isinstance(value, str):
         new_value = [x.strip() for x in value.split(",") if x.strip()]
         if not new_value:
-            raise ToolsError(f"Empty value after parsing CSV: {value!r}")
+            raise ToolsError(f"{pre}Empty value after parsing CSV: {value!r}")
 
     if not isinstance(new_value, (list, tuple)):
-        vtype = type(new_value).__name__
-        raise ToolsError(f"Invalid type {vtype} supplied, must be a list")
+        if coerce_list:
+            new_value = listify(obj=new_value)
+        else:
+            vtype = type(new_value).__name__
+            raise ToolsError(f"{pre}Invalid type {vtype} supplied, must be a list")
 
     if not new_value:
-        raise ToolsError(f"Empty list supplied {value}")
+        raise ToolsError(f"{pre}Empty list supplied {value}")
 
     return new_value
 
@@ -1433,4 +1448,40 @@ def get_paths_format(*args, mapping: Optional[Dict[str, str]] = None) -> Optiona
                 ret = ret / path
             else:
                 ret = path.resolve()
+    return ret
+
+
+def int_days_map(value: Union[str, List[Union[str, int]]], names: bool = False) -> List[str]:
+    """Pass."""
+    ret = []
+    value = coerce_str_to_csv(value=value, coerce_list=True)
+    valid = ", ".join([f"{v} ({k})" for k, v in DAYS_MAP.items()])
+
+    for item in value:
+        found = False
+        for number, name in DAYS_MAP.items():
+            if isinstance(item, str) and item.lower() == name.lower():
+                ret.append(number)
+                found = True
+
+            if (isinstance(item, str) and item.isdigit()) or isinstance(item, int):
+                item = coerce_int(
+                    obj=item,
+                    min_value=0,
+                    max_value=6,
+                    errmsg=f"Invalid day {item!r} supplied, valid: {valid}",
+                )
+                if item == number:
+                    ret.append(number)
+                    found = True
+
+        if not found:
+            item = str(item)
+            raise ToolsError(f"Invalid day {item!r} supplied, valid: {valid}")
+
+    if names:
+        ret = [v for k, v in DAYS_MAP.items() if k in ret]
+    else:
+        ret = [str(k) for k, v in DAYS_MAP.items() if k in ret]
+
     return ret

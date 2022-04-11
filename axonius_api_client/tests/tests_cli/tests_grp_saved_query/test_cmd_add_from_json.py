@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """Test suite for axonius_api_client.tools."""
 import pytest
-
 from axonius_api_client.tools import json_dump
 
 from ....cli import cli
@@ -99,8 +98,8 @@ class GrpSavedQueryCmdAddFromJson:
 
         self._cleanup(apiobj=apiobj, value=name)
 
-    def test_exists_overwrite_true_failure(self, apiobj, request, monkeypatch, sq_get):
-        data = sq_get.to_dict()
+    def test_exists_overwrite_true_failure(self, apiobj, request, monkeypatch, sq_added):
+        data = sq_added.to_dict()
         data["view"] = {}
 
         content = json_dump(data)
@@ -127,8 +126,8 @@ class GrpSavedQueryCmdAddFromJson:
             missing = [x for x in exps if x not in result.stderr]
             assert not missing, missing
 
-    def test_exists_overwrite_false(self, apiobj, request, monkeypatch, sq_get):
-        content = json_dump(sq_get)
+    def test_exists_overwrite_false(self, apiobj, request, monkeypatch, sq_added):
+        content = json_dump(sq_added)
         runner = load_clirunner(request, monkeypatch)
         with runner.isolated_filesystem():
             args = [
@@ -150,8 +149,8 @@ class GrpSavedQueryCmdAddFromJson:
             missing = [x for x in exps if x not in result.stderr]
             assert not missing, missing
 
-    def test_exists_overwrite_true(self, apiobj, request, monkeypatch, sq_get):
-        content = json_dump(sq_get)
+    def test_exists_overwrite_true(self, apiobj, request, monkeypatch, sq_added):
+        content = json_dump(sq_added)
         runner = load_clirunner(request, monkeypatch)
         with runner.isolated_filesystem():
             args = [

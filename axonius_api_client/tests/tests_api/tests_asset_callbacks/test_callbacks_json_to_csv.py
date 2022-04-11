@@ -24,7 +24,7 @@ class TestCallbacksJsonToCsv(Callbacks, Exports):
         cbobj = self.get_cbobj(
             apiobj=apiobj,
             cbexport=cbexport,
-            store={"fields": apiobj.fields_default},
+            store={"fields_parsed": apiobj.fields_default},
             getargs={"export_fd": io_fd, "export_fd_close": False},
         )
         cbobj.start()

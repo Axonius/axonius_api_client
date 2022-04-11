@@ -311,7 +311,7 @@ class BaseModel(dataclasses_json.DataClassJsonMixin, BaseCommon):
                 and value
                 and not all([isinstance(x, (str, int, bool, float, type(None))) for x in value])
             ):
-                ret += [f"{key} #{idx}: {item}" for idx, item in enumerate(value)]
+                ret += [f"{key} #{idx + 1}: {item}" for idx, item in enumerate(value)]
                 continue
             ret.append(f"{key}: {value}")
         return ret

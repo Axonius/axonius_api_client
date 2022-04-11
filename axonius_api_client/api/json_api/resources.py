@@ -92,7 +92,8 @@ class ResourcesGetSchema(BaseSchemaJson):
 
     sort = marshmallow_jsonapi.fields.Str(allow_none=True, load_default=None, dump_default=None)
     page = marshmallow_jsonapi.fields.Nested(PaginationSchema)
-    search = marshmallow_jsonapi.fields.Str(allow_none=True, load_default=None, dump_default=None)
+    search = marshmallow_jsonapi.fields.Str(load_default="", dump_default="")
+    filter = marshmallow_jsonapi.fields.Str(allow_none=True, load_default="", dump_default="")
     get_metadata = SchemaBool(load_default=True, dump_default=True)
 
     @staticmethod
@@ -103,15 +104,15 @@ class ResourcesGetSchema(BaseSchemaJson):
     class Meta:
         """Pass."""
 
-        type_ = "resource_base_schema"
+        type_ = "resource_request_schema"
 
 
 @dataclasses.dataclass
 class ResourcesGet(PageSortRequest):
     """Request attributes for getting resources."""
 
-    search: Optional[str] = dataclasses.field(
-        default=None,
+    search: str = dataclasses.field(
+        default="",
         metadata={
             "dataclasses_json": {
                 "mm_field": marshmallow_jsonapi.fields.Str(load_default="", dump_default="")
@@ -126,6 +127,16 @@ class ResourcesGet(PageSortRequest):
         (name == regex("test", "i"))
         (name == regex("test", "i")) and tags in ["Linux"]
     """
+    filter: Optional[str] = dataclasses.field(
+        default=None,
+        metadata={
+            "dataclasses_json": {
+                "mm_field": marshmallow_jsonapi.fields.Str(
+                    allow_none=True, load_default="", dump_default=""
+                )
+            },
+        },
+    )
 
     @staticmethod
     def get_schema_cls() -> Optional[Type[BaseSchema]]:

@@ -258,6 +258,24 @@ class Instances(ApiEndpointGroup):
         response_as_text=True,
     )
 
+    get_api_version: ApiEndpoint = ApiEndpoint(
+        method="get",
+        path="api/api",
+        request_schema_cls=None,
+        request_model_cls=None,
+        response_schema_cls=json_api.generic.StrValueSchema,
+        response_model_cls=json_api.generic.StrValue,
+    )
+
+    get_api_versions: ApiEndpoint = ApiEndpoint(
+        method="get",
+        path="api/supported_versions",
+        request_schema_cls=None,
+        request_model_cls=None,
+        response_schema_cls=json_api.generic.StrValueSchema,
+        response_model_cls=json_api.generic.StrValue,
+    )
+
 
 @dataclasses.dataclass(repr=False)
 class CentralCore(ApiEndpointGroup):
@@ -607,49 +625,67 @@ class Enforcements(ApiEndpointGroup):
 
     # PBUG: so many things wrong with this
 
-    get: ApiEndpoint = ApiEndpoint(
+    get_sets: ApiEndpoint = ApiEndpoint(
         method="get",
-        path="api/V4.0/enforcements",
+        path="api/V4.5/enforcements",
         request_schema_cls=json_api.resources.ResourcesGetSchema,
         request_model_cls=json_api.resources.ResourcesGet,
-        response_schema_cls=json_api.enforcements.EnforcementDetailsSchema,
-        response_model_cls=json_api.enforcements.EnforcementDetails,
+        response_schema_cls=json_api.enforcements.SetBasicSchema,
+        response_model_cls=json_api.enforcements.SetBasic,
     )
 
-    get_full: ApiEndpoint = ApiEndpoint(
+    get_set: ApiEndpoint = ApiEndpoint(
         method="get",
-        path="api/V4.0/enforcements/{uuid}",
+        path="api/V4.5/enforcements/{uuid}",
         request_schema_cls=None,
         request_model_cls=None,
-        response_schema_cls=json_api.enforcements.EnforcementSchema,
-        response_model_cls=json_api.enforcements.Enforcement,
+        response_schema_cls=json_api.enforcements.SetFullSchema,
+        response_model_cls=json_api.enforcements.SetFull,
     )
 
-    delete: ApiEndpoint = ApiEndpoint(
+    delete_set: ApiEndpoint = ApiEndpoint(
         method="delete",
-        path="api/V4.0/enforcements",
+        path="api/V4.5/enforcements",
         request_schema_cls=json_api.generic.DictValueSchema,
         request_model_cls=json_api.generic.DictValue,
         response_schema_cls=json_api.generic.DeletedSchema,
         response_model_cls=json_api.generic.Deleted,
     )
 
-    create: ApiEndpoint = ApiEndpoint(
+    create_set: ApiEndpoint = ApiEndpoint(
         method="post",
-        path="api/V4.0/enforcements",
-        request_schema_cls=json_api.enforcements.EnforcementCreateSchema,
-        request_model_cls=json_api.enforcements.EnforcementCreate,
-        response_schema_cls=json_api.enforcements.EnforcementSchema,
-        response_model_cls=json_api.enforcements.Enforcement,
+        path="api/V4.5/enforcements",
+        request_schema_cls=json_api.enforcements.CreateSchema,
+        request_model_cls=json_api.enforcements.Create,
+        response_schema_cls=json_api.enforcements.SetFullSchema,
+        response_model_cls=json_api.enforcements.SetFull,
     )
 
-    get_actions: ApiEndpoint = ApiEndpoint(
+    update_set: ApiEndpoint = ApiEndpoint(
+        method="put",
+        path="api/V4.5/enforcements/{uuid}",
+        request_schema_cls=json_api.enforcements.UpdateRequestSchema,
+        request_model_cls=json_api.enforcements.UpdateRequest,
+        response_schema_cls=json_api.enforcements.UpdateResponseSchema,
+        response_model_cls=json_api.enforcements.UpdateResponse,
+    )
+
+    copy_set: ApiEndpoint = ApiEndpoint(
+        method="POST",
+        path="api/V4.5/enforcements/duplicate/{uuid}",
+        request_schema_cls=json_api.enforcements.DuplicateSchema,
+        request_model_cls=json_api.enforcements.Duplicate,
+        response_schema_cls=json_api.enforcements.SetFullSchema,
+        response_model_cls=json_api.enforcements.SetFull,
+    )
+
+    get_action_types: ApiEndpoint = ApiEndpoint(
         method="get",
-        path="api/V4.0/enforcements/actions",
+        path="api/V4.5/enforcements/actions",
         request_schema_cls=None,
         request_model_cls=None,
-        response_schema_cls=json_api.enforcements.ActionSchema,
-        response_model_cls=json_api.enforcements.Action,
+        response_schema_cls=json_api.enforcements.ActionTypeSchema,
+        response_model_cls=json_api.enforcements.ActionType,
     )
 
 

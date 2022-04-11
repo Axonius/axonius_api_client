@@ -48,6 +48,8 @@ LOG_LEVEL_WIZARD: str = "debug"
 LOG_LEVEL_PACKAGE: str = "debug"
 """default logging level for the entire package"""
 
+LOG_LEVEL_PARSE: str = "debug"
+
 LOG_LEVELS_STR: List[str] = ["debug", "info", "warning", "error", "fatal"]
 """list of valid logging level strs"""
 

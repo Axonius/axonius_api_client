@@ -2,7 +2,6 @@ import dataclasses
 
 import marshmallow
 import pytest
-
 from axonius_api_client.api import json_api
 from axonius_api_client.api.json_api.base import BaseModel, BaseSchema, BaseSchemaJson
 from axonius_api_client.exceptions import SchemaError
@@ -209,6 +208,6 @@ class TestJsonApi:
 
     def test_dump_request_params(self):
         data = json_api.resources.ResourcesGet(page={"limit": 20, "offset": 3})
-        exp = {"page[limit]": 20, "page[offset]": 3, "get_metadata": True}
+        exp = {"page[limit]": 20, "page[offset]": 3, "get_metadata": True, "search": ""}
         ret = data.dump_request_params()
         assert ret == exp

@@ -32,7 +32,7 @@ class TestCallbacksCsv(Callbacks, Exports):
         cbobj = self.get_cbobj(
             apiobj=apiobj,
             cbexport=cbexport,
-            store={"fields": [field_complex]},
+            store={"fields_parsed": [field_complex]},
             getargs={"export_fd": io_fd, "export_fd_close": False},
         )
         cbobj.start()
@@ -63,7 +63,7 @@ class TestCallbacksCsv(Callbacks, Exports):
         cbobj = self.get_cbobj(
             apiobj=apiobj,
             cbexport=cbexport,
-            store={"fields": apiobj.fields_default},
+            store={"fields_parsed": apiobj.fields_default},
             getargs={"export_fd": io_fd, "field_titles": False, "export_fd_close": False},
         )
         cbobj.start()
