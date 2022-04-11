@@ -5,7 +5,6 @@ import copy
 import io
 
 import pytest
-
 from axonius_api_client.exceptions import ApiError, StopFetch
 
 from ...utils import get_rows_exist, get_schema
@@ -35,7 +34,7 @@ class TestCallbacksTable(Callbacks, Exports):
         cbobj = self.get_cbobj(
             apiobj=apiobj,
             cbexport=cbexport,
-            store={"fields": [field_complex]},
+            store={"fields_parsed": [field_complex]},
             getargs={"export_fd": io_fd, "export_fd_close": False, "table_max_rows": 4},
         )
         cbobj.start()

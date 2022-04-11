@@ -3,7 +3,9 @@
 import dataclasses
 import datetime
 import enum
-from typing import List
+from typing import List, Union
+
+from .exceptions import ApiError
 
 
 class BaseEnum(enum.Enum):
@@ -16,6 +18,34 @@ class BaseEnum(enum.Enum):
     def __str__(self):
         """Pass."""
         return str(self.value)
+
+    @classmethod
+    def get_value(cls, value: Union["BaseEnum", str]) -> "BaseEnum":
+        """Pass."""
+        if isinstance(value, cls):
+            return value
+
+        for item in cls:
+            if value in [item.name, item.value]:
+                return item
+
+        valids = "\n" + "\n".join([repr(x) for x in cls])
+        raise ApiError(f"Invalid {cls.__name__} value {value!r}, valids:{valids}")
+
+    @classmethod
+    def keys(cls) -> List[str]:
+        """Pass."""
+        return [x.name for x in cls]
+
+    @classmethod
+    def values(cls) -> List[str]:
+        """Pass."""
+        return [x.value for x in cls]
+
+    @classmethod
+    def to_dict(cls) -> dict:
+        """Pass."""
+        return {x.name: x.value for x in cls}
 
 
 @dataclasses.dataclass
