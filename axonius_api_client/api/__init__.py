@@ -10,6 +10,7 @@ from .openapi import OpenAPISpec
 from .system import (
     ActivityLogs,
     Dashboard,
+    DataScopes,
     Instances,
     Meta,
     RemoteSupport,
@@ -49,4 +50,5 @@ __all__ = (
     "ApiEndpoint",
     "json_api",
     "OpenAPISpec",
+    "DataScopes",
 )

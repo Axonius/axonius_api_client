@@ -8,6 +8,7 @@ from . import (
     base,
     central_core,
     custom_fields,
+    data_scopes,
     enforcements,
     generic,
     instances,
@@ -24,6 +25,7 @@ from . import (
 )
 
 __all__ = (
+    "data_scopes",
     "base",
     "custom_fields",
     "resources",

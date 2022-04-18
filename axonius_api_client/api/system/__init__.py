@@ -2,13 +2,10 @@
 """APIs for working with system components."""
 from .activity_logs import ActivityLogs
 from .dashboard import Dashboard
+from .data_scopes import DataScopes
 from .instances import Instances
 from .meta import Meta
 from .remote_support import RemoteSupport
-
-# from .settings_global import SettingsGlobal
-# from .settings_gui import SettingsGui
-# from .settings_identity_providers import SettingsIdentityProviders
 from .settings import SettingsGlobal, SettingsGui, SettingsIdentityProviders, SettingsLifecycle
 from .signup import Signup
 from .system_roles import SystemRoles
@@ -27,4 +24,5 @@ __all__ = (
     "RemoteSupport",
     "ActivityLogs",
     "SettingsIdentityProviders",
+    "DataScopes",
 )

@@ -131,6 +131,17 @@ class SavedQueries(ApiEndpointGroup):
         response_model_cls=json_api.saved_queries.SavedQuery,
     )
 
+    # WIP: folders
+    get_folders: ApiEndpoint = ApiEndpoint(
+        method="get",
+        path="api/V4.5/queries/folders",
+        request_schema_cls=None,
+        request_model_cls=None,
+        response_schema_cls=json_api.saved_queries.FoldersResponseSchema,
+        response_model_cls=json_api.saved_queries.FoldersResponse,
+    )
+    # PBUG: response not properly modeled
+
     create: ApiEndpoint = ApiEndpoint(
         method="post",
         path="api/V4.0/{asset_type}/views",
@@ -952,6 +963,47 @@ class OpenAPISpec(ApiEndpointGroup):
 
 
 @dataclasses.dataclass(repr=False)
+class DataScopes(ApiEndpointGroup):
+    """Pass."""
+
+    get: ApiEndpoint = ApiEndpoint(
+        method="get",
+        path="api/settings/data_scope",
+        request_schema_cls=None,
+        request_model_cls=None,
+        response_schema_cls=json_api.data_scopes.DataScopeDetailsSchema,
+        response_model_cls=json_api.data_scopes.DataScopeDetails,
+    )
+
+    create: ApiEndpoint = ApiEndpoint(
+        method="post",
+        path="api/settings/data_scope",
+        request_schema_cls=json_api.data_scopes.DataScopeCreateSchema,
+        request_model_cls=json_api.data_scopes.DataScopeCreate,
+        response_schema_cls=json_api.generic.MetadataSchema,
+        response_model_cls=json_api.generic.Metadata,
+    )
+
+    delete: ApiEndpoint = ApiEndpoint(
+        method="delete",
+        path="api/settings/data_scope/{uuid}",
+        request_schema_cls=None,
+        request_model_cls=None,
+        response_schema_cls=json_api.generic.MetadataSchema,
+        response_model_cls=json_api.generic.Metadata,
+    )
+
+    update: ApiEndpoint = ApiEndpoint(
+        method="put",
+        path="api/settings/data_scope/{uuid}",
+        request_schema_cls=json_api.data_scopes.DataScopeUpdateSchema,
+        request_model_cls=json_api.data_scopes.DataScopeUpdate,
+        response_schema_cls=json_api.generic.MetadataSchema,
+        response_model_cls=json_api.generic.Metadata,
+    )
+
+
+@dataclasses.dataclass(repr=False)
 class ApiEndpoints(BaseData):
     """Pass."""
 
@@ -970,6 +1022,7 @@ class ApiEndpoints(BaseData):
     saved_queries: ApiEndpointGroup = SavedQueries()
     assets: ApiEndpointGroup = Assets()
     openapi: ApiEndpointGroup = OpenAPISpec()
+    data_scopes: ApiEndpointGroup = DataScopes()
 
     @classmethod
     def get_groups(cls) -> Dict[str, ApiEndpointGroup]:

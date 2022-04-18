@@ -116,15 +116,6 @@ class SavedQueryPublic:
         with pytest.raises(AlreadyExists):
             apiobj.saved_query._check_name_exists(value=sq_fixture["name"])
 
-    def test__check_asset_scope_enabled(self, apiobj):
-        assert apiobj.saved_query._check_asset_scope_enabled(value=False) is None
-        flags = apiobj.instances._feature_flags()
-        if not flags.asset_scopes_enabled:
-            with pytest.raises(ApiError):
-                apiobj.saved_query._check_asset_scope_enabled(value=True)
-        else:
-            assert apiobj.saved_query._check_asset_scope_enabled(value=True) is None
-
     def test_get_no_generator(self, apiobj):
         rows = apiobj.saved_query.get(generator=False)
         assert not rows.__class__.__name__ == "generator"

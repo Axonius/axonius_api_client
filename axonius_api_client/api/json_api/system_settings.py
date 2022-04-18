@@ -7,6 +7,7 @@ from typing import List, Optional, Type
 import dataclasses_json
 import marshmallow_jsonapi
 
+from ...exceptions import FeatureNotEnabledError
 from ...tools import dt_days_left, dt_parse
 from .base import BaseModel, BaseSchema, BaseSchemaJson
 from .custom_fields import SchemaDatetime, get_field_dc_mm
@@ -108,18 +109,27 @@ class FeatureFlags(SystemSettings):
         """Get the status of cloud compliance module being enabled."""
         return self._cloud_compliance.get("enabled", False)
 
-    @property
-    def asset_scopes_enabled(self) -> bool:
-        """Get the status of asset scopes being enabled."""
-        return self._asset_scope.get("enabled", False)
+    def data_scope_check(self):
+        """Check if data scope feature flag is enabled.
+
+        Raises:
+            FeatureNotEnabledError: if data scope feature flag is not enabled
+        """
+        if not self.data_scopes_enabled:
+            raise FeatureNotEnabledError(name="Data Scopes")
 
     @property
-    def asset_scopes_max(self) -> Optional[int]:
-        """Get the max number of asset scopes allowed."""
-        return self._asset_scope.get("queries_limit", None)
+    def data_scopes_enabled(self) -> bool:
+        """Get the status of data scopes being enabled."""
+        return self._data_scopes.get("enabled", False)
 
     @property
-    def _asset_scope(self) -> dict:
+    def data_scopes_max(self) -> Optional[int]:
+        """Get the max number of data scopes allowed."""
+        return self._data_scopes.get("queries_limit", None)
+
+    @property
+    def _data_scopes(self) -> dict:
         return self.config.get("data_scope") or {}
 
     @property
