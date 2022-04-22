@@ -5,7 +5,7 @@ import pytest
 
 
 class TestCallbacksXml:
-    @pytest.fixture(params=["api_devices", "api_users"])
+    @pytest.fixture(params=["api_devices", "api_users"], scope="class")
     def apiobj(self, request):
         return request.getfixturevalue(request.param)
 

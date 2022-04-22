@@ -11,7 +11,7 @@ from .test_callbacks import Callbacks, Exports
 
 
 class TestCallbacksJson(Callbacks, Exports):
-    @pytest.fixture(params=["api_devices", "api_users"])
+    @pytest.fixture(params=["api_devices", "api_users"], scope="class")
     def apiobj(self, request):
         return request.getfixturevalue(request.param)
 

@@ -329,3 +329,15 @@ class RequestLoadObjectError(RequestError):
 
 class ResponseLoadObjectError(RequestError):
     """Pass."""
+
+
+class FeatureNotEnabledError(ApiError):
+    """Pass."""
+
+    def __init__(self, name: str):
+        """Pass."""
+        msg = (
+            f"The {name} feature is not enabled on this instance, "
+            "please contact support@axonius.com to enable"
+        )
+        super().__init__(msg)

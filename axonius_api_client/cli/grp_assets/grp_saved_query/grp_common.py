@@ -57,7 +57,7 @@ OPT_EXPORT = click.option(
     "-xf",
     "export_format",
     type=click.Choice(list(EXPORT_FORMATS)),
-    help="Format of to export data in",
+    help="Format to export data in",
     default="table",
     show_envvar=True,
     show_default=True,

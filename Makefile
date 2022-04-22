@@ -19,60 +19,35 @@ init:
 
 
 pip_install_tools:
-	pip install \
-		--quiet \
-		--upgrade \
-		--requirement requirements-pkg.txt
+	pip install --quiet --upgrade --requirement requirements-pkg.txt
 
 pip_install_dev:
-	pip install \
-		--quiet \
-		--upgrade \
-		--requirement requirements-dev.txt
+	pip install --quiet --upgrade --requirement requirements-dev.txt
+	# later versions of werkzeug break pytest
+	pip install --quiet --upgrade werkzeug==2.0.3
 
 pip_install_lint:
-	pip install \
-		--quiet \
-		--upgrade \
-		--requirement requirements-lint.txt
+	pip install --quiet --upgrade --requirement requirements-lint.txt
 
 pip_install_build:
-	pip install \
-		--quiet \
-		--upgrade \
-		--requirement requirements-build.txt
+	pip install --quiet --upgrade --requirement requirements-build.txt
 
 pip_install_docs:
-	pip install \
-		--quiet \
-		--upgrade \
-		--requirement docs/requirements.txt
+	pip install --quiet --upgrade --requirement docs/requirements.txt
 
 pipenv_init:
-	pipenv install \
-		--dev \
-		--skip-lock
+	pipenv install --dev --skip-lock
 
 pipenv_init_ver:
-	pipenv install \
-		--dev \
-		--skip-lock \
-		--python $(PYVER)
+	pipenv install --dev --skip-lock --python $(PYVER)
 
 pipenv_clean:
 	pipenv --rm || true
 
 lint:
-	pipenv run isort \
-		$(PACKAGE) setup.py shell.py
-	pipenv run black \
-		-l 100 \
-		$(PACKAGE) setup.py shell.py
-	pipenv run flake8 \
-		--max-line-length 100 \
-		--exclude $(PACKAGE)/tests \
-		--exclude $(PACKAGE)/examples \
-		$(PACKAGE) setup.py shell.py
+	pipenv run isort $(PACKAGE) setup.py shell.py
+	pipenv run black -l 100 $(PACKAGE) setup.py shell.py
+	pipenv run flake8 --max-line-length 100 --exclude $(PACKAGE)/tests --exclude $(PACKAGE)/examples $(PACKAGE) setup.py shell.py
 	# XXX DISABLED FOR NOW
 	# 	pipenv run pydocstyle \
 	# 		--match-dir='(?!tests).*'\

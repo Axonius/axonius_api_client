@@ -6,6 +6,7 @@ from ..context import AliasedGroup
 from . import (
     grp_activity_logs,
     grp_central_core,
+    grp_data_scopes,
     grp_discover,
     grp_meta,
     grp_nodes,
@@ -32,3 +33,4 @@ system.add_command(grp_users.users)
 system.add_command(grp_discover.discover)
 system.add_command(grp_remote_support.remote_support)
 system.add_command(grp_activity_logs.activity_logs)
+system.add_command(grp_data_scopes.data_scopes)

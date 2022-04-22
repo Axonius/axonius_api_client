@@ -22,6 +22,7 @@ API Objects:
     - activity_logs/al: Work with activity logs
     - adapters/a: Work with adapters and adapter connections
     - dashboard/db: Work with dashboards and discovery cycle
+    - data_scopes/ds: Work with data scopes
     - devices/d: Work with device assets
     - instances/i: Work with instances
     - meta/m: Work with instance metadata
@@ -67,6 +68,7 @@ def cmd(ctx, url, key, secret):  # noqa: D301
         - activity_logs/al: Work with activity logs
         - adapters/a: Work with adapters and adapter connections
         - dashboard/db: Work with dashboards and discovery cycle
+        - data_scopes/ds: Work with data scopes
         - devices/d: Work with device assets
         - instances/i: Work with instances
         - meta/m: Work with instance metadata
@@ -93,6 +95,7 @@ def cmd(ctx, url, key, secret):  # noqa: D301
         "ctx": ctx,
         "dashboard": client.dashboard,
         "devices": client.devices,
+        "data_scopes": client.data_scopes,
         "enforcements": client.enforcements,
         "instances": client.instances,
         "jdump": jdump,
@@ -111,6 +114,7 @@ def cmd(ctx, url, key, secret):  # noqa: D301
         "c": client,
         "d": client.devices,
         "db": client.dashboard,
+        "ds": client.data_scopes,
         "e": client.enforcements,
         "i": client.instances,
         "j": jdump,
