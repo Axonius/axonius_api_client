@@ -3,7 +3,7 @@
 import dataclasses
 import datetime
 import math
-from typing import List, Optional, Type
+from typing import Any, List, Optional, Type
 
 import marshmallow
 import marshmallow_jsonapi
@@ -77,17 +77,43 @@ def cat_actions(http) -> dict:
     return data
 
 
+def build_data_scope_restriction(
+    obj: Any = None,
+    enabled: bool = False,
+    data_scope: Optional[str] = None,
+) -> dict:
+    """Pass."""
+    if not isinstance(obj, dict):
+        obj = {}
+
+    enabled = obj.get("enabled", enabled)
+    data_scope = obj.get("data_scope", data_scope)
+
+    ret = {}
+    ret["enabled"] = enabled
+    ret["data_scope"] = data_scope
+    return ret
+
+
+def fix_data_scope_restriction(data: dict) -> dict:
+    """Pass."""
+    # PBUG: ASR seems to be quite poorly modeled
+    data["data_scope_restriction"] = build_data_scope_restriction(
+        data.get("data_scope_restriction")
+    )
+    return data
+
+
 class SystemRoleSchema(BaseSchemaJson):
     """Pass."""
 
     uuid = marshmallow_jsonapi.fields.Str(required=True)
     name = marshmallow_jsonapi.fields.Str(required=True)
-    permissions = marshmallow_jsonapi.fields.Dict()
+    permissions = marshmallow_jsonapi.fields.Dict(required=True)
+    data_scope_restriction = marshmallow_jsonapi.fields.Dict(required=False)
+
     predefined = SchemaBool(load_default=False, dump_default=False)
     last_updated = SchemaDatetime(allow_none=True)
-    asset_scope_restriction = marshmallow_jsonapi.fields.Dict(required=False)
-    # PBUG: not modeled well
-
     # NEW_IN: 05/31/21 cortex/develop
     users_count = marshmallow_jsonapi.fields.Int(required=False, load_default=0, dump_default=0)
 
@@ -103,40 +129,28 @@ class SystemRoleSchema(BaseSchemaJson):
         # PBUG: why is this called roles_details_schema vs roles_schema?
 
 
-class SystemRoleUpdateSchema(SystemRoleSchema):
+class SystemRoleUpdateSchema(BaseSchemaJson):
     """Pass."""
 
-    last_updated = SchemaDatetime(allow_none=True)
+    name = marshmallow_jsonapi.fields.Str(required=True)
+    permissions = marshmallow_jsonapi.fields.Dict(required=True)
+    data_scope_restriction = marshmallow_jsonapi.fields.Dict(required=False)
 
     @marshmallow.post_load
     def post_load_fixit(self, data: dict, **kwargs) -> dict:
         """Pass."""
-        data["asset_scope_restriction"] = data.get("asset_scope_restriction") or {"enabled": False}
-        return data
+        return fix_data_scope_restriction(data)
 
     @marshmallow.post_dump
     def post_dump_fixit(self, data: dict, **kwargs) -> dict:
         """Pass."""
-        # remove attrs that REST API can not accept for an update request body
-        data.pop("last_updated", None)
-        data.pop("id", None)
-        data.pop("uuid", None)
-        data.pop("predefined", None)
-        # PBUG: these should really just be ignored by rest api
-
-        # NEW_IN: 05/31/21 cortex/develop
-        data.pop("users_count", None)
-
-        data["asset_scope_restriction"] = data.get("asset_scope_restriction") or {"enabled": False}
-        data["asset_scope_restriction"].pop("asset_scope", None)
-        # PBUG: ASR seems to be quite poorly modeled
+        data = fix_data_scope_restriction(data)
         return data
 
     class Meta:
         """Pass."""
 
         type_ = "roles_schema"
-        # PBUG: why is this called roles_details_schema vs roles_schema?
 
     @staticmethod
     def get_model_cls() -> type:
@@ -144,16 +158,44 @@ class SystemRoleUpdateSchema(SystemRoleSchema):
         return SystemRoleUpdate
 
 
+class SystemRoleCreateSchema(BaseSchemaJson):
+    """Pass."""
+
+    name = marshmallow_jsonapi.fields.Str(required=True)
+    permissions = marshmallow_jsonapi.fields.Dict(required=True)
+    data_scope_restriction = marshmallow_jsonapi.fields.Dict(required=False)
+
+    @staticmethod
+    def get_model_cls() -> type:
+        """Pass."""
+        return SystemRoleCreate
+
+    class Meta:
+        """Pass."""
+
+        type_ = "roles_schema"
+
+    @marshmallow.post_load
+    def post_load_fixit(self, data: dict, **kwargs) -> dict:
+        """Pass."""
+        return fix_data_scope_restriction(data)
+
+    @marshmallow.post_dump
+    def post_dump_fixit(self, data: dict, **kwargs) -> dict:
+        """Pass."""
+        return fix_data_scope_restriction(data)
+
+
 @dataclasses.dataclass
 class SystemRole(BaseModel):
     """Pass."""
 
-    name: str
     uuid: str
+    name: str
+    permissions: dict
+    data_scope_restriction: Optional[dict] = dataclasses.field(default_factory=dict)
 
-    asset_scope_restriction: Optional[dict] = dataclasses.field(default_factory=dict)
     predefined: bool = False
-    permissions: dict = dataclasses.field(default_factory=dict)
     last_updated: Optional[datetime.datetime] = get_field_dc_mm(
         mm_field=SchemaDatetime(allow_none=True), default=None
     )
@@ -161,6 +203,16 @@ class SystemRole(BaseModel):
 
     # NEW_IN: 05/31/21 cortex/develop
     users_count: int = 0
+
+    @marshmallow.post_load
+    def post_load_fixit(self, data: dict, **kwargs) -> dict:
+        """Pass."""
+        return fix_data_scope_restriction(data)
+
+    @marshmallow.post_dump
+    def post_dump_fixit(self, data: dict, **kwargs) -> dict:
+        """Pass."""
+        return fix_data_scope_restriction(data)
 
     @staticmethod
     def get_schema_cls() -> Optional[Type[BaseSchema]]:
@@ -170,15 +222,28 @@ class SystemRole(BaseModel):
     def __post_init__(self):
         """Pass."""
         self.id = self.uuid if self.id is None and self.uuid is not None else self.id
-        self.asset_scope_restriction = self.asset_scope_restriction or {"enabled": False}
-        # PBUG: ASR seems to be quite poorly modeled
+        self.data_scope_restriction = build_data_scope_restriction(self.data_scope_restriction)
 
-    def to_dict_old(self):
+    def to_dict_old(self, data_scopes: Optional[List[dict]] = None) -> dict:
         """Pass."""
+        data_scopes = data_scopes or []
         obj = self.to_dict()
         obj["permissions_flat"] = self.permissions_flat()
         obj["permissions_flat_descriptions"] = self.permissions_flat_descriptions()
+
+        data_scope_name = None
+        if self.data_scope_id:
+            data_scope = [x for x in data_scopes if x.uuid == self.data_scope_id]
+            if data_scope:
+                data_scope_name = data_scope[0].name
+
+        obj["data_scope_name"] = data_scope_name
         return obj
+
+    @property
+    def data_scope_id(self) -> Optional[str]:
+        """Pass."""
+        return self.data_scope_restriction.get("data_scope")
 
     def permissions_flat(self) -> dict:
         """Parse a roles permissions into a flat structure."""
@@ -223,46 +288,17 @@ class SystemRole(BaseModel):
 
 
 @dataclasses.dataclass
-class SystemRoleUpdate(SystemRole):
+class SystemRoleUpdate(BaseModel):
     """Pass."""
+
+    name: str
+    permissions: dict
+    data_scope_restriction: Optional[dict] = dataclasses.field(default_factory=dict)
 
     @staticmethod
     def get_schema_cls() -> Optional[Type[BaseSchema]]:
         """Pass."""
         return SystemRoleUpdateSchema
-
-
-class SystemRoleCreateSchema(BaseSchemaJson):
-    """Pass."""
-
-    name = marshmallow_jsonapi.fields.Str(required=True)
-    permissions = marshmallow_jsonapi.fields.Dict(required=True)
-    asset_scope_restriction = marshmallow_jsonapi.fields.Dict(required=False)
-
-    @staticmethod
-    def get_model_cls() -> type:
-        """Pass."""
-        return SystemRoleCreate
-
-    class Meta:
-        """Pass."""
-
-        type_ = "roles_schema"
-
-    @marshmallow.post_load
-    def post_load_fixit(self, data: dict, **kwargs) -> dict:
-        """Pass."""
-        data["asset_scope_restriction"] = data.get("asset_scope_restriction") or {"enabled": False}
-        # PBUG: ASR seems to be quite poorly modeled
-        return data
-
-    @marshmallow.post_dump
-    def post_dump_fixit(self, data: dict, **kwargs) -> dict:
-        """Pass."""
-        data["asset_scope_restriction"] = data.get("asset_scope_restriction") or {"enabled": False}
-        # data["asset_scope_restriction"].pop("asset_scope", None)
-        # PBUG: ASR seems to be quite poorly modeled
-        return data
 
 
 @dataclasses.dataclass
@@ -271,7 +307,7 @@ class SystemRoleCreate(BaseModel):
 
     name: str
     permissions: dict
-    asset_scope_restriction: Optional[dict] = dataclasses.field(default_factory=dict)
+    data_scope_restriction: Optional[dict] = dataclasses.field(default_factory=dict)
 
     @staticmethod
     def get_schema_cls() -> Optional[Type[BaseSchema]]:
@@ -280,5 +316,4 @@ class SystemRoleCreate(BaseModel):
 
     def __post_init__(self):
         """Pass."""
-        self.asset_scope_restriction = self.asset_scope_restriction or {"enabled": False}
-        # PBUG: ASR seems to be quite poorly modeled
+        self.data_scope_restriction = build_data_scope_restriction(self.data_scope_restriction)

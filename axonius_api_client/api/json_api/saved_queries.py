@@ -396,7 +396,7 @@ FOLDER_SEP: str = "//"
 
 # WIP: folders
 @dataclasses.dataclass
-class Folder(BaseModel):
+class Folder(BaseModel):  # pragma: no cover
     """Pass."""
 
     _id: str
@@ -476,7 +476,7 @@ class Folder(BaseModel):
 
 # WIP: folders
 @dataclasses.dataclass
-class FoldersResponse(BaseModel):
+class FoldersResponse(BaseModel):  # pragma: no cover
     """Pass."""
 
     folders: List[dict]

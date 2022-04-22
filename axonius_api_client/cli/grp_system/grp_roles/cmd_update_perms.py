@@ -2,9 +2,9 @@
 """Command line interface for Axonius API Client."""
 from ...context import CONTEXT_SETTINGS, click
 from ...options import AUTH, add_options
-from .grp_common import EXPORT, PERMS, ROLE_NAME, handle_export
+from .grp_common import EXPORT_FORMATS, OPT_PERMS, OPT_ROLE_NAME, OPTS_EXPORT
 
-GRANT = click.option(
+OPT_GRANT = click.option(
     "--allow/--deny",
     "-a/-d",
     "grant",
@@ -16,19 +16,13 @@ GRANT = click.option(
 )
 
 
-OPTIONS = [
-    *AUTH,
-    EXPORT,
-    ROLE_NAME,
-    PERMS,
-    GRANT,
-]
+OPTIONS = [*AUTH, *OPTS_EXPORT, OPT_ROLE_NAME, OPT_PERMS, OPT_GRANT]
 
 
 @click.command(name="update-perms", context_settings=CONTEXT_SETTINGS)
 @add_options(OPTIONS)
 @click.pass_context
-def cmd(ctx, url, key, secret, export_format, name, grant, perms, **kwargs):
+def cmd(ctx, url, key, secret, export_format, table_format, name, grant, perms, **kwargs):
     """Update a roles permissions."""
     perms = dict(perms)
     client = ctx.obj.start_client(url=url, key=key, secret=secret)
@@ -36,4 +30,5 @@ def cmd(ctx, url, key, secret, export_format, name, grant, perms, **kwargs):
         data = client.system_roles.set_perms(name=name, grant=grant, **perms)
         ctx.obj.echo_ok(f"Updated role permissions for {name!r}")
 
-    handle_export(ctx=ctx, data=data, export_format=export_format, **kwargs)
+    click.secho(EXPORT_FORMATS[export_format](data=data, table_format=table_format))
+    ctx.exit(0)

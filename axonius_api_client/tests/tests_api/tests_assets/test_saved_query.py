@@ -23,6 +23,7 @@ from ...utils import get_schema, random_string
 class FixtureData:
 
     name = "badwolf torked"
+    name_asset_scope = "badwolf asset scope"
     fields = [
         "adapters",
         "last_seen",
@@ -491,6 +492,63 @@ class SavedQueryPublic:
         except Exception:
             pass
 
+    @pytest.fixture(scope="function")
+    def asset_scope_fixture(self, apiobj):
+        get_schema(apiobj=apiobj, field="specific_data.data.last_seen")
+
+        try:
+            apiobj.saved_query.delete_by_name(value=FixtureData.name_asset_scope)
+        except SavedQueryNotFoundError:
+            pass
+
+        row = apiobj.saved_query.add(
+            name=FixtureData.name_asset_scope,
+            fields=FixtureData.fields + [apiobj.FIELD_SIMPLE],
+            sort_field=apiobj.FIELD_SIMPLE,
+            sort_descending=FixtureData.sort_desc,
+            gui_page_size=FixtureData.gui_page_size,
+            tags=FixtureData.tags,
+            description=FixtureData.description,
+            query=FixtureData.query,
+            asset_scope=True,
+            as_dataclass=True,
+        )
+
+        uuid = row.uuid
+
+        assert row.name == FixtureData.name_asset_scope
+        assert row.query_type == "saved"
+        assert row.tags == FixtureData.tags
+        assert row.description == FixtureData.description
+        assert row.private is False
+        assert row.query == FixtureData.query
+        assert row.query_expr == FixtureData.query
+        assert row.expressions == []
+        assert row.page_size == FixtureData.gui_page_size
+        assert row.sort_field == apiobj.FIELD_SIMPLE
+        assert row.sort_descending == FixtureData.sort_desc
+        assert row.asset_scope is True
+
+        yield row
+
+        try:
+            apiobj.saved_query._delete(uuid=uuid)
+        except Exception:
+            pass
+
+    def test_get_by_multi_asset_scope(self, apiobj, asset_scope_fixture):
+        row = apiobj.saved_query.get_by_multi(
+            sq=asset_scope_fixture.name, asset_scopes=True, as_dataclass=True
+        )
+        assert row.uuid == asset_scope_fixture.uuid
+
+        non_asset_scopes = [
+            x for x in apiobj.saved_query.get(as_dataclass=True) if not x.asset_scope
+        ]
+
+        with pytest.raises(SavedQueryNotFoundError):
+            apiobj.saved_query.get_by_multi(sq=non_asset_scopes[0].name, asset_scopes=True)
+
     def test_add_remove(self, apiobj, sq_fixture):
         row = apiobj.saved_query.delete_by_name(value=sq_fixture["name"])
         assert isinstance(row, dict)
@@ -846,6 +904,10 @@ def validate_sq(asset):
     assert isinstance(assetConditionExpressions, list)
     assetExcludeAdapters = view.pop("assetExcludeAdapters", [])
     assert isinstance(assetExcludeAdapters, list)
+
+    # 4.6: 2022/04/19
+    queryStrings = view.pop("queryStrings", {})
+    assert isinstance(queryStrings, dict)
 
     assert not query, list(query)
     assert not view, list(view)

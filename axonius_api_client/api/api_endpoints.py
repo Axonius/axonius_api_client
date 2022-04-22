@@ -706,7 +706,7 @@ class SystemRoles(ApiEndpointGroup):
 
     get: ApiEndpoint = ApiEndpoint(
         method="get",
-        path="api/V4.0/settings/roles",
+        path="api/settings/roles",
         request_schema_cls=None,
         request_model_cls=None,
         response_schema_cls=json_api.system_roles.SystemRoleSchema,
@@ -716,7 +716,7 @@ class SystemRoles(ApiEndpointGroup):
 
     create: ApiEndpoint = ApiEndpoint(
         method="post",
-        path="api/V4.0/settings/roles",
+        path="api/settings/roles",
         request_schema_cls=json_api.system_roles.SystemRoleCreateSchema,
         request_model_cls=json_api.system_roles.SystemRoleCreate,
         response_schema_cls=json_api.system_roles.SystemRoleSchema,
@@ -725,7 +725,7 @@ class SystemRoles(ApiEndpointGroup):
 
     delete: ApiEndpoint = ApiEndpoint(
         method="delete",
-        path="api/V4.0/settings/roles/{uuid}",
+        path="api/settings/roles/{uuid}",
         request_schema_cls=None,
         request_model_cls=json_api.resources.ResourceDelete,
         response_schema_cls=json_api.generic.MetadataSchema,
@@ -735,7 +735,7 @@ class SystemRoles(ApiEndpointGroup):
 
     update: ApiEndpoint = ApiEndpoint(
         method="put",
-        path="api/V4.0/settings/roles/{uuid}",
+        path="api/settings/roles/{uuid}",
         request_schema_cls=json_api.system_roles.SystemRoleUpdateSchema,
         request_model_cls=json_api.system_roles.SystemRoleUpdate,
         response_schema_cls=json_api.system_roles.SystemRoleSchema,
@@ -744,7 +744,7 @@ class SystemRoles(ApiEndpointGroup):
 
     perms: ApiEndpoint = ApiEndpoint(
         method="get",
-        path="api/V4.0/labels",
+        path="api/labels",
         request_schema_cls=None,
         request_model_cls=None,
         response_schema_cls=None,

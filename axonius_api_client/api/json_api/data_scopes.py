@@ -7,14 +7,58 @@ from typing import ClassVar, Dict, List, Optional, Type
 import marshmallow
 import marshmallow_jsonapi
 
+from ...exceptions import ApiError
 from ...tools import json_load
 from .base import BaseModel, BaseSchema, BaseSchemaJson
 from .custom_fields import SchemaDatetime
 from .saved_queries import SavedQuery
 
 
+class UpdatedByMixins:
+    """Pass."""
+
+    @property
+    def updated_user_obj(self) -> dict:
+        """Pass."""
+        if not hasattr(self, "_updated_user_obj"):
+            self._updated_user_obj = json_load(self.updated_by)
+        return self._updated_user_obj
+
+    @property
+    def updated_user_name(self) -> str:
+        """Get the user name of the user that last updated this object."""
+        return self.updated_user_obj.get("user_name") or ""
+
+    @property
+    def updated_user_source(self) -> str:
+        """Get the source of the user that last updated this object."""
+        return self.updated_user_obj.get("source") or ""
+
+    @property
+    def updated_user_first_name(self) -> str:
+        """Get the first name of the user that last updated this object."""
+        return self.updated_user_obj.get("first_name") or ""
+
+    @property
+    def updated_user_last_name(self) -> str:
+        """Get the last name of the user that last updated this object."""
+        return self.updated_user_obj.get("last_name") or ""
+
+    @property
+    def updated_user_full_name(self) -> str:
+        """Get the first and last name of the user that last updated this object."""
+        return " ".join(
+            [x for x in [self.updated_user_first_name, self.updated_user_last_name] if x]
+        )
+
+    @property
+    def updated_user(self) -> str:
+        """Pass."""
+        return f"{self.updated_user_source}/{self.updated_user_name}"
+
+
 @dataclasses.dataclass
-class DataScope(BaseModel):
+class DataScope(BaseModel, UpdatedByMixins):
     """Pass."""
 
     name: str
@@ -38,56 +82,23 @@ class DataScope(BaseModel):
 
     def __str__(self) -> str:
         """Pass."""
-        user_scopes = [x.name for x in self.user_scopes]
-        device_scopes = [x.name for x in self.device_scopes]
+        users_scopes = [x.name for x in self.users_scopes]
+        devices_scopes = [x.name for x in self.devices_scopes]
         items = [
-            f"name={self.name!r}",
-            f"uuid={self.uuid!r}",
-            f"description={self.description!r}",
-            f"associated_roles={self.associated_roles}",
-            f"user_scopes={user_scopes}",
-            f"device_scopes={device_scopes}",
+            f"Name: {self.name!r}",
+            f"UUID: {self.uuid!r}",
+            f"Description: {self.description!r}",
+            f"Associated Roles: {self.associated_roles}",
+            f"User Asset Scopes: {users_scopes}",
+            f"Device Asset Scopes: {devices_scopes}",
+            f"Updated Date: {self.last_updated.isoformat()!r}",
+            f"Updated User: {self.updated_user!r}",
         ]
         return "\n".join(items)
 
-    @property
-    def updated_user_obj(self) -> dict:
+    def __post_init__(self):
         """Pass."""
-        if not hasattr(self, "_updated_user_obj"):
-            self._updated_user_obj = json_load(self.updated_by)
-        return self._updated_user_obj
-
-    @property
-    def updated_user_name(self) -> str:
-        """Get the user name of the user that last updated this set."""
-        return self.updated_user_obj.get("user_name", "")
-
-    @property
-    def updated_user_source(self) -> str:
-        """Get the source of the user that last updated this set."""
-        return self.updated_user_obj.get("source", "")
-
-    @property
-    def updated_user_first_name(self) -> str:
-        """Get the first name of the user that last updated this set."""
-        return self.updated_user_obj.get("first_name", "")
-
-    @property
-    def updated_user_last_name(self) -> str:
-        """Get the last name of the user that last updated this set."""
-        return self.updated_user_obj.get("last_name", "")
-
-    @property
-    def updated_user_full_name(self) -> str:
-        """Get the first and last name of the user that last updated this set."""
-        return " ".join(
-            [x for x in [self.updated_user_first_name, self.updated_user_last_name] if x]
-        )
-
-    @property
-    def updated_user(self) -> str:
-        """Pass."""
-        return f"{self.updated_user_source}/{self.updated_user_name}"
+        self.ASSET_SCOPES = self.ASSET_SCOPES or {}
 
     def to_tablize(self) -> dict:
         """Pass."""
@@ -101,19 +112,73 @@ class DataScope(BaseModel):
         return {
             "Identifier": "\n".join(ident),
             "Associated Roles": "\n".join(self.associated_roles),
-            "User Asset Scopes": "\n".join([x.name for x in self.user_scopes]),
-            "Device Asset Scopes": "\n".join([x.name for x in self.device_scopes]),
+            "User Asset Scopes": "\n".join([x.name for x in self.users_scopes]),
+            "Device Asset Scopes": "\n".join([x.name for x in self.devices_scopes]),
         }
 
-    @property
-    def user_scopes(self) -> List[SavedQuery]:
+    @staticmethod
+    def find_scope(uuid: str, scopes: List[SavedQuery]) -> SavedQuery:
         """Pass."""
-        return [x for x in self.ASSET_SCOPES["users"] if x.uuid in self.users_queries]
+        try:
+            return [x for x in scopes if x.uuid == uuid][0]
+        except Exception:
+            scopes = "\n\n" + "\n\n".join([str(x) for x in scopes])
+            raise ApiError(f"Unable to find Saved Query UUID {uuid!r} in:{scopes}")
 
     @property
-    def device_scopes(self) -> List[SavedQuery]:
+    def users_scopes(self) -> List[SavedQuery]:
         """Pass."""
-        return [x for x in self.ASSET_SCOPES["devices"] if x.uuid in self.devices_queries]
+        scopes = self.ASSET_SCOPES.get("users") or []
+        return [self.find_scope(uuid=x, scopes=scopes) for x in self.users_queries]
+
+    @property
+    def devices_scopes(self) -> List[SavedQuery]:
+        """Pass."""
+        scopes = self.ASSET_SCOPES.get("devices") or []
+        return [self.find_scope(uuid=x, scopes=scopes) for x in self.devices_queries]
+
+    @property
+    def scope_types(self) -> List[str]:
+        """Pass."""
+        return ["devices", "users"]
+
+    def check_scope_type(self, scope_type: str):
+        """Pass."""
+        if scope_type not in self.scope_types:
+            raise ApiError(f"Invalid scope Type {scope_type!r}, valids: {self.scope_types}")
+
+    def update_scopes(
+        self, scope_type: str, scopes: List[SavedQuery], append: bool = False, remove: bool = False
+    ) -> List[str]:
+        """Pass."""
+        self.check_scope_type(scope_type)
+
+        if (
+            not isinstance(scopes, list)
+            or not scopes
+            or not all([isinstance(x, SavedQuery) for x in scopes])
+        ):
+            raise ApiError(f"Must supply at least one asset scope of type {scope_type}")
+
+        scope_cache = self.ASSET_SCOPES.get(scope_type, [])
+        scope_cache_ids = [x.uuid for x in scope_cache]
+        scope_cache += [x for x in scopes if x.uuid not in scope_cache_ids]
+        scope_ids = [x.uuid for x in scopes]
+        queries_attr = f"{scope_type}_queries"
+        queries_current = getattr(self, queries_attr)
+
+        if remove:
+            queries_new = [x for x in queries_current if x not in scope_ids]
+        elif append:
+            queries_new = queries_current + [x for x in scope_ids if x not in queries_current]
+        else:
+            queries_new = scope_ids
+
+        setattr(self, queries_attr, queries_new)
+
+        if not any([self.users_queries, self.devices_queries]):
+            raise ApiError("Data Scopes must have a least one user or device Asset Scope")
+        return queries_new
 
 
 class DataScopeDetailsSchema(BaseSchemaJson):
