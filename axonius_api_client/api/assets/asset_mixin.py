@@ -641,6 +641,15 @@ class AssetMixin(ModelMixins):
         self.LOG.debug(f"Built query: {query!r}")
         return query
 
+    @property
+    def data_scopes(self):
+        """Work with data scopes."""
+        if not hasattr(self, "_data_scopes"):
+            from ..system import DataScopes
+
+            self._data_scopes: DataScopes = DataScopes(auth=self.auth)
+        return self._data_scopes
+
     def _init(self, **kwargs):
         """Post init method for subclasses to use for extra setup."""
         from ..adapters import Adapters

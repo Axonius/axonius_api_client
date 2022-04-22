@@ -122,10 +122,10 @@ class BaseSchema(BaseCommon, marshmallow.Schema):
         if not dataclasses.is_dataclass(model_cls):
             return model_cls(**data) if callable(model_cls) else data
 
-        fields_known = [x.name for x in dataclasses.fields(model_cls)]
-        extra_attributes = {k: data.pop(k) for k in list(data) if k not in fields_known}
+        # fields_known = [x.name for x in dataclasses.fields(model_cls)]
+        # extra_attributes = {k: data.pop(k) for k in list(data) if k not in fields_known}
         obj = model_cls.from_dict(data)
-        obj.extra_attributes = extra_attributes
+        # obj.extra_attributes = extra_attributes
         return obj
 
 
@@ -284,6 +284,15 @@ class BaseModel(dataclasses_json.DataClassJsonMixin, BaseCommon):
         """Pass."""
         props = self._to_str_properties()
         return self._str_join().join(props) if props else super().__str__()
+
+    @classmethod
+    def from_dict(cls, data: dict):
+        """Pass."""
+        fields_known = [x.name for x in dataclasses.fields(cls)]
+        extra_attributes = {k: data.pop(k) for k in list(data) if k not in fields_known}
+        obj = super().from_dict(data)
+        obj.extra_attributes = extra_attributes
+        return obj
 
     @staticmethod
     def _human_key(key):  # pragma: no cover
@@ -446,5 +455,5 @@ class BaseModel(dataclasses_json.DataClassJsonMixin, BaseCommon):
     @extra_attributes.setter
     def extra_attributes(self, value: dict):
         if value:
-            LOGGER.warning(f"Extra attributes found:\n{json_dump(value)}")
+            LOGGER.warning(f"Extra attributes found in {self}:\n{json_dump(value)}")
         self._extra_attributes = value

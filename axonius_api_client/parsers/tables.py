@@ -250,43 +250,60 @@ def tablize_user(user: dict) -> dict:
     return value
 
 
-def tablize_roles(
-    roles: List[dict], cat_actions: dict, err: str, fmt: str = TABLE_FORMAT, footer: bool = True
-) -> str:
+def tablize_roles(roles: List[dict], err: str, fmt: str = TABLE_FORMAT, footer: bool = True) -> str:
     """Create a table string for a set of roles.
 
     Args:
         roles: roles to create a table from
-        cat_actions: category -> actions mapping
         err: error string to show at top
         fmt: table format to use
         footer: show err at bottom too
     """
-    values = [tablize_role(role=x, cat_actions=cat_actions) for x in roles]
+    values = [tablize_role(role=x) for x in roles]
     return tablize(value=values, err=err, fmt=fmt, footer=footer)
 
 
-def tablize_role(role: dict, cat_actions: dict) -> dict:
+def tablize_role(role: dict) -> dict:
     """Create a table entry for a role.
 
     Args:
         role: role to create a table entry for
-        cat_actions: category -> actions mapping
     """
-    tab_map = {"Name": "name", "UUID": "uuid"}
-    value = {k: role.get(v) for k, v in tab_map.items()}
-
+    name = role["name"]
+    uuid = role["uuid"]
     perms = role["permissions_flat"]
+    updated = role.get("last_updated")
+    predefined = role.get("predefined", False)
+    users_count = role.get("users_count")
+    dsr = role.get("data_scope_restriction") or {}
+
     value_perms = []
     for cat, action in perms.items():
         if all(list(action.values())):
             has_perms = "all"
+        elif all([v is False for k, v in action.items()]):
+            has_perms = "none"
         else:
-            has_perms = ", ".join([k for k, v in action.items() if v])
-        value_perms.append(f"{cat}: {has_perms}")
+            has_perms = "\n  ".join([k for k, v in action.items() if v])
+        value_perms.append(f"{cat}:\n  {has_perms}")
 
     value_perms = "\n".join(value_perms)
-    value["Categories: actions"] = value_perms
+
+    dsr_name = role.get("data_scope_name")
+    data_scope = [f"{k}: {v!r}" for k, v in dsr.items()] + [f"Name: {dsr_name!r}"]
+
+    details = [
+        f"Name: {name}",
+        f"UUID: {uuid}",
+        f"Updated: {updated}",
+        f"Users Count: {users_count}",
+        f"Predefined: {predefined}",
+    ]
+
+    value = {}
+    value["Details"] = "\n".join(details)
+    value["Permissions"] = value_perms
+    value["Data Scope"] = "\n".join(data_scope)
     return value
 
 

@@ -17,6 +17,7 @@ from ..api_endpoints import ApiEndpoints
 from ..mixins import ChildMixins
 
 MODEL = json_api.saved_queries.SavedQuery
+MODEL_FOLDER = json_api.saved_queries.Folder
 BOTH = Union[dict, MODEL]
 MULTI = Union[str, BOTH]
 GEN = Generator[BOTH, None, None]
@@ -341,7 +342,6 @@ class SavedQuery(ChildMixins):
         """
         create_model = json_api.saved_queries.SavedQueryCreate
         self._check_name_exists(value=name)
-        self._check_asset_scope_enabled(value=asset_scope)
         sq = self.get_by_multi(sq=sq, as_dataclass=True)
         sq_create = {k: v for k, v in sq.to_dict().items() if k in create_model._get_field_names()}
         to_add = create_model.new_from_dict(sq_create)
@@ -352,7 +352,9 @@ class SavedQuery(ChildMixins):
         added = self._add_from_dataclass(obj=to_add)
         return self.get_by_multi(sq=added, as_dataclass=as_dataclass)
 
-    def get_by_multi(self, sq: MULTI, as_dataclass: bool = AS_DATACLASS, **kwargs) -> BOTH:
+    def get_by_multi(
+        self, sq: MULTI, as_dataclass: bool = AS_DATACLASS, asset_scopes: bool = False, **kwargs
+    ) -> BOTH:
         """Get a saved query by name or uuid.
 
         Args:
@@ -381,6 +383,11 @@ class SavedQuery(ChildMixins):
 
         searches = [name, uuid]
         sq_objs = self.get(as_dataclass=True, **kwargs)
+        details = f"name={name!r} or uuid={uuid!r}"
+
+        if asset_scopes:
+            sq_objs = [x for x in sq_objs if x.asset_scope]
+            details = f"{details} and is asset scope query"
 
         for sq_obj in sq_objs:
             checks = (
@@ -391,7 +398,7 @@ class SavedQuery(ChildMixins):
             if any([x in checks for x in searches]):
                 return sq_obj if as_dataclass else sq_obj.to_dict()
 
-        raise SavedQueryNotFoundError(sqs=sq_objs, details=f"name={name!r} or uuid={uuid!r}")
+        raise SavedQueryNotFoundError(sqs=sq_objs, details=details)
 
     def get_by_name(self, value: str, as_dataclass: bool = AS_DATACLASS) -> BOTH:
         """Get a saved query by name.
@@ -632,6 +639,9 @@ class SavedQuery(ChildMixins):
         private: bool = False,
         always_cached: bool = False,
         asset_scope: bool = False,
+        # WIP: folders
+        # folder_path: Optional[Union[str, List[str]]] = None,
+        # folder_id: Optional[str] = None,
         **kwargs,
     ) -> json_api.saved_queries.SavedQueryCreate:
         """Create a saved query.
@@ -680,10 +690,15 @@ class SavedQuery(ChildMixins):
             json_api.saved_queries.SavedQueryCreate: saved query dataclass to create
 
         """
+        # WIP: folders
+        # if isinstance(folder_path, str):
+        #     folders = self.get_folders()
+        #     folder = folders.search(value=folder_path)
+        #     folder_id = folder.id
+
         asset_scope = coerce_bool(asset_scope)
         private = coerce_bool(private)
         always_cached = coerce_bool(always_cached)
-        self._check_asset_scope_enabled(value=asset_scope)
         query_expr: Optional[str] = kwargs.get("query_expr", None) or query
         wiz_parsed: dict = self.parent.get_wiz_entries(wiz_entries=wiz_entries)
 
@@ -733,6 +748,8 @@ class SavedQuery(ChildMixins):
             always_cached=always_cached,
             asset_scope=asset_scope,
             tags=tags,
+            # WIP: folders
+            # folder_id=folder_id,
         )
 
     def delete_by_name(self, value: str, as_dataclass: bool = AS_DATACLASS) -> BOTH:
@@ -868,6 +885,8 @@ class SavedQuery(ChildMixins):
         private: bool = False,
         always_cached: bool = False,
         asset_scope: bool = False,
+        # WIP: folders
+        # folder_id: Optional[str] = None,
     ) -> MODEL:
         """Direct API method to update a saved query.
 
@@ -893,6 +912,8 @@ class SavedQuery(ChildMixins):
             private=private,
             tags=tags or [],
             asset_scope=asset_scope,
+            # WIP: folders
+            # folder_id=folder_id,
         )
         return api_endpoint.perform_request(
             http=self.auth.http,
@@ -921,6 +942,8 @@ class SavedQuery(ChildMixins):
         private: bool = False,
         always_cached: bool = False,
         asset_scope: bool = False,
+        # WIP: folders
+        # folder_id: Optional[str] = None,
     ) -> MODEL:
         """Direct API method to create a saved query.
 
@@ -946,6 +969,8 @@ class SavedQuery(ChildMixins):
             private=private,
             tags=tags or [],
             asset_scope=asset_scope,
+            # WIP: folders
+            # folder_id=folder_id,
         )
         return api_endpoint.perform_request(
             http=self.auth.http, request_obj=request_obj, asset_type=self.parent.ASSET_TYPE
@@ -985,20 +1010,6 @@ class SavedQuery(ChildMixins):
             http=self.auth.http, request_obj=request_obj, asset_type=self.parent.ASSET_TYPE
         )
 
-    def _check_asset_scope_enabled(self, value: bool):
-        """Check if asset scope feature flag is enabled on an instance of Axonius.
-
-        Args:
-            value (bool): if the calling method is trying to create an asset scope query
-
-        Raises:
-            ApiError: If value is True asset scope feature flag is False
-        """
-        if value:
-            flags = self.parent.instances._feature_flags()
-            if not flags.asset_scopes_enabled:
-                raise ApiError("Asset Scope feature is not enabled on this instance")
-
     def _check_name_exists(self, value: str):
         """Check if a SQ already exists with a given name.
 
@@ -1013,3 +1024,43 @@ class SavedQuery(ChildMixins):
             raise AlreadyExists(f"Saved query with name or uuid of {value!r} already exists:\n{sq}")
         except SavedQueryNotFoundError:
             return
+
+    # WIP: folders
+    '''
+    def _get_folders(self) -> json_api.saved_queries.FoldersResponse:
+        """Direct API method to get all folders.
+
+        Returns:
+            json_api.saved_queries.FoldersResponse: API response model
+        """
+        api_endpoint = ApiEndpoints.saved_queries.get_folders
+        return api_endpoint.perform_request(http=self.auth.http)
+
+    def folder_get(self) -> json_api.saved_queries.FoldersResponse:
+        """Direct API method to get all folders.
+
+        Returns:
+            json_api.saved_queries.FoldersResponse: API response model
+        """
+        return self._get_folders()
+
+    def folder_get_path(self, value: Union[MODEL_FOLDER, str, List[str]]) -> MODEL_FOLDER:
+        """Pass."""
+        if isinstance(value, MODEL_FOLDER):
+            return value
+        folders = self.folder_get()
+        return folders.search(value=value)
+
+    # folder_get(value: Optional[str])
+    # folder_get_path(value: Union[Folder, str, List[str]])
+
+    # resolve_folder_path(folder_path, folder_id)
+    # folder_create(path: Union[Folder, str], name: str)
+    #   - err on read only
+    # folder_delete(path: Union[Folder, str])
+    #   - err on root/read only
+    # folder_rename(path: Folder/str, name: str)
+    #   - err on root/read only
+    # folder_move(from_path: Union[Folder, str, List[str]], to_path: Union[Folder, str, List[str] )
+    #   - err on root/read only
+    '''

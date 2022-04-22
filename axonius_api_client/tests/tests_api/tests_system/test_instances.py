@@ -3,7 +3,6 @@
 import datetime
 
 import pytest
-
 from axonius_api_client.api import json_api
 from axonius_api_client.api.api_endpoints import ApiEndpoints
 from axonius_api_client.exceptions import NotFoundError
@@ -89,7 +88,7 @@ class TestInstancesPublic:
         assert isinstance(value, json_api.system_settings.FeatureFlags)
         assert isinstance(value.config, dict)
         assert isinstance(value.document_meta["schema"], dict)
-        assert isinstance(value.asset_scopes_max, (int, type(None)))
+        assert isinstance(value.data_scopes_max, (int, type(None)))
 
     def test_has_cloud_compliance(self, apiobj):
         value = apiobj.has_cloud_compliance

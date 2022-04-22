@@ -1,27 +1,32 @@
 # -*- coding: utf-8 -*-
 """Test suite."""
 import pytest
-
 from axonius_api_client.api import json_api
 from axonius_api_client.exceptions import ApiError, NotFoundError
-
-NAME = "badwolf"
-NEW_NAME = "badwolfxxx"
+from axonius_api_client.tools import listify
 
 
-def cleanup(apiobj):
-    objs = apiobj._get()
-    for obj in objs:
-        if obj.name in [NAME, NEW_NAME]:
-            apiobj._delete(uuid=obj.uuid)
-            print(f"deleted {obj}")
+class FixtureData:
+
+    name = "badwolf"
+    name_update = "badwolfxxx"
+    names = [name, name_update]
 
 
-class TestSystemRolesPrivate:
+class SystemRoles:
     @pytest.fixture(scope="class")
     def apiobj(self, api_system_roles):
         return api_system_roles
 
+    def cleanup_roles(self, apiobj, value):
+        for x in listify(value):
+            try:
+                apiobj.delete_by_name(name=x)
+            except Exception:
+                pass
+
+
+class TestSystemRolesPrivate(SystemRoles):
     def test_get(self, apiobj):
         roles = apiobj._get()
         assert isinstance(roles, list) and roles
@@ -29,9 +34,9 @@ class TestSystemRolesPrivate:
             assert isinstance(role, (json_api.system_roles.SystemRole,))
 
     def test_add_update_delete(self, apiobj):
-        cleanup(apiobj)
+        self.cleanup_roles(apiobj=apiobj, value=FixtureData.names)
         role = apiobj._add(
-            name=NAME,
+            name=FixtureData.name,
             permissions={
                 "adapters": {
                     "connections": {"delete": True, "post": True, "put": True, "terminate": True},
@@ -92,22 +97,20 @@ class TestSystemRolesPrivate:
         )
         assert isinstance(role, (json_api.system_roles.SystemRole,))
 
-        assert role.name == NAME
-        updated = apiobj._update(name=NEW_NAME, uuid=role.uuid, permissions=role.permissions)
+        assert role.name == FixtureData.name
+        updated = apiobj._update(
+            name=FixtureData.name_update, uuid=role.uuid, permissions=role.permissions
+        )
         assert isinstance(updated, (json_api.system_roles.SystemRole,))
-        assert updated.name == NEW_NAME
+        assert updated.name == FixtureData.name_update
 
         deleted = apiobj._delete(uuid=role.uuid)
         assert isinstance(role, (json_api.system_roles.SystemRole,))
-        assert deleted.document_meta == {"name": NEW_NAME}
-        cleanup(apiobj)
+        assert deleted.document_meta == {"name": FixtureData.name_update}
+        self.cleanup_roles(apiobj=apiobj, value=FixtureData.names)
 
 
-class TestSystemRolesPublic:
-    @pytest.fixture(scope="class")
-    def apiobj(self, api_system_roles):
-        return api_system_roles
-
+class TestSystemRolesPublic(SystemRoles):
     def test_get(self, apiobj):
         roles = apiobj.get()
         assert isinstance(roles, list) and roles
@@ -115,55 +118,45 @@ class TestSystemRolesPublic:
             assert isinstance(role, dict)
 
     def test_add(self, apiobj):
-        cleanup(apiobj)
+        self.cleanup_roles(apiobj=apiobj, value=FixtureData.name)
 
-        role = apiobj.add(name=NAME)
+        role = apiobj.add(name=FixtureData.name)
         assert isinstance(role, dict) and role
-        assert role["name"] == NAME
-        cleanup(apiobj)
+        assert role["name"] == FixtureData.name
+        self.cleanup_roles(apiobj=apiobj, value=FixtureData.name)
 
     def test_set_name(self, apiobj):
-        cleanup(apiobj)
+        self.cleanup_roles(apiobj=apiobj, value=FixtureData.names)
 
-        apiobj.add(name=NAME)
-        updated = apiobj.set_name(name=NAME, new_name=NEW_NAME)
-        assert updated["name"] == NEW_NAME
-        cleanup(apiobj)
+        apiobj.add(name=FixtureData.name)
+        updated = apiobj.set_name(name=FixtureData.name, new_name=FixtureData.name_update)
+        assert updated["name"] == FixtureData.name_update
+        self.cleanup_roles(apiobj=apiobj, value=FixtureData.names)
 
     def test_set_perms(self, apiobj):
-        cleanup(apiobj)
+        self.cleanup_roles(apiobj=apiobj, value=FixtureData.name)
 
-        apiobj.add(name=NAME)
-        updated = apiobj.set_perms(name=NAME, users_assets="all", devices_assets="all")
+        apiobj.add(name=FixtureData.name)
+        updated = apiobj.set_perms(name=FixtureData.name, users_assets="all", devices_assets="all")
         assert updated["permissions"]["adapters"]["get"] is False
         assert updated["permissions"]["users_assets"]["get"] is True
         assert updated["permissions"]["devices_assets"]["get"] is True
 
-        updated2 = apiobj.set_perms(name=NAME, grant=False, users_assets="get")
+        updated2 = apiobj.set_perms(name=FixtureData.name, grant=False, users_assets="get")
         assert updated2["permissions"]["adapters"]["get"] is False
         assert updated2["permissions"]["users_assets"]["get"] is False
         assert updated2["permissions"]["devices_assets"]["get"] is True
 
-        cleanup(apiobj)
-
-    # def test_set_perms_no_changes(self, apiobj):
-    #     cleanup(apiobj)
-
-    #     apiobj.add(name=NAME)
-    #     with pytest.raises(ApiError) as exc:
-    #         apiobj.set_perms(name=NAME)
-
-    #     assert "No permission changes" in str(exc.value)
-    #     cleanup(apiobj)
+        self.cleanup_roles(apiobj=apiobj, value=FixtureData.name)
 
     def test_add_already_exist(self, apiobj):
-        cleanup(apiobj)
-        apiobj.add(name=NAME)
+        self.cleanup_roles(apiobj=apiobj, value=FixtureData.name)
+        apiobj.add(name=FixtureData.name)
 
         with pytest.raises(ApiError):
-            apiobj.add(name=NAME)
+            apiobj.add(name=FixtureData.name)
 
-        cleanup(apiobj)
+        self.cleanup_roles(apiobj=apiobj, value=FixtureData.name)
 
     def test_get_by_uuid(self, apiobj):
         role = [x for x in apiobj.get()][0]

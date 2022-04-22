@@ -3,12 +3,13 @@
 import dataclasses
 import datetime
 import textwrap
-from typing import List, Optional, Type
+from typing import ClassVar, List, Optional, Type, Union
 
+import marshmallow
 import marshmallow_jsonapi
 
 from ...constants.api import GUI_PAGE_SIZES
-from ...exceptions import ApiAttributeTypeError
+from ...exceptions import ApiAttributeTypeError, ApiError
 from ...tools import coerce_bool, coerce_int, listify
 from .base import BaseModel, BaseSchema, BaseSchemaJson
 from .custom_fields import SchemaBool, SchemaDatetime
@@ -42,6 +43,10 @@ class SavedQuerySchema(BaseSchemaJson):
     )
     user_id = marshmallow_jsonapi.fields.Str(allow_none=True, load_default=None, dump_default=None)
     uuid = marshmallow_jsonapi.fields.Str(allow_none=True, load_default=None, dump_default=None)
+    # WIP: folders
+    # folder_id = marshmallow_jsonapi.fields.Str(
+    #     allow_none=True, load_default=None, dump_default=None
+    # )
 
     @staticmethod
     def get_model_cls() -> type:
@@ -68,6 +73,22 @@ class SavedQueryDeleteSchema(PrivateRequestSchema):
         type_ = "delete_view_schema"
 
 
+class FoldersResponseSchema(BaseSchemaJson):
+    """Pass."""
+
+    folders = marshmallow_jsonapi.fields.List(marshmallow_jsonapi.fields.Dict())
+
+    @staticmethod
+    def get_model_cls() -> type:
+        """Pass."""
+        return FoldersResponse
+
+    class Meta:
+        """Pass."""
+
+        type_ = "queries_folders_response_schema"
+
+
 class SavedQueryCreateSchema(BaseSchemaJson):
     """Pass."""
 
@@ -78,6 +99,10 @@ class SavedQueryCreateSchema(BaseSchemaJson):
     private = SchemaBool(load_default=False, dump_default=False)
     tags = marshmallow_jsonapi.fields.List(marshmallow_jsonapi.fields.Str())
     asset_scope = SchemaBool(load_default=False, dump_default=False)
+    # WIP: folders
+    # folder_id = marshmallow_jsonapi.fields.Str(
+    #     allow_none=True, load_default=None, dump_default=None
+    # )
 
     @staticmethod
     def get_model_cls() -> type:
@@ -253,7 +278,6 @@ class SavedQuery(BaseModel, SavedQueryMixins):
     last_updated: Optional[datetime.datetime] = dataclasses.field(
         default=None,
         metadata={
-            "update": False,
             "dataclasses_json": {"mm_field": SchemaDatetime(allow_none=True)},
         },
     )
@@ -265,6 +289,8 @@ class SavedQuery(BaseModel, SavedQueryMixins):
     predefined: bool = dataclasses.field(default=False, metadata={"update": False})
     is_asset_scope_query_ready: bool = dataclasses.field(default=False, metadata={"update": False})
     is_referenced: bool = dataclasses.field(default=False, metadata={"update": False})
+    # WIP: folders
+    # folder_id: Optional[str] = None
     document_meta: Optional[dict] = dataclasses.field(default_factory=dict)
 
     def __post_init__(self):
@@ -345,6 +371,8 @@ class SavedQueryCreate(BaseModel, SavedQueryMixins):
     asset_scope: bool = dataclasses.field(default=False)
     private: bool = dataclasses.field(default=False)
     tags: List[str] = dataclasses.field(default_factory=list)
+    # WIP: folders
+    # folder_id: Optional[str] = None
 
     @staticmethod
     def get_schema_cls() -> Optional[Type[BaseSchema]]:
@@ -360,3 +388,157 @@ class SavedQueryDelete(PrivateRequest):
     def get_schema_cls() -> Optional[Type[BaseSchema]]:
         """Pass."""
         return SavedQueryDeleteSchema
+
+
+# WIP: folders
+FOLDER_SEP: str = "//"
+
+
+# WIP: folders
+@dataclasses.dataclass
+class Folder(BaseModel):  # pragma: no cover
+    """Pass."""
+
+    _id: str
+    children_ids: List[str]
+    depth: int
+    name: str
+    root_type: str
+    created_at: datetime.datetime = dataclasses.field(
+        metadata={"dataclasses_json": {"mm_field": SchemaDatetime()}}
+    )
+    updated_at: datetime.datetime = dataclasses.field(
+        metadata={"dataclasses_json": {"mm_field": SchemaDatetime()}}
+    )
+    path: List[str]
+    children: Optional[List[dict]] = dataclasses.field(default_factory=list)
+    root_id: Optional[str] = None
+    created_by: Optional[str] = None
+    parent_id: Optional[str] = None
+    read_only: bool = False
+
+    PARENT: ClassVar[Optional[Union["Folder", "FoldersResponse"]]] = None
+
+    @property
+    def id(self) -> str:
+        """Pass."""
+        return self._id
+
+    @property
+    def path_str(self) -> str:
+        """Pass."""
+        return f" {FOLDER_SEP} ".join(self.path)
+
+    @property
+    def children_count(self) -> int:
+        """Pass."""
+        return len(self.children_ids)
+
+    @property
+    def models(self) -> List["Folder"]:
+        """Pass."""
+        schema = self.schema(many=True)
+        items = schema.load(self.children, unknown=marshmallow.INCLUDE)
+        for item in items:
+            item.HTTP = self.HTTP
+            item.PARENT = self
+        return items
+
+    def find_folder(self, value: str) -> "Folder":
+        """Pass."""
+        err = f"No folder named {value!r} found under {self.path_str!r}"
+        if not self.children:
+            raise ApiError(f"{err}No folders exist under {self.path_str!r}")
+
+        for model in self.models:
+            if model.name == value:
+                return model
+
+        valids = "\n" + "\n".join([str(x) for x in self.models])
+        raise ApiError(f"{err}, valids:{valids}")
+
+    def __str__(self) -> str:
+        """Pass."""
+        children = [x.name for x in self.models]
+        items = [
+            f"id: {self.id!r}",
+            f"name: {self.name!r}",
+            f"path: {self.path_str!r}",
+            f"children: {children}",
+        ]
+        items = ", ".join(items)
+        return f"Folder({items})"
+
+    def __repr__(self) -> str:
+        """Pass."""
+        return self.__str__()
+
+
+# WIP: folders
+@dataclasses.dataclass
+class FoldersResponse(BaseModel):  # pragma: no cover
+    """Pass."""
+
+    folders: List[dict]
+
+    @staticmethod
+    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+        """Pass."""
+        return FoldersResponseSchema
+
+    @property
+    def models(self) -> List[Folder]:
+        """Pass."""
+        schema = Folder.schema(many=True)
+        items = schema.load(self.folders, unknown=marshmallow.INCLUDE)
+        for item in items:
+            item.HTTP = self.HTTP
+            item.PARENT = self
+        return items
+
+    def find_folder(self, value: str) -> "Folder":
+        """Pass."""
+        for model in self.models:
+            if model.name == value:
+                return model
+
+        valids = "\n" + "\n".join([str(x) for x in self.models])
+        raise ApiError(f"No root folder named {value!r} found, valids:{valids}")
+
+    def search(self, value: Union[str, List[str]]) -> Folder:
+        """Find a folder by path."""
+        if isinstance(value, str):
+            value = [x.strip() for x in value.split(FOLDER_SEP) if x.strip()]
+
+        if not isinstance(value, list) and value and all([isinstance(x, str) and x for x in value]):
+            msg = (
+                f"Invalid folder search value {value!r} ({type(value)})\n"
+                f"Folder search value must be a list of str or a str separated by {FOLDER_SEP!r}"
+            )
+            raise ApiError(msg)
+
+        folder = None
+        for item in value:
+            folder = folder.find_folder(value=item) if folder else self.find_folder(value=item)
+        return folder
+
+    def get_tree(self, models: Optional[List["Folder"]] = None):
+        """Pass."""
+        models = self.models if models is None else models
+
+        items = []
+        for model in models:
+            items.append(f"{model.path_str}")
+            items += self.get_tree(models=model.models)
+        return items
+
+    def __str__(self) -> str:
+        """Pass."""
+        items = ",\n".join(
+            [f"Folder(name={x.name!r}, children={[y.name for y in x.models]})" for x in self.models]
+        )
+        return items
+
+    def __repr__(self) -> str:
+        """Pass."""
+        return self.__str__()

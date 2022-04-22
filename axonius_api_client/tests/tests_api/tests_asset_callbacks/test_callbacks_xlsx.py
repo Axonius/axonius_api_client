@@ -2,12 +2,11 @@
 """Test suite for assets."""
 
 import pytest
-
 from axonius_api_client.exceptions import ApiError
 
 
 class TestCallbacksXlsx:
-    @pytest.fixture(params=["api_devices", "api_users"])
+    @pytest.fixture(params=["api_devices", "api_users"], scope="class")
     def apiobj(self, request):
         return request.getfixturevalue(request.param)
 

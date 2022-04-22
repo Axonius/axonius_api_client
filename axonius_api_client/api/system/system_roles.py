@@ -50,8 +50,9 @@ class SystemRoles(ModelMixins):
     def get_generator(self) -> Generator[dict, None, None]:
         """Get Axonius system roles using a generator."""
         rows = self._get()
+        data_scopes = self.data_scopes.get_safe()
         for row in rows:
-            yield row.to_dict_old()
+            yield row.to_dict_old(data_scopes=data_scopes)
 
     def get_by_name(self, name: str) -> dict:
         """Get a role by name.
@@ -75,7 +76,7 @@ class SystemRoles(ModelMixins):
             return found[0]
 
         err = f"Role with name of {name!r} not found"
-        raise NotFoundError(tablize_roles(roles=roles, cat_actions=self.cat_actions, err=err))
+        raise NotFoundError(tablize_roles(roles=roles, err=err))
 
     def get_by_uuid(self, uuid: str) -> dict:
         """Get a role by uuid.
@@ -99,9 +100,9 @@ class SystemRoles(ModelMixins):
             return found[0]
 
         err = f"Role with uuid of {uuid!r} not found"
-        raise NotFoundError(tablize_roles(roles=roles, cat_actions=self.cat_actions, err=err))
+        raise NotFoundError(tablize_roles(roles=roles, err=err))
 
-    def add(self, name: str, **kwargs):
+    def add(self, name: str, data_scope: Optional[str] = None, **kwargs) -> dict:
         """Add a role.
 
         Examples:
@@ -133,19 +134,59 @@ class SystemRoles(ModelMixins):
 
         Args:
             name: name of role to add
+            data_scope: name or UUID of data scope to assign to role
             **kwargs: keys as categories, values as list or CSV of actions to allow for category
 
         Raises:
             :exc:`ApiError`: if role already exists matching name
         """
-        try:
-            self.get_by_name(name=name)
-            raise ApiError(f"Role with name of {name!r} already exists")
-        except NotFoundError:
-            pass
-
+        self.check_exists(name=name)
+        data_scope_restriction = self.data_scopes.build_role_data_scope(value=data_scope)
         perms = self.cat_actions_to_perms(grant=True, src=f"add role {name!r}", **kwargs)
-        self._add(name=name, permissions=perms)
+        self._add(name=name, permissions=perms, data_scope_restriction=data_scope_restriction)
+        return self.get_by_name(name=name)
+
+    def check_exists(self, name: str):
+        """Pass."""
+        try:
+            existing = self.get_by_name(name=name)
+        except NotFoundError:
+            return
+        else:
+            raise ApiError(f"Role with name of {name!r} already exists:\n{existing}")
+
+    def update_data_scope(
+        self, name: str, data_scope: Optional[str] = None, remove: bool = False
+    ) -> dict:
+        """Update the data scope of a role.
+
+        Args:
+            name (str): Name of role to update
+            data_scope (Optional[str], optional): Name or UUID of data scope
+            remove (bool, optional): Remove data scope from role
+        """
+        role = self.get_by_name(name=name)
+        self._check_predefined(role=role)
+
+        name = role["name"]
+        uuid = role["uuid"]
+        permissions = role["permissions"]
+
+        required = True
+
+        if remove:
+            data_scope = None
+            required = False
+
+        data_scope_restriction = self.data_scopes.build_role_data_scope(
+            value=data_scope, required=required
+        )
+        self._update(
+            uuid=uuid,
+            name=name,
+            permissions=permissions,
+            data_scope_restriction=data_scope_restriction,
+        )
         return self.get_by_name(name=name)
 
     def set_name(self, name: str, new_name: str) -> dict:
@@ -162,22 +203,33 @@ class SystemRoles(ModelMixins):
             name: name of role to update
             new_name: new name of role
         """
+        if name == new_name:
+            raise ApiError(f"New name {new_name!r} must be different than original name {name!r}")
+
         roles = self.get()
         found_new = [x for x in roles if x["name"] == new_name]
         if found_new:
             raise ApiError(f"Role with new name {new_name!r} already exists!")
 
-        if name == new_name:
-            raise ApiError(f"New name {new_name!r} must be different than original name {name!r}")
-
         found = [x for x in roles if x["name"] == name]
         if not found:
             err = f"Role with name of {name!r} not found"
-            raise NotFoundError(tablize_roles(roles=roles, cat_actions=self.cat_actions, err=err))
+            raise NotFoundError(tablize_roles(roles=roles, err=err))
 
         role = found[0]
         self._check_predefined(role=role)
-        self._update(uuid=role["uuid"], name=new_name, permissions=role["permissions"])
+
+        uuid = role["uuid"]
+        permissions = role["permissions"]
+        data_scope_restriction = json_api.system_roles.build_data_scope_restriction(
+            role.get("data_scope_restriction")
+        )
+        self._update(
+            uuid=uuid,
+            name=new_name,
+            permissions=permissions,
+            data_scope_restriction=data_scope_restriction,
+        )
         return self.get_by_name(name=new_name)
 
     def set_perms(self, name: str, grant: bool = True, **kwargs) -> dict:
@@ -219,7 +271,18 @@ class SystemRoles(ModelMixins):
         perms_new = self.cat_actions_to_perms(
             role_perms=perms_orig, grant=grant, src=f"set permissions on role {name!r}", **kwargs
         )
-        self._update(uuid=role["uuid"], name=name, permissions=perms_new)
+
+        name = role["name"]
+        uuid = role["uuid"]
+        data_scope_restriction = json_api.system_roles.build_data_scope_restriction(
+            role.get("data_scope_restriction")
+        )
+        self._update(
+            uuid=uuid,
+            name=name,
+            permissions=perms_new,
+            data_scope_restriction=data_scope_restriction,
+        )
         return self.get_by_name(name=name)
 
     def delete_by_name(self, name: str) -> dict:
@@ -286,7 +349,12 @@ class SystemRoles(ModelMixins):
         api_endpoint = ApiEndpoints.system_roles.get
         return api_endpoint.perform_request(http=self.auth.http)
 
-    def _add(self, name: str, permissions: dict) -> json_api.system_roles.SystemRole:
+    def _add(
+        self,
+        name: str,
+        permissions: dict,
+        data_scope_restriction: Optional[dict] = None,
+    ) -> json_api.system_roles.SystemRole:
         """Direct API method to add a role.
 
         Args:
@@ -294,10 +362,21 @@ class SystemRoles(ModelMixins):
             permissions: permissions for new role
         """
         api_endpoint = ApiEndpoints.system_roles.create
-        request_obj = api_endpoint.load_request(name=name, permissions=permissions)
+        data_scope_restriction = json_api.system_roles.build_data_scope_restriction(
+            data_scope_restriction
+        )
+        request_obj = api_endpoint.load_request(
+            name=name, permissions=permissions, data_scope_restriction=data_scope_restriction
+        )
         return api_endpoint.perform_request(http=self.auth.http, request_obj=request_obj)
 
-    def _update(self, uuid: str, name: str, permissions: dict) -> json_api.system_roles.SystemRole:
+    def _update(
+        self,
+        uuid: str,
+        name: str,
+        permissions: dict,
+        data_scope_restriction: Optional[dict] = None,
+    ) -> json_api.system_roles.SystemRole:
         """Direct API method to update a roles permissions.
 
         Args:
@@ -305,8 +384,15 @@ class SystemRoles(ModelMixins):
             permissions: permissions to update on new role
         """
         api_endpoint = ApiEndpoints.system_roles.update
-        request_obj = api_endpoint.load_request(name=name, permissions=permissions, uuid=uuid)
-        return api_endpoint.perform_request(http=self.auth.http, request_obj=request_obj)
+        data_scope_restriction = json_api.system_roles.build_data_scope_restriction(
+            data_scope_restriction
+        )
+        request_obj = api_endpoint.load_request(
+            name=name,
+            permissions=permissions,
+            data_scope_restriction=data_scope_restriction,
+        )
+        return api_endpoint.perform_request(http=self.auth.http, request_obj=request_obj, uuid=uuid)
 
     def _delete(self, uuid: str) -> json_api.system_roles.SystemRole:
         """Direct API method to delete a role.
@@ -423,3 +509,12 @@ class SystemRoles(ModelMixins):
 
         self.instances: Instances = Instances(auth=self.auth)
         """Work with instances"""
+
+    @property
+    def data_scopes(self):
+        """Work with data scopes."""
+        if not hasattr(self, "_data_scopes"):
+            from ..system import DataScopes
+
+            self._data_scopes: DataScopes = DataScopes(auth=self.auth)
+        return self._data_scopes

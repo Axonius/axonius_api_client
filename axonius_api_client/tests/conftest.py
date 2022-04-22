@@ -43,7 +43,7 @@ def pytest_addoption(parser):
 @pytest.fixture(scope="session")
 def api_devices(request):
     """Get a fully loaded Devices API object."""
-    from axonius_api_client.api import Adapters, Devices, Wizard, WizardCsv, WizardText
+    from axonius_api_client.api import Adapters, Devices, Wizard, WizardCsv, WizardText, DataScopes
     from axonius_api_client.api.assets import Fields, Labels, SavedQuery
 
     auth = get_auth(request)
@@ -64,14 +64,14 @@ def api_devices(request):
     assert isinstance(obj.wizard, Wizard)
     assert isinstance(obj.wizard_text, WizardText)
     assert isinstance(obj.wizard_csv, WizardCsv)
-
+    assert isinstance(obj.data_scopes, DataScopes)
     return obj
 
 
 @pytest.fixture(scope="session")
 def api_users(request):
     """Get a fully loaded Users API object."""
-    from axonius_api_client.api import Adapters, Users, Wizard, WizardCsv, WizardText
+    from axonius_api_client.api import Adapters, Users, Wizard, WizardCsv, WizardText, DataScopes
     from axonius_api_client.api.assets import Fields, Labels, SavedQuery
 
     auth = get_auth(request)
@@ -93,6 +93,7 @@ def api_users(request):
     assert isinstance(obj.wizard, Wizard)
     assert isinstance(obj.wizard_text, WizardText)
     assert isinstance(obj.wizard_csv, WizardCsv)
+    assert isinstance(obj.data_scopes, DataScopes)
 
     return obj
 
@@ -151,6 +152,19 @@ def api_system_roles(request):
     obj = SystemRoles(auth=auth)
     check_apiobj(authobj=auth, apiobj=obj)
     check_apiobj_xref(apiobj=obj, instances=Instances)
+
+    return obj
+
+
+@pytest.fixture(scope="session")
+def api_data_scopes(request):
+    """Test utility."""
+    from axonius_api_client.api import Instances, DataScopes, Users, Devices
+
+    auth = get_auth(request)
+    obj = DataScopes(auth=auth)
+    check_apiobj(authobj=auth, apiobj=obj)
+    check_apiobj_xref(apiobj=obj, instances=Instances, users=Users, devices=Devices)
 
     return obj
 

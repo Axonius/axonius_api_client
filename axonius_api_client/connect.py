@@ -11,6 +11,7 @@ from .api import (
     ActivityLogs,
     Adapters,
     Dashboard,
+    DataScopes,
     Devices,
     Enforcements,
     Instances,
@@ -495,6 +496,14 @@ class Connect:
         if not hasattr(self, "_openapi"):
             self._openapi = OpenAPISpec(**self.API_ARGS)
         return self._openapi
+
+    @property
+    def data_scopes(self) -> DataScopes:
+        """Work with data scopes."""
+        self.start()
+        if not hasattr(self, "_data_scopes"):
+            self._data_scopes = DataScopes(**self.API_ARGS)
+        return self._data_scopes
 
     @classmethod
     def _get_exc_reason(cls, exc: Exception) -> str:
