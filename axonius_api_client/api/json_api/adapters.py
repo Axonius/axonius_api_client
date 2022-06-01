@@ -810,6 +810,7 @@ class AdaptersList(Metadata):
                 "title": x["title"],
                 "name_raw": x["name"],
                 "name": get_aname(x["name"]),
+                "clients": x.get("clients"),
             }
             for x in items
         }

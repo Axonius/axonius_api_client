@@ -145,7 +145,8 @@ class Parsers(BaseEnum):
     to_str_escaped_regex = enum.auto()
     to_str_subnet = enum.auto()
     to_str_tags = enum.auto()
-    to_str_sq_name = enum.auto()
+    to_str_sq = enum.auto()
+    to_str_data_scope = enum.auto()
 
 
 class Types(BaseEnum):
@@ -175,8 +176,9 @@ class Formats(BaseEnum):
     os_distribution = "os-distribution"
     dynamic_field = enum.auto()
     date = enum.auto()  # added 4.5
-    sq_name = enum.auto()
+    sq = enum.auto()
     expirable_tag = "expirable-tag"
+    data_scope = enum.auto()
 
 
 @dataclasses.dataclass
@@ -282,11 +284,17 @@ class Operators(BaseData):
         template='("{field}" == "{aql_value}")',
         parser=Parsers.to_str_cnx_label,
     )
-    equals_str_sq_name: Operator = Operator(
+    equals_str_sq: Operator = Operator(
         name_map=OperatorNameMaps.equals_empty,
         template="({{{{QueryID={aql_value}}}}})",
-        parser=Parsers.to_str_sq_name,
+        parser=Parsers.to_str_sq,
         field_name_override="saved_query",
+    )
+    equals_str_data_scope: Operator = Operator(
+        name_map=OperatorNameMaps.equals_empty,
+        template="({{{{AssetScopeID={aql_value}}}}})",
+        parser=Parsers.to_str_data_scope,
+        field_name_override="data_scope",
     )
     equals_ip: Operator = Operator(
         name_map=OperatorNameMaps.equals,
@@ -466,14 +474,32 @@ class OperatorTypeMap(BaseData):
 class OperatorTypeMaps(BaseData):
     """Operator type map that maps operators to a specific field schemas."""
 
-    string_sq_name: OperatorTypeMap = OperatorTypeMap(
-        name="string_sq_name",
+    string_sq: OperatorTypeMap = OperatorTypeMap(
+        name="string_sq",
         operators=[
-            Operators.equals_str_sq_name,
+            Operators.equals_str_sq,
         ],
         field_type=Types.string,
-        field_format=Formats.sq_name,
+        field_format=Formats.sq,
     )
+    """
+    simple sq equals Name Of Saved Query
+    simple sq equals UUID_OF_SQ
+    """
+
+    string_data_scope: OperatorTypeMap = OperatorTypeMap(
+        name="string_data_scope",
+        operators=[
+            Operators.equals_str_data_scope,
+        ],
+        field_type=Types.string,
+        field_format=Formats.data_scope,
+    )
+    """
+    simple data_scope equals Name Of Data Scope
+    simple data_scope equals UUID_OF_DATA_SCOPE
+    """
+
     string_cnx_label: OperatorTypeMap = OperatorTypeMap(
         name="string_cnx_label",
         operators=[
@@ -484,6 +510,12 @@ class OperatorTypeMaps(BaseData):
         field_type=Types.string,
         field_format=Formats.connection_label,
     )
+    """
+    simple connection_label exists
+    simple connection_label equals abc
+    simple connection_label in abc,def,ghi
+    """
+
     string: OperatorTypeMap = OperatorTypeMap(
         name="string",
         operators=[
@@ -497,18 +529,38 @@ class OperatorTypeMaps(BaseData):
         ],
         field_type=Types.string,
     )
+    """
+    simple agg:name exists
+    simple agg:name regex a.*
+    simple agg:name contains test
+    simple agg:name equals test
+    simple agg:name startswith a
+    simple agg:name endswith a
+    simple agg:name in test,demo
+    """
+
     string_os_distribution: OperatorTypeMap = OperatorTypeMap(
         name="string_os_distribution",
         operators=string.operators,
         field_type=Types.string,
         field_format=Formats.os_distribution,
     )
+    """
+    simple os.distribution exists
+    simple os.distribution equals Server 2012
+    """
+
     string_expirable_tag: OperatorTypeMap = OperatorTypeMap(
         name="string_os_expirable_tag",
         operators=string.operators,
         field_type=Types.string,
         field_format=Formats.expirable_tag,
     )
+    """
+    simple expirable_tags.name exists
+    simple expirable_tags.name equals bravozulu
+    """
+
     string_ip: OperatorTypeMap = OperatorTypeMap(
         name="string_ip",
         operators=[
@@ -525,6 +577,7 @@ class OperatorTypeMaps(BaseData):
         field_type=Types.string,
         field_format=Formats.ip,
     )
+
     string_datetime: OperatorTypeMap = OperatorTypeMap(
         name="string_datetime",
         operators=[
@@ -539,6 +592,16 @@ class OperatorTypeMaps(BaseData):
         field_type=Types.string,
         field_format=Formats.datetime,
     )
+    """
+    simple first_seen exists
+    simple first_seen less_than 2022-06-01
+    simple first_seen more_than 2022-06-01
+    simple first_seen last_hours 10
+    simple first_seen next_hours 10
+    simple first_seen last_days 1
+    simple first_seen next_days 1
+    """
+
     string_date: OperatorTypeMap = OperatorTypeMap(
         name="string_date",
         operators=[
@@ -553,12 +616,14 @@ class OperatorTypeMaps(BaseData):
         field_type=Types.string,
         field_format=Formats.date,
     )
+
     string_image: OperatorTypeMap = OperatorTypeMap(
         name="string_image",
         operators=[Operators.exists],
         field_type=Types.string,
         field_format=Formats.image,
     )
+
     string_version: OperatorTypeMap = OperatorTypeMap(
         name="string_version",
         operators=[
@@ -573,6 +638,13 @@ class OperatorTypeMaps(BaseData):
         field_type=Types.string,
         field_format=Formats.version,
     )
+    """
+    simple installed_software.version exists
+    simple installed_software.version equals 7.0
+    complex installed_software // name contains a // version equals 7.0
+    complex installed_software // name equals Google Chrome // version earlier_than 100.0
+    """
+
     string_subnet: OperatorTypeMap = OperatorTypeMap(
         name="string_subnet",
         operators=[
@@ -585,11 +657,17 @@ class OperatorTypeMaps(BaseData):
         field_type=Types.string,
         field_format=Formats.subnet,
     )
+
     boolean: OperatorTypeMap = OperatorTypeMap(
         name="boolean",
         operators=[Operators.is_true, Operators.is_false],
         field_type=Types.boolean,
     )
+    """
+    simple from_last_fetch true
+    simple from_last_fetch false
+    """
+
     integer: OperatorTypeMap = OperatorTypeMap(
         name="integer",
         operators=[
@@ -601,17 +679,38 @@ class OperatorTypeMaps(BaseData):
         ],
         field_type=Types.integer,
     )
+    """
+    simple agg:not_fetched_count exists
+    simple agg:not_fetched_count equals 2
+    simple agg:not_fetched_count in 2,3,4
+    simple agg:not_fetched_count more_than 1
+    simple agg:not_fetched_count less_than 2
+    """
+
     number: OperatorTypeMap = OperatorTypeMap(
         name="number",
         operators=integer.operators,
         field_type=Types.number,
     )
+    """
+    simple agg:software_cves.cvss exists
+    simple agg:software_cves.cvss equals 7.5
+    simple agg:software_cves.cvss in 7.5,7.0
+    simple agg:software_cves.cvss more_than 7.0
+    simple agg:software_cves.cvss less_than 7.0
+    """
+
     array_object: OperatorTypeMap = OperatorTypeMap(
         name="array_object",
         operators=[Operators.exists_array_object, Operators.count_equals],
         field_type=Types.array,
         items_type=Types.array,
     )
+    """
+    simple cpus exists
+    simple cpus count_equals 2
+    """
+
     array_table_object: OperatorTypeMap = OperatorTypeMap(
         name="array_table_object",
         operators=array_object.operators,
@@ -619,6 +718,11 @@ class OperatorTypeMaps(BaseData):
         field_format=Formats.table,
         items_type=Types.array,
     )
+    """
+    simple open_ports exists
+    simple open_ports count_equals 2
+    """
+
     array_integer: OperatorTypeMap = OperatorTypeMap(
         name="array_integer",
         operators=[
@@ -628,6 +732,7 @@ class OperatorTypeMaps(BaseData):
         field_type=Types.array,
         items_type=Types.integer,
     )
+
     array_number: OperatorTypeMap = OperatorTypeMap(
         name="array_number",
         operators=[
@@ -637,6 +742,7 @@ class OperatorTypeMaps(BaseData):
         field_type=Types.array,
         items_type=Types.number,
     )
+
     array_string: OperatorTypeMap = OperatorTypeMap(
         name="array_string",
         operators=[
@@ -646,6 +752,13 @@ class OperatorTypeMaps(BaseData):
         field_type=Types.array,
         items_type=Types.string,
     )
+    """
+    simple last_used_users exists
+    simple last_used_users equals Administrator
+    simple last_used_users in Administrator,test
+    simple last_used_users contains test
+    """
+
     array_string_tag: OperatorTypeMap = OperatorTypeMap(
         name="array_string_tag",
         operators=[
@@ -662,6 +775,12 @@ class OperatorTypeMaps(BaseData):
         items_type=Types.string,
         items_format=Formats.tag,
     )
+    """
+    simple labels exists
+    simple labels count_equals 1
+    simple labels equals aaaa
+    """
+
     array_string_version: OperatorTypeMap = OperatorTypeMap(
         name="array_string_version",
         operators=[
@@ -673,6 +792,7 @@ class OperatorTypeMaps(BaseData):
         items_type=Types.string,
         items_format=Formats.version,
     )
+
     array_string_datetime: OperatorTypeMap = OperatorTypeMap(
         name="array_string_datetime",
         operators=[
@@ -684,6 +804,7 @@ class OperatorTypeMaps(BaseData):
         items_type=Types.string,
         items_format=Formats.datetime,
     )
+
     array_string_subnet: OperatorTypeMap = OperatorTypeMap(
         name="array_string_subnet",
         operators=[
@@ -695,6 +816,12 @@ class OperatorTypeMaps(BaseData):
         items_type=Types.string,
         items_format=Formats.subnet,
     )
+    """
+    simple network_interfaces.subnets exists
+    simple network_interfaces.subnets equals 10.240.0.0/16
+    simple network_interfaces.subnets in 10.240.0.0/16,10.0.1.0/24
+    """
+
     array_discrete_string_logo: OperatorTypeMap = OperatorTypeMap(
         name="array_discrete_string_logo",
         operators=[
@@ -710,6 +837,16 @@ class OperatorTypeMaps(BaseData):
         items_type=Types.string,
         items_format=Formats.logo,
     )
+    """
+    simple adapters exists
+    simple adapters equals aws
+    simple adapters equals tanium asset
+    simple adapters count_equals 1
+    simple adapters count_below 2
+    simple adapters count_above 1
+    simple adapters in aws, tanium asset
+    """
+
     array_string_ip: OperatorTypeMap = OperatorTypeMap(
         name="array_string_ip",
         operators=[
@@ -721,6 +858,18 @@ class OperatorTypeMaps(BaseData):
         items_type=Types.string,
         items_format=Formats.ip,
     )
+    """
+    simple public_ips exists
+    simple public_ips regex ^10.*
+    simple public_ips contains .0
+    simple public_ips in 10.0.0.1,10.0.0.2
+    simple public_ips equals 10.0.0.1
+    simple public_ips in_subnet 1.1.2.0/24
+    simple public_ips not_in_subnet 1.1.2.0/24
+    simple public_ips is_ipv4
+    simple public_ips is_ipv6
+    """
+
     array_string_ip_preferred: OperatorTypeMap = OperatorTypeMap(
         name="array_string_ip_preferred",
         operators=[
@@ -818,8 +967,8 @@ CUSTOM_FIELDS_MAP: Dict[str, List[dict]] = {
             "name_base": "connection_label",
             "name_qual": "specific_data.connection_label",
             "title": "Adapter Connection Label",
-            "type": "string",
-            "format": "connection_label",
+            "type": Types.string.value,
+            "format": Formats.connection_label.value,
             "type_norm": "string_cnx_label",
             "is_agg": True,
             "selectable": True,
@@ -843,9 +992,34 @@ CUSTOM_FIELDS_MAP: Dict[str, List[dict]] = {
             "name_base": "sq",
             "name_qual": "specific_data.sq",
             "title": "Saved Query Name",
-            "type": "string",
-            "format": "sq_name",
-            "type_norm": "string_sq_name",
+            "type": Types.string.value,
+            "format": Formats.sq.value,
+            "type_norm": "string_sq",
+            "is_agg": True,
+            "selectable": True,
+            "expr_field_type": AGG_EXPR_FIELD_TYPE,
+            "is_details": False,
+            "is_all": False,
+        },
+        {
+            "adapter_name_raw": f"{AGG_ADAPTER_NAME}_adapter",
+            "adapter_name": AGG_ADAPTER_NAME,
+            "adapter_title": AGG_ADAPTER_TITLE,
+            "adapter_prefix": "specific_data",
+            "column_name": f"{AGG_ADAPTER_NAME}:data_scope",
+            "column_title": f"{AGG_ADAPTER_TITLE}: Data Scope Name",
+            "sub_fields": [],
+            "is_complex": False,
+            "is_list": False,
+            "is_root": True,
+            "parent": "root",
+            "name": "specific_data.data_scope",
+            "name_base": "data_scope",
+            "name_qual": "specific_data.data_scope",
+            "title": "Data Scope Name",
+            "type": Types.string.value,
+            "format": Formats.data_scope.value,
+            "type_norm": "string_data_scope",
             "is_agg": True,
             "selectable": True,
             "expr_field_type": AGG_EXPR_FIELD_TYPE,

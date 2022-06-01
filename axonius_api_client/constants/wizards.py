@@ -60,7 +60,7 @@ class Patterns:
 
     OP_ALPHA: str = re.compile(
         r"""(?ix)        # case insensitive and verbose
-([^a-z_\-])  # contains characters that are not one of: a-z _ -
+([^a-z0-9_\-])  # contains characters that are not one of: a-z 0-9 _ -
 """
     )
     """regex for validating operators"""
