@@ -90,6 +90,15 @@ class Assets(ApiEndpointGroup):
         response_model_cls=json_api.generic.StrValue,
     )
 
+    tags_get_expirable_names: ApiEndpoint = ApiEndpoint(
+        method="get",
+        path="api/V4.0/{asset_type}/expirable_tags_names",
+        request_schema_cls=None,
+        request_model_cls=None,
+        response_schema_cls=json_api.generic.StrValueSchema,
+        response_model_cls=json_api.generic.StrValue,
+    )
+
     tags_add: ApiEndpoint = ApiEndpoint(
         method="put",
         path="api/V4.0/{asset_type}/labels",
