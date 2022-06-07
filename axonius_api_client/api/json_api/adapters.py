@@ -805,14 +805,13 @@ class AdaptersList(Metadata):
     def adapters(self) -> dict:
         """Pass."""
         items = self.document_meta["adapter_list"]
-        ret = {
-            get_aname(x["name"]): {
-                "title": x["title"],
-                "name_raw": x["name"],
-                "name": get_aname(x["name"]),
-            }
-            for x in items
-        }
+        ret = {}
+        for item in items:
+            name_raw = item["name"]
+            name = get_aname(name_raw)
+            item["name_raw"] = name_raw
+            item["name"] = name
+            ret[name] = item
         return ret
 
     def find_by_name(self, value: str) -> dict:

@@ -3,7 +3,6 @@
 import copy
 
 import pytest
-
 from axonius_api_client.api import json_api
 from axonius_api_client.constants.adapters import CSV_ADAPTER
 from axonius_api_client.exceptions import ApiError, ConfigUnchanged, ConfigUnknown, NotFoundError
@@ -142,7 +141,9 @@ class TestAdaptersPrivate(TestAdaptersBase):
         data = apiobj._get_basic()
         assert isinstance(data, json_api.adapters.AdaptersList)
         adapter = data.find_by_name(value=CSV_ADAPTER)
-        assert adapter == {"title": "CSV", "name_raw": "csv_adapter", "name": "csv"}
+        assert adapter["title"] == "CSV"
+        assert adapter["name_raw"] == "csv_adapter"
+        assert adapter["name"] == "csv"
 
         with pytest.raises(NotFoundError):
             data.find_by_name("badwolf")
@@ -171,7 +172,9 @@ class TestAdaptersPublic(TestAdaptersBase):
 
     def test_get_by_name_basic(self, apiobj):
         adapter = apiobj.get_by_name_basic(value=CSV_ADAPTER)
-        assert adapter == {"title": "CSV", "name_raw": "csv_adapter", "name": "csv"}
+        assert adapter["title"] == "CSV"
+        assert adapter["name_raw"] == "csv_adapter"
+        assert adapter["name"] == "csv"
 
     def test_get_by_name_bad_node(self, apiobj):
         with pytest.raises(NotFoundError):

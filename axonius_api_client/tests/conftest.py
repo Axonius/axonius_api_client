@@ -65,6 +65,7 @@ def api_devices(request):
     assert isinstance(obj.wizard_text, WizardText)
     assert isinstance(obj.wizard_csv, WizardCsv)
     assert isinstance(obj.data_scopes, DataScopes)
+    obj.ORIGINAL_ROW = obj.get(max_rows=1)[0]
     return obj
 
 
@@ -94,7 +95,7 @@ def api_users(request):
     assert isinstance(obj.wizard_text, WizardText)
     assert isinstance(obj.wizard_csv, WizardCsv)
     assert isinstance(obj.data_scopes, DataScopes)
-
+    obj.ORIGINAL_ROW = obj.get(max_rows=1)[0]
     return obj
 
 
@@ -387,3 +388,9 @@ def datafiles(request):
 
     paths = [get_datafile(x) for x in filenames]
     return paths
+
+
+@pytest.fixture(scope="session")
+def core_node(api_instances):
+    """Pass."""
+    return api_instances.get_core()

@@ -77,8 +77,8 @@
                     "url": "https://ct.googleapis.com/logs/argon2021/",
                     "mmd": 86400,
                     "state": {
-                        "usable": {
-                            "timestamp": "2018-06-15T02:30:13Z"
+                        "rejected": {
+                            "timestamp": "2022-03-01T00:00:00Z"
                         }
                     },
                     "temporal_interval": {
@@ -116,17 +116,6 @@
                     "temporal_interval": {
                         "start_inclusive": "2023-01-01T00:00:00Z",
                         "end_exclusive": "2024-01-01T00:00:00Z"
-                    }
-                },
-                {
-                    "description": "Google 'Argon2024' log",
-                    "log_id": "7s3QZNXbGs7FXLedtM0TojKHRny87N7DUUhZRnEftZs=",
-                    "key": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEHblsqctplMVc5ramA7vSuNxUQxcomQwGAVAdnWTAWUYr3MgDHQW0LagJ95lB7QT75Ve6JgT2EVLOFGU7L3YrwA==",
-                    "url": "https://ct.googleapis.com/logs/argon2024/",
-                    "mmd": 86400,
-                    "temporal_interval": {
-                        "start_inclusive": "2024-01-01T00:00:00Z",
-                        "end_exclusive": "2025-01-01T00:00:00Z"
                     }
                 },
                 {
@@ -184,8 +173,8 @@
                     "url": "https://ct.googleapis.com/logs/xenon2021/",
                     "mmd": 86400,
                     "state": {
-                        "usable": {
-                            "timestamp": "2019-06-17T21:23:01Z"
+                        "rejected": {
+                            "timestamp": "2022-03-01T00:00:00Z"
                         }
                     },
                     "temporal_interval": {
@@ -226,29 +215,14 @@
                     }
                 },
                 {
-                    "description": "Google 'Xenon2024' log",
-                    "log_id": "dv+IPwq2+5VRwmHM9Ye6NLSkzbsp3GhCCp/mZ0xaOnQ=",
-                    "key": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEuWDgNB415GUAk0+QCb1a7ETdjA/O7RE+KllGmjG2x5n33O89zY+GwjWlPtwpurvyVOKoDIMIUQbeIW02UI44TQ==",
-                    "url": "https://ct.googleapis.com/logs/xenon2024/",
-                    "mmd": 86400,
-                    "temporal_interval": {
-                        "start_inclusive": "2024-01-01T00:00:00Z",
-                        "end_exclusive": "2025-01-01T00:00:00Z"
-                    }
-                },
-                {
                     "description": "Google 'Aviator' log",
                     "log_id": "aPaY+B9kgr46jO65KB1M/HFRXWeT1ETRCmesu09P+8Q=",
                     "key": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE1/TMabLkDpCjiupacAlP7xNi0I1JYP8bQFAHDG1xhtolSY1l4QgNRzRrvSe8liE+NPWHdjGxfx3JhTsN9x8/6Q==",
                     "url": "https://ct.googleapis.com/aviator/",
                     "mmd": 86400,
                     "state": {
-                        "readonly": {
-                            "timestamp": "2016-11-30T13:24:18Z",
-                            "final_tree_head": {
-                                "sha256_root_hash": "LcGcZRsm+LGYmrlyC5LXhV1T6OD8iH5dNlb0sEJl9bA=",
-                                "tree_size": 46466472
-                            }
+                        "rejected": {
+                            "timestamp": "2022-04-29T17:12:19Z"
                         }
                     }
                 },
@@ -259,8 +233,12 @@
                     "url": "https://ct.googleapis.com/icarus/",
                     "mmd": 86400,
                     "state": {
-                        "usable": {
-                            "timestamp": "2017-03-06T19:35:01Z"
+                        "readonly": {
+                            "timestamp": "2022-05-03T18:52:50Z",
+                            "final_tree_head": {
+                                "sha256_root_hash": "D1H4wAJmq0MRCeLfeOtrsZ9Am015anO5MkeasNhnQWI=",
+                                "tree_size": 762430819
+                            }
                         }
                     }
                 },
@@ -271,8 +249,12 @@
                     "url": "https://ct.googleapis.com/pilot/",
                     "mmd": 86400,
                     "state": {
-                        "usable": {
-                            "timestamp": "2014-09-02T20:41:44Z"
+                        "readonly": {
+                            "timestamp": "2022-05-03T18:52:50Z",
+                            "final_tree_head": {
+                                "sha256_root_hash": "57gZIfRLpXho89LUBCQeZUDIHx8gA9PL1M4hc71W90E=",
+                                "tree_size": 1077336645
+                            }
                         }
                     }
                 },
@@ -283,8 +265,12 @@
                     "url": "https://ct.googleapis.com/rocketeer/",
                     "mmd": 86400,
                     "state": {
-                        "usable": {
-                            "timestamp": "2015-08-04T19:00:05Z"
+                        "readonly": {
+                            "timestamp": "2022-05-03T18:52:50Z",
+                            "final_tree_head": {
+                                "sha256_root_hash": "Fj49ZSzvzvjNlEOCVhdkwpTlP7hyp82SFsmfWPScpv0=",
+                                "tree_size": 1117582774
+                            }
                         }
                     }
                 },
@@ -295,8 +281,12 @@
                     "url": "https://ct.googleapis.com/skydiver/",
                     "mmd": 86400,
                     "state": {
-                        "usable": {
-                            "timestamp": "2017-03-06T19:35:01Z"
+                        "readonly": {
+                            "timestamp": "2022-05-03T18:52:50Z",
+                            "final_tree_head": {
+                                "sha256_root_hash": "m8mPaxXwy+EdNwnfdsSWCKdhEk1bm/5Mp84ilMB5xvc=",
+                                "tree_size": 312892829
+                            }
                         }
                     }
                 },
@@ -478,8 +468,8 @@
                     "url": "https://ct.cloudflare.com/logs/nimbus2021/",
                     "mmd": 86400,
                     "state": {
-                        "usable": {
-                            "timestamp": "2018-06-15T02:30:13Z"
+                        "rejected": {
+                            "timestamp": "2022-03-01T00:00:00Z"
                         }
                     },
                     "temporal_interval": {
@@ -606,8 +596,8 @@
                     "url": "https://yeti2021.ct.digicert.com/log/",
                     "mmd": 86400,
                     "state": {
-                        "usable": {
-                            "timestamp": "2018-08-24T00:53:07Z"
+                        "rejected": {
+                            "timestamp": "2022-03-01T00:00:00Z"
                         }
                     },
                     "temporal_interval": {
@@ -638,8 +628,8 @@
                     "url": "https://yeti2022-2.ct.digicert.com/log/",
                     "mmd": 86400,
                     "state": {
-                        "pending": {
-                            "timestamp": "2021-07-20T07:41:00Z"
+                        "usable": {
+                            "timestamp": "2022-05-20T00:00:00Z"
                         }
                     },
                     "temporal_interval": {
@@ -718,8 +708,8 @@
                     "url": "https://nessie2021.ct.digicert.com/log/",
                     "mmd": 86400,
                     "state": {
-                        "usable": {
-                            "timestamp": "2019-05-09T22:11:02Z"
+                        "rejected": {
+                            "timestamp": "2022-03-01T00:00:00Z"
                         }
                     },
                     "temporal_interval": {
@@ -766,8 +756,8 @@
                     "url": "https://ct.ws.symantec.com/",
                     "mmd": 86400,
                     "state": {
-                        "retired": {
-                            "timestamp": "2019-02-16T00:00:00Z"
+                        "rejected": {
+                            "timestamp": "2022-04-29T17:12:19Z"
                         }
                     }
                 },
@@ -778,8 +768,8 @@
                     "url": "https://vega.ws.symantec.com/",
                     "mmd": 86400,
                     "state": {
-                        "retired": {
-                            "timestamp": "2019-02-16T00:00:00Z"
+                        "rejected": {
+                            "timestamp": "2022-04-29T17:12:19Z"
                         }
                     }
                 },
@@ -797,8 +787,8 @@
                     "url": "https://sirius.ws.symantec.com/",
                     "mmd": 86400,
                     "state": {
-                        "retired": {
-                            "timestamp": "2019-02-16T00:00:00Z"
+                        "rejected": {
+                            "timestamp": "2022-04-29T17:12:19Z"
                         }
                     }
                 }
@@ -817,8 +807,8 @@
                     "url": "https://log.certly.io/",
                     "mmd": 86400,
                     "state": {
-                        "retired": {
-                            "timestamp": "2016-04-15T00:00:00Z"
+                        "rejected": {
+                            "timestamp": "2022-04-29T17:12:19Z"
                         }
                     }
                 }
@@ -837,8 +827,8 @@
                     "url": "https://ct.izenpe.com/",
                     "mmd": 86400,
                     "state": {
-                        "retired": {
-                            "timestamp": "2016-05-30T00:00:00Z"
+                        "rejected": {
+                            "timestamp": "2022-04-29T17:12:19Z"
                         }
                     }
                 },
@@ -881,8 +871,8 @@
                     "url": "https://ctlog.wosign.com/",
                     "mmd": 86400,
                     "state": {
-                        "retired": {
-                            "timestamp": "2018-02-12T23:59:59Z"
+                        "rejected": {
+                            "timestamp": "2022-04-29T17:12:19Z"
                         }
                     }
                 },
@@ -1024,8 +1014,8 @@
                     "url": "https://ctlog.api.venafi.com/",
                     "mmd": 86400,
                     "state": {
-                        "retired": {
-                            "timestamp": "2017-02-28T18:42:26Z"
+                        "rejected": {
+                            "timestamp": "2022-04-29T17:12:19Z"
                         }
                     }
                 },
@@ -1056,8 +1046,8 @@
                     "url": "https://ctserver.cnnic.cn/",
                     "mmd": 86400,
                     "state": {
-                        "retired": {
-                            "timestamp": "2018-09-18T00:00:00Z"
+                        "rejected": {
+                            "timestamp": "2022-04-29T17:12:19Z"
                         }
                     }
                 }
@@ -1076,8 +1066,8 @@
                     "url": "https://ct.startssl.com/",
                     "mmd": 86400,
                     "state": {
-                        "retired": {
-                            "timestamp": "2018-02-12T23:59:59Z"
+                        "rejected": {
+                            "timestamp": "2022-04-29T17:12:19Z"
                         }
                     }
                 }
@@ -1242,8 +1232,8 @@
                     "url": "https://oak.ct.letsencrypt.org/2021/",
                     "mmd": 86400,
                     "state": {
-                        "usable": {
-                            "timestamp": "2020-01-27T18:18:26Z"
+                        "rejected": {
+                            "timestamp": "2022-03-01T00:00:00Z"
                         }
                     },
                     "temporal_interval": {
@@ -1543,8 +1533,8 @@
                     "url": "https://ct2021.trustasia.com/log2021/",
                     "mmd": 86400,
                     "state": {
-                        "usable": {
-                            "timestamp": "2021-10-16T01:46:32Z"
+                        "rejected": {
+                            "timestamp": "2022-03-01T00:00:00Z"
                         }
                     },
                     "temporal_interval": {
@@ -1559,8 +1549,8 @@
                     "url": "https://ct.trustasia.com/log2021/",
                     "mmd": 86400,
                     "state": {
-                        "retired": {
-                            "timestamp": "2020-12-01T00:00:00Z"
+                        "rejected": {
+                            "timestamp": "2022-03-01T00:00:00Z"
                         }
                     },
                     "temporal_interval": {

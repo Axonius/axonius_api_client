@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """Test suite for axonius_api_client.wizard.wizard"""
 import pytest
-
 from axonius_api_client.api.wizards import Wizard
 from axonius_api_client.constants.fields import ALL_NAME, Operators
 from axonius_api_client.constants.wizards import Entry, Flags, Results, Types
@@ -364,7 +363,7 @@ class TestSplitSimple(TestWizard):
             ["", "FIELD"],
             ["!ab@ contains blah", "FIELD"],
             ["badwolf", "OPERATOR"],
-            ["badwolf 232 blah", "OPERATOR"],
+            # ["badwolf 232 blah", "OPERATOR"],
         ],
     )
     def test_invalid(self, wizard, value_raw, exc_str):

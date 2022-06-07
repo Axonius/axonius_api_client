@@ -1485,3 +1485,10 @@ def int_days_map(value: Union[str, List[Union[str, int]]], names: bool = False) 
         ret = [str(k) for k, v in DAYS_MAP.items() if k in ret]
 
     return ret
+
+
+def lowish(value: Any) -> Any:
+    """Pass."""
+    if isinstance(value, (list, tuple)):
+        return [lowish(x) for x in value]
+    return value.lower() if isinstance(value, str) else value

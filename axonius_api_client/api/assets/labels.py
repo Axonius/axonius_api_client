@@ -39,6 +39,18 @@ class Labels(ChildMixins):
         """
         return [x.value for x in self._get()]
 
+    def get_expirable_names(self) -> List[str]:
+        """Get all known expirable tags.
+
+        Examples:
+            Get all known expirable tags for this asset type
+
+            >>> apiobj.labels.get_expirable_names()
+            ['tag1', 'tag2']
+
+        """
+        return [x.value for x in self._get_expirable_names()]
+
     def add(self, rows: Union[List[dict], str], labels: List[str]) -> int:
         """Add tags to assets.
 
@@ -115,6 +127,11 @@ class Labels(ChildMixins):
     def _get(self) -> List[json_api.generic.StrValue]:
         """Direct API method to get all known labels/tags."""
         api_endpoint = ApiEndpoints.assets.tags_get
+        return api_endpoint.perform_request(http=self.auth.http, asset_type=self.parent.ASSET_TYPE)
+
+    def _get_expirable_names(self) -> List[json_api.generic.StrValue]:
+        """Direct API method to get all known expirable labels/tags."""
+        api_endpoint = ApiEndpoints.assets.tags_get_expirable_names
         return api_endpoint.perform_request(http=self.auth.http, asset_type=self.parent.ASSET_TYPE)
 
     def _remove(self, labels: List[str], ids: List[str]) -> json_api.generic.IntValue:
