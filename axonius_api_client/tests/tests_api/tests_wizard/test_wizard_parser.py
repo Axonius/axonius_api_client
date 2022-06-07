@@ -1,34 +1,20 @@
 # -*- coding: utf-8 -*-
 """Test suite."""
 import pytest
-
+from axonius_api_client.api import json_api
 from axonius_api_client.constants.fields import Parsers
 from axonius_api_client.exceptions import WizardError
 from axonius_api_client.parsers.wizards import WizardParser
 
 
-def patch_cnx_labels(wizard_parser, monkeypatch, values):
-    def _mock(*args, **kwargs):
+def patch_method(wizard_parser, monkeypatch, method, values):
+    def mockery(*args, **kwargs):
         return values
 
-    monkeypatch.setattr(wizard_parser, "_cnx_labels", _mock)
+    monkeypatch.setattr(wizard_parser, method, mockery)
 
 
-def patch_tags(wizard_parser, monkeypatch, values):
-    def _mock(*args, **kwargs):
-        return values
-
-    monkeypatch.setattr(wizard_parser, "_tags", _mock)
-
-
-def patch_sq_enum(wizard_parser, monkeypatch, values):
-    def _mock(*args, **kwargs):
-        return values
-
-    monkeypatch.setattr(wizard_parser, "_sq_enum", _mock)
-
-
-class TestWizardParser:
+class Base:
     @pytest.fixture(params=["api_devices", "api_users"])
     def wizard_parser(self, request):
         apiobj = request.getfixturevalue(request.param)
@@ -36,6 +22,8 @@ class TestWizardParser:
         assert obj.apiobj == apiobj
         return obj
 
+
+class TestMethods(Base):
     def test_parser_ops(self, wizard_parser):
         parsers = [x.value for x in Parsers]
 
@@ -46,23 +34,41 @@ class TestWizardParser:
             if item.startswith("value_") and callable(getattr(wizard_parser, item)):
                 assert item[6:] in parsers
 
-    def test_api_items(self, wizard_parser):
-        assert isinstance(wizard_parser._tags(), list)
-        for tag in wizard_parser._tags():
-            assert isinstance(tag, str)
+    def test_get_adapters(self, wizard_parser):
+        items = wizard_parser.get_adapters()
+        assert isinstance(items, list)
+        for item in items:
+            assert isinstance(item, dict)
 
-        assert isinstance(wizard_parser._adapters(), list)
-        for adapter in wizard_parser._adapters():
-            assert isinstance(adapter, dict)
+    def test_get_cnx_labels(self, wizard_parser):
+        items = wizard_parser.get_cnx_labels()
+        assert isinstance(items, list)
+        for item in items:
+            assert isinstance(item, dict)
 
-        assert isinstance(wizard_parser._adapter_names(), dict)
-        for k, v in wizard_parser._adapter_names().items():
-            assert isinstance(k, str)
-            assert isinstance(v, str)
+    def test_get_instances(self, wizard_parser):
+        items = wizard_parser.get_instances()
+        assert isinstance(items, list)
+        for item in items:
+            assert isinstance(item, json_api.instances.Instance)
 
-        assert isinstance(wizard_parser._cnx_labels(), list)
-        for label in wizard_parser._cnx_labels():
-            assert isinstance(label, str)
+    def test_get_sqs(self, wizard_parser):
+        items = wizard_parser.get_sqs()
+        assert isinstance(items, list)
+        for item in items:
+            assert isinstance(item, json_api.saved_queries.SavedQuery)
+
+    def test_get_asset_tags(self, wizard_parser):
+        items = wizard_parser.get_asset_tags()
+        assert isinstance(items, list)
+        for item in items:
+            assert isinstance(item, str)
+
+    def test_get_asset_tags_expirable(self, wizard_parser):
+        items = wizard_parser.get_asset_tags_expirable()
+        assert isinstance(items, list)
+        for item in items:
+            assert isinstance(item, str)
 
 
 class Common:
@@ -71,8 +77,8 @@ class Common:
             wizard_parser(value="", parser=parser)
 
 
-class TestToCsvAdapters(TestWizardParser, Common):
-    @pytest.fixture
+class TestToCsvAdapters(Base, Common):
+    @pytest.fixture(scope="class")
     def parser(self):
         return Parsers.to_csv_adapters.name
 
@@ -95,32 +101,44 @@ class TestToCsvAdapters(TestWizardParser, Common):
             wizard_parser(value="badwolf", parser=parser)
 
 
-class TestToCsvCnxLabel(TestWizardParser, Common):
-    @pytest.fixture
+class TestToCsvCnxLabel(Base, Common):
+    @pytest.fixture(scope="class")
     def parser(self):
         return Parsers.to_csv_cnx_label.name
 
-    def test_valid(self, wizard_parser, monkeypatch, parser):
-        patch_cnx_labels(
-            values=["label1", "label2"],
+    def test_valid(self, core_node, wizard_parser, monkeypatch, parser):
+        patch_method(
+            method="get_cnx_labels",
+            values=[
+                {"label": "label1", "plugin_name": "csv_adapter", "node_id": core_node["id"]},
+                {"label": "label2", "plugin_name": "csv_adapter", "node_id": core_node["id"]},
+            ],
             wizard_parser=wizard_parser,
             monkeypatch=monkeypatch,
         )
         ret = wizard_parser(value="label1, label2,", parser=parser)
         assert ret == ('"label1", "label2"', "label1,label2")
 
-    def test_valid_list(self, wizard_parser, monkeypatch, parser):
-        patch_cnx_labels(
-            values=["label1", "label2"],
+    def test_valid_list(self, core_node, wizard_parser, monkeypatch, parser):
+        patch_method(
+            method="get_cnx_labels",
+            values=[
+                {"label": "label1", "plugin_name": "csv_adapter", "node_id": core_node["id"]},
+                {"label": "label2", "plugin_name": "csv_adapter", "node_id": core_node["id"]},
+            ],
             wizard_parser=wizard_parser,
             monkeypatch=monkeypatch,
         )
         ret = wizard_parser(value=["label1", "label2"], parser=parser)
         assert ret == ('"label1", "label2"', "label1,label2")
 
-    def test_invalid(self, wizard_parser, monkeypatch, parser):
-        patch_cnx_labels(
-            values=["label1", "label2"],
+    def test_invalid(self, core_node, wizard_parser, monkeypatch, parser):
+        patch_method(
+            method="get_cnx_labels",
+            values=[
+                {"label": "label1", "plugin_name": "csv_adapter", "node_id": core_node["id"]},
+                {"label": "label2", "plugin_name": "csv_adapter", "node_id": core_node["id"]},
+            ],
             wizard_parser=wizard_parser,
             monkeypatch=monkeypatch,
         )
@@ -128,13 +146,15 @@ class TestToCsvCnxLabel(TestWizardParser, Common):
             wizard_parser(value="label1, label3, label2,", parser=parser)
 
     def test_no_items(self, wizard_parser, monkeypatch, parser):
-        patch_cnx_labels(values=[], wizard_parser=wizard_parser, monkeypatch=monkeypatch)
+        patch_method(
+            method="get_cnx_labels", values=[], wizard_parser=wizard_parser, monkeypatch=monkeypatch
+        )
         with pytest.raises(WizardError):
             wizard_parser(value="label1, label3, label2,", parser=parser)
 
 
-class TestToCsvInt(TestWizardParser, Common):
-    @pytest.fixture
+class TestToCsvInt(Base, Common):
+    @pytest.fixture(scope="class")
     def parser(self):
         return Parsers.to_csv_int.name
 
@@ -159,8 +179,8 @@ class TestToCsvInt(TestWizardParser, Common):
             wizard_parser(value="1, 2, c", parser=parser)
 
 
-class TestToCsvIp(TestWizardParser, Common):
-    @pytest.fixture
+class TestToCsvIp(Base, Common):
+    @pytest.fixture(scope="class")
     def parser(self):
         return Parsers.to_csv_ip.name
 
@@ -183,8 +203,8 @@ class TestToCsvIp(TestWizardParser, Common):
             wizard_parser(value="192.168.1.0, 10.0.0", parser=parser)
 
 
-class TestToCsvStr(TestWizardParser, Common):
-    @pytest.fixture
+class TestToCsvStr(Base, Common):
+    @pytest.fixture(scope="class")
     def parser(self):
         return Parsers.to_csv_str.name
 
@@ -201,8 +221,8 @@ class TestToCsvStr(TestWizardParser, Common):
             wizard_parser(value=1, parser=parser)
 
 
-class TestToCsvSubnet(TestWizardParser, Common):
-    @pytest.fixture
+class TestToCsvSubnet(Base, Common):
+    @pytest.fixture(scope="class")
     def parser(self):
         return Parsers.to_csv_subnet.name
 
@@ -223,53 +243,135 @@ class TestToCsvSubnet(TestWizardParser, Common):
             wizard_parser(value="10.0.0/24", parser=parser)
 
 
-class TestToCsvTags(TestWizardParser, Common):
-    @pytest.fixture
+class TestToCsvTags(Base, Common):
+    @pytest.fixture(scope="class")
     def parser(self):
         return Parsers.to_csv_tags.name
 
     def test_valid(self, wizard_parser, monkeypatch, parser):
-        patch_tags(values=["tag1", "tag2"], wizard_parser=wizard_parser, monkeypatch=monkeypatch)
+        patch_method(
+            method="get_asset_tags",
+            values=["tag1", "tag2"],
+            wizard_parser=wizard_parser,
+            monkeypatch=monkeypatch,
+        )
         ret = wizard_parser(value="tag1, tag2,", parser=parser)
         assert ret == ('"tag1", "tag2"', "tag1,tag2")
 
     def test_valid_list(self, wizard_parser, monkeypatch, parser):
-        patch_tags(values=["tag1", "tag2"], wizard_parser=wizard_parser, monkeypatch=monkeypatch)
+        patch_method(
+            method="get_asset_tags",
+            values=["tag1", "tag2"],
+            wizard_parser=wizard_parser,
+            monkeypatch=monkeypatch,
+        )
         ret = wizard_parser(value=["tag1", "tag2"], parser=parser)
         assert ret == ('"tag1", "tag2"', "tag1,tag2")
 
     def test_invalid(self, wizard_parser, monkeypatch, parser):
-        patch_tags(values=["tag1", "tag2"], wizard_parser=wizard_parser, monkeypatch=monkeypatch)
+        patch_method(
+            method="get_asset_tags",
+            values=["tag1", "tag2"],
+            wizard_parser=wizard_parser,
+            monkeypatch=monkeypatch,
+        )
         with pytest.raises(WizardError):
             wizard_parser(value="tag1, tag3, tag2,", parser=parser)
 
     def test_no_items(self, wizard_parser, monkeypatch, parser):
-        patch_tags(values=[], wizard_parser=wizard_parser, monkeypatch=monkeypatch)
+        patch_method(
+            method="get_asset_tags", values=[], wizard_parser=wizard_parser, monkeypatch=monkeypatch
+        )
         with pytest.raises(WizardError):
             wizard_parser(value="tag1, tag3, tag2,", parser=parser)
 
 
-class TestToStrSqName(TestWizardParser, Common):
-    @pytest.fixture
+class TestToCsvTagsExpirable(Base, Common):
+    @pytest.fixture(scope="class")
     def parser(self):
-        return Parsers.to_str_sq_name.name
+        return Parsers.to_csv_tags_expirable.name
 
-    def test_valid_name(self, wizard_parser, monkeypatch, parser):
-        patch_sq_enum(
-            values={"badwolf1": "uuid", "uuid": "badwolf1"},
+    def test_valid(self, wizard_parser, monkeypatch, parser):
+        patch_method(
+            method="get_asset_tags_expirable",
+            values=["tag1", "tag2"],
             wizard_parser=wizard_parser,
             monkeypatch=monkeypatch,
         )
-        ret = wizard_parser(value="badwolf1", parser=parser)
-        assert ret == ("uuid", "uuid")
+        ret = wizard_parser(value="tag1, tag2,", parser=parser)
+        assert ret == ('"tag1", "tag2"', "tag1,tag2")
+
+    def test_valid_list(self, wizard_parser, monkeypatch, parser):
+        patch_method(
+            method="get_asset_tags_expirable",
+            values=["tag1", "tag2"],
+            wizard_parser=wizard_parser,
+            monkeypatch=monkeypatch,
+        )
+        ret = wizard_parser(value=["tag1", "tag2"], parser=parser)
+        assert ret == ('"tag1", "tag2"', "tag1,tag2")
+
+    def test_invalid(self, wizard_parser, monkeypatch, parser):
+        patch_method(
+            method="get_asset_tags_expirable",
+            values=["tag1", "tag2"],
+            wizard_parser=wizard_parser,
+            monkeypatch=monkeypatch,
+        )
+        with pytest.raises(WizardError):
+            wizard_parser(value="tag1, tag3, tag2,", parser=parser)
+
+    def test_no_items(self, wizard_parser, monkeypatch, parser):
+        patch_method(
+            method="get_asset_tags_expirable",
+            values=[],
+            wizard_parser=wizard_parser,
+            monkeypatch=monkeypatch,
+        )
+        with pytest.raises(WizardError):
+            wizard_parser(value="tag1, tag3, tag2,", parser=parser)
+
+
+class TestToStrDataScope(Base, Common):
+    @pytest.fixture(scope="class")
+    def parser(self, api_data_scopes):
+        if not api_data_scopes.is_feature_enabled:
+            pytest.skip("Data Scopes Feature Flag not enabled")
+
+        return Parsers.to_str_data_scope.name
+
+    def test_valid(self, wizard_parser, monkeypatch, parser):
+        patch_method(
+            method="enum_cb_data_scope",
+            values="MOCK_UUID",
+            wizard_parser=wizard_parser,
+            monkeypatch=monkeypatch,
+        )
+        ret = wizard_parser(value="xxxx", parser=parser)
+        assert ret == ("MOCK_UUID", "MOCK_UUID")
+
+    def test_invalid(self, wizard_parser, monkeypatch, parser):
+        with pytest.raises(WizardError):
+            wizard_parser(value="I DO NOT EXISTSSSS", parser=parser)
+
+
+class TestToStrSq(Base, Common):
+    @pytest.fixture(scope="class")
+    def parser(self):
+        return Parsers.to_str_sq.name
+
+    def test_valid_name(self, wizard_parser, monkeypatch, parser):
+        sq = wizard_parser.apiobj.saved_query.get(as_dataclass=True)[0]
+        ret = wizard_parser(value=f"{sq.name}", parser=parser)
+        assert ret == (f"{sq.uuid}", f"{sq.uuid}")
 
     def test_invalid(self, wizard_parser, parser):
         with pytest.raises(WizardError):
             wizard_parser(value="badwolf", parser=parser)
 
 
-class TestToDt(TestWizardParser, Common):
-    @pytest.fixture
+class TestToDt(Base, Common):
+    @pytest.fixture(scope="class")
     def parser(self):
         return Parsers.to_dt.name
 
@@ -282,8 +384,8 @@ class TestToDt(TestWizardParser, Common):
             wizard_parser(value="x", parser=parser)
 
 
-class TestToInSubnet(TestWizardParser, Common):
-    @pytest.fixture
+class TestToInSubnet(Base, Common):
+    @pytest.fixture(scope="class")
     def parser(self):
         return Parsers.to_in_subnet.name
 
@@ -300,8 +402,8 @@ class TestToInSubnet(TestWizardParser, Common):
             wizard_parser(value="10.0.0/24", parser=parser)
 
 
-class TestToInt(TestWizardParser, Common):
-    @pytest.fixture
+class TestToInt(Base, Common):
+    @pytest.fixture(scope="class")
     def parser(self):
         return Parsers.to_int.name
 
@@ -314,8 +416,8 @@ class TestToInt(TestWizardParser, Common):
             wizard_parser(value="x", parser=parser)
 
 
-class TestToIp(TestWizardParser, Common):
-    @pytest.fixture
+class TestToIp(Base, Common):
+    @pytest.fixture(scope="class")
     def parser(self):
         return Parsers.to_ip.name
 
@@ -328,8 +430,8 @@ class TestToIp(TestWizardParser, Common):
             wizard_parser(value="192.168.1", parser=parser)
 
 
-class TestToNone(TestWizardParser):
-    @pytest.fixture
+class TestToNone(Base):
+    @pytest.fixture(scope="class")
     def parser(self):
         return Parsers.to_none.name
 
@@ -338,8 +440,8 @@ class TestToNone(TestWizardParser):
         assert ret == ("", None)
 
 
-class TestToRawVersion(TestWizardParser, Common):
-    @pytest.fixture
+class TestToRawVersion(Base, Common):
+    @pytest.fixture(scope="class")
     def parser(self):
         return Parsers.to_raw_version.name
 
@@ -356,10 +458,18 @@ class TestToRawVersion(TestWizardParser, Common):
             wizard_parser(value="82.6.b", parser=parser)
 
 
-class TestToStr(TestWizardParser, Common):
-    @pytest.fixture
+class TestToStr(Base, Common):
+    @pytest.fixture(scope="class")
     def parser(self):
         return Parsers.to_str.name
+
+    def test_valid_enum(self, wizard_parser, parser):
+        ret = wizard_parser(value="abc", enum=["abc"], parser=parser)
+        assert ret == ("abc", "abc")
+
+    def test_valid_enum_items(self, wizard_parser, parser):
+        ret = wizard_parser(value="abc", enum_items=["abc"], parser=parser)
+        assert ret == ("abc", "abc")
 
     def test_valid(self, wizard_parser, parser):
         ret = wizard_parser(value="2", parser=parser)
@@ -369,9 +479,25 @@ class TestToStr(TestWizardParser, Common):
         with pytest.raises(WizardError):
             wizard_parser(value=2, parser=parser)
 
+    def test_invalid_enum(self, wizard_parser, parser):
+        with pytest.raises(WizardError):
+            wizard_parser(value="def", enum=["abc"], parser=parser)
 
-class TestToStrAdapters(TestWizardParser, Common):
-    @pytest.fixture
+    def test_invalid_enum_items(self, wizard_parser, parser):
+        with pytest.raises(WizardError):
+            wizard_parser(value="def", enum_items=["abc"], parser=parser)
+
+    def test_bad_enum(self, wizard_parser, parser):
+        with pytest.raises(WizardError):
+            wizard_parser(value="def", enum={"k": "v"}, parser=parser)
+
+    def test_bad_enum_items(self, wizard_parser, parser):
+        with pytest.raises(WizardError):
+            wizard_parser(value="def", enum_items={"k": "v"}, parser=parser)
+
+
+class TestToStrAdapters(Base, Common):
+    @pytest.fixture(scope="class")
     def parser(self):
         return Parsers.to_str_adapters.name
 
@@ -384,23 +510,31 @@ class TestToStrAdapters(TestWizardParser, Common):
             wizard_parser(value="badwolf", parser=parser)
 
 
-class TestToStrCnxLabel(TestWizardParser, Common):
-    @pytest.fixture
+class TestToStrCnxLabel(Base, Common):
+    @pytest.fixture(scope="class")
     def parser(self):
         return Parsers.to_str_cnx_label.name
 
-    def test_valid(self, wizard_parser, monkeypatch, parser):
-        patch_cnx_labels(
-            values=["label1", "label2"],
+    def test_valid(self, core_node, wizard_parser, monkeypatch, parser):
+        patch_method(
+            method="get_cnx_labels",
+            values=[
+                {"label": "label1", "plugin_name": "csv_adapter", "node_id": core_node["id"]},
+                {"label": "label2", "plugin_name": "csv_adapter", "node_id": core_node["id"]},
+            ],
             wizard_parser=wizard_parser,
             monkeypatch=monkeypatch,
         )
         ret = wizard_parser(value="label1", parser=parser)
         assert ret == ("label1", "label1")
 
-    def test_invalid(self, wizard_parser, monkeypatch, parser):
-        patch_cnx_labels(
-            values=["label1", "label2"],
+    def test_invalid(self, core_node, wizard_parser, monkeypatch, parser):
+        patch_method(
+            method="get_cnx_labels",
+            values=[
+                {"label": "label1", "plugin_name": "csv_adapter", "node_id": core_node["id"]},
+                {"label": "label2", "plugin_name": "csv_adapter", "node_id": core_node["id"]},
+            ],
             wizard_parser=wizard_parser,
             monkeypatch=monkeypatch,
         )
@@ -408,13 +542,15 @@ class TestToStrCnxLabel(TestWizardParser, Common):
             wizard_parser(value="label3", parser=parser)
 
     def test_no_items(self, wizard_parser, monkeypatch, parser):
-        patch_cnx_labels(values=[], wizard_parser=wizard_parser, monkeypatch=monkeypatch)
+        patch_method(
+            method="get_cnx_labels", values=[], wizard_parser=wizard_parser, monkeypatch=monkeypatch
+        )
         with pytest.raises(WizardError):
             wizard_parser(value="label1", parser=parser)
 
 
-class TestToStrEscapedRegex(TestWizardParser, Common):
-    @pytest.fixture
+class TestToStrEscapedRegex(Base, Common):
+    @pytest.fixture(scope="class")
     def parser(self):
         return Parsers.to_str_escaped_regex.name
 
@@ -427,29 +563,77 @@ class TestToStrEscapedRegex(TestWizardParser, Common):
             wizard_parser(value=2, parser=parser)
 
 
-class TestToStrTags(TestWizardParser, Common):
-    @pytest.fixture
+class TestToStrTags(Base, Common):
+    @pytest.fixture(scope="class")
     def parser(self):
         return Parsers.to_str_tags.name
 
     def test_valid(self, wizard_parser, monkeypatch, parser):
-        patch_tags(values=["tag1", "tag2"], wizard_parser=wizard_parser, monkeypatch=monkeypatch)
+        patch_method(
+            method="get_asset_tags",
+            values=["tag1", "tag2"],
+            wizard_parser=wizard_parser,
+            monkeypatch=monkeypatch,
+        )
         ret = wizard_parser(value="tag1", parser=parser)
         assert ret == ("tag1", "tag1")
 
     def test_invalid(self, wizard_parser, monkeypatch, parser):
-        patch_tags(values=["tag1", "tag2"], wizard_parser=wizard_parser, monkeypatch=monkeypatch)
+        patch_method(
+            method="get_asset_tags",
+            values=["tag1", "tag2"],
+            wizard_parser=wizard_parser,
+            monkeypatch=monkeypatch,
+        )
         with pytest.raises(WizardError):
             wizard_parser(value="tag3", parser=parser)
 
     def test_no_items(self, wizard_parser, monkeypatch, parser):
-        patch_tags(values=[], wizard_parser=wizard_parser, monkeypatch=monkeypatch)
+        patch_method(
+            method="get_asset_tags", values=[], wizard_parser=wizard_parser, monkeypatch=monkeypatch
+        )
         with pytest.raises(WizardError):
             wizard_parser(value="tag1", parser=parser)
 
 
-class TestToStrSubnet(TestWizardParser, Common):
-    @pytest.fixture
+class TestToStrTagsExpirable(Base, Common):
+    @pytest.fixture(scope="class")
+    def parser(self):
+        return Parsers.to_str_tags_expirable.name
+
+    def test_valid(self, wizard_parser, monkeypatch, parser):
+        patch_method(
+            method="get_asset_tags_expirable",
+            values=["tag1", "tag2"],
+            wizard_parser=wizard_parser,
+            monkeypatch=monkeypatch,
+        )
+        ret = wizard_parser(value="tag1", parser=parser)
+        assert ret == ("tag1", "tag1")
+
+    def test_invalid(self, wizard_parser, monkeypatch, parser):
+        patch_method(
+            method="get_asset_tags_expirable",
+            values=["tag1", "tag2"],
+            wizard_parser=wizard_parser,
+            monkeypatch=monkeypatch,
+        )
+        with pytest.raises(WizardError):
+            wizard_parser(value="tag3", parser=parser)
+
+    def test_no_items(self, wizard_parser, monkeypatch, parser):
+        patch_method(
+            method="get_asset_tags_expirable",
+            values=[],
+            wizard_parser=wizard_parser,
+            monkeypatch=monkeypatch,
+        )
+        with pytest.raises(WizardError):
+            wizard_parser(value="tag1", parser=parser)
+
+
+class TestToStrSubnet(Base, Common):
+    @pytest.fixture(scope="class")
     def parser(self):
         return Parsers.to_str_subnet.name
 

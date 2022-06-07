@@ -58,7 +58,6 @@ class GrpSavedQueryCmdAddFromJson:
                 "Initial parsing of supplied row successful",
                 "Saved Query exists=False and overwrite=False, will create",
                 "Create failed",
-                "View data is required in order to save one",
                 "No changes made!",
             ]
             missing = [x for x in exps if x not in result.stderr]
@@ -120,7 +119,6 @@ class GrpSavedQueryCmdAddFromJson:
                 "Initial parsing of supplied row successful",
                 "Saved Query exists=True and overwrite=True, will update",
                 "Update failed",
-                "View data is required in order to save one",
                 "No changes made!",
             ]
             missing = [x for x in exps if x not in result.stderr]

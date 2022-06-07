@@ -1219,7 +1219,7 @@ class ExportMixins(Base):
         self._fd_close: bool = False
         self._fd: IO = sys.stdout
         self._fd_info: str = "stdout"
-        self.echo(msg="Exporting to {self._fd_info}")
+        self.echo(msg=f"Exporting to {self._fd_info}")
         return self._fd
 
     def close_fd(self):
