@@ -994,7 +994,14 @@ class SavedQuery(ChildMixins):
             uuid=uuid,
         )
 
-    def _get(self, limit: int = MAX_PAGE_SIZE, offset: int = 0) -> List[MODEL]:
+    def _get(
+        self,
+        limit: int = MAX_PAGE_SIZE,
+        offset: int = 0,
+        sort: Optional[str] = None,
+        filter: Optional[str] = None,
+        search: str = "",
+    ) -> List[MODEL]:
         """Direct API method to get all users.
 
         Args:
@@ -1005,7 +1012,9 @@ class SavedQuery(ChildMixins):
             List[MODEL]: list of saved query dataclass
         """
         api_endpoint = ApiEndpoints.saved_queries.get
-        request_obj = api_endpoint.load_request(page={"limit": limit, "offset": offset})
+        request_obj = api_endpoint.load_request(
+            page={"limit": limit, "offset": offset}, filter=filter, search=search, sort=sort
+        )
         return api_endpoint.perform_request(
             http=self.auth.http, request_obj=request_obj, asset_type=self.parent.ASSET_TYPE
         )

@@ -133,6 +133,7 @@ class Parsers(BaseEnum):
     to_csv_str = enum.auto()
     to_csv_subnet = enum.auto()
     to_csv_tags = enum.auto()
+    to_csv_tags_expirable = enum.auto()
     to_dt = enum.auto()
     to_in_subnet = enum.auto()
     to_int = enum.auto()
@@ -145,6 +146,7 @@ class Parsers(BaseEnum):
     to_str_escaped_regex = enum.auto()
     to_str_subnet = enum.auto()
     to_str_tags = enum.auto()
+    to_str_tags_expirable = enum.auto()
     to_str_sq = enum.auto()
     to_str_data_scope = enum.auto()
 
@@ -177,7 +179,7 @@ class Formats(BaseEnum):
     dynamic_field = enum.auto()
     date = enum.auto()  # added 4.5
     sq = enum.auto()
-    expirable_tag = "expirable-tag"
+    tag_expirable = "expirable-tag"
     data_scope = enum.auto()
 
 
@@ -274,6 +276,11 @@ class Operators(BaseData):
         template='("{field}" == "{aql_value}")',
         parser=Parsers.to_str_tags,
     )
+    equals_str_tag_expirable: Operator = Operator(
+        name_map=OperatorNameMaps.equals,
+        template='("{field}" == "{aql_value}")',
+        parser=Parsers.to_str_tags_expirable,
+    )
     equals_str_adapter: Operator = Operator(
         name_map=OperatorNameMaps.equals,
         template='("{field}" == "{aql_value}")',
@@ -361,6 +368,12 @@ class Operators(BaseData):
         template='("{field}" in [{aql_value}])',
         parser=Parsers.to_csv_tags,
     )
+    is_in_str_tag_expirable: Operator = Operator(
+        name_map=OperatorNameMaps.is_in,
+        template='("{field}" in [{aql_value}])',
+        parser=Parsers.to_csv_tags_expirable,
+    )
+
     is_in_str_adapter: Operator = Operator(
         name_map=OperatorNameMaps.is_in,
         template='("{field}" in [{aql_value}])',
@@ -550,16 +563,39 @@ class OperatorTypeMaps(BaseData):
     simple os.distribution equals Server 2012
     """
 
-    string_expirable_tag: OperatorTypeMap = OperatorTypeMap(
-        name="string_os_expirable_tag",
-        operators=string.operators,
+    string_tag_expirable: OperatorTypeMap = OperatorTypeMap(
+        name="string_tag_expirable",
+        operators=[
+            Operators.exists,
+            Operators.regex,
+            Operators.contains,
+            Operators.equals_str_tag,
+            Operators.startswith,
+            Operators.endswith,
+            Operators.is_in_str_tag,
+        ],
         field_type=Types.string,
-        field_format=Formats.expirable_tag,
+        field_format=Formats.tag_expirable,
     )
     """
     simple expirable_tags.name exists
     simple expirable_tags.name equals bravozulu
     """
+
+    string_tag: OperatorTypeMap = OperatorTypeMap(
+        name="string_tag",
+        operators=[
+            Operators.exists,
+            Operators.regex,
+            Operators.contains,
+            Operators.equals_str_tag,
+            Operators.startswith,
+            Operators.endswith,
+            Operators.is_in_str_tag,
+        ],
+        field_type=Types.string,
+        field_format=Formats.tag,
+    )
 
     string_ip: OperatorTypeMap = OperatorTypeMap(
         name="string_ip",

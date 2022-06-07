@@ -27,6 +27,7 @@ CACHE_SQS: TTLCache = TTLCache(maxsize=CACHE_MAXSIZE, ttl=CACHE_TTL)
 CACHE_INSTANCES: TTLCache = TTLCache(maxsize=CACHE_MAXSIZE, ttl=CACHE_TTL)
 CACHE_CNX_LABELS: TTLCache = TTLCache(maxsize=CACHE_MAXSIZE, ttl=CACHE_TTL)
 CACHE_ASSET_LABELS: TTLCache = TTLCache(maxsize=CACHE_MAXSIZE, ttl=CACHE_TTL)
+CACHE_ASSET_LABELS_EXPIRABLE: TTLCache = TTLCache(maxsize=CACHE_MAXSIZE, ttl=CACHE_TTL)
 
 
 class WizardParser:
@@ -146,6 +147,15 @@ class WizardParser:
     ) -> Tuple[str, str]:
         """Parse a value as a comma separated list of valid asset tags (labels)."""
         return self.parse_csv(value=value, enum_callback=self.enum_cb_asset_tags)
+
+    def value_to_csv_tags_expirable(
+        self,
+        value: Any,
+        enum: Optional[List[str]] = None,
+        enum_items: Optional[List[str]] = None,
+    ) -> Tuple[str, str]:
+        """Parse a value as a comma separated list of valid asset tags (labels)."""
+        return self.parse_csv(value=value, enum_callback=self.enum_cb_asset_tags_expirable)
 
     def value_to_dt(
         self,
@@ -300,6 +310,18 @@ class WizardParser:
         aql_value = self.check_enum(value=value, enum_callback=self.enum_cb_asset_tags)
         return aql_value, aql_value
 
+    def value_to_str_tags_expirable(
+        self,
+        value: Any,
+        enum: Optional[List[str]] = None,
+        enum_items: Optional[List[str]] = None,
+    ) -> Tuple[str, str]:
+        """Parse a value as a valid asset tag (label)."""
+        check_type(value=value, exp=str)
+        check_empty(value=value)
+        aql_value = self.check_enum(value=value, enum_callback=self.enum_cb_asset_tags_expirable)
+        return aql_value, aql_value
+
     def value_to_str_subnet(
         self,
         value: Any,
@@ -350,8 +372,8 @@ class WizardParser:
     def check_enum(
         self,
         value: Union[int, str],
-        enum: Optional[List[str]] = None,
-        enum_items: Optional[List[str]] = None,
+        enum: Optional[List[Union[str, int, float]]] = None,
+        enum_items: Optional[List[Union[str, int, float]]] = None,
         enum_callback: Optional[Callable] = None,
     ) -> Union[int, str]:
         """Check that the value is a valid option of enums.
@@ -365,33 +387,25 @@ class WizardParser:
         if callable(enum_callback):
             return enum_callback(value=value)
 
-        if enum is not None:
-            enum_use = enum
-        elif enum_items is not None:
-            enum_use = enum_items
-        else:
-            enum_use = None
-
+        enum_use = enum or enum_items or None
         value_check = lowish(value)
+        valids = []
 
         if enum_use:
-            if isinstance(enum_use, (list, tuple)):
+            if isinstance(enum_use, (list, tuple)) and all(
+                [isinstance(x, (str, int, float)) for x in enum_use]
+            ):
                 for item in enum_use:
+                    valid = {"Valid Values": item}
+                    valids.append(valid)
                     if value_check == lowish(item):
                         return item
 
-                valid = "\n - " + "\n - ".join([str(x) for x in enum_use])
-                raise WizardError(f"invalid choice {value!r}, valid choices:{valid}")
+                err = f"Invalid value {value!r} out of {len(valids)} items"
+                err_table = tablize(value=valids, err=err)
+                raise WizardError(err_table)
 
-            if isinstance(enum_use, dict):
-                for item, item_value in enum_use.items():
-                    if value_check in lowish([item, item_value]):
-                        return item_value
-
-                valid = "\n - " + "\n - ".join([str(x) for x in enum_use])
-                raise WizardError(f"invalid choice {value!r}, valid choices:{valid}")
-
-            raise WizardError(f"Unexpected enum type {type(enum_use)}: {enum_use!r}")
+            raise WizardError(f"Unexpected enum type: {enum_use!r}")
 
         return value
 
@@ -458,6 +472,22 @@ class WizardParser:
         err_table = tablize(value=valids, err=err)
         raise WizardError(err_table)
 
+    def enum_cb_asset_tags_expirable(self, value: Any) -> str:
+        """Pass."""
+        data = self.get_asset_tags_expirable()
+        value_check = lowish(value)
+        valids = []
+
+        for item in data:
+            valid = {"Tag": item}
+            valids.append(valid)
+            if value_check == lowish(item):
+                return item
+
+        err = f"No Expirable Asset Tag found with value of {value!r} out of {len(valids)} items"
+        err_table = tablize(value=valids, err=err)
+        raise WizardError(err_table)
+
     def enum_cb_adapter_name(self, value: Any) -> str:
         """Pass."""
         data = self.get_adapters()
@@ -490,8 +520,7 @@ class WizardParser:
 
     def enum_cb_data_scope(self, value: Any) -> str:
         """Pass."""
-        value = self.apiobj.data_scopes.get(value=value)
-        return value.uuid
+        return self.apiobj.data_scopes.get(value=value).uuid
 
     @cached(cache=CACHE_ADAPTERS)
     def get_adapters(self) -> List[dict]:
@@ -517,3 +546,8 @@ class WizardParser:
     def get_asset_tags(self) -> List[str]:
         """Get all known tags (labels) of this asset type."""
         return self.apiobj.labels.get()
+
+    @cached(cache=CACHE_ASSET_LABELS_EXPIRABLE)
+    def get_asset_tags_expirable(self) -> List[str]:
+        """Get all known expirable tags (labels) of this asset type."""
+        return self.apiobj.labels.get_expirable_names()
