@@ -138,13 +138,13 @@ def tablize_cnxs(
         req = "REQUIRED, " if obj["required"] else ""
         return "{name} ({req}{type})".format(req=req, **obj)
 
-    values = []
-    for cnx in cnxs:
+    def get_value(cnx):
         error = textwrap.fill(cnx["error"] or "", width=30, subsequent_indent=" " * 2)
         details = [
             f'Adapter: {cnx["adapter_name"]}',
             f'Node Name: {cnx["node_name"]}',
             f'Node ID: {cnx["node_id"]}',
+            f'Tunnel ID: {cnx["tunnel_id"]}',
             f'ID: {cnx["id"]}',
             f'UUID: {cnx["uuid"]}',
             f'Label: {cnx["connection_label"]}',
@@ -152,15 +152,14 @@ def tablize_cnxs(
             f'Working: {cnx["working"]}',
             f"Error: {error}",
         ]
+        configs = [config_str(k, v) for k, v in sorted(cnx["config"].items())]
+
         value = {}
         value["Details"] = join(details)
-        configs = [config_str(k, v) for k, v in sorted(cnx["config"].items())]
         value["Config"] = join(configs)
-        # else:  # pragma: no cover
-        #     keys = join([schema_str(v) for _, v in sorted(cnx["schemas"].items())])
-        #     value["Config Keys"] = keys
+        return value
 
-        values.append(value)
+    values = [get_value(cnx) for cnx in cnxs]
 
     return tablize(value=values, err=err, fmt=fmt, footer=footer)
 

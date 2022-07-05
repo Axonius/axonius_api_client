@@ -4,8 +4,8 @@
 import pytest
 from axonius_api_client.api import json_api
 from axonius_api_client.constants.adapters import CSV_ADAPTER
+from axonius_api_client.exceptions import CnxAddError  # ConfigRequired,
 from axonius_api_client.exceptions import (
-    CnxAddError,  # ConfigRequired,
     CnxTestError,
     CnxUpdateError,
     ConfigInvalidValue,
@@ -165,9 +165,89 @@ class TestCnxBase:
                     print(f"Unable to delete connection: {cnx}")
                 break
 
+    @pytest.fixture(scope="function")
+    def csv_cnx_tunnel(self, apiobj, tunnel_count_check):
+        tunnel = apiobj.instances.get_tunnel_default()
+
+        uploaded_file = apiobj.file_upload(
+            name=CsvData.adapter_name_raw,
+            field_name=CsvData.file_field_name,
+            file_name=CsvData.file_name,
+            file_content=CsvData.file_contents,
+        )
+        assert isinstance(uploaded_file, dict)
+        assert uploaded_file["uuid"]
+        assert uploaded_file["filename"]
+        config = combo_dicts(CsvData.config, file_path=uploaded_file)
+        core_instance = apiobj.instances.get_core()
+        added = apiobj.cnx._add(
+            connection=config,
+            tunnel_id=tunnel.id,
+            instance_id=core_instance["id"],
+            instance_name=core_instance["name"],
+            adapter_name=CsvData.adapter_name_raw,
+        )
+        fetched = [
+            x
+            for x in apiobj.cnx._get(adapter_name=CsvData.adapter_name_raw).cnxs
+            if x.uuid == added.id
+        ][0]
+        yield fetched
+
+        cnxs = apiobj.cnx._get(adapter_name=CsvData.adapter_name_raw).cnxs
+        for cnx in cnxs:
+            user_id = cnx.client_config.get(CsvKeys.user_id) or ""
+            if user_id == CsvData.user_id and cnx.tunnel_id == tunnel.id:
+                try:
+                    apiobj.cnx._delete(
+                        uuid=cnx.uuid,
+                        adapter_name=cnx.adapter_name_raw,
+                        instance_id=cnx.node_id,
+                        instance_name=cnx.node_name,
+                    )
+                except Exception:
+                    print(f"Unable to delete connection: {cnx}")
+                break
+
 
 class TestCnxPrivate(TestCnxBase):
     pass
+
+
+@pytest.mark.tunneltests
+class TestCnxTunnel(TestCnxBase):
+    def test_get_by_adapter_tunnel(self, apiobj, csv_cnx_tunnel):
+        data = apiobj.cnx.get_by_adapter(
+            adapter_name=csv_cnx_tunnel.adapter_name_raw,
+            adapter_node=csv_cnx_tunnel.node_name,
+            tunnel=csv_cnx_tunnel.tunnel_id,
+        )
+        assert isinstance(data, list)
+        uuids = [x["uuid"] for x in data]
+        assert csv_cnx_tunnel.uuid in uuids
+        fake_tunnel = json_api.instances.Tunnel(tunnel_id="xx", tunnel_name="xxx", status="xxx")
+        data = apiobj.cnx.get_by_adapter(
+            adapter_name=csv_cnx_tunnel.adapter_name_raw,
+            adapter_node=csv_cnx_tunnel.node_name,
+            tunnel=fake_tunnel,
+        )
+        assert not data
+
+    def test_add_remove(self, apiobj, tunnel_count_check):
+        tunnel = apiobj.instances.get_tunnel_default()
+
+        with pytest.raises(CnxAddError) as exc:
+            apiobj.cnx.add(tunnel=tunnel, adapter_name=TanData.adapter_name, **TanData.config_bad)
+
+        cnx_new = exc.value.cnx_new
+        assert isinstance(cnx_new, dict)
+        assert cnx_new["uuid"]
+        assert cnx_new["id"]
+
+        cnx_deleted = apiobj.cnx.delete_by_id(
+            cnx_id=cnx_new["id"], adapter_name=TanData.adapter_name
+        )
+        assert cnx_deleted.client_id == cnx_new["id"]
 
 
 class TestCnxPublic(TestCnxBase):

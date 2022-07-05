@@ -34,6 +34,11 @@ def users():
     """Group: Work with user assets."""
 
 
+@click.group(cls=AliasedGroup)
+def vulnerabilities():
+    """Group (BETA!): Work with vulnerability assets."""
+
+
 CMDS = [
     grp_saved_query.saved_query,
     cmd_count.cmd,
@@ -50,6 +55,7 @@ CMDS = [
 for cmd in CMDS:
     users.add_command(cmd)
     devices.add_command(cmd)
+    vulnerabilities.add_command(cmd)
 
 
 def add_cmd(grp_obj, method, cmd):

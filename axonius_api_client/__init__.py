@@ -60,6 +60,7 @@ try:
         Wizard,
         WizardCsv,
         WizardText,
+        Vulnerabilities,
     )
     from .auth import ApiKey
     from .connect import Connect
@@ -103,6 +104,7 @@ __all__ = (
     "ActivityLogs",
     "ApiEndpoints",
     "Features",
+    "Vulnerabilities",
     # modules
     "api",
     "auth",

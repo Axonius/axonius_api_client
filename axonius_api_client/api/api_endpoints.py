@@ -296,6 +296,18 @@ class Instances(ApiEndpointGroup):
         response_model_cls=json_api.generic.StrValue,
     )
 
+    get_tunnels: ApiEndpoint = ApiEndpoint(
+        method="get",
+        path="api/tunnel/get_status",
+        request_schema_cls=None,
+        request_model_cls=None,
+        response_schema_cls=None,
+        response_model_cls=json_api.instances.Tunnel,
+        response_json_error=False,
+    )
+    # PBUG: not modeled in any way shape or form
+    # PBUG: returns string 'Tunnel is not enabled on system' if FF: enable_saas is False
+
 
 @dataclasses.dataclass(repr=False)
 class CentralCore(ApiEndpointGroup):

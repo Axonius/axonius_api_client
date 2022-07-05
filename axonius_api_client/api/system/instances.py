@@ -8,13 +8,15 @@ from typing import List, Optional, Union
 import cachetools
 import requests
 
-from ...exceptions import NotFoundError
+from ...exceptions import FeatureNotEnabledError, NotFoundError
+from ...parsers.tables import tablize
 from ...tools import is_url, path_read
 from .. import json_api
 from ..api_endpoints import ApiEndpoints
 from ..mixins import ModelMixins
 
 FEATURE_FLAGS_CACHE = cachetools.TTLCache(maxsize=1, ttl=10)
+TUNNEL_MODEL = json_api.instances.Tunnel
 
 
 class Instances(ModelMixins):
@@ -168,6 +170,54 @@ class Instances(ModelMixins):
             data = data.to_dict()
             data = {k: str(v) if isinstance(v, datetime.datetime) else v for k, v in data.items()}
         return data
+
+    def check_tunnel_feature(self, feature_error: bool = True) -> bool:
+        """Pass."""
+        enabled = self.has_saas_enabled
+        if not enabled:
+            if feature_error:
+                raise FeatureNotEnabledError(name="enable_saas")
+        return enabled
+
+    def get_tunnels(self, feature_error: bool = True) -> List[TUNNEL_MODEL]:
+        """Pass."""
+        enabled = self.check_tunnel_feature(feature_error=feature_error)
+        if enabled:
+            tunnels = self._get_tunnels()
+            if isinstance(tunnels, (list, tuple)):
+                return tunnels
+        return []
+
+    def get_tunnel(
+        self,
+        value: Optional[str] = None,
+        return_id: bool = False,
+        feature_error: bool = True,
+    ) -> Optional[Union[TUNNEL_MODEL, str]]:
+        """Pass."""
+        if isinstance(value, TUNNEL_MODEL):
+            return value.id if return_id else value
+
+        if isinstance(value, str) and value.strip():
+            tunnels = self.get_tunnels(feature_error=feature_error)
+            for tunnel in tunnels:
+                if value in [tunnel.id, tunnel.name]:
+                    return tunnel.id if return_id else tunnel
+
+            err = f"No tunnel found with ID or Name of {value!r} out of {len(tunnels)} tunnels"
+            err_table = tablize(value=[x.to_tablize() for x in tunnels], err=err)
+            raise NotFoundError(err_table)
+        return None
+
+    def get_tunnel_default(
+        self, return_id: bool = False, feature_error: bool = True
+    ) -> Optional[Union[TUNNEL_MODEL, str]]:
+        """Pass."""
+        tunnels = self.get_tunnels(feature_error=feature_error)
+        for tunnel in tunnels:
+            if tunnel.default is True:
+                return tunnel.id if return_id else tunnel
+        return None
 
     def set_name(self, name: str, new_name: str) -> str:
         """Set the name of an instance.
@@ -464,6 +514,11 @@ class Instances(ModelMixins):
         return self._feature_flags()
 
     @property
+    def has_saas_enabled(self) -> bool:
+        """Get the status of SAAS & tunnel support being enabled."""
+        return self.feature_flags.saas_enabled
+
+    @property
     def has_cloud_compliance(self) -> bool:
         """Get the status of cloud compliance module being enabled."""
         return self.feature_flags.has_cloud_compliance
@@ -704,3 +759,6 @@ class Instances(ModelMixins):
 
     def _get_api_versions(self) -> json_api.generic.StrValueSchema:
         return ApiEndpoints.instances.get_api_versions.perform_request(http=self.auth.http)
+
+    def _get_tunnels(self) -> Union[str, List[TUNNEL_MODEL]]:
+        return ApiEndpoints.instances.get_tunnels.perform_request(http=self.auth.http)

@@ -78,7 +78,7 @@ class CallbacksFull(Callbacks):
         log_check(caplog=caplog, entries=["Stopping"], exists=True)
 
     def test_add_report_adapters_missing_false(self, cbexport, apiobj):
-        original_row = apiobj.ORIGINAL_ROW
+        original_row = copy.deepcopy(apiobj.ORIGINAL_ROWS[0])
         test_row = copy.deepcopy(original_row)
 
         cbobj = self.get_cbobj(
@@ -94,7 +94,7 @@ class CallbacksFull(Callbacks):
         assert not cbobj.custom_schemas
 
     def test_add_report_adapters_missing_true(self, cbexport, apiobj):
-        original_row = apiobj.ORIGINAL_ROW
+        original_row = copy.deepcopy(apiobj.ORIGINAL_ROWS[0])
         test_row = copy.deepcopy(original_row)
 
         cbobj = self.get_cbobj(
@@ -154,7 +154,7 @@ class CallbacksFull(Callbacks):
 
     def test_do_add_null_values_true(self, cbexport, apiobj):
         field_complex = apiobj.FIELD_COMPLEX
-        original_row = get_rows_exist(apiobj=apiobj, fields=field_complex)
+        original_row = copy.deepcopy(apiobj.COMPLEX_ROWS[0])
         picks = [x for x in original_row if x.startswith("specific_data.data.")]
         test_row = copy.deepcopy(original_row)
         test_row = {k: v for k, v in test_row.items() if k not in picks}
@@ -185,8 +185,9 @@ class CallbacksFull(Callbacks):
                     assert x["name"] not in sub_value
 
     def test_do_add_null_values_false(self, cbexport, apiobj):
-        original_row = get_rows_exist(apiobj=apiobj, fields=apiobj.FIELD_COMPLEX, not_exist=True)
+        original_row = copy.deepcopy(apiobj.ORIGINAL_ROWS[0])
         test_row = copy.deepcopy(original_row)
+        test_row.pop(apiobj.FIELD_ADAPTERS, None)
 
         cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs={"field_null": False})
 
@@ -195,11 +196,13 @@ class CallbacksFull(Callbacks):
         assert len(rows) == 1
 
         if not cbobj.GETARGS["field_null"]:
-            assert original_row == rows[0]
-            assert apiobj.FIELD_COMPLEX not in rows[0]
+            assert apiobj.FIELD_ADAPTERS not in rows[0]
+            for k, v in original_row.items():
+                if k != apiobj.FIELD_ADAPTERS:
+                    assert rows[0][k] == v
 
     def test_do_add_null_values_exclude(self, cbexport, apiobj):
-        original_row = apiobj.ORIGINAL_ROW
+        original_row = copy.deepcopy(apiobj.ORIGINAL_ROWS[0])
         test_row = copy.deepcopy(original_row)
         test_row.pop(apiobj.FIELD_ADAPTERS, None)
 
@@ -224,7 +227,7 @@ class CallbacksFull(Callbacks):
                 self._row_idx += 1
             return rows
 
-        original_row = apiobj.ORIGINAL_ROW
+        original_row = copy.deepcopy(apiobj.ORIGINAL_ROWS[0])
         cbobj = self.get_cbobj(
             apiobj=apiobj,
             cbexport=cbexport,
@@ -243,7 +246,7 @@ class CallbacksFull(Callbacks):
         def cb1(self, rows):
             raise ValueError("boom")
 
-        original_row = apiobj.ORIGINAL_ROW
+        original_row = copy.deepcopy(apiobj.ORIGINAL_ROWS[0])
 
         cbobj = self.get_cbobj(
             apiobj=apiobj,
@@ -259,7 +262,7 @@ class CallbacksFull(Callbacks):
             assert isinstance(x["exc"], ValueError)
 
     def test_process_tags_to_add_remove(self, cbexport, apiobj, caplog):
-        original_row = apiobj.ORIGINAL_ROW
+        original_row = copy.deepcopy(apiobj.ORIGINAL_ROWS[0])
         test_row = copy.deepcopy(original_row)
         row_id = test_row[apiobj.FIELD_AXON_ID]
         tags = [f"badwolf_{random_string(9)}", f"badwolf_{random_string(9)}"]
@@ -299,7 +302,7 @@ class CallbacksFull(Callbacks):
             assert tag not in row_tags
 
     def test_process_tags_to_add_empty(self, cbexport, apiobj, caplog):
-        original_row = apiobj.ORIGINAL_ROW
+        original_row = copy.deepcopy(apiobj.ORIGINAL_ROWS[0])
         test_row = copy.deepcopy(original_row)
 
         cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs={"tags_add": []})
@@ -313,7 +316,7 @@ class CallbacksFull(Callbacks):
         log_check(caplog=caplog, entries=["tags.*assets"], exists=False)
 
     def test_process_tags_to_remove_empty(self, cbexport, apiobj, caplog):
-        original_row = apiobj.ORIGINAL_ROW
+        original_row = copy.deepcopy(apiobj.ORIGINAL_ROWS[0])
         test_row = copy.deepcopy(original_row)
 
         cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs={"tags_remove": []})
@@ -327,7 +330,7 @@ class CallbacksFull(Callbacks):
         log_check(caplog=caplog, entries=["tags.*assets"], exists=False)
 
     def test_do_excludes_empty(self, cbexport, apiobj):
-        original_row = apiobj.ORIGINAL_ROW
+        original_row = copy.deepcopy(apiobj.ORIGINAL_ROWS[0])
         test_row = copy.deepcopy(original_row)
 
         cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs={"field_excludes": []})
@@ -340,7 +343,7 @@ class CallbacksFull(Callbacks):
             assert test_row != original_row
 
     def test_do_excludes(self, cbexport, apiobj):
-        original_row = apiobj.ORIGINAL_ROW
+        original_row = copy.deepcopy(apiobj.ORIGINAL_ROWS[0])
         test_row = copy.deepcopy(original_row)
 
         fields = [apiobj.FIELD_AXON_ID, apiobj.FIELD_ADAPTERS, "adapter_list_length"]
@@ -357,7 +360,7 @@ class CallbacksFull(Callbacks):
 
     def test_do_excludes_sub(self, cbexport, apiobj):
         field_complex = apiobj.FIELD_COMPLEX
-        original_row = get_rows_exist(apiobj=apiobj, fields=field_complex)
+        original_row = copy.deepcopy(apiobj.COMPLEX_ROWS[0])
         test_row = copy.deepcopy(original_row)
 
         sub_name = list(test_row[field_complex][0])[0]
@@ -383,7 +386,7 @@ class CallbacksFull(Callbacks):
             assert sub_name not in item
 
     def test_do_join_values_true(self, cbexport, apiobj):
-        original_row = apiobj.ORIGINAL_ROW
+        original_row = copy.deepcopy(apiobj.ORIGINAL_ROWS[0])
         test_row = copy.deepcopy(original_row)
 
         cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs={"field_join": True})
@@ -397,7 +400,7 @@ class CallbacksFull(Callbacks):
                 assert isinstance(test_row[field], str)
 
     def test_do_join_values_false(self, cbexport, apiobj):
-        original_row = apiobj.ORIGINAL_ROW
+        original_row = copy.deepcopy(apiobj.ORIGINAL_ROWS[0])
         test_row = copy.deepcopy(original_row)
 
         cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs={"field_join": False})
@@ -411,7 +414,7 @@ class CallbacksFull(Callbacks):
             assert original_row == test_row
 
     def test_do_join_values_trim(self, cbexport, apiobj):
-        original_row = apiobj.ORIGINAL_ROW
+        original_row = copy.deepcopy(apiobj.ORIGINAL_ROWS[0])
         original_row = copy.deepcopy(original_row)
         original_row["test"] = ("aaaa " * (FIELD_TRIM_LEN + 1000)).split()
         test_row = copy.deepcopy(original_row)
@@ -429,7 +432,7 @@ class CallbacksFull(Callbacks):
         assert test_len <= exp_len
 
     def test_do_join_values_trim_disabled(self, cbexport, apiobj):
-        original_row = apiobj.ORIGINAL_ROW
+        original_row = copy.deepcopy(apiobj.ORIGINAL_ROWS[0])
         original_row = copy.deepcopy(original_row)
         original_row["test"] = ("aaaa " * (FIELD_TRIM_LEN + 1000)).split()
         test_row = copy.deepcopy(original_row)
@@ -448,7 +451,7 @@ class CallbacksFull(Callbacks):
         assert "TRIMMED" not in test_row["test"]
 
     def test_do_join_values_trim_custom_joiner(self, cbexport, apiobj):
-        original_row = apiobj.ORIGINAL_ROW
+        original_row = copy.deepcopy(apiobj.ORIGINAL_ROWS[0])
         original_row = copy.deepcopy(original_row)
         original_row["test"] = ("aaaa " * (FIELD_TRIM_LEN + 1000)).split()
         test_row = copy.deepcopy(original_row)
@@ -467,7 +470,7 @@ class CallbacksFull(Callbacks):
 
     def test_do_change_field_titles_true(self, cbexport, apiobj):
         field_complex = apiobj.FIELD_COMPLEX
-        original_row = get_rows_exist(apiobj=apiobj, fields=field_complex)
+        original_row = copy.deepcopy(apiobj.COMPLEX_ROWS[0])
         test_row = copy.deepcopy(original_row)
 
         cbobj = self.get_cbobj(
@@ -489,7 +492,7 @@ class CallbacksFull(Callbacks):
             assert cb_schema["name_qual"] not in test_row
 
     def test_do_change_field_titles_false(self, cbexport, apiobj):
-        original_row = apiobj.ORIGINAL_ROW
+        original_row = copy.deepcopy(apiobj.ORIGINAL_ROWS[0])
         test_row = copy.deepcopy(original_row)
 
         cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs={"field_titles": False})
@@ -504,7 +507,7 @@ class CallbacksFull(Callbacks):
 
     def test_do_flatten_fields_true(self, cbexport, apiobj):
         field_complex = apiobj.FIELD_COMPLEX
-        original_row = get_rows_exist(apiobj=apiobj, fields=field_complex)
+        original_row = copy.deepcopy(apiobj.COMPLEX_ROWS[0])
         test_row = copy.deepcopy(original_row)
 
         cbobj = self.get_cbobj(
@@ -560,7 +563,7 @@ class CallbacksFull(Callbacks):
 
     def test_do_flatten_fields_exclude_sub(self, cbexport, apiobj):
         field_complex = apiobj.FIELD_COMPLEX
-        original_row = get_rows_exist(apiobj=apiobj, fields=field_complex)
+        original_row = copy.deepcopy(apiobj.COMPLEX_ROWS[0])
         test_row = copy.deepcopy(original_row)
 
         sub_field = get_schema(apiobj=apiobj, field=field_complex, key="sub_fields")[0]
@@ -592,7 +595,7 @@ class CallbacksFull(Callbacks):
 
     def test_do_flatten_fields_false(self, cbexport, apiobj):
         field_complex = apiobj.FIELD_COMPLEX
-        original_row = get_rows_exist(apiobj=apiobj, fields=field_complex)
+        original_row = copy.deepcopy(apiobj.COMPLEX_ROWS[0])
         test_row = copy.deepcopy(original_row)
 
         cbobj = self.get_cbobj(
@@ -613,7 +616,7 @@ class CallbacksFull(Callbacks):
 
     def test_do_flatten_fields_custom_null(self, cbexport, apiobj):
         field_complex = apiobj.FIELD_COMPLEX
-        original_row = get_rows_exist(apiobj=apiobj, fields=field_complex)
+        original_row = copy.deepcopy(apiobj.COMPLEX_ROWS[0])
         test_row = copy.deepcopy(original_row)
 
         cbobj = self.get_cbobj(
@@ -664,7 +667,7 @@ class CallbacksFull(Callbacks):
 
     def test_do_explode_field_complex(self, cbexport, apiobj):
         field_complex = apiobj.FIELD_COMPLEX
-        original_row = get_rows_exist(apiobj=apiobj, fields=field_complex)
+        original_row = copy.deepcopy(apiobj.COMPLEX_ROWS[0])
         test_row = copy.deepcopy(original_row)
 
         cbobj = self.get_cbobj(
@@ -683,7 +686,7 @@ class CallbacksFull(Callbacks):
                 assert sub_schema["name_qual"] in row
 
     def test_do_explode_field_simple(self, cbexport, apiobj):
-        original_row = apiobj.ORIGINAL_ROW
+        original_row = copy.deepcopy(apiobj.ORIGINAL_ROWS[0])
         test_row = copy.deepcopy(original_row)
 
         key = apiobj.FIELD_ADAPTERS
@@ -706,7 +709,7 @@ class CallbacksFull(Callbacks):
             assert value == row_val[idx]
 
     def test_do_explode_field_exclude(self, cbexport, apiobj):
-        original_row = apiobj.ORIGINAL_ROW
+        original_row = copy.deepcopy(apiobj.ORIGINAL_ROWS[0])
         test_row = copy.deepcopy(original_row)
 
         cbobj = self.get_cbobj(
@@ -724,7 +727,7 @@ class CallbacksFull(Callbacks):
         assert test_row == rows[0]
 
     def test_do_explode_field_none(self, cbexport, apiobj):
-        original_row = apiobj.ORIGINAL_ROW
+        original_row = copy.deepcopy(apiobj.ORIGINAL_ROWS[0])
         test_row = copy.deepcopy(original_row)
 
         cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport)
@@ -828,7 +831,7 @@ class CallbacksFull(Callbacks):
 
     def test_sw_whitelist_fail_no_sw_field(self, cbexport, apiobj, caplog):
         whitelist = ["chrome"]
-        rows = apiobj.get(max_rows=1)
+        rows = copy.deepcopy(apiobj.ORIGINAL_ROWS)
 
         cbobj = self.get_cbobj(
             apiobj=apiobj,
@@ -888,7 +891,7 @@ class CallbacksFull(Callbacks):
             assert field in cbobj.final_columns
 
     def test_do_field_replace_list_str(self, cbexport, apiobj):
-        original_row = apiobj.ORIGINAL_ROW
+        original_row = copy.deepcopy(apiobj.ORIGINAL_ROWS[0])
         test_row = copy.deepcopy(original_row)
 
         cbobj = self.get_cbobj(
@@ -913,7 +916,7 @@ class CallbacksFull(Callbacks):
                 assert "i" not in key
 
     def test_do_field_replace_list_list(self, cbexport, apiobj):
-        original_row = apiobj.ORIGINAL_ROW
+        original_row = copy.deepcopy(apiobj.ORIGINAL_ROWS[0])
         test_row = copy.deepcopy(original_row)
 
         cbobj = self.get_cbobj(
@@ -938,7 +941,7 @@ class CallbacksFull(Callbacks):
                 assert "i" not in key
 
     def test_do_field_replace_bad_types(self, cbexport, apiobj):
-        original_row = apiobj.ORIGINAL_ROW
+        original_row = copy.deepcopy(apiobj.ORIGINAL_ROWS[0])
         test_row = copy.deepcopy(original_row)
 
         cbobj = self.get_cbobj(
@@ -955,7 +958,7 @@ class CallbacksFull(Callbacks):
         assert sorted(list(rows[0])) == sorted(list(original_row))
 
     def test_do_field_replace_str_missing_rhs(self, cbexport, apiobj):
-        original_row = apiobj.ORIGINAL_ROW
+        original_row = copy.deepcopy(apiobj.ORIGINAL_ROWS[0])
         test_row = copy.deepcopy(original_row)
 
         cbobj = self.get_cbobj(

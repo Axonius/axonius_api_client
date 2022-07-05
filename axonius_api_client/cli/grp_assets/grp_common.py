@@ -241,6 +241,7 @@ GET_EXPORT = [
     ),
     click.option(
         "--explode",
+        "-exf",
         "field_explode",
         default=asset_callbacks.Base.args_map()["field_explode"],
         help="Flatten and explode a fields values into multiple rows",
@@ -248,6 +249,17 @@ GET_EXPORT = [
         show_default=True,
         hidden=False,
         metavar="FIELD",
+    ),
+    click.option(
+        "--explode_entities/--no-explode_entities",
+        "-exe/-nexe",
+        "explode_entities",
+        default=asset_callbacks.Base.args_map()["explode_entities"],
+        help="Split rows into one row for each asset entity (will enable include-details)",
+        show_envvar=True,
+        show_default=True,
+        is_flag=True,
+        hidden=False,
     ),
     click.option(
         "--flatten/--no-flatten",

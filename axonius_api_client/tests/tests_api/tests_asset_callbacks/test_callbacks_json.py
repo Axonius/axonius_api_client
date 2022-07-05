@@ -6,7 +6,6 @@ import json
 
 import pytest
 
-from ...utils import get_rows_exist
 from .test_callbacks import Callbacks, Exports
 
 
@@ -21,7 +20,7 @@ class TestCallbacksJson(Callbacks, Exports):
 
     def test_row_as_is(self, cbexport, apiobj):
         io_fd = io.StringIO()
-        original_rows = get_rows_exist(apiobj=apiobj, max_rows=5)
+        original_rows = copy.deepcopy(apiobj.ORIGINAL_ROWS)
 
         cbobj = self.get_cbobj(
             apiobj=apiobj, cbexport=cbexport, getargs={"export_fd": io_fd, "export_fd_close": False}
@@ -48,7 +47,7 @@ class TestCallbacksJson(Callbacks, Exports):
 
     def test_row_fully_loaded(self, cbexport, apiobj):
         io_fd = io.StringIO()
-        original_rows = get_rows_exist(apiobj=apiobj, max_rows=5)
+        original_rows = copy.deepcopy(apiobj.ORIGINAL_ROWS)
 
         cbobj = self.get_cbobj(
             apiobj=apiobj,

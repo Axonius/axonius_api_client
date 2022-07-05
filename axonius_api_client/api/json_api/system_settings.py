@@ -119,6 +119,11 @@ class FeatureFlags(SystemSettings):
             raise FeatureNotEnabledError(name="Data Scopes")
 
     @property
+    def saas_enabled(self) -> bool:
+        """Get the status of SAAS & tunnel support being enabled."""
+        return self.config.get("enable_saas", False)
+
+    @property
     def data_scopes_enabled(self) -> bool:
         """Get the status of data scopes being enabled."""
         return self._data_scopes.get("enabled", False)

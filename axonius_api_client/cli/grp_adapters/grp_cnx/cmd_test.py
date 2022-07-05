@@ -2,13 +2,13 @@
 """Command line interface for Axonius API Client."""
 from ....exceptions import CnxTestError
 from ...context import CONTEXT_SETTINGS, click
-from ...options import AUTH, NODE_CNX, add_options
-from .grp_common import OPT_SPLIT_CONFIG, OPTS_PROMPTS, OPTS_SHOWS
+from ...options import AUTH, add_options
+from .grp_common import OPT_SPLIT_CONFIG, OPTS_NODE, OPTS_PROMPTS, OPTS_SHOWS
 from .parsing import get_show_data, parse_config
 
 OPTIONS = [
     *AUTH,
-    *NODE_CNX,
+    *OPTS_NODE,
     *OPTS_SHOWS,
     *OPTS_PROMPTS,
     OPT_SPLIT_CONFIG,
@@ -26,6 +26,7 @@ def cmd(
     config,
     adapter_name,
     adapter_node,
+    tunnel,
     show_schemas,
     show_defaults,
     use_sane_defaults,
@@ -69,6 +70,7 @@ def cmd(
         client.adapters.cnx.test(
             adapter_name=adapter_name,
             adapter_node=adapter_node,
+            tunnel=tunnel,
             **config,
         )
         ctx.obj.echo_ok(msg="Connection tested with no errors")

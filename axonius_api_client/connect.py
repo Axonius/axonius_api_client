@@ -26,6 +26,7 @@ from .api import (
     SystemRoles,
     SystemUsers,
     Users,
+    Vulnerabilities,
 )
 from .auth import ApiKey
 from .constants.api import TIMEOUT_CONNECT, TIMEOUT_RESPONSE
@@ -339,6 +340,14 @@ class Connect:
         if not hasattr(self, "_users"):
             self._users = Users(**self.API_ARGS)
         return self._users
+
+    @property
+    def vulnerabilities(self) -> Users:
+        """Work with user assets."""
+        self.start()
+        if not hasattr(self, "_vulnerabilities"):
+            self._vulnerabilities = Vulnerabilities(**self.API_ARGS)
+        return self._vulnerabilities
 
     @property
     def devices(self) -> Devices:

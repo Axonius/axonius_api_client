@@ -22,6 +22,7 @@ KEYS = {
     "adapter_name": "Adapter name to add connection to (REQUIRED, STRING)",
     "config": "Configuration of the connection (REQUIRED, DICTIONARY)",
     "node_name": "Node name to add connection to (OPTIONAL, STRING, DEFAULT: Core instance)",
+    "tunnel": "Tunnel to add connection to (OPTIONAL, STRING, DEFAULT: None)",
     "save_and_fetch": "Save and fetch or just save (OPTIONAL, BOOLEAN, DEFAULT: True)",
     "active": "Set as active or inactive (OPTIONAL, BOOLEAN, DEFAULT: True)",
 }
@@ -64,6 +65,7 @@ def parse_item(item):
     parsed["adapter_name"] = check_type(key="adapter_name", ctype=str)
     parsed["adapter_node"] = item.get("adapter_node", None)
     parsed["new_config"] = check_type(key="config", ctype=dict)
+    parsed["tunnel"] = item.get("tunnel", None)
 
     if errs:
         raise Exception("\n".join(errs))

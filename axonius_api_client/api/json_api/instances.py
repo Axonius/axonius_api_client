@@ -2,11 +2,11 @@
 """Models for API requests & responses."""
 import dataclasses
 import datetime
-from typing import List, Optional, Type
+from typing import List, Optional, Type, Union
 
 import marshmallow_jsonapi
 
-from ...tools import calc_gb, calc_percent
+from ...tools import calc_gb, calc_percent, json_load
 from .base import BaseModel, BaseSchema, BaseSchemaJson
 from .custom_fields import SchemaBool, SchemaDatetime, get_field_dc_mm
 
@@ -243,3 +243,125 @@ class FactoryReset(BaseModel):
         """Pass."""
         msg = self.msg or "none"
         return f"Factory reset triggered: {self.triggered}, message: {msg}"
+
+
+@dataclasses.dataclass
+class Tunnel(BaseModel):
+    """Pass."""
+
+    tunnel_id: str
+    tunnel_name: str
+    status: str
+    external_addr: str = ""
+    internal_addr: str = ""
+    default: bool = False
+    tunnel_proxy_settings: dict = dataclasses.field(default_factory=dict)
+    tunnel_email_recipients: List[str] = dataclasses.field(default_factory=list)
+    first_seen: Optional[datetime.datetime] = get_field_dc_mm(
+        mm_field=SchemaDatetime(allow_none=True), default=None
+    )
+    last_seen: Optional[datetime.datetime] = get_field_dc_mm(
+        mm_field=SchemaDatetime(allow_none=True), default=None
+    )
+
+    @staticmethod
+    def _str_properties() -> List[str]:
+        """Pass."""
+        return [
+            "id",
+            "name",
+            "status",
+            "internal_addr",
+            "external_addr",
+            "default",
+            "first_seen",
+            "last_seen",
+        ]
+
+    @staticmethod
+    def _str_join() -> str:  # pragma: no cover
+        """Pass."""
+        return ", "
+
+    def __repr__(self):
+        """Pass."""
+        return self.__str__()
+
+    @classmethod
+    def load_response(cls, data: str, **kwargs) -> Union[str, "Tunnel"]:
+        """Pass."""
+        data: Union[str, List[dict]] = json_load(obj=data, error=False)
+        if isinstance(data, (list, tuple)):
+            return super().load_response(data=data, **kwargs)
+        return data
+
+    def to_tablize(self) -> dict:
+        """Pass."""
+        addresses = [
+            f"Internal: {self.internal_addr}",
+            f"External: {self.external_addr}",
+        ]
+        proxy = [
+            f"Enabled: {self.proxy_enabled}",
+            f"Address: {self.proxy_addr}",
+            f"Port: {self.proxy_port}",
+        ]
+        status = [
+            f"Is Default: {self.default}",
+            f"Is Connected: {self.is_connected}",
+            f"Status: {self.status}",
+            f"First Seen: {self.first_seen}",
+            f"Last Seen: {self.last_seen}",
+        ]
+        return {
+            "Name": self.name,
+            "ID": self.id,
+            "Status": "\n".join(status),
+            "Addresses": "\n".join(addresses),
+            "Proxy": "\n".join(proxy),
+        }
+
+    @staticmethod
+    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+        """Pass."""
+        return None
+
+    @property
+    def is_connected(self) -> bool:
+        """Pass."""
+        return self.status == "connected"
+
+    @property
+    def id(self) -> str:
+        """Pass."""
+        return self.tunnel_id
+
+    @property
+    def name(self) -> str:
+        """Pass."""
+        return self.tunnel_name
+
+    @property
+    def proxy_enabled(self) -> bool:
+        """Pass."""
+        return self.tunnel_proxy_settings.get("enabled", False)
+
+    @property
+    def proxy_addr(self) -> str:
+        """Pass."""
+        return self.tunnel_proxy_settings.get("tunnel_proxy_addr", "")
+
+    @property
+    def proxy_port(self) -> str:
+        """Pass."""
+        return self.tunnel_proxy_settings.get("tunnel_proxy_port", "")
+
+    @property
+    def proxy_user(self) -> str:
+        """Pass."""
+        return self.tunnel_proxy_settings.get("tunnel_proxy_user", "")
+
+    @property
+    def proxy_password(self) -> str:
+        """Pass."""
+        return self.tunnel_proxy_settings.get("tunnel_proxy_password", "")

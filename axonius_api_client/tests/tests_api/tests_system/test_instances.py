@@ -3,16 +3,18 @@
 import datetime
 
 import pytest
-from axonius_api_client.api import json_api
+from axonius_api_client.api import Instances, json_api
 from axonius_api_client.api.api_endpoints import ApiEndpoints
-from axonius_api_client.exceptions import NotFoundError
+from axonius_api_client.exceptions import FeatureNotEnabledError, NotFoundError
 
 
-class TestInstancesPublic:
+class InstancesBase:
     @pytest.fixture(scope="class")
     def apiobj(self, api_instances):
         return api_instances
 
+
+class TestInstancesPublic(InstancesBase):
     def test_get(self, apiobj):
         data = apiobj.get()
         assert isinstance(data, list) and data
@@ -142,11 +144,7 @@ class TestInstancesPublic:
         assert data["execute_result"] == "file executed"
 
 
-class TestInstancesPrivate:
-    @pytest.fixture(scope="class")
-    def apiobj(self, api_instances):
-        return api_instances
-
+class TestInstancesPrivate(InstancesBase):
     def test_get_update(self, apiobj):
         data = apiobj._get()
         assert isinstance(data, list)
@@ -207,3 +205,36 @@ class TestInstancesPrivate:
         assert isinstance(value, json_api.system_settings.FeatureFlags)
         assert isinstance(value.config, dict)
         assert isinstance(value.document_meta["schema"], dict)
+
+
+@pytest.mark.tunneltests
+class TestInstancesTunnels(InstancesBase):
+    def test_check_tunnel_feature_error_false(self, apiobj):
+        enabled = apiobj.has_saas_enabled
+        ret = apiobj.check_tunnel_feature(feature_error=False)
+        assert ret == enabled
+
+    def test_check_tunnel_feature_disabled_error_true(self, apiobj, monkeypatch):
+        monkeypatch.setattr(Instances, "has_saas_enabled", False)
+
+        with pytest.raises(FeatureNotEnabledError):
+            apiobj.check_tunnel_feature(feature_error=True)
+
+    def test_check_tunnel_feature_enabled_error_true(self, apiobj, monkeypatch):
+        monkeypatch.setattr(Instances, "has_saas_enabled", True)
+        ret = apiobj.check_tunnel_feature(feature_error=True)
+        assert ret is True
+
+    def test_get_tunnels(self, apiobj, tunnel_feature_check):
+        data = apiobj.get_tunnels()
+        assert isinstance(data, list)
+        for item in data:
+            assert isinstance(item, json_api.instances.Tunnel)
+
+    def test_get_tunnel_default(self, apiobj, tunnel_count_check):
+        data = apiobj.get_tunnel_default()
+        assert isinstance(data, json_api.instances.Tunnel)
+
+    def test_get_tunnel_invalid(self, apiobj):
+        with pytest.raises(NotFoundError):
+            apiobj.get_tunnel(value="xxx", feature_error=False)

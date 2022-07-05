@@ -2,20 +2,21 @@
 """Command line interface for Axonius API Client."""
 from ....exceptions import CnxAddError
 from ...context import CONTEXT_SETTINGS, click
-from ...options import AUTH, INPUT_FILE, NODE_CNX, add_options
+from ...options import AUTH, INPUT_FILE, add_options
 from .grp_common import (
     EXPORT_FORMATS,
     OPT_EXPORT,
     OPT_IGNORE_UNKNOWNS,
     OPT_USE_SANE_DEFAULTS,
     OPTS_FLAGS,
+    OPTS_NODE,
     OPTS_SHOWS,
 )
 from .parsing import get_show_data, parse_config
 
 OPTIONS = [
     *AUTH,
-    *NODE_CNX,
+    *OPTS_NODE,
     *OPTS_SHOWS,
     *OPTS_FLAGS,
     OPT_USE_SANE_DEFAULTS,
@@ -37,6 +38,7 @@ def cmd(
     export_format,
     adapter_node,
     adapter_name,
+    tunnel,
     save_and_fetch,
     active,
     show_schemas,
@@ -82,6 +84,7 @@ def cmd(
             data = client.adapters.cnx.add(
                 adapter_name=adapter_name,
                 adapter_node=adapter_node,
+                tunnel=tunnel,
                 save_and_fetch=save_and_fetch,
                 active=active,
                 **config,

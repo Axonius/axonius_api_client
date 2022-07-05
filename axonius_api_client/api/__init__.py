@@ -4,7 +4,7 @@ from . import api_endpoints, json_api
 from .adapters import Adapters, Cnx
 from .api_endpoint import ApiEndpoint
 from .api_endpoints import ApiEndpoints
-from .assets import Devices, Users
+from .assets import Devices, Users, Vulnerabilities
 from .enforcements import Enforcements
 from .openapi import OpenAPISpec
 from .system import (
@@ -51,4 +51,5 @@ __all__ = (
     "json_api",
     "OpenAPISpec",
     "DataScopes",
+    "Vulnerabilities",
 )

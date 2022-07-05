@@ -50,6 +50,28 @@ FUZZY_SCHEMAS_KEYS: List[str] = [
 PRETTY_SCHEMA_TMPL: str = "{adapter_name}:{name_base:{len_max}} -> {column_title}"
 """template to use when pretty printing schemas."""
 
+FIELDS_DETAILS: List[str] = [
+    "meta_data.client_used",
+    "unique_adapter_names_details",
+    "adapter_asset_entities_info",
+]
+"""Fields that are returned by REST API when include_details=True"""
+
+FIELDS_DETAILS_EXCLUDE: List[str] = [
+    "adapter_list_length_details",
+    "adapters_details",
+    "internal_axon_id_details",
+    "labels_details",
+]
+"""Fields that should be excluded when include_details=True"""
+
+FIELDS_ENTITY_PASSTHRU: List[str] = [
+    "adapter_list_length",
+    "internal_axon_id",
+    "labels",
+]
+"""Fields that should be passed thru directly when exploding by asset entities."""
+
 SCHEMAS_CUSTOM: Dict[str, dict] = {
     "report_adapters_missing": {
         "adapters_missing": {
