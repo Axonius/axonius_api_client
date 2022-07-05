@@ -75,6 +75,9 @@ class ApiEndpoint:
     response_as_text: bool = False
     """Do not serialize the response object when receiving the response."""
 
+    response_json_error: bool = True
+    """Throw errors if the JSON can not be serialized."""
+
     log_level: str = "debug"
     """Log level for this objects logger."""
 
@@ -257,12 +260,13 @@ class ApiEndpoint:
             JSON_TYPES: deserialized JSON from response
         """
         try:
-            data = response.json()
+            return response.json()
         except Exception as exc:
-            raise JsonInvalidError(
-                msg=f"Response has invalid JSON\nWhile in {self}", response=response, exc=exc
-            )
-        return data
+            msg = f"Response has invalid JSON\nWhile in {self}"
+            self.log.exception(msg)
+            if self.response_json_error:
+                raise JsonInvalidError(msg=msg, response=response, exc=exc)
+            return response.text
 
     def check_response_status(
         self,
@@ -281,14 +285,18 @@ class ApiEndpoint:
             **kwargs: Passed to `response_status_hook` if supplied, if hook returns truthy
                 no more status checks are done
 
+        Notes:
+            If response_status_hook returns True, the rest of the check_response_status
+            workflow will be skipped
+
         Raises:
             InvalidCredentials: if response has has a 401 status code
             ResponseNotOk: if response has a bad status code
         """
-        if callable(response_status_hook) and response_status_hook(
-            http=http, response=response, **kwargs
-        ):
-            return
+        if callable(response_status_hook):
+            hook_ret = response_status_hook(http=http, response=response, **kwargs)
+            if hook_ret is True:
+                return
 
         msgs = [
             f"Response has a bad HTTP status code: {response.status_code}",

@@ -63,9 +63,15 @@ def export_str(data):
 
 def export_str_args(data):
     """Pass."""
+
+    def parse(obj):
+        tmpl = "--node-name {node_name!r} --name {adapter_name!r} --id {id!r}"
+        if obj.get("tunnel_id"):
+            tmpl += " --tunnel {tunnel_id!r}"
+        return tmpl.format(**obj)
+
     data = listify(data)
-    tmpl = "--node-name {node_name!r} --name {adapter_name!r} --id {id!r}".format
-    return "\n".join([tmpl(**x) for x in data])
+    return "\n".join([parse(x) for x in data])
 
 
 EXPORT_FORMATS: dict = {
@@ -212,6 +218,35 @@ OPT_ID_CNX = click.option(
     show_default=True,
 )
 
+OPT_NODE_NAME = click.option(
+    "--node-name",
+    "-nn",
+    "adapter_node",
+    default=None,
+    show_envvar=True,
+    show_default=True,
+    help="Node name (will default to core instance if not supplied)",
+)
+
+OPT_TUNNEL = click.option(
+    "--tunnel",
+    "-tn",
+    "tunnel",
+    default=None,
+    show_envvar=True,
+    show_default=True,
+    help="Tunnel ID or Name",
+)
+
+OPT_ADAPTER_NAME = click.option(
+    "--name",
+    "-n",
+    "adapter_name",
+    required=True,
+    show_envvar=True,
+    show_default=True,
+    help="Adapter name",
+)
 OPTS_PROMPTS = [
     OPT_PROMPT_FOR_OPTIONALS,
     OPT_PROMPT_FOR_DEFAULT,
@@ -226,4 +261,11 @@ OPTS_FLAGS = [
 OPTS_SHOWS = [
     OPT_SHOW_SCHEMAS,
     OPT_SHOW_DEFAULTS,
+]
+
+
+OPTS_NODE = [
+    OPT_TUNNEL,
+    OPT_NODE_NAME,
+    OPT_ADAPTER_NAME,
 ]

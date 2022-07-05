@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 """Test suite for assets."""
+import copy
 import io
 
 import pytest
 
-from ...utils import get_rows_exist
 from .test_callbacks import Callbacks, Exports
 
 
@@ -18,7 +18,7 @@ class TestCallbacksJsonToCsv(Callbacks, Exports):
         return "json_to_csv"
 
     def test_row_as_is(self, cbexport, apiobj):
-        rows = get_rows_exist(apiobj=apiobj, max_rows=5)
+        rows = copy.deepcopy(apiobj.ORIGINAL_ROWS)
 
         io_fd = io.StringIO()
         cbobj = self.get_cbobj(

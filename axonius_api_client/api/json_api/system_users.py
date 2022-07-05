@@ -15,12 +15,12 @@ class SystemUserSchema(BaseSchemaJson):
     """Pass."""
 
     email = marshmallow_jsonapi.fields.Str(allow_none=True)
-    first_name = marshmallow_jsonapi.fields.Str()
+    first_name = marshmallow_jsonapi.fields.Str(load_default="", dump_default="", allow_none=True)
     last_login = SchemaDatetime()
-    last_name = marshmallow_jsonapi.fields.Str()
+    last_name = marshmallow_jsonapi.fields.Str(load_default="", dump_default="", allow_none=True)
     last_updated = SchemaDatetime()
     password = SchemaPassword(load_default="", dump_default="", allow_none=True)
-    pic_name = marshmallow_jsonapi.fields.Str()
+    pic_name = marshmallow_jsonapi.fields.Str(load_default="", dump_default="", allow_none=True)
     role_id = marshmallow_jsonapi.fields.Str(required=True)
     source = marshmallow_jsonapi.fields.Str()
     user_name = marshmallow_jsonapi.fields.Str(required=True)

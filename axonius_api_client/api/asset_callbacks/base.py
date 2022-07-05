@@ -8,12 +8,19 @@ from typing import IO, Generator, List, Optional, Tuple, Union
 
 from ... import DEFAULT_PATH
 from ...constants.api import FIELD_JOINER, FIELD_TRIM_LEN, FIELD_TRIM_STR
-from ...constants.fields import AGG_ADAPTER_NAME, SCHEMAS_CUSTOM
+from ...constants.fields import (
+    AGG_ADAPTER_NAME,
+    FIELDS_DETAILS,
+    FIELDS_DETAILS_EXCLUDE,
+    FIELDS_ENTITY_PASSTHRU,
+    SCHEMAS_CUSTOM,
+)
 from ...exceptions import ApiError
-from ...parsers.fields import schema_custom
+
+# from ...parsers.fields import schema_custom
+from ...tools import calc_percent  # json_dump,
 from ...tools import (
     PathLike,
-    calc_percent,
     check_path_is_not_dir,
     coerce_int,
     dt_now,
@@ -29,6 +36,17 @@ from ...tools import (
     path_backup_file,
     strip_right,
 )
+
+
+def crjoin(value):
+    """Pass."""
+    joiner = "\n   - "
+    return joiner + joiner.join(value)
+
+
+def is_str_details(value: str) -> bool:
+    """Pass."""
+    return value.endswith("_details")
 
 
 class Base:
@@ -176,6 +194,7 @@ class Base:
             "do_echo": False,
             "custom_cbs": [],
             "debug_timing": False,
+            "explode_entities": False,
         }
 
     def get_arg_value(self, arg: str) -> Union[str, list, bool, int]:
@@ -231,16 +250,31 @@ class Base:
 
     def start(self, **kwargs):
         """Start this callbacks object."""
-        join = "\n   - "
         self.echo(msg=f"Starting {self}")
+        excludes = listify(self.get_arg_value("field_excludes"))
+        explode_entities = self.get_arg_value("explode_entities")
+        include_details = self.STORE.get("include_details", False)
 
-        cbargs = join + join.join(join_kv(obj=self.GETARGS))
+        if explode_entities:
+            if not include_details:
+                self.echo(
+                    msg=f"Enabling 'include_details' due to 'explode_entities'={explode_entities}",
+                    debug=True,
+                )
+                self.STORE["include_details"] = include_details = True
+
+        if include_details:
+            missing = [x for x in FIELDS_DETAILS_EXCLUDE if x not in excludes]
+            self.echo(msg=f"Adding fields {missing} to field_excludes: {excludes}", debug=True)
+            self.set_arg_value("field_excludes", value=excludes + missing)
+
+        cbargs = crjoin(join_kv(obj=self.GETARGS))
         self.LOG.debug(f"Get Extra Arguments: {cbargs}")
 
-        config = join + join.join(self.args_strs)
+        config = crjoin(self.args_strs)
         self.echo(msg=f"Configuration: {config}")
 
-        store = join + join.join(join_kv(obj=self.STORE))
+        store = crjoin(join_kv(obj=self.STORE))
         self.echo(msg=f"Get Arguments: {store}")
 
     def echo_columns(self, **kwargs):
@@ -248,17 +282,16 @@ class Base:
         if getattr(self, "ECHO_DONE", False):
             return
 
-        join = "\n   - "
         schemas_pretty = self.APIOBJ.fields._prettify_schemas(schemas=self.schemas_selected)
-        schemas_pretty = join + join.join(schemas_pretty)
+        schemas_pretty = crjoin(schemas_pretty)
         self.echo(msg=f"Selected Columns: {schemas_pretty}")
 
         if self.excluded_schemas:
             schemas_pretty = self.APIOBJ.fields._prettify_schemas(schemas=self.excluded_schemas)
-            schemas_pretty = join + join.join(schemas_pretty)
+            schemas_pretty = crjoin(schemas_pretty)
             self.echo(msg=f"Excluded Columns: {schemas_pretty}")
 
-        final_columns = join + join.join(self.final_columns)
+        final_columns = crjoin(self.final_columns)
         self.echo(msg=f"Final Columns: {final_columns}")
         self.ECHO_DONE = True
 
@@ -332,6 +365,7 @@ class Base:
             self.add_report_software_whitelist,
             self.do_excludes,
             self.do_add_null_values,
+            self.do_explode_entities,
             self.do_flatten_fields,
             self.do_explode_field,
             self.do_join_values,
@@ -347,12 +381,16 @@ class Base:
             rows: rows to process
         """
         debug_timing = self.get_arg_value("debug_timing")
-        p_start = dt_now()
+
+        if debug_timing:  # pragma: no cover
+            p_start = dt_now()
 
         for cb in self.callbacks:
-            cb_start = dt_now()
-            rows = cb(rows=rows)
+            if debug_timing:  # pragma: no cover
+                cb_start = dt_now()
 
+            rows = cb(rows=rows)
+            # print(f"{cb} {json_dump(rows)}")
             if debug_timing:  # pragma: no cover
                 cb_delta = dt_now() - cb_start
                 self.LOG.debug(f"CALLBACK {cb} took {cb_delta} for {len(rows)} rows")
@@ -389,7 +427,8 @@ class Base:
             rows: rows to process
         """
         rows = listify(rows)
-        if not self.get_arg_value("field_null"):
+        field_null = self.get_arg_value("field_null")
+        if not field_null:
             return rows
 
         for row in rows:
@@ -405,7 +444,7 @@ class Base:
             schema: field schema to add null values for
             key: key of field schema to add null value for in row
         """
-        if self.is_excluded(schema=schema):
+        if self.is_excluded(schema=schema) or schema.get("is_details", False):
             return row
 
         null_value = self.get_arg_value("field_null_value")
@@ -414,14 +453,16 @@ class Base:
         field = schema[key]
 
         if schema["is_complex"]:
-
-            row[field] = listify(row.get(field, complex_null_value))
+            if field not in row:
+                row[field] = complex_null_value
 
             for item in row[field]:
                 for sub_schema in self.get_sub_schemas(schema=schema):
                     self._do_add_null_values(schema=sub_schema, row=item, key="name")
         else:
-            row[field] = row.get(field, null_value)
+            if field not in row:
+                row[field] = null_value
+        return row
 
     def do_excludes(self, rows: Union[List[dict], dict]) -> List[dict]:
         """Asset callback to remove fields from row.
@@ -444,16 +485,19 @@ class Base:
             row: row being processed
         """
         for schema in self.schemas_selected:
-            if self.is_excluded(schema=schema):
-                row.pop(schema["name_qual"], None)
+            field = schema["name_qual"]
+            if self.is_excluded(schema=schema) and field in row:
+                row.pop(field)
                 continue
 
             if schema["is_complex"]:
-                items = listify(row.get(schema["name_qual"], []))
+                items = listify(row.get(field, []))
                 for sub_schema in schema["sub_fields"]:
                     if self.is_excluded(schema=sub_schema):
+                        sub_field = sub_schema["name"]
                         for item in items:
-                            item.pop(sub_schema["name"], None)
+                            if sub_field in item:
+                                item.pop(sub_field)
 
     def do_join_values(self, rows: Union[List[dict], dict]) -> List[dict]:
         """Join values.
@@ -480,13 +524,14 @@ class Base:
         trim_str = FIELD_TRIM_STR
 
         for field in row:
-            if isinstance(row[field], list):
-                row[field] = joiner.join([str(x) for x in row[field]])
+            value = row[field]
+            if isinstance(value, list):
+                row[field] = value = joiner.join([str(x) for x in value])
 
-            if trim_len and isinstance(row[field], str) and len(row[field]) >= trim_len:
-                field_len = len(row[field])
+            if trim_len and isinstance(value, str) and len(value) >= trim_len:
+                field_len = len(value)
                 msg = trim_str.format(field_len=field_len, trim_len=trim_len)
-                row[field] = joiner.join([row[field][:trim_len], msg])
+                row[field] = value = joiner.join([value[:trim_len], msg])
 
     def do_change_field_replace(self, rows: Union[List[dict], dict]) -> List[dict]:
         """Asset callback to replace characters.
@@ -585,12 +630,13 @@ class Base:
             row: row being processed
         """
         null_value = self.get_arg_value("field_null_value")
+        complex_null_value = self.get_arg_value("field_null_value_complex")
 
         for schema in self.final_schemas:
             title = schema["column_title"]
             name = schema["name_qual"]
             is_complex = schema["is_complex"]
-            default = [] if is_complex else null_value
+            default = complex_null_value if is_complex else null_value
             row[title] = row.pop(name, default)
 
     def do_flatten_fields(self, rows: Union[List[dict], dict]) -> List[dict]:
@@ -605,7 +651,7 @@ class Base:
 
         for row in rows:
             for schema in self.schemas_selected:
-                if self.schema_to_explode != schema:
+                if self.schema_to_explode != schema and not schema.get("is_details", False):
                     self._do_flatten_fields(row=row, schema=schema)
 
         return rows
@@ -624,17 +670,79 @@ class Base:
             return
 
         null_value = self.get_arg_value("field_null_value")
+        field = schema["name_qual"]
 
-        items = listify(row.pop(schema["name_qual"], []))
+        # remove the complex field, i.e. specific_data.data.network_interfaces
+        # force it into a list of items
+        items = listify(row.pop(field, []))
 
         for sub_schema in self.get_sub_schemas(schema=schema):
-            row[sub_schema["name_qual"]] = []
-            # TBD: handle complex sub-fields
+            sub_field = sub_schema["name_qual"]
+            sub_short = sub_schema["name"]
 
+            # for each sub field, ensure there is an empty list to store values
+            row[sub_field] = []
+
+            # for each complex item, remove the sub field, force it into a list,
+            # and append it to the sub fields fully qualified name at the root row level
             for item in items:
-                value = item.pop(sub_schema["name"], null_value)
+                value = item.pop(sub_short, null_value)
                 value = value if isinstance(value, list) else [value]
-                row[sub_schema["name_qual"]] += value
+                row[sub_field] += value
+
+    def do_explode_entities(self, rows: Union[List[dict], dict]) -> List[dict]:
+        """Explode a row into a row for each asset entity.
+
+        Args:
+            rows: rows being processed
+        """
+        rows = listify(rows)
+        explode = self.get_arg_value("explode_entities")
+
+        if not explode:
+            return rows
+
+        new_rows = []
+        for row in rows:
+            new_rows += self._do_explode_entities(row=row)
+        return new_rows
+
+    def _do_explode_entities(self, row: dict) -> List[dict]:
+        """Explode a row into multiple rows for each asset entity.
+
+        Args:
+            row: row being processed
+        """
+
+        def explode(idx: int, adapter: str) -> dict:
+            new_row = {"adapters": adapter}
+
+            for k, v in row.items():
+                new_k = None
+                new_v = v
+
+                if k in FIELDS_ENTITY_PASSTHRU:
+                    new_k = k
+                elif k in FIELDS_DETAILS or is_str_details(k):
+                    new_k = k
+
+                    if k not in FIELDS_DETAILS:
+                        new_k = strip_right(obj=k, fix="_details")
+
+                    if isinstance(new_v, (list, tuple)):
+                        try:
+                            new_v = new_v[idx]
+                        except Exception:
+                            pass
+
+                if new_k is not None:
+                    new_row[new_k] = new_v
+
+            return new_row
+
+        adapters = row.get("adapters") or []
+        new_rows = [explode(idx=idx, adapter=adapter) for idx, adapter in enumerate(adapters)]
+        return new_rows
 
     def do_explode_field(self, rows: Union[List[dict], dict]) -> List[dict]:
         """Explode a field into multiple rows.
@@ -844,7 +952,9 @@ class Base:
         """List of all schemas that should be excluded."""
         if not hasattr(self, "_excluded_schemas"):
             excludes = listify(self.get_arg_value("field_excludes"))
-            self._excluded_schemas = self.APIOBJ.fields.get_field_names_eq(value=excludes, key=None)
+            self._excluded_schemas = self.APIOBJ.fields.get_field_names_eq(
+                value=excludes, key=None, selectable_only=False
+            )
         return self._excluded_schemas
 
     def echo(
@@ -925,6 +1035,7 @@ class Base:
 
         flat = self.get_arg_value("field_flatten")
         explode_field = self.schema_to_explode.get("name_qual", "")
+        explode_entities = self.get_arg_value("explode_entities")
 
         final = {}
 
@@ -932,6 +1043,8 @@ class Base:
             if self.is_excluded(schema=schema):
                 continue
             name = schema["name_qual"]
+            if explode_entities and is_str_details(name) and name not in FIELDS_DETAILS:
+                continue
             is_explode_field = name == explode_field
             if schema["is_complex"] and (is_explode_field or flat):
                 for sub_schema in self.get_sub_schemas(schema=schema):
@@ -968,14 +1081,14 @@ class Base:
         fields = listify(self.STORE.get("fields_parsed", []))
         api_fields = [x for x in self.APIOBJ.FIELDS_API if x not in fields]
 
-        if include_details:  # pragma: no cover
-            api_fields += ["meta_data.client_used", "unique_adapter_names_details"]
+        if include_details:
+            api_fields += FIELDS_DETAILS
 
         self._fields_selected = []
 
         for field in api_fields + fields:
             self._fields_selected.append(field)
-            if include_details:  # pragma: no cover
+            if include_details and field not in FIELDS_DETAILS and not field.endswith("_details"):
                 field_details = f"{field}_details"
                 self._fields_selected.append(field_details)
 
@@ -984,31 +1097,17 @@ class Base:
 
         return self._fields_selected
 
+        # XXX move _details fields from selected to final?!
+
     @property
     def schemas_selected(self) -> List[dict]:
         """Get the schemas of the fields that were selected."""
         if hasattr(self, "_schemas_selected"):
             return self._schemas_selected
 
-        self._schemas_selected = [] + self.custom_schemas
-
-        all_schemas = self.ALL_SCHEMAS
-
-        if isinstance(self.ALL_SCHEMAS, dict):
-            all_schemas = []
-            for schemas in self.ALL_SCHEMAS.values():
-                all_schemas += schemas
-
-        all_schemas_map = {x["name_qual"]: x for x in all_schemas}
-
-        for field in self.fields_selected:
-            if field in all_schemas_map:
-                self._schemas_selected.append(all_schemas_map[field])
-            else:  # pragma: no cover
-                self._schemas_selected.append(schema_custom(name=field))
-                msg = f"No schema found for field {field}"
-                self.echo(msg=msg, warning=True)
-
+        self._schemas_selected = self.custom_schemas + self.APIOBJ.fields.get_field_names_eq(
+            value=self.fields_selected, key=None, fields_error=False, selectable_only=False
+        )
         return self._schemas_selected
 
     @property
@@ -1036,8 +1135,7 @@ class Base:
                         return self._schema_to_explode
 
         valids = sorted(list(set(valids)))
-        msg = f"Explode field {explode!r} not found, valid fields:{valids}"
-        self.echo(msg=msg, error=ApiError)
+        self.echo(msg=f"Explode field {explode!r} not found, valid fields:{valids}", error=ApiError)
 
     @property
     def adapter_map(self) -> dict:
@@ -1064,7 +1162,6 @@ class Base:
             if cnt and name_raw not in has_cnx:
                 has_cnx.append(name_raw)
 
-        # self._adapter_map = {k: list(v) for k, v in self._adapter_map.items()}
         return self._adapter_map
 
     @property
@@ -1311,5 +1408,6 @@ ARG_DESCRIPTIONS: dict = {
     "xlsx_column_length": "For XLSX export: Length to use for every column",
     "xlsx_cell_format": "For XLSX Export: Formatting to apply to every cell",
     "debug_timing": "Enable logging of time taken for each callback",
+    "explode_entities": "Split rows into one row for each asset entity",
 }
 """Descriptions of all arguments for all callbacks"""

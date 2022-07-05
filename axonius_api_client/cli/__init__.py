@@ -342,6 +342,7 @@ def cli(click_ctx, ctx, quiet, **kwargs):
 cli.add_command(grp_adapters.adapters)
 cli.add_command(grp_assets.devices)
 cli.add_command(grp_assets.users)
+cli.add_command(grp_assets.vulnerabilities)
 cli.add_command(grp_system.system)
 cli.add_command(grp_tools.tools)
 cli.add_command(grp_openapi.openapi)

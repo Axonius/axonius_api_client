@@ -5,7 +5,7 @@ import io
 
 import pytest
 
-from ...utils import get_rows_exist, get_schema
+from ...utils import get_schema
 from .test_callbacks import Callbacks, Exports
 
 
@@ -25,7 +25,7 @@ class TestCallbacksCsv(Callbacks, Exports):
             for x in get_schema(apiobj=apiobj, field=field_complex, key="sub_fields")
             if x["is_root"]
         ]
-        original_rows = get_rows_exist(apiobj=apiobj, fields=field_complex, max_rows=5)
+        original_rows = copy.deepcopy(apiobj.ORIGINAL_ROWS)
 
         io_fd = io.StringIO()
 
@@ -57,7 +57,7 @@ class TestCallbacksCsv(Callbacks, Exports):
         assert output.endswith("\n\n")
 
     def test_row_no_titles(self, cbexport, apiobj):
-        rows = get_rows_exist(apiobj=apiobj, max_rows=5)
+        rows = copy.deepcopy(apiobj.ORIGINAL_ROWS)
 
         io_fd = io.StringIO()
         cbobj = self.get_cbobj(

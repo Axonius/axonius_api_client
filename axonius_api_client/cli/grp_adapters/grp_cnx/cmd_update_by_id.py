@@ -2,7 +2,7 @@
 """Command line interface for Axonius API Client."""
 from ....exceptions import CnxUpdateError
 from ...context import CONTEXT_SETTINGS, click
-from ...options import AUTH, NODE_CNX, add_options
+from ...options import AUTH, add_options
 from .grp_common import (
     EXPORT_FORMATS,
     OPT_EXPORT,
@@ -10,6 +10,7 @@ from .grp_common import (
     OPT_PROMPT_FOR_PREVIOUS,
     OPT_SPLIT_CONFIG,
     OPTS_FLAGS,
+    OPTS_NODE,
     OPTS_PROMPTS,
     OPTS_SHOWS,
 )
@@ -17,7 +18,7 @@ from .parsing import get_show_data, parse_config
 
 OPTIONS_SHARED = [
     *AUTH,
-    *NODE_CNX,
+    *OPTS_NODE,
     *OPTS_FLAGS,
     *OPTS_SHOWS,
     *OPTS_PROMPTS,
@@ -48,6 +49,7 @@ def handle_update(
     config,
     adapter_node,
     adapter_name,
+    tunnel,
     cnx_id,
     save_and_fetch,
     active,
@@ -67,7 +69,7 @@ def handle_update(
 
     with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
         cnx = client.adapters.cnx.get_by_id(
-            adapter_name=adapter_name, adapter_node=adapter_node, cnx_id=cnx_id
+            adapter_name=adapter_name, adapter_node=adapter_node, tunnel=tunnel, cnx_id=cnx_id
         )
 
     schemas = list(cnx["schemas"].values())

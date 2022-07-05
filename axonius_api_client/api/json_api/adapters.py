@@ -113,6 +113,9 @@ class CnxCreateRequestSchema(BaseSchemaJson):
     # PBUG: why is this even a thing? can we not rely on instance id in 'instance'?
     is_instances_mode = SchemaBool(required=False, load_default=False, dump_default=False)
     # PBUG: why is this even a thing? can we not rely on instance id in 'instance'?
+    tunnel_id = marshmallow_jsonapi.fields.Str(
+        required=False, load_default=None, dump_default=None, allow_none=True
+    )
 
     @staticmethod
     def get_model_cls() -> type:
@@ -142,6 +145,9 @@ class CnxTestRequestSchema(BaseSchemaJson):
 
     connection = marshmallow_jsonapi.fields.Dict(required=True)  # config of connection
     instance = marshmallow_jsonapi.fields.Str(required=True)  # instance ID
+    tunnel_id = marshmallow_jsonapi.fields.Str(
+        required=False, load_default=None, dump_default=None, allow_none=True
+    )
 
     @staticmethod
     def get_model_cls() -> type:
@@ -180,6 +186,9 @@ class CnxUpdateRequestSchema(CnxCreateRequestSchema):
         required=False, load_default=None, dump_default=None, allow_none=True
     )
     # PBUG: why is this even a thing? can we not rely on instance id in 'instance_prev'?
+    tunnel_id = marshmallow_jsonapi.fields.Str(
+        required=False, load_default=None, dump_default=None, allow_none=True
+    )
 
     def __post_init__(self):
         """Pass."""
@@ -840,6 +849,7 @@ class CnxCreateRequest(BaseModel):
     connection_discovery: Optional[dict] = None
     save_and_fetch: bool = True
     is_instances_mode: bool = False
+    tunnel_id: Optional[str] = None
 
     @staticmethod
     def get_schema_cls() -> Optional[Type[BaseSchema]]:
@@ -857,6 +867,7 @@ class CnxTestRequest(BaseModel):
 
     connection: dict
     instance: str
+    tunnel_id: Optional[str] = None
 
     @staticmethod
     def get_schema_cls() -> Optional[Type[BaseSchema]]:
@@ -878,6 +889,7 @@ class CnxUpdateRequest(BaseModel):
     is_instances_mode: bool = False
     instance_prev: Optional[str] = None
     instance_prev_name: Optional[str] = None
+    tunnel_id: Optional[str] = None
 
     @staticmethod
     def get_schema_cls() -> Optional[Type[BaseSchema]]:

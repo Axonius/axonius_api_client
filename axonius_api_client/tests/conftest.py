@@ -65,7 +65,11 @@ def api_devices(request):
     assert isinstance(obj.wizard_text, WizardText)
     assert isinstance(obj.wizard_csv, WizardCsv)
     assert isinstance(obj.data_scopes, DataScopes)
-    obj.ORIGINAL_ROW = obj.get(max_rows=1)[0]
+    obj.ORIGINAL_ROWS = obj.get(max_rows=5)
+
+    obj.COMPLEX_ROWS = obj.get(
+        max_rows=5, fields=obj.FIELD_COMPLEX, wiz_entries=f"simple {obj.FIELD_COMPLEX} exists"
+    )
     return obj
 
 
@@ -95,7 +99,11 @@ def api_users(request):
     assert isinstance(obj.wizard_text, WizardText)
     assert isinstance(obj.wizard_csv, WizardCsv)
     assert isinstance(obj.data_scopes, DataScopes)
-    obj.ORIGINAL_ROW = obj.get(max_rows=1)[0]
+    obj.ORIGINAL_ROWS = obj.get(max_rows=5)
+
+    obj.COMPLEX_ROWS = obj.get(
+        max_rows=5, fields=obj.FIELD_COMPLEX, wiz_entries=f"simple {obj.FIELD_COMPLEX} exists"
+    )
     return obj
 
 
@@ -394,3 +402,18 @@ def datafiles(request):
 def core_node(api_instances):
     """Pass."""
     return api_instances.get_core()
+
+
+@pytest.fixture(scope="session")
+def tunnel_feature_check(api_instances):
+    """Pass."""
+    if not api_instances.has_saas_enabled:
+        pytest.skip("saas_enabled=False, can not test for tunnels")
+
+
+@pytest.fixture(scope="session")
+def tunnel_count_check(api_instances, tunnel_feature_check):
+    """Pass."""
+    tunnels = api_instances.get_tunnels()
+    if not tunnels:
+        pytest.skip("No tunnels configured, can not test for tunnels")
