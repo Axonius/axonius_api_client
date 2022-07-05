@@ -2,12 +2,12 @@
 """Command line interface for Axonius API Client."""
 from ....exceptions import CnxTestError
 from ...context import CONTEXT_SETTINGS, click
-from ...options import AUTH, NODE_CNX, add_options
-from .grp_common import EXPORT_FORMATS, OPT_EXPORT, OPT_ID_CNX
+from ...options import AUTH, add_options
+from .grp_common import EXPORT_FORMATS, OPT_EXPORT, OPT_ID_CNX, OPTS_NODE
 
 OPTIONS = [
     *AUTH,
-    *NODE_CNX,
+    *OPTS_NODE,
     OPT_ID_CNX,
     OPT_EXPORT,
 ]
@@ -16,7 +16,7 @@ OPTIONS = [
 @click.command(name="test-by-id", context_settings=CONTEXT_SETTINGS)
 @add_options(OPTIONS)
 @click.pass_context
-def cmd(ctx, url, key, secret, adapter_name, adapter_node, export_format, cnx_id):
+def cmd(ctx, url, key, secret, adapter_name, adapter_node, tunnel, export_format, cnx_id):
     """Test reachability for an existing connection by ID."""
     client = ctx.obj.start_client(url=url, key=key, secret=secret)
 
@@ -25,6 +25,7 @@ def cmd(ctx, url, key, secret, adapter_name, adapter_node, export_format, cnx_id
         cnx = client.adapters.cnx.get_by_id(
             adapter_name=adapter_name,
             adapter_node=adapter_node,
+            tunnel=tunnel,
             cnx_id=cnx_id,
         )
 

@@ -359,28 +359,6 @@ NODE = [
 ]
 
 
-NODE_CNX = [
-    click.option(
-        "--node-name",
-        "-nn",
-        "adapter_node",
-        default=None,
-        show_envvar=True,
-        show_default=True,
-        help="Node name (will default to core instance if not supplied)",
-    ),
-    click.option(
-        "--name",
-        "-n",
-        "adapter_name",
-        required=True,
-        show_envvar=True,
-        show_default=True,
-        help="Adapter name",
-    ),
-]
-
-
 ABORT = click.option(
     "--abort/--no-abort",
     "-a/-na",

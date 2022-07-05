@@ -2,12 +2,12 @@
 """Command line interface for Axonius API Client."""
 from ....exceptions import CnxUpdateError
 from ...context import CONTEXT_SETTINGS, click
-from ...options import AUTH, NODE_CNX, add_options
-from .grp_common import EXPORT_FORMATS, OPT_EXPORT, OPT_ID_CNX, OPT_SAVE_AND_FETCH
+from ...options import AUTH, add_options
+from .grp_common import EXPORT_FORMATS, OPT_EXPORT, OPT_ID_CNX, OPT_SAVE_AND_FETCH, OPTS_NODE
 
 OPTIONS = [
     *AUTH,
-    *NODE_CNX,
+    *OPTS_NODE,
     OPT_SAVE_AND_FETCH,
     OPT_ID_CNX,
     click.option(
@@ -34,6 +34,7 @@ def cmd(
     secret,
     adapter_node,
     adapter_name,
+    tunnel,
     cnx_id,
     active,
     save_and_fetch,
@@ -47,6 +48,7 @@ def cmd(
         cnx = client.adapters.cnx.get_by_id(
             adapter_name=adapter_name,
             adapter_node=adapter_node,
+            tunnel=tunnel,
             cnx_id=cnx_id,
         )
         try:

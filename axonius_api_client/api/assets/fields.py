@@ -137,6 +137,7 @@ class Fields(ChildMixins):
         value: str,
         field_manual: bool = False,
         fields_custom: Optional[dict] = None,
+        selectable_only: bool = True,
         key: str = "name_qual",
     ) -> str:
         """Get the fully qualified name of a field.
@@ -176,23 +177,28 @@ class Fields(ChildMixins):
         if field_manual and key:
             return value
 
-        adapter, fields = self.split_search(value=value)
+        adapter, afields = self.split_search(value=value)
 
-        if len(fields) != 1:
+        if len(afields) != 1:
             raise ApiError("More than one field supplied to {}".format(value))
 
-        field = fields[0]
+        afield = afields[0]
 
         fields = self.get()
         adapter = self.get_adapter_name(value=adapter)
         schemas = fields[adapter]
         if fields_custom and adapter in fields_custom:
             schemas += fields_custom[adapter]
-        schema = self.get_field_schema(value=field, schemas=schemas)
+        schema = self.get_field_schema(
+            value=afield, schemas=schemas, selectable_only=selectable_only
+        )
         return schema[key] if key else schema
 
     def get_field_names_re(
-        self, value: Union[str, List[str]], key: str = "name_qual", root_only: bool = True
+        self,
+        value: Union[str, List[str]],
+        key: str = "name_qual",
+        root_only: bool = True,
     ) -> List[str]:
         """Get field names using regex.
 
@@ -261,7 +267,11 @@ class Fields(ChildMixins):
         return matches
 
     def get_field_names_eq(
-        self, value: Union[str, List[str]], key: str = "name_qual", fields_error: bool = True
+        self,
+        value: Union[str, List[str]],
+        key: str = "name_qual",
+        fields_error: bool = True,
+        selectable_only: bool = True,
     ) -> List[str]:
         """Get field names that equal a value.
 
@@ -298,12 +308,12 @@ class Fields(ChildMixins):
             adapter = self.get_adapter_name(value=adapter_name)
             for name in names:
                 schemas = fields[adapter]
-                try:
-                    schema = self.get_field_schema(value=name, schemas=schemas)
-                except Exception:
-                    if fields_error:
-                        raise
-                    schema = schema_custom(name=name)
+                schema = self.get_field_schema(
+                    value=name,
+                    schemas=schemas,
+                    fields_error=fields_error,
+                    selectable_only=selectable_only,
+                )
 
                 match = schema[key] if key else schema
                 if match not in matches:
@@ -450,10 +460,10 @@ class Fields(ChildMixins):
         matches = [x for x in fields if search.search(x)]
 
         if not matches:
-            msg = ("No adapter found where name regex matches {!r}, valid adapters:\n  {}").format(
-                value, "\n  ".join(list(fields))
+            valids = "\n  " + "\n  ".join(list(fields))
+            raise NotFoundError(
+                f"No adapter found where name regex matches {value!r}, valid adapters:{valids}"
             )
-            raise NotFoundError(msg)
         return matches
 
     def get_adapter_name(self, value: str) -> str:
@@ -475,9 +485,10 @@ class Fields(ChildMixins):
         if search in fields:
             return search
 
-        msg = "No adapter found where name equals {!r}, valid adapters:\n  {}"
-        msg = msg.format(value, "\n  ".join(list(fields)))
-        raise NotFoundError(msg)
+        valids = "\n  " + "\n  ".join(list(fields))
+        raise NotFoundError(
+            f"No adapter found where name equals {value!r}, valid adapters:{valids}"
+        )
 
     def get_field_schemas(
         self, value: str, schemas: List[dict], keys: List[str] = GET_SCHEMAS_KEYS
@@ -507,6 +518,8 @@ class Fields(ChildMixins):
         value: str,
         schemas: List[dict],
         keys: List[str] = GET_SCHEMA_KEYS,
+        fields_error: bool = True,
+        selectable_only: bool = True,
         **kwargs,
     ) -> dict:
         """Find a field name that equals a value.
@@ -523,12 +536,18 @@ class Fields(ChildMixins):
         """
         search = value.lower().strip()
 
-        schemas = [x for x in schemas if x.get("selectable", True)]
+        if selectable_only:
+            schemas = [x for x in schemas if x.get("selectable", True)]
 
         for schema in schemas:
             for key in keys:
                 if search.lower().strip() == schema[key].lower():
                     return schema
+
+        if not fields_error:
+            self.LOG.warning(f"No schema found for field {search!r}, creating custom schema")
+            schema = schema_custom(name=search)
+            return schema
 
         kwargs["search"] = value
         kwargs["schemas"] = schemas
@@ -569,7 +588,7 @@ class Fields(ChildMixins):
         search = value.strip().lower()
 
         if ":" in search:
-            adapter_split, field = search.split(":", 1)
+            adapter_split, field = [x.strip() for x in search.split(":", 1)]
             if not adapter_split:
                 adapter_split = adapter
         else:
@@ -592,9 +611,7 @@ class Fields(ChildMixins):
         )
 
         if not fields:
-            msg = "No fields provided in {!r}, format must be 'adapter:field'"
-            msg = msg.format(value)
-            raise ApiError(msg)
+            raise ApiError(f"No fields provided in {value!r}, format must be 'adapter:field'")
 
         return adapter_split, fields
 

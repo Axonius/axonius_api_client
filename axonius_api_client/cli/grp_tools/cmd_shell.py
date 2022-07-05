@@ -35,6 +35,7 @@ API Objects:
     - system_users/su: Work with system users
     - users/u: Work with user assets
     - openapi/oas: Work with the OpenAPI specification file
+    - vulnerabilities/v: Work with vulnerability assets
 
 """
 
@@ -81,6 +82,7 @@ def cmd(ctx, url, key, secret):  # noqa: D301
         - system_users/su: Work with system users
         - users/u: Work with user assets
         - openapi/oas: Work with the OpenAPI specification file
+        - vulnerabilities/v: Work with vulnerability assets
 
     """
     client = ctx.obj.start_client(url=url, key=key, secret=secret, save_history=True)
@@ -109,6 +111,7 @@ def cmd(ctx, url, key, secret):  # noqa: D301
         "system_roles": client.system_roles,
         "system_users": client.system_users,
         "users": client.users,
+        "vulnerabilities": client.vulnerabilities,
         "a": client.adapters,
         "al": client.activity_logs,
         "c": client,
@@ -128,6 +131,7 @@ def cmd(ctx, url, key, secret):  # noqa: D301
         "sr": client.system_roles,
         "su": client.system_users,
         "u": client.users,
+        "v": client.vulnerabilities,
     }
 
     spawn_shell(shellvars)

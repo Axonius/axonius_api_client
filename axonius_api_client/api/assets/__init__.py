@@ -6,6 +6,7 @@ from .fields import Fields
 from .labels import Labels
 from .saved_query import SavedQuery
 from .users import Users
+from .vulnerabilities import Vulnerabilities
 
 __all__ = (
     "Users",
@@ -14,4 +15,5 @@ __all__ = (
     "SavedQuery",
     "Fields",
     "Labels",
+    "Vulnerabilities",
 )

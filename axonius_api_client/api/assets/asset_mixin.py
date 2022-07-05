@@ -747,6 +747,7 @@ class AssetMixin(ModelMixins):
             use_cursor=use_cursor,
             filter=filter,
             cursor_id=cursor_id,
+            history=history_date,
             fields={self.ASSET_TYPE: listify(fields)},
             sort=sort,
             excluded_adapters=excluded_adapters or {},

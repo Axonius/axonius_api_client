@@ -31,6 +31,7 @@ from ...parsers.tables import tablize_cnxs, tablize_schemas
 from ...tools import combo_dicts, json_dump, json_load, listify, pathlib, strip_right
 from ..api_endpoints import ApiEndpoints
 from ..json_api.adapters import CnxDelete, CnxModifyResponse, Cnxs
+from ..json_api.instances import Tunnel
 from ..mixins import ChildMixins
 
 
@@ -58,7 +59,12 @@ class Cnx(ChildMixins):
         valid keys/values.
     """
 
-    def get_by_adapter(self, adapter_name: str, adapter_node: Optional[str] = None) -> List[dict]:
+    def get_by_adapter(
+        self,
+        adapter_name: str,
+        adapter_node: Optional[str] = None,
+        tunnel: Optional[Union[Tunnel, str]] = None,
+    ) -> List[dict]:
         """Get all connections of an adapter on a node.
 
         Examples:
@@ -71,17 +77,32 @@ class Cnx(ChildMixins):
         Args:
             adapter_name (str): name of adapter
             adapter_node (Optional[str], optional): name of node running adapter
+            tunnel (Optional[str], optional): name or ID of tunnel
 
         Returns:
             List[dict]: connection metadata for adapter
         """
+
+        def is_match(cnx):
+            if cnx.node_id != adapter["node_meta"]["node_id"]:
+                return False
+            if (tunnel_obj and cnx.tunnel_id) and tunnel_obj.id != cnx.tunnel_id:
+                return False
+            return True
+
         adapter = self.parent.get_by_name(name=adapter_name, node=adapter_node, get_clients=False)
+        tunnel_obj = self.parent.instances.get_tunnel(value=tunnel)
         cnxs_obj = self._get(adapter_name=adapter["name_raw"])
-        cnxs = [x for x in cnxs_obj.cnxs if x.node_id == adapter["node_meta"]["node_id"]]
-        return [x.to_dict_old() for x in cnxs]
+        ret = [x for x in cnxs_obj.cnxs if is_match(x)]
+        return [x.to_dict_old() for x in ret]
 
     def get_by_uuid(
-        self, cnx_uuid: str, adapter_name: str, adapter_node: Optional[str] = None, **kwargs
+        self,
+        cnx_uuid: str,
+        adapter_name: str,
+        adapter_node: Optional[str] = None,
+        tunnel: Optional[Union[Tunnel, str]] = None,
+        **kwargs,
     ) -> dict:
         """Get a connection for an adapter on a node by UUID.
 
@@ -102,6 +123,7 @@ class Cnx(ChildMixins):
             cnx_uuid: UUID to search for
             adapter_name: name of adapter
             adapter_node: name of node running adapter
+            tunnel (Optional[str], optional): name or ID of tunnel
             **kwargs: passed to :meth:`get_by_key`
 
         Raises:
@@ -110,24 +132,41 @@ class Cnx(ChildMixins):
         Returns:
             dict: connection metadata for uuid on adapter
         """
+
+        def is_match(cnx):
+            if cnx.node_id != adapter["node_meta"]["node_id"]:
+                return False
+            if (tunnel_obj and cnx.tunnel_id) and tunnel_obj.id != cnx.tunnel_id:
+                return False
+            if cnx_uuid in [cnx.client_id, cnx.uuid]:
+                return True
+            return False
+
         adapter = self.parent.get_by_name(name=adapter_name, node=adapter_node, get_clients=False)
-        node_id = adapter["node_meta"]["node_id"]
+        tunnel_obj = self.parent.instances.get_tunnel(value=tunnel)
         node_name = adapter["node_meta"]["node_name"]
         cnxs_obj = self._get(adapter_name=adapter["name_raw"])
 
         for cnx in cnxs_obj.cnxs:
-            if all([cnx.node_id == node_id, cnx.uuid == cnx_uuid]):
+            if is_match(cnx=cnx):
                 return cnx.to_dict_old()
 
         err = (
-            f"No connection found on adapter {adapter_name!r} node {node_name!r} "
-            f"with UUID of {cnx_uuid!r}"
+            f"No connection found on adapter {adapter_name!r} node {node_name!r}"
+            f"with client ID or UUID of {cnx_uuid!r}"
         )
+        if tunnel_obj:
+            err += f"on tunnel {tunnel_obj}"
+
         cnxs = [x.to_dict_old() for x in cnxs_obj.cnxs]
         raise NotFoundError(tablize_cnxs(cnxs=cnxs, err=err))
 
     def get_by_label(
-        self, value: str, adapter_name: str, adapter_node: Optional[str] = None
+        self,
+        value: str,
+        adapter_name: str,
+        adapter_node: Optional[str] = None,
+        tunnel: Optional[Union[Tunnel, str]] = None,
     ) -> dict:
         """Get a connection for an adapter on a node using a specific connection identifier key.
 
@@ -144,6 +183,7 @@ class Cnx(ChildMixins):
             value (str): value that connection_label must match for a connection
             adapter_name (str): name of adapter
             adapter_node (Optional[str], optional): name of node running adapter
+            tunnel (Optional[str], optional): name or ID of tunnel
 
         Raises:
             NotFoundError: when no connections found with supplied connection label
@@ -151,25 +191,43 @@ class Cnx(ChildMixins):
         Returns:
             dict: connection metadata for label on adapter
         """
+
+        def is_match(cnx):
+            if cnx.node_id != node_id:
+                return False
+            if (tunnel_obj and cnx.tunnel_id) and tunnel_obj.id != cnx.tunnel_id:
+                return False
+            if value == cnx.connection_label:
+                return True
+            return False
+
         adapter = self.parent.get_by_name(name=adapter_name, node=adapter_node, get_clients=False)
         node_id = adapter["node_meta"]["node_id"]
         node_name = adapter["node_meta"]["node_name"]
         cnxs_obj = self._get(adapter_name=adapter["name_raw"])
+        tunnel_obj = self.parent.instances.get_tunnel(value=tunnel)
 
         for cnx in cnxs_obj.cnxs:
-            if all([cnx.node_id == node_id, cnx.connection_label == value]):
+            if is_match(cnx=cnx):
                 return cnx.to_dict_old()
 
         err = (
-            f"No connection found on adapter {adapter_name!r} node {node_name!r} "
+            f"No connection found on adapter {adapter_name!r} node {node_name!r}"
             f"with a connection label of {value!r}"
         )
+        if tunnel_obj:
+            err += f"on tunnel {tunnel_obj}"
+
         cnxs = [x.to_dict_old() for x in cnxs_obj.cnxs]
         raise NotFoundError(tablize_cnxs(cnxs=cnxs, err=err))
 
-    # TBD: should support CID or UUID for get_by
     def get_by_id(
-        self, cnx_id: str, adapter_name: str, adapter_node: Optional[str] = None, **kwargs
+        self,
+        cnx_id: str,
+        adapter_name: str,
+        adapter_node: Optional[str] = None,
+        tunnel: Optional[Union[Tunnel, str]] = None,
+        **kwargs,
     ) -> dict:
         """Get a connection for an adapter on a node by ID.
 
@@ -189,7 +247,8 @@ class Cnx(ChildMixins):
         Args:
             cnx_id (str): connection ID to get
             adapter_name (str): name of adapter
-            adapter_node (Optional[str], optional): name of node running adapter
+            adapter_node (Optional[str], optional): name of node running
+            tunnel (Optional[str], optional): name or ID of tunnel
             **kwargs: passed to :meth:`get_by_key`
 
         Raises:
@@ -198,25 +257,43 @@ class Cnx(ChildMixins):
         Returns:
             dict: connection metadata for id on adapter
         """
+
+        def is_match(cnx):
+            if cnx.node_id != node_id:
+                return False
+            if (tunnel_obj and cnx.tunnel_id) and tunnel_obj.id != cnx.tunnel_id:
+                return False
+            if cnx_id in [cnx.client_id, cnx.uuid]:
+                return True
+            return False
+
         adapter = self.parent.get_by_name(name=adapter_name, node=adapter_node, get_clients=False)
         node_id = adapter["node_meta"]["node_id"]
         node_name = adapter["node_meta"]["node_name"]
-
         cnxs_obj = self._get(adapter_name=adapter["name_raw"])
+        tunnel_obj = self.parent.instances.get_tunnel(value=tunnel)
 
         for cnx in cnxs_obj.cnxs:
-            if all([cnx.node_id == node_id, cnx.client_id == cnx_id]):
+            if is_match(cnx=cnx):
                 return cnx.to_dict_old()
 
         err = (
             f"No connection found on adapter {adapter_name!r} node {node_name!r} "
-            f"with ID of {cnx_id!r}"
+            f"with client ID or UUID of {cnx_id!r}"
         )
+        if tunnel_obj:
+            err += f"on tunnel {tunnel_obj}"
+
         cnxs = [x.to_dict_old() for x in cnxs_obj.cnxs]
         raise NotFoundError(tablize_cnxs(cnxs=cnxs, err=err))
 
     def update_by_id(
-        self, cnx_id: str, adapter_name: str, adapter_node: Optional[str] = None, **kwargs
+        self,
+        cnx_id: str,
+        adapter_name: str,
+        adapter_node: Optional[str] = None,
+        tunnel: Optional[Union[Tunnel, str]] = None,
+        **kwargs,
     ) -> dict:
         """Update a connection for an adapter on a node by ID.
 
@@ -235,12 +312,15 @@ class Cnx(ChildMixins):
             cnx_id: connection ID to update
             adapter_name: name of adapter
             adapter_node: name of node running adapter
+            tunnel (Optional[str], optional): name or ID of tunnel
             **kwargs: passed to :meth:`update_cnx`
 
         Returns:
             dict: updated connection metadata
         """
-        cnx = self.get_by_id(cnx_id=cnx_id, adapter_name=adapter_name, adapter_node=adapter_node)
+        cnx = self.get_by_id(
+            cnx_id=cnx_id, adapter_name=adapter_name, adapter_node=adapter_node, tunnel=tunnel
+        )
         return self.update_cnx(cnx_update=cnx, **kwargs)
 
     def delete_by_id(
@@ -248,6 +328,7 @@ class Cnx(ChildMixins):
         cnx_id: str,
         adapter_name: str,
         adapter_node: Optional[str] = None,
+        tunnel: Optional[Union[Tunnel, str]] = None,
         delete_entities: bool = False,
     ) -> str:
         """Delete a connection for an adapter on a node by connection ID.
@@ -265,9 +346,12 @@ class Cnx(ChildMixins):
             cnx_id: connection ID to delete
             adapter_name: name of adapter
             adapter_node: name of node running adapter
+            tunnel (Optional[str], optional): name or ID of tunnel
             delete_entities: delete all assets fetched by this connection
         """
-        cnx = self.get_by_id(cnx_id=cnx_id, adapter_name=adapter_name, adapter_node=adapter_node)
+        cnx = self.get_by_id(
+            cnx_id=cnx_id, adapter_name=adapter_name, adapter_node=adapter_node, tunnel=tunnel
+        )
         return self.delete_cnx(cnx_delete=cnx, delete_entities=delete_entities)
 
     def test_by_id(self, **kwargs) -> dict:
@@ -294,6 +378,7 @@ class Cnx(ChildMixins):
         adapter_node: Optional[str] = None,
         save_and_fetch: bool = True,
         active: bool = True,
+        tunnel: Optional[Union[Tunnel, str]] = None,
         connection_label: Optional[str] = None,
         kwargs_config: Optional[dict] = None,
         new_config: Optional[dict] = None,
@@ -324,6 +409,13 @@ class Cnx(ChildMixins):
         Args:
             adapter_name: name of adapter
             adapter_node: name of node running adapter
+            save_and_fetch: perform a fetch when saving, or just save without fetching
+            active: set the connection as active after creating
+            connection_label: label to assign to connection
+            tunnel: tunnel ID or name to use for new connection
+            kwargs_config: connection args that conflict with this methods signature
+            new_config: connection args that conflict with this methods signature
+            parse_config: perform api client side parsing of connection args
             **kwargs: configuration of new connection
 
         Raises:
@@ -331,11 +423,11 @@ class Cnx(ChildMixins):
         """
         new_config = combo_dicts(kwargs_config, new_config, kwargs)
         adapter = self.parent.get_by_name(name=adapter_name, node=adapter_node, get_clients=False)
+        tunnel_id = self.parent.instances.get_tunnel(value=tunnel, return_id=True)
         schemas = self._get(adapter_name=adapter["name_raw"]).schema_cnx
 
         cnx_to_add = cnx_from_adapter(adapter)
         cnx_to_add = combo_dicts(cnx_to_add, config=new_config, schemas=schemas)
-
         if parse_config:
             cnx_str = ", ".join(get_cnx_strs(cnx=cnx_to_add))
             source = f"adding connection {cnx_str}"
@@ -368,14 +460,16 @@ class Cnx(ChildMixins):
             active=active,
             connection_label=connection_label,
             response_status_hook=response_status_hook,
+            tunnel_id=tunnel_id,
         )
         cnx_new = self.get_by_uuid(
             cnx_uuid=result.id,
             adapter_name=adapter["name"],
             adapter_node=adapter["node_meta"]["name"],
+            tunnel=tunnel_id,
         )
 
-        if not result.working:
+        if not result.working or not cnx_new["working"]:
             err = f"Connection was added but had a failure connecting:\n{result}"
             exc = CnxAddError(err)
             exc.result = result
@@ -388,6 +482,7 @@ class Cnx(ChildMixins):
         self,
         adapter_name: str,
         adapter_node: Optional[str] = None,
+        tunnel: Optional[Union[Tunnel, str]] = None,
         kwargs_config: Optional[dict] = None,
         new_config: Optional[dict] = None,
         parse_config: bool = True,
@@ -411,6 +506,7 @@ class Cnx(ChildMixins):
         Args:
             adapter_name (str): name of adapter
             adapter_node (Optional[str], optional): name of node running adapter
+            tunnel: tunnel ID or name to use for testing connection
             kwargs_config (Optional[dict], optional): configuration of connection to test
             new_config (Optional[dict], optional): configuration of connection to test
             parse_config (bool, optional): parse configuration for unknowns, requireds, etc
@@ -423,6 +519,7 @@ class Cnx(ChildMixins):
         new_config = combo_dicts(kwargs_config, new_config, kwargs)
         adapter = self.parent.get_by_name(name=adapter_name, node=adapter_node, get_clients=False)
         schemas = self._get(adapter_name=adapter["name_raw"]).schema_cnx
+        tunnel_id = self.parent.instances.get_tunnel(value=tunnel, return_id=True)
 
         cnx_to_test = cnx_from_adapter(adapter)
         cnx_to_test = combo_dicts(cnx_to_test, config=new_config, schemas=schemas)
@@ -447,6 +544,7 @@ class Cnx(ChildMixins):
             adapter_name=adapter["name_raw"],
             instance=adapter["node_id"],
             connection=new_config,
+            tunnel_id=tunnel_id,
             response_status_hook=response_status_hook,
         )
 
@@ -455,13 +553,13 @@ class Cnx(ChildMixins):
 
         Args:
             cnx_test: connection fetched previously
-            **kwargs: passed to :meth:`test`
         """
         response_status_hook = self.get_response_status_hook(cnx=cnx_test)
         return self._test(
             adapter_name=cnx_test["adapter_name_raw"],
             instance=cnx_test["node_id"],
             connection=cnx_test["config"],
+            tunnel_id=cnx_test.get("tunnel_id", None),
             response_status_hook=response_status_hook,
         )
 
@@ -471,6 +569,7 @@ class Cnx(ChildMixins):
         save_and_fetch: bool = True,
         active: Optional[bool] = None,
         new_node: Optional[str] = None,
+        new_tunnel: Optional[Union[Tunnel, str]] = None,
         kwargs_config: Optional[dict] = None,
         new_config: Optional[dict] = None,
         parse_config: bool = True,
@@ -480,6 +579,13 @@ class Cnx(ChildMixins):
 
         Args:
             cnx_update: connection fetched previously
+            save_and_fetch: perform a fetch when saving, or just save without fetching
+            active: set the connection as active or inactive after updating
+            new_node: move connection to a new node
+            new_tunnel: move connection to a new tunnel ID or name
+            kwargs_config: connection args that conflict with this methods signature
+            new_config: connection args that conflict with this methods signature
+            parse_config: perform api client side parsing of connection args
             **kwargs: configuration of connection to update
 
         Raises:
@@ -488,12 +594,20 @@ class Cnx(ChildMixins):
         Returns:
             dict: updated connection metadata
         """
+        node_name = cnx_update["node_name"]
+        adapter_name = cnx_update["adapter_name"]
+        adapter_old = self.parent.get_by_name(name=adapter_name, node=node_name)
+        tunnel_id_old = cnx_update.get("tunnel_id", None)
 
-        def get_adapter(node):
-            return self.parent.get_by_name(name=cnx_update["adapter_name"], node=node)
+        if new_node:
+            adapter_new = self.parent.get_by_name(name=adapter_name, node=new_node)
+        else:
+            adapter_new = adapter_old
 
-        adapter_old = get_adapter(cnx_update["node_name"])
-        adapter_new = get_adapter(new_node) if new_node else adapter_old
+        if new_tunnel:
+            tunnel_id_new = self.parent.instances.get_tunnel(value=new_tunnel, return_id=True)
+        else:
+            tunnel_id_new = tunnel_id_old
 
         new_config = combo_dicts(kwargs_config, new_config, kwargs)
         active = active if isinstance(active, bool) else cnx_update["active"]
@@ -535,6 +649,7 @@ class Cnx(ChildMixins):
             instance_prev=adapter_old["node_meta"]["id"],
             instance_prev_name=adapter_old["node_meta"]["name"],
             is_instances_mode=not adapter_new["node_meta"]["is_master"],
+            tunnel_id=tunnel_id_new,
             save_and_fetch=save_and_fetch,
             active=active,
             connection_label=cnx_update["connection_label"],
@@ -545,9 +660,10 @@ class Cnx(ChildMixins):
             cnx_uuid=result.id,
             adapter_name=cnx_update["adapter_name"],
             adapter_node=adapter_new["node_meta"]["name"],
+            tunnel=tunnel_id_new,
         )
 
-        if not result.working:
+        if not result.working or not cnx_new["working"]:
             err = f"Connection configuration was updated but had a failure connecting:\n{result}"
             exc = CnxUpdateError(err)
             exc.result = result
@@ -600,6 +716,7 @@ class Cnx(ChildMixins):
             instance_id=node["id"],
             instance_prev=node["id"],
             instance_prev_name=node["name"],
+            tunnel_id=cnx.get("tunnel_id", None),
             is_instances_mode=not node["is_master"],
             save_and_fetch=save_and_fetch,
             active=value,
@@ -610,6 +727,7 @@ class Cnx(ChildMixins):
             cnx_uuid=result.id,
             adapter_name=cnx["adapter_name"],
             adapter_node=node["name"],
+            tunnel=cnx.get("tunnel_id", None),
         )
         return cnx
 
@@ -635,6 +753,7 @@ class Cnx(ChildMixins):
             instance_prev=node["id"],
             instance_prev_name=node["name"],
             is_instances_mode=not node["is_master"],
+            tunnel_id=cnx.get("tunnel_id", None),
             save_and_fetch=save_and_fetch,
             active=cnx["active"],
             connection_label=value,
@@ -644,6 +763,7 @@ class Cnx(ChildMixins):
             cnx_uuid=result.id,
             adapter_name=cnx["adapter_name"],
             adapter_node=node["name"],
+            tunnel=cnx.get("tunnel_id", None),
         )
         return cnx
 
@@ -774,6 +894,7 @@ class Cnx(ChildMixins):
         save_and_fetch: bool = True,
         active: bool = True,
         connection_label: Optional[str] = None,
+        tunnel_id: Optional[str] = None,
         response_status_hook: Optional[Callable] = None,
     ) -> CnxModifyResponse:
         """Pass."""
@@ -787,6 +908,7 @@ class Cnx(ChildMixins):
             active=active,
             save_and_fetch=save_and_fetch,
             connection_label=connection_label,
+            tunnel_id=tunnel_id,
         )
         return api_endpoint.perform_request(
             http=self.auth.http,
@@ -800,6 +922,7 @@ class Cnx(ChildMixins):
         adapter_name: str,
         instance: str,
         connection: dict,
+        tunnel_id: Optional[str] = None,
         response_status_hook: Optional[Callable] = None,
     ) -> dict:
         """Direct API method to add a connection to an adapter.
@@ -808,6 +931,7 @@ class Cnx(ChildMixins):
             adapter_name (str): raw name of the adapter i.e. ``aws_adapter``
             instance (str): id of node running adapter
             connection (dict): configuration to test
+            tunnel_id (Optional[str], optional): tunnel ID to use
             response_status_hook (Optional[Callable], optional): callable to use when checking
                 status codes of response
 
@@ -818,6 +942,7 @@ class Cnx(ChildMixins):
         request_obj = api_endpoint.load_request(
             connection=connection,
             instance=instance,
+            tunnel_id=tunnel_id,
         )
         return api_endpoint.perform_request(
             http=self.auth.http,
@@ -890,6 +1015,7 @@ class Cnx(ChildMixins):
         adapter_name: str,
         instance_prev: Optional[str] = None,
         instance_prev_name: Optional[str] = None,
+        tunnel_id: Optional[str] = None,
         connection_discovery: Optional[dict] = None,
         is_instances_mode: bool = False,
         save_and_fetch: bool = True,
@@ -905,6 +1031,7 @@ class Cnx(ChildMixins):
             instance_id (str): UUID of instance to move connection to
             instance_name (str): NAME of instance to move connection to
             adapter_name (str): name of adapter
+            tunnel_id (Optional[str], optional): tunnel ID to use
             instance_prev (Optional[str], optional): UUID of instance to move connection from
             instance_prev_name (Optional[str], optional): NAME of instance to move connection from
             connection_discovery (Optional[dict], optional): connection specific discovery settings
@@ -927,6 +1054,7 @@ class Cnx(ChildMixins):
             instance_name=instance_name,
             instance_prev=instance_prev,
             instance_prev_name=instance_prev_name,
+            tunnel_id=tunnel_id,
             is_instances_mode=is_instances_mode,
             active=active,
             save_and_fetch=save_and_fetch,

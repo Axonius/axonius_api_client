@@ -214,7 +214,7 @@ def get_auth(request):
     from axonius_api_client import auth
     from axonius_api_client.http import Http
 
-    http = Http(url=get_url(request), certwarn=False)
+    http = Http(url=get_url(request), certwarn=False, save_history=True)
 
     obj = auth.ApiKey(http=http, **get_key_creds(request))
     obj.login()
