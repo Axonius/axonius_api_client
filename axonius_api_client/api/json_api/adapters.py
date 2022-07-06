@@ -22,6 +22,26 @@ def get_aname(value: str) -> str:
     return strip_right(obj=str(value or ""), fix="_adapter")
 
 
+class AdapterHistoryFiltersSchema(BaseSchemaJson):
+    """Pass."""
+
+    adapters_filter = marshmallow_jsonapi.fields.List(marshmallow_jsonapi.fields.Dict())
+    clients_filter = marshmallow_jsonapi.fields.List(marshmallow_jsonapi.fields.Str())
+    connection_labels_filter = marshmallow_jsonapi.fields.List(marshmallow_jsonapi.fields.Str())
+    instance_filter = marshmallow_jsonapi.fields.List(marshmallow_jsonapi.fields.Str())
+    statuses_filter = marshmallow_jsonapi.fields.List(marshmallow_jsonapi.fields.Str())
+
+    @staticmethod
+    def get_model_cls() -> type:
+        """Pass."""
+        return AdapterHistoryFilters
+
+    class Meta:
+        """Pass."""
+
+        type_ = "history_filters_response_schema"
+
+
 class AdapterSchema(BaseSchemaJson):
     """Pass."""
 
@@ -484,6 +504,69 @@ class AdapterNode(BaseModel):
     def get_schema_cls() -> Optional[Type[BaseSchema]]:
         """Pass."""
         return None
+
+
+@dataclasses.dataclass
+class AdapterHistoryFilters(BaseModel):
+    """Pass."""
+
+    adapters_filter: List[dict] = dataclasses.field(default_factory=list)
+    clients_filter: List[str] = dataclasses.field(default_factory=list)
+    connection_labels_filter: List[str] = dataclasses.field(default_factory=list)
+    instance_filter: List[str] = dataclasses.field(default_factory=list)
+    statuses_filter: List[str] = dataclasses.field(default_factory=list)
+
+    @staticmethod
+    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+        """Pass."""
+        return AdapterHistoryFiltersSchema
+
+    @property
+    def adapters(self) -> List[dict]:
+        """Pass."""
+
+        def parse_adapter(value):
+            title = value["name"]
+            name_raw = value["id"]
+            name = get_aname(name_raw)
+            return {"name": name, "name_raw": name_raw, "title": title}
+
+        return [parse_adapter(x) for x in self.adapters_filter]
+
+    @property
+    def connections(self) -> List[str]:
+        """Pass."""
+        return self.clients_filter
+
+    @property
+    def labels(self) -> List[str]:
+        """Pass."""
+        return self.connection_labels_filter
+
+    @property
+    def instances(self) -> List[str]:
+        """Pass."""
+        return self.instance_filter
+
+    @property
+    def statuses(self) -> List[str]:
+        """Pass."""
+        return self.statuses_filter
+
+    def __str__(self):
+        """Pass."""
+        items = [
+            f"adapters: {len(self.adapters)}",
+            f"connections: {len(self.connections)}",
+            f"labels: {len(self.labels)}",
+            f"instances: {len(self.instances)}",
+            f"statuses: {len(self.statuses)}",
+        ]
+        return ", ".join(items)
+
+    def __repr__(self):
+        """Pass."""
+        return self.__str__()
 
 
 @dataclasses.dataclass

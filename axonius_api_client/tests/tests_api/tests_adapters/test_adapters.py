@@ -150,6 +150,12 @@ class TestAdaptersPrivate(TestAdaptersBase):
 
 
 class TestAdaptersPublic(TestAdaptersBase):
+    def test_get_history_filters(self, apiobj):
+        data = apiobj.get_history_filters()
+        assert isinstance(data, json_api.adapters.AdapterHistoryFilters)
+        assert str(data)
+        assert repr(data)
+
     def test_get_clients_false(self, apiobj):
         adapters = apiobj.get(get_clients=False)
         for adapter in adapters:

@@ -834,6 +834,15 @@ class Adapters(ApiEndpointGroup):
         response_model_cls=json_api.adapters.AdaptersList,
     )
 
+    get_history_filters: ApiEndpoint = ApiEndpoint(
+        method="get",
+        path="api/adapters/history/filters",
+        request_schema_cls=None,
+        request_model_cls=None,
+        response_schema_cls=json_api.adapters.AdapterHistoryFiltersSchema,
+        response_model_cls=json_api.adapters.AdapterHistoryFilters,
+    )
+
     settings_get: ApiEndpoint = ApiEndpoint(
         method="get",
         path="api/V4.0/adapters/{adapter_name}/advanced_settings",

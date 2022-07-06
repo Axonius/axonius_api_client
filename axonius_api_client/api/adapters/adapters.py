@@ -8,7 +8,13 @@ from ...parsers.config import config_build, config_unchanged, config_unknown
 from ...parsers.tables import tablize_adapters
 from ...tools import path_read
 from ..api_endpoints import ApiEndpoints
-from ..json_api.adapters import Adapter, AdapterSettings, AdaptersList, CnxLabels
+from ..json_api.adapters import (
+    Adapter,
+    AdapterHistoryFilters,
+    AdapterSettings,
+    AdaptersList,
+    CnxLabels,
+)
 from ..json_api.system_settings import SystemSettings
 from ..mixins import ModelMixins
 
@@ -131,6 +137,10 @@ class Adapters(ModelMixins):
 
         err = f"No adapter named {name!r} found on instance {node_name!r}"
         raise NotFoundError(tablize_adapters(adapters=adapters, err=err))
+
+    def get_history_filters(self) -> AdapterHistoryFilters:
+        """Get filter values for use in adapters history."""
+        return self._get_history_filters()
 
     def config_get(
         self,
@@ -446,5 +456,11 @@ class Adapters(ModelMixins):
             CnxLabels: dataclass model containing response
         """
         api_endpoint = ApiEndpoints.adapters.labels_get
+        response = api_endpoint.perform_request(http=self.http)
+        return response
+
+    def _get_history_filters(self) -> AdapterHistoryFilters:
+        """Get filter values for use in adapters history."""
+        api_endpoint = ApiEndpoints.adapters.get_history_filters
         response = api_endpoint.perform_request(http=self.http)
         return response
