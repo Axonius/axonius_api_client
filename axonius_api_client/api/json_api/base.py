@@ -2,6 +2,7 @@
 """Models for API requests & responses."""
 import dataclasses
 import logging
+import warnings
 from typing import List, Optional, Type, Union
 
 import dataclasses_json
@@ -9,11 +10,18 @@ import marshmallow
 import marshmallow_jsonapi
 
 from ...constants.general import SIMPLE
-from ...exceptions import ApiAttributeMissingError, ApiAttributeTypeError, ApiError, SchemaError
+from ...exceptions import (
+    ApiAttributeMissingError,
+    ApiAttributeTypeError,
+    ApiError,
+    ApiWarning,
+    SchemaError,
+)
 from ...http import Http
 from ...tools import coerce_bool, combo_dicts, json_dump, json_load, listify
 
 LOGGER = logging.getLogger(__name__)
+EXTRA_WARN = False
 
 
 class BaseCommon:
@@ -160,6 +168,35 @@ class BaseSchemaJson(BaseSchema, marshmallow_jsonapi.Schema):
             exc = ApiError(f"Data to load must be a dictionary, not a {type(data).__name__}")
             raise SchemaError(schema=schema, exc=exc, data=data, obj=cls)
         return cls._load_schema(**combo_dicts(kwargs, schema=schema, data=data))
+
+    @classmethod
+    def validate_attr_excludes(cls) -> List[str]:
+        """Pass."""
+        return ["document_meta"]
+
+    @classmethod
+    def validate_attrs(cls) -> dict:
+        """Pass."""
+        excludes = cls.validate_attr_excludes()
+        return {k: v for k, v in cls._declared_fields.items() if k not in excludes}
+
+    @classmethod
+    def validate_attr(
+        cls,
+        value: str,
+        exc_cls: Type[Exception] = marshmallow.ValidationError,
+    ) -> str:
+        """Pass."""
+        check = value
+        if check.startswith("-"):
+            check = value[1:]
+
+        attrs = cls.validate_attrs()
+        if check in attrs:
+            return value
+
+        valids = "\n  " + "\n  ".join(list(attrs))
+        raise exc_cls(f"Invalid attribute {value!r}, valids: {valids}")
 
 
 @dataclasses.dataclass
@@ -455,5 +492,17 @@ class BaseModel(dataclasses_json.DataClassJsonMixin, BaseCommon):
     @extra_attributes.setter
     def extra_attributes(self, value: dict):
         if value:
-            LOGGER.warning(f"Extra attributes found in {self}:\n{json_dump(value)}")
+            schema = self.get_schema_cls()
+            stype = getattr(getattr(schema, "Meta", None), "type_", None)
+            this_cls = self.__class__
+            msgs = [
+                f"Extra attributes found in {this_cls}",
+                f"schema {schema}",
+                f"type {stype!r}",
+                f"{json_dump(value)}",
+            ]
+            msg = "\n".join(msgs)
+            LOGGER.warning(msg)
+            if EXTRA_WARN:  # pragma: no cover
+                warnings.warn(message=msg, category=ApiWarning)
         self._extra_attributes = value

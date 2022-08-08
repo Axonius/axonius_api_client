@@ -1,10 +1,11 @@
 import dataclasses
+import warnings
 
 import marshmallow
 import pytest
 from axonius_api_client.api import json_api
 from axonius_api_client.api.json_api.base import BaseModel, BaseSchema, BaseSchemaJson
-from axonius_api_client.exceptions import SchemaError
+from axonius_api_client.exceptions import ApiWarning, SchemaError
 
 from ..test_api_endpoints import get_model_classes, get_schema_classes
 
@@ -72,17 +73,20 @@ class TestJsonApi:
             )
         assert 'Invalid type. Expected "some_schema"' in str(exc.value)
 
-        ret = SomeSchema.load_response(
-            data={"data": {"type": "some_schema", "attributes": {"test": 1, "extra": 2}}}
-        )
-        assert ret.test == 1
-        assert ret.extra_attributes == {"extra": 2}
-
         exp = SomeModel(test=1)
         ret = SomeSchema.load_response(
             data={"data": {"type": "some_schema", "attributes": {"test": 1}}}
         )
         assert ret == exp
+        with warnings.catch_warnings():
+            if json_api.base.EXTRA_WARN:
+                warnings.simplefilter("ignore", ApiWarning)
+
+            ret = SomeSchema.load_response(
+                data={"data": {"type": "some_schema", "attributes": {"test": 1, "extra": 2}}}
+            )
+        assert ret.test == 1
+        assert ret.extra_attributes == {"extra": 2}
 
     def test_non_json_api_load_response(self):
         @dataclasses.dataclass
@@ -108,7 +112,12 @@ class TestJsonApi:
             SomeSchema.load_response(data=1)
         assert "Data to load must be a dictionary or list" in str(exc.value)
 
-        ret = SomeSchema.load_response(data={"test": 1, "extra": 2})
+        with warnings.catch_warnings():
+            if json_api.base.EXTRA_WARN:
+                warnings.simplefilter("ignore", ApiWarning)
+
+            ret = SomeSchema.load_response(data={"test": 1, "extra": 2})
+
         assert ret.test == 1
         assert ret.extra_attributes == {"extra": 2}
 
@@ -129,7 +138,12 @@ class TestJsonApi:
         assert "Data to load must be a dictionary or list" in str(exc.value)
 
         exp = {"test": 1, "extra": 2}
-        ret = SomeSchema.load_response(data={"test": 1, "extra": 2})
+
+        with warnings.catch_warnings():
+            if json_api.base.EXTRA_WARN:
+                warnings.simplefilter("ignore", ApiWarning)
+
+            ret = SomeSchema.load_response(data={"test": 1, "extra": 2})
         assert ret == exp
 
         exp = {"test": 1}

@@ -272,6 +272,12 @@ class AssetRequestSchema(BaseSchemaJson):
     fields = marshmallow_jsonapi.fields.Dict(load_default={}, dump_default={}, allow_none=True)
 
     page = marshmallow_jsonapi.fields.Nested(PaginationSchema)
+    saved_query_id = marshmallow_jsonapi.fields.Str(
+        load_default=None, dump_default=None, allow_none=True
+    )
+    expressions = marshmallow_jsonapi.fields.List(
+        marshmallow_jsonapi.fields.Dict(), load_default=[], dump_default=[]
+    )
 
     class Meta:
         """Pass."""
@@ -313,6 +319,8 @@ class AssetRequest(AssetMixins, BaseModel):
     page: Optional[PaginationRequest] = get_field_dc_mm(
         marshmallow_jsonapi.fields.Nested(PaginationSchema), default=None
     )
+    saved_query_id: Optional[str] = None
+    expressions: Optional[List[dict]] = dataclasses.field(default_factory=list)
 
     def __post_init__(self):
         """Pass."""
@@ -320,6 +328,7 @@ class AssetRequest(AssetMixins, BaseModel):
         self.field_filters = self.field_filters or {}
         self.fields = self.fields or {}
         self.page = self.page or PaginationRequest()
+        self.expressions = self.expressions or []
 
     @staticmethod
     def get_schema_cls() -> Optional[Type[BaseSchema]]:
@@ -579,6 +588,9 @@ class CountRequestSchema(BaseSchemaJson):
     use_cache_entry = SchemaBool(load_default=False, dump_default=False)
     history = marshmallow_jsonapi.fields.Str(load_default=None, dump_default=None, allow_none=True)
     filter = marshmallow_jsonapi.fields.Str(load_default="", dump_default="", allow_none=True)
+    saved_query_id = marshmallow_jsonapi.fields.Str(
+        load_default=None, dump_default=None, allow_none=True
+    )
 
     class Meta:
         """Pass."""
@@ -604,6 +616,7 @@ class CountRequest(BaseModel, AssetMixins):
     use_cache_entry: bool = False
     history: Optional[str] = None
     filter: Optional[str] = None
+    saved_query_id: Optional[str] = None
 
     @staticmethod
     def get_schema_cls() -> Optional[Type[BaseSchema]]:

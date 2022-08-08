@@ -119,6 +119,22 @@
                     }
                 },
                 {
+                    "description": "Google 'Argon2024' log",
+                    "log_id": "7s3QZNXbGs7FXLedtM0TojKHRny87N7DUUhZRnEftZs=",
+                    "key": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEHblsqctplMVc5ramA7vSuNxUQxcomQwGAVAdnWTAWUYr3MgDHQW0LagJ95lB7QT75Ve6JgT2EVLOFGU7L3YrwA==",
+                    "url": "https://ct.googleapis.com/logs/us1/argon2024/",
+                    "mmd": 86400,
+                    "state": {
+                        "pending": {
+                            "timestamp": "2022-06-20T10:18:00Z"
+                        }
+                    },
+                    "temporal_interval": {
+                        "start_inclusive": "2024-01-01T00:00:00Z",
+                        "end_exclusive": "2025-01-01T00:00:00Z"
+                    }
+                },
+                {
                     "description": "Google 'Xenon2018' log",
                     "log_id": "sQzVWabWeEaBH335pRUyc5rEjXA76gMj2l04dVvArU4=",
                     "key": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE1syJvwQdrv0a8dM2VAnK/SmHJNw/+FxC+CncFcnXMX2jNH9Xs7Q56FiV3taG5G2CokMsizhpcm7xXzuR3IHmag==",
@@ -212,6 +228,22 @@
                     "temporal_interval": {
                         "start_inclusive": "2023-01-01T00:00:00Z",
                         "end_exclusive": "2024-01-01T00:00:00Z"
+                    }
+                },
+                {
+                    "description": "Google 'Xenon2024' log",
+                    "log_id": "dv+IPwq2+5VRwmHM9Ye6NLSkzbsp3GhCCp/mZ0xaOnQ=",
+                    "key": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEuWDgNB415GUAk0+QCb1a7ETdjA/O7RE+KllGmjG2x5n33O89zY+GwjWlPtwpurvyVOKoDIMIUQbeIW02UI44TQ==",
+                    "url": "https://ct.googleapis.com/logs/eu1/xenon2024/",
+                    "mmd": 86400,
+                    "state": {
+                        "pending": {
+                            "timestamp": "2022-06-20T10:19:00Z"
+                        }
+                    },
+                    "temporal_interval": {
+                        "start_inclusive": "2024-01-01T00:00:00Z",
+                        "end_exclusive": "2025-01-01T00:00:00Z"
                     }
                 },
                 {
@@ -382,6 +414,17 @@
                     "temporal_interval": {
                         "start_inclusive": "2023-01-01T00:00:00Z",
                         "end_exclusive": "2024-01-01T00:00:00Z"
+                    }
+                },
+                {
+                    "description": "Google 'Solera2024' log",
+                    "log_id": "MCTOfusWiGJyS+pwLv/5ks/kVkNBkapZWyX4AibIABc=",
+                    "key": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEkKRxB5QC4ynmO/IvHmaJn+hbCEYhlakEWOQb+HcHJLz+b7Mas2GU0A1g+g6/QxTKFqu3AYV7nz9CzL0j6TN7Lg==",
+                    "url": "https://ct.googleapis.com/logs/eu1/solera2024/",
+                    "mmd": 86400,
+                    "temporal_interval": {
+                        "start_inclusive": "2024-01-01T00:00:00Z",
+                        "end_exclusive": "2025-01-01T00:00:00Z"
                     }
                 }
             ]
@@ -654,6 +697,38 @@
                     }
                 },
                 {
+                    "description": "DigiCert Yeti2024 Log",
+                    "log_id": "SLDja9qmRzQP5WoC+p0w6xxSActW3SyB2bu/qznYhHM=",
+                    "key": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEV7jBbzCkfy7k8NDZYGITleN6405Tw7O4c4XBGA0jDliE0njvm7MeLBrewY+BGxlEWLcAd2AgGnLYgt6unrHGSw==",
+                    "url": "https://yeti2024.ct.digicert.com/log/",
+                    "mmd": 86400,
+                    "state": {
+                        "pending": {
+                            "timestamp": "2022-02-11T16:59:00Z"
+                        }
+                    },
+                    "temporal_interval": {
+                        "start_inclusive": "2024-01-01T00:00:00Z",
+                        "end_exclusive": "2025-01-01T00:00:00Z"
+                    }
+                },
+                {
+                    "description": "DigiCert Yeti2025 Log",
+                    "log_id": "fVkeEuF4KnscYWd8Xv340IdcFKBOlZ65Ay/ZDowuebg=",
+                    "key": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE35UAXhDBAfc34xB00f+yypDtMplfDDn+odETEazRs3OTIMITPEy1elKGhj3jlSR82JGYSDvw8N8h8bCBWlklQw==",
+                    "url": "https://yeti2025.ct.digicert.com/log/",
+                    "mmd": 86400,
+                    "state": {
+                        "pending": {
+                            "timestamp": "2022-02-11T16:59:00Z"
+                        }
+                    },
+                    "temporal_interval": {
+                        "start_inclusive": "2025-01-01T00:00:00Z",
+                        "end_exclusive": "2026-01-01T00:00:00Z"
+                    }
+                },
+                {
                     "description": "DigiCert Nessie2018 Log",
                     "log_id": "b/FBtWR+QiL37wUs7658If1gjifSr1pun0uKN9ZjPuU=",
                     "key": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEVqpLa2W+Rz1XDZPBIyKJO+KKFOYZTj9MpJWnZeFUqzc5aivOiWEVhs8Gy2AlH3irWPFjIZPZMs3Dv7M+0LbPyQ==",
@@ -747,6 +822,38 @@
                     "temporal_interval": {
                         "start_inclusive": "2023-01-01T00:00:00Z",
                         "end_exclusive": "2024-01-01T00:00:00Z"
+                    }
+                },
+                {
+                    "description": "DigiCert Nessie2024 Log",
+                    "log_id": "c9meiRtMlnigIH1HneayxhzQUV5xGSqMa4AQesF3crU=",
+                    "key": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAELfyieza/VpHp/j/oPfzDp+BhUuos6QWjnycXgQVwa4FhRIr4OxCAQu0DLwBQIfxBVISjVNUusnoWSyofK2YEKw==",
+                    "url": "https://nessie2024.ct.digicert.com/log/",
+                    "mmd": 86400,
+                    "state": {
+                        "pending": {
+                            "timestamp": "2022-02-11T16:59:00Z"
+                        }
+                    },
+                    "temporal_interval": {
+                        "start_inclusive": "2024-01-01T00:00:00Z",
+                        "end_exclusive": "2025-01-01T00:00:00Z"
+                    }
+                },
+                {
+                    "description": "DigiCert Nessie2025 Log",
+                    "log_id": "5tIxY0B3jMEQQQbXcbnOwdJA9paEhvu6hzId/R43jlA=",
+                    "key": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE8vDwp4uBLgk5O59C2jhEX7TM7Ta72EN/FklXhwR/pQE09+hoP7d4H2BmLWeadYC3U6eF1byrRwZV27XfiKFvOA==",
+                    "url": "https://nessie2025.ct.digicert.com/log/",
+                    "mmd": 86400,
+                    "state": {
+                        "pending": {
+                            "timestamp": "2022-02-11T16:59:00Z"
+                        }
+                    },
+                    "temporal_interval": {
+                        "start_inclusive": "2025-01-01T00:00:00Z",
+                        "end_exclusive": "2026-01-01T00:00:00Z"
                     }
                 },
                 {
@@ -1274,6 +1381,28 @@
                     }
                 },
                 {
+                    "description": "Let's Encrypt 'Sapling 2022h2' log",
+                    "log_id": "Iy1BpM2sh87Z+UP0aMKCCVrgnTDWLi+mXdw7kZwuRo8=",
+                    "key": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE6m0gtMM2pcVTxVjkztm/ByNrF32xacdVnbsYwlzwtqN0vOwqcXLtPkfYqH+q93hlJwEBsX1MnRXDdlMHkkmZJg==",
+                    "url": "https://sapling.ct.letsencrypt.org/2022h2/",
+                    "mmd": 86400,
+                    "temporal_interval": {
+                        "start_inclusive": "2022-06-15T00:00:00Z",
+                        "end_exclusive": "2023-01-15T00:00:00Z"
+                    }
+                },
+                {
+                    "description": "Let's Encrypt 'Sapling 2023h1' log",
+                    "log_id": "wYMkC/GkUMdvuwByadysO+IqSAXU2+BJZsPIq8RHsAw=",
+                    "key": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE09jAcGbw5CDCK2Kg0kkmmDydfDfZAA8K64BufU37yx3Jcy/ePy1EjAi2wUPVJ0xsaNMCU37mh+fBV3+K/cSG8A==",
+                    "url": "https://sapling.ct.letsencrypt.org/2023h1/",
+                    "mmd": 86400,
+                    "temporal_interval": {
+                        "start_inclusive": "2022-12-15T00:00:00Z",
+                        "end_exclusive": "2023-07-15T00:00:00Z"
+                    }
+                },
+                {
                     "description": "Let's Encrypt 'Testflume2019' log",
                     "log_id": "hJ9ff1jSv3tU7L10YRzqRcScmPHWSBvG9p6MF08k888=",
                     "key": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEAg3+vFOesFW51rKECekioAt9Zo50atRoOJ0qLxF7DIEHsHneXLEpgO1WMreleRy1vEbUJD7TXoH9r8qSDGvyew==",
@@ -1588,6 +1717,22 @@
                     "temporal_interval": {
                         "start_inclusive": "2023-01-01T00:00:00Z",
                         "end_exclusive": "2024-01-01T00:00:00Z"
+                    }
+                },
+                {
+                    "description": "Trust Asia Log2024",
+                    "log_id": "MG0pV2rSGp1K4SrK2KqKeDqmWjIRYKz/Ww7uTKMgHQU=",
+                    "key": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEPX0aLEfVKm056ijcW703sEBWmKwkxGInR7UWRNwIWHgmGLUWL+9vRcLtP42YpcET5E1/vpO31taVn2q6lYJO9A==",
+                    "url": "https://ct2.trustasia.com/log2024/",
+                    "mmd": 86400,
+                    "state": {
+                        "pending": {
+                            "timestamp": "2022-04-11T09:32:00Z"
+                        }
+                    },
+                    "temporal_interval": {
+                        "start_inclusive": "2024-01-01T00:00:00Z",
+                        "end_exclusive": "2025-01-01T00:00:00Z"
                     }
                 }
             ]

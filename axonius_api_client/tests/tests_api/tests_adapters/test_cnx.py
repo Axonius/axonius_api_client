@@ -354,7 +354,7 @@ class TestCnxPublic(TestCnxBase):
 
     def test_get_by_uuid_fail(self, apiobj):
         with pytest.raises(NotFoundError):
-            apiobj.cnx.get_by_uuid(cnx_uuid="badwolf", adapter_name="aws")
+            apiobj.cnx.get_by_uuid(cnx_uuid="badwolf", adapter_name="active_directory")
 
     def test_get_by_id(self, apiobj):
         cnx = get_cnx_existing(apiobj)
@@ -367,7 +367,7 @@ class TestCnxPublic(TestCnxBase):
 
     def test_get_by_label_fail(self, apiobj):
         with pytest.raises(NotFoundError):
-            apiobj.cnx.get_by_label(value="badwolf", adapter_name="aws")
+            apiobj.cnx.get_by_label(value="badwolf", adapter_name="active_directory")
 
     def test_get_by_label(self, apiobj):
         cnx = get_cnx_existing(apiobj)

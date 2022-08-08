@@ -263,6 +263,9 @@ class SetBasicSchema(BaseSchemaJson):
     updated_by = marshmallow_jsonapi.fields.Str(allow_none=True)
     last_triggered = SchemaDatetime(allow_none=True)
     last_updated = SchemaDatetime(allow_none=True)
+    action_names = marshmallow_jsonapi.fields.List(marshmallow_jsonapi.fields.Str())
+    history = marshmallow.fields.Dict(allow_none=True, load_default={}, dump_default={})
+    last_run_status = marshmallow_jsonapi.fields.Str(allow_none=True)
 
     class Meta:
         """Pass."""
@@ -304,8 +307,10 @@ class SetBasic(BaseModel):
     last_triggered: Optional[datetime.datetime] = get_field_dc_mm(
         mm_field=SchemaDatetime(allow_none=True, load_default=None, dump_default=None), default=None
     )
-
+    action_names: Optional[List[str]] = dataclasses.field(default_factory=list)
     document_meta: Optional[dict] = dataclasses.field(default_factory=dict)
+    history: Optional[dict] = dataclasses.field(default_factory=dict)
+    last_run_status: Optional[str] = None
 
     @property
     def query_name(self) -> Optional[str]:
@@ -980,6 +985,8 @@ class UpdateResponseSchema(BaseSchemaJson):
     uuid = marshmallow_jsonapi.fields.Str()
     actions = marshmallow_jsonapi.fields.Dict()
     triggers = marshmallow_jsonapi.fields.List(marshmallow_jsonapi.fields.Dict())
+    updated_by = marshmallow_jsonapi.fields.Str(allow_none=True)
+    last_updated = SchemaDatetime(allow_none=True)
 
     class Meta:
         """Pass."""
@@ -1000,6 +1007,10 @@ class UpdateResponse(BaseModel):
     name: str
     actions: dict
     triggers: List[dict]
+    updated_by: Optional[str] = None
+    last_updated: Optional[datetime.datetime] = get_field_dc_mm(
+        mm_field=SchemaDatetime(allow_none=True, load_default=None, dump_default=None), default=None
+    )
 
     @staticmethod
     def get_schema_cls() -> Optional[Type[BaseSchema]]:
@@ -1082,6 +1093,8 @@ class ActionTypeSchema(BaseSchemaJson):
 
     default = marshmallow_jsonapi.fields.Dict(allow_none=True)
     schema = marshmallow_jsonapi.fields.Dict()
+    test_connection = marshmallow_jsonapi.fields.Dict()
+    adapter_fields = marshmallow_jsonapi.fields.List(marshmallow_jsonapi.fields.Str())
 
     class Meta:
         """Pass."""
@@ -1101,6 +1114,8 @@ class ActionType(BaseModel):
     id: str
     schema: dict
     default: Optional[dict] = None
+    test_connection: Optional[dict] = dataclasses.field(default_factory=dict)
+    adapter_fields: Optional[List[str]] = dataclasses.field(default_factory=list)
 
     @staticmethod
     def get_schema_cls() -> Optional[Type[BaseSchema]]:

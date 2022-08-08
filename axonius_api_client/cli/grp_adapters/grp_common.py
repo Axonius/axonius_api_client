@@ -1,8 +1,23 @@
 # -*- coding: utf-8 -*-
 """Command line interface for Axonius API Client."""
+from ...api.json_api.adapters import AdapterFetchHistory
 from ...constants.adapters import CONFIG_TYPES
-from ...tools import json_dump
+from ...parsers.tables import tablize
+from ...tools import csv_writer, json_dump
 from ..context import click
+
+
+def export_to_tablize(data, **kwargs):
+    """Pass."""
+    items = [x.to_tablize() for x in data] if isinstance(data, list) else [data.to_tablize()]
+    return tablize(items)
+
+
+def export_csv(data, **kwargs):
+    """Pass."""
+    rows = [x.to_csv() for x in data]
+    columns = AdapterFetchHistory._props_csv()
+    return csv_writer(rows=rows, columns=columns)
 
 
 def export_json_full(data, **kwargs):
@@ -19,6 +34,7 @@ CONFIG_EXPORT_FORMATS: dict = {
     "json": export_json,
     "json-full": export_json_full,
 }
+
 
 CONFIG_EXPORT = click.option(
     "--export-format",

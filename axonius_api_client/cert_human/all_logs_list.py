@@ -2,8 +2,10 @@
 """Fallback for all_logs_list.json."""
 import datetime
 
+import dateutil.parser
+
 UPDATED: str = "2022-02-15 20:54:41.901119+00:00"
-FALLBACK_UPDATED: datetime.datetime = datetime.datetime.fromisoformat(UPDATED)
+FALLBACK_UPDATED: datetime.datetime = dateutil.parser.parse(UPDATED)
 FALLBACK_JSON: str = """{
   "operators": [
     {

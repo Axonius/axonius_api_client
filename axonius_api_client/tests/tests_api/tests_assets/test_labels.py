@@ -4,7 +4,11 @@ import pytest
 from axonius_api_client.api import json_api
 
 
-class LabelsPrivate:
+class TestLabelsPrivate:
+    @pytest.fixture(params=["api_devices"], scope="class")
+    def apiobj(self, request):
+        return request.getfixturevalue(request.param)
+
     def test_private_get(self, apiobj):
         labels = apiobj.labels._get()
         assert isinstance(labels, list)
@@ -127,27 +131,3 @@ class LabelsPublic:
 
         for label in labels:
             assert label not in all_labels_post_remove
-
-
-class TestLabelsDevicesPrivate(LabelsPrivate):
-    @pytest.fixture(scope="class")
-    def apiobj(self, api_devices):
-        return api_devices
-
-
-class TestLabelsUsersPrivate(LabelsPrivate):
-    @pytest.fixture(scope="class")
-    def apiobj(self, api_users):
-        return api_users
-
-
-class TestLabelsDevicesPublic(LabelsPublic):
-    @pytest.fixture(scope="class")
-    def apiobj(self, api_devices):
-        return api_devices
-
-
-class TestLabelsUsersPublic(LabelsPublic):
-    @pytest.fixture(scope="class")
-    def apiobj(self, api_users):
-        return api_users
