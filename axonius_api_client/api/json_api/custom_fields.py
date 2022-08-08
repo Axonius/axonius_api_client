@@ -105,6 +105,18 @@ def get_field_dc_mm(mm_field: marshmallow.fields.Field, **kwargs) -> dataclasses
     return dataclasses.field(**kwargs)
 
 
+def validator_wrapper(fn: callable) -> callable:
+    """Pass."""
+
+    def validator(value):
+        try:
+            return fn(value=value)
+        except Exception as exc:
+            raise marshmallow.ValidationError(str(exc))
+
+    return validator
+
+
 # def get_field_oneof(
 #     choices: List[str], field: Type[marshmallow.fields.Field] = marshmallow.fields.Str, **kwargs
 # ) -> marshmallow.fields.Field:

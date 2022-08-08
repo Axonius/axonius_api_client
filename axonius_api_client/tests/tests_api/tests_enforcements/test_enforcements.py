@@ -138,7 +138,19 @@ class TestEnforcements(EnforcementsBase):
 
     def test_get_set_action_get_required_conditionally_no_key(self, apiobj):
         atype = apiobj.get_action_type("add_custom_data")
-        exp = ["field_name", "conditional", "field_value", "field_on", "field_list", "field_date"]
+        # exp = ["field_name", "conditional", "field_value", "field_on", "field_list", "field_date"]
+        exp = [
+            "field_name",
+            "conditional",
+            "field_value",
+            "field_on",
+            "field_list",
+            "field_date",
+            "field_integer",
+            "field_number",
+            "field_list_integer",
+            "field_list_number",
+        ]
         value = atype.get_required_conditionally()
         assert value == exp
 

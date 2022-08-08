@@ -22,6 +22,13 @@ class SystemUserSchema(BaseSchemaJson):
     password = SchemaPassword(load_default="", dump_default="", allow_none=True)
     pic_name = marshmallow_jsonapi.fields.Str(load_default="", dump_default="", allow_none=True)
     role_id = marshmallow_jsonapi.fields.Str(required=True)
+    role_name = marshmallow_jsonapi.fields.Str(
+        load_default=None, dump_default=None, allow_none=True
+    )
+    title = marshmallow_jsonapi.fields.Str(load_default=None, dump_default=None, allow_none=True)
+    department = marshmallow_jsonapi.fields.Str(
+        load_default=None, dump_default=None, allow_none=True
+    )
     source = marshmallow_jsonapi.fields.Str()
     user_name = marshmallow_jsonapi.fields.Str(required=True)
     uuid = marshmallow_jsonapi.fields.Str(required=True)
@@ -94,6 +101,9 @@ class SystemUser(BaseModel):
     )
     password: Optional[Union[List[str], str]] = None
     pic_name: Optional[str] = None
+    role_name: Optional[str] = None
+    title: Optional[str] = None
+    department: Optional[str] = None
     source: Optional[str] = None
     ignore_role_assignment_rules: bool = False
 

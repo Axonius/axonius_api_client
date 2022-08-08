@@ -35,7 +35,7 @@ OPTIONS = [URL, TOKEN, PASSWORD]
 @add_options(OPTIONS)
 @click.pass_context
 def cmd(ctx, url, token, password):
-    """Perform the initial signup to an instance."""
+    """Use a password reset token."""
     entry = Signup(url=url)
     with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
         name = entry.use_password_reset_token(token=token, password=password)

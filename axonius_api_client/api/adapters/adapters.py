@@ -1,16 +1,35 @@
 # -*- coding: utf-8 -*-
 """API for working with adapters."""
+import datetime
 import pathlib
-from typing import List, Optional, Union
+from typing import Generator, List, Optional, Union
 
-from ...exceptions import ApiError, NotFoundError
+from cachetools import TTLCache, cached
+
+from ...exceptions import ApiError, NotFoundError  # , StopFetch
 from ...parsers.config import config_build, config_unchanged, config_unknown
 from ...parsers.tables import tablize_adapters
 from ...tools import path_read
 from ..api_endpoints import ApiEndpoints
-from ..json_api.adapters import Adapter, AdapterSettings, AdaptersList, CnxLabels
+from ..json_api.adapters import (
+    Adapter,
+    AdapterFetchHistory,
+    AdapterFetchHistoryFilters,
+    AdapterFetchHistoryRequest,
+    AdapterSettings,
+    AdaptersList,
+    CnxLabels,
+)
+from ..json_api.paging_state import PagingState
 from ..json_api.system_settings import SystemSettings
+from ..json_api.time_range import UnitTypes
 from ..mixins import ModelMixins
+
+HIST_MOD = AdapterFetchHistory
+HIST_GEN = Generator[HIST_MOD, None, None]
+HIST_LIST = List[HIST_MOD]
+
+CACHE_HISTORY_FILTERS: TTLCache = TTLCache(maxsize=4096, ttl=30)
 
 
 class Adapters(ModelMixins):
@@ -131,6 +150,91 @@ class Adapters(ModelMixins):
 
         err = f"No adapter named {name!r} found on instance {node_name!r}"
         raise NotFoundError(tablize_adapters(adapters=adapters, err=err))
+
+    @cached(cache=CACHE_HISTORY_FILTERS)
+    def get_fetch_history_filters(self) -> AdapterFetchHistoryFilters:
+        """Get filter values for use in adapters history."""
+        return self._get_fetch_history_filters()
+
+    def get_fetch_history(self, generator: bool = False, **kwargs) -> Union[HIST_GEN, HIST_LIST]:
+        """Pass."""
+        gen = self.get_fetch_history_generator(**kwargs)
+        return gen if generator else list(gen)
+
+    def get_fetch_history_generator(
+        self,
+        adapters: Optional[List[str]] = None,
+        connection_labels: Optional[List[str]] = None,
+        clients: Optional[List[str]] = None,
+        instances: Optional[List[str]] = None,
+        statuses: Optional[List[str]] = None,
+        exclude_realtime: bool = False,
+        relative_unit_type: UnitTypes = UnitTypes.get_default(),
+        relative_unit_count: Optional[int] = None,
+        absolute_date_start: Optional[datetime.datetime] = None,
+        absolute_date_end: Optional[datetime.datetime] = None,
+        sort_attribute: Optional[str] = None,
+        sort_descending: bool = False,
+        page_sleep: int = PagingState.page_sleep,
+        page_size: int = PagingState.page_size,
+        row_start: int = PagingState.row_start,
+        row_stop: Optional[int] = PagingState.row_stop,
+        log_level: Union[int, str] = PagingState.log_level,
+        history_filters: Optional[AdapterFetchHistoryFilters] = None,
+        request_obj: Optional[AdapterFetchHistoryRequest] = None,
+    ) -> HIST_GEN:
+        """Get adapter fetch history."""
+        if not isinstance(history_filters, AdapterFetchHistoryFilters):
+            history_filters = self.get_fetch_history_filters()
+
+        if not isinstance(request_obj, AdapterFetchHistoryRequest):
+            request_obj = AdapterFetchHistoryRequest()
+
+        request_obj.set_filters(
+            history_filters=history_filters,
+            value_type="adapters",
+            value=adapters,
+        )
+        request_obj.set_filters(
+            history_filters=history_filters,
+            value_type="connection_labels",
+            value=connection_labels,
+        )
+        request_obj.set_filters(
+            history_filters=history_filters,
+            value_type="clients",
+            value=clients,
+        )
+        request_obj.set_filters(
+            history_filters=history_filters,
+            value_type="instances",
+            value=instances,
+        )
+        request_obj.set_filters(
+            history_filters=history_filters,
+            value_type="statuses",
+            value=statuses,
+        )
+        request_obj.set_sort(value=sort_attribute, descending=sort_descending)
+        request_obj.set_exclude_realtime(value=exclude_realtime)
+        request_obj.set_time_range(
+            relative_unit_type=relative_unit_type,
+            relative_unit_count=relative_unit_count,
+            absolute_date_start=absolute_date_start,
+            absolute_date_end=absolute_date_end,
+        )
+        purpose = "Get Adapter Fetch History Events"
+        with PagingState(
+            purpose=purpose,
+            page_sleep=page_sleep,
+            page_size=page_size,
+            row_start=row_start,
+            row_stop=row_stop,
+            log_level=log_level,
+        ) as state:
+            while not state.stop_paging:
+                page = state.page(method=self._get_fetch_history, request_obj=request_obj)
+                yield from page.rows
 
     def config_get(
         self,
@@ -447,4 +551,20 @@ class Adapters(ModelMixins):
         """
         api_endpoint = ApiEndpoints.adapters.labels_get
         response = api_endpoint.perform_request(http=self.http)
+        return response
+
+    def _get_fetch_history_filters(self) -> AdapterFetchHistoryFilters:
+        """Get filter values for use in adapters history."""
+        api_endpoint = ApiEndpoints.adapters.get_fetch_history_filters
+        response = api_endpoint.perform_request(http=self.http)
+        return response
+
+    def _get_fetch_history(
+        self, request_obj: Optional[AdapterFetchHistoryRequest] = None
+    ) -> HIST_LIST:
+        """Get adapter fetch history."""
+        api_endpoint = ApiEndpoints.adapters.get_fetch_history
+        if not request_obj:
+            request_obj = AdapterFetchHistoryRequest()
+        response = api_endpoint.perform_request(http=self.http, request_obj=request_obj)
         return response

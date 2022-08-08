@@ -2,24 +2,694 @@
 """Models for API requests & responses."""
 import dataclasses
 import datetime
-from typing import ClassVar, List, Optional, Type
+import re
+import textwrap
+from typing import ClassVar, List, Optional, Pattern, Type, Union
 
 import marshmallow
 import marshmallow_jsonapi
 
 from ...constants.adapters import DISCOVERY_NAME, GENERIC_NAME
-from ...exceptions import NotFoundError
+from ...exceptions import ApiError, NotFoundError
 from ...http import Http
 from ...parsers.config import parse_schema
-from ...tools import listify, longest_str, strip_right
+from ...parsers.tables import tablize
+from ...tools import coerce_bool, listify, longest_str, strip_right
 from .base import BaseModel, BaseSchema, BaseSchemaJson
+
+# from .count_operator import CountOperator, CountOperatorSchema
 from .custom_fields import SchemaBool, SchemaDatetime, dump_date, get_field_dc_mm
 from .generic import Metadata, MetadataSchema
+from .resources import PaginationRequest, PaginationSchema
+from .time_range import TimeRange, TimeRangeSchema, UnitTypes
+
+STR_RE = Union[str, Pattern]
+STR_RE_LISTY = Union[STR_RE, List[STR_RE]]
+
+
+def prepend_sort(value: str, descending: bool = False):
+    """Pass."""
+    if isinstance(value, str):
+        if value.startswith("-"):
+            value = value[1:]
+        if descending:
+            value = f"-{value}"
+    return value
 
 
 def get_aname(value: str) -> str:
     """Pass."""
     return strip_right(obj=str(value or ""), fix="_adapter")
+
+
+class AdapterFetchHistorySchema(BaseSchemaJson):
+    """Pass."""
+
+    adapter = marshmallow.fields.Dict(
+        description="The internal adapter name and its display name",
+        allow_none=False,
+    )
+    adapter_discovery_id = marshmallow.fields.Str(
+        description="The unique id of the adapter fetch record",
+        allow_none=False,
+    )
+    client = marshmallow.fields.Str(
+        description="The connection label of the adapter connection",
+        allow_none=True,
+        load_default=None,
+        dump_default=None,
+    )
+    client_id = marshmallow.fields.Str(
+        description="The connection id of the adapter connection",
+        allow_none=False,
+    )
+    devices_count = marshmallow.fields.Integer(
+        description="The amount of devices fetched by the connection",
+        allow_none=True,
+        load_default=None,
+        dump_default=None,
+    )
+    users_count = marshmallow.fields.Integer(
+        description="The amount of users fetched by the connection",
+        allow_none=True,
+        load_default=None,
+        dump_default=None,
+    )
+    resources_count = marshmallow.fields.Integer(
+        description="The amount of resources fetched by the connection",
+        allow_none=True,
+        load_default=None,
+        dump_default=None,
+    )
+    start_time = SchemaDatetime(
+        description="The start time of the fetch",
+        allow_none=False,
+    )
+    end_time = SchemaDatetime(
+        description="The end time of the fetch",
+        allow_none=True,
+        load_default=None,
+        dump_default=None,
+    )
+    duration = marshmallow.fields.Str(
+        description="The duration of the fetch",
+        allow_none=True,
+        load_default=None,
+        dump_default=None,
+    )
+    error = marshmallow.fields.Str(
+        description="The error that the adapter raised, if any occurred",
+        allow_none=True,
+        load_default=None,
+        dump_default=None,
+    )
+    fetch_events_count = marshmallow.fields.Dict(
+        description="A count for each type of event - Info, Warning and Error",
+        allow_none=True,
+        load_default=None,
+        dump_default=None,
+    )
+    ignored_devices_count = marshmallow.fields.Integer(
+        description="The amount of devices that were ignored",
+        allow_none=True,
+        load_default=None,
+        dump_default=None,
+    )
+    ignored_users_count = marshmallow.fields.Integer(
+        description="The amount of users that were ignored",
+        allow_none=True,
+        load_default=None,
+        dump_default=None,
+    )
+    instance = marshmallow.fields.Str(
+        description="The name of the Axonius instance of the connection",
+        allow_none=True,
+        load_default=None,
+        dump_default=None,
+    )
+    realtime = SchemaBool(
+        description="Is the connection of a realtime adapter",
+        load_default=False,
+        dump_default=False,
+    )
+    status = marshmallow.fields.Str(
+        description="The status of the fetch",
+    )
+
+    class Meta:
+        """Pass."""
+
+        type_ = "history_response_schema"
+
+    @staticmethod
+    def get_model_cls():
+        """Pass."""
+        return AdapterFetchHistory
+
+    @classmethod
+    def validate_attr_excludes(cls) -> List[str]:
+        """Pass."""
+        return ["document_meta", "id"]
+
+
+@dataclasses.dataclass
+class AdapterFetchHistory(BaseModel):
+    """Pass."""
+
+    adapter: dict = get_field_dc_mm(
+        mm_field=AdapterFetchHistorySchema._declared_fields["adapter"],
+    )
+    adapter_discovery_id: str = get_field_dc_mm(
+        mm_field=AdapterFetchHistorySchema._declared_fields["adapter_discovery_id"],
+    )
+
+    client_id: str = get_field_dc_mm(
+        mm_field=AdapterFetchHistorySchema._declared_fields["client_id"],
+    )
+
+    start_time: datetime.datetime = get_field_dc_mm(
+        mm_field=AdapterFetchHistorySchema._declared_fields["start_time"],
+    )
+
+    status: str = get_field_dc_mm(
+        mm_field=AdapterFetchHistorySchema._declared_fields["status"],
+    )
+
+    instance: Optional[str] = get_field_dc_mm(
+        mm_field=AdapterFetchHistorySchema._declared_fields["instance"],
+        default=None,
+    )
+
+    client: Optional[str] = get_field_dc_mm(
+        mm_field=AdapterFetchHistorySchema._declared_fields["client"],
+        default=None,
+    )
+
+    devices_count: Optional[int] = get_field_dc_mm(
+        mm_field=AdapterFetchHistorySchema._declared_fields["devices_count"],
+        default=None,
+    )
+
+    users_count: Optional[int] = get_field_dc_mm(
+        mm_field=AdapterFetchHistorySchema._declared_fields["users_count"],
+        default=None,
+    )
+
+    resources_count: Optional[int] = get_field_dc_mm(
+        mm_field=AdapterFetchHistorySchema._declared_fields["resources_count"],
+        default=None,
+    )
+
+    end_time: Optional[datetime.datetime] = get_field_dc_mm(
+        mm_field=AdapterFetchHistorySchema._declared_fields["end_time"],
+        default=None,
+    )
+
+    duration: Optional[str] = get_field_dc_mm(
+        mm_field=AdapterFetchHistorySchema._declared_fields["duration"],
+        default=None,
+    )
+
+    error: Optional[str] = get_field_dc_mm(
+        mm_field=AdapterFetchHistorySchema._declared_fields["error"],
+        default=None,
+    )
+
+    fetch_events_count: Optional[int] = get_field_dc_mm(
+        mm_field=AdapterFetchHistorySchema._declared_fields["fetch_events_count"],
+        default=None,
+    )
+
+    ignored_devices_count: Optional[int] = get_field_dc_mm(
+        mm_field=AdapterFetchHistorySchema._declared_fields["ignored_devices_count"],
+        default=None,
+    )
+
+    ignored_users_count: Optional[int] = get_field_dc_mm(
+        mm_field=AdapterFetchHistorySchema._declared_fields["ignored_users_count"],
+        default=None,
+    )
+
+    realtime: bool = get_field_dc_mm(
+        mm_field=AdapterFetchHistorySchema._declared_fields["realtime"],
+        default=False,
+    )
+    document_meta: Optional[dict] = dataclasses.field(default_factory=dict)
+
+    @staticmethod
+    def get_schema_cls():
+        """Pass."""
+        return AdapterFetchHistorySchema
+
+    @property
+    def adapter_name(self) -> str:
+        """Pass."""
+        return get_aname(self.adapter["icon"])
+
+    @property
+    def adapter_name_raw(self) -> str:
+        """Pass."""
+        return self.adapter["icon"]
+
+    @property
+    def adapter_title(self) -> str:
+        """Pass."""
+        return self.adapter["text"]
+
+    def __str__(self) -> List[str]:
+        """Pass."""
+
+        def getval(prop):
+            value = getattr(self, prop, None)
+            if value is not None and not isinstance(value, (str, int, float, bool)):
+                value = str(value)
+            return repr(value)
+
+        vals = ", ".join([f"{p}={getval(p)}" for p in self._props_details()])
+        return f"{self.__class__.__name__}({vals})"
+
+    def __repr__(self):
+        """Pass."""
+        return self.__str__()
+
+    def to_csv(self) -> dict:
+        """Pass."""
+        return {k: getattr(self, k, None) for k in self._props_csv()}
+
+    def to_tablize(self) -> dict:
+        """Pass."""
+
+        def getval(prop, width=30):
+            value = getattr(self, prop, None)
+            if isinstance(width, int) and len(str(value)) > width:
+                value = textwrap.fill(value, width=width)
+            prop = prop.replace("_", " ").title()
+            return f"{prop}: {value}"
+
+        def getvals(props, width=30):
+            return "\n".join([getval(prop=p, width=width) for p in props])
+
+        return {
+            "Details": getvals(self._props_details()),
+            "Timings": getvals(self._props_timings(), None),
+            "Results": getvals(self._props_counts() + self._props_results()),
+        }
+
+    @classmethod
+    def _props_csv(cls) -> List[str]:
+        """Pass."""
+        return cls._props_custom() + [
+            x for x in cls._get_field_names() if x not in cls._props_skip()
+        ]
+
+    @classmethod
+    def _props_details(cls) -> List[str]:
+        """Pass."""
+        return cls._props_custom() + [
+            x for x in cls._get_field_names() if x not in cls._props_details_excludes()
+        ]
+
+    @classmethod
+    def _props_details_excludes(cls) -> List[str]:
+        """Pass."""
+        return (
+            cls._props_custom()
+            + cls._props_skip()
+            + cls._props_timings()
+            + cls._props_results()
+            + cls._props_counts()
+        )
+
+    @classmethod
+    def _props_results(cls) -> List[str]:
+        """Pass."""
+        return ["status", "error"]
+
+    @classmethod
+    def _props_counts(cls) -> List[str]:
+        """Pass."""
+        return [x for x in cls._get_field_names() if x.endswith("_count")]
+
+    @classmethod
+    def _props_timings(cls) -> List[str]:
+        """Pass."""
+        return ["start_time", "end_time", "duration"]
+
+    @classmethod
+    def _props_skip(cls) -> List[str]:
+        """Pass."""
+        return ["adapter", "document_meta"]
+
+    @classmethod
+    def _props_custom(cls) -> List[str]:
+        """Pass."""
+        return ["adapter_name", "adapter_title"]
+
+
+class AdapterFetchHistoryRequestSchema(BaseSchemaJson):
+    """Pass."""
+
+    adapters_filter = marshmallow_jsonapi.fields.List(
+        marshmallow_jsonapi.fields.Str(),
+        load_default=[],
+        dump_default=[],
+    )
+    connection_labels_filter = marshmallow_jsonapi.fields.List(
+        marshmallow_jsonapi.fields.Str(),
+        load_default=[],
+        dump_default=[],
+    )
+    clients_filter = marshmallow_jsonapi.fields.List(
+        marshmallow_jsonapi.fields.Str(),
+        load_default=[],
+        dump_default=[],
+    )
+    statuses_filter = marshmallow_jsonapi.fields.List(
+        marshmallow_jsonapi.fields.Str(),
+        load_default=[],
+        dump_default=[],
+    )
+    instance_filter = marshmallow_jsonapi.fields.List(
+        marshmallow_jsonapi.fields.Str(),
+        load_default=[],
+        dump_default=[],
+    )
+    sort = marshmallow_jsonapi.fields.Str(
+        allow_none=True,
+        load_default=None,
+        dump_default=None,
+        validate=AdapterFetchHistorySchema.validate_attr,
+    )
+    exclude_realtime = SchemaBool(load_default=False, dump_default=False)
+    time_range = marshmallow_jsonapi.fields.Nested(TimeRangeSchema)
+    page = marshmallow_jsonapi.fields.Nested(PaginationSchema)
+    # total_devices_filter = marshmallow_jsonapi.fields.Nested(CountOperatorSchema)
+    # total_users_filter = marshmallow_jsonapi.fields.Nested(CountOperatorSchema)
+
+    class Meta:
+        """Pass."""
+
+        type_ = "history_request_schema"
+
+    @staticmethod
+    def get_model_cls():
+        """Pass."""
+        return AdapterFetchHistoryRequest
+
+    @marshmallow.post_dump
+    def post_dump_process(self, data, **kwargs) -> dict:
+        """Pass."""
+        if "sort" in data and data["sort"] is None:
+            data.pop("sort")
+        return data
+
+    @classmethod
+    def validate_attrs(cls) -> dict:
+        """Pass."""
+        return AdapterFetchHistorySchema.validate_attrs()
+
+
+@dataclasses.dataclass
+class AdapterFetchHistoryRequest(BaseModel):
+    """Pass."""
+
+    adapters_filter: List[str] = get_field_dc_mm(
+        mm_field=AdapterFetchHistoryRequestSchema._declared_fields["adapters_filter"],
+        default_factory=list,
+    )
+    clients_filter: List[str] = get_field_dc_mm(
+        mm_field=AdapterFetchHistoryRequestSchema._declared_fields["clients_filter"],
+        default_factory=list,
+    )
+    connection_labels_filter: List[str] = get_field_dc_mm(
+        mm_field=AdapterFetchHistoryRequestSchema._declared_fields["connection_labels_filter"],
+        default_factory=list,
+    )
+    instance_filter: List[str] = get_field_dc_mm(
+        mm_field=AdapterFetchHistoryRequestSchema._declared_fields["instance_filter"],
+        default_factory=list,
+    )
+    statuses_filter: List[str] = get_field_dc_mm(
+        mm_field=AdapterFetchHistoryRequestSchema._declared_fields["statuses_filter"],
+        default_factory=list,
+    )
+    exclude_realtime: bool = get_field_dc_mm(
+        mm_field=AdapterFetchHistoryRequestSchema._declared_fields["exclude_realtime"],
+        default=False,
+    )
+    page: Optional[PaginationRequest] = get_field_dc_mm(
+        mm_field=AdapterFetchHistoryRequestSchema._declared_fields["page"],
+        default=PaginationRequest(),
+    )
+    time_range: Optional[TimeRange] = get_field_dc_mm(
+        mm_field=AdapterFetchHistoryRequestSchema._declared_fields["time_range"],
+        default=TimeRange(),
+    )
+    sort: Optional[str] = get_field_dc_mm(
+        mm_field=AdapterFetchHistoryRequestSchema._declared_fields["sort"],
+        default=None,
+    )
+    # total_devices_filter: Optional[CountOperator] = get_field_dc_mm(
+    #     mm_field=AdapterFetchHistoryRequestSchema._declared_fields["total_devices_filter"],
+    #     default=CountOperator(),
+    # )
+    # total_users_filter: Optional[CountOperator] = get_field_dc_mm(
+    #     mm_field=AdapterFetchHistoryRequestSchema._declared_fields["total_users_filter"],
+    #     default=CountOperator(),
+    # )
+
+    def __post_init__(self):
+        """Pass."""
+        if self.page is None:
+            self.page = PaginationRequest()
+
+        if self.time_range is None:
+            self.time_range = TimeRange()
+
+        # if self.total_devices_filter is None:
+        #     self.total_devices_filter = CountOperator()
+
+        # if self.total_users_filter is None:
+        #     self.total_users_filter = CountOperator()
+
+    def set_sort(self, value: Optional[str] = None, descending: bool = False) -> Optional[str]:
+        """Pass."""
+        if isinstance(value, str) and value:
+            value = AdapterFetchHistorySchema.validate_attr(value=value, exc_cls=NotFoundError)
+            value = prepend_sort(value=value, descending=descending)
+        else:
+            value = None
+
+        self.sort = value
+        return value
+
+    def set_filters(
+        self,
+        history_filters: "AdapterFetchHistoryFilters",
+        value_type: str,
+        value: Optional[List[str]] = None,
+    ) -> List[str]:
+        """Pass."""
+        value = history_filters.check_value(value_type=value_type, value=value)
+        setattr(self, f"{value_type}_filter", value)
+        return value
+
+    def set_exclude_realtime(self, value: bool) -> bool:
+        """Pass."""
+        value = coerce_bool(value)
+        self.exclude_realtime = value
+        return value
+
+    def set_time_range(
+        self,
+        relative_unit_type: UnitTypes = UnitTypes.get_default(),
+        relative_unit_count: Optional[int] = None,
+        absolute_date_start: Optional[datetime.datetime] = None,
+        absolute_date_end: Optional[datetime.datetime] = None,
+    ) -> "TimeRange":
+        """Pass."""
+        value = TimeRange.build(
+            relative_unit_type=relative_unit_type,
+            relative_unit_count=relative_unit_count,
+            absolute_date_start=absolute_date_start,
+            absolute_date_end=absolute_date_end,
+        )
+        self.time_range = value
+        return value
+
+    @staticmethod
+    def get_schema_cls():
+        """Pass."""
+        return AdapterFetchHistoryRequestSchema
+
+
+class AdapterFetchHistoryFiltersSchema(BaseSchemaJson):
+    """Pass."""
+
+    adapters_filter = marshmallow_jsonapi.fields.List(marshmallow_jsonapi.fields.Dict())
+    clients_filter = marshmallow_jsonapi.fields.List(marshmallow_jsonapi.fields.Str())
+    connection_labels_filter = marshmallow_jsonapi.fields.List(marshmallow_jsonapi.fields.Str())
+    instance_filter = marshmallow_jsonapi.fields.List(marshmallow_jsonapi.fields.Str())
+    statuses_filter = marshmallow_jsonapi.fields.List(marshmallow_jsonapi.fields.Str())
+
+    @staticmethod
+    def get_model_cls() -> type:
+        """Pass."""
+        return AdapterFetchHistoryFilters
+
+    class Meta:
+        """Pass."""
+
+        type_ = "history_filters_response_schema"
+
+
+@dataclasses.dataclass
+class AdapterFetchHistoryFilters(BaseModel):
+    """Pass."""
+
+    adapters_filter: List[dict] = get_field_dc_mm(
+        mm_field=AdapterFetchHistoryFiltersSchema._declared_fields["adapters_filter"],
+        default_factory=list,
+    )
+    clients_filter: List[str] = get_field_dc_mm(
+        mm_field=AdapterFetchHistoryFiltersSchema._declared_fields["clients_filter"],
+        default_factory=list,
+    )
+    connection_labels_filter: List[str] = get_field_dc_mm(
+        mm_field=AdapterFetchHistoryFiltersSchema._declared_fields["connection_labels_filter"],
+        default_factory=list,
+    )
+    instance_filter: List[str] = get_field_dc_mm(
+        mm_field=AdapterFetchHistoryFiltersSchema._declared_fields["instance_filter"],
+        default_factory=list,
+    )
+    statuses_filter: List[str] = get_field_dc_mm(
+        mm_field=AdapterFetchHistoryFiltersSchema._declared_fields["statuses_filter"],
+        default_factory=list,
+    )
+
+    @staticmethod
+    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+        """Pass."""
+        return AdapterFetchHistoryFiltersSchema
+
+    def check_value(self, value_type: str, value: Optional[STR_RE_LISTY]) -> List[str]:
+        """Pass."""
+
+        def is_match(item):
+            if isinstance(check, str) and item == check:
+                return True
+            if isinstance(check, re.Pattern) and check.search(item):
+                return True
+            return False
+
+        def check_match(item):
+            if isinstance(item, dict):
+                for v in item.values():
+                    if is_match(item=v):
+                        return True
+            elif isinstance(item, str):
+                if is_match(item=item):
+                    return True
+            return False
+
+        value_type = self.check_value_type(value_type=value_type)
+
+        if isinstance(value, (list, tuple)):
+            ret = []
+            for x in value:
+                ret += self.check_value(value_type=value_type, value=x)
+            return ret
+        elif isinstance(value, str):
+            check = value.strip()
+            if check.startswith("~"):
+                check = re.compile(check[1:])
+        elif isinstance(value, re.Pattern):
+            check = value
+        elif value is None:
+            return []
+        else:
+            raise ApiError(f"Value must be {STR_RE_LISTY}, not type={type(value)}, value={value!r}")
+
+        items = getattr(self, value_type)
+        matches = []
+        valids = []
+
+        if isinstance(items, dict):
+            for k, v in items.items():
+                valids.append(v)
+                if check_match(item=v):
+                    matches.append(k)
+        elif isinstance(items, list):
+            for item in items:
+                valids.append({f"Valid {value_type}": item})
+                if check_match(item=item):
+                    matches.append(item)
+        else:
+            raise ApiError(f"Unexpected type for {value_type} type={type(items)}, value={items!r}")
+
+        if matches:
+            return matches
+
+        err = f"No {value_type} matching {value!r} using {check!r} found out of {len(valids)} items"
+        err_table = tablize(value=valids, err=err)
+        raise NotFoundError(err_table)
+
+    def check_value_type(self, value_type: str) -> str:
+        """Pass."""
+        value_types = self.value_types()
+        if value_type not in value_types:
+            valids = ", ".join(value_types)
+            raise ApiError(f"Invalid value_type {value_type!r}, valids: {valids}")
+        return value_type
+
+    @staticmethod
+    def value_types() -> List[str]:
+        """Pass."""
+        return ["adapters", "clients", "connection_labels", "instances", "statuses"]
+
+    @property
+    def adapters(self) -> dict:
+        """Pass."""
+        return {
+            x["id"]: {"name": get_aname(x["id"]), "name_raw": x["id"], "title": x["name"]}
+            for x in self.adapters_filter
+        }
+
+    @property
+    def clients(self) -> List[str]:
+        """Pass."""
+        return self.clients_filter
+
+    @property
+    def connection_labels(self) -> List[str]:
+        """Pass."""
+        return self.connection_labels_filter
+
+    @property
+    def instances(self) -> List[str]:
+        """Pass."""
+        return self.instance_filter
+
+    @property
+    def statuses(self) -> List[str]:
+        """Pass."""
+        return self.statuses_filter
+
+    def __str__(self):
+        """Pass."""
+        items = [
+            f"adapters: {len(self.adapters)}",
+            f"clients: {len(self.clients)}",
+            f"connection_labels: {len(self.connection_labels)}",
+            f"instances: {len(self.instances)}",
+            f"statuses: {len(self.statuses)}",
+        ]
+        return ", ".join(items)
+
+    def __repr__(self):
+        """Pass."""
+        return self.__str__()
 
 
 class AdapterSchema(BaseSchemaJson):
@@ -569,6 +1239,7 @@ class AdapterNodeCnx(BaseModel):
     )
     error: Optional[str] = ""
     tunnel_id: Optional[str] = None
+    did_notify_error: Optional[bool] = None
 
     def __post_init__(self):
         """Pass."""
@@ -1024,6 +1695,7 @@ class Cnx(BaseModel):
 
     client_config: Optional[dict] = dataclasses.field(default_factory=dict)
     connection_discovery: Optional[dict] = dataclasses.field(default_factory=dict)
+    connection_advanced_config: Optional[dict] = dataclasses.field(default_factory=dict)
     date_fetched: Optional[str] = None
     last_fetch_time: Optional[datetime.datetime] = get_field_dc_mm(
         mm_field=SchemaDatetime(allow_none=True), default=None

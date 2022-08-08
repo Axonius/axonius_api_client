@@ -2,13 +2,12 @@
 """Test suite."""
 import OpenSSL
 import pytest
-
 from axonius_api_client.cert_human import ssl_context
 
 
 def test_resolve_host_fail():
     with pytest.raises(ValueError):
-        ssl_context.resolve_host(host="foobar")
+        ssl_context.resolve_host(host="foobar.axonius.com")
 
 
 def test_resolve_host_ok():
