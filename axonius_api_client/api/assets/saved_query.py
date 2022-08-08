@@ -14,9 +14,11 @@ from ...exceptions import (
 from ...tools import check_gui_page_size, coerce_bool, echo_ok, echo_warn, listify
 from .. import json_api
 from ..api_endpoints import ApiEndpoints
+from ..json_api.paging_state import LOG_LEVEL_API, PAGE_SIZE, PagingState
 from ..mixins import ChildMixins
 
 MODEL = json_api.saved_queries.SavedQuery
+MODEL_GET = json_api.saved_queries.SavedQueryGet
 MODEL_FOLDER = json_api.saved_queries.Folder
 BOTH = Union[dict, MODEL]
 MULTI = Union[str, BOTH]
@@ -400,7 +402,7 @@ class SavedQuery(ChildMixins):
 
         raise SavedQueryNotFoundError(sqs=sq_objs, details=details)
 
-    def get_by_name(self, value: str, as_dataclass: bool = AS_DATACLASS) -> BOTH:
+    def get_by_name(self, value: str, as_dataclass: bool = AS_DATACLASS, **kwargs) -> BOTH:
         """Get a saved query by name.
 
         Examples:
@@ -437,7 +439,7 @@ class SavedQuery(ChildMixins):
             BOTH: saved query dataclass or dict
 
         """
-        sqs = self.get(as_dataclass=True)
+        sqs = self.get(as_dataclass=True, **kwargs)
 
         for sq in sqs:
             if value == sq.name:
@@ -445,7 +447,7 @@ class SavedQuery(ChildMixins):
 
         raise SavedQueryNotFoundError(sqs=sqs, details=f"name={value!r}")
 
-    def get_by_uuid(self, value: str, as_dataclass: bool = AS_DATACLASS) -> BOTH:
+    def get_by_uuid(self, value: str, as_dataclass: bool = AS_DATACLASS, **kwargs) -> BOTH:
         """Get a saved query by uuid.
 
         Examples:
@@ -463,7 +465,7 @@ class SavedQuery(ChildMixins):
         Returns:
             BOTH: saved query dataclass or dict
         """
-        sqs = self.get(as_dataclass=True)
+        sqs = self.get(as_dataclass=True, **kwargs)
 
         for sq in sqs:
             if value == sq.uuid:
@@ -472,7 +474,7 @@ class SavedQuery(ChildMixins):
         raise SavedQueryNotFoundError(sqs=sqs, details=f"uuid={value!r}")
 
     def get_by_tags(
-        self, value: Union[str, List[str]], as_dataclass: bool = AS_DATACLASS
+        self, value: Union[str, List[str]], as_dataclass: bool = AS_DATACLASS, **kwargs
     ) -> List[BOTH]:
         """Get saved queries by tags.
 
@@ -500,7 +502,7 @@ class SavedQuery(ChildMixins):
             List[BOTH]: list of saved query dataclass or dict containing any tags in value
         """
         value = listify(value)
-        sqs = self.get(as_dataclass=True)
+        sqs = self.get(as_dataclass=True, **kwargs)
 
         found = []
         valid = set()
@@ -562,7 +564,20 @@ class SavedQuery(ChildMixins):
 
         return list(gen)
 
-    def get_generator(self, as_dataclass: bool = AS_DATACLASS) -> GEN:
+    def get_generator(
+        self,
+        folder: Optional[str] = None,
+        include_usage: bool = False,
+        get_view_data: bool = True,
+        creators: Optional[List[str]] = None,
+        used_in: Optional[List[str]] = None,
+        as_dataclass: bool = AS_DATACLASS,
+        page_sleep: int = 0,
+        page_size: int = PAGE_SIZE,
+        row_start: int = 0,
+        row_stop: Optional[int] = None,
+        log_level: Union[int, str] = LOG_LEVEL_API,
+    ) -> GEN:
         """Get Saved Queries using a generator.
 
         Args:
@@ -571,17 +586,34 @@ class SavedQuery(ChildMixins):
         Yields:
             GEN: saved query dataclass or dict
         """
-        offset = 0
-
-        while True:
-            rows = self._get(offset=offset)
-            offset += len(rows)
-
-            if not rows:
-                break
-
-            for row in rows:
-                yield row if as_dataclass else row.to_dict()
+        request_obj = MODEL_GET(
+            # filter=filter,
+            # search=search,
+            # TBD: LATER
+            # sort=sort,
+            # TBD: sort attribute magic
+            # folder_id=folder_id or "",
+            # TODO: folder lookup
+            # creator_ids=creator_ids or [],
+            # TODO: creators lookup (users?)
+            # used_in=used_in or [],
+            # TODO: used_in lookup (erp?)
+            get_view_data=get_view_data,
+            include_usage=include_usage,
+        )
+        purpose = f"Get Saved Queries for asset type: {self.parent.ASSET_TYPE}"
+        with PagingState(
+            purpose=purpose,
+            page_sleep=page_sleep,
+            page_size=page_size,
+            row_start=row_start,
+            row_stop=row_stop,
+            log_level=log_level,
+        ) as state:
+            while not state.stop_paging:
+                page = state.page(method=self._get_model, request_obj=request_obj)
+                for row in page.rows:
+                    yield row if as_dataclass else row.to_dict()
 
     def add(self, as_dataclass: bool = AS_DATACLASS, **kwargs) -> BOTH:
         """Create a saved query.
@@ -815,7 +847,6 @@ class SavedQuery(ChildMixins):
                 msg = f"Saved query unable to be deleted {row!r}, error:\n{exc}"
                 echo_warn(msg=msg) if do_echo else self.LOG.warning(msg)
                 continue
-
         return deleted if as_dataclass else [x.to_dict() for x in deleted]
 
     def _update_flag(
@@ -1001,8 +1032,13 @@ class SavedQuery(ChildMixins):
         sort: Optional[str] = None,
         filter: Optional[str] = None,
         search: str = "",
+        folder_id: str = "",
+        creator_ids: Optional[List[str]] = None,
+        used_in: Optional[List[str]] = None,
+        get_view_data: bool = True,
+        include_usage: bool = False,
     ) -> List[MODEL]:
-        """Direct API method to get all users.
+        """Direct API method to get all saved queries.
 
         Args:
             limit (int, optional): limit to N rows per page
@@ -1013,8 +1049,21 @@ class SavedQuery(ChildMixins):
         """
         api_endpoint = ApiEndpoints.saved_queries.get
         request_obj = api_endpoint.load_request(
-            page={"limit": limit, "offset": offset}, filter=filter, search=search, sort=sort
+            page={"limit": limit, "offset": offset},
+            filter=filter,
+            search=search,
+            sort=sort,
+            folder_id=folder_id or "",
+            creator_ids=creator_ids or [],
+            used_in=used_in or [],
+            get_view_data=get_view_data,
+            include_usage=include_usage,
         )
+        return self._get_model(request_obj=request_obj)
+
+    def _get_model(self, request_obj: MODEL_GET) -> List[MODEL]:
+        """Direct API method to get all saved queries."""
+        api_endpoint = ApiEndpoints.saved_queries.get
         return api_endpoint.perform_request(
             http=self.auth.http, request_obj=request_obj, asset_type=self.parent.ASSET_TYPE
         )

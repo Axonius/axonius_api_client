@@ -6,6 +6,7 @@ import pytest
 from axonius_api_client.api import json_api
 from axonius_api_client.constants.adapters import CSV_ADAPTER
 from axonius_api_client.exceptions import ApiError, ConfigUnchanged, ConfigUnknown, NotFoundError
+from axonius_api_client.tools import dt_now
 
 from ...meta import CSV_FILECONTENT_BYTES, CSV_FILECONTENT_STR, CSV_FILENAME
 
@@ -18,6 +19,10 @@ class TestAdaptersBase:
     @pytest.fixture(scope="class")
     def adapter(self, apiobj):
         return apiobj.get_by_name(name=CSV_ADAPTER, get_clients=False)
+
+    @pytest.fixture(scope="class")
+    def history_filters(self, apiobj):
+        return apiobj.get_fetch_history_filters()
 
 
 class TestAdaptersPrivate(TestAdaptersBase):
@@ -148,11 +153,161 @@ class TestAdaptersPrivate(TestAdaptersBase):
         with pytest.raises(NotFoundError):
             data.find_by_name("badwolf")
 
+    def test_get_fetch_history(self, apiobj):
+        request_obj = json_api.adapters.AdapterFetchHistoryRequest()
+        data = apiobj._get_fetch_history(request_obj=request_obj)
+        assert isinstance(data, list)
+        for item in data:
+            assert isinstance(item, json_api.adapters.AdapterFetchHistory)
+            assert str(item)
+            assert repr(item)
+
+    def test_get_fetch_history_no_request_obj(self, apiobj):
+        data = apiobj._get_fetch_history()
+        assert isinstance(data, list)
+        for item in data:
+            assert isinstance(item, json_api.adapters.AdapterFetchHistory)
+            assert str(item)
+            assert repr(item)
+
+
+class TestFetchHistoryModel(TestAdaptersBase):
+    def test_set_sort_invalid(self, apiobj):
+        request_obj = json_api.adapters.AdapterFetchHistoryRequest()
+        with pytest.raises(NotFoundError):
+            request_obj.set_sort(value="x", descending=False)
+
+    def test_set_sort_valid(self, apiobj):
+        request_obj = json_api.adapters.AdapterFetchHistoryRequest()
+        attr = list(request_obj.get_schema_cls().validate_attrs())[0]
+        exp = attr
+        ret = request_obj.set_sort(value=attr, descending=False)
+        assert ret == exp
+
+    def test_set_sort_descending(self, apiobj):
+        request_obj = json_api.adapters.AdapterFetchHistoryRequest()
+        attr = list(request_obj.get_schema_cls().validate_attrs())[0]
+        exp = f"-{attr}"
+        ret = request_obj.set_sort(value=attr, descending=True)
+        assert ret == exp
+
+    def test_set_filters_invalid_type(self, apiobj, history_filters):
+        request_obj = json_api.adapters.AdapterFetchHistoryRequest()
+        with pytest.raises(ApiError):
+            request_obj.set_filters(history_filters=history_filters, value_type="x", value="v")
+
+    @pytest.mark.parametrize(
+        "value_type", json_api.adapters.AdapterFetchHistoryFilters.value_types()
+    )
+    def test_set_filters_invalid_value(self, apiobj, history_filters, value_type):
+        request_obj = json_api.adapters.AdapterFetchHistoryRequest()
+        with pytest.raises(NotFoundError):
+            request_obj.set_filters(
+                history_filters=history_filters, value_type=value_type, value="BaDWolFy a y a"
+            )
+
+    @pytest.mark.parametrize(
+        "value_type", json_api.adapters.AdapterFetchHistoryFilters.value_types()
+    )
+    def test_set_filters_valid_value(self, apiobj, history_filters, value_type):
+        request_obj = json_api.adapters.AdapterFetchHistoryRequest()
+        items = getattr(history_filters, value_type)
+        if items:
+            if isinstance(items, dict):
+                value = list(items.values())[0]
+                exp = [value["name_raw"]]
+                for value in value.values():
+                    ret = request_obj.set_filters(
+                        history_filters=history_filters, value_type=value_type, value=value
+                    )
+                    assert ret == exp
+            elif isinstance(items, list):
+                value = items[0:2]
+                exp = value
+                ret = request_obj.set_filters(
+                    history_filters=history_filters, value_type=value_type, value=value
+                )
+                assert ret == exp
+
+    def test_set_filters_adapters_empty(self, apiobj, history_filters):
+        request_obj = json_api.adapters.AdapterFetchHistoryRequest()
+        values = [None, []]
+        exp = []
+        for value in values:
+            ret = request_obj.set_filters(
+                history_filters=history_filters, value_type="adapters", value=value
+            )
+            assert ret == exp
+
+    def test_set_time_range_empty(self, apiobj):
+        request_obj = json_api.adapters.AdapterFetchHistoryRequest()
+        exp = json_api.time_range.TimeRange.build()
+        ret = request_obj.set_time_range()
+        assert ret == exp
+
+    def test_set_time_range_absolute_no_date_start(self, apiobj):
+        request_obj = json_api.adapters.AdapterFetchHistoryRequest()
+        with pytest.raises(ApiError):
+            request_obj.set_time_range(absolute_date_end="2022-01-01")
+
+    def test_set_time_range_absolute_date_start(self, apiobj):
+        request_obj = json_api.adapters.AdapterFetchHistoryRequest()
+        ret = request_obj.set_time_range(absolute_date_start="2022-01-01")
+        assert ret.type == json_api.time_range.DateTypes.absolute.name
+        assert ret.date_from.month == 1
+        assert ret.date_to.month == dt_now().month
+        assert ret.count is None
+        assert ret.unit == json_api.time_range.UnitTypes.get_default()
+
+    def test_set_time_range_absolute_date_start_end(self, apiobj):
+        request_obj = json_api.adapters.AdapterFetchHistoryRequest()
+        ret = request_obj.set_time_range(
+            absolute_date_start="2022-01-01", absolute_date_end="2022-02-01"
+        )
+        assert ret.type == json_api.time_range.DateTypes.absolute.name
+        assert ret.date_from.month == 1
+        assert ret.date_to.month == 2
+        assert ret.count is None
+        assert ret.unit == json_api.time_range.UnitTypes.get_default()
+
+    def test_set_time_range_relative_count(self, apiobj):
+        request_obj = json_api.adapters.AdapterFetchHistoryRequest()
+        ret = request_obj.set_time_range(relative_unit_count=4)
+        assert ret.type == json_api.time_range.DateTypes.relative.name
+        assert ret.date_from is None
+        assert ret.date_to is None
+        assert ret.count == 4
+        assert ret.unit == json_api.time_range.UnitTypes.get_default()
+
+    def test_set_time_range_relative_type_month(self, apiobj):
+        request_obj = json_api.adapters.AdapterFetchHistoryRequest()
+        ret = request_obj.set_time_range(
+            relative_unit_type=json_api.time_range.UnitTypes.month.name, relative_unit_count=2
+        )
+        assert ret.type == json_api.time_range.DateTypes.relative.name
+        assert ret.date_from is None
+        assert ret.date_to is None
+        assert ret.count == 2
+        assert ret.unit == json_api.time_range.UnitTypes.month.name
+
+    def test_set_time_range_relative_type_invalid(self, apiobj):
+        request_obj = json_api.adapters.AdapterFetchHistoryRequest()
+        with pytest.raises(ApiError):
+            request_obj.set_time_range(relative_unit_type="badwolf", relative_unit_count=1)
+
 
 class TestAdaptersPublic(TestAdaptersBase):
-    def test_get_history_filters(self, apiobj):
-        data = apiobj.get_history_filters()
-        assert isinstance(data, json_api.adapters.AdapterHistoryFilters)
+    def test_get_fetch_history(self, apiobj):
+        data = apiobj.get_fetch_history()
+        assert isinstance(data, list)
+        for item in data:
+            assert isinstance(item, json_api.adapters.AdapterFetchHistory)
+            assert str(item)
+            assert repr(item)
+
+    def test_get_fetch_history_filters(self, apiobj):
+        data = apiobj.get_fetch_history_filters()
+        assert isinstance(data, json_api.adapters.AdapterFetchHistoryFilters)
         assert str(data)
         assert repr(data)
 
@@ -195,7 +350,7 @@ class TestAdaptersPublic(TestAdaptersBase):
             apiobj.config_get(name=CSV_ADAPTER, config_type="badwolf")
 
     def test_config_get_discovery(self, apiobj):
-        data = apiobj.config_get(name="aws", config_type="discovery")
+        data = apiobj.config_get(name="active_directory", config_type="discovery")
         assert isinstance(data, dict)
         config = data.pop("config")
         assert isinstance(config, dict) and config
@@ -204,7 +359,7 @@ class TestAdaptersPublic(TestAdaptersBase):
         assert isinstance(schema, dict) and schema
 
     def test_config_get_specific(self, apiobj):
-        data = apiobj.config_get(name="aws", config_type="specific")
+        data = apiobj.config_get(name="active_directory", config_type="specific")
         assert isinstance(data, dict)
         config = data.pop("config")
         assert isinstance(config, dict) and config

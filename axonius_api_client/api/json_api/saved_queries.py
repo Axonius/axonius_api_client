@@ -14,6 +14,27 @@ from ...tools import coerce_bool, coerce_int, listify
 from .base import BaseModel, BaseSchema, BaseSchemaJson
 from .custom_fields import SchemaBool, SchemaDatetime
 from .generic import PrivateRequest, PrivateRequestSchema
+from .resources import PaginationRequest, ResourcesGet, ResourcesGetSchema
+
+
+class SavedQueryGetSchema(ResourcesGetSchema):
+    """Pass."""
+
+    folder_id = marshmallow_jsonapi.fields.Str(load_default="", dump_default="")
+    creator_ids = marshmallow_jsonapi.fields.List(marshmallow_jsonapi.fields.Str())
+    used_in = marshmallow_jsonapi.fields.List(marshmallow_jsonapi.fields.Str())
+    get_view_data = SchemaBool(load_default=True, dump_default=True)
+    include_usage = SchemaBool(load_default=False, dump_default=False)
+
+    @staticmethod
+    def get_model_cls() -> type:
+        """Pass."""
+        return SavedQueryGet
+
+    class Meta:
+        """Pass."""
+
+        type_ = "request_views_schema"
 
 
 class SavedQuerySchema(BaseSchemaJson):
@@ -24,7 +45,7 @@ class SavedQuerySchema(BaseSchemaJson):
     asset_scope = SchemaBool(load_default=False, dump_default=False)
     private = SchemaBool(load_default=False, dump_default=False)
     description = marshmallow_jsonapi.fields.Str(load_default="", dump_default="", allow_none=True)
-    view = marshmallow_jsonapi.fields.Dict()
+    view = marshmallow_jsonapi.fields.Dict(allow_none=True, load_default={}, dump_default={})
     tags = marshmallow_jsonapi.fields.List(marshmallow_jsonapi.fields.Str())
     predefined = SchemaBool(load_default=False, dump_default=False)
     date_fetched = marshmallow_jsonapi.fields.Str(
@@ -43,10 +64,25 @@ class SavedQuerySchema(BaseSchemaJson):
     )
     user_id = marshmallow_jsonapi.fields.Str(allow_none=True, load_default=None, dump_default=None)
     uuid = marshmallow_jsonapi.fields.Str(allow_none=True, load_default=None, dump_default=None)
-    # WIP: folders
-    # folder_id = marshmallow_jsonapi.fields.Str(
-    #     allow_none=True, load_default=None, dump_default=None
-    # )
+
+    # 2022-09-02
+    folder_id = marshmallow_jsonapi.fields.Str(
+        allow_none=True, load_default=None, dump_default=None
+    )
+
+    # 2022-09-02
+    last_run_time = SchemaDatetime(allow_none=True, load_default=None, dump_default=None)
+
+    # 2022-09-02
+    created_by = marshmallow_jsonapi.fields.Str(
+        allow_none=True, load_default=None, dump_default=None
+    )
+
+    # 2022-09-02
+    used_in = marshmallow_jsonapi.fields.List(marshmallow_jsonapi.fields.Str())
+
+    # 2022-09-02
+    module = marshmallow_jsonapi.fields.Str(allow_none=True, load_default=None, dump_default=None)
 
     @staticmethod
     def get_model_cls() -> type:
@@ -268,7 +304,7 @@ class SavedQuery(BaseModel, SavedQueryMixins):
 
     id: str = dataclasses.field(metadata={"update": False})
     name: str = dataclasses.field(metadata={"min_length": 1, "update": True})
-    view: dict = dataclasses.field(metadata={"update": True})
+    view: Optional[dict] = dataclasses.field(default_factory=dict, metadata={"update": True})
     query_type: str = dataclasses.field(default="saved", metadata={"update": True})
     updated_by: Optional[str] = dataclasses.field(default=None, metadata={"update": False})
     user_id: Optional[str] = dataclasses.field(default=None, metadata={"update": False})
@@ -289,8 +325,27 @@ class SavedQuery(BaseModel, SavedQueryMixins):
     predefined: bool = dataclasses.field(default=False, metadata={"update": False})
     is_asset_scope_query_ready: bool = dataclasses.field(default=False, metadata={"update": False})
     is_referenced: bool = dataclasses.field(default=False, metadata={"update": False})
-    # WIP: folders
-    # folder_id: Optional[str] = None
+
+    # 2022-09-02
+    folder_id: Optional[str] = None
+
+    # 2022-09-02
+    last_run_time: Optional[datetime.datetime] = dataclasses.field(
+        default=None,
+        metadata={
+            "dataclasses_json": {"mm_field": SchemaDatetime(allow_none=True)},
+        },
+    )
+
+    # 2022-09-02
+    created_by: Optional[str] = None
+
+    # 2022-09-02
+    module: Optional[str] = None
+
+    # 2022-09-02
+    used_in: Optional[List[str]] = dataclasses.field(default_factory=list)
+
     document_meta: Optional[dict] = dataclasses.field(default_factory=dict)
 
     def __post_init__(self):
@@ -388,6 +443,29 @@ class SavedQueryDelete(PrivateRequest):
     def get_schema_cls() -> Optional[Type[BaseSchema]]:
         """Pass."""
         return SavedQueryDeleteSchema
+
+
+@dataclasses.dataclass
+class SavedQueryGet(ResourcesGet):
+    """Pass."""
+
+    folder_id: str = ""
+    creator_ids: Optional[List[str]] = dataclasses.field(default_factory=list)
+    used_in: Optional[List[str]] = dataclasses.field(default_factory=list)
+    get_view_data: bool = True
+    include_usage: bool = False
+
+    def __post_init__(self):
+        """Pass."""
+        self.folder_id = self.folder_id or ""
+        self.creator_ids = self.creator_ids or []
+        self.used_in = self.used_in or []
+        self.page = self.page if self.page else PaginationRequest()
+
+    @staticmethod
+    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+        """Pass."""
+        return SavedQueryGetSchema
 
 
 # WIP: folders

@@ -38,7 +38,11 @@ class FixtureData:
     wiz_entries = "simple !last_seen last_days 1"
 
 
-class SavedQueryPrivate:
+class TestSavedQueryPrivate:
+    @pytest.fixture(params=["api_devices"], scope="class")
+    def apiobj(self, request):
+        return request.getfixturevalue(request.param)
+
     def test_get(self, apiobj):
         result = apiobj.saved_query._get()
         assert isinstance(result, list)
@@ -112,7 +116,11 @@ class SavedQueryPrivate:
             pass
 
 
-class SavedQueryPublic:
+class TestSavedQueryPublic:
+    @pytest.fixture(params=["api_devices"], scope="class")
+    def apiobj(self, request):
+        return request.getfixturevalue(request.param)
+
     def test__check_name_exists(self, apiobj, sq_fixture):
         with pytest.raises(AlreadyExists):
             apiobj.saved_query._check_name_exists(value=sq_fixture["name"])
@@ -493,7 +501,10 @@ class SavedQueryPublic:
             pass
 
     @pytest.fixture(scope="function")
-    def asset_scope_fixture(self, apiobj):
+    def asset_scope_fixture(self, apiobj, api_data_scopes):
+        if not api_data_scopes.is_feature_enabled:
+            pytest.skip("Data Scopes Feature Flag not enabled")
+
         get_schema(apiobj=apiobj, field="specific_data.data.last_seen")
 
         try:
@@ -568,30 +579,6 @@ class SavedQueryPublic:
         sort_field = "badwolf"
         with pytest.raises(ApiError):
             apiobj.saved_query.add(name=name, fields=fields, sort_field=sort_field)
-
-
-class TestSavedQueryDevicesPrivate(SavedQueryPrivate):
-    @pytest.fixture(scope="class")
-    def apiobj(self, api_devices):
-        return api_devices
-
-
-class TestSavedQueryDevicesPublic(SavedQueryPublic):
-    @pytest.fixture(scope="class")
-    def apiobj(self, api_devices):
-        return api_devices
-
-
-class TestSavedQueryUsersPrivate(SavedQueryPrivate):
-    @pytest.fixture(scope="class")
-    def apiobj(self, api_users):
-        return api_users
-
-
-class TestSavedQueryUsersPublic(SavedQueryPublic):
-    @pytest.fixture(scope="class")
-    def apiobj(self, api_users):
-        return api_users
 
 
 def validate_qexpr(qexpr, asset):
@@ -914,5 +901,3 @@ def validate_sq(asset):
 
     document_meta = asset.pop("document_meta", {})
     assert isinstance(document_meta, dict)
-
-    assert not asset, list(asset)

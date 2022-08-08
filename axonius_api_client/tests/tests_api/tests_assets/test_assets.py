@@ -52,8 +52,6 @@ class WizData:
     nones: List[Any] = [[], None, {}, ""]
 
 
-@pytest.mark.slow
-@pytest.mark.trylast
 class ModelMixinsBase:
     def test_model_child(self, apiobj):
         child = mixins.ChildMixins(parent=apiobj)
@@ -61,7 +59,13 @@ class ModelMixinsBase:
         assert repr(apiobj) in repr(child)
 
 
-class AssetsPrivate:
+@pytest.mark.slow
+@pytest.mark.trylast
+class TestAssetsPrivate(ModelMixinsBase):
+    @pytest.fixture(params=["api_devices"], scope="class")
+    def apiobj(self, request):
+        return request.getfixturevalue(request.param)
+
     def test_history_dates(self, apiobj):
         def check_asset_type_history_date(obj):
             assert isinstance(obj, json_api.assets.AssetTypeHistoryDate)
@@ -130,41 +134,42 @@ class AssetsPrivate:
 
     def test_get_asset_page(self, apiobj, monkeypatch):
         def check_page(page):
+            state = page.create_state()
+            assert isinstance(state, dict)
             assert isinstance(page, json_api.assets.AssetsPage)
             assert isinstance(page.assets, list)
-            assert len(page.assets) == 1
-            assert page.asset_count_page == 1
+            if page.asset_count_total:
+                assert len(page.assets) == 1
+                assert page.asset_count_page == 1
+                assert page.pages_total >= 1
             assert isinstance(page.cursor, str) and page.cursor
             assert isinstance(page.page, dict) and page.page
-            assert isinstance(page.pages_total, int) and page.pages_total
+            assert isinstance(page.pages_total, int)
 
         page1 = apiobj._get(offset=0, limit=1)
-        page2 = apiobj._get(offset=1, limit=1, cursor_id=page1.cursor)
-        page3 = apiobj._get(offset=2, limit=1, cursor_id=page1.cursor)
         check_page(page1)
+
+        page2 = apiobj._get(offset=1, limit=1, cursor_id=page1.cursor)
         check_page(page2)
 
-        assert page1.page_number == 1
-        assert page2.page_number == 2
-        assert page3.page_number == 3
-
-        state1_max_rows = page1.create_state(max_rows=2)
-        assert state1_max_rows["page_size"] == 2
-
-        state1_page_start = page1.create_state(page_start=2, page_size=2)
-        assert state1_page_start["rows_offset"] == 4
-
+        page3 = apiobj._get(offset=2, limit=1, cursor_id=page1.cursor)
         state1 = page1.create_state()
-        assert isinstance(state1, dict)
+        if page1.asset_count_total:
+            assert page1.page_number == 1
+            assert page2.page_number == 2
+            assert page3.page_number == 3
 
-        state2 = page1.create_state()
-        assert isinstance(state2, dict)
+            state1_max_rows = page1.create_state(max_rows=2)
+            assert state1_max_rows["page_size"] == 2
 
-        page2.process_page(state=state1, start_dt=page1.page_start_dt, apiobj=apiobj)
-        assert state1["page_number"] == 2
-        page2.process_row(state=state1, apiobj=apiobj, row=page2.assets[0])
-        page2.process_loop(state=state1, apiobj=apiobj)
-        assert state1["page_loop"] == 2
+            state1_page_start = page1.create_state(page_start=2, page_size=2)
+            assert state1_page_start["rows_offset"] == 4
+
+            page2.process_page(state=state1, start_dt=page1.page_start_dt, apiobj=apiobj)
+            assert state1["page_number"] == 2
+            page2.process_row(state=state1, apiobj=apiobj, row=page2.assets[0])
+            page2.process_loop(state=state1, apiobj=apiobj)
+            assert state1["page_loop"] == 2
 
         with monkeypatch.context() as m:
             m.setattr(page3, "assets", [])
@@ -173,17 +178,14 @@ class AssetsPrivate:
 
     def test_get_pages(self, apiobj):
         page1 = apiobj._get(offset=0, limit=5)
-        assert len(page1.assets) == 5
-
         cursor = page1.cursor
-
         page2 = apiobj._get(offset=5, limit=5, cursor_id=cursor)
-        assert len(page2.assets) == 5
-
         page3 = apiobj._get(offset=10, limit=5, cursor_id=cursor)
-        assert len(page3.assets) == 5
-
-        assert len(page1.assets + page2.assets + page3.assets) == 15
+        if page1.asset_count_total:
+            assert len(page1.assets) == 5
+            assert len(page2.assets) == 5
+            assert len(page3.assets) == 5
+            assert len(page1.assets + page2.assets + page3.assets) == 15
 
     @pytest.mark.parametrize("value", WizData.nones)
     def test_get_wiz_entries_none(self, apiobj, value):
@@ -255,7 +257,11 @@ class AssetsPrivate:
         assert query == f"{pre} (not ({inner})) {post}"
 
 
-class AssetsPublic:
+class TestAssetsPublic(ModelMixinsBase):
+    @pytest.fixture(params=["api_devices"], scope="class")
+    def apiobj(self, request):
+        return request.getfixturevalue(request.param)
+
     def test_sort(self, apiobj):
         apiobj.get(max_rows=1, sort_field=apiobj.FIELD_MAIN)
 
@@ -362,7 +368,7 @@ class AssetsPublic:
                     and all_data["accurate_for_datetime"]
                 )
 
-                if all_data["plugin_name"] != "static_analysis":
+                if all_data["plugin_name"] not in ["static_analysis", "gui"]:
                     assert isinstance(all_data["client_used"], str) and all_data["client_used"]
 
     def test_get_all_adapter(self, apiobj):

@@ -83,17 +83,17 @@ class TestToCsvAdapters(Base, Common):
         return Parsers.to_csv_adapters.name
 
     def test_valid(self, wizard_parser, parser):
-        ret = wizard_parser(value="  active_directory   ,   aws  ,,", parser=parser)
+        ret = wizard_parser(value="  active_directory   ,   csv  ,,", parser=parser)
         assert ret == (
-            '"active_directory_adapter", "aws_adapter"',
-            "active_directory_adapter,aws_adapter",
+            '"active_directory_adapter", "csv_adapter"',
+            "active_directory_adapter,csv_adapter",
         )
 
     def test_valid_list(self, wizard_parser, parser):
-        ret = wizard_parser(value=["active_directory", "aws"], parser=parser)
+        ret = wizard_parser(value=["active_directory", "csv"], parser=parser)
         assert ret == (
-            '"active_directory_adapter", "aws_adapter"',
-            "active_directory_adapter,aws_adapter",
+            '"active_directory_adapter", "csv_adapter"',
+            "active_directory_adapter,csv_adapter",
         )
 
     def test_invalid(self, wizard_parser, parser):

@@ -8,7 +8,7 @@ import cachetools
 
 from ...constants.api import DEFAULT_CALLBACKS_CLS, MAX_PAGE_SIZE, PAGE_SIZE
 from ...exceptions import ApiError, NotFoundError, ResponseNotOk, StopFetch
-from ...tools import combo_dicts, dt_now, dt_now_file, json_dump, listify
+from ...tools import dt_now, dt_now_file, json_dump, listify
 from .. import json_api
 from ..api_endpoints import ApiEndpoints
 from ..asset_callbacks.tools import get_callbacks_cls
@@ -57,6 +57,7 @@ class AssetMixin(ModelMixins):
         history_exact: bool = False,
         wiz_entries: Optional[Union[List[dict], List[str], dict, str]] = None,
         use_cache_entry: bool = False,
+        saved_query_id: Optional[str] = None,
         **kwargs,
     ) -> int:
         """Get the count of assets from a query.
@@ -89,8 +90,9 @@ class AssetMixin(ModelMixins):
         """
         wiz_parsed = self.get_wiz_entries(wiz_entries=wiz_entries)
 
-        if isinstance(wiz_parsed, dict) and wiz_parsed.get("query"):
-            query = wiz_parsed["query"]
+        if isinstance(wiz_parsed, dict):
+            if wiz_parsed.get("query"):
+                query = wiz_parsed["query"]
 
         history_date = self.get_history_date(
             date=history_date, days_ago=history_days_ago, exact=history_exact
@@ -125,8 +127,9 @@ class AssetMixin(ModelMixins):
             kwargs: supplied to :meth:`count`
         """
         sq = self.saved_query.get_by_name(value=name)
-        query = sq["view"]["query"]["filter"]
-        return self.count(**combo_dicts(kwargs, query=query))
+        kwargs["query"] = sq["view"]["query"]["filter"]
+        kwargs["saved_query_id"] = sq["id"]
+        return self.count(**kwargs)
 
     def get(self, generator: bool = False, **kwargs) -> GEN_TYPE:
         r"""Get assets from a query.
@@ -268,6 +271,8 @@ class AssetMixin(ModelMixins):
         history_days_ago: Optional[int] = None,
         history_exact: bool = False,
         wiz_entries: Optional[Union[List[dict], List[str], dict, str]] = None,
+        saved_query_id: Optional[str] = None,
+        expressions: Optional[List[dict]] = None,
         **kwargs,
     ) -> Generator[dict, None, None]:
         """Get assets from a query.
@@ -301,8 +306,11 @@ class AssetMixin(ModelMixins):
         """
         wiz_parsed: Optional[dict] = self.get_wiz_entries(wiz_entries=wiz_entries)
 
-        if isinstance(wiz_parsed, dict) and wiz_parsed.get("query"):
-            query = wiz_parsed["query"]
+        if isinstance(wiz_parsed, dict):
+            if wiz_parsed.get("query"):
+                query = wiz_parsed["query"]
+            if wiz_parsed.get("expressions"):
+                expressions = wiz_parsed["expressions"]
 
         fields_parsed: List[str] = self.fields.validate(
             fields=fields,
@@ -394,6 +402,8 @@ class AssetMixin(ModelMixins):
                     cursor_id=state["page_cursor"],
                     offset=state["rows_offset"],
                     limit=state["page_size"],
+                    saved_query_id=saved_query_id,
+                    expressions=expressions,
                     always_cached_query=False,
                     use_cache_entry=False,
                     get_metadata=True,
@@ -443,6 +453,8 @@ class AssetMixin(ModelMixins):
         sq = self.saved_query.get_by_name(value=name)
         kwargs["query"] = sq["view"]["query"]["filter"]
         kwargs["fields_manual"] = sq["view"]["fields"]
+        kwargs["saved_query_id"] = sq["id"]
+        kwargs["expressions"] = sq["view"]["query"]["expressions"]
         kwargs.setdefault("fields_default", False)
         return self.get(**kwargs)
 
@@ -710,6 +722,8 @@ class AssetMixin(ModelMixins):
         excluded_adapters: Optional[dict] = None,
         field_filters: Optional[dict] = None,
         fields: Optional[dict] = None,
+        saved_query_id: Optional[str] = None,
+        expressions: Optional[List[dict]] = None,
         offset: int = 0,
         limit: int = PAGE_SIZE,
     ) -> json_api.assets.AssetsPage:
@@ -752,6 +766,8 @@ class AssetMixin(ModelMixins):
             sort=sort,
             excluded_adapters=excluded_adapters or {},
             field_filters=field_filters or {},
+            saved_query_id=saved_query_id,
+            expressions=expressions or [],
         )
         request_obj.set_page(limit=limit, offset=offset)
         self.LAST_GET_REQUEST_OBJ = request_obj
@@ -777,6 +793,7 @@ class AssetMixin(ModelMixins):
         filter: Optional[str] = None,
         history_date: Optional[str] = None,
         use_cache_entry: bool = False,
+        saved_query_id: Optional[str] = None,
     ) -> json_api.assets.Count:
         """Private API method to get the count of assets.
 
@@ -792,6 +809,7 @@ class AssetMixin(ModelMixins):
         request_obj = api_endpoint.load_request(
             use_cache_entry=use_cache_entry,
             filter=filter,
+            saved_query_id=saved_query_id,
         )
         return api_endpoint.perform_request(
             http=self.auth.http, request_obj=request_obj, asset_type=asset_type

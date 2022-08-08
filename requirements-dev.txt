@@ -3,3 +3,4 @@ pytest
 pytest-cov
 pytest-httpbin
 werkzeug==2.0.3
+flaky

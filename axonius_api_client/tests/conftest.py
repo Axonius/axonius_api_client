@@ -41,6 +41,49 @@ def pytest_addoption(parser):
 
 
 @pytest.fixture(scope="session")
+def api_vulnerabilities(request):
+    """Get a fully loaded Vulnerabilities API object."""
+    from axonius_api_client.api import (
+        Adapters,
+        Vulnerabilities,
+        Wizard,
+        WizardCsv,
+        WizardText,
+        DataScopes,
+    )
+    from axonius_api_client.api.assets import Fields, Labels, SavedQuery
+
+    auth = get_auth(request)
+
+    obj = Vulnerabilities(auth=auth)
+    assert isinstance(obj.fields_default, list)
+
+    check_apiobj(authobj=auth, apiobj=obj)
+
+    check_apiobj_children(
+        apiobj=obj,
+        labels=Labels,
+        saved_query=SavedQuery,
+        fields=Fields,
+    )
+
+    check_apiobj_xref(apiobj=obj, adapters=Adapters)
+    assert isinstance(obj.wizard, Wizard)
+    assert isinstance(obj.wizard_text, WizardText)
+    assert isinstance(obj.wizard_csv, WizardCsv)
+    assert isinstance(obj.data_scopes, DataScopes)
+    obj.ORIGINAL_ROWS = obj.get(max_rows=5)
+
+    try:
+        obj.COMPLEX_ROWS = obj.get(
+            max_rows=5, fields=obj.FIELD_COMPLEX, wiz_entries=f"simple {obj.FIELD_COMPLEX} exists"
+        )
+    except Exception:
+        obj.COMPLEX_ROWS = []
+    return obj
+
+
+@pytest.fixture(scope="session")
 def api_devices(request):
     """Get a fully loaded Devices API object."""
     from axonius_api_client.api import Adapters, Devices, Wizard, WizardCsv, WizardText, DataScopes
@@ -67,9 +110,12 @@ def api_devices(request):
     assert isinstance(obj.data_scopes, DataScopes)
     obj.ORIGINAL_ROWS = obj.get(max_rows=5)
 
-    obj.COMPLEX_ROWS = obj.get(
-        max_rows=5, fields=obj.FIELD_COMPLEX, wiz_entries=f"simple {obj.FIELD_COMPLEX} exists"
-    )
+    try:
+        obj.COMPLEX_ROWS = obj.get(
+            max_rows=5, fields=obj.FIELD_COMPLEX, wiz_entries=f"simple {obj.FIELD_COMPLEX} exists"
+        )
+    except Exception:
+        obj.COMPLEX_ROWS = []
     return obj
 
 
@@ -101,9 +147,12 @@ def api_users(request):
     assert isinstance(obj.data_scopes, DataScopes)
     obj.ORIGINAL_ROWS = obj.get(max_rows=5)
 
-    obj.COMPLEX_ROWS = obj.get(
-        max_rows=5, fields=obj.FIELD_COMPLEX, wiz_entries=f"simple {obj.FIELD_COMPLEX} exists"
-    )
+    try:
+        obj.COMPLEX_ROWS = obj.get(
+            max_rows=5, fields=obj.FIELD_COMPLEX, wiz_entries=f"simple {obj.FIELD_COMPLEX} exists"
+        )
+    except Exception:
+        obj.COMPLEX_ROWS = []
     return obj
 
 

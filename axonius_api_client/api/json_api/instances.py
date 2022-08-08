@@ -15,6 +15,7 @@ class InstanceSchema(BaseSchemaJson):
     """Pass."""
 
     cpu_core_threads = marshmallow_jsonapi.fields.Int(allow_none=True)
+    cpu_logical_cores = marshmallow_jsonapi.fields.Int(allow_none=True)
     cpu_cores = marshmallow_jsonapi.fields.Int(allow_none=True)
     cpu_usage = marshmallow_jsonapi.fields.Int(allow_none=True)
     data_disk_free_space = marshmallow_jsonapi.fields.Number(allow_none=True)
@@ -41,6 +42,7 @@ class InstanceSchema(BaseSchemaJson):
     tags = marshmallow_jsonapi.fields.Dict()
     use_as_environment_name = SchemaBool()
     remaining_snapshots_days = marshmallow_jsonapi.fields.Int(allow_none=True)
+    indication_color = marshmallow_jsonapi.fields.Str(allow_none=True)
 
     @staticmethod
     def get_model_cls() -> type:
@@ -67,6 +69,7 @@ class Instance(BaseModel):
     ips: List[str] = dataclasses.field(default_factory=list)
     remaining_snapshots_days: Optional[int] = None
     cpu_core_threads: Optional[int] = None
+    cpu_logical_cores: Optional[int] = None
     cpu_cores: Optional[int] = None
     cpu_usage: Optional[int] = None
     data_disk_free_space: Optional[float] = None
@@ -88,6 +91,7 @@ class Instance(BaseModel):
         mm_field=SchemaDatetime(allow_none=True), default=None
     )
     tags: dict = dataclasses.field(default_factory=dict)
+    indication_color: Optional[str] = None
 
     id: Optional[str] = None
     document_meta: dict = dataclasses.field(default_factory=dict)

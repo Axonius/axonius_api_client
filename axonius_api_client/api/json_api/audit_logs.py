@@ -57,6 +57,9 @@ class AuditLogSchema(BaseSchemaJson):
     message = marshmallow_jsonapi.fields.Str()
     type = marshmallow_jsonapi.fields.Str()
     user = marshmallow_jsonapi.fields.Str()
+    role = marshmallow_jsonapi.fields.Str(allow_none=True)
+    impersonator_user = marshmallow_jsonapi.fields.Str(allow_none=True)
+    data_scope = marshmallow_jsonapi.fields.Str(allow_none=True)
 
     class Meta:
         """Pass."""
@@ -79,6 +82,9 @@ class AuditLog(BaseModel):
     message: str
     type: str
     user: str
+    role: Optional[str] = None
+    impersonator_user: Optional[str] = None
+    data_scope: Optional[str] = None
 
     @staticmethod
     def get_schema_cls() -> Optional[Type[BaseSchema]]:
@@ -106,6 +112,9 @@ class AuditLog(BaseModel):
             "message",
             "type",
             "user",
+            "role",
+            "impersonator_user",
+            "data_scope",
         ]
 
     @staticmethod

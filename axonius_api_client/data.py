@@ -3,7 +3,7 @@
 import dataclasses
 import datetime
 import enum
-from typing import List, Union
+from typing import Any, List, Union
 
 from .exceptions import ApiError
 
@@ -31,6 +31,36 @@ class BaseEnum(enum.Enum):
 
         valids = "\n" + "\n".join([repr(x) for x in cls])
         raise ApiError(f"Invalid {cls.__name__} value {value!r}, valids:{valids}")
+
+    @classmethod
+    def get_obj_by_value(
+        cls,
+        value: Any,
+        match_name: bool = True,
+        match_value: bool = True,
+        match_obj: bool = True,
+    ) -> "BaseEnum":
+        """Pass."""
+        for item in cls:
+            if match_obj and item == value:
+                return item
+            if match_name and item.name == value:
+                return item
+            if match_value and item.value == value:
+                return item
+
+        valids = "\n" + "\n".join([repr(x) for x in cls])
+        raise ApiError(f"Invalid {cls.__name__} value {value!r}, valids:{valids}")
+
+    @classmethod
+    def get_name_by_value(cls, value: Any, **kwargs) -> str:
+        """Pass."""
+        return cls.get_obj_by_value(value=value, **kwargs).name
+
+    @classmethod
+    def get_value_by_value(cls, value: Any, **kwargs) -> str:
+        """Pass."""
+        return cls.get_obj_by_value(value=value, **kwargs).value
 
     @classmethod
     def keys(cls) -> List[str]:

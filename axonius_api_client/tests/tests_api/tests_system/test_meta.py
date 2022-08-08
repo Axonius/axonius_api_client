@@ -45,6 +45,10 @@ class SystemMetaBase:
         vulns = entity_sizes.pop("Vulnerabilities", None)  # 4.6
         assert isinstance(vulns, dict) or vulns is None
 
+        # 2022-09-04
+        sws = entity_sizes.pop("Software", None)  # 4.6
+        assert isinstance(sws, dict) or sws is None
+
         assert not entity_sizes
         assert not data
 

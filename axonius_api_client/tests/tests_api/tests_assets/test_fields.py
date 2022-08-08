@@ -11,7 +11,23 @@ from ...meta import FIELD_FORMATS, SCHEMA_FIELD_FORMATS, SCHEMA_TYPES
 from ...utils import get_schema, get_schemas
 
 
-class FieldsPrivate:
+def pop_hyperlinks(schema):
+    hyperlinks = schema.pop("hyperlinks", None)
+    assert isinstance(hyperlinks, str) or hyperlinks is None
+
+
+def pop_enum(schema):
+    enums = schema.pop("enum", [])
+    assert isinstance(enums, list) or enums is None
+    for enum in enums or []:
+        assert isinstance(enum, (str, int, dict))
+
+
+class TestFieldsPrivate:
+    @pytest.fixture(params=["api_devices", "api_users", "api_vulnerabilities"], scope="class")
+    def apiobj(self, request):
+        return request.getfixturevalue(request.param)
+
     def test_private_get(self, apiobj):
         fields = apiobj.fields._get()
         assert isinstance(fields, json_api.generic.Metadata)
@@ -55,7 +71,7 @@ class FieldsPrivate:
         items = schema.pop("items")
         assert isinstance(items, list)
 
-        required = schema.pop("required")
+        required = schema.pop("required", [])
         assert isinstance(required, list)
 
         stype = schema.pop("type")
@@ -112,10 +128,7 @@ class FieldsPrivate:
             assert isinstance(fformat, str)
             assert fformat in FIELD_FORMATS or fformat == ""
 
-            enums = field.pop("enum", [])
-            assert isinstance(enums, list)
-            for enum in enums:
-                assert isinstance(enum, str) or isinstance(enum, int)
+            pop_enum(field)
 
             items = field.pop("items", {})
             assert isinstance(items, dict)
@@ -158,6 +171,13 @@ class FieldsPrivate:
             flatten = field.pop("flatten", False)
             assert isinstance(flatten, bool)
 
+            # 2022-09-02
+            view_type = field.pop("view_type", None)
+            assert isinstance(view_type, str) or view_type is None
+            # 2022-09-02
+            info = field.pop("info", None)
+            assert isinstance(info, str) or info is None
+            pop_hyperlinks(schema=field)
             assert not field, list(field)
 
     def val_raw_items(self, adapter, items):
@@ -198,11 +218,7 @@ class FieldsPrivate:
 
             val_source(obj=items)
 
-            enums = items.pop("enum", [])
-            assert isinstance(enums, list)
-
-            for enum in enums:
-                assert isinstance(enum, str) or isinstance(enum, int)
+            pop_enum(items)
 
             # added in 3.11?
             generic = items.pop("generic", True)
@@ -250,7 +266,11 @@ class FieldsPrivate:
             assert "->" in p
 
 
-class FieldsPublic:
+class TestFieldsPublic:
+    @pytest.fixture(params=["api_devices", "api_users", "api_vulnerabilities"], scope="class")
+    def apiobj(self, request):
+        return request.getfixturevalue(request.param)
+
     def test_get(self, apiobj):
         fields = apiobj.fields.get()
         self.val_parsed_fields(fields=fields)
@@ -348,8 +368,7 @@ class FieldsPublic:
         is_complex = schema.pop("is_complex")
         assert isinstance(is_complex, bool)
 
-        enums = schema.pop("enum", [])
-        assert isinstance(enums, list)
+        pop_enum(schema)
 
         is_agg = schema.pop("is_agg")
         assert isinstance(is_agg, bool)
@@ -362,9 +381,6 @@ class FieldsPublic:
 
         expr_field_type = schema.pop("expr_field_type")
         assert isinstance(expr_field_type, str)
-
-        for enum in enums:
-            assert isinstance(enum, str) or isinstance(enum, int)
 
         sub_fields = schema.pop("sub_fields", [])
         assert isinstance(sub_fields, list)
@@ -428,12 +444,7 @@ class FieldsPublic:
             assert itype in SCHEMA_TYPES or itype == ""
 
             val_source(obj=items)
-
-            enums = items.pop("enum", [])
-            assert isinstance(enums, list)
-
-            for enum in enums:
-                assert isinstance(enum, str) or isinstance(enum, int)
+            pop_enum(items)
 
             # 3.11
             generic = items.pop("generic", True)
@@ -463,6 +474,13 @@ class FieldsPublic:
 
             assert not items
 
+        # 2022-09-02
+        view_type = schema.pop("view_type", None)
+        assert isinstance(view_type, str) or view_type is None
+        # 2022-09-02
+        info = schema.pop("info", None)
+        assert isinstance(info, str) or info is None
+        pop_hyperlinks(schema=schema)
         assert not schema, list(schema)
 
     def test_get_adapter_name(self, apiobj):
@@ -657,7 +675,7 @@ class FieldsPublic:
             apiobj.fields.validate(fields_default=False)
 
 
-class TestFieldsDevicesPrivate(FieldsPrivate):
+class TestFuzzyFieldsDevices:
     @pytest.fixture(scope="class")
     def apiobj(self, api_devices):
         return api_devices
@@ -671,24 +689,6 @@ class TestFieldsDevicesPrivate(FieldsPrivate):
         with pytest.raises(NotFoundError) as exc:
             apiobj.fields.validate(fields="os", fields_default=False)
         assert "Maybe you meant" in str(exc.value)
-
-
-class TestFieldsDevicesPublic(FieldsPublic):
-    @pytest.fixture(scope="class")
-    def apiobj(self, api_devices):
-        return api_devices
-
-
-class TestFieldsUsersPrivate(FieldsPrivate):
-    @pytest.fixture(scope="class")
-    def apiobj(self, api_users):
-        return api_users
-
-
-class TestFieldsUsersPublic(FieldsPublic):
-    @pytest.fixture(scope="class")
-    def apiobj(self, api_users):
-        return api_users
 
 
 def val_source(obj):

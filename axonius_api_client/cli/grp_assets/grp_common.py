@@ -252,6 +252,7 @@ GET_EXPORT = [
     ),
     click.option(
         "--explode_entities/--no-explode_entities",
+        "--explode-entities/--no-explode-entities",
         "-exe/-nexe",
         "explode_entities",
         default=asset_callbacks.Base.args_map()["explode_entities"],

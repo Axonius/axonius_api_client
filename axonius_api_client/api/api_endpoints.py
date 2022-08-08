@@ -134,8 +134,8 @@ class SavedQueries(ApiEndpointGroup):
     get: ApiEndpoint = ApiEndpoint(
         method="get",
         path="api/V4.0/{asset_type}/views/saved",
-        request_schema_cls=json_api.resources.ResourcesGetSchema,
-        request_model_cls=json_api.resources.ResourcesGet,
+        request_schema_cls=json_api.saved_queries.SavedQueryGetSchema,
+        request_model_cls=json_api.saved_queries.SavedQueryGet,
         response_schema_cls=json_api.saved_queries.SavedQuerySchema,
         response_model_cls=json_api.saved_queries.SavedQuery,
     )
@@ -834,13 +834,24 @@ class Adapters(ApiEndpointGroup):
         response_model_cls=json_api.adapters.AdaptersList,
     )
 
-    get_history_filters: ApiEndpoint = ApiEndpoint(
+    get_fetch_history_filters: ApiEndpoint = ApiEndpoint(
         method="get",
         path="api/adapters/history/filters",
         request_schema_cls=None,
         request_model_cls=None,
-        response_schema_cls=json_api.adapters.AdapterHistoryFiltersSchema,
-        response_model_cls=json_api.adapters.AdapterHistoryFilters,
+        response_schema_cls=json_api.adapters.AdapterFetchHistoryFiltersSchema,
+        response_model_cls=json_api.adapters.AdapterFetchHistoryFilters,
+    )
+
+    get_fetch_history: ApiEndpoint = ApiEndpoint(
+        method="post",
+        path="api/adapters/history",
+        request_schema_cls=json_api.adapters.AdapterFetchHistoryRequestSchema,
+        request_model_cls=json_api.adapters.AdapterFetchHistoryRequest,
+        response_schema_cls=json_api.adapters.AdapterFetchHistorySchema,
+        response_model_cls=json_api.adapters.AdapterFetchHistory,
+        # response_schema_cls=None,
+        # response_model_cls=None,
     )
 
     settings_get: ApiEndpoint = ApiEndpoint(
