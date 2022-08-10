@@ -105,6 +105,12 @@ def get_field_dc_mm(mm_field: marshmallow.fields.Field, **kwargs) -> dataclasses
     return dataclasses.field(**kwargs)
 
 
+def get_schema_dc(schema: marshmallow.Schema, key: str, **kwargs) -> dataclasses.Field:
+    """Pass."""
+    kwargs["mm_field"] = schema._declared_fields[key]
+    return get_field_dc_mm(**kwargs)
+
+
 def validator_wrapper(fn: callable) -> callable:
     """Pass."""
 

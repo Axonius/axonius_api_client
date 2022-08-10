@@ -156,10 +156,28 @@ class SavedQueries(ApiEndpointGroup):
         path="api/queries/history",
         request_schema_cls=json_api.saved_queries.QueryHistoryRequestSchema,
         request_model_cls=json_api.saved_queries.QueryHistoryRequest,
-        response_schema_cls=None,
-        response_model_cls=None,
+        response_schema_cls=json_api.saved_queries.QueryHistorySchema,
+        response_model_cls=json_api.saved_queries.QueryHistory,
     )
     # PBUG: response not properly modeled
+
+    get_run_by: ApiEndpoint = ApiEndpoint(
+        method="get",
+        path="/api/queries/history/run_by_options",
+        request_schema_cls=None,
+        request_model_cls=None,
+        response_schema_cls=json_api.generic.ListValueSchema,
+        response_model_cls=json_api.generic.ListValue,
+    )
+
+    get_run_from: ApiEndpoint = ApiEndpoint(
+        method="get",
+        path="api/queries/history/run_from_options",
+        request_schema_cls=None,
+        request_model_cls=None,
+        response_schema_cls=json_api.generic.ListValueSchema,
+        response_model_cls=json_api.generic.ListValue,
+    )
 
     create: ApiEndpoint = ApiEndpoint(
         method="post",
