@@ -12,7 +12,7 @@ from ...constants.api import GUI_PAGE_SIZES
 from ...exceptions import ApiAttributeTypeError, ApiError
 from ...tools import coerce_bool, coerce_int, listify
 from .base import BaseModel, BaseSchema, BaseSchemaJson
-from .custom_fields import SchemaBool, SchemaDatetime
+from .custom_fields import SchemaBool, SchemaDatetime, get_field_dc_mm, get_schema_dc
 from .generic import PrivateRequest, PrivateRequestSchema
 from .resources import PaginationRequest, ResourcesGet, ResourcesGetSchema
 
@@ -35,6 +35,63 @@ class SavedQueryGetSchema(ResourcesGetSchema):
         """Pass."""
 
         type_ = "request_views_schema"
+
+
+class QueryHistoryRequestSchema(ResourcesGetSchema):
+    """Pass."""
+
+    folder_id = marshmallow_jsonapi.fields.Str(load_default="", dump_default="")
+
+    run_by = marshmallow_jsonapi.fields.List(marshmallow_jsonapi.fields.Str())
+    run_from = marshmallow_jsonapi.fields.List(marshmallow_jsonapi.fields.Str())
+    modules = marshmallow_jsonapi.fields.List(marshmallow_jsonapi.fields.Str())
+    tags = marshmallow_jsonapi.fields.List(marshmallow_jsonapi.fields.Str())
+    saved_query_name_term = marshmallow_jsonapi.fields.Str(allow_none=True)
+    date_from = SchemaDatetime(allow_none=True)
+    date_to = SchemaDatetime(allow_none=True)
+
+    @staticmethod
+    def get_model_cls() -> type:
+        """Pass."""
+        return QueryHistoryRequest
+
+    class Meta:
+        """Pass."""
+
+        type_ = "entities_queries_history_request_schema"
+
+
+class QueryHistorySchema(BaseSchemaJson):
+    """Pass."""
+
+    query_id = marshmallow_jsonapi.fields.Str(allow_none=False)
+    saved_query_name = marshmallow_jsonapi.fields.Str(
+        load_default=None, dump_default=None, allow_none=True
+    )
+    saved_query_tags = marshmallow.fields.List(marshmallow_jsonapi.fields.Str())
+    start_time = SchemaDatetime(allow_none=True)
+    end_time = SchemaDatetime(allow_none=True)
+    duration = marshmallow_jsonapi.fields.Str(load_default=None, dump_default=None, allow_none=True)
+    run_by = marshmallow_jsonapi.fields.Str(load_default=None, dump_default=None, allow_none=True)
+    run_from = marshmallow_jsonapi.fields.Str(load_default=None, dump_default=None, allow_none=True)
+    execution_source = marshmallow_jsonapi.fields.Dict(
+        load_default=None, dump_default=None, allow_none=True
+    )
+    status = marshmallow_jsonapi.fields.Str(load_default=None, dump_default=None, allow_none=True)
+    module = marshmallow_jsonapi.fields.Str(load_default=None, dump_default=None, allow_none=True)
+    results_count = marshmallow.fields.Integer(
+        load_default=None, dump_default=None, allow_none=True
+    )
+
+    class Meta:
+        """Pass."""
+
+        type_ = "entities_queries_history_response_schema"
+
+    @staticmethod
+    def get_model_cls() -> type:
+        """Pass."""
+        return QueryHistory
 
 
 class SavedQuerySchema(BaseSchemaJson):
@@ -466,6 +523,88 @@ class SavedQueryGet(ResourcesGet):
     def get_schema_cls() -> Optional[Type[BaseSchema]]:
         """Pass."""
         return SavedQueryGetSchema
+
+
+@dataclasses.dataclass
+class QueryHistoryRequest(ResourcesGet):
+    """Pass."""
+
+    run_by: Optional[List[str]] = get_field_dc_mm(
+        mm_field=QueryHistoryRequestSchema._declared_fields["run_by"],
+        default_factory=list,
+    )
+    run_from: Optional[List[str]] = get_field_dc_mm(
+        mm_field=QueryHistoryRequestSchema._declared_fields["run_from"],
+        default_factory=list,
+    )
+    modules: Optional[List[str]] = get_field_dc_mm(
+        mm_field=QueryHistoryRequestSchema._declared_fields["modules"],
+        default_factory=list,
+    )
+    tags: Optional[List[str]] = get_field_dc_mm(
+        mm_field=QueryHistoryRequestSchema._declared_fields["tags"],
+        default_factory=list,
+    )
+    saved_query_name_term: Optional[str] = get_field_dc_mm(
+        mm_field=QueryHistoryRequestSchema._declared_fields["saved_query_name_term"],
+        default=None,
+    )
+    date_from: Optional[datetime.datetime] = get_field_dc_mm(
+        mm_field=QueryHistoryRequestSchema._declared_fields["date_from"],
+        default=None,
+    )
+    date_to: Optional[datetime.datetime] = get_field_dc_mm(
+        mm_field=QueryHistoryRequestSchema._declared_fields["date_to"],
+        default=None,
+    )
+
+    def __post_init__(self):
+        """Pass."""
+        self.run_by = self.run_by or []
+        self.run_from = self.run_from or []
+        self.modules = self.modules or []
+        self.tags = self.tags or []
+        self.page = self.page if self.page else PaginationRequest()
+
+    @staticmethod
+    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+        """Pass."""
+        return QueryHistoryRequestSchema
+
+
+@dataclasses.dataclass
+class QueryHistory(BaseModel):
+    """Pass."""
+
+    query_id: str = get_schema_dc(schema=QueryHistorySchema, key="query_id")
+    saved_query_name: Optional[str] = get_schema_dc(
+        schema=QueryHistorySchema, key="saved_query_name", default=None
+    )
+    saved_query_tags: Optional[List[str]] = get_schema_dc(
+        schema=QueryHistorySchema, key="saved_query_tags", default=None
+    )
+    start_time: Optional[datetime.datetime] = get_schema_dc(
+        schema=QueryHistorySchema, key="start_time", default=None
+    )
+    end_time: Optional[datetime.datetime] = get_schema_dc(
+        schema=QueryHistorySchema, key="end_time", default=None
+    )
+    duration: Optional[str] = get_schema_dc(schema=QueryHistorySchema, key="duration", default=None)
+    run_by: Optional[str] = get_schema_dc(schema=QueryHistorySchema, key="run_by", default=None)
+    run_from: Optional[str] = get_schema_dc(schema=QueryHistorySchema, key="run_from", default=None)
+    execution_source: Optional[dict] = get_schema_dc(
+        schema=QueryHistorySchema, key="execution_source", default=None
+    )
+    status: Optional[str] = get_schema_dc(schema=QueryHistorySchema, key="status", default=None)
+    module: Optional[str] = get_schema_dc(schema=QueryHistorySchema, key="module", default=None)
+    results_count: Optional[int] = get_schema_dc(
+        schema=QueryHistorySchema, key="results_count", default=None
+    )
+
+    @staticmethod
+    def get_schema_cls():
+        """Pass."""
+        return QueryHistorySchema
 
 
 # WIP: folders

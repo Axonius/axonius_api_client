@@ -21,7 +21,7 @@ from ...http import Http
 from ...tools import coerce_bool, combo_dicts, json_dump, json_load, listify, strip_right
 
 LOGGER = logging.getLogger(__name__)
-EXTRA_WARN = False
+EXTRA_WARN = True
 
 
 class BaseCommon:
@@ -176,11 +176,16 @@ class BaseSchemaJson(BaseSchema, marshmallow_jsonapi.Schema):
         Raises:
             SchemaError: if data is not a dict
         """
-        many = isinstance(data, dict) and isinstance(data.get("data"), (list, tuple))
-        schema = cls(many=many)
         if not isinstance(data, dict):
-            exc = ApiError(f"Data to load must be a dictionary, not a {type(data).__name__}")
-            raise SchemaError(schema=schema, exc=exc, data=data, obj=cls)
+            if isinstance(data, list) and data:
+                # Fix for endpoints that do not return JSON API structure
+                data = {"data": [{"attributes": x, "type": cls.Meta.type_} for x in data]}
+            else:
+                exc = ApiError(f"Data to load must be a dictionary, not a {type(data).__name__}")
+                raise SchemaError(schema=cls, exc=exc, data=data, obj=cls)
+
+        many = isinstance(data.get("data"), (list, tuple))
+        schema = cls(many=many)
         return cls._load_schema(**combo_dicts(kwargs, schema=schema, data=data))
 
     @classmethod

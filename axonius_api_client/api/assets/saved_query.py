@@ -15,11 +15,13 @@ from ...tools import check_gui_page_size, coerce_bool, echo_ok, echo_warn, listi
 from .. import json_api
 from ..api_endpoints import ApiEndpoints
 from ..json_api.paging_state import LOG_LEVEL_API, PAGE_SIZE, PagingState
+from ..json_api.saved_queries import QueryHistory, QueryHistoryRequest
 from ..mixins import ChildMixins
 
 MODEL = json_api.saved_queries.SavedQuery
 MODEL_GET = json_api.saved_queries.SavedQueryGet
 MODEL_FOLDER = json_api.saved_queries.Folder
+MODEL_HIST = QueryHistory
 BOTH = Union[dict, MODEL]
 MULTI = Union[str, BOTH]
 GEN = Generator[BOTH, None, None]
@@ -1084,10 +1086,30 @@ class SavedQuery(ChildMixins):
         except SavedQueryNotFoundError:
             return
 
-    def _get_history(self):
+    def _get_history(self, request_obj: Optional[QueryHistoryRequest] = None) -> List[MODEL_HIST]:
         """Pass."""
         api_endpoint = ApiEndpoints.saved_queries.get_history
+        if not request_obj:
+            request_obj = QueryHistoryRequest()
+        return api_endpoint.perform_request(http=self.auth.http, request_obj=request_obj)
+
+    def _get_run_by(self) -> json_api.generic.ListValueSchema:
+        """Get the valid values for the run_by attribute for getting query history."""
+        api_endpoint = ApiEndpoints.saved_queries.get_run_by
         return api_endpoint.perform_request(http=self.auth.http)
+
+    def _get_run_from(self) -> json_api.generic.ListValueSchema:
+        """Get the valid values for the run_from attribute for getting query history."""
+        api_endpoint = ApiEndpoints.saved_queries.get_run_from
+        return api_endpoint.perform_request(http=self.auth.http)
+
+    def get_values_run_by(self) -> List[str]:
+        """Get the valid values for the run_by attribute for getting query history."""
+        return self._get_run_by().value
+
+    def get_values_run_from(self) -> List[str]:
+        """Get the valid values for the run_from attribute for getting query history."""
+        return self._get_run_from().value
 
     # WIP: folders
     '''
