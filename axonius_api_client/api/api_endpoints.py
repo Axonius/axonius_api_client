@@ -151,6 +151,16 @@ class SavedQueries(ApiEndpointGroup):
     )
     # PBUG: response not properly modeled
 
+    get_history: ApiEndpoint = ApiEndpoint(
+        method="get",
+        path="api/queries/history",
+        request_schema_cls=json_api.saved_queries.QueryHistoryRequestSchema,
+        request_model_cls=json_api.saved_queries.QueryHistoryRequest,
+        response_schema_cls=None,
+        response_model_cls=None,
+    )
+    # PBUG: response not properly modeled
+
     create: ApiEndpoint = ApiEndpoint(
         method="post",
         path="api/V4.0/{asset_type}/views",
