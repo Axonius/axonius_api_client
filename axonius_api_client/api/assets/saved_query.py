@@ -305,11 +305,12 @@ class SavedQuery(ChildMixins):
                 )
                 warnings.warn(message=msg, category=GuiQueryWizardWarning)
 
+        query = query or ""
         sq.query = query
         sq.query_expr = query
         if isinstance(expressions, list):
             sq.expressions = expressions
-        elif not append:
+        elif not append and query:
             msg = "\n".join(
                 [
                     f"Updating query {query!r} with no expressions",
@@ -1082,6 +1083,11 @@ class SavedQuery(ChildMixins):
             raise AlreadyExists(f"Saved query with name or uuid of {value!r} already exists:\n{sq}")
         except SavedQueryNotFoundError:
             return
+
+    def _get_history(self):
+        """Pass."""
+        api_endpoint = ApiEndpoints.saved_queries.get_history
+        return api_endpoint.perform_request(http=self.auth.http)
 
     # WIP: folders
     '''
