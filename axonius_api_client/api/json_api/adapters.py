@@ -14,7 +14,7 @@ from ...exceptions import ApiError, NotFoundError
 from ...http import Http
 from ...parsers.config import parse_schema
 from ...parsers.tables import tablize
-from ...tools import coerce_bool, listify, longest_str, strip_right
+from ...tools import coerce_bool, listify, longest_str
 from .base import BaseModel, BaseSchema, BaseSchemaJson
 
 # from .count_operator import CountOperator, CountOperatorSchema
@@ -25,21 +25,6 @@ from .time_range import TimeRange, TimeRangeSchema, UnitTypes
 
 STR_RE = Union[str, Pattern]
 STR_RE_LISTY = Union[STR_RE, List[STR_RE]]
-
-
-def prepend_sort(value: str, descending: bool = False):
-    """Pass."""
-    if isinstance(value, str):
-        if value.startswith("-"):
-            value = value[1:]
-        if descending:
-            value = f"-{value}"
-    return value
-
-
-def get_aname(value: str) -> str:
-    """Pass."""
-    return strip_right(obj=str(value or ""), fix="_adapter")
 
 
 class AdapterFetchHistorySchema(BaseSchemaJson):
@@ -244,7 +229,7 @@ class AdapterFetchHistory(BaseModel):
     @property
     def adapter_name(self) -> str:
         """Pass."""
-        return get_aname(self.adapter["icon"])
+        return self._get_aname(self.adapter["icon"])
 
     @property
     def adapter_name_raw(self) -> str:
@@ -476,7 +461,7 @@ class AdapterFetchHistoryRequest(BaseModel):
         """Pass."""
         if isinstance(value, str) and value:
             value = AdapterFetchHistorySchema.validate_attr(value=value, exc_cls=NotFoundError)
-            value = prepend_sort(value=value, descending=descending)
+            value = self._prepend_sort(value=value, descending=descending)
         else:
             value = None
 
@@ -652,7 +637,7 @@ class AdapterFetchHistoryFilters(BaseModel):
     def adapters(self) -> dict:
         """Pass."""
         return {
-            x["id"]: {"name": get_aname(x["id"]), "name_raw": x["id"], "title": x["name"]}
+            x["id"]: {"name": self._get_aname(x["id"]), "name_raw": x["id"], "title": x["name"]}
             for x in self.adapters_filter
         }
 
@@ -979,7 +964,7 @@ class AdapterNode(BaseModel):
     def __post_init__(self):
         """Pass."""
         self.adapter_name_raw = self.plugin_name
-        self.adapter_name = get_aname(self.plugin_name)
+        self.adapter_name = self._get_aname(self.plugin_name)
 
     @property
     def cnxs(self):
@@ -1167,7 +1152,7 @@ class Adapter(BaseModel):
     def __post_init__(self):
         """Pass."""
         self.adapter_name_raw = self.id
-        self.adapter_name = get_aname(self.id)
+        self.adapter_name = self._get_aname(self.id)
         self.document_meta = self.document_meta.pop(self.id, None)
         """
         document_meta: {}
@@ -1244,7 +1229,7 @@ class AdapterNodeCnx(BaseModel):
     def __post_init__(self):
         """Pass."""
         self.adapter_name_raw = self.adapter_name
-        self.adapter_name = get_aname(self.adapter_name)
+        self.adapter_name = self._get_aname(self.adapter_name)
 
     @property
     def working(self) -> bool:
@@ -1488,7 +1473,7 @@ class AdaptersList(Metadata):
         ret = {}
         for item in items:
             name_raw = item["name"]
-            name = get_aname(name_raw)
+            name = self._get_aname(name_raw)
             item["name_raw"] = name_raw
             item["name"] = name
             ret[name] = item
@@ -1496,7 +1481,7 @@ class AdaptersList(Metadata):
 
     def find_by_name(self, value: str) -> dict:
         """Pass."""
-        find_value = get_aname(value)
+        find_value = self._get_aname(value)
         adapters = self.adapters
         if find_value not in adapters:
             padding = longest_str(list(adapters))
@@ -1711,7 +1696,7 @@ class Cnx(BaseModel):
     def __post_init__(self):
         """Pass."""
         self.adapter_name_raw = self.adapter_name
-        self.adapter_name = get_aname(self.adapter_name)
+        self.adapter_name = self._get_aname(self.adapter_name)
 
     @staticmethod
     def _str_properties() -> List[str]:

@@ -18,7 +18,7 @@ from ...exceptions import (
     SchemaError,
 )
 from ...http import Http
-from ...tools import coerce_bool, combo_dicts, json_dump, json_load, listify
+from ...tools import coerce_bool, combo_dicts, json_dump, json_load, listify, strip_right
 
 LOGGER = logging.getLogger(__name__)
 EXTRA_WARN = False
@@ -69,6 +69,20 @@ class BaseCommon:
 
         cls._post_load_attrs(data=loaded, **kwargs)
         return loaded
+
+    def _get_aname(value: str) -> str:
+        """Pass."""
+        return strip_right(obj=str(value or ""), fix="_adapter")
+
+    @staticmethod
+    def _prepend_sort(value: str, descending: bool = False):
+        """Pass."""
+        if isinstance(value, str):
+            if value.startswith("-"):
+                value = value[1:]
+            if descending:
+                value = f"-{value}"
+        return value
 
 
 class BaseSchema(BaseCommon, marshmallow.Schema):
