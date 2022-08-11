@@ -223,9 +223,8 @@ class Adapters(ModelMixins):
             absolute_date_start=absolute_date_start,
             absolute_date_end=absolute_date_end,
         )
-        purpose = "Get Adapter Fetch History Events"
         with PagingState(
-            purpose=purpose,
+            purpose="Get Adapter Fetch History Events",
             page_sleep=page_sleep,
             page_size=page_size,
             row_start=row_start,
