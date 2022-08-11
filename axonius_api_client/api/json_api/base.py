@@ -70,6 +70,7 @@ class BaseCommon:
         cls._post_load_attrs(data=loaded, **kwargs)
         return loaded
 
+    @staticmethod
     def _get_aname(value: str) -> str:
         """Pass."""
         return strip_right(obj=str(value or ""), fix="_adapter")
@@ -177,7 +178,7 @@ class BaseSchemaJson(BaseSchema, marshmallow_jsonapi.Schema):
             SchemaError: if data is not a dict
         """
         if not isinstance(data, dict):
-            if isinstance(data, list) and data:
+            if isinstance(data, list):
                 # Fix for endpoints that do not return JSON API structure
                 data = {"data": [{"attributes": x, "type": cls.Meta.type_} for x in data]}
             else:
