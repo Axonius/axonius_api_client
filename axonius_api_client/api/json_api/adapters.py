@@ -9,7 +9,7 @@ from typing import ClassVar, List, Optional, Pattern, Type, Union
 import marshmallow
 import marshmallow_jsonapi
 
-from ...constants.adapters import DISCOVERY_NAME, GENERIC_NAME
+from ...constants.adapters import DISCOVERY_NAME, GENERIC_NAME, INGESTION_NAME
 from ...exceptions import ApiError, NotFoundError
 from ...http import Http
 from ...parsers.config import parse_schema
@@ -368,6 +368,9 @@ class AdapterFetchHistoryRequestSchema(BaseSchemaJson):
     exclude_realtime = SchemaBool(load_default=False, dump_default=False)
     time_range = marshmallow_jsonapi.fields.Nested(TimeRangeSchema)
     page = marshmallow_jsonapi.fields.Nested(PaginationSchema)
+    search = marshmallow_jsonapi.fields.Str(load_default="", dump_default="")
+    filter = marshmallow_jsonapi.fields.Str(allow_none=True, load_default="", dump_default="")
+
     # total_devices_filter = marshmallow_jsonapi.fields.Nested(CountOperatorSchema)
     # total_users_filter = marshmallow_jsonapi.fields.Nested(CountOperatorSchema)
 
@@ -432,6 +435,14 @@ class AdapterFetchHistoryRequest(BaseModel):
     )
     sort: Optional[str] = get_field_dc_mm(
         mm_field=AdapterFetchHistoryRequestSchema._declared_fields["sort"],
+        default=None,
+    )
+    search: str = get_field_dc_mm(
+        mm_field=AdapterFetchHistoryRequestSchema._declared_fields["search"],
+        default="",
+    )
+    filter: Optional[str] = get_field_dc_mm(
+        mm_field=AdapterFetchHistoryRequestSchema._declared_fields["filter"],
         default=None,
     )
     # total_devices_filter: Optional[CountOperator] = get_field_dc_mm(
@@ -988,11 +999,20 @@ class AdapterNode(BaseModel):
     @property
     def schema_name_specific(self) -> str:
         """Pass."""
+        ret = ""
+        skips = [self.schema_name_generic, self.schema_name_discovery, self.schema_name_ingestion]
         if self._meta:
-            for name in self._meta["config"]:
-                if name not in [self.schema_name_generic, self.schema_name_discovery]:
-                    return name
-        return ""
+            if self._meta:
+                matches = [x for x in self._meta if x.endswith("Adapter") and x not in skips]
+                if matches:
+                    ret = matches[0]
+        return ret
+
+    @property
+    def schema_name_ingestion(self) -> str:
+        """Pass."""
+        ret = INGESTION_NAME
+        return ret
 
     @property
     def schema_name_generic(self) -> str:
@@ -1350,11 +1370,17 @@ class AdapterSettings(Metadata):
     def schema_name_specific(self) -> str:
         """Pass."""
         ret = ""
+        skips = [self.schema_name_generic, self.schema_name_discovery, self.schema_name_ingestion]
         if self._meta:
-            for name in self._meta:
-                if name not in [self.schema_name_generic, self.schema_name_discovery]:
-                    ret = name
-                    break
+            matches = [x for x in self._meta if x.endswith("Adapter") and x not in skips]
+            if matches:
+                ret = matches[0]
+        return ret
+
+    @property
+    def schema_name_ingestion(self) -> str:
+        """Pass."""
+        ret = INGESTION_NAME
         return ret
 
     @property
