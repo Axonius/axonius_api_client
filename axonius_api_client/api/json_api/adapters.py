@@ -366,7 +366,7 @@ class AdapterFetchHistoryRequestSchema(BaseSchemaJson):
     exclude_realtime = SchemaBool(load_default=False, dump_default=False)
     time_range = marshmallow_jsonapi.fields.Nested(TimeRangeSchema)
     page = marshmallow_jsonapi.fields.Nested(PaginationSchema)
-    search = marshmallow_jsonapi.fields.Str(load_default="", dump_default="")
+    search = marshmallow_jsonapi.fields.Str(allow_none=True, load_default="", dump_default="")
     filter = marshmallow_jsonapi.fields.Str(allow_none=True, load_default="", dump_default="")
 
     # total_devices_filter = marshmallow_jsonapi.fields.Nested(CountOperatorSchema)
@@ -486,7 +486,7 @@ class AdapterFetchHistoryRequest(BaseModel):
         if any(is_strs) and not all(is_strs):
             raise ApiError(f"Only search or filter supplied, must supply both: {values}")
         if not all(is_strs):
-            search = None
+            search = ""
             filter = None
         self.search = search
         self.filter = filter

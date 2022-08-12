@@ -91,7 +91,7 @@ class QueryHistoryRequestSchema(BaseSchemaJson):
         dump_default=None,
         validate=QueryHistorySchema.validate_attr,
     )
-    search = marshmallow_jsonapi.fields.Str(load_default="", dump_default="")
+    search = marshmallow_jsonapi.fields.Str(allow_none=True, load_default="", dump_default="")
     filter = marshmallow_jsonapi.fields.Str(allow_none=True, load_default="", dump_default="")
 
     @staticmethod
@@ -700,7 +700,7 @@ class QueryHistoryRequest(BaseModel):
         if any(is_strs) and not all(is_strs):
             raise ApiError(f"Only search or filter supplied, must supply both: {values}")
         if not all(is_strs):
-            search = None
+            search = ""
             filter = None
         self.search = search
         self.filter = filter
