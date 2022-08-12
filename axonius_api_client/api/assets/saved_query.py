@@ -7,6 +7,7 @@ from typing import Generator, List, Optional, Union
 from cachetools import TTLCache, cached
 
 from ...constants.api import AS_DATACLASS, MAX_PAGE_SIZE
+from ...constants.general import OPT_STR_RE_LISTY
 from ...exceptions import (
     AlreadyExists,
     ApiError,
@@ -567,15 +568,17 @@ class SavedQuery(ChildMixins):
 
     def get_query_history_generator(
         self,
-        run_by: Optional[List[str]] = None,
-        run_from: Optional[List[str]] = None,
-        tags: Optional[List[str]] = None,
-        modules: Optional[List[str]] = None,
+        run_by: OPT_STR_RE_LISTY = None,
+        run_from: OPT_STR_RE_LISTY = None,
+        tags: OPT_STR_RE_LISTY = None,
+        modules: OPT_STR_RE_LISTY = None,
         name_term: Optional[str] = None,
         date_start: Optional[datetime.datetime] = None,
         date_end: Optional[datetime.datetime] = None,
         sort_attribute: Optional[str] = None,
         sort_descending: bool = False,
+        search: Optional[str] = None,
+        filter: Optional[str] = None,
         page_sleep: int = PagingState.page_sleep,
         page_size: int = PagingState.page_size,
         row_start: int = PagingState.row_start,
@@ -584,8 +587,6 @@ class SavedQuery(ChildMixins):
         run_by_values: Optional[List[str]] = None,
         run_from_values: Optional[List[str]] = None,
         request_obj: Optional[QueryHistoryRequest] = None,
-        search: Optional[str] = None,
-        filter: Optional[str] = None,
     ) -> HIST_LIST:
         """Pass."""
         if not isinstance(request_obj, QueryHistoryRequest):
@@ -628,7 +629,6 @@ class SavedQuery(ChildMixins):
             search=search,
             filter=filter,
         )
-
         with PagingState(
             purpose="Get Query History Events",
             page_sleep=page_sleep,
