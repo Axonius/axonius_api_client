@@ -3,6 +3,7 @@
 import copy
 import datetime
 import json
+import re
 
 import pytest
 from axonius_api_client.api import json_api
@@ -155,6 +156,143 @@ class TestQueryHistoryModel(SavedQueryBase):
         exp = f"-{attr}"
         ret = request_obj.set_sort(value=attr, descending=True)
         assert ret == exp
+
+    def test_set_sort_empty(self, apiobj):
+        request_obj = json_api.saved_queries.QueryHistoryRequest()
+        attr = None
+        exp = None
+        ret = request_obj.set_sort(value=attr, descending=True)
+        assert ret == exp
+
+    def test_set_name_term_valid(self, apiobj):
+        request_obj = json_api.saved_queries.QueryHistoryRequest()
+        value = "blah"
+        exp = value
+        ret = request_obj.set_name_term(value=value)
+        assert ret == exp
+
+    def test_set_name_term_empty(self, apiobj):
+        request_obj = json_api.saved_queries.QueryHistoryRequest()
+        value = None
+        exp = value
+        ret = request_obj.set_name_term(value=value)
+        assert ret == exp
+
+    def test_set_date_no_start_date(self, apiobj):
+        request_obj = json_api.saved_queries.QueryHistoryRequest()
+        with pytest.raises(ApiError):
+            request_obj.set_date(date_end="2020-02-20")
+
+    def test_set_date_valid(self, apiobj):
+        request_obj = json_api.saved_queries.QueryHistoryRequest()
+        ret = request_obj.set_date(date_start="2020-02-01", date_end="2020-02-20")
+        assert isinstance(ret, tuple)
+        assert [isinstance(x, datetime.datetime) for x in ret]
+
+    def test_set_date_no_end_date(self, apiobj):
+        request_obj = json_api.saved_queries.QueryHistoryRequest()
+        ret = request_obj.set_date(date_start="2020-02-01")
+        assert isinstance(ret, tuple)
+        assert [isinstance(x, datetime.datetime) for x in ret]
+
+    def test_set_search_filter_empty(self, apiobj):
+        request_obj = json_api.saved_queries.QueryHistoryRequest()
+        exp = ("", None)
+        ret = request_obj.set_search_filter()
+        assert ret == exp
+
+    def test_set_search_filter_valid(self, apiobj):
+        request_obj = json_api.saved_queries.QueryHistoryRequest()
+        search = "xxx"
+        filter = 'name == "xxx"'
+        exp = (search, filter)
+        ret = request_obj.set_search_filter(search=search, filter=filter)
+        assert ret == exp
+
+    def test_set_search_filter_only_one(self, apiobj):
+        request_obj = json_api.saved_queries.QueryHistoryRequest()
+        with pytest.raises(ApiError):
+            request_obj.set_search_filter(search="badwolf")
+
+    def test_set_list_invalid_prop(self, apiobj):
+        request_obj = json_api.saved_queries.QueryHistoryRequest()
+        with pytest.raises(ApiError):
+            request_obj.set_list(prop="badwolf")
+
+    def test_set_list_invalid_value_type(self, apiobj):
+        request_obj = json_api.saved_queries.QueryHistoryRequest()
+        with pytest.raises(ApiError):
+            request_obj.set_list(prop="tags", values=111)
+
+    def test_set_list_empty(self, apiobj):
+        request_obj = json_api.saved_queries.QueryHistoryRequest()
+        values = None
+        exp = []
+        ret = request_obj.set_list(prop="tags", values=values)
+        assert ret == exp
+
+    def test_set_list_no_enum(self, apiobj):
+        request_obj = json_api.saved_queries.QueryHistoryRequest()
+        values = ["x1", re.compile("x")]
+        exp = ["x1"]
+        ret = request_obj.set_list(prop="tags", values=values)
+        assert ret == exp
+
+    def test_set_list_enum_regex(self, apiobj):
+        tags_enum = ["x1", "x2", "y1", "y2"]
+        request_obj = json_api.saved_queries.QueryHistoryRequest()
+        values = re.compile("x")
+        exp = ["x1", "x2"]
+        ret = request_obj.set_list(prop="tags", values=values, enum=tags_enum)
+        assert ret == exp
+
+    def test_set_list_enum_callback_regex(self, apiobj):
+        def tags_mock():
+            return ["x1", "x2", "y1", "y2"]
+
+        request_obj = json_api.saved_queries.QueryHistoryRequest()
+        values = re.compile("x")
+        exp = ["x1", "x2"]
+        ret = request_obj.set_list(prop="tags", values=values, enum_callback=tags_mock)
+        assert ret == exp
+
+    def test_set_list_enum_callback_str_regex(self, apiobj):
+        def tags_mock():
+            return ["x1", "x2", "y1", "y2"]
+
+        request_obj = json_api.saved_queries.QueryHistoryRequest()
+        values = "~x"
+        exp = ["x1", "x2"]
+        ret = request_obj.set_list(prop="tags", values=values, enum_callback=tags_mock)
+        assert ret == exp
+
+    def test_set_list_enum_callback_str_regex_no_match(self, apiobj):
+        def tags_mock():
+            return ["x1", "x2", "y1", "y2"]
+
+        request_obj = json_api.saved_queries.QueryHistoryRequest()
+        values = "~z"
+        with pytest.raises(NotFoundError):
+            request_obj.set_list(prop="tags", values=values, enum_callback=tags_mock)
+
+    def test_set_list_enum_callback_str(self, apiobj):
+        def tags_mock():
+            return ["x1", "x2", "y1", "y2"]
+
+        request_obj = json_api.saved_queries.QueryHistoryRequest()
+        values = ["x1", "x2"]
+        exp = ["x1", "x2"]
+        ret = request_obj.set_list(prop="tags", values=values, enum_callback=tags_mock)
+        assert ret == exp
+
+    def test_set_list_enum_callback_str_no_match(self, apiobj):
+        def tags_mock():
+            return ["x1", "x2", "y1", "y2"]
+
+        request_obj = json_api.saved_queries.QueryHistoryRequest()
+        values = "z"
+        with pytest.raises(NotFoundError):
+            request_obj.set_list(prop="tags", values=values, enum_callback=tags_mock)
 
 
 class TestSavedQueryPublic(SavedQueryBase):
