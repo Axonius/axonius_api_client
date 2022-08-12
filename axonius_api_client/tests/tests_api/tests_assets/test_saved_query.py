@@ -811,10 +811,10 @@ def validate_sq(asset):
         sort = view.pop("sort")
         assert isinstance(sort, dict)
 
-        sort_desc = sort.pop("desc")
+        sort_desc = sort.pop("desc", False)
         assert isinstance(sort_desc, bool)
 
-        sort_field = sort.pop("field")
+        sort_field = sort.pop("field", "")
         assert isinstance(sort_field, str)
         assert not sort
 
@@ -925,9 +925,10 @@ def validate_sq(asset):
 
     # 4.5: 2022/02/07
     assetConditionExpressions = view.pop("assetConditionExpressions", [])
-    assert isinstance(assetConditionExpressions, list)
+    assert isinstance(assetConditionExpressions, list) or assetConditionExpressions is None
+
     assetExcludeAdapters = view.pop("assetExcludeAdapters", [])
-    assert isinstance(assetExcludeAdapters, list)
+    assert isinstance(assetExcludeAdapters, list) or assetExcludeAdapters is None
 
     # 4.6: 2022/04/19
     queryStrings = view.pop("queryStrings", {})
