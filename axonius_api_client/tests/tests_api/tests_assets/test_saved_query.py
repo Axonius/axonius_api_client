@@ -13,6 +13,7 @@ from axonius_api_client.exceptions import (
     ApiAttributeTypeError,
     ApiError,
     GuiQueryWizardWarning,
+    NotFoundError,
     ResponseNotOk,
     SavedQueryNotFoundError,
 )
@@ -38,11 +39,13 @@ class FixtureData:
     wiz_entries = "simple !last_seen last_days 1"
 
 
-class TestSavedQueryPrivate:
+class SavedQueryBase:
     @pytest.fixture(params=["api_devices"], scope="class")
     def apiobj(self, request):
         return request.getfixturevalue(request.param)
 
+
+class TestSavedQueryPrivate(SavedQueryBase):
     def test_get(self, apiobj):
         result = apiobj.saved_query._get()
         assert isinstance(result, list)
@@ -115,12 +118,46 @@ class TestSavedQueryPrivate:
         except Exception:
             pass
 
+    def test_get_query_history(self, apiobj):
+        request_obj = json_api.saved_queries.QueryHistoryRequest()
+        data = apiobj.saved_query._get_query_history(request_obj=request_obj)
+        assert isinstance(data, list)
+        for item in data:
+            assert isinstance(item, json_api.saved_queries.QueryHistory)
+            assert str(item)
+            assert repr(item)
 
-class TestSavedQueryPublic:
-    @pytest.fixture(params=["api_devices"], scope="class")
-    def apiobj(self, request):
-        return request.getfixturevalue(request.param)
+    def test_get_query_history_no_request_obj(self, apiobj):
+        data = apiobj.saved_query._get_query_history()
+        assert isinstance(data, list)
+        for item in data:
+            assert isinstance(item, json_api.saved_queries.QueryHistory)
+            assert str(item)
+            assert repr(item)
 
+
+class TestQueryHistoryModel(SavedQueryBase):
+    def test_set_sort_invalid(self, apiobj):
+        request_obj = json_api.saved_queries.QueryHistoryRequest()
+        with pytest.raises(NotFoundError):
+            request_obj.set_sort(value="x", descending=False)
+
+    def test_set_sort_valid(self, apiobj):
+        request_obj = json_api.saved_queries.QueryHistoryRequest()
+        attr = list(request_obj.get_schema_cls().validate_attrs())[0]
+        exp = attr
+        ret = request_obj.set_sort(value=attr, descending=False)
+        assert ret == exp
+
+    def test_set_sort_descending(self, apiobj):
+        request_obj = json_api.saved_queries.QueryHistoryRequest()
+        attr = list(request_obj.get_schema_cls().validate_attrs())[0]
+        exp = f"-{attr}"
+        ret = request_obj.set_sort(value=attr, descending=True)
+        assert ret == exp
+
+
+class TestSavedQueryPublic(SavedQueryBase):
     def test__check_name_exists(self, apiobj, sq_fixture):
         with pytest.raises(AlreadyExists):
             apiobj.saved_query._check_name_exists(value=sq_fixture["name"])
