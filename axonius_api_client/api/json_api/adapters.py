@@ -4,17 +4,18 @@ import dataclasses
 import datetime
 import re
 import textwrap
-from typing import ClassVar, List, Optional, Pattern, Type, Union
+from typing import ClassVar, List, Optional, Tuple, Type
 
 import marshmallow
 import marshmallow_jsonapi
 
-from ...constants.adapters import DISCOVERY_NAME, GENERIC_NAME
+from ...constants.adapters import DISCOVERY_NAME, GENERIC_NAME, INGESTION_NAME
+from ...constants.general import STR_RE_LISTY
 from ...exceptions import ApiError, NotFoundError
 from ...http import Http
 from ...parsers.config import parse_schema
 from ...parsers.tables import tablize
-from ...tools import coerce_bool, listify, longest_str, strip_right
+from ...tools import coerce_bool, listify, longest_str
 from .base import BaseModel, BaseSchema, BaseSchemaJson
 
 # from .count_operator import CountOperator, CountOperatorSchema
@@ -22,24 +23,6 @@ from .custom_fields import SchemaBool, SchemaDatetime, dump_date, get_field_dc_m
 from .generic import Metadata, MetadataSchema
 from .resources import PaginationRequest, PaginationSchema
 from .time_range import TimeRange, TimeRangeSchema, UnitTypes
-
-STR_RE = Union[str, Pattern]
-STR_RE_LISTY = Union[STR_RE, List[STR_RE]]
-
-
-def prepend_sort(value: str, descending: bool = False):
-    """Pass."""
-    if isinstance(value, str):
-        if value.startswith("-"):
-            value = value[1:]
-        if descending:
-            value = f"-{value}"
-    return value
-
-
-def get_aname(value: str) -> str:
-    """Pass."""
-    return strip_right(obj=str(value or ""), fix="_adapter")
 
 
 class AdapterFetchHistorySchema(BaseSchemaJson):
@@ -244,7 +227,7 @@ class AdapterFetchHistory(BaseModel):
     @property
     def adapter_name(self) -> str:
         """Pass."""
-        return get_aname(self.adapter["icon"])
+        return self._get_aname(self.adapter["icon"])
 
     @property
     def adapter_name_raw(self) -> str:
@@ -383,6 +366,9 @@ class AdapterFetchHistoryRequestSchema(BaseSchemaJson):
     exclude_realtime = SchemaBool(load_default=False, dump_default=False)
     time_range = marshmallow_jsonapi.fields.Nested(TimeRangeSchema)
     page = marshmallow_jsonapi.fields.Nested(PaginationSchema)
+    search = marshmallow_jsonapi.fields.Str(allow_none=True, load_default="", dump_default="")
+    filter = marshmallow_jsonapi.fields.Str(allow_none=True, load_default="", dump_default="")
+
     # total_devices_filter = marshmallow_jsonapi.fields.Nested(CountOperatorSchema)
     # total_users_filter = marshmallow_jsonapi.fields.Nested(CountOperatorSchema)
 
@@ -449,6 +435,14 @@ class AdapterFetchHistoryRequest(BaseModel):
         mm_field=AdapterFetchHistoryRequestSchema._declared_fields["sort"],
         default=None,
     )
+    search: str = get_field_dc_mm(
+        mm_field=AdapterFetchHistoryRequestSchema._declared_fields["search"],
+        default="",
+    )
+    filter: Optional[str] = get_field_dc_mm(
+        mm_field=AdapterFetchHistoryRequestSchema._declared_fields["filter"],
+        default=None,
+    )
     # total_devices_filter: Optional[CountOperator] = get_field_dc_mm(
     #     mm_field=AdapterFetchHistoryRequestSchema._declared_fields["total_devices_filter"],
     #     default=CountOperator(),
@@ -476,12 +470,27 @@ class AdapterFetchHistoryRequest(BaseModel):
         """Pass."""
         if isinstance(value, str) and value:
             value = AdapterFetchHistorySchema.validate_attr(value=value, exc_cls=NotFoundError)
-            value = prepend_sort(value=value, descending=descending)
+            value = self._prepend_sort(value=value, descending=descending)
         else:
             value = None
 
         self.sort = value
         return value
+
+    def set_search_filter(
+        self, search: Optional[str] = None, filter: Optional[str] = None
+    ) -> Tuple[Optional[str], Optional[str]]:
+        """Pass."""
+        values = [search, filter]
+        is_strs = [isinstance(x, str) and x for x in values]
+        if any(is_strs) and not all(is_strs):
+            raise ApiError(f"Only search or filter supplied, must supply both: {values}")
+        if not all(is_strs):
+            search = ""
+            filter = None
+        self.search = search
+        self.filter = filter
+        return (search, filter)
 
     def set_filters(
         self,
@@ -652,7 +661,7 @@ class AdapterFetchHistoryFilters(BaseModel):
     def adapters(self) -> dict:
         """Pass."""
         return {
-            x["id"]: {"name": get_aname(x["id"]), "name_raw": x["id"], "title": x["name"]}
+            x["id"]: {"name": self._get_aname(x["id"]), "name_raw": x["id"], "title": x["name"]}
             for x in self.adapters_filter
         }
 
@@ -979,7 +988,7 @@ class AdapterNode(BaseModel):
     def __post_init__(self):
         """Pass."""
         self.adapter_name_raw = self.plugin_name
-        self.adapter_name = get_aname(self.plugin_name)
+        self.adapter_name = self._get_aname(self.plugin_name)
 
     @property
     def cnxs(self):
@@ -1003,11 +1012,20 @@ class AdapterNode(BaseModel):
     @property
     def schema_name_specific(self) -> str:
         """Pass."""
+        ret = ""
+        skips = [self.schema_name_generic, self.schema_name_discovery, self.schema_name_ingestion]
         if self._meta:
-            for name in self._meta["config"]:
-                if name not in [self.schema_name_generic, self.schema_name_discovery]:
-                    return name
-        return ""
+            if self._meta:
+                matches = [x for x in self._meta if x.endswith("Adapter") and x not in skips]
+                if matches:
+                    ret = matches[0]
+        return ret
+
+    @property
+    def schema_name_ingestion(self) -> str:
+        """Pass."""
+        ret = INGESTION_NAME
+        return ret
 
     @property
     def schema_name_generic(self) -> str:
@@ -1167,7 +1185,7 @@ class Adapter(BaseModel):
     def __post_init__(self):
         """Pass."""
         self.adapter_name_raw = self.id
-        self.adapter_name = get_aname(self.id)
+        self.adapter_name = self._get_aname(self.id)
         self.document_meta = self.document_meta.pop(self.id, None)
         """
         document_meta: {}
@@ -1244,7 +1262,7 @@ class AdapterNodeCnx(BaseModel):
     def __post_init__(self):
         """Pass."""
         self.adapter_name_raw = self.adapter_name
-        self.adapter_name = get_aname(self.adapter_name)
+        self.adapter_name = self._get_aname(self.adapter_name)
 
     @property
     def working(self) -> bool:
@@ -1365,11 +1383,17 @@ class AdapterSettings(Metadata):
     def schema_name_specific(self) -> str:
         """Pass."""
         ret = ""
+        skips = [self.schema_name_generic, self.schema_name_discovery, self.schema_name_ingestion]
         if self._meta:
-            for name in self._meta:
-                if name not in [self.schema_name_generic, self.schema_name_discovery]:
-                    ret = name
-                    break
+            matches = [x for x in self._meta if x.endswith("Adapter") and x not in skips]
+            if matches:
+                ret = matches[0]
+        return ret
+
+    @property
+    def schema_name_ingestion(self) -> str:
+        """Pass."""
+        ret = INGESTION_NAME
         return ret
 
     @property
@@ -1488,7 +1512,7 @@ class AdaptersList(Metadata):
         ret = {}
         for item in items:
             name_raw = item["name"]
-            name = get_aname(name_raw)
+            name = self._get_aname(name_raw)
             item["name_raw"] = name_raw
             item["name"] = name
             ret[name] = item
@@ -1496,7 +1520,7 @@ class AdaptersList(Metadata):
 
     def find_by_name(self, value: str) -> dict:
         """Pass."""
-        find_value = get_aname(value)
+        find_value = self._get_aname(value)
         adapters = self.adapters
         if find_value not in adapters:
             padding = longest_str(list(adapters))
@@ -1711,7 +1735,7 @@ class Cnx(BaseModel):
     def __post_init__(self):
         """Pass."""
         self.adapter_name_raw = self.adapter_name
-        self.adapter_name = get_aname(self.adapter_name)
+        self.adapter_name = self._get_aname(self.adapter_name)
 
     @staticmethod
     def _str_properties() -> List[str]:

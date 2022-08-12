@@ -6,6 +6,7 @@ from typing import Generator, List, Optional, Union
 
 from cachetools import TTLCache, cached
 
+from ...constants.general import OPT_STR_RE_LISTY
 from ...exceptions import ApiError, NotFoundError  # , StopFetch
 from ...parsers.config import config_build, config_unchanged, config_unknown
 from ...parsers.tables import tablize_adapters
@@ -157,17 +158,25 @@ class Adapters(ModelMixins):
         return self._get_fetch_history_filters()
 
     def get_fetch_history(self, generator: bool = False, **kwargs) -> Union[HIST_GEN, HIST_LIST]:
-        """Pass."""
+        """Get adapter fetch history.
+
+        Args:
+            generator (bool, optional): Return a generator or a list
+            **kwargs: passed to :meth:`get_fetch_history_generator`
+
+        Returns:
+            Union[HIST_GEN, HIST_LIST]: Generator or list of history event models
+        """
         gen = self.get_fetch_history_generator(**kwargs)
         return gen if generator else list(gen)
 
     def get_fetch_history_generator(
         self,
-        adapters: Optional[List[str]] = None,
-        connection_labels: Optional[List[str]] = None,
-        clients: Optional[List[str]] = None,
-        instances: Optional[List[str]] = None,
-        statuses: Optional[List[str]] = None,
+        adapters: OPT_STR_RE_LISTY = None,
+        connection_labels: OPT_STR_RE_LISTY = None,
+        clients: OPT_STR_RE_LISTY = None,
+        instances: OPT_STR_RE_LISTY = None,
+        statuses: OPT_STR_RE_LISTY = None,
         exclude_realtime: bool = False,
         relative_unit_type: UnitTypes = UnitTypes.get_default(),
         relative_unit_count: Optional[int] = None,
@@ -175,6 +184,8 @@ class Adapters(ModelMixins):
         absolute_date_end: Optional[datetime.datetime] = None,
         sort_attribute: Optional[str] = None,
         sort_descending: bool = False,
+        search: Optional[str] = None,
+        filter: Optional[str] = None,
         page_sleep: int = PagingState.page_sleep,
         page_size: int = PagingState.page_size,
         row_start: int = PagingState.row_start,
@@ -183,7 +194,39 @@ class Adapters(ModelMixins):
         history_filters: Optional[AdapterFetchHistoryFilters] = None,
         request_obj: Optional[AdapterFetchHistoryRequest] = None,
     ) -> HIST_GEN:
-        """Get adapter fetch history."""
+        """Get adapter fetch history.
+
+        Notes:
+            Use ~ prefix for regex in adapters, connection_labels, clients, instances, statuses
+
+        Args:
+            adapters (OPT_STR_RE_LISTY, optional): Filter for records with matching adapters
+            connection_labels (OPT_STR_RE_LISTY, optional): Filter for records with connection
+                labels
+            clients (OPT_STR_RE_LISTY, optional): Filter for records with matching client ids
+            instances (OPT_STR_RE_LISTY, optional): Filter for records with matching instances
+            statuses (OPT_STR_RE_LISTY, optional): Filter for records with matching statuses
+            exclude_realtime (bool, optional): Exclude records for realtime adapters
+            relative_unit_type (UnitTypes, optional): Type of unit to use when supplying
+                relative_unit_count
+            relative_unit_count (Optional[int], optional): Filter records for the past N units of
+                relative_unit_type
+            absolute_date_start (Optional[datetime.datetime], optional): Filter records that are
+                after this date. (overrides relative values)
+            absolute_date_end (Optional[datetime.datetime], optional): Filter records that are
+                before this date. (defaults to now if start but no end)
+            sort_attribute (Optional[str], optional): Sort records based on this attribute
+            sort_descending (bool, optional): Sort sort_attribute descending or ascending
+            page_sleep (int, optional): Sleep N seconds between pages
+            page_size (int, optional): Get N records per page
+            row_start (int, optional): Start at row N
+            row_stop (Optional[int], optional): Stop at row N
+            log_level (Union[int, str], optional): log level to use for paging
+            history_filters (Optional[AdapterFetchHistoryFilters], optional): response
+                from :meth:`get_fetch_history_filters` (will be fetched if not supplied)
+            request_obj (Optional[AdapterFetchHistoryRequest], optional): Request object to use
+                for options
+        """
         if not isinstance(history_filters, AdapterFetchHistoryFilters):
             history_filters = self.get_fetch_history_filters()
 
@@ -215,17 +258,26 @@ class Adapters(ModelMixins):
             value_type="statuses",
             value=statuses,
         )
-        request_obj.set_sort(value=sort_attribute, descending=sort_descending)
-        request_obj.set_exclude_realtime(value=exclude_realtime)
+        request_obj.set_sort(
+            value=sort_attribute,
+            descending=sort_descending,
+        )
+        request_obj.set_exclude_realtime(
+            value=exclude_realtime,
+        )
         request_obj.set_time_range(
             relative_unit_type=relative_unit_type,
             relative_unit_count=relative_unit_count,
             absolute_date_start=absolute_date_start,
             absolute_date_end=absolute_date_end,
         )
-        purpose = "Get Adapter Fetch History Events"
+        request_obj.set_search_filter(
+            search=search,
+            filter=filter,
+        )
+
         with PagingState(
-            purpose=purpose,
+            purpose="Get Adapter Fetch History Events",
             page_sleep=page_sleep,
             page_size=page_size,
             row_start=row_start,

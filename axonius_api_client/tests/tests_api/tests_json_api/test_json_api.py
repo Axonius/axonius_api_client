@@ -52,11 +52,11 @@ class TestJsonApi:
                 return SomeModel
 
         with pytest.raises(SchemaError) as exc:
-            SomeModel.load_response(data=[])
+            SomeModel.load_response(data=1)
         assert "Data to load must be a dictionary" in str(exc.value)
 
         with pytest.raises(SchemaError) as exc:
-            SomeSchema.load_response(data=[])
+            SomeSchema.load_response(data="x")
         assert "Data to load must be a dictionary" in str(exc.value)
 
         with pytest.raises(SchemaError) as exc:

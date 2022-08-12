@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Constants for general use."""
 import sys
-from typing import List, Tuple, Type, Union
+from typing import List, Optional, Pattern, Tuple, Type, Union
 
 URL_STARTS: List[str] = ["https://", "http://"]
 
@@ -40,6 +40,11 @@ COMPLEX: Tuple[Type] = (dict, list, tuple)
 
 SIMPLE: Tuple[Type] = (str, int, bool, float)
 """types that are considered as simple"""
+
+OPT_LIST_STR = Optional[Union[str, List[str]]]
+STR_RE = Union[str, Pattern]
+STR_RE_LISTY = Union[STR_RE, List[STR_RE]]
+OPT_STR_RE_LISTY = Optional[STR_RE_LISTY]
 
 JSON_TYPES = Union[int, str, float, bool, dict, list, tuple, None]
 

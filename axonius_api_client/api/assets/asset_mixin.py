@@ -8,7 +8,7 @@ import cachetools
 
 from ...constants.api import DEFAULT_CALLBACKS_CLS, MAX_PAGE_SIZE, PAGE_SIZE
 from ...exceptions import ApiError, NotFoundError, ResponseNotOk, StopFetch
-from ...tools import dt_now, dt_now_file, json_dump, listify
+from ...tools import dt_now, dt_now_file, get_subcls, json_dump, listify
 from .. import json_api
 from ..api_endpoints import ApiEndpoints
 from ..asset_callbacks.tools import get_callbacks_cls
@@ -48,6 +48,16 @@ class AssetMixin(ModelMixins):
     """
 
     ASSET_TYPE: str = ""
+
+    @classmethod
+    def asset_types(cls) -> List[str]:
+        """Pass."""
+        return [x.ASSET_TYPE for x in cls.asset_modules()]
+
+    @classmethod
+    def asset_modules(cls) -> List["AssetMixin"]:
+        """Pass."""
+        return get_subcls(AssetMixin)
 
     def count(
         self,

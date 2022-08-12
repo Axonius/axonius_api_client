@@ -52,6 +52,8 @@ GENERIC_NAME: str = "AdapterBase"
 DISCOVERY_NAME: str = "DiscoverySchema"
 """name of discover adapter advanced settings in adapter schemas"""
 
+INGESTION_NAME: str = "IngestionRulesSchema"
+
 CONFIG_TYPES: List[str] = ["generic", "specific", "discovery"]
 """valid names of types of adapter advanced settings"""
 

@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 """Models for API requests & responses."""
 import dataclasses
-from typing import Optional, Type
+from typing import List, Optional, Type
 
 import marshmallow_jsonapi
 
 from ...http import Http
 from .base import BaseModel, BaseSchema, BaseSchemaJson
-from .custom_fields import SchemaBool
+from .custom_fields import SchemaBool, get_schema_dc
 
 
 class MetadataSchema(BaseSchemaJson):
@@ -160,6 +160,34 @@ class StrValue(BaseModel):
     def get_schema_cls() -> Optional[Type[BaseSchema]]:
         """Pass."""
         return StrValueSchema
+
+
+class ListValueSchema(BaseSchemaJson):
+    """Pass."""
+
+    value = marshmallow_jsonapi.fields.List(marshmallow_jsonapi.fields.Str())
+
+    class Meta:
+        """Pass."""
+
+        type_ = "list_value_schema"
+
+    @staticmethod
+    def get_model_cls() -> type:
+        """Pass."""
+        return ListValue
+
+
+@dataclasses.dataclass
+class ListValue(BaseModel):
+    """Pass."""
+
+    value: List[str] = get_schema_dc(schema=ListValueSchema, key="value", default_factory=list)
+
+    @staticmethod
+    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+        """Pass."""
+        return ListValueSchema
 
 
 class DictValueSchema(BaseSchemaJson):

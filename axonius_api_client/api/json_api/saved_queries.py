@@ -2,19 +2,22 @@
 """Models for API requests & responses."""
 import dataclasses
 import datetime
+import re
 import textwrap
-from typing import ClassVar, List, Optional, Type, Union
+from typing import ClassVar, List, Optional, Tuple, Type, Union
 
 import marshmallow
 import marshmallow_jsonapi
 
 from ...constants.api import GUI_PAGE_SIZES
-from ...exceptions import ApiAttributeTypeError, ApiError
-from ...tools import coerce_bool, coerce_int, listify
+from ...constants.general import STR_RE_LISTY
+from ...exceptions import ApiAttributeTypeError, ApiError, NotFoundError
+from ...parsers.tables import tablize
+from ...tools import coerce_bool, coerce_int, dt_now, dt_parse, listify
 from .base import BaseModel, BaseSchema, BaseSchemaJson
-from .custom_fields import SchemaBool, SchemaDatetime
+from .custom_fields import SchemaBool, SchemaDatetime, get_schema_dc
 from .generic import PrivateRequest, PrivateRequestSchema
-from .resources import PaginationRequest, ResourcesGet, ResourcesGetSchema
+from .resources import PaginationRequest, PaginationSchema, ResourcesGet, ResourcesGetSchema
 
 
 class SavedQueryGetSchema(ResourcesGetSchema):
@@ -35,6 +38,81 @@ class SavedQueryGetSchema(ResourcesGetSchema):
         """Pass."""
 
         type_ = "request_views_schema"
+
+
+class QueryHistorySchema(BaseSchemaJson):
+    """Pass."""
+
+    query_id = marshmallow_jsonapi.fields.Str(allow_none=False)
+    saved_query_name = marshmallow_jsonapi.fields.Str(
+        load_default=None, dump_default=None, allow_none=True
+    )
+    saved_query_tags = marshmallow.fields.List(marshmallow_jsonapi.fields.Str())
+    start_time = SchemaDatetime(allow_none=True)
+    end_time = SchemaDatetime(allow_none=True)
+    duration = marshmallow_jsonapi.fields.Str(load_default=None, dump_default=None, allow_none=True)
+    run_by = marshmallow_jsonapi.fields.Str(load_default=None, dump_default=None, allow_none=True)
+    run_from = marshmallow_jsonapi.fields.Str(load_default=None, dump_default=None, allow_none=True)
+    execution_source = marshmallow_jsonapi.fields.Dict(
+        load_default=None, dump_default=None, allow_none=True
+    )
+    status = marshmallow_jsonapi.fields.Str(load_default=None, dump_default=None, allow_none=True)
+    module = marshmallow_jsonapi.fields.Str(load_default=None, dump_default=None, allow_none=True)
+    results_count = marshmallow.fields.Integer(
+        load_default=None, dump_default=None, allow_none=True
+    )
+
+    class Meta:
+        """Pass."""
+
+        type_ = "entities_queries_history_response_schema"
+
+    @staticmethod
+    def get_model_cls() -> type:
+        """Pass."""
+        return QueryHistory
+
+    @classmethod
+    def validate_attr_excludes(cls) -> List[str]:
+        """Pass."""
+        return ["document_meta", "id"]
+
+
+class QueryHistoryRequestSchema(BaseSchemaJson):
+    """Pass."""
+
+    folder_id = marshmallow_jsonapi.fields.Str(load_default="", dump_default="")
+    run_by = marshmallow_jsonapi.fields.List(marshmallow_jsonapi.fields.Str())
+    run_from = marshmallow_jsonapi.fields.List(marshmallow_jsonapi.fields.Str())
+    modules = marshmallow_jsonapi.fields.List(marshmallow_jsonapi.fields.Str())
+    tags = marshmallow_jsonapi.fields.List(marshmallow_jsonapi.fields.Str())
+    saved_query_name_term = marshmallow_jsonapi.fields.Str(allow_none=True)
+    date_from = SchemaDatetime(allow_none=True)
+    date_to = SchemaDatetime(allow_none=True)
+    page = marshmallow_jsonapi.fields.Nested(PaginationSchema)
+    sort = marshmallow_jsonapi.fields.Str(
+        allow_none=True,
+        load_default=None,
+        dump_default=None,
+        validate=QueryHistorySchema.validate_attr,
+    )
+    search = marshmallow_jsonapi.fields.Str(allow_none=True, load_default="", dump_default="")
+    filter = marshmallow_jsonapi.fields.Str(allow_none=True, load_default="", dump_default="")
+
+    @staticmethod
+    def get_model_cls() -> type:
+        """Pass."""
+        return QueryHistoryRequest
+
+    class Meta:
+        """Pass."""
+
+        type_ = "entities_queries_history_request_schema"
+
+    @classmethod
+    def validate_attrs(cls) -> dict:
+        """Pass."""
+        return QueryHistorySchema.validate_attrs()
 
 
 class SavedQuerySchema(BaseSchemaJson):
@@ -466,6 +544,329 @@ class SavedQueryGet(ResourcesGet):
     def get_schema_cls() -> Optional[Type[BaseSchema]]:
         """Pass."""
         return SavedQueryGetSchema
+
+
+@dataclasses.dataclass
+class QueryHistoryRequest(BaseModel):
+    """Pass."""
+
+    run_by: Optional[List[str]] = get_schema_dc(
+        schema=QueryHistoryRequestSchema,
+        key="run_by",
+        default_factory=list,
+    )
+    run_from: Optional[List[str]] = get_schema_dc(
+        schema=QueryHistoryRequestSchema,
+        key="run_from",
+        default_factory=list,
+    )
+    modules: Optional[List[str]] = get_schema_dc(
+        schema=QueryHistoryRequestSchema,
+        key="modules",
+        default_factory=list,
+    )
+    tags: Optional[List[str]] = get_schema_dc(
+        schema=QueryHistoryRequestSchema,
+        key="tags",
+        default_factory=list,
+    )
+    saved_query_name_term: Optional[str] = get_schema_dc(
+        schema=QueryHistoryRequestSchema,
+        key="saved_query_name_term",
+        default=None,
+    )
+    date_from: Optional[datetime.datetime] = get_schema_dc(
+        schema=QueryHistoryRequestSchema,
+        key="date_from",
+        default=None,
+    )
+    date_to: Optional[datetime.datetime] = get_schema_dc(
+        schema=QueryHistoryRequestSchema,
+        key="date_to",
+        default=None,
+    )
+    page: Optional[PaginationRequest] = get_schema_dc(
+        schema=QueryHistoryRequestSchema,
+        key="page",
+        default=PaginationRequest(),
+    )
+    search: Optional[str] = get_schema_dc(
+        schema=QueryHistoryRequestSchema,
+        key="search",
+        default="",
+    )
+    filter: Optional[str] = get_schema_dc(
+        schema=QueryHistoryRequestSchema,
+        key="filter",
+        default=None,
+    )
+
+    def __post_init__(self):
+        """Pass."""
+        self.run_by = self.run_by or []
+        self.run_from = self.run_from or []
+        self.modules = self.modules or []
+        self.tags = self.tags or []
+        self.page = self.page if self.page else PaginationRequest()
+
+    def set_sort(self, value: Optional[str] = None, descending: bool = False) -> Optional[str]:
+        """Pass."""
+        if isinstance(value, str) and value:
+            value = QueryHistorySchema.validate_attr(value=value, exc_cls=NotFoundError)
+            value = self._prepend_sort(value=value, descending=descending)
+        else:
+            value = None
+
+        self.sort = value
+        return value
+
+    def set_name_term(self, value: Optional[str] = None) -> Optional[str]:
+        """Pass."""
+        if isinstance(value, str) and value:
+            self.saved_query_name_term = value
+        else:
+            value = None
+            self.saved_query_name_term = value
+        return value
+
+    def set_date(
+        self,
+        date_start: Optional[datetime.datetime] = None,
+        date_end: Optional[datetime.datetime] = None,
+    ) -> Tuple[Optional[datetime.datetime], Optional[datetime.datetime]]:
+        """Pass."""
+        if date_end and not date_start:
+            raise ApiError("date_start must also be supplied when date_end is supplied")
+
+        if date_start:
+            date_start = dt_parse(date_start)
+            if date_end:
+                date_end = dt_parse(date_end)
+            else:
+                date_end = dt_now()
+        return (date_start, date_end)
+
+    @classmethod
+    def get_list_props(cls) -> List[str]:
+        """Pass."""
+        return [x.name for x in cls._get_fields() if x.type == Optional[List[str]]]
+
+    def set_list(
+        self,
+        prop: str,
+        values: Optional[List[str]] = None,
+        enum: Optional[List[str]] = None,
+        enum_callback: Optional[callable] = None,
+    ) -> List[str]:
+        """Pass."""
+
+        def err(check, use_enum):
+            valids = [{f"Valid {prop} values": x} for x in use_enum]
+            err = f"No {prop} matching {check!r} found out of {len(use_enum)} items"
+            err_table = tablize(value=valids, err=err)
+            raise NotFoundError(err_table)
+
+        props = self.get_list_props()
+        if prop not in props:
+            raise ApiError(f"Invalid list property {prop}, valids: {props}")
+
+        values = listify(values)
+        use_enum = None
+        if isinstance(enum, list) and enum:
+            use_enum = enum
+        elif callable(enum_callback):
+            use_enum = enum_callback()
+
+        matches = []
+        for value in values:
+            if isinstance(value, str):
+                check = value
+                if check.startswith("~"):
+                    check = re.compile(check[1:])
+            elif isinstance(value, re.Pattern):
+                check = value
+            else:
+                raise ApiError(
+                    f"Value must be {STR_RE_LISTY}, not type={type(value)}, value={value!r}"
+                )
+
+            if isinstance(use_enum, list) and use_enum:
+                if isinstance(check, str):
+                    if check not in use_enum:
+                        err(check=check, use_enum=use_enum)
+                    matches.append(check)
+                elif isinstance(check, re.Pattern):
+                    re_matches = [x for x in use_enum if check.search(x)]
+                    if not re_matches:
+                        err(check=check, use_enum=use_enum)
+                    matches += re_matches
+            else:
+                if isinstance(check, str):
+                    matches.append(check)
+
+        self._log.debug(f"Resolved {prop} values {values} to matches {matches}")
+        setattr(self, prop, matches)
+        return matches
+
+    def set_search_filter(
+        self, search: Optional[str] = None, filter: Optional[str] = None
+    ) -> Tuple[Optional[str], Optional[str]]:
+        """Pass."""
+        values = [search, filter]
+        is_strs = [isinstance(x, str) and x for x in values]
+        if any(is_strs) and not all(is_strs):
+            raise ApiError(f"Only search or filter supplied, must supply both: {values}")
+        if not all(is_strs):
+            search = ""
+            filter = None
+        self.search = search
+        self.filter = filter
+        return (search, filter)
+
+    @staticmethod
+    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+        """Pass."""
+        return QueryHistoryRequestSchema
+
+
+@dataclasses.dataclass
+class QueryHistory(BaseModel):
+    """Pass."""
+
+    query_id: str = get_schema_dc(schema=QueryHistorySchema, key="query_id")
+    saved_query_name: Optional[str] = get_schema_dc(
+        schema=QueryHistorySchema, key="saved_query_name", default=None
+    )
+    saved_query_tags: Optional[List[str]] = get_schema_dc(
+        schema=QueryHistorySchema, key="saved_query_tags", default=None
+    )
+    start_time: Optional[datetime.datetime] = get_schema_dc(
+        schema=QueryHistorySchema, key="start_time", default=None
+    )
+    end_time: Optional[datetime.datetime] = get_schema_dc(
+        schema=QueryHistorySchema, key="end_time", default=None
+    )
+    duration: Optional[str] = get_schema_dc(schema=QueryHistorySchema, key="duration", default=None)
+    run_by: Optional[str] = get_schema_dc(schema=QueryHistorySchema, key="run_by", default=None)
+    run_from: Optional[str] = get_schema_dc(schema=QueryHistorySchema, key="run_from", default=None)
+    execution_source: Optional[dict] = get_schema_dc(
+        schema=QueryHistorySchema, key="execution_source", default=None
+    )
+    status: Optional[str] = get_schema_dc(schema=QueryHistorySchema, key="status", default=None)
+    module: Optional[str] = get_schema_dc(schema=QueryHistorySchema, key="module", default=None)
+    results_count: Optional[int] = get_schema_dc(
+        schema=QueryHistorySchema, key="results_count", default=None
+    )
+
+    @staticmethod
+    def get_schema_cls():
+        """Pass."""
+        return QueryHistorySchema
+
+    @property
+    def name(self) -> Optional[str]:
+        """Pass."""
+        return self.saved_query_name
+
+    @property
+    def tags(self) -> Optional[str]:
+        """Pass."""
+        return self.saved_query_tags
+
+    @property
+    def asset_type(self) -> Optional[str]:
+        """Pass."""
+        return self.execution_source.get("entity_type")
+
+    @property
+    def component(self) -> Optional[str]:
+        """Pass."""
+        return self.execution_source.get("component")
+
+    def __str__(self) -> List[str]:
+        """Pass."""
+
+        def getval(prop):
+            value = getattr(self, prop, None)
+            if value is not None and not isinstance(value, (str, int, float, bool)):
+                value = str(value)
+            return repr(value)
+
+        vals = ", ".join([f"{p}={getval(p)}" for p in self._props_details()])
+        return f"{self.__class__.__name__}({vals})"
+
+    def __repr__(self):
+        """Pass."""
+        return self.__str__()
+
+    def to_csv(self) -> dict:
+        """Pass."""
+
+        def getval(prop):
+            value = getattr(self, prop, None)
+            if isinstance(value, list):
+                value = "\n".join(value)
+            return value
+
+        return {k: getval(k) for k in self._props_csv()}
+
+    def to_tablize(self) -> dict:
+        """Pass."""
+
+        def getval(prop, width=30):
+            value = getattr(self, prop, None)
+            if isinstance(width, int) and len(str(value)) > width:
+                value = textwrap.fill(value, width=width)
+            prop = prop.replace("_", " ").title()
+            return f"{prop}: {value}"
+
+        def getvals(props, width=30):
+            return "\n".join([getval(prop=p, width=width) for p in props])
+
+        tags = "\nTags:\n  " + "\n  ".join(self.tags or [])
+        return {
+            "Details": getvals(self._props_details(), None) + tags,
+            "Results": getvals(self._props_timings() + self._props_results(), None),
+        }
+
+    @classmethod
+    def _props_csv(cls) -> List[str]:
+        """Pass."""
+        return cls._props_custom() + [
+            x for x in cls._get_field_names() if x not in cls._props_skip()
+        ]
+
+    @classmethod
+    def _props_details(cls) -> List[str]:
+        """Pass."""
+        return [x for x in cls._props_custom() if x not in ["tags"]] + [
+            x for x in cls._get_field_names() if x not in cls._props_details_excludes()
+        ]
+
+    @classmethod
+    def _props_details_excludes(cls) -> List[str]:
+        """Pass."""
+        return cls._props_custom() + cls._props_skip() + cls._props_timings() + cls._props_results()
+
+    @classmethod
+    def _props_timings(cls) -> List[str]:
+        """Pass."""
+        return ["start_time", "end_time", "duration"]
+
+    @classmethod
+    def _props_skip(cls) -> List[str]:
+        """Pass."""
+        return ["execution_source", "document_meta", "saved_query_name", "saved_query_tags"]
+
+    @classmethod
+    def _props_custom(cls) -> List[str]:
+        """Pass."""
+        return ["name", "tags"]
+
+    @classmethod
+    def _props_results(cls) -> List[str]:
+        """Pass."""
+        return ["status", "results_count"]
 
 
 # WIP: folders
