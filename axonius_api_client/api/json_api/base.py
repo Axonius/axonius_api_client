@@ -18,6 +18,7 @@ from ...exceptions import (
     SchemaError,
 )
 from ...http import Http
+from ...logs import get_obj_log
 from ...tools import coerce_bool, combo_dicts, json_dump, json_load, listify, strip_right
 
 LOGGER = logging.getLogger(__name__)
@@ -222,6 +223,11 @@ class BaseSchemaJson(BaseSchema, marshmallow_jsonapi.Schema):
 @dataclasses.dataclass
 class BaseModel(dataclasses_json.DataClassJsonMixin, BaseCommon):
     """Model base class for holding data."""
+
+    @property
+    def _log(self) -> logging.Logger:
+        """Pass."""
+        return get_obj_log(self)
 
     def get_schema_cls() -> Optional[Type[BaseSchema]]:
         """Get the BaseSchema that should be used to validate the data for this model.
