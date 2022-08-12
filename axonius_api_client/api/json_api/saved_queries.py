@@ -751,6 +751,111 @@ class QueryHistory(BaseModel):
         """Pass."""
         return QueryHistorySchema
 
+    @property
+    def name(self) -> Optional[str]:
+        """Pass."""
+        return self.saved_query_name
+
+    @property
+    def tags(self) -> Optional[str]:
+        """Pass."""
+        return self.saved_query_tags
+
+    @property
+    def asset_type(self) -> Optional[str]:
+        """Pass."""
+        return self.execution_source.get("entity_type")
+
+    @property
+    def component(self) -> Optional[str]:
+        """Pass."""
+        return self.execution_source.get("component")
+
+    def __str__(self) -> List[str]:
+        """Pass."""
+
+        def getval(prop):
+            value = getattr(self, prop, None)
+            if value is not None and not isinstance(value, (str, int, float, bool)):
+                value = str(value)
+            return repr(value)
+
+        vals = ", ".join([f"{p}={getval(p)}" for p in self._props_details()])
+        return f"{self.__class__.__name__}({vals})"
+
+    def __repr__(self):
+        """Pass."""
+        return self.__str__()
+
+    def to_csv(self) -> dict:
+        """Pass."""
+
+        def getval(prop):
+            value = getattr(self, prop, None)
+            if isinstance(value, list):
+                value = "\n".join(value)
+            return value
+
+        return {k: getval(k) for k in self._props_csv()}
+
+    def to_tablize(self) -> dict:
+        """Pass."""
+
+        def getval(prop, width=30):
+            value = getattr(self, prop, None)
+            if isinstance(width, int) and len(str(value)) > width:
+                value = textwrap.fill(value, width=width)
+            prop = prop.replace("_", " ").title()
+            return f"{prop}: {value}"
+
+        def getvals(props, width=30):
+            return "\n".join([getval(prop=p, width=width) for p in props])
+
+        tags = "\nTags:\n  " + "\n  ".join(self.tags or [])
+        return {
+            "Details": getvals(self._props_details(), None) + tags,
+            "Results": getvals(self._props_timings() + self._props_results(), None),
+        }
+
+    @classmethod
+    def _props_csv(cls) -> List[str]:
+        """Pass."""
+        return cls._props_custom() + [
+            x for x in cls._get_field_names() if x not in cls._props_skip()
+        ]
+
+    @classmethod
+    def _props_details(cls) -> List[str]:
+        """Pass."""
+        return [x for x in cls._props_custom() if x not in ["tags"]] + [
+            x for x in cls._get_field_names() if x not in cls._props_details_excludes()
+        ]
+
+    @classmethod
+    def _props_details_excludes(cls) -> List[str]:
+        """Pass."""
+        return cls._props_custom() + cls._props_skip() + cls._props_timings() + cls._props_results()
+
+    @classmethod
+    def _props_timings(cls) -> List[str]:
+        """Pass."""
+        return ["start_time", "end_time", "duration"]
+
+    @classmethod
+    def _props_skip(cls) -> List[str]:
+        """Pass."""
+        return ["execution_source", "document_meta", "saved_query_name", "saved_query_tags"]
+
+    @classmethod
+    def _props_custom(cls) -> List[str]:
+        """Pass."""
+        return ["name", "tags"]
+
+    @classmethod
+    def _props_results(cls) -> List[str]:
+        """Pass."""
+        return ["status", "results_count"]
+
 
 # WIP: folders
 FOLDER_SEP: str = "//"
