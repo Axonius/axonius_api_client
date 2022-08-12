@@ -4,12 +4,13 @@ import dataclasses
 import datetime
 import re
 import textwrap
-from typing import ClassVar, List, Optional, Pattern, Type, Union
+from typing import ClassVar, List, Optional, Tuple, Type
 
 import marshmallow
 import marshmallow_jsonapi
 
 from ...constants.adapters import DISCOVERY_NAME, GENERIC_NAME, INGESTION_NAME
+from ...constants.general import STR_RE_LISTY
 from ...exceptions import ApiError, NotFoundError
 from ...http import Http
 from ...parsers.config import parse_schema
@@ -22,9 +23,6 @@ from .custom_fields import SchemaBool, SchemaDatetime, dump_date, get_field_dc_m
 from .generic import Metadata, MetadataSchema
 from .resources import PaginationRequest, PaginationSchema
 from .time_range import TimeRange, TimeRangeSchema, UnitTypes
-
-STR_RE = Union[str, Pattern]
-STR_RE_LISTY = Union[STR_RE, List[STR_RE]]
 
 
 class AdapterFetchHistorySchema(BaseSchemaJson):
@@ -478,6 +476,21 @@ class AdapterFetchHistoryRequest(BaseModel):
 
         self.sort = value
         return value
+
+    def set_search_filter(
+        self, search: Optional[str] = None, filter: Optional[str] = None
+    ) -> Tuple[Optional[str], Optional[str]]:
+        """Pass."""
+        values = [search, filter]
+        is_strs = [isinstance(x, str) and x for x in values]
+        if any(is_strs) and not all(is_strs):
+            raise ApiError(f"Only search or filter supplied, must supply both: {values}")
+        if not all(is_strs):
+            search = None
+            filter = None
+        self.search = search
+        self.filter = filter
+        return (search, filter)
 
     def set_filters(
         self,
