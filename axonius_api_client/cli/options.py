@@ -10,6 +10,23 @@ from . import context
 from .helps import HELPSTRS
 
 
+def build_filter_opt(value_type: str):
+    """Pass."""
+    short_opt = "".join([x[0] for x in value_type.split("_")])
+    long_opt = value_type.replace("_", "-")
+    camel = " ".join(x.title() for x in value_type.split("_"))
+    return click.option(
+        f"--filter-{long_opt}",
+        f"-f{short_opt}",
+        f"{value_type}",
+        help=f"Filter for records with matching {camel} (~ prefix for regex!) (multiple)",
+        multiple=True,
+        show_envvar=True,
+        show_default=True,
+        required=False,
+    )
+
+
 def add_options(options):
     """Pass."""
 

@@ -72,6 +72,11 @@ class QueryHistorySchema(BaseSchemaJson):
         """Pass."""
         return QueryHistory
 
+    @classmethod
+    def validate_attr_excludes(cls) -> List[str]:
+        """Pass."""
+        return ["document_meta", "id"]
+
 
 class QueryHistoryRequestSchema(BaseSchemaJson):
     """Pass."""
@@ -103,6 +108,11 @@ class QueryHistoryRequestSchema(BaseSchemaJson):
         """Pass."""
 
         type_ = "entities_queries_history_request_schema"
+
+    @classmethod
+    def validate_attrs(cls) -> dict:
+        """Pass."""
+        return QueryHistorySchema.validate_attrs()
 
 
 class SavedQuerySchema(BaseSchemaJson):
@@ -636,6 +646,11 @@ class QueryHistoryRequest(BaseModel):
                 date_end = dt_now()
         return (date_start, date_end)
 
+    @classmethod
+    def get_list_props(cls) -> List[str]:
+        """Pass."""
+        return [x.name for x in cls._get_fields() if x.type == Optional[List[str]]]
+
     def set_list(
         self,
         prop: str,
@@ -651,7 +666,7 @@ class QueryHistoryRequest(BaseModel):
             err_table = tablize(value=valids, err=err)
             raise NotFoundError(err_table)
 
-        props = [x.name for x in self._get_fields() if x.type == Optional[List[str]]]
+        props = self.get_list_props()
         if prop not in props:
             raise ApiError(f"Invalid list property {prop}, valids: {props}")
 
@@ -663,20 +678,19 @@ class QueryHistoryRequest(BaseModel):
             use_enum = enum_callback()
 
         matches = []
+        for value in values:
+            if isinstance(value, str):
+                check = value
+                if check.startswith("~"):
+                    check = re.compile(check[1:])
+            elif isinstance(value, re.Pattern):
+                check = value
+            else:
+                raise ApiError(
+                    f"Value must be {STR_RE_LISTY}, not type={type(value)}, value={value!r}"
+                )
 
-        if isinstance(use_enum, list) and use_enum:
-            for value in values:
-                if isinstance(value, str):
-                    check = value
-                    if check.startswith("~"):
-                        check = re.compile(check[1:])
-                elif isinstance(value, re.Pattern):
-                    check = value
-                else:
-                    raise ApiError(
-                        f"Value must be {STR_RE_LISTY}, not type={type(value)}, value={value!r}"
-                    )
-
+            if isinstance(use_enum, list) and use_enum:
                 if isinstance(check, str):
                     if check not in use_enum:
                         err(check=check, use_enum=use_enum)
@@ -686,6 +700,9 @@ class QueryHistoryRequest(BaseModel):
                     if not re_matches:
                         err(check=check, use_enum=use_enum)
                     matches += re_matches
+            else:
+                if isinstance(check, str):
+                    matches.append(check)
 
         self._log.debug(f"Resolved {prop} values {values} to matches {matches}")
         setattr(self, prop, matches)
@@ -710,11 +727,6 @@ class QueryHistoryRequest(BaseModel):
     def get_schema_cls() -> Optional[Type[BaseSchema]]:
         """Pass."""
         return QueryHistoryRequestSchema
-
-    @classmethod
-    def validate_attrs(cls) -> dict:
-        """Pass."""
-        return QueryHistorySchema.validate_attrs()
 
 
 @dataclasses.dataclass

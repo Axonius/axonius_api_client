@@ -562,7 +562,15 @@ class SavedQuery(ChildMixins):
         return self._get_query_history_run_from().value
 
     def get_query_history(self, generator: bool = False, **kwargs) -> Union[HIST_GEN, HIST_LIST]:
-        """Pass."""
+        """Get query history.
+
+        Args:
+            generator (bool, optional): Return a generator or a list
+            **kwargs: passed to :meth:`get_fetch_history_generator`
+
+        Returns:
+            Union[HIST_GEN, HIST_LIST]: Generator or list of query event models
+        """
         gen = self.get_query_history_generator(**kwargs)
         return gen if generator else list(gen)
 
@@ -588,7 +596,34 @@ class SavedQuery(ChildMixins):
         run_from_values: Optional[List[str]] = None,
         request_obj: Optional[QueryHistoryRequest] = None,
     ) -> HIST_LIST:
-        """Pass."""
+        """Get query history.
+
+        Args:
+            run_by (OPT_STR_RE_LISTY, optional): Filter records run by users
+            run_from (OPT_STR_RE_LISTY, optional): Filter records run from api/gui
+            tags (OPT_STR_RE_LISTY, optional): Filter records by SQ tags
+            modules (OPT_STR_RE_LISTY, optional): Filter records by asset type
+                (defaults to parent asset type)
+            name_term (Optional[str], optional): Filter records by SQ name pattern
+            date_start (Optional[datetime.datetime], optional): Filter records after this date
+            date_end (Optional[datetime.datetime], optional): Filter records before this date
+                (will default to now if date_start supplied and no date_end)
+            sort_attribute (Optional[str], optional): Sort records based on this attribute
+            sort_descending (bool, optional): Sort records descending or ascending
+            search (Optional[str], optional): AQL search value to filter records
+            filter (Optional[str], optional): AQL to filter records
+            page_sleep (int, optional): Sleep N seconds between pages
+            page_size (int, optional): Get N records per page
+            row_start (int, optional): Start at row N
+            row_stop (Optional[int], optional): Stop at row N
+            log_level (Union[int, str], optional): log level to use for paging
+            run_by_values (Optional[List[str]], optional): Output from
+                :meth:`get_query_history_run_by` (will be fetched if not supplied)
+            run_from_values (Optional[List[str]], optional): Output from
+                :meth:`get_query_history_run_from` (will be fetched if not supplied)
+            request_obj (Optional[QueryHistoryRequest], optional):  Request object to use
+                for options
+        """
         if not isinstance(request_obj, QueryHistoryRequest):
             request_obj = QueryHistoryRequest()
 
