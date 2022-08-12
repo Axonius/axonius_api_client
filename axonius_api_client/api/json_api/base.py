@@ -323,11 +323,16 @@ class BaseModel(dataclasses_json.DataClassJsonMixin, BaseCommon):
         dumped = json_load(obj=json_dump(obj=self.to_dict()))
         ret = {}
         for k, v in dumped.items():
+            if v is None:
+                continue
+
             if isinstance(v, dict):
                 for a, b in v.items():
                     if isinstance(b, SIMPLE):
                         ret[f"{k}[{a}]"] = b
             elif isinstance(v, SIMPLE):
+                ret[k] = v
+            elif isinstance(v, (list, tuple)) and v and all([isinstance(x, SIMPLE) for x in v]):
                 ret[k] = v
         return ret
 
