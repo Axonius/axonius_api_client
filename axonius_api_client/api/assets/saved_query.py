@@ -1,9 +1,13 @@
 # -*- coding: utf-8 -*-
 """API for working with saved queries for assets."""
+import datetime
 import warnings
 from typing import Generator, List, Optional, Union
 
+from cachetools import TTLCache, cached
+
 from ...constants.api import AS_DATACLASS, MAX_PAGE_SIZE
+from ...constants.general import OPT_STR_RE_LISTY
 from ...exceptions import (
     AlreadyExists,
     ApiError,
@@ -15,14 +19,21 @@ from ...tools import check_gui_page_size, coerce_bool, echo_ok, echo_warn, listi
 from .. import json_api
 from ..api_endpoints import ApiEndpoints
 from ..json_api.paging_state import LOG_LEVEL_API, PAGE_SIZE, PagingState
+from ..json_api.saved_queries import QueryHistory, QueryHistoryRequest
 from ..mixins import ChildMixins
 
 MODEL = json_api.saved_queries.SavedQuery
 MODEL_GET = json_api.saved_queries.SavedQueryGet
 MODEL_FOLDER = json_api.saved_queries.Folder
+MODEL_HIST = QueryHistory
+HIST_GEN = Generator[QueryHistory, None, None]
+HIST_LIST = List[QueryHistory]
 BOTH = Union[dict, MODEL]
 MULTI = Union[str, BOTH]
 GEN = Generator[BOTH, None, None]
+CACHE_TAGS = TTLCache(maxsize=1024, ttl=60)
+CACHE_RUN_BY = TTLCache(maxsize=1024, ttl=60)
+CACHE_RUN_FROM = TTLCache(maxsize=1024, ttl=60)
 
 
 class SavedQuery(ChildMixins):
@@ -305,11 +316,12 @@ class SavedQuery(ChildMixins):
                 )
                 warnings.warn(message=msg, category=GuiQueryWizardWarning)
 
+        query = query or ""
         sq.query = query
         sq.query_expr = query
         if isinstance(expressions, list):
             sq.expressions = expressions
-        elif not append:
+        elif not append and query:
             msg = "\n".join(
                 [
                     f"Updating query {query!r} with no expressions",
@@ -516,7 +528,7 @@ class SavedQuery(ChildMixins):
             raise SavedQueryTagsNotFoundError(value=value, valid=valid)
         return found if as_dataclass else [x.to_dict() for x in found]
 
-    def get_tags(self) -> List[str]:
+    def get_tags_slow(self) -> List[str]:
         """Get all tags for saved queries.
 
         Examples:
@@ -533,6 +545,136 @@ class SavedQuery(ChildMixins):
         for sq in self.get(as_dataclass=True):
             tags += [x for x in sq.tags if x not in tags]
         return tags
+
+    @cached(cache=CACHE_TAGS)
+    def get_tags(self) -> List[str]:
+        """Get all tags for saved queries."""
+        return self._get_tags().value
+
+    @cached(cache=CACHE_RUN_BY)
+    def get_query_history_run_by(self) -> List[str]:
+        """Get the valid values for the run_by attribute for getting query history."""
+        return self._get_query_history_run_by().value
+
+    @cached(cache=CACHE_RUN_FROM)
+    def get_query_history_run_from(self) -> List[str]:
+        """Get the valid values for the run_from attribute for getting query history."""
+        return self._get_query_history_run_from().value
+
+    def get_query_history(self, generator: bool = False, **kwargs) -> Union[HIST_GEN, HIST_LIST]:
+        """Get query history.
+
+        Args:
+            generator (bool, optional): Return a generator or a list
+            **kwargs: passed to :meth:`get_fetch_history_generator`
+
+        Returns:
+            Union[HIST_GEN, HIST_LIST]: Generator or list of query event models
+        """
+        gen = self.get_query_history_generator(**kwargs)
+        return gen if generator else list(gen)
+
+    def get_query_history_generator(
+        self,
+        run_by: OPT_STR_RE_LISTY = None,
+        run_from: OPT_STR_RE_LISTY = None,
+        tags: OPT_STR_RE_LISTY = None,
+        modules: OPT_STR_RE_LISTY = None,
+        name_term: Optional[str] = None,
+        date_start: Optional[datetime.datetime] = None,
+        date_end: Optional[datetime.datetime] = None,
+        sort_attribute: Optional[str] = None,
+        sort_descending: bool = False,
+        search: Optional[str] = None,
+        filter: Optional[str] = None,
+        page_sleep: int = PagingState.page_sleep,
+        page_size: int = PagingState.page_size,
+        row_start: int = PagingState.row_start,
+        row_stop: Optional[int] = PagingState.row_stop,
+        log_level: Union[int, str] = PagingState.log_level,
+        run_by_values: Optional[List[str]] = None,
+        run_from_values: Optional[List[str]] = None,
+        request_obj: Optional[QueryHistoryRequest] = None,
+    ) -> HIST_LIST:
+        """Get query history.
+
+        Args:
+            run_by (OPT_STR_RE_LISTY, optional): Filter records run by users
+            run_from (OPT_STR_RE_LISTY, optional): Filter records run from api/gui
+            tags (OPT_STR_RE_LISTY, optional): Filter records by SQ tags
+            modules (OPT_STR_RE_LISTY, optional): Filter records by asset type
+                (defaults to parent asset type)
+            name_term (Optional[str], optional): Filter records by SQ name pattern
+            date_start (Optional[datetime.datetime], optional): Filter records after this date
+            date_end (Optional[datetime.datetime], optional): Filter records before this date
+                (will default to now if date_start supplied and no date_end)
+            sort_attribute (Optional[str], optional): Sort records based on this attribute
+            sort_descending (bool, optional): Sort records descending or ascending
+            search (Optional[str], optional): AQL search value to filter records
+            filter (Optional[str], optional): AQL to filter records
+            page_sleep (int, optional): Sleep N seconds between pages
+            page_size (int, optional): Get N records per page
+            row_start (int, optional): Start at row N
+            row_stop (Optional[int], optional): Stop at row N
+            log_level (Union[int, str], optional): log level to use for paging
+            run_by_values (Optional[List[str]], optional): Output from
+                :meth:`get_query_history_run_by` (will be fetched if not supplied)
+            run_from_values (Optional[List[str]], optional): Output from
+                :meth:`get_query_history_run_from` (will be fetched if not supplied)
+            request_obj (Optional[QueryHistoryRequest], optional):  Request object to use
+                for options
+        """
+        if not isinstance(request_obj, QueryHistoryRequest):
+            request_obj = QueryHistoryRequest()
+
+        request_obj.set_list(
+            prop="run_from",
+            values=run_from,
+            enum=run_from_values,
+            enum_callback=self.get_query_history_run_from,
+        )
+        request_obj.set_list(
+            prop="run_by",
+            values=run_by,
+            enum=run_by_values,
+            enum_callback=self.get_query_history_run_by,
+        )
+        request_obj.set_list(
+            prop="tags",
+            values=tags,
+            enum_callback=self.get_tags,
+        )
+        request_obj.set_list(
+            prop="modules",
+            values=modules or self.parent.ASSET_TYPE,
+            enum_callback=self.parent.asset_types,
+        )
+        request_obj.set_date(
+            date_start=date_start,
+            date_end=date_end,
+        )
+        request_obj.set_sort(
+            value=sort_attribute,
+            descending=sort_descending,
+        )
+        request_obj.set_name_term(
+            value=name_term,
+        )
+        request_obj.set_search_filter(
+            search=search,
+            filter=filter,
+        )
+        with PagingState(
+            purpose="Get Query History Events",
+            page_sleep=page_sleep,
+            page_size=page_size,
+            row_start=row_start,
+            row_stop=row_stop,
+            log_level=log_level,
+        ) as state:
+            while not state.stop_paging:
+                page = state.page(method=self._get_query_history, request_obj=request_obj)
+                yield from page.rows
 
     def get(self, generator: bool = False, **kwargs) -> Union[GEN, List[BOTH]]:
         """Get all saved queries.
@@ -1082,6 +1224,28 @@ class SavedQuery(ChildMixins):
             raise AlreadyExists(f"Saved query with name or uuid of {value!r} already exists:\n{sq}")
         except SavedQueryNotFoundError:
             return
+
+    def _get_query_history(self, request_obj: Optional[QueryHistoryRequest] = None) -> HIST_LIST:
+        """Pass."""
+        api_endpoint = ApiEndpoints.saved_queries.get_query_history
+        if not request_obj:
+            request_obj = QueryHistoryRequest()
+        return api_endpoint.perform_request(http=self.auth.http, request_obj=request_obj)
+
+    def _get_query_history_run_by(self) -> json_api.generic.ListValueSchema:
+        """Get the valid values for the run_by attribute for getting query history."""
+        api_endpoint = ApiEndpoints.saved_queries.get_run_by
+        return api_endpoint.perform_request(http=self.auth.http)
+
+    def _get_query_history_run_from(self) -> json_api.generic.ListValueSchema:
+        """Get the valid values for the run_from attribute for getting query history."""
+        api_endpoint = ApiEndpoints.saved_queries.get_run_from
+        return api_endpoint.perform_request(http=self.auth.http)
+
+    def _get_tags(self) -> json_api.generic.ListValueSchema:
+        """Get the valid tags."""
+        api_endpoint = ApiEndpoints.saved_queries.get_tags
+        return api_endpoint.perform_request(http=self.auth.http, asset_type=self.parent.ASSET_TYPE)
 
     # WIP: folders
     '''

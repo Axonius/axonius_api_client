@@ -8,6 +8,7 @@ from axonius_api_client.api import json_api, mixins
 from axonius_api_client.constants.api import MAX_PAGE_SIZE
 from axonius_api_client.exceptions import ApiError, NotFoundError, StopFetch
 from axonius_api_client.tools import listify
+from flaky import flaky
 
 from ...meta import QUERIES
 from ...utils import check_asset, check_assets
@@ -354,6 +355,7 @@ class TestAssetsPublic(ModelMixinsBase):
         check_assets(rows)
         assert len(rows) == 20
 
+    @flaky(max_runs=3)
     def test_get_all_agg(self, apiobj):
         rows = apiobj.get(fields="agg:all", max_rows=5)
         for row in rows:

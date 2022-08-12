@@ -18,10 +18,11 @@ from ...exceptions import (
     SchemaError,
 )
 from ...http import Http
-from ...tools import coerce_bool, combo_dicts, json_dump, json_load, listify
+from ...logs import get_obj_log
+from ...tools import coerce_bool, combo_dicts, json_dump, json_load, listify, strip_right
 
 LOGGER = logging.getLogger(__name__)
-EXTRA_WARN = False
+EXTRA_WARN = True
 
 
 class BaseCommon:
@@ -69,6 +70,21 @@ class BaseCommon:
 
         cls._post_load_attrs(data=loaded, **kwargs)
         return loaded
+
+    @staticmethod
+    def _get_aname(value: str) -> str:
+        """Pass."""
+        return strip_right(obj=str(value or ""), fix="_adapter")
+
+    @staticmethod
+    def _prepend_sort(value: str, descending: bool = False):
+        """Pass."""
+        if isinstance(value, str):
+            if value.startswith("-"):
+                value = value[1:]
+            if descending:
+                value = f"-{value}"
+        return value
 
 
 class BaseSchema(BaseCommon, marshmallow.Schema):
@@ -162,11 +178,16 @@ class BaseSchemaJson(BaseSchema, marshmallow_jsonapi.Schema):
         Raises:
             SchemaError: if data is not a dict
         """
-        many = isinstance(data, dict) and isinstance(data.get("data"), (list, tuple))
-        schema = cls(many=many)
         if not isinstance(data, dict):
-            exc = ApiError(f"Data to load must be a dictionary, not a {type(data).__name__}")
-            raise SchemaError(schema=schema, exc=exc, data=data, obj=cls)
+            if isinstance(data, list):
+                # Fix for endpoints that do not return JSON API structure
+                data = {"data": [{"attributes": x, "type": cls.Meta.type_} for x in data]}
+            else:
+                exc = ApiError(f"Data to load must be a dictionary, not a {type(data).__name__}")
+                raise SchemaError(schema=cls, exc=exc, data=data, obj=cls)
+
+        many = isinstance(data.get("data"), (list, tuple))
+        schema = cls(many=many)
         return cls._load_schema(**combo_dicts(kwargs, schema=schema, data=data))
 
     @classmethod
@@ -202,6 +223,11 @@ class BaseSchemaJson(BaseSchema, marshmallow_jsonapi.Schema):
 @dataclasses.dataclass
 class BaseModel(dataclasses_json.DataClassJsonMixin, BaseCommon):
     """Model base class for holding data."""
+
+    @property
+    def _log(self) -> logging.Logger:
+        """Pass."""
+        return get_obj_log(self)
 
     def get_schema_cls() -> Optional[Type[BaseSchema]]:
         """Get the BaseSchema that should be used to validate the data for this model.
@@ -297,11 +323,16 @@ class BaseModel(dataclasses_json.DataClassJsonMixin, BaseCommon):
         dumped = json_load(obj=json_dump(obj=self.to_dict()))
         ret = {}
         for k, v in dumped.items():
+            if v is None:
+                continue
+
             if isinstance(v, dict):
                 for a, b in v.items():
                     if isinstance(b, SIMPLE):
                         ret[f"{k}[{a}]"] = b
             elif isinstance(v, SIMPLE):
+                ret[k] = v
+            elif isinstance(v, (list, tuple)) and v and all([isinstance(x, SIMPLE) for x in v]):
                 ret[k] = v
         return ret
 

@@ -191,6 +191,13 @@ class TestFetchHistoryModel(TestAdaptersBase):
         ret = request_obj.set_sort(value=attr, descending=True)
         assert ret == exp
 
+    def test_set_sort_empty(self, apiobj):
+        request_obj = json_api.adapters.AdapterFetchHistoryRequest()
+        attr = None
+        exp = None
+        ret = request_obj.set_sort(value=attr, descending=True)
+        assert ret == exp
+
     def test_set_filters_invalid_type(self, apiobj, history_filters):
         request_obj = json_api.adapters.AdapterFetchHistoryRequest()
         with pytest.raises(ApiError):

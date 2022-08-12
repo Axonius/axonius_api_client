@@ -1,16 +1,11 @@
 # -*- coding: utf-8 -*-
 """Command line interface for Axonius API Client."""
-from ...api.json_api.adapters import (
-    AdapterFetchHistory,
-    AdapterFetchHistoryFilters,
-    AdapterFetchHistorySchema,
-)
-from ...api.json_api.paging_state import PagingState
-from ...api.json_api.time_range import UnitTypes
-from ...parsers.tables import tablize
-from ...tools import csv_writer, json_dump
-from ..context import CONTEXT_SETTINGS, click
-from ..options import AUTH, add_options, build_filter_opt
+from ....api.json_api.paging_state import PagingState
+from ....api.json_api.saved_queries import QueryHistory, QueryHistoryRequest, QueryHistorySchema
+from ....parsers.tables import tablize
+from ....tools import csv_writer, json_dump
+from ...context import CONTEXT_SETTINGS, click
+from ...options import AUTH, add_options, build_filter_opt
 
 
 def export_to_tablize(data, **kwargs):
@@ -22,18 +17,18 @@ def export_to_tablize(data, **kwargs):
 def export_csv(data, **kwargs):
     """Pass."""
     rows = [x.to_csv() for x in data]
-    columns = AdapterFetchHistory._props_csv()
+    columns = QueryHistory._props_csv()
     return csv_writer(rows=rows, columns=columns)
 
 
-def export_json(data, **kwargs):
+def export_json_full(data, **kwargs):
     """Pass."""
     return json_dump(data)
 
 
 MAP_EXPORT_FORMATS: dict = {
     "table": export_to_tablize,
-    "json": export_json,
+    "json": export_json_full,
     "csv": export_csv,
 }
 
@@ -48,58 +43,34 @@ OPT_EXPORT = click.option(
     show_default=True,
 )
 
-OPT_REALTIME = click.option(
-    "--exclude-realtime/--no-exclude-realtime",
-    "-er/-ner",
-    "exclude_realtime",
-    default=False,
-    help="Exclude records for realtime adapters.",
-    is_flag=True,
-    show_envvar=True,
-    show_default=True,
-    required=False,
-)
-
-OPT_REL_UNIT_TYPE = click.option(
-    "--relative-unit-type",
-    "-rut",
-    "relative_unit_type",
-    default=UnitTypes.get_default(),
-    help="Type of unit to use when supplying --relative-unit-count.",
-    type=click.Choice(UnitTypes.keys()),
-    show_envvar=True,
-    show_default=True,
-    required=False,
-)
-OPT_REL_UNIT_COUNT = click.option(
-    "--relative-unit-count",
-    "-ruc",
-    "absolute_date_start",
-    help="Filter records for the past N units of --relative-unit-type.",
-    default=None,
-    type=click.IntRange(min=1),
-    show_envvar=True,
-    show_default=True,
-    required=False,
-)
-OPT_ABS_START_DT = click.option(
-    "--absolute-date-start",
-    "-ads",
-    "absolute_date_start",
-    help="Filter records that are after this date. (overrides relative values)",
+OPT_START_DT = click.option(
+    "--date-start",
+    "-ds",
+    "date_start",
+    help="Filter records that are after this date.",
     default=None,
     metavar="DATE",
     show_envvar=True,
     show_default=True,
     required=False,
 )
-OPT_ABS_END_DT = click.option(
-    "--absolute-date-end",
-    "-ade",
-    "absolute_date_end",
+OPT_END_DT = click.option(
+    "--date-end",
+    "-de",
+    "date_end",
     help="Filter records that are before this date. (defaults to now if start but no end)",
     default=None,
     metavar="DATE",
+    show_envvar=True,
+    show_default=True,
+    required=False,
+)
+OPT_NAME_TERM = click.option(
+    "--name-term",
+    "-nt",
+    "name_term",
+    help="Filter records that match this Saved Query name pattern",
+    default=None,
     show_envvar=True,
     show_default=True,
     required=False,
@@ -111,7 +82,7 @@ OPT_SORT_ATTR = click.option(
     "sort_attribute",
     help="Sort records based on this attribute",
     default=None,
-    type=click.Choice(list(AdapterFetchHistorySchema.validate_attrs())),
+    type=click.Choice(list(QueryHistorySchema.validate_attrs())),
     show_envvar=True,
     show_default=True,
     required=False,
@@ -169,12 +140,10 @@ OPT_ROW_STOP = click.option(
     show_default=True,
 )
 
-OPTS_FILTERS = [build_filter_opt(value_type=x) for x in AdapterFetchHistoryFilters.value_types()]
+OPTS_FILTERS = [build_filter_opt(value_type=x) for x in QueryHistoryRequest.get_list_props()]
 OPTS_TIME_RANGE = [
-    OPT_REL_UNIT_TYPE,
-    OPT_REL_UNIT_COUNT,
-    OPT_ABS_START_DT,
-    OPT_ABS_END_DT,
+    OPT_START_DT,
+    OPT_END_DT,
 ]
 OPTS_SORT = [
     OPT_SORT_ATTR,
@@ -190,23 +159,25 @@ OPTIONS = [
     *AUTH,
     *OPTS_PAGING,
     *OPTS_FILTERS,
-    OPT_REALTIME,
     *OPTS_TIME_RANGE,
     *OPTS_SORT,
+    OPT_NAME_TERM,
     OPT_EXPORT,
 ]
 
 
-@click.command(name="get-fetch-history", context_settings=CONTEXT_SETTINGS)
+@click.command(name="get-query-history", context_settings=CONTEXT_SETTINGS)
 @add_options(OPTIONS)
 @click.pass_context
 def cmd(ctx, url, key, secret, export_format, **kwargs):
-    """Get adapter fetch history events."""
+    """Get query history events."""
     client = ctx.obj.start_client(url=url, key=key, secret=secret)
+    p_grp = ctx.parent.parent.command.name
+    apiobj = getattr(client, p_grp)
 
     with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
-        data = client.adapters.get_fetch_history(**kwargs)
-        ctx.obj.echo_ok(f"Received {len(data)} Fetch History Events")
+        data = apiobj.saved_query.get_query_history(**kwargs)
+        ctx.obj.echo_ok(f"Received {len(data)} Query History Events")
 
     click.secho(MAP_EXPORT_FORMATS[export_format](data=data))
     ctx.exit(0)
