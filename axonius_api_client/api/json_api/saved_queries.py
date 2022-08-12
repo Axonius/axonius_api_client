@@ -2,6 +2,7 @@
 """Models for API requests & responses."""
 import dataclasses
 import datetime
+import re
 import textwrap
 from typing import ClassVar, List, Optional, Tuple, Type, Union
 
@@ -9,6 +10,7 @@ import marshmallow
 import marshmallow_jsonapi
 
 from ...constants.api import GUI_PAGE_SIZES
+from ...constants.general import STR_RE_LISTY
 from ...exceptions import ApiAttributeTypeError, ApiError, NotFoundError
 from ...parsers.tables import tablize
 from ...tools import coerce_bool, coerce_int, dt_now, dt_parse, listify
@@ -642,6 +644,17 @@ class QueryHistoryRequest(BaseModel):
         enum_callback: Optional[callable] = None,
     ) -> List[str]:
         """Pass."""
+
+        def err(check, use_enum):
+            valids = [{f"Valid {prop} values": x} for x in use_enum]
+            err = f"No {prop} matching {check!r} found out of {len(use_enum)} items"
+            err_table = tablize(value=valids, err=err)
+            raise NotFoundError(err_table)
+
+        props = [x.name for x in self._get_fields() if x.type == Optional[List[str]]]
+        if prop not in props:
+            raise ApiError(f"Invalid list property {prop}, valids: {props}")
+
         values = listify(values)
         use_enum = None
         if isinstance(enum, list) and enum:
@@ -649,15 +662,34 @@ class QueryHistoryRequest(BaseModel):
         elif callable(enum_callback):
             use_enum = enum_callback()
 
+        matches = []
+
         if isinstance(use_enum, list) and use_enum:
             for value in values:
-                if value not in use_enum:
-                    valids = [{f"Valid {prop} values": x} for x in use_enum]
-                    err = f"No {prop} matching {value!r} found out of {len(use_enum)} items"
-                    err_table = tablize(value=valids, err=err)
-                    raise NotFoundError(err_table)
-        setattr(self, prop, values)
-        return values
+                if isinstance(value, str):
+                    check = value
+                    if check.startswith("~"):
+                        check = re.compile(check[1:])
+                elif isinstance(value, re.Pattern):
+                    check = value
+                else:
+                    raise ApiError(
+                        f"Value must be {STR_RE_LISTY}, not type={type(value)}, value={value!r}"
+                    )
+
+                if isinstance(check, str):
+                    if check not in use_enum:
+                        err(check=check, use_enum=use_enum)
+                    matches.append(check)
+                elif isinstance(check, re.Pattern):
+                    re_matches = [x for x in use_enum if check.search(x)]
+                    if not re_matches:
+                        err(check=check, use_enum=use_enum)
+                    matches += re_matches
+
+        self._log.debug(f"Resolved {prop} values {values} to matches {matches}")
+        setattr(self, prop, matches)
+        return matches
 
     def set_search_filter(
         self, search: Optional[str] = None, filter: Optional[str] = None
