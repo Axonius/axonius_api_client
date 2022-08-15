@@ -73,6 +73,34 @@ class BoolValue(BaseModel):
         return BoolValueSchema
 
 
+class NameSchema(BaseSchemaJson):
+    """Pass."""
+
+    name = marshmallow_jsonapi.fields.Str()
+
+    class Meta:
+        """Pass."""
+
+        type_ = "name_schema"
+
+    @staticmethod
+    def get_model_cls() -> type:
+        """Pass."""
+        return Name
+
+
+@dataclasses.dataclass
+class Name(BaseModel):
+    """Pass."""
+
+    name: bool
+
+    @staticmethod
+    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+        """Pass."""
+        return NameSchema
+
+
 class IntValueSchema(BaseSchemaJson):
     """Pass."""
 
@@ -188,6 +216,34 @@ class ListValue(BaseModel):
     def get_schema_cls() -> Optional[Type[BaseSchema]]:
         """Pass."""
         return ListValueSchema
+
+
+class ListDictValueSchema(BaseSchemaJson):
+    """Pass."""
+
+    value = marshmallow_jsonapi.fields.List(marshmallow_jsonapi.fields.Dict())
+
+    class Meta:
+        """Pass."""
+
+        type_ = "list_value_schema"
+
+    @staticmethod
+    def get_model_cls() -> type:
+        """Pass."""
+        return ListDictValue
+
+
+@dataclasses.dataclass
+class ListDictValue(BaseModel):
+    """Pass."""
+
+    value: List[str] = get_schema_dc(schema=ListDictValueSchema, key="value", default_factory=list)
+
+    @staticmethod
+    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+        """Pass."""
+        return ListDictValueSchema
 
 
 class DictValueSchema(BaseSchemaJson):
