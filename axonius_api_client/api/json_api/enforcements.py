@@ -18,7 +18,7 @@ from ...exceptions import (
 )
 from ...tools import coerce_bool, coerce_int, coerce_str_to_csv, int_days_map, json_dump, json_load
 from .base import BaseModel, BaseSchema, BaseSchemaJson
-from .custom_fields import SchemaDatetime, get_field_dc_mm
+from .custom_fields import SchemaBool, SchemaDatetime, get_field_dc_mm, get_schema_dc
 
 
 class SetDefaults:
@@ -514,13 +514,23 @@ class SetFull(BaseModel):
             "action": {"action_name": action_type.name, "config": config},
         }
 
-    def check_trigger_exists(self, msg: str) -> bool:
+    def check_trigger_exists(self, msg: str, error: bool = True) -> bool:
         """Pass."""
-        if not self._trigger_obj:
-            raise NoTriggerDefinedError(
+        if not self.has_trigger:
+            err = (
                 f"Unable to {msg} - Enforcement Set with Name of {self.name!r}"
-                f" and UUID of {self.uuid!r}) has no trigger configured"
+                f" and UUID of {self.uuid!r} has no trigger configured"
             )
+            if error:
+                raise NoTriggerDefinedError(f"{self}\n{err}")
+            else:
+                self._log.warning(err)
+        return self.has_trigger
+
+    @property
+    def has_trigger(self) -> bool:
+        """Pass."""
+        return bool(self._trigger_obj)
 
     def check_action_category(self, category: Union[ActionCategory, str]) -> ActionCategory:
         """Pass."""
@@ -1214,3 +1224,112 @@ class ActionType(BaseModel):
     def __repr__(self):
         """Pass."""
         return self.__str__()
+
+
+class RunSetAgainstTriggerRequestSchema(BaseSchemaJson):
+    """Pass."""
+
+    ec_page_run = SchemaBool(
+        load_default=False,
+        dump_default=False,
+    )
+    use_conditions = SchemaBool(
+        load_default=False,
+        dump_default=False,
+    )
+
+    class Meta:
+        """Pass."""
+
+        type_ = "run_enforcements_schema"
+
+    @staticmethod
+    def get_model_cls() -> type:
+        """Pass."""
+        return RunSetAgainstTriggerRequest
+
+
+@dataclasses.dataclass
+class RunSetAgainstTriggerRequest(BaseModel):
+    """Pass."""
+
+    ec_page_run: bool = get_schema_dc(
+        schema=RunSetAgainstTriggerRequestSchema,
+        key="ec_page_run",
+        default=False,
+    )
+    use_conditions: bool = get_schema_dc(
+        schema=RunSetAgainstTriggerRequestSchema,
+        key="use_conditions",
+        default=False,
+    )
+
+    @staticmethod
+    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+        """Pass."""
+        return RunSetAgainstTriggerRequestSchema
+
+
+class RunSetsValueSchema(BaseSchema):
+    """Pass."""
+
+    ids = marshmallow_jsonapi.fields.List(marshmallow_jsonapi.fields.Str(), required=True)
+    include = SchemaBool(load_default=True, dump_default=True)
+
+    @staticmethod
+    def get_model_cls() -> type:
+        """Pass."""
+        return RunSetsValue
+
+
+@dataclasses.dataclass
+class RunSetsValue(BaseModel):
+    """Pass."""
+
+    ids: List[str] = get_schema_dc(schema=RunSetsValueSchema, key="ids")
+    include: bool = get_schema_dc(schema=RunSetsValueSchema, key="include", default=True)
+
+    @staticmethod
+    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+        """Pass."""
+        return RunSetsValueSchema
+
+
+class RunSetsAgainstTriggerRequestSchema(BaseSchemaJson):
+    """Pass."""
+
+    value = marshmallow_jsonapi.fields.Nested(RunSetsValueSchema)
+    use_conditions = SchemaBool(
+        load_default=False,
+        dump_default=False,
+    )
+
+    class Meta:
+        """Pass."""
+
+        type_ = "run_multiple_enforcements_schema"
+
+    @staticmethod
+    def get_model_cls() -> type:
+        """Pass."""
+        return RunSetsAgainstTriggerRequest
+
+
+@dataclasses.dataclass
+class RunSetsAgainstTriggerRequest(BaseModel):
+    """Pass."""
+
+    value: RunSetsValue = get_schema_dc(
+        schema=RunSetsAgainstTriggerRequestSchema,
+        key="value",
+    )
+    use_conditions: bool = get_schema_dc(
+        schema=RunSetsAgainstTriggerRequestSchema,
+        key="use_conditions",
+        default=False,
+    )
+
+    @staticmethod
+    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+        """Pass."""
+        return RunSetsAgainstTriggerRequestSchema

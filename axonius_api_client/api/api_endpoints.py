@@ -756,6 +756,22 @@ class Enforcements(ApiEndpointGroup):
         response_schema_cls=json_api.enforcements.ActionTypeSchema,
         response_model_cls=json_api.enforcements.ActionType,
     )
+    run_set_against_trigger: ApiEndpoint = ApiEndpoint(
+        method="put",
+        path="api/V4.5/enforcements/{uuid}/trigger",
+        request_schema_cls=json_api.enforcements.RunSetAgainstTriggerRequestSchema,
+        request_model_cls=json_api.enforcements.RunSetAgainstTriggerRequest,
+        response_schema_cls=json_api.generic.NameSchema,
+        response_model_cls=json_api.generic.Name,
+    )
+    run_sets_against_trigger: ApiEndpoint = ApiEndpoint(
+        method="post",
+        path="api/V4.5/enforcements/trigger",
+        request_schema_cls=json_api.enforcements.RunSetsAgainstTriggerRequestSchema,
+        request_model_cls=json_api.enforcements.RunSetsAgainstTriggerRequest,
+        response_schema_cls=json_api.generic.ListDictValueSchema,
+        response_model_cls=json_api.generic.ListDictValue,
+    )
 
 
 @dataclasses.dataclass(repr=False)

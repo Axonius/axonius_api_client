@@ -6,6 +6,7 @@ from typing import Generator, List, Optional, Union
 from ...constants.api import MAX_PAGE_SIZE
 from ...exceptions import ApiError, ApiWarning, NotFoundError
 from ...parsers.tables import tablize
+from ...tools import listify
 from .. import json_api
 from ..api_endpoints import ApiEndpoints
 from ..mixins import ModelMixins
@@ -51,7 +52,9 @@ class Enforcements(ModelMixins):
         run
     """
 
-    def get_set(self, value: MULTI_SET) -> MODEL_SET_FULL:
+    def get_set(
+        self, value: MULTI_SET, cache: Optional[List[MODEL_SET_FULL]] = None
+    ) -> MODEL_SET_FULL:
         """Get an enforcement set by name or UUID.
 
         Args:
@@ -77,7 +80,18 @@ class Enforcements(ModelMixins):
             raise ApiError(f"Unknown type {type(value)}, must be {MULTI_SET}")
 
         items = []
-        for item in self.get_sets_generator(full=True):
+        if (
+            isinstance(cache, list)
+            and cache
+            and all(
+                [isinstance(x, (MODEL_SET_BASIC, MODEL_SET_FULL, MODEL_SET_UPDATE)) for x in cache]
+            )
+        ):
+            data = cache
+        else:
+            data = self.get_sets_generator(full=True)
+
+        for item in data:
             if name == item.name or uuid == item.uuid:
                 return item
             items.append(item)
@@ -815,3 +829,77 @@ class Enforcements(ModelMixins):
         """
         api_endpoint = ApiEndpoints.enforcements.get_action_types
         return api_endpoint.perform_request(http=self.auth.http)
+
+    def _run_set_against_trigger(
+        self, uuid: str, ec_page_run: bool = False, use_conditions: bool = False
+    ) -> json_api.generic.Name:
+        """Run an enforcement set against its trigger.
+
+        Args:
+            uuid (str): UUID of enforcement set to trigger
+            ec_page_run (bool, optional): this was triggered from the EC Page
+                in the GUI
+            use_conditions (bool, optional): use conditions
+                configured on enforcement set to determine execution
+
+        """
+        api_endpoint = ApiEndpoints.enforcements.run_set_against_trigger
+        request_obj = api_endpoint.load_request(
+            ec_page_run=ec_page_run, use_conditions=use_conditions
+        )
+        return api_endpoint.perform_request(http=self.auth.http, request_obj=request_obj, uuid=uuid)
+
+    def _run_sets_against_trigger(
+        self, uuids: List[str], include: bool = True, use_conditions: bool = False
+    ) -> json_api.generic.ListDictValue:
+        """Run enforcement sets against their triggers.
+
+        Args:
+            uuids (List[str]): UUIDs of enforcement sets to trigger
+            include (bool, optional): select UUIDs in DB or UUIDs NOT in DB
+            use_conditions (bool, optional): use conditions
+                configured on enforcement set to determine execution
+
+        """
+        api_endpoint = ApiEndpoints.enforcements.run_sets_against_trigger
+        value = {"ids": listify(uuids), "include": include}
+        request_obj = api_endpoint.load_request(
+            value=value,
+            include=include,
+            use_conditions=use_conditions,
+        )
+        return api_endpoint.perform_request(http=self.auth.http, request_obj=request_obj)
+
+    def run(
+        self, values: List[str], use_conditions: bool = False, error: bool = True
+    ) -> List[MODEL_SET_FULL]:
+        """Run enforcement sets against their triggers.
+
+        Args:
+            values (List[str]): names or UUIDs of enforcement sets to trigger
+            use_conditions (bool, optional): use conditions
+                configured on enforcement set to determine execution
+            error (bool, optional): throw error if an enforcement set has no trigger
+
+        """
+        cache = self.get_sets()
+        items = [self.get_set(value=x, cache=cache) for x in listify(values)]
+        to_run = []
+        for item in items:
+            if item.check_trigger_exists(msg="run enforcement set", error=error):
+                to_run.append(item)
+
+        if not to_run:
+            raise ApiError(f"No enforcement sets with triggers found from values: {values!r}")
+
+        uuids = [x.uuid for x in to_run]
+        if len(uuids) == 1:
+            result = self._run_set_against_trigger(uuid=uuids[0], use_conditions=use_conditions)
+        else:
+            result = self._run_sets_against_trigger(uuids=uuids, use_conditions=use_conditions)
+
+        self.LOG.info(
+            f"Ran enforcement sets uuids {uuids} with use_conditions={use_conditions}\n"
+            f"Result: {result}"
+        )
+        return to_run
