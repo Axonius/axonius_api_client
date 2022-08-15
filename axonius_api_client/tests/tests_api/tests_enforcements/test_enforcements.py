@@ -69,7 +69,7 @@ class EnforcementsBase:
     @pytest.fixture(scope="class")
     def created_set_trigger(self, apiobj):
         try:
-            created_set = apiobj.get_set(value=Meta.name)
+            created_set = apiobj.get_set(value=Meta.name_trigger)
         except NotFoundError:
             with pytest.warns(ApiWarning):
                 created_set = apiobj.create(
