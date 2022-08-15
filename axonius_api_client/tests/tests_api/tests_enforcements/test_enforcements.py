@@ -23,6 +23,7 @@ from axonius_api_client.exceptions import (
 
 class Meta:
     name = "badwolf EC"
+    name_trigger = "badwolf EC with trigger"
     name_cli = "Badwolf FROM CLI"
     name_copy = "yan badwolf EC"
     name_rename = "badwolf vittles"
@@ -36,6 +37,8 @@ class Meta:
     action_name2 = "badwolf action 2"
 
     action_config = {}
+    trigger_name = "All Windows Devices"
+    trigger_type = "devices"
 
 
 class EnforcementsBase:
@@ -63,6 +66,28 @@ class EnforcementsBase:
         deleted = self.cleanup(apiobj=apiobj, value=created_set)
         assert isinstance(deleted, SetFull)
 
+    @pytest.fixture(scope="class")
+    def created_set_trigger(self, apiobj):
+        try:
+            created_set = apiobj.get_set(value=Meta.name_trigger)
+        except NotFoundError:
+            with pytest.warns(ApiWarning):
+                created_set = apiobj.create(
+                    name=Meta.name_trigger,
+                    main_action_type=Meta.action_type,
+                    main_action_name=Meta.action_name,
+                    main_action_config=Meta.action_config,
+                    query_name=Meta.trigger_name,
+                    query_type=Meta.trigger_type,
+                )
+
+        assert isinstance(created_set, SetFull)
+
+        yield created_set
+
+        deleted = self.cleanup(apiobj=apiobj, value=created_set)
+        assert isinstance(deleted, SetFull)
+
     def cleanup(self, apiobj, value):
         try:
             deleted = apiobj.delete(value=value)
@@ -74,6 +99,21 @@ class EnforcementsBase:
 
 
 class TestEnforcements(EnforcementsBase):
+    def test_run_no_trigger_error_true(self, apiobj, created_set):
+        with pytest.raises(ApiError, match=r".*Unable to run enforcement set.*"):
+            apiobj.run(values=created_set, error=True)
+
+    def test_run_no_trigger_error_false(self, apiobj, created_set):
+        with pytest.raises(ApiError, match=r".*No enforcement sets with triggers.*"):
+            apiobj.run(values=created_set, error=False)
+
+    def test_run(self, apiobj, created_set_trigger):
+        ret = apiobj.run(values=created_set_trigger, error=True)
+        assert isinstance(ret, list)
+        for item in ret:
+            assert isinstance(item, SetFull)
+        assert [created_set_trigger.name] == [x.name for x in ret]
+
     def test_create_delete(self, apiobj):
         self.cleanup(apiobj=apiobj, value=Meta.name_create)
         with pytest.warns(ApiWarning):

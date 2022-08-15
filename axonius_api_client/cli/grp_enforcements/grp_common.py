@@ -51,6 +51,25 @@ OPT_UPDATE_BOOL = click.option(
     show_envvar=True,
     show_default=True,
 )
+OPT_USE_CONDITIONS = click.option(
+    "--use-conditions/--no-use-conditions",
+    "-uc/-nuc",
+    "use_conditions",
+    default=False,
+    help="Use conditions configured on enforcement set to determine execution",
+    show_envvar=True,
+    show_default=True,
+)
+OPT_ERROR = click.option(
+    "--error/--no-error",
+    "-err/-nerr",
+    "error",
+    default=True,
+    help="Throw error if an enforcement set has no trigger",
+    show_envvar=True,
+    show_default=True,
+)
+
 
 OPT_UPDATE_INT = click.option(
     "--int",
@@ -78,6 +97,16 @@ OPT_SET_VALUE_REQ = click.option(
     "value",
     help="Name or UUID of Enforcement Set",
     required=True,
+    show_envvar=True,
+    show_default=True,
+)
+OPT_SET_VALUES_REQ = click.option(
+    "--value",
+    "-v",
+    "values",
+    help="Name or UUID of Enforcement Set (multiple)",
+    required=True,
+    multiple=True,
     show_envvar=True,
     show_default=True,
 )
