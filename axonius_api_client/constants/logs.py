@@ -97,6 +97,7 @@ RESPONSE_ATTR_MAP: dict = {
     "reason": "{reason!r}",
     "elapsed": "{elapsed}",
     "headers": "{headers}",
+    "cookies": "{cookies}",
 }
 """Mapping of response attributes to log to their formatting strings."""
 
@@ -105,5 +106,6 @@ REQUEST_ATTR_MAP: dict = {
     "size": "{body_size}",
     "method": "{method!r}",
     "headers": "{headers}",
+    "cookies": "{cookies}",
 }
 """Mapping of request attributes to log to their formatting strings."""

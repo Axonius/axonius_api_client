@@ -433,6 +433,8 @@ class SetFullSchema(BaseSchemaJson):
     uuid = marshmallow_jsonapi.fields.Str()
     actions = marshmallow_jsonapi.fields.Dict()
     triggers = marshmallow_jsonapi.fields.List(marshmallow_jsonapi.fields.Dict())
+    description = marshmallow_jsonapi.fields.Str()
+    settings = marshmallow_jsonapi.fields.Dict(load_default={}, dump_default={})
 
     class Meta:
         """Pass."""
@@ -454,6 +456,8 @@ class SetFull(BaseModel):
     name: str
     actions: dict
     triggers: List[dict]
+    description: Optional[str] = ""
+    settings: Optional[dict] = dataclasses.field(default_factory=dict)
 
     BASIC: ClassVar[SetBasic] = None
 
@@ -997,6 +1001,9 @@ class UpdateResponseSchema(BaseSchemaJson):
     triggers = marshmallow_jsonapi.fields.List(marshmallow_jsonapi.fields.Dict())
     updated_by = marshmallow_jsonapi.fields.Str(allow_none=True)
     last_updated = SchemaDatetime(allow_none=True)
+    last_updated = SchemaDatetime(allow_none=True)
+    description = marshmallow_jsonapi.fields.Str()
+    settings = marshmallow_jsonapi.fields.Dict(load_default={}, dump_default={})
 
     class Meta:
         """Pass."""
@@ -1021,6 +1028,8 @@ class UpdateResponse(BaseModel):
     last_updated: Optional[datetime.datetime] = get_field_dc_mm(
         mm_field=SchemaDatetime(allow_none=True, load_default=None, dump_default=None), default=None
     )
+    description: Optional[str] = ""
+    settings: Optional[dict] = dataclasses.field(default_factory=dict)
 
     @staticmethod
     def get_schema_cls() -> Optional[Type[BaseSchema]]:

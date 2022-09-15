@@ -9,11 +9,6 @@ import logging
 
 from . import setup_env, version
 
-# import sys
-
-
-# print("oh hai")
-# sys.exit()
 PACKAGE_ROOT: str = __package__
 PACKAGE_FILE: str = __file__
 VERSION: str = version.__version__
