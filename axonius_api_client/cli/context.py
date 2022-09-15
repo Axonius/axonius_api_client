@@ -3,13 +3,24 @@
 import importlib
 import pathlib
 import warnings
-from typing import Optional
+from typing import List, Optional, Tuple, Type, Union
 
 import click
 import requests
 
 from ..connect import Connect
-from ..tools import bom_strip, echo_debug, echo_error, echo_ok, echo_warn, json_load, read_stream
+from ..tools import (
+    bom_strip,
+    echo_debug,
+    echo_error,
+    echo_ok,
+    echo_warn,
+    extract_kvs_auto,
+    is_str,
+    json_load,
+    listify,
+    read_stream,
+)
 
 CONTEXT_SETTINGS = {"auto_envvar_prefix": "AX"}
 SSLWARN_CLS = requests.urllib3.exceptions.InsecureRequestWarning
@@ -36,19 +47,142 @@ def load_cmds(path, package, group):
             group.add_command(module_cmd)
 
 
-class SplitEquals(click.ParamType):
+class DictParam(click.ParamType):
+    """Pass."""
+
+    name = "dict_param"
+
+    def __init__(self, split_kv: str = "="):
+        """Pass."""
+        self.split_kv = split_kv
+
+    def convert(self, value, param, ctx) -> Union[dict, Tuple[str, str]]:
+        """Pass."""
+        if isinstance(value, (str, bytes)):
+            example = f"key1{self.split_kv}value1"
+            example = f"\nExample: {example!r}"
+            splitit = f"key/value split character {self.split_kv!r}"
+            parts = value.split("=", 1)
+            if len(parts) != 2:
+                self.fail(f"Missing {splitit} in value {value!r}{example}", param, ctx)
+
+            skey, svalue = parts
+            skey = skey.strip()
+            if not skey:
+                self.fail(f"Missing key before {splitit} in value {value!r}{example}", param, ctx)
+
+            return skey, svalue
+        return value
+
+
+class DictOption(click.Option):
+    """Pass."""
+
+    param_type_name = "dict_option"
+    """
+        default=[],
+        # how to do default as {}?
+    """
+    split_kv: str = "="
+    constructor: Type = dict
+    help_post: List[str] = None
+
+    def __init__(self, *args, **kwargs):
+        """Pass."""
+        self.split_kv = kwargs.pop("split_kv", self.split_kv)
+        self.help_post = listify(kwargs.pop("help_post", self.help_post_default))
+        self.constructor = kwargs.pop("constructor", self.constructor)
+
+        help = kwargs.get("help", "")
+        kwargs["type"] = DictParam(split_kv=self.split_kv)
+        kwargs["multiple"] = True
+        kwargs["is_flag"] = False
+        kwargs["help"] = "  ".join([x for x in [help, *self.help_post] if is_str(x)])
+        kwargs.setdefault("show_envvar", True)
+        kwargs.setdefault("show_default", False)
+        super().__init__(*args, **kwargs)
+
+    @property
+    def help_post_default(self) -> List[str]:
+        """Pass."""
+        example = f"key1{self.split_kv}value1"
+        example = f"Example: {example!r}"
+        return [
+            f"({example})",
+            "(env var parsed as CSV unless starts with 'json:')",
+            "(multiples)",
+        ]
+
+    def to_info_dict(self):
+        """Pass."""
+        info_dict = super().to_info_dict()
+        info_dict["split_kv"] = self.split_kv
+        info_dict["constructor"] = self.constructor
+        return info_dict
+
+    @staticmethod
+    def check_value_type(value, exp, orig=None):
+        """Pass."""
+        if not isinstance(value, exp):
+            items = [
+                f"Unexpected type {type(value)}",
+                f"Value: {value!r}",
+                f"Original value: {orig!r}",
+                f"Expected type: {exp}",
+            ]
+            raise ValueError("\n -".join(items))
+
+    def type_cast_value(self, ctx, value):
+        """Pass."""
+        if isinstance(value, self.constructor):
+            ret = value
+        elif isinstance(value, (list, tuple)):
+            ret = [self.type(param=self, ctx=ctx, value=x) for x in value]
+        self.check_value_type(value=ret, orig=value, exp=(self.constructor, list, tuple))
+        return ret
+
+    def get_envvar(self, ctx):
+        """Pass."""
+        if (
+            not self.envvar
+            and self.allow_from_autoenv
+            and ctx.auto_envvar_prefix is not None
+            and self.name is not None
+        ):
+            return f"{ctx.auto_envvar_prefix}_{self.name.upper()}"
+        return self.envvar
+
+    def value_from_envvar(self, ctx) -> dict:
+        """Pass."""
+        value = self.resolve_envvar_value(ctx)
+        ret = value
+        if is_str(ret):
+            envvar = self.get_envvar(ctx)
+            opts = ", ".join(self.opts) if isinstance(self.opts, (list, tuple)) else self.opts
+            ret = extract_kvs_auto(
+                value=ret,
+                split_kv=self.split_kv,
+                src=["", f"OS Environment variable: {envvar!r}", f"Option: {opts}"],
+            )
+
+        if not ret:
+            # TODO: add support for required=True
+            if not self.required:
+                return {}
+
+        if not isinstance(ret, self.constructor):
+            try:
+                ret = self.constructor(ret)
+            except Exception:
+                pass
+        self.check_value_type(value=ret, orig=value, exp=self.constructor)
+        return ret
+
+
+class SplitEquals(DictParam):
     """Pass."""
 
     name = "split_equals"
-
-    def convert(self, value, param, ctx):
-        """Pass."""
-        split = value.split("=", 1)
-
-        if len(split) != 2:  # pragma: no cover
-            self.fail(f"Need an '=' in --{param.name} with value {value!r}", param, ctx)
-
-        return [x.strip() for x in split]
 
 
 class AliasedGroup(click.Group):

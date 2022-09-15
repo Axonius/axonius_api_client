@@ -11,6 +11,7 @@ import marshmallow_jsonapi
 
 from ...constants.api import GUI_PAGE_SIZES
 from ...constants.general import STR_RE_LISTY
+from ...data import BaseEnum
 from ...exceptions import ApiAttributeTypeError, ApiError, NotFoundError
 from ...parsers.tables import tablize
 from ...tools import coerce_bool, coerce_int, dt_now, dt_parse, listify
@@ -18,6 +19,38 @@ from .base import BaseModel, BaseSchema, BaseSchemaJson
 from .custom_fields import SchemaBool, SchemaDatetime, get_schema_dc
 from .generic import PrivateRequest, PrivateRequestSchema
 from .resources import PaginationRequest, PaginationSchema, ResourcesGet, ResourcesGetSchema
+
+
+class AccessMode(BaseEnum):
+    """Pass."""
+
+    public: str = "Public"
+    private: str = "Private"
+    restricted: str = "Restricted"
+    shared: str = "Shared"
+
+    @classmethod
+    def get_default(cls) -> "AccessMode":
+        """Pass."""
+        return cls.public
+
+    @classmethod
+    def key_mode(self) -> str:
+        """Pass."""
+        return "mode"
+
+    @classmethod
+    def get_default_access(cls) -> dict:
+        """Pass."""
+        return {cls.key_mode(): cls.get_default().value}
+
+    @classmethod
+    def get_access_bool(cls, value: bool) -> dict:
+        """Pass."""
+        if value:
+            return {cls.key_mode(): cls.private.value}
+        else:
+            return {cls.key_mode(): cls.public.value}
 
 
 class SavedQueryGetSchema(ResourcesGetSchema):
@@ -157,10 +190,14 @@ class SavedQuerySchema(BaseSchemaJson):
     )
 
     # 2022-09-02
-    used_in = marshmallow_jsonapi.fields.List(marshmallow_jsonapi.fields.Str())
+    # used_in = marshmallow_jsonapi.fields.List()
 
     # 2022-09-02
     module = marshmallow_jsonapi.fields.Str(allow_none=True, load_default=None, dump_default=None)
+    # 2022-08-22
+    access = marshmallow_jsonapi.fields.Dict(
+        load_default=AccessMode.get_default_access(), dump_default=AccessMode.get_default_access()
+    )
 
     @staticmethod
     def get_model_cls() -> type:
@@ -213,7 +250,9 @@ class SavedQueryCreateSchema(BaseSchemaJson):
     private = SchemaBool(load_default=False, dump_default=False)
     tags = marshmallow_jsonapi.fields.List(marshmallow_jsonapi.fields.Str())
     asset_scope = SchemaBool(load_default=False, dump_default=False)
-    # WIP: folders
+    access = marshmallow_jsonapi.fields.Dict(
+        load_default=AccessMode.get_default_access(), dump_default=AccessMode.get_default_access()
+    )  # WIP: folders
     # folder_id = marshmallow_jsonapi.fields.Str(
     #     allow_none=True, load_default=None, dump_default=None
     # )
@@ -423,6 +462,7 @@ class SavedQuery(BaseModel, SavedQueryMixins):
 
     # 2022-09-02
     used_in: Optional[List[str]] = dataclasses.field(default_factory=list)
+    access: dict = dataclasses.field(default_factory=AccessMode.get_default_access)
 
     document_meta: Optional[dict] = dataclasses.field(default_factory=dict)
 
@@ -504,8 +544,15 @@ class SavedQueryCreate(BaseModel, SavedQueryMixins):
     asset_scope: bool = dataclasses.field(default=False)
     private: bool = dataclasses.field(default=False)
     tags: List[str] = dataclasses.field(default_factory=list)
+    access: Optional[dict] = None
+
     # WIP: folders
     # folder_id: Optional[str] = None
+
+    def __post_init__(self):
+        """Pass."""
+        if not (isinstance(self.access, dict) and self.access):
+            self.access = AccessMode.get_access_bool(self.private)
 
     @staticmethod
     def get_schema_cls() -> Optional[Type[BaseSchema]]:

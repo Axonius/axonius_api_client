@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 """Command line interface for Axonius API Client."""
+import os
 import sys
 
 import click
 
-from .. import version
+from .. import INIT_DOTENV, version
 from ..constants.api import TIMEOUT_CONNECT, TIMEOUT_RESPONSE
 from ..constants.logs import (
     LOG_FILE_MAX_FILES,
@@ -22,6 +23,7 @@ from ..constants.logs import (
     RESPONSE_ATTR_MAP,
 )
 from ..logs import LOG
+from ..setup_env import DEFAULT_ENV_FILE
 from . import (
     context,
     grp_adapters,
@@ -33,13 +35,41 @@ from . import (
     grp_tools,
 )
 
+AX_ENV = os.environ.get("AX_ENV", "")
+
+if os.path.isfile(INIT_DOTENV):
+    DOT_INFO = f"Using existing .env file: {INIT_DOTENV!r}"
+else:
+    DOT_INFO = f"No .env file found, looking for {DEFAULT_ENV_FILE!r}"
+
+PROTIPS: str = f"""
+
+\b
+{DOT_INFO}
+AX_ENV={AX_ENV}
+\b
+Tips:
+- All of the options listed above must be supplied BEFORE any commands or groups.
+  - CORRECT: axonshell --log-console devices count
+  - INCORRECT: axonshell devices count --log-console
+- All values stored in a .env file will be treated as OS environment variables.
+- Almost all options throughout axonshell have an associated OS environment variable.
+- Use AX_ENV to point to a custom .env file:
+  - bash: export AX_ENV=/path/to/.env  # for all commands in current shell
+  - bash: AX_ENV=/path/to/.env axonshell tools shell  # for single commands
+  - cmd.exe: SET AX_ENV="c:\\path\\to\\.env"
+  - powershell: $AX_ENV = "c:\\path\\to\\.env"
+- Use AX_COOKIES and AX_HEADERS as comma seperated values or json:
+  - AX_COOKIES="key1=value1,key2=value2,key3=value4"
+  - AX_HEADERS='json:{{"key1": "value1", "key2": "value2"}}'
+- Use AX_URL, AX_KEY, AX_SECRET to specify credentials
+"""
+
 
 @click.group(
     cls=context.AliasedGroup,
     context_settings=context.CONTEXT_SETTINGS,
-    epilog="""
-All of the options listed above must be supplied BEFORE any commands or groups.
-""",
+    epilog=PROTIPS,
 )
 @click.option(
     "--quiet/--no-quiet",
@@ -51,14 +81,18 @@ All of the options listed above must be supplied BEFORE any commands or groups.
     show_default=True,
 )
 @click.option(
+    "--cookie",
+    "-cook",
+    "cookies",
+    help="Additional cookies to supply with every request",
+    cls=context.DictOption,
+)
+@click.option(
     "--header",
+    "-head",
     "headers",
-    default=[],
-    help="Additional headers to use in all requests in the format of key=value (multiples)",
-    show_envvar=True,
-    show_default=True,
-    multiple=True,
-    type=context.SplitEquals(),
+    help="Additional headers to supply with every request",
+    cls=context.DictOption,
 )
 @click.option(
     "--log-level-package",
@@ -332,7 +366,6 @@ def cli(click_ctx, ctx, quiet, **kwargs):
         cli_args = sys.argv
     except Exception:  # pragma: no cover
         cli_args = "No sys.argv!"
-
     LOG.debug(f"sys.argv: {cli_args}")
     ctx._click_ctx = click_ctx
     ctx.QUIET = quiet

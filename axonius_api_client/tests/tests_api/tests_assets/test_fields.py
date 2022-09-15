@@ -267,7 +267,7 @@ class TestFieldsPrivate:
 
 
 class TestFieldsPublic:
-    @pytest.fixture(params=["api_devices", "api_users", "api_vulnerabilities"], scope="class")
+    @pytest.fixture(params=["api_devices", "api_users"], scope="class")
     def apiobj(self, request):
         return request.getfixturevalue(request.param)
 

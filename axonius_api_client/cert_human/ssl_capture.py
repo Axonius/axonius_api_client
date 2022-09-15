@@ -5,9 +5,10 @@ import sys
 from typing import List, Optional
 
 import OpenSSL
-import urllib3.connectionpool
-import urllib3.contrib.pyopenssl
-import urllib3.poolmanager
+
+# import urllib3
+# import urllib3.connectionpool
+from urllib3 import connectionpool, poolmanager
 
 LOG: logging.Logger = logging.getLogger(__name__)
 
@@ -18,7 +19,7 @@ if sys.version_info >= (3, 10, 1):
     INJECT_WITH_PYOPENSSL: bool = False
 
 
-class CaptureHTTPSResponse(urllib3.connectionpool.HTTPSConnectionPool.ResponseCls):
+class CaptureHTTPSResponse(connectionpool.HTTPSConnectionPool.ResponseCls):
     """Pass."""
 
     def __init__(self, *args, **kwargs):
@@ -30,7 +31,7 @@ class CaptureHTTPSResponse(urllib3.connectionpool.HTTPSConnectionPool.ResponseCl
                 setattr(self, attr, getattr(connection, attr))
 
 
-class CaptureHTTPSConnection(urllib3.connectionpool.HTTPSConnectionPool.ConnectionCls):
+class CaptureHTTPSConnection(connectionpool.HTTPSConnectionPool.ConnectionCls):
     """Pass."""
 
     def set_captured_cert(self):
@@ -144,7 +145,7 @@ class CaptureHTTPSConnection(urllib3.connectionpool.HTTPSConnectionPool.Connecti
         self.set_captured_chain()
 
 
-class CaptureHTTPSConnectionPool(urllib3.connectionpool.HTTPSConnectionPool):
+class CaptureHTTPSConnectionPool(connectionpool.HTTPSConnectionPool):
     """Pass."""
 
     ConnectionCls = CaptureHTTPSConnection
@@ -154,7 +155,7 @@ class CaptureHTTPSConnectionPool(urllib3.connectionpool.HTTPSConnectionPool):
 class Patches:
     """Pass."""
 
-    https_pool = urllib3.poolmanager.pool_classes_by_scheme["https"]
+    https_pool = poolmanager.pool_classes_by_scheme["https"]
     pyopenssl_injected: bool = False
 
 
@@ -163,16 +164,23 @@ def inject_into_urllib3(with_pyopenssl: bool = INJECT_WITH_PYOPENSSL):
     if with_pyopenssl:
         if Patches.pyopenssl_injected:
             LOG.debug("pyopenssl already patched into urllib3")
+        elif not INJECT_WITH_PYOPENSSL:
+            LOG.debug("pyopenssl on 3.10.1+ not needed")
         else:
-            urllib3.contrib.pyopenssl.inject_into_urllib3()
+            try:
+                import urllib3.contrib.pyopenssl
+
+                urllib3.contrib.pyopenssl.inject_into_urllib3()
+            except ImportError:
+                pass
             Patches.pyopenssl_injected = True
             LOG.debug("pyopenssl patched into urllib3")
 
-    if urllib3.poolmanager.pool_classes_by_scheme["https"] == CaptureHTTPSConnectionPool:
+    if poolmanager.pool_classes_by_scheme["https"] == CaptureHTTPSConnectionPool:
         LOG.debug(f"HTTPS pool class is already patched with {CaptureHTTPSConnectionPool}")
     else:
-        Patches.https_pool = urllib3.poolmanager.pool_classes_by_scheme["https"]
-        urllib3.poolmanager.pool_classes_by_scheme["https"] = CaptureHTTPSConnectionPool
+        Patches.https_pool = poolmanager.pool_classes_by_scheme["https"]
+        poolmanager.pool_classes_by_scheme["https"] = CaptureHTTPSConnectionPool
         LOG.debug(f"HTTPS pool class patched with {CaptureHTTPSConnectionPool}")
 
 
@@ -180,14 +188,22 @@ def extract_from_urllib3(with_pyopenssl: bool = INJECT_WITH_PYOPENSSL):
     """Pass."""
     if with_pyopenssl:
         if Patches.pyopenssl_injected:
-            urllib3.contrib.pyopenssl.extract_from_urllib3()
+            try:
+                import urllib3.contrib.pyopenssl
+
+                urllib3.contrib.pyopenssl.extract_from_urllib3()
+            except ImportError:
+                pass
+
             Patches.pyopenssl_injected = False
             LOG.debug("pyopenssl unpatched from urllib3")
+        elif not INJECT_WITH_PYOPENSSL:
+            LOG.debug("pyopenssl on 3.10.1+ not needed")
         else:
             LOG.debug("pyopenssl is not patched into urllib3")
 
-    if urllib3.poolmanager.pool_classes_by_scheme["https"] == CaptureHTTPSConnectionPool:
-        urllib3.poolmanager.pool_classes_by_scheme["https"] = Patches.https_pool
+    if poolmanager.pool_classes_by_scheme["https"] == CaptureHTTPSConnectionPool:
+        poolmanager.pool_classes_by_scheme["https"] = Patches.https_pool
         LOG.debug(f"HTTPS pool class unpatched to {Patches.https_pool}")
     else:
         LOG.debug(f"HTTPS pool class is not patched with {CaptureHTTPSConnectionPool}")

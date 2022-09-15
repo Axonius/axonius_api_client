@@ -15,7 +15,9 @@ import sys
 from datetime import datetime, timedelta, timezone
 from itertools import zip_longest
 from typing import (
+    IO,
     Any,
+    Callable,
     Dict,
     Iterable,
     Iterator,
@@ -63,6 +65,7 @@ EMAIL_RE_STR: str = (
 EMAIL_RE: Pattern = re.compile(EMAIL_RE_STR, re.I)
 PathLike: TypeVar = TypeVar("PathLike", pathlib.Path, str, bytes)
 DAYS_MAP: dict = dict(zip(range(7), calendar.day_name))
+CoerceIO: TypeVar = Union[str, bytes, IO]
 
 
 def listify(obj: Any, dictkeys: bool = False) -> list:
@@ -126,7 +129,7 @@ def coerce_int(
         return None
 
     pre = f"{errmsg}\n" if errmsg else ""
-    vtype = type(obj).__name__
+    vtype = trype(obj)
 
     try:
         value = int(obj)
@@ -169,7 +172,7 @@ def coerce_int_float(value: Union[int, float, str]) -> Union[int, float]:
         if value.replace(".", "").isdigit():
             return float(value)
 
-    vtype = type(value).__name__
+    vtype = trype(value)
     raise ToolsError(f"Supplied value {value!r} of type {vtype} is not an integer or float.")
 
 
@@ -199,7 +202,7 @@ def coerce_bool(obj: Any, errmsg: Optional[str] = None) -> bool:
     if coerce_obj in NO:
         return False
 
-    vtype = type(obj).__name__
+    vtype = trype(obj)
     msg = listify(errmsg)
     msg += [
         f"Supplied value {coerce_obj!r} of type {vtype} must be one of:",
@@ -446,7 +449,7 @@ def dt_parse_tmpl(obj: Union[str, timedelta, datetime], tmpl: str = "%Y-%m-%d") 
         dt = dt_parse(obj=obj)
         return dt.strftime(tmpl)
     except Exception:
-        vtype = type(obj).__name__
+        vtype = trype(obj)
         valid = "\n - " + "\n - ".join(valid_fmts)
         raise ToolsError(
             (
@@ -950,7 +953,7 @@ def join_kv(
         return [join_kv(obj=x, listjoin=listjoin, tmpl=tmpl) for x in obj]
 
     if not isinstance(obj, dict):
-        raise ToolsError(f"Object must be a dict, supplied {type(obj)}")
+        raise ToolsError(f"Object must be a dict, supplied {trype(obj)}")
 
     items = []
     for k, v in obj.items():
@@ -975,7 +978,7 @@ def get_type_str(obj: Any):
     Args:
         obj: class or tuple of classes to get type name(s) of
     """
-    if isinstance(obj, tuple):
+    if isinstance(obj, (list, tuple)):
         return " or ".join([x.__name__ for x in obj])
     else:
         return obj.__name__
@@ -1019,7 +1022,7 @@ def check_empty(value: Any, name: str = ""):
         name: identifier of what value is for
     """
     if not value:
-        vtype = type(value).__name__
+        vtype = trype(value)
         name = f" for {name!r}" if name else ""
         err = f"Required value{name} but received an empty {vtype}: {value!r}"
         raise ToolsError(err)
@@ -1070,8 +1073,7 @@ def coerce_str_to_csv(
         if coerce_list:
             new_value = listify(obj=new_value)
         else:
-            vtype = type(new_value).__name__
-            raise ToolsError(f"{pre}Invalid type {vtype} supplied, must be a list")
+            raise ToolsError(f"{pre}Invalid type {trype(new_value)} supplied, must be a list")
 
     if not new_value:
         raise ToolsError(f"{pre}Empty list supplied {value}")
@@ -1098,10 +1100,9 @@ def parse_ip_network(value: str) -> Union[ipaddress.IPv4Network, ipaddress.IPv6N
         value: ip network
     """
     if "/" not in str(value):
-        vtype = type(value).__name__
         raise ToolsError(
             (
-                f"Supplied value {value!r} of type {vtype} is not a valid subnet "
+                f"Supplied value {value!r} of type {trype(value)} is not a valid subnet "
                 "- format must be <address>/<CIDR>."
             )
         )
@@ -1492,3 +1493,129 @@ def lowish(value: Any) -> Any:
     if isinstance(value, (list, tuple)):
         return [lowish(x) for x in value]
     return value.lower() if isinstance(value, str) else value
+
+
+def log_or_exc(
+    msg: List[str],
+    error: bool = True,
+    log: Union[Callable, logging.Logger] = LOG,
+    log_level: str = "exception",
+    log_join: str = "\n",
+    exc_cls: Exception = ToolsError,
+    exc_args: Optional[dict] = None,
+    **kwargs,
+):
+    """Pass."""
+    msg = listify(msg)
+    msg += listify(kwargs.get("src"))
+    msg = log_join.join(msg)
+    exc_args = exc_args or {}
+    logmethod = getattr(log, log_level, log)
+    if callable(logmethod):
+        logmethod(msg)
+    if error:
+        raise exc_cls(msg, **exc_args)
+
+
+def coerce_io(value: Union[str, bytes, IO]) -> IO:
+    """Pass."""
+    if isinstance(value, str):
+        return io.StringIO(value)
+    elif isinstance(value, bytes):
+        return io.BytesIO(value)
+    return value
+
+
+def extract_kvs_auto(value: Union[str, bytes, IO], marker_json: str = "json:", **kwargs) -> dict:
+    """Pass."""
+    method = extract_kvs_csv
+
+    if callable(getattr(value, "read", None)):
+        value = value.read()
+
+    marker_len = len(marker_json)
+    if isinstance(value, (str, bytes)) and value.lower().lstrip().startswith(marker_json.lower()):
+        method = extract_kvs_json
+        value = value.lstrip()[marker_len:]
+
+    ret = method(value=value, **kwargs)
+    return ret
+
+
+def trype(value):
+    """Pass."""
+    return type(value).__name__
+
+
+def extract_kvs_json(value: Union[str, bytes, IO], **kwargs) -> dict:
+    """Pass."""
+    fh = coerce_io(value)
+    ret = {}
+    example = {"key1": "value1", "key2": "value2"}
+    example = f"Example: {json.dumps(example)!r}"
+
+    msg = [
+        f"Supplied value (type {trype(value)}): {value!r}",
+        "",
+        example,
+        "",
+    ]
+    try:
+        ret = json.load(fh)
+    except Exception as exc:
+        kwargs["msg"] = [*msg, f"ERROR: Unable to parse JSON, exception: {exc}"]
+        log_or_exc(**kwargs)
+
+    if not isinstance(ret, dict):
+        kwargs["msg"] = [
+            *msg,
+            f"Parsed JSON contains an invalid type {trype(ret)}, must be dictionary",
+            f"Parsed JSON: {ret!r}",
+        ]
+        log_or_exc(**kwargs)
+
+    return ret
+
+
+def extract_kvs_csv(value: Union[str, bytes, IO] = None, split_kv: str = "=", **kwargs) -> dict:
+    """Pass."""
+    ret = {}
+    fh = coerce_io(value)
+
+    if callable(getattr(fh, "read", None)):
+        example = f"key1{split_kv}value1,key2{split_kv}value2"
+        splitit = f"key/value split character {split_kv!r}"
+
+        rows = list(csv.reader(fh))
+        rows_cnt = len(rows)
+        for row_idx, row in enumerate(rows):
+            row_num = row_idx + 1
+            row_info = f"row #{row_num}/{rows_cnt}"
+            icnt = len(row)
+            for col_idx, col in enumerate(row):
+                col_num = col_idx + 1
+                if not col.strip():
+                    continue
+
+                msg = [
+                    f"While in {row_info} column #{col_num}/{icnt}",
+                    "",
+                    f"Supplied value (type {trype(value)}): {value!r}",
+                    f"Row #{row_num} values: {row!r}",
+                    f"Column #{col_num} value: {col}",
+                    "",
+                    f"Example: {example!r}",
+                    "",
+                ]
+                if split_kv not in col:
+                    kwargs["msg"] = [*msg, f"ERROR: Missing {splitit}"]
+                    log_or_exc(**kwargs)
+                    continue
+                ikey, ivalue = col.split(split_kv, 1)
+                ikey = ikey.strip()
+                if not ikey.strip():
+                    kwargs["msg"] = [*msg, f"ERROR: Missing/empty key before {splitit}"]
+                    log_or_exc(**kwargs)
+                    continue
+                ret[ikey] = ivalue
+    return ret

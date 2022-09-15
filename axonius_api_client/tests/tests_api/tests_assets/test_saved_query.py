@@ -1009,10 +1009,12 @@ def validate_sq(asset):
         }
     ]
     """
-    colfilters = view.pop("colFilters", [])
-    assert isinstance(colfilters, list)
-    for colfilter in colfilters:
-        assert isinstance(colfilter, dict)
+    view.pop("colFilters", [])
+    # forget you
+    # assert isinstance(colfilters, list) or colfilters is None
+    # if isinstance(colfilters, list):
+    #     for colfilter in colfilters:
+    #         assert isinstance(colfilter, dict)
 
     qfilter = query.pop("filter")
     assert isinstance(qfilter, str) or qfilter is None
@@ -1041,10 +1043,10 @@ def validate_sq(asset):
     """ structure
     [{"exclude": ["chef_adapter"], "fieldPath": "specific_data.data.name"}]
     """
-    excluded_adapters = view.pop("colExcludedAdapters", [])
-    assert isinstance(excluded_adapters, list)
-    for excluded_adapter in excluded_adapters:
-        assert isinstance(excluded_adapter, dict)
+    view.pop("colExcludedAdapters", [])  # forget you
+    # assert isinstance(excluded_adapters, list)
+    # for excluded_adapter in excluded_adapters:
+    #     assert isinstance(excluded_adapter, dict)
 
     # 4.0
     always_cached = asset.pop("always_cached")

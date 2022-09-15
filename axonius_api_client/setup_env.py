@@ -279,6 +279,7 @@ def set_env(key: str, value: str, **kwargs) -> Tuple[str, Tuple[bool, str, str]]
     """Set an environment variable in .env file."""
     from . import INIT_DOTENV as ax_env
 
+    ax_env = ax_env or DEFAULT_ENV_FILE
     return dotenv.set_key(dotenv_path=ax_env, key_to_set=key, value_to_set=str(value))
 
 
