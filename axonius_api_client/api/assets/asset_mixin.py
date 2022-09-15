@@ -283,6 +283,7 @@ class AssetMixin(ModelMixins):
         wiz_entries: Optional[Union[List[dict], List[str], dict, str]] = None,
         saved_query_id: Optional[str] = None,
         expressions: Optional[List[dict]] = None,
+        http_args: Optional[dict] = None,
         **kwargs,
     ) -> Generator[dict, None, None]:
         """Get assets from a query.
@@ -418,6 +419,7 @@ class AssetMixin(ModelMixins):
                     use_cache_entry=False,
                     get_metadata=True,
                     use_cursor=True,
+                    http_args=http_args,
                 )
 
                 state = page.process_page(state=state, start_dt=start_dt, apiobj=self)
@@ -736,6 +738,7 @@ class AssetMixin(ModelMixins):
         expressions: Optional[List[dict]] = None,
         offset: int = 0,
         limit: int = PAGE_SIZE,
+        http_args: Optional[dict] = None,
     ) -> json_api.assets.AssetsPage:
         """Private API method to get a page of assets.
 
@@ -782,8 +785,9 @@ class AssetMixin(ModelMixins):
         request_obj.set_page(limit=limit, offset=offset)
         self.LAST_GET_REQUEST_OBJ = request_obj
         self.LAST_GET = request_obj.to_dict()
+        http_args = http_args or {}
         return api_endpoint.perform_request(
-            http=self.auth.http, request_obj=request_obj, asset_type=asset_type
+            http=self.auth.http, request_obj=request_obj, asset_type=asset_type, **http_args
         )
 
     def _get_by_id(self, id: str) -> json_api.assets.AssetById:
