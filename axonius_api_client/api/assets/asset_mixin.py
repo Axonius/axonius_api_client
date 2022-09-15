@@ -787,7 +787,7 @@ class AssetMixin(ModelMixins):
         self.LAST_GET = request_obj.to_dict()
         http_args = http_args or {}
         return api_endpoint.perform_request(
-            http=self.auth.http, request_obj=request_obj, asset_type=asset_type, **http_args
+            http=self.auth.http, request_obj=request_obj, asset_type=asset_type, http_args=http_args
         )
 
     def _get_by_id(self, id: str) -> json_api.assets.AssetById:
