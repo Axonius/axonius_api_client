@@ -3,7 +3,7 @@
 import logging
 import pathlib
 import warnings
-from typing import Any, List, Optional, Union
+from typing import Any, List, Optional, TypeVar, Union
 
 import requests
 
@@ -18,6 +18,8 @@ from .tools import coerce_str, join_url, json_log, listify, path_read
 from .version import __version__
 
 cert_human.ssl_capture.inject_into_urllib3()
+T_Cookies: TypeVar = Union[dict, requests.cookies.RequestsCookieJar]
+T_Headers: TypeVar = Union[dict, requests.structures.CaseInsensitiveDict]
 
 
 class Http:
@@ -29,6 +31,8 @@ class Http:
         certpath: Optional[Union[str, pathlib.Path]] = None,
         certwarn: bool = True,
         certverify: bool = False,
+        headers: Optional[T_Headers] = None,
+        cookies: Optional[T_Cookies] = None,
         **kwargs,
     ):
         """HTTP client that wraps around :obj:`requests.Session`.
@@ -78,7 +82,7 @@ class Http:
         self.RESPONSE_TIMEOUT: int = kwargs.get("response_timeout", TIMEOUT_RESPONSE)
         """seconds to wait for responses from :attr:`url` ``kwargs=response_timeout``"""
 
-        self.LOG_HIDE_HEADERS: List[str] = ["api-key", "api-secret"]
+        self.LOG_HIDE_HEADERS: List[str] = kwargs.get("log_hide_headers", ["api-key", "api-secret"])
         """Headers to hide when logging."""
 
         self.LOG_REQUEST_BODY: bool = kwargs.get("log_request_body", False)
@@ -132,8 +136,8 @@ class Http:
         self.CERT_PATH: Optional[Union[str, pathlib.Path]] = certpath
         self.CERT_VERIFY: bool = certverify
         self.CERT_WARN: bool = certwarn
-        self.HTTP_HEADERS: dict = kwargs.get("headers") or {}
-
+        self.HTTP_HEADERS: T_Headers = headers if isinstance(headers, T_Headers) else {}
+        self.HTTP_COOKIES: T_Cookies = cookies if isinstance(cookies, T_Cookies) else {}
         self.log_request_attrs: Optional[List[str]] = self.LOG_REQUEST_ATTRS
         self.log_response_attrs: Optional[List[str]] = self.LOG_RESPONSE_ATTRS
 
@@ -175,6 +179,7 @@ class Http:
         """Pass."""
         self.session: requests.Session = requests.Session()
         self.set_session_headers()
+        self.set_session_cookies()
         self.set_session_proxies()
         self.set_session_verify()
         self.set_session_cert()
@@ -182,6 +187,10 @@ class Http:
     def set_session_headers(self):
         """Pass."""
         self.session.headers.update(self.HTTP_HEADERS)
+
+    def set_session_cookies(self):
+        """Pass."""
+        self.session.cookies.update(self.HTTP_COOKIES)
 
     def set_session_proxies(self):
         """Pass."""
@@ -358,6 +367,7 @@ class Http:
                 body_size=len(request.body or ""),
                 method=request.method,
                 headers=self._clean_headers(headers=request.headers),
+                cookies=self._clean_headers(headers=request._cookies),
             )
             self.LOG.debug(f"REQUEST ATTRS: {lattrs}")
 
@@ -372,7 +382,10 @@ class Http:
         """
         hide = "*********"
         hidden = self.LOG_HIDE_HEADERS
-        return {k: hide if k in hidden else v for k, v in headers.items()}
+        try:
+            return {k: hide if k in hidden else v for k, v in headers.items()}
+        except Exception:
+            return headers
 
     def _do_log_response(self, response):
         """Log attributes and/or body of a response.
@@ -389,6 +402,7 @@ class Http:
                 reason=response.reason,
                 elapsed=response.elapsed,
                 headers=self._clean_headers(headers=response.headers),
+                cookies=self._clean_headers(headers=response.cookies),
             )
             self.LOG.debug(f"RESPONSE ATTRS: {lattrs}")
 

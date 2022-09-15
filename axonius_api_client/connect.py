@@ -45,7 +45,7 @@ from .constants.logs import (
     LOG_LEVEL_PACKAGE,
 )
 from .exceptions import ConnectError, InvalidCredentials
-from .http import Http
+from .http import Http, T_Cookies, T_Headers
 from .logs import LOG, add_file, add_stderr, get_obj_log, set_log_level
 from .setup_env import get_env_ax
 from .tools import coerce_bool, coerce_int, json_dump, json_reload, sysinfo
@@ -112,6 +112,8 @@ class Connect:
         certverify: bool = False,
         certwarn: bool = True,
         proxy: Optional[str] = None,
+        headers: Optional[T_Headers] = None,
+        cookies: Optional[T_Cookies] = None,
         **kwargs,
     ):
         """Easy all-in-one connection handler.
@@ -126,6 +128,8 @@ class Connect:
             certverify: raise exception if cert is self-signed or only if cert is invalid
             certwarn: show insecure warning once or never show insecure warning
             proxy: proxy to use when making https requests to :attr:`url`
+            headers: additional headers to supply with every request
+            cookies: additional cookies to supply with every request
             **kwargs: documented as properties
         """
         self.url: str = url
@@ -257,8 +261,6 @@ class Connect:
                 self.HANDLER_FILE.doRollover()
                 LOG.info("Forced file logs to rotate")
 
-        headers = kwargs.get("headers") or {}
-
         self.HTTP_ARGS: dict = {
             "url": url,
             "https_proxy": proxy,
@@ -277,6 +279,7 @@ class Connect:
             "connect_timeout": self.TIMEOUT_CONNECT,
             "response_timeout": self.TIMEOUT_RESPONSE,
             "headers": headers,
+            "cookies": cookies,
         }
         """arguments to use for creating :attr:`HTTP`"""
 
