@@ -82,7 +82,9 @@ class Http:
         self.RESPONSE_TIMEOUT: int = kwargs.get("response_timeout", TIMEOUT_RESPONSE)
         """seconds to wait for responses from :attr:`url` ``kwargs=response_timeout``"""
 
-        self.LOG_HIDE_HEADERS: List[str] = kwargs.get("log_hide_headers", ["api-key", "api-secret"])
+        self.LOG_HIDE_HEADERS: List[str] = kwargs.get(
+            "log_hide_headers", ["api-key", "api-secret", "Cookie"]
+        )
         """Headers to hide when logging."""
 
         self.LOG_REQUEST_BODY: bool = kwargs.get("log_request_body", False)
@@ -136,8 +138,12 @@ class Http:
         self.CERT_PATH: Optional[Union[str, pathlib.Path]] = certpath
         self.CERT_VERIFY: bool = certverify
         self.CERT_WARN: bool = certwarn
-        self.HTTP_HEADERS: T_Headers = headers if isinstance(headers, T_Headers) else {}
-        self.HTTP_COOKIES: T_Cookies = cookies if isinstance(cookies, T_Cookies) else {}
+        self.HTTP_HEADERS: T_Headers = (
+            headers if isinstance(headers, (dict, requests.structures.CaseInsensitiveDict)) else {}
+        )
+        self.HTTP_COOKIES: T_Cookies = (
+            cookies if isinstance(cookies, (dict, requests.cookies.RequestsCookieJar)) else {}
+        )
         self.log_request_attrs: Optional[List[str]] = self.LOG_REQUEST_ATTRS
         self.log_response_attrs: Optional[List[str]] = self.LOG_RESPONSE_ATTRS
 
