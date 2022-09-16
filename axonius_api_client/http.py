@@ -164,6 +164,7 @@ class Http:
         self.set_urllib_warnings()
         self.set_urllib_log()
         self.new_session()
+        self._init()
 
     def get_cert(self) -> cert_human.Cert:
         """Pass."""
@@ -513,3 +514,7 @@ class Http:
         """
         body = json_log(obj=coerce_str(value=body), trim=self.LOG_BODY_MAX_LEN)
         return f"{body_type} BODY:\n{body}"
+
+    def _init(self):
+        """Pass."""
+        pass
