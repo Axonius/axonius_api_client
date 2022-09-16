@@ -404,13 +404,12 @@ class Http:
         """
 
         def getval(key, value):
-            skey = str(key)
+            skey = str(key).lower()
             for check in self.LOG_HIDE_HEADERS:
-                if isinstance(check, str) and check.lower() == skey.lower():
+                if (isinstance(check, str) and check.lower() == skey) or (
+                    isinstance(check, Pattern) and check.search(key)
+                ):
                     return self.HIDE_STR
-                if isinstance(check, Pattern) and check.search(key):
-                    return self.HIDE_STR
-
             return value
 
         try:
