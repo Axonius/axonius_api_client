@@ -178,16 +178,16 @@ class TestAssetsPrivate(ModelMixinsBase):
             with pytest.raises(StopFetch):
                 page3.process_page(state={**state1}, start_dt=page1.page_start_dt, apiobj=apiobj)
 
-    def test_get_pages(self, apiobj):
-        page1 = apiobj._get(offset=0, limit=5)
-        cursor = page1.cursor
-        page2 = apiobj._get(offset=5, limit=5, cursor_id=cursor)
-        page3 = apiobj._get(offset=10, limit=5, cursor_id=cursor)
-        if page1.asset_count_total:
-            assert len(page1.assets) == 5
-            assert len(page2.assets) == 5
-            assert len(page3.assets) == 5
-            assert len(page1.assets + page2.assets + page3.assets) == 15
+    # def test_get_pages(self, apiobj):
+    #     page1 = apiobj._get(offset=0, limit=5)
+    #     cursor = page1.cursor
+    #     page2 = apiobj._get(offset=5, limit=5, cursor_id=cursor)
+    #     page3 = apiobj._get(offset=10, limit=5, cursor_id=cursor)
+    #     if page1.asset_count_total:
+    #         assert len(page1.assets) == 5
+    #         assert len(page2.assets) == 5
+    #         assert len(page3.assets) == 5
+    #         assert len(page1.assets + page2.assets + page3.assets) == 15
 
     @pytest.mark.parametrize("value", WizData.nones)
     def test_get_wiz_entries_none(self, apiobj, value):
@@ -215,11 +215,10 @@ class TestAssetsPrivate(ModelMixinsBase):
         assert len(data.assets) == 1
 
     def test_get_by_id_dc(self, apiobj):
-        data = apiobj._get(limit=1)
-        id = data.assets[0]["internal_axon_id"]
-        data = apiobj._get_by_id(id=id)
+        ax_id = apiobj.ORIGINAL_ROWS[0]["internal_axon_id"]
+        data = apiobj._get_by_id(id=ax_id)
         assert isinstance(data, json_api.assets.AssetById)
-        assert data.id == id
+        assert data.id == ax_id
 
     def test_count_dc(self, apiobj):
         data = apiobj._count()
