@@ -79,10 +79,6 @@ class DictOption(click.Option):
     """Pass."""
 
     param_type_name = "dict_option"
-    """
-        default=[],
-        # how to do default as {}?
-    """
     split_kv: str = "="
     constructor: Type = dict
     help_post: List[str] = None
@@ -120,28 +116,17 @@ class DictOption(click.Option):
         info_dict["constructor"] = self.constructor
         return info_dict
 
-    @staticmethod
-    def check_value_type(value, exp, orig=None):
-        """Pass."""
-        if not isinstance(value, exp):
-            items = [
-                f"Unexpected type {type(value)}",
-                f"Value: {value!r}",
-                f"Original value: {orig!r}",
-                f"Expected type: {exp}",
-            ]
-            raise ValueError("\n -".join(items))
-
-    def type_cast_value(self, ctx, value):
+    def type_cast_value(self, ctx, value) -> Optional[dict]:
         """Pass."""
         if isinstance(value, self.constructor):
-            ret = value
-        elif isinstance(value, (list, tuple)):
-            ret = [self.type(param=self, ctx=ctx, value=x) for x in value]
-        self.check_value_type(value=ret, orig=value, exp=(self.constructor, list, tuple))
-        return ret
+            return value
 
-    def get_envvar(self, ctx):
+        if value is not None:
+            typed = [self.type(param=self, ctx=ctx, value=x) for x in value]
+            return self.constructor(typed)
+        return value
+
+    def get_envvar(self, ctx) -> Optional[str]:
         """Pass."""
         if (
             not self.envvar
@@ -155,28 +140,11 @@ class DictOption(click.Option):
     def value_from_envvar(self, ctx) -> dict:
         """Pass."""
         value = self.resolve_envvar_value(ctx)
-        ret = value
-        if is_str(ret):
-            envvar = self.get_envvar(ctx)
+        if is_str(value):
             opts = ", ".join(self.opts) if isinstance(self.opts, (list, tuple)) else self.opts
-            ret = extract_kvs_auto(
-                value=ret,
-                split_kv=self.split_kv,
-                src=["", f"OS Environment variable: {envvar!r}", f"Option: {opts}"],
-            )
-
-        if not ret:
-            # TODO: add support for required=True
-            if not self.required:
-                return {}
-
-        if not isinstance(ret, self.constructor):
-            try:
-                ret = self.constructor(ret)
-            except Exception:
-                pass
-        self.check_value_type(value=ret, orig=value, exp=self.constructor)
-        return ret
+            src = ["", f"OS Environment variable: {self.get_envvar(ctx)!r}", f"Option: {opts}"]
+            value = extract_kvs_auto(value=value, split_kv=self.split_kv, src=src)
+        return value
 
 
 class SplitEquals(DictParam):
