@@ -19,6 +19,7 @@ from ...exceptions import (
 from ...tools import coerce_bool, coerce_int, coerce_str_to_csv, int_days_map, json_dump, json_load
 from .base import BaseModel, BaseSchema, BaseSchemaJson
 from .custom_fields import SchemaBool, SchemaDatetime, get_field_dc_mm, get_schema_dc
+from .selection import IdSelection, IdSelectionSchema
 
 
 class SetDefaults:
@@ -1279,35 +1280,10 @@ class RunSetAgainstTriggerRequest(BaseModel):
         return RunSetAgainstTriggerRequestSchema
 
 
-class RunSetsValueSchema(BaseSchema):
-    """Pass."""
-
-    ids = marshmallow_jsonapi.fields.List(marshmallow_jsonapi.fields.Str(), required=True)
-    include = SchemaBool(load_default=True, dump_default=True)
-
-    @staticmethod
-    def get_model_cls() -> type:
-        """Pass."""
-        return RunSetsValue
-
-
-@dataclasses.dataclass
-class RunSetsValue(BaseModel):
-    """Pass."""
-
-    ids: List[str] = get_schema_dc(schema=RunSetsValueSchema, key="ids")
-    include: bool = get_schema_dc(schema=RunSetsValueSchema, key="include", default=True)
-
-    @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
-        """Pass."""
-        return RunSetsValueSchema
-
-
 class RunSetsAgainstTriggerRequestSchema(BaseSchemaJson):
     """Pass."""
 
-    value = marshmallow_jsonapi.fields.Nested(RunSetsValueSchema)
+    value = marshmallow_jsonapi.fields.Nested(IdSelectionSchema)
     use_conditions = SchemaBool(
         load_default=False,
         dump_default=False,
@@ -1328,7 +1304,7 @@ class RunSetsAgainstTriggerRequestSchema(BaseSchemaJson):
 class RunSetsAgainstTriggerRequest(BaseModel):
     """Pass."""
 
-    value: RunSetsValue = get_schema_dc(
+    value: IdSelection = get_schema_dc(
         schema=RunSetsAgainstTriggerRequestSchema,
         key="value",
     )

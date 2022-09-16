@@ -201,6 +201,8 @@ class Devices(AssetMixin):
     FIELD_OS_TYPE: str = "specific_data.data.os.type"
     """OS Type field."""
 
+    VERIFY_EXCLUDES_TYPE: List[str] = [FIELD_MAC]
+
     FIELD_MAIN: str = FIELD_HOSTNAME
     """Field name of the main identifier."""
 

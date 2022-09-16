@@ -126,6 +126,16 @@ class Assets(ApiEndpointGroup):
         response_model_cls=json_api.assets.HistoryDates,
     )
 
+    run_enforcement: ApiEndpoint = ApiEndpoint(
+        method="PUT",
+        path="api/{asset_type}/enforce",
+        request_schema_cls=json_api.assets.RunEnforcementRequestSchema,
+        request_model_cls=json_api.assets.RunEnforcementRequest,
+        response_schema_cls=None,
+        response_model_cls=None,
+        response_as_text=True,
+    )
+
 
 @dataclasses.dataclass(repr=False)
 class SavedQueries(ApiEndpointGroup):

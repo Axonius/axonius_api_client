@@ -2,13 +2,15 @@
 """API model mixin for device and user assets."""
 import datetime
 import time
-from typing import Generator, List, Optional, Union
+from typing import Generator, List, Optional, Tuple, Union
 
 import cachetools
+import click
 
-from ...constants.api import DEFAULT_CALLBACKS_CLS, MAX_PAGE_SIZE, PAGE_SIZE
+from ...constants.api import AXID, AXID_LEN, DEFAULT_CALLBACKS_CLS, MAX_PAGE_SIZE, PAGE_SIZE
 from ...exceptions import ApiError, NotFoundError, ResponseNotOk, StopFetch
-from ...tools import dt_now, dt_now_file, get_subcls, json_dump, listify
+from ...parsers.tables import tablize
+from ...tools import dt_now, dt_now_file, get_subcls, is_str, json_dump, listify, strim
 from .. import json_api
 from ..api_endpoints import ApiEndpoints
 from ..asset_callbacks.tools import get_callbacks_cls
@@ -18,6 +20,14 @@ from ..wizards import Wizard, WizardCsv, WizardText
 GEN_TYPE = Union[Generator[dict, None, None], List[dict]]
 HISTORY_DATES_OBJ_CACHE = cachetools.TTLCache(maxsize=1, ttl=300)
 HISTORY_DATES_CACHE = cachetools.TTLCache(maxsize=1, ttl=300)
+
+ENFORCEMENT = Union[
+    str,
+    dict,
+    json_api.enforcements.SetBasic,
+    json_api.enforcements.SetFull,
+    json_api.enforcements.UpdateResponse,
+]
 
 
 class AssetMixin(ModelMixins):
@@ -852,10 +862,222 @@ class AssetMixin(ModelMixins):
         api_endpoint = ApiEndpoints.assets.history_dates
         return api_endpoint.perform_request(http=self.auth.http)
 
+    def _enforce(
+        self,
+        name: str,
+        ids: List[str],
+        include: bool = True,
+        fields: Optional[List[str]] = None,
+        query: Optional[str] = "",
+    ) -> None:
+        """Run an enforcement set manually against a list of assets internal_axon_ids.
+
+        Args:
+            name (str): Name of enforcement set to exectue
+            ids (List[str]): internal_axon_id's of assets to run enforcement set against
+            include (bool, optional): select IDs in DB or IDs NOT in DB
+            fields (Optional[List[str]], optional): list of fields used to select assets
+            query (str, optional): filter used to select assets
+
+        Returns:
+            TYPE: Empty response
+        """
+        fields = listify(fields)
+        ids = listify(ids)
+        query = query if isinstance(query, str) and query.strip() else ""
+
+        asset_type = self.ASSET_TYPE
+        selection = {"ids": ids, "include": include}
+
+        view_sort = {"field": "", "desc": True}
+        view_colfilters = []
+        view = {"fields": fields, "sort": view_sort, "colFilters": view_colfilters}
+        # view does not seem to be really used in back end, but front end sends it
+        # duplicating the front end concept for now
+
+        api_endpoint = ApiEndpoints.assets.enforce
+        request_obj = api_endpoint.load_request(
+            name=name, selection=selection, view=view, filter=query
+        )
+
+        return api_endpoint.perform_request(
+            http=self.auth.http, request_obj=request_obj, asset_type=asset_type
+        )
+
+    @staticmethod
+    def _csv_able(value: Optional[Union[str, List[str]]]) -> Generator[str, None, None]:
+        """Pass."""
+        for item in listify(value):
+            if is_str(item):
+                yield from [x.strip() for x in item.split(",") if is_str(x)]
+            if isinstance(item, (list, tuple)):
+                yield from [x.strip() for x in item if is_str(x)]
+
+    def _query_in_field(self, value: List[str], field: str = AXID) -> str:
+        """Pass."""
+        csv = ",".join(value)
+        return self.wizard_text.parse(f"simple {field} in {csv}")["query"]
+
+    def enforce(
+        self,
+        value: ENFORCEMENT,
+        ids: Union[str, List[str]],
+        execute: bool = False,
+        verify_count: bool = True,
+        verify_data: bool = False,
+        data_format: str = "table",
+        data_prompt: bool = False,
+        field_title: bool = True,
+        query_trim: int = 70,
+        field_replace: Optional[List[Tuple[str, str]]] = None,
+        field_join: bool = False,
+        fields_exclude: Optional[List[str]] = None,
+        orig_query: Optional[str] = None,
+        orig_fields: Optional[Union[str, List[str]]] = None,
+        refetch: bool = False,
+    ) -> json_api.enforcements.SetFull:
+        """Run an enforcement set manually against a list of assets ids.
+
+        Args:
+            value (T_Multi): enforcement set model or str with name or uuid
+            ids (List[str]): internal_axon_id's of assets to run enforcement against
+            verify (bool, optional): Verify the count of assets that match supplied IDs equals
+                the number of supplied IDs
+            refetch (bool, optional): refetch enforcement if it is already a full model
+            fields (Optional[List[str]], optional): list of fields used to select assets
+            query (Optional[str], optional): filter used to select assets
+
+        """
+
+        def logit(lmsgs, error):
+            log_level = "info" if error else "error"
+            getattr(self.LOG, log_level)("\n".join(lmsgs))
+
+        data_formats = ["table", "str", "json"]
+        if data_format not in data_formats:
+            raise ApiError(f"Invalid data_format {data_format}, valids: {data_formats}")
+
+        rids = [x for x in self._csv_able(value=ids) if len(x) == AXID_LEN]
+        if not rids:
+            raise ApiError(
+                "Supplied 'ids' is empty - must supply a CSV str or "
+                f"list of strs that are {AXID_LEN} characters each of {self.FIELD_AXON_ID}'s"
+            )
+
+        orig_fields = self._csv_able(value=orig_fields)
+        count_ids = len(rids)
+
+        verify_query = self._query_in_field(rids)
+        verify_query_str = strim(value=verify_query, limit=query_trim)
+
+        msgs = [
+            f"verify_count={verify_count}",
+            f"verify_data={verify_data}",
+            f"verify_query={verify_query_str}",
+            f"execute={execute}",
+            f"count_ids: {count_ids}",
+        ]
+
+        if not execute and not verify_data and verify_count:
+            count_result = self.count(query=verify_query)
+            count_matches = count_result == count_ids
+            vmsgs = msgs + [
+                f"count_result: {count_result}",
+                f"count_matches: {count_matches}",
+            ]
+            logit(lmsgs=vmsgs, error=not count_matches)
+            if not count_matches:
+                vmsgs += [
+                    "count_result does not match count_ids and execute is False",
+                    "Re-run with execute=True to force",
+                ]
+                raise ApiError("\n".join(vmsgs))
+            execute = True
+
+        if not execute and verify_data:
+            field_replace = [
+                x
+                for x in listify(field_replace)
+                if isinstance(x, (list, tuple))
+                and len(x) == 2
+                and all([isinstance(y, str) for y in x])
+            ]
+            field_replace += self.VERIFY_REPLACE
+            fields_exclude = [x for x in listify(fields_exclude) if is_str(x)]
+            fields_exclude += self.VERIFY_EXCLUDES + self.VERIFY_EXCLUDES_TYPE
+
+            if data_format == "table":
+                field_join = True
+
+            data_result = self.get(
+                query=verify_query,
+                field_null=True,
+                field_title=field_title,
+                field_replace=field_replace,
+                field_join=field_join,
+            )
+            data_ids = [x[AXID] for x in data_result]
+            count_result = len(data_result)
+            count_matches = count_result == count_ids
+
+            missing_ids = [x for x in rids if x not in data_ids]
+            count_missing = len(missing_ids)
+            vmsgs = msgs + [
+                f"count_result: {count_result}",
+                f"count_matches: {count_matches}",
+                f"count_missing: {count_missing}",
+            ]
+            logit(lmsgs=vmsgs, error=not count_matches or count_missing)
+
+            if data_format == "table":
+                output = tablize(value=data_result)
+            elif data_format == "str":
+                output = ""  # XXX
+            elif data_format == "json":
+                output = json_dump(data_result)
+            elif data_format == "jsonl":
+                output = ""  # XXX
+
+            if data_prompt:
+                click.echo("\n".join(vmsgs))
+                vmsgs = [*vmsgs, output, *vmsgs, "execute is False"]
+                execute = click.confirm()
+
+            raise ApiError("\n".join(vmsgs))
+
+        if not execute and not verify_count and not verify_data:
+            vmsgs = msgs + [
+                "verify_count, verify_data, and execute are all False"
+                "re-run with at least one set to True"
+            ]
+            raise ApiError("\n".join(vmsgs))
+
+        value = self.enforcements.get_set(value=value, refetch=refetch)
+        result = self._enforce(name=value.name, ids=rids, fields=fields, filter=query)
+        self.LOG.info(f"Ran enforcement set against IDs: {ids}\nResult: {result}\n{value}")
+        return value
+
+    def enforce_dicts(
+        self, data: List[dict], key: str = AXID, error: bool = True, **kwargs
+    ) -> json_api.enforcements.SetFull:
+        """Run an enforcement set manually against a list of dictionaries.
+
+        This will take the value of 'key' from each dict and treat pass it as the asset ID's
+        to execute using :meth:`enforce`.
+
+        Args:
+            data (List[dict]): dictionaries to get key value from
+            key (str, optional): key to get asset ID value from each dictionary in data
+            error (bool, optional): throw errors if an asset parse fails
+            **kwargs: passed to :meth:`enforce`.
+
+        """
+        pass
+
     FIELD_TAGS: str = "labels"
     """Field name for getting tabs (labels)."""
 
-    FIELD_AXON_ID: str = "internal_axon_id"
+    FIELD_AXON_ID: str = AXID
     """Field name for asset unique ID."""
 
     FIELD_ADAPTERS: str = "adapters"
@@ -886,6 +1108,18 @@ class AssetMixin(ModelMixins):
         FIELD_ADAPTER_LEN,
     ]
     """Field names that are always returned by the REST API no matter what fields are selected"""
+
+    VERIFY_REPLACE: List[Tuple[str, str]] = [
+        ("Aggregated: ", ""),
+        ("specific_data.data", ""),
+    ]
+    VERIFY_EXCLUDES: List[str] = [
+        FIELD_AXON_ID,
+        FIELD_ADAPTER_LEN,
+        FIELD_LAST_SEEN,
+        FIELD_ADAPTERS,
+    ]
+    VERIFY_EXCLUDES_TYPE: List[str] = []
 
     wizard: str = None
     """:obj:`axonius_api_client.api.wizards.wizard.Wizard`: Query wizard for python objects."""

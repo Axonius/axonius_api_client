@@ -53,7 +53,7 @@ class Enforcements(ModelMixins):
     """
 
     def get_set(
-        self, value: MULTI_SET, cache: Optional[List[MODEL_SET_FULL]] = None
+        self, value: MULTI_SET, refetch: bool = True, cache: Optional[List[MODEL_SET_FULL]] = None
     ) -> MODEL_SET_FULL:
         """Get an enforcement set by name or UUID.
 
@@ -71,6 +71,8 @@ class Enforcements(ModelMixins):
             name = value
             uuid = value
         elif isinstance(value, (MODEL_SET_BASIC, MODEL_SET_FULL, MODEL_SET_UPDATE)):
+            if not refetch and isinstance(value, MODEL_SET_FULL):
+                return value
             name = value.name
             uuid = value.uuid
         elif isinstance(value, dict) and value.get("name") and value.get("uuid"):

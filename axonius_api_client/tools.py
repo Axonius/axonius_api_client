@@ -1336,6 +1336,26 @@ def str_trim(
     return value
 
 
+def strim(value: str, limit: Optional[int] = None) -> str:
+    """Pass."""
+    if isinstance(limit, int) and limit > 0 and len(value) > limit:
+        value = value[:limit] + f"... {len(value) - limit} more characters"
+    return value
+
+
+def ltrim(
+    value: Union[str, List[str]], limit: Optional[int] = None, rejoin: bool = False
+) -> List[str]:
+    """Pass."""
+    if isinstance(value, str):
+        value = value.splitlines()
+    value = listify(value)
+
+    if isinstance(limit, int) and limit > 0 and len(value) > limit:
+        value = value[:limit] + [f"... {len(value) - limit} more lines"]
+    return value
+
+
 def get_cls_path(value: Any) -> str:
     """Pass."""
     if inspect.isclass(value):
