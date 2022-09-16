@@ -3,7 +3,7 @@
 import logging
 import pathlib
 import warnings
-from typing import Any, List, Optional, TypeVar, Union
+from typing import Any, List, Optional, Pattern, TypeVar, Union
 
 import requests
 
@@ -14,16 +14,30 @@ from .exceptions import HttpError
 from .logs import get_obj_log, set_log_level
 from .parsers.url_parser import UrlParser
 from .setup_env import get_env_user_agent
-from .tools import coerce_str, join_url, json_log, listify, path_read
+from .tools import coerce_str, join_url, json_log, listify, path_read, tilde_re
 from .version import __version__
 
 cert_human.ssl_capture.inject_into_urllib3()
 T_Cookies: TypeVar = Union[dict, requests.cookies.RequestsCookieJar]
 T_Headers: TypeVar = Union[dict, requests.structures.CaseInsensitiveDict]
+T_StrPattern: TypeVar = Union[str, Pattern]
+
+HIDE_HEADERS: str = [
+    "~cookie",
+    "~auth",
+    "~token",
+    "~^cf_",
+    "~secret",
+    "~key",
+    "~username",
+    "~password",
+]
 
 
 class Http:
     """HTTP client that wraps around around :obj:`requests.Session`."""
+
+    HIDE_STR = "*********"
 
     def __init__(
         self,
@@ -69,6 +83,11 @@ class Http:
         self.url: str = self.URLPARSED.url
         """URL to connect to"""
 
+        self.LOG_HIDE_HEADERS: List[T_StrPattern] = tilde_re(
+            kwargs.get("log_hide_headers", HIDE_HEADERS)
+        )
+        """Headers to hide when logging."""
+
         self.SAVE_LAST: bool = kwargs.get("save_last", True)
         """save requests to :attr:`LAST_REQUEST` and responses to :attr:`LAST_RESPONSE`
         ``kwargs=save_last``"""
@@ -81,11 +100,6 @@ class Http:
 
         self.RESPONSE_TIMEOUT: int = kwargs.get("response_timeout", TIMEOUT_RESPONSE)
         """seconds to wait for responses from :attr:`url` ``kwargs=response_timeout``"""
-
-        self.LOG_HIDE_HEADERS: List[str] = kwargs.get(
-            "log_hide_headers", ["api-key", "api-secret", "Cookie"]
-        )
-        """Headers to hide when logging."""
 
         self.LOG_REQUEST_BODY: bool = kwargs.get("log_request_body", False)
         """Log the full request body ``kwargs=log_request_body``"""
@@ -388,10 +402,19 @@ class Http:
         Args:
             headers: headers to clean values of
         """
-        hide = "*********"
-        hidden = self.LOG_HIDE_HEADERS
+
+        def getval(key, value):
+            skey = str(key)
+            for check in self.LOG_HIDE_HEADERS:
+                if isinstance(check, str) and check.lower() == skey.lower():
+                    return self.HIDE_STR
+                if isinstance(check, Pattern) and check.search(key):
+                    return self.HIDE_STR
+
+            return value
+
         try:
-            return {k: hide if k in hidden else v for k, v in headers.items()}
+            return {k: getval(k, v) for k, v in headers.items()}
         except Exception:
             return headers
 
