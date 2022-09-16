@@ -4,7 +4,7 @@ import dataclasses
 import datetime
 import re
 import textwrap
-from typing import ClassVar, List, Optional, Tuple, Type, Union
+from typing import ClassVar, List, Optional, Pattern, Tuple, Type, Union
 
 import marshmallow
 import marshmallow_jsonapi
@@ -730,7 +730,7 @@ class QueryHistoryRequest(BaseModel):
                 check = value
                 if check.startswith("~"):
                     check = re.compile(check[1:])
-            elif isinstance(value, re.Pattern):
+            elif isinstance(value, Pattern):
                 check = value
             else:
                 raise ApiError(
@@ -742,7 +742,7 @@ class QueryHistoryRequest(BaseModel):
                     if check not in use_enum:
                         err(check=check, use_enum=use_enum)
                     matches.append(check)
-                elif isinstance(check, re.Pattern):
+                elif isinstance(check, Pattern):
                     re_matches = [x for x in use_enum if check.search(x)]
                     if not re_matches:
                         err(check=check, use_enum=use_enum)

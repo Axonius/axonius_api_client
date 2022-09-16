@@ -1619,3 +1619,12 @@ def extract_kvs_csv(value: Union[str, bytes, IO] = None, split_kv: str = "=", **
                     continue
                 ret[ikey] = ivalue
     return ret
+
+
+def tilde_re(value: Any) -> Optional[Union[str, Pattern]]:
+    """Pass."""
+    if isinstance(value, (list, tuple)):
+        return [tilde_re(x) for x in value]
+    if isinstance(value, str) and value.startswith("~"):
+        return re.compile(value[1:], re.I)
+    return value if isinstance(value, (str, Pattern)) else None
