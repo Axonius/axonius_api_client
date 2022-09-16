@@ -798,7 +798,8 @@ class CallbacksFull(Callbacks):
         cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs={"do_echo": False})
         cbobj.echo(msg=entry)
         capture = capsys.readouterr()
-        assert not capture.err
+        if sys.version_info >= (3, 8, 0):
+            assert not capture.err
         assert not capture.out
         log_check(caplog=caplog, entries=[entry], exists=True)
 
