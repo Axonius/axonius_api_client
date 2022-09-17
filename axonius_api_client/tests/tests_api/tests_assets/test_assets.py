@@ -9,10 +9,9 @@ from axonius_api_client.api import json_api, mixins
 # from axonius_api_client.constants.api import MAX_PAGE_SIZE
 from axonius_api_client.exceptions import ApiError, NotFoundError, StopFetch
 from axonius_api_client.tools import listify
-from flaky import flaky
 
 from ...meta import QUERIES
-from ...utils import check_asset, check_assets
+from ...utils import FLAKY, check_asset, check_assets
 
 
 class WizData:
@@ -263,7 +262,7 @@ class TestAssetsPublic(ModelMixinsBase):
     def apiobj(self, request):
         return request.getfixturevalue(request.param)
 
-    @flaky(max_runs=3)
+    @FLAKY()
     def test_sort(self, apiobj):
         apiobj.get(max_rows=1, sort_field=apiobj.FIELD_MAIN, http_args={"response_timeout": 30})
 
@@ -320,7 +319,7 @@ class TestAssetsPublic(ModelMixinsBase):
             if id in ids:
                 raise Exception(f"Duplicate id {id} at row {idx}")
 
-    @flaky(max_runs=3)
+    @FLAKY()
     def test_get_agg_raw_data(self, apiobj):
         rows = apiobj.get(max_rows=1, fields=["agg:raw_data"], http_args={"response_timeout": 30})
         for row in rows:
@@ -338,7 +337,7 @@ class TestAssetsPublic(ModelMixinsBase):
             assert isinstance(raw_data["client_used"], str) and raw_data["client_used"]
             assert raw_data["plugin_name"] in adapters
 
-    @flaky(max_runs=3)
+    @FLAKY()
     def test_get_adapter_raw_data(self, apiobj):
         rows = apiobj.get(
             max_rows=1,
@@ -361,7 +360,7 @@ class TestAssetsPublic(ModelMixinsBase):
     #     check_assets(rows)
     #     assert len(rows) == 2
 
-    @flaky(max_runs=3)
+    @FLAKY()
     def test_get_all_agg(self, apiobj):
         rows = apiobj.get(fields="agg:all", max_rows=1, http_args={"response_timeout": 30})
         for row in rows:
@@ -379,7 +378,7 @@ class TestAssetsPublic(ModelMixinsBase):
                 if all_data["plugin_name"] not in ["static_analysis", "gui"]:
                     assert isinstance(all_data["client_used"], str) and all_data["client_used"]
 
-    @flaky(max_runs=3)
+    @FLAKY()
     def test_get_all_adapter(self, apiobj):
         rows = apiobj.get(
             fields="active_directory:all",
@@ -398,7 +397,7 @@ class TestAssetsPublic(ModelMixinsBase):
                     and all_data["accurate_for_datetime"]
                 )
 
-    @flaky(max_runs=3)
+    @FLAKY()
     def test_get_id(self, apiobj):
         axid = apiobj.ORIGINAL_ROWS[0]["internal_axon_id"]
 
@@ -410,7 +409,7 @@ class TestAssetsPublic(ModelMixinsBase):
         with pytest.raises(NotFoundError):
             apiobj.get_by_id(id="badwolf")
 
-    @flaky(max_runs=3)
+    @FLAKY()
     def test_get_by_saved_query(self, apiobj):
         sq = apiobj.saved_query.get()[0]
         sq_name = sq["name"]

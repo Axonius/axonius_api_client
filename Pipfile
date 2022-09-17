@@ -3,12 +3,5 @@ url = "https://pypi.org/simple/"
 verify_ssl = true
 name = "pypi"
 
-[dev-packages]
-"codecov" = "*"
-"pytest" = ">=2.8.0"
-"pytest-cov" = "*"
-"pytest-httpbin" = "*"
-"flaky" = "*"
-
 [packages]
 e1839a8 = {path = ".",editable = true}

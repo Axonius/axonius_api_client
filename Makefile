@@ -23,8 +23,6 @@ pip_install_tools:
 
 pip_install_dev:
 	pip install --quiet --upgrade --requirement requirements-dev.txt
-	# later versions of werkzeug break pytest
-	pip install --quiet --upgrade werkzeug==2.0.3
 
 pip_install_lint:
 	pip install --quiet --upgrade --requirement requirements-lint.txt
