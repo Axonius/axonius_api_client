@@ -4,7 +4,7 @@ import dataclasses
 import datetime
 import re
 import textwrap
-from typing import ClassVar, List, Optional, Tuple, Type
+from typing import ClassVar, List, Optional, Pattern, Tuple, Type
 
 import marshmallow
 import marshmallow_jsonapi
@@ -588,7 +588,7 @@ class AdapterFetchHistoryFilters(BaseModel):
         def is_match(item):
             if isinstance(check, str) and item == check:
                 return True
-            if isinstance(check, re.Pattern) and check.search(item):
+            if isinstance(check, Pattern) and check.search(item):
                 return True
             return False
 
@@ -613,7 +613,7 @@ class AdapterFetchHistoryFilters(BaseModel):
             check = value.strip()
             if check.startswith("~"):
                 check = re.compile(check[1:])
-        elif isinstance(value, re.Pattern):
+        elif isinstance(value, Pattern):
             check = value
         elif value is None:
             return []

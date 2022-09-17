@@ -1,15 +1,19 @@
 # -*- coding: utf-8 -*-
 """Test suite."""
 import csv
+import functools
 import random
 import re
 import string
 import sys
+import time
 from io import StringIO
 
 import pytest
+import requests
 from cachetools import TTLCache, cached
 from click.testing import CliRunner
+from flaky import flaky
 
 IS_WINDOWS = sys.platform == "win32"
 IS_LINUX = sys.platform == "linux"
@@ -17,6 +21,16 @@ IS_MAC = sys.platform == "darwin"
 
 
 CACHE: TTLCache = TTLCache(maxsize=1024, ttl=600)
+
+
+def flaky_filter(err, *args):
+    """Pass."""
+    if issubclass(err[0], requests.exceptions.ReadTimeout):
+        time.sleep(30)
+    return True
+
+
+FLAKY = functools.partial(flaky, max_runs=10, rerun_filter=flaky_filter)
 
 
 def get_field_vals(rows, field):
