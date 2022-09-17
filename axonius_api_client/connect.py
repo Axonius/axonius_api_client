@@ -297,6 +297,7 @@ class Connect:
 
         self.SIGNUP = Signup(**self.HTTP_ARGS)
         """Easy access to signup."""
+        self._init()
 
     def start(self):
         """Connect to and authenticate with Axonius."""
@@ -539,3 +540,7 @@ class Connect:
         re.compile(r".*?\] (.*) "),
     ]
     """patterns to look for in exceptions that we can pretty up for user display."""
+
+    def _init(self):
+        """Pass."""
+        pass
