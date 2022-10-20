@@ -265,12 +265,8 @@
                     "url": "https://ct.googleapis.com/icarus/",
                     "mmd": 86400,
                     "state": {
-                        "readonly": {
-                            "timestamp": "2022-05-03T18:52:50Z",
-                            "final_tree_head": {
-                                "sha256_root_hash": "D1H4wAJmq0MRCeLfeOtrsZ9Am015anO5MkeasNhnQWI=",
-                                "tree_size": 762430819
-                            }
+                        "retired": {
+                            "timestamp": "2022-09-15T00:00:00Z"
                         }
                     }
                 },
@@ -281,12 +277,8 @@
                     "url": "https://ct.googleapis.com/pilot/",
                     "mmd": 86400,
                     "state": {
-                        "readonly": {
-                            "timestamp": "2022-05-03T18:52:50Z",
-                            "final_tree_head": {
-                                "sha256_root_hash": "57gZIfRLpXho89LUBCQeZUDIHx8gA9PL1M4hc71W90E=",
-                                "tree_size": 1077336645
-                            }
+                        "retired": {
+                            "timestamp": "2022-09-15T00:00:00Z"
                         }
                     }
                 },
@@ -297,12 +289,8 @@
                     "url": "https://ct.googleapis.com/rocketeer/",
                     "mmd": 86400,
                     "state": {
-                        "readonly": {
-                            "timestamp": "2022-05-03T18:52:50Z",
-                            "final_tree_head": {
-                                "sha256_root_hash": "Fj49ZSzvzvjNlEOCVhdkwpTlP7hyp82SFsmfWPScpv0=",
-                                "tree_size": 1117582774
-                            }
+                        "retired": {
+                            "timestamp": "2022-09-15T00:00:00Z"
                         }
                     }
                 },
@@ -313,12 +301,8 @@
                     "url": "https://ct.googleapis.com/skydiver/",
                     "mmd": 86400,
                     "state": {
-                        "readonly": {
-                            "timestamp": "2022-05-03T18:52:50Z",
-                            "final_tree_head": {
-                                "sha256_root_hash": "m8mPaxXwy+EdNwnfdsSWCKdhEk1bm/5Mp84ilMB5xvc=",
-                                "tree_size": 312892829
-                            }
+                        "retired": {
+                            "timestamp": "2022-09-15T00:00:00Z"
                         }
                     }
                 },
@@ -559,8 +543,8 @@
                     "url": "https://ct.cloudflare.com/logs/nimbus2024/",
                     "mmd": 86400,
                     "state": {
-                        "pending": {
-                            "timestamp": "2022-08-12T20:43:00Z"
+                        "qualified": {
+                            "timestamp": "2022-09-21T17:00:00Z"
                         }
                     },
                     "temporal_interval": {
@@ -687,8 +671,8 @@
                     "url": "https://yeti2022-2.ct.digicert.com/log/",
                     "mmd": 86400,
                     "state": {
-                        "usable": {
-                            "timestamp": "2022-05-20T00:00:00Z"
+                        "retired": {
+                            "timestamp": "2022-09-29T00:00:00Z"
                         }
                     },
                     "temporal_interval": {
@@ -703,8 +687,8 @@
                     "url": "https://yeti2023.ct.digicert.com/log/",
                     "mmd": 86400,
                     "state": {
-                        "usable": {
-                            "timestamp": "2019-10-31T19:22:00Z"
+                        "retired": {
+                            "timestamp": "2022-09-29T00:00:00Z"
                         }
                     },
                     "temporal_interval": {
@@ -1403,8 +1387,8 @@
                     "url": "https://oak.ct.letsencrypt.org/2024h1/",
                     "mmd": 86400,
                     "state": {
-                        "pending": {
-                            "timestamp": "2022-06-17T19:38:00Z"
+                        "qualified": {
+                            "timestamp": "2022-09-21T17:00:00Z"
                         }
                     },
                     "temporal_interval": {
@@ -1419,8 +1403,8 @@
                     "url": "https://oak.ct.letsencrypt.org/2024h2/",
                     "mmd": 86400,
                     "state": {
-                        "pending": {
-                            "timestamp": "2022-06-17T19:38:00Z"
+                        "qualified": {
+                            "timestamp": "2022-09-21T17:00:00Z"
                         }
                     },
                     "temporal_interval": {
@@ -1774,8 +1758,24 @@
                     "url": "https://ct2.trustasia.com/log2024/",
                     "mmd": 86400,
                     "state": {
+                        "rejected": {
+                            "timestamp": "2022-09-13T23:00:00Z"
+                        }
+                    },
+                    "temporal_interval": {
+                        "start_inclusive": "2024-01-01T00:00:00Z",
+                        "end_exclusive": "2025-01-01T00:00:00Z"
+                    }
+                },
+                {
+                    "description": "Trust Asia Log2024-2",
+                    "log_id": "h0+1DcAp2ZMd5XPp8omejkUzs5LTiwpGJXS/D+6y/B4=",
+                    "key": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEp2TieYE/YdfsxvhlKB2gtGYzwyXVCpV4nI/+pCrYj35y4P6of/ixLYXAjhJ0DS+Mq9d/eh7ZhDM56P2JX5ZICA==",
+                    "url": "https://ct2024.trustasia.com/log2024/",
+                    "mmd": 86400,
+                    "state": {
                         "pending": {
-                            "timestamp": "2022-04-11T09:32:00Z"
+                            "timestamp": "2022-10-14T17:53:20Z"
                         }
                     },
                     "temporal_interval": {

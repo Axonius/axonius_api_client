@@ -4,7 +4,7 @@ from . import api_endpoints, json_api
 from .adapters import Adapters, Cnx
 from .api_endpoint import ApiEndpoint
 from .api_endpoints import ApiEndpoints
-from .assets import Devices, Users, Vulnerabilities
+from .assets import Devices, Runner, Users, Vulnerabilities
 from .enforcements import Enforcements
 from .openapi import OpenAPISpec
 from .system import (
@@ -31,6 +31,7 @@ __all__ = (
     "Devices",
     "Enforcements",
     "Instances",
+    "Runner",
     "Meta",
     "RemoteSupport",
     "SettingsGlobal",

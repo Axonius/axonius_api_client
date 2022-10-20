@@ -13,6 +13,7 @@ from . import (
     cmd_get_fields,
     cmd_get_fields_default,
     cmd_get_tags,
+    cmds_run_enforcement,
     grp_saved_query,
 )
 from .grp_common import (
@@ -50,6 +51,7 @@ CMDS = [
     cmd_get_tags.cmd,
     cmd_get_by_id.cmd,
     cmd_destroy.cmd,
+    *cmds_run_enforcement.CMDS,
 ]
 
 for cmd in CMDS:

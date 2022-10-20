@@ -109,7 +109,7 @@ def api_devices(request):
     assert isinstance(obj.wizard_csv, WizardCsv)
     assert isinstance(obj.data_scopes, DataScopes)
     obj.ORIGINAL_ROWS = obj.get(max_rows=5)
-
+    obj.IDS = [x["internal_axon_id"] for x in obj.ORIGINAL_ROWS]
     try:
         obj.COMPLEX_ROWS = obj.get(
             max_rows=5, fields=obj.FIELD_COMPLEX, wiz_entries=f"simple {obj.FIELD_COMPLEX} exists"
@@ -146,6 +146,7 @@ def api_users(request):
     assert isinstance(obj.wizard_csv, WizardCsv)
     assert isinstance(obj.data_scopes, DataScopes)
     obj.ORIGINAL_ROWS = obj.get(max_rows=5)
+    obj.IDS = [x["internal_axon_id"] for x in obj.ORIGINAL_ROWS]
 
     try:
         obj.COMPLEX_ROWS = obj.get(

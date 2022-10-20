@@ -492,6 +492,16 @@ class SetFull(BaseModel):
         )
         self.triggers = [trigger]
 
+    @property
+    def main_action_name(self) -> str:
+        """Pass."""
+        return self.main_action["name"]
+
+    @property
+    def main_action_type(self) -> str:
+        """Pass."""
+        return self.main_action["action"]["action_name"]
+
     def get_basic(self, refresh: bool = False) -> SetBasic:
         """Pass."""
         if self.BASIC and not refresh:

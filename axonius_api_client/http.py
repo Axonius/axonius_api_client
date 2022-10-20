@@ -303,6 +303,11 @@ class Http:
         Returns:
             :obj:`requests.Response`
         """
+
+        def log_if_headers(msg: str):
+            if "headers" in self.log_request_attrs:
+                self.LOG.debug(msg)
+
         if not hasattr(self, "session") or kwargs.get("session_reset", False) is True:
             self.new_session()
 
@@ -344,14 +349,13 @@ class Http:
             "verify": kwargs.get("verify", self.session.verify),
             "cert": kwargs.get("cert", self.session.cert),
         }
-        self.LOG.debug(f"Request arguments before environment merge: {pre_send_args}")
+        log_if_headers(f"Request arguments before environment merge: {pre_send_args}")
 
         send_args = self.session.merge_environment_settings(
             url=prepped_request.url,
             **pre_send_args,
         )
-
-        self.LOG.debug(f"Request arguments after environment merge: {send_args}")
+        log_if_headers(f"Request arguments after environment merge: {send_args}")
 
         response = self.session.send(request=prepped_request, timeout=timeout, **send_args)
 

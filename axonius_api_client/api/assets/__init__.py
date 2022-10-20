@@ -4,6 +4,7 @@ from .asset_mixin import AssetMixin
 from .devices import Devices
 from .fields import Fields
 from .labels import Labels
+from .runner import Runner
 from .saved_query import SavedQuery
 from .users import Users
 from .vulnerabilities import Vulnerabilities
@@ -16,4 +17,5 @@ __all__ = (
     "Fields",
     "Labels",
     "Vulnerabilities",
+    "Runner",
 )

@@ -2,17 +2,55 @@
 """Constants for field schemas."""
 import dataclasses
 import enum
+import string
+import typing as t
 import warnings
-from typing import Dict, List, Optional
 
 from ..data import BaseData, BaseEnum
 from ..exceptions import NotFoundError, UnknownFieldSchema
+from ..tools import is_str
 
 AGG_ADAPTER_NAME: str = "agg"
 """Short name to use for aggregated adapter"""
 
 AGG_ADAPTER_TITLE: str = "Aggregated"
 """Title to use for aggregated adapter"""
+
+
+class AXID:
+    """Pass."""
+
+    name: str = "internal_axon_id"
+    title: str = "Asset Unique ID"
+    column_title: str = f"{AGG_ADAPTER_TITLE}: {title}"
+    keys_title: t.List[str] = [column_title, title]
+    keys: t.List[str] = [name, *keys_title]
+    keys_str: str = ",".join(keys)
+    chars: str = string.ascii_lowercase + string.digits
+    length: int = 32
+
+    examples: t.List[str] = [
+        "b237ae0c07f9eb3f02ad854a8298f37e",
+        "7592ea0d5acca4981b9cd3f1c37bfb32",
+    ]
+    example_csv: str = ",".join(examples)
+    rules_short: str = f"{length} character alphanumeric string"
+    rules: t.List[str] = [
+        f"{name}'s must be supplied as alphanumeric strings that are {length} characters in length",
+        "You can provide multiples using a comma separated string:",
+        f"  example: {example_csv}",
+    ]
+
+    @classmethod
+    def strip(cls, value: str):
+        """Pass."""
+        return "".join(x for x in value if x in cls.chars)
+
+    @staticmethod
+    def is_axid(value: t.Any) -> bool:
+        """Pass."""
+        return is_str(value) and value.isalnum() and len(value) == AXID.length
+
 
 ALL_NAME: str = "all"
 """alternative name to use for 'all' field."""
@@ -22,10 +60,10 @@ RAW_NAME: str = "raw_data"
 AGG_EXPR_FIELD_TYPE: str = "axonius"
 """epxr_field_type to use in saved query expressions for aggregated fields"""
 
-AGG_ADAPTER_ALTS: List[str] = ["generic", "general", "specific", "agg", "aggregated"]
+AGG_ADAPTER_ALTS: t.List[str] = ["generic", "general", "specific", "agg", "aggregated"]
 """list of list of alternatives for 'generic' adapter."""
 
-GET_SCHEMAS_KEYS: List[str] = [
+GET_SCHEMAS_KEYS: t.List[str] = [
     "name",
     "name_base",
     "name_qual",
@@ -33,7 +71,7 @@ GET_SCHEMAS_KEYS: List[str] = [
 ]
 """field schema keys to check when finding field schemas"""
 
-GET_SCHEMA_KEYS: List[str] = [
+GET_SCHEMA_KEYS: t.List[str] = [
     "name",
     "name_base",
     "name_qual",
@@ -41,7 +79,7 @@ GET_SCHEMA_KEYS: List[str] = [
 ]
 """field schema keys to check when finding a single field schema"""
 
-FUZZY_SCHEMAS_KEYS: List[str] = [
+FUZZY_SCHEMAS_KEYS: t.List[str] = [
     "name_base",
     "title",
 ]
@@ -50,14 +88,14 @@ FUZZY_SCHEMAS_KEYS: List[str] = [
 PRETTY_SCHEMA_TMPL: str = "{adapter_name}:{name_base:{len_max}} -> {column_title}"
 """template to use when pretty printing schemas."""
 
-FIELDS_DETAILS: List[str] = [
+FIELDS_DETAILS: t.List[str] = [
     "meta_data.client_used",
     "unique_adapter_names_details",
     "adapter_asset_entities_info",
 ]
 """Fields that are returned by REST API when include_details=True"""
 
-FIELDS_DETAILS_EXCLUDE: List[str] = [
+FIELDS_DETAILS_EXCLUDE: t.List[str] = [
     "adapter_list_length_details",
     "adapters_details",
     "internal_axon_id_details",
@@ -65,14 +103,14 @@ FIELDS_DETAILS_EXCLUDE: List[str] = [
 ]
 """Fields that should be excluded when include_details=True"""
 
-FIELDS_ENTITY_PASSTHRU: List[str] = [
+FIELDS_ENTITY_PASSTHRU: t.List[str] = [
     "adapter_list_length",
     "internal_axon_id",
     "labels",
 ]
 """Fields that should be passed thru directly when exploding by asset entities."""
 
-SCHEMAS_CUSTOM: Dict[str, dict] = {
+SCHEMAS_CUSTOM: t.Dict[str, dict] = {
     "report_adapters_missing": {
         "adapters_missing": {
             "adapter_name": "report",
@@ -251,10 +289,10 @@ class Operator(BaseData):
     template: str
     name_map: OperatorNameMap
     parser: Parsers
-    field_name_override: Optional[str] = None
+    field_name_override: t.Optional[str] = None
 
 
-def ops_clean(operators: List[Operator], clean: List[Operator]):
+def ops_clean(operators: t.List[Operator], clean: t.List[Operator]):
     """Get a list of operators without those in clean."""
     return [x for x in operators if x not in clean]
 
@@ -498,7 +536,7 @@ class OperatorTypeMap(BaseData):
     """Operator type map that maps an operator to a specific field schema."""
 
     name: str
-    operators: List[Operator]
+    operators: t.List[Operator]
     field_type: Types
     field_format: Formats = None
     items_type: Types = None
@@ -984,7 +1022,7 @@ class OperatorTypeMaps(BaseData):
         return OperatorTypeMaps.array_string if is_array else OperatorTypeMaps.string
 
     @classmethod
-    def get_operator(cls, field: dict, operator: str, err: Optional[str] = None):
+    def get_operator(cls, field: dict, operator: str, err: t.Optional[str] = None):
         """Get an operator for a specific field."""
         operator = operator.lower().strip()
         type_map = cls.get_type_map(field=field)
@@ -1007,7 +1045,7 @@ class OperatorTypeMaps(BaseData):
         raise NotFoundError(f"{err}{valid}")
 
 
-CUSTOM_FIELDS_MAP: Dict[str, List[dict]] = {
+CUSTOM_FIELDS_MAP: t.Dict[str, t.List[dict]] = {
     "agg": [
         {
             "adapter_name_raw": f"{AGG_ADAPTER_NAME}_adapter",

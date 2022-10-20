@@ -68,3 +68,18 @@ IS_MAC: bool = sys.platform == "darwin"
 
 TRIM_MSG: str = "\nTrimmed {value_len} {trim_type} down to {trim}"
 FILE_DATE_FMT: str = "%Y-%m-%dT%H-%M-%S"
+
+
+SECHO_ARGS: List[str] = [
+    "fg",
+    "bg",
+    "bold",
+    "dim",
+    "underline",
+    "overline",
+    "italic",
+    "blink",
+    "reverse",
+    "strikethrough",
+    "stderr",
+]

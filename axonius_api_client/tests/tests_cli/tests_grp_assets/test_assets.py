@@ -1,11 +1,299 @@
 # -*- coding: utf-8 -*-
 """Test suite."""
 import pytest
-
 from axonius_api_client.cli import cli
-from axonius_api_client.tools import json_load
+from axonius_api_client.tools import json_load, pathify
 
-from ...utils import get_rows_exist, load_clirunner
+from ...tests_api.tests_assets.test_runner import RunEnforcements
+from ...utils import FLAKY, get_rows_exist, load_clirunner
+
+
+@FLAKY()
+class CliRunEnforcements(RunEnforcements):
+    def test_cli_run_enforcement_from_csv(self, request, monkeypatch, apiobj, exec_eset):
+        runner = load_clirunner(request, monkeypatch)
+        with runner.isolated_filesystem():
+            file_name = pathify("data.csv")
+            get_data = runner.invoke(
+                cli=cli,
+                args=[
+                    apiobj.ASSET_TYPE,
+                    "get",
+                    "--max-rows",
+                    "2",
+                    "--export-format",
+                    "csv",
+                    "--export-file",
+                    f"{file_name}",
+                ],
+            )
+            assert get_data.stderr
+            assert get_data.exit_code == 0
+            assert not get_data.stdout
+            assert file_name.is_file()
+
+            prompt_no = runner.invoke(
+                cli=cli,
+                args=[
+                    apiobj.ASSET_TYPE,
+                    "run-enforcement-from-csv",
+                    "--eset",
+                    exec_eset.name,
+                    "--path",
+                    f"{file_name}",
+                    "--no-prompt",
+                ],
+            )
+            assert prompt_no.stderr
+            assert prompt_no.exit_code == 0
+            assert prompt_no.stdout
+
+            prompt_yes_no_stdin = runner.invoke(
+                cli=cli,
+                input="y",
+                args=[
+                    apiobj.ASSET_TYPE,
+                    "run-enforcement-from-csv",
+                    "--eset",
+                    exec_eset.name,
+                    "--path",
+                    f"{file_name}",
+                ],
+            )
+            assert "is not a TTY -- unable to prompt" in prompt_yes_no_stdin.stderr
+            assert prompt_yes_no_stdin.exit_code != 0
+            assert not prompt_yes_no_stdin.stdout
+            with monkeypatch.context() as m:
+
+                def mock_is_tty(*args, **kwargs):
+                    return True
+
+                m.setattr("axonius_api_client.tools.is_tty", mock_is_tty)
+                prompt_yes = runner.invoke(
+                    cli=cli,
+                    input="y",
+                    args=[
+                        apiobj.ASSET_TYPE,
+                        "run-enforcement-from-csv",
+                        "--eset",
+                        exec_eset.name,
+                        "--path",
+                        f"{file_name}",
+                    ],
+                )
+                assert prompt_yes.stderr
+                assert prompt_yes.exit_code == 0
+                assert prompt_yes.stdout
+
+    def test_cli_run_enforcement_from_json(self, request, monkeypatch, apiobj, exec_eset):
+        runner = load_clirunner(request, monkeypatch)
+        with runner.isolated_filesystem():
+            file_name = pathify("data.json")
+            get_data = runner.invoke(
+                cli=cli,
+                args=[
+                    apiobj.ASSET_TYPE,
+                    "get",
+                    "--max-rows",
+                    "2",
+                    "--export-format",
+                    "json",
+                    "--export-file",
+                    f"{file_name}",
+                ],
+            )
+            assert get_data.stderr
+            assert get_data.exit_code == 0
+            assert not get_data.stdout
+            assert file_name.is_file()
+
+            prompt_no = runner.invoke(
+                cli=cli,
+                args=[
+                    apiobj.ASSET_TYPE,
+                    "run-enforcement-from-json",
+                    "--eset",
+                    exec_eset.name,
+                    "--path",
+                    f"{file_name}",
+                    "--no-prompt",
+                ],
+            )
+            assert prompt_no.stderr
+            assert prompt_no.exit_code == 0
+            assert prompt_no.stdout
+
+            prompt_yes_no_stdin = runner.invoke(
+                cli=cli,
+                input="y",
+                args=[
+                    apiobj.ASSET_TYPE,
+                    "run-enforcement-from-json",
+                    "--eset",
+                    exec_eset.name,
+                    "--path",
+                    f"{file_name}",
+                ],
+            )
+            assert "is not a TTY -- unable to prompt" in prompt_yes_no_stdin.stderr
+            assert prompt_yes_no_stdin.exit_code != 0
+            assert not prompt_yes_no_stdin.stdout
+            with monkeypatch.context() as m:
+
+                def mock_is_tty(*args, **kwargs):
+                    return True
+
+                m.setattr("axonius_api_client.tools.is_tty", mock_is_tty)
+                prompt_yes = runner.invoke(
+                    cli=cli,
+                    input="y",
+                    args=[
+                        apiobj.ASSET_TYPE,
+                        "run-enforcement-from-json",
+                        "--eset",
+                        exec_eset.name,
+                        "--path",
+                        f"{file_name}",
+                    ],
+                )
+                assert prompt_yes.stderr
+                assert prompt_yes.exit_code == 0
+                assert prompt_yes.stdout
+
+    def test_cli_run_enforcement_from_jsonl(self, request, monkeypatch, apiobj, exec_eset):
+        runner = load_clirunner(request, monkeypatch)
+        with runner.isolated_filesystem():
+            file_name = pathify("data.jsonl")
+            get_data = runner.invoke(
+                cli=cli,
+                args=[
+                    apiobj.ASSET_TYPE,
+                    "get",
+                    "--max-rows",
+                    "2",
+                    "--export-format",
+                    "json",
+                    "--json-flat",
+                    "--export-file",
+                    f"{file_name}",
+                ],
+            )
+            assert get_data.stderr
+            assert get_data.exit_code == 0
+            assert not get_data.stdout
+            assert file_name.is_file()
+
+            prompt_no = runner.invoke(
+                cli=cli,
+                args=[
+                    apiobj.ASSET_TYPE,
+                    "run-enforcement-from-jsonl",
+                    "--eset",
+                    exec_eset.name,
+                    "--path",
+                    f"{file_name}",
+                    "--no-prompt",
+                ],
+            )
+            assert prompt_no.stderr
+            assert prompt_no.exit_code == 0
+            assert prompt_no.stdout
+
+            prompt_yes_no_stdin = runner.invoke(
+                cli=cli,
+                input="y",
+                args=[
+                    apiobj.ASSET_TYPE,
+                    "run-enforcement-from-jsonl",
+                    "--eset",
+                    exec_eset.name,
+                    "--path",
+                    f"{file_name}",
+                ],
+            )
+            assert "is not a TTY -- unable to prompt" in prompt_yes_no_stdin.stderr
+            assert prompt_yes_no_stdin.exit_code != 0
+            assert not prompt_yes_no_stdin.stdout
+            with monkeypatch.context() as m:
+
+                def mock_is_tty(*args, **kwargs):
+                    return True
+
+                m.setattr("axonius_api_client.tools.is_tty", mock_is_tty)
+                prompt_yes = runner.invoke(
+                    cli=cli,
+                    input="y",
+                    args=[
+                        apiobj.ASSET_TYPE,
+                        "run-enforcement-from-jsonl",
+                        "--eset",
+                        exec_eset.name,
+                        "--path",
+                        f"{file_name}",
+                    ],
+                )
+                assert prompt_yes.stderr
+                assert prompt_yes.exit_code == 0
+                assert prompt_yes.stdout
+
+    def test_cli_run_enforcement_from_text(self, request, monkeypatch, apiobj, exec_eset):
+        runner = load_clirunner(request, monkeypatch)
+        with runner.isolated_filesystem():
+            file_name = pathify("data.txt")
+            file_name.write_text("\n".join(apiobj.IDS))
+
+            prompt_no = runner.invoke(
+                cli=cli,
+                args=[
+                    apiobj.ASSET_TYPE,
+                    "run-enforcement-from-text",
+                    "--eset",
+                    exec_eset.name,
+                    "--path",
+                    f"{file_name}",
+                    "--no-prompt",
+                ],
+            )
+            assert prompt_no.stderr
+            assert prompt_no.exit_code == 0
+            assert prompt_no.stdout
+
+            prompt_yes_no_stdin = runner.invoke(
+                cli=cli,
+                input="y",
+                args=[
+                    apiobj.ASSET_TYPE,
+                    "run-enforcement-from-text",
+                    "--eset",
+                    exec_eset.name,
+                    "--path",
+                    f"{file_name}",
+                ],
+            )
+            assert "is not a TTY -- unable to prompt" in prompt_yes_no_stdin.stderr
+            assert prompt_yes_no_stdin.exit_code != 0
+            assert not prompt_yes_no_stdin.stdout
+            with monkeypatch.context() as m:
+
+                def mock_is_tty(*args, **kwargs):
+                    return True
+
+                m.setattr("axonius_api_client.tools.is_tty", mock_is_tty)
+                prompt_yes = runner.invoke(
+                    cli=cli,
+                    input="y",
+                    args=[
+                        apiobj.ASSET_TYPE,
+                        "run-enforcement-from-text",
+                        "--eset",
+                        exec_eset.name,
+                        "--path",
+                        f"{file_name}",
+                    ],
+                )
+                assert prompt_yes.stderr
+                assert prompt_yes.exit_code == 0
+                assert prompt_yes.stdout
 
 
 class GrpAssetsBase:
@@ -20,15 +308,16 @@ class GrpAssetsBase:
         value = int(result.stdout)
         assert isinstance(value, int)
 
-    def check_get_result(self, result):
-        assert result.stdout
+    def check_get_result(self, result, check_data_stdout=True):
         assert result.stderr
         assert result.exit_code == 0
-        data = json_load(result.stdout)
-        assert isinstance(data, list)
-        assert len(data) <= 2
-        for item in data:
-            assert isinstance(item, dict)
+        if check_data_stdout:
+            assert result.stdout
+            data = json_load(result.stdout)
+            assert isinstance(data, list)
+            assert len(data) <= 2
+            for item in data:
+                assert isinstance(item, dict)
 
     def test_count(self, request, monkeypatch, apiobj):
         runner = load_clirunner(request, monkeypatch)
@@ -100,6 +389,7 @@ class GrpAssetsBase:
             data = json_load(result.stdout)
             assert isinstance(data, dict) and data
 
+    @FLAKY()
     def test_get_by_saved_query(self, request, monkeypatch, existing_sq, apiobj):
         runner = load_clirunner(request, monkeypatch)
         with runner.isolated_filesystem():
@@ -270,21 +560,6 @@ class GrpAssetsBase:
             assert result.stderr
             assert result.exit_code == 0
 
-    def test_get_json(self, request, monkeypatch, apiobj):
-        runner = load_clirunner(request, monkeypatch)
-        with runner.isolated_filesystem():
-
-            args = [
-                apiobj.ASSET_TYPE,
-                "get",
-                "--max-rows",
-                "2",
-                "--export-format",
-                "json",
-            ]
-            result = runner.invoke(cli=cli, args=args)
-            self.check_get_result(result=result)
-
     def test_destroy(self, request, monkeypatch, apiobj):
         runner = load_clirunner(request, monkeypatch)
         with runner.isolated_filesystem():
@@ -349,28 +624,13 @@ class GrpAssetsBase:
             assert disable_destroy.exit_code == 0
 
 
-class TestGrpAssetsDevices(GrpAssetsBase):
+class TestGrpAssetsDevices(GrpAssetsBase, CliRunEnforcements):
     @pytest.fixture(scope="class")
     def apiobj(self, api_devices):
         return api_devices
 
-    def test_get_by_hostname(self, request, monkeypatch, apiobj):
-        runner = load_clirunner(request, monkeypatch)
-        with runner.isolated_filesystem():
 
-            args = [
-                apiobj.ASSET_TYPE,
-                "get-by-hostname-re",
-                "--value",
-                "test",
-                "--max-rows",
-                "2",
-            ]
-            result = runner.invoke(cli=cli, args=args)
-            self.check_get_result(result=result)
-
-
-class TestGrpAssetsUsers(GrpAssetsBase):
+class TestGrpAssetsUsers(GrpAssetsBase, CliRunEnforcements):
     @pytest.fixture(scope="class")
     def apiobj(self, api_users):
         return api_users

@@ -333,7 +333,7 @@ class SystemRoles(ModelMixins):
                 cat_role_acts = role_perms[category]
                 lines += ["", "-" * 70, f"{category:<{len_acts + 2}} {cat_desc}"]
                 for action, action_desc in actions.items():
-                    cat_role_act = cat_role_acts[action]
+                    cat_role_act = cat_role_acts.get(action, False)
                     lines.append(
                         f"  {action:<{len_acts}} {action_desc:<{len_acts_desc}} {cat_role_act}"
                     )
