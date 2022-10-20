@@ -177,16 +177,17 @@ class TestAssetsPrivate(ModelMixinsBase):
             with pytest.raises(StopFetch):
                 page3.process_page(state={**state1}, start_dt=page1.page_start_dt, apiobj=apiobj)
 
-    # def test_get_pages(self, apiobj):
-    #     page1 = apiobj._get(offset=0, limit=5)
-    #     cursor = page1.cursor
-    #     page2 = apiobj._get(offset=5, limit=5, cursor_id=cursor)
-    #     page3 = apiobj._get(offset=10, limit=5, cursor_id=cursor)
-    #     if page1.asset_count_total:
-    #         assert len(page1.assets) == 5
-    #         assert len(page2.assets) == 5
-    #         assert len(page3.assets) == 5
-    #         assert len(page1.assets + page2.assets + page3.assets) == 15
+    @pytest.mark.skip("BREAKER: induces timeout")
+    def test_get_pages(self, apiobj):
+        page1 = apiobj._get(offset=0, limit=5)
+        cursor = page1.cursor
+        page2 = apiobj._get(offset=5, limit=5, cursor_id=cursor)
+        page3 = apiobj._get(offset=10, limit=5, cursor_id=cursor)
+        if page1.asset_count_total:
+            assert len(page1.assets) == 5
+            assert len(page2.assets) == 5
+            assert len(page3.assets) == 5
+            assert len(page1.assets + page2.assets + page3.assets) == 15
 
     @pytest.mark.parametrize("value", WizData.nones)
     def test_get_wiz_entries_none(self, apiobj, value):
@@ -295,29 +296,13 @@ class TestAssetsPublic(ModelMixinsBase):
         data = apiobj.count_by_saved_query(name=sq_name)
         assert isinstance(data, int)
 
-    # def test_get_generator_no(self, apiobj):
-    #     rows = apiobj.get(generator=False, max_rows=1, http_args={"response_timeout": 30})
-
-    #     assert not rows.__class__.__name__ == "generator"
-    #     check_assets(rows)
-    #     assert len(rows) == 1
-
-    # def test_get_generator_yes(self, apiobj):
-    #     gen = apiobj.get(generator=True, max_rows=1, http_args={"response_timeout": 30})
-
-    #     assert gen.__class__.__name__ == "generator"
-
-    #     rows = [x for x in gen]
-    #     check_assets(rows)
-    #     assert len(rows) == 1
-
-    def test_get_no_dups(self, apiobj):
-        rows = apiobj.get(generator=True)
-        ids = {}
-        for idx, row in enumerate(rows):
-            id = row["internal_axon_id"]
-            if id in ids:
-                raise Exception(f"Duplicate id {id} at row {idx}")
+    # def test_get_no_dups(self, apiobj):
+    #     rows = apiobj.get(generator=True)
+    #     ids = {}
+    #     for idx, row in enumerate(rows):
+    #         id = row["internal_axon_id"]
+    #         if id in ids:
+    #             raise Exception(f"Duplicate id {id} at row {idx}")
 
     @FLAKY()
     def test_get_agg_raw_data(self, apiobj):

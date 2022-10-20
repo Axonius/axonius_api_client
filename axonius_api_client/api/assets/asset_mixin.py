@@ -1,21 +1,26 @@
 # -*- coding: utf-8 -*-
 """API model mixin for device and user assets."""
 import datetime
+import pathlib
 import time
-from typing import Generator, List, Optional, Union
+import types
+import typing as t
 
 import cachetools
 
 from ...constants.api import DEFAULT_CALLBACKS_CLS, MAX_PAGE_SIZE, PAGE_SIZE
+from ...constants.fields import AXID
 from ...exceptions import ApiError, NotFoundError, ResponseNotOk, StopFetch
-from ...tools import dt_now, dt_now_file, get_subcls, json_dump, listify
+from ...parsers.grabber import Grabber
+from ...tools import PathLike, dt_now, dt_now_file, get_subcls, json_dump, listify
 from .. import json_api
 from ..api_endpoints import ApiEndpoints
 from ..asset_callbacks.tools import get_callbacks_cls
 from ..mixins import ModelMixins
 from ..wizards import Wizard, WizardCsv, WizardText
+from .runner import ENFORCEMENT, Runner
 
-GEN_TYPE = Union[Generator[dict, None, None], List[dict]]
+GEN_TYPE = t.Union[t.Generator[dict, None, None], t.List[dict]]
 HISTORY_DATES_OBJ_CACHE = cachetools.TTLCache(maxsize=1, ttl=300)
 HISTORY_DATES_CACHE = cachetools.TTLCache(maxsize=1, ttl=300)
 
@@ -40,7 +45,7 @@ class AssetMixin(ModelMixins):
 
     See Also:
         This object is not usable directly, it only stores the logic that is common for working
-        with device and user assets:
+        with the various asset types:
 
         * Device assets :obj:`axonius_api_client.api.assets.devices.Devices`
         * User assets :obj:`axonius_api_client.api.assets.users.Users`
@@ -50,24 +55,386 @@ class AssetMixin(ModelMixins):
     ASSET_TYPE: str = ""
 
     @classmethod
-    def asset_types(cls) -> List[str]:
+    def asset_types(cls) -> t.List[str]:
         """Pass."""
         return [x.ASSET_TYPE for x in cls.asset_modules()]
 
     @classmethod
-    def asset_modules(cls) -> List["AssetMixin"]:
+    def asset_modules(cls) -> t.List["AssetMixin"]:
         """Pass."""
         return get_subcls(AssetMixin)
 
+    def run_enforcement(
+        self,
+        eset: ENFORCEMENT,
+        ids: t.Union[str, t.List[str]],
+        verify_and_run: bool = True,
+        verified: bool = False,
+        verify_count: bool = True,
+        prompt: bool = False,
+        do_echo: bool = False,
+        refetch: bool = False,
+        src_query: t.Optional[str] = None,
+        src_fields: t.Optional[t.List[str]] = None,
+        check_stdin: bool = True,
+    ) -> Runner:
+        """Run an enforcement set against a manually selected list of assets.
+
+        Args:
+            eset (ENFORCEMENT): name, uuid, or Enforcement Set object to run
+            ids (t.Union[str, t.List[str]]): Asset IDs to run Enforcement Set against,
+                csv-like string or list of csv-like strings
+            verify_and_run (bool, optional): if false, return the Runner object
+                to use manually. if true, run :method:`Runner.verify_and_run`
+                before returning the Runner object
+            verified (bool): $ids already verified, just run $eset against $ids
+            verify_count (bool): Verify that the count of $query equals the count of $ids
+            prompt (bool): Prompt user for verification when applicable.
+            do_echo (bool): Echo output to console as well as log
+            refetch (bool): refetch $eset even if it is a :obj:`json_api.enforcements.SetFull`
+            check_stdin (bool): check if stdin is a TTY when prompting
+
+        Returns:
+            Runner: Runner object used to verify and run $eset
+        """
+        runner = Runner(
+            apiobj=self,
+            eset=eset,
+            ids=ids,
+            verified=verified,
+            verify_count=verify_count,
+            prompt=prompt,
+            do_echo=do_echo,
+            refetch=refetch,
+            src_query=src_query,
+            src_fields=src_fields,
+        )
+        if verify_and_run:
+            runner.verify_and_run()
+        return runner
+
+    def run_enforcement_from_items(
+        self,
+        eset: ENFORCEMENT,
+        items: t.Union[str, t.List[str], dict, t.List[dict], types.GeneratorType],
+        keys: t.Optional[t.Union[str, t.List[str]]] = None,
+        do_echo_grab: bool = True,
+        do_raise_grab: bool = False,
+        **kwargs,
+    ) -> Runner:
+        """Get Asset IDs from a list of dicts or strs and run $eset against them.
+
+        Args:
+            eset (ENFORCEMENT): name, uuid, or Enforcement Set object to run
+            items (t.Union[str, t.List[str], dict, t.List[dict], types.GeneratorType]): list of
+                strs or dicts to grab Asset IDs from
+            keys (t.Union[str, t.List[str]]): additional keys for grabber to look for Asset IDs in
+            do_echo_grab (bool, optional): Echo output of Asset ID grabber to console as well as log
+            do_raise_grab (bool, optional): Throw an error if grabber fails to find an Asset ID
+                in any items
+            **kwargs: passed to :method:`run_enforcement`
+
+        Returns:
+            Runner: Runner object used to verify and run $eset
+        """
+        grabber = Grabber(
+            items=items,
+            keys=keys,
+            do_echo=do_echo_grab,
+            do_raise=do_raise_grab,
+            source=kwargs.pop("source", None),
+        )
+        kwargs["ids"] = grabber.axids
+        return self.run_enforcement(eset=eset, **kwargs)
+
+    def run_enforcement_from_json(
+        self,
+        eset: ENFORCEMENT,
+        items: t.Union[str, bytes, t.IO, pathlib.Path],
+        keys: t.Optional[t.Union[str, t.List[str]]] = None,
+        do_echo_grab: bool = True,
+        do_raise_grab: bool = False,
+        **kwargs,
+    ) -> Runner:
+        """Get Asset IDs from a JSON string with a list of dicts and run $eset against them.
+
+        Args:
+            eset (ENFORCEMENT): name, uuid, or Enforcement Set object to run
+            items (t.Union[str, bytes, t.IO, pathlib.Path]): json str, handle for file containing
+                json str, or pathlib.Path of path containing json str
+            keys (t.Union[str, t.List[str]]): additional keys for grabber to look for Asset IDs in
+            do_echo_grab (bool, optional): Echo output of Asset ID grabber to console as well as log
+            do_raise_grab (bool, optional): Throw an error if grabber fails to find an Asset ID
+                in any items
+            **kwargs: passed to :method:`run_enforcement`
+
+        Returns:
+            Runner: Runner object used to verify and run $eset
+        """
+        grabber = Grabber.from_json(
+            items=items,
+            keys=keys,
+            do_echo=do_echo_grab,
+            do_raise=do_raise_grab,
+            source=kwargs.pop("source", None),
+        )
+        kwargs["ids"] = grabber.axids
+        return self.run_enforcement(eset=eset, **kwargs)
+
+    def run_enforcement_from_jsonl(
+        self,
+        eset: ENFORCEMENT,
+        items: t.Union[str, bytes, t.IO, pathlib.Path],
+        keys: t.Optional[t.Union[str, t.List[str]]] = None,
+        do_echo_grab: bool = True,
+        do_raise_grab: bool = False,
+        **kwargs,
+    ) -> Runner:
+        """Get Asset IDs from a JSONL string with one dict per line and run $eset against them.
+
+        Args:
+            eset (ENFORCEMENT): name, uuid, or Enforcement Set object to run
+            items (t.Union[str, bytes, t.IO, pathlib.Path]): jsonl str, handle for file containing
+                jsonl str, or pathlib.Path of path containing jsonl str
+            keys (t.Union[str, t.List[str]]): additional keys for grabber to look for Asset IDs in
+            do_echo_grab (bool, optional): Echo output of Asset ID grabber to console as well as log
+            do_raise_grab (bool, optional): Throw an error if grabber fails to find an Asset ID
+                in any items
+            **kwargs: passed to :method:`run_enforcement`
+
+        Returns:
+            Runner: Runner object used to verify and run $eset
+        """
+        grabber = Grabber.from_jsonl(
+            items=items,
+            keys=keys,
+            do_echo=do_echo_grab,
+            do_raise=do_raise_grab,
+            source=kwargs.pop("source", None),
+        )
+        kwargs["ids"] = grabber.axids
+        return self.run_enforcement(eset=eset, **kwargs)
+
+    def run_enforcement_from_csv(
+        self,
+        eset: ENFORCEMENT,
+        items: t.Union[str, bytes, t.IO, pathlib.Path],
+        keys: t.Optional[t.Union[str, t.List[str]]] = None,
+        do_echo_grab: bool = True,
+        do_raise_grab: bool = False,
+        load_args: t.Optional[dict] = None,
+        **kwargs,
+    ) -> Runner:
+        """Get Asset IDs from a CSV string and run $eset against them.
+
+        Args:
+            eset (ENFORCEMENT): name, uuid, or Enforcement Set object to run
+            items (t.Union[str, bytes, t.IO, pathlib.Path]): csv str, handle for file containing
+                csv str, or pathlib.Path of path containing csv str
+            keys (t.Union[str, t.List[str]]): additional keys for grabber to look for Asset IDs in
+            do_echo_grab (bool, optional): Echo output of Asset ID grabber to console as well as log
+            do_raise_grab (bool, optional): Throw an error if grabber fails to find an Asset ID
+                in any items
+            **kwargs: passed to :method:`run_enforcement`
+
+        Returns:
+            Runner: Runner object used to verify and run $eset
+        """
+        grabber = Grabber.from_csv(
+            items=items,
+            keys=keys,
+            do_echo=do_echo_grab,
+            do_raise=do_raise_grab,
+            load_args=load_args,
+            source=kwargs.pop("source", None),
+        )
+        kwargs["ids"] = grabber.axids
+        return self.run_enforcement(eset=eset, **kwargs)
+
+    def run_enforcement_from_text(
+        self,
+        eset: ENFORCEMENT,
+        items: t.Union[str, bytes, t.IO, pathlib.Path],
+        keys: t.Optional[t.Union[str, t.List[str]]] = None,
+        do_echo_grab: bool = True,
+        do_raise_grab: bool = False,
+        **kwargs,
+    ) -> Runner:
+        """Get Asset IDs from a text string and run $eset against them.
+
+        Args:
+            eset (ENFORCEMENT): name, uuid, or Enforcement Set object to run
+            items (t.Union[str, bytes, t.IO, pathlib.Path]): text str, handle for file containing
+                text str, or pathlib.Path of path containing text str
+            keys (t.Union[str, t.List[str]]): n/a
+            do_echo_grab (bool, optional): Echo output of Asset ID grabber to console as well as log
+            do_raise_grab (bool, optional): Throw an error if grabber fails to find an Asset ID
+                in any items
+            **kwargs: passed to :method:`run_enforcement`
+
+        Returns:
+            Runner: Runner object used to verify and run $eset
+        """
+        grabber = Grabber.from_text(
+            items=items,
+            keys=keys,
+            do_echo=do_echo_grab,
+            do_raise=do_raise_grab,
+            source=kwargs.pop("source", None),
+        )
+        kwargs["ids"] = grabber.axids
+        return self.run_enforcement(eset=eset, **kwargs)
+
+    def run_enforcement_from_json_path(
+        self,
+        eset: ENFORCEMENT,
+        path: PathLike,
+        keys: t.Optional[t.Union[str, t.List[str]]] = None,
+        do_echo_grab: bool = True,
+        do_raise_grab: bool = False,
+        **kwargs,
+    ) -> Runner:
+        """Get Asset IDs from a JSON file with a list of dicts and run $eset against them.
+
+        Args:
+            eset (ENFORCEMENT): name, uuid, or Enforcement Set object to run
+            path (PathLike): str or pathlib.Path of path containing json str
+            keys (t.Union[str, t.List[str]]): additional keys for grabber to look for Asset IDs in
+            do_echo_grab (bool, optional): Echo output of Asset ID grabber to console as well as log
+            do_raise_grab (bool, optional): Throw an error if grabber fails to find an Asset ID
+                in any items
+            **kwargs: passed to :method:`run_enforcement`
+
+        Returns:
+            Runner: Runner object used to verify and run $eset
+        """
+        grabber = Grabber.from_json_path(
+            path=path,
+            keys=keys,
+            do_echo=do_echo_grab,
+            do_raise=do_raise_grab,
+            source=kwargs.pop("source", None),
+        )
+        kwargs["ids"] = grabber.axids
+        return self.run_enforcement(eset=eset, **kwargs)
+
+    def run_enforcement_from_jsonl_path(
+        self,
+        eset: ENFORCEMENT,
+        path: PathLike,
+        keys: t.Optional[t.Union[str, t.List[str]]] = None,
+        do_echo_grab: bool = True,
+        do_raise_grab: bool = False,
+        **kwargs,
+    ) -> Runner:
+        """Get Asset IDs from a JSONL file with one dict per line and run $eset against them.
+
+        Args:
+            eset (ENFORCEMENT): name, uuid, or Enforcement Set object to run
+            path (PathLike): str or pathlib.Path of path containing jsonl str
+            keys (t.Union[str, t.List[str]]): additional keys for grabber to look for Asset IDs in
+            do_echo_grab (bool, optional): Echo output of Asset ID grabber to console as well as log
+            do_raise_grab (bool, optional): Throw an error if grabber fails to find an Asset ID
+                in any items
+            **kwargs: passed to :method:`run_enforcement`
+
+        Returns:
+            Runner: Runner object used to verify and run $eset
+        """
+        grabber = Grabber.from_jsonl_path(
+            path=path,
+            keys=keys,
+            do_echo=do_echo_grab,
+            do_raise=do_raise_grab,
+            source=kwargs.pop("source", None),
+        )
+        kwargs["ids"] = grabber.axids
+        return self.run_enforcement(eset=eset, **kwargs)
+
+    def run_enforcement_from_csv_path(
+        self,
+        eset: ENFORCEMENT,
+        path: PathLike,
+        keys: t.Optional[t.Union[str, t.List[str]]] = None,
+        do_echo_grab: bool = True,
+        do_raise_grab: bool = False,
+        **kwargs,
+    ) -> Runner:
+        """Get Asset IDs from a CSV file and run $eset against them.
+
+        Args:
+            eset (ENFORCEMENT): name, uuid, or Enforcement Set object to run
+            path (PathLike): str or pathlib.Path of path containing csv str
+            keys (t.Union[str, t.List[str]]): additional keys for grabber to look for Asset IDs in
+            do_echo_grab (bool, optional): Echo output of Asset ID grabber to console as well as log
+            do_raise_grab (bool, optional): Throw an error if grabber fails to find an Asset ID
+                in any items
+            **kwargs: passed to :method:`run_enforcement`
+
+        Returns:
+            Runner: Runner object used to verify and run $eset
+        """
+        grabber = Grabber.from_csv_path(
+            path=path,
+            keys=keys,
+            do_echo=do_echo_grab,
+            do_raise=do_raise_grab,
+            source=kwargs.pop("source", None),
+        )
+        kwargs["ids"] = grabber.axids
+        return self.run_enforcement(eset=eset, **kwargs)
+
+    def run_enforcement_from_text_path(
+        self,
+        eset: ENFORCEMENT,
+        path: PathLike,
+        keys: t.Optional[t.Union[str, t.List[str]]] = None,
+        do_echo_grab: bool = True,
+        do_raise_grab: bool = False,
+        **kwargs,
+    ) -> Runner:
+        """Get Asset IDs from a text file and run $eset against them.
+
+        Args:
+            eset (ENFORCEMENT): name, uuid, or Enforcement Set object to run
+            path (PathLike): str or pathlib.Path of path containing text str
+            keys (t.Union[str, t.List[str]]): n/a
+            do_echo_grab (bool, optional): Echo output of Asset ID grabber to console as well as log
+            do_raise_grab (bool, optional): Throw an error if grabber fails to find an Asset ID
+                in any items
+            **kwargs: passed to :method:`run_enforcement`
+
+        Returns:
+            Runner: Runner object used to verify and run $eset
+        """
+        grabber = Grabber.from_text_path(
+            path=path,
+            keys=keys,
+            do_echo=do_echo_grab,
+            do_raise=do_raise_grab,
+            source=kwargs.pop("source", None),
+        )
+        kwargs["ids"] = grabber.axids
+        return self.run_enforcement(eset=eset, **kwargs)
+
+    @property
+    def enforcements(self):
+        """Work with data scopes."""
+        if not hasattr(self, "_enforcements"):
+            from ..enforcements import Enforcements
+
+            self._enforcements: Enforcements = Enforcements(auth=self.auth)
+        return self._enforcements
+
     def count(
         self,
-        query: Optional[str] = None,
-        history_date: Optional[Union[str, datetime.timedelta, datetime.datetime]] = None,
-        history_days_ago: Optional[int] = None,
+        query: t.Optional[str] = None,
+        history_date: t.Optional[t.Union[str, datetime.timedelta, datetime.datetime]] = None,
+        history_days_ago: t.Optional[int] = None,
         history_exact: bool = False,
-        wiz_entries: Optional[Union[List[dict], List[str], dict, str]] = None,
+        wiz_entries: t.Optional[t.Union[t.List[dict], t.List[str], dict, str]] = None,
         use_cache_entry: bool = False,
-        saved_query_id: Optional[str] = None,
+        saved_query_id: t.Optional[str] = None,
         **kwargs,
     ) -> int:
         """Get the count of assets from a query.
@@ -218,8 +585,8 @@ class AssetMixin(ModelMixins):
         return gen if generator else list(gen)
 
     def get_wiz_entries(
-        self, wiz_entries: Optional[Union[List[dict], List[str], dict, str]] = None
-    ) -> Optional[dict]:
+        self, wiz_entries: t.Optional[t.Union[t.List[dict], t.List[str], dict, str]] = None
+    ) -> t.Optional[dict]:
         """Pass."""
         wiz_entries = listify(wiz_entries) if wiz_entries else []
         if not wiz_entries:
@@ -234,8 +601,8 @@ class AssetMixin(ModelMixins):
         raise ApiError("wiz_entries must be a single or list of dict or str")
 
     def get_sort_field(
-        self, field: Optional[str] = None, descending: bool = False
-    ) -> Optional[str]:
+        self, field: t.Optional[str] = None, descending: bool = False
+    ) -> t.Optional[str]:
         """Pass."""
         if isinstance(field, str) and field:
             field = self.fields.get_field_name(value=field)
@@ -246,10 +613,10 @@ class AssetMixin(ModelMixins):
 
     def get_history_date(
         self,
-        date: Optional[Union[str, datetime.timedelta, datetime.datetime]] = None,
-        days_ago: Optional[int] = None,
+        date: t.Optional[t.Union[str, datetime.timedelta, datetime.datetime]] = None,
+        days_ago: t.Optional[int] = None,
         exact: bool = False,
-    ) -> Optional[str]:
+    ) -> t.Optional[str]:
         """Pass."""
         if date is not None or days_ago is not None:
             return self.history_dates_obj().get_date(date=date, days_ago=days_ago, exact=exact)
@@ -257,17 +624,17 @@ class AssetMixin(ModelMixins):
 
     def get_generator(
         self,
-        query: Optional[str] = None,
-        fields: Optional[Union[List[str], str]] = None,
-        fields_manual: Optional[Union[List[str], str]] = None,
-        fields_regex: Optional[Union[List[str], str]] = None,
+        query: t.Optional[str] = None,
+        fields: t.Optional[t.Union[t.List[str], str]] = None,
+        fields_manual: t.Optional[t.Union[t.List[str], str]] = None,
+        fields_regex: t.Optional[t.Union[t.List[str], str]] = None,
         fields_regex_root_only: bool = True,
-        fields_fuzzy: Optional[Union[List[str], str]] = None,
+        fields_fuzzy: t.Optional[t.Union[t.List[str], str]] = None,
         fields_default: bool = True,
-        fields_root: Optional[str] = None,
+        fields_root: t.Optional[str] = None,
         fields_error: bool = True,
-        max_rows: Optional[int] = None,
-        max_pages: Optional[int] = None,
+        max_rows: t.Optional[int] = None,
+        max_pages: t.Optional[int] = None,
         row_start: int = 0,
         page_size: int = MAX_PAGE_SIZE,
         page_start: int = 0,
@@ -275,17 +642,17 @@ class AssetMixin(ModelMixins):
         export: str = DEFAULT_CALLBACKS_CLS,
         include_notes: bool = False,
         include_details: bool = False,
-        sort_field: Optional[str] = None,
+        sort_field: t.Optional[str] = None,
         sort_descending: bool = False,
-        history_date: Optional[Union[str, datetime.timedelta, datetime.datetime]] = None,
-        history_days_ago: Optional[int] = None,
+        history_date: t.Optional[t.Union[str, datetime.timedelta, datetime.datetime]] = None,
+        history_days_ago: t.Optional[int] = None,
         history_exact: bool = False,
-        wiz_entries: Optional[Union[List[dict], List[str], dict, str]] = None,
-        saved_query_id: Optional[str] = None,
-        expressions: Optional[List[dict]] = None,
-        http_args: Optional[dict] = None,
+        wiz_entries: t.Optional[t.Union[t.List[dict], t.List[str], dict, str]] = None,
+        saved_query_id: t.Optional[str] = None,
+        expressions: t.Optional[t.List[dict]] = None,
+        http_args: t.Optional[dict] = None,
         **kwargs,
-    ) -> Generator[dict, None, None]:
+    ) -> t.Generator[dict, None, None]:
         """Get assets from a query.
 
         Args:
@@ -315,7 +682,9 @@ class AssetMixin(ModelMixins):
             wiz_entries: wizard expressions to create query from
             **kwargs: passed thru to the asset callback defined in ``export``
         """
-        wiz_parsed: Optional[dict] = self.get_wiz_entries(wiz_entries=wiz_entries)
+        wiz_parsed: t.Optional[dict] = kwargs.get(
+            "_wiz_parsed", self.get_wiz_entries(wiz_entries=wiz_entries)
+        )
 
         if isinstance(wiz_parsed, dict):
             if wiz_parsed.get("query"):
@@ -323,28 +692,36 @@ class AssetMixin(ModelMixins):
             if wiz_parsed.get("expressions"):
                 expressions = wiz_parsed["expressions"]
 
-        fields_parsed: List[str] = self.fields.validate(
-            fields=fields,
-            fields_manual=fields_manual,
-            fields_regex=fields_regex,
-            fields_regex_root_only=fields_regex_root_only,
-            fields_default=fields_default,
-            fields_root=fields_root,
-            fields_fuzzy=fields_fuzzy,
-            fields_error=fields_error,
+        fields_parsed: t.List[str] = kwargs.get(
+            "_fields_parsed",
+            self.fields.validate(
+                fields=fields,
+                fields_manual=fields_manual,
+                fields_regex=fields_regex,
+                fields_regex_root_only=fields_regex_root_only,
+                fields_default=fields_default,
+                fields_root=fields_root,
+                fields_fuzzy=fields_fuzzy,
+                fields_error=fields_error,
+            ),
         )
 
-        sort_field_parsed: Optional[str] = self.get_sort_field(
-            field=sort_field, descending=sort_descending
+        sort_field_parsed: t.Optional[str] = kwargs.get(
+            "_sort_field_parsed", self.get_sort_field(field=sort_field, descending=sort_descending)
         )
 
-        history_date_parsed: Optional[str] = self.get_history_date(
-            date=history_date, days_ago=history_days_ago, exact=history_exact
+        history_date_parsed: t.Optional[str] = kwargs.get(
+            "_history_date_parsed",
+            self.get_history_date(
+                date=history_date, days_ago=history_days_ago, exact=history_exact
+            ),
         )
 
-        initial_count: int = self.count(query=query, history_date=history_date)
+        initial_count: int = kwargs.get(
+            "_initial_count", self.count(query=query, history_date=history_date)
+        )
 
-        file_date: str = dt_now_file()
+        file_date: str = kwargs.get("_file_date", dt_now_file())
         export_templates: dict = {
             "{DATE}": file_date,
             "{HISTORY_DATE}": history_date_parsed or file_date,
@@ -493,7 +870,7 @@ class AssetMixin(ModelMixins):
             raise  # pragma: no cover
 
     @property
-    def fields_default(self) -> List[dict]:
+    def fields_default(self) -> t.List[dict]:
         """Fields to use by default for getting assets."""
         raise NotImplementedError  # pragma: no cover
 
@@ -513,7 +890,7 @@ class AssetMixin(ModelMixins):
 
     def get_by_values(
         self,
-        values: List[str],
+        values: t.List[str],
         field: str,
         not_flag: bool = False,
         pre: str = "",
@@ -727,18 +1104,18 @@ class AssetMixin(ModelMixins):
         get_metadata: bool = True,
         use_cursor: bool = True,
         sort_descending: bool = False,
-        history_date: Optional[str] = None,
-        filter: Optional[str] = None,
-        cursor_id: Optional[str] = None,
-        sort: Optional[str] = None,
-        excluded_adapters: Optional[dict] = None,
-        field_filters: Optional[dict] = None,
-        fields: Optional[dict] = None,
-        saved_query_id: Optional[str] = None,
-        expressions: Optional[List[dict]] = None,
+        history_date: t.Optional[str] = None,
+        filter: t.Optional[str] = None,
+        cursor_id: t.Optional[str] = None,
+        sort: t.Optional[str] = None,
+        excluded_adapters: t.Optional[dict] = None,
+        field_filters: t.Optional[dict] = None,
+        fields: t.Optional[dict] = None,
+        saved_query_id: t.Optional[str] = None,
+        expressions: t.Optional[t.List[dict]] = None,
         offset: int = 0,
         limit: int = PAGE_SIZE,
-        http_args: Optional[dict] = None,
+        http_args: t.Optional[dict] = None,
     ) -> json_api.assets.AssetsPage:
         """Private API method to get a page of assets.
 
@@ -751,14 +1128,13 @@ class AssetMixin(ModelMixins):
             get_metadata (bool, optional): Description
             use_cursor (bool, optional): Description
             sort_descending (bool, optional): reverse the sort of the returned assets
-            history_date (Optional[Union[str, datetime.timedelta, datetime.datetime]], optional):
-                return assets for a given historical date
-            filter (Optional[str], optional): Description
-            cursor_id (Optional[str], optional): Description
-            sort (Optional[str], optional): Description
-            excluded_adapters (Optional[dict], optional): Description
-            field_filters (Optional[dict], optional): Description
-            fields (Optional[dict], optional): CSV or list of fields to include in return
+            history_date (t.Optional[str], optional): return assets for a given historical date
+            filter (t.Optional[str], optional): Description
+            cursor_id (t.Optional[str], optional): Description
+            sort (t.Optional[str], optional): Description
+            excluded_adapters (t.Optional[dict], optional): Description
+            field_filters (t.Optional[dict], optional): Description
+            fields (t.Optional[dict], optional): CSV or list of fields to include in return
             offset (int, optional): Description
             limit (int, optional): Description
 
@@ -804,17 +1180,17 @@ class AssetMixin(ModelMixins):
 
     def _count(
         self,
-        filter: Optional[str] = None,
-        history_date: Optional[str] = None,
+        filter: t.Optional[str] = None,
+        history_date: t.Optional[str] = None,
         use_cache_entry: bool = False,
-        saved_query_id: Optional[str] = None,
+        saved_query_id: t.Optional[str] = None,
     ) -> json_api.assets.Count:
         """Private API method to get the count of assets.
 
         Args:
-            filter (Optional[str], optional): if supplied,
+            filter (t.Optional[str], optional): if supplied,
                 only return the count of assets that match the query
-            history_date (Optional[Union[str, timedelta, datetime]], optional): Description
+            history_date (t.Optional[t.Union[str, timedelta, datetime]], optional): Description
             use_cache_entry (bool, optional): Description
 
         """
@@ -852,10 +1228,52 @@ class AssetMixin(ModelMixins):
         api_endpoint = ApiEndpoints.assets.history_dates
         return api_endpoint.perform_request(http=self.auth.http)
 
+    def _run_enforcement(
+        self,
+        name: str,
+        ids: t.List[str],
+        include: bool = True,
+        fields: t.Optional[t.List[str]] = None,
+        query: t.Optional[str] = "",
+    ) -> None:
+        """Run an enforcement set manually against a list of assets internal_axon_ids.
+
+        Args:
+            name (str): Name of enforcement set to exectue
+            ids (t.List[str]): internal_axon_id's of assets to run enforcement set against
+            include (bool, optional): select IDs in DB or IDs NOT in DB
+            fields (t.Optional[t.List[str]], optional): list of fields used to select assets
+            query (str, optional): filter used to select assets
+
+        Returns:
+            TYPE: Empty response
+        """
+        fields = listify(fields)
+        ids = listify(ids)
+        query = query if isinstance(query, str) and query.strip() else ""
+
+        asset_type = self.ASSET_TYPE
+        selection = {"ids": ids, "include": include}
+
+        view_sort = {"field": "", "desc": True}
+        view_colfilters = []
+        view = {"fields": fields, "sort": view_sort, "colFilters": view_colfilters}
+        # view does not seem to be really used in back end, but front end sends it
+        # duplicating the front end concept for now
+
+        api_endpoint = ApiEndpoints.assets.run_enforcement
+        request_obj = api_endpoint.load_request(
+            name=name, selection=selection, view=view, filter=query
+        )
+
+        return api_endpoint.perform_request(
+            http=self.auth.http, request_obj=request_obj, asset_type=asset_type
+        )
+
     FIELD_TAGS: str = "labels"
     """Field name for getting tabs (labels)."""
 
-    FIELD_AXON_ID: str = "internal_axon_id"
+    FIELD_AXON_ID: str = AXID.name
     """Field name for asset unique ID."""
 
     FIELD_ADAPTERS: str = "adapters"
@@ -879,7 +1297,7 @@ class AssetMixin(ModelMixins):
     FIELD_COMPLEX_SUB: str = None
     """Field name of a complex sub field."""
 
-    FIELDS_API: List[str] = [
+    FIELDS_API: t.List[str] = [
         FIELD_AXON_ID,
         FIELD_ADAPTERS,
         FIELD_TAGS,

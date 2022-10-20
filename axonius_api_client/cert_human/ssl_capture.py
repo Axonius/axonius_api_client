@@ -38,13 +38,13 @@ class CaptureHTTPSConnection(connectionpool.HTTPSConnectionPool.ConnectionCls):
         """Pass."""
         logger = LOG.getChild(f"{self.__class__.__name__}")
         info = f"certificate from {self.sock}"
-        logger.debug(f"Fetching {info}")
+        # logger.debug(f"Fetching {info}")
 
         # works with pyopenssl and ssl, python 3.9+ tested
         how = "n/a"
         if callable(getattr(self.sock, "getpeercert", None)):
             method = "self.sock.getpeercert(True)"
-            logger.debug(f"Fetching {info} using method {method}")
+            # logger.debug(f"Fetching {info} using method {method}")
             try:
                 cert_bytes: bytes = self.sock.getpeercert(True)
             except Exception as exc:
@@ -54,7 +54,7 @@ class CaptureHTTPSConnection(connectionpool.HTTPSConnectionPool.ConnectionCls):
                 self.captured_cert: OpenSSL.crypto.X509 = OpenSSL.crypto.load_certificate(
                     OpenSSL.crypto.FILETYPE_ASN1, cert_bytes
                 )
-                logger.debug(f"Fetched {info} using method {method}: {self.captured_cert}")
+                # logger.debug(f"Fetched {info} using method {method}: {self.captured_cert}")
                 return
 
         if not self.captured_cert:
@@ -64,7 +64,7 @@ class CaptureHTTPSConnection(connectionpool.HTTPSConnectionPool.ConnectionCls):
         """Pass."""
         logger = LOG.getChild(f"{self.__class__.__name__}")
         info = f"certificate chain from {self.sock}"
-        logger.debug(f"Fetching {info}")
+        # logger.debug(f"Fetching {info}")
 
         if hasattr(self.sock, "_sslobj"):
             # only available on python 3.10.1+
@@ -72,7 +72,7 @@ class CaptureHTTPSConnection(connectionpool.HTTPSConnectionPool.ConnectionCls):
 
             if callable(getattr(self.sock._sslobj, "get_verified_chain", None)):
                 method = "self.sock._sslobj.get_verified_chain()"
-                logger.debug(f"Fetching {info} using method {method}")
+                # logger.debug(f"Fetching {info} using method {method}")
                 try:
                     chain_ssl = self.sock._sslobj.get_verified_chain()
                     # List[_ssl.Certificate]
@@ -86,12 +86,12 @@ class CaptureHTTPSConnection(connectionpool.HTTPSConnectionPool.ConnectionCls):
                         )
                         for x in chain_ssl
                     ]
-                    logger.debug(f"Fetched {info} using method {method}: {self.captured_chain}")
+                    # logger.debug(f"Fetched {info} using method {method}: {self.captured_chain}")
                     return
 
             if callable(getattr(self.sock._sslobj, "get_unverified_chain", None)):
                 method = "self.sock._sslobj.get_unverified_chain()"
-                logger.debug(f"Fetching {info} using method {method}")
+                # logger.debug(f"Fetching {info} using method {method}")
                 try:
                     chain_ssl = self.sock._sslobj.get_unverified_chain()
                     # List[_ssl.Certificate]
@@ -105,7 +105,7 @@ class CaptureHTTPSConnection(connectionpool.HTTPSConnectionPool.ConnectionCls):
                         )
                         for x in chain_ssl
                     ]
-                    logger.debug(f"Fetched {info} using method {method}: {self.captured_chain}")
+                    # logger.debug(f"Fetched {info} using method {method}: {self.captured_chain}")
                     return
 
         if hasattr(self.sock, "connection"):
@@ -114,7 +114,7 @@ class CaptureHTTPSConnection(connectionpool.HTTPSConnectionPool.ConnectionCls):
 
             if callable(getattr(self.sock.connection, "get_peer_cert_chain", None)):
                 method = "self.sock.connection.get_peer_cert_chain()"
-                logger.debug(f"Fetching {info} using method {method}")
+                # logger.debug(f"Fetching {info} using method {method}")
                 try:
                     self.captured_chain: List[
                         OpenSSL.crypto.X509
@@ -123,7 +123,7 @@ class CaptureHTTPSConnection(connectionpool.HTTPSConnectionPool.ConnectionCls):
                     self.captured_chain_errors.append({"how": how, "method": method, "exc": exc})
                     logger.exception(f"Failure fetching {info} using method {method}")
                 else:
-                    logger.debug(f"Fetched {info} using method {method}: {self.captured_chain}")
+                    # logger.debug(f"Fetched {info} using method {method}: {self.captured_chain}")
                     return
 
         if not self.captured_chain:

@@ -56,6 +56,7 @@ try:
         WizardCsv,
         WizardText,
         Vulnerabilities,
+        Runner,
     )
     from .auth import ApiKey
     from .connect import Connect
@@ -89,6 +90,7 @@ __all__ = (
     "Signup",
     "SystemRoles",
     "SystemUsers",
+    "Runner",
     "Users",
     "Wizard",
     "Wizard",

@@ -18,6 +18,7 @@ from . import (
     remote_support,
     resources,
     saved_queries,
+    selection,
     signup,
     system_meta,
     system_roles,
@@ -49,4 +50,5 @@ __all__ = (
     "assets",
     "time_range",
     "paging_state",
+    "selection",
 )

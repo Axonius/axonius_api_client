@@ -12,23 +12,10 @@ import pathlib
 import platform
 import re
 import sys
+import types
+import typing as t
 from datetime import datetime, timedelta, timezone
 from itertools import zip_longest
-from typing import (
-    IO,
-    Any,
-    Callable,
-    Dict,
-    Iterable,
-    Iterator,
-    List,
-    Optional,
-    Pattern,
-    Tuple,
-    Type,
-    TypeVar,
-    Union,
-)
 from urllib.parse import urljoin
 
 import click
@@ -47,6 +34,7 @@ from .constants.general import (
     NO,
     OK_ARGS,
     OK_TMPL,
+    SECHO_ARGS,
     TRIM_MSG,
     URL_STARTS,
     WARN_ARGS,
@@ -62,13 +50,83 @@ EMAIL_RE_STR: str = (
     r"([-!#-'*+/-9=?A-Z^-~]+(\.[-!#-'*+/-9=?A-Z^-~]+)*|\"([]!#-[^-~ \t]|(\\[\t -~]))+\")"
     r"@([-!#-'*+/-9=?A-Z^-~]+(\.[-!#-'*+/-9=?A-Z^-~]+)*|\[[\t -Z^-~]*])"
 )
-EMAIL_RE: Pattern = re.compile(EMAIL_RE_STR, re.I)
-PathLike: TypeVar = TypeVar("PathLike", pathlib.Path, str, bytes)
+EMAIL_RE: t.Pattern = re.compile(EMAIL_RE_STR, re.I)
+PathLike: t.TypeVar = t.TypeVar("PathLike", pathlib.Path, str, bytes)
 DAYS_MAP: dict = dict(zip(range(7), calendar.day_name))
-CoerceIO: TypeVar = Union[str, bytes, IO]
+CoerceIO: t.TypeVar = t.Union[str, bytes, t.IO]
 
 
-def listify(obj: Any, dictkeys: bool = False) -> list:
+def type_str(
+    value: t.Any, max_len: int = 60, join: t.Optional[str] = ", "
+) -> t.Union[str, t.List[str]]:
+    """Pass."""
+    length = len(str(value))
+    svalue = f"{str(value)[:max_len]}...snip..." if length >= max_len else f"{value}"
+    items = [
+        f"type={type(value)}",
+        f"length={length}",
+        f"value={svalue!r}",
+    ]
+    return join.join(items) if isinstance(join, str) else items
+
+
+def pathify(
+    path: PathLike,
+    path_strict: bool = True,
+    path_encoding: str = "utf-8",
+    resolve: bool = True,
+    expanduser: bool = True,
+    as_file: bool = False,
+    as_dir: bool = False,
+    exts: t.Optional[t.List[str]] = None,
+) -> pathlib.Path:
+    """Convert a str into a fully resolved & expanded Path object."""
+    check_type(value=path, exp=(str, bytes, pathlib.Path))
+
+    if isinstance(path, bytes):
+        path = bytes_to_str(value=path, strict=path_strict, encoding=path_encoding)
+        resolved = pathlib.Path(path.splitlines()[0])
+    elif isinstance(path, str):
+        resolved = pathlib.Path(path.splitlines()[0])
+    elif isinstance(path, pathlib.Path):
+        resolved = path
+
+    if expanduser:
+        resolved = resolved.expanduser()
+
+    if resolve:
+        resolved = resolved.resolve()
+
+    vstr = f"(supplied {type_str(path)})"
+    rstr = f"Resolved path {str(resolved)!r}"
+
+    if as_file and not resolved.is_file():
+        raise ToolsError(f"{rstr} does not exist as a file {vstr}")
+
+    if as_dir and not resolved.is_dir():
+        raise ToolsError(f"{rstr} does not exist as a directory {vstr}")
+
+    if isinstance(exts, list) and exts and resolved.suffix not in exts:
+        raise ToolsError(f"{rstr} with extension {resolved.suffix!r} is not one of {exts}")
+
+    return resolved
+
+
+def is_existing_file(path: t.Any, **kwargs) -> bool:
+    """Check if the supplied value refers to an existing file."""
+    if isinstance(path, pathlib.Path) and path.is_file():
+        return True
+
+    try:
+        if isinstance(path, (str, bytes)):
+            return pathify(path=path, **kwargs).is_file()
+    except Exception:
+        return False
+
+    return False
+
+
+def listify(obj: t.Any, dictkeys: bool = False) -> list:
     """Force an object into a list.
 
     Notes:
@@ -83,22 +141,20 @@ def listify(obj: Any, dictkeys: bool = False) -> list:
         obj: object to coerce to list
         dictkeys: if obj is dict, return list of keys of obj
     """
+    if isinstance(obj, types.GeneratorType):
+        return obj
     if isinstance(obj, list):
         return obj
-
-    if isinstance(obj, tuple):
-        return list(obj)
-
     if obj is None:
         return []
-
-    if isinstance(obj, dict) and dictkeys:
+    if isinstance(obj, (tuple, set)):
         return list(obj)
-
+    if dictkeys and isinstance(obj, dict):
+        return list(obj)
     return [obj]
 
 
-def grouper(iterable: Iterable, n: int, fillvalue: Optional[Any] = None) -> Iterator:
+def grouper(iterable: t.Iterable, n: int, fillvalue: t.Optional[t.Any] = None) -> t.Iterator:
     """Split an iterable into chunks.
 
     Args:
@@ -110,12 +166,12 @@ def grouper(iterable: Iterable, n: int, fillvalue: Optional[Any] = None) -> Iter
 
 
 def coerce_int(
-    obj: Any,
-    max_value: Optional[int] = None,
-    min_value: Optional[int] = None,
+    obj: t.Any,
+    max_value: t.Optional[int] = None,
+    min_value: t.Optional[int] = None,
     allow_none: bool = False,
-    valid_values: Optional[List[int]] = None,
-    errmsg: Optional[str] = None,
+    valid_values: t.Optional[t.List[int]] = None,
+    errmsg: t.Optional[str] = None,
 ) -> int:
     """Convert an object into int.
 
@@ -129,12 +185,11 @@ def coerce_int(
         return None
 
     pre = f"{errmsg}\n" if errmsg else ""
-    vtype = trype(obj)
 
     try:
         value = int(obj)
     except Exception:
-        raise ToolsError(f"{pre}Supplied value {obj!r} of type {vtype} is not an integer.")
+        raise ToolsError(f"{pre}Supplied value {obj!r} of type {trype(obj)} is not an integer.")
 
     if max_value is not None and value > max_value:
         raise ToolsError(f"{pre}Supplied value {obj!r} is greater than max value of {max_value}.")
@@ -148,7 +203,7 @@ def coerce_int(
     return value
 
 
-def coerce_int_float(value: Union[int, float, str]) -> Union[int, float]:
+def coerce_int_float(value: t.Union[int, float, str]) -> t.Union[int, float]:
     """Convert an object into int or float.
 
     Args:
@@ -176,7 +231,7 @@ def coerce_int_float(value: Union[int, float, str]) -> Union[int, float]:
     raise ToolsError(f"Supplied value {value!r} of type {vtype} is not an integer or float.")
 
 
-def coerce_bool(obj: Any, errmsg: Optional[str] = None) -> bool:
+def coerce_bool(obj: t.Any, errmsg: t.Optional[str] = None) -> bool:
     """Convert an object into bool.
 
     Args:
@@ -212,19 +267,19 @@ def coerce_bool(obj: Any, errmsg: Optional[str] = None) -> bool:
     raise ToolsError("\n".join(msg))
 
 
-def is_str(value: Any, not_empty: bool = True) -> bool:
+def is_str(value: t.Any, not_empty: bool = True) -> bool:
     """Check if value is non empty string."""
     return isinstance(value, str) and (
         isinstance(value, str) and bool(value.strip()) if not_empty else True
     )
 
 
-def is_email(value: Any) -> bool:
+def is_email(value: t.Any) -> bool:
     """Check if a value is a valid email."""
     return is_str(value=value, not_empty=True) and bool(EMAIL_RE.fullmatch(value))
 
 
-def is_int(obj: Any, digit: bool = False) -> bool:
+def is_int(obj: t.Any, digit: bool = False) -> bool:
     """Check if obj is int typeable.
 
     Args:
@@ -255,7 +310,7 @@ def join_url(url: str, *parts) -> str:
     return url
 
 
-def strip_right(obj: Union[List[str], str], fix: str) -> Union[List[str], str]:
+def strip_right(obj: t.Union[t.List[str], str], fix: str) -> t.Union[t.List[str], str]:
     """Strip text from the right side of obj.
 
     Args:
@@ -274,7 +329,7 @@ def strip_right(obj: Union[List[str], str], fix: str) -> Union[List[str], str]:
     return obj
 
 
-def strip_left(obj: Union[List[str], str], fix: str) -> Union[List[str], str]:
+def strip_left(obj: t.Union[t.List[str], str], fix: str) -> t.Union[t.List[str], str]:
     """Strip text from the left side of obj.
 
     Args:
@@ -315,21 +370,21 @@ class AxJSONEncoder(json.JSONEncoder):
         return super().default(obj)  # pragma: no cover
 
 
-def has_to_dict(obj: Any) -> bool:
+def has_to_dict(obj: t.Any) -> bool:
     """Pass."""
     return hasattr(obj, "to_dict") and callable(obj.to_dict)
 
 
 def json_dump(
-    obj: Any,
+    obj: t.Any,
     indent: int = 2,
     sort_keys: bool = False,
     error: bool = True,
-    fallback: Any = str,
+    fallback: t.Any = str,
     to_dict: bool = True,
-    cls: Type = AxJSONEncoder,
+    cls: t.Type = AxJSONEncoder,
     **kwargs,
-) -> Any:
+) -> t.Any:
     """Serialize an object into json str.
 
     Args:
@@ -354,7 +409,22 @@ def json_dump(
         return obj
 
 
-def json_load(obj: str, error: bool = True, **kwargs) -> Any:
+def lens(value: t.Any) -> t.Optional[int]:
+    """Pass."""
+    try:
+        return len(value)
+    except Exception:
+        return None
+
+
+def tlens(value: t.Any) -> t.Optional[int]:
+    """Pass."""
+    return f"type={trype(value)}, length={lens(value)}"
+
+
+def json_load(
+    obj: t.Union[str, t.IO, pathlib.Path], error: bool = True, close_fh: bool = True, **kwargs
+) -> t.Any:
     """Deserialize a json str into an object.
 
     Args:
@@ -362,18 +432,162 @@ def json_load(obj: str, error: bool = True, **kwargs) -> Any:
         error: if json error happens, raise it
         **kwargs: passed to :func:`json.loads`
     """
+    load = obj
+    method = json.loads
+    fh = None
+    if is_existing_file(load):
+        method = json.load
+        path = pathify(obj)
+        fh = load = path.open()
+
+    if isinstance(load, (io.TextIOBase, io.BufferedIOBase)):
+        method = json.load
+
     try:
-        return json.loads(obj, **kwargs)
-    except Exception:
+        return method(load, **kwargs)
+    except Exception as exc:
+        msgs = [
+            f"Unable to load JSON from supplied {tlens(obj)}",
+            f"error: {exc}",
+        ]
+        msgs = "\n".join(msgs)
+        LOG.exception(msgs)
         if error:
-            raise
+            nexc = ToolsError(msgs)
+            nexc.obj = obj
+            nexc.load = load
+            nexc.orig_exc = exc
+            raise nexc
+
         return obj
+    finally:
+        try:
+            if close_fh and fh is not None:
+                fh.close()
+        except Exception:
+            pass
+
+
+def is_file_like(value: t.Any) -> bool:
+    """Pass."""
+    return isinstance(value, (io.TextIOBase, io.BufferedIOBase))
+
+
+def csv_load(
+    value: t.Union[str, bytes, PathLike, t.IO],
+    encoding: str = "utf-8-sig",
+    restkey: t.Optional[str] = "extra_columns",
+    close_fh: bool = True,
+    **kwargs,
+) -> csv.DictReader:
+    """Pass."""
+    kwargs["restkey"] = restkey
+    fh = None
+    if is_existing_file(value):
+        path = pathify(value)
+        kwargs["f"] = fh = path.open(newline="", encoding=encoding)
+    elif is_file_like(value):
+        fh = value
+        kwargs["f"] = value
+    elif isinstance(value, str):
+        kwargs["f"] = io.StringIO(value)
+    elif isinstance(value, bytes):
+        kwargs["f"] = io.BytesIO(value)
+    try:
+        reader = csv.DictReader(**kwargs)
+        reader.rows = list(reader)
+        return reader
+    except Exception as exc:
+        msgs = [
+            f"Unable to load CSV {tlens(value)} using args {kwargs}",
+            f"error: {exc}",
+        ]
+        msgs = "\n".join(msgs)
+        LOG.exception(msgs)
+
+        nexc = ToolsError(msgs)
+        nexc.value = value
+        nexc.kwargs = kwargs
+        nexc.orig_exc = exc
+        raise nexc
+    finally:
+        if close_fh and fh is not None:
+            try:
+                fh.close()
+            except Exception:
+                pass
+
+
+def jsonl_loader(item: str, idx: int, error: bool = True, **kwargs) -> t.Any:
+    """Pass."""
+    try:
+        return json.loads(item, **kwargs)
+    except Exception as exc:
+        msgs = [
+            f"Unable to load JSONL item #{idx + 1}: {item}",
+            f"error: {exc}",
+        ]
+        msgs = "\n".join(msgs)
+        LOG.exception(msgs)
+
+        if error:
+            nexc = ToolsError(msgs)
+            nexc.item = item
+            nexc.orig_exc = exc
+            raise nexc
+
+
+def jsonl_load(
+    obj: t.Union[str, t.List[str], t.IO], error: bool = True, close_fh: bool = True, **kwargs
+) -> t.List[t.Any]:
+    """Deserialize a jsonl str into an object.
+
+    Args:
+        obj: str to deserialize into obj
+        error: if json error happens, raise it
+        **kwargs: passed to :func:`json.loads`
+    """
+
+    def is_item(item):
+        if not isinstance(item, str):
+            return False
+        if not item.strip() or item.startswith("#"):
+            return False
+        return True
+
+    fh = None
+
+    if is_existing_file(obj):
+        path = pathify(obj)
+        fh = path.open()
+        items = fh.readlines
+    elif is_file_like(obj):
+        fh = obj
+        items = obj.readlines
+    elif isinstance(obj, (tuple, list)):
+        items = obj
+    elif isinstance(obj, str):
+        items = obj.splitlines
+    else:
+        raise ToolsError(f"Unexpected type {tlens(obj)}, must be str, bytes, {t.IO}, or {PathLike}")
+
+    ret = [
+        jsonl_loader(item=item, idx=idx, error=error, **kwargs)
+        for idx, item in enumerate(items() if callable(items) else items)
+        if is_item(item)
+    ]
+    try:
+        if close_fh and fh is not None:
+            fh.close()
+    except Exception:
+        pass
+    return ret
 
 
 def json_log(
-    obj: Any,
+    obj: t.Any,
     error: bool = False,
-    trim: Optional[int] = MAX_BODY_LEN,
+    trim: t.Optional[int] = MAX_BODY_LEN,
     trim_lines: bool = True,
     trim_msg: str = TRIM_MSG,
     **kwargs,
@@ -385,9 +599,9 @@ def json_log(
 
 
 def json_reload(
-    obj: Any,
+    obj: t.Any,
     error: bool = False,
-    trim: Optional[int] = None,
+    trim: t.Optional[int] = None,
     trim_lines: bool = False,
     trim_msg: str = TRIM_MSG,
     **kwargs,
@@ -406,7 +620,38 @@ def json_reload(
     return obj
 
 
-def dt_parse(obj: Union[str, timedelta, datetime], default_tz_utc: bool = False) -> datetime:
+def text_load(
+    value: t.Union[str, t.List[str], t.IO], close_fh: bool = True
+) -> t.Generator[str, None, None]:
+    """Pass."""
+    fh = None
+    if is_existing_file(value):
+        path = pathify(value)
+        fh = path.open()
+        lines = fh.readlines
+    elif is_file_like(value):
+        fh = value
+        lines = value.readlines
+    elif isinstance(value, str):
+        lines = value.splitlines
+    elif isinstance(value, (list, tuple)):
+        lines = value
+    else:
+        raise ToolsError(
+            f"Must supply str, list of str, {pathlib.Path}, or {t.IO}, supplied {tlens(value)}"
+        )
+
+    try:
+        yield from [line for line in (lines() if callable(lines) else lines)]
+    finally:
+        try:
+            if close_fh and fh is not None:
+                fh.close()
+        except Exception:
+            pass
+
+
+def dt_parse(obj: t.Union[str, timedelta, datetime], default_tz_utc: bool = False) -> datetime:
     """Parse a str, datetime, or timedelta into a datetime object.
 
     Notes:
@@ -434,7 +679,7 @@ def dt_parse(obj: Union[str, timedelta, datetime], default_tz_utc: bool = False)
     return value
 
 
-def dt_parse_tmpl(obj: Union[str, timedelta, datetime], tmpl: str = "%Y-%m-%d") -> str:
+def dt_parse_tmpl(obj: t.Union[str, timedelta, datetime], tmpl: str = "%Y-%m-%d") -> str:
     """Parse a string into the format used by the REST API.
 
     Args:
@@ -460,7 +705,7 @@ def dt_parse_tmpl(obj: Union[str, timedelta, datetime], tmpl: str = "%Y-%m-%d") 
 
 
 def dt_now(
-    delta: Optional[timedelta] = None,
+    delta: t.Optional[timedelta] = None,
     tz: timezone = dateutil.tz.tzutc(),
 ) -> datetime:
     """Get the current datetime in for a specific tz.
@@ -479,7 +724,7 @@ def dt_now_file(fmt: str = FILE_DATE_FMT, **kwargs):
     return dt_now(**kwargs).strftime(fmt)
 
 
-def dt_sec_ago(obj: Union[str, timedelta, datetime], exact: bool = False) -> int:
+def dt_sec_ago(obj: t.Union[str, timedelta, datetime], exact: bool = False) -> int:
     """Get number of seconds ago a given datetime was.
 
     Args:
@@ -491,7 +736,7 @@ def dt_sec_ago(obj: Union[str, timedelta, datetime], exact: bool = False) -> int
     return value if exact else round(value)
 
 
-def dt_min_ago(obj: Union[str, timedelta, datetime]) -> int:
+def dt_min_ago(obj: t.Union[str, timedelta, datetime]) -> int:
     """Get number of minutes ago a given datetime was.
 
     Args:
@@ -500,7 +745,7 @@ def dt_min_ago(obj: Union[str, timedelta, datetime]) -> int:
     return round(dt_sec_ago(obj=obj) / 60)
 
 
-def dt_days_left(obj: Optional[Union[str, timedelta, datetime]]) -> Optional[int]:
+def dt_days_left(obj: t.Optional[t.Union[str, timedelta, datetime]]) -> t.Optional[int]:
     """Get number of days left until a given datetime.
 
     Args:
@@ -516,8 +761,8 @@ def dt_days_left(obj: Optional[Union[str, timedelta, datetime]]) -> Optional[int
 
 
 def dt_within_min(
-    obj: Union[str, timedelta, datetime],
-    n: Optional[Union[str, int]] = None,
+    obj: t.Union[str, timedelta, datetime],
+    n: t.Optional[t.Union[str, int]] = None,
 ) -> bool:
     """Check if given datetime is within the past n minutes.
 
@@ -542,7 +787,7 @@ def get_path(obj: PathLike) -> pathlib.Path:
 
 def path_read(
     obj: PathLike, binary: bool = False, is_json: bool = False, **kwargs
-) -> Union[bytes, str]:
+) -> t.Union[bytes, str]:
     """Read data from a file.
 
     Notes:
@@ -616,7 +861,7 @@ def path_create_parent_dir(
 
 def path_backup_file(
     path: PathLike,
-    backup_path: Optional[PathLike] = None,
+    backup_path: t.Optional[PathLike] = None,
     make_parent: bool = True,
     protect_parent=0o700,
     **kwargs,
@@ -643,10 +888,10 @@ def path_backup_file(
 
 def auto_suffix(
     path: PathLike,
-    data: Union[bytes, str],
+    data: t.Union[bytes, str],
     error: bool = False,
     **kwargs,
-) -> Union[bytes, str]:
+) -> t.Union[bytes, str]:
     """Pass."""
     path = get_path(obj=path)
 
@@ -657,10 +902,10 @@ def auto_suffix(
 
 def path_write(
     obj: PathLike,
-    data: Union[bytes, str],
+    data: t.Union[bytes, str],
     overwrite: bool = False,
     backup: bool = False,
-    backup_path: Optional[PathLike] = None,
+    backup_path: t.Optional[PathLike] = None,
     binary: bool = False,
     binary_encoding: str = "utf-8",
     is_json: bool = False,
@@ -669,7 +914,7 @@ def path_write(
     protect_parent=0o700,
     suffix_auto: bool = True,
     **kwargs,
-) -> Tuple[pathlib.Path, Tuple[int, Optional[pathlib.Path]]]:
+) -> t.Tuple[pathlib.Path, t.Tuple[int, t.Optional[pathlib.Path]]]:
     """Write data to a file.
 
     Notes:
@@ -732,7 +977,7 @@ def path_write(
     return obj, (bytes_written, backup_path)
 
 
-def longest_str(obj: List[str]) -> int:
+def longest_str(obj: t.List[str]) -> int:
     """Determine the length of the longest string in a list of strings.
 
     Args:
@@ -742,13 +987,13 @@ def longest_str(obj: List[str]) -> int:
 
 
 def split_str(
-    obj: Union[List[str], str],
+    obj: t.Union[t.List[str], str],
     split: str = ",",
-    strip: Optional[str] = None,
+    strip: t.Optional[str] = None,
     do_strip: bool = True,
     lower: bool = True,
     empty: bool = False,
-) -> List[str]:
+) -> t.List[str]:
     """Split a string or list of strings into a list of strings.
 
     Args:
@@ -791,79 +1036,106 @@ def split_str(
     return ret
 
 
-def echo_debug(msg: str, tmpl: bool = True, **kwargs):
+def echo_debug(msg: str, **kwargs):
     """Echo a message to console.
 
     Args:
         msg: message to echo
-        tmpl: template to using for echo
-        kwargs: passed to ``click.secho``
+        kwargs: passed to ``echo``
     """
-    echoargs = {}
-    echoargs.update(DEBUG_ARGS)
-    echoargs.update(kwargs)
-    if tmpl:
-        msg = DEBUG_TMPL.format(msg=msg)
-
-    LOG.debug(msg)
-    click.secho(msg, **echoargs)
+    kwargs.setdefault("style_args", DEBUG_ARGS)
+    kwargs.setdefault("style_tmpl", DEBUG_TMPL)
+    kwargs.setdefault("log_level", "debug")
+    return echo(msg=msg, **kwargs)
 
 
-def echo_ok(msg: str, tmpl: bool = True, **kwargs):
+def echo_ok(msg: str, **kwargs):
     """Echo a message to console.
 
     Args:
         msg: message to echo
-        tmpl: template to using for echo
-        kwargs: passed to ``click.secho``
+        kwargs: passed to ``echo``
     """
-    echoargs = {}
-    echoargs.update(OK_ARGS)
-    echoargs.update(kwargs)
-    if tmpl:
-        msg = OK_TMPL.format(msg=msg)
-
-    LOG.info(msg)
-    click.secho(msg, **echoargs)
+    kwargs.setdefault("style_args", OK_ARGS)
+    kwargs.setdefault("style_tmpl", OK_TMPL)
+    kwargs.setdefault("log_level", "info")
+    return echo(msg=msg, **kwargs)
 
 
-def echo_warn(msg: str, tmpl: bool = True, **kwargs):
+def echo_warn(msg: str, **kwargs):
     """Echo a warning message to console.
 
     Args:
         msg: message to echo
-        tmpl: template to using for echo
-        kwargs: passed to ``click.secho``
+        kwargs: passed to ``echo``
     """
-    echoargs = {}
-    echoargs.update(WARN_ARGS)
-    echoargs.update(kwargs)
-    if tmpl:
-        msg = WARN_TMPL.format(msg=msg)
-
-    LOG.warning(msg)
-    click.secho(msg, **echoargs)
+    kwargs.setdefault("style_args", WARN_ARGS)
+    kwargs.setdefault("style_tmpl", WARN_TMPL)
+    kwargs.setdefault("log_level", "warning")
+    kwargs["do_echo"] = True
+    return echo(msg=msg, **kwargs)
 
 
-def echo_error(msg: str, abort: bool = True, tmpl: bool = True, **kwargs):
+def echo_error(msg: str, abort=True, **kwargs):
     """Echo an error message to console.
 
     Args:
         msg: message to echo
-        tmpl: template to using for echo
-        kwargs: passed to ``click.secho``
         abort: call sys.exit(1) after echoing message
+        kwargs: passed to ``echo``
     """
-    echoargs = {}
-    echoargs.update(ERROR_ARGS)
-    echoargs.update(kwargs)
-    if tmpl:
-        msg = ERROR_TMPL.format(msg=msg)
+    kwargs.setdefault("style_args", ERROR_ARGS)
+    kwargs.setdefault("style_tmpl", ERROR_TMPL)
+    kwargs.setdefault("log_level", "error")
+    kwargs.setdefault("abort_code", 1)
+    kwargs["do_echo"] = True
+    return echo(msg=msg, abort=abort, **kwargs)
 
-    LOG.error(msg)
-    click.secho(msg, **echoargs)
+
+def echo(
+    msg: t.Optional[t.Union[str, t.List[str]]] = None,
+    abort: bool = False,
+    tmpl: bool = True,
+    log: t.Optional[logging.Logger] = None,
+    log_level: str = "debug",
+    log_method: t.Optional[t.Callable] = None,
+    log_fallback: t.Callable = LOG.debug,
+    style_tmpl: t.Optional[str] = None,
+    style_args: t.Optional[dict] = None,
+    joiner: str = "\n",
+    do_echo: bool = True,
+    abort_code: int = 0,
+    **kwargs,
+):
+    """Pass."""
+    if isinstance(msg, (list, tuple)):
+        msg = joiner.join(msg)
+
+    if callable(log_method):
+        use_method = log_method
+    elif isinstance(log, logging.Logger):
+        use_method = getattr(log, log_level)
+    else:
+        use_method = log_fallback
+
+    use_method(msg)
+
+    if do_echo:
+        echo_msg = msg
+
+        fmt_args = {}
+        fmt_args.update(locals())
+        fmt_args.update(kwargs)
+        if tmpl and is_str(style_tmpl):
+            echo_msg = style_tmpl.format(**fmt_args)
+
+        style_args = style_args if isinstance(style_args, dict) else {}
+        echo_args = get_secho_args(kwargs=kwargs, **style_args)
+        echo_args["message"] = echo_msg
+        click.secho(**echo_args)
+
     if abort:
-        sys.exit(1)
+        sys.exit(abort_code)
 
 
 def sysinfo() -> dict:
@@ -908,7 +1180,7 @@ def sysinfo() -> dict:
     return info
 
 
-def calc_percent(part: Union[int, float], whole: Union[int, float], places: int = 2) -> float:
+def calc_percent(part: t.Union[int, float], whole: t.Union[int, float], places: int = 2) -> float:
     """Calculate the percentage of part out of whole.
 
     Args:
@@ -940,8 +1212,8 @@ def trim_float(value: float, places: int = 2) -> float:
 
 
 def join_kv(
-    obj: Union[List[dict], dict], listjoin: str = ", ", tmpl: str = "{k}: {v!r}"
-) -> List[str]:
+    obj: t.Union[t.List[dict], dict], listjoin: str = ", ", tmpl: str = "{k}: {v!r}"
+) -> t.List[str]:
     """Join a dictionary into key value strings.
 
     Args:
@@ -972,7 +1244,7 @@ def join_kv(
     return items
 
 
-def get_type_str(obj: Any):
+def get_type_str(obj: t.Any):
     """Get the type name of a class.
 
     Args:
@@ -984,7 +1256,7 @@ def get_type_str(obj: Any):
         return obj.__name__
 
 
-def check_type(value: Any, exp: Any, name: str = "", exp_items: Optional[Any] = None):
+def check_type(value: t.Any, exp: t.Any, name: str = "", exp_items: t.Optional[t.Any] = None):
     """Check that a value is the appropriate type.
 
     Args:
@@ -1014,7 +1286,7 @@ def check_type(value: Any, exp: Any, name: str = "", exp_items: Optional[Any] = 
             raise ToolsError(err)
 
 
-def check_empty(value: Any, name: str = ""):
+def check_empty(value: t.Any, name: str = ""):
     """Check if a value is empty.
 
     Args:
@@ -1022,9 +1294,8 @@ def check_empty(value: Any, name: str = ""):
         name: identifier of what value is for
     """
     if not value:
-        vtype = trype(value)
         name = f" for {name!r}" if name else ""
-        err = f"Required value{name} but received an empty {vtype}: {value!r}"
+        err = f"Required value{name} but received an empty {trype(value)}: {value!r}"
         raise ToolsError(err)
 
 
@@ -1054,8 +1325,8 @@ def get_raw_version(value: str) -> str:
 def coerce_str_to_csv(
     value: str,
     coerce_list: bool = False,
-    errmsg: Optional[str] = None,
-) -> List[str]:
+    errmsg: t.Optional[str] = None,
+) -> t.List[str]:
     """Coerce a string into a list of strings.
 
     Args:
@@ -1081,7 +1352,7 @@ def coerce_str_to_csv(
     return new_value
 
 
-def parse_ip_address(value: str) -> Union[ipaddress.IPv4Address, ipaddress.IPv6Address]:
+def parse_ip_address(value: str) -> t.Union[ipaddress.IPv4Address, ipaddress.IPv6Address]:
     """Parse a string into an IP address.
 
     Args:
@@ -1093,7 +1364,7 @@ def parse_ip_address(value: str) -> Union[ipaddress.IPv4Address, ipaddress.IPv6A
         raise ToolsError(str(exc))
 
 
-def parse_ip_network(value: str) -> Union[ipaddress.IPv4Network, ipaddress.IPv6Network]:
+def parse_ip_network(value: str) -> t.Union[ipaddress.IPv4Network, ipaddress.IPv6Network]:
     """Parse a string into an IP network.
 
     Args:
@@ -1121,7 +1392,7 @@ def kv_dump(obj: dict) -> str:
     return "\n  " + "\n  ".join([f"{k}: {v}" for k, v in obj.items()])
 
 
-def bom_strip(content: Union[str, bytes], strip=True, bom: bytes = codecs.BOM_UTF8) -> str:
+def bom_strip(content: t.Union[str, bytes], strip=True, bom: bytes = codecs.BOM_UTF8) -> str:
     """Remove the UTF-8 BOM marker from the beginning of a string.
 
     Args:
@@ -1163,7 +1434,7 @@ def read_stream(stream) -> str:
     return content
 
 
-def check_gui_page_size(size: Optional[int] = None) -> int:
+def check_gui_page_size(size: t.Optional[int] = None) -> int:
     """Check page size to see if it one of the valid GUI page sizes.
 
     Args:
@@ -1181,7 +1452,7 @@ def check_gui_page_size(size: Optional[int] = None) -> int:
     return size
 
 
-def calc_gb(value: Union[str, int], places: int = 2, is_kb: bool = True) -> float:
+def calc_gb(value: t.Union[str, int], places: int = 2, is_kb: bool = True) -> float:
     """Convert bytes into GB.
 
     Args:
@@ -1200,7 +1471,7 @@ def calc_perc_gb(
     obj: dict,
     whole_key: str,
     part_key: str,
-    perc_key: Optional[str] = None,
+    perc_key: t.Optional[str] = None,
     places: int = 2,
     update: bool = True,
     is_kb: bool = True,
@@ -1227,14 +1498,14 @@ def calc_perc_gb(
     return ret
 
 
-def get_subcls(cls: type, excludes: Optional[List[type]] = None) -> list:
+def get_subcls(cls: type, excludes: t.Optional[t.List[type]] = None) -> list:
     """Get all subclasses of a class."""
     excludes = excludes or []
     subs = [s for c in cls.__subclasses__() for s in get_subcls(c)]
     return [x for x in list(set(cls.__subclasses__()).union(subs)) if x not in excludes]
 
 
-def prettify_obj(obj: Union[dict, list], indent: int = 0) -> List[str]:
+def prettify_obj(obj: t.Union[dict, list], indent: int = 0) -> t.List[str]:
     """Pass."""
     spaces = " " * indent
     sub_indent = indent + 2
@@ -1274,24 +1545,24 @@ def is_url(value: str) -> bool:
     return isinstance(value, str) and any([value.startswith(x) for x in URL_STARTS])
 
 
-def bytes_to_str(value: Any) -> Union[str, Any]:
+def bytes_to_str(value: t.Any) -> t.Union[str, t.Any]:
     """Convert obj to str if it is bytes."""
     return value.decode() if isinstance(value, bytes) else value
 
 
-def strip_str(value: Any) -> Union[str, Any]:
+def strip_str(value: t.Any) -> t.Union[str, t.Any]:
     """Strip a value if it is a string."""
     return value.strip() if isinstance(value, str) else value
 
 
 def coerce_str(
-    value: Any,
+    value: t.Any,
     strip: bool = True,
-    none: Any = "",
-    trim: Optional[int] = None,
+    none: t.Any = "",
+    trim: t.Optional[int] = None,
     trim_lines: bool = False,
     trim_msg: str = TRIM_MSG,
-) -> Union[str, Any]:
+) -> t.Union[str, t.Any]:
     """Coerce a value to a string."""
     value = bytes_to_str(value=value)
     if value is None:
@@ -1309,7 +1580,7 @@ def coerce_str(
 
 def str_trim(
     value: str,
-    trim: Optional[int] = None,
+    trim: t.Optional[int] = None,
     trim_lines: bool = False,
     trim_msg: str = TRIM_MSG,
 ) -> str:
@@ -1336,7 +1607,27 @@ def str_trim(
     return value
 
 
-def get_cls_path(value: Any) -> str:
+def strim(value: str, limit: t.Optional[int] = None) -> str:
+    """Pass."""
+    if isinstance(limit, int) and limit > 0 and len(value) > limit:
+        value = value[:limit] + f"... {len(value) - limit} more characters"
+    return value
+
+
+def ltrim(
+    value: t.Union[str, t.List[str]], limit: t.Optional[int] = None, rejoin: bool = False
+) -> t.List[str]:
+    """Pass."""
+    if isinstance(value, str):
+        value = value.splitlines()
+    value = listify(value)
+
+    if isinstance(limit, int) and limit > 0 and len(value) > limit:
+        value = value[:limit] + [f"... {len(value) - limit} more lines"]
+    return value
+
+
+def get_cls_path(value: t.Any) -> str:
     """Pass."""
     if inspect.isclass(value):
         cls = value
@@ -1352,13 +1643,14 @@ def get_cls_path(value: Any) -> str:
 
 
 def csv_writer(
-    rows: List[dict],
-    columns: Optional[List[str]] = None,
+    rows: t.List[dict],
+    columns: t.Optional[t.List[str]] = None,
     quotes: str = "nonnumeric",
     dialect: str = "excel",
     line_ending: str = "\n",
+    stream: t.Optional[t.IO] = None,
     key_extra_error: bool = False,
-    key_missing_value: Optional[Any] = None,
+    key_missing_value: t.Optional[t.Any] = None,
 ) -> str:  # pragma: no cover
     """Pass."""
     quotes = getattr(csv, f"QUOTE_{quotes.upper()}")
@@ -1367,7 +1659,7 @@ def csv_writer(
         for row in rows:
             columns += [x for x in row if x not in columns]
 
-    stream = io.StringIO()
+    stream = stream if is_file_like(stream) else io.StringIO()
     writer = csv.DictWriter(
         stream,
         fieldnames=columns,
@@ -1379,8 +1671,8 @@ def csv_writer(
     )
     writer.writerow(dict(zip(columns, columns)))
     writer.writerows(rows)
+    stream.seek(0)
     content = stream.getvalue()
-    stream.close()
     return content
 
 
@@ -1410,7 +1702,7 @@ def safe_replace(obj: dict, value: str) -> str:
 
 
 def safe_format(
-    value: PathLike, mapping: Optional[Dict[str, str]] = None, as_path: bool = False, **kwargs
+    value: PathLike, mapping: t.Optional[t.Dict[str, str]] = None, as_path: bool = False, **kwargs
 ) -> PathLike:
     """Pass."""
     is_path = isinstance(value, pathlib.Path)
@@ -1426,7 +1718,9 @@ def safe_format(
     return get_path(to_update) if is_path or as_path else to_update
 
 
-def get_paths_format(*args, mapping: Optional[Dict[str, str]] = None) -> Optional[pathlib.Path]:
+def get_paths_format(
+    *args, mapping: t.Optional[t.Dict[str, str]] = None
+) -> t.Optional[pathlib.Path]:
     """Pass."""
     ret = None
     for path in args:
@@ -1452,7 +1746,9 @@ def get_paths_format(*args, mapping: Optional[Dict[str, str]] = None) -> Optiona
     return ret
 
 
-def int_days_map(value: Union[str, List[Union[str, int]]], names: bool = False) -> List[str]:
+def int_days_map(
+    value: t.Union[str, t.List[t.Union[str, int]]], names: bool = False
+) -> t.List[str]:
     """Pass."""
     ret = []
     value = coerce_str_to_csv(value=value, coerce_list=True)
@@ -1488,7 +1784,7 @@ def int_days_map(value: Union[str, List[Union[str, int]]], names: bool = False) 
     return ret
 
 
-def lowish(value: Any) -> Any:
+def lowish(value: t.Any) -> t.Any:
     """Pass."""
     if isinstance(value, (list, tuple)):
         return [lowish(x) for x in value]
@@ -1496,13 +1792,13 @@ def lowish(value: Any) -> Any:
 
 
 def log_or_exc(
-    msg: List[str],
+    msg: t.List[str],
     error: bool = True,
-    log: Union[Callable, logging.Logger] = LOG,
+    log: t.Union[t.Callable, logging.Logger] = LOG,
     log_level: str = "exception",
     log_join: str = "\n",
     exc_cls: Exception = ToolsError,
-    exc_args: Optional[dict] = None,
+    exc_args: t.Optional[dict] = None,
     **kwargs,
 ):
     """Pass."""
@@ -1517,7 +1813,7 @@ def log_or_exc(
         raise exc_cls(msg, **exc_args)
 
 
-def coerce_io(value: Union[str, bytes, IO]) -> IO:
+def coerce_io(value: t.Union[str, bytes, t.IO]) -> t.IO:
     """Pass."""
     if isinstance(value, str):
         return io.StringIO(value)
@@ -1526,17 +1822,33 @@ def coerce_io(value: Union[str, bytes, IO]) -> IO:
     return value
 
 
-def extract_kvs_auto(value: Union[str, bytes, IO], marker_json: str = "json:", **kwargs) -> dict:
+def is_json_dict(value) -> bool:
+    """Pass."""
+    try:
+        check_obj = json.loads(value) if isinstance(value, (str, bytes)) else json.load(value)
+    except Exception:
+        pass
+    else:
+        if isinstance(check_obj, dict):
+            return True
+    return False
+
+
+def extract_kvs_auto(value: t.Union[str, bytes, t.IO], **kwargs) -> dict:
     """Pass."""
     method = extract_kvs_csv
 
     if callable(getattr(value, "read", None)):
         value = value.read()
 
+    marker_json = kwargs.pop("marker_json", "json:")
     marker_len = len(marker_json)
     if isinstance(value, (str, bytes)) and value.lower().lstrip().startswith(marker_json.lower()):
         method = extract_kvs_json
         value = value.lstrip()[marker_len:]
+
+    if is_json_dict(value):
+        method = extract_kvs_json
 
     ret = method(value=value, **kwargs)
     return ret
@@ -1547,7 +1859,7 @@ def trype(value):
     return type(value).__name__
 
 
-def extract_kvs_json(value: Union[str, bytes, IO], **kwargs) -> dict:
+def extract_kvs_json(value: t.Union[str, bytes, t.IO], **kwargs) -> dict:
     """Pass."""
     fh = coerce_io(value)
     ret = {}
@@ -1577,17 +1889,38 @@ def extract_kvs_json(value: Union[str, bytes, IO], **kwargs) -> dict:
     return ret
 
 
-def extract_kvs_csv(value: Union[str, bytes, IO] = None, split_kv: str = "=", **kwargs) -> dict:
+def is_callable(value: t.Any, attr: t.Optional[str] = None, default: t.Any = None) -> bool:
+    """Pass."""
+    if isinstance(attr, str):
+        check = getattr(value, attr, default)
+    else:
+        check = value
+    return callable(check)
+
+
+def extract_kvs_csv(
+    value: t.Union[str, bytes, t.IO] = None,
+    has_headers: bool = False,
+    split_kv: str = "=",
+    **kwargs,
+) -> dict:
     """Pass."""
     ret = {}
     fh = coerce_io(value)
 
-    if callable(getattr(fh, "read", None)):
+    if is_callable(fh, "read") and is_callable(fh, "seek"):
         example = f"key1{split_kv}value1,key2{split_kv}value2"
         splitit = f"key/value split character {split_kv!r}"
 
         rows = list(csv.reader(fh))
+        if len(rows) > 1 and split_kv not in "".join([str(x) for x in rows[0]]):
+            has_headers = True
+
+        if has_headers:
+            rows = rows[1:]
+        # XXX TEST
         rows_cnt = len(rows)
+
         for row_idx, row in enumerate(rows):
             row_num = row_idx + 1
             row_info = f"row #{row_num}/{rows_cnt}"
@@ -1621,10 +1954,121 @@ def extract_kvs_csv(value: Union[str, bytes, IO] = None, split_kv: str = "=", **
     return ret
 
 
-def tilde_re(value: Any) -> Optional[Union[str, Pattern]]:
+def tilde_re(value: t.Any) -> t.Optional[t.Union[str, t.Pattern]]:
     """Pass."""
     if isinstance(value, (list, tuple)):
         return [tilde_re(x) for x in value]
     if isinstance(value, str) and value.startswith("~"):
         return re.compile(value[1:], re.I)
-    return value if isinstance(value, (str, Pattern)) else None
+    return value if isinstance(value, (str, t.Pattern)) else None
+
+
+def is_tty(value: t.Any) -> bool:
+    """Pass."""
+    try:
+        return value.isatty()
+    except Exception:
+        return False
+
+
+def check_tty(value: t.Any, errmsg: str = "unable to prompt"):
+    """Pass."""
+    if not is_tty(value):
+        raise ToolsError(f"{value!r} is not a TTY -- {errmsg}")
+
+
+def check_tty_stdin():
+    """Pass."""
+    check_tty(sys.stdin)
+
+
+def get_secho_args(kwargs: t.Optional[dict] = None, key: t.Optional[str] = None, **sargs):
+    """Pass."""
+    kwargs = kwargs if isinstance(kwargs, dict) else {}
+    ret = {}
+    skey = f"style_{key}"
+
+    for arg in SECHO_ARGS:
+        checks = [arg]
+
+        if is_str(key):
+            checks.insert(0, f"{arg}_{key}")
+
+        for check in checks:
+            if check in kwargs:
+                ret.setdefault(arg, kwargs[check])
+            elif check in sargs:
+                ret.setdefault(arg, sargs[check])
+
+    if skey in kwargs:
+        ret.update(kwargs[skey])
+
+    if "stderr" in ret:
+        ret["err"] = ret.pop("stderr")
+
+    ret.setdefault("err", True)
+    return ret
+
+
+def confirm(
+    msgs: t.Optional[t.Union[str, t.List[str]]] = None,
+    text: t.Optional[str] = None,
+    abort: bool = False,
+    default: bool = False,
+    text_confirm: str = "Please confirm",
+    join: str = "\n",
+    check_stdin: bool = True,
+    **kwargs,
+):
+    """Pass."""
+    if check_stdin:
+        check_tty_stdin()
+    use_msgs = listify(msgs)
+    style_msgs = kwargs.get("style_msgs", {"fg": "blue", "bold": True})
+    style_text = kwargs.get("style_text", {"fg": "white", "bold": False})
+    if use_msgs:
+        secho_msg = get_secho_args(key="msgs", kwargs=kwargs, **style_msgs)
+        click.secho(message=join.join(use_msgs), **secho_msg)
+    if is_str(text):
+        secho_text = get_secho_args(key="text", kwargs=kwargs, **style_text)
+        click.secho(message=text, **secho_text)
+    text_confirm = click.style(text_confirm, bold=True)
+    answer = click.confirm(
+        text=text_confirm, default=default, abort=abort, err=kwargs.get("stderr", True)
+    )
+    return answer
+
+
+def csv_able(value: t.Optional[t.Union[str, t.List[str]]]) -> t.List[str]:
+    """Pass."""
+    ret = []
+    if is_str(value):
+        ret += [x.strip() for x in value.split(",") if is_str(x) and x not in ret]
+
+    if isinstance(value, (list, tuple, set)):
+        for item in value:
+            ret += [x for x in csv_able(value=item) if x not in ret]
+    return ret
+
+
+def is_list(value: t.Any) -> bool:
+    """Pass."""
+    return isinstance(value, (list, tuple))
+
+
+def style_switch(
+    text: str,
+    switch: bool = False,
+    args_true: dict = {"fg": "green", "bold": True},
+    args_false: str = {"fg": "red", "bold": True},
+):
+    """Pass."""
+    args = args_true if switch else args_false
+    return click.style(text=text, **args)
+
+
+def add_source(source: str, kwargs: dict) -> str:
+    """Pass."""
+    ksource = kwargs.get("source", "")
+    ksource = f"{ksource} / " if ksource else ""
+    return f"{ksource}{source}"

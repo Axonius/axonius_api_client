@@ -3,6 +3,7 @@
 import dataclasses
 import inspect
 import logging
+import os
 from typing import List, Optional, Tuple, Type, Union
 
 import requests
@@ -23,6 +24,8 @@ from ..http import Http
 from ..logs import get_obj_log
 from ..tools import combo_dicts, get_cls_path, json_log
 from .json_api.base import BaseModel, BaseSchema, BaseSchemaJson
+
+LOG_LEVEL: str = os.environ.get("AX_ENDPOINT_LOG_LEVEL") or "info"
 
 
 def check_model_cls(obj: type, src: str):
@@ -78,7 +81,7 @@ class ApiEndpoint:
     response_json_error: bool = True
     """Throw errors if the JSON can not be serialized."""
 
-    log_level: str = "debug"
+    log_level: str = LOG_LEVEL
     """Log level for this objects logger."""
 
     def __str__(self):
@@ -114,7 +117,8 @@ class ApiEndpoint:
     @property
     def log(self) -> logging.Logger:
         """Get the logger for this object."""
-        return get_obj_log(obj=self, level=self.log_level)
+        ret = get_obj_log(obj=self, level=self.log_level)
+        return ret
 
     def perform_request(
         self, http: Http, request_obj: Optional[BaseModel] = None, raw: bool = False, **kwargs
@@ -403,12 +407,9 @@ class ApiEndpoint:
         Returns:
             str: formatted string of :attr:`path`
         """
-        kwargs = combo_dicts(kwargs, {"path": self.path})
-
-        if callable(getattr(request_obj, "dump_request_path", None)):
-            method = request_obj.dump_request_path
-        else:
-            method = self.path.format
+        kwargs = combo_dicts(kwargs, path=self.path)
+        cls_dump = getattr(request_obj, "dump_request_path", None)
+        method = cls_dump if callable(cls_dump) else self.path.format
 
         try:
             return method(**kwargs)

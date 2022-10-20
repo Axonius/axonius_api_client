@@ -4,9 +4,11 @@ import copy
 
 import pytest
 
+from ...utils import FLAKY
 from .test_callbacks import CallbacksFull
 
 
+@FLAKY()
 class TestCallbacksBase(CallbacksFull):
     @pytest.fixture(params=["api_devices"], scope="class")
     def apiobj(self, request):

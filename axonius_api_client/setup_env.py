@@ -158,10 +158,10 @@ def get_env_bool(key: str, default: Optional[bool] = None) -> bool:
         :exc:`ValueError`: OS env var value is not able to be converted to bool
     """
     value = get_env_str(key=key, default=default, lower=True)
-    if value in YES:
+    if value in YES or value is True:
         return True
 
-    if value in NO:
+    if value in NO or value is False:
         return False
 
     msg = [
