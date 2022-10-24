@@ -154,6 +154,7 @@ EPI_CSV: str = """
 \b
 # Notes:
 # 1) --path must be a CSV file with headers
+# 2) --path can also be a CSV file exported from the GUI.
 
 \b
 # Example:

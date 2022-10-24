@@ -430,6 +430,7 @@ class AssetMixin(ModelMixins):
         Examples:
             '''Get a list of assets from a query and export the assets to a JSONL str
             then run an enforcement against all asset IDs from the JSONL str.
+            We can also use a CSV file exported from the GUI.
             We know assets are valid because we just got them, so we pass verified=True.
             '''
             from axonius_api_client.tools import bom_strip
