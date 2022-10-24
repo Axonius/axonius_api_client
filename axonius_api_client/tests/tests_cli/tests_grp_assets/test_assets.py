@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 """Test suite."""
 import pytest
+from axonius_api_client.api import Runner
 from axonius_api_client.cli import cli
-from axonius_api_client.tools import json_load, pathify
+from axonius_api_client.tools import csv_load, json_load, pathify
 
 from ...tests_api.tests_assets.test_runner import RunEnforcements
 from ...utils import FLAKY, get_rows_exist, load_clirunner
@@ -25,12 +26,19 @@ class CliRunEnforcements(RunEnforcements):
                     "csv",
                     "--export-file",
                     f"{file_name}",
+                    "--export-overwrite",
                 ],
             )
             assert get_data.stderr
             assert get_data.exit_code == 0
             assert not get_data.stdout
             assert file_name.is_file()
+            reader = csv_load(file_name)
+            data = reader.rows
+            assert isinstance(data, list)
+            assert len(data) == 2
+            for item in data:
+                assert isinstance(item, dict) and item
 
             prompt_no = runner.invoke(
                 cli=cli,
@@ -44,7 +52,7 @@ class CliRunEnforcements(RunEnforcements):
                     "--no-prompt",
                 ],
             )
-            assert prompt_no.stderr
+            assert Runner._trun_pre in prompt_no.stderr
             assert prompt_no.exit_code == 0
             assert prompt_no.stdout
 
@@ -81,7 +89,7 @@ class CliRunEnforcements(RunEnforcements):
                         f"{file_name}",
                     ],
                 )
-                assert prompt_yes.stderr
+                assert Runner._trun_pre in prompt_yes.stderr
                 assert prompt_yes.exit_code == 0
                 assert prompt_yes.stdout
 
@@ -106,6 +114,11 @@ class CliRunEnforcements(RunEnforcements):
             assert get_data.exit_code == 0
             assert not get_data.stdout
             assert file_name.is_file()
+            data = json_load(file_name)
+            assert isinstance(data, list)
+            assert len(data) == 2
+            for item in data:
+                assert isinstance(item, dict) and item
 
             prompt_no = runner.invoke(
                 cli=cli,
@@ -119,7 +132,7 @@ class CliRunEnforcements(RunEnforcements):
                     "--no-prompt",
                 ],
             )
-            assert prompt_no.stderr
+            assert Runner._trun_pre in prompt_no.stderr
             assert prompt_no.exit_code == 0
             assert prompt_no.stdout
 
@@ -156,7 +169,7 @@ class CliRunEnforcements(RunEnforcements):
                         f"{file_name}",
                     ],
                 )
-                assert prompt_yes.stderr
+                assert Runner._trun_pre in prompt_yes.stderr
                 assert prompt_yes.exit_code == 0
                 assert prompt_yes.stdout
 
@@ -195,7 +208,7 @@ class CliRunEnforcements(RunEnforcements):
                     "--no-prompt",
                 ],
             )
-            assert prompt_no.stderr
+            assert Runner._trun_pre in prompt_no.stderr
             assert prompt_no.exit_code == 0
             assert prompt_no.stdout
 
@@ -232,7 +245,7 @@ class CliRunEnforcements(RunEnforcements):
                         f"{file_name}",
                     ],
                 )
-                assert prompt_yes.stderr
+                assert Runner._trun_pre in prompt_yes.stderr
                 assert prompt_yes.exit_code == 0
                 assert prompt_yes.stdout
 
@@ -254,7 +267,7 @@ class CliRunEnforcements(RunEnforcements):
                     "--no-prompt",
                 ],
             )
-            assert prompt_no.stderr
+            assert Runner._trun_pre in prompt_no.stderr
             assert prompt_no.exit_code == 0
             assert prompt_no.stdout
 
@@ -291,7 +304,7 @@ class CliRunEnforcements(RunEnforcements):
                         f"{file_name}",
                     ],
                 )
-                assert prompt_yes.stderr
+                assert Runner._trun_pre in prompt_yes.stderr
                 assert prompt_yes.exit_code == 0
                 assert prompt_yes.stdout
 
@@ -627,10 +640,15 @@ class GrpAssetsBase:
 class TestGrpAssetsDevices(GrpAssetsBase, CliRunEnforcements):
     @pytest.fixture(scope="class")
     def apiobj(self, api_devices):
+        if not api_devices.ORIGINAL_ROWS:
+            pytest.skip(f"No assets available for {api_devices}")
         return api_devices
 
 
 class TestGrpAssetsUsers(GrpAssetsBase, CliRunEnforcements):
     @pytest.fixture(scope="class")
     def apiobj(self, api_users):
+        if not api_users.ORIGINAL_ROWS:
+            pytest.skip(f"No assets available for {api_users}")
+
         return api_users
