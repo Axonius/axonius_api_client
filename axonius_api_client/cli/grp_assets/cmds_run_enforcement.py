@@ -113,12 +113,84 @@ OPTIONS = [
     *OPTS_RUNNER,
 ]
 
+EPI_JSON: str = """
+\b
+# Notes:
+# 1) --path must be a JSON file containing a list of dictionaries
 
-@click.command(
-    name="run-enforcement-from-json",
-    context_settings=CONTEXT_SETTINGS,
-    epilog="--path must be a JSON file containing a list of dictionaries",
-)
+\b
+# Example:
+# 1) Get assets in JSON format:
+axonshell devices get --export-format json --export-file data.json --export-overwrite --wiz simple 'os.type equals windows'
+# 2) Run an enforcement set against the asset IDs in the JSON file:
+# 2a) prompting to verify the count:
+axonshell devices run-enforcement-from-json --path data.json --eset test
+# 2b) With no prompting (will error out if the count mismatches):
+axonshell devices run-enforcement-from-json --path data.json --eset test --no-prompt
+# 2c) With no verification because we know the asset IDs are valid for this instance:
+axonshell devices run-enforcement-from-json --path data.json --eset test --verified
+"""  # noqa
+
+EPI_JSONL: str = """
+\b
+# Notes:
+# 1) --path must be a JSONL file with one dictionary per line
+
+\b
+# Example:
+# 1) Get assets in JSONL format:
+axonshell devices get --export-format json --json-flat --export-file data.jsonl --export-overwrite --wiz simple 'os.type equals windows'
+# 2) Run an enforcement set against the asset IDs in the JSON file:
+# 2a) prompting to verify the count:
+axonshell devices run-enforcement-from-jsonl --path data.jsonl --eset test
+# 2b) With no prompting (will error out if the count mismatches):
+axonshell devices run-enforcement-from-jsonl --path data.jsonl --eset test --no-prompt
+# 2c) With no verification because we know the asset IDs are valid for this instance:
+axonshell devices run-enforcement-from-jsonl --path data.jsonl --eset test --verified
+"""  # noqa
+
+
+EPI_CSV: str = """
+\b
+# Notes:
+# 1) --path must be a CSV file with headers
+
+\b
+# Example:
+# 1) Get assets in CSV format:
+axonshell devices get --export-format csv --export-file data.csv --export-overwrite --wiz simple 'os.type equals windows'
+# 2) Run an enforcement set against the asset IDs in the CSV file:
+# 2a) prompting to verify the count:
+axonshell devices run-enforcement-from-csv --path data.csv --eset test
+# 2b) With no prompting (will error out if the count mismatches):
+axonshell devices run-enforcement-from-csv --path data.csv --eset test --no-prompt
+# 2c) With no verification because we know the asset IDs are valid for this instance:
+axonshell devices run-enforcement-from-csv --path data.csv --eset test --verified
+"""  # noqa
+
+EPI_TEXT: str = """
+\b
+# Notes:
+# 1) --path must be a text file with valid asset IDs
+# 2) All lines will have any non alpha-numeric characters removed from them and
+#   if a 32 character alpha numeric string is found it is considered an Asset ID.
+
+\b
+# Example:
+# 1) Get assets in JSON format then use jq to extract the IDs to a text file:
+axonshell devices get --export-format json --export-file data.json --export-overwrite --wiz simple 'os.type equals windows'
+jq '.[].internal_axon_id' data.json > data.txt
+# 2) Run an enforcement set against the asset IDs in the text file:
+# 2a) prompting to verify the count:
+axonshell devices run-enforcement-from-text --path data.txt --eset test
+# 2b) With no prompting (will error out if the count mismatches):
+axonshell devices run-enforcement-from-text --path data.txt --eset test --no-prompt
+# 2c) With no verification because we know the asset IDs are valid for this instance:
+axonshell devices run-enforcement-from-text --path data.txt --eset test --verified
+"""  # noqa
+
+
+@click.command(name="run-enforcement-from-json", context_settings=CONTEXT_SETTINGS, epilog=EPI_JSON)
 @add_options(OPTIONS)
 @click.pass_context
 def from_json(ctx, url, key, secret, **kwargs):
@@ -133,9 +205,7 @@ def from_json(ctx, url, key, secret, **kwargs):
 
 
 @click.command(
-    name="run-enforcement-from-jsonl",
-    context_settings=CONTEXT_SETTINGS,
-    epilog="--path must be a JSONL file with one dictionary per line",
+    name="run-enforcement-from-jsonl", context_settings=CONTEXT_SETTINGS, epilog=EPI_JSONL
 )
 @add_options(OPTIONS)
 @click.pass_context
@@ -150,11 +220,7 @@ def from_jsonl(ctx, url, key, secret, **kwargs):
     ctx.exit(0)
 
 
-@click.command(
-    name="run-enforcement-from-csv",
-    context_settings=CONTEXT_SETTINGS,
-    epilog="--path must be a CSV file with headers",
-)
+@click.command(name="run-enforcement-from-csv", context_settings=CONTEXT_SETTINGS, epilog=EPI_CSV)
 @add_options(OPTIONS)
 @click.pass_context
 def from_csv(ctx, url, key, secret, **kwargs):
@@ -168,11 +234,7 @@ def from_csv(ctx, url, key, secret, **kwargs):
     ctx.exit(0)
 
 
-@click.command(
-    name="run-enforcement-from-text",
-    context_settings=CONTEXT_SETTINGS,
-    epilog="--path must be a text file with valid asset IDs",
-)
+@click.command(name="run-enforcement-from-text", context_settings=CONTEXT_SETTINGS, epilog=EPI_TEXT)
 @add_options(OPTIONS)
 @click.pass_context
 def from_text(ctx, url, key, secret, **kwargs):
