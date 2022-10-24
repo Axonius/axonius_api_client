@@ -152,7 +152,7 @@ class Cnx(ChildMixins):
                 return cnx.to_dict_old()
 
         err = (
-            f"No connection found on adapter {adapter_name!r} node {node_name!r}"
+            f"No connection found on adapter {adapter_name!r} node {node_name!r} "
             f"with client ID or UUID of {cnx_uuid!r}"
         )
         if tunnel_obj:
@@ -212,7 +212,7 @@ class Cnx(ChildMixins):
                 return cnx.to_dict_old()
 
         err = (
-            f"No connection found on adapter {adapter_name!r} node {node_name!r}"
+            f"No connection found on adapter {adapter_name!r} node {node_name!r} "
             f"with a connection label of {value!r}"
         )
         if tunnel_obj:

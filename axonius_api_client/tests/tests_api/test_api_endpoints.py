@@ -37,7 +37,7 @@ MODELS_EXCLUDE = [
     json_api.time_range.TimeRange,
     json_api.paging_state.Page,
     json_api.paging_state.PagingState,
-    json_api.enforcements.RunSetsValue,
+    json_api.selection.IdSelection,
 ]
 
 SCHEMAS_EXCLUDE = [
@@ -45,7 +45,7 @@ SCHEMAS_EXCLUDE = [
     json_api.base.BaseSchemaJson,
     json_api.central_core.AdditionalDataAws,
     json_api.system_settings.SystemSettingsUpdateSchema,
-    json_api.enforcements.RunSetsValueSchema,
+    json_api.selection.IdSelectionSchema,
 ]
 
 

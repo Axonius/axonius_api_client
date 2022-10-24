@@ -31,6 +31,12 @@ class UnknownFieldSchema(ApiWarning):
 class AxonError(Exception):
     """Base class for all exceptions in this package."""
 
+    def __init__(self, msg):
+        """Pass."""
+        if isinstance(msg, (list, tuple)):
+            msg = "\n".join([str(x) for x in msg])
+        super().__init__(msg)
+
 
 class ApiError(AxonError):
     """Errors for API models."""
@@ -343,3 +349,19 @@ class FeatureNotEnabledError(ApiError):
         if extra is not None:
             msg = f"{msg}:\n{extra}"
         super().__init__(msg)
+
+
+class RunnerError(ApiError):
+    """Pass."""
+
+
+class RunnerWarning(ApiWarning):
+    """Pass."""
+
+
+class GrabberError(ApiError):
+    """Pass."""
+
+
+class GrabberWarning(ApiWarning):
+    """Pass."""

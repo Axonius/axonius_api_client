@@ -5,7 +5,7 @@ import logging.handlers
 import pathlib
 import sys
 import time
-from typing import Dict, List, Optional, Union
+from typing import Callable, Dict, List, Optional, Tuple, Union
 
 from . import LOG
 from .constants.logs import (
@@ -28,7 +28,32 @@ from .constants.logs import (
     LOG_NAME_STDOUT,
 )
 from .exceptions import ToolsError
-from .tools import get_path, is_int
+from .tools import echo_debug, echo_error, echo_ok, echo_warn, get_path, is_int
+
+ECHOERS: Tuple[Tuple[int, Callable]] = (
+    (logging.DEBUG, echo_debug),
+    (logging.INFO, echo_ok),
+    (logging.WARNING, echo_warn),
+    (logging.ERROR, echo_error),
+    (logging.CRITICAL, echo_error),
+)
+
+
+def get_echoer(level: Union[int, str]) -> Callable:
+    """Pass."""
+    level_str = str_level(level=level)
+    level_int = getattr(logging, level_str)
+    for lvl_int, caller in ECHOERS:
+        if lvl_int >= level_int:
+            return caller
+    return echo_error
+
+
+def get_log_method(obj: logging.Logger, level: Optional[str] = None) -> Callable:
+    """Pass."""
+    level = level.lower() if isinstance(level, str) else level
+    ret = getattr(obj, level, None)
+    return ret if callable(ret) else lambda x: None
 
 
 def gmtime():
@@ -65,7 +90,12 @@ def set_log_level(
         level: level to set
     """
     if isinstance(level, (int, str)):
-        obj.setLevel(getattr(logging, str_level(level=level)))
+        level_str = str_level(level=level)
+        if level_str == "OFF":
+            level_int = 0
+        else:
+            level_int = getattr(logging, level_str)
+        obj.setLevel(level_int)
 
 
 def str_level(level: Union[int, str]) -> str:
@@ -77,18 +107,21 @@ def str_level(level: Union[int, str]) -> str:
     Raises:
         :exc:`ToolsError`: if level is not mappable as an int or str to a known logger level
     """
-    # ret = ""
     if is_int(obj=level, digit=True):
         level_mapped = logging.getLevelName(int(level))
         if hasattr(logging, level_mapped):
             return level_mapped
 
-    if isinstance(level, str) and hasattr(logging, level.upper()):
-        return level.upper()
+    if isinstance(level, str):
+        level = level.upper()
+        if hasattr(logging, level):
+            return level
+        if level == "OFF":
+            return "OFF"
 
     error = (
         f"Invalid logging level {level!r}, must be one of "
-        f"{LOG_LEVELS_STR_CSV} or {LOG_LEVELS_INT_CSV}"
+        f"{LOG_LEVELS_STR_CSV} or OFF or {LOG_LEVELS_INT_CSV}"
     )
     raise ToolsError(error)
 

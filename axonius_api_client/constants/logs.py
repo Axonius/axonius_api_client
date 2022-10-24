@@ -7,13 +7,16 @@ from .. import DEFAULT_PATH, PACKAGE_ROOT
 from ..setup_env import DEBUG
 
 LOG_FMT_VERBOSE: str = (
-    "%(asctime)s %(levelname)-8s [%(name)s:%(funcName)s:%(pathname)s:%(lineno)d] %(message)s"
+    "%(asctime)s %(levelname)-8s [%(name)s:%(module)s:%(funcName)s:%(pathname)s:%(lineno)d] "
+    "%(message)s"
 )
 """Logging format to use for verbose logging."""
 
-LOG_FMT_BRIEF: str = "%(levelname)-8s %(module)-15s %(message)s"
+LOG_FMT_BRIEF_SRC: str = "%(levelname)-8s [%(name)s in %(module)s] %(message)s"
 """Logging format to use for brief logging."""
 
+LOG_FMT_BRIEF: str = "%(levelname)-8s [%(name)s] %(message)s"
+"""Logging format to use for brief logging."""
 
 LOG_FMT_CONSOLE: str = LOG_FMT_VERBOSE if DEBUG else LOG_FMT_BRIEF
 """default logging format for console logs, will be verbose if package wide debugging is enabled"""

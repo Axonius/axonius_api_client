@@ -59,9 +59,10 @@ Tips:
   - bash: AX_ENV=/path/to/.env axonshell tools shell  # for single commands
   - cmd.exe: SET AX_ENV="c:\\path\\to\\.env"
   - powershell: $AX_ENV = "c:\\path\\to\\.env"
-- Use AX_COOKIES and AX_HEADERS as comma seperated values or json:
-  - AX_COOKIES="key1=value1,key2=value2,key3=value4"
-  - AX_HEADERS='json:{{"key1": "value1", "key2": "value2"}}'
+- Multiple ways to specify AX_COOKIES and AX_HEADERS:
+  - As CSV with , as delimiter: AX_COOKIES="key1=value1,key2=value2,key3=value4"
+  - As CSV with ; as delimiter: AX_COOKIES="semi:key1=value1;key2=value2;key3=value4"
+  - As JSON str: AX_HEADERS='json:{{"key1": "value1", "key2": "value2"}}'
 - Use AX_URL, AX_KEY, AX_SECRET to specify credentials
 """
 

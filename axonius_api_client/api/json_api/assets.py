@@ -13,9 +13,10 @@ from ...exceptions import ApiError, StopFetch
 from ...http import Http
 from ...tools import coerce_int, dt_now, dt_parse, dt_sec_ago, json_dump, parse_int_min_max
 from .base import BaseModel, BaseSchema, BaseSchemaJson
-from .custom_fields import SchemaBool, get_field_dc_mm
+from .custom_fields import SchemaBool, get_field_dc_mm, get_schema_dc
 from .generic import DictValue, DictValueSchema
 from .resources import PaginationRequest, PaginationSchema
+from .selection import IdSelection, IdSelectionSchema
 
 LOGGER = LOG.getChild("__name__")
 
@@ -658,3 +659,51 @@ class DestroyRequest(BaseModel):
     def get_schema_cls() -> Optional[Type[BaseSchema]]:
         """Pass."""
         return None
+
+
+class RunEnforcementRequestSchema(BaseSchemaJson):
+    """Pass."""
+
+    name = marshmallow_jsonapi.fields.Str(required=True)
+    selection = marshmallow_jsonapi.fields.Nested(IdSelectionSchema)
+    filter = marshmallow_jsonapi.fields.Str(load_default="", dump_default="")
+    view = marshmallow_jsonapi.fields.Dict()
+
+    class Meta:
+        """Pass."""
+
+        type_ = "enforce_entity_schema"
+
+    @staticmethod
+    def get_model_cls():
+        """Pass."""
+        return RunEnforcementRequest
+
+
+@dataclasses.dataclass
+class RunEnforcementRequest(BaseModel):
+    """Pass."""
+
+    name: str = get_schema_dc(
+        schema=RunEnforcementRequestSchema,
+        key="name",
+    )
+    selection: IdSelection = get_schema_dc(
+        schema=RunEnforcementRequestSchema,
+        key="selection",
+    )
+    filter: str = get_schema_dc(
+        schema=RunEnforcementRequestSchema,
+        key="filter",
+        default="",
+    )
+    view: dict = get_schema_dc(
+        schema=RunEnforcementRequestSchema,
+        key="view",
+        default_factory=dict,
+    )
+
+    @staticmethod
+    def get_schema_cls():
+        """Pass."""
+        return RunEnforcementRequestSchema

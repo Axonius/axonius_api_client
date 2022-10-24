@@ -2,11 +2,14 @@
 """Test suite."""
 import csv
 import functools
+import hashlib
 import random
 import re
+import secrets
 import string
 import sys
 import time
+import typing as t
 from io import StringIO
 
 import pytest
@@ -18,6 +21,8 @@ from flaky import flaky
 IS_WINDOWS = sys.platform == "win32"
 IS_LINUX = sys.platform == "linux"
 IS_MAC = sys.platform == "darwin"
+SALT_SIZE = 32  # In Bytes
+SOURCE: str = string.ascii_lowercase + string.digits
 
 
 CACHE: TTLCache = TTLCache(maxsize=1024, ttl=600)
@@ -96,11 +101,24 @@ def get_schema(apiobj, field, key=None, adapter=None):
     return schema[key] if key else schema
 
 
-def random_string(length):
+def random_string(length: int = 32, source: str = SOURCE):
     """Test utility."""
-    letters = string.ascii_lowercase
-    result_str = "".join(random.choice(letters) for i in range(length))
+    result_str = "".join(random.choice(source) for i in range(length))
     return result_str
+
+
+def random_strs(num: int = 1, length: int = 32, source: str = SOURCE) -> t.List[str]:
+    """Test utility."""
+    return [random_string(length=length, source=source) for i in range(num)]
+
+
+def random_string_salt(length: int, source: str = SOURCE) -> str:
+    """Generate a random string with length, seed it time in milliseconds and salt."""
+    result = ""
+    for i in range(0, length):
+        result += secrets.choice(source)
+    salt = secrets.token_bytes(SALT_SIZE)
+    return hashlib.sha256(f"{salt}{result}".encode("utf-16")).hexdigest()
 
 
 def get_rows_exist(apiobj, fields=None, max_rows=1, not_exist=False, **kwargs):
