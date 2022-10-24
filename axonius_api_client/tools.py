@@ -1842,10 +1842,21 @@ def extract_kvs_auto(value: t.Union[str, bytes, t.IO], **kwargs) -> dict:
         value = value.read()
 
     marker_json = kwargs.pop("marker_json", "json:")
-    marker_len = len(marker_json)
-    if isinstance(value, (str, bytes)) and value.lower().lstrip().startswith(marker_json.lower()):
-        method = extract_kvs_json
-        value = value.lstrip()[marker_len:]
+    marker_semi = kwargs.pop("marker_smi", "semi:")
+    marker_len = None
+
+    if isinstance(value, (str, bytes)):
+        value = value.lstrip()
+        check_value = value.lower()
+        if check_value.startswith(marker_json.lower()):
+            marker_len = len(marker_json)
+            method = extract_kvs_json
+        elif check_value.startswith(marker_semi.lower()):
+            marker_len = len(marker_semi)
+            kwargs["delimiter"] = ";"
+
+    if isinstance(marker_len, int):
+        value = value[marker_len:]
 
     if is_json_dict(value):
         method = extract_kvs_json
@@ -1902,6 +1913,7 @@ def extract_kvs_csv(
     value: t.Union[str, bytes, t.IO] = None,
     has_headers: bool = False,
     split_kv: str = "=",
+    delimiter: str = ",",
     **kwargs,
 ) -> dict:
     """Pass."""
@@ -1912,13 +1924,12 @@ def extract_kvs_csv(
         example = f"key1{split_kv}value1,key2{split_kv}value2"
         splitit = f"key/value split character {split_kv!r}"
 
-        rows = list(csv.reader(fh))
+        rows = list(csv.reader(fh, delimiter=delimiter))
         if len(rows) > 1 and split_kv not in "".join([str(x) for x in rows[0]]):
             has_headers = True
 
         if has_headers:
             rows = rows[1:]
-        # XXX TEST
         rows_cnt = len(rows)
 
         for row_idx, row in enumerate(rows):

@@ -106,6 +106,7 @@ class DictOption(click.Option):
         return [
             f"({example})",
             "(env var parsed as CSV unless starts with 'json:')",
+            "(env var CSV delimiter uses ; instead of , if starts with 'semi:')",
             "(multiples)",
         ]
 
