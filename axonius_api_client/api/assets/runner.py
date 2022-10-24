@@ -8,7 +8,7 @@ import typing as t
 from ...constants.fields import AXID
 from ...data import BaseData
 from ...exceptions import RunnerError, RunnerWarning
-from ...parsers.grabber import Mixins
+from ...parsers.grabber import Grabber, Mixins
 from ...tools import confirm, csv_able, is_str, listify, style_switch
 from .. import json_api
 
@@ -148,6 +148,9 @@ class Runner(BaseData, Mixins):
 
     check_stdin: bool = True
     """Check if stdin is a TTY when prompting."""
+
+    grabber: t.Optional[Grabber] = None
+    """Grabber used to get IDs."""
 
     log: t.ClassVar[logging.Logger] = None
     result: t.ClassVar[str] = None
@@ -412,20 +415,21 @@ class Runner(BaseData, Mixins):
     def _tstr_items(self) -> t.List[str]:
         return [
             f"state={self.state!r}",
-            f"eset={self._teset}",
+            f"eset={self._teset!r}",
             f"executed={self.executed}",
             f"count_ids={self.count_ids}",
             f"count_result={self.count_result}",
             f"verified={self.verified}",
             f"verify_count={self.verify_count}",
             f"prompt={self.prompt}",
+            f"grabber={self.grabber}",
         ]
 
     @property
     def _teset(self) -> str:
         ret = f"{self.eset}"
         if isinstance(self.eset, json_api.enforcements.SetFull):
-            ret = f"{self.eset.name!r} (UUID: {self.eset.uuid!r})"
+            ret = f"{self.eset.name}"
         return ret
 
     @property

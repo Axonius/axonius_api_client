@@ -64,7 +64,8 @@ class Mixins:
 
     def __str__(self) -> str:
         """Dunder."""
-        return f"{self.__class__.__name__}({', '.join(self._tstr_items)})"
+        items = "\n  " + ",\n  ".join(self._tstr_items) + ",\n"
+        return f"{self.__class__.__name__}({items})"
 
     def infos(self, msgs: t.Optional[t.List[str]] = None, top: bool = True) -> t.List[str]:
         """Get info on self."""
@@ -240,8 +241,10 @@ class Grabber(BaseData, Mixins):
     @classmethod
     def from_text(cls, items: t.Union[str, t.List[str]], **kwargs):
         """Get Asset IDs from a text string."""
-        kwargs["items"] = text_load(value=items)
-        kwargs["source"] = add_source(source=f"from_text items {tlens(items)}", kwargs=kwargs)
+        kwargs["items"] = post_load = text_load(value=items)
+        kwargs["source"] = add_source(
+            source=f"from_text items {tlens(items)} post_load {tlens(post_load)}", kwargs=kwargs
+        )
         return cls(**kwargs)
 
     @classmethod
@@ -411,7 +414,7 @@ class Grabber(BaseData, Mixins):
             f"count_found={self.count_found}",
             f"do_echo={self.do_echo}",
             f"do_raise={self.do_raise}",
-            f"source={self.source}",
+            f"source={self.source!r}",
         ]
         return items
 

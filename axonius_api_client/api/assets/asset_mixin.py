@@ -77,8 +77,35 @@ class AssetMixin(ModelMixins):
         src_query: t.Optional[str] = None,
         src_fields: t.Optional[t.List[str]] = None,
         check_stdin: bool = True,
+        grabber: t.Optional[Grabber] = None,
     ) -> Runner:
         """Run an enforcement set against a manually selected list of assets.
+
+        Examples:
+            '''Get a list of assets from a query and manually extract the IDs.
+            We know assets are valid because we just got them, so we pass verified=True.
+            '''
+            client = globals()['client']  # instance of axonius_api_client.Connect
+            apiobj = client.devices  # client.devices, client.users, or client.vulnerabilities
+            WIZ = "simple os.type equals Windows"  # "query of assets to target"
+            ESET = "test"  # "name or uuid of enforcement set"
+            ITEMS = apiobj.get(wiz_entries=WIZ)
+            IDS = [x['internal_axon_id'] for x in ITEMS]
+            runner = apiobj.run_enforcement(eset=ESET, ids=IDS, verified=True)
+            print(runner)
+            '''
+            Runner(
+              state='Ran Enforcement Set against 31 supplied Asset IDs',
+              eset='test',
+              executed=True,
+              count_ids=31,
+              count_result=None,
+              verified=True,
+              verify_count=True,
+              prompt=False,
+              grabber=None,
+            )
+            '''
 
         Args:
             eset (ENFORCEMENT): name, uuid, or Enforcement Set object to run
@@ -93,6 +120,7 @@ class AssetMixin(ModelMixins):
             do_echo (bool): Echo output to console as well as log
             refetch (bool): refetch $eset even if it is a :obj:`json_api.enforcements.SetFull`
             check_stdin (bool): check if stdin is a TTY when prompting
+            grabber: (grabber): Grabber used to get IDs
 
         Returns:
             Runner: Runner object used to verify and run $eset
@@ -108,6 +136,7 @@ class AssetMixin(ModelMixins):
             refetch=refetch,
             src_query=src_query,
             src_fields=src_fields,
+            grabber=grabber,
         )
         if verify_and_run:
             runner.verify_and_run()
@@ -124,6 +153,37 @@ class AssetMixin(ModelMixins):
     ) -> Runner:
         """Get Asset IDs from a list of dicts or strs and run $eset against them.
 
+        Examples:
+            '''Get a list of assets from a query and use the grabber get the IDs.
+            We know assets are valid because we just got them, so we pass verified=True.
+            '''
+            client = globals()['client']  # instance of axonius_api_client.Connect
+            apiobj = client.devices  # client.devices, client.users, or client.vulnerabilities
+            WIZ = "simple os.type equals Windows"  # "query of assets to target"
+            ESET = "test"  # "name or uuid of enforcement set"
+            ITEMS = apiobj.get(wiz_entries=WIZ)
+            runner = apiobj.run_enforcement_from_items(eset=ESET, items=ITEMS, verified=True)
+            print(runner)
+            '''
+            Runner(
+              state='Ran Enforcement Set against 31 supplied Asset IDs',
+              eset='test',
+              executed=True,
+              count_ids=31,
+              count_result=None,
+              verified=True,
+              verify_count=True,
+              prompt=False,
+              grabber=Grabber(
+              count_supplied=31,
+              count_found=31,
+              do_echo=True,
+              do_raise=False,
+              source=None,
+            ),
+            )
+            '''
+
         Args:
             eset (ENFORCEMENT): name, uuid, or Enforcement Set object to run
             items (t.Union[str, t.List[str], dict, t.List[dict], types.GeneratorType]): list of
@@ -137,7 +197,7 @@ class AssetMixin(ModelMixins):
         Returns:
             Runner: Runner object used to verify and run $eset
         """
-        grabber = Grabber(
+        kwargs["grabber"] = grabber = Grabber(
             items=items,
             keys=keys,
             do_echo=do_echo_grab,
@@ -158,6 +218,75 @@ class AssetMixin(ModelMixins):
     ) -> Runner:
         """Get Asset IDs from a JSON string with a list of dicts and run $eset against them.
 
+        Examples:
+            '''Get a list of assets from a query and export the assets to a JSON str
+            then run an enforcement against all asset IDs from the JSON str.
+            We know assets are valid because we just got them, so we pass verified=True.
+            '''
+            import io
+            client = globals()['client']  # instance of axonius_api_client.Connect
+            apiobj = client.devices  # client.devices, client.users, or client.vulnerabilities
+            WIZ = "simple os.type equals Windows"  # "query of assets to target"
+            ESET = "test"  # "name or uuid of enforcement set"
+            FH = io.StringIO()
+            z = apiobj.get(wiz_entries=WIZ, export="json", export_fd=FH, export_fd_close=False)
+            FH.seek(0)
+            ITEMS = FH.getvalue()
+            runner = apiobj.run_enforcement_from_json(eset=ESET, items=ITEMS, verified=True)
+            print(runner)
+            '''
+            Runner(
+              state='Ran Enforcement Set against 31 supplied Asset IDs',
+              eset='test',
+              executed=True,
+              count_ids=31,
+              count_result=None,
+              verified=True,
+              verify_count=True,
+              prompt=False,
+              grabber=Grabber(
+              count_supplied=31,
+              count_found=31,
+              do_echo=True,
+              do_raise=False,
+              source='from_json items type=str, length=15519 post_load type=list, length=31',
+            ),
+            )
+            '''
+
+            '''Get a list of assets from a query and export the assets to a JSON file
+            then run an enforcement against all asset IDs from the JSON file.
+            We know assets are valid because we just got them, so we pass verified=True.
+            '''
+            import pathlib
+            client = globals()['client']  # instance of axonius_api_client.Connect
+            apiobj = client.devices  # client.devices, client.users, or client.vulnerabilities
+            WIZ = "simple os.type equals Windows"  # "query of assets to target"
+            ESET = "test"  # "name or uuid of enforcement set"
+            PATH = pathlib.Path("data.json")
+            z = apiobj.get(wiz_entries=WIZ, export="json", export_file=PATH, export_overwrite=True)
+            runner = apiobj.run_enforcement_from_json(eset=ESET, items=PATH, verified=True)
+            print(runner)
+            '''
+            Runner(
+              state='Ran Enforcement Set against 31 supplied Asset IDs',
+              eset='test',
+              executed=True,
+              count_ids=31,
+              count_result=None,
+              verified=True,
+              verify_count=True,
+              prompt=False,
+              grabber=Grabber(
+              count_supplied=31,
+              count_found=31,
+              do_echo=True,
+              do_raise=False,
+              source='from_json items type=PosixPath, length=None post_load type=list, length=31',
+            ),
+            )
+            '''
+
         Args:
             eset (ENFORCEMENT): name, uuid, or Enforcement Set object to run
             items (t.Union[str, bytes, t.IO, pathlib.Path]): json str, handle for file containing
@@ -171,7 +300,7 @@ class AssetMixin(ModelMixins):
         Returns:
             Runner: Runner object used to verify and run $eset
         """
-        grabber = Grabber.from_json(
+        kwargs["grabber"] = grabber = Grabber.from_json(
             items=items,
             keys=keys,
             do_echo=do_echo_grab,
@@ -192,6 +321,77 @@ class AssetMixin(ModelMixins):
     ) -> Runner:
         """Get Asset IDs from a JSONL string with one dict per line and run $eset against them.
 
+        Examples:
+            '''Get a list of assets from a query and export the assets to a JSONL str
+            then run an enforcement against all asset IDs from the JSONL str.
+            We know assets are valid because we just got them, so we pass verified=True.
+            '''
+            import io
+            client = globals()['client']  # instance of axonius_api_client.Connect
+            apiobj = client.devices  # client.devices, client.users, or client.vulnerabilities
+            WIZ = "simple os.type equals Windows"  # "query of assets to target"
+            ESET = "test"  # "name or uuid of enforcement set"
+            FH = io.StringIO()
+            z = apiobj.get(
+              wiz_entries=WIZ, export="json", json_flat=True, export_fd=FH, export_fd_close=False)
+            FH.seek(0)
+            runner = apiobj.run_enforcement_from_jsonl(eset=ESET, items=FH, verified=True)
+            print(runner)
+            '''
+            Runner(
+              state='Ran Enforcement Set against 31 supplied Asset IDs',
+              eset='test',
+              executed=True,
+              count_ids=31,
+              count_result=None,
+              verified=True,
+              verify_count=True,
+              prompt=False,
+              grabber=Grabber(
+              count_supplied=31,
+              count_found=31,
+              do_echo=True,
+              do_raise=False,
+              source='from_jsonl items type=StringIO, length=None post_load type=list, length=31',
+            ),
+            )
+            '''
+
+            '''Get a list of assets from a query and export the assets to a JSONL file
+            then run an enforcement against all asset IDs from the JSONL file.
+            We know assets are valid because we just got them, so we pass verified=True.
+            '''
+            import pathlib
+            client = globals()['client']  # instance of axonius_api_client.Connect
+            apiobj = client.devices  # client.devices, client.users, or client.vulnerabilities
+            WIZ = "simple os.type equals Windows"  # "query of assets to target"
+            ESET = "test"  # "name or uuid of enforcement set"
+            PATH = pathlib.Path("data.jsonl")
+            z = apiobj.get(
+              wiz_entries=WIZ, export="json", json_flat=True, export_file=PATH,
+              export_overwrite=True)
+            runner = apiobj.run_enforcement_from_jsonl(eset=ESET, items=PATH, verified=True)
+            print(runner)
+            '''
+            Runner(
+              state='Ran Enforcement Set against 31 supplied Asset IDs',
+              eset='test',
+              executed=True,
+              count_ids=31,
+              count_result=None,
+              verified=True,
+              verify_count=True,
+              prompt=False,
+              grabber=Grabber(
+              count_supplied=31,
+              count_found=31,
+              do_echo=True,
+              do_raise=False,
+              source='from_jsonl items type=PosixPath, length=None post_load type=list, length=31',
+            ),
+            )
+            '''
+
         Args:
             eset (ENFORCEMENT): name, uuid, or Enforcement Set object to run
             items (t.Union[str, bytes, t.IO, pathlib.Path]): jsonl str, handle for file containing
@@ -205,7 +405,7 @@ class AssetMixin(ModelMixins):
         Returns:
             Runner: Runner object used to verify and run $eset
         """
-        grabber = Grabber.from_jsonl(
+        kwargs["grabber"] = grabber = Grabber.from_jsonl(
             items=items,
             keys=keys,
             do_echo=do_echo_grab,
@@ -227,6 +427,77 @@ class AssetMixin(ModelMixins):
     ) -> Runner:
         """Get Asset IDs from a CSV string and run $eset against them.
 
+        Examples:
+            '''Get a list of assets from a query and export the assets to a JSONL str
+            then run an enforcement against all asset IDs from the JSONL str.
+            We know assets are valid because we just got them, so we pass verified=True.
+            '''
+            from axonius_api_client.tools import bom_strip
+            import io
+            client = globals()['client']  # instance of axonius_api_client.Connect
+            apiobj = client.devices  # client.devices, client.users, or client.vulnerabilities
+            WIZ = "simple os.type equals Windows"  # "query of assets to target"
+            ESET = "test"  # "name or uuid of enforcement set"
+            FH = io.StringIO()
+            z = apiobj.get(wiz_entries=WIZ, export="csv", export_fd=FH, export_fd_close=False)
+            FH.seek(0)
+            ITEMS = bom_strip(FH.getvalue())
+            runner = apiobj.run_enforcement_from_csv(eset=ESET, items=ITEMS, verified=True)
+            print(runner)
+            '''
+            Runner(
+              state='Ran Enforcement Set against 31 supplied Asset IDs',
+              eset='test',
+              executed=True,
+              count_ids=31,
+              count_result=None,
+              verified=True,
+              verify_count=True,
+              prompt=False,
+              grabber=Grabber(
+              count_supplied=33,
+              count_found=31,
+              do_echo=True,
+              do_raise=False,
+              source='from_csv items type=str, length=6556 post_load type=list, length=33',
+            ),
+            )
+            '''
+
+            '''Get a list of assets from a query and export the assets to a CSV file
+            then run an enforcement against all asset IDs from the CSV file.
+            We can also use a CSV file exported from the GUI.
+            We know assets are valid because we just got them, so we pass verified=True.
+            '''
+            import pathlib
+            client = globals()['client']  # instance of axonius_api_client.Connect
+            apiobj = client.devices  # client.devices, client.users, or client.vulnerabilities
+            WIZ = "simple os.type equals Windows"  # "query of assets to target"
+            ESET = "test"  # "name or uuid of enforcement set"
+            PATH = pathlib.Path("data.csv")
+            z = apiobj.get(wiz_entries=WIZ, export="csv", export_file=PATH, export_overwrite=True)
+            runner = apiobj.run_enforcement_from_csv(eset=ESET, items=PATH, verified=True)
+            print(runner)
+            '''
+            Runner(
+              state='Ran Enforcement Set against 31 supplied Asset IDs',
+              eset='test',
+              executed=True,
+              count_ids=31,
+              count_result=None,
+              verified=True,
+              verify_count=True,
+              prompt=False,
+              grabber=Grabber(
+              count_supplied=33,
+              count_found=31,
+              do_echo=True,
+              do_raise=False,
+              source='from_csv items type=PosixPath, length=None post_load type=list, length=33',
+            ),
+            )
+            '''
+
         Args:
             eset (ENFORCEMENT): name, uuid, or Enforcement Set object to run
             items (t.Union[str, bytes, t.IO, pathlib.Path]): csv str, handle for file containing
@@ -240,7 +511,7 @@ class AssetMixin(ModelMixins):
         Returns:
             Runner: Runner object used to verify and run $eset
         """
-        grabber = Grabber.from_csv(
+        kwargs["grabber"] = grabber = Grabber.from_csv(
             items=items,
             keys=keys,
             do_echo=do_echo_grab,
@@ -260,7 +531,45 @@ class AssetMixin(ModelMixins):
         do_raise_grab: bool = False,
         **kwargs,
     ) -> Runner:
-        """Get Asset IDs from a text string and run $eset against them.
+        r"""Get Asset IDs from a text string and run $eset against them.
+
+        Examples:
+            '''Get a list of assets from a query and export the assets to a text file
+            then run an enforcement against all asset IDs from the text file.
+            All lines will have any non alpha-numeric characters removed from them and if a
+            32 character alpha numeric string is found it is considered an Asset ID.
+            We know assets are valid because we just got them, so we pass verified=True.
+            '''
+            import pathlib
+            client = globals()['client']  # instance of axonius_api_client.Connect
+            apiobj = client.devices  # client.devices, client.users, or client.vulnerabilities
+            WIZ = "simple os.type equals Windows"  # "query of assets to target"
+            ESET = "test"  # "name or uuid of enforcement set"
+            PATH = pathlib.Path("data.txt")
+            ASSETS = apiobj.get(wiz_entries=WIZ)
+            IDS = [x['internal_axon_id'] for x in ASSETS]
+            PATH.write_text('\n'.join(IDS))
+            runner = apiobj.run_enforcement_from_text(eset=ESET, items=PATH, verified=True)
+            print(runner)
+            '''
+            Runner(
+              state='Ran Enforcement Set against 31 supplied Asset IDs',
+              eset='test',
+              executed=True,
+              count_ids=31,
+              count_result=None,
+              verified=True,
+              verify_count=True,
+              prompt=False,
+              grabber=Grabber(
+              count_supplied=31,
+              count_found=31,
+              do_echo=True,
+              do_raise=False,
+              source='from_text items type=PosixPath, length=None',
+            ),
+            )
+            '''
 
         Args:
             eset (ENFORCEMENT): name, uuid, or Enforcement Set object to run
@@ -275,7 +584,7 @@ class AssetMixin(ModelMixins):
         Returns:
             Runner: Runner object used to verify and run $eset
         """
-        grabber = Grabber.from_text(
+        kwargs["grabber"] = grabber = Grabber.from_text(
             items=items,
             keys=keys,
             do_echo=do_echo_grab,
@@ -296,6 +605,39 @@ class AssetMixin(ModelMixins):
     ) -> Runner:
         """Get Asset IDs from a JSON file with a list of dicts and run $eset against them.
 
+        Examples:
+            '''Run an enforcement against all asset IDs from a JSON file.
+            We are unsure if Asset IDs are still valid for this instance so
+            we do not pass verified=True.
+            '''
+            client = globals()['client']  # instance of axonius_api_client.Connect
+            apiobj = client.devices  # client.devices, client.users, or client.vulnerabilities
+            PATH = "data.json"
+            ESET = "test"  # "name or uuid of enforcement set"
+            runner = apiobj.run_enforcement_from_json_path(eset=ESET, path=PATH)
+            print(runner)
+            '''
+            Runner(
+              state='Ran Enforcement Set against 31 supplied Asset IDs',
+              eset='test',
+              executed=True,
+              count_ids=31,
+              count_result=31,
+              verified=True,
+              verify_count=True,
+              prompt=False,
+              grabber=Grabber(
+              count_supplied=31,
+              count_found=31,
+              do_echo=True,
+              do_raise=False,
+              source='from_json_path /Users/jimbo/gh/Axonius/axonapi/data.json /
+            from_json items type=PosixPath, length=None post_load
+            type=list, length=31',
+            ),
+            )
+            '''
+
         Args:
             eset (ENFORCEMENT): name, uuid, or Enforcement Set object to run
             path (PathLike): str or pathlib.Path of path containing json str
@@ -308,7 +650,7 @@ class AssetMixin(ModelMixins):
         Returns:
             Runner: Runner object used to verify and run $eset
         """
-        grabber = Grabber.from_json_path(
+        kwargs["grabber"] = grabber = Grabber.from_json_path(
             path=path,
             keys=keys,
             do_echo=do_echo_grab,
@@ -329,6 +671,38 @@ class AssetMixin(ModelMixins):
     ) -> Runner:
         """Get Asset IDs from a JSONL file with one dict per line and run $eset against them.
 
+        Examples:
+            '''Run an enforcement against all asset IDs from a JSONL file.
+            We are unsure if Asset IDs are still valid for this instance so
+            we do not pass verified=True.
+            '''
+            client = globals()['client']  # instance of axonius_api_client.Connect
+            apiobj = client.devices  # client.devices, client.users, or client.vulnerabilities
+            PATH = "data.jsonl"
+            ESET = "test"  # "name or uuid of enforcement set"
+            runner = apiobj.run_enforcement_from_jsonl_path(eset=ESET, path=PATH)
+            print(runner)
+            '''
+            Runner(
+              state='Ran Enforcement Set against 31 supplied Asset IDs',
+              eset='test',
+              executed=True,
+              count_ids=31,
+              count_result=31,
+              verified=True,
+              verify_count=True,
+              prompt=False,
+              grabber=Grabber(
+              count_supplied=31,
+              count_found=31,
+              do_echo=True,
+              do_raise=False,
+              source='from_jsonl_path /Users/jimbo/gh/Axonius/axonapi/data.jsonl /
+            from_jsonl items type=PosixPath, length=None post_load type=list, length=31',
+            ),
+            )
+            '''
+
         Args:
             eset (ENFORCEMENT): name, uuid, or Enforcement Set object to run
             path (PathLike): str or pathlib.Path of path containing jsonl str
@@ -341,7 +715,7 @@ class AssetMixin(ModelMixins):
         Returns:
             Runner: Runner object used to verify and run $eset
         """
-        grabber = Grabber.from_jsonl_path(
+        kwargs["grabber"] = grabber = Grabber.from_jsonl_path(
             path=path,
             keys=keys,
             do_echo=do_echo_grab,
@@ -362,6 +736,38 @@ class AssetMixin(ModelMixins):
     ) -> Runner:
         """Get Asset IDs from a CSV file and run $eset against them.
 
+        Examples:
+            '''Run an enforcement against all asset IDs from a JSONL file.
+            We are unsure if Asset IDs are still valid for this instance so
+            we do not pass verified=True.
+            '''
+            client = globals()['client']  # instance of axonius_api_client.Connect
+            apiobj = client.devices  # client.devices, client.users, or client.vulnerabilities
+            PATH = "data.csv"
+            ESET = "test"  # "name or uuid of enforcement set"
+            runner = apiobj.run_enforcement_from_csv_path(eset=ESET, path=PATH)
+            print(runner)
+            '''
+            Runner(
+              state='Ran Enforcement Set against 31 supplied Asset IDs',
+              eset='test',
+              executed=True,
+              count_ids=31,
+              count_result=31,
+              verified=True,
+              verify_count=True,
+              prompt=False,
+              grabber=Grabber(
+              count_supplied=33,
+              count_found=31,
+              do_echo=True,
+              do_raise=False,
+              source='from_csv_path /Users/jimbo/gh/Axonius/axonapi/data.csv /
+            from_csv items type=PosixPath, length=None post_load type=list, length=33',
+            ),
+            )
+            '''
+
         Args:
             eset (ENFORCEMENT): name, uuid, or Enforcement Set object to run
             path (PathLike): str or pathlib.Path of path containing csv str
@@ -374,7 +780,7 @@ class AssetMixin(ModelMixins):
         Returns:
             Runner: Runner object used to verify and run $eset
         """
-        grabber = Grabber.from_csv_path(
+        kwargs["grabber"] = grabber = Grabber.from_csv_path(
             path=path,
             keys=keys,
             do_echo=do_echo_grab,
@@ -395,6 +801,40 @@ class AssetMixin(ModelMixins):
     ) -> Runner:
         """Get Asset IDs from a text file and run $eset against them.
 
+        Examples:
+            '''Run an enforcement against all asset IDs from a text file.
+            All lines will have any non alpha-numeric characters removed from them and if a
+            32 character alpha numeric string is found it is considered an Asset ID.
+            We are unsure if Asset IDs are still valid for this instance so
+            we do not pass verified=True.
+            '''
+            client = globals()['client']  # instance of axonius_api_client.Connect
+            apiobj = client.devices  # client.devices, client.users, or client.vulnerabilities
+            PATH = "data.txt"
+            ESET = "test"  # "name or uuid of enforcement set"
+            runner = apiobj.run_enforcement_from_text_path(eset=ESET, path=PATH)
+            print(runner)
+            '''
+            Runner(
+              state='Ran Enforcement Set against 31 supplied Asset IDs',
+              eset='test',
+              executed=True,
+              count_ids=31,
+              count_result=None,
+              verified=True,
+              verify_count=True,
+              prompt=False,
+              grabber=Grabber(
+              count_supplied=31,
+              count_found=31,
+              do_echo=True,
+              do_raise=False,
+              source='from_text_path /Users/jimbo/gh/Axonius/axonapi/data.txt /
+            from_text items type=PosixPath, length=None post_load type=generator, length=None',
+            ),
+            )
+            '''
+
         Args:
             eset (ENFORCEMENT): name, uuid, or Enforcement Set object to run
             path (PathLike): str or pathlib.Path of path containing text str
@@ -407,7 +847,7 @@ class AssetMixin(ModelMixins):
         Returns:
             Runner: Runner object used to verify and run $eset
         """
-        grabber = Grabber.from_text_path(
+        kwargs["grabber"] = grabber = Grabber.from_text_path(
             path=path,
             keys=keys,
             do_echo=do_echo_grab,
