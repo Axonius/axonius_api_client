@@ -106,7 +106,7 @@ class Feature(BaseData):  # pragma: no cover
         items = [
             f"Feature name: {name} - Added in API client version: {vadd!r}",
             f"Enabled if Axonius product version is greater than or equal to: {vmin}",
-            f"Enable in .env by adding a line:\nAX_FEATURES={name}\n"
+            f"Enable in .env by adding a line:\nAX_FEATURES={name}\n",
             f"Enable in Unix shell via:\nexport AX_FEATURES={name}\n",
             f"Enable in Windows CMD via:\nset AX_FEATURES={name}\n",
             f"Enable in python via:\naxonius_api_client.features.Features.{name}.force = True\n",
