@@ -74,7 +74,7 @@ class SystemMetaBase:
         contract_expiry = data.pop("Contract Expiry Date", None)
         assert isinstance(contract_expiry, (str, type(None)))
 
-        assert not data
+        # assert not data
 
 
 class TestSystemMetaPrivate(SystemMetaBase):
