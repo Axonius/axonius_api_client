@@ -434,6 +434,14 @@ class SystemSettings(ApiEndpointGroup):
         response_schema_cls=json_api.system_meta.SystemMetaSchema,
         response_model_cls=None,
     )
+    meta_about2: ApiEndpoint = ApiEndpoint(
+        method="get",
+        path="api/settings/metadata",
+        request_schema_cls=None,
+        request_model_cls=None,
+        response_schema_cls=None,
+        response_model_cls=None,
+    )
     # PBUG: meta/about should return no spaces/all lowercase keys
 
     historical_sizes: ApiEndpoint = ApiEndpoint(

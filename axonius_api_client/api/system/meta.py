@@ -34,8 +34,13 @@ class Meta(ModelMixins):
         """
         if not hasattr(self, "_about_data"):
             self._about_data = self._about()
-            features.PRODUCT_ABOUT = self._about_data
-        return self._about_data
+        if not hasattr(self, "_about_data2"):
+            self._about_data2 = self._about2()
+        ret = {}
+        ret.update(self._about_data)
+        ret.update(self._about_data2)
+        features.PRODUCT_ABOUT = ret
+        return ret
 
     def historical_sizes(self) -> dict:
         """Get disk usage metadata.
@@ -75,6 +80,11 @@ class Meta(ModelMixins):
     def _about(self) -> dict:
         """Direct API method to get the About page."""
         api_endpoint = ApiEndpoints.system_settings.meta_about
+        return api_endpoint.perform_request(http=self.auth.http)
+
+    def _about2(self) -> dict:
+        """Direct API method to get the About page."""
+        api_endpoint = ApiEndpoints.system_settings.meta_about2
         return api_endpoint.perform_request(http=self.auth.http)
 
     def _historical_sizes(self) -> dict:
