@@ -423,7 +423,11 @@ def tlens(value: t.Any) -> t.Optional[int]:
 
 
 def json_load(
-    obj: t.Union[str, t.IO, pathlib.Path], error: bool = True, close_fh: bool = True, **kwargs
+    obj: t.Union[str, t.IO, pathlib.Path],
+    error: bool = True,
+    load_file: bool = True,
+    close_fh: bool = True,
+    **kwargs,
 ) -> t.Any:
     """Deserialize a json str into an object.
 
@@ -435,7 +439,7 @@ def json_load(
     load = obj
     method = json.loads
     fh = None
-    if is_existing_file(load):
+    if load_file and is_existing_file(load):
         method = json.load
         path = pathify(obj)
         fh = load = path.open()

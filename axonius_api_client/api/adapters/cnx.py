@@ -28,7 +28,16 @@ from ...parsers.config import (
     config_unknown,
 )
 from ...parsers.tables import tablize_cnxs, tablize_schemas
-from ...tools import combo_dicts, json_dump, json_load, listify, pathlib, strip_right
+from ...tools import (
+    combo_dicts,
+    is_existing_file,
+    json_dump,
+    json_load,
+    listify,
+    pathify,
+    pathlib,
+    strip_right,
+)
 from ..api_endpoints import ApiEndpoints
 from ..json_api.adapters import CnxDelete, CnxModifyResponse, Cnxs
 from ..json_api.instances import Tunnel
@@ -838,50 +847,45 @@ class Cnx(ChildMixins):
                 a dictionary that does not have 'uuid' and 'filename' keys',
                 or if value is not a file
         """
+
+        def fail(msg):
+            sinfo = config_info(schema=schema, value=str(value), source=source)
+            msgs = [sinfo, "", f"supplied value: {orig!r}", f"parsed value: {value!r}", msg]
+            raise ConfigInvalidValue("\n".join(msgs))
+
+        orig = value
         adapter_name = callbacks["adapter_name"]
         adapter_node = callbacks["adapter_node"]
         field_name = schema["name"]
-
-        value = json_load(obj=value, error=False)
-
-        if isinstance(value, str):
-            value = pathlib.Path(value).expanduser().resolve()
-            if not value.is_file():
-                sinfo = config_info(schema=schema, value=str(value), source=source)
-                raise ConfigInvalidValue(f"{sinfo}\nFile does not exist!")
-            return self.parent.file_upload(
-                name=adapter_name,
-                field_name=field_name,
-                file_name=value.name,
-                file_content=value.read_text(),
-                node=adapter_node,
-            )
+        value = json_load(obj=value, error=False, load_file=False)
+        file_content = None
 
         if isinstance(value, dict):
             if value.get("uuid") and value.get("filename"):
                 return {"uuid": value["uuid"], "filename": value["filename"]}
-
-            sinfo = config_info(schema=schema, value=str(value), source=source)
-            raise ConfigInvalidValue(
-                f"{sinfo}\nDictionary must have uuid and filename keys: {value}!"
-            )
+            fail("supplied dictionary must have uuid and filename keys")
 
         if isinstance(value, pathlib.Path):
-            value = value.expanduser().resolve()
             if not value.is_file():
-                sinfo = config_info(schema=schema, value=str(value), source=source)
-                raise ConfigInvalidValue(f"{sinfo}\nFile does not exist!")
+                fail("supplied pathlib does not exist as a file")
+            file_content = value.read_text()
 
+        if isinstance(value, str):
+            value = pathify(value)
+            if not is_existing_file(value):
+                fail("supplied string does not exist as a file")
+            file_content = value.read_text()
+
+        if file_content:
             return self.parent.file_upload(
                 name=adapter_name,
                 field_name=field_name,
                 file_name=value.name,
-                file_content=value.read_text(),
+                file_content=file_content,
                 node=adapter_node,
             )
 
-        sinfo = config_info(schema=schema, value=str(value), source=source)
-        raise ConfigInvalidValue(f"{sinfo}\nFile is not an existing file!")
+        fail("Unable to load contents from file")
 
     def _add(
         self,
