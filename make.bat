@@ -13,9 +13,8 @@ if "%CMD%" == "" goto :HELP
 if "%CMD%" == "help" goto :HELP
 if "%CMD%" == "init" goto :INIT
 if "%CMD%" == "clean" goto :CLEAN
-if "%CMD%" == "pipenv_clean" goto :PIPENV_CLEAN
+if "%CMD%" == "pipenv_remove" goto :PIPENV_REMOVE
 if "%CMD%" == "pipenv_install" goto :PIPENV_INSTALL
-if "%CMD%" == "pip_install_tools" goto :PIP_INSTALL_TOOLS
 if "%CMD%" == "pip_install_dev" goto :PIP_INSTALL_DEV
 if "%CMD%" == "pip_install" goto :PIP_INSTALL
 if "%CMD%" == "test" goto :TEST
@@ -40,18 +39,16 @@ goto :END
 
 :PIP_INSTALL_CMD
 echo.Installing requirements
-call python -m pip install --quiet --upgrade --requirement requirements.txt
+call python -m pip install --upgrade --requirement requirements.txt
 echo.Requirements installed
 goto :END
 
-:PIP_INSTALL_TOOLS_CMD
-echo.Installing Packaging requirements
-call python -m pip install --quiet --upgrade --requirement requirements-pkg.txt
-echo.Packaging requirements installed
-goto :END
-
 :PIP_INSTALL_DEV_CMD
-call python -m pip install --quiet --upgrade --requirement requirements-dev.txt
+echo.Installing developement requirements
+call python -m pip install --upgrade --requirement requirements-dev.txt
+call python -m pip install --upgrade --requirement requirements-build.txt
+call python -m pip install --upgrade --requirement requirements-lint.txt
+call python -m pip install --upgrade --requirement requirements-pkg.txt
 echo.Developement requirements installed
 goto :END
 
@@ -70,9 +67,8 @@ goto :END
 
 :INIT
 echo.Initializing...
-call :PIP_INSTALL_TOOLS_CMD
-call :PIP_INSTALL_DEV_CMD
 call :PIP_INSTALL_CMD
+call :PIP_INSTALL_DEV_CMD
 call :PIPENV_INSTALL_CMD
 echo.Initialized
 goto :BYE
@@ -92,16 +88,12 @@ goto :BYE
 call :FILES_CLEAN_CMD
 goto :BYE
 
-:PIPENV_CLEAN
+:PIPENV_REMOVE
 call :PIPENV_REMOVE_CMD
 goto :BYE
 
 :PIPENV_INSTALL
 call :PIPENV_INSTALL_CMD
-goto :BYE
-
-:PIP_INSTALL_TOOLS
-call :PIP_INSTALL_TOOLS_CMD
 goto :BYE
 
 :PIP_INSTALL

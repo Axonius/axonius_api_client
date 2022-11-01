@@ -110,7 +110,7 @@ Tested Python versions
 
 Versions:
 
-* Python 3.7.15 64 bit
+* Python 3.7.8 64 bit
 * Python 3.10.8 64 bit
 * Python 3.11.0 64 bit
 
