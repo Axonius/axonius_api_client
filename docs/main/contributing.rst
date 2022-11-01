@@ -97,7 +97,7 @@ to `cov_html/index.html`:
 Supported Python versions
 ----------------------------------------------------------
 
-* Latest versions of 3.7 and 3.8
+* Latest versions of 3.7, 3.10, and 3.11
 * Microsoft Windows, macOS, Linux
 
 .. note::
@@ -108,36 +108,24 @@ Supported Python versions
 Tested Python versions
 ----------------------------------------------------------
 
-* macOS 10.15.3 (Catalina)
+Versions:
 
-  * Python 3.7.6 64 bit: 02/08/2020
-  * Python 3.8.1 64 bit : 02/08/2020
+* Python 3.7.15 64 bit
+* Python 3.10.8 64 bit
+* Python 3.11.0 64 bit
 
+Operating Systems:
+
+* macOS 12.6.1 (Monterey)
 * Ubuntu Linux 18.04.03 LTS 64 bit
+* Ubuntu Linux 22.04.01 LTS 64 bit
+* Microsoft Windows 10 x64
+* Microsoft Windows 11 x64
+* Microsoft Windows Server 2012 R2 x64
+* Microsoft Windows Server 2019 x64
+* Microsoft Windows Server Standard 2022
 
-  * Python 3.7.6 64 bit: 02/08/2020
-  * Python 3.8.1 64 bit: 02/08/2020
-
-* Microsoft Windows 10 Pro x64 (Version 1909, Build 18363.592)
-
-  * Python 3.8.1 64 bit: 02/08/2020
-
-* Microsoft Windows Server 2012 R2 x64 (Version 6.3, Build 9600)
-
-  * Python 3.8.1 64 bit: 02/08/2020
-
-* Microsoft Windows Server 2019 x64 (Version 1809, Build 17763.1012)
-
-  * Python 3.8.1 64 bit: 02/08/2020
-
-.. _issue tracker: https://github.com/Axonius/axonius_api_client/issues
-.. _GitHub project: https://github.com/Axonius/axonius_api_client
-.. _black: https://github.com/psf/black
-.. _flake8: https://gitlab.com/pycqa/flake8
-.. _pytest: https://docs.pytest.org/en/latest/
-.. _isort: https://github.com/timothycrosley/isort
-.. _pydocstyle: https://github.com/PyCQA/pydocstyle/
-.. _bandit: https://github.com/PyCQA/bandit
+Last Updated: 2022/10/31
 
 Release Strategy
 ===================================================
@@ -156,3 +144,12 @@ Major releases: x.0.0:
     A major release is only done for architectural and model changes to the API client library.
 
     Any scripts that utilize this API library might not work with new major releases.
+
+.. _issue tracker: https://github.com/Axonius/axonius_api_client/issues
+.. _GitHub project: https://github.com/Axonius/axonius_api_client
+.. _black: https://github.com/psf/black
+.. _flake8: https://gitlab.com/pycqa/flake8
+.. _pytest: https://docs.pytest.org/en/latest/
+.. _isort: https://github.com/timothycrosley/isort
+.. _pydocstyle: https://github.com/PyCQA/pydocstyle/
+.. _bandit: https://github.com/PyCQA/bandit

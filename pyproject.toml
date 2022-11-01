@@ -11,6 +11,7 @@ log_file = "artifacts/pytest.log"
 filterwarnings = [
     "error",
     'ignore:The distutils package:DeprecationWarning',
+    "ignore:'urllib3.contrib.pyopenssl:DeprecationWarning",
     'ignore:ssl.wrap_socket\(\) is deprecated:DeprecationWarning',
     'ignore:ssl.PROTOCOL_TLS is deprecated:DeprecationWarning',
     'ignore:distutils Version classes:DeprecationWarning',

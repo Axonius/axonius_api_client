@@ -66,6 +66,9 @@ class TestPropsData:
     def test_str_repr_init(self):
         @dataclasses.dataclass
         class BadWolf(PropsData):
+
+            raw: dict
+
             @property
             def _properties(self):
                 return ["name"]

@@ -44,7 +44,7 @@ def check_schema_cls(obj: type, src: str):
             raise ValueError(f"{src} {obj} must be a subclass of {BaseSchema}")
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(eq=True, frozen=True)
 class ApiEndpoint:
     """Container for defining an endpoints method, path, schemas, and models."""
 

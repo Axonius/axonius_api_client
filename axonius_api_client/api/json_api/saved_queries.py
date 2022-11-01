@@ -635,7 +635,7 @@ class QueryHistoryRequest(BaseModel):
     page: Optional[PaginationRequest] = get_schema_dc(
         schema=QueryHistoryRequestSchema,
         key="page",
-        default=PaginationRequest(),
+        default_factory=PaginationRequest,
     )
     search: Optional[str] = get_schema_dc(
         schema=QueryHistoryRequestSchema,

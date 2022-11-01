@@ -425,11 +425,11 @@ class AdapterFetchHistoryRequest(BaseModel):
     )
     page: Optional[PaginationRequest] = get_field_dc_mm(
         mm_field=AdapterFetchHistoryRequestSchema._declared_fields["page"],
-        default=PaginationRequest(),
+        default_factory=PaginationRequest,
     )
     time_range: Optional[TimeRange] = get_field_dc_mm(
         mm_field=AdapterFetchHistoryRequestSchema._declared_fields["time_range"],
-        default=TimeRange(),
+        default_factory=TimeRange,
     )
     sort: Optional[str] = get_field_dc_mm(
         mm_field=AdapterFetchHistoryRequestSchema._declared_fields["sort"],

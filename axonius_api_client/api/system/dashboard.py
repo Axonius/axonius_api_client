@@ -3,7 +3,7 @@
 import dataclasses
 import datetime
 import time
-from typing import Dict, List, Optional, Tuple, Union
+import typing as t
 
 from ...data import PropsData
 from ...tools import coerce_int, dt_now, dt_parse, trim_float
@@ -11,8 +11,8 @@ from .. import json_api
 from ..api_endpoints import ApiEndpoints
 from ..mixins import ModelMixins
 
-PROPERTIES_PHASE: List[str] = ["name", "human_name", "is_done", "progress"]
-PROPERTIES: List[str] = [
+PROPERTIES_PHASE: t.List[str] = ["name", "human_name", "is_done", "progress"]
+PROPERTIES: t.List[str] = [
     "is_running",
     "is_correlation_finished",
     "status",
@@ -32,16 +32,16 @@ class DiscoverPhase(PropsData):
 
     raw: dict
 
-    def to_str_properties(self) -> List[str]:
+    def to_str_properties(self) -> t.List[str]:
         """Pass."""
         return [f"Name: {self.human_name}", f"Is Done: {self.is_done}"]
 
-    def to_str_progress(self) -> List[str]:
+    def to_str_progress(self) -> t.List[str]:
         """Pass."""
         return [f"{k}: {', '.join(v)}" for k, v in self.progress.items()]
 
     @property
-    def _properties(self) -> List[str]:
+    def _properties(self) -> t.List[str]:
         return PROPERTIES_PHASE
 
     @property
@@ -60,7 +60,7 @@ class DiscoverPhase(PropsData):
         return self.raw["status"] == 1
 
     @property
-    def progress(self) -> Dict[str, List[str]]:
+    def progress(self) -> t.Dict[str, t.List[str]]:
         """Pass."""
         items = self.raw["additional_data"].items()
         return {status: [k for k, v in items if v == status] for _, status in items}
@@ -85,19 +85,24 @@ class DiscoverData(PropsData):
     """Pass."""
 
     raw: dict
-    adapters: List[dict] = dataclasses.field(default_factory=list, repr=False)
+    adapters: t.List[dict] = dataclasses.field(default_factory=list, repr=False)
 
     @property
-    def _properties(self) -> List[str]:
+    def _properties(self) -> t.List[str]:
         return PROPERTIES
 
-    def to_str_progress(self) -> List[str]:
+    def to_str_progress(self) -> t.List[str]:
         """Pass."""
         return [x["str"] for x in self.progress]
 
-    def to_str_phases(self) -> List[str]:
+    def to_str_phases(self) -> t.List[str]:
         """Pass."""
         return [f"{x.human_name}: {x.status}" for x in self.phases]
+
+    @property
+    def phases_dict(self) -> dict:
+        """Pass."""
+        return {x.name: x for x in self.phases}
 
     def to_dict(self, dt_obj: bool = False) -> dict:
         """Pass."""
@@ -107,25 +112,25 @@ class DiscoverData(PropsData):
         return ret
 
     @property
-    def last_run_finish_date(self) -> Optional[datetime.datetime]:
+    def last_run_finish_date(self) -> t.Optional[datetime.datetime]:
         """Pass."""
         dt = self.raw["last_finished_time"]
         return dt_parse(obj=dt) if dt else None
 
     @property
-    def last_run_start_date(self) -> Optional[datetime.datetime]:
+    def last_run_start_date(self) -> t.Optional[datetime.datetime]:
         """Pass."""
         dt = self.raw["last_start_time"]
         return dt_parse(obj=dt) if dt else None
 
     @property
-    def current_run_duration_in_minutes(self) -> Optional[float]:
+    def current_run_duration_in_minutes(self) -> t.Optional[float]:
         """Pass."""
         dt = self.last_run_start_date
         return trim_float(value=(dt_now() - dt).total_seconds() / 60) if self.is_running else None
 
     @property
-    def last_run_duration_in_minutes(self) -> Optional[float]:
+    def last_run_duration_in_minutes(self) -> t.Optional[float]:
         """Pass."""
         start = self.last_run_start_date
         finish = self.last_run_finish_date
@@ -134,7 +139,7 @@ class DiscoverData(PropsData):
         return trim_float(value=(finish - start).total_seconds() / 60) if check else None
 
     @property
-    def last_run_minutes_ago(self) -> Optional[float]:
+    def last_run_minutes_ago(self) -> t.Optional[float]:
         """Pass."""
         finish = self.last_run_finish_date
         return trim_float(value=(dt_now() - finish).total_seconds() / 60) if finish else None
@@ -155,11 +160,18 @@ class DiscoverData(PropsData):
         return "Post_Correlation"
 
     @property
+    def correlation_phase(self) -> t.Optional[DiscoverPhase]:
+        """Pass."""
+        return self.phases_dict.get(self.correlation_stage)
+
+    @property
     def is_correlation_finished(self) -> bool:
         """Pass."""
-        stage = self.correlation_stage
-        not_running = not self.is_running
-        return any([not_running, *[x.name == stage and x.is_done for x in self.phases]])
+        if not self.is_running:
+            return True
+        elif isinstance(self.correlation_phase, DiscoverPhase) and self.correlation_phase.is_done:
+            return True
+        return False
 
     @property
     def running_status_map(self) -> dict:
@@ -182,7 +194,7 @@ class DiscoverData(PropsData):
         return self.raw["status"]
 
     @property
-    def progress(self) -> List[dict]:
+    def progress(self) -> t.List[dict]:
         """Pass."""
         plugin_map = {x["name_plugin"]: x for x in self.adapters}
 
@@ -202,7 +214,7 @@ class DiscoverData(PropsData):
         return ret
 
     @property
-    def phases(self) -> List[DiscoverPhase]:
+    def phases(self) -> t.List[DiscoverPhase]:
         """Pass."""
         self._has_running = False
 
@@ -231,8 +243,8 @@ class DiscoverData(PropsData):
         return coerce_int(obj=value, min_value=0) >= int(self.next_run_starts_in_minutes)
 
     def get_stability(
-        self, for_next_minutes: Optional[int] = None, start_check: Union[int, float] = 0.5
-    ) -> Tuple[str, bool]:
+        self, for_next_minutes: t.Optional[int] = None, start_check: t.Union[int, float] = 0.5
+    ) -> t.Tuple[str, bool]:
         """Pass."""
         current_run = self.current_run_duration_in_minutes
 
