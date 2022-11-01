@@ -3,8 +3,11 @@
 FOR /F "tokens=* USEBACKQ" %%F IN (`python get_version.py`) do (
     SET VERSION=%%F
 )
+FOR /F "tokens=* USEBACKQ" %%F IN (`pyenv version`) do (
+    SET PYTHON_VERSION=%%F
+)
 SET CMD=%1
-echo.Hello, version %VERSION% %CMD%
+echo.Hello, version=%VERSION%, cmd=%CMD%, python version=%PYTHON_VERSION%
 
 if "%CMD%" == "" goto :HELP
 if "%CMD%" == "help" goto :HELP
@@ -114,7 +117,7 @@ call :TEST_CMD
 goto :BYE
 
 :BYE
-echo.Goodbye, version %VERSION% %CMD%
+echo.Goodbye, version=%VERSION%, cmd=%CMD%, python version=%PYTHON_VERSION%
 goto :END
 
 :END
