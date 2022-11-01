@@ -117,8 +117,8 @@ Versions:
 Operating Systems:
 
 * macOS 12.6.1 (Monterey)
-* Ubuntu Linux 18.04.03 LTS 64 bit
-* Ubuntu Linux 22.04.01 LTS 64 bit
+* Ubuntu Linux 18.04.05 64 bit (using "ubuntu-18.04.5-desktop-amd64.iso")
+* Ubuntu Linux 22.04.01 64 bit (using "ubuntu-22.04.1-desktop-amd64.iso")
 * Microsoft Windows 10 x64
 * Microsoft Windows 11 x64
 * Microsoft Windows Server 2012 R2 x64
