@@ -121,11 +121,11 @@ Operating Systems:
 * Ubuntu Linux 22.04.01 64 bit (using "ubuntu-22.04.1-desktop-amd64.iso")
 * Microsoft Windows 10 x64
 * Microsoft Windows 11 x64
-* Microsoft Windows Server 2012 R2 x64
+* Microsoft Windows Server 2016 x64
 * Microsoft Windows Server 2019 x64
-* Microsoft Windows Server Standard 2022
+* Microsoft Windows Server 2022 x64
 
-Last Updated: 2022/10/31
+Last Updated: 2022/11/01
 
 Release Strategy
 ===================================================

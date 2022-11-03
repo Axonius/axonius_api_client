@@ -45,10 +45,10 @@ goto :END
 
 :PIP_INSTALL_DEV_CMD
 echo.Installing developement requirements
+call python -m pip install --upgrade --requirement requirements-pkg.txt
 call python -m pip install --upgrade --requirement requirements-dev.txt
 call python -m pip install --upgrade --requirement requirements-build.txt
 call python -m pip install --upgrade --requirement requirements-lint.txt
-call python -m pip install --upgrade --requirement requirements-pkg.txt
 echo.Developement requirements installed
 goto :END
 
