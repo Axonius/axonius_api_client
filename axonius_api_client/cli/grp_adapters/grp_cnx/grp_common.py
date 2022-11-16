@@ -227,6 +227,15 @@ OPT_NODE_NAME = click.option(
     show_default=True,
     help="Node name (will default to core instance if not supplied)",
 )
+OPT_CNX_LABEL = click.option(
+    "--connection-label",
+    "-cl",
+    "connection_label",
+    default=None,
+    show_envvar=True,
+    show_default=True,
+    help="Connection label to assign",
+)
 
 OPT_TUNNEL = click.option(
     "--tunnel",

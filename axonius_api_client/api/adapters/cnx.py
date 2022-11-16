@@ -434,7 +434,8 @@ class Cnx(ChildMixins):
         adapter = self.parent.get_by_name(name=adapter_name, node=adapter_node, get_clients=False)
         tunnel_id = self.parent.instances.get_tunnel(value=tunnel, return_id=True)
         schemas = self._get(adapter_name=adapter["name_raw"]).schema_cnx
-
+        config_label = new_config.pop("connection_label", None)
+        connection_label = connection_label or config_label
         cnx_to_add = cnx_from_adapter(adapter)
         cnx_to_add = combo_dicts(cnx_to_add, config=new_config, schemas=schemas)
         if parse_config:
