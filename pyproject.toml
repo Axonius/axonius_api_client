@@ -9,7 +9,6 @@ log_format = "%(asctime)s %(levelname)-8s [%(name)s:%(funcName)s:%(pathname)s:%(
 log_level = "DEBUG"
 log_file = "artifacts/pytest.log"
 filterwarnings = [
-    "error",
     'ignore:The distutils package:DeprecationWarning',
     "ignore:'urllib3.contrib.pyopenssl:DeprecationWarning",
     'ignore:ssl.wrap_socket\(\) is deprecated:DeprecationWarning',
