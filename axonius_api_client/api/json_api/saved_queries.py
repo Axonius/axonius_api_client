@@ -177,9 +177,7 @@ class SavedQuerySchema(BaseSchemaJson):
     uuid = marshmallow_jsonapi.fields.Str(allow_none=True, load_default=None, dump_default=None)
 
     # 2022-09-02
-    folder_id = marshmallow_jsonapi.fields.Str(
-        allow_none=True, load_default=None, dump_default=None
-    )
+    folder_id = marshmallow_jsonapi.fields.Str(allow_none=True, load_default="", dump_default="")
 
     # 2022-09-02
     last_run_time = SchemaDatetime(allow_none=True, load_default=None, dump_default=None)
@@ -252,10 +250,9 @@ class SavedQueryCreateSchema(BaseSchemaJson):
     asset_scope = SchemaBool(load_default=False, dump_default=False)
     access = marshmallow_jsonapi.fields.Dict(
         load_default=AccessMode.get_default_access(), dump_default=AccessMode.get_default_access()
-    )  # WIP: folders
-    # folder_id = marshmallow_jsonapi.fields.Str(
-    #     allow_none=True, load_default=None, dump_default=None
-    # )
+    )
+    # WIP: folders
+    folder_id = marshmallow_jsonapi.fields.Str(allow_none=True, load_default="", dump_default="")
 
     @staticmethod
     def get_model_cls() -> type:
@@ -444,7 +441,7 @@ class SavedQuery(BaseModel, SavedQueryMixins):
     is_referenced: bool = dataclasses.field(default=False, metadata={"update": False})
 
     # 2022-09-02
-    folder_id: Optional[str] = None
+    folder_id: str = ""
 
     # 2022-09-02
     last_run_time: Optional[datetime.datetime] = dataclasses.field(
@@ -469,6 +466,7 @@ class SavedQuery(BaseModel, SavedQueryMixins):
     def __post_init__(self):
         """Pass."""
         self.uuid = self.uuid or self.id
+        self.folder_id = self.folder_id or ""
 
     @staticmethod
     def get_schema_cls() -> Optional[Type[BaseSchema]]:
@@ -545,14 +543,13 @@ class SavedQueryCreate(BaseModel, SavedQueryMixins):
     private: bool = dataclasses.field(default=False)
     tags: List[str] = dataclasses.field(default_factory=list)
     access: Optional[dict] = None
-
-    # WIP: folders
-    # folder_id: Optional[str] = None
+    folder_id: str = ""
 
     def __post_init__(self):
         """Pass."""
         if not (isinstance(self.access, dict) and self.access):
             self.access = AccessMode.get_access_bool(self.private)
+        self.folder_id = self.folder_id or ""
 
     @staticmethod
     def get_schema_cls() -> Optional[Type[BaseSchema]]:
@@ -635,7 +632,7 @@ class QueryHistoryRequest(BaseModel):
     page: Optional[PaginationRequest] = get_schema_dc(
         schema=QueryHistoryRequestSchema,
         key="page",
-        default=PaginationRequest(),
+        default_factory=PaginationRequest,
     )
     search: Optional[str] = get_schema_dc(
         schema=QueryHistoryRequestSchema,

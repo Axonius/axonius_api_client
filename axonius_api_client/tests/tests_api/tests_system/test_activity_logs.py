@@ -49,7 +49,7 @@ class TestActivityLogsPublic(ActivityLogsBase):
         data = apiobj.get(within_last_hours=12)
         assert isinstance(data, list)
         for row in data:
-            assert row.hours_ago <= 12
+            assert row.hours_ago <= 13
 
         data = apiobj.get(within_last_hours=-1)
         assert isinstance(data, list)

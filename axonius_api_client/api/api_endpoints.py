@@ -26,7 +26,7 @@ class ApiEndpointGroup(BaseData):
         return self.__str__()
 
 
-@dataclasses.dataclass(repr=False)
+@dataclasses.dataclass(eq=True, frozen=True, repr=False)
 class Assets(ApiEndpointGroup):
     """Pass."""
 
@@ -137,7 +137,7 @@ class Assets(ApiEndpointGroup):
     )
 
 
-@dataclasses.dataclass(repr=False)
+@dataclasses.dataclass(eq=True, frozen=True, repr=False)
 class SavedQueries(ApiEndpointGroup):
     """Pass."""
 
@@ -235,7 +235,7 @@ class SavedQueries(ApiEndpointGroup):
     )
 
 
-@dataclasses.dataclass(repr=False)
+@dataclasses.dataclass(eq=True, frozen=True, repr=False)
 class Instances(ApiEndpointGroup):
     """Pass."""
 
@@ -356,7 +356,7 @@ class Instances(ApiEndpointGroup):
     # PBUG: returns string 'Tunnel is not enabled on system' if FF: enable_saas is False
 
 
-@dataclasses.dataclass(repr=False)
+@dataclasses.dataclass(eq=True, frozen=True, repr=False)
 class CentralCore(ApiEndpointGroup):
     """Pass."""
 
@@ -391,7 +391,7 @@ class CentralCore(ApiEndpointGroup):
     # TBUG: need testrail integration to automate tests
 
 
-@dataclasses.dataclass(repr=False)
+@dataclasses.dataclass(eq=True, frozen=True, repr=False)
 class SystemSettings(ApiEndpointGroup):
     """Pass."""
 
@@ -542,7 +542,7 @@ class SystemSettings(ApiEndpointGroup):
     )
 
 
-@dataclasses.dataclass(repr=False)
+@dataclasses.dataclass(eq=True, frozen=True, repr=False)
 class RemoteSupport(ApiEndpointGroup):
     """Pass."""
 
@@ -615,7 +615,7 @@ class RemoteSupport(ApiEndpointGroup):
     # PBUG: response is not jsonapi model
 
 
-@dataclasses.dataclass(repr=False)
+@dataclasses.dataclass(eq=True, frozen=True, repr=False)
 class SystemUsers(ApiEndpointGroup):
     """Pass."""
 
@@ -656,7 +656,7 @@ class SystemUsers(ApiEndpointGroup):
     )
 
 
-@dataclasses.dataclass(repr=False)
+@dataclasses.dataclass(eq=True, frozen=True, repr=False)
 class PasswordReset(ApiEndpointGroup):
     """Pass."""
 
@@ -706,7 +706,7 @@ class PasswordReset(ApiEndpointGroup):
     # PBUG: response is not jsonapi model
 
 
-@dataclasses.dataclass(repr=False)
+@dataclasses.dataclass(eq=True, frozen=True, repr=False)
 class Enforcements(ApiEndpointGroup):
     """Pass."""
 
@@ -792,7 +792,7 @@ class Enforcements(ApiEndpointGroup):
     )
 
 
-@dataclasses.dataclass(repr=False)
+@dataclasses.dataclass(eq=True, frozen=True, repr=False)
 class SystemRoles(ApiEndpointGroup):
     """Pass."""
 
@@ -845,7 +845,7 @@ class SystemRoles(ApiEndpointGroup):
     # PBUG: response is not jsonapi model
 
 
-@dataclasses.dataclass(repr=False)
+@dataclasses.dataclass(eq=True, frozen=True, repr=False)
 class Lifecycle(ApiEndpointGroup):
     """Pass."""
 
@@ -881,7 +881,7 @@ class Lifecycle(ApiEndpointGroup):
     # PBUG: response is not jsonapi model
 
 
-@dataclasses.dataclass(repr=False)
+@dataclasses.dataclass(eq=True, frozen=True, repr=False)
 class Adapters(ApiEndpointGroup):
     """Pass."""
 
@@ -1013,7 +1013,7 @@ class Adapters(ApiEndpointGroup):
     # "{'client_id': 'https://10.0.0.111_test1'}"
 
 
-@dataclasses.dataclass(repr=False)
+@dataclasses.dataclass(eq=True, frozen=True, repr=False)
 class Signup(ApiEndpointGroup):
     """Pass."""
 
@@ -1045,7 +1045,7 @@ class Signup(ApiEndpointGroup):
     )
 
 
-@dataclasses.dataclass(repr=False)
+@dataclasses.dataclass(eq=True, frozen=True, repr=False)
 class AuditLogs(ApiEndpointGroup):
     """Pass."""
 
@@ -1059,7 +1059,7 @@ class AuditLogs(ApiEndpointGroup):
     )
 
 
-@dataclasses.dataclass(repr=False)
+@dataclasses.dataclass(eq=True, frozen=True, repr=False)
 class OpenAPISpec(ApiEndpointGroup):
     """Pass."""
 
@@ -1074,7 +1074,7 @@ class OpenAPISpec(ApiEndpointGroup):
     )
 
 
-@dataclasses.dataclass(repr=False)
+@dataclasses.dataclass(eq=True, frozen=True, repr=False)
 class DataScopes(ApiEndpointGroup):
     """Pass."""
 
@@ -1115,7 +1115,7 @@ class DataScopes(ApiEndpointGroup):
     )
 
 
-@dataclasses.dataclass(repr=False)
+@dataclasses.dataclass(eq=True, frozen=True, repr=False)
 class ApiEndpoints(BaseData):
     """Pass."""
 

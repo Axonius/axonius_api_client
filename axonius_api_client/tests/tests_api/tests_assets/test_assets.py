@@ -80,6 +80,9 @@ class TestAssetsPrivate(ModelMixinsBase):
             assert isinstance(obj.dates, list)
             assert obj.get_date() is None
 
+            if not obj.dates:
+                return
+
             for date in obj.dates:
                 check_asset_type_history_date(date)
 

@@ -811,7 +811,10 @@ class CallbacksFull(Callbacks):
             cbobj.echo(msg=entry, error=ApiError)
 
         capture = capsys.readouterr()
-        assert not capture.err
+        if capture.err:
+            lines = capture.err.splitlines()
+            for line in lines:
+                assert line.startswith("ResourceWarning") or line.startswith("Exception ignored in")
         assert not capture.out
         log_check(caplog=caplog, entries=[entry], exists=True)
 

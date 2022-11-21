@@ -220,7 +220,6 @@ class BaseSchemaJson(BaseSchema, marshmallow_jsonapi.Schema):
         raise exc_cls(f"Invalid attribute {value!r}, valids: {valids}")
 
 
-@dataclasses.dataclass
 class BaseModel(dataclasses_json.DataClassJsonMixin, BaseCommon):
     """Model base class for holding data."""
 

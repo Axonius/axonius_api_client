@@ -12,26 +12,30 @@ init:
 	$(MAKE) pip_install_tools
 	$(MAKE) clean
 	$(MAKE) pipenv_init_ver
+	$(MAKE) pip_install_req
 	$(MAKE) pip_install_lint
 	$(MAKE) pip_install_dev
 	$(MAKE) pip_install_docs
 	$(MAKE) pip_install_build
 
 
+pip_install_req:
+	pip install --upgrade --requirement requirements.txt
+
 pip_install_tools:
-	pip install --quiet --upgrade --requirement requirements-pkg.txt
+	pip install --upgrade --requirement requirements-pkg.txt
 
 pip_install_dev:
-	pip install --quiet --upgrade --requirement requirements-dev.txt
+	pip install --upgrade --requirement requirements-dev.txt
 
 pip_install_lint:
-	pip install --quiet --upgrade --requirement requirements-lint.txt
+	pip install --upgrade --requirement requirements-lint.txt
 
 pip_install_build:
-	pip install --quiet --upgrade --requirement requirements-build.txt
+	pip install --upgrade --requirement requirements-build.txt
 
 pip_install_docs:
-	pip install --quiet --upgrade --requirement docs/requirements.txt
+	pip install --upgrade --requirement docs/requirements.txt
 
 pipenv_init:
 	pipenv install --dev --skip-lock
@@ -70,7 +74,7 @@ docs_dev:
 	(cd docs && pipenv run make html SPHINXOPTS="-na" && cd ..)
 
 docs_apigen:
-	pip install sphinx -t /tmp/sphinx-latest --quiet --upgrade
+	pip install sphinx -t /tmp/sphinx-latest --upgrade
 	rm -rf /tmp/api
 	PYTHONPATH=/tmp/sphinx-latest /tmp/sphinx-latest/bin/sphinx-apidoc \
 		-e -P -M -f -T -t docs/_templates \

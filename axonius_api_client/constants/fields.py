@@ -243,7 +243,7 @@ class Formats(BaseEnum):
     data_scope = enum.auto()
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(eq=True, frozen=True)
 class OperatorNameMap(BaseData):
     """Mapping class of an operator name to its GUI expression operator name."""
 
@@ -251,7 +251,7 @@ class OperatorNameMap(BaseData):
     op: str
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(eq=True, frozen=True)
 class OperatorNameMaps(BaseData):
     """Maps of operator names to their GUI expression operator names."""
 
@@ -282,7 +282,7 @@ class OperatorNameMaps(BaseData):
     later_than: OperatorNameMap = OperatorNameMap(name="later_than", op="later than")
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(eq=True, frozen=True)
 class Operator(BaseData):
     """Operator mapto its AQL template, operator name map, and its value parser."""
 
@@ -297,7 +297,7 @@ def ops_clean(operators: t.List[Operator], clean: t.List[Operator]):
     return [x for x in operators if x not in clean]
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(eq=True, frozen=True)
 class Operators(BaseData):
     """Operator maps to their AQL templates, operator name map, and their value parsers."""
 
@@ -531,7 +531,7 @@ class Operators(BaseData):
     )
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(eq=True, frozen=True)
 class OperatorTypeMap(BaseData):
     """Operator type map that maps an operator to a specific field schema."""
 
@@ -543,7 +543,7 @@ class OperatorTypeMap(BaseData):
     items_format: Formats = None
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(eq=True, frozen=True)
 class OperatorTypeMaps(BaseData):
     """Operator type map that maps operators to a specific field schemas."""
 
@@ -988,7 +988,7 @@ class OperatorTypeMaps(BaseData):
 
         def enum_val(obj, attr):
             value = getattr(obj, attr, None)
-            return value.value if value else value
+            return value.value if hasattr(value, "value") else value
 
         name = field["name_qual"]
         ftype = field["type"]
@@ -1009,12 +1009,12 @@ class OperatorTypeMaps(BaseData):
         }
         attrs_text = attrs_str(attrs)
 
-        typemaps = cls.get_fields()
-        for typemap in typemaps:
-            type_attrs = {k: enum_val(typemap.default, k) for k in attrs}
+        fields = cls.get_fields()
+        for field in fields:
+            type_map = field.default
+            type_attrs = {k: enum_val(type_map, k) for k in attrs}
             if type_attrs == attrs:
-                typemap.default.name = typemap.name
-                return typemap.default
+                return type_map
 
         assume = "array of string" if is_array else "string"
         msg = f"Unexepected schema in field {name!r} with {attrs_text}, falling back to {assume}"

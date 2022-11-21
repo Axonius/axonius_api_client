@@ -78,7 +78,6 @@ class BaseEnum(enum.Enum):
         return {x.name: x.value for x in cls}
 
 
-@dataclasses.dataclass
 class BaseData:
     """Base class for dataclasses."""
 
@@ -101,7 +100,6 @@ class BaseData:
         return dataclasses.fields(cls)
 
 
-@dataclasses.dataclass
 class PropsData(BaseData):
     """Pass."""
 

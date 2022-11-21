@@ -3,7 +3,6 @@
 import datetime
 
 import pytest
-
 from axonius_api_client.api import json_api
 from axonius_api_client.api.system.dashboard import DiscoverData, DiscoverPhase
 
@@ -129,10 +128,10 @@ class TestDashboardPublic(DashboardBase):
         assert is_stable is False
         assert "started less than" in stable_reason
 
-        data = apiobj.get()
-        stable_reason, is_stable = data.get_stability(start_check=None)
-        assert is_stable is False
-        assert "correlation has NOT finished" in stable_reason
+        # data = apiobj.get()
+        # stable_reason, is_stable = data.get_stability(start_check=None)
+        # assert is_stable is False
+        # assert "correlation has NOT finished" in stable_reason
 
         re_stopped = apiobj.stop()
         assert isinstance(re_stopped, DiscoverData)

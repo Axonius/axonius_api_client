@@ -5,6 +5,7 @@ from ...context import CONTEXT_SETTINGS, click
 from ...options import AUTH, add_options
 from .grp_common import (
     EXPORT_FORMATS,
+    OPT_CNX_LABEL,
     OPT_EXPORT,
     OPT_SPLIT_CONFIG,
     OPTS_FLAGS,
@@ -20,6 +21,7 @@ OPTIONS = [
     *OPTS_FLAGS,
     *OPTS_SHOWS,
     *OPTS_PROMPTS,
+    OPT_CNX_LABEL,
     OPT_SPLIT_CONFIG,
     OPT_EXPORT,
 ]
@@ -45,12 +47,14 @@ def cmd(
     show_defaults,
     use_sane_defaults,
     ignore_unknowns,
+    connection_label,
     tunnel,
 ):
     """Add a connection from prompts or arguments."""
     client = ctx.obj.start_client(url=url, key=key, secret=secret)
     config = dict(config)
-
+    config_label = config.pop("connection_label", None)
+    connection_label = config_label or connection_label
     with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
         adapter = client.adapters.get_by_name(name=adapter_name, node=adapter_node)
         cnxs = client.adapters.cnx._get(adapter_name=adapter["name_raw"])
@@ -88,6 +92,7 @@ def cmd(
                 save_and_fetch=save_and_fetch,
                 tunnel=tunnel,
                 active=active,
+                connection_label=connection_label,
                 **config,
             )
             ctx.obj.echo_ok(msg="Connection added with no errors")
