@@ -190,6 +190,7 @@ class TestEnforcements(EnforcementsBase):
             "field_number",
             "field_list_integer",
             "field_list_number",
+            "field_list_date",
         ]
         value = atype.get_required_conditionally()
         assert value == exp
