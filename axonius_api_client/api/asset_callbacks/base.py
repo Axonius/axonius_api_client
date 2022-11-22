@@ -44,11 +44,6 @@ def crjoin(value):
     return joiner + joiner.join(value)
 
 
-def is_str_details(value: str) -> bool:
-    """Pass."""
-    return value.endswith("_details")
-
-
 class Base:
     """Callbacks for formatting asset data.
 
@@ -718,29 +713,27 @@ class Base:
             new_row = {"adapters": adapter}
 
             for k, v in row.items():
-                new_k = None
-                new_v = v
+                if k in FIELDS_ENTITY_PASSTHRU or k.endswith("_preferred"):
+                    new_row[k] = v
+                    continue
 
-                if k in FIELDS_ENTITY_PASSTHRU:
-                    new_k = k
-                elif k in FIELDS_DETAILS or is_str_details(k):
-                    new_k = k
+                if (k in FIELDS_DETAILS or k.endswith("_details")) and not k.endswith(
+                    "_preferred_details"
+                ):
+                    new_k = strip_right(obj=k, fix="_details") if k not in FIELDS_DETAILS else k
 
-                    if k not in FIELDS_DETAILS:
-                        new_k = strip_right(obj=k, fix="_details")
-
-                    if isinstance(new_v, (list, tuple)):
-                        try:
-                            new_v = new_v[idx]
-                        except Exception:
-                            pass
-
-                if new_k is not None:
-                    new_row[new_k] = new_v
-
+                    try:
+                        new_row.setdefault(new_k, v[idx])
+                    except Exception:
+                        msg = (
+                            f"Adapters length {adapters_cnt} != details length {len(v)} on {k}: {v}"
+                        )
+                        self.echo(msg=msg, warning=True)
+                    continue
             return new_row
 
         adapters = row.get("adapters") or []
+        adapters_cnt = len(adapters)
         new_rows = [explode(idx=idx, adapter=adapter) for idx, adapter in enumerate(adapters)]
         return new_rows
 
@@ -1043,7 +1036,7 @@ class Base:
             if self.is_excluded(schema=schema):
                 continue
             name = schema["name_qual"]
-            if explode_entities and is_str_details(name) and name not in FIELDS_DETAILS:
+            if explode_entities and name.endswith("_details") and name not in FIELDS_DETAILS:
                 continue
             is_explode_field = name == explode_field
             if schema["is_complex"] and (is_explode_field or flat):
