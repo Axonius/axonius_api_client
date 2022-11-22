@@ -443,6 +443,14 @@ class SystemSettings(ApiEndpointGroup):
         response_model_cls=None,
     )
     # PBUG: meta/about should return no spaces/all lowercase keys
+    get_constants: ApiEndpoint = ApiEndpoint(
+        method="get",
+        path="api/get_constants",
+        request_schema_cls=None,
+        request_model_cls=None,
+        response_schema_cls=None,
+        response_model_cls=None,
+    )
 
     historical_sizes: ApiEndpoint = ApiEndpoint(
         method="get",

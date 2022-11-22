@@ -118,6 +118,12 @@ class AdapterFetchHistorySchema(BaseSchemaJson):
     status = marshmallow.fields.Str(
         description="The status of the fetch",
     )
+    discovery_id = marshmallow.fields.Str(
+        description="The ID of the discovery cycle that originated the adapter fetch record",
+        allow_none=True,
+        load_default=None,
+        dump_default=None,
+    )
 
     class Meta:
         """Pass."""
@@ -156,6 +162,11 @@ class AdapterFetchHistory(BaseModel):
 
     status: str = get_field_dc_mm(
         mm_field=AdapterFetchHistorySchema._declared_fields["status"],
+    )
+
+    discovery_id: Optional[str] = get_field_dc_mm(
+        mm_field=AdapterFetchHistorySchema._declared_fields["discovery_id"],
+        default=None,
     )
 
     instance: Optional[str] = get_field_dc_mm(
@@ -540,6 +551,7 @@ class AdapterFetchHistoryFiltersSchema(BaseSchemaJson):
     connection_labels_filter = marshmallow_jsonapi.fields.List(marshmallow_jsonapi.fields.Str())
     instance_filter = marshmallow_jsonapi.fields.List(marshmallow_jsonapi.fields.Str())
     statuses_filter = marshmallow_jsonapi.fields.List(marshmallow_jsonapi.fields.Str())
+    discoveries_filter = marshmallow_jsonapi.fields.List(marshmallow_jsonapi.fields.Str())
 
     @staticmethod
     def get_model_cls() -> type:
@@ -574,6 +586,10 @@ class AdapterFetchHistoryFilters(BaseModel):
     )
     statuses_filter: List[str] = get_field_dc_mm(
         mm_field=AdapterFetchHistoryFiltersSchema._declared_fields["statuses_filter"],
+        default_factory=list,
+    )
+    discoveries_filter: List[str] = get_field_dc_mm(
+        mm_field=AdapterFetchHistoryFiltersSchema._declared_fields["discoveries_filter"],
         default_factory=list,
     )
 
@@ -655,7 +671,7 @@ class AdapterFetchHistoryFilters(BaseModel):
     @staticmethod
     def value_types() -> List[str]:
         """Pass."""
-        return ["adapters", "clients", "connection_labels", "instances", "statuses"]
+        return ["adapters", "clients", "connection_labels", "instances", "statuses", "discoveries"]
 
     @property
     def adapters(self) -> dict:
@@ -685,6 +701,11 @@ class AdapterFetchHistoryFilters(BaseModel):
         """Pass."""
         return self.statuses_filter
 
+    @property
+    def discoveries(self) -> List[str]:
+        """Pass."""
+        return self.discoveries_filter
+
     def __str__(self):
         """Pass."""
         items = [
@@ -693,6 +714,7 @@ class AdapterFetchHistoryFilters(BaseModel):
             f"connection_labels: {len(self.connection_labels)}",
             f"instances: {len(self.instances)}",
             f"statuses: {len(self.statuses)}",
+            f"discoveries: {len(self.discoveries)}",
         ]
         return ", ".join(items)
 

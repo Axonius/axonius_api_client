@@ -54,27 +54,28 @@ class SystemMetaBase:
 
     def val_about(self, data):
         """Pass."""
-        data = copy.deepcopy(data)
-        build_date = data.pop("Build Date")
-        assert isinstance(build_date, str) and build_date
+        if data:
+            data = copy.deepcopy(data)
+            build_date = data.pop("Build Date")
+            assert isinstance(build_date, str) and build_date
 
-        api_version = data.pop("api_client_version")
-        assert isinstance(api_version, str) and api_version
+            api_version = data.pop("api_client_version")
+            assert isinstance(api_version, str) and api_version
 
-        version = data.pop("Version")
-        assert isinstance(version, str)
+            version = data.pop("Version")
+            assert isinstance(version, str)
 
-        iversion = data.pop("Installed Version")
-        assert isinstance(iversion, str)
+            iversion = data.pop("Installed Version")
+            assert isinstance(iversion, str)
 
-        customer_id = data.pop("Customer ID", None) or data.pop("Customer Id", None)
-        assert isinstance(customer_id, (str, type(None)))
+            customer_id = data.pop("Customer ID", None) or data.pop("Customer Id", None)
+            assert isinstance(customer_id, (str, type(None)))
 
-        # 2022-01-21
-        contract_expiry = data.pop("Contract Expiry Date", None)
-        assert isinstance(contract_expiry, (str, type(None)))
+            # 2022-01-21
+            contract_expiry = data.pop("Contract Expiry Date", None)
+            assert isinstance(contract_expiry, (str, type(None)))
 
-        # assert not data
+            # assert not data
 
 
 class TestSystemMetaPrivate(SystemMetaBase):

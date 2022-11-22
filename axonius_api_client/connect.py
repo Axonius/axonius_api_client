@@ -475,11 +475,16 @@ class Connect:
         pkg_ver = f"API Client v{VERSION}"
 
         if self.STARTED:
-            msg = [
-                f"Connected to {url!r}",
-                f"version {self.version}",
-                f"(RELEASE DATE: {self.build_date})",
-            ]
+            about = self.meta.about(error=False)
+            if about:
+                version = about.get("Version", "") or about.get("Installed Version", "") or "DEMO"
+                build_date = about.get("Build Date", "")
+                bits = [f"version: {version}", f"(RELEASE DATE: {build_date})"]
+            else:
+                version = "unknown (no permissions)"
+                bits = [f"version: {version}"]
+
+            msg = [f"Connected to {url!r}", *bits]
         else:
             msg = [f"Not connected to {url!r}"]
 
