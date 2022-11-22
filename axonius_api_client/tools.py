@@ -2054,15 +2054,15 @@ def confirm(
     return answer
 
 
-def csv_able(value: t.Optional[t.Union[str, t.List[str]]]) -> t.List[str]:
+def csv_able(value: t.Optional[t.Union[str, t.List[str]]], sep: str = ",") -> t.List[str]:
     """Pass."""
     ret = []
     if is_str(value):
-        ret += [x.strip() for x in value.split(",") if is_str(x) and x not in ret]
+        ret += [x.strip() for x in value.split(sep) if is_str(x) and x not in ret]
 
     if isinstance(value, (list, tuple, set)):
         for item in value:
-            ret += [x for x in csv_able(value=item) if x not in ret]
+            ret += [x for x in csv_able(value=item, sep=sep) if x not in ret]
     return ret
 
 
