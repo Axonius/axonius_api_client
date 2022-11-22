@@ -46,7 +46,7 @@ class Mixins(Model):
     _logged_in: bool = False
     """Attribute checked by :meth:`is_logged_in`."""
 
-    _validate_endpoint: ApiEndpoint = ApiEndpoints.system_settings.meta_about
+    _validate_endpoint: ApiEndpoint = ApiEndpoints.system_settings.get_constants
     """Endpoint to use to validate logins."""
 
     def __init__(self, http: Http, creds: dict, **kwargs):

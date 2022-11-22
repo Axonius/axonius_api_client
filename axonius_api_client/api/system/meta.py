@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 """API for working with product metadata."""
+import typing as t
+
 from ... import features
 from ...tools import calc_gb
 from ..api_endpoints import ApiEndpoints
@@ -16,7 +18,10 @@ class Meta(ModelMixins):
 
     """
 
-    def about(self) -> dict:
+    ABOUT_DATA1: t.Optional[dict] = None
+    ABOUT_DATA2: t.Optional[dict] = None
+
+    def about(self, error: bool = True) -> dict:
         """Get about page metadata.
 
         Examples:
@@ -32,13 +37,23 @@ class Meta(ModelMixins):
             }
 
         """
-        if not hasattr(self, "_about_data"):
-            self._about_data = self._about()
-        if not hasattr(self, "_about_data2"):
-            self._about_data2 = self._about2()
+        if not isinstance(self.ABOUT_DATA1, dict) or not self.ABOUT_DATA1:
+            try:
+                self.ABOUT_DATA1 = self._about()
+            except Exception:
+                if error:
+                    raise
+
+        if not isinstance(self.ABOUT_DATA2, dict) or not self.ABOUT_DATA2:
+            try:
+                self.ABOUT_DATA2 = self._about2()
+            except Exception:
+                if error:
+                    raise
+
         ret = {}
-        ret.update(self._about_data)
-        ret.update(self._about_data2)
+        ret.update(self.ABOUT_DATA1 or {})
+        ret.update(self.ABOUT_DATA2 or {})
         features.PRODUCT_ABOUT = ret
         return ret
 
@@ -75,7 +90,7 @@ class Meta(ModelMixins):
             '3.10'
 
         """
-        return self.about()["Version"]
+        return self.about().get("Version", "")
 
     def _about(self) -> dict:
         """Direct API method to get the About page."""
@@ -90,4 +105,9 @@ class Meta(ModelMixins):
     def _historical_sizes(self) -> dict:
         """Direct API method to get the metadata about disk usage."""
         api_endpoint = ApiEndpoints.system_settings.historical_sizes
+        return api_endpoint.perform_request(http=self.auth.http)
+
+    def _get_constants(self) -> dict:
+        """Direct API method to get constants."""
+        api_endpoint = ApiEndpoints.system_settings.get_constants
         return api_endpoint.perform_request(http=self.auth.http)

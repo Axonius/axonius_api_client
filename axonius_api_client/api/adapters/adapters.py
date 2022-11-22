@@ -177,6 +177,7 @@ class Adapters(ModelMixins):
         clients: OPT_STR_RE_LISTY = None,
         instances: OPT_STR_RE_LISTY = None,
         statuses: OPT_STR_RE_LISTY = None,
+        discoveries: OPT_STR_RE_LISTY = None,
         exclude_realtime: bool = False,
         relative_unit_type: UnitTypes = UnitTypes.get_default(),
         relative_unit_count: Optional[int] = None,
@@ -206,6 +207,7 @@ class Adapters(ModelMixins):
             clients (OPT_STR_RE_LISTY, optional): Filter for records with matching client ids
             instances (OPT_STR_RE_LISTY, optional): Filter for records with matching instances
             statuses (OPT_STR_RE_LISTY, optional): Filter for records with matching statuses
+            discoveries (OPT_STR_RE_LISTY, optional): Filter for records with matching discovery IDs
             exclude_realtime (bool, optional): Exclude records for realtime adapters
             relative_unit_type (UnitTypes, optional): Type of unit to use when supplying
                 relative_unit_count
@@ -257,6 +259,11 @@ class Adapters(ModelMixins):
             history_filters=history_filters,
             value_type="statuses",
             value=statuses,
+        )
+        request_obj.set_filters(
+            history_filters=history_filters,
+            value_type="discoveries",
+            value=discoveries,
         )
         request_obj.set_sort(
             value=sort_attribute,
