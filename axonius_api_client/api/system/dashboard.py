@@ -6,7 +6,7 @@ import time
 import typing as t
 
 from ...data import PropsData
-from ...tools import coerce_int, dt_now, dt_parse, trim_float
+from ...tools import coerce_int, dt_now, dt_parse, listify, trim_float
 from .. import json_api
 from ..api_endpoints import ApiEndpoints
 from ..mixins import ModelMixins
@@ -273,7 +273,7 @@ class DiscoverData(PropsData):
 
 
 class Dashboard(ModelMixins):
-    """API for working with dashboards and discovery lifecycle.
+    """API for working with discovery lifecycle.
 
     Examples:
         * Get discover lifecycle metadata: :meth:`get`
@@ -376,3 +376,24 @@ class Dashboard(ModelMixins):
 
         self.adapters: Adapters = Adapters(auth=self.auth)
         """Work with adapters"""
+
+
+class DashboardSpaces(ModelMixins):
+    """Pass."""
+
+    def get_exportable_spaces(self) -> t.List[str]:
+        """Pass."""
+        return self._get_exportable_spaces().spaces
+
+    def _get_exportable_spaces(self) -> json_api.dashboard_spaces.ExportableSpacesResponse:
+        """Pass."""
+        api_endpoint = ApiEndpoints.dashboard_spaces.get_exportable_spaces
+        return api_endpoint.perform_request(http=self.auth.http)
+
+    def _export_spaces(self, spaces: t.Optional[t.List[str]] = None, as_template: bool = False):
+        """Pass."""
+        api_endpoint = ApiEndpoints.dashboard_spaces.export_spaces
+        request_obj = api_endpoint.request_model_cls(
+            spaces=listify(spaces), as_template=as_template
+        )
+        return api_endpoint.perform_request(request_obj=request_obj, http=self.auth.http)

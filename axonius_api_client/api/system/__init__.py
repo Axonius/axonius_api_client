@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """APIs for working with system components."""
 from .activity_logs import ActivityLogs
-from .dashboard import Dashboard
+from .dashboard import Dashboard, DashboardSpaces
 from .data_scopes import DataScopes
 from .instances import Instances
 from .meta import Meta
@@ -25,4 +25,5 @@ __all__ = (
     "ActivityLogs",
     "SettingsIdentityProviders",
     "DataScopes",
+    "DashboardSpaces",
 )

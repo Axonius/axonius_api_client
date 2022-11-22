@@ -27,6 +27,38 @@ class ApiEndpointGroup(BaseData):
 
 
 @dataclasses.dataclass(eq=True, frozen=True, repr=False)
+class DashboardSpaces(ApiEndpointGroup):
+    """Pass."""
+
+    # get: ApiEndpoint = ApiEndpoint(
+    #     method="get",
+    #     path="api/dashboard",
+    #     request_schema_cls=None,
+    #     request_model_cls=None,
+    #     response_schema_cls=None,
+    #     response_model_cls=None,
+    # )
+
+    export_spaces: ApiEndpoint = ApiEndpoint(
+        method="post",
+        path="api/dashboard/export",
+        request_schema_cls=json_api.dashboard_spaces.ExportSpacesRequestSchema,
+        request_model_cls=json_api.dashboard_spaces.ExportSpacesRequest,
+        response_schema_cls=None,
+        response_model_cls=None,
+    )
+
+    get_exportable_spaces: ApiEndpoint = ApiEndpoint(
+        method="get",
+        path="api/dashboard/list_spaces",
+        request_schema_cls=None,
+        request_model_cls=None,
+        response_schema_cls=json_api.dashboard_spaces.ExportableSpacesResponseSchema,
+        response_model_cls=json_api.dashboard_spaces.ExportableSpacesResponse,
+    )
+
+
+@dataclasses.dataclass(eq=True, frozen=True, repr=False)
 class Assets(ApiEndpointGroup):
     """Pass."""
 
@@ -1143,6 +1175,7 @@ class ApiEndpoints(BaseData):
     assets: ApiEndpointGroup = Assets()
     openapi: ApiEndpointGroup = OpenAPISpec()
     data_scopes: ApiEndpointGroup = DataScopes()
+    dashboard_spaces: ApiEndpointGroup = DashboardSpaces()
 
     @classmethod
     def get_groups(cls) -> Dict[str, ApiEndpointGroup]:

@@ -145,12 +145,7 @@ class BaseSchema(BaseCommon, marshmallow.Schema):
 
         if not dataclasses.is_dataclass(model_cls):
             return model_cls(**data) if callable(model_cls) else data
-
-        # fields_known = [x.name for x in dataclasses.fields(model_cls)]
-        # extra_attributes = {k: data.pop(k) for k in list(data) if k not in fields_known}
-        obj = model_cls.from_dict(data)
-        # obj.extra_attributes = extra_attributes
-        return obj
+        return model_cls.from_dict(data)
 
 
 class BaseSchemaJson(BaseSchema, marshmallow_jsonapi.Schema):
@@ -522,6 +517,9 @@ class BaseModel(dataclasses_json.DataClassJsonMixin, BaseCommon):
     @extra_attributes.setter
     def extra_attributes(self, value: dict):
         if value:
+            import pdb
+
+            pdb.set_trace()
             schema = self.get_schema_cls()
             stype = getattr(getattr(schema, "Meta", None), "type_", None)
             this_cls = self.__class__

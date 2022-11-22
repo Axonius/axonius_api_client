@@ -8,6 +8,7 @@ from . import (
     base,
     central_core,
     custom_fields,
+    dashboard_spaces,
     data_scopes,
     enforcements,
     generic,
@@ -51,4 +52,5 @@ __all__ = (
     "time_range",
     "paging_state",
     "selection",
+    "dashboard_spaces",
 )
