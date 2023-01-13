@@ -2,7 +2,7 @@
 """Models for API requests & responses."""
 import dataclasses
 import enum
-from typing import Optional
+import typing as t
 
 import marshmallow
 
@@ -42,9 +42,9 @@ COUNT_OPERATOR_SCHEMA = CountOperatorSchema()
 class CountOperator(BaseModel):
     """Pass."""
 
-    type: Optional[str] = get_field_dc_mm(
+    type: t.Optional[str] = get_field_dc_mm(
         mm_field=COUNT_OPERATOR_SCHEMA.fields["type"], default=None
     )
-    count: Optional[int] = get_field_dc_mm(
+    count: t.Optional[int] = get_field_dc_mm(
         mm_field=COUNT_OPERATOR_SCHEMA.fields["count"], default=None
     )

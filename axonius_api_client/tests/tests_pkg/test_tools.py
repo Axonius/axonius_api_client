@@ -1196,12 +1196,14 @@ class TestJsonDump:
         dc = IntValue(value=1111)
         now = datetime.utcnow()
         obj = {"foo": json_dump, "now": now, "dc": dc}
+
         exp = [
             "{",
             f'  "foo": "{json_dump}",',
             f'  "now": "{now.isoformat()}",',
             '  "dc": {',
-            '    "value": 1111',
+            '    "value": 1111,',
+            '    "document_meta": {}',
             "  }",
             "}",
         ]

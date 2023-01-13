@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Models for API requests & responses."""
 import dataclasses
-from typing import Optional, Type
+import typing as t
 
 import marshmallow_jsonapi
 
@@ -34,7 +34,7 @@ class CentralCoreSettingsUpdate(BaseModel):
     enabled: bool
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return CentralCoreSettingsUpdateSchema
 
@@ -101,7 +101,7 @@ class CentralCoreRestoreAwsRequest(BaseModel):
     restore_type: str = "aws"
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return CentralCoreRestoreAwsRequestSchema
 
@@ -131,8 +131,9 @@ class CentralCoreRestore(BaseModel):
     status: str
     message: str
     additional_data: dict
+    document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return CentralCoreRestoreSchema

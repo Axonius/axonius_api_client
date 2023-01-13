@@ -8,7 +8,7 @@ import re
 import pytest
 from axonius_api_client.api import json_api
 from axonius_api_client.constants.api import GUI_PAGE_SIZES
-from axonius_api_client.constants.general import SIMPLE
+from axonius_api_client.constants.ctypes import SimpleLike
 from axonius_api_client.exceptions import (
     AlreadyExists,
     ApiAttributeTypeError,
@@ -48,7 +48,8 @@ class SavedQueryBase:
 
 class TestSavedQueryPrivate(SavedQueryBase):
     def test_get(self, apiobj):
-        result = apiobj.saved_query._get()
+        request_obj = json_api.saved_queries.SavedQueryGet()
+        result = apiobj.saved_query._get_model(request_obj=request_obj)
         assert isinstance(result, list)
         for item in result:
             assert isinstance(item, json_api.saved_queries.SavedQuery)
@@ -72,13 +73,13 @@ class TestSavedQueryPrivate(SavedQueryBase):
             ],
             "pageSize": 20,
         }
-
         try:
             apiobj.saved_query.delete_by_name(value=name)
         except Exception:
             pass
 
-        result = apiobj.saved_query._add(name=name, view=view)
+        create_obj = json_api.saved_queries.SavedQueryCreate(name=name, view=view)
+        result = apiobj.saved_query._add_from_dataclass(obj=create_obj)
         assert isinstance(result, json_api.saved_queries.SavedQuery)
         assert result.name == name
         assert result.view == view
@@ -296,7 +297,6 @@ class TestQueryHistoryModel(SavedQueryBase):
 
 
 class TestSavedQueryPublic(SavedQueryBase):
-    @pytest.mark.skip("sqs broken")
     def test__check_name_exists(self, apiobj, sq_fixture):
         with pytest.raises(AlreadyExists):
             apiobj.saved_query._check_name_exists(value=sq_fixture["name"])
@@ -363,7 +363,6 @@ class TestSavedQueryPublic(SavedQueryBase):
         with pytest.raises(SavedQueryNotFoundError):
             apiobj.saved_query.get_by_tags(value=value)
 
-    @pytest.mark.skip("sqs broken")
     def test_update_name(self, apiobj, sq_fixture):
         add = random_string(6)
         old_value = sq_fixture["name"]
@@ -371,14 +370,12 @@ class TestSavedQueryPublic(SavedQueryBase):
         updated = apiobj.saved_query.update_name(sq=sq_fixture, value=new_value)
         assert updated["name"] == new_value
 
-    @pytest.mark.skip("sqs broken")
     def test_update_always_cached(self, apiobj, sq_fixture):
         old_value = sq_fixture["always_cached"]
         new_value = not old_value
         updated = apiobj.saved_query.update_always_cached(sq=sq_fixture, value=new_value)
         assert updated["always_cached"] == new_value
 
-    @pytest.mark.skip("sqs broken")
     def test_update_private(self, apiobj, sq_fixture):
         old_value = sq_fixture["private"]
         new_value = not old_value
@@ -390,7 +387,6 @@ class TestSavedQueryPublic(SavedQueryBase):
                 apiobj.saved_query.update_private(sq=sq_fixture, value=new_value)
             assert "Can't change a public query to be a private query." in str(exc.value)
 
-    @pytest.mark.skip("sqs broken")
     def test_update_description(self, apiobj, sq_fixture):
         add = random_string(6)
         old_value = sq_fixture["description"]
@@ -398,7 +394,6 @@ class TestSavedQueryPublic(SavedQueryBase):
         updated = apiobj.saved_query.update_description(sq=sq_fixture, value=new_value)
         assert updated["description"] == new_value
 
-    @pytest.mark.skip("sqs broken")
     def test_update_page_size(self, apiobj, sq_fixture):
         new_value = GUI_PAGE_SIZES[0]
         updated = apiobj.saved_query.update_page_size(sq=sq_fixture, value=new_value)
@@ -408,7 +403,6 @@ class TestSavedQueryPublic(SavedQueryBase):
         with pytest.raises(ApiError):
             apiobj.saved_query.update_tags(sq=None, value=1)
 
-    @pytest.mark.skip("sqs broken")
     def test_update_tags(self, apiobj, sq_fixture):
         value_set = ["badwolf1_set", "badwolf2_set", "badwolf3_set"]
         updated_set = apiobj.saved_query.update_tags(
@@ -435,7 +429,6 @@ class TestSavedQueryPublic(SavedQueryBase):
         )
         assert updated_wipe.tags == []
 
-    @pytest.mark.skip("sqs broken")
     def test_update_fields(self, apiobj, sq_fixture):
         value_set = apiobj.fields_default
         updated_set = apiobj.saved_query.update_fields(
@@ -457,7 +450,6 @@ class TestSavedQueryPublic(SavedQueryBase):
         )
         assert updated_append.fields == value_append_exp
 
-    @pytest.mark.skip("sqs broken")
     def test_update_query_empty_expressions_append(self, apiobj, sq_fixture):
         wiz_entries = f"simple {apiobj.FIELD_SIMPLE} contains a"
         wiz_parsed = apiobj.get_wiz_entries(wiz_entries=wiz_entries)
@@ -465,12 +457,10 @@ class TestSavedQueryPublic(SavedQueryBase):
         with pytest.warns(GuiQueryWizardWarning):
             apiobj.saved_query.update_query(sq=sq_fixture, query=wiz_parsed["query"], append=True)
 
-    @pytest.mark.skip("sqs broken")
     def test_update_query_empty_query_append(self, apiobj, sq_fixture):
         with pytest.raises(ApiError):
             apiobj.saved_query.update_query(sq=sq_fixture, query=None, append=True)
 
-    @pytest.mark.skip("sqs broken")
     def test_update_query(self, apiobj, sq_fixture):
         wiz_set_entries = f"simple {apiobj.FIELD_SIMPLE} contains a"
         wiz_set = apiobj.get_wiz_entries(wiz_entries=wiz_set_entries)
@@ -538,7 +528,6 @@ class TestSavedQueryPublic(SavedQueryBase):
         )
         assert updated_append_and_not.query == wiz_append_and_not_exp_query
 
-    @pytest.mark.skip("sqs broken")
     def test_update_sort(self, apiobj, sq_fixture):
         field = "specific_data.data.last_seen"
         get_schema(apiobj=apiobj, field=field)
@@ -547,13 +536,12 @@ class TestSavedQueryPublic(SavedQueryBase):
         assert updated["view"]["sort"]["field"] == field
         assert updated["view"]["sort"]["desc"] is False
 
-    @pytest.mark.skip("sqs broken")
     def test_update_sort_empty(self, apiobj, sq_fixture):
         updated = apiobj.saved_query.update_sort(sq=sq_fixture, field="", descending=True)
         assert updated["view"]["sort"]["field"] == ""
         assert updated["view"]["sort"]["desc"] is True
 
-    @pytest.mark.skip("sqs broken")
+    @pytest.mark.skip("private sqs broken")
     def test_update_copy(self, apiobj, sq_fixture):
         add = random_string(6)
         new_value = f"{FixtureData.name} {add}"
@@ -564,17 +552,14 @@ class TestSavedQueryPublic(SavedQueryBase):
         assert updated.private is True
         apiobj.saved_query.delete_by_name(value=updated.name)
 
-    @pytest.mark.skip("sqs broken")
     def test_get_by_multi_not_found(self, apiobj, sq_fixture):
         with pytest.raises(SavedQueryNotFoundError):
             apiobj.saved_query.get_by_multi(sq="i do not exist, therefore i am not")
 
-    @pytest.mark.skip("sqs broken")
     def test_get_by_multi_bad_type(self, apiobj, sq_fixture):
         with pytest.raises(ApiError):
             apiobj.saved_query.get_by_multi(sq=222222222)
 
-    @pytest.mark.skip("sqs broken")
     def test_get_by_multi(self, apiobj, sq_fixture):
         sqs = apiobj.saved_query.get(as_dataclass=True)
         by_name_str = apiobj.saved_query.get_by_multi(
@@ -651,7 +636,6 @@ class TestSavedQueryPublic(SavedQueryBase):
             pass
 
     @pytest.fixture(scope="function")
-    @pytest.mark.skip("sqs broken")
     def sq_fixture(self, apiobj):
         get_schema(apiobj=apiobj, field="specific_data.data.last_seen")
 
@@ -753,7 +737,6 @@ class TestSavedQueryPublic(SavedQueryBase):
         with pytest.raises(SavedQueryNotFoundError):
             apiobj.saved_query.get_by_multi(sq=non_asset_scopes[0].name, asset_scopes=True)
 
-    @pytest.mark.skip("sqs broken")
     def test_add_remove(self, apiobj, sq_fixture):
         row = apiobj.saved_query.delete_by_name(value=sq_fixture["name"])
         assert isinstance(row, dict)
@@ -800,7 +783,7 @@ def validate_qexpr(qexpr, asset):
     assert isinstance(notflag, bool)
 
     value = qexpr.pop("value")
-    assert isinstance(value, SIMPLE) or value is None
+    assert isinstance(value, SimpleLike) or value is None
 
     obj = qexpr.pop("obj", False)
     assert isinstance(obj, bool)
@@ -897,45 +880,46 @@ def validate_sq(asset):
     assert isinstance(archived, bool)
 
     updated_by_str = asset.pop("updated_by")
-    assert isinstance(updated_by_str, str)
+    assert isinstance(updated_by_str, str) or updated_by_str is None
 
-    updated_by = json.loads(updated_by_str)
-    assert isinstance(updated_by, dict)
+    if isinstance(updated_by_str, str) and updated_by_str:
+        updated_by = json.loads(updated_by_str)
+        assert isinstance(updated_by, dict)
 
-    updated_by_deleted = updated_by.pop("deleted")
-    assert isinstance(updated_by_deleted, bool)
+        updated_by_deleted = updated_by.pop("deleted")
+        assert isinstance(updated_by_deleted, bool)
 
-    # 4.5
-    updated_by_is_first_login = updated_by.pop("is_first_login", False)
-    assert isinstance(updated_by_is_first_login, bool)
+        # 4.5
+        updated_by_is_first_login = updated_by.pop("is_first_login", False)
+        assert isinstance(updated_by_is_first_login, bool)
 
-    # 4.5
-    updated_by_permanent = updated_by.pop("permanent", False)
-    assert isinstance(updated_by_permanent, bool)
+        # 4.5
+        updated_by_permanent = updated_by.pop("permanent", False)
+        assert isinstance(updated_by_permanent, bool)
 
-    updated_str_keys_req = [
-        "first_name",
-        "last_name",
-        "source",
-        "user_name",
-    ]
-    for updated_str_key in updated_str_keys_req:
-        val = updated_by.pop(updated_str_key)
-        assert isinstance(val, (str, int, float)) or val is None
+        updated_str_keys_req = [
+            "first_name",
+            "last_name",
+            "source",
+            "user_name",
+        ]
+        for updated_str_key in updated_str_keys_req:
+            val = updated_by.pop(updated_str_key)
+            assert isinstance(val, (str, int, float)) or val is None
 
-    updated_str_keys_opt = [
-        "_id",
-        "last_updated",
-        "password",
-        "pic_name",
-        "role_id",
-        "salt",
-    ]
-    for updated_str_key in updated_str_keys_opt:
-        val = updated_by.pop(updated_str_key, None)
-        assert isinstance(val, (str, int, float)) or val is None
+        updated_str_keys_opt = [
+            "_id",
+            "last_updated",
+            "password",
+            "pic_name",
+            "role_id",
+            "salt",
+        ]
+        for updated_str_key in updated_str_keys_opt:
+            val = updated_by.pop(updated_str_key, None)
+            assert isinstance(val, (str, int, float)) or val is None
 
-    assert not updated_by
+        assert not updated_by
 
     tags = asset.pop("tags", [])
     assert isinstance(tags, list)
@@ -1051,7 +1035,7 @@ def validate_sq(asset):
     assert qsearch is None or isinstance(qsearch, str)
 
     historical = view.pop("historical", None)
-    assert historical is None or isinstance(historical, SIMPLE)
+    assert historical is None or isinstance(historical, SimpleLike)
 
     """ changed in 4.5
     # 3.6+

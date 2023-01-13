@@ -2,7 +2,7 @@
 """Models for API requests & responses."""
 import dataclasses
 import datetime
-from typing import ClassVar, Dict, List, Optional, Type, Union
+import typing as t
 
 import marshmallow
 import marshmallow_jsonapi
@@ -43,12 +43,12 @@ class ModifyTagsSchema(BaseSchemaJson):
 class ModifyTags(BaseModel):
     """Pass."""
 
-    labels: List[str] = dataclasses.field(default_factory=list)
+    labels: t.List[str] = dataclasses.field(default_factory=list)
     entities: dict = dataclasses.field(default_factory=dict)
-    filter: Optional[str] = None
+    filter: t.Optional[str] = None
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return ModifyTagsSchema
 
@@ -69,6 +69,7 @@ class AssetTypeHistoryDate(BaseModel):
     date_api: str
     date_api_exact: str
     asset_type: str
+    document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     @property
     def days_ago(self) -> int:
@@ -92,7 +93,7 @@ class AssetTypeHistoryDate(BaseModel):
         return f"date={self.date}, days_ago={self.days_ago}"
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return None
 
@@ -103,11 +104,12 @@ class AssetTypeHistoryDates(BaseModel):
 
     asset_type: str
     values: dict
-    DATE_ONLY_FMT: ClassVar[str] = "%Y-%m-%d"
-    DATE_ONLY_VALID_FMTS: ClassVar[List[str]] = ["YYYY-MM-DD", "YYYYMMDD"]
+    DATE_ONLY_FMT: t.ClassVar[str] = "%Y-%m-%d"
+    DATE_ONLY_VALID_FMTS: t.ClassVar[t.List[str]] = ["YYYY-MM-DD", "YYYYMMDD"]
+    document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     @property
-    def dates(self) -> List[AssetTypeHistoryDate]:
+    def dates(self) -> t.List[AssetTypeHistoryDate]:
         """Pass."""
         if not hasattr(self, "_dates"):
             self._dates = [
@@ -117,65 +119,70 @@ class AssetTypeHistoryDates(BaseModel):
         return self._dates
 
     @property
-    def dates_by_days_ago(self) -> Dict[int, AssetTypeHistoryDate]:
+    def dates_by_days_ago(self) -> t.Dict[int, AssetTypeHistoryDate]:
         """Pass."""
         return {x.days_ago: x for x in self.dates}
 
     def get_date_nearest(
-        self, value: Union[str, datetime.timedelta, datetime.datetime]
-    ) -> AssetTypeHistoryDate:
+        self, value: t.Union[str, datetime.timedelta, datetime.datetime]
+    ) -> t.Optional[AssetTypeHistoryDate]:
         """Pass."""
 
         def get_delta(obj):
             """Pass."""
             return obj.date - pivot if obj.date >= pivot else pivot - obj.date
 
-        pivot = dt_parse(obj=value, default_tz_utc=True)
-        ret = min(self.dates, key=get_delta)
-        LOGGER.info(f"Closest {self.asset_type} history date to {pivot} found: {ret}")
-        return ret
+        if self.dates:
+            pivot = dt_parse(obj=value, default_tz_utc=True)
+            ret = min(self.dates, key=get_delta)
+            LOGGER.info(f"Closest {self.asset_type} history date to {pivot} found: {ret}")
+            return ret
 
-    def get_date_nearest_days_ago(self, value: int) -> AssetTypeHistoryDate:
+    def get_date_nearest_days_ago(self, value: int) -> t.Optional[AssetTypeHistoryDate]:
         """Pass."""
 
         def get_delta(obj):
             """Pass."""
             return obj.days_ago - pivot if obj.days_ago >= pivot else pivot - obj.days_ago
 
-        pivot = coerce_int(value)
-        ret = min(self.dates, key=get_delta)
-        LOGGER.info(f"Closest {self.asset_type} history days ago to {pivot} found: {ret}")
-        return ret
+        if self.dates:
+            pivot = coerce_int(value)
+            ret = min(self.dates, key=get_delta)
+            LOGGER.info(f"Closest {self.asset_type} history days ago to {pivot} found: {ret}")
+            return ret
 
     def get_date_by_date(
         self,
-        value: Optional[Union[str, datetime.timedelta, datetime.datetime]] = None,
+        value: t.Optional[t.Union[str, datetime.timedelta, datetime.datetime]] = None,
         exact: bool = True,
-    ) -> Optional[str]:
+    ) -> t.Optional[str]:
         """Pass."""
         if value:
             try:
-                dt = dt_parse(obj=value, default_tz_utc=True)
+                dt: datetime.datetime = dt_parse(obj=value, default_tz_utc=True)
             except Exception:
                 valid = " or ".join(self.DATE_ONLY_VALID_FMTS)
                 raise ApiError(f"Invalid history date format {value!r}, format must be {valid}")
 
-            date_api = dt.strftime(self.DATE_ONLY_FMT)
+            date_api: str = dt.strftime(self.DATE_ONLY_FMT)
             if date_api in self.values:
                 return self.values[date_api]
 
             if exact:
                 err = f"Invalid exact history date {date_api!r}"
                 raise ApiError(f"{err}\n\n{self}\n\n{err}")
-            return self.get_date_nearest(value=dt).date_api_exact
+
+            nearest: t.Optional[AssetTypeHistoryDate] = self.get_date_nearest(value=dt)
+            if isinstance(nearest, AssetTypeHistoryDate):
+                return nearest.date_api_exact
 
     def get_date_by_days_ago(
-        self, value: Optional[Union[int, str]] = None, exact: bool = True
-    ) -> Optional[str]:
+        self, value: t.Optional[t.Union[int, str]] = None, exact: bool = True
+    ) -> t.Optional[str]:
         """Pass."""
         if isinstance(value, str):
             try:
-                value = int(value)
+                value: int = int(value)
             except Exception:
                 raise ApiError(f"Invalid integer for exact days ago {value!r}")
 
@@ -188,21 +195,23 @@ class AssetTypeHistoryDates(BaseModel):
                 err = f"Invalid exact days ago {value!r} (highest={nums[-1]}, lowest={nums[0]})"
                 raise ApiError(f"{err}\n{self}\n\n{err}")
 
-            return self.get_date_nearest_days_ago(value=value).date_api_exact
+            nearest: t.Optional[AssetTypeHistoryDate] = self.get_date_nearest_days_ago(value=value)
+            if isinstance(nearest, AssetTypeHistoryDate):
+                return nearest.date_api_exact
 
     def get_date(
         self,
-        date: Optional[Union[str, datetime.timedelta, datetime.datetime]] = None,
-        days_ago: Optional[Union[int, str]] = None,
+        date: t.Optional[t.Union[str, datetime.timedelta, datetime.datetime]] = None,
+        days_ago: t.Optional[t.Union[int, str]] = None,
         exact: bool = True,
-    ) -> Optional[str]:
+    ) -> t.Optional[str]:
         """Pass."""
         return self.get_date_by_date(value=date, exact=exact) or self.get_date_by_days_ago(
             value=days_ago, exact=exact
         )
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return None
 
@@ -223,10 +232,10 @@ class AssetTypeHistoryDates(BaseModel):
 class HistoryDates(DictValue):
     """Pass."""
 
-    parsed: ClassVar[dict] = None
+    parsed: t.ClassVar[dict] = None
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return HistoryDatesSchema
 
@@ -308,20 +317,20 @@ class AssetRequest(AssetMixins, BaseModel):
     get_metadata: bool = True
     use_cursor: bool = True
 
-    history: Optional[str] = None
-    filter: Optional[str] = None
-    cursor_id: Optional[str] = None
-    sort: Optional[str] = None
+    history: t.Optional[str] = None
+    filter: t.Optional[str] = None
+    cursor_id: t.Optional[str] = None
+    sort: t.Optional[str] = None
 
-    excluded_adapters: Optional[dict] = dataclasses.field(default_factory=dict)
-    field_filters: Optional[dict] = dataclasses.field(default_factory=dict)
-    fields: Optional[dict] = dataclasses.field(default_factory=dict)
+    excluded_adapters: t.Optional[dict] = dataclasses.field(default_factory=dict)
+    field_filters: t.Optional[dict] = dataclasses.field(default_factory=dict)
+    fields: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
-    page: Optional[PaginationRequest] = get_field_dc_mm(
+    page: t.Optional[PaginationRequest] = get_field_dc_mm(
         marshmallow_jsonapi.fields.Nested(PaginationSchema), default=None
     )
-    saved_query_id: Optional[str] = None
-    expressions: Optional[List[dict]] = dataclasses.field(default_factory=list)
+    saved_query_id: t.Optional[str] = None
+    expressions: t.Optional[t.List[dict]] = dataclasses.field(default_factory=list)
 
     def __post_init__(self):
         """Pass."""
@@ -332,7 +341,7 @@ class AssetRequest(AssetMixins, BaseModel):
         self.expressions = self.expressions or []
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return AssetRequestSchema
 
@@ -345,9 +354,10 @@ class AssetRequest(AssetMixins, BaseModel):
 class AssetsPage(BaseModel):
     """Pass."""
 
-    assets: Optional[List[dict]] = dataclasses.field(default_factory=list)
-    meta: Optional[dict] = dataclasses.field(default_factory=dict)
+    assets: t.Optional[t.List[dict]] = dataclasses.field(default_factory=list)
+    meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
     empty_response: bool = False
+    document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     def __post_init__(self):
         """Pass."""
@@ -377,7 +387,7 @@ class AssetsPage(BaseModel):
         return self.__str__()
 
     @property
-    def page_attrs(self) -> List[str]:
+    def page_attrs(self) -> t.List[str]:
         """Pass."""
         return [
             "page_number",
@@ -554,7 +564,7 @@ class AssetsPage(BaseModel):
         raise StopFetch(reason=reason, state=state)
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return None
 
@@ -565,9 +575,10 @@ class AssetById(BaseModel):
 
     asset: dict
     id: str
+    document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return None
 
@@ -615,12 +626,12 @@ class CountRequest(BaseModel, AssetMixins):
     """Pass."""
 
     use_cache_entry: bool = False
-    history: Optional[str] = None
-    filter: Optional[str] = None
-    saved_query_id: Optional[str] = None
+    history: t.Optional[str] = None
+    filter: t.Optional[str] = None
+    saved_query_id: t.Optional[str] = None
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return CountRequestSchema
 
@@ -629,10 +640,11 @@ class CountRequest(BaseModel, AssetMixins):
 class Count(BaseModel):
     """Pass."""
 
-    value: Optional[int] = None
+    value: t.Optional[int] = None
+    document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return None
 
@@ -656,7 +668,7 @@ class DestroyRequest(BaseModel):
     history: bool = False
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return None
 

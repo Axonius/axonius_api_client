@@ -15,23 +15,7 @@ def export_str_names(data, **kwargs):
 
 def export_str(data, **kwargs):
     """Pass."""
-
-    def getstr(obj):
-        return "\n".join(
-            [
-                "-----------------------------------------------",
-                f"Name: {obj.name}",
-                f"UUID: {obj.uuid}",
-                f"Description: {obj.description}",
-                f"Query: {obj.query}",
-                f"Tags: {obj.tags}",
-                f"Fields: {obj.fields}",
-                f"Flags: {', '.join(obj.flags_txt)}",
-                f"Updated: {obj.last_updated_str}",
-            ]
-        )
-
-    return "\n".join(getstr(x) for x in listify(data))
+    return f"\n{'-' * 60}\n".join("\n".join(x.to_strs()) for x in listify(data))
 
 
 def export_table(data, table_format=TABLE_FORMAT, **kwargs):

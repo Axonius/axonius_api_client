@@ -2,7 +2,7 @@
 """Models for API requests & responses."""
 import dataclasses
 import datetime
-from typing import List, Optional, Type
+import typing as t
 
 import dataclasses_json
 import marshmallow_jsonapi
@@ -45,7 +45,7 @@ class SystemSettings(BaseModel):
     document_meta: dict = dataclasses.field(default_factory=dict)
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return SystemSettingsSchema
 
@@ -65,7 +65,7 @@ class SystemSettingsUpdateSchema(BaseSchemaJson):
         type_ = "settings_schema"
 
     @staticmethod
-    def get_model_cls() -> Optional[type]:
+    def get_model_cls() -> t.Optional[type]:
         """Pass."""
         return SystemSettingsUpdate
 
@@ -81,7 +81,7 @@ class SystemSettingsUpdate(BaseModel):
     prefix: str = ""
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return SystemSettingsUpdateSchema
 
@@ -100,7 +100,7 @@ class FeatureFlags(SystemSettings):
     """Pass."""
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return FeatureFlagsSchema
 
@@ -129,7 +129,7 @@ class FeatureFlags(SystemSettings):
         return self._data_scopes.get("enabled", False)
 
     @property
-    def data_scopes_max(self) -> Optional[int]:
+    def data_scopes_max(self) -> t.Optional[int]:
         """Get the max number of data scopes allowed."""
         return self._data_scopes.get("queries_limit", None)
 
@@ -142,24 +142,24 @@ class FeatureFlags(SystemSettings):
         return self.config.get("cloud_compliance") or {}
 
     @property
-    def trial_expiry_dt(self) -> Optional[datetime.datetime]:
+    def trial_expiry_dt(self) -> t.Optional[datetime.datetime]:
         """Get the trial expiration date."""
         expiry = self.config["trial_end"]
         return dt_parse(obj=expiry) if expiry else None
 
     @property
-    def trial_expiry_in_days(self) -> Optional[int]:
+    def trial_expiry_in_days(self) -> t.Optional[int]:
         """Get the number of days left for the trial."""
         return dt_days_left(obj=self.trial_expiry_dt)
 
     @property
-    def license_expiry_dt(self) -> Optional[datetime.datetime]:
+    def license_expiry_dt(self) -> t.Optional[datetime.datetime]:
         """Get the license expiration date."""
         expiry = self.config["expiry_date"]
         return dt_parse(obj=expiry) if expiry else None
 
     @property
-    def license_expiry_in_days(self) -> Optional[int]:
+    def license_expiry_in_days(self) -> t.Optional[int]:
         """Get the number of days left for the license."""
         return dt_days_left(obj=self.license_expiry_dt)
 
@@ -183,7 +183,7 @@ class CertificateUpdateRequest(BaseModel):
     passphrase: str = ""
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return None
 
@@ -203,7 +203,7 @@ class CertificateDetailsSchema(BaseSchemaJson):
         type_ = "certificate_schema"
 
     @staticmethod
-    def get_model_cls() -> Optional[Type[BaseModel]]:
+    def get_model_cls() -> t.Optional[t.Type[BaseModel]]:
         """Pass."""
         return CertificateDetails
 
@@ -213,20 +213,21 @@ class CertificateDetails(BaseModel):
     """Pass."""
 
     issued_to: str
-    alternative_names: List[str]
+    alternative_names: t.List[str]
     issued_by: str
     sha1_fingerprint: str
-    expires_on: Optional[datetime.datetime] = get_field_dc_mm(
+    expires_on: t.Optional[datetime.datetime] = get_field_dc_mm(
         mm_field=SchemaDatetime(allow_none=True), default=None
     )
+    document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     @staticmethod
-    def _str_properties() -> List[str]:
+    def _str_properties() -> t.List[str]:
         """Pass."""
         return ["issued_to", "alternative_names", "issued_by", "sha1_fingerprint", "expires_on"]
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return CertificateDetailsSchema
 
@@ -246,7 +247,7 @@ class CertificateConfigSchema(BaseSchemaJson):
         type_ = "certificate_config_schema"
 
     @staticmethod
-    def get_model_cls() -> Optional[Type[BaseModel]]:
+    def get_model_cls() -> t.Optional[t.Type[BaseModel]]:
         """Pass."""
         return CertificateConfig
 
@@ -255,11 +256,12 @@ class CertificateConfigSchema(BaseSchemaJson):
 class CertificateConfig(BaseModel):
     """Pass."""
 
-    certificate_verify: Optional[dict] = dataclasses.field(default_factory=dict)
-    mutual_tls: Optional[dict] = dataclasses.field(default_factory=dict)
-    ssl_trust: Optional[dict] = dataclasses.field(default_factory=dict)
+    certificate_verify: t.Optional[dict] = dataclasses.field(default_factory=dict)
+    mutual_tls: t.Optional[dict] = dataclasses.field(default_factory=dict)
+    ssl_trust: t.Optional[dict] = dataclasses.field(default_factory=dict)
+    document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return CertificateConfigSchema

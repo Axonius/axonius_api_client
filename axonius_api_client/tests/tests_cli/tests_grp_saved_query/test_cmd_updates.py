@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 """Test suite for axonius_api_client.tools."""
-import pytest
 from axonius_api_client.constants.api import GUI_PAGE_SIZES
 
 from ....cli import cli
@@ -8,7 +7,6 @@ from ...utils import load_clirunner
 from .base import GrpSavedQueryDevices, GrpSavedQueryUsers
 
 
-@pytest.mark.skip("sqs broken")
 class GrpSavedQueryCmdUpdates:
     def test_cmd_update_always_cached(self, apiobj, request, monkeypatch, sq_added):
         runner = load_clirunner(request, monkeypatch)

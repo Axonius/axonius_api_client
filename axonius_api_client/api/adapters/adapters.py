@@ -2,11 +2,11 @@
 """API for working with adapters."""
 import datetime
 import pathlib
-from typing import Generator, List, Optional, Union
+import typing as t
 
 from cachetools import TTLCache, cached
 
-from ...constants.general import OPT_STR_RE_LISTY
+from ...constants.ctypes import PatternLikeListy
 from ...exceptions import ApiError, NotFoundError  # , StopFetch
 from ...parsers.config import config_build, config_unchanged, config_unknown
 from ...parsers.tables import tablize_adapters
@@ -27,8 +27,8 @@ from ..json_api.time_range import UnitTypes
 from ..mixins import ModelMixins
 
 HIST_MOD = AdapterFetchHistory
-HIST_GEN = Generator[HIST_MOD, None, None]
-HIST_LIST = List[HIST_MOD]
+HIST_GEN = t.Generator[HIST_MOD, None, None]
+HIST_LIST = t.List[HIST_MOD]
 
 CACHE_HISTORY_FILTERS: TTLCache = TTLCache(maxsize=4096, ttl=30)
 
@@ -54,7 +54,7 @@ class Adapters(ModelMixins):
         valid keys/values.
     """
 
-    def get(self, get_clients: bool = False) -> List[dict]:
+    def get(self, get_clients: bool = False) -> t.List[dict]:
         """Get all adapters on all nodes.
 
         Examples:
@@ -74,7 +74,7 @@ class Adapters(ModelMixins):
             get_clients (bool, optional): Include the connections and schemas in the response
 
         Returns:
-            List[dict]: list of adapter metadata
+            t.List[dict]: list of adapter metadata
 
         """
         basic_data = self._get_basic()
@@ -96,7 +96,9 @@ class Adapters(ModelMixins):
         data = self._get_basic()
         return data.find_by_name(value=value)
 
-    def get_by_name(self, name: str, node: Optional[str] = None, get_clients: bool = False) -> dict:
+    def get_by_name(
+        self, name: str, node: t.Optional[str] = None, get_clients: bool = False
+    ) -> dict:
         """Get an adapter by name on a single node.
 
         Examples:
@@ -157,7 +159,7 @@ class Adapters(ModelMixins):
         """Get filter values for use in adapters history."""
         return self._get_fetch_history_filters()
 
-    def get_fetch_history(self, generator: bool = False, **kwargs) -> Union[HIST_GEN, HIST_LIST]:
+    def get_fetch_history(self, generator: bool = False, **kwargs) -> t.Union[HIST_GEN, HIST_LIST]:
         """Get adapter fetch history.
 
         Args:
@@ -165,35 +167,35 @@ class Adapters(ModelMixins):
             **kwargs: passed to :meth:`get_fetch_history_generator`
 
         Returns:
-            Union[HIST_GEN, HIST_LIST]: Generator or list of history event models
+            t.Union[HIST_GEN, HIST_LIST]: t.Generator or list of history event models
         """
         gen = self.get_fetch_history_generator(**kwargs)
         return gen if generator else list(gen)
 
     def get_fetch_history_generator(
         self,
-        adapters: OPT_STR_RE_LISTY = None,
-        connection_labels: OPT_STR_RE_LISTY = None,
-        clients: OPT_STR_RE_LISTY = None,
-        instances: OPT_STR_RE_LISTY = None,
-        statuses: OPT_STR_RE_LISTY = None,
-        discoveries: OPT_STR_RE_LISTY = None,
+        adapters: t.Optional[PatternLikeListy] = None,
+        connection_labels: t.Optional[PatternLikeListy] = None,
+        clients: t.Optional[PatternLikeListy] = None,
+        instances: t.Optional[PatternLikeListy] = None,
+        statuses: t.Optional[PatternLikeListy] = None,
+        discoveries: t.Optional[PatternLikeListy] = None,
         exclude_realtime: bool = False,
         relative_unit_type: UnitTypes = UnitTypes.get_default(),
-        relative_unit_count: Optional[int] = None,
-        absolute_date_start: Optional[datetime.datetime] = None,
-        absolute_date_end: Optional[datetime.datetime] = None,
-        sort_attribute: Optional[str] = None,
+        relative_unit_count: t.Optional[int] = None,
+        absolute_date_start: t.Optional[datetime.datetime] = None,
+        absolute_date_end: t.Optional[datetime.datetime] = None,
+        sort_attribute: t.Optional[str] = None,
         sort_descending: bool = False,
-        search: Optional[str] = None,
-        filter: Optional[str] = None,
+        search: t.Optional[str] = None,
+        filter: t.Optional[str] = None,
         page_sleep: int = PagingState.page_sleep,
         page_size: int = PagingState.page_size,
         row_start: int = PagingState.row_start,
-        row_stop: Optional[int] = PagingState.row_stop,
-        log_level: Union[int, str] = PagingState.log_level,
-        history_filters: Optional[AdapterFetchHistoryFilters] = None,
-        request_obj: Optional[AdapterFetchHistoryRequest] = None,
+        row_stop: t.Optional[int] = PagingState.row_stop,
+        log_level: t.Union[int, str] = PagingState.log_level,
+        history_filters: t.Optional[AdapterFetchHistoryFilters] = None,
+        request_obj: t.Optional[AdapterFetchHistoryRequest] = None,
     ) -> HIST_GEN:
         """Get adapter fetch history.
 
@@ -201,13 +203,18 @@ class Adapters(ModelMixins):
             Use ~ prefix for regex in adapters, connection_labels, clients, instances, statuses
 
         Args:
-            adapters (OPT_STR_RE_LISTY, optional): Filter for records with matching adapters
-            connection_labels (OPT_STR_RE_LISTY, optional): Filter for records with connection
-                labels
-            clients (OPT_STR_RE_LISTY, optional): Filter for records with matching client ids
-            instances (OPT_STR_RE_LISTY, optional): Filter for records with matching instances
-            statuses (OPT_STR_RE_LISTY, optional): Filter for records with matching statuses
-            discoveries (OPT_STR_RE_LISTY, optional): Filter for records with matching discovery IDs
+            adapters (t.Optional[PatternLikeListy], optional): Filter for records with matching
+                adapters
+            connection_labels (t.Optional[PatternLikeListy], optional): Filter for records with
+                connection labels
+            clients (t.Optional[PatternLikeListy], optional): Filter for records with matching
+                client ids
+            instances (t.Optional[PatternLikeListy], optional): Filter for records with matching
+                instances
+            statuses (t.Optional[PatternLikeListy], optional): Filter for records with matching
+                statuses
+            discoveries (t.Optional[PatternLikeListy], optional): Filter for records with matching
+                discovery IDs
             exclude_realtime (bool, optional): Exclude records for realtime adapters
             relative_unit_type (UnitTypes, optional): Type of unit to use when supplying
                 relative_unit_count
@@ -223,7 +230,7 @@ class Adapters(ModelMixins):
             page_size (int, optional): Get N records per page
             row_start (int, optional): Start at row N
             row_stop (Optional[int], optional): Stop at row N
-            log_level (Union[int, str], optional): log level to use for paging
+            log_level (t.Union[int, str], optional): log level to use for paging
             history_filters (Optional[AdapterFetchHistoryFilters], optional): response
                 from :meth:`get_fetch_history_filters` (will be fetched if not supplied)
             request_obj (Optional[AdapterFetchHistoryRequest], optional): Request object to use
@@ -298,7 +305,7 @@ class Adapters(ModelMixins):
     def config_get(
         self,
         name: str,
-        node: Optional[str] = None,
+        node: t.Optional[str] = None,
         config_type: str = "generic",
     ) -> dict:
         """Get the advanced settings for an adapter.
@@ -363,7 +370,7 @@ class Adapters(ModelMixins):
         return adapter_config
 
     def config_update(
-        self, name: str, node: Optional[str] = None, config_type: str = "generic", **kwargs
+        self, name: str, node: t.Optional[str] = None, config_type: str = "generic", **kwargs
     ) -> dict:
         """Update the advanced settings for an adapter.
 
@@ -424,9 +431,9 @@ class Adapters(ModelMixins):
         name: str,
         field_name: str,
         file_name: str,
-        file_content: Union[str, bytes],
-        file_content_type: Optional[str] = None,
-        node: Optional[str] = None,
+        file_content: t.Union[str, bytes],
+        file_content_type: t.Optional[str] = None,
+        node: t.Optional[str] = None,
     ) -> dict:
         """Upload a file to a specific adapter on a specific node.
 
@@ -467,7 +474,7 @@ class Adapters(ModelMixins):
             file_content_type=file_content_type,
         )
 
-    def file_upload_path(self, path: Union[str, pathlib.Path], **kwargs) -> dict:
+    def file_upload_path(self, path: t.Union[str, pathlib.Path], **kwargs) -> dict:
         """Upload the contents of a file to a specific adapter on a specific node.
 
         Examples:
@@ -480,7 +487,7 @@ class Adapters(ModelMixins):
             {'uuid': '5f78b674e33f0a113700a6fa', 'filename': 'test.csv'}
 
         Args:
-            path (Union[str, pathlib.Path]): path to file containing contents to upload
+            path (t.Union[str, pathlib.Path]): path to file containing contents to upload
             **kwargs: passed to :meth:`file_upload`
 
         Returns:
@@ -505,7 +512,7 @@ class Adapters(ModelMixins):
         self.instances: Instances = Instances(auth=self.auth)
         """Work with instances"""
 
-    def _get(self, get_clients: bool = False, filter: Optional[str] = None) -> List[Adapter]:
+    def _get(self, get_clients: bool = False, filter: t.Optional[str] = None) -> t.List[Adapter]:
         """Private API method to get all adapters.
 
         Args:
@@ -513,7 +520,7 @@ class Adapters(ModelMixins):
             filter (Optional[str], optional): unk
 
         Returns:
-            List[Adapter]: List of Adapter dataclass models
+            t.List[Adapter]: t.List of Adapter dataclass models
         """
         api_endpoint = ApiEndpoints.adapters.get
         request_obj = api_endpoint.load_request(get_clients=get_clients, filter=filter)
@@ -572,9 +579,9 @@ class Adapters(ModelMixins):
         node_id: str,
         field_name: str,
         file_name: str,
-        file_content: Union[bytes, str],
-        file_content_type: Optional[str] = None,
-        file_headers: Optional[dict] = None,
+        file_content: t.Union[bytes, str],
+        file_content_type: t.Optional[str] = None,
+        file_headers: t.Optional[dict] = None,
     ) -> dict:
         """Private API method to upload a file to a specific adapter on a specifc node.
 
@@ -583,7 +590,7 @@ class Adapters(ModelMixins):
             node_id (str): ID of node running adapter
             field_name (str): name of field (should match configuration schema key name)
             file_name (str): name of file to upload
-            file_content (Union[bytes, str]): content of file to upload
+            file_content (t.Union[bytes, str]): content of file to upload
             file_content_type (Optional[str], optional): mime type of file to upload
             file_headers (Optional[dict], optional): headers to use for file
 
@@ -619,7 +626,7 @@ class Adapters(ModelMixins):
         return response
 
     def _get_fetch_history(
-        self, request_obj: Optional[AdapterFetchHistoryRequest] = None
+        self, request_obj: t.Optional[AdapterFetchHistoryRequest] = None
     ) -> HIST_LIST:
         """Get adapter fetch history."""
         api_endpoint = ApiEndpoints.adapters.get_fetch_history

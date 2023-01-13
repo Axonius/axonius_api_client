@@ -2,7 +2,7 @@
 """Models for API requests & responses."""
 import dataclasses
 import datetime
-from typing import Optional
+import typing as t
 
 import marshmallow
 
@@ -68,19 +68,19 @@ class TimeRangeSchema(marshmallow.Schema):
 class TimeRange(BaseModel):
     """Pass."""
 
-    type: Optional[str] = get_field_dc_mm(
+    type: t.Optional[str] = get_field_dc_mm(
         mm_field=TimeRangeSchema._declared_fields["type"], default=DateTypes.get_default()
     )
-    unit: Optional[str] = get_field_dc_mm(
+    unit: t.Optional[str] = get_field_dc_mm(
         mm_field=TimeRangeSchema._declared_fields["unit"], default=UnitTypes.get_default()
     )
-    date_from: Optional[datetime.datetime] = get_field_dc_mm(
+    date_from: t.Optional[datetime.datetime] = get_field_dc_mm(
         mm_field=TimeRangeSchema._declared_fields["date_from"], default=None
     )
-    date_to: Optional[datetime.datetime] = get_field_dc_mm(
+    date_to: t.Optional[datetime.datetime] = get_field_dc_mm(
         mm_field=TimeRangeSchema._declared_fields["date_to"], default=None
     )
-    count: Optional[int] = get_field_dc_mm(
+    count: t.Optional[int] = get_field_dc_mm(
         mm_field=TimeRangeSchema._declared_fields["count"], default=None
     )
 
@@ -88,9 +88,9 @@ class TimeRange(BaseModel):
     def build(
         cls,
         relative_unit_type: UnitTypes = UnitTypes.get_default(),
-        relative_unit_count: Optional[int] = None,
-        absolute_date_start: Optional[datetime.datetime] = None,
-        absolute_date_end: Optional[datetime.datetime] = None,
+        relative_unit_count: t.Optional[int] = None,
+        absolute_date_start: t.Optional[datetime.datetime] = None,
+        absolute_date_end: t.Optional[datetime.datetime] = None,
     ) -> "TimeRange":
         """Pass."""
         if absolute_date_end and not absolute_date_start:

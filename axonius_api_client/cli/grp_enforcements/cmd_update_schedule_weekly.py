@@ -20,7 +20,6 @@ OPTIONS = [*AUTH, OPT_EXPORT_FORMAT, OPT_RECURRENCE_WEEKLY, *OPTS_SCHEDULE_TIME,
 def cmd(ctx, url, key, secret, export_format, **kwargs):
     """Update a set to run weekly."""
     client = ctx.obj.start_client(url=url, key=key, secret=secret)
-
     with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
         data = client.enforcements.update_schedule_weekly(**kwargs)
 

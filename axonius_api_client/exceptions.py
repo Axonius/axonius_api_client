@@ -24,6 +24,10 @@ class GuiQueryWizardWarning(ApiWarning):
     """Pass."""
 
 
+class ExtraAttributeWarning(ApiWarning):
+    """Pass."""
+
+
 class UnknownFieldSchema(ApiWarning):
     """Warning for unknown field schema mappings."""
 

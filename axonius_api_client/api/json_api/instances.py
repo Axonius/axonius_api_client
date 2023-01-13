@@ -2,7 +2,7 @@
 """Models for API requests & responses."""
 import dataclasses
 import datetime
-from typing import List, Optional, Type, Union
+import typing as t
 
 import marshmallow_jsonapi
 
@@ -43,6 +43,7 @@ class InstanceSchema(BaseSchemaJson):
     use_as_environment_name = SchemaBool()
     remaining_snapshots_days = marshmallow_jsonapi.fields.Int(allow_none=True)
     indication_color = marshmallow_jsonapi.fields.Str(allow_none=True)
+    installed_version = marshmallow_jsonapi.fields.Str(allow_none=True)
 
     @staticmethod
     def get_model_cls() -> type:
@@ -66,34 +67,35 @@ class Instance(BaseModel):
     status: str
     is_master: bool = get_field_dc_mm(mm_field=SchemaBool())
     use_as_environment_name: bool = get_field_dc_mm(mm_field=SchemaBool())
-    ips: List[str] = dataclasses.field(default_factory=list)
-    remaining_snapshots_days: Optional[int] = None
-    cpu_core_threads: Optional[int] = None
-    cpu_logical_cores: Optional[int] = None
-    cpu_cores: Optional[int] = None
-    cpu_usage: Optional[int] = None
-    data_disk_free_space: Optional[float] = None
-    data_disk_size: Optional[float] = None
-    last_snapshot_size: Optional[float] = None
-    max_snapshots: Optional[int] = None
-    memory_free_space: Optional[float] = None
-    memory_size: Optional[float] = None
-    os_disk_free_space: Optional[float] = None
-    os_disk_size: Optional[float] = None
-    physical_cpu: Optional[int] = None
-    swap_cache_size: Optional[float] = None
-    swap_free_space: Optional[float] = None
-    swap_size: Optional[float] = None
-    last_seen: Optional[datetime.datetime] = get_field_dc_mm(
+    ips: t.List[str] = dataclasses.field(default_factory=list)
+    remaining_snapshots_days: t.Optional[int] = None
+    cpu_core_threads: t.Optional[int] = None
+    cpu_logical_cores: t.Optional[int] = None
+    cpu_cores: t.Optional[int] = None
+    cpu_usage: t.Optional[int] = None
+    data_disk_free_space: t.Optional[float] = None
+    data_disk_size: t.Optional[float] = None
+    last_snapshot_size: t.Optional[float] = None
+    max_snapshots: t.Optional[int] = None
+    memory_free_space: t.Optional[float] = None
+    memory_size: t.Optional[float] = None
+    os_disk_free_space: t.Optional[float] = None
+    os_disk_size: t.Optional[float] = None
+    physical_cpu: t.Optional[int] = None
+    swap_cache_size: t.Optional[float] = None
+    swap_free_space: t.Optional[float] = None
+    swap_size: t.Optional[float] = None
+    last_seen: t.Optional[datetime.datetime] = get_field_dc_mm(
         mm_field=SchemaDatetime(allow_none=True), default=None
     )
-    last_updated: Optional[datetime.datetime] = get_field_dc_mm(
+    last_updated: t.Optional[datetime.datetime] = get_field_dc_mm(
         mm_field=SchemaDatetime(allow_none=True), default=None
     )
     tags: dict = dataclasses.field(default_factory=dict)
-    indication_color: Optional[str] = None
+    indication_color: t.Optional[str] = None
+    installed_version: t.Optional[str] = None
 
-    id: Optional[str] = None
+    id: t.Optional[str] = None
     document_meta: dict = dataclasses.field(default_factory=dict)
 
     name: str = dataclasses.field(init=False)
@@ -139,7 +141,7 @@ class Instance(BaseModel):
         )
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return InstanceSchema
 
@@ -148,10 +150,10 @@ class Instance(BaseModel):
 class InstanceDeleteRequest(BaseModel):
     """Pass."""
 
-    nodeIds: List[str]
+    nodeIds: t.List[str]
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return None
 
@@ -164,7 +166,7 @@ class InstanceUpdateActiveRequest(BaseModel):
     status: bool
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return None
 
@@ -179,7 +181,7 @@ class InstanceUpdateAttributesRequest(BaseModel):
     use_as_environment_name: bool
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return None
 
@@ -209,7 +211,7 @@ class FactoryResetRequest(BaseModel):
     approve_not_recoverable_action: bool = False
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return FactoryResetRequestSchema
 
@@ -237,9 +239,10 @@ class FactoryReset(BaseModel):
 
     triggered: bool = False
     msg: str = ""
+    document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return FactoryResetSchema
 
@@ -260,16 +263,17 @@ class Tunnel(BaseModel):
     internal_addr: str = ""
     default: bool = False
     tunnel_proxy_settings: dict = dataclasses.field(default_factory=dict)
-    tunnel_email_recipients: List[str] = dataclasses.field(default_factory=list)
-    first_seen: Optional[datetime.datetime] = get_field_dc_mm(
+    tunnel_email_recipients: t.List[str] = dataclasses.field(default_factory=list)
+    first_seen: t.Optional[datetime.datetime] = get_field_dc_mm(
         mm_field=SchemaDatetime(allow_none=True), default=None
     )
-    last_seen: Optional[datetime.datetime] = get_field_dc_mm(
+    last_seen: t.Optional[datetime.datetime] = get_field_dc_mm(
         mm_field=SchemaDatetime(allow_none=True), default=None
     )
+    document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     @staticmethod
-    def _str_properties() -> List[str]:
+    def _str_properties() -> t.List[str]:
         """Pass."""
         return [
             "id",
@@ -292,9 +296,9 @@ class Tunnel(BaseModel):
         return self.__str__()
 
     @classmethod
-    def load_response(cls, data: str, **kwargs) -> Union[str, "Tunnel"]:
+    def load_response(cls, data: str, **kwargs) -> t.Union[str, "Tunnel"]:
         """Pass."""
-        data: Union[str, List[dict]] = json_load(obj=data, error=False)
+        data: t.Union[str, t.List[dict]] = json_load(obj=data, error=False)
         if isinstance(data, (list, tuple)):
             return super().load_response(data=data, **kwargs)
         return data
@@ -326,7 +330,7 @@ class Tunnel(BaseModel):
         }
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return None
 

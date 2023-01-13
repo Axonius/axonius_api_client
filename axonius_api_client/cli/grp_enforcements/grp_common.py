@@ -165,7 +165,7 @@ OPTS_SCHEDULE_TIME = [
     click.option(
         "--schedule-hour",
         "-sh",
-        "schedule_hour",
+        "hour",
         help="Hour to use for schedule",
         default=SetDefaults.schedule_hour,
         type=click.INT,
@@ -176,7 +176,7 @@ OPTS_SCHEDULE_TIME = [
     click.option(
         "--schedule-minute",
         "-sm",
-        "schedule_minute",
+        "minute",
         help="Minute to use for schedule",
         default=SetDefaults.schedule_minute,
         type=click.INT,

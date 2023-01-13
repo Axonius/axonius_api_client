@@ -3,7 +3,7 @@
 import dataclasses
 import datetime
 import math
-from typing import Any, List, Optional, Type
+import typing as t
 
 import marshmallow
 import marshmallow_jsonapi
@@ -78,9 +78,9 @@ def cat_actions(http) -> dict:
 
 
 def build_data_scope_restriction(
-    obj: Any = None,
+    obj: t.Any = None,
     enabled: bool = False,
-    data_scope: Optional[str] = None,
+    data_scope: t.Optional[str] = None,
 ) -> dict:
     """Pass."""
     if not isinstance(obj, dict):
@@ -193,16 +193,17 @@ class SystemRole(BaseModel):
     uuid: str
     name: str
     permissions: dict
-    data_scope_restriction: Optional[dict] = dataclasses.field(default_factory=dict)
+    data_scope_restriction: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     predefined: bool = False
-    last_updated: Optional[datetime.datetime] = get_field_dc_mm(
+    last_updated: t.Optional[datetime.datetime] = get_field_dc_mm(
         mm_field=SchemaDatetime(allow_none=True), default=None
     )
-    id: Optional[str] = None
+    id: t.Optional[str] = None
 
     # NEW_IN: 05/31/21 cortex/develop
     users_count: int = 0
+    document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     @marshmallow.post_load
     def post_load_fixit(self, data: dict, **kwargs) -> dict:
@@ -215,7 +216,7 @@ class SystemRole(BaseModel):
         return fix_data_scope_restriction(data)
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return SystemRoleSchema
 
@@ -224,7 +225,7 @@ class SystemRole(BaseModel):
         self.id = self.uuid if self.id is None and self.uuid is not None else self.id
         self.data_scope_restriction = build_data_scope_restriction(self.data_scope_restriction)
 
-    def to_dict_old(self, data_scopes: Optional[List[dict]] = None) -> dict:
+    def to_dict_old(self, data_scopes: t.Optional[t.List[dict]] = None) -> dict:
         """Pass."""
         data_scopes = data_scopes or []
         obj = self.to_dict()
@@ -241,7 +242,7 @@ class SystemRole(BaseModel):
         return obj
 
     @property
-    def data_scope_id(self) -> Optional[str]:
+    def data_scope_id(self) -> t.Optional[str]:
         """Pass."""
         return self.data_scope_restriction.get("data_scope")
 
@@ -263,7 +264,7 @@ class SystemRole(BaseModel):
         """Pass."""
         return cat_actions(http=self.HTTP)
 
-    def permissions_flat_descriptions(self) -> List[dict]:
+    def permissions_flat_descriptions(self) -> t.List[dict]:
         """Pass."""
         ret = []
         permissions = self.permissions_flat()
@@ -293,10 +294,10 @@ class SystemRoleUpdate(BaseModel):
 
     name: str
     permissions: dict
-    data_scope_restriction: Optional[dict] = dataclasses.field(default_factory=dict)
+    data_scope_restriction: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return SystemRoleUpdateSchema
 
@@ -307,10 +308,10 @@ class SystemRoleCreate(BaseModel):
 
     name: str
     permissions: dict
-    data_scope_restriction: Optional[dict] = dataclasses.field(default_factory=dict)
+    data_scope_restriction: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return SystemRoleCreateSchema
 

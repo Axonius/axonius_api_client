@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 """API for working with saved queries for assets."""
 import datetime
+import typing as t
 import warnings
-from typing import Generator, List, Optional, Union
 
 from cachetools import TTLCache, cached
 
-from ...constants.api import AS_DATACLASS, MAX_PAGE_SIZE
-from ...constants.general import OPT_STR_RE_LISTY
+from ...constants.api import AS_DATACLASS
+from ...constants.ctypes import PatternLikeListy
 from ...exceptions import (
     AlreadyExists,
     ApiError,
@@ -26,14 +26,15 @@ MODEL = json_api.saved_queries.SavedQuery
 MODEL_GET = json_api.saved_queries.SavedQueryGet
 MODEL_FOLDER = json_api.saved_queries.Folder
 MODEL_HIST = QueryHistory
-HIST_GEN = Generator[QueryHistory, None, None]
-HIST_LIST = List[QueryHistory]
-BOTH = Union[dict, MODEL]
-MULTI = Union[str, BOTH]
-GEN = Generator[BOTH, None, None]
+HIST_GEN = t.Generator[QueryHistory, None, None]
+HIST_LIST = t.List[QueryHistory]
+BOTH = t.Union[dict, MODEL]
+MULTI = t.Union[str, BOTH]
+GEN = t.Generator[BOTH, None, None]
 CACHE_TAGS = TTLCache(maxsize=1024, ttl=60)
 CACHE_RUN_BY = TTLCache(maxsize=1024, ttl=60)
 CACHE_RUN_FROM = TTLCache(maxsize=1024, ttl=60)
+CACHE_GET = TTLCache(maxsize=1024, ttl=60)
 
 
 class SavedQuery(ChildMixins):
@@ -113,7 +114,7 @@ class SavedQuery(ChildMixins):
     def update_sort(
         self,
         sq: MULTI,
-        field: Optional[str] = None,
+        field: t.Optional[str] = None,
         descending: bool = True,
         as_dataclass: bool = AS_DATACLASS,
     ) -> BOTH:
@@ -121,7 +122,7 @@ class SavedQuery(ChildMixins):
 
         Args:
             sq (MULTI): str with name or uuid, or saved query dict or dataclass
-            field (Optional[str], optional): field to sort results on
+            field (t.Optional[str], optional): field to sort results on
             descending (bool, optional): sort descending or ascending
             as_dataclass (bool, optional): Return saved query dataclass instead of dict
 
@@ -142,7 +143,7 @@ class SavedQuery(ChildMixins):
     def update_tags(
         self,
         sq: MULTI,
-        value: Union[str, List[str]],
+        value: t.Union[str, t.List[str]],
         remove: bool = False,
         append: bool = False,
         as_dataclass: bool = AS_DATACLASS,
@@ -151,7 +152,7 @@ class SavedQuery(ChildMixins):
 
         Args:
             sq (MULTI): str with name or uuid, or saved query dict or dataclass
-            value (Union[str, List[str]]): tags to set
+            value (t.Union[str, t.List[str]]): tags to set
             remove (bool, optional): remove tags in value from saved query tags
             append (bool, optional): append tags in value to pre-existing saved query tags
             as_dataclass (bool, optional): Return saved query dataclass instead of dict
@@ -206,13 +207,13 @@ class SavedQuery(ChildMixins):
     def update_fields(
         self,
         sq: MULTI,
-        fields: Optional[Union[List[str], str]] = None,
-        fields_manual: Optional[Union[List[str], str]] = None,
-        fields_regex: Optional[Union[List[str], str]] = None,
+        fields: t.Optional[t.Union[t.List[str], str]] = None,
+        fields_manual: t.Optional[t.Union[t.List[str], str]] = None,
+        fields_regex: t.Optional[t.Union[t.List[str], str]] = None,
         fields_regex_root_only: bool = True,
-        fields_fuzzy: Optional[Union[List[str], str]] = None,
+        fields_fuzzy: t.Optional[t.Union[t.List[str], str]] = None,
         fields_default: bool = False,
-        fields_root: Optional[str] = None,
+        fields_root: t.Optional[str] = None,
         remove: bool = False,
         append: bool = False,
         as_dataclass: bool = AS_DATACLASS,
@@ -221,12 +222,12 @@ class SavedQuery(ChildMixins):
 
         Args:
             sq (MULTI): str with name or uuid, or saved query dict or dataclass
-            fields (Optional[Union[List[str], str]], optional): fields
-            fields_manual (Optional[Union[List[str], str]], optional): fields fully qualified
-            fields_regex (Optional[Union[List[str], str]], optional): fields via regex
-            fields_fuzzy (Optional[Union[List[str], str]], optional): fields via fuzzy
+            fields (t.Optional[t.Union[t.List[str], str]], optional): fields
+            fields_manual (t.Optional[t.Union[t.List[str], str]], optional): fields fully qualified
+            fields_regex (t.Optional[t.Union[t.List[str], str]], optional): fields via regex
+            fields_fuzzy (t.Optional[t.Union[t.List[str], str]], optional): fields via fuzzy
             fields_default (bool, optional): Include default fields
-            fields_root (Optional[str], optional): fields via root
+            fields_root (t.Optional[str], optional): fields via root
             remove (bool, optional): remove supplied fields from saved query fields
             append (bool, optional): append supplied fields in value to pre-existing saved query
                 fields
@@ -258,9 +259,9 @@ class SavedQuery(ChildMixins):
     def update_query(
         self,
         sq: MULTI,
-        query: Optional[str] = None,
-        expressions: Optional[List[str]] = None,
-        wiz_entries: Optional[Union[str, List[dict]]] = None,
+        query: t.Optional[str] = None,
+        expressions: t.Optional[t.List[str]] = None,
+        wiz_entries: t.Optional[t.Union[str, t.List[dict]]] = None,
         append: bool = False,
         append_and_flag: bool = False,
         append_not_flag: bool = False,
@@ -271,9 +272,9 @@ class SavedQuery(ChildMixins):
 
         Args:
             sq (MULTI): str with name or uuid, or saved query dict or dataclass
-            query (Optional[str]], optional): previously generated query
-            expressions (Optional[List[str]], optional): Expressions for GUI Query Wizard
-            wiz_entries (Optional[Union[str, List[dict]]]): API query wizard entries to parse
+            query (t.Optional[str]], optional): previously generated query
+            expressions (t.Optional[t.List[str]], optional): Expressions for GUI Query Wizard
+            wiz_entries (t.Optional[t.Union[str, t.List[dict]]]): API query wizard entries to parse
                 into query and GUI query wizard expressions
             append (bool, optional): append query to pre-existing query
             append_and_flag (bool, optional): use and instead of or for appending query
@@ -367,7 +368,12 @@ class SavedQuery(ChildMixins):
         return self.get_by_multi(sq=added, as_dataclass=as_dataclass)
 
     def get_by_multi(
-        self, sq: MULTI, as_dataclass: bool = AS_DATACLASS, asset_scopes: bool = False, **kwargs
+        self,
+        sq: MULTI,
+        as_dataclass: bool = AS_DATACLASS,
+        asset_scopes: bool = False,
+        cache: bool = False,
+        **kwargs,
     ) -> BOTH:
         """Get a saved query by name or uuid.
 
@@ -396,7 +402,8 @@ class SavedQuery(ChildMixins):
             raise ApiError(f"Unknown type {type(sq)}, must be a str, dict, or {MODEL}")
 
         searches = [name, uuid]
-        sq_objs = self.get(as_dataclass=True, **kwargs)
+        get_method = self.get_cached if cache else self.get
+        sq_objs = get_method(as_dataclass=True, **kwargs)
         details = f"name={name!r} or uuid={uuid!r}"
 
         if asset_scopes:
@@ -486,8 +493,8 @@ class SavedQuery(ChildMixins):
         raise SavedQueryNotFoundError(sqs=sqs, details=f"uuid={value!r}")
 
     def get_by_tags(
-        self, value: Union[str, List[str]], as_dataclass: bool = AS_DATACLASS, **kwargs
-    ) -> List[BOTH]:
+        self, value: t.Union[str, t.List[str]], as_dataclass: bool = AS_DATACLASS, **kwargs
+    ) -> t.List[BOTH]:
         """Get saved queries by tags.
 
         Examples:
@@ -504,14 +511,14 @@ class SavedQuery(ChildMixins):
             5
 
         Args:
-            value (Union[str, List[str]]): list of tags
+            value (t.Union[str, t.List[str]]): list of tags
             as_dataclass (bool, optional): Return saved query dataclass instead of dict
 
         Raises:
             SavedQueryTagsNotFoundError: if no saved queries found with supplied tags
 
         Returns:
-            List[BOTH]: list of saved query dataclass or dict containing any tags in value
+            t.List[BOTH]: list of saved query dataclass or dict containing any tags in value
         """
         value = listify(value)
         sqs = self.get(as_dataclass=True, **kwargs)
@@ -528,7 +535,7 @@ class SavedQuery(ChildMixins):
             raise SavedQueryTagsNotFoundError(value=value, valid=valid)
         return found if as_dataclass else [x.to_dict() for x in found]
 
-    def get_tags_slow(self) -> List[str]:
+    def get_tags_slow(self) -> t.List[str]:
         """Get all tags for saved queries.
 
         Examples:
@@ -539,7 +546,7 @@ class SavedQuery(ChildMixins):
             19
 
         Returns:
-            List[str]: list of all tags in use
+            t.List[str]: list of all tags in use
         """
         tags = []
         for sq in self.get(as_dataclass=True):
@@ -547,21 +554,21 @@ class SavedQuery(ChildMixins):
         return tags
 
     @cached(cache=CACHE_TAGS)
-    def get_tags(self) -> List[str]:
+    def get_tags(self) -> t.List[str]:
         """Get all tags for saved queries."""
         return self._get_tags().value
 
     @cached(cache=CACHE_RUN_BY)
-    def get_query_history_run_by(self) -> List[str]:
+    def get_query_history_run_by(self) -> t.List[str]:
         """Get the valid values for the run_by attribute for getting query history."""
         return self._get_query_history_run_by().value
 
     @cached(cache=CACHE_RUN_FROM)
-    def get_query_history_run_from(self) -> List[str]:
+    def get_query_history_run_from(self) -> t.List[str]:
         """Get the valid values for the run_from attribute for getting query history."""
         return self._get_query_history_run_from().value
 
-    def get_query_history(self, generator: bool = False, **kwargs) -> Union[HIST_GEN, HIST_LIST]:
+    def get_query_history(self, generator: bool = False, **kwargs) -> t.Union[HIST_GEN, HIST_LIST]:
         """Get query history.
 
         Args:
@@ -569,59 +576,59 @@ class SavedQuery(ChildMixins):
             **kwargs: passed to :meth:`get_fetch_history_generator`
 
         Returns:
-            Union[HIST_GEN, HIST_LIST]: Generator or list of query event models
+            t.Union[HIST_GEN, HIST_LIST]: t.Generator or list of query event models
         """
         gen = self.get_query_history_generator(**kwargs)
         return gen if generator else list(gen)
 
     def get_query_history_generator(
         self,
-        run_by: OPT_STR_RE_LISTY = None,
-        run_from: OPT_STR_RE_LISTY = None,
-        tags: OPT_STR_RE_LISTY = None,
-        modules: OPT_STR_RE_LISTY = None,
-        name_term: Optional[str] = None,
-        date_start: Optional[datetime.datetime] = None,
-        date_end: Optional[datetime.datetime] = None,
-        sort_attribute: Optional[str] = None,
+        run_by: t.Optional[PatternLikeListy] = None,
+        run_from: t.Optional[PatternLikeListy] = None,
+        tags: t.Optional[PatternLikeListy] = None,
+        modules: t.Optional[PatternLikeListy] = None,
+        name_term: t.Optional[str] = None,
+        date_start: t.Optional[datetime.datetime] = None,
+        date_end: t.Optional[datetime.datetime] = None,
+        sort_attribute: t.Optional[str] = None,
         sort_descending: bool = False,
-        search: Optional[str] = None,
-        filter: Optional[str] = None,
+        search: t.Optional[str] = None,
+        filter: t.Optional[str] = None,
         page_sleep: int = PagingState.page_sleep,
         page_size: int = PagingState.page_size,
         row_start: int = PagingState.row_start,
-        row_stop: Optional[int] = PagingState.row_stop,
-        log_level: Union[int, str] = PagingState.log_level,
-        run_by_values: Optional[List[str]] = None,
-        run_from_values: Optional[List[str]] = None,
-        request_obj: Optional[QueryHistoryRequest] = None,
+        row_stop: t.Optional[int] = PagingState.row_stop,
+        log_level: t.Union[int, str] = PagingState.log_level,
+        run_by_values: t.Optional[t.List[str]] = None,
+        run_from_values: t.Optional[t.List[str]] = None,
+        request_obj: t.Optional[QueryHistoryRequest] = None,
     ) -> HIST_LIST:
         """Get query history.
 
         Args:
-            run_by (OPT_STR_RE_LISTY, optional): Filter records run by users
-            run_from (OPT_STR_RE_LISTY, optional): Filter records run from api/gui
-            tags (OPT_STR_RE_LISTY, optional): Filter records by SQ tags
-            modules (OPT_STR_RE_LISTY, optional): Filter records by asset type
+            run_by (t.Optional[PatternLikeListy], optional): Filter records run by users
+            run_from (t.Optional[PatternLikeListy], optional): Filter records run from api/gui
+            tags (t.Optional[PatternLikeListy], optional): Filter records by SQ tags
+            modules (t.Optional[PatternLikeListy], optional): Filter records by asset type
                 (defaults to parent asset type)
-            name_term (Optional[str], optional): Filter records by SQ name pattern
-            date_start (Optional[datetime.datetime], optional): Filter records after this date
-            date_end (Optional[datetime.datetime], optional): Filter records before this date
+            name_term (t.Optional[str], optional): Filter records by SQ name pattern
+            date_start (t.Optional[datetime.datetime], optional): Filter records after this date
+            date_end (t.Optional[datetime.datetime], optional): Filter records before this date
                 (will default to now if date_start supplied and no date_end)
-            sort_attribute (Optional[str], optional): Sort records based on this attribute
+            sort_attribute (t.Optional[str], optional): Sort records based on this attribute
             sort_descending (bool, optional): Sort records descending or ascending
-            search (Optional[str], optional): AQL search value to filter records
-            filter (Optional[str], optional): AQL to filter records
+            search (t.Optional[str], optional): AQL search value to filter records
+            filter (t.Optional[str], optional): AQL to filter records
             page_sleep (int, optional): Sleep N seconds between pages
             page_size (int, optional): Get N records per page
             row_start (int, optional): Start at row N
-            row_stop (Optional[int], optional): Stop at row N
-            log_level (Union[int, str], optional): log level to use for paging
-            run_by_values (Optional[List[str]], optional): Output from
+            row_stop (t.Optional[int], optional): Stop at row N
+            log_level (t.Union[int, str], optional): log level to use for paging
+            run_by_values (t.Optional[t.List[str]], optional): Output from
                 :meth:`get_query_history_run_by` (will be fetched if not supplied)
-            run_from_values (Optional[List[str]], optional): Output from
+            run_from_values (t.Optional[t.List[str]], optional): Output from
                 :meth:`get_query_history_run_from` (will be fetched if not supplied)
-            request_obj (Optional[QueryHistoryRequest], optional):  Request object to use
+            request_obj (t.Optional[QueryHistoryRequest], optional):  Request object to use
                 for options
         """
         if not isinstance(request_obj, QueryHistoryRequest):
@@ -676,7 +683,7 @@ class SavedQuery(ChildMixins):
                 page = state.page(method=self._get_query_history, request_obj=request_obj)
                 yield from page.rows
 
-    def get(self, generator: bool = False, **kwargs) -> Union[GEN, List[BOTH]]:
+    def get(self, generator: bool = False, **kwargs) -> t.Union[GEN, t.List[BOTH]]:
         """Get all saved queries.
 
         Examples:
@@ -693,7 +700,7 @@ class SavedQuery(ChildMixins):
             GEN: if generator = True, saved query dataclass or dict
 
         Returns:
-            List[BOTH]: if generator = False, list of saved query dataclass or dict
+            t.List[BOTH]: if generator = False, list of saved query dataclass or dict
 
         """
         if "sqs" in kwargs:
@@ -706,19 +713,43 @@ class SavedQuery(ChildMixins):
 
         return list(gen)
 
+    @cached(cache=CACHE_GET)
+    def get_cached(self, generator: bool = False, **kwargs) -> t.List[BOTH]:
+        """Get all saved queries.
+
+        Examples:
+            Get all saved queries
+
+            >>> sqs = apiobj.saved_query.get()
+            >>> len(sqs)
+            39
+
+        Args:
+            generator: return an iterator
+
+        Yields:
+            GEN: if generator = True, saved query dataclass or dict
+
+        Returns:
+            t.List[BOTH]: if generator = False, list of saved query dataclass or dict
+
+        """
+        return list(self.get_generator(**kwargs))
+
     def get_generator(
         self,
-        folder: Optional[str] = None,
+        folder: t.Optional[str] = None,
         include_usage: bool = False,
         get_view_data: bool = True,
-        creators: Optional[List[str]] = None,
-        used_in: Optional[List[str]] = None,
+        creators: t.Optional[t.List[str]] = None,
+        used_in: t.Optional[t.List[str]] = None,
         as_dataclass: bool = AS_DATACLASS,
         page_sleep: int = 0,
         page_size: int = PAGE_SIZE,
         row_start: int = 0,
-        row_stop: Optional[int] = None,
-        log_level: Union[int, str] = LOG_LEVEL_API,
+        row_stop: t.Optional[int] = None,
+        log_level: t.Union[int, str] = LOG_LEVEL_API,
+        query: t.Optional[str] = None,
     ) -> GEN:
         """Get Saved Queries using a generator.
 
@@ -728,21 +759,22 @@ class SavedQuery(ChildMixins):
         Yields:
             GEN: saved query dataclass or dict
         """
+        query_by_module: str = f'module in ["{self.parent.ASSET_TYPE}"]'
+        if isinstance(query, str):
+            if query_by_module not in query:
+                query = f"{query} and {query_by_module}"
+        else:
+            query = query_by_module
+
         request_obj = MODEL_GET(
-            # filter=filter,
-            # search=search,
-            # TBD: LATER
-            # sort=sort,
-            # TBD: sort attribute magic
-            # folder_id=folder_id or "",
-            # TODO: folder lookup
-            # creator_ids=creator_ids or [],
-            # TODO: creators lookup (users?)
-            # used_in=used_in or [],
-            # TODO: used_in lookup (erp?)
+            filter=query,
             get_view_data=get_view_data,
             include_usage=include_usage,
+            folder_id="all",
+            creator_ids=[],
+            used_in=[],
         )
+
         purpose = f"Get Saved Queries for asset type: {self.parent.ASSET_TYPE}"
         with PagingState(
             purpose=purpose,
@@ -794,28 +826,27 @@ class SavedQuery(ChildMixins):
     def build_add_model(
         self,
         name: str,
-        query: Optional[str] = None,
-        wiz_entries: Optional[Union[List[dict], List[str], dict, str]] = None,
-        tags: Optional[List[str]] = None,
-        description: Optional[str] = None,
-        expressions: Optional[List[str]] = None,
-        fields: Optional[Union[List[str], str]] = None,
-        fields_manual: Optional[Union[List[str], str]] = None,
-        fields_regex: Optional[Union[List[str], str]] = None,
+        query: t.Optional[str] = None,
+        wiz_entries: t.Optional[t.Union[t.List[dict], t.List[str], dict, str]] = None,
+        tags: t.Optional[t.List[str]] = None,
+        description: t.Optional[str] = None,
+        expressions: t.Optional[t.List[str]] = None,
+        fields: t.Optional[t.Union[t.List[str], str]] = None,
+        fields_manual: t.Optional[t.Union[t.List[str], str]] = None,
+        fields_regex: t.Optional[t.Union[t.List[str], str]] = None,
         fields_regex_root_only: bool = True,
-        fields_fuzzy: Optional[Union[List[str], str]] = None,
+        fields_fuzzy: t.Optional[t.Union[t.List[str], str]] = None,
         fields_default: bool = True,
-        fields_root: Optional[str] = None,
-        sort_field: Optional[str] = None,
+        fields_root: t.Optional[str] = None,
+        sort_field: t.Optional[str] = None,
         sort_descending: bool = True,
-        column_filters: Optional[dict] = None,
-        gui_page_size: Optional[int] = None,
+        column_filters: t.Optional[dict] = None,
+        gui_page_size: t.Optional[int] = None,
         private: bool = False,
         always_cached: bool = False,
         asset_scope: bool = False,
-        # WIP: folders
-        # folder_path: Optional[Union[str, List[str]]] = None,
-        # folder_id: Optional[str] = None,
+        # folder_path: t.Optional[t.Union[str, t.List[str]]] = None,
+        folder_id: str = "",
         **kwargs,
     ) -> json_api.saved_queries.SavedQueryCreate:
         """Create a saved query.
@@ -842,10 +873,10 @@ class SavedQuery(ChildMixins):
         Args:
             name: name of saved query
             query: query built by GUI or API query wizard
-            wiz_entries (Optional[Union[str, List[dict]]]): API query wizard entries to parse
+            wiz_entries (t.Optional[t.Union[str, t.List[dict]]]): API query wizard entries to parse
                 into query and GUI query wizard expressions
-            tags (Optional[List[str]], optional): list of tags
-            expressions (Optional[List[str]], optional): Expressions for GUI Query Wizard
+            tags (t.Optional[t.List[str]], optional): list of tags
+            expressions (t.Optional[t.List[str]], optional): Expressions for GUI Query Wizard
             fields: fields to return for each asset (will be validated)
             fields_manual: fields to return for each asset (will NOT be validated)
             fields_regex: regex of fields to return for each asset
@@ -864,7 +895,6 @@ class SavedQuery(ChildMixins):
             json_api.saved_queries.SavedQueryCreate: saved query dataclass to create
 
         """
-        # WIP: folders
         # if isinstance(folder_path, str):
         #     folders = self.get_folders()
         #     folder = folders.search(value=folder_path)
@@ -873,7 +903,7 @@ class SavedQuery(ChildMixins):
         asset_scope = coerce_bool(asset_scope)
         private = coerce_bool(private)
         always_cached = coerce_bool(always_cached)
-        query_expr: Optional[str] = kwargs.get("query_expr", None) or query
+        query_expr: t.Optional[str] = kwargs.get("query_expr", None) or query
         wiz_parsed: dict = self.parent.get_wiz_entries(wiz_entries=wiz_entries)
 
         if wiz_parsed:
@@ -922,8 +952,7 @@ class SavedQuery(ChildMixins):
             always_cached=always_cached,
             asset_scope=asset_scope,
             tags=tags,
-            # WIP: folders
-            # folder_id=folder_id,
+            folder_id=folder_id,
         )
 
     def delete_by_name(self, value: str, as_dataclass: bool = AS_DATACLASS) -> BOTH:
@@ -947,16 +976,16 @@ class SavedQuery(ChildMixins):
 
     def delete(
         self,
-        rows: Union[List[MULTI], MULTI],
+        rows: t.Union[t.List[MULTI], MULTI],
         errors: bool = True,
         refetch: bool = True,
         as_dataclass: bool = AS_DATACLASS,
         **kwargs,
-    ) -> List[BOTH]:
+    ) -> t.List[BOTH]:
         """Delete saved queries.
 
         Args:
-            rows (Union[List[MULTI], MULTI]): str or list of str with name, str or list of str
+            rows (t.Union[t.List[MULTI], MULTI]): str or list of str with name, str or list of str
                 with uuid, saved query dict or list of dict, or saved query dataclass or list
                 of dataclass
             errors (bool, optional): Raise errors if SQ not found or other error
@@ -964,7 +993,7 @@ class SavedQuery(ChildMixins):
             as_dataclass (bool, optional): Return saved query dataclass instead of dict
 
         Returns:
-            List[BOTH]: list of saved query dataclass or dict that were deleted
+            t.List[BOTH]: list of saved query dataclass or dict that were deleted
 
         """
         do_echo = kwargs.get("do_echo", False)
@@ -1020,78 +1049,30 @@ class SavedQuery(ChildMixins):
         Returns:
             BOTH: saved query dataclass or dict
         """
-        ret = self._update(
-            uuid=sq.uuid,
-            name=sq.name,
-            view=sq.view,
-            description=sq.description,
-            tags=sq.tags,
-            private=sq.private,
-            always_cached=sq.always_cached,
-            asset_scope=sq.asset_scope,
-        )
+        ret = self._update_from_dataclass(obj=sq)
         return ret if as_dataclass else ret.to_dict()
 
     def _update_from_dataclass(
-        self, obj: json_api.saved_queries.SavedQueryCreate, uuid: str
+        self, obj: json_api.saved_queries.SavedQueryMixins, uuid: t.Optional[str] = None
     ) -> MODEL:
         """Direct API method to update a saved query.
 
         Args:
-            obj (json_api.saved_queries.SavedQueryCreate): pre-created dataclass
+            obj (json_api.saved_queries.SavedQueryMixins): pre-created dataclass
 
         Returns:
             MODEL: saved query dataclass
         """
-        return self._update(
-            uuid=uuid,
-            **obj.get_attrs(),
-        )
+        request_obj = MODEL.create_from_other(obj)
+        if not (isinstance(uuid, str) and uuid):
+            uuid = getattr(obj, "uuid", None)
+            if not (isinstance(uuid, str) and uuid):
+                raise ApiError("Must supply UUID via uuid kwarg or obj.uuid")
 
-    def _update(
-        self,
-        uuid: str,
-        name: str,
-        view: dict,
-        description: str = "",
-        tags: Optional[List[str]] = None,
-        private: bool = False,
-        always_cached: bool = False,
-        asset_scope: bool = False,
-        # WIP: folders
-        # folder_id: Optional[str] = None,
-    ) -> MODEL:
-        """Direct API method to update a saved query.
-
-        Args:
-            uuid (str): UUID of SQ to update
-            name (str): name to set
-            view (dict): view object to set
-            description (str, optional): description to set
-            tags (Optional[List[str]], optional): tags to set
-            private (bool, optional): set sq as private or public
-            always_cached (bool, optional): set sq as always cached
-            asset_scope (bool, optional): set sq as asset scope query
-
-        Returns:
-            MODEL: saved query dataclass
-        """
         api_endpoint = ApiEndpoints.saved_queries.update
-        request_obj = api_endpoint.load_request(
-            name=name,
-            view=view,
-            description=description,
-            always_cached=always_cached,
-            private=private,
-            tags=tags or [],
-            asset_scope=asset_scope,
-            # WIP: folders
-            # folder_id=folder_id,
-        )
         return api_endpoint.perform_request(
             http=self.auth.http,
             request_obj=request_obj,
-            asset_type=self.parent.ASSET_TYPE,
             uuid=uuid,
         )
 
@@ -1104,47 +1085,8 @@ class SavedQuery(ChildMixins):
         Returns:
             MODEL: saved query dataclass
         """
-        return self._add(**obj.get_attrs())
-
-    def _add(
-        self,
-        name: str,
-        view: dict,
-        description: Optional[str] = "",
-        tags: Optional[List[str]] = None,
-        private: bool = False,
-        always_cached: bool = False,
-        asset_scope: bool = False,
-        # WIP: folders
-        # folder_id: Optional[str] = None,
-    ) -> MODEL:
-        """Direct API method to create a saved query.
-
-        Args:
-
-            name (str): name to set
-            view (dict): view object to set
-            description (str, optional): description to set
-            tags (Optional[List[str]], optional): tags to set
-            private (bool, optional): set sq as private or public
-            always_cached (bool, optional): set sq as always cached
-            asset_scope (bool, optional): set sq as asset scope query
-
-        Returns:
-            MODEL: saved query dataclass
-        """
         api_endpoint = ApiEndpoints.saved_queries.create
-        request_obj = api_endpoint.load_request(
-            name=name,
-            view=view,
-            description=description,
-            always_cached=always_cached,
-            private=private,
-            tags=tags or [],
-            asset_scope=asset_scope,
-            # WIP: folders
-            # folder_id=folder_id,
-        )
+        request_obj = MODEL.create_from_other(obj)
         return api_endpoint.perform_request(
             http=self.auth.http, request_obj=request_obj, asset_type=self.parent.ASSET_TYPE
         )
@@ -1167,48 +1109,10 @@ class SavedQuery(ChildMixins):
             uuid=uuid,
         )
 
-    def _get(
-        self,
-        limit: int = MAX_PAGE_SIZE,
-        offset: int = 0,
-        sort: Optional[str] = None,
-        filter: Optional[str] = None,
-        search: str = "",
-        folder_id: str = "",
-        creator_ids: Optional[List[str]] = None,
-        used_in: Optional[List[str]] = None,
-        get_view_data: bool = True,
-        include_usage: bool = False,
-    ) -> List[MODEL]:
-        """Direct API method to get all saved queries.
-
-        Args:
-            limit (int, optional): limit to N rows per page
-            offset (int, optional): start at row N
-
-        Returns:
-            List[MODEL]: list of saved query dataclass
-        """
-        api_endpoint = ApiEndpoints.saved_queries.get
-        request_obj = api_endpoint.load_request(
-            page={"limit": limit, "offset": offset},
-            filter=filter,
-            search=search,
-            sort=sort,
-            folder_id=folder_id or "",
-            creator_ids=creator_ids or [],
-            used_in=used_in or [],
-            get_view_data=get_view_data,
-            include_usage=include_usage,
-        )
-        return self._get_model(request_obj=request_obj)
-
-    def _get_model(self, request_obj: MODEL_GET) -> List[MODEL]:
+    def _get_model(self, request_obj: MODEL_GET) -> t.List[MODEL]:
         """Direct API method to get all saved queries."""
         api_endpoint = ApiEndpoints.saved_queries.get
-        return api_endpoint.perform_request(
-            http=self.auth.http, request_obj=request_obj, asset_type=self.parent.ASSET_TYPE
-        )
+        return api_endpoint.perform_request(http=self.auth.http, request_obj=request_obj)
 
     def _check_name_exists(self, value: str):
         """Check if a SQ already exists with a given name.
@@ -1225,7 +1129,7 @@ class SavedQuery(ChildMixins):
         except SavedQueryNotFoundError:
             return
 
-    def _get_query_history(self, request_obj: Optional[QueryHistoryRequest] = None) -> HIST_LIST:
+    def _get_query_history(self, request_obj: t.Optional[QueryHistoryRequest] = None) -> HIST_LIST:
         """Pass."""
         api_endpoint = ApiEndpoints.saved_queries.get_query_history
         if not request_obj:
@@ -1266,23 +1170,24 @@ class SavedQuery(ChildMixins):
         """
         return self._get_folders()
 
-    def folder_get_path(self, value: Union[MODEL_FOLDER, str, List[str]]) -> MODEL_FOLDER:
+    def folder_get_path(self, value: t.Union[MODEL_FOLDER, str, t.List[str]]) -> MODEL_FOLDER:
         """Pass."""
         if isinstance(value, MODEL_FOLDER):
             return value
         folders = self.folder_get()
         return folders.search(value=value)
 
-    # folder_get(value: Optional[str])
-    # folder_get_path(value: Union[Folder, str, List[str]])
+    # folder_get(value: t.Optional[str])
+    # folder_get_path(value: t.Union[Folder, str, t.List[str]])
 
     # resolve_folder_path(folder_path, folder_id)
-    # folder_create(path: Union[Folder, str], name: str)
+    # folder_create(path: t.Union[Folder, str], name: str)
     #   - err on read only
-    # folder_delete(path: Union[Folder, str])
+    # folder_delete(path: t.Union[Folder, str])
     #   - err on root/read only
     # folder_rename(path: Folder/str, name: str)
     #   - err on root/read only
-    # folder_move(from_path: Union[Folder, str, List[str]], to_path: Union[Folder, str, List[str] )
+    # folder_move(from_path: t.Union[Folder, str, t.List[str]], to_path:
+    t.Union[Folder, str, t.List[str] )
     #   - err on root/read only
     '''
