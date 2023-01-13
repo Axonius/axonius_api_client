@@ -5,7 +5,7 @@ import datetime
 import logging
 import math
 import time
-from typing import ClassVar, Generator, List, Optional, Union
+import typing as t
 
 from ...constants.api import MAX_PAGE_SIZE, PAGE_SIZE
 from ...constants.logs import LOG_LEVEL_API
@@ -23,11 +23,11 @@ class Page(BaseModel):
     method: callable
     request_obj: BaseModel
 
-    response: ClassVar[Optional[List[BaseModel]]] = None
-    start_date: ClassVar[Optional[datetime.datetime]] = None
-    stop_date: ClassVar[Optional[datetime.datetime]] = None
-    duration: ClassVar[Optional[datetime.timedelta]] = None
-    page_number: ClassVar[int] = 0
+    response: t.ClassVar[t.Optional[t.List[BaseModel]]] = None
+    start_date: t.ClassVar[t.Optional[datetime.datetime]] = None
+    stop_date: t.ClassVar[t.Optional[datetime.datetime]] = None
+    duration: t.ClassVar[t.Optional[datetime.timedelta]] = None
+    page_number: t.ClassVar[int] = 0
 
     def __post_init__(self):
         """Pass."""
@@ -50,11 +50,11 @@ class Page(BaseModel):
         request_obj.page.limit = self.state.page_size
         return {"request_obj": request_obj}
 
-    def get_response(self) -> List[BaseModel]:
+    def get_response(self) -> t.List[BaseModel]:
         """Pass."""
         return self.method(**self.get_request_args())
 
-    def handle_response(self, response: List[BaseModel]) -> List[BaseModel]:
+    def handle_response(self, response: t.List[BaseModel]) -> t.List[BaseModel]:
         """Pass."""
         if isinstance(response, (list, tuple)):
             self.state.rows_fetched_total += len(response)
@@ -64,7 +64,7 @@ class Page(BaseModel):
         """Pass."""
         return self.__str__()
 
-    def __str__(self) -> List[str]:
+    def __str__(self) -> t.List[str]:
         """Pass."""
 
         def getval(prop):
@@ -101,7 +101,7 @@ class Page(BaseModel):
         return row
 
     @property
-    def rows(self) -> Generator[BaseModel, None, None]:
+    def rows(self) -> t.Generator[BaseModel, None, None]:
         """Pass."""
         self.check_stop()
         for row in self.response:
@@ -111,7 +111,7 @@ class Page(BaseModel):
         self.handle_sleep()
 
     @property
-    def row_count(self) -> Optional[int]:
+    def row_count(self) -> t.Optional[int]:
         """Pass."""
         return len(self.response) if isinstance(self.response, (list, tuple)) else None
 
@@ -120,28 +120,28 @@ class Page(BaseModel):
 class PagingState(BaseModel):
     """Pass."""
 
-    purpose: Optional[str] = None
+    purpose: t.Optional[str] = None
 
     page_sleep: int = 0
     page_size: int = PAGE_SIZE
 
     row_start: int = 0
-    row_stop: Optional[int] = None
-    log_level: Union[int, str] = LOG_LEVEL_API
+    row_stop: t.Optional[int] = None
+    log_level: t.Union[int, str] = LOG_LEVEL_API
     page_cls: Page = Page
 
-    page_number: ClassVar[int] = 0
-    page_history: ClassVar[List[Page]] = None
-    row_number: ClassVar[int] = 0
-    rows_fetched_total: ClassVar[int] = 0
-    rows_yielded_total: ClassVar[int] = 0
+    page_number: t.ClassVar[int] = 0
+    page_history: t.ClassVar[t.List[Page]] = None
+    row_number: t.ClassVar[int] = 0
+    rows_fetched_total: t.ClassVar[int] = 0
+    rows_yielded_total: t.ClassVar[int] = 0
 
-    start_date: ClassVar[Optional[datetime.datetime]] = None
-    stop_date: ClassVar[Optional[datetime.datetime]] = None
-    stop_reason: ClassVar[Optional[str]] = None
-    stop_paging: ClassVar[bool] = False
+    start_date: t.ClassVar[t.Optional[datetime.datetime]] = None
+    stop_date: t.ClassVar[t.Optional[datetime.datetime]] = None
+    stop_reason: t.ClassVar[t.Optional[str]] = None
+    stop_paging: t.ClassVar[bool] = False
 
-    log: ClassVar[logging.Logger] = None
+    log: t.ClassVar[logging.Logger] = None
 
     def __post_init__(self):
         """Pass."""
@@ -190,7 +190,7 @@ class PagingState(BaseModel):
         """Pass."""
         return self.__str__()
 
-    def __str__(self) -> List[str]:
+    def __str__(self) -> t.List[str]:
         """Pass."""
 
         def getval(prop):
@@ -228,7 +228,7 @@ class PagingState(BaseModel):
         now = dt_now()
         return (self.stop_date or now) - (self.start_date or now)
 
-    def stop(self, reason: Optional[str] = None):
+    def stop(self, reason: t.Optional[str] = None):
         """Pass."""
         self.stop_paging = True
 

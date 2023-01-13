@@ -5,13 +5,10 @@ import datetime
 import time
 import typing as t
 
-import requests
-
 from ...data import PropsData
-from ...exceptions import ApiError
-from ...tools import coerce_int, csv_able, dt_now, dt_parse, listify, trim_float
+from ...tools import coerce_int, dt_now, dt_parse, trim_float
 from .. import json_api
-from ..api_endpoints import ApiEndpoint, ApiEndpoints
+from ..api_endpoints import ApiEndpoints
 from ..mixins import ModelMixins
 
 PROPERTIES_PHASE: t.List[str] = ["name", "human_name", "is_done", "progress"]
@@ -379,77 +376,3 @@ class Dashboard(ModelMixins):
 
         self.adapters: Adapters = Adapters(auth=self.auth)
         """Work with adapters"""
-
-
-class DashboardSpaces(ModelMixins):
-    """Pass."""
-
-    def get_exportable_spaces(self) -> t.List[str]:
-        """Pass."""
-        model: json_api.dashboard_spaces.ExportableSpacesResponse = self._get_exportable_spaces()
-        data: t.List[str] = model.spaces
-        return data
-
-    def export_spaces(
-        self,
-        spaces: t.Union[str, t.List[str]],
-        as_template: bool = False,
-        error_unknown: bool = True,
-        sep: str = ",",
-    ) -> t.Union[bytes, dict]:
-        """Pass."""
-        parsed: t.List[str] = csv_able(value=spaces, sep=sep)
-        valid: t.List[str] = self.get_exportable_spaces()
-        invalid: t.List[str] = [x for x in parsed if x not in valid]
-        if invalid and error_unknown:
-            invalid = "\n ! " + "\n ! ".join(invalid)
-            valid = "\n - " + "\n - ".join(valid)
-            parsed = "\n - " + "\n - ".join(parsed)
-            desc = "Dashboard Space names for exporting"
-            raise ApiError(
-                [
-                    f"Invalid {desc} provided!",
-                    "",
-                    f"Provided {desc} (unparsed):\n{spaces!r}",
-                    "",
-                    f"Provided {desc} (parsed using separator {sep!r}):{parsed}",
-                    "",
-                    f"Invalid {desc} provided:{invalid}",
-                    "",
-                    f"All valid {desc}:{valid}",
-                    "",
-                ]
-            )
-
-        data: t.Union[bytes, dict] = self._export_spaces(
-            spaces=[x for x in parsed if x in valid], as_template=as_template
-        )
-        return data
-
-    def _get_exportable_spaces(self) -> json_api.dashboard_spaces.ExportableSpacesResponse:
-        """Pass."""
-        api_endpoint: ApiEndpoint = ApiEndpoints.dashboard_spaces.get_exportable_spaces
-        response: json_api.dashboard_spaces.ExportableSpacesResponse = api_endpoint.perform_request(
-            http=self.auth.http
-        )
-        return response
-
-    def _export_spaces(
-        self, spaces: t.List[str], as_template: bool = False
-    ) -> t.Union[bytes, dict]:
-        """Pass."""
-        spaces: t.List[str] = listify(spaces)
-        api_endpoint: ApiEndpoint = ApiEndpoints.dashboard_spaces.export_spaces
-        request_obj: json_api.dashboard_spaces.ExportSpacesRequest = api_endpoint.request_model_cls(
-            spaces=spaces, as_template=as_template
-        )
-        raw: bool = request_obj.as_template
-        response: t.Union[dict, requests.Response] = api_endpoint.perform_request(
-            request_obj=request_obj, raw=raw, http=self.auth.http
-        )
-
-        if raw:
-            api_endpoint.check_response_status(http=self.auth.http, response=response)
-            response: bytes = response.content
-
-        return response

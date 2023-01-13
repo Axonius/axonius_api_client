@@ -69,7 +69,7 @@ class TestGrpCnxCmdAddMultipleFromJson(CnxTools):
 
             content = '[{"adapter_name": "banzarbar", "config": {"x": "y"}}]'
             exps = [
-                "No adapter named 'banzarbar' found on instance 'Master'",
+                "No adapter named 'banzarbar' found on instance",
                 "Added 0 out of 1 connections (error count: 1)",
             ]
             args = [

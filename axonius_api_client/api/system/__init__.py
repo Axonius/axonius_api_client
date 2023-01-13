@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """APIs for working with system components."""
 from .activity_logs import ActivityLogs
-from .dashboard import Dashboard, DashboardSpaces
+from .dashboard import Dashboard
+from .dashboard_spaces import DashboardSpaces
 from .data_scopes import DataScopes
 from .instances import Instances
 from .meta import Meta

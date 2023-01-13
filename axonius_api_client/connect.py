@@ -298,6 +298,9 @@ class Connect:
 
         self.SIGNUP = Signup(**self.HTTP_ARGS)
         """Easy access to signup."""
+
+        self.HTTP.CLIENT = self
+
         self._init()
 
     def start(self):

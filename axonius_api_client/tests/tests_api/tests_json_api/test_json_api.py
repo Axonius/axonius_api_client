@@ -1,11 +1,10 @@
 import dataclasses
-import warnings
 
 import marshmallow
 import pytest
 from axonius_api_client.api import json_api
 from axonius_api_client.api.json_api.base import BaseModel, BaseSchema, BaseSchemaJson
-from axonius_api_client.exceptions import ApiWarning, SchemaError
+from axonius_api_client.exceptions import ExtraAttributeWarning, SchemaError
 
 from ..test_api_endpoints import get_model_classes, get_schema_classes
 
@@ -78,10 +77,11 @@ class TestJsonApi:
             data={"data": {"type": "some_schema", "attributes": {"test": 1}}}
         )
         assert ret == exp
-        with warnings.catch_warnings():
-            if json_api.base.EXTRA_WARN:
-                warnings.simplefilter("ignore", ApiWarning)
+        # with warnings.catch_warnings():
+        #     if json_api.base.EXTRA_WARN:
+        #         warnings.simplefilter("ignore", ApiWarning)
 
+        with pytest.warns(ExtraAttributeWarning):
             ret = SomeSchema.load_response(
                 data={"data": {"type": "some_schema", "attributes": {"test": 1, "extra": 2}}}
             )
@@ -112,10 +112,11 @@ class TestJsonApi:
             SomeSchema.load_response(data=1)
         assert "Data to load must be a dictionary or list" in str(exc.value)
 
-        with warnings.catch_warnings():
-            if json_api.base.EXTRA_WARN:
-                warnings.simplefilter("ignore", ApiWarning)
+        # with warnings.catch_warnings():
+        #     if json_api.base.EXTRA_WARN:
+        #         warnings.simplefilter("ignore", ApiWarning)
 
+        with pytest.warns(ExtraAttributeWarning):
             ret = SomeSchema.load_response(data={"test": 1, "extra": 2})
 
         assert ret.test == 1
@@ -139,11 +140,11 @@ class TestJsonApi:
 
         exp = {"test": 1, "extra": 2}
 
-        with warnings.catch_warnings():
-            if json_api.base.EXTRA_WARN:
-                warnings.simplefilter("ignore", ApiWarning)
+        # with warnings.catch_warnings():
+        #     if json_api.base.EXTRA_WARN:
+        #         warnings.simplefilter("ignore", ApiWarning)
 
-            ret = SomeSchema.load_response(data={"test": 1, "extra": 2})
+        ret = SomeSchema.load_response(data={"test": 1, "extra": 2})
         assert ret == exp
 
         exp = {"test": 1}

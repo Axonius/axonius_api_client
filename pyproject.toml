@@ -9,6 +9,7 @@ log_format = "%(asctime)s %(levelname)-8s [%(name)s:%(funcName)s:%(pathname)s:%(
 log_level = "DEBUG"
 log_file = "artifacts/pytest.log"
 filterwarnings = [
+    'error:Extra attributes found',
     'ignore:The distutils package:DeprecationWarning',
     "ignore:'urllib3.contrib.pyopenssl:DeprecationWarning",
     'ignore:ssl.wrap_socket\(\) is deprecated:DeprecationWarning',
@@ -20,8 +21,6 @@ filterwarnings = [
     "ignore::pytest.PytestUnhandledThreadExceptionWarning",
 ]
 
-# "ignore::axonius_api_client.exceptions.ApiAttributeExtraWarning",
-# including package exceptions causes coverage to bust?
 
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",

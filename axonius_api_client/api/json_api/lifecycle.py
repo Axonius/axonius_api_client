@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Models for API requests & responses."""
 import dataclasses
-from typing import List, Optional, Type
+import typing as t
 
 import marshmallow_jsonapi
 
@@ -33,14 +33,15 @@ class LifecycleSchema(BaseSchemaJson):
 class Lifecycle(BaseModel):
     """Pass."""
 
-    last_finished_time: Optional[str] = None
-    last_start_time: Optional[str] = None
-    next_run_time: Optional[str] = None
-    status: Optional[str] = None
-    sub_phases: List[dict] = dataclasses.field(default_factory=list)
-    tunnel_status: Optional[str] = None
+    last_finished_time: t.Optional[str] = None
+    last_start_time: t.Optional[str] = None
+    next_run_time: t.Optional[str] = None
+    status: t.Optional[str] = None
+    sub_phases: t.List[dict] = dataclasses.field(default_factory=list)
+    tunnel_status: t.Optional[str] = None
+    document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return LifecycleSchema

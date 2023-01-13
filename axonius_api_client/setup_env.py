@@ -35,6 +35,8 @@ KEY_OVERRIDE: str = f"{KEY_PRE}ENV_OVERRIDE"
 KEY_URL: str = f"{KEY_PRE}URL"
 """OS env to get API URL from"""
 
+KEY_EXTRA_WARN: str = f"{KEY_PRE}EXTRA_WARN"
+
 KEY_KEY: str = f"{KEY_PRE}KEY"
 """OS env to get API key from"""
 
@@ -61,6 +63,8 @@ KEY_USER_AGENT: str = f"{KEY_PRE}USER_AGENT"
 
 DEFAULT_DEBUG: str = "no"
 """Default for :attr:`KEY_DEBUG`"""
+
+DEFAULT_EXTRA_WARN: str = "yes"
 
 DEFAULT_DEBUG_PRINT: str = "no"
 """Default for :attr:`KEY_DEBUG_PRINT`"""
@@ -281,6 +285,12 @@ def set_env(key: str, value: str, **kwargs) -> Tuple[str, Tuple[bool, str, str]]
 
     ax_env = ax_env or DEFAULT_ENV_FILE
     return dotenv.set_key(dotenv_path=ax_env, key_to_set=key, value_to_set=str(value))
+
+
+def get_env_extra_warn(**kwargs) -> str:
+    """Pass."""
+    load_dotenv(**kwargs)
+    return get_env_bool(key=KEY_EXTRA_WARN, default=DEFAULT_EXTRA_WARN)
 
 
 DEBUG_PRINT: bool = get_env_bool(key=KEY_DEBUG_PRINT, default=DEFAULT_DEBUG_PRINT)

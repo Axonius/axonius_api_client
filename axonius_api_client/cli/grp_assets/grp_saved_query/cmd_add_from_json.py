@@ -177,7 +177,6 @@ class State:
                 return
 
             self.debug(f"{msg_exist}, will update")
-
             try:
                 self.obj = self.apiobj.saved_query._update_from_dataclass(
                     obj=self.obj_parsed, uuid=existing.uuid

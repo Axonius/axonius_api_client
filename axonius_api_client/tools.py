@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 """Utilities and tools."""
-import calendar
 import codecs
 import csv
 import inspect
@@ -25,16 +24,21 @@ import dateutil.tz
 
 from . import INIT_DOTENV, PACKAGE_FILE, PACKAGE_ROOT, VERSION
 from .constants.api import GUI_PAGE_SIZES
+from .constants.ctypes import PathLike, PatternLike
 from .constants.general import (
+    DAYS_MAP,
     DEBUG_ARGS,
     DEBUG_TMPL,
+    EMAIL_RE,
     ERROR_ARGS,
     ERROR_TMPL,
     FILE_DATE_FMT,
+    HUMAN_SIZES,
     NO,
     OK_ARGS,
     OK_TMPL,
     SECHO_ARGS,
+    SPLITTER,
     TRIM_MSG,
     URL_STARTS,
     WARN_ARGS,
@@ -46,14 +50,6 @@ from .exceptions import ToolsError
 from .setup_env import find_dotenv, get_env_ax
 
 LOG: logging.Logger = logging.getLogger(PACKAGE_ROOT).getChild("tools")
-EMAIL_RE_STR: str = (
-    r"([-!#-'*+/-9=?A-Z^-~]+(\.[-!#-'*+/-9=?A-Z^-~]+)*|\"([]!#-[^-~ \t]|(\\[\t -~]))+\")"
-    r"@([-!#-'*+/-9=?A-Z^-~]+(\.[-!#-'*+/-9=?A-Z^-~]+)*|\[[\t -Z^-~]*])"
-)
-EMAIL_RE: t.Pattern = re.compile(EMAIL_RE_STR, re.I)
-PathLike: t.TypeVar = t.TypeVar("PathLike", pathlib.Path, str, bytes)
-DAYS_MAP: dict = dict(zip(range(7), calendar.day_name))
-CoerceIO: t.TypeVar = t.Union[str, bytes, t.IO]
 
 
 def type_str(
@@ -126,7 +122,18 @@ def is_existing_file(path: t.Any, **kwargs) -> bool:
     return False
 
 
-def listify(obj: t.Any, dictkeys: bool = False) -> list:
+def listify(
+    obj: t.Any = None,
+    split: bool = False,
+    split_max: int = -1,
+    split_sep: t.Optional[PatternLike] = SPLITTER,
+    strip: bool = True,
+    strip_chars: t.Optional[str] = None,
+    encoding: str = "utf-8",
+    errors: str = "replace",
+    dictkeys: bool = False,
+    **kwargs,
+) -> list:
     """Force an object into a list.
 
     Notes:
@@ -141,16 +148,29 @@ def listify(obj: t.Any, dictkeys: bool = False) -> list:
         obj: object to coerce to list
         dictkeys: if obj is dict, return list of keys of obj
     """
-    if isinstance(obj, types.GeneratorType):
-        return obj
-    if isinstance(obj, list):
-        return obj
+
+    def do_strip(values):
+        return [y for y in [x.strip(strip_chars) for x in values] if y] if strip else values
+
+    if "value" in kwargs:
+        obj = kwargs["value"]
+
     if obj is None:
         return []
+    if isinstance(obj, (types.GeneratorType, list)):
+        return obj
     if isinstance(obj, (tuple, set)):
         return list(obj)
-    if dictkeys and isinstance(obj, dict):
-        return list(obj)
+    if isinstance(obj, dict):
+        return list(obj) if dictkeys else [obj]
+    if split:
+        if isinstance(obj, bytes):
+            obj = obj.decode(encoding=encoding, errors=errors)
+        if isinstance(obj, str):
+            if is_pattern(value=split_sep):
+                split_max = 0 if split_max == -1 else split_max
+                return do_strip(split_sep.split(obj, maxsplit=split_max))
+            return do_strip(obj.split(sep=split_sep, maxsplit=split_max))
     return [obj]
 
 
@@ -203,32 +223,67 @@ def coerce_int(
     return value
 
 
-def coerce_int_float(value: t.Union[int, float, str]) -> t.Union[int, float]:
-    """Convert an object into int or float.
+# def coerce_int_float(value: t.Union[int, float, str]) -> t.Union[int, float]:
+#     """Convert an object into int or float.
+
+#     Args:
+#         obj: object to convert to int or float
+
+#     Raises:
+#         :exc:`ToolsError`: if obj is not able to be converted to int or float
+#     """
+#     if isinstance(value, float):
+#         return value
+
+#     if isinstance(value, int):
+#         return value
+
+#     if isinstance(value, str):
+#         value = value.strip()
+
+#         if value.isdigit():
+#             return int(value)
+
+#         if value.replace(".", "").isdigit():
+#             return float(value)
+
+#     vtype = trype(value)
+#     raise ToolsError(f"Supplied value {value!r} of type {vtype} is not an integer or float.")
+
+
+def coerce_int_float(
+    value: t.Union[int, float, str, bytes], as_float: bool = False, error: bool = True
+) -> t.Optional[t.Union[int, float]]:
+    """Coerce a value into int or float.
 
     Args:
-        obj: object to convert to int or float
+        value (t.Union[int, float, str, bytes]): value to coerce
+        as_float (bool, optional): if value is an integer, coerce to float
 
-    Raises:
-        :exc:`ToolsError`: if obj is not able to be converted to int or float
+    Returns:
+        t.Optional[t.Union[int, float]]:
+            float or int if value is int, float, int as str, or float as str; else None
     """
-    if isinstance(value, float):
-        return value
+    if isinstance(value, (float, int)):
+        return float(value) if as_float else value
 
-    if isinstance(value, int):
-        return value
+    value = bytes_to_str(value=value)
 
-    if isinstance(value, str):
+    if is_str(value=value):
         value = value.strip()
 
-        if value.isdigit():
-            return int(value)
-
-        if value.replace(".", "").isdigit():
+        if "." in value and value.replace(".", "").isdigit():
             return float(value)
 
-    vtype = trype(value)
-    raise ToolsError(f"Supplied value {value!r} of type {vtype} is not an integer or float.")
+        if value.isdigit():
+            return float(value) if as_float else int(value)
+
+    if error:
+        raise ToolsError(
+            f"Supplied value {value!r} of type {trype(value)} is not an integer or float."
+        )
+
+    return None
 
 
 def coerce_bool(obj: t.Any, errmsg: t.Optional[str] = None) -> bool:
@@ -269,9 +324,7 @@ def coerce_bool(obj: t.Any, errmsg: t.Optional[str] = None) -> bool:
 
 def is_str(value: t.Any, not_empty: bool = True) -> bool:
     """Check if value is non empty string."""
-    return isinstance(value, str) and (
-        isinstance(value, str) and bool(value.strip()) if not_empty else True
-    )
+    return not (not_empty and not value) if isinstance(value, str) else False
 
 
 def is_email(value: t.Any) -> bool:
@@ -436,6 +489,9 @@ def json_load(
         error: if json error happens, raise it
         **kwargs: passed to :func:`json.loads`
     """
+    if obj in [None, ""] and not error:
+        return None
+
     load = obj
     method = json.loads
     fh = None
@@ -597,6 +653,8 @@ def json_log(
     **kwargs,
 ) -> str:  # pragma: no cover
     """Pass."""
+    if obj is None and not error:
+        obj = "null"
     return json_reload(
         obj=obj, error=error, trim=trim, trim_lines=trim_lines, trim_msg=trim_msg, **kwargs
     )
@@ -1549,9 +1607,18 @@ def is_url(value: str) -> bool:
     return isinstance(value, str) and any([value.startswith(x) for x in URL_STARTS])
 
 
-def bytes_to_str(value: t.Any) -> t.Union[str, t.Any]:
-    """Convert obj to str if it is bytes."""
-    return value.decode() if isinstance(value, bytes) else value
+def bytes_to_str(value: t.Any, encoding: str = "utf-8", errors: str = "replace") -> t.Any:
+    """Convert value to str if value is bytes.
+
+    Args:
+        value (t.Any): value to convert to str
+        encoding (str, optional): encoding to use
+        errors (str, optional): how to handle errors
+
+    Returns:
+        t.Any: str if value is bytes, else orginal value
+    """
+    return value.decode(encoding=encoding, errors=errors) if isinstance(value, bytes) else value
 
 
 def strip_str(value: t.Any) -> t.Union[str, t.Any]:
@@ -1569,6 +1636,7 @@ def coerce_str(
 ) -> t.Union[str, t.Any]:
     """Coerce a value to a string."""
     value = bytes_to_str(value=value)
+
     if value is None:
         value = none
 
@@ -1611,24 +1679,24 @@ def str_trim(
     return value
 
 
-def strim(value: str, limit: t.Optional[int] = None) -> str:
-    """Pass."""
-    if isinstance(limit, int) and limit > 0 and len(value) > limit:
-        value = value[:limit] + f"... {len(value) - limit} more characters"
-    return value
+# def strim(value: str, limit: t.Optional[int] = None) -> str:
+#     """Pass."""
+#     if isinstance(limit, int) and limit > 0 and len(value) > limit:
+#         value = value[:limit] + f"... {len(value) - limit} more characters"
+#     return value
 
 
-def ltrim(
-    value: t.Union[str, t.List[str]], limit: t.Optional[int] = None, rejoin: bool = False
-) -> t.List[str]:
-    """Pass."""
-    if isinstance(value, str):
-        value = value.splitlines()
-    value = listify(value)
+# def ltrim(
+#     value: t.Union[str, t.List[str]], limit: t.Optional[int] = None, rejoin: bool = False
+# ) -> t.List[str]:
+#     """Pass."""
+#     if isinstance(value, str):
+#         value = value.splitlines()
+#     value = listify(value)
 
-    if isinstance(limit, int) and limit > 0 and len(value) > limit:
-        value = value[:limit] + [f"... {len(value) - limit} more lines"]
-    return value
+#     if isinstance(limit, int) and limit > 0 and len(value) > limit:
+#         value = value[:limit] + [f"... {len(value) - limit} more lines"]
+#     return value
 
 
 def get_cls_path(value: t.Any) -> str:
@@ -1978,6 +2046,59 @@ def tilde_re(value: t.Any) -> t.Optional[t.Union[str, t.Pattern]]:
     return value if isinstance(value, (str, t.Pattern)) else None
 
 
+def coerce_str_re(value: t.Any, prefix: str = "~") -> t.Any:
+    """Convert a str into a pattern if value is str and starts with prefix.
+
+    Args:
+        value (t.Any): value to convert to pattern
+        prefix (str, optional): prefix to use to indicate value should be converted to a pattern
+
+    Returns:
+        t.Any: t.Pattern if value is str or bytes and starts with prefix, else original value
+    """
+    if isinstance(value, (list, tuple)):
+        return [coerce_str_re(value=x, prefix=prefix) for x in value]
+
+    value = bytes_to_str(value=value)
+    return (
+        re.compile(value[1:], re.I) if (is_str(value=value) and value.startswith(prefix)) else value
+    )
+
+
+def human_size(
+    value: t.Union[int, str, bytes, float], decimals: int = 2, error: bool = True
+) -> str:
+    """Convert bytes to human readable.
+
+    Args:
+        value (t.Union[int, str, bytes, float]): value to coerce into int/float
+        decimals (int, optional): number of decimal places to include in str output
+
+    Returns:
+        str: human readable size of value if value is int, float, int as str, or float as str
+             else empty str
+    """
+    value = coerce_int_float(value=value, error=error)
+    if isinstance(value, (int, float)):
+        for size in HUMAN_SIZES:
+            if value < 1024.0:
+                return f"{value:0.{decimals}f} {size}"
+            value /= 1024.0
+    return ""
+
+
+def is_pattern(value: t.Any) -> bool:
+    """Check if value is a pattern.
+
+    Args:
+        value (t.Any): value to check
+
+    Returns:
+        bool: True if value is a re.Pattern; else False
+    """
+    return isinstance(value, t.Pattern)
+
+
 def is_tty(value: t.Any) -> bool:
     """Pass."""
     try:
@@ -2057,12 +2178,17 @@ def confirm(
 def csv_able(value: t.Optional[t.Union[str, t.List[str]]], sep: str = ",") -> t.List[str]:
     """Pass."""
     ret = []
-    if is_str(value):
-        ret += [x.strip() for x in value.split(sep) if is_str(x) and x not in ret]
-
     if isinstance(value, (list, tuple, set)):
         for item in value:
             ret += [x for x in csv_able(value=item, sep=sep) if x not in ret]
+        return ret
+
+    if is_str(value):
+        for item in value.split(sep):
+            item = item.strip()
+            if item and item not in ret:
+                ret.append(item)
+
     return ret
 
 

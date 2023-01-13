@@ -21,6 +21,7 @@ from . import (
     saved_queries,
     selection,
     signup,
+    spaces_export,
     system_meta,
     system_roles,
     system_settings,
@@ -53,4 +54,5 @@ __all__ = (
     "paging_state",
     "selection",
     "dashboard_spaces",
+    "spaces_export",
 )

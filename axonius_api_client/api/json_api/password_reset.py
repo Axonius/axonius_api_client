@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Models for API requests & responses."""
 import dataclasses
-from typing import Optional, Type, Union
+import typing as t
 
 from ...http import Http
 from .base import BaseModel, BaseSchema
@@ -16,7 +16,7 @@ class CreateRequest(BaseModel):
     user_name: str
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return None
 
@@ -30,7 +30,7 @@ class SendRequest(BaseModel):
     invite: bool = False
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return None
 
@@ -42,7 +42,7 @@ class SendResponse(BaseModel):
     user_name: str
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return None
 
@@ -53,12 +53,12 @@ class ValidateRequest(BaseModel):
 
     token: str
 
-    def dump_request_params(self, **kwargs) -> Optional[dict]:
+    def dump_request_params(self, **kwargs) -> t.Optional[dict]:
         """Pass."""
         return None
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return None
 
@@ -70,9 +70,9 @@ class ValidateResponse(BoolValue):
     @classmethod
     def load_response(
         cls,
-        data: Union[dict, list],
+        data: t.Union[dict, list],
         http: Http,
-        schema_cls: Optional[Type[BaseSchema]] = None,
+        schema_cls: t.Optional[t.Type[BaseSchema]] = None,
         **kwargs
     ):
         """Pass."""
@@ -81,7 +81,7 @@ class ValidateResponse(BoolValue):
         # PBUG: forced into BoolValue model
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return None
 
@@ -94,7 +94,7 @@ class UseRequest(BaseModel):
     password: str
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return None
 
@@ -104,8 +104,9 @@ class UseResponse(BaseModel):
     """Pass."""
 
     user_name: str
+    document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return None

@@ -31,6 +31,7 @@ from . import (
     grp_certs,
     grp_enforcements,
     grp_openapi,
+    grp_spaces,
     grp_system,
     grp_tools,
 )
@@ -382,3 +383,4 @@ cli.add_command(grp_tools.tools)
 cli.add_command(grp_openapi.openapi)
 cli.add_command(grp_certs.certs)
 cli.add_command(grp_enforcements.enforcements)
+cli.add_command(grp_spaces.spaces)

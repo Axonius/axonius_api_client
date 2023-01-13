@@ -30,14 +30,33 @@ class ApiEndpointGroup(BaseData):
 class DashboardSpaces(ApiEndpointGroup):
     """Pass."""
 
-    # get: ApiEndpoint = ApiEndpoint(
-    #     method="get",
-    #     path="api/dashboard",
-    #     request_schema_cls=None,
-    #     request_model_cls=None,
-    #     response_schema_cls=None,
-    #     response_model_cls=None,
-    # )
+    get: ApiEndpoint = ApiEndpoint(
+        method="get",
+        path="api/dashboard",
+        request_schema_cls=None,
+        request_model_cls=None,
+        response_schema_cls=json_api.dashboard_spaces.SpacesDetailsSchema,
+        response_model_cls=json_api.dashboard_spaces.SpacesDetails,
+    )
+
+    get_single: ApiEndpoint = ApiEndpoint(
+        method="get",
+        path="api/dashboard/{uuid}",
+        request_schema_cls=None,
+        request_model_cls=None,
+        response_schema_cls=json_api.dashboard_spaces.SpaceChartsSchema,
+        response_model_cls=json_api.dashboard_spaces.SpaceCharts,
+    )
+
+    export_chart_csv: ApiEndpoint = ApiEndpoint(
+        method="get",
+        path="api/dashboard/charts/{uuid}/csv?sort_by=&sort_order=",
+        request_schema_cls=None,
+        request_model_cls=None,
+        response_schema_cls=None,
+        response_model_cls=None,
+        response_as_text=True,
+    )
 
     export_spaces: ApiEndpoint = ApiEndpoint(
         method="post",
@@ -48,7 +67,16 @@ class DashboardSpaces(ApiEndpointGroup):
         response_model_cls=None,
     )
 
-    get_exportable_spaces: ApiEndpoint = ApiEndpoint(
+    import_spaces: ApiEndpoint = ApiEndpoint(
+        method="post",
+        path="api/dashboard/import",
+        request_schema_cls=json_api.dashboard_spaces.ImportSpacesRequestSchema,
+        request_model_cls=json_api.dashboard_spaces.ImportSpacesRequest,
+        response_schema_cls=json_api.dashboard_spaces.ImportSpacesResponseSchema,
+        response_model_cls=json_api.dashboard_spaces.ImportSpacesResponse,
+    )
+
+    get_exportable_space_names: ApiEndpoint = ApiEndpoint(
         method="get",
         path="api/dashboard/list_spaces",
         request_schema_cls=None,
@@ -159,7 +187,7 @@ class Assets(ApiEndpointGroup):
     )
 
     run_enforcement: ApiEndpoint = ApiEndpoint(
-        method="PUT",
+        method="put",
         path="api/{asset_type}/enforce",
         request_schema_cls=json_api.assets.RunEnforcementRequestSchema,
         request_model_cls=json_api.assets.RunEnforcementRequest,
@@ -175,7 +203,7 @@ class SavedQueries(ApiEndpointGroup):
 
     get: ApiEndpoint = ApiEndpoint(
         method="get",
-        path="api/V4.0/{asset_type}/views/saved",
+        path="api/queries/saved",
         request_schema_cls=json_api.saved_queries.SavedQueryGetSchema,
         request_model_cls=json_api.saved_queries.SavedQueryGet,
         response_schema_cls=json_api.saved_queries.SavedQuerySchema,
@@ -232,7 +260,7 @@ class SavedQueries(ApiEndpointGroup):
 
     create: ApiEndpoint = ApiEndpoint(
         method="post",
-        path="api/V4.0/{asset_type}/views",
+        path="api/queries/{asset_type}",
         request_schema_cls=json_api.saved_queries.SavedQueryCreateSchema,
         request_model_cls=json_api.saved_queries.SavedQueryCreate,
         response_schema_cls=json_api.saved_queries.SavedQuerySchema,
@@ -241,25 +269,16 @@ class SavedQueries(ApiEndpointGroup):
 
     delete: ApiEndpoint = ApiEndpoint(
         method="delete",
-        path="api/V4.0/{asset_type}/views/view/{uuid}",
+        path="api/queries/query/{uuid}",
         request_schema_cls=json_api.generic.PrivateRequestSchema,
         request_model_cls=json_api.generic.PrivateRequest,
         response_schema_cls=json_api.generic.MetadataSchema,
         response_model_cls=json_api.generic.Metadata,
     )
 
-    delete_4_3: ApiEndpoint = ApiEndpoint(
-        method="delete",
-        path="api/V4.0/{asset_type}/views/view/{uuid}",
-        request_schema_cls=json_api.saved_queries.SavedQueryDeleteSchema,
-        request_model_cls=json_api.saved_queries.SavedQueryDelete,
-        response_schema_cls=json_api.generic.MetadataSchema,
-        response_model_cls=json_api.generic.Metadata,
-    )
-
     update: ApiEndpoint = ApiEndpoint(
         method="put",
-        path="api/V4.0/{asset_type}/views/{uuid}",
+        path="api/queries/{uuid}",
         request_schema_cls=json_api.saved_queries.SavedQueryCreateSchema,
         request_model_cls=json_api.saved_queries.SavedQueryCreate,
         response_schema_cls=json_api.saved_queries.SavedQuerySchema,

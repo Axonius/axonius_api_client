@@ -40,7 +40,7 @@ class CnxTools:
                 assert exp in result.stdout
 
                 assert "Connection deleted!" in result.stderr
-                exp = f"CnxDelete(client_id={cnx_id!r})"
+                exp = f"CnxDelete(client_id={cnx_id!r}"
                 assert exp in result.stderr
 
 
