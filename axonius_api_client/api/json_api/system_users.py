@@ -2,7 +2,7 @@
 """Models for API requests & responses."""
 import dataclasses
 import datetime
-from typing import List, Optional, Type, Union
+import typing as t
 
 import marshmallow
 import marshmallow_jsonapi
@@ -63,7 +63,7 @@ class SystemUserUpdateSchema(SystemUserSchema):
         return SystemUserUpdate
 
     @marshmallow.pre_load
-    def pre_load_fix(self, data, **kwargs) -> Union[dict, BaseModel]:
+    def pre_load_fix(self, data, **kwargs) -> t.Union[dict, BaseModel]:
         """Pass."""
         data["email"] = data.get("email", "") or ""
         data["first_name"] = data.get("first_name", "") or ""
@@ -89,26 +89,27 @@ class SystemUser(BaseModel):
     user_name: str
     uuid: str
 
-    email: Optional[str] = None
-    first_name: Optional[str] = None
-    id: Optional[str] = None
-    last_login: Optional[datetime.datetime] = get_field_dc_mm(
+    email: t.Optional[str] = None
+    first_name: t.Optional[str] = None
+    id: t.Optional[str] = None
+    last_login: t.Optional[datetime.datetime] = get_field_dc_mm(
         mm_field=SchemaDatetime(allow_none=True), default=None
     )
-    last_name: Optional[str] = None
-    last_updated: Optional[datetime.datetime] = get_field_dc_mm(
+    last_name: t.Optional[str] = None
+    last_updated: t.Optional[datetime.datetime] = get_field_dc_mm(
         mm_field=SchemaDatetime(allow_none=True), default=None
     )
-    password: Optional[Union[List[str], str]] = None
-    pic_name: Optional[str] = None
-    role_name: Optional[str] = None
-    title: Optional[str] = None
-    department: Optional[str] = None
-    source: Optional[str] = None
+    password: t.Optional[t.Union[t.List[str], str]] = None
+    pic_name: t.Optional[str] = None
+    role_name: t.Optional[str] = None
+    title: t.Optional[str] = None
+    department: t.Optional[str] = None
+    source: t.Optional[str] = None
     ignore_role_assignment_rules: bool = False
+    document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return SystemUserSchema
 
@@ -122,7 +123,7 @@ class SystemUser(BaseModel):
         if self.id is None and self.uuid is not None:
             self.id = self.uuid
 
-    def to_dict_old(self, system_roles: List[dict]) -> dict:
+    def to_dict_old(self, system_roles: t.List[dict]) -> dict:
         """Pass."""
         system_role = [x for x in system_roles if x["uuid"] == self.role_id][0]
         obj = self.to_dict()
@@ -137,7 +138,7 @@ class SystemUserUpdate(SystemUser):
     """Pass."""
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return SystemUserUpdateSchema
 
@@ -181,10 +182,10 @@ class SystemUserCreate(BaseModel):
     role_id: str
 
     auto_generated_password: bool = False
-    email: Optional[str] = None
-    first_name: Optional[str] = None
-    last_name: Optional[str] = None
-    password: Optional[str] = get_field_dc_mm(
+    email: t.Optional[str] = None
+    first_name: t.Optional[str] = None
+    last_name: t.Optional[str] = None
+    password: t.Optional[str] = get_field_dc_mm(
         mm_field=SchemaPassword(load_default="", dump_default="", allow_none=True), default=""
     )
 
@@ -196,6 +197,6 @@ class SystemUserCreate(BaseModel):
         self.password = self.password or ""
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return SystemUserCreateSchema

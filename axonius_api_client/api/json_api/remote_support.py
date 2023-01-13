@@ -2,7 +2,7 @@
 """Models for API requests & responses."""
 import dataclasses
 import datetime
-from typing import List, Optional, Type
+import typing as t
 
 import marshmallow
 
@@ -34,7 +34,7 @@ class RemoteSupport(BaseModel):
     provision: bool
     analytics: bool
     troubleshooting: bool
-    timeout: Optional[datetime.datetime] = get_field_dc_mm(
+    timeout: t.Optional[datetime.datetime] = get_field_dc_mm(
         mm_field=SchemaDatetime(
             allow_none=True,
             load_default=None,
@@ -44,9 +44,10 @@ class RemoteSupport(BaseModel):
     )
     type: str = "maintenance"
     _id: str = ""
+    document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     @staticmethod
-    def _str_properties() -> List[str]:
+    def _str_properties() -> t.List[str]:
         return [
             "enabled",
             "enabled_temporarily",
@@ -73,7 +74,7 @@ class RemoteSupport(BaseModel):
         return self.enabled_permanently or self.enabled_temporarily
 
     @property
-    def temporary_expiry_date(self) -> Optional[datetime.datetime]:
+    def temporary_expiry_date(self) -> t.Optional[datetime.datetime]:
         """Pass."""
         value = self.timeout
         if value:
@@ -81,7 +82,7 @@ class RemoteSupport(BaseModel):
         return None
 
     @property
-    def temporary_expires_in_hours(self) -> Optional[float]:
+    def temporary_expires_in_hours(self) -> t.Optional[float]:
         """Pass."""
         value = self.temporary_expiry_date
         if value:
@@ -122,7 +123,7 @@ class UpdatePermanentRequest(BaseModel):
     provision: bool
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return UpdatePermanentRequestSchema
 
@@ -145,7 +146,7 @@ class UpdateAnalyticsRequest(BaseModel):
     analytics: bool
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return UpdateAnalyticsRequestSchema
 
@@ -168,7 +169,7 @@ class UpdateTroubleshootingRequest(BaseModel):
     troubleshooting: bool
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return UpdateTroubleshootingRequestSchema
 
@@ -191,7 +192,7 @@ class UpdateTemporaryRequest(BaseModel):
     duration: int
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return UpdateTemporaryRequestSchema
 
@@ -201,8 +202,9 @@ class UpdateTemporaryResponse(BaseModel):
     """Pass."""
 
     timeout: str
+    document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return None

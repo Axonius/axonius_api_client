@@ -48,7 +48,12 @@ class SystemMetaBase:
         # 2022-09-04
         sws = entity_sizes.pop("Software", None)  # 4.6
         assert isinstance(sws, dict) or sws is None
+        # 2022-12-20
+        tickets = entity_sizes.pop("Tickets", None)  # 4.7
+        assert isinstance(tickets, dict) or tickets is None
 
+        generic_assets = entity_sizes.pop("GenericAssets", None)  # 4.8
+        assert isinstance(generic_assets, dict) or generic_assets is None
         assert not entity_sizes
         assert not data
 

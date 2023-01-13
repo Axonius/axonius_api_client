@@ -2,27 +2,44 @@
 """Models for API requests & responses."""
 import dataclasses
 import logging
+import typing as t
 import warnings
-from typing import List, Optional, Type, Union
 
 import dataclasses_json
 import marshmallow
 import marshmallow_jsonapi
 
-from ...constants.general import SIMPLE
+from ...constants.ctypes import SimpleLike
 from ...exceptions import (
     ApiAttributeMissingError,
     ApiAttributeTypeError,
     ApiError,
-    ApiWarning,
+    ExtraAttributeWarning,
     SchemaError,
 )
 from ...http import Http
 from ...logs import get_obj_log
+from ...setup_env import get_env_extra_warn
 from ...tools import coerce_bool, combo_dicts, json_dump, json_load, listify, strip_right
 
 LOGGER = logging.getLogger(__name__)
-EXTRA_WARN = True
+WARN_TRACKER: t.Dict["BaseModel", t.Set[str]] = {}
+
+
+def get_warn_help(value: Warning) -> t.List[str]:
+    """Pass."""
+    name = value.__name__
+    ret = [
+        "",
+        "To silence these warnings please upgrade to latest API client.",
+        "If there is not a newer version available yet, you can disable these warnings using:",
+        "- from command line, use OS environment variable AX_EXTRA_WARN='no'",
+        "- or from python, use warnings module:",
+        "import warnings, axonius_api_client",
+        f'warnings.filterwarnings(action="ignore", category=axonius_api_client.exceptions.{name})',
+        "",
+    ]
+    return ret
 
 
 class BaseCommon:
@@ -30,12 +47,15 @@ class BaseCommon:
 
     @classmethod
     def _post_load_attrs(
-        cls, data: Union["BaseModel", List["BaseModel"]], http: Optional[Http] = None, **kwargs
+        cls,
+        data: t.Union["BaseModel", t.List["BaseModel"]],
+        http: t.Optional[Http] = None,
+        **kwargs,
     ):
         """Add HTTP object as an attribute to any loaded model.
 
         Args:
-            data (Union["BaseModel", List["BaseModel"]]): Loaded model(s)
+            data (t.Union["BaseModel", t.List["BaseModel"]]): Loaded model(s)
             http (Optional[Http], optional): HTTP object to set on loaded model(s)
             **kwargs: n/a
         """
@@ -47,17 +67,17 @@ class BaseCommon:
 
     @classmethod
     def _load_schema(
-        cls, schema: marshmallow.Schema, data: Union[dict, List[dict]], **kwargs
-    ) -> Union["BaseModel", List["BaseModel"]]:
+        cls, schema: marshmallow.Schema, data: t.Union[dict, t.List[dict]], **kwargs
+    ) -> t.Union["BaseModel", t.List["BaseModel"]]:
         """Load data using a marshmallow schema.
 
         Args:
             schema (marshmallow.Schema): Schema to use to load data
-            data (Union[dict, List[dict]]): Data to load
+            data (t.Union[dict, t.List[dict]]): Data to load
             **kwargs: passed to :meth:`_post_load_attrs`
 
         Returns:
-            Union["BaseModel", List["BaseModel"]]: Loaded model(s)
+            t.Union["BaseModel", t.List["BaseModel"]]: Loaded model(s)
 
         Raises:
             JsonApiError: when "type" of JSON API data does not match Meta._type of schema
@@ -91,11 +111,11 @@ class BaseSchema(BaseCommon, marshmallow.Schema):
     """Schema base class for validating non JSON API data."""
 
     @staticmethod
-    def get_model_cls() -> Union["BaseModel", type]:
+    def get_model_cls() -> t.Union["BaseModel", type]:
         """Get the BaseModel or type that data should be loaded into.
 
         Returns:
-            Union["BaseModel", type]: BaseModel to load data into, or callable (i.e. dict)
+            t.Union["BaseModel", type]: BaseModel to load data into, or callable (i.e. dict)
 
         Raises:
             NotImplementedError: Sub classes MUST define this.
@@ -104,16 +124,16 @@ class BaseSchema(BaseCommon, marshmallow.Schema):
 
     @classmethod
     def load_response(
-        cls, data: Union[dict, list, tuple], **kwargs
-    ) -> Union["BaseModel", List["BaseModel"]]:
+        cls, data: t.Union[dict, list, tuple], **kwargs
+    ) -> t.Union["BaseModel", t.List["BaseModel"]]:
         """Load data using this schema.
 
         Args:
-            data (Union[dict, list, tuple]): Response data to load using this schema
+            data (t.Union[dict, list, tuple]): Response data to load using this schema
             **kwargs: passed to :meth:`BaseCommon._load_schema`
 
         Returns:
-            Union["BaseModel", List["BaseModel"]]: Loaded model(s)
+            t.Union["BaseModel", t.List["BaseModel"]]: Loaded model(s)
 
         Raises:
             SchemaError: if data is not a dict or list
@@ -130,7 +150,7 @@ class BaseSchema(BaseCommon, marshmallow.Schema):
         return cls._load_schema(**combo_dicts(kwargs, schema=schema, data=data))
 
     @marshmallow.post_load
-    def post_load_process(self, data: dict, **kwargs) -> Union[dict, "BaseModel"]:
+    def post_load_process(self, data: dict, **kwargs) -> t.Union[dict, "BaseModel"]:
         """Marshmallow post_load hook to load validated data into a model class.
 
         Args:
@@ -138,19 +158,14 @@ class BaseSchema(BaseCommon, marshmallow.Schema):
             **kwargs: n/a
 
         Returns:
-            Union[dict, "BaseModel"]: Loaded data model
+            t.Union[dict, "BaseModel"]: Loaded data model
         """
         model_cls = self.get_model_cls()
         data = data or {}
 
         if not dataclasses.is_dataclass(model_cls):
             return model_cls(**data) if callable(model_cls) else data
-
-        # fields_known = [x.name for x in dataclasses.fields(model_cls)]
-        # extra_attributes = {k: data.pop(k) for k in list(data) if k not in fields_known}
-        obj = model_cls.from_dict(data)
-        # obj.extra_attributes = extra_attributes
-        return obj
+        return model_cls.from_dict(data)
 
 
 class BaseSchemaJson(BaseSchema, marshmallow_jsonapi.Schema):
@@ -165,7 +180,7 @@ class BaseSchemaJson(BaseSchema, marshmallow_jsonapi.Schema):
         type_ = "base_schema"
 
     @classmethod
-    def load_response(cls, data: dict, **kwargs) -> Union["BaseModel", List["BaseModel"]]:
+    def load_response(cls, data: dict, **kwargs) -> t.Union["BaseModel", t.List["BaseModel"]]:
         """Load data using this JSON API schema.
 
         Args:
@@ -173,7 +188,7 @@ class BaseSchemaJson(BaseSchema, marshmallow_jsonapi.Schema):
             **kwargs: passed to :meth:`BaseCommon._load_schema`
 
         Returns:
-            Union["BaseModel", List["BaseModel"]]: Loaded model(s)
+            t.Union["BaseModel", t.List["BaseModel"]]: Loaded model(s)
 
         Raises:
             SchemaError: if data is not a dict
@@ -191,7 +206,7 @@ class BaseSchemaJson(BaseSchema, marshmallow_jsonapi.Schema):
         return cls._load_schema(**combo_dicts(kwargs, schema=schema, data=data))
 
     @classmethod
-    def validate_attr_excludes(cls) -> List[str]:
+    def validate_attr_excludes(cls) -> t.List[str]:
         """Pass."""
         return ["document_meta"]
 
@@ -205,7 +220,7 @@ class BaseSchemaJson(BaseSchema, marshmallow_jsonapi.Schema):
     def validate_attr(
         cls,
         value: str,
-        exc_cls: Type[Exception] = marshmallow.ValidationError,
+        exc_cls: t.Type[Exception] = marshmallow.ValidationError,
     ) -> str:
         """Pass."""
         check = value
@@ -228,11 +243,11 @@ class BaseModel(dataclasses_json.DataClassJsonMixin, BaseCommon):
         """Pass."""
         return get_obj_log(self)
 
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Get the BaseSchema that should be used to validate the data for this model.
 
         Returns:
-            Optional[Type[BaseSchema]]: BaseSchema to use to verify data
+            t.Optional[Type[BaseSchema]]: BaseSchema to use to verify data
 
         Raises:
             NotImplementedError: Sub classes MUST define this.
@@ -241,18 +256,18 @@ class BaseModel(dataclasses_json.DataClassJsonMixin, BaseCommon):
 
     @classmethod
     def load_response(
-        cls, data: Union[dict, list, tuple], schema_cls: Optional[BaseSchema] = None, **kwargs
-    ) -> Union["BaseModel", List["BaseModel"]]:
+        cls, data: t.Union[dict, list, tuple], schema_cls: t.Optional[BaseSchema] = None, **kwargs
+    ) -> t.Union["BaseModel", t.List["BaseModel"]]:
         """Load data using this JSON API schema.
 
         Args:
-            data (Union[dict, list, tuple]): Response data to load using this schema
+            data (t.Union[dict, list, tuple]): Response data to load using this schema
             schema_cls (Optional[BaseSchema], optional): Schema class to use to validate data
                 will fallback to :meth:`get_schema_cls` or dataclasses_json automatic schema
             **kwargs: passed to :meth:`BaseCommon._load_schema`
 
         Returns:
-            Union["BaseModel", List["BaseModel"]]: Loaded model(s)
+            t.Union["BaseModel", t.List["BaseModel"]]: Loaded model(s)
 
         Raises:
             SchemaError: if data is not a dict or list
@@ -284,7 +299,7 @@ class BaseModel(dataclasses_json.DataClassJsonMixin, BaseCommon):
         schema = cls.schema()
         return cls._load_schema(schema=schema, data=kwargs)
 
-    def dump_request(self, schema_cls: Optional[BaseSchema] = None, **kwargs) -> dict:
+    def dump_request(self, schema_cls: t.Optional[BaseSchema] = None, **kwargs) -> dict:
         """Convert this model into a dictionary for sending as a request.
 
         This does a bunch of fancy foot work to re-validate the data using marshmallow schema
@@ -303,11 +318,15 @@ class BaseModel(dataclasses_json.DataClassJsonMixin, BaseCommon):
         schema = schema_cls()
         dumped = self.to_dict()
 
-        if isinstance(schema, BaseSchemaJson) and "data" not in dumped:
-            dumped = {"data": {"attributes": dumped, "type": schema.Meta.type_}}
+        if isinstance(schema, BaseSchemaJson):
+            if "data" not in dumped:
+                dumped = {"data": {"attributes": dumped, "type": schema.Meta.type_}}
+            if "type" not in dumped["data"]:
+                dumped = {"data": {"attributes": dumped, "type": schema.Meta.type_}}
 
         loaded = self._load_schema(**combo_dicts(kwargs, schema=schema, data=dumped))
         redumped = schema.dump(loaded)
+        redumped.pop("document_meta", None)
         return redumped
 
     def dump_request_params(self, **kwargs) -> dict:
@@ -327,11 +346,11 @@ class BaseModel(dataclasses_json.DataClassJsonMixin, BaseCommon):
 
             if isinstance(v, dict):
                 for a, b in v.items():
-                    if isinstance(b, SIMPLE):
+                    if isinstance(b, SimpleLike):
                         ret[f"{k}[{a}]"] = b
-            elif isinstance(v, SIMPLE):
+            elif isinstance(v, SimpleLike):
                 ret[k] = v
-            elif isinstance(v, (list, tuple)) and v and all([isinstance(x, SIMPLE) for x in v]):
+            elif isinstance(v, (list, tuple)) and v and all([isinstance(x, SimpleLike) for x in v]):
                 ret[k] = v
         return ret
 
@@ -372,11 +391,11 @@ class BaseModel(dataclasses_json.DataClassJsonMixin, BaseCommon):
         return "\n"
 
     @staticmethod
-    def _str_properties() -> List[str]:  # pragma: no cover
+    def _str_properties() -> t.List[str]:  # pragma: no cover
         """Pass."""
         return []
 
-    def _to_str_properties(self) -> List[str]:  # pragma: no cover
+    def _to_str_properties(self) -> t.List[str]:  # pragma: no cover
         """Pass."""
         ret = []
         for prop in self._str_properties():
@@ -393,12 +412,12 @@ class BaseModel(dataclasses_json.DataClassJsonMixin, BaseCommon):
         return ret
 
     @classmethod
-    def _get_field_names(cls) -> List[str]:
+    def _get_field_names(cls) -> t.List[str]:
         """Get a list of field names defined for this dataclass."""
         return [x.name for x in cls._get_fields()]
 
     @classmethod
-    def _get_fields(cls) -> List[dataclasses.Field]:
+    def _get_fields(cls) -> t.List[dataclasses.Field]:
         """Get a list of fields defined for this dataclass."""
         return dataclasses.fields(cls)
 
@@ -475,7 +494,7 @@ class BaseModel(dataclasses_json.DataClassJsonMixin, BaseCommon):
                     cls_args[fname] = value
                     continue
 
-                if ftype_origin in [list, List] or list in ftype_args:
+                if ftype_origin in [list, t.List] or list in ftype_args:
                     if value is None:
                         value = []
                     if not isinstance(value, (list, tuple)):
@@ -521,18 +540,30 @@ class BaseModel(dataclasses_json.DataClassJsonMixin, BaseCommon):
 
     @extra_attributes.setter
     def extra_attributes(self, value: dict):
-        if value:
+        if isinstance(value, dict) and value:
             schema = self.get_schema_cls()
-            stype = getattr(getattr(schema, "Meta", None), "type_", None)
-            this_cls = self.__class__
-            msgs = [
-                f"Extra attributes found in {this_cls}",
-                f"schema {schema}",
-                f"type {stype!r}",
-                f"{json_dump(value)}",
-            ]
-            msg = "\n".join(msgs)
-            LOGGER.warning(msg)
-            if EXTRA_WARN:  # pragma: no cover
-                warnings.warn(message=msg, category=ApiWarning)
+            if self.__class__ not in WARN_TRACKER:
+                WARN_TRACKER[self.__class__] = set()
+            unknown = list(value)
+            unknown_str = ", ".join(unknown)
+            if unknown_str not in WARN_TRACKER[self.__class__]:
+                WARN_TRACKER[self.__class__].add(unknown_str)
+                stype = getattr(getattr(schema, "Meta", None), "type_", None)
+                this_cls = self.__class__
+                warn_help = get_warn_help(ExtraAttributeWarning)
+                msgs = [
+                    f"Extra attributes found in dataclass model {this_cls}",
+                    f"Associated schema {schema} (JSON API type: {stype!r})",
+                    *warn_help,
+                    "Extra attributes found:",
+                    f"{json_dump(value)}",
+                ]
+                msg = "\n".join(msgs)
+                LOGGER.warning(msg)
+                # import pdb
+
+                # pdb.set_trace(header=msg)
+                if get_env_extra_warn():
+                    warnings.warn(message=msg, category=ExtraAttributeWarning)
+
         self._extra_attributes = value

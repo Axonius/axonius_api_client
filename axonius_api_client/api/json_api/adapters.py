@@ -4,13 +4,13 @@ import dataclasses
 import datetime
 import re
 import textwrap
-from typing import ClassVar, List, Optional, Pattern, Tuple, Type
+import typing as t
 
 import marshmallow
 import marshmallow_jsonapi
 
 from ...constants.adapters import DISCOVERY_NAME, GENERIC_NAME, INGESTION_NAME
-from ...constants.general import STR_RE_LISTY
+from ...constants.ctypes import PatternLikeListy
 from ...exceptions import ApiError, NotFoundError
 from ...http import Http
 from ...parsers.config import parse_schema
@@ -136,7 +136,7 @@ class AdapterFetchHistorySchema(BaseSchemaJson):
         return AdapterFetchHistory
 
     @classmethod
-    def validate_attr_excludes(cls) -> List[str]:
+    def validate_attr_excludes(cls) -> t.List[str]:
         """Pass."""
         return ["document_meta", "id"]
 
@@ -164,62 +164,62 @@ class AdapterFetchHistory(BaseModel):
         mm_field=AdapterFetchHistorySchema._declared_fields["status"],
     )
 
-    discovery_id: Optional[str] = get_field_dc_mm(
+    discovery_id: t.Optional[str] = get_field_dc_mm(
         mm_field=AdapterFetchHistorySchema._declared_fields["discovery_id"],
         default=None,
     )
 
-    instance: Optional[str] = get_field_dc_mm(
+    instance: t.Optional[str] = get_field_dc_mm(
         mm_field=AdapterFetchHistorySchema._declared_fields["instance"],
         default=None,
     )
 
-    client: Optional[str] = get_field_dc_mm(
+    client: t.Optional[str] = get_field_dc_mm(
         mm_field=AdapterFetchHistorySchema._declared_fields["client"],
         default=None,
     )
 
-    devices_count: Optional[int] = get_field_dc_mm(
+    devices_count: t.Optional[int] = get_field_dc_mm(
         mm_field=AdapterFetchHistorySchema._declared_fields["devices_count"],
         default=None,
     )
 
-    users_count: Optional[int] = get_field_dc_mm(
+    users_count: t.Optional[int] = get_field_dc_mm(
         mm_field=AdapterFetchHistorySchema._declared_fields["users_count"],
         default=None,
     )
 
-    resources_count: Optional[int] = get_field_dc_mm(
+    resources_count: t.Optional[int] = get_field_dc_mm(
         mm_field=AdapterFetchHistorySchema._declared_fields["resources_count"],
         default=None,
     )
 
-    end_time: Optional[datetime.datetime] = get_field_dc_mm(
+    end_time: t.Optional[datetime.datetime] = get_field_dc_mm(
         mm_field=AdapterFetchHistorySchema._declared_fields["end_time"],
         default=None,
     )
 
-    duration: Optional[str] = get_field_dc_mm(
+    duration: t.Optional[str] = get_field_dc_mm(
         mm_field=AdapterFetchHistorySchema._declared_fields["duration"],
         default=None,
     )
 
-    error: Optional[str] = get_field_dc_mm(
+    error: t.Optional[str] = get_field_dc_mm(
         mm_field=AdapterFetchHistorySchema._declared_fields["error"],
         default=None,
     )
 
-    fetch_events_count: Optional[int] = get_field_dc_mm(
+    fetch_events_count: t.Optional[int] = get_field_dc_mm(
         mm_field=AdapterFetchHistorySchema._declared_fields["fetch_events_count"],
         default=None,
     )
 
-    ignored_devices_count: Optional[int] = get_field_dc_mm(
+    ignored_devices_count: t.Optional[int] = get_field_dc_mm(
         mm_field=AdapterFetchHistorySchema._declared_fields["ignored_devices_count"],
         default=None,
     )
 
-    ignored_users_count: Optional[int] = get_field_dc_mm(
+    ignored_users_count: t.Optional[int] = get_field_dc_mm(
         mm_field=AdapterFetchHistorySchema._declared_fields["ignored_users_count"],
         default=None,
     )
@@ -228,7 +228,7 @@ class AdapterFetchHistory(BaseModel):
         mm_field=AdapterFetchHistorySchema._declared_fields["realtime"],
         default=False,
     )
-    document_meta: Optional[dict] = dataclasses.field(default_factory=dict)
+    document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     @staticmethod
     def get_schema_cls():
@@ -250,7 +250,7 @@ class AdapterFetchHistory(BaseModel):
         """Pass."""
         return self.adapter["text"]
 
-    def __str__(self) -> List[str]:
+    def __str__(self) -> t.List[str]:
         """Pass."""
 
         def getval(prop):
@@ -290,21 +290,21 @@ class AdapterFetchHistory(BaseModel):
         }
 
     @classmethod
-    def _props_csv(cls) -> List[str]:
+    def _props_csv(cls) -> t.List[str]:
         """Pass."""
         return cls._props_custom() + [
             x for x in cls._get_field_names() if x not in cls._props_skip()
         ]
 
     @classmethod
-    def _props_details(cls) -> List[str]:
+    def _props_details(cls) -> t.List[str]:
         """Pass."""
         return cls._props_custom() + [
             x for x in cls._get_field_names() if x not in cls._props_details_excludes()
         ]
 
     @classmethod
-    def _props_details_excludes(cls) -> List[str]:
+    def _props_details_excludes(cls) -> t.List[str]:
         """Pass."""
         return (
             cls._props_custom()
@@ -315,27 +315,27 @@ class AdapterFetchHistory(BaseModel):
         )
 
     @classmethod
-    def _props_results(cls) -> List[str]:
+    def _props_results(cls) -> t.List[str]:
         """Pass."""
         return ["status", "error"]
 
     @classmethod
-    def _props_counts(cls) -> List[str]:
+    def _props_counts(cls) -> t.List[str]:
         """Pass."""
         return [x for x in cls._get_field_names() if x.endswith("_count")]
 
     @classmethod
-    def _props_timings(cls) -> List[str]:
+    def _props_timings(cls) -> t.List[str]:
         """Pass."""
         return ["start_time", "end_time", "duration"]
 
     @classmethod
-    def _props_skip(cls) -> List[str]:
+    def _props_skip(cls) -> t.List[str]:
         """Pass."""
         return ["adapter", "document_meta"]
 
     @classmethod
-    def _props_custom(cls) -> List[str]:
+    def _props_custom(cls) -> t.List[str]:
         """Pass."""
         return ["adapter_name", "adapter_title"]
 
@@ -410,23 +410,23 @@ class AdapterFetchHistoryRequestSchema(BaseSchemaJson):
 class AdapterFetchHistoryRequest(BaseModel):
     """Pass."""
 
-    adapters_filter: List[str] = get_field_dc_mm(
+    adapters_filter: t.List[str] = get_field_dc_mm(
         mm_field=AdapterFetchHistoryRequestSchema._declared_fields["adapters_filter"],
         default_factory=list,
     )
-    clients_filter: List[str] = get_field_dc_mm(
+    clients_filter: t.List[str] = get_field_dc_mm(
         mm_field=AdapterFetchHistoryRequestSchema._declared_fields["clients_filter"],
         default_factory=list,
     )
-    connection_labels_filter: List[str] = get_field_dc_mm(
+    connection_labels_filter: t.List[str] = get_field_dc_mm(
         mm_field=AdapterFetchHistoryRequestSchema._declared_fields["connection_labels_filter"],
         default_factory=list,
     )
-    instance_filter: List[str] = get_field_dc_mm(
+    instance_filter: t.List[str] = get_field_dc_mm(
         mm_field=AdapterFetchHistoryRequestSchema._declared_fields["instance_filter"],
         default_factory=list,
     )
-    statuses_filter: List[str] = get_field_dc_mm(
+    statuses_filter: t.List[str] = get_field_dc_mm(
         mm_field=AdapterFetchHistoryRequestSchema._declared_fields["statuses_filter"],
         default_factory=list,
     )
@@ -434,15 +434,15 @@ class AdapterFetchHistoryRequest(BaseModel):
         mm_field=AdapterFetchHistoryRequestSchema._declared_fields["exclude_realtime"],
         default=False,
     )
-    page: Optional[PaginationRequest] = get_field_dc_mm(
+    page: t.Optional[PaginationRequest] = get_field_dc_mm(
         mm_field=AdapterFetchHistoryRequestSchema._declared_fields["page"],
         default_factory=PaginationRequest,
     )
-    time_range: Optional[TimeRange] = get_field_dc_mm(
+    time_range: t.Optional[TimeRange] = get_field_dc_mm(
         mm_field=AdapterFetchHistoryRequestSchema._declared_fields["time_range"],
         default_factory=TimeRange,
     )
-    sort: Optional[str] = get_field_dc_mm(
+    sort: t.Optional[str] = get_field_dc_mm(
         mm_field=AdapterFetchHistoryRequestSchema._declared_fields["sort"],
         default=None,
     )
@@ -450,18 +450,19 @@ class AdapterFetchHistoryRequest(BaseModel):
         mm_field=AdapterFetchHistoryRequestSchema._declared_fields["search"],
         default="",
     )
-    filter: Optional[str] = get_field_dc_mm(
+    filter: t.Optional[str] = get_field_dc_mm(
         mm_field=AdapterFetchHistoryRequestSchema._declared_fields["filter"],
         default=None,
     )
-    # total_devices_filter: Optional[CountOperator] = get_field_dc_mm(
+    # total_devices_filter: t.Optional[CountOperator] = get_field_dc_mm(
     #     mm_field=AdapterFetchHistoryRequestSchema._declared_fields["total_devices_filter"],
     #     default=CountOperator(),
     # )
-    # total_users_filter: Optional[CountOperator] = get_field_dc_mm(
+    # total_users_filter: t.Optional[CountOperator] = get_field_dc_mm(
     #     mm_field=AdapterFetchHistoryRequestSchema._declared_fields["total_users_filter"],
     #     default=CountOperator(),
     # )
+    document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     def __post_init__(self):
         """Pass."""
@@ -477,7 +478,7 @@ class AdapterFetchHistoryRequest(BaseModel):
         # if self.total_users_filter is None:
         #     self.total_users_filter = CountOperator()
 
-    def set_sort(self, value: Optional[str] = None, descending: bool = False) -> Optional[str]:
+    def set_sort(self, value: t.Optional[str] = None, descending: bool = False) -> t.Optional[str]:
         """Pass."""
         if isinstance(value, str) and value:
             value = AdapterFetchHistorySchema.validate_attr(value=value, exc_cls=NotFoundError)
@@ -489,8 +490,8 @@ class AdapterFetchHistoryRequest(BaseModel):
         return value
 
     def set_search_filter(
-        self, search: Optional[str] = None, filter: Optional[str] = None
-    ) -> Tuple[Optional[str], Optional[str]]:
+        self, search: t.Optional[str] = None, filter: t.Optional[str] = None
+    ) -> t.Tuple[t.Optional[str], t.Optional[str]]:
         """Pass."""
         values = [search, filter]
         is_strs = [isinstance(x, str) and x for x in values]
@@ -507,8 +508,8 @@ class AdapterFetchHistoryRequest(BaseModel):
         self,
         history_filters: "AdapterFetchHistoryFilters",
         value_type: str,
-        value: Optional[List[str]] = None,
-    ) -> List[str]:
+        value: t.Optional[t.List[str]] = None,
+    ) -> t.List[str]:
         """Pass."""
         value = history_filters.check_value(value_type=value_type, value=value)
         setattr(self, f"{value_type}_filter", value)
@@ -523,9 +524,9 @@ class AdapterFetchHistoryRequest(BaseModel):
     def set_time_range(
         self,
         relative_unit_type: UnitTypes = UnitTypes.get_default(),
-        relative_unit_count: Optional[int] = None,
-        absolute_date_start: Optional[datetime.datetime] = None,
-        absolute_date_end: Optional[datetime.datetime] = None,
+        relative_unit_count: t.Optional[int] = None,
+        absolute_date_start: t.Optional[datetime.datetime] = None,
+        absolute_date_end: t.Optional[datetime.datetime] = None,
     ) -> "TimeRange":
         """Pass."""
         value = TimeRange.build(
@@ -568,43 +569,44 @@ class AdapterFetchHistoryFiltersSchema(BaseSchemaJson):
 class AdapterFetchHistoryFilters(BaseModel):
     """Pass."""
 
-    adapters_filter: List[dict] = get_field_dc_mm(
+    adapters_filter: t.List[dict] = get_field_dc_mm(
         mm_field=AdapterFetchHistoryFiltersSchema._declared_fields["adapters_filter"],
         default_factory=list,
     )
-    clients_filter: List[str] = get_field_dc_mm(
+    clients_filter: t.List[str] = get_field_dc_mm(
         mm_field=AdapterFetchHistoryFiltersSchema._declared_fields["clients_filter"],
         default_factory=list,
     )
-    connection_labels_filter: List[str] = get_field_dc_mm(
+    connection_labels_filter: t.List[str] = get_field_dc_mm(
         mm_field=AdapterFetchHistoryFiltersSchema._declared_fields["connection_labels_filter"],
         default_factory=list,
     )
-    instance_filter: List[str] = get_field_dc_mm(
+    instance_filter: t.List[str] = get_field_dc_mm(
         mm_field=AdapterFetchHistoryFiltersSchema._declared_fields["instance_filter"],
         default_factory=list,
     )
-    statuses_filter: List[str] = get_field_dc_mm(
+    statuses_filter: t.List[str] = get_field_dc_mm(
         mm_field=AdapterFetchHistoryFiltersSchema._declared_fields["statuses_filter"],
         default_factory=list,
     )
-    discoveries_filter: List[str] = get_field_dc_mm(
+    discoveries_filter: t.List[str] = get_field_dc_mm(
         mm_field=AdapterFetchHistoryFiltersSchema._declared_fields["discoveries_filter"],
         default_factory=list,
     )
+    document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return AdapterFetchHistoryFiltersSchema
 
-    def check_value(self, value_type: str, value: Optional[STR_RE_LISTY]) -> List[str]:
+    def check_value(self, value_type: str, value: t.Optional[PatternLikeListy]) -> t.List[str]:
         """Pass."""
 
         def is_match(item):
             if isinstance(check, str) and item == check:
                 return True
-            if isinstance(check, Pattern) and check.search(item):
+            if isinstance(check, t.Pattern) and check.search(item):
                 return True
             return False
 
@@ -629,12 +631,14 @@ class AdapterFetchHistoryFilters(BaseModel):
             check = value.strip()
             if check.startswith("~"):
                 check = re.compile(check[1:])
-        elif isinstance(value, Pattern):
+        elif isinstance(value, t.Pattern):
             check = value
         elif value is None:
             return []
         else:
-            raise ApiError(f"Value must be {STR_RE_LISTY}, not type={type(value)}, value={value!r}")
+            raise ApiError(
+                f"Value must be {PatternLikeListy}, not type={type(value)}, value={value!r}"
+            )
 
         items = getattr(self, value_type)
         matches = []
@@ -669,7 +673,7 @@ class AdapterFetchHistoryFilters(BaseModel):
         return value_type
 
     @staticmethod
-    def value_types() -> List[str]:
+    def value_types() -> t.List[str]:
         """Pass."""
         return ["adapters", "clients", "connection_labels", "instances", "statuses", "discoveries"]
 
@@ -682,27 +686,27 @@ class AdapterFetchHistoryFilters(BaseModel):
         }
 
     @property
-    def clients(self) -> List[str]:
+    def clients(self) -> t.List[str]:
         """Pass."""
         return self.clients_filter
 
     @property
-    def connection_labels(self) -> List[str]:
+    def connection_labels(self) -> t.List[str]:
         """Pass."""
         return self.connection_labels_filter
 
     @property
-    def instances(self) -> List[str]:
+    def instances(self) -> t.List[str]:
         """Pass."""
         return self.instance_filter
 
     @property
-    def statuses(self) -> List[str]:
+    def statuses(self) -> t.List[str]:
         """Pass."""
         return self.statuses_filter
 
     @property
-    def discoveries(self) -> List[str]:
+    def discoveries(self) -> t.List[str]:
         """Pass."""
         return self.discoveries_filter
 
@@ -788,7 +792,7 @@ class AdapterSettingsUpdateSchema(BaseSchemaJson):
         type_ = "settings_schema"
 
     @staticmethod
-    def get_model_cls() -> Optional[type]:
+    def get_model_cls() -> t.Optional[type]:
         """Pass."""
         return AdapterSettingsUpdate
 
@@ -971,10 +975,11 @@ class CnxLabelsSchema(MetadataSchema):
 class AdapterClientsCount(BaseModel):
     """Pass."""
 
-    error_count: Optional[int] = None
-    inactive_count: Optional[int] = None
-    success_count: Optional[int] = None
-    total_count: Optional[int] = None
+    error_count: t.Optional[int] = None
+    inactive_count: t.Optional[int] = None
+    success_count: t.Optional[int] = None
+    total_count: t.Optional[int] = None
+    document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     def __post_init__(self):
         """Pass."""
@@ -989,7 +994,7 @@ class AdapterClientsCount(BaseModel):
                 setattr(self, count, 0)
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return None
 
@@ -1003,9 +1008,11 @@ class AdapterNode(BaseModel):
     plugin_name: str
     status: str
     unique_plugin_name: str
-    clients: Optional[List[dict]] = dataclasses.field(default_factory=list)
-    clients_count: Optional[AdapterClientsCount] = None
-    supported_features: List[str] = dataclasses.field(default_factory=list)
+    clients: t.Optional[t.List[dict]] = dataclasses.field(default_factory=list)
+    clients_count: t.Optional[AdapterClientsCount] = None
+    supported_features: t.List[str] = dataclasses.field(default_factory=list)
+    is_master: bool = False
+    document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     def __post_init__(self):
         """Pass."""
@@ -1139,7 +1146,7 @@ class AdapterNode(BaseModel):
         return self._meta["config"][self.schema_name_discovery]["config"] if self._meta else {}
 
     @staticmethod
-    def _str_properties() -> List[str]:
+    def _str_properties() -> t.List[str]:
         """Pass."""
         return [
             "adapter_name",
@@ -1155,7 +1162,7 @@ class AdapterNode(BaseModel):
         """Pass."""
         return ", "
 
-    def to_dict_old(self, basic_data: Optional[List[dict]] = None) -> dict:
+    def to_dict_old(self, basic_data: t.Optional[t.List[dict]] = None) -> dict:
         """Pass."""
         basic_data = basic_data or {}
         title = basic_data.get(self.adapter_name, {}).get("title")
@@ -1191,7 +1198,7 @@ class AdapterNode(BaseModel):
         return ret
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return None
 
@@ -1200,9 +1207,9 @@ class AdapterNode(BaseModel):
 class Adapter(BaseModel):
     """Pass."""
 
-    adapters_data: List[dict]
+    adapters_data: t.List[dict]
     id: str
-    document_meta: Optional[dict] = dataclasses.field(default_factory=dict)
+    document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     def __post_init__(self):
         """Pass."""
@@ -1228,7 +1235,7 @@ class Adapter(BaseModel):
         """
 
     @property
-    def adapter_nodes(self) -> List[AdapterNode]:
+    def adapter_nodes(self) -> t.List[AdapterNode]:
         """Pass."""
 
         def load(data):
@@ -1247,12 +1254,12 @@ class Adapter(BaseModel):
         return self._adapter_nodes
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return AdapterSchema
 
     @staticmethod
-    def _str_properties() -> List[str]:
+    def _str_properties() -> t.List[str]:
         """Pass."""
         return ["adapter_name", "adapter_nodes"]
 
@@ -1268,18 +1275,19 @@ class AdapterNodeCnx(BaseModel):
     node_id: str
     status: str
     uuid: str
-    client_config: Optional[dict] = dataclasses.field(default_factory=dict)
-    connection_advanced_config: Optional[dict] = dataclasses.field(default_factory=dict)
-    failed_connections_attempts: Optional[int] = None
+    client_config: t.Optional[dict] = dataclasses.field(default_factory=dict)
+    connection_advanced_config: t.Optional[dict] = dataclasses.field(default_factory=dict)
+    failed_connections_attempts: t.Optional[int] = None
     failed_connections_limit_exceeded: bool = False
-    connection_discovery: Optional[dict] = dataclasses.field(default_factory=dict)
-    date_fetched: Optional[str] = None
-    last_fetch_time: Optional[datetime.datetime] = get_field_dc_mm(
+    connection_discovery: t.Optional[dict] = dataclasses.field(default_factory=dict)
+    date_fetched: t.Optional[str] = None
+    last_fetch_time: t.Optional[datetime.datetime] = get_field_dc_mm(
         mm_field=SchemaDatetime(allow_none=True), default=None
     )
-    error: Optional[str] = ""
-    tunnel_id: Optional[str] = None
-    did_notify_error: Optional[bool] = None
+    error: t.Optional[str] = ""
+    tunnel_id: t.Optional[str] = None
+    did_notify_error: t.Optional[bool] = None
+    document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     def __post_init__(self):
         """Pass."""
@@ -1330,7 +1338,7 @@ class AdapterNodeCnx(BaseModel):
         return ret
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return None
 
@@ -1339,12 +1347,12 @@ class AdapterNodeCnx(BaseModel):
 class AdaptersRequest(BaseModel):
     """Pass."""
 
-    filter: Optional[str] = None
+    filter: t.Optional[str] = None
     # PBUG: how is this even used?
     get_clients: bool = False
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return AdaptersRequestSchema
 
@@ -1354,7 +1362,7 @@ class AdapterSettings(Metadata):
     """Pass."""
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return AdapterSettingsSchema
 
@@ -1513,7 +1521,7 @@ class AdapterSettingsUpdate(BaseModel):
     prefix: str = "adapters"
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return AdapterSettingsUpdateSchema
 
@@ -1523,7 +1531,7 @@ class AdaptersList(Metadata):
     """Pass."""
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return AdaptersListSchema
 
@@ -1561,15 +1569,15 @@ class CnxCreateRequest(BaseModel):
     connection: dict
     instance: str
     instance_name: str
-    connection_label: Optional[str] = None
+    connection_label: t.Optional[str] = None
     active: bool = True
-    connection_discovery: Optional[dict] = None
+    connection_discovery: t.Optional[dict] = None
     save_and_fetch: bool = True
     is_instances_mode: bool = False
-    tunnel_id: Optional[str] = None
+    tunnel_id: t.Optional[str] = None
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return CnxCreateRequestSchema
 
@@ -1584,10 +1592,10 @@ class CnxTestRequest(BaseModel):
 
     connection: dict
     instance: str
-    tunnel_id: Optional[str] = None
+    tunnel_id: t.Optional[str] = None
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return CnxTestRequestSchema
 
@@ -1599,17 +1607,17 @@ class CnxUpdateRequest(BaseModel):
     connection: dict
     instance: str
     instance_name: str
-    connection_label: Optional[str] = None
+    connection_label: t.Optional[str] = None
     active: bool = True
-    connection_discovery: Optional[dict] = None
+    connection_discovery: t.Optional[dict] = None
     save_and_fetch: bool = True
     is_instances_mode: bool = False
-    instance_prev: Optional[str] = None
-    instance_prev_name: Optional[str] = None
-    tunnel_id: Optional[str] = None
+    instance_prev: t.Optional[str] = None
+    instance_prev_name: t.Optional[str] = None
+    tunnel_id: t.Optional[str] = None
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return CnxUpdateRequestSchema
 
@@ -1627,11 +1635,12 @@ class CnxModifyResponse(BaseModel):
     client_id: str
     id: str
     active: bool = True
-    error: Optional[str] = None
-    failed_connections_limit_exceeded: Optional[int] = None
+    error: t.Optional[str] = None
+    failed_connections_limit_exceeded: t.Optional[int] = None
+    document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return CnxModifyResponseSchema
 
@@ -1641,7 +1650,7 @@ class CnxModifyResponse(BaseModel):
         return self.id
 
     @staticmethod
-    def _str_properties() -> List[str]:
+    def _str_properties() -> t.List[str]:
         """Pass."""
         return ["client_id", "uuid", "status", "error"]
 
@@ -1661,7 +1670,7 @@ class CnxDeleteRequest(BaseModel):
     delete_entities: bool = False
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return CnxDeleteRequestSchema
 
@@ -1671,6 +1680,7 @@ class CnxDelete(BaseModel):
     """Pass."""
 
     client_id: str
+    document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     def __post_init__(self):
         """Pass."""
@@ -1680,7 +1690,7 @@ class CnxDelete(BaseModel):
             pass
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return CnxDeleteSchema
 
@@ -1692,17 +1702,17 @@ class CnxLabels(Metadata):
     document_meta: dict
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return CnxLabelsSchema
 
     @property
-    def labels(self) -> List[dict]:
+    def labels(self) -> t.List[dict]:
         """Pass."""
         return self.document_meta.get("labels") or []
 
     @property
-    def label_values(self) -> List[str]:
+    def label_values(self) -> t.List[str]:
         """Pass."""
         return list(set([x["label"] for x in self.labels]))
 
@@ -1739,20 +1749,21 @@ class Cnx(BaseModel):
     node_name: str
     status: str
 
-    client_config: Optional[dict] = dataclasses.field(default_factory=dict)
-    connection_discovery: Optional[dict] = dataclasses.field(default_factory=dict)
-    connection_advanced_config: Optional[dict] = dataclasses.field(default_factory=dict)
-    date_fetched: Optional[str] = None
-    last_fetch_time: Optional[datetime.datetime] = get_field_dc_mm(
+    client_config: t.Optional[dict] = dataclasses.field(default_factory=dict)
+    connection_discovery: t.Optional[dict] = dataclasses.field(default_factory=dict)
+    connection_advanced_config: t.Optional[dict] = dataclasses.field(default_factory=dict)
+    date_fetched: t.Optional[str] = None
+    last_fetch_time: t.Optional[datetime.datetime] = get_field_dc_mm(
         mm_field=SchemaDatetime(allow_none=True), default=None
     )
-    error: Optional[str] = ""
-    tunnel_id: Optional[str] = None
-    failed_connections_limit_exceeded: Optional[int] = None
-    adapter_name_raw: ClassVar[str] = None
-    connection_label: ClassVar[str] = None
-    PARENT: ClassVar["Cnxs"] = None
-    HTTP: ClassVar[Http] = None
+    error: t.Optional[str] = ""
+    tunnel_id: t.Optional[str] = None
+    failed_connections_limit_exceeded: t.Optional[int] = None
+    adapter_name_raw: t.ClassVar[str] = None
+    connection_label: t.ClassVar[str] = None
+    PARENT: t.ClassVar["Cnxs"] = None
+    HTTP: t.ClassVar[Http] = None
+    document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     def __post_init__(self):
         """Pass."""
@@ -1760,7 +1771,7 @@ class Cnx(BaseModel):
         self.adapter_name = self._get_aname(self.adapter_name)
 
     @staticmethod
-    def _str_properties() -> List[str]:
+    def _str_properties() -> t.List[str]:
         """Pass."""
         return [
             "adapter_name",
@@ -1805,7 +1816,7 @@ class Cnx(BaseModel):
         return ret
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return None
 
@@ -1814,11 +1825,12 @@ class Cnx(BaseModel):
 class Cnxs(BaseModel):
     """Pass."""
 
-    cnxs: List[Cnx]
+    cnxs: t.List[Cnx]
     meta: dict
+    document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return None
 
@@ -1864,12 +1876,12 @@ class Cnxs(BaseModel):
         return parse_schema(self.meta["schema"])
 
     '''
-    def find_by_node_id(self, value: str) -> List[Cnx]:
+    def find_by_node_id(self, value: str) -> t.List[Cnx]:
         """Pass."""
         return [x for x in self.cnxs if x.node_id == value]
     '''
 
-    def get_labels(self, cached: bool = False) -> List[dict]:
+    def get_labels(self, cached: bool = False) -> t.List[dict]:
         """Pass."""
         from .. import ApiEndpoints
 

@@ -3,7 +3,7 @@
 import dataclasses
 import datetime
 import re
-from typing import List, Optional, Type, Union
+import typing as t
 
 import marshmallow_jsonapi
 
@@ -35,15 +35,15 @@ class AuditLogRequestSchema(ResourcesGetSchema):
 class AuditLogRequest(ResourcesGet):
     """Pass."""
 
-    date_from: Optional[datetime.datetime] = get_field_dc_mm(
+    date_from: t.Optional[datetime.datetime] = get_field_dc_mm(
         mm_field=SchemaDatetime(allow_none=True), default=None
     )
-    date_to: Optional[datetime.datetime] = get_field_dc_mm(
+    date_to: t.Optional[datetime.datetime] = get_field_dc_mm(
         mm_field=SchemaDatetime(allow_none=True), default=None
     )
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return AuditLogRequestSchema
 
@@ -60,6 +60,7 @@ class AuditLogSchema(BaseSchemaJson):
     role = marshmallow_jsonapi.fields.Str(allow_none=True)
     impersonator_user = marshmallow_jsonapi.fields.Str(allow_none=True)
     data_scope = marshmallow_jsonapi.fields.Str(allow_none=True)
+    discovery_cycle_id = marshmallow_jsonapi.fields.Str(allow_none=True)
 
     class Meta:
         """Pass."""
@@ -82,17 +83,19 @@ class AuditLog(BaseModel):
     message: str
     type: str
     user: str
-    role: Optional[str] = None
-    impersonator_user: Optional[str] = None
-    data_scope: Optional[str] = None
+    role: t.Optional[str] = None
+    impersonator_user: t.Optional[str] = None
+    data_scope: t.Optional[str] = None
+    discovery_cycle_id: t.Optional[str] = None
+    document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return AuditLogSchema
 
     @staticmethod
-    def _search_properties() -> List[str]:
+    def _search_properties() -> t.List[str]:
         return [
             "action",
             "category",
@@ -102,13 +105,14 @@ class AuditLog(BaseModel):
         ]
 
     @staticmethod
-    def _str_properties() -> List[str]:
+    def _str_properties() -> t.List[str]:
         """Pass."""
         return [
             "action",
             "category",
             "date",
             "hours_ago",
+            "discovery_cycle_id",
             "message",
             "type",
             "user",
@@ -127,14 +131,14 @@ class AuditLog(BaseModel):
         """Pass."""
         return trim_float(value=(dt_now() - self.date).total_seconds() / 60 / 60)
 
-    def within_last_hours(self, hours: Optional[Union[int, float]] = None) -> bool:
+    def within_last_hours(self, hours: t.Optional[t.Union[int, float]] = None) -> bool:
         """Pass."""
         return coerce_int_float(value=hours) >= self.hours_ago if hours else True
 
     def within_dates(
         self,
-        start: Optional[Union[str, datetime.datetime]] = None,
-        end: Optional[Union[str, datetime.datetime]] = None,
+        start: t.Optional[t.Union[str, datetime.datetime]] = None,
+        end: t.Optional[t.Union[str, datetime.datetime]] = None,
     ) -> bool:
         """Pass."""
         start_match = True

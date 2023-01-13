@@ -273,7 +273,7 @@ class DiscoverData(PropsData):
 
 
 class Dashboard(ModelMixins):
-    """API for working with dashboards and discovery lifecycle.
+    """API for working with discovery lifecycle.
 
     Examples:
         * Get discover lifecycle metadata: :meth:`get`

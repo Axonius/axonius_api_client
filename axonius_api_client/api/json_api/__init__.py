@@ -8,6 +8,7 @@ from . import (
     base,
     central_core,
     custom_fields,
+    dashboard_spaces,
     data_scopes,
     enforcements,
     generic,
@@ -20,6 +21,7 @@ from . import (
     saved_queries,
     selection,
     signup,
+    spaces_export,
     system_meta,
     system_roles,
     system_settings,
@@ -51,4 +53,6 @@ __all__ = (
     "time_range",
     "paging_state",
     "selection",
+    "dashboard_spaces",
+    "spaces_export",
 )

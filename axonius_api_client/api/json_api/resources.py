@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Models for API requests & responses."""
 import dataclasses
-from typing import Optional, Type
+import typing as t
 
 import marshmallow
 import marshmallow_jsonapi
@@ -25,14 +25,14 @@ class PaginationSchema(marshmallow.Schema):
 class PaginationRequest(BaseModel):
     """Pass."""
 
-    offset: Optional[int] = 0
+    offset: t.Optional[int] = 0
     """Row to start from"""
 
-    limit: Optional[int] = MAX_PAGE_SIZE
+    limit: t.Optional[int] = MAX_PAGE_SIZE
     """Number of rows to return"""
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return None
 
@@ -48,7 +48,7 @@ class PaginationRequest(BaseModel):
 class PageSortRequest(BaseModel):
     """Data attributes for pagination and sort."""
 
-    sort: Optional[str] = None
+    sort: t.Optional[str] = None
     """Field to sort on and direction to sort.
 
     not used by api client (sort using client side logic)
@@ -58,7 +58,7 @@ class PageSortRequest(BaseModel):
         for ascending: "field"
     """
 
-    page: Optional[PaginationRequest] = dataclasses.field(
+    page: t.Optional[PaginationRequest] = dataclasses.field(
         default=None,
         metadata={
             "dataclasses_json": {"mm_field": marshmallow_jsonapi.fields.Nested(PaginationSchema)},
@@ -82,7 +82,7 @@ class PageSortRequest(BaseModel):
         self.page = self.page if self.page else PaginationRequest()
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return None
 
@@ -127,7 +127,7 @@ class ResourcesGet(PageSortRequest):
         (name == regex("test", "i"))
         (name == regex("test", "i")) and tags in ["Linux"]
     """
-    filter: Optional[str] = dataclasses.field(
+    filter: t.Optional[str] = dataclasses.field(
         default=None,
         metadata={
             "dataclasses_json": {
@@ -139,7 +139,7 @@ class ResourcesGet(PageSortRequest):
     )
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return ResourcesGetSchema
 
@@ -151,6 +151,6 @@ class ResourceDelete(BaseModel):
     uuid: str
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return None

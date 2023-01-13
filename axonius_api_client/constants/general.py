@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
 """Constants for general use."""
+import calendar
+import re
 import sys
-from typing import List, Optional, Pattern, Tuple, Type, Union
+import typing as t
 
-URL_STARTS: List[str] = ["https://", "http://"]
+URL_STARTS: t.List[str] = ["https://", "http://"]
 
 OK_ARGS: dict = {"fg": "green", "bold": True, "err": True}
 """default arguments for echo_ok"""
@@ -35,26 +37,15 @@ PY36: bool = sys.version_info[0:2] >= (3, 6)
 PY37: bool = sys.version_info[0:2] >= (3, 7)
 """python version is 3.7 or higher"""
 
-COMPLEX: Tuple[Type] = (dict, list, tuple)
-"""types that are considered as complex."""
+JSON_TYPES = t.Union[int, str, float, bool, dict, list, tuple, None]
 
-SIMPLE: Tuple[Type] = (str, int, bool, float)
-"""types that are considered as simple"""
-
-OPT_LIST_STR = Optional[Union[str, List[str]]]
-STR_RE = Union[str, Pattern]
-STR_RE_LISTY = Union[STR_RE, List[STR_RE]]
-OPT_STR_RE_LISTY = Optional[STR_RE_LISTY]
-
-JSON_TYPES = Union[int, str, float, bool, dict, list, tuple, None]
-
-EMPTY: List[Union[str, list, dict, tuple]] = [None, "", [], {}, ()]
+EMPTY: t.List[t.Union[str, list, dict, tuple]] = [None, "", [], {}, ()]
 """Values that should be considered as empty"""
 
-YES: List[Union[bool, int, str]] = [True, 1, "1", "true", "t", "yes", "y", "on"]
+YES: t.List[t.Union[bool, int, str]] = [True, 1, "1", "true", "t", "yes", "y", "on"]
 """Values that should be considered as truthy"""
 
-NO: List[Union[bool, int, str]] = [False, 0, "0", "false", "f", "no", "n", "off"]
+NO: t.List[t.Union[bool, int, str]] = [False, 0, "0", "false", "f", "no", "n", "off"]
 """Values that should be considered as falsey"""
 
 IS_WINDOWS: bool = sys.platform == "win32"
@@ -70,7 +61,7 @@ TRIM_MSG: str = "\nTrimmed {value_len} {trim_type} down to {trim}"
 FILE_DATE_FMT: str = "%Y-%m-%dT%H-%M-%S"
 
 
-SECHO_ARGS: List[str] = [
+SECHO_ARGS: t.List[str] = [
     "fg",
     "bg",
     "bold",
@@ -83,3 +74,13 @@ SECHO_ARGS: List[str] = [
     "strikethrough",
     "stderr",
 ]
+
+EMAIL_RE_STR: str = (
+    r"([-!#-'*+/-9=?A-Z^-~]+(\.[-!#-'*+/-9=?A-Z^-~]+)*|\"([]!#-[^-~ \t]|(\\[\t -~]))+\")"
+    r"@([-!#-'*+/-9=?A-Z^-~]+(\.[-!#-'*+/-9=?A-Z^-~]+)*|\[[\t -Z^-~]*])"
+)
+EMAIL_RE: t.Pattern = re.compile(EMAIL_RE_STR, re.I)
+DAYS_MAP: dict = dict(zip(range(7), calendar.day_name))
+HUMAN_SIZES: t.List[str] = ["bytes", "KB", "MB", "GB", "TB"]
+SPLITTER: t.Pattern = re.compile(",")
+HIDDEN: str = "**HIDDEN**"

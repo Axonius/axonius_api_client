@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Models for API requests & responses."""
 import dataclasses
-from typing import Optional, Type
+import typing as t
 
 import marshmallow_jsonapi
 
@@ -65,7 +65,7 @@ class SignupRequest(BaseModel):
     )
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return SignupRequestSchema
 
@@ -93,9 +93,10 @@ class SignupResponse(BaseModel):
 
     api_key: str
     api_secret: str
+    document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return SignupResponseSchema
 
@@ -107,9 +108,10 @@ class SystemStatus(BaseModel):
     msg: str
     is_ready: bool
     status_code: int
+    document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return SystemStatusSchema
 

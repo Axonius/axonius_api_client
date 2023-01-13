@@ -11,6 +11,7 @@ from .api import (
     ActivityLogs,
     Adapters,
     Dashboard,
+    DashboardSpaces,
     DataScopes,
     Devices,
     Enforcements,
@@ -297,6 +298,9 @@ class Connect:
 
         self.SIGNUP = Signup(**self.HTTP_ARGS)
         """Easy access to signup."""
+
+        self.HTTP.CLIENT = self
+
         self._init()
 
     def start(self):
@@ -395,11 +399,19 @@ class Connect:
 
     @property
     def dashboard(self) -> Dashboard:
-        """Work with dashboards and discovery cycles."""
+        """Work with discovery cycles."""
         self.start()
         if not hasattr(self, "_dashboard"):
             self._dashboard = Dashboard(**self.API_ARGS)
         return self._dashboard
+
+    @property
+    def dashboard_spaces(self) -> DashboardSpaces:
+        """Work with dashboard spaces."""
+        self.start()
+        if not hasattr(self, "_dashboard_spaces"):
+            self._dashboard_spaces = DashboardSpaces(**self.API_ARGS)
+        return self._dashboard_spaces
 
     @property
     def enforcements(self) -> Enforcements:
