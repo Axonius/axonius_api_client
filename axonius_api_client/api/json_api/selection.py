@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Models for API requests & responses."""
 import dataclasses
-from typing import List, Optional, Type
+import typing as t
 
 import marshmallow_jsonapi
 
@@ -25,10 +25,10 @@ class IdSelectionSchema(BaseSchema):
 class IdSelection(BaseModel):
     """Pass."""
 
-    ids: List[str] = get_schema_dc(schema=IdSelectionSchema, key="ids")
+    ids: t.List[str] = get_schema_dc(schema=IdSelectionSchema, key="ids")
     include: bool = get_schema_dc(schema=IdSelectionSchema, key="include", default=True)
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return IdSelectionSchema

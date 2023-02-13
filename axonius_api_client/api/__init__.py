@@ -10,6 +10,7 @@ from .openapi import OpenAPISpec
 from .system import (
     ActivityLogs,
     Dashboard,
+    DashboardSpaces,
     DataScopes,
     Instances,
     Meta,
@@ -28,6 +29,7 @@ __all__ = (
     "Adapters",
     "Cnx",
     "Dashboard",
+    "DashboardSpaces",
     "Devices",
     "Enforcements",
     "Instances",

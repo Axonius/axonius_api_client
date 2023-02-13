@@ -2,7 +2,7 @@
 """Models for API requests & responses."""
 import dataclasses
 import datetime
-from typing import Any, ClassVar, List, Optional, Type, Union
+import typing as t
 
 import marshmallow
 import marshmallow_jsonapi
@@ -25,15 +25,15 @@ from .selection import IdSelection, IdSelectionSchema
 class SetDefaults:
     """Pass."""
 
-    query_name: Optional[str] = None
-    query_type: Union["QueryType", str] = "devices"
-    schedule_type: Union["Schedule", str] = "never"
+    query_name: t.Optional[str] = None
+    query_type: t.Union["QueryType", str] = "devices"
+    schedule_type: t.Union["Schedule", str] = "never"
     schedule_hour: int = 13
     schedule_minute: int = 0
-    schedule_recurrence: Optional[Union[int, List[str]]] = None
+    schedule_recurrence: t.Optional[t.Union[int, t.List[str]]] = None
     only_new_assets: bool = False
-    on_count_above: Optional[int] = None
-    on_count_below: Optional[int] = None
+    on_count_above: t.Optional[int] = None
+    on_count_below: t.Optional[int] = None
     on_count_increased: bool = False
     on_count_decreased: bool = False
 
@@ -67,8 +67,8 @@ class OnlyNewAssets(BaseEnum):
 
     @classmethod
     def get_bool(
-        cls, value: Optional[Union["OnlyNewAssets", str]] = all_entities
-    ) -> Optional[bool]:
+        cls, value: t.Optional[t.Union["OnlyNewAssets", str]] = all_entities
+    ) -> t.Optional[bool]:
         """Pass."""
         if value is not None:
             value = cls.get_value(value=value)
@@ -93,11 +93,11 @@ class Schedule(BaseEnum):
     weekly: str = "weekly"
 
     @classmethod
-    def get_value(cls, value: Union["Schedule", str] = SetDefaults.schedule_type) -> "Schedule":
+    def get_value(cls, value: t.Union["Schedule", str] = SetDefaults.schedule_type) -> "Schedule":
         """Pass."""
         return super().get_value(value=value)
 
-    def get_recurrence(self, value: Any = SetDefaults.schedule_recurrence) -> Any:
+    def get_recurrence(self, value: t.Any = SetDefaults.schedule_recurrence) -> t.Any:
         """Pass."""
         return getattr(self, f"calc_{self.name}")(value=value)
 
@@ -122,8 +122,8 @@ class Schedule(BaseEnum):
 
     @staticmethod
     def get_conditions(
-        on_count_above: Optional[int] = SetDefaults.on_count_above,
-        on_count_below: Optional[int] = SetDefaults.on_count_below,
+        on_count_above: t.Optional[int] = SetDefaults.on_count_above,
+        on_count_below: t.Optional[int] = SetDefaults.on_count_below,
         on_count_increased: bool = SetDefaults.on_count_increased,
         on_count_decreased: bool = SetDefaults.on_count_decreased,
     ) -> dict:
@@ -151,8 +151,9 @@ class Schedule(BaseEnum):
 
     @staticmethod
     def get_view(
-        query_uuid: Optional[str] = None, query_type: Union[QueryType, str] = SetDefaults.query_type
-    ) -> Optional[dict]:
+        query_uuid: t.Optional[str] = None,
+        query_type: t.Union[QueryType, str] = SetDefaults.query_type,
+    ) -> t.Optional[dict]:
         """Pass."""
         query_type = QueryType.get_value(query_type)
         if isinstance(query_uuid, str) and query_uuid:
@@ -162,15 +163,17 @@ class Schedule(BaseEnum):
     @classmethod
     def get_trigger(
         cls,
-        query_uuid: Optional[str] = None,
-        query_type: Union[QueryType, str] = SetDefaults.query_type,
-        schedule_type: Union["Schedule", str] = SetDefaults.schedule_type,
+        query_uuid: t.Optional[str] = None,
+        query_type: t.Union[QueryType, str] = SetDefaults.query_type,
+        schedule_type: t.Union["Schedule", str] = SetDefaults.schedule_type,
         schedule_hour: int = SetDefaults.schedule_hour,
         schedule_minute: int = SetDefaults.schedule_minute,
-        schedule_recurrence: Optional[Union[int, List[str]]] = SetDefaults.schedule_recurrence,
+        schedule_recurrence: t.Optional[
+            t.Union[int, t.List[str]]
+        ] = SetDefaults.schedule_recurrence,
         only_new_assets: bool = SetDefaults.only_new_assets,
-        on_count_above: Optional[int] = SetDefaults.on_count_above,
-        on_count_below: Optional[int] = SetDefaults.on_count_below,
+        on_count_above: t.Optional[int] = SetDefaults.on_count_above,
+        on_count_below: t.Optional[int] = SetDefaults.on_count_below,
         on_count_increased: bool = SetDefaults.on_count_increased,
         on_count_decreased: bool = SetDefaults.on_count_decreased,
     ) -> dict:
@@ -201,14 +204,14 @@ class Schedule(BaseEnum):
         return ret
 
     @staticmethod
-    def calc_hourly(value: Any = None) -> int:
+    def calc_hourly(value: t.Any = None) -> int:
         """Pass."""
         pre = "Schedule Recurrence of 'hourly'"
         err_value = f"{pre} must be an integer between 1 and 24"
         return coerce_int(obj=value, max_value=24, min_value=1, errmsg=err_value)
 
     @staticmethod
-    def calc_monthly(value: Any = None) -> List[str]:
+    def calc_monthly(value: t.Any = None) -> t.List[str]:
         """Pass."""
         pre = "Schedule Recurrence of 'monthly'"
         err_values = f"{pre} must be a list or CSV of integers between 1 and 29"
@@ -219,7 +222,7 @@ class Schedule(BaseEnum):
         return [str(x) for x in sorted(list(set(value)))]
 
     @staticmethod
-    def calc_weekly(value: Any = None) -> List[str]:
+    def calc_weekly(value: t.Any = None) -> t.List[str]:
         """Pass."""
         pre = "Schedule Recurrence of 'weekly'"
         err_value = f"{pre} must be a list or CSV of integers between 0 and 6 or day names"
@@ -229,19 +232,19 @@ class Schedule(BaseEnum):
             raise ToolsError(f"{err_value}: {exc}")
 
     @staticmethod
-    def calc_daily(value: Any = None) -> int:
+    def calc_daily(value: t.Any = None) -> int:
         """Pass."""
         pre = "Schedule Recurrence of 'daily'"
         err_value = f"{pre} must be an integer higher than 1"
         return coerce_int(obj=value, min_value=1, errmsg=err_value)
 
     @staticmethod
-    def calc_never(value: Any = None) -> None:
+    def calc_never(value: t.Any = None) -> None:
         """Pass."""
         return None
 
     @staticmethod
-    def calc_discovery(value: Any = None) -> None:
+    def calc_discovery(value: t.Any = None) -> None:
         """Pass."""
         return None
 
@@ -296,40 +299,41 @@ class SetBasic(BaseModel):
     actions_main_name: str
     actions_main_type: str
 
-    triggers_period: Optional[str] = None
-    triggers_view_name: Optional[str] = None
-    triggers_last_triggered: Optional[str] = None
-    triggers_times_triggered: Optional[int] = None
+    triggers_period: t.Optional[str] = None
+    triggers_view_name: t.Optional[str] = None
+    triggers_last_triggered: t.Optional[str] = None
+    triggers_times_triggered: t.Optional[int] = None
 
-    updated_by: Optional[str] = None
-    last_updated: Optional[datetime.datetime] = get_field_dc_mm(
+    updated_by: t.Optional[str] = None
+    last_updated: t.Optional[datetime.datetime] = get_field_dc_mm(
         mm_field=SchemaDatetime(allow_none=True, load_default=None, dump_default=None), default=None
     )
-    last_triggered: Optional[datetime.datetime] = get_field_dc_mm(
+    last_triggered: t.Optional[datetime.datetime] = get_field_dc_mm(
         mm_field=SchemaDatetime(allow_none=True, load_default=None, dump_default=None), default=None
     )
-    action_names: Optional[List[str]] = dataclasses.field(default_factory=list)
-    document_meta: Optional[dict] = dataclasses.field(default_factory=dict)
-    history: Optional[dict] = dataclasses.field(default_factory=dict)
-    last_run_status: Optional[str] = None
+    action_names: t.Optional[t.List[str]] = dataclasses.field(default_factory=list)
+    document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
+    history: t.Optional[dict] = dataclasses.field(default_factory=dict)
+    last_run_status: t.Optional[str] = None
+    document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     @property
-    def query_name(self) -> Optional[str]:
+    def query_name(self) -> t.Optional[str]:
         """Pass."""
         return self.triggers_view_name or None
 
     @property
-    def triggered_last_date(self) -> Optional[datetime.datetime]:
+    def triggered_last_date(self) -> t.Optional[datetime.datetime]:
         """Pass."""
         return self.last_triggered
 
     @property
-    def triggered_count(self) -> Optional[int]:
+    def triggered_count(self) -> t.Optional[int]:
         """Pass."""
         return self.triggers_times_triggered
 
     @property
-    def schedule(self) -> Optional[str]:
+    def schedule(self) -> t.Optional[str]:
         """Pass."""
         return self.triggers_period or None
 
@@ -383,7 +387,7 @@ class SetBasic(BaseModel):
         return f"{self.updated_user_source}/{self.updated_user_name}"
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return SetBasicSchema
 
@@ -456,23 +460,26 @@ class SetFull(BaseModel):
     uuid: str
     name: str
     actions: dict
-    triggers: List[dict]
-    description: Optional[str] = ""
-    settings: Optional[dict] = dataclasses.field(default_factory=dict)
+    triggers: t.List[dict]
+    description: t.Optional[str] = ""
+    settings: t.Optional[dict] = dataclasses.field(default_factory=dict)
+    document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
-    BASIC: ClassVar[SetBasic] = None
+    BASIC: t.ClassVar[SetBasic] = None
 
     def set_trigger(
         self,
-        query_uuid: Optional[str] = None,
+        query_uuid: t.Optional[str] = None,
         query_type: str = SetDefaults.query_type,
-        schedule_type: Union["Schedule", str] = SetDefaults.schedule_type,
+        schedule_type: t.Union["Schedule", str] = SetDefaults.schedule_type,
         schedule_hour: int = SetDefaults.schedule_hour,
         schedule_minute: int = SetDefaults.schedule_minute,
-        schedule_recurrence: Optional[Union[int, List[str]]] = SetDefaults.schedule_recurrence,
+        schedule_recurrence: t.Optional[
+            t.Union[int, t.List[str]]
+        ] = SetDefaults.schedule_recurrence,
         only_new_assets: bool = SetDefaults.only_new_assets,
-        on_count_above: Optional[int] = SetDefaults.on_count_above,
-        on_count_below: Optional[int] = SetDefaults.on_count_below,
+        on_count_above: t.Optional[int] = SetDefaults.on_count_above,
+        on_count_below: t.Optional[int] = SetDefaults.on_count_below,
         on_count_increased: bool = SetDefaults.on_count_increased,
         on_count_decreased: bool = SetDefaults.on_count_decreased,
     ):
@@ -547,7 +554,7 @@ class SetFull(BaseModel):
         """Pass."""
         return bool(self._trigger_obj)
 
-    def check_action_category(self, category: Union[ActionCategory, str]) -> ActionCategory:
+    def check_action_category(self, category: t.Union[ActionCategory, str]) -> ActionCategory:
         """Pass."""
         category = ActionCategory.get_value(category)
 
@@ -611,7 +618,7 @@ class SetFull(BaseModel):
 
     def set_schedule_weekly(
         self,
-        recurrence: Union[str, List[Union[str, int]]],
+        recurrence: t.Union[str, t.List[t.Union[str, int]]],
         hour: int = SetDefaults.schedule_hour,
         minute: int = SetDefaults.schedule_minute,
     ):
@@ -628,7 +635,7 @@ class SetFull(BaseModel):
 
     def set_schedule_monthly(
         self,
-        recurrence: Union[str, List[int]],
+        recurrence: t.Union[str, t.List[int]],
         hour: int = SetDefaults.schedule_hour,
         minute: int = SetDefaults.schedule_minute,
     ):
@@ -671,17 +678,17 @@ class SetFull(BaseModel):
         self.actions["main"] = action
 
     @property
-    def failure_actions(self) -> List[dict]:
+    def failure_actions(self) -> t.List[dict]:
         """Pass."""
         return self.actions.get(ActionCategory.failure.value) or []
 
     @property
-    def success_actions(self) -> List[dict]:
+    def success_actions(self) -> t.List[dict]:
         """Pass."""
         return self.actions.get(ActionCategory.success.value) or []
 
     @property
-    def post_actions(self) -> List[dict]:
+    def post_actions(self) -> t.List[dict]:
         """Pass."""
         return self.actions.get(ActionCategory.post.value) or []
 
@@ -691,7 +698,7 @@ class SetFull(BaseModel):
         return self._get_action_str(value=self.main_action, category="main")
 
     @property
-    def failure_actions_str(self) -> List[str]:
+    def failure_actions_str(self) -> t.List[str]:
         """Pass."""
         return [
             self._get_action_str(value=x, category=ActionCategory.failure.value, idx=idx)
@@ -699,7 +706,7 @@ class SetFull(BaseModel):
         ]
 
     @property
-    def success_actions_str(self) -> List[str]:
+    def success_actions_str(self) -> t.List[str]:
         """Pass."""
         return [
             self._get_action_str(value=x, category=ActionCategory.success.value, idx=idx)
@@ -707,7 +714,7 @@ class SetFull(BaseModel):
         ]
 
     @property
-    def post_actions_str(self) -> List[str]:
+    def post_actions_str(self) -> t.List[str]:
         """Pass."""
         return [
             self._get_action_str(value=x, category=ActionCategory.post.value, idx=idx)
@@ -715,36 +722,36 @@ class SetFull(BaseModel):
         ]
 
     @property
-    def schedule_type(self) -> Optional[str]:
+    def schedule_type(self) -> t.Optional[str]:
         """Pass."""
         return self._schedule_type.name if self._schedule_type else None
 
     @property
-    def query_type(self) -> Optional[str]:
+    def query_type(self) -> t.Optional[str]:
         """Pass."""
         return self._trigger_view_obj.get("entity", None)
 
     # BASIC MODEL attribute
     @property
-    def query_name(self) -> Optional[str]:
+    def query_name(self) -> t.Optional[str]:
         """Pass."""
         return self.get_basic().query_name
 
     # BASIC MODEL attribute
     @property
-    def triggered_last_date(self) -> Optional[datetime.datetime]:
+    def triggered_last_date(self) -> t.Optional[datetime.datetime]:
         """Pass."""
         return self.get_basic().triggered_last_date
 
     # BASIC MODEL attribute
     @property
-    def triggered_count(self) -> Optional[int]:
+    def triggered_count(self) -> t.Optional[int]:
         """Pass."""
         return self.get_basic().triggered_count
 
     # BASIC MODEL attribute
     @property
-    def schedule(self) -> Optional[str]:
+    def schedule(self) -> t.Optional[str]:
         """Pass."""
         return self.get_basic().schedule
 
@@ -797,7 +804,7 @@ class SetFull(BaseModel):
         return self.get_basic().updated_user
 
     @property
-    def only_new_assets(self) -> Optional[bool]:
+    def only_new_assets(self) -> t.Optional[bool]:
         """Pass."""
         return OnlyNewAssets.get_bool(value=self._trigger_obj.get("run_on"))
 
@@ -808,12 +815,12 @@ class SetFull(BaseModel):
         self._trigger_obj["run_on"] = OnlyNewAssets.get_str(value)
 
     @property
-    def on_count_above(self) -> Optional[int]:
+    def on_count_above(self) -> t.Optional[int]:
         """Pass."""
         return self._trigger_conditions_obj.get("above")
 
     @on_count_above.setter
-    def on_count_above(self, value: Optional[int]):
+    def on_count_above(self, value: t.Optional[int]):
         """Pass."""
         self.check_trigger_exists(f"set on_count_above to {value}")
         self._trigger_obj["conditions"]["above"] = coerce_int(
@@ -824,12 +831,12 @@ class SetFull(BaseModel):
         )
 
     @property
-    def on_count_below(self) -> Optional[int]:
+    def on_count_below(self) -> t.Optional[int]:
         """Pass."""
         return self._trigger_conditions_obj.get("below")
 
     @on_count_below.setter
-    def on_count_below(self, value: Optional[int]):
+    def on_count_below(self, value: t.Optional[int]):
         """Pass."""
         self.check_trigger_exists(f"set on_count_below to {value}")
         self._trigger_obj["conditions"]["below"] = coerce_int(
@@ -840,7 +847,7 @@ class SetFull(BaseModel):
         )
 
     @property
-    def on_count_increased(self) -> Optional[bool]:
+    def on_count_increased(self) -> t.Optional[bool]:
         """Pass."""
         return self._trigger_conditions_obj.get("new_entities")
 
@@ -853,7 +860,7 @@ class SetFull(BaseModel):
         )
 
     @property
-    def on_count_decreased(self) -> Optional[bool]:
+    def on_count_decreased(self) -> t.Optional[bool]:
         """Pass."""
         return self._trigger_conditions_obj.get("previous_entities")
 
@@ -896,7 +903,7 @@ class SetFull(BaseModel):
         }
 
     @staticmethod
-    def _get_action_str(value: dict, category: str, idx: Optional[int] = None) -> str:
+    def _get_action_str(value: dict, category: str, idx: t.Optional[int] = None) -> str:
         """Pass."""
         name = value["name"]
         atype = value["action"]["action_name"]
@@ -926,7 +933,7 @@ class SetFull(BaseModel):
         return self._trigger_obj.get("period", "")
 
     @property
-    def _schedule_type(self) -> Optional[Schedule]:
+    def _schedule_type(self) -> t.Optional[Schedule]:
         """Pass."""
         period = self._trigger_obj.get("period", "")
         if period:
@@ -963,7 +970,7 @@ class SetFull(BaseModel):
         return self.__str__()
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return SetFullSchema
 
@@ -995,10 +1002,10 @@ class UpdateRequest(BaseModel):
     uuid: str
     name: str
     actions: dict
-    triggers: List[dict]
+    triggers: t.List[dict]
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return UpdateRequestSchema
 
@@ -1034,16 +1041,17 @@ class UpdateResponse(BaseModel):
     id: str
     name: str
     actions: dict
-    triggers: List[dict]
-    updated_by: Optional[str] = None
-    last_updated: Optional[datetime.datetime] = get_field_dc_mm(
+    triggers: t.List[dict]
+    updated_by: t.Optional[str] = None
+    last_updated: t.Optional[datetime.datetime] = get_field_dc_mm(
         mm_field=SchemaDatetime(allow_none=True, load_default=None, dump_default=None), default=None
     )
-    description: Optional[str] = ""
-    settings: Optional[dict] = dataclasses.field(default_factory=dict)
+    description: t.Optional[str] = ""
+    settings: t.Optional[dict] = dataclasses.field(default_factory=dict)
+    document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return UpdateResponseSchema
 
@@ -1081,7 +1089,7 @@ class Duplicate(BaseModel):
     clone_triggers: bool = True
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return DuplicateSchema
 
@@ -1110,10 +1118,10 @@ class Create(BaseModel):
 
     name: str
     actions: dict
-    triggers: List[dict]
+    triggers: t.List[dict]
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return CreateSchema
 
@@ -1143,12 +1151,13 @@ class ActionType(BaseModel):
 
     id: str
     schema: dict
-    default: Optional[dict] = None
-    test_connection: Optional[dict] = dataclasses.field(default_factory=dict)
-    adapter_fields: Optional[List[str]] = dataclasses.field(default_factory=list)
+    default: t.Optional[dict] = None
+    test_connection: t.Optional[dict] = dataclasses.field(default_factory=dict)
+    adapter_fields: t.Optional[t.List[str]] = dataclasses.field(default_factory=list)
+    document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return ActionTypeSchema
 
@@ -1157,35 +1166,35 @@ class ActionType(BaseModel):
         return {"Name": self.name, "Config Keys": "\n".join(self.names)}
 
     @property
-    def items(self) -> List[dict]:
+    def items(self) -> t.List[dict]:
         """Pass."""
         return self.schema.get("items", [])
 
     @property
-    def required(self) -> List[str]:
+    def required(self) -> t.List[str]:
         """Pass."""
         return self.schema.get("required", [])
 
     @property
-    def names(self) -> List[str]:
+    def names(self) -> t.List[str]:
         """Pass."""
         return [x["name"] for x in self.items]
 
     @property
-    def conditional_schema(self) -> Optional[dict]:
+    def conditional_schema(self) -> t.Optional[dict]:
         """Pass."""
         if "conditional" in self.names:
             return [x for x in self.items if x["name"] == "conditional"][0]
         return None
 
     @property
-    def conditional_items(self) -> List[dict]:
+    def conditional_items(self) -> t.List[dict]:
         """Pass."""
         schema = self.conditional_schema
         return [x for x in schema["enum"]] if schema else []
 
     @property
-    def conditional_names(self) -> List[str]:
+    def conditional_names(self) -> t.List[str]:
         """Pass."""
         return [x["name"] for x in self.conditional_items]
 
@@ -1194,7 +1203,7 @@ class ActionType(BaseModel):
         """Pass."""
         return self.id
 
-    def get_required_conditionally(self, config: Optional[dict] = None) -> List[str]:
+    def get_required_conditionally(self, config: t.Optional[dict] = None) -> t.List[str]:
         """Pass."""
         config = {} if config is None else config
         remove_requireds = []
@@ -1206,7 +1215,7 @@ class ActionType(BaseModel):
             return [x for x in self.required if x not in remove_requireds]
         return self.required
 
-    def check_config(self, config: Optional[dict] = None) -> dict:
+    def check_config(self, config: t.Optional[dict] = None) -> dict:
         """Pass."""
         config = {} if config is None else config
         if not isinstance(config, dict):
@@ -1216,7 +1225,7 @@ class ActionType(BaseModel):
         config = self.check_config_missing(config=config)
         return config
 
-    def check_config_missing(self, config: Optional[dict] = None) -> dict:
+    def check_config_missing(self, config: t.Optional[dict] = None) -> dict:
         """Pass."""
         config = {} if config is None else config
         required = self.get_required_conditionally(config=config)
@@ -1227,7 +1236,7 @@ class ActionType(BaseModel):
             raise ConfigRequired("\n\n".join([err, json_dump(self), err]))
         return config
 
-    def check_config_unknown(self, config: Optional[dict] = None) -> dict:
+    def check_config_unknown(self, config: t.Optional[dict] = None) -> dict:
         """Pass."""
         config = {} if config is None else config
         unknowns = [x for x in config if x not in self.names]
@@ -1285,7 +1294,7 @@ class RunSetAgainstTriggerRequest(BaseModel):
     )
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return RunSetAgainstTriggerRequestSchema
 
@@ -1325,6 +1334,6 @@ class RunSetsAgainstTriggerRequest(BaseModel):
     )
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return RunSetsAgainstTriggerRequestSchema

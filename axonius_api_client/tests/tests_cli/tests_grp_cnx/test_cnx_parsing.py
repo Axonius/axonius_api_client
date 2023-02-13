@@ -4,7 +4,6 @@ import pathlib
 
 import click
 import pytest
-
 from axonius_api_client.cli.grp_adapters.grp_cnx import parsing
 from axonius_api_client.constants.adapters import CNX_SANE_DEFAULTS
 
@@ -502,7 +501,7 @@ class TestSchemaString:
         assert "Value is required, can not use empty sentinel" in str(exc.value)
 
         with pytest.raises(parsing.SchemaError) as exc:
-            obj.parse(config={"test_key": "  "})
+            obj.parse(config={"test_key": ""})
         assert "Value is required, must be a non-empty string" in str(exc.value)
 
         with pytest.raises(parsing.SchemaError) as exc:

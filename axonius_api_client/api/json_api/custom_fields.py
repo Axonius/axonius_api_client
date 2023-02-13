@@ -2,7 +2,7 @@
 """Models for API requests & responses."""
 import dataclasses
 import datetime
-from typing import Optional, Union
+import typing as t
 
 import dataclasses_json
 import dateutil
@@ -14,7 +14,7 @@ from ...tools import coerce_bool
 DT_FMT = "%Y-%m-%dT%H:%M:%S%z"
 
 
-def load_date(value: Optional[Union[str, datetime.datetime]]) -> Optional[datetime.datetime]:
+def load_date(value: t.Optional[t.Union[str, datetime.datetime]]) -> t.Optional[datetime.datetime]:
     """Pass."""
     if not isinstance(value, datetime.datetime):
         value = dateutil.parser.parse(value)
@@ -24,7 +24,7 @@ def load_date(value: Optional[Union[str, datetime.datetime]]) -> Optional[dateti
     return value
 
 
-def dump_date(value: Optional[Union[str, datetime.datetime]]) -> Optional[str]:
+def dump_date(value: t.Optional[t.Union[str, datetime.datetime]]) -> t.Optional[str]:
     """Pass."""
     if isinstance(value, datetime.datetime):
         if not value.tzinfo:

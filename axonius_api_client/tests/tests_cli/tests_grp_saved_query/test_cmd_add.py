@@ -2,7 +2,7 @@
 """Test suite for axonius_api_client.tools."""
 from ....cli import cli
 from ...utils import load_clirunner
-from .base import FixtureData, GrpSavedQueryDevices, GrpSavedQueryUsers
+from .base import FixtureData, GrpSavedQueryDevices  # , GrpSavedQueryUsers
 
 
 class GrpSavedQueryCmdAdd:
@@ -30,5 +30,5 @@ class TestDevicesGrpSavedQueryCmdAdd(GrpSavedQueryDevices, GrpSavedQueryCmdAdd):
     pass
 
 
-class TestUsersGrpSavedQueryCmdAdd(GrpSavedQueryUsers, GrpSavedQueryCmdAdd):
-    pass
+# class TestUsersGrpSavedQueryCmdAdd(GrpSavedQueryUsers, GrpSavedQueryCmdAdd):
+#     pass

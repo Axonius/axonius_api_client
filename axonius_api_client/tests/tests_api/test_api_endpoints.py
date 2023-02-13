@@ -38,6 +38,10 @@ MODELS_EXCLUDE = [
     json_api.paging_state.Page,
     json_api.paging_state.PagingState,
     json_api.selection.IdSelection,
+    json_api.nested_access.Access,
+    json_api.dashboard_spaces.Size,
+    json_api.dashboard_spaces.ChartQuery,
+    json_api.dashboard_spaces.Chart,
 ]
 
 SCHEMAS_EXCLUDE = [
@@ -46,6 +50,10 @@ SCHEMAS_EXCLUDE = [
     json_api.central_core.AdditionalDataAws,
     json_api.system_settings.SystemSettingsUpdateSchema,
     json_api.selection.IdSelectionSchema,
+    json_api.nested_access.AccessSchema,
+    json_api.dashboard_spaces.SizeSchema,
+    json_api.dashboard_spaces.ChartSchema,
+    json_api.nested_access.AccessSchemaJson,
 ]
 
 

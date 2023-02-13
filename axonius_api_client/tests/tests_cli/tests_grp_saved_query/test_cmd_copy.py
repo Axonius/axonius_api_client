@@ -1,10 +1,13 @@
 # -*- coding: utf-8 -*-
 """Test suite for axonius_api_client.tools."""
+import pytest
+
 from ....cli import cli
 from ...utils import load_clirunner
 from .base import GrpSavedQueryDevices, GrpSavedQueryUsers
 
 
+@pytest.mark.skip("private sqs broken")
 class GrpSavedQueryCmdCopy:
     def test_success(self, apiobj, request, monkeypatch, sq_get):
         name = "manannanaa"

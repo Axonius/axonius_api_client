@@ -4,53 +4,34 @@ import dataclasses
 import datetime
 import re
 import textwrap
-from typing import ClassVar, List, Optional, Pattern, Tuple, Type, Union
+import typing as t
 
 import marshmallow
 import marshmallow_jsonapi
 
 from ...constants.api import GUI_PAGE_SIZES
-from ...constants.general import STR_RE_LISTY
-from ...data import BaseEnum
+from ...constants.ctypes import PatternLikeListy
 from ...exceptions import ApiAttributeTypeError, ApiError, NotFoundError
 from ...parsers.tables import tablize
-from ...tools import coerce_bool, coerce_int, dt_now, dt_parse, listify
+from ...tools import coerce_bool, coerce_int, dt_now, dt_parse, json_load, listify
 from .base import BaseModel, BaseSchema, BaseSchemaJson
 from .custom_fields import SchemaBool, SchemaDatetime, get_schema_dc
-from .generic import PrivateRequest, PrivateRequestSchema
+from .nested_access import Access, AccessSchema
 from .resources import PaginationRequest, PaginationSchema, ResourcesGet, ResourcesGetSchema
 
 
-class AccessMode(BaseEnum):
+def get_user_source(value: t.Union[str, dict]) -> str:
     """Pass."""
+    user_name = None
+    source = None
+    if isinstance(value, str) and value:
+        value = json_load(obj=value, error=False)
+    if isinstance(value, dict):
+        user_name = value.get("user_name")
+        source = value.get("source")
 
-    public: str = "Public"
-    private: str = "Private"
-    restricted: str = "Restricted"
-    shared: str = "Shared"
-
-    @classmethod
-    def get_default(cls) -> "AccessMode":
-        """Pass."""
-        return cls.public
-
-    @classmethod
-    def key_mode(self) -> str:
-        """Pass."""
-        return "mode"
-
-    @classmethod
-    def get_default_access(cls) -> dict:
-        """Pass."""
-        return {cls.key_mode(): cls.get_default().value}
-
-    @classmethod
-    def get_access_bool(cls, value: bool) -> dict:
-        """Pass."""
-        if value:
-            return {cls.key_mode(): cls.private.value}
-        else:
-            return {cls.key_mode(): cls.public.value}
+    ret = [x for x in [source, user_name, value] if isinstance(x, str) and x.strip()]
+    return "/".join(ret)
 
 
 class SavedQueryGetSchema(ResourcesGetSchema):
@@ -106,7 +87,7 @@ class QueryHistorySchema(BaseSchemaJson):
         return QueryHistory
 
     @classmethod
-    def validate_attr_excludes(cls) -> List[str]:
+    def validate_attr_excludes(cls) -> t.List[str]:
         """Pass."""
         return ["document_meta", "id"]
 
@@ -175,26 +156,17 @@ class SavedQuerySchema(BaseSchemaJson):
     )
     user_id = marshmallow_jsonapi.fields.Str(allow_none=True, load_default=None, dump_default=None)
     uuid = marshmallow_jsonapi.fields.Str(allow_none=True, load_default=None, dump_default=None)
-
-    # 2022-09-02
-    folder_id = marshmallow_jsonapi.fields.Str(allow_none=True, load_default="", dump_default="")
-
-    # 2022-09-02
+    folder_id = marshmallow_jsonapi.fields.Str(load_default="", dump_default="")
     last_run_time = SchemaDatetime(allow_none=True, load_default=None, dump_default=None)
-
-    # 2022-09-02
     created_by = marshmallow_jsonapi.fields.Str(
         allow_none=True, load_default=None, dump_default=None
     )
-
-    # 2022-09-02
-    # used_in = marshmallow_jsonapi.fields.List()
-
-    # 2022-09-02
+    used_in = marshmallow_jsonapi.fields.List(marshmallow_jsonapi.fields.Str)
     module = marshmallow_jsonapi.fields.Str(allow_none=True, load_default=None, dump_default=None)
-    # 2022-08-22
-    access = marshmallow_jsonapi.fields.Dict(
-        load_default=AccessMode.get_default_access(), dump_default=AccessMode.get_default_access()
+    access = marshmallow_jsonapi.fields.Nested(
+        AccessSchema,
+        load_default=Access().to_dict(),
+        dump_default=Access().to_dict(),
     )
 
     @staticmethod
@@ -206,20 +178,6 @@ class SavedQuerySchema(BaseSchemaJson):
         """Pass."""
 
         type_ = "views_details_schema"
-
-
-class SavedQueryDeleteSchema(PrivateRequestSchema):
-    """Pass."""
-
-    @staticmethod
-    def get_model_cls() -> type:
-        """Pass."""
-        return SavedQueryDelete
-
-    class Meta:
-        """Pass."""
-
-        type_ = "delete_view_schema"
 
 
 class FoldersResponseSchema(BaseSchemaJson):
@@ -248,11 +206,12 @@ class SavedQueryCreateSchema(BaseSchemaJson):
     private = SchemaBool(load_default=False, dump_default=False)
     tags = marshmallow_jsonapi.fields.List(marshmallow_jsonapi.fields.Str())
     asset_scope = SchemaBool(load_default=False, dump_default=False)
-    access = marshmallow_jsonapi.fields.Dict(
-        load_default=AccessMode.get_default_access(), dump_default=AccessMode.get_default_access()
+    access = marshmallow_jsonapi.fields.Nested(
+        AccessSchema,
+        load_default=Access().to_dict(),
+        dump_default=Access().to_dict(),
     )
-    # WIP: folders
-    folder_id = marshmallow_jsonapi.fields.Str(allow_none=True, load_default="", dump_default="")
+    folder_id = marshmallow_jsonapi.fields.Str(load_default="", dump_default="")
 
     @staticmethod
     def get_model_cls() -> type:
@@ -268,20 +227,18 @@ class SavedQueryCreateSchema(BaseSchemaJson):
 class SavedQueryMixins:
     """Pass."""
 
-    GET_ATTRS: List[str] = [
-        "name",
-        "view",
-        "description",
-        "always_cached",
-        "asset_scope",
-        "private",
-        "tags",
-    ]
-
-    def get_attrs(self, attrs: Optional[List[str]] = None) -> dict:
+    @classmethod
+    def create_from_other(cls, other: "SavedQueryMixins") -> "SavedQueryCreate":
         """Pass."""
-        attrs = listify(attrs) or self.GET_ATTRS
-        return {x: getattr(self, x) for x in attrs if isinstance(x, str) and hasattr(self, x)}
+        if isinstance(other, SavedQueryMixins):
+            return SavedQueryCreate(
+                **{
+                    f.name: getattr(other, f.name)
+                    for f in SavedQueryCreate._get_fields()
+                    if hasattr(other, f.name)
+                }
+            )
+        raise ApiError(f"{type(other)} is not not a subclass of {SavedQueryMixins}")
 
     def set_name(self, value: str):
         """Set the name of this SQ."""
@@ -295,7 +252,7 @@ class SavedQueryMixins:
             raise ApiAttributeTypeError(f"Value must be a string, not {value!r}")
         self.description = value
 
-    def set_tags(self, value: List[str]):
+    def set_tags(self, value: t.List[str]):
         """Set the tags for this SQ."""
         value = listify(value)
         if not all([isinstance(x, str) and x.strip() for x in value]):
@@ -304,12 +261,12 @@ class SavedQueryMixins:
         self.tags = value
 
     @property
-    def fields(self) -> List[str]:
+    def fields(self) -> t.List[str]:
         """Get the fields for this SQ."""
         return self.view.get("fields") or []
 
     @fields.setter
-    def fields(self, value: List[str]):
+    def fields(self, value: t.List[str]):
         """Set the fields for this SQ."""
         value = listify(value)
         if not all([isinstance(x, str) and x.strip() for x in value]):
@@ -369,7 +326,7 @@ class SavedQueryMixins:
         self._query["onlyExpressionsFilter"] = value
 
     @staticmethod
-    def reindex_expressions(value: List[dict]) -> List[dict]:
+    def reindex_expressions(value: t.List[dict]) -> t.List[dict]:
         """Reindex the GUI query wizard expressions."""
         if isinstance(value, list):
             for idx, item in enumerate(value):
@@ -382,12 +339,12 @@ class SavedQueryMixins:
         return value
 
     @property
-    def expressions(self) -> List[dict]:
+    def expressions(self) -> t.List[dict]:
         """Get the query wizard expressions for this SQ."""
         return self._query.get("expressions") or []
 
     @expressions.setter
-    def expressions(self, value: List[dict]):
+    def expressions(self, value: t.List[dict]):
         """Set the query wizard expressions for this SQ."""
         if not isinstance(value, list) or not all([isinstance(x, dict) and x for x in value]):
             raise ApiAttributeTypeError(
@@ -418,14 +375,14 @@ class SavedQuery(BaseModel, SavedQueryMixins):
 
     id: str = dataclasses.field(metadata={"update": False})
     name: str = dataclasses.field(metadata={"min_length": 1, "update": True})
-    view: Optional[dict] = dataclasses.field(default_factory=dict, metadata={"update": True})
+    view: t.Optional[dict] = dataclasses.field(default_factory=dict, metadata={"update": True})
     query_type: str = dataclasses.field(default="saved", metadata={"update": True})
-    updated_by: Optional[str] = dataclasses.field(default=None, metadata={"update": False})
-    user_id: Optional[str] = dataclasses.field(default=None, metadata={"update": False})
-    uuid: Optional[str] = dataclasses.field(default=None, metadata={"update": False})
-    date_fetched: Optional[str] = dataclasses.field(default=None, metadata={"update": False})
-    timestamp: Optional[str] = dataclasses.field(default=None, metadata={"update": False})
-    last_updated: Optional[datetime.datetime] = dataclasses.field(
+    updated_by: t.Optional[str] = dataclasses.field(default=None, metadata={"update": False})
+    user_id: t.Optional[str] = dataclasses.field(default=None, metadata={"update": False})
+    uuid: t.Optional[str] = dataclasses.field(default=None, metadata={"update": False})
+    date_fetched: t.Optional[str] = dataclasses.field(default=None, metadata={"update": False})
+    timestamp: t.Optional[str] = dataclasses.field(default=None, metadata={"update": False})
+    last_updated: t.Optional[datetime.datetime] = dataclasses.field(
         default=None,
         metadata={
             "dataclasses_json": {"mm_field": SchemaDatetime(allow_none=True)},
@@ -434,34 +391,25 @@ class SavedQuery(BaseModel, SavedQueryMixins):
     always_cached: bool = dataclasses.field(default=False, metadata={"update": True})
     asset_scope: bool = dataclasses.field(default=False, metadata={"update": True})
     private: bool = dataclasses.field(default=False, metadata={"update": True})
-    description: Optional[str] = dataclasses.field(default="", metadata={"update": True})
-    tags: List[str] = dataclasses.field(default_factory=list, metadata={"update": True})
+    description: t.Optional[str] = dataclasses.field(default="", metadata={"update": True})
+    tags: t.List[str] = dataclasses.field(default_factory=list, metadata={"update": True})
     predefined: bool = dataclasses.field(default=False, metadata={"update": False})
     is_asset_scope_query_ready: bool = dataclasses.field(default=False, metadata={"update": False})
     is_referenced: bool = dataclasses.field(default=False, metadata={"update": False})
-
-    # 2022-09-02
-    folder_id: str = ""
-
-    # 2022-09-02
-    last_run_time: Optional[datetime.datetime] = dataclasses.field(
+    folder_id: str = dataclasses.field(default="", metadata={"update": True})
+    last_run_time: t.Optional[datetime.datetime] = dataclasses.field(
         default=None,
         metadata={
             "dataclasses_json": {"mm_field": SchemaDatetime(allow_none=True)},
+            "update": False,
         },
     )
+    created_by: t.Optional[str] = dataclasses.field(default=None, metadata={"update": False})
+    module: t.Optional[str] = dataclasses.field(default=None, metadata={"update": False})
+    used_in: t.Optional[t.List[str]] = dataclasses.field(default_factory=list)
+    access: t.Optional[Access] = dataclasses.field(default_factory=Access)
 
-    # 2022-09-02
-    created_by: Optional[str] = None
-
-    # 2022-09-02
-    module: Optional[str] = None
-
-    # 2022-09-02
-    used_in: Optional[List[str]] = dataclasses.field(default_factory=list)
-    access: dict = dataclasses.field(default_factory=AccessMode.get_default_access)
-
-    document_meta: Optional[dict] = dataclasses.field(default_factory=dict)
+    document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     def __post_init__(self):
         """Pass."""
@@ -469,12 +417,12 @@ class SavedQuery(BaseModel, SavedQueryMixins):
         self.folder_id = self.folder_id or ""
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return SavedQuerySchema
 
     @staticmethod
-    def _str_properties() -> List[str]:
+    def _str_properties() -> t.List[str]:
         """Pass."""
         return [
             "name",
@@ -501,8 +449,18 @@ class SavedQuery(BaseModel, SavedQueryMixins):
         )
 
     @property
-    def flags(self) -> dict:
-        """Get the flags for this SQ."""
+    def created_by_str(self) -> str:
+        """Pass."""
+        return get_user_source(value=self.created_by)
+
+    @property
+    def updated_by_str(self) -> str:
+        """Pass."""
+        return get_user_source(value=self.updated_by)
+
+    @property
+    def col_details(self) -> dict:
+        """Get the details for this SQ."""
         return {
             "predefined": self.predefined,
             "referenced": self.is_referenced,
@@ -510,24 +468,45 @@ class SavedQuery(BaseModel, SavedQueryMixins):
             "always_cached": self.always_cached,
             "asset_scope": self.asset_scope,
             "asset_scope_ready": self.is_asset_scope_query_ready,
+            "page_size": self.page_size,
+            "access": self.access,
+            "created_by": self.created_by_str,
+            "updated_by": self.updated_by_str,
+            "last_updated": self.last_updated_str,
+            "last_run_time": self.last_run_time,
         }
 
     @property
-    def flags_txt(self) -> List[str]:
-        """Get the text version of flags for this SQ."""
-        return [f"{k}: {v}" for k, v in self.flags.items()]
+    def col_info(self) -> dict:
+        """Pass."""
+        return {
+            "name": self.name,
+            "uuid": self.uuid,
+            "folder": self.folder_id,
+            "module": self.module,
+            "description": self.description if isinstance(self.description, str) else "",
+            "tags": self.tags_str,
+        }
+
+    @property
+    def tags_str(self) -> str:
+        """Pass."""
+        return ", ".join(self.tags or [])
+
+    def to_strs(self) -> t.List[str]:
+        """Pass."""
+        items = list(self.col_info.items()) + list(self.col_details.items())
+        return [f"{k}: {v}" for k, v in items]
 
     def to_tablize(self) -> dict:
         """Get tablize-able repr of this obj."""
-        details = self.flags_txt + [
-            f"page_size: {self.page_size}",
-            f"updated: {self.last_updated_str}",
+        col_info = [
+            f"{k.upper()}={textwrap.fill(v or '', width=30)}" for k, v in self.col_info.items()
         ]
+        col_details = [f"{k}: {v}" for k, v in self.col_details.items()]
         ret = {}
-        ret["Name/UUID"] = textwrap.fill(f"NAME={self.name}\nUUID={self.uuid}", width=30)
-        ret["Description"] = textwrap.fill(self.description or "", width=30)
-        ret["Tags"] = "\n".join(listify(self.tags))
-        ret["Details"] = "\n".join(details)
+        ret["Info"] = "\n".join(col_info)
+        ret["Details"] = "\n".join(col_details)
         return ret
 
 
@@ -535,36 +514,20 @@ class SavedQuery(BaseModel, SavedQueryMixins):
 class SavedQueryCreate(BaseModel, SavedQueryMixins):
     """Pass."""
 
-    name: str = dataclasses.field(metadata={"min_length": 1})
-    view: dict  # TODO: add model
-    description: Optional[str] = dataclasses.field(default="")
-    always_cached: bool = dataclasses.field(default=False)
-    asset_scope: bool = dataclasses.field(default=False)
-    private: bool = dataclasses.field(default=False)
-    tags: List[str] = dataclasses.field(default_factory=list)
-    access: Optional[dict] = None
+    name: str
+    view: dict
+    description: t.Optional[str] = ""
+    always_cached: bool = False
+    asset_scope: bool = False
+    private: bool = False
+    tags: t.List[str] = dataclasses.field(default_factory=list)
+    access: t.Optional[Access] = dataclasses.field(default_factory=Access)
     folder_id: str = ""
 
-    def __post_init__(self):
-        """Pass."""
-        if not (isinstance(self.access, dict) and self.access):
-            self.access = AccessMode.get_access_bool(self.private)
-        self.folder_id = self.folder_id or ""
-
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return SavedQueryCreateSchema
-
-
-@dataclasses.dataclass
-class SavedQueryDelete(PrivateRequest):
-    """Pass."""
-
-    @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
-        """Pass."""
-        return SavedQueryDeleteSchema
 
 
 @dataclasses.dataclass
@@ -572,8 +535,8 @@ class SavedQueryGet(ResourcesGet):
     """Pass."""
 
     folder_id: str = ""
-    creator_ids: Optional[List[str]] = dataclasses.field(default_factory=list)
-    used_in: Optional[List[str]] = dataclasses.field(default_factory=list)
+    creator_ids: t.Optional[t.List[str]] = dataclasses.field(default_factory=list)
+    used_in: t.Optional[t.List[str]] = dataclasses.field(default_factory=list)
     get_view_data: bool = True
     include_usage: bool = False
 
@@ -585,7 +548,7 @@ class SavedQueryGet(ResourcesGet):
         self.page = self.page if self.page else PaginationRequest()
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return SavedQueryGetSchema
 
@@ -594,52 +557,52 @@ class SavedQueryGet(ResourcesGet):
 class QueryHistoryRequest(BaseModel):
     """Pass."""
 
-    run_by: Optional[List[str]] = get_schema_dc(
+    run_by: t.Optional[t.List[str]] = get_schema_dc(
         schema=QueryHistoryRequestSchema,
         key="run_by",
         default_factory=list,
     )
-    run_from: Optional[List[str]] = get_schema_dc(
+    run_from: t.Optional[t.List[str]] = get_schema_dc(
         schema=QueryHistoryRequestSchema,
         key="run_from",
         default_factory=list,
     )
-    modules: Optional[List[str]] = get_schema_dc(
+    modules: t.Optional[t.List[str]] = get_schema_dc(
         schema=QueryHistoryRequestSchema,
         key="modules",
         default_factory=list,
     )
-    tags: Optional[List[str]] = get_schema_dc(
+    tags: t.Optional[t.List[str]] = get_schema_dc(
         schema=QueryHistoryRequestSchema,
         key="tags",
         default_factory=list,
     )
-    saved_query_name_term: Optional[str] = get_schema_dc(
+    saved_query_name_term: t.Optional[str] = get_schema_dc(
         schema=QueryHistoryRequestSchema,
         key="saved_query_name_term",
         default=None,
     )
-    date_from: Optional[datetime.datetime] = get_schema_dc(
+    date_from: t.Optional[datetime.datetime] = get_schema_dc(
         schema=QueryHistoryRequestSchema,
         key="date_from",
         default=None,
     )
-    date_to: Optional[datetime.datetime] = get_schema_dc(
+    date_to: t.Optional[datetime.datetime] = get_schema_dc(
         schema=QueryHistoryRequestSchema,
         key="date_to",
         default=None,
     )
-    page: Optional[PaginationRequest] = get_schema_dc(
+    page: t.Optional[PaginationRequest] = get_schema_dc(
         schema=QueryHistoryRequestSchema,
         key="page",
         default_factory=PaginationRequest,
     )
-    search: Optional[str] = get_schema_dc(
+    search: t.Optional[str] = get_schema_dc(
         schema=QueryHistoryRequestSchema,
         key="search",
         default="",
     )
-    filter: Optional[str] = get_schema_dc(
+    filter: t.Optional[str] = get_schema_dc(
         schema=QueryHistoryRequestSchema,
         key="filter",
         default=None,
@@ -653,7 +616,7 @@ class QueryHistoryRequest(BaseModel):
         self.tags = self.tags or []
         self.page = self.page if self.page else PaginationRequest()
 
-    def set_sort(self, value: Optional[str] = None, descending: bool = False) -> Optional[str]:
+    def set_sort(self, value: t.Optional[str] = None, descending: bool = False) -> t.Optional[str]:
         """Pass."""
         if isinstance(value, str) and value:
             value = QueryHistorySchema.validate_attr(value=value, exc_cls=NotFoundError)
@@ -664,7 +627,7 @@ class QueryHistoryRequest(BaseModel):
         self.sort = value
         return value
 
-    def set_name_term(self, value: Optional[str] = None) -> Optional[str]:
+    def set_name_term(self, value: t.Optional[str] = None) -> t.Optional[str]:
         """Pass."""
         if isinstance(value, str) and value:
             self.saved_query_name_term = value
@@ -675,9 +638,9 @@ class QueryHistoryRequest(BaseModel):
 
     def set_date(
         self,
-        date_start: Optional[datetime.datetime] = None,
-        date_end: Optional[datetime.datetime] = None,
-    ) -> Tuple[Optional[datetime.datetime], Optional[datetime.datetime]]:
+        date_start: t.Optional[datetime.datetime] = None,
+        date_end: t.Optional[datetime.datetime] = None,
+    ) -> t.Tuple[t.Optional[datetime.datetime], t.Optional[datetime.datetime]]:
         """Pass."""
         if date_end and not date_start:
             raise ApiError("date_start must also be supplied when date_end is supplied")
@@ -691,17 +654,17 @@ class QueryHistoryRequest(BaseModel):
         return (date_start, date_end)
 
     @classmethod
-    def get_list_props(cls) -> List[str]:
+    def get_list_props(cls) -> t.List[str]:
         """Pass."""
-        return [x.name for x in cls._get_fields() if x.type == Optional[List[str]]]
+        return [x.name for x in cls._get_fields() if x.type == t.Optional[t.List[str]]]
 
     def set_list(
         self,
         prop: str,
-        values: Optional[List[str]] = None,
-        enum: Optional[List[str]] = None,
-        enum_callback: Optional[callable] = None,
-    ) -> List[str]:
+        values: t.Optional[t.List[str]] = None,
+        enum: t.Optional[t.List[str]] = None,
+        enum_callback: t.Optional[callable] = None,
+    ) -> t.List[str]:
         """Pass."""
 
         def err(check, use_enum):
@@ -727,11 +690,11 @@ class QueryHistoryRequest(BaseModel):
                 check = value
                 if check.startswith("~"):
                     check = re.compile(check[1:])
-            elif isinstance(value, Pattern):
+            elif isinstance(value, t.Pattern):
                 check = value
             else:
                 raise ApiError(
-                    f"Value must be {STR_RE_LISTY}, not type={type(value)}, value={value!r}"
+                    f"Value must be {PatternLikeListy}, not type={type(value)}, value={value!r}"
                 )
 
             if isinstance(use_enum, list) and use_enum:
@@ -739,7 +702,7 @@ class QueryHistoryRequest(BaseModel):
                     if check not in use_enum:
                         err(check=check, use_enum=use_enum)
                     matches.append(check)
-                elif isinstance(check, Pattern):
+                elif isinstance(check, t.Pattern):
                     re_matches = [x for x in use_enum if check.search(x)]
                     if not re_matches:
                         err(check=check, use_enum=use_enum)
@@ -753,8 +716,8 @@ class QueryHistoryRequest(BaseModel):
         return matches
 
     def set_search_filter(
-        self, search: Optional[str] = None, filter: Optional[str] = None
-    ) -> Tuple[Optional[str], Optional[str]]:
+        self, search: t.Optional[str] = None, filter: t.Optional[str] = None
+    ) -> t.Tuple[t.Optional[str], t.Optional[str]]:
         """Pass."""
         values = [search, filter]
         is_strs = [isinstance(x, str) and x for x in values]
@@ -768,7 +731,7 @@ class QueryHistoryRequest(BaseModel):
         return (search, filter)
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return QueryHistoryRequestSchema
 
@@ -778,29 +741,34 @@ class QueryHistory(BaseModel):
     """Pass."""
 
     query_id: str = get_schema_dc(schema=QueryHistorySchema, key="query_id")
-    saved_query_name: Optional[str] = get_schema_dc(
+    saved_query_name: t.Optional[str] = get_schema_dc(
         schema=QueryHistorySchema, key="saved_query_name", default=None
     )
-    saved_query_tags: Optional[List[str]] = get_schema_dc(
+    saved_query_tags: t.Optional[t.List[str]] = get_schema_dc(
         schema=QueryHistorySchema, key="saved_query_tags", default=None
     )
-    start_time: Optional[datetime.datetime] = get_schema_dc(
+    start_time: t.Optional[datetime.datetime] = get_schema_dc(
         schema=QueryHistorySchema, key="start_time", default=None
     )
-    end_time: Optional[datetime.datetime] = get_schema_dc(
+    end_time: t.Optional[datetime.datetime] = get_schema_dc(
         schema=QueryHistorySchema, key="end_time", default=None
     )
-    duration: Optional[str] = get_schema_dc(schema=QueryHistorySchema, key="duration", default=None)
-    run_by: Optional[str] = get_schema_dc(schema=QueryHistorySchema, key="run_by", default=None)
-    run_from: Optional[str] = get_schema_dc(schema=QueryHistorySchema, key="run_from", default=None)
-    execution_source: Optional[dict] = get_schema_dc(
+    duration: t.Optional[str] = get_schema_dc(
+        schema=QueryHistorySchema, key="duration", default=None
+    )
+    run_by: t.Optional[str] = get_schema_dc(schema=QueryHistorySchema, key="run_by", default=None)
+    run_from: t.Optional[str] = get_schema_dc(
+        schema=QueryHistorySchema, key="run_from", default=None
+    )
+    execution_source: t.Optional[dict] = get_schema_dc(
         schema=QueryHistorySchema, key="execution_source", default=None
     )
-    status: Optional[str] = get_schema_dc(schema=QueryHistorySchema, key="status", default=None)
-    module: Optional[str] = get_schema_dc(schema=QueryHistorySchema, key="module", default=None)
-    results_count: Optional[int] = get_schema_dc(
+    status: t.Optional[str] = get_schema_dc(schema=QueryHistorySchema, key="status", default=None)
+    module: t.Optional[str] = get_schema_dc(schema=QueryHistorySchema, key="module", default=None)
+    results_count: t.Optional[int] = get_schema_dc(
         schema=QueryHistorySchema, key="results_count", default=None
     )
+    document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     @staticmethod
     def get_schema_cls():
@@ -808,26 +776,26 @@ class QueryHistory(BaseModel):
         return QueryHistorySchema
 
     @property
-    def name(self) -> Optional[str]:
+    def name(self) -> t.Optional[str]:
         """Pass."""
         return self.saved_query_name
 
     @property
-    def tags(self) -> Optional[str]:
+    def tags(self) -> t.Optional[str]:
         """Pass."""
         return self.saved_query_tags
 
     @property
-    def asset_type(self) -> Optional[str]:
+    def asset_type(self) -> t.Optional[str]:
         """Pass."""
         return self.execution_source.get("entity_type")
 
     @property
-    def component(self) -> Optional[str]:
+    def component(self) -> t.Optional[str]:
         """Pass."""
         return self.execution_source.get("component")
 
-    def __str__(self) -> List[str]:
+    def __str__(self) -> t.List[str]:
         """Pass."""
 
         def getval(prop):
@@ -874,41 +842,41 @@ class QueryHistory(BaseModel):
         }
 
     @classmethod
-    def _props_csv(cls) -> List[str]:
+    def _props_csv(cls) -> t.List[str]:
         """Pass."""
         return cls._props_custom() + [
             x for x in cls._get_field_names() if x not in cls._props_skip()
         ]
 
     @classmethod
-    def _props_details(cls) -> List[str]:
+    def _props_details(cls) -> t.List[str]:
         """Pass."""
         return [x for x in cls._props_custom() if x not in ["tags"]] + [
             x for x in cls._get_field_names() if x not in cls._props_details_excludes()
         ]
 
     @classmethod
-    def _props_details_excludes(cls) -> List[str]:
+    def _props_details_excludes(cls) -> t.List[str]:
         """Pass."""
         return cls._props_custom() + cls._props_skip() + cls._props_timings() + cls._props_results()
 
     @classmethod
-    def _props_timings(cls) -> List[str]:
+    def _props_timings(cls) -> t.List[str]:
         """Pass."""
         return ["start_time", "end_time", "duration"]
 
     @classmethod
-    def _props_skip(cls) -> List[str]:
+    def _props_skip(cls) -> t.List[str]:
         """Pass."""
         return ["execution_source", "document_meta", "saved_query_name", "saved_query_tags"]
 
     @classmethod
-    def _props_custom(cls) -> List[str]:
+    def _props_custom(cls) -> t.List[str]:
         """Pass."""
         return ["name", "tags"]
 
     @classmethod
-    def _props_results(cls) -> List[str]:
+    def _props_results(cls) -> t.List[str]:
         """Pass."""
         return ["status", "results_count"]
 
@@ -923,7 +891,7 @@ class Folder(BaseModel):  # pragma: no cover
     """Pass."""
 
     _id: str
-    children_ids: List[str]
+    children_ids: t.List[str]
     depth: int
     name: str
     root_type: str
@@ -933,14 +901,15 @@ class Folder(BaseModel):  # pragma: no cover
     updated_at: datetime.datetime = dataclasses.field(
         metadata={"dataclasses_json": {"mm_field": SchemaDatetime()}}
     )
-    path: List[str]
-    children: Optional[List[dict]] = dataclasses.field(default_factory=list)
-    root_id: Optional[str] = None
-    created_by: Optional[str] = None
-    parent_id: Optional[str] = None
+    path: t.List[str]
+    children: t.Optional[t.List[dict]] = dataclasses.field(default_factory=list)
+    root_id: t.Optional[str] = None
+    created_by: t.Optional[str] = None
+    parent_id: t.Optional[str] = None
     read_only: bool = False
+    document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
-    PARENT: ClassVar[Optional[Union["Folder", "FoldersResponse"]]] = None
+    PARENT: t.ClassVar[t.Optional[t.Union["Folder", "FoldersResponse"]]] = None
 
     @property
     def id(self) -> str:
@@ -958,7 +927,7 @@ class Folder(BaseModel):  # pragma: no cover
         return len(self.children_ids)
 
     @property
-    def models(self) -> List["Folder"]:
+    def models(self) -> t.List["Folder"]:
         """Pass."""
         schema = self.schema(many=True)
         items = schema.load(self.children, unknown=marshmallow.INCLUDE)
@@ -1002,15 +971,16 @@ class Folder(BaseModel):  # pragma: no cover
 class FoldersResponse(BaseModel):  # pragma: no cover
     """Pass."""
 
-    folders: List[dict]
+    folders: t.List[dict]
+    document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return FoldersResponseSchema
 
     @property
-    def models(self) -> List[Folder]:
+    def models(self) -> t.List[Folder]:
         """Pass."""
         schema = Folder.schema(many=True)
         items = schema.load(self.folders, unknown=marshmallow.INCLUDE)
@@ -1028,7 +998,7 @@ class FoldersResponse(BaseModel):  # pragma: no cover
         valids = "\n" + "\n".join([str(x) for x in self.models])
         raise ApiError(f"No root folder named {value!r} found, valids:{valids}")
 
-    def search(self, value: Union[str, List[str]]) -> Folder:
+    def search(self, value: t.Union[str, t.List[str]]) -> Folder:
         """Find a folder by path."""
         if isinstance(value, str):
             value = [x.strip() for x in value.split(FOLDER_SEP) if x.strip()]
@@ -1045,7 +1015,7 @@ class FoldersResponse(BaseModel):  # pragma: no cover
             folder = folder.find_folder(value=item) if folder else self.find_folder(value=item)
         return folder
 
-    def get_tree(self, models: Optional[List["Folder"]] = None):
+    def get_tree(self, models: t.Optional[t.List["Folder"]] = None):
         """Pass."""
         models = self.models if models is None else models
 

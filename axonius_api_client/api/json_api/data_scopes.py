@@ -2,7 +2,7 @@
 """Models for API requests & responses."""
 import dataclasses
 import datetime
-from typing import ClassVar, Dict, List, Optional, Type
+import typing as t
 
 import marshmallow
 import marshmallow_jsonapi
@@ -74,11 +74,12 @@ class DataScope(BaseModel, UpdatedByMixins):
     description: str = ""
     updated_by: str = ""
 
-    associated_roles: List[str] = dataclasses.field(default_factory=list)
-    users_queries: List[str] = dataclasses.field(default_factory=list)
-    devices_queries: List[str] = dataclasses.field(default_factory=list)
+    associated_roles: t.List[str] = dataclasses.field(default_factory=list)
+    users_queries: t.List[str] = dataclasses.field(default_factory=list)
+    devices_queries: t.List[str] = dataclasses.field(default_factory=list)
 
-    ASSET_SCOPES: ClassVar[Dict[str, List[SavedQuery]]] = None
+    ASSET_SCOPES: t.ClassVar[t.Dict[str, t.List[SavedQuery]]] = None
+    document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     def __str__(self) -> str:
         """Pass."""
@@ -117,7 +118,7 @@ class DataScope(BaseModel, UpdatedByMixins):
         }
 
     @staticmethod
-    def find_scope(uuid: str, scopes: List[SavedQuery]) -> SavedQuery:
+    def find_scope(uuid: str, scopes: t.List[SavedQuery]) -> SavedQuery:
         """Pass."""
         try:
             return [x for x in scopes if x.uuid == uuid][0]
@@ -126,19 +127,19 @@ class DataScope(BaseModel, UpdatedByMixins):
             raise ApiError(f"Unable to find Saved Query UUID {uuid!r} in:{scopes}")
 
     @property
-    def users_scopes(self) -> List[SavedQuery]:
+    def users_scopes(self) -> t.List[SavedQuery]:
         """Pass."""
         scopes = self.ASSET_SCOPES.get("users") or []
         return [self.find_scope(uuid=x, scopes=scopes) for x in self.users_queries]
 
     @property
-    def devices_scopes(self) -> List[SavedQuery]:
+    def devices_scopes(self) -> t.List[SavedQuery]:
         """Pass."""
         scopes = self.ASSET_SCOPES.get("devices") or []
         return [self.find_scope(uuid=x, scopes=scopes) for x in self.devices_queries]
 
     @property
-    def scope_types(self) -> List[str]:
+    def scope_types(self) -> t.List[str]:
         """Pass."""
         return ["devices", "users"]
 
@@ -148,8 +149,12 @@ class DataScope(BaseModel, UpdatedByMixins):
             raise ApiError(f"Invalid scope Type {scope_type!r}, valids: {self.scope_types}")
 
     def update_scopes(
-        self, scope_type: str, scopes: List[SavedQuery], append: bool = False, remove: bool = False
-    ) -> List[str]:
+        self,
+        scope_type: str,
+        scopes: t.List[SavedQuery],
+        append: bool = False,
+        remove: bool = False,
+    ) -> t.List[str]:
         """Pass."""
         self.check_scope_type(scope_type)
 
@@ -204,15 +209,16 @@ class DataScopeDetailsSchema(BaseSchemaJson):
 class DataScopeDetails(BaseModel):
     """Pass."""
 
-    scopes: List[dict]
+    scopes: t.List[dict]
     settings: dict
+    document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return DataScopeDetailsSchema
 
-    def get_scopes(self, asset_scopes: Dict[str, List[SavedQuery]]) -> List[DataScope]:
+    def get_scopes(self, asset_scopes: t.Dict[str, t.List[SavedQuery]]) -> t.List[DataScope]:
         """Pass."""
         schema = DataScope.schema(many=True)
         objs = schema.load(self.scopes, unknown=marshmallow.INCLUDE)
@@ -257,12 +263,12 @@ class DataScopeCreate(BaseModel):
     """Pass."""
 
     name: str
-    devices_queries: List[str] = dataclasses.field(default_factory=list)
-    users_queries: List[str] = dataclasses.field(default_factory=list)
+    devices_queries: t.List[str] = dataclasses.field(default_factory=list)
+    users_queries: t.List[str] = dataclasses.field(default_factory=list)
     description: str = ""
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return DataScopeCreateSchema
 
@@ -304,11 +310,11 @@ class DataScopeUpdate(BaseModel):
 
     uuid: str
     name: str
-    devices_queries: List[str] = dataclasses.field(default_factory=list)
-    users_queries: List[str] = dataclasses.field(default_factory=list)
+    devices_queries: t.List[str] = dataclasses.field(default_factory=list)
+    users_queries: t.List[str] = dataclasses.field(default_factory=list)
     description: str = ""
 
     @staticmethod
-    def get_schema_cls() -> Optional[Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Pass."""
         return DataScopeUpdateSchema
