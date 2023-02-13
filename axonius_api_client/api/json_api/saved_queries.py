@@ -139,7 +139,8 @@ class SavedQuerySchema(BaseSchemaJson):
     description = marshmallow_jsonapi.fields.Str(load_default="", dump_default="", allow_none=True)
     view = marshmallow_jsonapi.fields.Dict(allow_none=True, load_default={}, dump_default={})
     tags = marshmallow_jsonapi.fields.List(marshmallow_jsonapi.fields.Str())
-    predefined = SchemaBool(load_default=False, dump_default=False)
+    # PBUG: An null predefined can still come back from the server.
+    predefined = SchemaBool(allow_none=True, load_default=False, dump_default=False)
     date_fetched = marshmallow_jsonapi.fields.Str(
         allow_none=True, load_default=None, dump_default=None
     )
@@ -539,6 +540,7 @@ class SavedQueryGet(ResourcesGet):
     used_in: t.Optional[t.List[str]] = dataclasses.field(default_factory=list)
     get_view_data: bool = True
     include_usage: bool = False
+    predefined: t.Optional[bool] = None
 
     def __post_init__(self):
         """Pass."""
