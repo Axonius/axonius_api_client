@@ -479,7 +479,7 @@ class Cnx(ChildMixins):
             tunnel=tunnel_id,
         )
 
-        if not result.working or not cnx_new["working"]:
+        if not result.working and not cnx_new["working"]:
             err = f"Connection was added but had a failure connecting:\n{result}"
             exc = CnxAddError(err)
             exc.result = result
@@ -673,7 +673,7 @@ class Cnx(ChildMixins):
             tunnel=tunnel_id_new,
         )
 
-        if not result.working or not cnx_new["working"]:
+        if not result.working and not cnx_new["working"]:
             err = f"Connection configuration was updated but had a failure connecting:\n{result}"
             exc = CnxUpdateError(err)
             exc.result = result

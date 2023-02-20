@@ -90,4 +90,5 @@ def cmd(ctx, url, password, company_name, contact_email, export_format):
         data["url"] = url
 
     click.secho(EXPORT_FORMATS[export_format](data=data))
+    ctx.obj.echo_ok("Signup completed successfully!")
     ctx.exit(0)
