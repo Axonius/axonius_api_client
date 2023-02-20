@@ -394,7 +394,7 @@ class SavedQuery(BaseModel, SavedQueryMixins):
     private: bool = dataclasses.field(default=False, metadata={"update": True})
     description: t.Optional[str] = dataclasses.field(default="", metadata={"update": True})
     tags: t.List[str] = dataclasses.field(default_factory=list, metadata={"update": True})
-    predefined: bool = dataclasses.field(default=False, metadata={"update": False})
+    predefined: t.Optional[bool] = dataclasses.field(default=False, metadata={"update": False})
     is_asset_scope_query_ready: bool = dataclasses.field(default=False, metadata={"update": False})
     is_referenced: bool = dataclasses.field(default=False, metadata={"update": False})
     folder_id: str = dataclasses.field(default="", metadata={"update": True})
@@ -540,7 +540,6 @@ class SavedQueryGet(ResourcesGet):
     used_in: t.Optional[t.List[str]] = dataclasses.field(default_factory=list)
     get_view_data: bool = True
     include_usage: bool = False
-    predefined: t.Optional[bool] = None
 
     def __post_init__(self):
         """Pass."""
