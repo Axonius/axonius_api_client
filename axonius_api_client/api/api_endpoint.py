@@ -3,12 +3,12 @@
 import dataclasses
 import inspect
 import logging
-import os
-from typing import List, Optional, Tuple, Type, Union
+import typing as t
 
 import requests
 
 from ..constants.general import JSON_TYPES
+from ..constants.logs import LOG_LEVEL_ENDPOINTS
 from ..exceptions import (
     InvalidCredentials,
     JsonInvalidError,
@@ -21,11 +21,27 @@ from ..exceptions import (
     ResponseNotOk,
 )
 from ..http import Http
-from ..logs import get_obj_log
+from ..logs import set_log_level
 from ..tools import combo_dicts, get_cls_path, json_log
 from .json_api.base import BaseModel, BaseSchema, BaseSchemaJson
 
-LOG_LEVEL: str = os.environ.get("AX_ENDPOINT_LOG_LEVEL") or "info"
+RERAISE: bool = False
+LOGGER: logging.Logger = logging.getLogger(name=__name__)
+set_log_level(obj=LOGGER, level=LOG_LEVEL_ENDPOINTS)
+
+
+def check_mappings(endpoint: "ApiEndpoint"):
+    """Pass."""
+    model_attrs: t.List[str] = ["request_model_cls", "response_model_cls"]
+    schema_attrs: t.List[str] = ["request_schema_cls", "response_schema_cls"]
+
+    for attr in model_attrs:
+        value = getattr(endpoint, attr)
+        check_model_cls(obj=value, src=attr)
+
+    for attr in schema_attrs:
+        value = getattr(endpoint, attr)
+        check_schema_cls(obj=value, src=attr)
 
 
 def check_model_cls(obj: type, src: str):
@@ -54,22 +70,22 @@ class ApiEndpoint:
     path: str
     """Path to access endpoint, will be string formatted before request is made."""
 
-    request_schema_cls: Optional[Type[Union[BaseSchema, BaseSchemaJson]]]
+    request_schema_cls: t.Optional[t.Type[t.Union[BaseSchema, BaseSchemaJson]]]
     """Class of marshmallow or marshmallow_json_api for validating request data."""
 
-    request_model_cls: Optional[Type[BaseModel]]
+    request_model_cls: t.Optional[t.Type[BaseModel]]
     """Class of dataclass for containing request data."""
 
-    response_schema_cls: Optional[Type[Union[BaseSchema, BaseSchemaJson]]]
+    response_schema_cls: t.Optional[t.Type[t.Union[BaseSchema, BaseSchemaJson]]]
     """Class of marshmallow or marshmallow_json_api class for validating response data."""
 
-    response_model_cls: Optional[Type[BaseModel]]
+    response_model_cls: t.Optional[t.Type[BaseModel]]
     """Class of dataclass for containing response data."""
 
     http_args: dict = dataclasses.field(default_factory=dict)
     """Arguments to always pass to :meth:`Http.__call__` for this endpoint."""
 
-    http_args_required: List[str] = dataclasses.field(default_factory=list)
+    http_args_required: t.List[str] = dataclasses.field(default_factory=list)
     """Arguments that must always be supplied to :meth:`perform_request` as http_args={}."""
 
     request_as_none: bool = False
@@ -81,9 +97,6 @@ class ApiEndpoint:
     response_json_error: bool = True
     """Throw errors if the JSON can not be serialized."""
 
-    log_level: str = LOG_LEVEL
-    """Log level for this objects logger."""
-
     def __str__(self):
         """Get a pretty str for this object."""
         items = "\n  " + ",\n  ".join(self.str_properties) + ",\n"
@@ -91,16 +104,11 @@ class ApiEndpoint:
 
     def __post_init__(self):
         """Pass."""
-        for attr in ["request_model_cls", "response_model_cls"]:
-            value = getattr(self, attr)
-            check_model_cls(obj=value, src=attr)
-
-        for attr in ["request_schema_cls", "response_schema_cls"]:
-            value = getattr(self, attr)
-            check_schema_cls(obj=value, src=attr)
+        super().__setattr__("log", LOGGER.getChild(self.__class__.__name__))
+        check_mappings(endpoint=self)
 
     @property
-    def str_properties(self) -> List[str]:
+    def str_properties(self) -> t.List[str]:
         """Get the properties for this endpoint as a list of strs."""
         return [
             f"method={self.method!r}",
@@ -114,52 +122,47 @@ class ApiEndpoint:
             f"http_args_required={self.http_args_required}",
         ]
 
-    @property
-    def log(self) -> logging.Logger:
-        """Get the logger for this object."""
-        ret = get_obj_log(obj=self, level=self.log_level)
-        return ret
-
     def perform_request(
-        self, http: Http, request_obj: Optional[BaseModel] = None, raw: bool = False, **kwargs
-    ) -> Union[BaseModel, JSON_TYPES]:
+        self, http: Http, request_obj: t.Optional[BaseModel] = None, raw: bool = False, **kwargs
+    ) -> t.Union[BaseModel, JSON_TYPES]:
         """Perform a request to this endpoint using an http object.
 
         Args:
             http (Http): HTTP object to use to send request
-            request_obj (Optional[BaseModel], optional): dataclass containing
+            request_obj (t.Optional[BaseModel], optional): dataclass containing
                 object to serialize for the request
             raw (bool): return the raw requests.Response object
             **kwargs: passed to :meth:`perform_request_raw` and :meth:`handle_response`
 
         Returns:
-            Union[BaseModel, JSON_TYPES]: the data loaded from the response received
+            t.Union[BaseModel, JSON_TYPES]: the data loaded from the response received
         """
         self.log.debug(f"{self!r} Performing request with request_obj type {type(request_obj)}")
         kwargs["response"] = response = self.perform_request_raw(
             http=http, request_obj=request_obj, **kwargs
         )
+        self.log.debug(f"{self!r} Received response {response}")
         return response if raw else self.handle_response(http=http, **kwargs)
 
     def perform_request_raw(
-        self, http: Http, request_obj: Optional[BaseModel] = None, **kwargs
-    ) -> Union[BaseModel, JSON_TYPES]:
+        self, http: Http, request_obj: t.Optional[BaseModel] = None, **kwargs
+    ) -> t.Union[BaseModel, JSON_TYPES]:
         """Perform a request to this endpoint using an http object.
 
         Args:
             http (Http): HTTP object to use to send request
-            request_obj (Optional[BaseModel], optional): dataclass containing
+            request_obj (t.Optional[BaseModel], optional): dataclass containing
                 object to serialize for the request
             **kwargs: passed to :meth:`get_http_args` and :meth:`Http.__call__`
 
         Returns:
-            Union[BaseModel, JSON_TYPES]: the data loaded from the response received
+            t.Union[BaseModel, JSON_TYPES]: the data loaded from the response received
         """
         http_args = self.get_http_args(request_obj=request_obj, **kwargs)
         response = http(**http_args)
         return response
 
-    def load_request(self, **kwargs) -> Union[BaseModel, dict, None]:
+    def load_request(self, **kwargs) -> t.Union[BaseModel, dict, None]:
         """Create a dataclass for a request_obj to send using :meth:`perform_request`.
 
         Args:
@@ -167,7 +170,7 @@ class ApiEndpoint:
                 is set
 
         Returns:
-            Union[BaseModel, dict, None]: Loaded dataclass object or dict of kwargs or None if
+            t.Union[BaseModel, dict, None]: Loaded dataclass object or dict of kwargs or None if
                 kwargs empty
         """
         load_cls = self.request_load_cls
@@ -185,8 +188,8 @@ class ApiEndpoint:
         return ret
 
     def load_response(
-        self, data: dict, http: Http, unloaded: bool = False, **kwargs
-    ) -> Union[BaseModel, JSON_TYPES]:
+        self, data: dict, http: Http, unloaded: bool = False, reraise: bool = RERAISE, **kwargs
+    ) -> t.Union[BaseModel, JSON_TYPES]:
         """Load the response data into a dataclass model object.
 
         Args:
@@ -196,7 +199,7 @@ class ApiEndpoint:
             **kwargs: passed to :meth:`BaseSchema.load_response` or :meth:`BaseModel.load_response`
 
         Returns:
-            Union[BaseModel, JSON_TYPES]: Loaded dataclass model or JSON data
+            t.Union[BaseModel, JSON_TYPES]: Loaded dataclass model or JSON data
         """
         if not unloaded:
             load_cls = self.response_load_cls
@@ -207,6 +210,8 @@ class ApiEndpoint:
                 try:
                     data = load_cls.load_response(data=data, http=http, **kwargs)
                 except Exception as exc:
+                    if reraise:
+                        raise
                     err = "Failed to load response object"
                     details = [f"load_cls: {load_cls}"]
                     raise ResponseLoadObjectError(
@@ -217,18 +222,18 @@ class ApiEndpoint:
         return data
 
     @property
-    def request_load_cls(self) -> Optional[Union[Type[BaseSchema], Type[BaseModel]]]:
+    def request_load_cls(self) -> t.Optional[t.Union[t.Type[BaseSchema], t.Type[BaseModel]]]:
         """Get the class that should be used to load request data."""
         return self.request_model_cls or None
 
     @property
-    def response_load_cls(self) -> Optional[Union[Type[BaseSchema], Type[BaseModel]]]:
+    def response_load_cls(self) -> t.Optional[t.Union[t.Type[BaseSchema], t.Type[BaseModel]]]:
         """Get the class that should be used to load response data."""
         return self.response_schema_cls or self.response_model_cls or None
 
     def handle_response(
         self, http: Http, response: requests.Response, **kwargs
-    ) -> Union[BaseModel, JSON_TYPES]:
+    ) -> t.Union[BaseModel, JSON_TYPES]:
         """Get the response data.
 
         Args:
@@ -237,7 +242,7 @@ class ApiEndpoint:
             **kwargs: passed to :meth:`get_response_json` and :meth:`load_response`
 
         Returns:
-            Union[BaseModel, JSON_TYPES]: Loaded dataclass model or JSON data
+            t.Union[BaseModel, JSON_TYPES]: Loaded dataclass model or JSON data
 
         """
         if self.response_as_text:
@@ -267,7 +272,6 @@ class ApiEndpoint:
             return response.json()
         except Exception as exc:
             msg = f"Response has invalid JSON\nWhile in {self}"
-            self.log.exception(msg)
             if self.response_json_error:
                 raise JsonInvalidError(msg=msg, response=response, exc=exc)
             return response.text
@@ -276,7 +280,7 @@ class ApiEndpoint:
         self,
         http: Http,
         response: requests.Response,
-        response_status_hook: Optional[callable] = None,
+        response_status_hook: t.Optional[callable] = None,
         **kwargs,
     ):
         """Check the status code of a response.
@@ -284,7 +288,7 @@ class ApiEndpoint:
         Args:
             http (Http): HTTP object used to receive response
             response (requests.Response): response to handle
-            response_status_hook (Optional[callable], optional): callable to perform
+            response_status_hook (t.Optional[callable], optional): callable to perform
                 extra checks of response status that takes args: http, response, kwargs
             **kwargs: Passed to `response_status_hook` if supplied, if hook returns truthy
                 no more status checks are done
@@ -317,13 +321,16 @@ class ApiEndpoint:
             raise ResponseNotOk(msg="\n".join(msgs), response=response, exc=exc)
 
     def get_http_args(
-        self, request_obj: Optional[BaseModel] = None, http_args: Optional[dict] = None, **kwargs
+        self,
+        request_obj: t.Optional[BaseModel] = None,
+        http_args: t.Optional[dict] = None,
+        **kwargs,
     ) -> dict:
         """Build the arguments to supply to :meth:`Http.__call__`.
 
         Args:
-            request_obj (Optional[BaseModel], optional): dataclass model to serialize for request
-            http_args (Optional[dict], optional): Additional arguments to add
+            request_obj (t.Optional[BaseModel], optional): dataclass model to serialize for request
+            http_args (t.Optional[dict], optional): Additional arguments to add
             **kwargs: passed to :meth:`dump_path` and :meth:`dump_object`
 
         Returns:
@@ -340,8 +347,8 @@ class ApiEndpoint:
         return args
 
     def _get_dump_object_method(
-        self, request_obj: Optional[BaseModel] = None, **kwargs
-    ) -> Tuple[str, callable]:
+        self, request_obj: t.Optional[BaseModel] = None, **kwargs
+    ) -> t.Tuple[str, callable]:
         """Get the method that should be used to dump a model and the arg for the request."""
         if self.method == "get" and callable(getattr(request_obj, "dump_request_params", None)):
             dump_method = request_obj.dump_request_params
@@ -359,7 +366,7 @@ class ApiEndpoint:
         return key, dump_method
 
     def _call_dump_object_method(
-        self, dump_method: callable, request_obj: Optional[BaseModel] = None, **kwargs
+        self, dump_method: callable, request_obj: t.Optional[BaseModel] = None, **kwargs
     ) -> dict:
         """Pass."""
         kwargs = combo_dicts(kwargs, schema_cls=self.request_schema_cls)
@@ -374,11 +381,11 @@ class ApiEndpoint:
             ]
             raise RequestFormatObjectError(api_endpoint=self, err=err, details=details, exc=exc)
 
-    def dump_object(self, request_obj: Optional[BaseModel] = None, **kwargs) -> dict:
+    def dump_object(self, request_obj: t.Optional[BaseModel] = None, **kwargs) -> dict:
         """Serialize a dataclass model for a request.
 
         Args:
-            request_obj (Optional[BaseModel], optional): dataclass model to serialize for request
+            request_obj (t.Optional[BaseModel], optional): dataclass model to serialize for request
             **kwargs: passed to :meth:`BaseModel.dump_request_params` if method is GET, else
                 passed to :meth:`BaseModel.dump_request`
 
@@ -396,11 +403,11 @@ class ApiEndpoint:
             )
         return ret
 
-    def dump_path(self, request_obj: Optional[BaseModel] = None, **kwargs) -> str:
+    def dump_path(self, request_obj: t.Optional[BaseModel] = None, **kwargs) -> str:
         """Get the path to use for this endpoint.
 
         Args:
-            request_obj (Optional[BaseModel], optional): dataclass model used as part
+            request_obj (t.Optional[BaseModel], optional): dataclass model used as part
                 of the string formatting for :attr:`path`
             **kwargs: Used as part of the string formatting for :attr:`path`
 

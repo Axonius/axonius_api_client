@@ -198,6 +198,105 @@ class Assets(ApiEndpointGroup):
 
 
 @dataclasses.dataclass(eq=True, frozen=True, repr=False)
+class Folders(ApiEndpointGroup):
+    """Pass."""
+
+    """
+    update_parent_folder:
+        PUT
+        '<folder_id>/parent'
+        class FolderUpdateParentRequestSchema(BaseSchema):
+            parent_id = fields.Str(description='The parent id of the folder')
+            class Meta:
+                type_ = 'folder_update_parent_request_schema'  # Required
+
+        MetadataSchema
+        return ApiResponseData(document_meta={
+            'message': SuccessMessages['UPDATE'],
+            'folder_data': {
+                ID_FIELD: folder_id,
+                NAME_FIELD: current_folder_with_nested_children[NAME_FIELD],
+                PARENT_ID_FIELD: folder_request.get(PARENT_ID_FIELD)
+            }
+        })
+
+    rename_folder
+        PUT
+        '<folder_id>/rename'
+        class FolderRenameRequestSchema(BaseSchema):
+            name = fields.Str(description='The name of the folder')
+
+            class Meta:
+                type_ = 'folder_rename_request_schema'  # Required
+
+        MetadataSchema
+        ApiResponseData(document_meta={
+                    'message': SuccessMessages['UPDATE'],
+                    'folder_data': {
+                        ID_FIELD: folder_id,
+                        NAME_FIELD: new_folder.get(NAME_FIELD),
+                        PARENT_ID_FIELD: folder_request.get(PARENT_ID_FIELD)
+                    }
+                })
+
+    delete_folder
+        DELETE
+        '<folder_id>'
+        None
+        MetadataSchema
+        ApiResponseData(document_meta={
+                    'message': SuccessMessages['DELETE'],
+                    'folder_id': folder_id
+                })
+    """
+
+    get: ApiEndpoint = ApiEndpoint(
+        method="get",
+        path="api/queries/folders",
+        request_schema_cls=None,
+        request_model_cls=None,
+        response_schema_cls=json_api.folders.RootFoldersSchema,
+        response_model_cls=json_api.folders.RootFolders,
+    )
+
+    create: ApiEndpoint = ApiEndpoint(
+        method="post",
+        path="api/queries/folders",
+        request_schema_cls=json_api.folders.CreateFolderSchema,
+        request_model_cls=json_api.folders.CreateFolder,
+        response_schema_cls=json_api.folders.CreateFolderResponseSchema,
+        response_model_cls=json_api.folders.CreateFolderResponse,
+    )
+
+    delete: ApiEndpoint = ApiEndpoint(
+        method="delete",
+        path="api/queries/folders/{id}",
+        request_schema_cls=None,
+        request_model_cls=None,
+        response_schema_cls=json_api.folders.DeleteFolderResponseSchema,
+        response_model_cls=json_api.folders.DeleteFolderResponse,
+    )
+
+    rename: ApiEndpoint = ApiEndpoint(
+        method="put",
+        path="api/queries/folders/{id}/rename",
+        request_schema_cls=None,  # XXX
+        request_model_cls=None,
+        response_schema_cls=json_api.generic.MetadataSchema,
+        response_model_cls=json_api.generic.Metadata,
+    )
+
+    move: ApiEndpoint = ApiEndpoint(
+        method="put",
+        path="api/queries/folders/{id}/parent",
+        request_schema_cls=None,  # XXX
+        request_model_cls=None,
+        response_schema_cls=json_api.generic.MetadataSchema,
+        response_model_cls=json_api.generic.Metadata,
+    )
+
+
+@dataclasses.dataclass(eq=True, frozen=True, repr=False)
 class SavedQueries(ApiEndpointGroup):
     """Pass."""
 
@@ -210,16 +309,14 @@ class SavedQueries(ApiEndpointGroup):
         response_model_cls=json_api.saved_queries.SavedQuery,
     )
 
-    # WIP: folders
-    get_folders: ApiEndpoint = ApiEndpoint(
+    get_count: ApiEndpoint = ApiEndpoint(
         method="get",
-        path="api/V4.5/queries/folders",
-        request_schema_cls=None,
-        request_model_cls=None,
-        response_schema_cls=json_api.saved_queries.FoldersResponseSchema,
-        response_model_cls=json_api.saved_queries.FoldersResponse,
+        path="api/queries/saved/count",
+        request_schema_cls=json_api.saved_queries.SavedQueryGetSchema,
+        request_model_cls=json_api.saved_queries.SavedQueryGet,
+        response_schema_cls=json_api.generic.IntValueSchema,
+        response_model_cls=json_api.generic.IntValue,
     )
-    # PBUG: response not properly modeled
 
     get_tags: ApiEndpoint = ApiEndpoint(
         method="get",
@@ -1195,6 +1292,7 @@ class ApiEndpoints(BaseData):
     openapi: ApiEndpointGroup = OpenAPISpec()
     data_scopes: ApiEndpointGroup = DataScopes()
     dashboard_spaces: ApiEndpointGroup = DashboardSpaces()
+    folders: ApiEndpointGroup = Folders()
 
     @classmethod
     def get_groups(cls) -> Dict[str, ApiEndpointGroup]:

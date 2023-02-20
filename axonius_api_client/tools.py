@@ -252,7 +252,10 @@ def coerce_int(
 
 
 def coerce_int_float(
-    value: t.Union[int, float, str, bytes], as_float: bool = False, error: bool = True
+    value: t.Union[int, float, str, bytes],
+    as_float: bool = False,
+    error: bool = True,
+    ret_value: bool = False,
 ) -> t.Optional[t.Union[int, float]]:
     """Coerce a value into int or float.
 
@@ -283,10 +286,10 @@ def coerce_int_float(
             f"Supplied value {value!r} of type {trype(value)} is not an integer or float."
         )
 
-    return None
+    return value if ret_value is True else None
 
 
-def coerce_bool(obj: t.Any, errmsg: t.Optional[str] = None) -> bool:
+def coerce_bool(obj: t.Any, errmsg: t.Optional[str] = None, error: bool = True) -> bool:
     """Convert an object into bool.
 
     Args:
@@ -311,15 +314,16 @@ def coerce_bool(obj: t.Any, errmsg: t.Optional[str] = None) -> bool:
 
     if coerce_obj in NO:
         return False
-
-    vtype = trype(obj)
-    msg = listify(errmsg)
-    msg += [
-        f"Supplied value {coerce_obj!r} of type {vtype} must be one of:",
-        f"  For True: {combine(YES)}",
-        f"  For False: {combine(NO)}",
-    ]
-    raise ToolsError("\n".join(msg))
+    if error is True:
+        vtype = trype(obj)
+        msg = listify(errmsg)
+        msg += [
+            f"Supplied value {coerce_obj!r} of type {vtype} must be one of:",
+            f"  For True: {combine(YES)}",
+            f"  For False: {combine(NO)}",
+        ]
+        raise ToolsError("\n".join(msg))
+    return obj
 
 
 def is_str(value: t.Any, not_empty: bool = True) -> bool:

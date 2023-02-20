@@ -13,25 +13,11 @@ from ...constants.api import GUI_PAGE_SIZES
 from ...constants.ctypes import PatternLikeListy
 from ...exceptions import ApiAttributeTypeError, ApiError, NotFoundError
 from ...parsers.tables import tablize
-from ...tools import coerce_bool, coerce_int, dt_now, dt_parse, json_load, listify
+from ...tools import coerce_bool, coerce_int, dt_now, dt_parse, listify
 from .base import BaseModel, BaseSchema, BaseSchemaJson
-from .custom_fields import SchemaBool, SchemaDatetime, get_schema_dc
+from .custom_fields import SchemaBool, SchemaDatetime, UnionField, get_schema_dc
 from .nested_access import Access, AccessSchema
 from .resources import PaginationRequest, PaginationSchema, ResourcesGet, ResourcesGetSchema
-
-
-def get_user_source(value: t.Union[str, dict]) -> str:
-    """Pass."""
-    user_name = None
-    source = None
-    if isinstance(value, str) and value:
-        value = json_load(obj=value, error=False)
-    if isinstance(value, dict):
-        user_name = value.get("user_name")
-        source = value.get("source")
-
-    ret = [x for x in [source, user_name, value] if isinstance(x, str) and x.strip()]
-    return "/".join(ret)
 
 
 class SavedQueryGetSchema(ResourcesGetSchema):
@@ -40,8 +26,9 @@ class SavedQueryGetSchema(ResourcesGetSchema):
     folder_id = marshmallow_jsonapi.fields.Str(load_default="", dump_default="")
     creator_ids = marshmallow_jsonapi.fields.List(marshmallow_jsonapi.fields.Str())
     used_in = marshmallow_jsonapi.fields.List(marshmallow_jsonapi.fields.Str())
+    used_adapters = marshmallow_jsonapi.fields.List(marshmallow_jsonapi.fields.Str())
     get_view_data = SchemaBool(load_default=True, dump_default=True)
-    include_usage = SchemaBool(load_default=False, dump_default=False)
+    include_usage = SchemaBool(load_default=True, dump_default=True)
 
     @staticmethod
     def get_model_cls() -> type:
@@ -161,7 +148,7 @@ class SavedQuerySchema(BaseSchemaJson):
     created_by = marshmallow_jsonapi.fields.Str(
         allow_none=True, load_default=None, dump_default=None
     )
-    used_in = marshmallow_jsonapi.fields.List(marshmallow_jsonapi.fields.Str)
+    used_in = marshmallow_jsonapi.fields.List(UnionField(types=[dict, str]))
     module = marshmallow_jsonapi.fields.Str(allow_none=True, load_default=None, dump_default=None)
     access = marshmallow_jsonapi.fields.Nested(
         AccessSchema,
@@ -178,22 +165,6 @@ class SavedQuerySchema(BaseSchemaJson):
         """Pass."""
 
         type_ = "views_details_schema"
-
-
-class FoldersResponseSchema(BaseSchemaJson):
-    """Pass."""
-
-    folders = marshmallow_jsonapi.fields.List(marshmallow_jsonapi.fields.Dict())
-
-    @staticmethod
-    def get_model_cls() -> type:
-        """Pass."""
-        return FoldersResponse
-
-    class Meta:
-        """Pass."""
-
-        type_ = "queries_folders_response_schema"
 
 
 class SavedQueryCreateSchema(BaseSchemaJson):
@@ -406,7 +377,7 @@ class SavedQuery(BaseModel, SavedQueryMixins):
     )
     created_by: t.Optional[str] = dataclasses.field(default=None, metadata={"update": False})
     module: t.Optional[str] = dataclasses.field(default=None, metadata={"update": False})
-    used_in: t.Optional[t.List[str]] = dataclasses.field(default_factory=list)
+    used_in: t.Optional[t.List[t.Union[str, dict]]] = dataclasses.field(default_factory=list)
     access: t.Optional[Access] = dataclasses.field(default_factory=Access)
 
     document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
@@ -451,12 +422,80 @@ class SavedQuery(BaseModel, SavedQueryMixins):
     @property
     def created_by_str(self) -> str:
         """Pass."""
-        return get_user_source(value=self.created_by)
+        from .system_users import SystemUser
+
+        return SystemUser.get_user_source(value=self.created_by)
 
     @property
     def updated_by_str(self) -> str:
         """Pass."""
-        return get_user_source(value=self.updated_by)
+        from .system_users import SystemUser
+
+        return SystemUser.get_user_source(value=self.updated_by)
+
+    @property
+    def _tree_summary(self) -> dict:
+        """Pass."""
+        return {
+            "module": self.module,
+            "name": self.name,
+        }
+
+    @property
+    def _tree_details(self) -> dict:
+        """Pass."""
+        return {
+            "module": self.module,
+            "name": self.name,
+            "uuid": self.uuid,
+            "tags": self.tags,
+            "is_predefined": self.predefined,
+            "is_referenced": self.is_referenced,
+            "is_private": self.private,
+            "is_always_cached": self.always_cached,
+            "is_asset_scope": self.asset_scope,
+            "is_asset_scope_ready": self.is_asset_scope_query_ready,
+            "created_by": self.created_by_str,
+            "updated_by": self.updated_by_str,
+            "last_updated": self.last_updated_str,
+            "last_run_time": self.last_run_time,
+        }
+
+    def _get_tree_entry(self, include_details: bool = True) -> str:
+        """Pass."""
+        obj: dict = self._tree_details if include_details else self._tree_summary
+        items: t.List[str] = [f"{k}={v!r}" for k, v in obj.items()]
+        items: str = ", ".join(items)
+        return f"SavedQuery({items})"
+
+    @property
+    def tags_str(self) -> str:
+        """Pass."""
+        return ", ".join(self.tags or [])
+
+    def to_strs(self) -> t.List[str]:
+        """Pass."""
+        items = list(self.col_info.items()) + list(self.col_details.items())
+        return [f"{k}: {v}" for k, v in items]
+
+    def to_tablize(self) -> dict:
+        """Get tablize-able repr of this obj."""
+        col_info = [
+            f"{k.upper()}={textwrap.fill(v or '', width=30)}" for k, v in self.col_info.items()
+        ]
+        col_details = [f"{k}: {v}" for k, v in self.col_details.items()]
+        ret = {}
+        ret["Info"] = "\n".join(col_info)
+        ret["Details"] = "\n".join(col_details)
+        return ret
+
+    @property
+    def str_details(self) -> str:
+        """Pass."""
+        items = {}
+        items.update(self.col_info)
+        items.update(self.col_details)
+        return "\n".join([f"{k.upper()}={v}" for k, v in items.items()])
 
     @property
     def col_details(self) -> dict:
@@ -488,27 +527,6 @@ class SavedQuery(BaseModel, SavedQueryMixins):
             "tags": self.tags_str,
         }
 
-    @property
-    def tags_str(self) -> str:
-        """Pass."""
-        return ", ".join(self.tags or [])
-
-    def to_strs(self) -> t.List[str]:
-        """Pass."""
-        items = list(self.col_info.items()) + list(self.col_details.items())
-        return [f"{k}: {v}" for k, v in items]
-
-    def to_tablize(self) -> dict:
-        """Get tablize-able repr of this obj."""
-        col_info = [
-            f"{k.upper()}={textwrap.fill(v or '', width=30)}" for k, v in self.col_info.items()
-        ]
-        col_details = [f"{k}: {v}" for k, v in self.col_details.items()]
-        ret = {}
-        ret["Info"] = "\n".join(col_info)
-        ret["Details"] = "\n".join(col_details)
-        return ret
-
 
 @dataclasses.dataclass
 class SavedQueryCreate(BaseModel, SavedQueryMixins):
@@ -537,8 +555,9 @@ class SavedQueryGet(ResourcesGet):
     folder_id: str = ""
     creator_ids: t.Optional[t.List[str]] = dataclasses.field(default_factory=list)
     used_in: t.Optional[t.List[str]] = dataclasses.field(default_factory=list)
+    used_adapters: t.Optional[t.List[str]] = dataclasses.field(default_factory=list)
     get_view_data: bool = True
-    include_usage: bool = False
+    include_usage: bool = True
 
     def __post_init__(self):
         """Pass."""
@@ -711,7 +730,7 @@ class QueryHistoryRequest(BaseModel):
                 if isinstance(check, str):
                     matches.append(check)
 
-        self._log.debug(f"Resolved {prop} values {values} to matches {matches}")
+        self.logger.debug(f"Resolved {prop} values {values} to matches {matches}")
         setattr(self, prop, matches)
         return matches
 
@@ -879,159 +898,3 @@ class QueryHistory(BaseModel):
     def _props_results(cls) -> t.List[str]:
         """Pass."""
         return ["status", "results_count"]
-
-
-# WIP: folders
-FOLDER_SEP: str = "//"
-
-
-# WIP: folders
-@dataclasses.dataclass
-class Folder(BaseModel):  # pragma: no cover
-    """Pass."""
-
-    _id: str
-    children_ids: t.List[str]
-    depth: int
-    name: str
-    root_type: str
-    created_at: datetime.datetime = dataclasses.field(
-        metadata={"dataclasses_json": {"mm_field": SchemaDatetime()}}
-    )
-    updated_at: datetime.datetime = dataclasses.field(
-        metadata={"dataclasses_json": {"mm_field": SchemaDatetime()}}
-    )
-    path: t.List[str]
-    children: t.Optional[t.List[dict]] = dataclasses.field(default_factory=list)
-    root_id: t.Optional[str] = None
-    created_by: t.Optional[str] = None
-    parent_id: t.Optional[str] = None
-    read_only: bool = False
-    document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
-
-    PARENT: t.ClassVar[t.Optional[t.Union["Folder", "FoldersResponse"]]] = None
-
-    @property
-    def id(self) -> str:
-        """Pass."""
-        return self._id
-
-    @property
-    def path_str(self) -> str:
-        """Pass."""
-        return f" {FOLDER_SEP} ".join(self.path)
-
-    @property
-    def children_count(self) -> int:
-        """Pass."""
-        return len(self.children_ids)
-
-    @property
-    def models(self) -> t.List["Folder"]:
-        """Pass."""
-        schema = self.schema(many=True)
-        items = schema.load(self.children, unknown=marshmallow.INCLUDE)
-        for item in items:
-            item.HTTP = self.HTTP
-            item.PARENT = self
-        return items
-
-    def find_folder(self, value: str) -> "Folder":
-        """Pass."""
-        err = f"No folder named {value!r} found under {self.path_str!r}"
-        if not self.children:
-            raise ApiError(f"{err}No folders exist under {self.path_str!r}")
-
-        for model in self.models:
-            if model.name == value:
-                return model
-
-        valids = "\n" + "\n".join([str(x) for x in self.models])
-        raise ApiError(f"{err}, valids:{valids}")
-
-    def __str__(self) -> str:
-        """Pass."""
-        children = [x.name for x in self.models]
-        items = [
-            f"id: {self.id!r}",
-            f"name: {self.name!r}",
-            f"path: {self.path_str!r}",
-            f"children: {children}",
-        ]
-        items = ", ".join(items)
-        return f"Folder({items})"
-
-    def __repr__(self) -> str:
-        """Pass."""
-        return self.__str__()
-
-
-# WIP: folders
-@dataclasses.dataclass
-class FoldersResponse(BaseModel):  # pragma: no cover
-    """Pass."""
-
-    folders: t.List[dict]
-    document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
-
-    @staticmethod
-    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
-        """Pass."""
-        return FoldersResponseSchema
-
-    @property
-    def models(self) -> t.List[Folder]:
-        """Pass."""
-        schema = Folder.schema(many=True)
-        items = schema.load(self.folders, unknown=marshmallow.INCLUDE)
-        for item in items:
-            item.HTTP = self.HTTP
-            item.PARENT = self
-        return items
-
-    def find_folder(self, value: str) -> "Folder":
-        """Pass."""
-        for model in self.models:
-            if model.name == value:
-                return model
-
-        valids = "\n" + "\n".join([str(x) for x in self.models])
-        raise ApiError(f"No root folder named {value!r} found, valids:{valids}")
-
-    def search(self, value: t.Union[str, t.List[str]]) -> Folder:
-        """Find a folder by path."""
-        if isinstance(value, str):
-            value = [x.strip() for x in value.split(FOLDER_SEP) if x.strip()]
-
-        if not isinstance(value, list) and value and all([isinstance(x, str) and x for x in value]):
-            msg = (
-                f"Invalid folder search value {value!r} ({type(value)})\n"
-                f"Folder search value must be a list of str or a str separated by {FOLDER_SEP!r}"
-            )
-            raise ApiError(msg)
-
-        folder = None
-        for item in value:
-            folder = folder.find_folder(value=item) if folder else self.find_folder(value=item)
-        return folder
-
-    def get_tree(self, models: t.Optional[t.List["Folder"]] = None):
-        """Pass."""
-        models = self.models if models is None else models
-
-        items = []
-        for model in models:
-            items.append(f"{model.path_str}")
-            items += self.get_tree(models=model.models)
-        return items
-
-    def __str__(self) -> str:
-        """Pass."""
-        items = ",\n".join(
-            [f"Folder(name={x.name!r}, children={[y.name for y in x.models]})" for x in self.models]
-        )
-        return items
-
-    def __repr__(self) -> str:
-        """Pass."""
-        return self.__str__()

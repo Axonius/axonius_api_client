@@ -190,7 +190,6 @@ class CustomConnect(axonapi.Connect):
         admin_maps = list(self.get_admin_maps(assets=assets))
 
         # return self.get_tag_actions(admin_maps=admin_maps)
-        # XXX HERE
 
         return admin_maps
 

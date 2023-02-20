@@ -546,7 +546,7 @@ class SetFull(BaseModel):
             if error:
                 raise NoTriggerDefinedError(f"{self}\n{err}")
             else:
-                self._log.warning(err)
+                self.logger.warning(err)
         return self.has_trigger
 
     @property

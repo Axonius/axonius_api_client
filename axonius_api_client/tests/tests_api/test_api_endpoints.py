@@ -32,7 +32,7 @@ MODELS_EXCLUDE = [
     json_api.adapters.AdapterNodeCnx,
     json_api.adapters.AdapterClientsCount,
     json_api.adapters.AdapterNode,
-    json_api.saved_queries.Folder,
+    json_api.folders.Folder,
     json_api.data_scopes.DataScope,
     json_api.time_range.TimeRange,
     json_api.paging_state.Page,

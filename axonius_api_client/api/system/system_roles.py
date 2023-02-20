@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 """API for working with system roles."""
 import copy
-from typing import Generator, List, Optional, Union
+import typing as t
+
+import cachetools
 
 from ...exceptions import ApiError, NotFoundError
 from ...parsers.tables import tablize_roles
@@ -9,6 +11,9 @@ from ...tools import coerce_str_to_csv
 from .. import json_api
 from ..api_endpoints import ApiEndpoints
 from ..mixins import ModelMixins
+
+CACHE_GET: cachetools.TTLCache = cachetools.TTLCache(maxsize=1024, ttl=60)
+MODEL = json_api.system_roles.SystemRole
 
 
 class SystemRoles(ModelMixins):
@@ -30,7 +35,7 @@ class SystemRoles(ModelMixins):
         """Parse the permission labels into a layered dict."""
         return json_api.system_roles.parse_cat_actions(raw=raw)
 
-    def get(self, generator: bool = False) -> Union[Generator[dict, None, None], List[dict]]:
+    def get(self, generator: bool = False) -> t.Union[t.Generator[dict, None, None], t.List[dict]]:
         """Get Axonius system roles.
 
         Examples:
@@ -47,12 +52,28 @@ class SystemRoles(ModelMixins):
         gen = self.get_generator()
         return gen if generator else list(gen)
 
-    def get_generator(self) -> Generator[dict, None, None]:
+    def get_generator(self) -> t.Generator[dict, None, None]:
         """Get Axonius system roles using a generator."""
         rows = self._get()
-        data_scopes = self.data_scopes.get_safe()
         for row in rows:
-            yield row.to_dict_old(data_scopes=data_scopes)
+            yield row.to_dict_old()
+
+    @cachetools.cached(cache=CACHE_GET)
+    def get_cached(self) -> t.List[MODEL]:
+        """Get Axonius system roles using a caching mechanism."""
+        return self._get()
+
+    def get_cached_single(self, value: t.Union[str, dict, MODEL]) -> MODEL:
+        """Pass."""
+        name = MODEL._get_attr_value(value=value, attr="name")
+        uuid = MODEL._get_attr_value(value=value, attr="uuid")
+        items = self.get_cached()
+        for item in items:
+            if name == item.name or uuid == item.uuid:
+                return item
+
+        err = f"No role found with name of {name!r} or UUID of {uuid!r}"
+        raise NotFoundError(tablize_roles(roles=[x.to_dict_old() for x in items], err=err))
 
     def get_by_name(self, name: str) -> dict:
         """Get a role by name.
@@ -102,7 +123,7 @@ class SystemRoles(ModelMixins):
         err = f"Role with uuid of {uuid!r} not found"
         raise NotFoundError(tablize_roles(roles=roles, err=err))
 
-    def add(self, name: str, data_scope: Optional[str] = None, **kwargs) -> dict:
+    def add(self, name: str, data_scope: t.Optional[str] = None, **kwargs) -> dict:
         """Add a role.
 
         Examples:
@@ -156,13 +177,13 @@ class SystemRoles(ModelMixins):
             raise ApiError(f"Role with name of {name!r} already exists:\n{existing}")
 
     def update_data_scope(
-        self, name: str, data_scope: Optional[str] = None, remove: bool = False
+        self, name: str, data_scope: t.Optional[str] = None, remove: bool = False
     ) -> dict:
         """Update the data scope of a role.
 
         Args:
             name (str): Name of role to update
-            data_scope (Optional[str], optional): Name or UUID of data scope
+            data_scope (t.Optional[str], optional): Name or UUID of data scope
             remove (bool, optional): Remove data scope from role
         """
         role = self.get_by_name(name=name)
@@ -339,7 +360,7 @@ class SystemRoles(ModelMixins):
                     )
         return "\n".join(lines)
 
-    def _get(self) -> List[json_api.system_roles.SystemRole]:
+    def _get(self) -> t.List[MODEL]:
         """Direct API method to get all users.
 
         Args:
@@ -353,8 +374,8 @@ class SystemRoles(ModelMixins):
         self,
         name: str,
         permissions: dict,
-        data_scope_restriction: Optional[dict] = None,
-    ) -> json_api.system_roles.SystemRole:
+        data_scope_restriction: t.Optional[dict] = None,
+    ) -> MODEL:
         """Direct API method to add a role.
 
         Args:
@@ -375,8 +396,8 @@ class SystemRoles(ModelMixins):
         uuid: str,
         name: str,
         permissions: dict,
-        data_scope_restriction: Optional[dict] = None,
-    ) -> json_api.system_roles.SystemRole:
+        data_scope_restriction: t.Optional[dict] = None,
+    ) -> MODEL:
         """Direct API method to update a roles permissions.
 
         Args:
@@ -394,7 +415,7 @@ class SystemRoles(ModelMixins):
         )
         return api_endpoint.perform_request(http=self.auth.http, request_obj=request_obj, uuid=uuid)
 
-    def _delete(self, uuid: str) -> json_api.system_roles.SystemRole:
+    def _delete(self, uuid: str) -> MODEL:
         """Direct API method to delete a role.
 
         Args:
@@ -431,9 +452,9 @@ class SystemRoles(ModelMixins):
 
     def cat_actions_to_perms(
         self,
-        role_perms: Optional[dict] = None,
+        role_perms: t.Optional[dict] = None,
         grant: bool = True,
-        src: Optional[str] = None,
+        src: t.Optional[str] = None,
         **kwargs,
     ) -> dict:
         """Create an updated set of role permissions based on categories and actions.

@@ -416,6 +416,22 @@ def api_openapi(request):
     return obj
 
 
+@pytest.fixture(scope="session")
+def api_client(request):
+    """Test utility."""
+    from axonius_api_client.connect import Connect
+
+    url = request.config.getoption("--ax-url")
+    key = request.config.getoption("--ax-key")
+    secret = request.config.getoption("--ax-secret")
+    if isinstance(url, str):
+        url = url.rstrip("/")
+
+    client = Connect(url=url, key=key, secret=secret, certwarn=False, save_history=True)
+    client.start()
+    return client
+
+
 @pytest.fixture
 def datafiles(request):
     """Pass."""

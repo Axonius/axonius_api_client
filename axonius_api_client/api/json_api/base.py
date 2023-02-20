@@ -45,6 +45,11 @@ def get_warn_help(value: Warning) -> t.List[str]:
 class BaseCommon:
     """Common methods for all schema and model classes."""
 
+    @property
+    def logger(self) -> logging.Logger:
+        """Pass."""
+        return get_obj_log(self)
+
     @classmethod
     def _post_load_attrs(
         cls,
@@ -238,10 +243,42 @@ class BaseSchemaJson(BaseSchema, marshmallow_jsonapi.Schema):
 class BaseModel(dataclasses_json.DataClassJsonMixin, BaseCommon):
     """Model base class for holding data."""
 
-    @property
-    def _log(self) -> logging.Logger:
+    @classmethod
+    def _get_attr_value(cls, value: t.Union[str, dict, "BaseModel"], attr: str) -> str:
         """Pass."""
-        return get_obj_log(self)
+        if isinstance(value, str):
+            if not value.strip():
+                raise ApiError(
+                    f"Value provided for attribute {attr!r} as str can not be empty: {value!r}"
+                )
+            return value
+
+        if isinstance(value, dict):
+            if attr not in value:
+                raise ApiError(f"Dict provided does not have attribute {attr!r}: {value!r}")
+
+            ret = value[attr]
+            if not (isinstance(ret, str) and ret.strip()):
+                raise ApiError(
+                    f"Dict provided has an empty or non string attribute {attr!r}: {ret!r}"
+                )
+            return ret
+
+        if isinstance(value, cls):
+            if not hasattr(value, attr):
+                raise ApiError(f"{cls} provided does not have attribute {attr!r}: {value!r}")
+
+            ret = getattr(value, attr)
+            if not (isinstance(ret, str) and ret.strip()):
+                raise ApiError(
+                    f"{cls} provided has an empty or non string attribute {attr!r}: {ret!r}"
+                )
+
+            return ret
+        raise ApiError(
+            f"Unable to get attribute {attr}!"
+            f" Invalid value type {type(value)} {value!r}, must be str, dict, or {cls}"
+        )
 
     def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
         """Get the BaseSchema that should be used to validate the data for this model.
@@ -370,6 +407,10 @@ class BaseModel(dataclasses_json.DataClassJsonMixin, BaseCommon):
         """Pass."""
         props = self._to_str_properties()
         return self._str_join().join(props) if props else super().__str__()
+
+    def __repr__(self):
+        """Pass."""
+        return self.__str__()
 
     @classmethod
     def from_dict(cls, data: dict):

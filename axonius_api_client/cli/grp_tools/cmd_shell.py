@@ -25,6 +25,7 @@ API Objects:
     - dashboard_spaces/dbs: Work with dashboard spaces
     - data_scopes/ds: Work with data scopes
     - devices/d: Work with device assets
+    - folders/f: Work with folders
     - instances/i: Work with instances
     - meta/m: Work with instance metadata
     - remote_support/rs: Work with configuring system remote support
@@ -73,6 +74,7 @@ def cmd(ctx, url, key, secret):  # noqa: D301
         - dashboard_spaces/dbs: Work with dashboard spaces
         - data_scopes/ds: Work with data scopes
         - devices/d: Work with device assets
+        - folders/f: Work with folders
         - instances/i: Work with instances
         - meta/m: Work with instance metadata
         - remote_support/rs: Work with configuring system remote support
@@ -102,6 +104,7 @@ def cmd(ctx, url, key, secret):  # noqa: D301
         "devices": client.devices,
         "data_scopes": client.data_scopes,
         "enforcements": client.enforcements,
+        "folders": client.folders,
         "instances": client.instances,
         "jdump": jdump,
         "meta": client.meta,
@@ -124,6 +127,7 @@ def cmd(ctx, url, key, secret):  # noqa: D301
         "ds": client.data_scopes,
         "e": client.enforcements,
         "i": client.instances,
+        "f": client.folders,
         "j": jdump,
         "m": client.meta,
         "oas": client.openapi,

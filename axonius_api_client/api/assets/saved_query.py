@@ -24,7 +24,6 @@ from ..mixins import ChildMixins
 
 MODEL = json_api.saved_queries.SavedQuery
 MODEL_GET = json_api.saved_queries.SavedQueryGet
-MODEL_FOLDER = json_api.saved_queries.Folder
 MODEL_HIST = QueryHistory
 HIST_GEN = t.Generator[QueryHistory, None, None]
 HIST_LIST = t.List[QueryHistory]
@@ -714,7 +713,7 @@ class SavedQuery(ChildMixins):
         return list(gen)
 
     @cached(cache=CACHE_GET)
-    def get_cached(self, generator: bool = False, **kwargs) -> t.List[BOTH]:
+    def get_cached(self, **kwargs) -> t.List[BOTH]:
         """Get all saved queries.
 
         Examples:
@@ -736,20 +735,51 @@ class SavedQuery(ChildMixins):
         """
         return list(self.get_generator(**kwargs))
 
+    def get_cached_single(self, value: t.Union[str, dict, MODEL]) -> MODEL:
+        """Pass."""
+        name = MODEL._get_attr_value(value=value, attr="name")
+        uuid = MODEL._get_attr_value(value=value, attr="uuid")
+        items = self.get_cached(as_dataclass=True)
+        for item in items:
+            if name == item.name or uuid == item.uuid:
+                return item
+
+        raise SavedQueryNotFoundError(sqs=items, details=f"name={name!r} and uuid={value!r}")
+
+    @property
+    def query_by_asset_type(self) -> str:
+        """Pass."""
+        return f'module in ["{self.parent.ASSET_TYPE}"]'
+
+    def build_filter_query(
+        self,
+        query: t.Optional[str] = None,
+        add_query_by_asset_type: bool = True,
+    ) -> t.Optional[str]:
+        """Pass."""
+        parts = []
+
+        if isinstance(query, str) and query.strip():
+            parts.append(query)
+
+        if add_query_by_asset_type and not any([self.query_by_asset_type in x for x in parts]):
+            parts.append(self.query_by_asset_type)
+        return " and ".join(parts) if parts else None
+
     def get_generator(
         self,
-        folder: t.Optional[str] = None,
-        include_usage: bool = False,
+        folder_id: str = "all",
+        include_usage: bool = True,
         get_view_data: bool = True,
-        creators: t.Optional[t.List[str]] = None,
-        used_in: t.Optional[t.List[str]] = None,
         as_dataclass: bool = AS_DATACLASS,
         page_sleep: int = 0,
         page_size: int = PAGE_SIZE,
         row_start: int = 0,
         row_stop: t.Optional[int] = None,
+        add_query_by_asset_type: bool = True,
         log_level: t.Union[int, str] = LOG_LEVEL_API,
         query: t.Optional[str] = None,
+        request_obj: t.Optional[MODEL_GET] = None,
     ) -> GEN:
         """Get Saved Queries using a generator.
 
@@ -759,23 +789,18 @@ class SavedQuery(ChildMixins):
         Yields:
             GEN: saved query dataclass or dict
         """
-        query_by_module: str = f'module in ["{self.parent.ASSET_TYPE}"]'
-        if isinstance(query, str):
-            if query_by_module not in query:
-                query = f"{query} and {query_by_module}"
-        else:
-            query = query_by_module
-
-        request_obj = MODEL_GET(
-            filter=query,
-            get_view_data=get_view_data,
-            include_usage=include_usage,
-            folder_id="all",
-            creator_ids=[],
-            used_in=[],
+        query = self.build_filter_query(
+            query=query, add_query_by_asset_type=add_query_by_asset_type
         )
+        if not isinstance(request_obj, MODEL_GET):
+            request_obj = MODEL_GET(
+                filter=query,
+                get_view_data=get_view_data,
+                include_usage=include_usage,
+                folder_id=folder_id,
+            )
 
-        purpose = f"Get Saved Queries for asset type: {self.parent.ASSET_TYPE}"
+        purpose = f"Get Saved Queries using query: {query}"
         with PagingState(
             purpose=purpose,
             page_sleep=page_sleep,
@@ -846,7 +871,7 @@ class SavedQuery(ChildMixins):
         always_cached: bool = False,
         asset_scope: bool = False,
         # folder_path: t.Optional[t.Union[str, t.List[str]]] = None,
-        folder_id: str = "",
+        folder_id: str = "",  # XXX
         **kwargs,
     ) -> json_api.saved_queries.SavedQueryCreate:
         """Create a saved query.
@@ -952,7 +977,7 @@ class SavedQuery(ChildMixins):
             always_cached=always_cached,
             asset_scope=asset_scope,
             tags=tags,
-            folder_id=folder_id,
+            folder_id=folder_id,  # XXX
         )
 
     def delete_by_name(self, value: str, as_dataclass: bool = AS_DATACLASS) -> BOTH:
@@ -1150,44 +1175,3 @@ class SavedQuery(ChildMixins):
         """Get the valid tags."""
         api_endpoint = ApiEndpoints.saved_queries.get_tags
         return api_endpoint.perform_request(http=self.auth.http, asset_type=self.parent.ASSET_TYPE)
-
-    # WIP: folders
-    '''
-    def _get_folders(self) -> json_api.saved_queries.FoldersResponse:
-        """Direct API method to get all folders.
-
-        Returns:
-            json_api.saved_queries.FoldersResponse: API response model
-        """
-        api_endpoint = ApiEndpoints.saved_queries.get_folders
-        return api_endpoint.perform_request(http=self.auth.http)
-
-    def folder_get(self) -> json_api.saved_queries.FoldersResponse:
-        """Direct API method to get all folders.
-
-        Returns:
-            json_api.saved_queries.FoldersResponse: API response model
-        """
-        return self._get_folders()
-
-    def folder_get_path(self, value: t.Union[MODEL_FOLDER, str, t.List[str]]) -> MODEL_FOLDER:
-        """Pass."""
-        if isinstance(value, MODEL_FOLDER):
-            return value
-        folders = self.folder_get()
-        return folders.search(value=value)
-
-    # folder_get(value: t.Optional[str])
-    # folder_get_path(value: t.Union[Folder, str, t.List[str]])
-
-    # resolve_folder_path(folder_path, folder_id)
-    # folder_create(path: t.Union[Folder, str], name: str)
-    #   - err on read only
-    # folder_delete(path: t.Union[Folder, str])
-    #   - err on root/read only
-    # folder_rename(path: Folder/str, name: str)
-    #   - err on root/read only
-    # folder_move(from_path: t.Union[Folder, str, t.List[str]], to_path:
-    t.Union[Folder, str, t.List[str] )
-    #   - err on root/read only
-    '''

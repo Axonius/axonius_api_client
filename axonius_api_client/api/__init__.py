@@ -6,6 +6,7 @@ from .api_endpoint import ApiEndpoint
 from .api_endpoints import ApiEndpoints
 from .assets import Devices, Runner, Users, Vulnerabilities
 from .enforcements import Enforcements
+from .folders import Folders
 from .openapi import OpenAPISpec
 from .system import (
     ActivityLogs,
@@ -55,4 +56,5 @@ __all__ = (
     "OpenAPISpec",
     "DataScopes",
     "Vulnerabilities",
+    "Folders",
 )

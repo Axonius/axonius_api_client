@@ -183,6 +183,9 @@ def tablize_sq(data: dict) -> dict:
     Args:
         data: sq to create a table entry for
     """
+    if callable(getattr(data, "to_tablize", None)):
+        return data.to_tablize()
+
     data = data.to_dict() if hasattr(data, "to_dict") else data
 
     name = data["name"]

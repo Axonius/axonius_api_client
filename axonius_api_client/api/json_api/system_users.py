@@ -7,8 +7,10 @@ import typing as t
 import marshmallow
 import marshmallow_jsonapi
 
+from ...tools import is_str, json_load
 from .base import BaseModel, BaseSchema, BaseSchemaJson
 from .custom_fields import SchemaBool, SchemaDatetime, SchemaPassword, get_field_dc_mm
+from .system_roles import SystemRole
 
 
 class SystemUserSchema(BaseSchemaJson):
@@ -123,14 +125,47 @@ class SystemUser(BaseModel):
         if self.id is None and self.uuid is not None:
             self.id = self.uuid
 
-    def to_dict_old(self, system_roles: t.List[dict]) -> dict:
+    @property
+    def role_obj(self) -> SystemRole:
         """Pass."""
-        system_role = [x for x in system_roles if x["uuid"] == self.role_id][0]
+        if not hasattr(self, "_role_obj"):
+            self._role_obj = self.HTTP.CLIENT.system_roles.get_cached_single(value=self.role_name)
+        return self._role_obj
+
+    def to_dict_old(self) -> dict:
+        """Pass."""
         obj = self.to_dict()
-        obj["role_obj"] = system_role
-        obj["role_name"] = system_role["name"]
+        obj["role_obj"] = self.role_obj.to_dict_old()
+        obj["role_name"] = self.role_obj["name"]
         obj["full_name"] = self.full_name
         return obj
+
+    @property
+    def user_source(self) -> str:
+        """Pass."""
+        return self.get_user_source(value=self)
+
+    @classmethod
+    def get_user_source(cls, value: t.Union[str, dict, "SystemUser"]) -> str:
+        """Pass."""
+
+        def add_part(part):
+            if is_str(part):
+                parts.append(part)
+
+        parts = []
+        if is_str(value):
+            value = json_load(obj=value, error=False)
+
+        if isinstance(value, str):
+            add_part(value)
+        elif isinstance(value, dict):
+            add_part(value.get("user_name"))
+            add_part(value.get("source"))
+        elif isinstance(value, cls):
+            add_part(value.user_name)
+            add_part(value.source)
+        return "/".join(parts)
 
 
 @dataclasses.dataclass

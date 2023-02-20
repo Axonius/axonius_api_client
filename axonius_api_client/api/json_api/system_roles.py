@@ -11,6 +11,7 @@ from cachetools import TTLCache, cached
 
 from .base import BaseModel, BaseSchema, BaseSchemaJson
 from .custom_fields import SchemaBool, SchemaDatetime, get_field_dc_mm
+from .data_scopes import DataScope
 
 
 def parse_cat_actions(raw: dict) -> dict:
@@ -225,21 +226,31 @@ class SystemRole(BaseModel):
         self.id = self.uuid if self.id is None and self.uuid is not None else self.id
         self.data_scope_restriction = build_data_scope_restriction(self.data_scope_restriction)
 
-    def to_dict_old(self, data_scopes: t.Optional[t.List[dict]] = None) -> dict:
+    def to_dict_old(self) -> dict:
         """Pass."""
-        data_scopes = data_scopes or []
         obj = self.to_dict()
         obj["permissions_flat"] = self.permissions_flat()
         obj["permissions_flat_descriptions"] = self.permissions_flat_descriptions()
-
-        data_scope_name = None
-        if self.data_scope_id:
-            data_scope = [x for x in data_scopes if x.uuid == self.data_scope_id]
-            if data_scope:
-                data_scope_name = data_scope[0].name
-
-        obj["data_scope_name"] = data_scope_name
+        obj["data_scope_name"] = self.data_scope_name
         return obj
+
+    @property
+    def data_scope_name(self) -> t.Optional[str]:
+        """Pass."""
+        if isinstance(self.data_scope, DataScope):
+            return self.data_scope.name
+        return None
+
+    @property
+    def data_scope(self) -> t.Optional[DataScope]:
+        """Pass."""
+        if not hasattr(self, "_data_scope"):
+            self._data_scope = None
+            if isinstance(self.data_scope_id, str) and self.data_scope_id.strip():
+                self._data_scope = self.HTTP.CLIENT.data_scopes.get_cached_single(
+                    value=self.data_scope_id
+                )
+        return self._data_scope
 
     @property
     def data_scope_id(self) -> t.Optional[str]:

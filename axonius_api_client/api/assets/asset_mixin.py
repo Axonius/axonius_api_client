@@ -944,7 +944,7 @@ class AssetMixin(ModelMixins):
             name: saved query to get count of assets from
             kwargs: supplied to :meth:`count`
         """
-        sq = self.saved_query.get_by_name(value=name)
+        sq = self.saved_query.get_by_multi(sq=name)
         kwargs["query"] = sq["view"]["query"]["filter"]
         kwargs["saved_query_id"] = sq["id"]
         return self.count(**kwargs)
@@ -1280,7 +1280,7 @@ class AssetMixin(ModelMixins):
             name: name of saved query to get assets from
             **kwargs: passed to :meth:`get`
         """
-        sq = self.saved_query.get_by_name(value=name)
+        sq = self.saved_query.get_by_multi(sq=name)
         kwargs["query"] = sq["view"]["query"]["filter"]
         kwargs["fields_manual"] = sq["view"]["fields"]
         kwargs["saved_query_id"] = sq["id"]

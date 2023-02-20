@@ -30,7 +30,8 @@ HIST_MOD = AdapterFetchHistory
 HIST_GEN = t.Generator[HIST_MOD, None, None]
 HIST_LIST = t.List[HIST_MOD]
 
-CACHE_HISTORY_FILTERS: TTLCache = TTLCache(maxsize=4096, ttl=30)
+CACHE_HISTORY_FILTERS: TTLCache = TTLCache(maxsize=4096, ttl=60)
+CACHE_GET_BASIC: TTLCache = TTLCache(maxsize=1024, ttl=60)
 
 
 class Adapters(ModelMixins):
@@ -77,9 +78,8 @@ class Adapters(ModelMixins):
             t.List[dict]: list of adapter metadata
 
         """
-        basic_data = self._get_basic()
         return [
-            adapter_node.to_dict_old(basic_data=basic_data.adapters)
+            adapter_node.to_dict_old()
             for adapter in self._get(get_clients=get_clients)
             for adapter_node in adapter.adapter_nodes
         ]
@@ -93,7 +93,7 @@ class Adapters(ModelMixins):
         Returns:
             dict: adapter basic metadata
         """
-        data = self._get_basic()
+        data = self.get_basic()
         return data.find_by_name(value=value)
 
     def get_by_name(
@@ -153,6 +153,15 @@ class Adapters(ModelMixins):
 
         err = f"No adapter named {name!r} found on instance {node_name!r}"
         raise NotFoundError(tablize_adapters(adapters=adapters, err=err))
+
+    @cached(cache=CACHE_GET_BASIC)
+    def get_basic_cached(self) -> AdaptersList:
+        """Get basic adapter data cached."""
+        return self.get_basic()
+
+    def get_basic(self) -> AdaptersList:
+        """Get basic adapter data."""
+        return self._get_basic()
 
     @cached(cache=CACHE_HISTORY_FILTERS)
     def get_fetch_history_filters(self) -> AdapterFetchHistoryFilters:
@@ -389,8 +398,6 @@ class Adapters(ModelMixins):
             ...     name="aws", config_type="specific", fetch_s3=True
             ... )
 
-            Update the discovery advanced settings
-            >>> # XXX currently broken!
 
         Args:
             name (str): name of adapter to update advanced settings of
