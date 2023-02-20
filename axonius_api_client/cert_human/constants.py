@@ -11,7 +11,7 @@ class CT_LOGS:
     modified_days_max: Optional[int] = 30
     timeout: Tuple[float, float] = (3.2, 6.2)
 
-    url: str = "https://www.gstatic.com/ct/log_list/v2/all_logs_list.json"
+    url: str = "https://www.gstatic.com/ct/log_list/v3/all_logs_list.json"
     data_file: str = "all_logs_list.json"
     path: pathlib.Path = pathlib.Path(__file__).parent / data_file
     request_args: dict = {}
