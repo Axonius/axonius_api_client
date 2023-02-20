@@ -2,5 +2,5 @@
 pytest
 pytest-cov
 pytest-httpbin
-werkzeug==2.0.3
+werkzeug==2.2.3
 flaky

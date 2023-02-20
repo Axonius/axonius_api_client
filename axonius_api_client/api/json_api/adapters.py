@@ -1287,6 +1287,7 @@ class AdapterNodeCnx(BaseModel):
     error: t.Optional[str] = ""
     tunnel_id: t.Optional[str] = None
     did_notify_error: t.Optional[bool] = None
+    note: t.Optional[t.Any] = None
     document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     def __post_init__(self):
@@ -1761,6 +1762,7 @@ class Cnx(BaseModel):
     failed_connections_limit_exceeded: t.Optional[int] = None
     adapter_name_raw: t.ClassVar[str] = None
     connection_label: t.ClassVar[str] = None
+    note: t.Optional[t.Any] = None
     PARENT: t.ClassVar["Cnxs"] = None
     HTTP: t.ClassVar[Http] = None
     document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
