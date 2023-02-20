@@ -1287,6 +1287,7 @@ class AdapterNodeCnx(BaseModel):
     error: t.Optional[str] = ""
     tunnel_id: t.Optional[str] = None
     did_notify_error: t.Optional[bool] = None
+    note: t.Optional[t.Any] = None
     document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     def __post_init__(self):
