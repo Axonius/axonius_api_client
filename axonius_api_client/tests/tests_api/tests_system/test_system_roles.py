@@ -2,12 +2,11 @@
 """Test suite."""
 import pytest
 from axonius_api_client.api import json_api
-from axonius_api_client.exceptions import ApiError, NotFoundError
+from axonius_api_client.exceptions import ApiError, NotFoundError, ResponseNotOk
 from axonius_api_client.tools import listify
 
 
 class FixtureData:
-
     name = "badwolf"
     name_update = "badwolfxxx"
     names = [name, name_update]
@@ -35,66 +34,15 @@ class TestSystemRolesPrivate(SystemRoles):
 
     def test_add_update_delete(self, apiobj):
         self.cleanup_roles(apiobj=apiobj, value=FixtureData.names)
-        role = apiobj._add(
-            name=FixtureData.name,
-            permissions={
-                "adapters": {
-                    "connections": {"delete": True, "post": True, "put": True, "terminate": True},
-                    "get": True,
-                    "put": True,
-                },
-                "api_access": {"api_access_enabled": True, "reset_api_key": True},
-                "compliance": {"exclusions_and_comments": {"put": True}, "get": True, "put": True},
-                "dashboard": {
-                    "charts": {"delete": True, "post": True, "put": True},
-                    "get": True,
-                    "spaces": {"delete": True, "post": True, "refresh": True},
-                },
-                "devices_assets": {
-                    "get": True,
-                    "put": True,
-                    "saved_queries": {"delete": True, "post": True, "put": True, "run": True},
-                },
-                "enforcements": {
-                    "delete": True,
-                    "duplicate": True,
-                    "get": True,
-                    "post": True,
-                    "put": True,
-                    "run": True,
-                    "tasks": {"get": True, "terminate": True},
-                },
-                "general_actions": {"export_csv": True},
-                "instances": {"get": True, "put": True, "run": True},
-                "queries_history": {"get": True},
-                "reports": {
-                    "deactivate": True,
-                    "delete": True,
-                    "get": True,
-                    "post": True,
-                    "private": True,
-                    "put": True,
-                },
-                "settings": {
-                    "audit": {"get": True},
-                    "data_scope": True,
-                    "get": True,
-                    "get_users_and_roles": True,
-                    "manage_admin_users": True,
-                    "manage_service_accounts": True,
-                    "notifications": {"get": True},
-                    "put": True,
-                    "roles": {"delete": True, "post": True, "put": True},
-                    "run_manual_discovery": True,
-                    "users": {"delete": True, "post": True, "put": True},
-                },
-                "users_assets": {
-                    "get": True,
-                    "put": True,
-                    "saved_queries": {"delete": True, "post": True, "put": True, "run": True},
-                },
-            },
-        )
+        viewer = [x for x in apiobj._get() if x.name == "Viewer"][0]
+        try:
+            role = apiobj._add(
+                name=FixtureData.name,
+                permissions=viewer.permissions,
+            )
+        except ResponseNotOk:
+            role = [x for x in apiobj._get() if x.name == FixtureData.name][0]
+
         assert isinstance(role, (json_api.system_roles.SystemRole,))
 
         assert role.name == FixtureData.name
@@ -120,7 +68,11 @@ class TestSystemRolesPublic(SystemRoles):
     def test_add(self, apiobj):
         self.cleanup_roles(apiobj=apiobj, value=FixtureData.name)
 
-        role = apiobj.add(name=FixtureData.name)
+        try:
+            role = apiobj.add(name=FixtureData.name)
+        except ResponseNotOk:
+            role = apiobj.get_by_name(name=FixtureData.name)
+
         assert isinstance(role, dict) and role
         assert role["name"] == FixtureData.name
         self.cleanup_roles(apiobj=apiobj, value=FixtureData.name)
@@ -128,16 +80,24 @@ class TestSystemRolesPublic(SystemRoles):
     def test_set_name(self, apiobj):
         self.cleanup_roles(apiobj=apiobj, value=FixtureData.names)
 
-        apiobj.add(name=FixtureData.name)
-        updated = apiobj.set_name(name=FixtureData.name, new_name=FixtureData.name_update)
+        try:
+            role = apiobj.add(name=FixtureData.name)
+        except ResponseNotOk:
+            role = apiobj.get_by_name(name=FixtureData.name)
+
+        updated = apiobj.set_name(name=role["name"], new_name=FixtureData.name_update)
         assert updated["name"] == FixtureData.name_update
         self.cleanup_roles(apiobj=apiobj, value=FixtureData.names)
 
     def test_set_perms(self, apiobj):
         self.cleanup_roles(apiobj=apiobj, value=FixtureData.name)
 
-        apiobj.add(name=FixtureData.name)
-        updated = apiobj.set_perms(name=FixtureData.name, users_assets="all", devices_assets="all")
+        try:
+            role = apiobj.add(name=FixtureData.name)
+        except ResponseNotOk:
+            role = apiobj.get_by_name(name=FixtureData.name)
+
+        updated = apiobj.set_perms(name=role["name"], users_assets="all", devices_assets="all")
         assert updated["permissions"]["adapters"]["get"] is False
         assert updated["permissions"]["users_assets"]["get"] is True
         assert updated["permissions"]["devices_assets"]["get"] is True
@@ -150,13 +110,9 @@ class TestSystemRolesPublic(SystemRoles):
         self.cleanup_roles(apiobj=apiobj, value=FixtureData.name)
 
     def test_add_already_exist(self, apiobj):
-        self.cleanup_roles(apiobj=apiobj, value=FixtureData.name)
-        apiobj.add(name=FixtureData.name)
-
+        existing = apiobj._get()[-1]
         with pytest.raises(ApiError):
-            apiobj.add(name=FixtureData.name)
-
-        self.cleanup_roles(apiobj=apiobj, value=FixtureData.name)
+            apiobj.add(name=existing.name)
 
     def test_get_by_uuid(self, apiobj):
         role = [x for x in apiobj.get()][0]

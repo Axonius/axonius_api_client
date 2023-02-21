@@ -23,7 +23,6 @@ from ...utils import get_schema, random_string
 
 
 class FixtureData:
-
     name = "badwolf torked"
     name_asset_scope = "badwolf asset scope"
     fields = [
@@ -914,6 +913,11 @@ def validate_sq(asset):
             "pic_name",
             "role_id",
             "salt",
+            "last_used",
+            "email",
+            "department",
+            "title",
+            "description",
         ]
         for updated_str_key in updated_str_keys_opt:
             val = updated_by.pop(updated_str_key, None)

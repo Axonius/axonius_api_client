@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 """Test suite for axonius_api_client.tools."""
 import pytest
-
 from axonius_api_client.cli import cli
 
+from ...tests_api.tests_adapters.test_cnx import skip_if_no_adapter
 from ...utils import get_cnx_working, load_clirunner
 from .test_cnx_base import CnxBase
 
@@ -40,6 +40,7 @@ class TestGrpCnxCmdTestDirect(CnxBase):
             assert "Connection tested with no errors" in result.stderr
 
     def test_failure(self, api_adapters, request, monkeypatch):
+        skip_if_no_adapter(api_adapters, "tanium")
         runner = load_clirunner(request, monkeypatch)
         with runner.isolated_filesystem():
             adapter_name = "tanium"
