@@ -268,7 +268,7 @@ class Docs:
   }}
 ]
 """
-    EX_FIELDS: str = "os.distribution,os.os_str,aws:aws_device_type"
+    EX_FIELDS: str = "os.distribution,os.os_str,active_directory:ad_password_last_set"
     GUI_PAGE_SIZES_STR = " or ".join([str(x) for x in GUI_PAGE_SIZES]) + " (default 20 if empty)"
     OPT_BOOL = "Optional: True or False (default False if empty)"
     EX_CSV: str = f"""

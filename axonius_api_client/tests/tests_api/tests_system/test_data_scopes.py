@@ -7,7 +7,6 @@ from axonius_api_client.tools import listify
 
 
 class FixtureData:
-
     name = "badwolf data scope"
     name_update = f"{name} UPDATED"
     names = [name, name_update]
@@ -83,6 +82,9 @@ class DataScopeFixtures:
 
     @pytest.fixture(scope="class")
     def f_data_scope(self, api_data_scopes, f_asset_scope_devices1, f_asset_scope_users1):
+        if not api_data_scopes.is_feature_enabled:
+            pytest.skip("Data Scopes Feature Flag not enabled")
+
         yield from self.create_data_scope(
             apiobj=api_data_scopes,
             name=FixtureData.name,
@@ -92,24 +94,36 @@ class DataScopeFixtures:
 
     @pytest.fixture(scope="class")
     def f_asset_scope_devices1(self, api_data_scopes):
+        if not api_data_scopes.is_feature_enabled:
+            pytest.skip("Data Scopes Feature Flag not enabled")
+
         yield from self.create_asset_scope(
             apiasset=api_data_scopes.devices, name=FixtureData.asset_scope_devices1
         )
 
     @pytest.fixture(scope="class")
     def f_asset_scope_devices2(self, api_data_scopes):
+        if not api_data_scopes.is_feature_enabled:
+            pytest.skip("Data Scopes Feature Flag not enabled")
+
         yield from self.create_asset_scope(
             apiasset=api_data_scopes.devices, name=FixtureData.asset_scope_devices2
         )
 
     @pytest.fixture(scope="class")
     def f_asset_scope_users1(self, api_data_scopes):
+        if not api_data_scopes.is_feature_enabled:
+            pytest.skip("Data Scopes Feature Flag not enabled")
+
         yield from self.create_asset_scope(
             apiasset=api_data_scopes.users, name=FixtureData.asset_scope_users1
         )
 
     @pytest.fixture(scope="class")
     def f_asset_scope_users2(self, api_data_scopes):
+        if not api_data_scopes.is_feature_enabled:
+            pytest.skip("Data Scopes Feature Flag not enabled")
+
         yield from self.create_asset_scope(
             apiasset=api_data_scopes.users, name=FixtureData.asset_scope_users2
         )

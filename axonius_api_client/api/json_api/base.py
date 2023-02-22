@@ -560,9 +560,6 @@ class BaseModel(dataclasses_json.DataClassJsonMixin, BaseCommon):
                 ]
                 msg = "\n".join(msgs)
                 LOGGER.warning(msg)
-                # import pdb
-
-                # pdb.set_trace(header=msg)
                 if get_env_extra_warn():
                     warnings.warn(message=msg, category=ExtraAttributeWarning)
 

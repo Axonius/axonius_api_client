@@ -18,6 +18,18 @@ from ...meta import CSV_FILECONTENT_STR, CsvData, CsvKeys, TanData, TanKeys
 from ...utils import get_cnx_existing, get_cnx_working
 
 
+def skip_if_no_adapter(api_adapters, adapter):
+    if not adapter.endswith("_adapter"):
+        adapter = f"{adapter}_adapter"
+
+    adapters = api_adapters._get()
+    name_map = {x.id: x for x in adapters}
+    found = name_map.get(adapter)
+    if not found:
+        pytest.skip(f"Adapter {adapter!r} not found in {list(name_map)}")
+    return found
+
+
 """
 cnx errors
  adapters.cnx._delete(
@@ -126,6 +138,8 @@ class TestCnxBase:
 
     @pytest.fixture(scope="function")
     def csv_cnx(self, apiobj):
+        skip_if_no_adapter(apiobj, "csv")
+
         uploaded_file = apiobj.file_upload(
             name=CsvData.adapter_name_raw,
             field_name=CsvData.file_field_name,
@@ -167,6 +181,7 @@ class TestCnxBase:
 
     @pytest.fixture(scope="function")
     def csv_cnx_tunnel(self, apiobj, tunnel_count_check):
+        skip_if_no_adapter(apiobj, "csv")
         tunnel = apiobj.instances.get_tunnel_default()
 
         uploaded_file = apiobj.file_upload(
@@ -217,6 +232,7 @@ class TestCnxPrivate(TestCnxBase):
 @pytest.mark.tunneltests
 class TestCnxTunnel(TestCnxBase):
     def test_get_by_adapter_tunnel(self, apiobj, csv_cnx_tunnel):
+        skip_if_no_adapter(apiobj, csv_cnx_tunnel.adapter_name_raw)
         data = apiobj.cnx.get_by_adapter(
             adapter_name=csv_cnx_tunnel.adapter_name_raw,
             adapter_node=csv_cnx_tunnel.node_name,
@@ -234,6 +250,7 @@ class TestCnxTunnel(TestCnxBase):
         assert not data
 
     def test_add_remove(self, apiobj, tunnel_count_check):
+        skip_if_no_adapter(apiobj, TanData.adapter_name)
         tunnel = apiobj.instances.get_tunnel_default()
 
         with pytest.raises(CnxAddError) as exc:
@@ -252,6 +269,7 @@ class TestCnxTunnel(TestCnxBase):
 
 class TestCnxPublic(TestCnxBase):
     def test_add_update_fail(self, apiobj):
+        skip_if_no_adapter(apiobj, TanData.adapter_name)
         with pytest.raises(CnxAddError) as exc:
             apiobj.cnx.add(adapter_name=TanData.adapter_name, **TanData.config_bad)
 
@@ -281,7 +299,6 @@ class TestCnxPublic(TestCnxBase):
             apiobj.cnx.update_cnx(cnx_update=csv_cnx.to_dict_old())
 
     def test_update_cnx(self, apiobj, csv_cnx):
-
         config_old = csv_cnx.client_config
         value_old = config_old[CsvKeys.verify_ssl]
         value_new = not value_old
@@ -329,6 +346,7 @@ class TestCnxPublic(TestCnxBase):
         assert reverted["connection_label"] == old_value
 
     def test_get_by_adapter(self, apiobj):
+        skip_if_no_adapter(apiobj, "csv")
         cnxs = apiobj.cnx.get_by_adapter(adapter_name=CSV_ADAPTER)
         assert isinstance(cnxs, list)
         for cnx in cnxs:
@@ -340,6 +358,7 @@ class TestCnxPublic(TestCnxBase):
             apiobj.cnx.get_by_adapter(adapter_name="badwolf")
 
     def test_get_by_adapter_badnode(self, apiobj):
+        skip_if_no_adapter(apiobj, "csv")
         with pytest.raises(NotFoundError):
             apiobj.cnx.get_by_adapter(adapter_name=CSV_ADAPTER, adapter_node="badwolf")
 
@@ -353,8 +372,9 @@ class TestCnxPublic(TestCnxBase):
         assert cnx == found
 
     def test_get_by_uuid_fail(self, apiobj):
+        skip_if_no_adapter(apiobj, "csv")
         with pytest.raises(NotFoundError):
-            apiobj.cnx.get_by_uuid(cnx_uuid="badwolf", adapter_name="active_directory")
+            apiobj.cnx.get_by_uuid(cnx_uuid="badwolf", adapter_name="csv")
 
     def test_get_by_id(self, apiobj):
         cnx = get_cnx_existing(apiobj)
@@ -366,8 +386,9 @@ class TestCnxPublic(TestCnxBase):
         assert cnx == found
 
     def test_get_by_label_fail(self, apiobj):
+        skip_if_no_adapter(apiobj, "csv")
         with pytest.raises(NotFoundError):
-            apiobj.cnx.get_by_label(value="badwolf", adapter_name="active_directory")
+            apiobj.cnx.get_by_label(value="badwolf", adapter_name="csv")
 
     def test_get_by_label(self, apiobj):
         cnx = get_cnx_existing(apiobj)
@@ -400,18 +421,15 @@ class TestCnxPublic(TestCnxBase):
         assert result == exp
 
     def test_test_fail(self, apiobj):
+        skip_if_no_adapter(apiobj, TanData.adapter_name)
         mpass = "badwolf"
         with pytest.raises(CnxTestError):
             apiobj.cnx.test(
-                adapter_name="tanium",
+                adapter_name=TanData.adapter_name,
                 domain=mpass,
                 username=mpass,
                 password=mpass,
             )
-
-    # def test_test_fail_no_domain(self, apiobj):
-    #     with pytest.raises(ConfigRequired):
-    #         apiobj.cnx.test(adapter_name="tanium", username="x")
 
     def test_cb_file_upload_fail(self, apiobj, csv_file_path, monkeypatch):
         mock_return = {"filename": "badwolf", "uuid": "badwolf"}
@@ -521,6 +539,7 @@ class TestCnxPublic(TestCnxBase):
             )
 
     def test_add_remove(self, apiobj, csv_file_path):
+        skip_if_no_adapter(apiobj, "csv")
         config = {
             "user_id": "badwolf",
             "file_path": csv_file_path,
@@ -545,6 +564,7 @@ class TestCnxPublic(TestCnxBase):
             )
 
     def test_add_remove_path(self, apiobj, tmp_path):
+        skip_if_no_adapter(apiobj, "csv")
         file_path = tmp_path / "test.csv"
         file_path.write_text(CSV_FILECONTENT_STR)
         config = {
@@ -572,6 +592,7 @@ class TestCnxPublic(TestCnxBase):
             )
 
     def test_add_remove_path_notexists(self, apiobj, tmp_path):
+        skip_if_no_adapter(apiobj, "csv")
         file_path = tmp_path / "badtest.csv"
         config = {
             "user_id": "badwolf",
@@ -581,6 +602,7 @@ class TestCnxPublic(TestCnxBase):
             apiobj.cnx.add(adapter_name=CSV_ADAPTER, **config)
 
     def test_add_remove_error(self, apiobj, csv_file_path_broken):
+        skip_if_no_adapter(apiobj, "csv")
         config = {
             "user_id": "badwolf",
             "file_path": csv_file_path_broken,
