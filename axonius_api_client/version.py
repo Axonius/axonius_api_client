@@ -36,6 +36,6 @@ __license__ = "MIT"
 LICENSE: str = __license__
 """License of package."""
 
-__copyright__ = "Copyright Axonius 2022"
+__copyright__ = "Copyright Axonius 2023"
 COPYRIGHT: str = __copyright__
 """Copyright of package."""
