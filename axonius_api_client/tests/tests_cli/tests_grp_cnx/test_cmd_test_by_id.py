@@ -3,6 +3,7 @@
 from axonius_api_client.cli import cli
 from axonius_api_client.exceptions import CnxAddError
 from axonius_api_client.tools import json_load
+from ...tests_api.tests_adapters.test_cnx import skip_if_no_adapter
 
 from ...utils import get_cnx_working, load_clirunner
 from .test_cnx_base import CnxTools
@@ -40,6 +41,7 @@ class TestGrpCnxCmdTestById(CnxTools):
             assert isinstance(result_json, dict) and result_json
 
     def test_failure(self, api_adapters, request, monkeypatch):
+        skip_if_no_adapter(api_adapters, "tanium")
         try:
             api_adapters.cnx.add(adapter_name="tanium", username="x", password="x", domain="x")
         except CnxAddError as exc:

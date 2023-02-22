@@ -270,6 +270,10 @@ class SetBasicSchema(BaseSchemaJson):
     action_names = marshmallow_jsonapi.fields.List(marshmallow_jsonapi.fields.Str())
     history = marshmallow.fields.Dict(allow_none=True, load_default={}, dump_default={})
     last_run_status = marshmallow_jsonapi.fields.Str(allow_none=True)
+    folder_id = marshmallow_jsonapi.fields.Str(
+        load_default=None, dump_default=None, allow_none=True
+    )
+    next_run = SchemaDatetime(allow_none=True)
 
     class Meta:
         """Pass."""
@@ -315,6 +319,10 @@ class SetBasic(BaseModel):
     document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
     history: t.Optional[dict] = dataclasses.field(default_factory=dict)
     last_run_status: t.Optional[str] = None
+    folder_id: t.Optional[str] = None
+    next_run: t.Optional[datetime.datetime] = get_field_dc_mm(
+        mm_field=SchemaDatetime(allow_none=True, load_default=None, dump_default=None), default=None
+    )
     document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     @property
@@ -440,6 +448,9 @@ class SetFullSchema(BaseSchemaJson):
     triggers = marshmallow_jsonapi.fields.List(marshmallow_jsonapi.fields.Dict())
     description = marshmallow_jsonapi.fields.Str()
     settings = marshmallow_jsonapi.fields.Dict(load_default={}, dump_default={})
+    folder_id = marshmallow_jsonapi.fields.Str(
+        load_default=None, dump_default=None, allow_none=True
+    )
 
     class Meta:
         """Pass."""
@@ -463,6 +474,7 @@ class SetFull(BaseModel):
     triggers: t.List[dict]
     description: t.Optional[str] = ""
     settings: t.Optional[dict] = dataclasses.field(default_factory=dict)
+    folder_id: t.Optional[str] = None
     document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     BASIC: t.ClassVar[SetBasic] = None
@@ -1022,6 +1034,9 @@ class UpdateResponseSchema(BaseSchemaJson):
     last_updated = SchemaDatetime(allow_none=True)
     description = marshmallow_jsonapi.fields.Str()
     settings = marshmallow_jsonapi.fields.Dict(load_default={}, dump_default={})
+    folder_id = marshmallow_jsonapi.fields.Str(
+        load_default=None, dump_default=None, allow_none=True
+    )
 
     class Meta:
         """Pass."""
@@ -1047,6 +1062,7 @@ class UpdateResponse(BaseModel):
         mm_field=SchemaDatetime(allow_none=True, load_default=None, dump_default=None), default=None
     )
     description: t.Optional[str] = ""
+    folder_id: t.Optional[str] = None
     settings: t.Optional[dict] = dataclasses.field(default_factory=dict)
     document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 

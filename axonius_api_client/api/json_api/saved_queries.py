@@ -126,7 +126,8 @@ class SavedQuerySchema(BaseSchemaJson):
     description = marshmallow_jsonapi.fields.Str(load_default="", dump_default="", allow_none=True)
     view = marshmallow_jsonapi.fields.Dict(allow_none=True, load_default={}, dump_default={})
     tags = marshmallow_jsonapi.fields.List(marshmallow_jsonapi.fields.Str())
-    predefined = SchemaBool(load_default=False, dump_default=False)
+    # PBUG: An null predefined can still come back from the server.
+    predefined = SchemaBool(allow_none=True, load_default=False, dump_default=False)
     date_fetched = marshmallow_jsonapi.fields.Str(
         allow_none=True, load_default=None, dump_default=None
     )
@@ -364,7 +365,7 @@ class SavedQuery(BaseModel, SavedQueryMixins):
     private: bool = dataclasses.field(default=False, metadata={"update": True})
     description: t.Optional[str] = dataclasses.field(default="", metadata={"update": True})
     tags: t.List[str] = dataclasses.field(default_factory=list, metadata={"update": True})
-    predefined: bool = dataclasses.field(default=False, metadata={"update": False})
+    predefined: t.Optional[bool] = dataclasses.field(default=False, metadata={"update": False})
     is_asset_scope_query_ready: bool = dataclasses.field(default=False, metadata={"update": False})
     is_referenced: bool = dataclasses.field(default=False, metadata={"update": False})
     folder_id: str = dataclasses.field(default="", metadata={"update": True})
