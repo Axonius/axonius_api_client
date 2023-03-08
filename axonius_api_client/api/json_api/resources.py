@@ -8,7 +8,7 @@ import marshmallow_jsonapi
 
 from ...constants.api import MAX_PAGE_SIZE, PAGE_SIZE
 from ...tools import parse_int_min_max
-from .base import BaseModel, BaseSchema, BaseSchemaJson
+from .base import BaseModel, BaseSchemaJson
 from .custom_fields import SchemaBool
 
 
@@ -32,7 +32,7 @@ class PaginationRequest(BaseModel):
     """Number of rows to return"""
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[type]:
         """Pass."""
         return None
 
@@ -82,7 +82,7 @@ class PageSortRequest(BaseModel):
         self.page = self.page if self.page else PaginationRequest()
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[type]:
         """Pass."""
         return None
 
@@ -97,7 +97,7 @@ class ResourcesGetSchema(BaseSchemaJson):
     get_metadata = SchemaBool(load_default=True, dump_default=True)
 
     @staticmethod
-    def get_model_cls() -> type:
+    def get_model_cls() -> t.Optional[type]:
         """Pass."""
         return ResourcesGet
 
@@ -139,7 +139,7 @@ class ResourcesGet(PageSortRequest):
     )
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[type]:
         """Pass."""
         return ResourcesGetSchema
 
@@ -151,6 +151,6 @@ class ResourceDelete(BaseModel):
     uuid: str
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[type]:
         """Pass."""
         return None

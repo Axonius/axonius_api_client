@@ -5,7 +5,7 @@ import typing as t
 
 import marshmallow_jsonapi
 
-from .base import BaseModel, BaseSchema, BaseSchemaJson
+from .base import BaseModel, BaseSchemaJson
 from .custom_fields import SchemaBool, get_field_str_req
 
 
@@ -25,7 +25,7 @@ class SignupRequestSchema(BaseSchemaJson):
         type_ = "signup_schema"
 
     @staticmethod
-    def get_model_cls() -> type:
+    def get_model_cls() -> t.Optional[type]:
         """Pass."""
         return SignupRequest
 
@@ -38,7 +38,7 @@ class SystemStatusSchema(BaseSchemaJson):
     status_code = marshmallow_jsonapi.fields.Int()
 
     @staticmethod
-    def get_model_cls() -> type:
+    def get_model_cls() -> t.Optional[type]:
         """Pass."""
         return SystemStatus
 
@@ -65,7 +65,7 @@ class SignupRequest(BaseModel):
     )
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[type]:
         """Pass."""
         return SignupRequestSchema
 
@@ -82,7 +82,7 @@ class SignupResponseSchema(BaseSchemaJson):
         type_ = "signup_response_schema"
 
     @staticmethod
-    def get_model_cls() -> type:
+    def get_model_cls() -> t.Optional[type]:
         """Pass."""
         return SignupResponse
 
@@ -96,7 +96,7 @@ class SignupResponse(BaseModel):
     document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[type]:
         """Pass."""
         return SignupResponseSchema
 
@@ -111,7 +111,7 @@ class SystemStatus(BaseModel):
     document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[type]:
         """Pass."""
         return SystemStatusSchema
 

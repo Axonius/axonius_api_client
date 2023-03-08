@@ -2,6 +2,8 @@
 """Constants for API models."""
 from typing import List
 
+from .general import ECHO
+
 USE_CA_PATH: str = " > ".join(
     ["Settings", "Certificate Settings", "SSL Trust & CA Settings", "Use custom CA certificate"]
 )
@@ -56,3 +58,38 @@ AS_DATACLASS: bool = False
 
 BARRIER: str = "-" * 15
 ASSET_TMPL: str = "{k}: {v}"
+# ALL_ID: str = "all"
+
+
+class FolderDefaults:
+    """Pass."""
+
+    all_objects: bool = False
+    confirm: bool = False
+    create: bool = False
+    create_path: bool = True
+    create_copy: bool = True
+    create_move: bool = True
+    echo: bool = ECHO
+    echo_resolve: bool = False
+    echo_resolve_action: bool = True
+    error_no_matches: bool = True
+    error_no_objects: bool = True
+    error_unmatched: bool = True
+    full_objects: bool = False
+    full_objects_search: bool = True
+    ignore_case: bool = True
+    include_details: bool = False
+    include_objects: bool = False
+    include_objects_delete: bool = False
+    include_subfolders: bool = False
+    copy_prefix: str = "Copy of"
+    pattern_prefix: str = "~"
+    prompt: bool = False
+    prompt_default: bool = False
+    query_type: str = "devices"
+    recursive: bool = False
+    refresh: int = 60
+    refresh_resolve: bool = True
+    refresh_delete: bool = True
+    sep: str = "/"

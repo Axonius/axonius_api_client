@@ -9,15 +9,34 @@ import typing as t
 import marshmallow
 import marshmallow_jsonapi
 
-from ...constants.api import GUI_PAGE_SIZES
-from ...constants.ctypes import PatternLikeListy
-from ...exceptions import ApiAttributeTypeError, ApiError, NotFoundError
+from ...constants.api import GUI_PAGE_SIZES, FolderDefaults
+from ...constants.ctypes import FolderBase, PatternLikeListy, Refreshables
+from ...data import BaseEnum
+from ...exceptions import ApiAttributeTypeError, ApiError, NotAllowedError, NotFoundError
 from ...parsers.tables import tablize
-from ...tools import coerce_bool, coerce_int, dt_now, dt_parse, listify
-from .base import BaseModel, BaseSchema, BaseSchemaJson
+from ...tools import (
+    check_confirm_prompt,
+    coerce_bool,
+    coerce_int,
+    dt_now,
+    dt_parse,
+    is_str,
+    listify,
+    parse_value_copy,
+)
+from .base import BaseModel, BaseSchemaJson
 from .custom_fields import SchemaBool, SchemaDatetime, UnionField, get_schema_dc
+from .generic import Metadata
 from .nested_access import Access, AccessSchema
 from .resources import PaginationRequest, PaginationSchema, ResourcesGet, ResourcesGetSchema
+
+
+class QueryTypes(BaseEnum):
+    """Pass."""
+
+    devices: str = "devices"
+    users: str = "users"
+    vulnerabilities: str = "vulnerabilities"
 
 
 class SavedQueryGetSchema(ResourcesGetSchema):
@@ -31,7 +50,7 @@ class SavedQueryGetSchema(ResourcesGetSchema):
     include_usage = SchemaBool(load_default=True, dump_default=True)
 
     @staticmethod
-    def get_model_cls() -> type:
+    def get_model_cls() -> t.Optional[type]:
         """Pass."""
         return SavedQueryGet
 
@@ -69,7 +88,7 @@ class QueryHistorySchema(BaseSchemaJson):
         type_ = "entities_queries_history_response_schema"
 
     @staticmethod
-    def get_model_cls() -> type:
+    def get_model_cls() -> t.Optional[type]:
         """Pass."""
         return QueryHistory
 
@@ -101,7 +120,7 @@ class QueryHistoryRequestSchema(BaseSchemaJson):
     filter = marshmallow_jsonapi.fields.Str(allow_none=True, load_default="", dump_default="")
 
     @staticmethod
-    def get_model_cls() -> type:
+    def get_model_cls() -> t.Optional[type]:
         """Pass."""
         return QueryHistoryRequest
 
@@ -158,7 +177,7 @@ class SavedQuerySchema(BaseSchemaJson):
     )
 
     @staticmethod
-    def get_model_cls() -> type:
+    def get_model_cls() -> t.Optional[type]:
         """Pass."""
         return SavedQuery
 
@@ -186,7 +205,7 @@ class SavedQueryCreateSchema(BaseSchemaJson):
     folder_id = marshmallow_jsonapi.fields.Str(load_default="", dump_default="")
 
     @staticmethod
-    def get_model_cls() -> type:
+    def get_model_cls() -> t.Optional[type]:
         """Pass."""
         return SavedQueryCreate
 
@@ -198,6 +217,150 @@ class SavedQueryCreateSchema(BaseSchemaJson):
 
 class SavedQueryMixins:
     """Pass."""
+
+    @property
+    def folder(self) -> FolderBase:
+        """Pass."""
+        return self.HTTP.CLIENT.folders.queries.get_cached(path=self.folder_id)
+
+    @property
+    def folder_path(self) -> str:
+        """Pass."""
+        return self.folder.path
+
+    # XXX
+    def move(
+        self,
+        path: t.Union[str, FolderBase],
+        create: bool = FolderDefaults.create_move,
+        # XXX ESET NEEDS THIS BACK TOO
+        refresh: Refreshables = FolderDefaults.refresh_resolve,
+        echo: bool = FolderDefaults.echo,
+    ) -> "SavedQuery":
+        """Pass."""
+
+        def reason():
+            return f"Move '{self.folder_path}/@{self.name}' to {path!r}/@{self.name}"
+
+        self._check_update_ok(reason=reason())
+        path: FolderBase = self.folder.root_folders.find(
+            value=path,
+            create=create,
+            refresh=refresh,
+            echo=echo,
+            minimum_depth=1,
+            reason=reason,
+        )
+        self.folder.spew(f"Start {reason()}", echo=echo)
+        self.folder_id = path.id
+        return self.HTTP.CLIENT.devices.saved_query._update_handler(sq=self, as_dataclass=True)
+
+    # XXX ALMOST GOOD ENOUGH
+    def copy(
+        self,
+        path: t.Optional[t.Union[str, FolderBase]] = None,
+        create: bool = FolderDefaults.create_path,
+        name: t.Optional[str] = None,
+        copy_prefix: str = FolderDefaults.copy_prefix,
+        echo: bool = FolderDefaults.echo,
+        refresh: Refreshables = FolderDefaults.refresh_resolve,
+        folder_id: t.Optional[str] = None,
+        private: bool = False,
+        asset_scope: bool = False,
+    ) -> "SavedQuery":
+        """Pass."""
+        from ..assets.asset_mixin import AssetMixin
+
+        private = coerce_bool(private)
+        asset_scope = coerce_bool(asset_scope)
+
+        asset_type: str = self.module
+        asset_api: AssetMixin = getattr(self.HTTP.CLIENT, asset_type)
+        names: t.List[str] = [
+            x.name
+            for x in asset_api.saved_query.get(
+                as_dataclass=True, include_usage=False, get_view_data=False
+            )
+        ]
+        name: str = parse_value_copy(
+            default=self.name, value=name, copy_prefix=copy_prefix, existing=names
+        )
+
+        root: FolderBase = self.folder.root_folders.refresh(value=refresh)
+
+        fallback: t.Optional[FolderBase] = None
+        if asset_scope:
+            self.HTTP.CLIENT.data_scopes.check_feature_enabled()
+            fallback: t.Optional[FolderBase] = root.path_asset_scope
+
+        reason: str = f"Copy '{self.folder_path}/@{self.name}' to @{name!r}"
+        self.folder.spew(f"Start {reason}", echo=echo)
+        default: FolderBase = None if self.folder.read_only else self.folder
+        path: FolderBase = root.resolve_folder(
+            path=path,
+            create=create,
+            echo=echo,
+            reason=reason,
+            default=default,
+            folder_id=folder_id,
+            private=private,
+            asset_scope=asset_scope,
+            fallback=fallback,
+        )
+
+        create_obj: SavedQueryCreate = SavedQueryCreate(
+            name=name,
+            view=self.view,
+            description=self.description,
+            always_cached=self.always_cached,
+            asset_scope=asset_scope,
+            private=private,
+            tags=self.tags,
+            access=self.access,
+            folder_id=path.id,
+        )
+        create_response_obj = asset_api.saved_query._add_from_dataclass(obj=create_obj)
+        create_response_obj.copied_from_obj = self
+        create_response_obj.create_obj = create_obj
+        self.create_response_obj = create_response_obj
+        created_obj: SavedQuery = asset_api.saved_query.get_by_uuid(
+            value=self.create_response_obj.id, as_dataclass=True
+        )
+        created_obj.create_response_obj = create_response_obj
+        return created_obj
+
+    def _check_update_ok(self, reason: str = ""):
+        """Pass."""
+        errs: t.List[str] = []
+        if self.predefined is True:
+            errs.append("Saved Query is predefined")
+
+        if errs:
+            raise NotAllowedError([f"Unable to {reason}", *errs, "", "While in object:", f"{self}"])
+
+    # XXX
+    def delete(
+        self,
+        confirm: bool = FolderDefaults.confirm,
+        echo: bool = FolderDefaults.echo,  # XXX NYET BRO
+        prompt: bool = FolderDefaults.prompt,
+        prompt_default: bool = FolderDefaults.prompt_default,
+    ) -> Metadata:
+        """Pass."""
+        reason: str = f"Delete '{self.folder_path}/@{self.name}'"
+        self.folder.spew(f"Start {reason}", echo=echo)
+        self._check_update_ok(reason=reason)
+        check_confirm_prompt(
+            reason=reason,
+            src=self,
+            value=confirm,
+            prompt=prompt,
+            default=prompt_default,
+            do_echo=echo,
+        )
+        self.delete_response = self.HTTP.CLIENT.devices.saved_query._delete(uuid=self.uuid)
+        self.delete_response.deleted_object = self
+        return self.delete_response
 
     @classmethod
     def create_from_other(cls, other: "SavedQueryMixins") -> "SavedQueryCreate":
@@ -340,8 +503,21 @@ class SavedQueryMixins:
 
         self.view["pageSize"] = value
 
+    def update_description(
+        self, value: str, append: bool = False, as_dataclass: bool = True
+    ) -> t.Union["SavedQuery", dict]:
+        """Pass."""
+        if append and is_str(self.description):
+            value = f"{self.description}{value}"
+        reason: str = "update description to {value}"
+        self._check_update_ok(reason=reason)
+        self.set_description(value=value)
+        apiobj = getattr(self.HTTP.CLIENT, self.module)
+        response = apiobj.saved_query._update_handler(sq=self, as_dataclass=as_dataclass)
+        return response
 
-@dataclasses.dataclass
+
+@dataclasses.dataclass(repr=False)
 class SavedQuery(BaseModel, SavedQueryMixins):
     """Pass."""
 
@@ -386,10 +562,16 @@ class SavedQuery(BaseModel, SavedQueryMixins):
     def __post_init__(self):
         """Pass."""
         self.uuid = self.uuid or self.id
-        self.folder_id = self.folder_id or ""
+        if not is_str(self.folder_id):
+            self.folder_id = ""
+
+    @classmethod
+    def get_tree_type(cls) -> str:
+        """Get the name to use for objects in tree outputs."""
+        return "SavedQuery"
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[type]:
         """Pass."""
         return SavedQuerySchema
 
@@ -399,6 +581,7 @@ class SavedQuery(BaseModel, SavedQueryMixins):
         return [
             "name",
             "uuid",
+            "folder_path",
             "description",
             "tags",
             "query",
@@ -438,18 +621,21 @@ class SavedQuery(BaseModel, SavedQueryMixins):
     def _tree_summary(self) -> dict:
         """Pass."""
         return {
-            "module": self.module,
             "name": self.name,
+            "query_type": self.module,
         }
 
     @property
     def _tree_details(self) -> dict:
         """Pass."""
         return {
-            "module": self.module,
             "name": self.name,
+            "query_type": self.module,
+            "description": self.description,
             "uuid": self.uuid,
+            "query": self.query,
             "tags": self.tags,
+            "fields": self.fields,
             "is_predefined": self.predefined,
             "is_referenced": self.is_referenced,
             "is_private": self.private,
@@ -462,12 +648,16 @@ class SavedQuery(BaseModel, SavedQueryMixins):
             "last_run_time": self.last_run_time,
         }
 
-    def _get_tree_entry(self, include_details: bool = True) -> str:
+    def get_tree_entry(self, include_details: bool = False) -> str:
         """Pass."""
+
+        def to_str(value):
+            return str(value) if isinstance(value, datetime.datetime) else value
+
         obj: dict = self._tree_details if include_details else self._tree_summary
-        items: t.List[str] = [f"{k}={v!r}" for k, v in obj.items()]
+        items: t.List[str] = [f"{k}={to_str(v)!r}" for k, v in obj.items()]
         items: str = ", ".join(items)
-        return f"SavedQuery({items})"
+        return f"{self.get_tree_type()}({items})"
 
     @property
     def tags_str(self) -> str:
@@ -522,8 +712,8 @@ class SavedQuery(BaseModel, SavedQueryMixins):
         return {
             "name": self.name,
             "uuid": self.uuid,
-            "folder": self.folder_id,
-            "module": self.module,
+            "folder": self.folder_path,
+            "asset_type": self.module,
             "description": self.description if isinstance(self.description, str) else "",
             "tags": self.tags_str,
         }
@@ -544,7 +734,7 @@ class SavedQueryCreate(BaseModel, SavedQueryMixins):
     folder_id: str = ""
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[type]:
         """Pass."""
         return SavedQueryCreateSchema
 
@@ -568,7 +758,7 @@ class SavedQueryGet(ResourcesGet):
         self.page = self.page if self.page else PaginationRequest()
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[type]:
         """Pass."""
         return SavedQueryGetSchema
 
@@ -751,7 +941,7 @@ class QueryHistoryRequest(BaseModel):
         return (search, filter)
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[type]:
         """Pass."""
         return QueryHistoryRequestSchema
 

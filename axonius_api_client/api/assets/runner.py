@@ -10,14 +10,20 @@ from ...data import BaseData
 from ...exceptions import RunnerError, RunnerWarning
 from ...parsers.grabber import Grabber, Mixins
 from ...tools import confirm, csv_able, is_str, listify, style_switch
-from .. import json_api
+
+# from .. import json_api
+from ..json_api.enforcements import (
+    EnforcementBasicModel,
+    EnforcementFullModel,
+    UpdateEnforcementResponseModel,
+)
 
 ENFORCEMENT: t.TypeVar = t.Union[
     str,
     dict,
-    json_api.enforcements.SetBasic,
-    json_api.enforcements.SetFull,
-    json_api.enforcements.UpdateResponse,
+    EnforcementBasicModel,
+    EnforcementFullModel,
+    UpdateEnforcementResponseModel,
 ]
 
 
@@ -113,7 +119,7 @@ class Runner(BaseData, Mixins):
         verify_count (bool): Verify that the count of $query equals the count of $ids
         prompt (bool): Prompt user for verification when applicable.
         do_echo (bool): Echo output to console as well as log
-        refetch (bool): refetch $eset even if it is a :obj:`json_api.enforcements.SetFull`
+        refetch (bool): refetch $eset even if it is a model
     """
 
     apiobj: object
@@ -138,7 +144,7 @@ class Runner(BaseData, Mixins):
     """Echo output to console as well as log"""
 
     refetch: bool = False
-    """refetch $eset even if it is a :obj:`json_api.enforcements.SetFull`"""
+    """refetch $eset even if it is a model"""
 
     src_query: t.Optional[str] = None
     """direct api support, unknown"""
@@ -428,7 +434,7 @@ class Runner(BaseData, Mixins):
     @property
     def _teset(self) -> str:
         ret = f"{self.eset}"
-        if isinstance(self.eset, json_api.enforcements.SetFull):
+        if isinstance(self.eset, EnforcementFullModel):
             ret = f"{self.eset.name}"
         return ret
 
@@ -437,7 +443,7 @@ class Runner(BaseData, Mixins):
         """Build info for the Enforcement Set supplied to $eset."""
         obj = self.eset
         details = [f"Not yet fetched: {obj!r}"]
-        if isinstance(obj, json_api.enforcements.SetFull):
+        if isinstance(obj, EnforcementFullModel):
             details = [
                 f"Name: {obj.name!r} (UUID: {obj.uuid})",
                 f"Description: {obj.description!r}",

@@ -4,10 +4,40 @@ import click
 import tabulate
 
 from .. import DEFAULT_PATH
-from ..constants.api import MAX_PAGE_SIZE, TABLE_FORMAT
+from ..constants.api import MAX_PAGE_SIZE, TABLE_FORMAT, FolderDefaults
 from ..tools import coerce_int
 from . import context
 from .helps import HELPSTRS
+
+OPT_FOLDER = click.option(
+    "--path",
+    "-p",
+    "path",
+    help="Path of folder to store object in",
+    required=False,
+    show_envvar=True,
+    show_default=True,
+)
+OPT_REQ_FOLDER = click.option(
+    "--path",
+    "-p",
+    "path",
+    help="Path of folder to store object in",
+    required=False,
+    show_envvar=True,
+    show_default=True,
+)
+OPT_FOLDER_CREATE = click.option(
+    "--create/--no-create",
+    "-c/-nc",
+    "create",
+    default=FolderDefaults.create_path,
+    help="Create --path if not found.",
+    show_envvar=True,
+    show_default=True,
+)
+OPTS_FOLDER = [OPT_FOLDER, OPT_FOLDER_CREATE]
+OPTS_REQ_FOLDER = [OPT_REQ_FOLDER, OPT_FOLDER_CREATE]
 
 
 def build_filter_opt(value_type: str):

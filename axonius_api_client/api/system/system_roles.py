@@ -5,7 +5,7 @@ import typing as t
 
 import cachetools
 
-from ...exceptions import ApiError, NotFoundError
+from ...exceptions import ApiError, NotFoundError, ResponseNotOk
 from ...parsers.tables import tablize_roles
 from ...tools import coerce_str_to_csv
 from .. import json_api
@@ -164,7 +164,13 @@ class SystemRoles(ModelMixins):
         self.check_exists(name=name)
         data_scope_restriction = self.data_scopes.build_role_data_scope(value=data_scope)
         perms = self.cat_actions_to_perms(grant=True, src=f"add role {name!r}", **kwargs)
-        self._add(name=name, permissions=perms, data_scope_restriction=data_scope_restriction)
+        # REST API can return error when adding a role with same name that was recently deleted
+        try:
+            self._add(name=name, permissions=perms, data_scope_restriction=data_scope_restriction)
+        except ResponseNotOk as exc:
+            if "Invalid input" not in str(exc):
+                raise
+
         return self.get_by_name(name=name)
 
     def check_exists(self, name: str):

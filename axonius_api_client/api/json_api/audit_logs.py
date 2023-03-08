@@ -9,7 +9,7 @@ import marshmallow_jsonapi
 
 from ...exceptions import ApiError
 from ...tools import coerce_int_float, dt_now, dt_parse, listify, trim_float
-from .base import BaseModel, BaseSchema, BaseSchemaJson
+from .base import BaseModel, BaseSchemaJson
 from .custom_fields import SchemaDatetime, get_field_dc_mm
 from .resources import ResourcesGet, ResourcesGetSchema
 
@@ -25,8 +25,8 @@ class AuditLogRequestSchema(ResourcesGetSchema):
 
         type_ = "audit_request_schema"
 
-    @staticmethod
-    def get_model_cls() -> type:
+    @classmethod
+    def get_model_cls(cls) -> t.Optional[type]:
         """Pass."""
         return AuditLogRequest
 
@@ -42,8 +42,8 @@ class AuditLogRequest(ResourcesGet):
         mm_field=SchemaDatetime(allow_none=True), default=None
     )
 
-    @staticmethod
-    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
+    @classmethod
+    def get_schema_cls(cls) -> t.Optional[type]:
         """Pass."""
         return AuditLogRequestSchema
 
@@ -67,8 +67,8 @@ class AuditLogSchema(BaseSchemaJson):
 
         type_ = "audit_schema"
 
-    @staticmethod
-    def get_model_cls() -> type:
+    @classmethod
+    def get_model_cls(cls) -> t.Optional[type]:
         """Pass."""
         return AuditLog
 
@@ -89,8 +89,8 @@ class AuditLog(BaseModel):
     discovery_cycle_id: t.Optional[str] = None
     document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
-    @staticmethod
-    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
+    @classmethod
+    def get_schema_cls(cls) -> t.Optional[type]:
         """Pass."""
         return AuditLogSchema
 

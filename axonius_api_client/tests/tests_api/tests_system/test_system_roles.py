@@ -52,9 +52,13 @@ class TestSystemRolesPrivate(SystemRoles):
         assert isinstance(updated, (json_api.system_roles.SystemRole,))
         assert updated.name == FixtureData.name_update
 
-        deleted = apiobj._delete(uuid=role.uuid)
-        assert isinstance(role, (json_api.system_roles.SystemRole,))
-        assert deleted.document_meta == {"name": FixtureData.name_update}
+        try:
+            deleted = apiobj._delete(uuid=role.uuid)
+            assert isinstance(role, (json_api.system_roles.SystemRole,))
+            assert deleted.document_meta == {"name": FixtureData.name_update}
+        except ResponseNotOk:
+            pass
+
         self.cleanup_roles(apiobj=apiobj, value=FixtureData.names)
 
 

@@ -23,7 +23,7 @@ import dateutil.relativedelta
 import dateutil.tz
 
 from . import INIT_DOTENV, PACKAGE_FILE, PACKAGE_ROOT, VERSION
-from .constants.api import GUI_PAGE_SIZES
+from .constants.api import GUI_PAGE_SIZES, FolderDefaults
 from .constants.ctypes import PathLike, PatternLike
 from .constants.general import (
     DAYS_MAP,
@@ -1165,10 +1165,12 @@ def echo(
     log: t.Optional[logging.Logger] = None,
     log_level: str = "debug",
     log_method: t.Optional[t.Callable] = None,
+    log_args: t.Optional[dict] = None,
     log_fallback: t.Callable = LOG.debug,
     style_tmpl: t.Optional[str] = None,
     style_args: t.Optional[dict] = None,
     joiner: str = "\n",
+    do_log: bool = True,
     do_echo: bool = True,
     abort_code: int = 0,
     **kwargs,
@@ -1177,14 +1179,18 @@ def echo(
     if isinstance(msg, (list, tuple)):
         msg = joiner.join(msg)
 
-    if callable(log_method):
-        use_method = log_method
-    elif isinstance(log, logging.Logger):
-        use_method = getattr(log, log_level)
-    else:
-        use_method = log_fallback
+    if do_log:
+        if callable(log_method):
+            use_method = log_method
+        elif isinstance(log, logging.Logger):
+            use_method = getattr(log, log_level)
+        else:
+            use_method = log_fallback
 
-    use_method(msg)
+        if not isinstance(log_args, dict):
+            log_args = {}
+
+        use_method(msg, **log_args)
 
     if do_echo:
         echo_msg = msg
@@ -2179,6 +2185,33 @@ def confirm(
     return answer
 
 
+def coerce_prompt_confirm(value: t.Any = None, prompt: bool = False, **kwargs) -> bool:
+    """Pass."""
+    kwargs.setdefault("style_msgs", {"fg": "red", "bold": True})
+    value: t.Any = coerce_bool(obj=value, error=False)
+    if value is not True and prompt is True:
+        value: bool = confirm(**kwargs)
+    return True if value is True else False
+
+
+def check_confirm_prompt(
+    reason: str,
+    src: t.Any,
+    msgs: t.List[str] = None,
+    value: t.Any = None,
+    prompt: bool = False,
+    **kwargs,
+):
+    """Pass."""
+    from .exceptions import ConfirmNotTrue
+
+    msgs = listify(msgs)
+    msgs.append(f"Do you really want to {reason}")
+    value: bool = coerce_prompt_confirm(msgs=msgs, value=value, prompt=prompt, **kwargs)
+    if value is not True:
+        raise ConfirmNotTrue(confirm=value, prompt=prompt, reason=reason, src=src)
+
+
 def csv_able(value: t.Optional[t.Union[str, t.List[str]]], sep: str = ",") -> t.List[str]:
     """Pass."""
     ret = []
@@ -2217,3 +2250,46 @@ def add_source(source: str, kwargs: dict) -> str:
     ksource = kwargs.get("source", "")
     ksource = f"{ksource} / " if ksource else ""
     return f"{ksource}{source}"
+
+
+# def parse_int_bool(value: t.Any) -> t.Union[int, bool]:
+#     """Pass."""
+#     if isinstance(value, (str, bytes)):
+#         # if bytes, convert to str
+#         value = bytes_to_str(value=value)
+#         # try to coerce to int or float
+#         value = coerce_int_float(value=value, error=False, ret_value=True)
+#         # try to coerce to bool
+#         value = coerce_bool(obj=value, error=False)
+#     return value if isinstance(value, (int, float, bool)) else False
+
+
+# def appendit(values: t.List[t.Any], targets: t.List[list]):
+#     """Pass."""
+#     for target in listify(targets):
+#         for value in listify(values):
+#             if value not in target:
+#                 target.append(value)
+
+
+def parse_value_copy(
+    default: str,
+    value: t.Optional[str] = None,
+    copy_prefix: str = FolderDefaults.copy_prefix,
+    existing: t.Optional[t.List[str]] = None,
+) -> str:
+    """Pass."""
+    existing = listify(existing)
+    if not is_str(value):
+        value = default
+    while value in existing:
+        value = f"{copy_prefix} {value}"
+    return value
+
+
+# def get_hours_ago(value: t.Optional[datetime.datetime] = None, exact: bool = True) -> float:
+#     """Pass."""
+#     if isinstance(value, datetime.datetime):
+#         secs_ago: float = dt_sec_ago(obj=value, exact=exact)
+#         return trim_float(value=secs_ago / 60 / 60)
+#     return None

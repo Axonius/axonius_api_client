@@ -62,7 +62,7 @@ class TestSignupPublic(TestSignup):
         token2 = api_system_users.get_password_reset_link(name=temp_user.user_name)
 
         with pytest.raises(ApiError) as exc:
-            apiobj.use_password_reset_token(token="XXXXXXX", password=password)
+            apiobj.use_password_reset_token(token="ZZZZZZZZZZZZ", password=password)
 
         with pytest.raises(ResponseNotOk) as exc:
             apiobj.use_password_reset_token(token=token2, password=password)

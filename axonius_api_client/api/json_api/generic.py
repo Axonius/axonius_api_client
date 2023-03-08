@@ -6,7 +6,7 @@ import typing as t
 import marshmallow_jsonapi
 
 from ...http import Http
-from .base import BaseModel, BaseSchema, BaseSchemaJson
+from .base import BaseModel, BaseSchemaJson
 from .custom_fields import SchemaBool, get_schema_dc
 
 
@@ -14,7 +14,7 @@ class MetadataSchema(BaseSchemaJson):
     """Pass."""
 
     @staticmethod
-    def get_model_cls() -> type:
+    def get_model_cls() -> t.Optional[type]:
         """Pass."""
         return Metadata
 
@@ -40,7 +40,7 @@ class Metadata(BaseModel):
     document_meta: dict = dataclasses.field(default_factory=dict)
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[type]:
         """Pass."""
         return MetadataSchema
 
@@ -56,7 +56,7 @@ class BoolValueSchema(BaseSchemaJson):
         type_ = "bool_value_schema"
 
     @staticmethod
-    def get_model_cls() -> type:
+    def get_model_cls() -> t.Optional[type]:
         """Pass."""
         return BoolValue
 
@@ -69,7 +69,7 @@ class BoolValue(BaseModel):
     document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[type]:
         """Pass."""
         return BoolValueSchema
 
@@ -85,7 +85,7 @@ class NameSchema(BaseSchemaJson):
         type_ = "name_schema"
 
     @staticmethod
-    def get_model_cls() -> type:
+    def get_model_cls() -> t.Optional[type]:
         """Pass."""
         return Name
 
@@ -98,7 +98,7 @@ class Name(BaseModel):
     document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[type]:
         """Pass."""
         return NameSchema
 
@@ -114,7 +114,7 @@ class IntValueSchema(BaseSchemaJson):
         type_ = "int_value_schema"
 
     @staticmethod
-    def get_model_cls() -> type:
+    def get_model_cls() -> t.Optional[type]:
         """Pass."""
         return IntValue
 
@@ -127,7 +127,7 @@ class IntValue(BaseModel):
     document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[type]:
         """Pass."""
         return IntValueSchema
 
@@ -143,7 +143,7 @@ class ApiBaseSchema(BaseSchemaJson):
         type_ = "base_schema"
 
     @staticmethod
-    def get_model_cls() -> type:
+    def get_model_cls() -> t.Optional[type]:
         """Pass."""
         return ApiBase
 
@@ -157,7 +157,7 @@ class ApiBase(BaseModel):
     document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[type]:
         """Pass."""
         return ApiBaseSchema
 
@@ -177,7 +177,7 @@ class StrValueSchema(BaseSchemaJson):
         type_ = "string_value_schema"
 
     @staticmethod
-    def get_model_cls() -> type:
+    def get_model_cls() -> t.Optional[type]:
         """Pass."""
         return StrValue
 
@@ -190,7 +190,7 @@ class StrValue(BaseModel):
     document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[type]:
         """Pass."""
         return StrValueSchema
 
@@ -206,7 +206,7 @@ class ListValueSchema(BaseSchemaJson):
         type_ = "list_value_schema"
 
     @staticmethod
-    def get_model_cls() -> type:
+    def get_model_cls() -> t.Optional[type]:
         """Pass."""
         return ListValue
 
@@ -219,7 +219,7 @@ class ListValue(BaseModel):
     document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[type]:
         """Pass."""
         return ListValueSchema
 
@@ -235,7 +235,7 @@ class ListDictValueSchema(BaseSchemaJson):
         type_ = "list_value_schema"
 
     @staticmethod
-    def get_model_cls() -> type:
+    def get_model_cls() -> t.Optional[type]:
         """Pass."""
         return ListDictValue
 
@@ -250,7 +250,7 @@ class ListDictValue(BaseModel):
     document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[type]:
         """Pass."""
         return ListDictValueSchema
 
@@ -266,7 +266,7 @@ class DictValueSchema(BaseSchemaJson):
         type_ = "dict_value_schema"
 
     @staticmethod
-    def get_model_cls() -> type:
+    def get_model_cls() -> t.Optional[type]:
         """Pass."""
         return DictValue
 
@@ -279,7 +279,7 @@ class DictValue(BaseModel):
     document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[type]:
         """Pass."""
         return DictValueSchema
 
@@ -295,7 +295,7 @@ class DeletedSchema(BaseSchemaJson):
         type_ = "deleted_schema"
 
     @staticmethod
-    def get_model_cls() -> type:
+    def get_model_cls() -> t.Optional[type]:
         """Pass."""
         return Deleted
 
@@ -308,7 +308,7 @@ class Deleted(BaseModel):
     document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[type]:
         """Pass."""
         return DeletedSchema
 
@@ -321,7 +321,7 @@ class PrivateRequest(BaseModel):
     document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[type]:
         """Pass."""
         return PrivateRequestSchema
 
@@ -337,6 +337,6 @@ class PrivateRequestSchema(BaseSchemaJson):
         type_ = "private_schema"
 
     @staticmethod
-    def get_model_cls() -> type:
+    def get_model_cls() -> t.Optional[type]:
         """Pass."""
         return PrivateRequest

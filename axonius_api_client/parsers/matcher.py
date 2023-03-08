@@ -59,6 +59,11 @@ class Matcher:
                 elif is_pattern(value=check) and check not in self.patterns:
                     self.patterns.append(check)
 
+    @property
+    def has_matches(self) -> bool:
+        """Pass."""
+        return all([bool(self.strings), bool(self.patterns)])
+
     @classmethod
     def load(
         cls,

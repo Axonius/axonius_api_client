@@ -6,7 +6,7 @@ import pathlib
 import pytest
 
 from .meta import CSV_FILECONTENT_STR, CSV_FILENAME, USER_NAME
-from .utils import check_apiobj, check_apiobj_children, check_apiobj_xref, get_auth, get_url
+from .utils import check_apiobj_children, check_apiobj_xref, get_url
 
 AX_URL = os.environ.get("AX_URL", None) or None
 AX_KEY = os.environ.get("AX_KEY", None) or None
@@ -40,12 +40,10 @@ def pytest_addoption(parser):
     )
 
 
-@pytest.fixture(scope="session")
-def api_vulnerabilities(request):
-    """Get a fully loaded Vulnerabilities API object."""
+def load_asset_api(obj):
+    """Pass."""
     from axonius_api_client.api import (
         Adapters,
-        Vulnerabilities,
         Wizard,
         WizardCsv,
         WizardText,
@@ -53,12 +51,7 @@ def api_vulnerabilities(request):
     )
     from axonius_api_client.api.assets import Fields, Labels, SavedQuery
 
-    auth = get_auth(request)
-
-    obj = Vulnerabilities(auth=auth)
     assert isinstance(obj.fields_default, list)
-
-    check_apiobj(authobj=auth, apiobj=obj)
 
     check_apiobj_children(
         apiobj=obj,
@@ -73,6 +66,7 @@ def api_vulnerabilities(request):
     assert isinstance(obj.wizard_csv, WizardCsv)
     assert isinstance(obj.data_scopes, DataScopes)
     obj.ORIGINAL_ROWS = obj.get(max_rows=5)
+    obj.IDS = [x["internal_axon_id"] for x in obj.ORIGINAL_ROWS]
 
     try:
         obj.COMPLEX_ROWS = obj.get(
@@ -84,216 +78,127 @@ def api_vulnerabilities(request):
 
 
 @pytest.fixture(scope="session")
-def api_devices(request):
+def api_client(request):
+    """Test utility."""
+    from axonius_api_client.connect import Connect
+
+    url = request.config.getoption("--ax-url")
+    key = request.config.getoption("--ax-key")
+    secret = request.config.getoption("--ax-secret")
+    if isinstance(url, str):
+        url = url.rstrip("/")
+
+    client = Connect(url=url, key=key, secret=secret, certwarn=False, save_history=True)
+    client.start()
+    return client
+
+
+@pytest.fixture(scope="session")
+def api_openapi(api_client):
+    """Test utility."""
+    return api_client.openapi
+
+
+@pytest.fixture(scope="session")
+def api_vulnerabilities(api_client):
+    """Get a fully loaded Vulnerabilities API object."""
+    from axonius_api_client.api import Vulnerabilities
+
+    obj = api_client.vulnerabilities
+    assert isinstance(obj, Vulnerabilities)
+    return load_asset_api(obj)
+
+
+@pytest.fixture(scope="session")
+def api_devices(api_client):
     """Get a fully loaded Devices API object."""
-    from axonius_api_client.api import Adapters, Devices, Wizard, WizardCsv, WizardText, DataScopes
-    from axonius_api_client.api.assets import Fields, Labels, SavedQuery
+    from axonius_api_client.api import Devices
 
-    auth = get_auth(request)
-
-    obj = Devices(auth=auth)
-    assert isinstance(obj.fields_default, list)
-
-    check_apiobj(authobj=auth, apiobj=obj)
-
-    check_apiobj_children(
-        apiobj=obj,
-        labels=Labels,
-        saved_query=SavedQuery,
-        fields=Fields,
-    )
-
-    check_apiobj_xref(apiobj=obj, adapters=Adapters)
-    assert isinstance(obj.wizard, Wizard)
-    assert isinstance(obj.wizard_text, WizardText)
-    assert isinstance(obj.wizard_csv, WizardCsv)
-    assert isinstance(obj.data_scopes, DataScopes)
-    obj.ORIGINAL_ROWS = obj.get(max_rows=5)
-    obj.IDS = [x["internal_axon_id"] for x in obj.ORIGINAL_ROWS]
-    try:
-        obj.COMPLEX_ROWS = obj.get(
-            max_rows=5, fields=obj.FIELD_COMPLEX, wiz_entries=f"simple {obj.FIELD_COMPLEX} exists"
-        )
-    except Exception:
-        obj.COMPLEX_ROWS = []
-    return obj
+    obj = api_client.devices
+    assert isinstance(obj, Devices)
+    return load_asset_api(obj)
 
 
 @pytest.fixture(scope="session")
-def api_users(request):
+def api_users(api_client):
     """Get a fully loaded Users API object."""
-    from axonius_api_client.api import Adapters, Users, Wizard, WizardCsv, WizardText, DataScopes
-    from axonius_api_client.api.assets import Fields, Labels, SavedQuery
+    from axonius_api_client.api import Users
 
-    auth = get_auth(request)
-
-    obj = Users(auth=auth)
-
-    assert isinstance(obj.fields_default, list)
-
-    check_apiobj(authobj=auth, apiobj=obj)
-
-    check_apiobj_children(
-        apiobj=obj,
-        labels=Labels,
-        saved_query=SavedQuery,
-        fields=Fields,
-    )
-
-    check_apiobj_xref(apiobj=obj, adapters=Adapters)
-    assert isinstance(obj.wizard, Wizard)
-    assert isinstance(obj.wizard_text, WizardText)
-    assert isinstance(obj.wizard_csv, WizardCsv)
-    assert isinstance(obj.data_scopes, DataScopes)
-    obj.ORIGINAL_ROWS = obj.get(max_rows=5)
-    obj.IDS = [x["internal_axon_id"] for x in obj.ORIGINAL_ROWS]
-
-    try:
-        obj.COMPLEX_ROWS = obj.get(
-            max_rows=5, fields=obj.FIELD_COMPLEX, wiz_entries=f"simple {obj.FIELD_COMPLEX} exists"
-        )
-    except Exception:
-        obj.COMPLEX_ROWS = []
-    return obj
+    obj = api_client.users
+    assert isinstance(obj, Users)
+    return load_asset_api(obj)
 
 
 @pytest.fixture(scope="session")
-def api_enforcements(request):
+def api_enforcements(api_client):
     """Test utility."""
-    from axonius_api_client.api import Enforcements
-
-    auth = get_auth(request)
-    obj = Enforcements(auth=auth)
-    check_apiobj(authobj=auth, apiobj=obj)
-    return obj
+    return api_client.enforcements
 
 
 @pytest.fixture(scope="session")
-def api_adapters(request):
+def api_adapters(api_client):
     """Test utility."""
-    from axonius_api_client.api import Adapters, Cnx
-
-    auth = get_auth(request)
-    obj = Adapters(auth=auth)
-    check_apiobj(authobj=auth, apiobj=obj)
-    check_apiobj_children(apiobj=obj, cnx=Cnx)
-    return obj
+    return api_client.adapters
 
 
 @pytest.fixture(scope="session")
-def api_dashboard(request):
+def api_dashboard(api_client):
     """Test utility."""
-    from axonius_api_client.api import Dashboard
-
-    auth = get_auth(request)
-    obj = Dashboard(auth=auth)
-    check_apiobj(authobj=auth, apiobj=obj)
-    return obj
+    return api_client.dashboard
 
 
 @pytest.fixture(scope="session")
-def api_instances(request):
+def api_instances(api_client):
     """Test utility."""
-    from axonius_api_client.api import Instances
-
-    auth = get_auth(request)
-    obj = Instances(auth=auth)
-    check_apiobj(authobj=auth, apiobj=obj)
-    return obj
+    return api_client.instances
 
 
 @pytest.fixture(scope="session")
-def api_system_roles(request):
+def api_system_roles(api_client):
     """Test utility."""
-    from axonius_api_client.api import Instances, SystemRoles
-
-    auth = get_auth(request)
-    obj = SystemRoles(auth=auth)
-    check_apiobj(authobj=auth, apiobj=obj)
-    check_apiobj_xref(apiobj=obj, instances=Instances)
-
-    return obj
+    return api_client.system_roles
 
 
 @pytest.fixture(scope="session")
-def api_data_scopes(request):
+def api_data_scopes(api_client):
     """Test utility."""
-    from axonius_api_client.api import Instances, DataScopes, Users, Devices
-
-    auth = get_auth(request)
-    obj = DataScopes(auth=auth)
-    check_apiobj(authobj=auth, apiobj=obj)
-    check_apiobj_xref(apiobj=obj, instances=Instances, users=Users, devices=Devices)
-
-    return obj
+    return api_client.data_scopes
 
 
 @pytest.fixture(scope="session")
-def api_system_users(request):
+def api_system_users(api_client):
     """Test utility."""
-    from axonius_api_client.api import SystemRoles, SystemUsers
-
-    auth = get_auth(request)
-    obj = SystemUsers(auth=auth)
-    check_apiobj(authobj=auth, apiobj=obj)
-    check_apiobj_xref(apiobj=obj, roles=SystemRoles)
-
-    return obj
+    return api_client.system_users
 
 
 @pytest.fixture(scope="session")
-def api_meta(request):
+def api_meta(api_client):
     """Test utility."""
-    from axonius_api_client.api import Meta
-
-    auth = get_auth(request)
-    obj = Meta(auth=auth)
-    check_apiobj(authobj=auth, apiobj=obj)
-    return obj
+    return api_client.meta
 
 
 @pytest.fixture(scope="session")
-def api_settings_lifecycle(request):
+def api_settings_lifecycle(api_client):
     """Test utility."""
-    from axonius_api_client.api import SettingsLifecycle
-
-    auth = get_auth(request)
-    obj = SettingsLifecycle(auth=auth)
-    check_apiobj(authobj=auth, apiobj=obj)
-    return obj
+    return api_client.settings_lifecycle
 
 
 @pytest.fixture(scope="session")
-def api_settings_global(request):
+def api_settings_global(api_client):
     """Test utility."""
-    from axonius_api_client.api import SettingsGlobal
-
-    auth = get_auth(request)
-    obj = SettingsGlobal(auth=auth)
-    check_apiobj(authobj=auth, apiobj=obj)
-    return obj
+    return api_client.settings_global
 
 
 @pytest.fixture(scope="session")
-def api_settings_gui(request):
+def api_settings_gui(api_client):
     """Test utility."""
-    from axonius_api_client.api import SettingsGui
-
-    auth = get_auth(request)
-    obj = SettingsGui(auth=auth)
-    check_apiobj(authobj=auth, apiobj=obj)
-    return obj
+    return api_client.settings_gui
 
 
 @pytest.fixture(scope="session")
-def api_settings_ip(request):
+def api_settings_ip(api_client):
     """Test utility."""
-    from axonius_api_client.api import SettingsIdentityProviders
-
-    auth = get_auth(request)
-    obj = SettingsIdentityProviders(auth=auth)
-    check_apiobj(authobj=auth, apiobj=obj)
-    return obj
+    return api_client.settings_ip
 
 
 @pytest.fixture(scope="session")
@@ -306,25 +211,15 @@ def api_signup(request):
 
 
 @pytest.fixture(scope="session")
-def api_remote_support(request):
+def api_remote_support(api_client):
     """Test utility."""
-    from axonius_api_client.api import RemoteSupport
-
-    auth = get_auth(request)
-    obj = RemoteSupport(auth=auth)
-    check_apiobj(authobj=auth, apiobj=obj)
-    return obj
+    return api_client.remote_support
 
 
 @pytest.fixture(scope="session")
-def api_activity_logs(request):
+def api_activity_logs(api_client):
     """Test utility."""
-    from axonius_api_client.api import ActivityLogs
-
-    auth = get_auth(request)
-    obj = ActivityLogs(auth=auth)
-    check_apiobj(authobj=auth, apiobj=obj)
-    return obj
+    return api_client.activity_logs
 
 
 @pytest.fixture(scope="session")
@@ -403,33 +298,6 @@ def temp_user(api_system_users):
         api_system_users._delete(uuid=tuser.uuid)
     except Exception:
         pass
-
-
-@pytest.fixture(scope="session")
-def api_openapi(request):
-    """Test utility."""
-    from axonius_api_client.api import OpenAPISpec
-
-    auth = get_auth(request)
-    obj = OpenAPISpec(auth=auth)
-    check_apiobj(authobj=auth, apiobj=obj)
-    return obj
-
-
-@pytest.fixture(scope="session")
-def api_client(request):
-    """Test utility."""
-    from axonius_api_client.connect import Connect
-
-    url = request.config.getoption("--ax-url")
-    key = request.config.getoption("--ax-key")
-    secret = request.config.getoption("--ax-secret")
-    if isinstance(url, str):
-        url = url.rstrip("/")
-
-    client = Connect(url=url, key=key, secret=secret, certwarn=False, save_history=True)
-    client.start()
-    return client
 
 
 @pytest.fixture

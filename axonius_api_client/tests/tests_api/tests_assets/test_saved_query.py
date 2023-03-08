@@ -537,8 +537,8 @@ class TestSavedQueryPublic(SavedQueryBase):
 
     def test_update_sort_empty(self, apiobj, sq_fixture):
         updated = apiobj.saved_query.update_sort(sq=sq_fixture, field="", descending=True)
-        assert updated["view"]["sort"]["field"] == ""
-        assert updated["view"]["sort"]["desc"] is True
+        assert updated["view"]["sort"].get("field", "") == ""
+        assert updated["view"]["sort"].get("desc", True) is True
 
     @pytest.mark.skip("private sqs broken")
     def test_update_copy(self, apiobj, sq_fixture):

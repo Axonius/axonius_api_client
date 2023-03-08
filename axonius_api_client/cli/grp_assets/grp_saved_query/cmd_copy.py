@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Command line interface for Axonius API Client."""
 from ...context import CONTEXT_SETTINGS, click
-from ...options import AUTH, add_options
+from ...options import AUTH, OPTS_FOLDER, add_options
 from .grp_common import EXPORT_FORMATS, OPTS_EXPORT
 
 OPTIONS = [
@@ -58,9 +58,11 @@ OPTIONS = [
         show_default=True,
         required=False,
     ),
+    *OPTS_FOLDER,
 ]
 
 
+# XXX TEST
 @click.command(name="copy", context_settings=CONTEXT_SETTINGS)
 @add_options(OPTIONS)
 @click.pass_context
@@ -72,7 +74,7 @@ def cmd(ctx, url, key, secret, export_format, table_format, sq, **kwargs):
     apiobj = getattr(client, p_grp)
 
     with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
-        data = apiobj.saved_query.copy(sq=sq, as_dataclass=True, **kwargs)
+        data = apiobj.saved_query.copy(sq=sq, as_dataclass=True, echo=True, **kwargs)
         ctx.obj.echo_ok(f"Successfully copied Saved Query {sq!r} to {data.name!r}")
 
     click.secho(EXPORT_FORMATS[export_format](data=data, table_format=table_format))

@@ -54,7 +54,7 @@ class AccessSchema(BaseSchema):
     )
 
     @staticmethod
-    def get_model_cls() -> type:
+    def get_model_cls() -> t.Optional[type]:
         """Pass."""
         return Access
 
@@ -80,7 +80,7 @@ class AccessSchemaJson(BaseSchemaJson):
     )
 
     @staticmethod
-    def get_model_cls() -> type:
+    def get_model_cls() -> t.Optional[type]:
         """Pass."""
         return Access
 
@@ -102,6 +102,6 @@ class Access(BaseModel):
     )
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[type]:
         """Pass."""
         return AccessSchema

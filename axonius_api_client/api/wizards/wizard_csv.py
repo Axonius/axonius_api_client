@@ -271,6 +271,7 @@ class WizardCsv(Wizard):
             self.SQ.update(parsed)
         self.SQS_DONE.append(self.SQ)
 
+    # XXX need to add support for path && folder_id
     def _new_sq(self, entry: dict):
         """Create a new current saved query.
 

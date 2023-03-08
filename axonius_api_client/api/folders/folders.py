@@ -1,101 +1,213 @@
 # -*- coding: utf-8 -*-
-"""API for working with enforcements."""
+"""API for working with folders."""
+import abc
 import typing as t
 
-import cachetools
+from cachetools import TTLCache, cached
 
-from ..api_endpoints import ApiEndpoint, ApiEndpoints
-from ..json_api.folders import CreateFolder, CreateFolderResponse, DeleteFolderResponse, RootFolders
-
-# from ..json_api.generic import Metadata
-from ..json_api.paging_state import LOG_LEVEL_API, PAGE_SIZE, PagingState
-from ..json_api.saved_queries import SavedQuery, SavedQueryGet
+from ..api_endpoints import ApiEndpoint, ApiEndpointGroup, ApiEndpoints
+from ..json_api.folders.base import (
+    CreateFolderRequestModel,
+    CreateFolderResponseModel,
+    DeleteFolderResponseModel,
+    Folder,
+    FolderDefaults,
+    FolderModel,
+    FoldersModel,
+    MoveFolderRequestModel,
+    MoveFolderResponseModel,
+    RenameFolderRequestModel,
+    RenameFolderResponseModel,
+)
 from ..mixins import ModelMixins
-
-CACHE_QUERY_GET: cachetools.TTLCache = cachetools.TTLCache(maxsize=1024, ttl=60)
 
 
 class Folders(ModelMixins):
     """Pass."""
 
-    def get(self) -> RootFolders:
+    def _init(self, **kwargs):
+        """Post init method for subclasses to use for extra setup."""
+        self.queries: FoldersQueries = FoldersQueries(auth=self.auth, **kwargs)
+        self.enforcements: FoldersEnforcements = FoldersEnforcements(auth=self.auth, **kwargs)
+
+
+class FoldersMixins(ModelMixins, abc.ABC):
+    """Pass."""
+
+    # XXX .search_objects(path=path, values="~test")
+    # XXX .search_objects_delete(path=path, searches="~test", target=target)
+    # XXX .search_objects_copy(path=path, searches="~test", target=target)
+    # XXX .search_objects_move(path=path, searches="~test", target=target)
+
+    @abc.abstractproperty
+    def api_endpoint_group(self) -> ApiEndpointGroup:
         """Pass."""
-        data: RootFolders = self._get()
+        raise NotImplementedError()
+
+    @cached(cache=TTLCache(maxsize=1024, ttl=60))
+    def get_cached(self, *args, **kwargs) -> t.Union[FoldersModel, FolderModel]:
+        """Get the root folders for this object type using a 60 second cache."""
+        return self.get(*args, **kwargs)
+
+    def get(
+        self,
+        path: t.Optional[t.Union[str, Folder]] = None,
+        create: bool = FolderDefaults.create,
+        echo: bool = FolderDefaults.echo,
+        minimum_depth: t.Optional[int] = None,
+    ) -> t.Union[FoldersModel, FolderModel]:
+        """Get the root folders for this object type.
+
+        Args:
+            path (t.Optional[t.Union[str, Folder]], optional): if supplied, folder to find
+                and return
+            create (bool, optional): if path supplied and does not exist, create it as necessary
+            echo (bool, optional): echo output to console
+            minimum_depth (t.Optional[int], optional): Description
+        """
+        data: FoldersModel = self._get()
+        if data.is_findable(path):
+            return data.find(value=path, create=create, echo=echo, minimum_depth=minimum_depth)
         return data
 
-    def get_queries(
-        self, generator: bool = False, **kwargs
-    ) -> t.Union[t.List[SavedQuery], t.Generator[SavedQuery, None, None]]:
-        """Get all saved queries."""
-        gen: t.Generator[SavedQuery, None, None] = self.get_queries_generator(**kwargs)
-        return gen if generator else list(gen)
-
-    @cachetools.cached(cache=CACHE_QUERY_GET)
-    def get_queries_cached(self, **kwargs) -> t.List[SavedQuery]:
-        """Get all saved queries."""
-        return list(self.get_queries_generator(**kwargs))
-
-    def get_queries_generator(
+    def get_tree(
         self,
-        folder_id: str = "all",
-        include_usage: bool = False,
-        include_view: bool = False,
-        page_sleep: int = 0,
-        page_size: int = PAGE_SIZE,
-        row_start: int = 0,
-        row_stop: t.Optional[int] = None,
-        log_level: t.Union[int, str] = LOG_LEVEL_API,
-        query: t.Optional[str] = None,
-        request_obj: t.Optional[SavedQueryGet] = None,
-    ) -> t.Generator[SavedQuery, None, None]:
-        """Get Saved Queries using a generator."""
-        if not isinstance(request_obj, SavedQueryGet):
-            request_obj = SavedQueryGet(
-                filter=query,
-                get_view_data=include_view,
-                include_usage=include_usage,
-                folder_id=folder_id,
-            )
+        path: t.Optional[t.Union[str, Folder]] = None,
+        maximum_depth: t.Optional[int] = None,
+        include_objects: bool = FolderDefaults.include_objects,
+        include_details: bool = FolderDefaults.include_details,
+        as_str: bool = False,
+        **kwargs,
+    ) -> t.Union[t.List[str], str]:
+        """Get a tree view of all subfolders and their objects.
 
-        purpose = f"Get Saved Queries using query: {query}"
-        with PagingState(
-            purpose=purpose,
-            page_sleep=page_sleep,
-            page_size=page_size,
-            row_start=row_start,
-            row_stop=row_stop,
-            log_level=log_level,
-        ) as state:
-            while not state.stop_paging:
-                page = state.page(method=self._get_query_model, request_obj=request_obj)
-                yield from page.rows
+        Args:
+            include_objects (bool, optional): include objects in output
+            include_details (bool, optional): show summary or details in output
+            maximum_depth (t.Optional[int], optional): print only recursive counts past this depth,
+                not the actual subfolders and objects
+            as_str (bool, optional): return as str instead of list of str
+        """
+        data: Folder = self.get(path=path, **kwargs)
+        return data.get_tree(
+            maximum_depth=maximum_depth,
+            include_objects=include_objects,
+            include_details=include_details,
+            as_str=as_str,
+        )
 
-    def _get_query_model(self, request_obj: SavedQueryGet) -> t.List[SavedQuery]:
-        """Direct API method to get all saved queries."""
-        api_endpoint = ApiEndpoints.saved_queries.get
-        return api_endpoint.perform_request(http=self.auth.http, request_obj=request_obj)
+    def delete(
+        self,
+        path: t.Union[str, Folder],
+        confirm: bool = FolderDefaults.confirm,
+        include_subfolders: bool = FolderDefaults.include_subfolders,
+        include_objects: bool = FolderDefaults.include_objects,
+        echo: bool = FolderDefaults.echo,
+        prompt: bool = FolderDefaults.prompt,
+        prompt_default: bool = FolderDefaults.prompt_default,
+    ) -> DeleteFolderResponseModel:
+        """Pass."""
+        path: FolderModel = self.get(path=path, echo=echo)
+        return path.delete(
+            confirm=confirm,
+            include_subfolders=include_subfolders,
+            include_objects=include_objects,
+            echo=echo,
+            prompt=prompt,
+            prompt_default=prompt_default,
+        )
 
-    def _get(self) -> RootFolders:
+    def create(
+        self, path: t.Union[str, Folder], target: str, echo: bool = FolderDefaults.echo
+    ) -> "FolderModel":
+        """Create a subfolder.
+
+        Args:
+            value (str): Name of folder to create under this folder
+
+        """
+        path: FolderModel = self.get(path=path, echo=echo)
+        return path.create(value=target, echo=echo)
+
+    def rename(
+        self, path: t.Union[str, Folder], target: str, echo: bool = FolderDefaults.echo
+    ) -> "FolderModel":
+        """Pass."""
+        path: FolderModel = self.get(path=path, echo=echo)
+        return path.rename(value=target, echo=echo)
+
+    def move(
+        self,
+        path: t.Union[str, Folder],
+        target: t.Union[str, Folder],
+        create: bool = FolderDefaults.create_move,
+        echo: bool = FolderDefaults.echo,
+    ) -> "FolderModel":
+        """Pass."""
+        path: FolderModel = self.get(path=path, echo=echo)
+        return path.move(value=target, create=create, echo=echo)
+
+    def _get(self) -> FoldersModel:
         """Direct API method to get all folders.
 
         Returns:
-            RootFolders: API response model
+            FoldersModel: API response model
         """
-        api_endpoint: ApiEndpoint = ApiEndpoints.folders.get
-        response: RootFolders = api_endpoint.perform_request(http=self.auth.http)
+        endpoint: ApiEndpoint = self.api_endpoint_group.get
+        response: FoldersModel = endpoint.perform_request(http=self.auth.http)
         return response
 
-    def _create(self, name: str, parent_id: str) -> CreateFolderResponse:
+    def _rename(self, id: str, name: str) -> RenameFolderResponseModel:
         """Pass."""
-        api_endpoint: ApiEndpoint = ApiEndpoints.folders.create
-        request_obj: CreateFolder = api_endpoint.load_request(name=name, parent_id=parent_id)
-        response: CreateFolderResponse = api_endpoint.perform_request(
+        endpoint: ApiEndpoint = self.api_endpoint_group.rename
+        request_obj: RenameFolderRequestModel = endpoint.load_request(name=name)
+        response: RenameFolderResponseModel = endpoint.perform_request(
+            http=self.auth.http, request_obj=request_obj, id=id
+        )
+        return response
+
+    def _move(self, id: str, parent_id: str) -> MoveFolderResponseModel:
+        """Pass."""
+        endpoint: ApiEndpoint = self.api_endpoint_group.move
+        request_obj: MoveFolderRequestModel = endpoint.load_request(parent_id=parent_id)
+        response: MoveFolderResponseModel = endpoint.perform_request(
+            http=self.auth.http,
+            request_obj=request_obj,
+            id=id,
+        )
+        return response
+
+    def _create(self, name: str, parent_id: str) -> CreateFolderResponseModel:
+        """Pass."""
+        endpoint: ApiEndpoint = self.api_endpoint_group.create
+        request_obj: CreateFolderRequestModel = endpoint.load_request(
+            name=name, parent_id=parent_id
+        )
+        response: CreateFolderResponseModel = endpoint.perform_request(
             http=self.auth.http, request_obj=request_obj
         )
         return response
 
-    def _delete(self, id: str) -> DeleteFolderResponse:
+    def _delete(self, id: str) -> DeleteFolderResponseModel:
         """Pass."""
-        api_endpoint: ApiEndpoint = ApiEndpoints.folders.delete
-        response: DeleteFolderResponse = api_endpoint.perform_request(http=self.auth.http, id=id)
+        endpoint: ApiEndpoint = self.api_endpoint_group.delete
+        response: DeleteFolderResponseModel = endpoint.perform_request(http=self.auth.http, id=id)
         return response
+
+
+class FoldersQueries(FoldersMixins):
+    """Pass."""
+
+    @property
+    def api_endpoint_group(self) -> ApiEndpointGroup:
+        """Pass."""
+        return ApiEndpoints.folders_queries
+
+
+class FoldersEnforcements(FoldersMixins):
+    """Pass."""
+
+    @property
+    def api_endpoint_group(self) -> ApiEndpointGroup:
+        """Pass."""
+        return ApiEndpoints.folders_enforcements

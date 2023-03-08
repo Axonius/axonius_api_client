@@ -9,7 +9,7 @@ import marshmallow_jsonapi
 
 from ...exceptions import ApiError
 from ...tools import json_load
-from .base import BaseModel, BaseSchema, BaseSchemaJson
+from .base import BaseModel, BaseSchemaJson
 from .custom_fields import SchemaDatetime
 from .saved_queries import SavedQuery
 
@@ -196,7 +196,7 @@ class DataScopeDetailsSchema(BaseSchemaJson):
     settings = marshmallow_jsonapi.fields.Dict(description="Data Scopes settings")
 
     @staticmethod
-    def get_model_cls() -> type:
+    def get_model_cls() -> t.Optional[type]:
         """Pass."""
         return DataScopeDetails
 
@@ -215,7 +215,7 @@ class DataScopeDetails(BaseModel):
     document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[type]:
         """Pass."""
         return DataScopeDetailsSchema
 
@@ -248,7 +248,7 @@ class DataScopeCreateSchema(BaseSchemaJson):
     )
 
     @staticmethod
-    def get_model_cls() -> type:
+    def get_model_cls() -> t.Optional[type]:
         """Pass."""
         return DataScopeCreate
 
@@ -268,7 +268,7 @@ class DataScopeCreate(BaseModel):
     description: str = ""
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[type]:
         """Pass."""
         return DataScopeCreateSchema
 
@@ -294,7 +294,7 @@ class DataScopeUpdateSchema(BaseSchemaJson):
     )
 
     @staticmethod
-    def get_model_cls() -> type:
+    def get_model_cls() -> t.Optional[type]:
         """Pass."""
         return DataScopeUpdate
 
@@ -315,6 +315,6 @@ class DataScopeUpdate(BaseModel):
     description: str = ""
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[type]:
         """Pass."""
         return DataScopeUpdateSchema

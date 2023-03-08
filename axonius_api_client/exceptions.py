@@ -47,14 +47,14 @@ class AxonTypeError(AxonError):
 
     def __init__(
         self,
-        obj: t.Any,
         attr: str,
         value: t.Any,
         expected: t.Any,
+        src: t.Any = None,
         extra: t.Any = None,
     ):
         """Pass."""
-        self.obj: t.Any = obj
+        self.src: t.Any = src
         self.attr: str = attr
         self.value: t.Any = value
         self.expected: t.Any = expected
@@ -63,7 +63,7 @@ class AxonTypeError(AxonError):
         msgs: t.List[str] = [
             err,
             "",
-            f"Source: {obj}",
+            f"Source: {src}",
             f"Supplied value: {value!r}",
             f"Supplied value type: {type(value)}",
             f"Expected value type: {expected!r}",
@@ -80,6 +80,35 @@ class AxonTypeError(AxonError):
 
 class ApiError(AxonError):
     """Errors for API models."""
+
+
+class ConfirmNotTrue(AxonError):
+    """Error for when confirm != True."""
+
+    def __init__(
+        self,
+        confirm: t.Any = False,
+        prompt: t.Any = False,
+        reason: t.Any = "",
+        src: t.Any = None,
+        extra: t.Any = None,
+    ):
+        """Pass."""
+        self.confirm: t.Any = confirm
+        self.reason: t.Any = reason
+        msgs: t.List[str] = [
+            f"Unable to {reason}",
+            f"confirm is {confirm} and prompt is {prompt}, confirm must be {True}",
+        ]
+        if src is not None:
+            msgs += ["", "While in object:", f"{src!r}"]
+
+        if extra:
+            if isinstance(extra, (list, tuple)):
+                msgs += [str(x) for x in extra]
+            else:
+                msgs.append(str(extra))
+        super().__init__(msgs)
 
 
 class NotAllowedError(AxonError):
@@ -422,16 +451,27 @@ class GrabberWarning(ApiWarning):
 class FolderAlreadyExistsError(AlreadyExists):
     """Error when something exists with same name."""
 
-    def __init__(self, msg: str, folder: object):
-        """Pass."""
-        self.folder: object = folder
-        super().__init__(msg)
-
 
 class FolderNotFoundError(NotFoundError):
     """Error when something is not found."""
 
-    def __init__(self, msg: str, folder: object):
+    def __init__(self, msg: str, folder: t.Optional[object] = None):
         """Pass."""
-        self.folder: object = folder
+        self.folder: t.Optional[object] = folder
         super().__init__(msg)
+
+
+class SearchError(AxonError):
+    """Pass."""
+
+
+class SearchUnmatchedError(SearchError):
+    """Pass."""
+
+
+class SearchNoMatchesError(SearchError):
+    """Pass."""
+
+
+class SearchNoObjectsError(SearchError):
+    """Pass."""

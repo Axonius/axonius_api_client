@@ -7,7 +7,7 @@ import typing as t
 
 import requests
 
-from ..constants.general import JSON_TYPES
+from ..constants.general import JSON_TYPES, RERAISE
 from ..constants.logs import LOG_LEVEL_ENDPOINTS
 from ..exceptions import (
     InvalidCredentials,
@@ -25,7 +25,6 @@ from ..logs import set_log_level
 from ..tools import combo_dicts, get_cls_path, json_log
 from .json_api.base import BaseModel, BaseSchema, BaseSchemaJson
 
-RERAISE: bool = False
 LOGGER: logging.Logger = logging.getLogger(name=__name__)
 set_log_level(obj=LOGGER, level=LOG_LEVEL_ENDPOINTS)
 

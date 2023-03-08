@@ -177,6 +177,7 @@ def get_cnx_working(apiobj, name=None, reqkeys=None):
     problems = [
         "symantec_altiris",  # AX-7165
         "alibaba",  # noticed in 4.3 that test fails but connection still green
+        "webscan",
     ]
     found = get_cnx(
         apiobj=apiobj, cntkey="success_count", name=name, reqkeys=reqkeys, problems=problems

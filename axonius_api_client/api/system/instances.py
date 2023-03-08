@@ -554,8 +554,6 @@ class Instances(ModelMixins):
         response["execute_result"] = self._admin_script_execute(uuid=response["file_uuid"])
         return response
 
-    # XXX expose verify to axonshell
-    # XXX ALSO: https://axonius.slack.com/archives/C017HPPE5D5/p1675086642937679
     def admin_script_upload_path(
         self, path: Union[str, pathlib.Path], path_verify: bool = True, **kwargs
     ) -> dict:

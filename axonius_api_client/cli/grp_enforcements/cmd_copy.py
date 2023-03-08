@@ -2,7 +2,7 @@
 """Command line interface for Axonius API Client."""
 
 from ..context import CONTEXT_SETTINGS, click
-from ..options import AUTH, add_options
+from ..options import AUTH, OPTS_FOLDER, add_options
 from .grp_common import (
     EXPORT_FORMATS,
     OPT_COPY_TRIGGERS,
@@ -11,9 +11,17 @@ from .grp_common import (
     OPT_SET_VALUE_REQ,
 )
 
-OPTIONS = [*AUTH, OPT_EXPORT_FORMAT, OPT_NEW_NAME, OPT_COPY_TRIGGERS, OPT_SET_VALUE_REQ]
+OPTIONS = [
+    *AUTH,
+    OPT_EXPORT_FORMAT,
+    OPT_NEW_NAME,
+    OPT_COPY_TRIGGERS,
+    OPT_SET_VALUE_REQ,
+    *OPTS_FOLDER,
+]
 
 
+# XXX test
 @click.command(name="copy", context_settings=CONTEXT_SETTINGS)
 @add_options(OPTIONS)
 @click.pass_context

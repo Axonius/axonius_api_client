@@ -16,20 +16,16 @@ from ...exceptions import (
     SavedQueryTagsNotFoundError,
 )
 from ...tools import check_gui_page_size, coerce_bool, echo_ok, echo_warn, listify
-from .. import json_api
 from ..api_endpoints import ApiEndpoints
+from ..folders import FoldersQueries
+from ..json_api import saved_queries as models
+from ..json_api.folders.base import FolderDefaults
+from ..json_api.folders.queries import FolderModel, FoldersModel
+from ..json_api.generic import ListValueSchema, Metadata
 from ..json_api.paging_state import LOG_LEVEL_API, PAGE_SIZE, PagingState
-from ..json_api.saved_queries import QueryHistory, QueryHistoryRequest
 from ..mixins import ChildMixins
 
-MODEL = json_api.saved_queries.SavedQuery
-MODEL_GET = json_api.saved_queries.SavedQueryGet
-MODEL_HIST = QueryHistory
-HIST_GEN = t.Generator[QueryHistory, None, None]
-HIST_LIST = t.List[QueryHistory]
-BOTH = t.Union[dict, MODEL]
-MULTI = t.Union[str, BOTH]
-GEN = t.Generator[BOTH, None, None]
+MULTI = t.Union[str, dict, models.SavedQuery]
 CACHE_TAGS = TTLCache(maxsize=1024, ttl=60)
 CACHE_RUN_BY = TTLCache(maxsize=1024, ttl=60)
 CACHE_RUN_FROM = TTLCache(maxsize=1024, ttl=60)
@@ -60,7 +56,19 @@ class SavedQuery(ChildMixins):
 
     """
 
-    def update_name(self, sq: MULTI, value: str, as_dataclass: bool = AS_DATACLASS) -> BOTH:
+    @property
+    def folders(self) -> FoldersQueries:
+        """Get the folders api for this object type."""
+        return self.HTTP.CLIENT.folders.queries
+
+    def update_path(
+        self,
+        sq: MULTI,
+        path: t.Union[str, FolderModel],
+        as_dataclass: bool = AS_DATACLASS,
+        create: bool = FolderDefaults.create_path,
+        echo: bool = FolderDefaults.echo,
+    ) -> t.Union[dict, models.SavedQuery]:
         """Update the name of a Saved Query.
 
         Args:
@@ -69,7 +77,28 @@ class SavedQuery(ChildMixins):
             as_dataclass (bool, optional): Return saved query dataclass instead of dict
 
         Returns:
-            BOTH: saved query dataclass or dict
+            t.Union[dict, models.SavedQuery]: saved query dataclass or dict
+        """
+        sq = self.get_by_multi(sq=sq, as_dataclass=True)
+        updated_obj = sq.move(
+            path=path,
+            create=create,
+            echo=echo,
+        )
+        return updated_obj if as_dataclass else updated_obj.to_dict()
+
+    def update_name(
+        self, sq: MULTI, value: str, as_dataclass: bool = AS_DATACLASS
+    ) -> t.Union[dict, models.SavedQuery]:
+        """Update the name of a Saved Query.
+
+        Args:
+            sq (MULTI): str with name or uuid, or saved query dict or dataclass
+            value (str): new name
+            as_dataclass (bool, optional): Return saved query dataclass instead of dict
+
+        Returns:
+            t.Union[dict, models.SavedQuery]: saved query dataclass or dict
         """
         sq = self.get_by_multi(sq=sq, as_dataclass=True)
         self._check_name_exists(value=value)
@@ -78,7 +107,7 @@ class SavedQuery(ChildMixins):
 
     def update_description(
         self, sq: MULTI, value: str, append: bool = False, as_dataclass: bool = AS_DATACLASS
-    ) -> BOTH:
+    ) -> t.Union[dict, models.SavedQuery]:
         """Update the description of a Saved Query.
 
         Args:
@@ -88,14 +117,14 @@ class SavedQuery(ChildMixins):
             as_dataclass (bool, optional): Return saved query dataclass instead of dict
 
         Returns:
-            BOTH: saved query dataclass or dict
+            t.Union[dict, models.SavedQuery]: saved query dataclass or dict
         """
         sq = self.get_by_multi(sq=sq, as_dataclass=True)
-        value = f"{sq.description}{value}" if sq.description and append else value
-        sq.set_description(value=value)
-        return self._update_handler(sq=sq, as_dataclass=as_dataclass)
+        return sq.update_description(value=value, append=append, as_dataclass=as_dataclass)
 
-    def update_page_size(self, sq: MULTI, value: int, as_dataclass: bool = AS_DATACLASS) -> BOTH:
+    def update_page_size(
+        self, sq: MULTI, value: int, as_dataclass: bool = AS_DATACLASS
+    ) -> t.Union[dict, models.SavedQuery]:
         """Update the GUI page size of a Saved Query.
 
         Args:
@@ -104,7 +133,7 @@ class SavedQuery(ChildMixins):
             as_dataclass (bool, optional): Return saved query dataclass instead of dict
 
         Returns:
-            BOTH: saved query dataclass or dict
+            t.Union[dict, models.SavedQuery]: saved query dataclass or dict
         """
         sq = self.get_by_multi(sq=sq, as_dataclass=True)
         sq.page_size = value
@@ -116,7 +145,7 @@ class SavedQuery(ChildMixins):
         field: t.Optional[str] = None,
         descending: bool = True,
         as_dataclass: bool = AS_DATACLASS,
-    ) -> BOTH:
+    ) -> t.Union[dict, models.SavedQuery]:
         """Update the sort of a Saved Query.
 
         Args:
@@ -126,7 +155,7 @@ class SavedQuery(ChildMixins):
             as_dataclass (bool, optional): Return saved query dataclass instead of dict
 
         Returns:
-            BOTH: saved query dataclass or dict
+            t.Union[dict, models.SavedQuery]: saved query dataclass or dict
         """
         sq = self.get_by_multi(sq=sq, as_dataclass=True)
 
@@ -146,7 +175,7 @@ class SavedQuery(ChildMixins):
         remove: bool = False,
         append: bool = False,
         as_dataclass: bool = AS_DATACLASS,
-    ) -> BOTH:
+    ) -> t.Union[dict, models.SavedQuery]:
         """Update the tags of a Saved Query.
 
         Args:
@@ -157,7 +186,7 @@ class SavedQuery(ChildMixins):
             as_dataclass (bool, optional): Return saved query dataclass instead of dict
 
         Returns:
-            BOTH: saved query dataclass or dict
+            t.Union[dict, models.SavedQuery]: saved query dataclass or dict
         """
         value = listify(value)
         if not all([isinstance(x, str) and x.strip() for x in value]):
@@ -175,7 +204,7 @@ class SavedQuery(ChildMixins):
 
     def update_always_cached(
         self, sq: MULTI, value: bool, as_dataclass: bool = AS_DATACLASS
-    ) -> BOTH:
+    ) -> t.Union[dict, models.SavedQuery]:
         """Update the always_cached flag of a Saved Query.
 
         Args:
@@ -184,13 +213,15 @@ class SavedQuery(ChildMixins):
             as_dataclass (bool, optional): Return saved query dataclass instead of dict
 
         Returns:
-            BOTH: saved query dataclass or dict
+            t.Union[dict, models.SavedQuery]: saved query dataclass or dict
         """
         return self._update_flag(
             attr="always_cached", sq=sq, value=value, as_dataclass=as_dataclass
         )
 
-    def update_private(self, sq: MULTI, value: bool, as_dataclass: bool = AS_DATACLASS) -> BOTH:
+    def update_private(
+        self, sq: MULTI, value: bool, as_dataclass: bool = AS_DATACLASS
+    ) -> t.Union[dict, models.SavedQuery]:
         """Update the private flag of a Saved Query.
 
         Args:
@@ -199,7 +230,7 @@ class SavedQuery(ChildMixins):
             as_dataclass (bool, optional): Return saved query dataclass instead of dict
 
         Returns:
-            BOTH: saved query dataclass or dict
+            t.Union[dict, models.SavedQuery]: saved query dataclass or dict
         """
         return self._update_flag(attr="private", sq=sq, value=value, as_dataclass=as_dataclass)
 
@@ -216,7 +247,7 @@ class SavedQuery(ChildMixins):
         remove: bool = False,
         append: bool = False,
         as_dataclass: bool = AS_DATACLASS,
-    ) -> BOTH:
+    ) -> t.Union[dict, models.SavedQuery]:
         """Update the tags of a Saved Query.
 
         Args:
@@ -233,7 +264,7 @@ class SavedQuery(ChildMixins):
             as_dataclass (bool, optional): Return saved query dataclass instead of dict
 
         Returns:
-            BOTH: saved query dataclass or dict
+            t.Union[dict, models.SavedQuery]: saved query dataclass or dict
         """
         sq = self.get_by_multi(sq=sq, as_dataclass=True)
 
@@ -266,7 +297,7 @@ class SavedQuery(ChildMixins):
         append_not_flag: bool = False,
         as_dataclass: bool = AS_DATACLASS,
         **kwargs,
-    ) -> BOTH:
+    ) -> t.Union[dict, models.SavedQuery]:
         """Update the query of a Saved Query.
 
         Args:
@@ -281,7 +312,7 @@ class SavedQuery(ChildMixins):
             as_dataclass (bool, optional): Return saved query dataclass instead of dict
 
         Returns:
-            BOTH: saved query dataclass or dict
+            t.Union[dict, models.SavedQuery]: saved query dataclass or dict
         """
         sq = self.get_by_multi(sq=sq, as_dataclass=True)
 
@@ -339,9 +370,12 @@ class SavedQuery(ChildMixins):
         name: str,
         private: bool = False,
         asset_scope: bool = False,
-        always_cached: bool = False,
         as_dataclass: bool = AS_DATACLASS,
-    ) -> BOTH:
+        path: t.Optional[t.Union[str, FolderModel]] = None,
+        create: bool = FolderDefaults.create_path,
+        echo: bool = FolderDefaults.echo,
+        folder_id: t.Optional[str] = None,
+    ) -> t.Union[dict, models.SavedQuery]:
         """Create a copy of a Saved Query.
 
         Args:
@@ -352,19 +386,19 @@ class SavedQuery(ChildMixins):
             as_dataclass (bool, optional): Return saved query dataclass instead of dict
 
         Returns:
-            BOTH: saved query dataclass or dict
+            t.Union[dict, models.SavedQuery]: saved query dataclass or dict
         """
-        create_model = json_api.saved_queries.SavedQueryCreate
-        self._check_name_exists(value=name)
         sq = self.get_by_multi(sq=sq, as_dataclass=True)
-        sq_create = {k: v for k, v in sq.to_dict().items() if k in create_model._get_field_names()}
-        to_add = create_model.new_from_dict(sq_create)
-        to_add.private = coerce_bool(private)
-        to_add.asset_scope = coerce_bool(asset_scope)
-        to_add.always_cached = coerce_bool(always_cached)
-        to_add.set_name(value=name)
-        added = self._add_from_dataclass(obj=to_add)
-        return self.get_by_multi(sq=added, as_dataclass=as_dataclass)
+        created_obj = sq.copy(
+            path=path,
+            folder_id=folder_id,
+            create=create,
+            name=name,
+            echo=echo,
+            private=private,
+            asset_scope=asset_scope,
+        )
+        return created_obj if as_dataclass else created_obj.to_dict()
 
     def get_by_multi(
         self,
@@ -373,7 +407,7 @@ class SavedQuery(ChildMixins):
         asset_scopes: bool = False,
         cache: bool = False,
         **kwargs,
-    ) -> BOTH:
+    ) -> t.Union[dict, models.SavedQuery]:
         """Get a saved query by name or uuid.
 
         Args:
@@ -382,11 +416,11 @@ class SavedQuery(ChildMixins):
             **kwargs: passed to :meth:`get`
 
         Returns:
-            BOTH: saved query dataclass or dict
+            t.Union[dict, models.SavedQuery]: saved query dataclass or dict
 
         Raises:
             ApiError: if sq is not a str, saved query dict, or saved query dataclass
-            SavedQueryNotFoundError: If no sq found with name or uuid from value
+            models.SavedQueryNotFoundError: If no sq found with name or uuid from value
         """
         if isinstance(sq, str):
             name = sq
@@ -394,11 +428,11 @@ class SavedQuery(ChildMixins):
         elif isinstance(sq, dict) and "uuid" in sq and "name" in sq:
             name = sq["name"]
             uuid = sq["uuid"]
-        elif isinstance(sq, MODEL):
+        elif isinstance(sq, models.SavedQuery):
             name = sq.name
             uuid = sq.uuid
         else:
-            raise ApiError(f"Unknown type {type(sq)}, must be a str, dict, or {MODEL}")
+            raise ApiError(f"Unknown type {type(sq)}, must be a str, dict, or {models.SavedQuery}")
 
         searches = [name, uuid]
         get_method = self.get_cached if cache else self.get
@@ -412,7 +446,7 @@ class SavedQuery(ChildMixins):
         for sq_obj in sq_objs:
             checks = (
                 [sq_obj.name, sq_obj.uuid]
-                if isinstance(sq_obj, MODEL)
+                if isinstance(sq_obj, models.SavedQuery)
                 else [sq_obj.get("name"), sq_obj.get("uuid")]
             )
             if any([x in checks for x in searches]):
@@ -420,7 +454,9 @@ class SavedQuery(ChildMixins):
 
         raise SavedQueryNotFoundError(sqs=sq_objs, details=details)
 
-    def get_by_name(self, value: str, as_dataclass: bool = AS_DATACLASS, **kwargs) -> BOTH:
+    def get_by_name(
+        self, value: str, as_dataclass: bool = AS_DATACLASS, **kwargs
+    ) -> t.Union[dict, models.SavedQuery]:
         """Get a saved query by name.
 
         Examples:
@@ -454,7 +490,7 @@ class SavedQuery(ChildMixins):
             SavedQueryNotFoundError: if no saved query found with name of value
 
         Returns:
-            BOTH: saved query dataclass or dict
+            t.Union[dict, models.SavedQuery]: saved query dataclass or dict
 
         """
         sqs = self.get(as_dataclass=True, **kwargs)
@@ -465,7 +501,9 @@ class SavedQuery(ChildMixins):
 
         raise SavedQueryNotFoundError(sqs=sqs, details=f"name={value!r}")
 
-    def get_by_uuid(self, value: str, as_dataclass: bool = AS_DATACLASS, **kwargs) -> BOTH:
+    def get_by_uuid(
+        self, value: str, as_dataclass: bool = AS_DATACLASS, **kwargs
+    ) -> t.Union[dict, models.SavedQuery]:
         """Get a saved query by uuid.
 
         Examples:
@@ -481,7 +519,7 @@ class SavedQuery(ChildMixins):
             SavedQueryNotFoundError: if no saved query found with uuid of value
 
         Returns:
-            BOTH: saved query dataclass or dict
+            t.Union[dict, models.SavedQuery]: saved query dataclass or dict
         """
         sqs = self.get(as_dataclass=True, **kwargs)
 
@@ -493,7 +531,7 @@ class SavedQuery(ChildMixins):
 
     def get_by_tags(
         self, value: t.Union[str, t.List[str]], as_dataclass: bool = AS_DATACLASS, **kwargs
-    ) -> t.List[BOTH]:
+    ) -> t.List[t.Union[dict, models.SavedQuery]]:
         """Get saved queries by tags.
 
         Examples:
@@ -517,7 +555,8 @@ class SavedQuery(ChildMixins):
             SavedQueryTagsNotFoundError: if no saved queries found with supplied tags
 
         Returns:
-            t.List[BOTH]: list of saved query dataclass or dict containing any tags in value
+            t.List[t.Union[dict, models.SavedQuery]]: list of saved query dataclass or dict
+                containing any tags in value
         """
         value = listify(value)
         sqs = self.get(as_dataclass=True, **kwargs)
@@ -567,7 +606,9 @@ class SavedQuery(ChildMixins):
         """Get the valid values for the run_from attribute for getting query history."""
         return self._get_query_history_run_from().value
 
-    def get_query_history(self, generator: bool = False, **kwargs) -> t.Union[HIST_GEN, HIST_LIST]:
+    def get_query_history(
+        self, generator: bool = False, **kwargs
+    ) -> t.Union[t.Generator[models.QueryHistory, None, None], t.List[models.QueryHistory]]:
         """Get query history.
 
         Args:
@@ -575,7 +616,8 @@ class SavedQuery(ChildMixins):
             **kwargs: passed to :meth:`get_fetch_history_generator`
 
         Returns:
-            t.Union[HIST_GEN, HIST_LIST]: t.Generator or list of query event models
+            t.Union[t.Generator[QueryHistory, None, None], t.List[QueryHistory]]: t.Generator or
+                list of query event models
         """
         gen = self.get_query_history_generator(**kwargs)
         return gen if generator else list(gen)
@@ -600,8 +642,8 @@ class SavedQuery(ChildMixins):
         log_level: t.Union[int, str] = PagingState.log_level,
         run_by_values: t.Optional[t.List[str]] = None,
         run_from_values: t.Optional[t.List[str]] = None,
-        request_obj: t.Optional[QueryHistoryRequest] = None,
-    ) -> HIST_LIST:
+        request_obj: t.Optional[models.QueryHistoryRequest] = None,
+    ) -> t.List[models.QueryHistory]:
         """Get query history.
 
         Args:
@@ -630,8 +672,8 @@ class SavedQuery(ChildMixins):
             request_obj (t.Optional[QueryHistoryRequest], optional):  Request object to use
                 for options
         """
-        if not isinstance(request_obj, QueryHistoryRequest):
-            request_obj = QueryHistoryRequest()
+        if not isinstance(request_obj, models.QueryHistoryRequest):
+            request_obj = models.QueryHistoryRequest()
 
         request_obj.set_list(
             prop="run_from",
@@ -682,7 +724,12 @@ class SavedQuery(ChildMixins):
                 page = state.page(method=self._get_query_history, request_obj=request_obj)
                 yield from page.rows
 
-    def get(self, generator: bool = False, **kwargs) -> t.Union[GEN, t.List[BOTH]]:
+    def get(
+        self, generator: bool = False, **kwargs
+    ) -> t.Union[
+        t.Generator[t.Union[dict, models.SavedQuery], None, None],
+        t.List[t.Union[dict, models.SavedQuery]],
+    ]:
         """Get all saved queries.
 
         Examples:
@@ -696,10 +743,12 @@ class SavedQuery(ChildMixins):
             generator: return an iterator
 
         Yields:
-            GEN: if generator = True, saved query dataclass or dict
+            t.Generator[t.Union[dict, models.SavedQuery], None, None]: if generator = True,
+                saved query dataclass or dict
 
         Returns:
-            t.List[BOTH]: if generator = False, list of saved query dataclass or dict
+            t.List[t.Union[dict, models.SavedQuery]]: if generator = False, list of saved query
+                dataclass or dict
 
         """
         if "sqs" in kwargs:
@@ -713,7 +762,7 @@ class SavedQuery(ChildMixins):
         return list(gen)
 
     @cached(cache=CACHE_GET)
-    def get_cached(self, **kwargs) -> t.List[BOTH]:
+    def get_cached(self, **kwargs) -> t.List[t.Union[dict, models.SavedQuery]]:
         """Get all saved queries.
 
         Examples:
@@ -727,18 +776,20 @@ class SavedQuery(ChildMixins):
             generator: return an iterator
 
         Yields:
-            GEN: if generator = True, saved query dataclass or dict
+            t.Generator[QueryHistory, None, None]: if generator = True, saved query
+                dataclass or dict
 
         Returns:
-            t.List[BOTH]: if generator = False, list of saved query dataclass or dict
+            t.List[t.Union[dict, models.SavedQuery]]: if generator = False, list of saved query
+                dataclass or dict
 
         """
         return list(self.get_generator(**kwargs))
 
-    def get_cached_single(self, value: t.Union[str, dict, MODEL]) -> MODEL:
+    def get_cached_single(self, value: t.Union[str, dict, models.SavedQuery]) -> models.SavedQuery:
         """Pass."""
-        name = MODEL._get_attr_value(value=value, attr="name")
-        uuid = MODEL._get_attr_value(value=value, attr="uuid")
+        name = models.SavedQuery._get_attr_value(value=value, attr="name")
+        uuid = models.SavedQuery._get_attr_value(value=value, attr="uuid")
         items = self.get_cached(as_dataclass=True)
         for item in items:
             if name == item.name or uuid == item.uuid:
@@ -779,21 +830,21 @@ class SavedQuery(ChildMixins):
         add_query_by_asset_type: bool = True,
         log_level: t.Union[int, str] = LOG_LEVEL_API,
         query: t.Optional[str] = None,
-        request_obj: t.Optional[MODEL_GET] = None,
-    ) -> GEN:
+        request_obj: t.Optional[models.SavedQueryGet] = None,
+    ) -> t.Generator[models.QueryHistory, None, None]:
         """Get Saved Queries using a generator.
 
         Args:
             as_dataclass (bool, optional): Return saved query dataclass instead of dict
 
         Yields:
-            GEN: saved query dataclass or dict
+            t.Generator[QueryHistory, None, None]: saved query dataclass or dict
         """
         query = self.build_filter_query(
             query=query, add_query_by_asset_type=add_query_by_asset_type
         )
-        if not isinstance(request_obj, MODEL_GET):
-            request_obj = MODEL_GET(
+        if not isinstance(request_obj, models.SavedQueryGet):
+            request_obj = models.SavedQueryGet(
                 filter=query,
                 get_view_data=get_view_data,
                 include_usage=include_usage,
@@ -814,7 +865,7 @@ class SavedQuery(ChildMixins):
                 for row in page.rows:
                     yield row if as_dataclass else row.to_dict()
 
-    def add(self, as_dataclass: bool = AS_DATACLASS, **kwargs) -> BOTH:
+    def add(self, as_dataclass: bool = AS_DATACLASS, **kwargs) -> t.Union[dict, models.SavedQuery]:
         """Create a saved query.
 
         Examples:
@@ -841,10 +892,11 @@ class SavedQuery(ChildMixins):
             **kwargs: passed to :meth:`build_add_model`
 
         Returns:
-            BOTH: saved query dataclass or dict
+            t.Union[dict, models.SavedQuery]: saved query dataclass or dict
 
         """
         create_obj = self.build_add_model(**kwargs)
+        self._check_name_exists(value=create_obj.name)
         added = self._add_from_dataclass(obj=create_obj)
         return self.get_by_uuid(value=added.id, as_dataclass=as_dataclass)
 
@@ -870,10 +922,12 @@ class SavedQuery(ChildMixins):
         private: bool = False,
         always_cached: bool = False,
         asset_scope: bool = False,
-        # folder_path: t.Optional[t.Union[str, t.List[str]]] = None,
-        folder_id: str = "",  # XXX
+        folder_id: t.Optional[str] = None,
+        path: t.Optional[t.Union[str, FolderModel]] = None,
+        create: bool = FolderDefaults.create_path,
+        echo: bool = FolderDefaults.echo,
         **kwargs,
-    ) -> json_api.saved_queries.SavedQueryCreate:
+    ) -> models.SavedQueryCreate:
         """Create a saved query.
 
         Examples:
@@ -917,19 +971,30 @@ class SavedQuery(ChildMixins):
             asset_scope: make this query an asset scope query
 
         Returns:
-            json_api.saved_queries.SavedQueryCreate: saved query dataclass to create
+            models.SavedQueryCreate: saved query dataclass to create
 
         """
-        # if isinstance(folder_path, str):
-        #     folders = self.get_folders()
-        #     folder = folders.search(value=folder_path)
-        #     folder_id = folder.id
-
         asset_scope = coerce_bool(asset_scope)
         private = coerce_bool(private)
         always_cached = coerce_bool(always_cached)
         query_expr: t.Optional[str] = kwargs.get("query_expr", None) or query
         wiz_parsed: dict = self.parent.get_wiz_entries(wiz_entries=wiz_entries)
+
+        root: FoldersModel = self.auth.http.CLIENT.folders.queries.get()
+        fallback: t.Optional[FolderModel] = None
+        if asset_scope:
+            self.auth.http.CLIENT.data_scopes.check_feature_enabled()
+            fallback: t.Optional[FolderModel] = root.path_asset_scope
+
+        path: FolderModel = root.resolve_folder(
+            path=path,
+            create=create,
+            echo=echo,
+            folder_id=folder_id,
+            private=private,
+            asset_scope=asset_scope,
+            fallback=fallback,
+        )
 
         if wiz_parsed:
             query = wiz_parsed["query"]
@@ -969,7 +1034,7 @@ class SavedQuery(ChildMixins):
         view["sort"]["field"] = sort_field or ""
         view["fields"] = fields
         view["pageSize"] = gui_page_size
-        return json_api.saved_queries.SavedQueryCreate.new_from_kwargs(
+        return models.SavedQueryCreate.new_from_kwargs(
             name=name,
             description=description,
             view=view,
@@ -977,10 +1042,12 @@ class SavedQuery(ChildMixins):
             always_cached=always_cached,
             asset_scope=asset_scope,
             tags=tags,
-            folder_id=folder_id,  # XXX
+            folder_id=path.id,
         )
 
-    def delete_by_name(self, value: str, as_dataclass: bool = AS_DATACLASS) -> BOTH:
+    def delete_by_name(
+        self, value: str, as_dataclass: bool = AS_DATACLASS
+    ) -> t.Union[dict, models.SavedQuery]:
         """Delete a saved query by name.
 
         Examples:
@@ -993,7 +1060,7 @@ class SavedQuery(ChildMixins):
             as_dataclass (bool, optional): Return saved query dataclass instead of dict
 
         Returns:
-            BOTH: saved query dataclass or dict
+            t.Union[dict, models.SavedQuery]: saved query dataclass or dict
         """
         sq = self.get_by_name(value=value, as_dataclass=True)
         self._delete(uuid=sq.uuid)
@@ -1006,7 +1073,7 @@ class SavedQuery(ChildMixins):
         refetch: bool = True,
         as_dataclass: bool = AS_DATACLASS,
         **kwargs,
-    ) -> t.List[BOTH]:
+    ) -> t.List[t.Union[dict, models.SavedQuery]]:
         """Delete saved queries.
 
         Args:
@@ -1018,7 +1085,8 @@ class SavedQuery(ChildMixins):
             as_dataclass (bool, optional): Return saved query dataclass instead of dict
 
         Returns:
-            t.List[BOTH]: list of saved query dataclass or dict that were deleted
+            t.List[t.Union[dict, models.SavedQuery]]: list of saved query dataclass or dict that
+                were deleted
 
         """
         do_echo = kwargs.get("do_echo", False)
@@ -1027,7 +1095,7 @@ class SavedQuery(ChildMixins):
         for row in listify(rows):
             try:
                 sq = row
-                if not isinstance(row, MODEL) or refetch:
+                if not isinstance(row, models.SavedQuery) or refetch:
                     sq = self.get_by_multi(sq=row, as_dataclass=True, sqs=sqs)
 
                 if sq not in deleted:
@@ -1047,7 +1115,7 @@ class SavedQuery(ChildMixins):
 
     def _update_flag(
         self, attr: str, sq: MULTI, value: bool, as_dataclass: bool = AS_DATACLASS
-    ) -> BOTH:
+    ) -> t.Union[dict, models.SavedQuery]:
         """Update a boolean flag for a SQ.
 
         Args:
@@ -1057,14 +1125,16 @@ class SavedQuery(ChildMixins):
             as_dataclass (bool, optional): Return saved query dataclass instead of dict
 
         Returns:
-            BOTH: saved query dataclass or dict
+            t.Union[dict, models.SavedQuery]: saved query dataclass or dict
         """
         sq = self.get_by_multi(sq=sq, as_dataclass=True)
         value = coerce_bool(obj=value, errmsg=f"{attr} requires a valid boolean")
         setattr(sq, attr, value)
         return self._update_handler(sq=sq, as_dataclass=as_dataclass)
 
-    def _update_handler(self, sq: MODEL, as_dataclass: bool = AS_DATACLASS) -> BOTH:
+    def _update_handler(
+        self, sq: models.SavedQuery, as_dataclass: bool = AS_DATACLASS
+    ) -> t.Union[dict, models.SavedQuery]:
         """Update a SQ.
 
         Args:
@@ -1072,69 +1142,72 @@ class SavedQuery(ChildMixins):
             as_dataclass (bool, optional): Return saved query dataclass instead of dict
 
         Returns:
-            BOTH: saved query dataclass or dict
+            t.Union[dict, models.SavedQuery]: saved query dataclass or dict
         """
         ret = self._update_from_dataclass(obj=sq)
-        return ret if as_dataclass else ret.to_dict()
+        return self.get_by_multi(sq=ret, as_dataclass=True)
 
     def _update_from_dataclass(
-        self, obj: json_api.saved_queries.SavedQueryMixins, uuid: t.Optional[str] = None
-    ) -> MODEL:
+        self, obj: models.SavedQueryMixins, uuid: t.Optional[str] = None
+    ) -> models.SavedQuery:
         """Direct API method to update a saved query.
 
         Args:
-            obj (json_api.saved_queries.SavedQueryMixins): pre-created dataclass
+            obj (models.SavedQueryMixins): pre-created dataclass
 
         Returns:
-            MODEL: saved query dataclass
+            models.SavedQuery: saved query dataclass
         """
-        request_obj = MODEL.create_from_other(obj)
+        request_obj = models.SavedQueryMixins.create_from_other(obj)
         if not (isinstance(uuid, str) and uuid):
             uuid = getattr(obj, "uuid", None)
             if not (isinstance(uuid, str) and uuid):
                 raise ApiError("Must supply UUID via uuid kwarg or obj.uuid")
 
         api_endpoint = ApiEndpoints.saved_queries.update
-        return api_endpoint.perform_request(
+        response = api_endpoint.perform_request(
             http=self.auth.http,
             request_obj=request_obj,
             uuid=uuid,
         )
+        self.get_cached.cache_clear()
+        return response
 
-    def _add_from_dataclass(self, obj: json_api.saved_queries.SavedQueryCreate) -> MODEL:
+    def _add_from_dataclass(self, obj: models.SavedQueryCreate) -> models.SavedQuery:
         """Direct API method to create a saved query.
 
         Args:
-            obj (json_api.saved_queries.SavedQueryCreate): pre-created dataclass
+            obj (models.SavedQueryCreate): pre-created dataclass
 
         Returns:
-            MODEL: saved query dataclass
+            models.SavedQuery: saved query dataclass
         """
         api_endpoint = ApiEndpoints.saved_queries.create
-        request_obj = MODEL.create_from_other(obj)
-        return api_endpoint.perform_request(
+        request_obj = models.SavedQuery.create_from_other(obj)
+        response = api_endpoint.perform_request(
             http=self.auth.http, request_obj=request_obj, asset_type=self.parent.ASSET_TYPE
         )
+        self.get_cached.cache_clear()
+        return response
 
-    def _delete(self, uuid: str) -> json_api.generic.Metadata:
+    def _delete(self, uuid: str) -> Metadata:
         """Direct API method to delete saved queries.
 
         Args:
             uuid (str): uuid of SQ to delete
 
         Returns:
-            json_api.generic.Metadata: Metadata object containing UUID of deleted SQ
+            Metadata: Metadata object containing UUID of deleted SQ
         """
         api_endpoint = ApiEndpoints.saved_queries.delete
         request_obj = api_endpoint.load_request()
-        return api_endpoint.perform_request(
-            http=self.auth.http,
-            request_obj=request_obj,
-            asset_type=self.parent.ASSET_TYPE,
-            uuid=uuid,
+        response = api_endpoint.perform_request(
+            http=self.auth.http, request_obj=request_obj, uuid=uuid
         )
+        self.get_cached.cache_clear()
+        return response
 
-    def _get_model(self, request_obj: MODEL_GET) -> t.List[MODEL]:
+    def _get_model(self, request_obj: models.SavedQueryGet) -> t.List[models.SavedQuery]:
         """Direct API method to get all saved queries."""
         api_endpoint = ApiEndpoints.saved_queries.get
         return api_endpoint.perform_request(http=self.auth.http, request_obj=request_obj)
@@ -1150,28 +1223,32 @@ class SavedQuery(ChildMixins):
         """
         try:
             sq = self.get_by_name(value=value, as_dataclass=True)
-            raise AlreadyExists(f"Saved query with name or uuid of {value!r} already exists:\n{sq}")
+            exc = AlreadyExists(f"Saved query with name or uuid of {value!r} already exists:\n{sq}")
+            exc.obj = sq
+            raise exc
         except SavedQueryNotFoundError:
             return
 
-    def _get_query_history(self, request_obj: t.Optional[QueryHistoryRequest] = None) -> HIST_LIST:
+    def _get_query_history(
+        self, request_obj: t.Optional[models.QueryHistoryRequest] = None
+    ) -> t.List[models.QueryHistory]:
         """Pass."""
         api_endpoint = ApiEndpoints.saved_queries.get_query_history
         if not request_obj:
-            request_obj = QueryHistoryRequest()
+            request_obj = models.QueryHistoryRequest()
         return api_endpoint.perform_request(http=self.auth.http, request_obj=request_obj)
 
-    def _get_query_history_run_by(self) -> json_api.generic.ListValueSchema:
+    def _get_query_history_run_by(self) -> ListValueSchema:
         """Get the valid values for the run_by attribute for getting query history."""
         api_endpoint = ApiEndpoints.saved_queries.get_run_by
         return api_endpoint.perform_request(http=self.auth.http)
 
-    def _get_query_history_run_from(self) -> json_api.generic.ListValueSchema:
+    def _get_query_history_run_from(self) -> ListValueSchema:
         """Get the valid values for the run_from attribute for getting query history."""
         api_endpoint = ApiEndpoints.saved_queries.get_run_from
         return api_endpoint.perform_request(http=self.auth.http)
 
-    def _get_tags(self) -> json_api.generic.ListValueSchema:
+    def _get_tags(self) -> ListValueSchema:
         """Get the valid tags."""
         api_endpoint = ApiEndpoints.saved_queries.get_tags
         return api_endpoint.perform_request(http=self.auth.http, asset_type=self.parent.ASSET_TYPE)

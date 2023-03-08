@@ -10,6 +10,7 @@ import marshmallow
 import marshmallow_jsonapi
 
 from ...constants.ctypes import SimpleLike
+from ...constants.general import RERAISE
 from ...exceptions import (
     ApiAttributeMissingError,
     ApiAttributeTypeError,
@@ -72,7 +73,11 @@ class BaseCommon:
 
     @classmethod
     def _load_schema(
-        cls, schema: marshmallow.Schema, data: t.Union[dict, t.List[dict]], **kwargs
+        cls,
+        schema: marshmallow.Schema,
+        data: t.Union[dict, t.List[dict]],
+        reraise: bool = RERAISE,
+        **kwargs,
     ) -> t.Union["BaseModel", t.List["BaseModel"]]:
         """Load data using a marshmallow schema.
 
@@ -91,6 +96,8 @@ class BaseCommon:
         try:
             loaded = schema.load(data, unknown=marshmallow.INCLUDE)
         except Exception as exc:
+            if reraise:
+                raise
             raise SchemaError(schema=schema, exc=exc, obj=cls, data=data)
 
         cls._post_load_attrs(data=loaded, **kwargs)
@@ -116,7 +123,7 @@ class BaseSchema(BaseCommon, marshmallow.Schema):
     """Schema base class for validating non JSON API data."""
 
     @staticmethod
-    def get_model_cls() -> t.Union["BaseModel", type]:
+    def get_model_cls() -> t.Optional[type]:
         """Get the BaseModel or type that data should be loaded into.
 
         Returns:
@@ -243,6 +250,18 @@ class BaseSchemaJson(BaseSchema, marshmallow_jsonapi.Schema):
 class BaseModel(dataclasses_json.DataClassJsonMixin, BaseCommon):
     """Model base class for holding data."""
 
+    @staticmethod
+    def get_schema_cls() -> t.Optional[type]:
+        """Get the BaseSchema that should be used to validate the data for this model.
+
+        Returns:
+            t.Optional[Type[BaseSchema]]: BaseSchema to use to verify data
+
+        Raises:
+            NotImplementedError: Sub classes MUST define this.
+        """
+        raise NotImplementedError()
+
     @classmethod
     def _get_attr_value(cls, value: t.Union[str, dict, "BaseModel"], attr: str) -> str:
         """Pass."""
@@ -279,17 +298,6 @@ class BaseModel(dataclasses_json.DataClassJsonMixin, BaseCommon):
             f"Unable to get attribute {attr}!"
             f" Invalid value type {type(value)} {value!r}, must be str, dict, or {cls}"
         )
-
-    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
-        """Get the BaseSchema that should be used to validate the data for this model.
-
-        Returns:
-            t.Optional[Type[BaseSchema]]: BaseSchema to use to verify data
-
-        Raises:
-            NotImplementedError: Sub classes MUST define this.
-        """
-        raise NotImplementedError()
 
     @classmethod
     def load_response(

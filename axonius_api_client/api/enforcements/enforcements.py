@@ -1,31 +1,39 @@
 # -*- coding: utf-8 -*-
 """API for working with enforcements."""
+import typing as t
 import warnings
-from typing import Generator, List, Optional, Union
+
+from cachetools import TTLCache, cached
 
 from ...constants.api import MAX_PAGE_SIZE
-from ...exceptions import ApiError, ApiWarning, NotFoundError
+from ...exceptions import AlreadyExists, ApiError, ApiWarning, NotAllowedError, NotFoundError
 from ...parsers.tables import tablize
 from ...tools import listify
 from .. import json_api
 from ..api_endpoints import ApiEndpoints
+from ..json_api.enforcements import (
+    ActionCategory,
+    ActionType,
+    CreateEnforcementModel,
+    EnforcementBasicModel,
+    EnforcementDefaults,
+    EnforcementFullModel,
+    EnforcementSchedule,
+    MoveEnforcementsRequestModel,
+    MoveEnforcementsResponseModel,
+    UpdateEnforcementResponseModel,
+)
+from ..json_api.folders.base import FolderDefaults
+from ..json_api.folders.enforcements import FolderModel, FoldersModel
+from ..json_api.saved_queries import QueryTypes, SavedQuery
 from ..mixins import ModelMixins
 
-ActionCategory = json_api.enforcements.ActionCategory
-QueryType = json_api.enforcements.QueryType
-SetDefaults = json_api.enforcements.SetDefaults
-Schedule = json_api.enforcements.Schedule
-MODEL_SQ = json_api.saved_queries.SavedQuery
-MODEL_SQ_MULTI = Union[str, dict, MODEL_SQ]
-MODEL_SET_UPDATE = json_api.enforcements.UpdateResponse
-MODEL_SET_BASIC = json_api.enforcements.SetBasic
-MODEL_SET_FULL = json_api.enforcements.SetFull
-MODEL_SET_BOTH = Union[MODEL_SET_BASIC, MODEL_SET_FULL]
-GEN_SET = Generator[MODEL_SET_BOTH, None, None]
-MULTI_SET = Union[str, dict, MODEL_SET_BASIC, MODEL_SET_FULL, MODEL_SET_UPDATE]
-
-MODEL_ACTION_TYPE = json_api.enforcements.ActionType
-MULTI_ACTION_TYPE = Union[str, dict, MODEL_ACTION_TYPE]
+MULTI_SQ = t.Union[str, dict, SavedQuery]
+MULTI_SET = t.Union[
+    str, dict, EnforcementBasicModel, EnforcementFullModel, UpdateEnforcementResponseModel
+]
+MULTI_ACTION_TYPE = t.Union[str, dict, ActionType]
+CACHE_GET = TTLCache(maxsize=1024, ttl=60)
 
 
 class Enforcements(ModelMixins):
@@ -44,17 +52,18 @@ class Enforcements(ModelMixins):
     last_updated. Also the "human friendly" description of trigger schedule is only available from
     BASIC.
 
-    We overcome this by getting the FULL object and attaching the BASIC object as FULL.BASIC,
-    see :method:`attach_full_set`.
+    We overcome this by getting the FULL object and attaching the BASIC object as FULL.BASIC.
 
     TBD:
         get_tasks
-        run
     """
 
     def get_set(
-        self, value: MULTI_SET, refetch: bool = True, cache: Optional[List[MODEL_SET_FULL]] = None
-    ) -> MODEL_SET_FULL:
+        self,
+        value: MULTI_SET,
+        refetch: bool = True,
+        cache: t.Optional[t.List[EnforcementFullModel]] = None,
+    ) -> EnforcementFullModel:
         """Get an enforcement set by name or UUID.
 
         Args:
@@ -65,13 +74,16 @@ class Enforcements(ModelMixins):
             NotFoundError: if not found
 
         Returns:
-            MODEL_SET_FULL: enforcement set model
+            EnforcementFullModel: enforcement set model
         """
         if isinstance(value, str):
             name = value
             uuid = value
-        elif isinstance(value, (MODEL_SET_BASIC, MODEL_SET_FULL, MODEL_SET_UPDATE)):
-            if not refetch and isinstance(value, MODEL_SET_FULL):
+        elif isinstance(
+            value,
+            (EnforcementBasicModel, EnforcementFullModel, UpdateEnforcementResponseModel),
+        ):
+            if not refetch and isinstance(value, EnforcementFullModel):
                 return value
             name = value.name
             uuid = value.uuid
@@ -86,7 +98,17 @@ class Enforcements(ModelMixins):
             isinstance(cache, list)
             and cache
             and all(
-                [isinstance(x, (MODEL_SET_BASIC, MODEL_SET_FULL, MODEL_SET_UPDATE)) for x in cache]
+                [
+                    isinstance(
+                        x,
+                        (
+                            EnforcementBasicModel,
+                            EnforcementFullModel,
+                            UpdateEnforcementResponseModel,
+                        ),
+                    )
+                    for x in cache
+                ]
             )
         ):
             data = cache
@@ -105,9 +127,19 @@ class Enforcements(ModelMixins):
             )
         )
 
+    @cached(cache=CACHE_GET)
+    def get_sets_cached(
+        self, **kwargs
+    ) -> t.List[t.Union[EnforcementBasicModel, EnforcementFullModel]]:
+        """Get all enforcements cached."""
+        return list(self.get_sets_generator(**kwargs))
+
     def get_sets(
         self, generator: bool = False, full: bool = True
-    ) -> Union[GEN_SET, List[MODEL_SET_BOTH]]:
+    ) -> t.Union[
+        t.Generator[t.Union[EnforcementBasicModel, EnforcementFullModel], None, None],
+        t.List[t.Union[EnforcementBasicModel, EnforcementFullModel]],
+    ]:
         """Get all enforcement sets.
 
         Args:
@@ -117,14 +149,16 @@ class Enforcements(ModelMixins):
         gen = self.get_sets_generator(full=full)
         return gen if generator else list(gen)
 
-    def get_sets_generator(self, full: bool = True) -> GEN_SET:
+    def get_sets_generator(
+        self, full: bool = True
+    ) -> t.Generator[t.Union[EnforcementBasicModel, EnforcementFullModel], None, None]:
         """Get all enforcement sets using a generator.
 
         Args:
             full (bool, optional): get the full model of each enforcement set
 
         Yields:
-            GEN_SET: Generator
+            t.Generator[t.Union[EnforcementBasicModel, EnforcementFullModel], None, None]: Generator
         """
         offset = 0
 
@@ -136,26 +170,7 @@ class Enforcements(ModelMixins):
                 break
 
             for row in rows:
-                yield self.attach_full_set(value=row) if full else row
-
-    def attach_full_set(self, value: MODEL_SET_BASIC) -> MODEL_SET_FULL:
-        """Fetch the full model of an enforcement set and attach the basic model to it.
-
-        Args:
-            value (MODEL_SET_BASIC): Previously fetched basic model
-
-        Returns:
-            MODEL_SET_FULL: Full model with basic model embedded
-
-        Raises:
-            ApiError: if value is incorrect type
-        """
-        if not isinstance(value, MODEL_SET_BASIC):
-            raise ApiError(f"Incorrect type {type(value)}, must be {MODEL_SET_BASIC}")
-
-        data = self._get_set(uuid=value.uuid)
-        data.BASIC = value
-        return data
+                yield row.get_full() if full else row
 
     def check_set_exists(self, value: MULTI_SET):
         """Check if an enforcement set already exists.
@@ -172,16 +187,18 @@ class Enforcements(ModelMixins):
         except NotFoundError:
             return
 
-        raise ApiError(f"enforcement set matching {value!r} already exists:\n{existing}")
+        exc = AlreadyExists(f"enforcement set matching {value!r} already exists:\n{existing}")
+        exc.obj = existing
+        raise exc
 
-    def get_action_type(self, value: MULTI_ACTION_TYPE) -> MODEL_ACTION_TYPE:
+    def get_action_type(self, value: MULTI_ACTION_TYPE) -> ActionType:
         """Get an action type.
 
         Args:
             value (MULTI_ACTION_TYPE): action type model or str with name
 
         Returns:
-            MODEL_ACTION_TYPE: action type model
+            ActionType: action type model
 
         Raises:
             ApiError: if value is incorrect type
@@ -191,10 +208,10 @@ class Enforcements(ModelMixins):
             name = value
         elif isinstance(value, dict) and value.get("id"):
             name = value["id"]
-        elif isinstance(value, MODEL_ACTION_TYPE):
+        elif isinstance(value, ActionType):
             name = value.name
         else:
-            raise ApiError(f"Unknown type {type(value)}, must be str, dict, or {MODEL_ACTION_TYPE}")
+            raise ApiError(f"Unknown type {type(value)}, must be str, dict, or {ActionType}")
 
         items = self.get_action_types()
 
@@ -209,15 +226,16 @@ class Enforcements(ModelMixins):
             )
         )
 
-    def get_action_types(self) -> List[MODEL_ACTION_TYPE]:
+    def get_action_types(self) -> t.List[ActionType]:
         """Get all action types.
 
         Returns:
-            List[MODEL_ACTION_TYPE]: action type models
+            t.List[ActionType]: action type models
         """
         return self._get_action_types()
 
-    def copy(self, value: MULTI_SET, name: str, copy_triggers: bool = True) -> MODEL_SET_FULL:
+    # XXX bring me up to date with SavedQuery.copy
+    def copy(self, value: MULTI_SET, name: str, copy_triggers: bool = True) -> EnforcementFullModel:
         """Copy an enforcement set.
 
         Args:
@@ -226,13 +244,13 @@ class Enforcements(ModelMixins):
             copy_triggers (bool, optional): copy triggers to new set
 
         Returns:
-            MODEL_SET_FULL: copied enforcement set
+            EnforcementFullModel: copied enforcement set
         """
         existing = self.get_set(value=value)
         created = self._copy(uuid=existing.uuid, name=name, clone_triggers=copy_triggers)
         return self.get_set(value=created)
 
-    def update_name(self, value: MULTI_SET, name: str) -> MODEL_SET_FULL:
+    def update_name(self, value: MULTI_SET, name: str) -> EnforcementFullModel:
         """Update the name of an enforcement set.
 
         Args:
@@ -240,7 +258,7 @@ class Enforcements(ModelMixins):
             name (str): name to update
 
         Returns:
-            MODEL_SET_FULL: updated enforcement set
+            EnforcementFullModel: updated enforcement set
         """
         existing = self.get_set(value=value)
         self.check_set_exists(value=name)
@@ -248,9 +266,25 @@ class Enforcements(ModelMixins):
         updated = self.update_from_model(value=existing)
         return self.get_set(value=updated)
 
+    def update_description(
+        self, value: MULTI_SET, description: str, append: bool = False
+    ) -> EnforcementFullModel:
+        """Update the description of an enforcement set.
+
+        Args:
+            value (MULTI_SET): enforcement set model or str with name or uuid
+            description (str): description to update
+
+        Returns:
+            EnforcementFullModel: updated enforcement set
+        """
+        existing = self.get_set(value=value)
+        existing.update_description(value=description, append=append)
+        return self.get_set(value=existing)
+
     def update_action_main(
-        self, value: MULTI_SET, name: str, action_type: str, config: Optional[dict] = None
-    ) -> MODEL_SET_FULL:
+        self, value: MULTI_SET, name: str, action_type: str, config: t.Optional[dict] = None
+    ) -> EnforcementFullModel:
         """Update the main action of an enforcement set.
 
         Args:
@@ -260,7 +294,7 @@ class Enforcements(ModelMixins):
             config (Optional[dict], optional): action configuration
 
         Returns:
-            MODEL_SET_FULL: updated enforcement set
+            EnforcementFullModel: updated enforcement set
         """
         existing = self.get_set(value=value)
         action = self.get_set_action(name=name, action_type=action_type, config=config)
@@ -271,11 +305,11 @@ class Enforcements(ModelMixins):
     def update_action_add(
         self,
         value: MULTI_SET,
-        category: Union[ActionCategory, str],
+        category: t.Union[ActionCategory, str],
         name: str,
         action_type: str,
-        config: Optional[dict] = None,
-    ) -> MODEL_SET_FULL:
+        config: t.Optional[dict] = None,
+    ) -> EnforcementFullModel:
         """Add an action to an enforcement set.
 
         Args:
@@ -286,7 +320,7 @@ class Enforcements(ModelMixins):
             config (Optional[dict], optional): action configuration
 
         Returns:
-            MODEL_SET_FULL: updated enforcement set
+            EnforcementFullModel: updated enforcement set
         """
         existing = self.get_set(value=value)
         action = self.get_set_action(name=name, action_type=action_type, config=config)
@@ -295,8 +329,8 @@ class Enforcements(ModelMixins):
         return self.get_set(value=updated)
 
     def update_action_remove(
-        self, value: MULTI_SET, category: Union[ActionCategory, str], name: str
-    ) -> MODEL_SET_FULL:
+        self, value: MULTI_SET, category: t.Union[ActionCategory, str], name: str
+    ) -> EnforcementFullModel:
         """Remove an action from an enforcement set.
 
         Args:
@@ -305,7 +339,7 @@ class Enforcements(ModelMixins):
             name (str): name of action to remove
 
         Returns:
-            MODEL_SET_FULL: updated enforcement set
+            EnforcementFullModel: updated enforcement set
         """
         existing = self.get_set(value=value)
         existing.remove_action(category=category, name=name)
@@ -316,17 +350,17 @@ class Enforcements(ModelMixins):
         self,
         value: MULTI_SET,
         query_name: str,
-        query_type: Union[QueryType, str] = SetDefaults.query_type,
-    ) -> MODEL_SET_FULL:
+        query_type: t.Union[QueryTypes, str] = EnforcementDefaults.query_type,
+    ) -> EnforcementFullModel:
         """Update the query of an enforcement set.
 
         Args:
             value (MULTI_SET): enforcement set model or str with name or uuid
             query_name (str): name of saved query
-            query_type (Union[QueryType, str], optional): type of saved query
+            query_type (Union[QueryTypes, str], optional): type of saved query
 
         Returns:
-            MODEL_SET_FULL: updated enforcement set
+            EnforcementFullModel: updated enforcement set
         """
         sq = self.get_trigger_view(query_name=query_name, query_type=query_type)
         existing = self.get_set(value=value)
@@ -334,49 +368,50 @@ class Enforcements(ModelMixins):
         updated = self.update_from_model(value=existing)
         return self.get_set(value=updated)
 
-    def update_query_remove(self, value: MULTI_SET) -> MODEL_SET_FULL:
+    def update_query_remove(self, value: MULTI_SET) -> EnforcementFullModel:
         """Remove the query from an enforcement set.
 
         Args:
             value (MULTI_SET): enforcement set model or str with name or uuid
 
         Returns:
-            MODEL_SET_FULL: updated enforcement set
+            EnforcementFullModel: updated enforcement set
         """
+        raise NotAllowedError("Enforcement Sets now require a Saved Query to be defined")
         existing = self.get_set(value=value)
         existing.query_remove()
         updated = self.update_from_model(value=existing)
         return self.get_set(value=updated)
 
-    def update_schedule_never(self, value: MULTI_SET) -> MODEL_SET_FULL:
+    def update_schedule_never(self, value: MULTI_SET) -> EnforcementFullModel:
         """Set the schedule of an enforcement set to never run.
 
         Args:
             value (MULTI_SET): enforcement set model or str with name or uuid
 
         Returns:
-            MODEL_SET_FULL: updated enforcement set
+            EnforcementFullModel: updated enforcement set
         """
         existing = self.get_set(value=value)
         existing.set_schedule_never()
         updated = self.update_from_model(value=existing)
         return self.get_set(value=updated)
 
-    def update_schedule_discovery(self, value: MULTI_SET) -> MODEL_SET_FULL:
+    def update_schedule_discovery(self, value: MULTI_SET) -> EnforcementFullModel:
         """Set the schedule of an enforcement set to run every discovery.
 
         Args:
             value (MULTI_SET): enforcement set model or str with name or uuid
 
         Returns:
-            MODEL_SET_FULL: updated enforcement set
+            EnforcementFullModel: updated enforcement set
         """
         existing = self.get_set(value=value)
         existing.set_schedule_discovery()
         updated = self.update_from_model(value=existing)
         return self.get_set(value=updated)
 
-    def update_schedule_hourly(self, value: MULTI_SET, recurrence: int) -> MODEL_SET_FULL:
+    def update_schedule_hourly(self, value: MULTI_SET, recurrence: int) -> EnforcementFullModel:
         """Set the schedule of an enforcement set to run hourly.
 
         Args:
@@ -384,7 +419,7 @@ class Enforcements(ModelMixins):
             recurrence (int): run schedule every N hours (N = 1-24)
 
         Returns:
-            MODEL_SET_FULL: updated enforcement set
+            EnforcementFullModel: updated enforcement set
         """
         existing = self.get_set(value=value)
         existing.set_schedule_hourly(recurrence=recurrence)
@@ -395,9 +430,9 @@ class Enforcements(ModelMixins):
         self,
         value: MULTI_SET,
         recurrence: int,
-        hour: int = SetDefaults.schedule_hour,
-        minute: int = SetDefaults.schedule_minute,
-    ) -> MODEL_SET_FULL:
+        hour: int = EnforcementDefaults.schedule_hour,
+        minute: int = EnforcementDefaults.schedule_minute,
+    ) -> EnforcementFullModel:
         """Set the schedule of an enforcement set to run daily.
 
         Args:
@@ -407,7 +442,7 @@ class Enforcements(ModelMixins):
             minute (int, optional): minute of hour to run schedule
 
         Returns:
-            MODEL_SET_FULL: updated enforcement set
+            EnforcementFullModel: updated enforcement set
         """
         existing = self.get_set(value=value)
         existing.set_schedule_daily(recurrence=recurrence, hour=hour, minute=minute)
@@ -417,20 +452,20 @@ class Enforcements(ModelMixins):
     def update_schedule_weekly(
         self,
         value: MULTI_SET,
-        recurrence: Union[str, List[Union[str, int]]],
-        hour: int = SetDefaults.schedule_hour,
-        minute: int = SetDefaults.schedule_minute,
-    ) -> MODEL_SET_FULL:
+        recurrence: t.Union[str, t.List[t.Union[str, int]]],
+        hour: int = EnforcementDefaults.schedule_hour,
+        minute: int = EnforcementDefaults.schedule_minute,
+    ) -> EnforcementFullModel:
         """Set the schedule of an enforcement set to run weekly.
 
         Args:
             value (MULTI_SET): enforcement set model or str with name or uuid
-            recurrence (Union[str, List[Union[str, int]]]): run enforcement on days of week
+            recurrence (Union[str, t.List[Union[str, int]]]): run enforcement on days of week
             hour (int, optional): hour of day to run schedule
             minute (int, optional): minute of hour to run schedule
 
         Returns:
-            MODEL_SET_FULL: updated enforcement set
+            EnforcementFullModel: updated enforcement set
         """
         existing = self.get_set(value=value)
         existing.set_schedule_weekly(recurrence=recurrence, hour=hour, minute=minute)
@@ -440,27 +475,27 @@ class Enforcements(ModelMixins):
     def update_schedule_monthly(
         self,
         value: MULTI_SET,
-        recurrence: Union[str, List[Union[int, str]]],
-        hour: int = SetDefaults.schedule_hour,
-        minute: int = SetDefaults.schedule_minute,
-    ) -> MODEL_SET_FULL:
+        recurrence: t.Union[str, t.List[t.Union[int, str]]],
+        hour: int = EnforcementDefaults.schedule_hour,
+        minute: int = EnforcementDefaults.schedule_minute,
+    ) -> EnforcementFullModel:
         """Set the schedule of an enforcement set to run monthly.
 
         Args:
             value (MULTI_SET): enforcement set model or str with name or uuid
-            recurrence (Union[str, List[int]]): run enforcement on days of month
+            recurrence (Union[str, t.List[int]]): run enforcement on days of month
             hour (int, optional): hour of day to run schedule
             minute (int, optional): minute of hour to run schedule
 
         Returns:
-            MODEL_SET_FULL: updated enforcement set
+            EnforcementFullModel: updated enforcement set
         """
         existing = self.get_set(value=value)
         existing.set_schedule_monthly(recurrence=recurrence, hour=hour, minute=minute)
         updated = self.update_from_model(value=existing)
         return self.get_set(value=updated)
 
-    def update_only_new_assets(self, value: MULTI_SET, update: bool) -> MODEL_SET_FULL:
+    def update_only_new_assets(self, value: MULTI_SET, update: bool) -> EnforcementFullModel:
         """Update enforcement set to only run against newly added assets from last automated run.
 
         Args:
@@ -469,14 +504,14 @@ class Enforcements(ModelMixins):
                 newly added assets from last automated run
 
         Returns:
-            MODEL_SET_FULL: updated enforcement set
+            EnforcementFullModel: updated enforcement set
         """
         existing = self.get_set(value=value)
         existing.only_new_assets = update
         updated = self.update_from_model(value=existing)
         return self.get_set(value=updated)
 
-    def update_on_count_increased(self, value: MULTI_SET, update: bool) -> MODEL_SET_FULL:
+    def update_on_count_increased(self, value: MULTI_SET, update: bool) -> EnforcementFullModel:
         """Update enforcement set to only run if asset count increased from last automated run.
 
         Args:
@@ -485,14 +520,14 @@ class Enforcements(ModelMixins):
                 automated run if asset count increased
 
         Returns:
-            MODEL_SET_FULL: updated enforcement set
+            EnforcementFullModel: updated enforcement set
         """
         existing = self.get_set(value=value)
         existing.on_count_increased = update
         updated = self.update_from_model(value=existing)
         return self.get_set(value=updated)
 
-    def update_on_count_decreased(self, value: MULTI_SET, update: bool) -> MODEL_SET_FULL:
+    def update_on_count_decreased(self, value: MULTI_SET, update: bool) -> EnforcementFullModel:
         """Update enforcement set to only run if asset count decreased from last automated run.
 
         Args:
@@ -501,14 +536,16 @@ class Enforcements(ModelMixins):
                 automated run if asset count decreased
 
         Returns:
-            MODEL_SET_FULL: updated enforcement set
+            EnforcementFullModel: updated enforcement set
         """
         existing = self.get_set(value=value)
         existing.on_count_decreased = update
         updated = self.update_from_model(value=existing)
         return self.get_set(value=updated)
 
-    def update_on_count_above(self, value: MULTI_SET, update: Optional[int]) -> MODEL_SET_FULL:
+    def update_on_count_above(
+        self, value: MULTI_SET, update: t.Optional[int]
+    ) -> EnforcementFullModel:
         """Update enforcement set to only run automatically if asset count is above N.
 
         Args:
@@ -517,14 +554,16 @@ class Enforcements(ModelMixins):
                 integer to only run automatically if asset count is above N
 
         Returns:
-            MODEL_SET_FULL: updated enforcement set
+            EnforcementFullModel: updated enforcement set
         """
         existing = self.get_set(value=value)
         existing.on_count_above = update
         updated = self.update_from_model(value=existing)
         return self.get_set(value=updated)
 
-    def update_on_count_below(self, value: MULTI_SET, update: Optional[int]) -> MODEL_SET_FULL:
+    def update_on_count_below(
+        self, value: MULTI_SET, update: t.Optional[int]
+    ) -> EnforcementFullModel:
         """Update enforcement set to only run automatically if asset count is below N.
 
         Args:
@@ -533,24 +572,28 @@ class Enforcements(ModelMixins):
                 integer to only run automatically if asset count is below N
 
         Returns:
-            MODEL_SET_FULL: updated enforcement set
+            EnforcementFullModel: updated enforcement set
         """
         existing = self.get_set(value=value)
         existing.on_count_below = update
         updated = self.update_from_model(value=existing)
         return self.get_set(value=updated)
 
-    def update_from_model(self, value: MODEL_SET_FULL) -> MODEL_SET_FULL:
+    def update_from_model(self, value: EnforcementFullModel) -> EnforcementFullModel:
         """Update an enforcement set from the values in a model.
 
         Args:
-            value (MODEL_SET_FULL): enforcement set model to update
+            value (EnforcementFullModel): enforcement set model to update
 
         Returns:
-            MODEL_SET_FULL: updated enforcement set
+            EnforcementFullModel: updated enforcement set
         """
         return self._update(
-            uuid=value.uuid, name=value.name, actions=value.actions, triggers=value.triggers
+            uuid=value.uuid,
+            name=value.name,
+            actions=value.actions,
+            triggers=value.triggers,
+            folder_id=value.folder_id,
         )
 
     def create(
@@ -558,19 +601,26 @@ class Enforcements(ModelMixins):
         name: str,
         main_action_name: str,
         main_action_type: str,
-        main_action_config: Optional[dict] = None,
-        query_name: Optional[str] = SetDefaults.query_name,
-        query_type: str = SetDefaults.query_type,
-        schedule_type: Union[Schedule, str] = SetDefaults.schedule_type,
-        schedule_hour: int = SetDefaults.schedule_hour,
-        schedule_minute: int = SetDefaults.schedule_minute,
-        schedule_recurrence: Optional[Union[int, List[str]]] = SetDefaults.schedule_recurrence,
-        only_new_assets: bool = SetDefaults.only_new_assets,
-        on_count_above: Optional[int] = SetDefaults.on_count_above,
-        on_count_below: Optional[int] = SetDefaults.on_count_below,
-        on_count_increased: bool = SetDefaults.on_count_increased,
-        on_count_decreased: bool = SetDefaults.on_count_decreased,
-    ) -> MODEL_SET_FULL:
+        main_action_config: t.Optional[dict] = None,
+        description: t.Optional[str] = "",
+        query_name: t.Optional[str] = EnforcementDefaults.query_name,
+        query_type: str = EnforcementDefaults.query_type,
+        schedule_type: t.Union[EnforcementSchedule, str] = EnforcementDefaults.schedule_type,
+        schedule_hour: int = EnforcementDefaults.schedule_hour,
+        schedule_minute: int = EnforcementDefaults.schedule_minute,
+        schedule_recurrence: t.Optional[
+            t.Union[int, t.List[str]]
+        ] = EnforcementDefaults.schedule_recurrence,
+        only_new_assets: bool = EnforcementDefaults.only_new_assets,
+        on_count_above: t.Optional[int] = EnforcementDefaults.on_count_above,
+        on_count_below: t.Optional[int] = EnforcementDefaults.on_count_below,
+        on_count_increased: bool = EnforcementDefaults.on_count_increased,
+        on_count_decreased: bool = EnforcementDefaults.on_count_decreased,
+        folder_id: t.Optional[str] = None,
+        path: t.Optional[t.Union[str, FolderModel]] = None,
+        create: bool = FolderDefaults.create_path,
+        echo: bool = FolderDefaults.echo,
+    ) -> EnforcementFullModel:
         """Create an enforcement set.
 
         Args:
@@ -580,10 +630,11 @@ class Enforcements(ModelMixins):
             main_action_config (Optional[dict], optional): action config for main action
             query_name (Optional[str], optional): Saved Query name to use for trigger
             query_type (str, optional): Saved Query type
-            schedule_type (Union[Schedule, str], optional): Schedule type for automation
+            schedule_type (Union[EnforcementSchedule, str], optional): EnforcementSchedule type
+                for automation
             schedule_hour (int, optional): Hour of day to use for schedule_type
             schedule_minute (int, optional): Minute of hour to use for schedule_type
-            schedule_recurrence (Optional[Union[int, List[str]]], optional): recurrence value,
+            schedule_recurrence (Optional[Union[int, t.List[str]]], optional): recurrence value,
                 type changes based on schedule_type
             only_new_assets (bool, optional): only run set against assets added since last run
             on_count_above (Optional[int], optional): only run if asset count above N
@@ -592,9 +643,15 @@ class Enforcements(ModelMixins):
             on_count_decreased (bool, optional): only run if asset count decreased since last run
 
         Returns:
-            MODEL_SET_FULL: created enforcement set
+            EnforcementFullModel: created enforcement set
         """
         self.check_set_exists(value=name)
+
+        root: FoldersModel = self.auth.http.CLIENT.folders.enforcements.get()
+        path: FolderModel = root.resolve_folder(
+            path=path, create=create, echo=echo, folder_id=folder_id
+        )
+
         main = self.get_set_action(
             name=main_action_name, action_type=main_action_type, config=main_action_config
         )
@@ -603,7 +660,7 @@ class Enforcements(ModelMixins):
         sq = self.get_trigger_view(query_name=query_name, query_type=query_type)
         if sq:
             triggers.append(
-                Schedule.get_trigger(
+                EnforcementSchedule.get_trigger(
                     query_uuid=sq.uuid,
                     query_type=query_type,
                     schedule_type=schedule_type,
@@ -618,17 +675,25 @@ class Enforcements(ModelMixins):
                 )
             )
 
-        created = self._create(name=name, main=main, triggers=triggers)
-        return self.get_set(value=created)
+        create_response = self._create(
+            name=name, main=main, triggers=triggers, description=description, folder_id=path.id
+        )
 
-    def delete(self, value: MULTI_SET) -> MODEL_SET_FULL:
+        # NEAT: can not move to/from public /private in enforcements
+        if path.depth > 1 and path.id != create_response.folder.id:
+            self._move_sets(folder_id=path.id, enforcements_ids=create_response.uuid)
+
+        created = self.get_set(value=create_response)
+        return created
+
+    def delete(self, value: MULTI_SET) -> EnforcementFullModel:
         """Delete an enforcement set.
 
         Args:
             value (MULTI_SET): enforcement set model or str with name or uuid
 
         Returns:
-            MODEL_SET_FULL: deleted enforcement set
+            EnforcementFullModel: deleted enforcement set
         """
         obj = self.get_set(value=value)
         self._delete(uuid=obj.uuid)
@@ -638,7 +703,7 @@ class Enforcements(ModelMixins):
         self,
         name: str,
         action_type: MULTI_ACTION_TYPE,
-        config: Optional[dict] = None,
+        config: t.Optional[dict] = None,
     ) -> dict:
         """Get the action dictionary needed to add an action to an enforcement set.
 
@@ -661,38 +726,43 @@ class Enforcements(ModelMixins):
         )
         warnings.warn(message=msg, category=ApiWarning)
 
-        return MODEL_SET_FULL.get_action_obj(name=name, action_type=action_type, config=config)
+        return EnforcementFullModel.get_action_obj(
+            name=name, action_type=action_type, config=config
+        )
 
     def get_trigger_view(
         self,
-        query_name: Optional[MODEL_SQ_MULTI] = SetDefaults.query_name,
-        query_type: Union[QueryType, str] = SetDefaults.query_type,
-    ) -> Optional[MODEL_SQ]:
+        query_name: t.Optional[MULTI_SQ] = EnforcementDefaults.query_name,
+        query_type: t.Union[QueryTypes, str] = EnforcementDefaults.query_type,
+    ) -> t.Optional[SavedQuery]:
         """Get the saved query for use in adding a query to an enforcement.
 
         Args:
-            query_name (Optional[MODEL_SQ_MULTI], optional): Name of Saved Query
-            query_type (Union[QueryType, str], optional): Type of Saved Query
+            query_name (Optional[MULTI_SQ], optional): Name of Saved Query
+            query_type (Union[QueryTypes, str], optional): Type of Saved Query
 
         Returns:
-            Optional[MODEL_SQ]: None if query_name is not supplied, otherwise saved query model
+            t.Optional[SavedQuery]: None if query_name is not supplied, otherwise saved query model
         """
-        query_type = QueryType.get_value(query_type)
+        query_type = QueryTypes.get_value_by_value(query_type)
 
         if query_name is not None:
-            return self._triggers_map[query_type.value].saved_query.get_by_multi(
+            return self._triggers_map[query_type].saved_query.get_by_multi(
                 sq=query_name, as_dataclass=True
             )
         return None
 
     def _init(self, **kwargs):
         """Post init method for subclasses to use for extra setup."""
-        from .. import Devices, Users, Instances
+        from .. import Devices, Users, Instances, Vulnerabilities
 
         self.api_devices: Devices = Devices(auth=self.auth, **kwargs)
         """API model for cross reference."""
 
         self.api_users: Users = Users(auth=self.auth, **kwargs)
+        """API model for cross reference."""
+
+        self.api_vulnerabilities: Vulnerabilities = Users(auth=self.auth, **kwargs)
         """API model for cross reference."""
 
         self.api_instances: Instances = Instances(auth=self.auth, **kwargs)
@@ -701,7 +771,11 @@ class Enforcements(ModelMixins):
     @property
     def _triggers_map(self) -> dict:
         """Map of query types to api objects."""
-        return {QueryType.devices.value: self.api_devices, QueryType.users.value: self.api_users}
+        return {
+            QueryTypes.devices.value: self.api_devices,
+            QueryTypes.users.value: self.api_users,
+            QueryTypes.vulnerabilities.value: self.api_vulnerabilities,
+        }
 
     def _delete(self, uuid: str) -> json_api.generic.Deleted:
         """Delete an enforcement set by UUID.
@@ -714,9 +788,11 @@ class Enforcements(ModelMixins):
         """
         api_endpoint = ApiEndpoints.enforcements.delete_set
         request_obj = api_endpoint.load_request(value={"ids": [uuid], "include": True})
-        return api_endpoint.perform_request(http=self.auth.http, request_obj=request_obj)
+        response = api_endpoint.perform_request(http=self.auth.http, request_obj=request_obj)
+        self.get_sets_cached.cache_clear()
+        return response
 
-    def _copy(self, uuid: str, name: str, clone_triggers: bool) -> MODEL_SET_FULL:
+    def _copy(self, uuid: str, name: str, clone_triggers: bool) -> EnforcementFullModel:
         """Copy an enforcement set.
 
         Args:
@@ -725,55 +801,92 @@ class Enforcements(ModelMixins):
             clone_triggers (bool): copy triggers into new set
 
         Returns:
-            MODEL_SET_FULL: copied set
+            EnforcementFullModel: copied set
         """
         api_endpoint = ApiEndpoints.enforcements.copy_set
         request_obj = api_endpoint.load_request(
             id=uuid, uuid=uuid, name=name, clone_triggers=clone_triggers
         )
-        return api_endpoint.perform_request(http=self.auth.http, request_obj=request_obj)
+        response = api_endpoint.perform_request(http=self.auth.http, request_obj=request_obj)
+        self.get_sets_cached.cache_clear()
+        return response
+
+    def _update_description(self, uuid: str, description: str):
+        """Pass."""
+        api_endpoint = ApiEndpoints.enforcements.update_description
+        request_obj = api_endpoint.load_request(description=description)
+        response = api_endpoint.perform_request(
+            http=self.auth.http, request_obj=request_obj, uuid=uuid
+        )
+        self.get_sets_cached.cache_clear()
+        return response
 
     def _update(
-        self, uuid: str, name: str, actions: dict, triggers: Optional[List[dict]] = None
-    ) -> MODEL_SET_FULL:
+        self,
+        uuid: str,
+        name: str,
+        actions: dict,
+        folder_id: str = "",
+        triggers: t.Optional[t.List[dict]] = None,
+    ) -> EnforcementFullModel:
         """Update an enforcement set.
 
         Args:
             uuid (str): UUID of set to update
             name (str): name of set
             actions (dict): actions of set
-            triggers (Optional[List[dict]], optional): triggers of set
+            triggers (Optional[t.List[dict]], optional): triggers of set
 
         Returns:
-            MODEL_SET_FULL: updated set
+            EnforcementFullModel: updated set
         """
         api_endpoint = ApiEndpoints.enforcements.update_set
         request_obj = api_endpoint.load_request(
-            uuid=uuid, id=uuid, name=name, actions=actions, triggers=triggers or []
+            uuid=uuid,
+            id=uuid,
+            name=name,
+            actions=actions,
+            triggers=triggers or [],
+            folder_id=folder_id,
         )
-        return api_endpoint.perform_request(http=self.auth.http, request_obj=request_obj, uuid=uuid)
+        response = api_endpoint.perform_request(
+            http=self.auth.http, request_obj=request_obj, uuid=uuid
+        )
+        self.get_sets_cached.cache_clear()
+        return response
+
+    def _create_from_model(self, request_obj: CreateEnforcementModel) -> EnforcementFullModel:
+        """Pass."""
+        api_endpoint = ApiEndpoints.enforcements.create_set
+        response: EnforcementFullModel = api_endpoint.perform_request(
+            http=self.auth.http, request_obj=request_obj
+        )
+        self.get_sets_cached.cache_clear()
+        return response
 
     def _create(
         self,
         name: str,
         main: dict,
-        success: Optional[List[dict]] = None,
-        failure: Optional[List[dict]] = None,
-        post: Optional[List[dict]] = None,
-        triggers: Optional[List[dict]] = None,
-    ) -> MODEL_SET_FULL:
+        folder_id: str = "",
+        description: str = "",
+        success: t.Optional[t.List[dict]] = None,
+        failure: t.Optional[t.List[dict]] = None,
+        post: t.Optional[t.List[dict]] = None,
+        triggers: t.Optional[t.List[dict]] = None,
+    ) -> EnforcementFullModel:
         """Create an enforcement set.
 
         Args:
             name (str): name of enforcement to create
             main (dict): main action
-            success (Optional[List[dict]], optional): success actions
-            failure (Optional[List[dict]], optional): failure actions
-            post (Optional[List[dict]], optional): post actions
-            triggers (Optional[List[dict]], optional): saved query trigger
+            success (Optional[t.List[dict]], optional): success actions
+            failure (Optional[t.List[dict]], optional): failure actions
+            post (Optional[t.List[dict]], optional): post actions
+            triggers (Optional[t.List[dict]], optional): saved query trigger
 
         Returns:
-            MODEL_SET_FULL: created set
+            EnforcementFullModel: created set
         """
         actions = {
             "main": main,
@@ -782,17 +895,25 @@ class Enforcements(ModelMixins):
             "post": post or [],
         }
         api_endpoint = ApiEndpoints.enforcements.create_set
-        request_obj = api_endpoint.load_request(name=name, actions=actions, triggers=triggers or [])
-        return api_endpoint.perform_request(http=self.auth.http, request_obj=request_obj)
+        request_obj = api_endpoint.load_request(
+            name=name,
+            actions=actions,
+            triggers=triggers or [],
+            description=description,
+            folder_id=folder_id,
+        )
+        response = api_endpoint.perform_request(http=self.auth.http, request_obj=request_obj)
+        self.get_sets_cached.cache_clear()
+        return response
 
     def _get_sets(
         self,
         limit: int = MAX_PAGE_SIZE,
         offset: int = 0,
-        sort: Optional[str] = None,
-        filter: Optional[str] = None,
+        sort: t.Optional[str] = None,
+        filter: t.Optional[str] = None,
         search: str = "",
-    ) -> List[MODEL_SET_BASIC]:
+    ) -> t.List[EnforcementBasicModel]:
         """Get enforcement sets in basic model.
 
         Args:
@@ -803,7 +924,7 @@ class Enforcements(ModelMixins):
             search (str, optional): search string
 
         Returns:
-            List[MODEL_SET_BASIC]: basic models
+            t.List[EnforcementBasicModel]: basic models
         """
         api_endpoint = ApiEndpoints.enforcements.get_sets
         request_obj = api_endpoint.load_request(
@@ -811,23 +932,23 @@ class Enforcements(ModelMixins):
         )
         return api_endpoint.perform_request(http=self.auth.http, request_obj=request_obj)
 
-    def _get_set(self, uuid: str) -> MODEL_SET_FULL:
+    def _get_set(self, uuid: str) -> EnforcementFullModel:
         """Get an enforcement set in full model.
 
         Args:
             uuid (str): UUID of set to get
 
         Returns:
-            MODEL_SET_FULL: full model
+            EnforcementFullModel: full model
         """
         api_endpoint = ApiEndpoints.enforcements.get_set
         return api_endpoint.perform_request(http=self.auth.http, uuid=uuid)
 
-    def _get_action_types(self) -> List[MODEL_ACTION_TYPE]:
+    def _get_action_types(self) -> t.List[ActionType]:
         """Get all action types.
 
         Returns:
-            List[MODEL_ACTION_TYPE]: action type models
+            t.List[ActionType]: action type models
         """
         api_endpoint = ApiEndpoints.enforcements.get_action_types
         return api_endpoint.perform_request(http=self.auth.http)
@@ -851,8 +972,22 @@ class Enforcements(ModelMixins):
         )
         return api_endpoint.perform_request(http=self.auth.http, request_obj=request_obj, uuid=uuid)
 
+    def _move_sets(
+        self, folder_id: str, enforcements_ids: t.List[str]
+    ) -> MoveEnforcementsResponseModel:
+        """Pass."""
+        api_endpoint = ApiEndpoints.enforcements.move_sets
+
+        request_obj: MoveEnforcementsRequestModel = api_endpoint.load_request(
+            folder_id=folder_id, enforcements_ids=listify(enforcements_ids)
+        )
+        response: MoveEnforcementsResponseModel = api_endpoint.perform_request(
+            http=self.auth.http, request_obj=request_obj
+        )
+        return response
+
     def _run_sets_against_trigger(
-        self, uuids: List[str], include: bool = True, use_conditions: bool = False
+        self, uuids: t.List[str], include: bool = True, use_conditions: bool = False
     ) -> json_api.generic.ListDictValue:
         """Run enforcement sets against their triggers.
 
@@ -873,8 +1008,8 @@ class Enforcements(ModelMixins):
         return api_endpoint.perform_request(http=self.auth.http, request_obj=request_obj)
 
     def run(
-        self, values: List[str], use_conditions: bool = False, error: bool = True
-    ) -> List[MODEL_SET_FULL]:
+        self, values: t.List[str], use_conditions: bool = False, error: bool = True
+    ) -> t.List[EnforcementFullModel]:
         """Run enforcement sets against their triggers.
 
         Args:
