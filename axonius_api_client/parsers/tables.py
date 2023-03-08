@@ -183,6 +183,9 @@ def tablize_sq(data: dict) -> dict:
     Args:
         data: sq to create a table entry for
     """
+    if callable(getattr(data, "to_tablize", None)):
+        return data.to_tablize()
+
     data = data.to_dict() if hasattr(data, "to_dict") else data
 
     name = data["name"]
@@ -326,7 +329,6 @@ def tab_map(
 
     for key, name, width in key_map:
         if key in orig_value and name:
-
             key_value = orig_value.pop(key)
 
             if isinstance(key_value, list):

@@ -9,7 +9,7 @@ import marshmallow_jsonapi
 
 from ...exceptions import ApiError
 from ...tools import json_load
-from .base import BaseModel, BaseSchema, BaseSchemaJson
+from .base import BaseModel, BaseSchemaJson
 from .custom_fields import SchemaDatetime
 from .saved_queries import SavedQuery
 
@@ -78,28 +78,21 @@ class DataScope(BaseModel, UpdatedByMixins):
     users_queries: t.List[str] = dataclasses.field(default_factory=list)
     devices_queries: t.List[str] = dataclasses.field(default_factory=list)
 
-    ASSET_SCOPES: t.ClassVar[t.Dict[str, t.List[SavedQuery]]] = None
     document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     def __str__(self) -> str:
         """Pass."""
-        users_scopes = [x.name for x in self.users_scopes]
-        devices_scopes = [x.name for x in self.devices_scopes]
         items = [
             f"Name: {self.name!r}",
             f"UUID: {self.uuid!r}",
             f"Description: {self.description!r}",
             f"Associated Roles: {self.associated_roles}",
-            f"User Asset Scopes: {users_scopes}",
-            f"Device Asset Scopes: {devices_scopes}",
+            f"User Asset Scopes: {self.users_scopes_names}",
+            f"Device Asset Scopes: {self.devices_scopes_names}",
             f"Updated Date: {self.last_updated.isoformat()!r}",
             f"Updated User: {self.updated_user!r}",
         ]
         return "\n".join(items)
-
-    def __post_init__(self):
-        """Pass."""
-        self.ASSET_SCOPES = self.ASSET_SCOPES or {}
 
     def to_tablize(self) -> dict:
         """Pass."""
@@ -113,30 +106,39 @@ class DataScope(BaseModel, UpdatedByMixins):
         return {
             "Identifier": "\n".join(ident),
             "Associated Roles": "\n".join(self.associated_roles),
-            "User Asset Scopes": "\n".join([x.name for x in self.users_scopes]),
-            "Device Asset Scopes": "\n".join([x.name for x in self.devices_scopes]),
+            "User Asset Scopes": "\n".join(self.users_scopes_names),
+            "Device Asset Scopes": "\n".join(self.devices_scopes_names),
         }
 
-    @staticmethod
-    def find_scope(uuid: str, scopes: t.List[SavedQuery]) -> SavedQuery:
+    @property
+    def users_scopes_names(self) -> t.List[str]:
         """Pass."""
-        try:
-            return [x for x in scopes if x.uuid == uuid][0]
-        except Exception:
-            scopes = "\n\n" + "\n\n".join([str(x) for x in scopes])
-            raise ApiError(f"Unable to find Saved Query UUID {uuid!r} in:{scopes}")
+        return [x.name for x in self.users_scopes]
+
+    @property
+    def devices_scopes_names(self) -> t.List[str]:
+        """Pass."""
+        return [x.name for x in self.devices_scopes]
 
     @property
     def users_scopes(self) -> t.List[SavedQuery]:
         """Pass."""
-        scopes = self.ASSET_SCOPES.get("users") or []
-        return [self.find_scope(uuid=x, scopes=scopes) for x in self.users_queries]
+        if not hasattr(self, "_user_scopes"):
+            self._user_scopes = [
+                self.HTTP.CLIENT.users.saved_query.get_cached_single(value=x)
+                for x in self.users_queries
+            ]
+        return self._user_scopes
 
     @property
     def devices_scopes(self) -> t.List[SavedQuery]:
         """Pass."""
-        scopes = self.ASSET_SCOPES.get("devices") or []
-        return [self.find_scope(uuid=x, scopes=scopes) for x in self.devices_queries]
+        if not hasattr(self, "_device_scopes"):
+            self._device_scopes = [
+                self.HTTP.CLIENT.devices.saved_query.get_cached_single(value=x)
+                for x in self.devices_queries
+            ]
+        return self._device_scopes
 
     @property
     def scope_types(self) -> t.List[str]:
@@ -165,9 +167,6 @@ class DataScope(BaseModel, UpdatedByMixins):
         ):
             raise ApiError(f"Must supply at least one asset scope of type {scope_type}")
 
-        scope_cache = self.ASSET_SCOPES.get(scope_type, [])
-        scope_cache_ids = [x.uuid for x in scope_cache]
-        scope_cache += [x for x in scopes if x.uuid not in scope_cache_ids]
         scope_ids = [x.uuid for x in scopes]
         queries_attr = f"{scope_type}_queries"
         queries_current = getattr(self, queries_attr)
@@ -181,8 +180,10 @@ class DataScope(BaseModel, UpdatedByMixins):
 
         setattr(self, queries_attr, queries_new)
 
-        if not any([self.users_queries, self.devices_queries]):
-            raise ApiError("Data Scopes must have a least one user or device Asset Scope")
+        if not any([getattr(self, f"{x}_queries", []) for x in self.scope_types]):
+            raise ApiError(
+                f"Data Scopes must have a least one Asset Scope of any types: {self.scope_types}"
+            )
         return queries_new
 
 
@@ -195,7 +196,7 @@ class DataScopeDetailsSchema(BaseSchemaJson):
     settings = marshmallow_jsonapi.fields.Dict(description="Data Scopes settings")
 
     @staticmethod
-    def get_model_cls() -> type:
+    def get_model_cls() -> t.Optional[type]:
         """Pass."""
         return DataScopeDetails
 
@@ -214,17 +215,16 @@ class DataScopeDetails(BaseModel):
     document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[type]:
         """Pass."""
         return DataScopeDetailsSchema
 
-    def get_scopes(self, asset_scopes: t.Dict[str, t.List[SavedQuery]]) -> t.List[DataScope]:
+    def get_scopes(self) -> t.List[DataScope]:
         """Pass."""
         schema = DataScope.schema(many=True)
         objs = schema.load(self.scopes, unknown=marshmallow.INCLUDE)
         for obj in objs:
             obj.HTTP = self.HTTP
-            obj.ASSET_SCOPES = asset_scopes
         return objs
 
 
@@ -248,7 +248,7 @@ class DataScopeCreateSchema(BaseSchemaJson):
     )
 
     @staticmethod
-    def get_model_cls() -> type:
+    def get_model_cls() -> t.Optional[type]:
         """Pass."""
         return DataScopeCreate
 
@@ -268,7 +268,7 @@ class DataScopeCreate(BaseModel):
     description: str = ""
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[type]:
         """Pass."""
         return DataScopeCreateSchema
 
@@ -294,7 +294,7 @@ class DataScopeUpdateSchema(BaseSchemaJson):
     )
 
     @staticmethod
-    def get_model_cls() -> type:
+    def get_model_cls() -> t.Optional[type]:
         """Pass."""
         return DataScopeUpdate
 
@@ -315,6 +315,6 @@ class DataScopeUpdate(BaseModel):
     description: str = ""
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[type]:
         """Pass."""
         return DataScopeUpdateSchema

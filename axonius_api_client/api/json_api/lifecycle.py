@@ -5,7 +5,7 @@ import typing as t
 
 import marshmallow_jsonapi
 
-from .base import BaseModel, BaseSchema, BaseSchemaJson
+from .base import BaseModel, BaseSchemaJson
 
 
 class LifecycleSchema(BaseSchemaJson):
@@ -24,7 +24,7 @@ class LifecycleSchema(BaseSchemaJson):
         type_ = "lifecycle_schema"
 
     @staticmethod
-    def get_model_cls() -> type:
+    def get_model_cls() -> t.Optional[type]:
         """Pass."""
         return Lifecycle
 
@@ -42,6 +42,6 @@ class Lifecycle(BaseModel):
     document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[type]:
         """Pass."""
         return LifecycleSchema

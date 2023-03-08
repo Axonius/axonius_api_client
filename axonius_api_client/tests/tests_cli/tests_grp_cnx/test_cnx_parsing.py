@@ -4,6 +4,7 @@ import pathlib
 
 import click
 import pytest
+
 from axonius_api_client.cli.grp_adapters.grp_cnx import parsing
 from axonius_api_client.constants.adapters import CNX_SANE_DEFAULTS
 
@@ -213,7 +214,7 @@ class TestSchemaString:
 
     def test_prompt_for_previous_true(self, monkeypatch):
         def mockprompt(*args, **kwargs):
-            return "XXX"
+            return "ZZZ"
 
         schema = {
             "name": "test_key",
@@ -227,7 +228,7 @@ class TestSchemaString:
         )
         monkeypatch.setattr(click, "prompt", mockprompt)
         parsed = obj.parse(config={}, config_previous={"test_key": "xx"})
-        assert parsed == "XXX"
+        assert parsed == "ZZZ"
 
     def test_prompt_for_missing_required_false_required(self):
         schema = {
@@ -248,7 +249,7 @@ class TestSchemaString:
 
     def test_prompt_for_missing_required_true(self, monkeypatch):
         def mockprompt(*args, **kwargs):
-            return "XXX"
+            return "ZZZ"
 
         schema = {
             "name": "test_key",
@@ -265,11 +266,11 @@ class TestSchemaString:
         )
         monkeypatch.setattr(click, "prompt", mockprompt)
         parsed = obj.parse(config={})
-        assert parsed == "XXX"
+        assert parsed == "ZZZ"
 
     def test_prompt_for_optional_true(self, monkeypatch):
         def mockprompt(*args, **kwargs):
-            return "XXX"
+            return "ZZZ"
 
         schema = {
             "name": "test_key",
@@ -283,7 +284,7 @@ class TestSchemaString:
         )
         monkeypatch.setattr(click, "prompt", mockprompt)
         parsed = obj.parse(config={})
-        assert parsed == "XXX"
+        assert parsed == "ZZZ"
 
     def test_prompt_for_optional_false(self, monkeypatch):
         schema = {
@@ -301,7 +302,7 @@ class TestSchemaString:
 
     def test_prompt_for_default_true(self, monkeypatch):
         def mockprompt(*args, **kwargs):
-            return "XXX"
+            return "ZZZ"
 
         schema = {
             "name": "test_key",
@@ -315,7 +316,7 @@ class TestSchemaString:
         )
         monkeypatch.setattr(click, "prompt", mockprompt)
         parsed = obj.parse(config={})
-        assert parsed == "XXX"
+        assert parsed == "ZZZ"
 
     def test_prompt_for_default_false(self, monkeypatch):
         schema = {
@@ -399,7 +400,7 @@ class TestSchemaString:
         }
         obj = parsing.Schema.load_type(schema=schema, adapter_name="foozball", error_as_exc=True)
         assert obj.hide_value is True
-        assert obj.hide(value="XXX") == "3_CHARACTERS_HIDDEN"
+        assert obj.hide(value="ZZZ") == "3_CHARACTERS_HIDDEN"
         assert "Input will be hidden" in obj.prompt_text
         parsed = obj.parse(config={"test_key": "['unchanged']"})
         assert parsed == ["unchanged"]
@@ -710,7 +711,6 @@ class TestSchemaFile:
         assert "Value must be a string or a " in str(exc.value)
 
     def test_parse_valid_content(self):
-
         schema = {
             "name": "test_key",
             "title": "Test Key",

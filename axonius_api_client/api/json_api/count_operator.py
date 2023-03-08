@@ -34,6 +34,11 @@ class CountOperatorSchema(marshmallow.Schema):
 
         type_ = "count_operator_schema"
 
+    @staticmethod
+    def get_model_cls() -> t.Optional[type]:
+        """Pass."""
+        return CountOperator
+
 
 COUNT_OPERATOR_SCHEMA = CountOperatorSchema()
 
@@ -48,3 +53,8 @@ class CountOperator(BaseModel):
     count: t.Optional[int] = get_field_dc_mm(
         mm_field=COUNT_OPERATOR_SCHEMA.fields["count"], default=None
     )
+
+    @staticmethod
+    def get_schema_cls() -> t.Optional[type]:
+        """Pass."""
+        return CountOperatorSchema

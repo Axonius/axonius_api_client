@@ -164,13 +164,11 @@ class ADUserProps:
 
 
 def find_user(users, user_search_criteria):
-
     t, v = identify_type(user_search_criteria)
 
     user_matches = []
 
     for user in users:
-
         searched_user = User()
 
         searched_user.axon_id = user.get("internal_axon_id")
@@ -271,7 +269,6 @@ def find_machine(machines, machine_search_criteria):
     device_matches = []
 
     for machine in machines:
-
         device = Device()
 
         device.axon_id = machine.get("internal_axon_id")
@@ -469,7 +466,6 @@ class CustomConnect(axonapi.Connect):
 
         for match in user_matches:
             if match.cherwell_props:
-
                 email = match.cherwell_props.email
                 if email is not None:
                     matches = find_machine(self.get_devices(), email)

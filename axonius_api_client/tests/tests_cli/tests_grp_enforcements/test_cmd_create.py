@@ -3,6 +3,7 @@
 import json
 
 import pytest
+
 from axonius_api_client.cli import cli
 from axonius_api_client.exceptions import ApiWarning
 from axonius_api_client.tools import json_load
@@ -16,7 +17,6 @@ class TestGrpEnforcementsCmdCreateDelete(EnforcementsBase):
         self.cleanup(apiobj=apiobj, value=Meta.name_cli)
         runner = load_clirunner(request, monkeypatch)
         with runner.isolated_filesystem():
-
             args = [
                 "enforcements",
                 "create",

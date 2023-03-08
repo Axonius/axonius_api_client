@@ -15,6 +15,7 @@ from .api import (
     DataScopes,
     Devices,
     Enforcements,
+    Folders,
     Instances,
     Meta,
     OpenAPISpec,
@@ -41,6 +42,7 @@ from .constants.logs import (
     LOG_LEVEL_API,
     LOG_LEVEL_AUTH,
     LOG_LEVEL_CONSOLE,
+    LOG_LEVEL_ENDPOINTS,
     LOG_LEVEL_FILE,
     LOG_LEVEL_HTTP,
     LOG_LEVEL_PACKAGE,
@@ -190,6 +192,11 @@ class Connect:
         self.LOG_LEVEL_PACKAGE: Union[str, int] = kwargs.get("log_level_package", LOG_LEVEL_PACKAGE)
         """log level for entire package ``kwargs=log_level_package``"""
 
+        self.LOG_LEVEL_ENDPOINTS: Union[str, int] = kwargs.get(
+            "log_level_endpoints", LOG_LEVEL_ENDPOINTS
+        )
+        """log level for entire package ``kwargs=log_level_package``"""
+
         self.LOG_LEVEL_HTTP: Union[str, int] = kwargs.get("log_level_http", LOG_LEVEL_HTTP)
         """log level for :obj:`axonius_api_client.http.Http` ``kwargs=log_level_http``"""
 
@@ -231,6 +238,10 @@ class Connect:
         """logger object to use"""
 
         set_log_level(obj=self.LOG_LOGGER, level=self.LOG_LEVEL_PACKAGE)
+
+        from .api.api_endpoint import LOGGER as LOGGER_ENDPOINT
+
+        set_log_level(obj=LOGGER_ENDPOINT, level=self.LOG_LEVEL_ENDPOINTS)
 
         self.STARTED: bool = False
         """track if :meth:`start` has been called"""
@@ -534,6 +545,14 @@ class Connect:
         if not hasattr(self, "_data_scopes"):
             self._data_scopes = DataScopes(**self.API_ARGS)
         return self._data_scopes
+
+    @property
+    def folders(self) -> Folders:
+        """Work with data scopes."""
+        self.start()
+        if not hasattr(self, "_folders"):
+            self._folders = Folders(**self.API_ARGS)
+        return self._folders
 
     @classmethod
     def _get_exc_reason(cls, exc: Exception) -> str:

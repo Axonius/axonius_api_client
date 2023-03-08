@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Test suite for axonius_api_client.tools."""
 import pytest
+
 from axonius_api_client.tools import json_dump
 
 from ....cli import cli

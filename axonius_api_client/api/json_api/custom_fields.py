@@ -9,9 +9,32 @@ import dateutil
 import marshmallow
 import marshmallow_jsonapi
 
-from ...tools import coerce_bool
+from ...tools import coerce_bool, listify
 
-DT_FMT = "%Y-%m-%dT%H:%M:%S%z"
+
+class UnionField(marshmallow.fields.Field):
+    """Field that deserializes multi-type input data to app-level objects."""
+
+    def __init__(self, types: t.List[t.Type] = None, *args, **kwargs) -> None:
+        """Pass."""
+        super().__init__(*args, **kwargs)
+        if types:
+            self.types = listify(types)
+        else:
+            raise AttributeError("No types provided on union field")
+
+    @property
+    def types_str(self) -> str:
+        """Pass."""
+        return ", ".join([str(i) for i in self.types])
+
+    def _deserialize(self, value, attr, data, **kwargs):
+        if bool([isinstance(value, i) for i in self.types if isinstance(value, i)]):
+            return value
+        else:
+            raise marshmallow.ValidationError(
+                f"Field shoud be any of the following types: {self.types_str}"
+            )
 
 
 def load_date(value: t.Optional[t.Union[str, datetime.datetime]]) -> t.Optional[datetime.datetime]:

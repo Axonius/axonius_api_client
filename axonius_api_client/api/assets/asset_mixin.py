@@ -118,7 +118,7 @@ class AssetMixin(ModelMixins):
             verify_count (bool): Verify that the count of $query equals the count of $ids
             prompt (bool): Prompt user for verification when applicable.
             do_echo (bool): Echo output to console as well as log
-            refetch (bool): refetch $eset even if it is a :obj:`json_api.enforcements.SetFull`
+            refetch (bool): refetch $eset even if it is already a model
             check_stdin (bool): check if stdin is a TTY when prompting
             grabber: (grabber): Grabber used to get IDs
 
@@ -944,7 +944,7 @@ class AssetMixin(ModelMixins):
             name: saved query to get count of assets from
             kwargs: supplied to :meth:`count`
         """
-        sq = self.saved_query.get_by_name(value=name)
+        sq = self.saved_query.get_by_multi(sq=name)
         kwargs["query"] = sq["view"]["query"]["filter"]
         kwargs["saved_query_id"] = sq["id"]
         return self.count(**kwargs)
@@ -1280,7 +1280,7 @@ class AssetMixin(ModelMixins):
             name: name of saved query to get assets from
             **kwargs: passed to :meth:`get`
         """
-        sq = self.saved_query.get_by_name(value=name)
+        sq = self.saved_query.get_by_multi(sq=name)
         kwargs["query"] = sq["view"]["query"]["filter"]
         kwargs["fields_manual"] = sq["view"]["fields"]
         kwargs["saved_query_id"] = sq["id"]

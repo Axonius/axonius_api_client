@@ -1,10 +1,13 @@
 # -*- coding: utf-8 -*-
 """Command line interface for Axonius API Client."""
 from ..context import CONTEXT_SETTINGS, click
+from ..grp_folders.grp_options import OPTS_OBJECT_CREATE
 from ..options import AUTH, add_options
 from .grp_common import EXPORT_FORMATS, OPT_EXPORT_FORMAT, OPTS_CREATE
 
-OPTIONS = [*AUTH, OPT_EXPORT_FORMAT, *OPTS_CREATE]
+OPTIONS = [*AUTH, OPT_EXPORT_FORMAT, *OPTS_CREATE, *OPTS_OBJECT_CREATE]
+
+# XXX test
 
 
 @click.command(name="create", context_settings=CONTEXT_SETTINGS)

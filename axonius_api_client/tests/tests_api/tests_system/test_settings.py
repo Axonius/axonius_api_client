@@ -5,6 +5,7 @@
 # import subprocess
 
 import pytest
+
 from axonius_api_client import cert_human
 from axonius_api_client.api.json_api.generic import ApiBase
 from axonius_api_client.api.json_api.system_settings import CertificateDetails

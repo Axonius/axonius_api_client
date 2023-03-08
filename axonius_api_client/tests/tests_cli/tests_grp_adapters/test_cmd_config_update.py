@@ -11,7 +11,6 @@ class TestGrpAdaptersCmdConfigUpdate:
     def test_update(self, request, monkeypatch):
         runner = load_clirunner(request, monkeypatch)
         with runner.isolated_filesystem():
-
             args1 = [
                 "adapters",
                 "config-get",

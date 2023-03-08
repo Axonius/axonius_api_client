@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Test suite for axonius_api_client.wizard.wizard"""
 import pytest
+
 from axonius_api_client.api.wizards import Wizard
 from axonius_api_client.constants.fields import ALL_NAME, Operators
 from axonius_api_client.constants.wizards import Entry, Flags, Results, Types
@@ -23,7 +24,6 @@ class TestWizard:
 class TestData:
     @pytest.fixture
     def test_data1(self, wizard):
-
         simple = wizard.APIOBJ.FIELD_SIMPLE
         cplex = wizard.APIOBJ.FIELD_COMPLEX
         sub = wizard.APIOBJ.FIELD_COMPLEX_SUB

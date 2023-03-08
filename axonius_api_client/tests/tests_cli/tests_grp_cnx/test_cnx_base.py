@@ -14,7 +14,6 @@ class CnxTools:
 
         for cnx in listify(data):
             with runner.isolated_filesystem():
-
                 cnx_id = cnx["id"]
                 adapter_name = cnx["adapter_name"]
                 node_name = cnx["node_name"]
@@ -48,7 +47,6 @@ class CnxBase(CnxTools):
     def test_show_schemas(self, api_adapters, request, cmd, monkeypatch):
         runner = load_clirunner(request, monkeypatch)
         with runner.isolated_filesystem():
-
             args = ["adapters", "cnx", cmd, "--name", "csv", "--show-schemas"]
             result = runner.invoke(cli=cli, args=args)
 
@@ -60,7 +58,6 @@ class CnxBase(CnxTools):
     def test_show_defaults(self, api_adapters, request, cmd, monkeypatch):
         runner = load_clirunner(request, monkeypatch)
         with runner.isolated_filesystem():
-
             args = ["adapters", "cnx", cmd, "--name", "csv", "--show-defaults"]
             result = runner.invoke(cli=cli, args=args)
 

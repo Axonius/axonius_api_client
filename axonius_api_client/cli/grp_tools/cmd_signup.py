@@ -1,22 +1,39 @@
 # -*- coding: utf-8 -*-
 """Command line interface for Axonius API Client."""
 import datetime
+import typing as t
 
 import click
 
 from ...api import Signup
 from ...tools import json_dump
-from ..options import URL, add_options
+from ..options import add_options
+
+
+def get_fb(obj: dict, keys: t.List[str]) -> str:
+    """Pass."""
+    for key in keys:
+        if key not in obj:
+            continue
+        value = obj.get(key, None)
+        if value:
+            return value
+    raise Exception(f"Unable to find any keys {keys} in dict {obj}")
 
 
 def export_str(data):
     """Pass."""
-    date = datetime.datetime.utcnow()
+    date: datetime.datetime = datetime.datetime.utcnow()
+    ax_url: str = get_fb(obj=data, keys=["url"])
+    ax_secret: str = get_fb(obj=data, keys=["ax_secret", "api_secret"])
+    ax_key: str = get_fb(obj=data, keys=["ax_key", "api_key"])
+    ax_banner: str = f"signup on {date}"
+
     lines = [
-        f"AX_URL={data['url']}",
-        f"AX_KEY={data['api_key']}",
-        f"AX_SECRET={data['api_secret']}",
-        f"AX_BANNER=signup on {date}",
+        f'AX_URL="{ax_url}"',
+        f'AX_KEY="{ax_key}"',
+        f'AX_SECRET="{ax_secret}"',
+        f'AX_BANNER="{ax_banner}"',
     ]
     return "\n".join(lines)
 
@@ -30,6 +47,18 @@ EXPORT_FORMATS: dict = {
     "json": export_json,
     "str": export_str,
 }
+
+URL = click.option(
+    "--url",
+    "-u",
+    "url",
+    required=True,
+    help="URL of an Axonius instance",
+    metavar="URL",
+    prompt="URL",
+    show_envvar=True,
+    show_default=True,
+)
 
 EXPORT = click.option(
     "--export-format",
@@ -90,4 +119,5 @@ def cmd(ctx, url, password, company_name, contact_email, export_format):
         data["url"] = url
 
     click.secho(EXPORT_FORMATS[export_format](data=data))
+    ctx.obj.echo_ok("Signup completed successfully!")
     ctx.exit(0)

@@ -972,7 +972,6 @@ class OperatorTypeMaps(BaseData):
             Operators.exists_array,
             *ops_clean(string_ip.operators, [Operators.exists]),
         ],
-        # XXX remove in subnet / not in subnet AX-9222
         field_type=Types.array,
         field_format=Formats.ip_preferred,
         items_type=Types.string,

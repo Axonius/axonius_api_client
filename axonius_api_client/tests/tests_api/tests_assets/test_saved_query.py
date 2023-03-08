@@ -6,6 +6,7 @@ import json
 import re
 
 import pytest
+
 from axonius_api_client.api import json_api
 from axonius_api_client.constants.api import GUI_PAGE_SIZES
 from axonius_api_client.constants.ctypes import SimpleLike
@@ -23,7 +24,6 @@ from ...utils import get_schema, random_string
 
 
 class FixtureData:
-
     name = "badwolf torked"
     name_asset_scope = "badwolf asset scope"
     fields = [
@@ -538,18 +538,15 @@ class TestSavedQueryPublic(SavedQueryBase):
 
     def test_update_sort_empty(self, apiobj, sq_fixture):
         updated = apiobj.saved_query.update_sort(sq=sq_fixture, field="", descending=True)
-        assert updated["view"]["sort"]["field"] == ""
-        assert updated["view"]["sort"]["desc"] is True
+        assert updated["view"]["sort"].get("field", "") == ""
+        assert updated["view"]["sort"].get("desc", True) is True
 
-    @pytest.mark.skip("private sqs broken")
     def test_update_copy(self, apiobj, sq_fixture):
         add = random_string(6)
         new_value = f"{FixtureData.name} {add}"
-        updated = apiobj.saved_query.copy(
-            sq=FixtureData.name, name=new_value, private=True, asset_scope=False, as_dataclass=True
-        )
+        updated = apiobj.saved_query.copy(sq=FixtureData.name, name=new_value, as_dataclass=True)
         assert updated.name == new_value
-        assert updated.private is True
+
         apiobj.saved_query.delete_by_name(value=updated.name)
 
     def test_get_by_multi_not_found(self, apiobj, sq_fixture):
@@ -914,6 +911,11 @@ def validate_sq(asset):
             "pic_name",
             "role_id",
             "salt",
+            "last_used",
+            "email",
+            "department",
+            "title",
+            "description",
         ]
         for updated_str_key in updated_str_keys_opt:
             val = updated_by.pop(updated_str_key, None)

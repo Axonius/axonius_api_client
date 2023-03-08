@@ -11,7 +11,6 @@ class TestGrpEnforcementsCmdRun(EnforcementsBase):
     def test_json_export(self, request, monkeypatch, created_set_trigger):
         runner = load_clirunner(request, monkeypatch)
         with runner.isolated_filesystem():
-
             args = [
                 "enforcements",
                 "run",

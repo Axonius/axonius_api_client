@@ -1090,7 +1090,7 @@ class Base:
 
         return self._fields_selected
 
-        # XXX move _details fields from selected to final?!
+        # TBD move _details fields from selected to final?!
 
     @property
     def schemas_selected(self) -> List[dict]:

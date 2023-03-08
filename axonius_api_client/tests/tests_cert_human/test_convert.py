@@ -17,7 +17,7 @@ class TestGetDerCertCount:
         assert ret == 1
 
     def test_no_match(self):
-        value = b"XXX"
+        value = b"ZZZ"
         ret = cert_human.convert.get_der_cert_count(value=value)
         assert ret == 0
 
@@ -32,7 +32,7 @@ class TestGetDerCsrCount:
         assert ret == 1
 
     def test_no_match(self):
-        value = b"XXX"
+        value = b"ZZZ"
         ret = cert_human.convert.get_der_csr_count(value=value)
         assert ret == 0
 
@@ -49,7 +49,7 @@ class TestGetPemCertCount:
         assert ret == len(chain)
 
     def test_no_match(self):
-        value = b"XXX"
+        value = b"ZZZ"
         ret = cert_human.convert.get_pem_cert_count(value=value)
         assert ret == 0
 
@@ -63,7 +63,7 @@ class TestGetPemCsrCount:
         assert ret == 1
 
     def test_no_match(self):
-        value = b"XXX"
+        value = b"ZZZ"
         ret = cert_human.convert.get_pem_csr_count(value=value)
         assert ret == 0
 
@@ -77,14 +77,14 @@ class TestGetPkcs7CertCount:
         assert ret == 2
 
     def test_no_match(self):
-        value = b"XXX"
+        value = b"ZZZ"
         ret = cert_human.convert.get_pkcs7_cert_count(value=value)
         assert ret == 0
 
 
 class TestPemToBytes:
     def test_no_pem(self):
-        value = b"XXX"
+        value = b"ZZZ"
         with pytest.raises(ValueError) as exc:
             cert_human.convert.pem_to_bytes(value=value)
 

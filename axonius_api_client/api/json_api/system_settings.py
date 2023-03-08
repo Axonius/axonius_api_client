@@ -9,7 +9,7 @@ import marshmallow_jsonapi
 
 from ...exceptions import FeatureNotEnabledError
 from ...tools import dt_days_left, dt_parse
-from .base import BaseModel, BaseSchema, BaseSchemaJson
+from .base import BaseModel, BaseSchemaJson
 from .custom_fields import SchemaDatetime, get_field_dc_mm
 
 
@@ -23,7 +23,7 @@ class SystemSettingsSchema(BaseSchemaJson):
     prefix = marshmallow_jsonapi.fields.Str(load_default="", dump_default="")
 
     @staticmethod
-    def get_model_cls() -> type:
+    def get_model_cls() -> t.Optional[type]:
         """Pass."""
         return SystemSettings
 
@@ -45,7 +45,7 @@ class SystemSettings(BaseModel):
     document_meta: dict = dataclasses.field(default_factory=dict)
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[type]:
         """Pass."""
         return SystemSettingsSchema
 
@@ -81,7 +81,7 @@ class SystemSettingsUpdate(BaseModel):
     prefix: str = ""
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[type]:
         """Pass."""
         return SystemSettingsUpdateSchema
 
@@ -90,7 +90,7 @@ class FeatureFlagsSchema(SystemSettingsSchema):
     """Pass."""
 
     @staticmethod
-    def get_model_cls() -> type:
+    def get_model_cls() -> t.Optional[type]:
         """Pass."""
         return FeatureFlags
 
@@ -100,7 +100,7 @@ class FeatureFlags(SystemSettings):
     """Pass."""
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[type]:
         """Pass."""
         return FeatureFlagsSchema
 
@@ -183,7 +183,7 @@ class CertificateUpdateRequest(BaseModel):
     passphrase: str = ""
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[type]:
         """Pass."""
         return None
 
@@ -203,7 +203,7 @@ class CertificateDetailsSchema(BaseSchemaJson):
         type_ = "certificate_schema"
 
     @staticmethod
-    def get_model_cls() -> t.Optional[t.Type[BaseModel]]:
+    def get_model_cls() -> t.Optional[type]:
         """Pass."""
         return CertificateDetails
 
@@ -227,7 +227,7 @@ class CertificateDetails(BaseModel):
         return ["issued_to", "alternative_names", "issued_by", "sha1_fingerprint", "expires_on"]
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[type]:
         """Pass."""
         return CertificateDetailsSchema
 
@@ -247,7 +247,7 @@ class CertificateConfigSchema(BaseSchemaJson):
         type_ = "certificate_config_schema"
 
     @staticmethod
-    def get_model_cls() -> t.Optional[t.Type[BaseModel]]:
+    def get_model_cls() -> t.Optional[type]:
         """Pass."""
         return CertificateConfig
 
@@ -262,6 +262,6 @@ class CertificateConfig(BaseModel):
     document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[type]:
         """Pass."""
         return CertificateConfigSchema

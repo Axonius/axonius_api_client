@@ -11,7 +11,6 @@ class TestGrpDataScopesCmdGet(DataScopesBase):
     def test_json(self, apiobj, request, monkeypatch, f_data_scope):
         runner = load_clirunner(request, monkeypatch)
         with runner.isolated_filesystem():
-
             args = [
                 "system",
                 "data-scopes",
@@ -26,7 +25,6 @@ class TestGrpDataScopesCmdGet(DataScopesBase):
     def test_str_types(self, apiobj, request, monkeypatch, str_format, f_data_scope):
         runner = load_clirunner(request, monkeypatch)
         with runner.isolated_filesystem():
-
             args = [
                 "system",
                 "data-scopes",
@@ -43,7 +41,6 @@ class TestGrpDataScopesCmdGet(DataScopesBase):
     def test_json_value(self, apiobj, request, monkeypatch, f_data_scope):
         runner = load_clirunner(request, monkeypatch)
         with runner.isolated_filesystem():
-
             args = [
                 "system",
                 "data-scopes",
@@ -60,7 +57,6 @@ class TestGrpDataScopesCmdGet(DataScopesBase):
     def test_str_types_value(self, apiobj, request, monkeypatch, str_format, f_data_scope):
         runner = load_clirunner(request, monkeypatch)
         with runner.isolated_filesystem():
-
             args = [
                 "system",
                 "data-scopes",

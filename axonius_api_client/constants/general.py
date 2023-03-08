@@ -84,3 +84,5 @@ DAYS_MAP: dict = dict(zip(range(7), calendar.day_name))
 HUMAN_SIZES: t.List[str] = ["bytes", "KB", "MB", "GB", "TB"]
 SPLITTER: t.Pattern = re.compile(",")
 HIDDEN: str = "**HIDDEN**"
+ECHO: bool = False
+RERAISE: bool = False

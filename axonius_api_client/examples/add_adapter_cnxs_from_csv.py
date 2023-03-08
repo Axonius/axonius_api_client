@@ -4,12 +4,11 @@
 import copy  # noqa
 import csv
 import sys
+from typing import List
 
 import click
 
 import axonius_api_client as axonapi
-
-from typing import List
 
 # client.activity_logs          # get audit logs
 # client.adapters               # get adapters and update adapter settings
@@ -90,9 +89,7 @@ def print_adapter_schema(schema: dict):
     sys.exit(0)
 
 
-def check_schema(
-    schema: dict, configs: List, ignore_unknown_keys: bool = False
-) -> List:
+def check_schema(schema: dict, configs: List, ignore_unknown_keys: bool = False) -> List:
     """Checks that the configs from the CSV match what is needed to add a connection."""
     schema_keys = schema.keys()
     required_keys = [v.get("name") for k, v in schema.items() if v.get("required")]
@@ -139,15 +136,9 @@ class PathNotProvided(Exception):
 
 
 @click.command()
-@click.option(
-    "--adapter", required=True, help="Adapter you want to add connections to."
-)
-@click.option(
-    "--path", type=click.Path(exists=True), help="Path to the CSV file to open."
-)
-@click.option(
-    "--show-schemas", is_flag=True, help="Show the adapter's schema and exit."
-)
+@click.option("--adapter", required=True, help="Adapter you want to add connections to.")
+@click.option("--path", type=click.Path(exists=True), help="Path to the CSV file to open.")
+@click.option("--show-schemas", is_flag=True, help="Show the adapter's schema and exit.")
 @click.option(
     "--active",
     is_flag=True,
@@ -194,9 +185,7 @@ def main(
     # for each row
     for row in rows:
         # add a connection
-        add_adapter_connection(
-            adapter, configs, row, active=active, save_and_fetch=save_and_fetch
-        )
+        add_adapter_connection(adapter, configs, row, active=active, save_and_fetch=save_and_fetch)
 
 
 if __name__ == "__main__":

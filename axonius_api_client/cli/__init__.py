@@ -15,6 +15,7 @@ from ..constants.logs import (
     LOG_LEVEL_API,
     LOG_LEVEL_AUTH,
     LOG_LEVEL_CONSOLE,
+    LOG_LEVEL_ENDPOINTS,
     LOG_LEVEL_FILE,
     LOG_LEVEL_HTTP,
     LOG_LEVEL_PACKAGE,
@@ -30,6 +31,7 @@ from . import (
     grp_assets,
     grp_certs,
     grp_enforcements,
+    grp_folders,
     grp_openapi,
     grp_spaces,
     grp_system,
@@ -131,7 +133,17 @@ Tips:
     "-lvlapi",
     "log_level_api",
     default=LOG_LEVEL_API,
-    help="Logging level to use for api clients.",
+    help="Logging level to use for API models.",
+    type=click.Choice(LOG_LEVELS_STR),
+    show_envvar=True,
+    show_default=True,
+)
+@click.option(
+    "--log-level-endpoints",
+    "-lvlep",
+    "log_level_endpoints",
+    default=LOG_LEVEL_ENDPOINTS,
+    help="Logging level to use for API endpoints.",
     type=click.Choice(LOG_LEVELS_STR),
     show_envvar=True,
     show_default=True,
@@ -384,3 +396,4 @@ cli.add_command(grp_openapi.openapi)
 cli.add_command(grp_certs.certs)
 cli.add_command(grp_enforcements.enforcements)
 cli.add_command(grp_spaces.spaces)
+cli.add_command(grp_folders.folders)
