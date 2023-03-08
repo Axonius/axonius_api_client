@@ -46,6 +46,7 @@ try:
         Instances,
         Meta,
         RemoteSupport,
+        Runner,
         SettingsGlobal,
         SettingsGui,
         SettingsLifecycle,
@@ -53,11 +54,10 @@ try:
         SystemRoles,
         SystemUsers,
         Users,
+        Vulnerabilities,
         Wizard,
         WizardCsv,
         WizardText,
-        Vulnerabilities,
-        Runner,
     )
     from .auth import ApiKey
     from .connect import Connect

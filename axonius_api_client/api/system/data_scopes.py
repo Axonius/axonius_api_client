@@ -289,7 +289,7 @@ class DataScopes(ModelMixins):
 
     def _init(self, **kwargs):
         """Post init method for subclasses to use for extra setup."""
-        from .. import Devices, Users, Instances, SystemRoles
+        from .. import Devices, Instances, SystemRoles, Users
 
         self.devices: Devices = Devices(auth=self.auth, **kwargs)
         """API model for cross reference."""

@@ -30,7 +30,6 @@ class TestGrpOpenAPIGetSpec:
     def test_get_spec_stdout(self, request, monkeypatch):
         runner = load_clirunner(request, monkeypatch)
         with runner.isolated_filesystem():
-
             args1 = ["openapi", "get-spec", "--export-file", ""]
             result1 = runner.invoke(cli=cli, args=args1)
 

@@ -184,7 +184,10 @@ class Folder(abc.ABC, FolderBase):
     mark_indent: t.ClassVar[str] = "| "
 
     def refresh(
-        self, value: Refreshables = FolderDefaults.refresh, force: bool = False
+        self,
+        value: Refreshables = FolderDefaults.refresh,
+        force: bool = False,
+        root: t.Optional["FoldersModel"] = None,
     ) -> "Folder":
         """Refresh the root folders data.
 
@@ -192,11 +195,12 @@ class Folder(abc.ABC, FolderBase):
             value (Refreshables, optional): only perform if refresh is True or is
                 int/float and elapsed >= refresh.
             force (bool, optional): perform a refresh if force is True
+            root (t.Optional["FoldersModel"], optional): dont fetch a new root, use this one yo
 
         """
         check: bool = self._parse_refresh(value=value)
         if check is True or force is True:
-            return self._refresh()
+            return self._refresh(root=root)
         return self
 
     @property
@@ -301,31 +305,23 @@ class Folder(abc.ABC, FolderBase):
 
     @classmethod
     def is_model_folders(cls, value: t.Any) -> bool:
-        """Pass."""
+        """Check if value is an instance of FoldersModel for this folders object type."""
         return isinstance(value, cls.get_model_folders())
 
     @classmethod
     def is_model_folder(cls, value: t.Any) -> bool:
-        """Pass."""
+        """Check if value is an instance of FolderModel for this folders object type."""
         return isinstance(value, cls.get_model_folder())
 
     @classmethod
     def is_models_objects(cls, value: t.Any) -> bool:
-        """Pass."""
+        """Check if value is an instance of BaseModel for this folders object type."""
         return isinstance(value, cls.get_models_objects())
 
     @classmethod
     def is_models_folders(cls, value: t.Any) -> bool:
-        """Pass."""
+        """Check if value is an instance of Folder for this folders object type."""
         return isinstance(value, cls.get_models_folders())
-
-    # XXX
-    """
-
-    FOLDERS API TODO:
-        ENSURE SQ/ESET move/copy/delete/rename methods tested
-
-    """
 
     def get_tree(
         self,
@@ -362,7 +358,7 @@ class Folder(abc.ABC, FolderBase):
 
     def find(
         self,
-        value: t.Union[str, enum.Enum, "Folder", "CreateFolderResponseModel"],
+        folder: t.Union[str, enum.Enum, "Folder", "CreateFolderResponseModel"],
         create: bool = FolderDefaults.create,
         refresh: Refreshables = FolderDefaults.refresh,
         echo: bool = FolderDefaults.echo,
@@ -372,33 +368,32 @@ class Folder(abc.ABC, FolderBase):
         """Find a folder.
 
         Args:
-            value (t.Union[str, "Folder", "CreateFolderResponseModel"]): folder to search for
-                as str can be: ID, absolute path, or relative path
+            folder (t.Union[str, enum.Enum, "Folder", "CreateFolderResponseModel"]): folder to find
+                as any of absolute path, relative path, folder id, folder object
             create (bool, optional): create folders that do not exist
             refresh (Refreshables, optional): refresh logic, see :meth:`refresh`
             echo (bool, optional): echo output to console
             minimum_depth (t.Optional[int], optional): minimum depth of resolved path
             reason (str, optional): reason for the find
         """
+
+        def check(folder):
+            folder = folder._check_minimum_depth(reason=reason, minimum_depth=minimum_depth)
+            return folder
+
         self = self.refresh(value=refresh)
 
-        if isinstance(value, enum.Enum):
-            ret: Folder = self.find_subfolder(value=value, create=create, echo=echo)
-        elif is_str(value):
+        if isinstance(folder, enum.Enum):
+            return check(self.find_subfolder(folder=folder, create=create, echo=echo))
+        elif is_str(folder):
             # try to find by ID of any folder in system
-            folder: t.Optional[Folder] = self._get_by_id(value=value)
+            if folder.strip() in self.all_folders_by_id:
+                return check(self.all_folders_by_id[folder.strip()])
+            # try to find absolute path of any folder OR relative path of subfolder
+            return check(self.find_subfolder(folder=folder, create=create, echo=echo))
 
-            if self.is_models_folders(folder):
-                ret: Folder = folder
-            else:
-                # try to find absolute path of any folder OR relative path of subfolder
-                ret: Folder = self.find_subfolder(value=value, create=create, echo=echo)
-        else:
-            # try to find folder by value.id or value
-            ret: Folder = self.find_by_id(value=value)
-
-        ret._check_minimum_depth(reason=reason, minimum_depth=minimum_depth)
-        return ret
+        # try to find folder by folder.id or folder
+        return check(self.find_by_id(folder=folder))
 
     def get_objects(
         self,
@@ -406,9 +401,17 @@ class Folder(abc.ABC, FolderBase):
         all_objects: bool = FolderDefaults.all_objects,
         recursive: bool = FolderDefaults.recursive,
         refresh: Refreshables = FolderDefaults.refresh,
-        **kwargs,
     ) -> t.List[BaseModel]:
-        """Get all objects in current folder."""
+        """Get all objects in current folder.
+
+        Args:
+            full_objects (bool, optional): get objects with their full data
+            all_objects (bool, optional): return all objects in system or only objects in this
+                folder directly
+            recursive (bool, optional): return all objects under this folder or only objects
+                in this folder directly
+            refresh (Refreshables, optional): refresh the object cache if this is True
+        """
         refresh = self._parse_refresh(value=refresh)
         if refresh is True:
             self._clear_objects_cache()
@@ -429,7 +432,6 @@ class Folder(abc.ABC, FolderBase):
                     recursive=True,
                     all_objects=False,
                     refresh=False,
-                    **kwargs,
                 )
         return ret
 
@@ -447,9 +449,25 @@ class Folder(abc.ABC, FolderBase):
         echo: bool = FolderDefaults.echo,
         refresh: Refreshables = FolderDefaults.refresh,
     ) -> t.List[BaseModel]:
-        """Pass."""
-        # TBD: model out the rest of parsers.search_wip to support this:
+        """Search for objects in this folder.
+
+        Args:
+            searches (t.List[str]): List of object names to search for
+            pattern_prefix (t.Optional[str], optional): Treat any searches that start with this
+                prefix as a regex
+            ignore_case (bool, optional): ignore case when building patterns
+            error_unmatched (bool, optional): Throw a fit if any searches supplied have no
+                matches
+            error_no_matches (bool, optional): Throw a fit if no searches match objects
+            error_no_objects (bool, optional): Throw a fit if no objects exist in folder
+            recursive (bool, optional): search all objects under folder
+            all_objects (bool, optional): search all objects in the entire system
+            full_objects (bool, optional): return objects with their full data
+            echo (bool, optional): echo output to console
+            refresh (Refreshables, optional): refresh the folders before searching
         """
+        """
+        # NEXT: model out the rest of parsers.search_wip to support this:
         - "test" == obj.name == "test"
         - "name:test" == obj.name == "test"
         - "tags:beta" == any of obj.tags equals "beta"
@@ -514,93 +532,227 @@ class Folder(abc.ABC, FolderBase):
     def search_objects_copy(
         self,
         searches: t.List[str],
-        path: t.Optional[t.Union[str, FolderBase]] = None,
+        folder: t.Optional[t.Union[str, FolderBase]] = None,
         copy_prefix: str = FolderDefaults.copy_prefix,
-        create: bool = FolderDefaults.create_copy,
-        echo: bool = FolderDefaults.echo,
-        **kwargs,
+        create: bool = FolderDefaults.create_action,
+        pattern_prefix: t.Optional[str] = FolderDefaults.pattern_prefix,
+        ignore_case: bool = FolderDefaults.ignore_case,
+        error_unmatched: bool = FolderDefaults.error_unmatched,
+        error_no_matches: bool = FolderDefaults.error_no_matches,
+        error_no_objects: bool = FolderDefaults.error_no_objects,
+        recursive: bool = FolderDefaults.recursive,
+        all_objects: bool = FolderDefaults.all_objects,
+        full_objects: bool = FolderDefaults.full_objects_search,
+        echo: bool = FolderDefaults.echo_action,
+        refresh: Refreshables = FolderDefaults.refresh,
     ) -> t.Tuple["Folder", t.List[BaseModel]]:
-        """Pass."""
-        matches: t.List[BaseModel] = self.search_objects(searches=searches, echo=echo, **kwargs)
-        reason: str = f"copy {len(matches)} {self._desc} to {path!r}"
-        if path is None:
-            path: Folder = self.path_public if self.read_only else self
+        """Search for objects in a folder and copy them, optionally to a different folder.
+
+        Args:
+            searches (t.List[str]): List of object names to search for
+            folder (t.Optional[t.Union[str, FolderBase]], optional): optional folder to copy
+                objects to
+            copy_prefix (str, optional): value to prepend to each objects name
+            create (bool, optional): if target is supplied and does not exist, create it
+            pattern_prefix (t.Optional[str], optional): if any searches start with
+                this prefix, treat the search as a regex
+            ignore_case (bool, optional): ignore case when building patterns for searches
+                that start with pattern_prefix
+            error_unmatched (bool, optional): Throw a fit if any searches supplied have no
+                matches
+            error_no_matches (bool, optional): Throw a fit if no searches match objects
+            error_no_objects (bool, optional): Throw a fit if no objects exist in folder
+            recursive (bool, optional): search all objects under folder
+            all_objects (bool, optional): search all objects in the entire system
+            full_objects (bool, optional): return objects with their full data
+            echo (bool, optional): echo output to console
+            refresh (Refreshables, optional): refresh the folders before searching
+        """
+        matches: t.List[BaseModel] = self.search_objects(
+            searches=searches,
+            pattern_prefix=pattern_prefix,
+            ignore_case=ignore_case,
+            error_unmatched=error_unmatched,
+            error_no_matches=error_no_matches,
+            error_no_objects=error_no_objects,
+            recursive=recursive,
+            all_objects=all_objects,
+            full_objects=full_objects,
+            echo=echo,
+            refresh=refresh,
+        )
+        matches_cnt: str = f"{len(matches)} matches"
+        reason: str = f"copy {matches_cnt} {self._desc} to {folder!r}"
+        if folder is None:
+            folder: Folder = self.path_public if self.read_only else self
         else:
-            path: Folder = self.find(value=path, create=create, echo=echo, reason=reason)
+            folder: Folder = self.find(folder=folder, create=create, echo=echo, reason=reason)
         results: t.List[BaseModel] = []
 
         msgs: t.List[str] = [
-            f"Starting copy of {len(matches)} from {self._str_under} to {path._str_under}",
+            f"Starting copy of {matches_cnt} from {self._str_under} to {folder._str_under}",
         ]
         self.spew(msgs, echo=echo, level="info")
         for idx, match in enumerate(matches):
-            old_name: str = match.name
-            result: BaseModel = match.copy(path=path, copy_prefix=copy_prefix, refresh=False)
-            self.spew(f"Copied {old_name!r} to {result.name!r}", echo=echo)
+            from_path: str = self.join_under(f"/@{match.name}")
+            result: BaseModel = match.copy(
+                folder=folder, copy_prefix=copy_prefix, root=folder.root_folders
+            )
+            new_path: str = folder.join_under(f"@{result.name}")
+            self.spew(f"Created copy: {new_path!r}\n- From path: {from_path!r}", echo=echo)
+
             results.append(result)
-        path.refresh(force=True)
-        self.refresh(force=True)
-        return path, results
+        folder.refresh(force=True)
+        self.refresh(force=True, root=folder.root_folders)
+        return folder, results
 
     def search_objects_move(
         self,
         searches: t.List[str],
-        path: t.Union[str, enum.Enum, "Folder"],
-        create: bool = FolderDefaults.create_move,
+        folder: t.Union[str, enum.Enum, "Folder"],
+        create: bool = FolderDefaults.create_action,
+        pattern_prefix: t.Optional[str] = FolderDefaults.pattern_prefix,
+        ignore_case: bool = FolderDefaults.ignore_case,
+        error_unmatched: bool = FolderDefaults.error_unmatched,
+        error_no_matches: bool = FolderDefaults.error_no_matches,
+        error_no_objects: bool = FolderDefaults.error_no_objects,
+        recursive: bool = FolderDefaults.recursive,
+        all_objects: bool = FolderDefaults.all_objects,
+        full_objects: bool = FolderDefaults.full_objects_search,
         echo: bool = FolderDefaults.echo,
-        **kwargs,
+        refresh: Refreshables = FolderDefaults.refresh,
     ) -> t.Tuple["Folder", t.List[BaseModel]]:
-        """Pass."""
-        matches: t.List[BaseModel] = self.search_objects(searches=searches, echo=echo, **kwargs)
-        reason: str = f"move {len(matches)} {self._desc} to {path!r}"
-        path: Folder = self.find(value=path, create=create, echo=echo, reason=reason)
+        """Search for objects in a folder and move them to another folder.
+
+        Args:
+            searches (t.List[str]): List of object names to search for
+            folder (t.Union[str, enum.Enum, "Folder"]): folder to move objects to
+            create (bool, optional): if folder does not exist, create it
+            pattern_prefix (t.Optional[str], optional): if any searches start with
+                this prefix, treat the search as a regex
+            ignore_case (bool, optional): ignore case when building patterns for searches
+                that start with pattern_prefix
+            error_unmatched (bool, optional): Throw a fit if any searches supplied have no
+                matches
+            error_no_matches (bool, optional): Throw a fit if no searches match objects
+            error_no_objects (bool, optional): Throw a fit if no objects exist in folder
+            recursive (bool, optional): search all objects under folder
+            all_objects (bool, optional): search all objects in the entire system
+            full_objects (bool, optional): return objects with their full data
+            echo (bool, optional): echo output to console
+            refresh (Refreshables, optional): refresh the folders before searching
+
+        """
+        matches: t.List[BaseModel] = self.search_objects(
+            searches=searches,
+            pattern_prefix=pattern_prefix,
+            ignore_case=ignore_case,
+            error_unmatched=error_unmatched,
+            error_no_matches=error_no_matches,
+            error_no_objects=error_no_objects,
+            recursive=recursive,
+            all_objects=all_objects,
+            full_objects=full_objects,
+            echo=echo,
+            refresh=refresh,
+        )
+        matches_cnt: str = f"{len(matches)} matches"
+        reason: str = f"move {matches_cnt} {self._desc} to {folder!r}"
+        folder: Folder = self.find(folder=folder, create=create, echo=echo, reason=reason)
         results: t.List[BaseModel] = []
 
         msgs: t.List[str] = [
-            f"Starting move of {len(matches)} from {self._str_under} to {path._str_under}",
+            f"Starting move of {matches_cnt} from {self._str_under} to {folder._str_under}",
         ]
         self.spew(msgs, echo=echo, level="info")
         for idx, match in enumerate(matches):
-            old_name: str = match.name
-            result: BaseModel = match.move(path=path, create=create, echo=echo, refresh=False)
-            self.spew(f"Moved {old_name!r} to {result.path!r}", echo=echo)
+            from_path: str = self.join_under(f"/@{match.name}")
+            result: BaseModel = match.move(
+                folder=folder, create=create, echo=echo, root=folder.root_folders
+            )
+            new_path: str = folder.join_under(f"@{result.name}")
+            self.spew(f"Moved: {new_path!r}\n- From path: {from_path!r}", echo=echo)
             results.append(result)
-        path.refresh(force=True)
-        return path, results
+        folder.refresh(force=True)
+        self.refresh(force=True, root=folder.root_folders)
+        return folder, results
 
     def search_objects_delete(
         self,
         searches: t.List[str],
         confirm: bool = FolderDefaults.confirm,
-        echo: bool = FolderDefaults.echo,
         prompt: bool = FolderDefaults.prompt,
         prompt_default: bool = FolderDefaults.prompt_default,
-        **kwargs,
-    ) -> t.List[BaseModel]:
-        """Pass."""
-        matches: t.List[BaseModel] = self.search_objects(searches=searches, echo=echo, **kwargs)
+        pattern_prefix: t.Optional[str] = FolderDefaults.pattern_prefix,
+        ignore_case: bool = FolderDefaults.ignore_case,
+        error_unmatched: bool = FolderDefaults.error_unmatched,
+        error_no_matches: bool = FolderDefaults.error_no_matches,
+        error_no_objects: bool = FolderDefaults.error_no_objects,
+        recursive: bool = FolderDefaults.recursive,
+        all_objects: bool = FolderDefaults.all_objects,
+        full_objects: bool = FolderDefaults.full_objects_search,
+        echo: bool = FolderDefaults.echo,
+        refresh: Refreshables = FolderDefaults.refresh,
+    ) -> t.Tuple[t.List[BaseModel], t.List[BaseModel]]:
+        """Search for objects in a folder and delete them.
+
+        Args:
+            searches (t.List[str]): List of object names to search for
+            confirm (bool, optional): Throw a fit if neither confirm nor prompt is True
+            prompt (bool, optional): If confirm is not True and prompt is True, prompt user
+                to delete each object
+            prompt_default (bool, optional): if prompt is True, default choice to use in prompt
+            pattern_prefix (t.Optional[str], optional): if any searches start with
+                this prefix, treat the search as a regex
+            ignore_case (bool, optional): ignore case when building patterns for searches
+                that start with pattern_prefix
+            error_unmatched (bool, optional): Throw a fit if any searches supplied have no
+                matches
+            error_no_matches (bool, optional): Throw a fit if no searches match objects
+            error_no_objects (bool, optional): Throw a fit if no objects exist in folder
+            recursive (bool, optional): search all objects under folder
+            all_objects (bool, optional): search all objects in the entire system
+            full_objects (bool, optional): return objects with their full data
+            echo (bool, optional): echo output to console
+            refresh (Refreshables, optional): refresh the folders before searching
+
+        """
+        matches: t.List[BaseModel] = self.search_objects(
+            searches=searches,
+            pattern_prefix=pattern_prefix,
+            ignore_case=ignore_case,
+            error_unmatched=error_unmatched,
+            error_no_matches=error_no_matches,
+            error_no_objects=error_no_objects,
+            recursive=recursive,
+            all_objects=all_objects,
+            full_objects=full_objects,
+            echo=echo,
+            refresh=refresh,
+        )
         results: t.List[BaseModel] = []
+        matches_cnt: str = f"{len(matches)} matches"
 
         msgs: t.List[str] = [
-            f"Starting delete of {len(matches)} from {self._str_under}",
+            f"Starting delete of {matches_cnt} from {self._str_under}",
             f"confirm={confirm!r}, prompt={prompt!r}, prompt_default={prompt_default!r}",
         ]
         self.spew(msgs, echo=echo, level="info")
         for idx, match in enumerate(matches):
-            old_name: str = match.name
+            from_path: str = self.join_under(f"/@{match.name}")
             result: BaseModel = match.delete(
                 confirm=confirm, echo=echo, prompt=prompt, prompt_default=prompt_default
             )
-            self.spew(f"Deleted {old_name!r}", echo=echo)
+            self.spew(f"Deleted {from_path!r}", echo=echo)
             results.append(result)
 
         self.refresh(force=True)
-        return results
+        return matches, results
 
-    def create_object(self, echo: bool = FolderDefaults.echo, **kwargs) -> BaseModel:
+    def create_object(self, echo: bool = FolderDefaults.echo_action, **kwargs) -> BaseModel:
         """Create passthru for the object type for this type of folders."""
-        if self.is_model_folder(self):
-            kwargs.update(dict(folder_id=self.id, path=self))
+        update: dict = {"folder": self}
+        kwargs.update(update if self.is_model_folder(self) else {})
         created: bool = self._create_object(**kwargs)
         self.spew(msg=f"Created a {created.get_tree_type()}:\n{created}", level="info", echo=echo)
         self.refresh(force=True)
@@ -608,48 +760,44 @@ class Folder(abc.ABC, FolderBase):
 
     def resolve_folder(
         self,
-        path: t.Optional[t.Union[str, enum.Enum, "Folder"]] = None,
-        create: bool = FolderDefaults.create_path,
-        refresh: Refreshables = FolderDefaults.refresh,
-        echo: bool = FolderDefaults.echo,
-        echo_resolve: bool = FolderDefaults.echo_resolve,
-        reason: t.Optional[str] = "",
+        folder: t.Optional[t.Union[str, enum.Enum, "Folder"]] = None,
+        create: bool = FolderDefaults.create_action,
+        refresh: Refreshables = FolderDefaults.refresh_action,
+        echo: bool = FolderDefaults.echo_action,
         minimum_depth: t.Optional[int] = 1,
         default: t.Optional["Folder"] = None,
         fallback: t.Optional["Folder"] = None,
-        folder_id: t.Optional[str] = None,
+        reason: t.Optional[str] = "",
         **kwargs,
     ) -> "FolderModel":
         """Resolve a folder object to use.
 
         Args:
-            path (t.Optional[t.Union[str, "Folder"]], optional): path to resolve
-            create (bool, optional): create path if not found
-            minimum_depth (t.Optional[int], optional): minimum depth of resolved path
-            reason (t.Optional[str], optional): reason for resolve call
+            folder (t.Optional[t.Union[str, enum.Enum, "Folder"]], optional): folder to resolve
+            create (bool, optional): create folder if not found
+            refresh (Refreshables, optional): Description
             echo (bool, optional): echo output to console
-            default_self (bool, optional): default to self if path is not supplied
-            folder_id: (t.Optional[str], optional): id of folder to resolve
-            kwargs: if path not supplied and default_self is False, determine default
+            minimum_depth (t.Optional[int], optional): minimum depth of resolved folder
+            default (t.Optional["Folder"], optional): Description
+            fallback (t.Optional["Folder"], optional): Description
+            reason (t.Optional[str], optional): reason for resolve call
+            kwargs: if folder not supplied and default_self is False, determine default
                 from private:bool, public:bool, and object type specific traits like
                 asset_scope:bool
         """
-        attrs: t.List[str] = [
-            f"path={path!r}",
+        attr_info: t.List[str] = [
+            f"folder={folder!r}",
             f"fallback={fallback!r}",
             f"default={default!r}",
-            f"folder_id={folder_id!r}",
         ]
-        # path is a FolderModel, use it
-        if self.is_model_folder(path):
-            folder: Folder = path
-        # folder_id is str, find it
-        elif is_str(folder_id):
-            folder: Folder = self.find_by_id(value=folder_id)
-        # path is a str, find it as a path or uuid
-        elif is_str(path) or isinstance(path, enum.Enum):
-            folder: Folder = self.find(
-                value=path,
+        # folder is a FolderModel, use it
+        if self.is_model_folder(folder):
+            ret: Folder = folder
+            echo = False
+        # folder is a str, find it as a folder or uuid
+        elif is_str(folder) or isinstance(folder, enum.Enum):
+            ret: Folder = self.find(
+                folder=folder,
                 create=create,
                 echo=echo,
                 reason=reason,
@@ -658,27 +806,24 @@ class Folder(abc.ABC, FolderBase):
             )
         # default supplied
         elif self.is_model_folder(default):
-            folder: Folder = default
+            ret: Folder = default
         # pick a default folder based on kwargs
         else:
-            folder: Folder = self.get_default_folder(**kwargs)
+            ret: Folder = self.get_default_folder(**kwargs)
 
-        if echo_resolve:
-            attrs: str = ", ".join(attrs)
-            msgs: t.List[str] = [
-                f"Resolved folder from {attrs}",
-                f"{folder!r}",
-                f"Reason: {reason}",
-            ]
-            self.spew(msgs, echo=echo)
+        attr_info: str = ", ".join(attr_info)
+        msgs: t.List[str] = [
+            f"Resolved folder from {attr_info}",
+            f"{ret!r}",
+            f"Reason: {reason}",
+        ]
+        self.spew(msgs, echo=echo)
 
         # check folder.depth > minimum_depth
-        folder._check_minimum_depth(reason=reason, minimum_depth=minimum_depth)
-
+        ret = ret._check_minimum_depth(reason=reason, minimum_depth=minimum_depth)
         # do object type specific checks as necessary
-        folder = folder._check_resolved_folder(reason=reason, fallback=fallback, **kwargs)
-
-        return folder
+        ret = ret._check_resolved_folder(reason=reason, fallback=fallback, **kwargs)
+        return ret
 
     def get_default_folder(self, private: bool = False, **kwargs) -> "FolderModel":
         """Determine default folder to use."""
@@ -688,20 +833,20 @@ class Folder(abc.ABC, FolderBase):
 
     def move(
         self,
-        value: t.Union[str, enum.Enum, "Folder"],
-        create: bool = FolderDefaults.create_move,
-        refresh: Refreshables = FolderDefaults.refresh,
-        echo: bool = FolderDefaults.echo,
+        folder: t.Union[str, enum.Enum, "Folder"],
+        create: bool = FolderDefaults.create_action,
+        refresh: Refreshables = FolderDefaults.refresh_action,
+        echo: bool = FolderDefaults.echo_action,
     ) -> "FolderModel":
         """Move this folder under some other path.
 
         Args:
-            value (t.Union[str, "Folder"]): path to move this folder to
-            create (bool, optional): create value if it does not exist
+            folder (t.Union[str, enum.Enum, "Folder"]): path to move this folder to
+            create (bool, optional): create folder if it does not exist
             refresh (Refreshables, optional): refresh logic, see :meth:`refresh`
             echo (bool, optional): echo output to console
         """
-        reason: str = f"move a {self._desc} to {value!r}"
+        reason: str = f"move a {self._desc} to {folder!r}"
 
         # check self is not deleted and is not read only
         self._check_update_ok(reason=reason)
@@ -709,48 +854,45 @@ class Folder(abc.ABC, FolderBase):
         # check self is not /, /Public, /Private
         self._check_minimum_depth(reason=reason, minimum_depth=2)
 
-        # find the value path, creating it if necessary
-        value: Folder = self.find(
-            value=value, create=create, refresh=refresh, reason=reason, echo=echo
+        # find the folder path, creating it if necessary
+        folder: Folder = self.find(
+            folder=folder, create=create, refresh=refresh, reason=reason, echo=echo
         )
 
-        # check self is not under value
-        self._check_under_folder(reason=reason, value=value)
+        # check self is not under folder
+        self._check_under_folder(reason=reason, value=folder)
 
-        # check value not deleted and is not read only
-        value._check_update_ok(reason=reason)
+        # check folder not deleted and is not read only
+        folder._check_update_ok(reason=reason)
 
-        # check value is not /
-        value._check_minimum_depth(reason=reason, minimum_depth=1)
+        # check folder is not /
+        folder = folder._check_minimum_depth(reason=reason, minimum_depth=1)
 
-        # check value does not have a subfolder with same name as this folder
-        value._check_subfolder_exists(reason=reason, value=self.name)
+        # check folder does not have a subfolder with same name as this folder
+        folder._check_subfolder_exists(reason=reason, value=self.name)
 
         self.spew(f"Issuing an API request to {reason}", echo=False)
-        response: MoveFolderResponseModel = self.api_folders._move(id=self.id, parent_id=value.id)
+        response: MoveFolderResponseModel = self.api_folders._move(id=self.id, parent_id=folder.id)
         self.spew([f"Received an API response to {reason}", f"Response: {response}"], echo=echo)
 
         # refresh self
         self = self.refresh(force=True)
         return self
 
-    def rename(
-        self,
-        value: str,
-        echo: bool = FolderDefaults.echo,
-    ) -> "FolderModel":
+    def rename(self, folder: str, echo: bool = FolderDefaults.echo_action) -> "FolderModel":
         """Rename this folder.
 
         Args:
-            value (t.Union[str, "Folder"]): new name for folder
+            folder (str): new name for folder
             echo (bool, optional): echo output to console
+
         """
-        reason: str = f"rename a {self._desc} to {value!r}"
+        reason: str = f"rename a {self._desc} to {folder!r}"
 
-        # check value is str
-        value: str = self._check_str(value=value, src=self.rename)
+        # check folder is str
+        folder: str = self._check_str(value=folder, attr="folder", src=self.rename)
 
-        if self.sep in value:
+        if self.sep in folder:
             raise NotAllowedError(
                 [
                     f"You can not use {self.sep!r} in a folder name to {reason}",
@@ -765,10 +907,10 @@ class Folder(abc.ABC, FolderBase):
         self._check_minimum_depth(reason=reason, minimum_depth=2)
 
         # check if subfolder exists under parent with same name already
-        self.parent._check_subfolder_exists(reason=reason, value=value)
+        self.parent._check_subfolder_exists(reason=reason, value=folder)
 
         self.spew(f"Issuing an API request to {reason}", echo=False)
-        response: RenameFolderResponseModel = self.api_folders._rename(id=self.id, name=value)
+        response: RenameFolderResponseModel = self.api_folders._rename(id=self.id, name=folder)
         self.spew([f"Received an API response to {reason}", f"Response: {response}"], echo=echo)
 
         # refresh self
@@ -778,8 +920,8 @@ class Folder(abc.ABC, FolderBase):
     def delete(
         self,
         confirm: bool = FolderDefaults.confirm,
-        include_subfolders: bool = FolderDefaults.include_subfolders,
-        include_objects: bool = FolderDefaults.include_objects_delete,
+        delete_subfolders: bool = FolderDefaults.delete_subfolders,
+        delete_objects: bool = FolderDefaults.delete_objects,
         echo: bool = FolderDefaults.echo,
         prompt: bool = FolderDefaults.prompt,
         prompt_default: bool = FolderDefaults.prompt_default,
@@ -788,9 +930,9 @@ class Folder(abc.ABC, FolderBase):
 
         Args:
             confirm (bool, optional): if not True and prompt=False, raise exc
-            include_subfolders (bool, optional): if any subfolders exist under this folder,
+            delete_subfolders (bool, optional): if any subfolders exist under this folder,
                 if True: delete them, else: raise exc
-            include_objects (bool, optional): if any objects exist in this folder,
+            delete_objects (bool, optional): if any objects exist in this folder,
                 if True: delete them, else: raise exc
             echo (bool, optional): echo output to console
             prompt (bool, optional): if confirm is not True, prompt user on console before action
@@ -818,16 +960,16 @@ class Folder(abc.ABC, FolderBase):
         cnt_objs: int = len(objs)
         errs: t.List = []
 
-        # if any recursive subfolders, check include_subfolders is True
-        if cnt_subs > 0 and include_subfolders is not True:
-            errs.append(f"include_subfolders is {include_subfolders} and must be {True}")
+        # if any recursive subfolders, check delete_subfolders is True
+        if cnt_subs > 0 and delete_subfolders is not True:
+            errs.append(f"delete_subfolders is {delete_subfolders} and must be {True}")
 
-        # if any recursive objects exist, check include_objects is True
-        if cnt_objs > 0 and include_objects is not True:
-            errs.append(f"include_objects is {include_objects} and must be {True}")
+        # if any recursive objects exist, check delete_objects is True
+        if cnt_objs > 0 and delete_objects is not True:
+            errs.append(f"delete_objects is {delete_objects} and must be {True}")
 
         if errs:
-            tree: t.List[str] = self.get_tree(include_objects=False, include_details=True)
+            tree: t.List[str] = self.get_tree(include_objects=True, include_details=True)
             errs: t.List[str] = [
                 f"Unable to {reason}",
                 f"{cnt_subs} subfolders exist recursively under this folder",
@@ -845,30 +987,26 @@ class Folder(abc.ABC, FolderBase):
         self = self.refresh(force=True)
         return response
 
-    def create(
-        self,
-        value: str,
-        echo: bool = FolderDefaults.echo,
-    ) -> "FolderModel":
+    def create(self, folder: str, echo: bool = FolderDefaults.echo_action) -> "FolderModel":
         """Create a folder under this folder.
 
         Args:
-            value (str): Name of folder to create under this folder
+            folder (str): Name of folder to create under this folder
             echo (bool, optional): echo output to console
 
         """
-        reason: str = f"create a subfolder named {value!r} under a {self._desc}"
+        reason: str = f"create a subfolder named {folder!r} under a {self._desc}"
 
-        # check value is str
-        value: str = self._check_str(value=value, src=self.create)
+        # check folder is str
+        folder: str = self._check_str(value=folder, attr="folder", src=self.create)
 
-        # if value has '/' in it, treat it as a path
-        if self.sep in value:
-            return self.find_by_path(value=value, create=True, echo=echo)
+        # if folder has '/' in it, treat it as a path
+        if self.sep in folder:
+            return self.find_by_path(folder=folder, create=True, echo=echo)
 
         # check if subfolder exists already with same name
-        if value in self.subfolders_by_name:
-            return self.subfolders_by_name[value]
+        if folder in self.subfolders_by_name:
+            return self.subfolders_by_name[folder]
 
         # check self is not deleted and is not read only
         self._check_update_ok(reason=reason)
@@ -878,102 +1016,101 @@ class Folder(abc.ABC, FolderBase):
 
         self.spew(f"Issuing an API request to {reason}", echo=False)
         response: CreateFolderResponseModel = self.api_folders._create(
-            name=value, parent_id=self.id
+            name=folder, parent_id=self.id
         )
         self.spew([f"Received an API response to {reason}", f"Response: {response}"], echo=echo)
 
         # get the created folder object
         self = self.refresh(force=True)
-        created: Folder = self.root_folders.find(value=response, reason=reason, echo=echo)
+        created: Folder = self.root_folders.find(folder=response, reason=reason, echo=echo)
         return created
 
     def find_subfolder(
         self,
-        value: t.Union[str, enum.Enum],
+        folder: t.Union[str, enum.Enum],
         create: bool = FolderDefaults.create,
         echo: bool = FolderDefaults.echo,
     ) -> "Folder":
         """Find a folder under this folder.
 
         Args:
-            value (str): can be name of subfolder, absolute path, or relative path to folder
+            folder (str): can be name of subfolder, absolute path, or relative path to folder
             create (bool, optional): create folders that do not exist
             echo (bool, optional): echo output to console
         """
-        # check value is str
-        value: str = self._check_str(value=value, src=self.find_subfolder, enum_ok=True)
+        # check folder is str
+        folder: str = self._check_str(
+            value=folder, attr="folder", src=self.find_subfolder, enum_ok=True
+        )
 
-        # if / in value, find by path
-        if self.sep in value:
-            return self.find_by_path(value=value, create=create, echo=echo)
+        # if / in folder, find by path
+        if self.sep in folder:
+            return self.find_by_path(folder=folder, create=create, echo=echo)
 
-        # see if any subfolders exist that match name or id to value
-        for folder in self.subfolders:
-            if value in [folder.name, folder.id]:
-                return folder
+        # see if any subfolders exist that match name or id to folder
+        for subfolder in self.subfolders:
+            if folder in [subfolder.name, subfolder.id]:
+                return subfolder
 
         # no subfolder found with matching name or id
         if create is True:
-            return self.create(value=value, echo=echo)
+            return self.create(folder=folder, echo=echo)
 
-        err: str = f"Subfolder with name or ID of {value!r} {self._str_under} not found"
+        err: str = f"Subfolder with name or ID of {folder!r} {self._str_under} not found"
         raise FolderNotFoundError([err, "", *self.subfolders_summary, err], folder=self)
 
     def find_by_path(
         self,
-        value: t.Union[str, enum.Enum],
+        folder: t.Union[str, enum.Enum],
         create: bool = FolderDefaults.create,
         echo: bool = FolderDefaults.echo,
     ) -> "Folder":
         """Find a folder by path.
 
         Args:
-            value (str): can be name of subfolder, absolute path, or relative path to folder
+            folder (str): can be name of subfolder, absolute path, or relative path to folder
             create (bool, optional): create folders that do not exist
             echo (bool, optional): echo output to console
         """
-        # check value is str
-        value: str = self._check_str(value=value, src=self.find_by_path, enum_ok=True)
+        # check folder is str
+        folder: str = self._check_str(
+            value=folder, attr="folder", src=self.find_by_path, enum_ok=True
+        )
 
         # search under self
-        folder: Folder = self
+        ret: Folder = self
 
-        # search under root folders if value startswith /
-        if value.startswith(self.sep):
-            folder: Folder = self.root_folders
+        # search under root folders if folder startswith /
+        if folder.startswith(self.sep):
+            ret: Folder = self.root_folders
 
-        # split up the value on / and find each folder
-        parts: t.List[str] = self.split(value=value)
+        # split up the folder on / and find each subfolder recursively
+        parts: t.List[str] = self.split(value=folder)
         for part in parts:
-            folder: Folder = folder.find_subfolder(value=part, create=create, echo=echo)
-        return folder
+            ret: Folder = ret.find_subfolder(folder=part, create=create, echo=echo)
+        return ret
 
-    def find_by_id(
-        self,
-        value: t.Union[str, "Folder"],
-    ) -> "Folder":
+    def find_by_id(self, folder: t.Union[str, "Folder"]) -> "Folder":
         """Find any folder in the system by id.
 
         Args:
-            value (t.Union[str, "Folder"]): as str must be ID of folder
+            folder (t.Union[str, "Folder"]): as str must be ID of folder
 
         """
-        if not self.is_findable(value=value):
+        if not self.is_findable(value=folder):
             raise AxonTypeError(
-                src=self.find_by_id, attr="value", value=value, expected=self.get_types_findable()
+                src=self.find_by_id, attr="folder", value=folder, expected=self.get_types_findable()
             )
 
-        value_id: str = value
+        value_id: str = folder
         value_from: str = ""
 
-        if isinstance(value, self._get_types_findable()):
-            value_id: str = value.id
-            value_from: str = f" (from {value})"
+        if isinstance(folder, self._get_types_findable()):
+            value_id: str = folder.id
+            value_from: str = f" (from {folder})"
 
-        folder: t.Optional[Folder] = self._get_by_id(value=value_id)
-
-        if self.is_models_folders(folder):
-            return folder
+        if value_id.strip() in self.all_folders_by_id:
+            return self.all_folders_by_id[value_id.strip()]
 
         err: str = f"Folder not found by ID {value_id!r}{value_from}"
         raise FolderNotFoundError([err, *self.all_folders_by_id_summary, err], folder=self)
@@ -1071,12 +1208,12 @@ class Folder(abc.ABC, FolderBase):
     @property
     def path_public(self) -> "FolderModel":
         """Get the root of the public folders."""
-        return self.root_folders.find_subfolder(value=self.get_enum_names().public)
+        return self.root_folders.find_subfolder(folder=self.get_enum_names().public)
 
     @property
     def path_private(self) -> "FolderModel":
         """Get the root of the private folders."""
-        return self.root_folders.find_subfolder(value=self.get_enum_names().private)
+        return self.root_folders.find_subfolder(folder=self.get_enum_names().private)
 
     @property
     def count_total(self) -> int:
@@ -1188,7 +1325,7 @@ class Folder(abc.ABC, FolderBase):
     def root(self) -> t.Optional["Folder"]:
         """Get the root of this folder, if any."""
         if is_str(self.root_id):
-            return self.find(value=self.root_id)
+            return self.find(folder=self.root_id)
         if self.is_model_folder(self):
             return self.root_folders
 
@@ -1196,7 +1333,7 @@ class Folder(abc.ABC, FolderBase):
     def parent(self) -> t.Optional["Folder"]:
         """Get the parent of this folder, if any."""
         if is_str(self.parent_id):
-            return self.find(value=self.parent_id)
+            return self.find(folder=self.parent_id)
         if self.is_model_folder(self):
             return self.root_folders
 
@@ -1293,21 +1430,22 @@ class Folder(abc.ABC, FolderBase):
         data.refreshed = True
         return data
 
-    def _refresh(self) -> "Folder":
+    def _refresh(self, root: t.Optional["FoldersModel"] = None) -> "Folder":
         """Refresh the root folders data."""
         self._clear_objects_cache()
         if self.is_model_folders(self):
-            # fetch a new root folders
-            root: FoldersModel = self._refetch_root_folders()
+            root: FoldersModel = (
+                root if self.is_model_folders(root) else self._refetch_root_folders()
+            )
             # update root folders references in old root folders
             self.__dict__.update(root.__dict__)
             self.refreshed = True
             return self
 
-        self.root_folders = self.root_folders._refresh()
+        self.root_folders = self.root_folders._refresh(root=root)
         if self.deleted is not True:
             # find the updated version of self and update self
-            updated: Folder = self.root_folders.find(value=self, refresh=False)
+            updated: Folder = self.root_folders.find(folder=self, refresh=False)
             self.__dict__.update(updated.__dict__)
         return self
 
@@ -1328,17 +1466,6 @@ class Folder(abc.ABC, FolderBase):
                 return True
 
         return False
-
-    def _get_by_id(self, value: str) -> t.Optional["Folder"]:
-        """Get a folder anywhere in the system by ID.
-
-        Args:
-            value (str): ID to get
-
-        Returns:
-            t.Optional["Folder"]: Folder if ID found, None otherwise
-        """
-        return self.all_folders_by_id.get(value.strip())
 
     def _get_tree_entries_objects_prefix(
         self,
@@ -1434,8 +1561,8 @@ class Folder(abc.ABC, FolderBase):
         return value.strip() if strip else value
 
     def _clear_objects_cache(self):
-        """Pass."""
-        pass
+        """Clear any object specific cache being used."""
+        return
 
     def _check_confirm(
         self,
@@ -1516,7 +1643,12 @@ class Folder(abc.ABC, FolderBase):
         """Check if resolved folder meets object type specific restrictions."""
         return self
 
-    def _check_minimum_depth(self, reason: str = "", minimum_depth: t.Optional[int] = None):
+    def _check_minimum_depth(
+        self,
+        reason: str = "",
+        minimum_depth: t.Optional[int] = None,
+        fallback: t.Optional["Folder"] = None,
+    ) -> "Folder":
         """Check if this folder is not above a specified minimum depth."""
         if isinstance(minimum_depth, int) and self.depth < minimum_depth:
             depth: str = f"Folder depth of {self.depth}"
@@ -1524,7 +1656,12 @@ class Folder(abc.ABC, FolderBase):
             errs: t.List[str] = [
                 f"Unable to {reason}" f"{depth} is below {min_depth} for this operation",
             ]
-            raise NotAllowedError([*errs, "", f"This {self}"])
+            msgs: t.List[str] = [*errs, "", f"This {self}"]
+            if self.is_model_folder(fallback):
+                self.spew(msgs, echo=True)
+                return fallback
+            raise NotAllowedError(msgs)
+        return self
 
     def _is_past_maximum_depth(self, maximum_depth: t.Optional[int] = None) -> bool:
         """Check if this folder is not below a specified maximum depth."""

@@ -30,6 +30,7 @@ OPTIONS = [
 ]
 
 
+# XXX NEEDS TESTS
 @click.command(name="update-description", context_settings=CONTEXT_SETTINGS)
 @add_options(OPTIONS)
 @click.pass_context

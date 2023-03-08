@@ -329,7 +329,6 @@ def tab_map(
 
     for key, name, width in key_map:
         if key in orig_value and name:
-
             key_value = orig_value.pop(key)
 
             if isinstance(key_value, list):

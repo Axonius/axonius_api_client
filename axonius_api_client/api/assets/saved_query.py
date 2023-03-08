@@ -59,15 +59,15 @@ class SavedQuery(ChildMixins):
     @property
     def folders(self) -> FoldersQueries:
         """Get the folders api for this object type."""
-        return self.HTTP.CLIENT.folders.queries
+        return self.auth.http.CLIENT.folders.queries
 
-    def update_path(
+    def update_folder(
         self,
         sq: MULTI,
-        path: t.Union[str, FolderModel],
+        folder: t.Union[str, FolderModel],
         as_dataclass: bool = AS_DATACLASS,
-        create: bool = FolderDefaults.create_path,
-        echo: bool = FolderDefaults.echo,
+        create: bool = FolderDefaults.create_action,
+        echo: bool = FolderDefaults.echo_action,
     ) -> t.Union[dict, models.SavedQuery]:
         """Update the name of a Saved Query.
 
@@ -81,9 +81,10 @@ class SavedQuery(ChildMixins):
         """
         sq = self.get_by_multi(sq=sq, as_dataclass=True)
         updated_obj = sq.move(
-            path=path,
+            folder=folder,
             create=create,
             echo=echo,
+            refresh=False,
         )
         return updated_obj if as_dataclass else updated_obj.to_dict()
 
@@ -371,10 +372,10 @@ class SavedQuery(ChildMixins):
         private: bool = False,
         asset_scope: bool = False,
         as_dataclass: bool = AS_DATACLASS,
-        path: t.Optional[t.Union[str, FolderModel]] = None,
-        create: bool = FolderDefaults.create_path,
+        always_cached: bool = False,
+        folder: t.Optional[t.Union[str, FolderModel]] = None,
+        create: bool = FolderDefaults.create_action,
         echo: bool = FolderDefaults.echo,
-        folder_id: t.Optional[str] = None,
     ) -> t.Union[dict, models.SavedQuery]:
         """Create a copy of a Saved Query.
 
@@ -388,15 +389,15 @@ class SavedQuery(ChildMixins):
         Returns:
             t.Union[dict, models.SavedQuery]: saved query dataclass or dict
         """
-        sq = self.get_by_multi(sq=sq, as_dataclass=True)
-        created_obj = sq.copy(
-            path=path,
-            folder_id=folder_id,
+        existing = self.get_by_multi(sq=sq, as_dataclass=True)
+        created_obj = existing.copy(
+            folder=folder,
             create=create,
             name=name,
             echo=echo,
             private=private,
             asset_scope=asset_scope,
+            always_cached=always_cached,
         )
         return created_obj if as_dataclass else created_obj.to_dict()
 
@@ -922,10 +923,9 @@ class SavedQuery(ChildMixins):
         private: bool = False,
         always_cached: bool = False,
         asset_scope: bool = False,
-        folder_id: t.Optional[str] = None,
-        path: t.Optional[t.Union[str, FolderModel]] = None,
-        create: bool = FolderDefaults.create_path,
-        echo: bool = FolderDefaults.echo,
+        folder: t.Optional[t.Union[str, FolderModel]] = None,
+        create: bool = FolderDefaults.create_action,
+        echo: bool = FolderDefaults.echo_action,
         **kwargs,
     ) -> models.SavedQueryCreate:
         """Create a saved query.
@@ -980,19 +980,21 @@ class SavedQuery(ChildMixins):
         query_expr: t.Optional[str] = kwargs.get("query_expr", None) or query
         wiz_parsed: dict = self.parent.get_wiz_entries(wiz_entries=wiz_entries)
 
-        root: FoldersModel = self.auth.http.CLIENT.folders.queries.get()
+        root: FoldersModel = self.folders.get()
         fallback: t.Optional[FolderModel] = None
         if asset_scope:
             self.auth.http.CLIENT.data_scopes.check_feature_enabled()
             fallback: t.Optional[FolderModel] = root.path_asset_scope
 
-        path: FolderModel = root.resolve_folder(
-            path=path,
+        reason: str = f"Create Saved Query {name!r}"
+        folder: FolderModel = root.resolve_folder(
+            folder=folder,
             create=create,
             echo=echo,
-            folder_id=folder_id,
             private=private,
             asset_scope=asset_scope,
+            reason=reason,
+            refresh=False,
             fallback=fallback,
         )
 
@@ -1042,7 +1044,7 @@ class SavedQuery(ChildMixins):
             always_cached=always_cached,
             asset_scope=asset_scope,
             tags=tags,
-            folder_id=path.id,
+            folder_id=folder.id,
         )
 
     def delete_by_name(

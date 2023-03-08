@@ -3,6 +3,7 @@
 import json
 
 import pytest
+
 from axonius_api_client import connect
 from axonius_api_client.tools import json_load
 
@@ -11,7 +12,6 @@ from ...utils import load_clirunner
 
 
 class TestGrpMetaCmdAbout:
-
     ARGS = ["system", "meta", "about"]
 
     def test_export_json(self, request, monkeypatch):
@@ -35,7 +35,6 @@ class TestGrpMetaCmdAbout:
 
 @pytest.mark.parametrize("option", ["header", "cookie"])
 class TestDictOptions:
-
     ARGS = ["system", "meta", "about"]
 
     def test_cmdline(self, request, monkeypatch, option):

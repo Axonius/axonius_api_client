@@ -13,7 +13,6 @@ class TestGrpAdaptersCmdGet:
     def test_json_exports(self, request, monkeypatch, export_format):
         runner = load_clirunner(request, monkeypatch)
         with runner.isolated_filesystem():
-
             args1 = ["adapters", "get", "--export-format", export_format]
             result1 = runner.invoke(cli=cli, args=args1)
 
@@ -30,7 +29,6 @@ class TestGrpAdaptersCmdGet:
     def test_str_exports(self, request, monkeypatch, export_format):
         runner = load_clirunner(request, monkeypatch)
         with runner.isolated_filesystem():
-
             args1 = ["adapters", "get", "--export-format", export_format]
             result1 = runner.invoke(cli=cli, args=args1)
 

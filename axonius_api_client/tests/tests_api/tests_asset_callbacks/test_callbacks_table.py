@@ -5,6 +5,7 @@ import copy
 import io
 
 import pytest
+
 from axonius_api_client.exceptions import ApiError, StopFetch
 
 from ...utils import get_schema

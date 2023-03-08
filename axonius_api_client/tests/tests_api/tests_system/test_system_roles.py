@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Test suite."""
 import pytest
+
 from axonius_api_client.api import json_api
 from axonius_api_client.exceptions import ApiError, NotFoundError, ResponseNotOk
 from axonius_api_client.tools import listify

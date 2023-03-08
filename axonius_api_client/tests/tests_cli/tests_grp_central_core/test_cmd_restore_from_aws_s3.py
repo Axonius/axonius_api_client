@@ -11,7 +11,6 @@ class TestGrpCentralCoreCmdRestoreFromAwsS3:
 
         runner = load_clirunner(request, monkeypatch)
         with runner.isolated_filesystem():
-
             args = [
                 "system",
                 "central-core",

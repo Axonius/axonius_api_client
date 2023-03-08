@@ -11,7 +11,6 @@ class GrpSavedQueryCmdAddFromWizCsv:
 
 class TestDevicesGrpSavedQueryCmdAddFromWizCsv(GrpSavedQueryDevices, GrpSavedQueryCmdAddFromWizCsv):
     def test_add_success(self, apiobj, request, monkeypatch):
-
         runner = load_clirunner(request, monkeypatch)
         with runner.isolated_filesystem():
             result_csv = runner.invoke(

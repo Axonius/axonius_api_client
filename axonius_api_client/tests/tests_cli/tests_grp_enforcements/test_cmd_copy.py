@@ -3,6 +3,7 @@
 import json
 
 import pytest
+
 from axonius_api_client.cli import cli
 from axonius_api_client.exceptions import ApiWarning
 from axonius_api_client.tools import json_load

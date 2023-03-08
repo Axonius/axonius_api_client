@@ -4,6 +4,7 @@
 import copy
 
 import pytest
+
 from axonius_api_client.exceptions import ApiError
 
 from .test_callbacks import Callbacks

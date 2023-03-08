@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Test suite."""
 import pytest
+
 from axonius_api_client.api.json_api.enforcements import (
     ActionCategory,
     ActionType,

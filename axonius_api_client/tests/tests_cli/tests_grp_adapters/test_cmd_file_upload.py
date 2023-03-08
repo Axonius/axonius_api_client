@@ -11,7 +11,6 @@ class TestGrpAdaptersFileUpload:
     def test_upload(self, request, monkeypatch):
         runner = load_clirunner(request, monkeypatch)
         with runner.isolated_filesystem():
-
             args1 = [
                 "adapters",
                 "file-upload",

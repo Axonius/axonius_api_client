@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 """Test suite."""
 import pytest
+
 from axonius_api_client.api import Runner
 from axonius_api_client.cli import cli
 from axonius_api_client.tools import csv_load, json_load, pathify
 
 from ...tests_api.tests_assets.test_runner import RunEnforcements
-from ...utils import FLAKY, get_rows_exist, load_clirunner
+from ...utils import FLAKY, load_clirunner
 
 
 @FLAKY()
@@ -335,7 +336,6 @@ class GrpAssetsBase:
     def test_count(self, request, monkeypatch, apiobj):
         runner = load_clirunner(request, monkeypatch)
         with runner.isolated_filesystem():
-
             args = [
                 apiobj.ASSET_TYPE,
                 "count",
@@ -346,7 +346,6 @@ class GrpAssetsBase:
     def test_count_wiz(self, request, monkeypatch, apiobj):
         runner = load_clirunner(request, monkeypatch)
         with runner.isolated_filesystem():
-
             args = [
                 apiobj.ASSET_TYPE,
                 "count",
@@ -360,7 +359,6 @@ class GrpAssetsBase:
     def test_count_history_days_ago(self, request, monkeypatch, apiobj):
         runner = load_clirunner(request, monkeypatch)
         with runner.isolated_filesystem():
-
             args = [
                 apiobj.ASSET_TYPE,
                 "count",
@@ -373,7 +371,6 @@ class GrpAssetsBase:
     def test_count_by_saved_query(self, request, monkeypatch, existing_sq, apiobj):
         runner = load_clirunner(request, monkeypatch)
         with runner.isolated_filesystem():
-
             args = [
                 apiobj.ASSET_TYPE,
                 "count-by-saved-query",
@@ -384,11 +381,10 @@ class GrpAssetsBase:
             self.check_count_result(result)
 
     def test_get_by_id(self, request, monkeypatch, apiobj):
-        asset = get_rows_exist(apiobj=apiobj)
-        get_id = asset["internal_axon_id"]
+        get_id = apiobj.IDS[0]
+        # get_id = asset["internal_axon_id"]
         runner = load_clirunner(request, monkeypatch)
         with runner.isolated_filesystem():
-
             args = [
                 apiobj.ASSET_TYPE,
                 "get-by-id",
@@ -406,7 +402,6 @@ class GrpAssetsBase:
     def test_get_by_saved_query(self, request, monkeypatch, existing_sq, apiobj):
         runner = load_clirunner(request, monkeypatch)
         with runner.isolated_filesystem():
-
             args = [
                 apiobj.ASSET_TYPE,
                 "get-by-saved-query",
@@ -422,7 +417,6 @@ class GrpAssetsBase:
     def test_get_fields_export_str_types(self, request, monkeypatch, export_format, apiobj):
         runner = load_clirunner(request, monkeypatch)
         with runner.isolated_filesystem():
-
             args = [
                 apiobj.ASSET_TYPE,
                 "get-fields",
@@ -438,7 +432,6 @@ class GrpAssetsBase:
     def test_get_fields_export_json_types(self, request, monkeypatch, export_format, apiobj):
         runner = load_clirunner(request, monkeypatch)
         with runner.isolated_filesystem():
-
             args = [
                 apiobj.ASSET_TYPE,
                 "get-fields",
@@ -457,7 +450,6 @@ class GrpAssetsBase:
     def test_get_fields_match_adapter_re(self, request, monkeypatch, apiobj):
         runner = load_clirunner(request, monkeypatch)
         with runner.isolated_filesystem():
-
             args = [
                 apiobj.ASSET_TYPE,
                 "get-fields",
@@ -476,7 +468,6 @@ class GrpAssetsBase:
     def test_get_fields_match_root_only(self, request, monkeypatch, apiobj):
         runner = load_clirunner(request, monkeypatch)
         with runner.isolated_filesystem():
-
             args = [
                 apiobj.ASSET_TYPE,
                 "get-fields",
@@ -494,7 +485,6 @@ class GrpAssetsBase:
     def test_get_fields_match_no_complex(self, request, monkeypatch, apiobj):
         runner = load_clirunner(request, monkeypatch)
         with runner.isolated_filesystem():
-
             args = [
                 apiobj.ASSET_TYPE,
                 "get-fields",
@@ -512,7 +502,6 @@ class GrpAssetsBase:
     def test_get_fields_match_no_simple(self, request, monkeypatch, apiobj):
         runner = load_clirunner(request, monkeypatch)
         with runner.isolated_filesystem():
-
             args = [
                 apiobj.ASSET_TYPE,
                 "get-fields",
@@ -530,7 +519,6 @@ class GrpAssetsBase:
     def test_get_fields_match_no_agg(self, request, monkeypatch, apiobj):
         runner = load_clirunner(request, monkeypatch)
         with runner.isolated_filesystem():
-
             args = [
                 apiobj.ASSET_TYPE,
                 "get-fields",
@@ -550,7 +538,6 @@ class GrpAssetsBase:
     def test_get_fields_default(self, request, monkeypatch, apiobj):
         runner = load_clirunner(request, monkeypatch)
         with runner.isolated_filesystem():
-
             args = [
                 apiobj.ASSET_TYPE,
                 "get-fields-default",
@@ -563,7 +550,6 @@ class GrpAssetsBase:
     def test_get_tags(self, request, monkeypatch, apiobj):
         runner = load_clirunner(request, monkeypatch)
         with runner.isolated_filesystem():
-
             args = [
                 apiobj.ASSET_TYPE,
                 "get-tags",
@@ -576,7 +562,6 @@ class GrpAssetsBase:
     def test_destroy(self, request, monkeypatch, apiobj):
         runner = load_clirunner(request, monkeypatch)
         with runner.isolated_filesystem():
-
             disable_destroy_args = [
                 "system",
                 "settings-global",

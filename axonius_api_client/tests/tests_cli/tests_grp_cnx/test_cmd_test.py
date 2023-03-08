@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Test suite for axonius_api_client.tools."""
 import pytest
+
 from axonius_api_client.cli import cli
 
 from ...tests_api.tests_adapters.test_cnx import skip_if_no_adapter

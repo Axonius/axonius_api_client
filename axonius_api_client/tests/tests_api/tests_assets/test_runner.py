@@ -3,6 +3,7 @@
 import re
 
 import pytest
+
 from axonius_api_client import Runner
 from axonius_api_client.api.assets import runner as runner_module
 from axonius_api_client.exceptions import ApiWarning, RunnerError, RunnerWarning
@@ -11,7 +12,6 @@ from ...utils import random_string, random_strs
 
 
 class MetaEset:
-
     name = "badwolf execute"
     main_action_type = "create_notification"
     main_action_name = f"fizzlebot_{random_string(8)}"

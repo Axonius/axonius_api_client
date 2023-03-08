@@ -16,7 +16,7 @@ from ...http import Http
 from ...parsers.config import parse_schema
 from ...parsers.tables import tablize
 from ...tools import coerce_bool, listify, longest_str
-from .base import BaseModel, BaseSchema, BaseSchemaJson
+from .base import BaseModel, BaseSchemaJson
 
 # from .count_operator import CountOperator, CountOperatorSchema
 from .custom_fields import SchemaBool, SchemaDatetime, dump_date, get_field_dc_mm

@@ -14,7 +14,6 @@ class TestGrpCnxCmdGet:
         cnx = get_cnx_existing(apiobj=api_adapters)
         runner = load_clirunner(request, monkeypatch)
         with runner.isolated_filesystem():
-
             adapter_name = cnx["adapter_name"]
             uuid = cnx["uuid"]
             schemas = cnx["schemas"]
@@ -52,7 +51,6 @@ class TestGrpCnxCmdGet:
         cnx = get_cnx_existing(apiobj=api_adapters)
         runner = load_clirunner(request, monkeypatch)
         with runner.isolated_filesystem():
-
             adapter_name = cnx["adapter_name"]
             node_name = cnx["node_name"]
             uuid = cnx["uuid"]

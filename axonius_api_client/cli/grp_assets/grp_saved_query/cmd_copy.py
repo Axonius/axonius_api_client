@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """Command line interface for Axonius API Client."""
 from ...context import CONTEXT_SETTINGS, click
-from ...options import AUTH, OPTS_FOLDER, add_options
+from ...grp_folders.grp_options import OPT_CREATE_FOLDER_REQ, OPT_ECHO, OPT_FOLDER
+from ...options import AUTH, add_options
 from .grp_common import EXPORT_FORMATS, OPTS_EXPORT
 
 OPTIONS = [
@@ -58,11 +59,12 @@ OPTIONS = [
         show_default=True,
         required=False,
     ),
-    *OPTS_FOLDER,
+    OPT_ECHO,
+    OPT_FOLDER,
+    OPT_CREATE_FOLDER_REQ,
 ]
 
 
-# XXX TEST
 @click.command(name="copy", context_settings=CONTEXT_SETTINGS)
 @add_options(OPTIONS)
 @click.pass_context

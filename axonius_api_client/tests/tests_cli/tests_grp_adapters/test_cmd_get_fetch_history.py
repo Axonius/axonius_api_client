@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Test suite for axonius_api_client.tools."""
 import pytest
+
 from axonius_api_client.cli import cli
 from axonius_api_client.tools import json_load
 
@@ -12,7 +13,6 @@ class TestGrpAdaptersCmdGetFetchHistory:
     def test_json_exports(self, request, monkeypatch, export_format):
         runner = load_clirunner(request, monkeypatch)
         with runner.isolated_filesystem():
-
             args1 = [
                 "adapters",
                 "get-fetch-history",
@@ -34,7 +34,6 @@ class TestGrpAdaptersCmdGetFetchHistory:
     def test_str_exports(self, request, monkeypatch, export_format):
         runner = load_clirunner(request, monkeypatch)
         with runner.isolated_filesystem():
-
             args1 = [
                 "adapters",
                 "get-fetch-history",

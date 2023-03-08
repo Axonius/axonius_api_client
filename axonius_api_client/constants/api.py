@@ -66,13 +66,12 @@ class FolderDefaults:
 
     all_objects: bool = False
     confirm: bool = False
+    delete_subfolders: bool = False
+    delete_objects: bool = False
     create: bool = False
-    create_path: bool = True
-    create_copy: bool = True
-    create_move: bool = True
+    create_action: bool = True
     echo: bool = ECHO
-    echo_resolve: bool = False
-    echo_resolve_action: bool = True
+    echo_action: bool = True
     error_no_matches: bool = True
     error_no_objects: bool = True
     error_unmatched: bool = True
@@ -81,15 +80,14 @@ class FolderDefaults:
     ignore_case: bool = True
     include_details: bool = False
     include_objects: bool = False
-    include_objects_delete: bool = False
     include_subfolders: bool = False
     copy_prefix: str = "Copy of"
     pattern_prefix: str = "~"
     prompt: bool = False
     prompt_default: bool = False
+    prompt_shell: bool = True
     query_type: str = "devices"
     recursive: bool = False
     refresh: int = 60
-    refresh_resolve: bool = True
-    refresh_delete: bool = True
+    refresh_action: bool = True
     sep: str = "/"

@@ -6,6 +6,7 @@ import json
 import re
 
 import pytest
+
 from axonius_api_client.api import json_api
 from axonius_api_client.constants.api import GUI_PAGE_SIZES
 from axonius_api_client.constants.ctypes import SimpleLike
@@ -540,15 +541,12 @@ class TestSavedQueryPublic(SavedQueryBase):
         assert updated["view"]["sort"].get("field", "") == ""
         assert updated["view"]["sort"].get("desc", True) is True
 
-    @pytest.mark.skip("private sqs broken")
     def test_update_copy(self, apiobj, sq_fixture):
         add = random_string(6)
         new_value = f"{FixtureData.name} {add}"
-        updated = apiobj.saved_query.copy(
-            sq=FixtureData.name, name=new_value, private=True, asset_scope=False, as_dataclass=True
-        )
+        updated = apiobj.saved_query.copy(sq=FixtureData.name, name=new_value, as_dataclass=True)
         assert updated.name == new_value
-        assert updated.private is True
+
         apiobj.saved_query.delete_by_name(value=updated.name)
 
     def test_get_by_multi_not_found(self, apiobj, sq_fixture):

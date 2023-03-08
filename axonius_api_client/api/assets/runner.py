@@ -298,7 +298,6 @@ class Runner(BaseData, Mixins):
         pre = kwargs.get("pre", self._tconfirm_pre)
         msgs = self.infos(msgs=msgs, top=top)
         action = style_switch(text=action, switch=default)
-        # TBD WORK ON COLORS
         answer = confirm(
             msgs=msgs, text=f"{pre}{action}", default=default, check_stdin=self.check_stdin
         )

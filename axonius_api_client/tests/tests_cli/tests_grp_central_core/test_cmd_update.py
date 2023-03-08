@@ -10,7 +10,6 @@ class TestGrpCentralCoreCmdUpdate:
     def test_update(self, request, monkeypatch):
         runner = load_clirunner(request, monkeypatch)
         with runner.isolated_filesystem():
-
             get_args = [
                 "system",
                 "central-core",

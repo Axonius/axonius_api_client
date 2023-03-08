@@ -41,7 +41,7 @@ class SavedQueryFixtures:
     @pytest.fixture(scope="class")
     def sq_get(self, apiobj):
         """Pass."""
-        return apiobj.saved_query.get(as_dataclass=True)[-1]
+        return apiobj.saved_query.get(as_dataclass=True, row_stop=1, page_size=1)[0]
 
     @pytest.fixture(scope="class")
     def sq_tags(self, apiobj):
@@ -66,15 +66,15 @@ class GrpSavedQueryDevices(SavedQueryFixtures):
     """Pass."""
 
     @pytest.fixture(scope="class")
-    def apiobj(self, api_devices):
+    def apiobj(self, api_client):
         """Pass."""
-        return api_devices
+        return api_client.devices
 
 
 class GrpSavedQueryUsers(SavedQueryFixtures):
     """Pass."""
 
     @pytest.fixture(scope="class")
-    def apiobj(self, api_users):
+    def apiobj(self, api_client):
         """Pass."""
-        return api_users
+        return api_client.users

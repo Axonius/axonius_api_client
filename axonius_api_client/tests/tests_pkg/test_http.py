@@ -4,6 +4,7 @@ import logging
 
 import pytest
 import requests
+
 from axonius_api_client.exceptions import HttpError
 from axonius_api_client.http import Http
 from axonius_api_client.parsers.url_parser import UrlParser

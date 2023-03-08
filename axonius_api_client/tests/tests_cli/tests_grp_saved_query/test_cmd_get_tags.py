@@ -9,7 +9,6 @@ class GrpSavedQueryCmdGetTags:
     def test_str(self, apiobj, request, monkeypatch):
         runner = load_clirunner(request, monkeypatch)
         with runner.isolated_filesystem():
-
             args = [
                 apiobj.ASSET_TYPE,
                 "saved-query",

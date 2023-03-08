@@ -42,13 +42,7 @@ def pytest_addoption(parser):
 
 def load_asset_api(obj):
     """Pass."""
-    from axonius_api_client.api import (
-        Adapters,
-        Wizard,
-        WizardCsv,
-        WizardText,
-        DataScopes,
-    )
+    from axonius_api_client.api import Adapters, DataScopes, Wizard, WizardCsv, WizardText
     from axonius_api_client.api.assets import Fields, Labels, SavedQuery
 
     assert isinstance(obj.fields_default, list)

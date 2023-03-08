@@ -9,7 +9,6 @@ class TestGrpSystemRolesCmdGetPerms(SystemRolesBase):
     def test_str_types(self, apiobj, request, monkeypatch):
         runner = load_clirunner(request, monkeypatch)
         with runner.isolated_filesystem():
-
             args = [
                 "system",
                 "roles",

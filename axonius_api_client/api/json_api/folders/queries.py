@@ -85,7 +85,7 @@ class Folder(base.Folder):
         return self.client.folders.queries
 
     def _clear_objects_cache(self):
-        """Pass."""
+        """Clear any object specific cache being used."""
         super()._clear_objects_cache()
         self.client.devices.saved_query.get_cached.cache_clear()
 
@@ -142,17 +142,17 @@ class Folder(base.Folder):
     @property
     def path_archive(self) -> "FolderModel":
         """Get the archive folder for saved queries."""
-        return self.find(value=self.get_enum_paths().archive)
+        return self.find(folder=self.get_enum_paths().archive)
 
     @property
     def path_predefined(self) -> "FolderModel":
         """Get the predefined folder for saved queries."""
-        return self.find(value=self.get_enum_paths().predefined)
+        return self.find(folder=self.get_enum_paths().predefined)
 
     @property
     def path_asset_scope(self) -> "FolderModel":
         """Get the root of the asset scope folders."""
-        return self.find(value=self.get_enum_paths().asset_scope)
+        return self.find(folder=self.get_enum_paths().asset_scope)
 
 
 class CreateFolderRequestSchema(BaseSchemaJson, base.CreateFolderRequestSchema):

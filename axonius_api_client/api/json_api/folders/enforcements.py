@@ -64,7 +64,7 @@ class Folder(base.Folder):
         return self.client.folders.enforcements
 
     def _clear_objects_cache(self):
-        """Pass."""
+        """Clear any object specific cache being used."""
         super()._clear_objects_cache()
         self.client.enforcements.get_sets_cached.cache_clear()
 

@@ -3,6 +3,7 @@
 import datetime
 
 import pytest
+
 from axonius_api_client.api.json_api import folders
 from axonius_api_client.data import BaseEnum
 from axonius_api_client.exceptions import (  # SearchZeroObjectsError,
@@ -21,7 +22,20 @@ from axonius_api_client.exceptions import (  # SearchZeroObjectsError,
 )
 
 
-class FolderBaseQueries:
+class FolderBase:
+    def cleanup(self, apiobj, folder):
+        if isinstance(folder, list):
+            for x in folder:
+                self.cleanup(apiobj, x)
+            return
+
+        try:
+            apiobj.delete(folder=folder, confirm=True, delete_subfolders=True, delete_objects=True)
+        except FolderNotFoundError:
+            pass
+
+
+class FolderBaseQueries(FolderBase):
     @pytest.fixture(scope="class")
     def apiobj(self, request, api_client):
         return api_client.folders.queries
@@ -52,7 +66,7 @@ class FolderBaseQueries:
             api_client.devices.saved_query.get_by_multi(obj_name)
 
 
-class FolderBaseEnforcements:
+class FolderBaseEnforcements(FolderBase):
     @pytest.fixture(scope="class")
     def apiobj(self, request, api_client):
         return api_client.folders.enforcements
@@ -97,28 +111,29 @@ class FolderBase:
     def test_search_objects(self, apiobj, created_obj):
         root = apiobj.get()
         api_name = root.api_folders.__class__.__name__
-        folder_name = f"badwolf search objects for {api_name}"
-        folder_path = root.path_public.join_under(folder_name)
-        folder_name_copy = "badwolf search objects copy"
-        folder_path_copy = root.path_public.join_under(folder_name_copy)
+        folder_path = root.path_public.join_under(f"badwolf search objects for {api_name}")
+        folder_path_copy = root.path_public.join_under("badwolf search objects copy")
+        folder_path_move = root.path_public.join_under("badwolf search objects move")
         obj_fake_name = "F12 makes aliens see rainbows"
 
+        self.cleanup(apiobj, [folder_path_copy, folder_path_move])
+
         try:
-            folder = root.find(value=folder_path)
+            folder = root.find(folder=folder_path)
         except FolderNotFoundError:
-            folder = root.find(value=folder_path, create=True)
+            folder = root.find(folder=folder_path, create=True)
         else:
-            folder.delete(confirm=True, include_objects=True, include_subfolders=True)
-            folder = root.find(value=folder_path, create=True)
+            folder.delete(confirm=True, delete_objects=True, delete_subfolders=True)
+            folder = root.find(folder=folder_path, create=True)
 
         try:
             apiobj.delete(
-                path=folder_path_copy, confirm=True, include_subfolders=True, include_objects=True
+                folder=folder_path_move, confirm=True, delete_subfolders=True, delete_objects=True
             )
         except FolderNotFoundError:
             pass
 
-        copied_obj = created_obj.copy(path=folder)
+        copied_obj = created_obj.copy(folder=folder)
         created_obj.delete(confirm=True)
         assert copied_obj.folder.id == folder.id
         objs = folder.search_objects(searches=copied_obj.name)
@@ -146,10 +161,21 @@ class FolderBase:
 
         # test_search_objects_copy_other_folder
         folder_copy, objs_copied_other_folder = folder.search_objects_copy(
-            searches="~.*", path=folder_path_copy, create=True
+            searches="~.*", folder=folder_path_copy, create=True
         )
         assert len(objs_copied_other_folder) == 2
         assert len(folder_copy.get_objects()) == 2
+
+        # test_search_objects_copy_move
+        folder_move, objs_moved = folder.search_objects_move(
+            searches="~.*", folder=folder_path_move
+        )
+        assert copied_obj.name in [x.name for x in objs_moved]
+        assert len(objs_moved) == 2
+        for x in objs_moved:
+            assert x.folder.id == folder_move.id
+
+        assert len(folder_move.get_objects()) == 2
 
         # test_search_objects_delete
         with pytest.raises(ConfirmNotTrue):
@@ -158,14 +184,16 @@ class FolderBase:
         assert len(objs_deleted) == 2
         assert len(folder_copy.get_objects()) == 0
 
-        folder_copy.delete(confirm=True, include_objects=True)
-        folder.delete(confirm=True, include_objects=True)
+        folder_move.delete(confirm=True, delete_objects=True, delete_subfolders=True)
+        folder_copy.delete(confirm=True, delete_objects=True, delete_subfolders=True)
+        folder.delete(confirm=True, delete_objects=True, delete_subfolders=True)
+        self.cleanup(apiobj, [folder, folder_move, folder_copy])
 
     def test_search_objects_no_matches(self, apiobj):
         root = apiobj.get()
         api_name = root.api_folders.__class__.__name__
         name = f"badwolf search objects no matches for {api_name}"
-        folder = root.path_public.create(value=name)
+        folder = root.path_public.create(folder=name)
         obj_fake_name = "Windy portrait makes noise"
         with pytest.raises(SearchNoMatchesError):
             folder.search_objects(searches=obj_fake_name, error_no_objects=False)
@@ -183,45 +211,29 @@ class FolderBase:
         root = apiobj.get()
         api_name = root.api_folders.__class__.__name__
         name = f"badwolf search objects no objects for {api_name}"
-        folder = root.path_public.create(value=name)
+        folder = root.path_public.create(folder=name)
         obj_fake_name = "Elevators do not make good people"
         with pytest.raises(SearchNoObjectsError):
             folder.search_objects(searches=obj_fake_name)
 
         folder.delete(confirm=True)
 
-    # def test_search_objects_no_objs_exc(self, apiobj):
-    #     root = apiobj.get()
-    #     api_name = root.api_folders.__class__.__name__
-    #     name = f"badwolf search objects for {api_name}"
-    #     folder = root.path_public.create(value=name)
-    #     with pytest.raises(SearchZeroObjectsError):
-    #         folder.search_objects(searches=name)
-
-    # def test_search_objects_error_no_objects_False(self, apiobj):
-    #     root = apiobj.get()
-    #     api_name = root.api_folders.__class__.__name__
-    #     name = f"badwolf search objects for {api_name}"
-    #     folder = root.path_public.create(value=name)
-    #     objs = folder.search_objects(searches="x", error_no_objects=False)
-    #     assert not objs
-
-    def test_delete_include_objects(self, apiobj, created_obj, jsonapi_module):
+    def test_delete_delete_objects(self, apiobj, created_obj, jsonapi_module):
         root = apiobj.get()
         api_name = root.api_folders.__class__.__name__
 
         name = f"badwolf delete include objects for {api_name}"
         path = root.path_public.join_under(name)
-        folder = root.create(value=path)
+        folder = root.create(folder=path)
 
-        created_obj = created_obj.move(path=folder)
+        created_obj = created_obj.move(folder=folder)
         assert created_obj.folder.id == folder.id
 
         with pytest.raises(NotAllowedError) as exc:
             folder.delete(confirm=True)
-        assert "include_objects is False" in str(exc.value)
+        assert "delete_objects is False" in str(exc.value)
 
-        deleted = folder.delete(include_objects=True, confirm=True)
+        deleted = folder.delete(delete_objects=True, confirm=True)
         assert isinstance(deleted, jsonapi_module.DeleteFolderResponseModel)
 
     def test_property_refresh_dt(self, apiobj):
@@ -235,31 +247,31 @@ class FolderBase:
     def test_find_self(self, apiobj):
         root = apiobj.get()
         folder = root.path_public
-        found = folder.find(value=folder)
+        found = folder.find(folder=folder)
         assert found == folder
 
     def test_property_parent_public_root(self, apiobj):
         root = apiobj.get()
         public_path: str = str(root.get_enum_paths().public)
-        folder = root.find(value=public_path)
+        folder = root.find(folder=public_path)
         assert folder.parent == folder.root
 
     def test_property_path_public_root(self, apiobj):
         root = apiobj.get()
         public_path: str = str(root.get_enum_paths().public)
-        folder = root.find(value=public_path)
+        folder = root.find(folder=public_path)
         assert folder.root == folder.root
 
     def test_property_parent_private_root(self, apiobj):
         root = apiobj.get()
         private_path: str = str(root.get_enum_paths().private)
-        folder = root.find(value=private_path)
+        folder = root.find(folder=private_path)
         assert folder.parent == folder.root
 
     def test_property_path_private_root(self, apiobj):
         root = apiobj.get()
         private_path: str = str(root.get_enum_paths().private)
-        folder = root.find(value=private_path)
+        folder = root.find(folder=private_path)
         assert folder.root == folder.root
 
     def test_property_subfolders_recursive(self, apiobj, jsonapi_module):
@@ -286,10 +298,10 @@ class FolderBase:
     def test_create_delete_public(self, apiobj, jsonapi_module):
         root = apiobj.get()
         public = root.path_public
-        badwolf = public.create(value="badwolf_crud")
+        badwolf = public.create(folder="badwolf_crud")
         assert badwolf.parent == root.path_public
         assert badwolf.root == root.path_public
-        badwolf2 = public.create(value="badwolf_crud")
+        badwolf2 = public.create(folder="badwolf_crud")
         assert badwolf == badwolf2
 
         deleted_folder = badwolf.delete(confirm=True)
@@ -299,11 +311,11 @@ class FolderBase:
         assert deleted_folder.message
 
         with pytest.raises(NotAllowedError) as exc:
-            badwolf.delete(confirm=True, include_subfolders=True)
+            badwolf.delete(confirm=True, delete_subfolders=True)
         assert "is already deleted" in str(exc.value)
 
         with pytest.raises(FolderNotFoundError):
-            root.find(value=badwolf, refresh=True)
+            root.find(folder=badwolf, refresh=True)
 
     def test_echo_tree(self, apiobj):
         root = apiobj.get()
@@ -313,7 +325,7 @@ class FolderBase:
         root = apiobj.get()
         root._clear_objects_cache()
 
-    def test_delete_include_subfolders(self, apiobj, jsonapi_module):
+    def test_delete_delete_subfolders(self, apiobj, jsonapi_module):
         root = apiobj.get()
         leaf1 = "badwolf delete include subfolders"
         leaf2 = "alpha"
@@ -323,9 +335,9 @@ class FolderBase:
         path2 = root.join_under(leaf1, leaf2)
         path3 = root.join_under(leaf1, leaf2, leaf3)
 
-        folder3 = root.create(value=path3)
-        folder2 = root.create(value=path2)
-        folder1 = root.create(value=path1)
+        folder3 = root.create(folder=path3)
+        folder2 = root.create(folder=path2)
+        folder1 = root.create(folder=path1)
 
         assert folder3.name == leaf3
         assert folder2.name == leaf2
@@ -335,25 +347,25 @@ class FolderBase:
 
         with pytest.raises(NotAllowedError) as exc:
             folder1.delete(confirm=True)
-        assert "include_subfolders is False" in str(exc.value)
+        assert "delete_subfolders is False" in str(exc.value)
 
-        deleted1 = folder1.delete(include_subfolders=True, confirm=True)
+        deleted1 = folder1.delete(delete_subfolders=True, confirm=True)
         assert isinstance(deleted1, jsonapi_module.DeleteFolderResponseModel)
         assert str(deleted1)
         assert repr(deleted1)
         assert deleted1.message
 
         with pytest.raises(NotAllowedError) as exc:
-            folder1.delete(include_subfolders=True, confirm=True)
+            folder1.delete(delete_subfolders=True, confirm=True)
         assert "is already deleted" in str(exc.value)
 
         with pytest.raises(FolderNotFoundError):
-            root.find(value=folder3, refresh=True)
+            root.find(folder=folder3, refresh=True)
 
     def test_find_subfolder_create_delete(self, apiobj, jsonapi_module):
         root = apiobj.get()
         public = root.path_public
-        badwolf = public.find_subfolder(value="badwolf crud", create=True)
+        badwolf = public.find_subfolder(folder="badwolf crud", create=True)
         assert badwolf.name == "badwolf crud"
         assert badwolf.parent.name == public.name
 
@@ -364,23 +376,23 @@ class FolderBase:
         assert deleted_folder.message
 
         with pytest.raises(NotAllowedError) as exc:
-            badwolf.delete(include_subfolders=True, confirm=True)
+            badwolf.delete(delete_subfolders=True, confirm=True)
         assert "is already deleted" in str(exc.value)
 
         root.refresh(force=True)
         with pytest.raises(FolderNotFoundError):
-            root.find_subfolder(value=badwolf.name)
+            root.find_subfolder(folder=badwolf.name)
 
     def test_move_under_path_exc(self, apiobj):
         root = apiobj.get()
         public = root.path_public
-        badwolf = public.find_subfolder(value="badwolf under test", create=True)
+        badwolf = public.find_subfolder(folder="badwolf under test", create=True)
         path = f"{badwolf.path}/test under"
 
         with pytest.raises(NotAllowedError) as exc:
-            badwolf.move(value=path)
+            badwolf.move(folder=path)
         assert "is under this path" in str(exc.value)
-        badwolf.delete(confirm=True, include_subfolders=True)
+        badwolf.delete(confirm=True, delete_subfolders=True)
 
     def test_rename_exc(self, apiobj):
         root = apiobj.get()
@@ -396,12 +408,12 @@ class FolderBase:
         except FolderNotFoundError:
             pass
         else:
-            found.delete(confirm=True, include_subfolders=True, include_objects=True)
-        badwolf = public.find_subfolder(value="badwolf rename", create=True)
-        badwolf.create(value="a/b/c/")
-        renamed = badwolf.rename(value="badwolf renamed")
+            found.delete(confirm=True, delete_subfolders=True, delete_objects=True)
+        badwolf = public.find_subfolder(folder="badwolf rename", create=True)
+        badwolf.create(folder="a/b/c/")
+        renamed = badwolf.rename(folder="badwolf renamed")
         assert "a" in renamed.subfolders_by_name
-        renamed.delete(confirm=True, include_subfolders=True, include_objects=True)
+        renamed.delete(confirm=True, delete_subfolders=True, delete_objects=True)
 
     def test_rename_exists(self, apiobj):
         root = apiobj.get()
@@ -411,16 +423,16 @@ class FolderBase:
         path1 = root.path_public.join_under(name1)
         path2 = root.path_public.join_under(name2)
 
-        folder1 = root.find(value=path1, create=True)
-        folder2 = root.find(value=path2, create=True)
+        folder1 = root.find(folder=path1, create=True)
+        folder2 = root.find(folder=path2, create=True)
 
         folder1.refresh(force=True)
         with pytest.raises(FolderAlreadyExistsError) as exc:
-            folder1.rename(value=folder2.name)
+            folder1.rename(folder=folder2.name)
         assert "already exists" in str(exc.value)
 
-        folder1.delete(confirm=True, include_subfolders=True, include_objects=True)
-        folder2.delete(confirm=True, include_subfolders=True, include_objects=True)
+        folder1.delete(confirm=True, delete_subfolders=True, delete_objects=True)
+        folder2.delete(confirm=True, delete_subfolders=True, delete_objects=True)
 
     def test_move(self, apiobj):
         root = apiobj.get()
@@ -430,12 +442,12 @@ class FolderBase:
         except FolderNotFoundError:
             pass
         else:
-            found.delete(confirm=True, include_subfolders=True, include_objects=True)
-        badwolf = public.find_subfolder(value="badwolf move", create=True)
-        badwolf.create(value="a/b/c/")
-        moved = badwolf.move(value=f"{public.path}/badwolf moved")
+            found.delete(confirm=True, delete_subfolders=True, delete_objects=True)
+        badwolf = public.find_subfolder(folder="badwolf move", create=True)
+        badwolf.create(folder="a/b/c/")
+        moved = badwolf.move(folder=f"{public.path}/badwolf moved")
         assert "a" in moved.subfolders_by_name
-        moved.delete(confirm=True, include_subfolders=True, include_objects=True)
+        moved.delete(confirm=True, delete_subfolders=True, delete_objects=True)
 
     def test_resolve_folder_default(self, apiobj):
         root = apiobj.get()
@@ -458,13 +470,13 @@ class FolderBase:
     def test_resolve_folder_value_model(self, apiobj):
         root = apiobj.get()
 
-        folder = root.path_public.resolve_folder(path=root.path_private)
+        folder = root.path_public.resolve_folder(folder=root.path_private)
         assert folder == root.path_private
 
     def test_resolve_folder_value_str(self, apiobj):
         root = apiobj.get()
 
-        folder = root.path_public.resolve_folder(path=f"{root.path_private.path}")
+        folder = root.path_public.resolve_folder(folder=f"{root.path_private.path}")
         assert folder == root.path_private
 
 
@@ -520,43 +532,43 @@ class FoldersBase:
         root = apiobj.get()
 
         with pytest.raises(AxonTypeError):
-            root.find(value={})
+            root.find(folder={})
 
     def test_find_bad_str_exc(self, apiobj):
         root = apiobj.get()
 
         with pytest.raises(AxonTypeError):
-            root.find(value="")
+            root.find(folder="")
 
     def test_find_by_id_bad_type_exc(self, apiobj):
         root = apiobj.get()
 
         with pytest.raises(AxonTypeError):
-            root.find_by_id(value={})
+            root.find_by_id(folder={})
 
     def test_find_by_path_bad_type_exc(self, apiobj):
         root = apiobj.get()
 
         with pytest.raises(AxonTypeError):
-            root.find_by_path(value={})
+            root.find_by_path(folder={})
 
     def test_find_subfolder_bad_type_exc(self, apiobj):
         root = apiobj.get()
 
         with pytest.raises(AxonTypeError):
-            root.find_subfolder(value={})
+            root.find_subfolder(folder={})
 
     def test_create_bad_type_exc(self, apiobj):
         root = apiobj.get()
 
         with pytest.raises(AxonTypeError):
-            root.create(value={})
+            root.create(folder={})
 
     def test_create_bad_str_exc(self, apiobj):
         root = apiobj.get()
 
         with pytest.raises(AxonTypeError):
-            root.create(value="")
+            root.create(folder="")
 
     def test_get(self, apiobj, jsonapi_module):
         root = apiobj.get()
@@ -833,7 +845,7 @@ class FoldersBase:
         path3 = root.path_public.join_under(leaf1, leaf2, leaf3)
         path4 = root.path_public.join_under(leaf1, leaf2, leaf3, leaf4)
 
-        folder4 = root.path_public.find(value=path4, create=True)
+        folder4 = root.path_public.find(folder=path4, create=True)
         root = folder4.root
 
         assert folder4.name == leaf4
@@ -862,7 +874,7 @@ class FoldersBase:
         if root.count_recursive_objects:
             assert any([x.get_tree_type() in tree for x in root.get_models_objects()])
 
-        folder1.delete(include_subfolders=True, confirm=True)
+        folder1.delete(delete_subfolders=True, confirm=True)
 
         tree = apiobj.get_tree(include_details=True, include_objects=True, as_str=True)
         assert path1 not in tree
@@ -941,7 +953,7 @@ class FoldersBase:
     def test_find_subfolder_found_enum(self, apiobj, jsonapi_module):
         root = apiobj.get()
         public_name = root.get_enum_names().public
-        folder = root.find_subfolder(value=public_name)
+        folder = root.find_subfolder(folder=public_name)
         assert isinstance(folder, jsonapi_module.FolderModel)
         assert folder.name == str(public_name)
 
@@ -954,7 +966,7 @@ class FoldersBase:
         root = apiobj.get()
         public_name: str = str(root.get_enum_names().public)
         public_path: str = str(root.get_enum_paths().public)
-        folder = root.find_by_path(value=public_path)
+        folder = root.find_by_path(folder=public_path)
         assert isinstance(folder, jsonapi_module.FolderModel)
         assert folder.name == public_name
 
@@ -973,12 +985,12 @@ class FoldersBase:
     def test_find_by_path_relative_not_found_exc(self, apiobj):
         root = apiobj.get()
         with pytest.raises(FolderNotFoundError):
-            root.find_by_path(value="badwolf")
+            root.find_by_path(folder="badwolf")
 
     def test_create_read_only_exc(self, apiobj):
         root = apiobj.get()
         with pytest.raises(NotAllowedError) as exc:
-            root.create(value="badwolf")
+            root.create(folder="badwolf")
         assert "is read-only" in str(exc.value)
 
     def test_delete_read_only_exc(self, apiobj):
@@ -1015,28 +1027,28 @@ class FoldersBase:
         root = apiobj.get()
 
         with pytest.raises(NotAllowedError) as exc:
-            root.rename(value="zzz")
+            root.rename(folder="zzz")
         assert "is read-only" in str(exc.value)
 
     def test_move_not_allowed_root_exc(self, apiobj):
         root = apiobj.get()
 
         with pytest.raises(NotAllowedError) as exc:
-            root.move(value=f"{root.path_public.path}")
+            root.move(folder=f"{root.path_public.path}")
         assert "is read-only" in str(exc.value)
 
     def test_rename_not_allowed_depth_exc(self, apiobj):
         root = apiobj.get()
 
         with pytest.raises(NotAllowedError) as exc:
-            root.path_public.rename(value="badwolf")
+            root.path_public.rename(folder="badwolf")
         assert "below minimum_depth" in str(exc.value)
 
     def test_move_not_allowed_depth_exc(self, apiobj):
         root = apiobj.get()
 
         with pytest.raises(NotAllowedError) as exc:
-            root.path_public.move(value=f"{root.path_public.path}/badwolf")
+            root.path_public.move(folder=f"{root.path_public.path}/badwolf")
         assert "below minimum_depth" in str(exc.value)
 
 

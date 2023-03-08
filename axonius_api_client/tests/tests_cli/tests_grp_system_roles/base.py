@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Test suite for axonius_api_client.tools."""
 import pytest
+
 from axonius_api_client.tools import json_load
 
 from ...tests_api.tests_system.test_data_scopes import DataScopeFixtures

@@ -3,6 +3,7 @@ from typing import List, Type
 
 import pytest
 import requests
+
 from axonius_api_client.api import json_api
 from axonius_api_client.api.api_endpoints import ApiEndpoint, ApiEndpointGroup, ApiEndpoints
 from axonius_api_client.exceptions import (

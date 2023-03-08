@@ -4,6 +4,7 @@ import pathlib
 
 import click
 import pytest
+
 from axonius_api_client.cli.grp_adapters.grp_cnx import parsing
 from axonius_api_client.constants.adapters import CNX_SANE_DEFAULTS
 

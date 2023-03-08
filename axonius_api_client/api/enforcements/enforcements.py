@@ -11,6 +11,7 @@ from ...parsers.tables import tablize
 from ...tools import listify
 from .. import json_api
 from ..api_endpoints import ApiEndpoints
+from ..folders import FoldersEnforcements
 from ..json_api.enforcements import (
     ActionCategory,
     ActionType,
@@ -24,7 +25,7 @@ from ..json_api.enforcements import (
     UpdateEnforcementResponseModel,
 )
 from ..json_api.folders.base import FolderDefaults
-from ..json_api.folders.enforcements import FolderModel, FoldersModel
+from ..json_api.folders.enforcements import Folder, FolderModel, FoldersModel
 from ..json_api.saved_queries import QueryTypes, SavedQuery
 from ..mixins import ModelMixins
 
@@ -57,6 +58,11 @@ class Enforcements(ModelMixins):
     TBD:
         get_tasks
     """
+
+    @property
+    def folders(self) -> FoldersEnforcements:
+        """Get the folders api for this object type."""
+        return self.auth.http.CLIENT.folders.enforcements
 
     def get_set(
         self,
@@ -234,21 +240,68 @@ class Enforcements(ModelMixins):
         """
         return self._get_action_types()
 
-    # XXX bring me up to date with SavedQuery.copy
-    def copy(self, value: MULTI_SET, name: str, copy_triggers: bool = True) -> EnforcementFullModel:
+    def copy(
+        self,
+        value: MULTI_SET,
+        name: str,
+        copy_triggers: bool = True,
+        folder: t.Optional[t.Union[str, Folder]] = None,
+        create: bool = FolderDefaults.create_action,
+        echo: bool = FolderDefaults.echo_action,
+    ) -> EnforcementFullModel:
         """Copy an enforcement set.
 
         Args:
             value (MULTI_SET): enforcement set model or str with name or uuid
             name (str): name to assign to copy
             copy_triggers (bool, optional): copy triggers to new set
+            folder (t.Optional[t.Union[str, Folder]], optional): folder to put object in
+            create (bool, optional): if folder supplied does not exist, create it
+            echo (bool, optional): echo output to console during create/etc
 
         Returns:
-            EnforcementFullModel: copied enforcement set
+            EnforcementFullModel: updated enforcement set
         """
         existing = self.get_set(value=value)
+
+        root: FoldersModel = self.folders.get()
+        folder: FolderModel = root.resolve_folder(folder=folder, create=create, echo=echo)
+
         created = self._copy(uuid=existing.uuid, name=name, clone_triggers=copy_triggers)
+
+        # NEAT: can not move to/from public /private in enforcements
+        if folder.depth > 1 and folder.id != created.folder.id:
+            self._move_sets(folder_id=folder.id, enforcements_ids=created.uuid)
+
         return self.get_set(value=created)
+
+    def update_folder(
+        self,
+        value: MULTI_SET,
+        folder: t.Union[str, FolderModel],
+        create: bool = FolderDefaults.create_action,
+        echo: bool = FolderDefaults.echo_action,
+    ) -> EnforcementFullModel:
+        """Update the name of an enforcement set.
+
+        Args:
+            value (MULTI_SET): enforcement set model or str with name or uuid
+            name (str): name to update
+            folder (t.Optional[t.Union[str, Folder]], optional): folder to put object in
+            create (bool, optional): if folder supplied does not exist, create it
+            echo (bool, optional): echo output to console during create/etc
+
+        Returns:
+            EnforcementFullModel: updated enforcement set
+        """
+        existing: EnforcementFullModel = self.get_set(value=value)
+        updated_obj: EnforcementFullModel = existing.move(
+            folder=folder,
+            create=create,
+            echo=echo,
+            refresh=False,
+        )
+        return updated_obj
 
     def update_name(self, value: MULTI_SET, name: str) -> EnforcementFullModel:
         """Update the name of an enforcement set.
@@ -616,10 +669,9 @@ class Enforcements(ModelMixins):
         on_count_below: t.Optional[int] = EnforcementDefaults.on_count_below,
         on_count_increased: bool = EnforcementDefaults.on_count_increased,
         on_count_decreased: bool = EnforcementDefaults.on_count_decreased,
-        folder_id: t.Optional[str] = None,
-        path: t.Optional[t.Union[str, FolderModel]] = None,
-        create: bool = FolderDefaults.create_path,
-        echo: bool = FolderDefaults.echo,
+        folder: t.Optional[t.Union[str, FolderModel]] = None,
+        create: bool = FolderDefaults.create_action,
+        echo: bool = FolderDefaults.echo_action,
     ) -> EnforcementFullModel:
         """Create an enforcement set.
 
@@ -647,10 +699,8 @@ class Enforcements(ModelMixins):
         """
         self.check_set_exists(value=name)
 
-        root: FoldersModel = self.auth.http.CLIENT.folders.enforcements.get()
-        path: FolderModel = root.resolve_folder(
-            path=path, create=create, echo=echo, folder_id=folder_id
-        )
+        root: FoldersModel = self.folders.get()
+        folder: FolderModel = root.resolve_folder(folder=folder, create=create, echo=echo)
 
         main = self.get_set_action(
             name=main_action_name, action_type=main_action_type, config=main_action_config
@@ -676,12 +726,12 @@ class Enforcements(ModelMixins):
             )
 
         create_response = self._create(
-            name=name, main=main, triggers=triggers, description=description, folder_id=path.id
+            name=name, main=main, triggers=triggers, description=description, folder_id=folder.id
         )
 
         # NEAT: can not move to/from public /private in enforcements
-        if path.depth > 1 and path.id != create_response.folder.id:
-            self._move_sets(folder_id=path.id, enforcements_ids=create_response.uuid)
+        if folder.depth > 1 and folder.id != create_response.folder.id:
+            self._move_sets(folder_id=folder.id, enforcements_ids=create_response.uuid)
 
         created = self.get_set(value=create_response)
         return created
@@ -754,7 +804,7 @@ class Enforcements(ModelMixins):
 
     def _init(self, **kwargs):
         """Post init method for subclasses to use for extra setup."""
-        from .. import Devices, Users, Instances, Vulnerabilities
+        from .. import Devices, Instances, Users, Vulnerabilities
 
         self.api_devices: Devices = Devices(auth=self.auth, **kwargs)
         """API model for cross reference."""
@@ -975,7 +1025,12 @@ class Enforcements(ModelMixins):
     def _move_sets(
         self, folder_id: str, enforcements_ids: t.List[str]
     ) -> MoveEnforcementsResponseModel:
-        """Pass."""
+        """Move enforcments to a folder.
+
+        Args:
+            folder_id (str): ID of folder to move enforcements to
+            enforcements_ids (t.List[str]): list of uuids to move
+        """
         api_endpoint = ApiEndpoints.enforcements.move_sets
 
         request_obj: MoveEnforcementsRequestModel = api_endpoint.load_request(

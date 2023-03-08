@@ -8,7 +8,7 @@ import marshmallow
 import marshmallow_jsonapi
 
 from ...constants.api import FolderDefaults
-from ...constants.ctypes import FolderBase
+from ...constants.ctypes import FolderBase, Refreshables
 from ...data import BaseEnum
 from ...exceptions import (
     ApiError,
@@ -513,7 +513,7 @@ class Enforcement:
     @property
     def folder(self):
         """Pass."""
-        return self.HTTP.CLIENT.folders.enforcements.get_cached(path=self.folder_id)
+        return self.HTTP.CLIENT.folders.enforcements.find_cached(folder=self.folder_id)
 
     @classmethod
     def get_tree_type(cls) -> str:
@@ -529,31 +529,89 @@ class Enforcement:
         """Pass."""
         return
 
-    # XXX bring me up to date with SavedQuery.copy
+    def get_names(self) -> t.List[str]:
+        """Pass."""
+        names: t.List[str] = [x.name for x in self._api.get_sets(full=False)]
+        return names
+
+    def move(
+        self,
+        folder: t.Union[str, FolderBase],
+        create: bool = FolderDefaults.create_action,
+        refresh: Refreshables = FolderDefaults.refresh_action,
+        echo: bool = FolderDefaults.echo_action,
+        root: t.Optional[FolderBase] = None,
+    ) -> "Enforcement":
+        """Move an object to another folder.
+
+        Args:
+            folder (t.Union[str, FolderBase]): folder to move an object to
+            create (bool, optional): create folder if it does not exist
+            refresh (Refreshables, optional): refresh the folders before searching
+            echo (bool, optional): echo output to console
+            root (t.Optional[FolderBase], optional): root folders to use to find folder
+                instead of root folders from self.folder
+        """
+        reason: str = f"Move '{self.folder_path}/@{self.name}' to {folder!r}"
+        self._check_update_ok(reason=reason)
+        if not isinstance(root, FolderBase):
+            root: FolderBase = self.folder.root_folders
+            root.refresh(value=refresh)
+
+        folder: FolderBase = root.find(
+            folder=folder,
+            create=create,
+            refresh=False,
+            echo=echo,
+            minimum_depth=2,
+            reason=reason,
+        )
+        self.folder_id = folder.id
+        move_response: MoveEnforcementsResponseModel = self._api._move_sets(
+            folder_id=folder.id, enforcements_ids=self.uuid
+        )
+        updated_obj = self._api.get_set(value=self.uuid)
+        updated_obj.move_response = move_response
+        return updated_obj
+
     def copy(
         self,
-        path: t.Optional[t.Union[str, FolderBase]] = None,
-        create: bool = FolderDefaults.create_path,
+        folder: t.Optional[t.Union[str, FolderBase]] = None,
         name: t.Optional[str] = None,
         copy_prefix: str = FolderDefaults.copy_prefix,
-        echo: bool = FolderDefaults.echo,
-        refresh: Refreshables = FolderDefaults.refresh_resolve,
-        folder_id: t.Optional[str] = None,
+        create: bool = FolderDefaults.create_action,
+        echo: bool = FolderDefaults.echo_action,
+        refresh: Refreshables = FolderDefaults.refresh_action,
+        root: t.Optional[FolderBase] = None,
     ) -> "Enforcement":
-        """Pass."""
-        names: t.List[str] = [x.name for x in self.HTTP.CLIENT.enforcements.get_sets(full=False)]
+        """Create a copy of an object, optionally in a different folder.
+
+        Args:
+            folder (t.Optional[t.Union[str, FolderBase]], optional): Folder to copy an object to
+            name (t.Optional[str], optional): if supplied, name to give copy, otherwise use
+                self.name + copy_prefix
+            copy_prefix (str, optional): value to prepend to current name if no new name supplied
+            create (bool, optional): create folder if it does not exist
+            echo (bool, optional): echo output to console
+            refresh (Refreshables, optional): refresh the folders before searching
+            root (t.Optional[FolderBase], optional): root folders to use to find folder
+                instead of root folders from self.folder
+
+        """
+        names: t.List[str] = self.get_names()
         name: str = parse_value_copy(
             default=self.name, value=name, copy_prefix=copy_prefix, existing=names
         )
+        if not isinstance(root, FolderBase):
+            root: FolderBase = self.folder.root_folders
+            root.refresh(value=refresh)
 
-        root: FolderBase = self.folder.root_folders.refresh(value=refresh)
-
-        reason: str = f"Copy '{self.folder_path}/@{self.name}' to @{name!r}"
+        reason: str = f"Copy '{self.folder_path}/@{self.name}' to '{folder}/@{name}'"
         default: FolderBase = None if self.folder.read_only else self.folder
-        path: FolderBase = self.folder.root_folders.resolve_folder(
-            path=path,
+        folder: FolderBase = root.resolve_folder(
+            folder=folder,
             create=create,
-            refresh=refresh,
+            refresh=False,
             echo=echo,
             reason=reason,
             default=default,
@@ -562,55 +620,36 @@ class Enforcement:
         create_obj: CreateEnforcementModel = CreateEnforcementModel(
             name=name, actions=full.actions, triggers=full.triggers, description=full.description
         )
-        create_response_obj: EnforcementFullModel = (
-            self.HTTP.CLIENT.enforcements._create_from_model(request_obj=create_obj)
+        create_response_obj: EnforcementFullModel = self._api._create_from_model(
+            request_obj=create_obj
         )
-        create_response_obj.copied_from_obj = self
-        self.create_response_obj = create_response_obj
-
-        if path.depth > 1 and path.id != create_response_obj.folder.id:
-            self.HTTP.CLIENT.enforcements._move_sets(
-                folder_id=path.id, enforcements_ids=create_response_obj.uuid
-            )
-
-        created_obj = self.HTTP.CLIENT.enforcements.get_set(value=create_response_obj)
-        created_obj.create_response_obj = create_response_obj
+        if folder.depth > 1 and folder.id != create_response_obj.folder.id:
+            self._api._move_sets(folder_id=folder.id, enforcements_ids=create_response_obj.uuid)
+        created_obj = self._api.get_set(value=create_response_obj)
         return created_obj
 
-    # XXX
-    def move(
-        self,
-        path: t.Union[str, FolderBase],
-        create: bool = FolderDefaults.create_move,
-        echo: bool = FolderDefaults.echo,
-    ) -> "Enforcement":
+    @property
+    def _api(self) -> object:
         """Pass."""
-        reason: str = f"Move '{self.folder_path}/@{self.name}' to {path!r}"
-        self._check_update_ok(reason=reason)
-        path: FolderBase = self.folder.root_folders.find(
-            value=path,
-            create=create,
-            refresh=True,
-            echo=echo,
-            minimum_depth=2,
-            reason=reason,
-        )
-        self.folder_id = path.id
-        move_response: MoveEnforcementsResponseModel = self.HTTP.CLIENT.enforcements._move_sets(
-            folder_id=path.id, enforcements_ids=self.uuid
-        )
-        updated_obj = self.HTTP.CLIENT.enforcements.get_set(value=self.uuid)
-        updated_obj.move_response = move_response
-        return updated_obj
+        return self.HTTP.CLIENT.enforcements
 
     def delete(
         self,
         confirm: bool = FolderDefaults.confirm,
-        echo: bool = FolderDefaults.echo,
+        echo: bool = FolderDefaults.echo_action,
         prompt: bool = FolderDefaults.prompt,
         prompt_default: bool = FolderDefaults.prompt_default,
     ) -> Deleted:
-        """Pass."""
+        """Delete an object.
+
+        Args:
+            confirm (bool, optional): if not True, will throw exc
+            echo (bool, optional): echo output to console
+            prompt (bool, optional): if confirm is not True and this is True, prompt user
+                to delete an object
+            prompt_default (bool, optional): if prompt is True, default choice to offer user
+                in prompt
+        """
         reason: str = f"Delete {self.name!r} from {self.folder_path!r}"
         self._check_update_ok(reason=reason)
         check_confirm_prompt(
@@ -620,7 +659,7 @@ class Enforcement:
             prompt=prompt,
             default=prompt_default,
         )
-        return self.HTTP.CLIENT.enforcements._delete(uuid=self.uuid)
+        return self._api._delete(uuid=self.uuid)
 
     @property
     def _tree_summary(self) -> dict:
@@ -691,7 +730,7 @@ class EnforcementBasic(Enforcement):
         if not refresh:
             return self
 
-        result: t.List[EnforcementBasicModel] = self.HTTP.CLIENT.enforcements._get_sets(
+        result: t.List[EnforcementBasicModel] = self._api._get_sets(
             filter=f'name == "{self.name}"',
             search=f"{self.name}",
         )
@@ -705,7 +744,7 @@ class EnforcementBasic(Enforcement):
         if self.FULL and not refresh:
             return self.FULL
 
-        self.FULL: EnforcementFullModel = self.HTTP.CLIENT.enforcements._get_set(uuid=self.uuid)
+        self.FULL: EnforcementFullModel = self._api._get_set(uuid=self.uuid)
         self.FULL.BASIC = self
         return self.FULL
 
@@ -801,7 +840,7 @@ class EnforcementBasic(Enforcement):
     def delete(self, confirm: bool = False) -> Deleted:
         """Pass."""
         if confirm is True:
-            return self.HTTP.CLIENT.enforcements._delete(uuid=self.uuid)
+            return self._api._delete(uuid=self.uuid)
         raise ConfirmNotTrue(f"Confirm is {confirm}, not {True} - can not delete {self}")
 
     def __str__(self) -> str:
@@ -891,9 +930,7 @@ class EnforcementFull(Enforcement):
             value = f"{self.description} {value}"
 
         self.description = value
-        response = self.HTTP.CLIENT.enforcements._update_description(
-            uuid=self.uuid, description=value
-        )
+        response = self._api._update_description(uuid=self.uuid, description=value)
         return response
 
     @property
@@ -911,7 +948,7 @@ class EnforcementFull(Enforcement):
         if self.BASIC and not refresh:
             return self.BASIC
 
-        result: t.List[EnforcementBasicModel] = self.HTTP.CLIENT.enforcements._get_sets(
+        result: t.List[EnforcementBasicModel] = self._api._get_sets(
             filter=f'name == "{self.name}"',
             search=f"{self.name}",
         )
@@ -927,7 +964,7 @@ class EnforcementFull(Enforcement):
         if not refresh:
             return self
 
-        return self.HTTP.CLIENT.enforcements._get_set(uuid=self.uuid)
+        return self._api._get_set(uuid=self.uuid)
 
     @staticmethod
     def get_action_obj(name: str, action_type: "ActionType", config: dict) -> dict:

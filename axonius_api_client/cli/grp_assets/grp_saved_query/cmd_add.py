@@ -2,10 +2,10 @@
 """Command line interface for Axonius API Client."""
 from ....constants.api import GUI_PAGE_SIZES
 from ...context import CONTEXT_SETTINGS, click
+from ...grp_folders.grp_options import OPTS_OBJECT_CREATE
 from ...options import (
     AUTH,
     FIELDS_SELECT_BASE,
-    OPTS_FOLDER,
     QUERY,
     add_options,
     get_option_fields_default,
@@ -15,7 +15,6 @@ from ...options import (
 from ..grp_common import WIZ, load_wiz
 from .grp_common import EXPORT_FORMATS, OPTS_EXPORT
 
-# XXX TEST
 OPTIONS = [
     get_option_help(choices=["auth", "query", "selectfields", "wizard"]),
     *AUTH,
@@ -119,7 +118,7 @@ OPTIONS = [
         show_envvar=True,
         show_default=True,
     ),
-    *OPTS_FOLDER,
+    *OPTS_OBJECT_CREATE,
 ]
 
 

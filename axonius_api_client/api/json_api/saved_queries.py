@@ -175,6 +175,7 @@ class SavedQuerySchema(BaseSchemaJson):
         load_default=Access().to_dict(),
         dump_default=Access().to_dict(),
     )
+    user_archived = SchemaBool(allow_none=True, load_default=False, dump_default=False)
 
     @staticmethod
     def get_model_cls() -> t.Optional[type]:
@@ -221,112 +222,142 @@ class SavedQueryMixins:
     @property
     def folder(self) -> FolderBase:
         """Pass."""
-        return self.HTTP.CLIENT.folders.queries.get_cached(path=self.folder_id)
+        return self.HTTP.CLIENT.folders.queries.find_cached(folder=self.folder_id)
 
     @property
     def folder_path(self) -> str:
         """Pass."""
         return self.folder.path
 
-    # XXX
+    @property
+    def _api(self) -> object:
+        """Pass."""
+        return getattr(self.HTTP.CLIENT, self.module)
+
+    def get_names(self) -> t.List[str]:
+        """Pass."""
+        names: t.List[str] = [
+            x.name
+            for x in self._api.saved_query.get(
+                as_dataclass=True, include_usage=False, get_view_data=False
+            )
+        ]
+        return names
+
     def move(
         self,
-        path: t.Union[str, FolderBase],
-        create: bool = FolderDefaults.create_move,
-        # XXX ESET NEEDS THIS BACK TOO
-        refresh: Refreshables = FolderDefaults.refresh_resolve,
-        echo: bool = FolderDefaults.echo,
+        folder: t.Union[str, FolderBase],
+        create: bool = FolderDefaults.create_action,
+        refresh: Refreshables = FolderDefaults.refresh_action,
+        echo: bool = FolderDefaults.echo_action,
+        root: t.Optional[FolderBase] = None,
     ) -> "SavedQuery":
-        """Pass."""
+        """Move an object to another folder.
 
-        def reason():
-            return f"Move '{self.folder_path}/@{self.name}' to {path!r}/@{self.name}"
+        Args:
+            folder (t.Union[str, FolderBase]): folder to move an object to
+            create (bool, optional): create folder if it does not exist
+            refresh (Refreshables, optional): refresh the folders before searching
+            echo (bool, optional): echo output to console
+            root (t.Optional[FolderBase], optional): root folders to use to find folder
+                instead of root folders from self.folder
+        """
+        reason: str = f"Move '{self.folder.path}/@{self.name}' to {folder!r}/@{self.name}"
+        self._check_update_ok(reason=reason)
 
-        self._check_update_ok(reason=reason())
-        path: FolderBase = self.folder.root_folders.find(
-            value=path,
+        if not isinstance(root, FolderBase):
+            root: FolderBase = self.folder.root_folders
+            root.refresh(value=refresh)
+
+        folder: FolderBase = root.find(
+            folder=folder,
             create=create,
-            refresh=refresh,
+            refresh=False,
             echo=echo,
             minimum_depth=1,
             reason=reason,
         )
-        self.folder.spew(f"Start {reason()}", echo=echo)
-        self.folder_id = path.id
-        return self.HTTP.CLIENT.devices.saved_query._update_handler(sq=self, as_dataclass=True)
+        self.folder_id = folder.id
+        return self._api.saved_query._update_handler(sq=self, as_dataclass=True)
 
-    # XXX ALMOST GOOD ENOUGH
     def copy(
         self,
-        path: t.Optional[t.Union[str, FolderBase]] = None,
-        create: bool = FolderDefaults.create_path,
+        folder: t.Optional[t.Union[str, FolderBase]] = None,
         name: t.Optional[str] = None,
         copy_prefix: str = FolderDefaults.copy_prefix,
-        echo: bool = FolderDefaults.echo,
-        refresh: Refreshables = FolderDefaults.refresh_resolve,
-        folder_id: t.Optional[str] = None,
+        create: bool = FolderDefaults.create_action,
+        echo: bool = FolderDefaults.echo_action,
+        refresh: Refreshables = FolderDefaults.refresh_action,
         private: bool = False,
         asset_scope: bool = False,
+        always_cached: bool = False,
+        root: t.Optional[FolderBase] = None,
     ) -> "SavedQuery":
-        """Pass."""
-        from ..assets.asset_mixin import AssetMixin
+        """Create a copy of an object, optionally in a different folder.
 
-        private = coerce_bool(private)
-        asset_scope = coerce_bool(asset_scope)
+        Args:
+            folder (t.Optional[t.Union[str, FolderBase]], optional): Folder to copy an object to
+            name (t.Optional[str], optional): if supplied, name to give copy, otherwise use
+                self.name + copy_prefix
+            copy_prefix (str, optional): value to prepend to current name if no new name supplied
+            create (bool, optional): create folder if it does not exist
+            echo (bool, optional): echo output to console
+            refresh (Refreshables, optional): refresh the folders before searching
+            private (bool, optional): set copy as private, will change default folder used
+            asset_scope (bool, optional): set copy as asset scope, will change default folder used
+            root (t.Optional[FolderBase], optional): root folders to use to find folder
+                instead of root folders from self.folder
 
-        asset_type: str = self.module
-        asset_api: AssetMixin = getattr(self.HTTP.CLIENT, asset_type)
-        names: t.List[str] = [
-            x.name
-            for x in asset_api.saved_query.get(
-                as_dataclass=True, include_usage=False, get_view_data=False
-            )
-        ]
+        """
+        private: bool = coerce_bool(private)
+        asset_scope: bool = coerce_bool(asset_scope)
+        always_cached: bool = coerce_bool(always_cached)
+
+        names: t.List[str] = self.get_names()
         name: str = parse_value_copy(
             default=self.name, value=name, copy_prefix=copy_prefix, existing=names
         )
 
-        root: FolderBase = self.folder.root_folders.refresh(value=refresh)
+        if not isinstance(root, FolderBase):
+            root: FolderBase = self.folder.root_folders
+            root.refresh(value=refresh)
 
         fallback: t.Optional[FolderBase] = None
         if asset_scope:
+            # PBUG currently problematic in dev
             self.HTTP.CLIENT.data_scopes.check_feature_enabled()
             fallback: t.Optional[FolderBase] = root.path_asset_scope
 
-        reason: str = f"Copy '{self.folder_path}/@{self.name}' to @{name!r}"
-        self.folder.spew(f"Start {reason}", echo=echo)
         default: FolderBase = None if self.folder.read_only else self.folder
-        path: FolderBase = root.resolve_folder(
-            path=path,
+
+        reason: str = f"Copy '{self.folder_path}/@{self.name}' to '{folder}/@{name}'"
+
+        folder: FolderBase = root.resolve_folder(
+            folder=folder,
             create=create,
             echo=echo,
             reason=reason,
+            refresh=False,
             default=default,
-            folder_id=folder_id,
             private=private,
             asset_scope=asset_scope,
             fallback=fallback,
         )
-
         create_obj: SavedQueryCreate = SavedQueryCreate(
             name=name,
             view=self.view,
             description=self.description,
-            always_cached=self.always_cached,
+            always_cached=always_cached,
             asset_scope=asset_scope,
             private=private,
             tags=self.tags,
             access=self.access,
-            folder_id=path.id,
+            folder_id=folder.id,
         )
-        create_response_obj = asset_api.saved_query._add_from_dataclass(obj=create_obj)
-        create_response_obj.copied_from_obj = self
-        create_response_obj.create_obj = create_obj
-        self.create_response_obj = create_response_obj
-        created_obj: SavedQuery = asset_api.saved_query.get_by_uuid(
-            value=self.create_response_obj.id, as_dataclass=True
+        create_response_obj = self._api.saved_query._add_from_dataclass(obj=create_obj)
+        created_obj: SavedQuery = self._api.saved_query.get_by_uuid(
+            value=create_response_obj.id, as_dataclass=True
         )
-        created_obj.create_response_obj = create_response_obj
         return created_obj
 
     def _check_update_ok(self, reason: str = ""):
@@ -338,17 +369,24 @@ class SavedQueryMixins:
         if errs:
             raise NotAllowedError([f"Unable to {reason}", *errs, "", "While in object:", f"{self}"])
 
-    # XXX
     def delete(
         self,
         confirm: bool = FolderDefaults.confirm,
-        echo: bool = FolderDefaults.echo,  # XXX NYET BRO
+        echo: bool = FolderDefaults.echo_action,
         prompt: bool = FolderDefaults.prompt,
         prompt_default: bool = FolderDefaults.prompt_default,
     ) -> Metadata:
-        """Pass."""
-        reason: str = f"Delete '{self.folder_path}/@{self.name}'"
-        self.folder.spew(f"Start {reason}", echo=echo)
+        """Delete an object.
+
+        Args:
+            confirm (bool, optional): if not True, will throw exc
+            echo (bool, optional): echo output to console
+            prompt (bool, optional): if confirm is not True and this is True, prompt user
+                to delete an object
+            prompt_default (bool, optional): if prompt is True, default choice to offer user
+                in prompt
+        """
+        reason: str = f"Delete '{self.folder.path}/@{self.name}'"
         self._check_update_ok(reason=reason)
         check_confirm_prompt(
             reason=reason,
@@ -556,6 +594,7 @@ class SavedQuery(BaseModel, SavedQueryMixins):
     module: t.Optional[str] = dataclasses.field(default=None, metadata={"update": False})
     used_in: t.Optional[t.List[t.Union[str, dict]]] = dataclasses.field(default_factory=list)
     access: t.Optional[Access] = dataclasses.field(default_factory=Access)
+    user_archived: t.Optional[bool] = dataclasses.field(default=False, metadata={"update": False})
 
     document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
