@@ -16,7 +16,7 @@ class IdSelectionSchema(BaseSchema):
     include = SchemaBool(load_default=True, dump_default=True)
 
     @staticmethod
-    def get_model_cls() -> type:
+    def get_model_cls() -> t.Optional[type]:
         """Pass."""
         return IdSelection
 
@@ -29,6 +29,6 @@ class IdSelection(BaseModel):
     include: bool = get_schema_dc(schema=IdSelectionSchema, key="include", default=True)
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[type]:
         """Pass."""
         return IdSelectionSchema

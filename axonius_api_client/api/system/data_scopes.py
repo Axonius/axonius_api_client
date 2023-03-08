@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """API for working with data scopes."""
-from typing import Dict, List, Optional, Union
+import typing as t
+
+import cachetools
 
 from ...exceptions import ApiError, NotFoundError
 from ...parsers.tables import tablize
@@ -10,31 +12,31 @@ from ..api_endpoints import ApiEndpoints
 from ..mixins import ModelMixins
 
 MODEL = json_api.data_scopes.DataScope
-SELECT = Union[str, MODEL]
+SELECT = t.Union[str, MODEL]
 MODEL_SQ = json_api.saved_queries.SavedQuery
-SELECT_SQ = Union[str, MODEL_SQ]
-SELECT_SQS = Union[SELECT_SQ, List[SELECT_SQ]]
+SELECT_SQ = t.Union[str, MODEL_SQ]
+SELECT_SQS = t.Union[SELECT_SQ, t.List[SELECT_SQ]]
+CACHE_GET: cachetools.TTLCache = cachetools.TTLCache(maxsize=1024, ttl=60)
 
 
 class DataScopes(ModelMixins):
     """API for working with Data Scopes."""
 
-    def get(self, value: Optional[SELECT] = None) -> Union[MODEL, List[MODEL]]:
+    def get(self, value: t.Optional[SELECT] = None) -> t.Union[MODEL, t.List[MODEL]]:
         """Get data scopes.
 
         Args:
-            value (Optional[SELECT], optional): Name or UUID of Data Scope to get
+            value (t.Optional[SELECT], optional): Name or UUID of Data Scope to get
 
         Returns:
-            Union[MODEL, List[MODEL]]: Data scope objects
+            t.Union[MODEL, t.List[MODEL]]: Data scope objects
 
         Raises:
             NotFoundError: If value supplied and no data scopes match UUID or name
         """
         self.check_feature_enabled()
-        asset_scopes = self.get_asset_scopes()
-        response = self._get()
-        scopes = response.get_scopes(asset_scopes=asset_scopes)
+        response: json_api.data_scopes.DataScopeDetails = self._get()
+        scopes: t.List[MODEL] = response.get_scopes()
 
         if value is not None:
             for scope in scopes:
@@ -53,7 +55,31 @@ class DataScopes(ModelMixins):
             )
         return scopes
 
-    def get_safe(self) -> List[MODEL]:
+    def get_cached_single(self, value: t.Union[str, dict, MODEL]) -> MODEL:
+        """Pass."""
+        name = MODEL._get_attr_value(value=value, attr="name")
+        uuid = MODEL._get_attr_value(value=value, attr="uuid")
+        items = self.get_cached()
+        for item in items:
+            if name == item.name or uuid == item.uuid:
+                return item
+
+        err = f"No data scope found with name of {name!r} or UUID of {uuid!r}"
+        raise NotFoundError(tablize(value=[x.to_tablize() for x in items], err=err))
+
+    @cachetools.cached(cache=CACHE_GET)
+    def get_cached(self, safe: bool = False) -> t.List[MODEL]:
+        """Get Axonius system users using a cache mechanism."""
+        if not self.is_feature_enabled:
+            if safe:
+                return []
+            self.check_feature_enabled()
+
+        response: json_api.data_scopes.DataScopeDetails = self._get()
+        scopes: t.List[MODEL] = response.get_scopes()
+        return scopes
+
+    def get_safe(self) -> t.List[MODEL]:
         """Get data scopes.
 
         Notes:
@@ -61,15 +87,17 @@ class DataScopes(ModelMixins):
             on Axonius instance.
 
         Returns:
-            List[MODEL]: Data scope objects
+            t.List[MODEL]: Data scope objects
         """
         return self.get() if self.is_feature_enabled else []
 
-    def build_role_data_scope(self, value: Optional[SELECT] = None, required: bool = False) -> dict:
+    def build_role_data_scope(
+        self, value: t.Optional[SELECT] = None, required: bool = False
+    ) -> dict:
         """Build a data scope restriction dict for use by a system role.
 
         Args:
-            value (Optional[SELECT], optional): Name or UUID of data scope
+            value (t.Optional[SELECT], optional): Name or UUID of data scope
             required (bool, optional): throw error if value is None
 
         Returns:
@@ -97,16 +125,16 @@ class DataScopes(ModelMixins):
     def create(
         self,
         name: str,
-        device_scopes: Optional[SELECT_SQS] = None,
-        user_scopes: Optional[SELECT_SQS] = None,
+        device_scopes: t.Optional[SELECT_SQS] = None,
+        user_scopes: t.Optional[SELECT_SQS] = None,
         description: str = "",
     ) -> MODEL:
         """Create a data scope.
 
         Args:
             name (str): name
-            device_scopes (Optional[SELECT_SQS], optional): names/uuids of device asset scopes
-            user_scopes (Optional[SELECT_SQS], optional): names/uuids of user asset scopes
+            device_scopes (t.Optional[SELECT_SQS], optional): names/uuids of device asset scopes
+            user_scopes (t.Optional[SELECT_SQS], optional): names/uuids of user asset scopes
             description (str, optional): description
 
         Returns:
@@ -250,18 +278,18 @@ class DataScopes(ModelMixins):
         else:
             raise ApiError(f"Data scope with name of {value!r} already exists:\n{existing}")
 
-    def get_asset_scopes(self) -> Dict[str, List[json_api.saved_queries.SavedQuery]]:
-        """Get all saved queries that are asset scopes for each asset type."""
-        return {
-            "devices": [
-                x for x in self.devices.saved_query.get(as_dataclass=True) if x.asset_scope
-            ],
-            "users": [x for x in self.users.saved_query.get(as_dataclass=True) if x.asset_scope],
-        }
+    # def get_asset_scopes(self) -> t.Dict[str, t.List[json_api.saved_queries.SavedQuery]]:
+    #     """Get all saved queries that are asset scopes for each asset type."""
+    #     return {
+    #         "devices": [
+    #             x for x in self.devices.saved_query.get(as_dataclass=True) if x.asset_scope
+    #         ],
+    #         "users": [x for x in self.users.saved_query.get(as_dataclass=True) if x.asset_scope],
+    #     }
 
     def _init(self, **kwargs):
         """Post init method for subclasses to use for extra setup."""
-        from .. import Devices, Users, Instances, SystemRoles
+        from .. import Devices, Instances, SystemRoles, Users
 
         self.devices: Devices = Devices(auth=self.auth, **kwargs)
         """API model for cross reference."""
@@ -286,7 +314,11 @@ class DataScopes(ModelMixins):
         return api_endpoint.perform_request(http=self.auth.http, uuid=uuid)
 
     def _create(
-        self, name: str, devices_queries: List[str], users_queries: List[str], description: str = ""
+        self,
+        name: str,
+        devices_queries: t.List[str],
+        users_queries: t.List[str],
+        description: str = "",
     ) -> json_api.generic.Metadata:
         """Direct API method to create a data scope."""
         api_endpoint = ApiEndpoints.data_scopes.create
@@ -302,8 +334,8 @@ class DataScopes(ModelMixins):
         self,
         uuid: str,
         name: str,
-        devices_queries: List[str],
-        users_queries: List[str],
+        devices_queries: t.List[str],
+        users_queries: t.List[str],
         description: str = "",
     ) -> json_api.generic.Metadata:
         """Direct API method to update a data scope."""

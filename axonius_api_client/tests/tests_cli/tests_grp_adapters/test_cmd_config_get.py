@@ -14,7 +14,6 @@ class TestGrpAdaptersCmdConfigGet:
     def test_json_exports(self, request, monkeypatch, export_format):
         runner = load_clirunner(request, monkeypatch)
         with runner.isolated_filesystem():
-
             args1 = [
                 "adapters",
                 "config-get",

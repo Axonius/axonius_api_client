@@ -6,6 +6,7 @@ import tempfile
 
 import dateutil.tz
 import pytest
+
 from axonius_api_client.api.json_api.generic import IntValue
 from axonius_api_client.constants.api import GUI_PAGE_SIZES
 from axonius_api_client.constants.general import IS_WINDOWS

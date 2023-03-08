@@ -33,5 +33,4 @@ class TestPkcs7:
             assert isinstance(cert, cert_human.Cert)
             assert cert.INDEX == idx
 
-            # XXX assert SOURCE == {'method'....}
 """

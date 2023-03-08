@@ -3,6 +3,7 @@
 import typing as t
 
 import pytest
+
 from axonius_api_client.constants.fields import AXID
 from axonius_api_client.exceptions import GrabberError
 from axonius_api_client.parsers.grabber import Grabber, Hunter

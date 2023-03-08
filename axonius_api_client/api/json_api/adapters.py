@@ -16,7 +16,7 @@ from ...http import Http
 from ...parsers.config import parse_schema
 from ...parsers.tables import tablize
 from ...tools import coerce_bool, listify, longest_str
-from .base import BaseModel, BaseSchema, BaseSchemaJson
+from .base import BaseModel, BaseSchemaJson
 
 # from .count_operator import CountOperator, CountOperatorSchema
 from .custom_fields import SchemaBool, SchemaDatetime, dump_date, get_field_dc_mm
@@ -131,7 +131,7 @@ class AdapterFetchHistorySchema(BaseSchemaJson):
         type_ = "history_response_schema"
 
     @staticmethod
-    def get_model_cls():
+    def get_model_cls() -> t.Optional[type]:
         """Pass."""
         return AdapterFetchHistory
 
@@ -231,7 +231,7 @@ class AdapterFetchHistory(BaseModel):
     document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     @staticmethod
-    def get_schema_cls():
+    def get_schema_cls() -> t.Optional[type]:
         """Pass."""
         return AdapterFetchHistorySchema
 
@@ -389,7 +389,7 @@ class AdapterFetchHistoryRequestSchema(BaseSchemaJson):
         type_ = "history_request_schema"
 
     @staticmethod
-    def get_model_cls():
+    def get_model_cls() -> t.Optional[type]:
         """Pass."""
         return AdapterFetchHistoryRequest
 
@@ -539,7 +539,7 @@ class AdapterFetchHistoryRequest(BaseModel):
         return value
 
     @staticmethod
-    def get_schema_cls():
+    def get_schema_cls() -> t.Optional[type]:
         """Pass."""
         return AdapterFetchHistoryRequestSchema
 
@@ -555,7 +555,7 @@ class AdapterFetchHistoryFiltersSchema(BaseSchemaJson):
     discoveries_filter = marshmallow_jsonapi.fields.List(marshmallow_jsonapi.fields.Str())
 
     @staticmethod
-    def get_model_cls() -> type:
+    def get_model_cls() -> t.Optional[type]:
         """Pass."""
         return AdapterFetchHistoryFilters
 
@@ -596,7 +596,7 @@ class AdapterFetchHistoryFilters(BaseModel):
     document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[type]:
         """Pass."""
         return AdapterFetchHistoryFiltersSchema
 
@@ -733,7 +733,7 @@ class AdapterSchema(BaseSchemaJson):
     adapters_data = marshmallow_jsonapi.fields.List(marshmallow_jsonapi.fields.Dict())
 
     @staticmethod
-    def get_model_cls() -> type:
+    def get_model_cls() -> t.Optional[type]:
         """Pass."""
         return Adapter
 
@@ -747,7 +747,7 @@ class AdaptersListSchema(MetadataSchema):
     """Pass."""
 
     @staticmethod
-    def get_model_cls() -> type:
+    def get_model_cls() -> t.Optional[type]:
         """Pass."""
         return AdaptersList
 
@@ -759,7 +759,7 @@ class AdaptersRequestSchema(BaseSchemaJson):
     get_clients = SchemaBool(load_default=False, dump_default=False)
 
     @staticmethod
-    def get_model_cls() -> type:
+    def get_model_cls() -> t.Optional[type]:
         """Pass."""
         return AdaptersRequest
 
@@ -773,7 +773,7 @@ class AdapterSettingsSchema(MetadataSchema):
     """Pass."""
 
     @staticmethod
-    def get_model_cls() -> type:
+    def get_model_cls() -> t.Optional[type]:
         """Pass."""
         return AdapterSettings
 
@@ -823,7 +823,7 @@ class CnxCreateRequestSchema(BaseSchemaJson):
     )
 
     @staticmethod
-    def get_model_cls() -> type:
+    def get_model_cls() -> t.Optional[type]:
         """Pass."""
         return CnxCreateRequest
 
@@ -855,7 +855,7 @@ class CnxTestRequestSchema(BaseSchemaJson):
     )
 
     @staticmethod
-    def get_model_cls() -> type:
+    def get_model_cls() -> t.Optional[type]:
         """Pass."""
         return CnxTestRequest
 
@@ -871,7 +871,7 @@ class CnxDeleteSchema(BaseSchemaJson):
     client_id = marshmallow_jsonapi.fields.Str()
 
     @staticmethod
-    def get_model_cls() -> type:
+    def get_model_cls() -> t.Optional[type]:
         """Pass."""
         return CnxDelete
 
@@ -899,7 +899,7 @@ class CnxUpdateRequestSchema(CnxCreateRequestSchema):
         """Pass."""
 
     @staticmethod
-    def get_model_cls() -> type:
+    def get_model_cls() -> t.Optional[type]:
         """Pass."""
         return CnxUpdateRequest
 
@@ -928,7 +928,7 @@ class CnxModifyResponseSchema(BaseSchemaJson):
     failed_connections_limit_exceeded = marshmallow_jsonapi.fields.Int(allow_none=True)
 
     @staticmethod
-    def get_model_cls() -> type:
+    def get_model_cls() -> t.Optional[type]:
         """Pass."""
         return CnxModifyResponse
 
@@ -947,7 +947,7 @@ class CnxDeleteRequestSchema(BaseSchemaJson):
     instance_name = marshmallow_jsonapi.fields.Str()
 
     @staticmethod
-    def get_model_cls() -> type:
+    def get_model_cls() -> t.Optional[type]:
         """Pass."""
         return CnxDeleteRequest
 
@@ -961,7 +961,7 @@ class CnxLabelsSchema(MetadataSchema):
     """Pass."""
 
     @staticmethod
-    def get_model_cls() -> type:
+    def get_model_cls() -> t.Optional[type]:
         """Pass."""
         return CnxLabels
 
@@ -994,7 +994,7 @@ class AdapterClientsCount(BaseModel):
                 setattr(self, count, 0)
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[type]:
         """Pass."""
         return None
 
@@ -1162,16 +1162,21 @@ class AdapterNode(BaseModel):
         """Pass."""
         return ", "
 
-    def to_dict_old(self, basic_data: t.Optional[t.List[dict]] = None) -> dict:
+    @property
+    def adapter_title(self) -> t.Optional[str]:
         """Pass."""
-        basic_data = basic_data or {}
-        title = basic_data.get(self.adapter_name, {}).get("title")
+        if not hasattr(self, "_title"):
+            basic: AdaptersList = self.HTTP.CLIENT.adapters.get_basic_cached()
+            self._title: t.Optional[str] = basic.get_title(value=self.adapter_name, error=False)
+        return self._title
 
+    def to_dict_old(self) -> dict:
+        """Pass."""
         ret = {}
         ret["name"] = self.adapter_name
         ret["name_raw"] = self.adapter_name_raw
         ret["name_plugin"] = self.unique_plugin_name
-        ret["title"] = title
+        ret["title"] = self.adapter_title
         ret["node_name"] = self.node_name
         ret["node_id"] = self.node_id
         ret["status"] = self.status
@@ -1198,7 +1203,7 @@ class AdapterNode(BaseModel):
         return ret
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[type]:
         """Pass."""
         return None
 
@@ -1254,7 +1259,7 @@ class Adapter(BaseModel):
         return self._adapter_nodes
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[type]:
         """Pass."""
         return AdapterSchema
 
@@ -1339,7 +1344,7 @@ class AdapterNodeCnx(BaseModel):
         return ret
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[type]:
         """Pass."""
         return None
 
@@ -1353,7 +1358,7 @@ class AdaptersRequest(BaseModel):
     get_clients: bool = False
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[type]:
         """Pass."""
         return AdaptersRequestSchema
 
@@ -1363,7 +1368,7 @@ class AdapterSettings(Metadata):
     """Pass."""
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[type]:
         """Pass."""
         return AdapterSettingsSchema
 
@@ -1522,7 +1527,7 @@ class AdapterSettingsUpdate(BaseModel):
     prefix: str = "adapters"
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[type]:
         """Pass."""
         return AdapterSettingsUpdateSchema
 
@@ -1531,36 +1536,60 @@ class AdapterSettingsUpdate(BaseModel):
 class AdaptersList(Metadata):
     """Pass."""
 
+    adapters: t.ClassVar[t.Dict[str, dict]] = None
+
     @staticmethod
-    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[type]:
         """Pass."""
         return AdaptersListSchema
 
-    @property
-    def adapters(self) -> dict:
+    def __post_init__(self):
         """Pass."""
         items = self.document_meta["adapter_list"]
-        ret = {}
+        self.adapters = {}
         for item in items:
             name_raw = item["name"]
             name = self._get_aname(name_raw)
             item["name_raw"] = name_raw
             item["name"] = name
-            ret[name] = item
-        return ret
+            self.adapters[name] = item
 
     def find_by_name(self, value: str) -> dict:
         """Pass."""
         find_value = self._get_aname(value)
-        adapters = self.adapters
-        if find_value not in adapters:
-            padding = longest_str(list(adapters))
-            valid = [f"{k:{padding}}: {v['title']}" for k, v in adapters.items()]
+
+        if find_value not in self.adapters:
+            padding = longest_str(list(self.adapters))
+            valid = [f"{k:{padding}}: {v['title']}" for k, v in self.adapters.items()]
             pre = f"No adapter found with name of {value!r}"
             msg = [pre, "", *valid, "", pre]
             raise NotFoundError("\n".join(msg))
-        ret = adapters[find_value]
+        ret = self.adapters[find_value]
         return ret
+
+    def find(self, value: str, error: bool = True) -> t.Optional[dict]:
+        """Find adapter basic data by title, name, or name_raw."""
+        find_values = [value, self._get_aname(value)]
+        valids = []
+        for data in self.adapters.values():
+            data_values = list(data.values())
+            valids.append(data)
+            if any([x in data_values for x in find_values]):
+                return data
+        if error:
+            err = f"No Adapter found matching {find_values} out of {len(valids)} items"
+            err_table = tablize(value=valids, err=err)
+            raise NotFoundError(err_table)
+        return None
+
+    def get_title(self, value: str, error: bool = True) -> t.Optional[str]:
+        """Pass."""
+        found = self.find(value=value, error=error)
+        if isinstance(found, dict):
+            title = found.get("title")
+            if isinstance(title, str) and title.strip():
+                return title
+        return None
 
 
 @dataclasses.dataclass
@@ -1578,7 +1607,7 @@ class CnxCreateRequest(BaseModel):
     tunnel_id: t.Optional[str] = None
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[type]:
         """Pass."""
         return CnxCreateRequestSchema
 
@@ -1596,7 +1625,7 @@ class CnxTestRequest(BaseModel):
     tunnel_id: t.Optional[str] = None
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[type]:
         """Pass."""
         return CnxTestRequestSchema
 
@@ -1618,7 +1647,7 @@ class CnxUpdateRequest(BaseModel):
     tunnel_id: t.Optional[str] = None
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[type]:
         """Pass."""
         return CnxUpdateRequestSchema
 
@@ -1641,7 +1670,7 @@ class CnxModifyResponse(BaseModel):
     document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[type]:
         """Pass."""
         return CnxModifyResponseSchema
 
@@ -1671,7 +1700,7 @@ class CnxDeleteRequest(BaseModel):
     delete_entities: bool = False
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[type]:
         """Pass."""
         return CnxDeleteRequestSchema
 
@@ -1691,7 +1720,7 @@ class CnxDelete(BaseModel):
             pass
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[type]:
         """Pass."""
         return CnxDeleteSchema
 
@@ -1703,7 +1732,7 @@ class CnxLabels(Metadata):
     document_meta: dict
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[type]:
         """Pass."""
         return CnxLabelsSchema
 
@@ -1818,7 +1847,7 @@ class Cnx(BaseModel):
         return ret
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[type]:
         """Pass."""
         return None
 
@@ -1832,7 +1861,7 @@ class Cnxs(BaseModel):
     document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[type]:
         """Pass."""
         return None
 

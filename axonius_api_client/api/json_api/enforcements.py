@@ -7,27 +7,42 @@ import typing as t
 import marshmallow
 import marshmallow_jsonapi
 
+from ...constants.api import FolderDefaults
+from ...constants.ctypes import FolderBase, Refreshables
 from ...data import BaseEnum
 from ...exceptions import (
     ApiError,
     ConfigRequired,
     ConfigUnknown,
+    ConfirmNotTrue,
     NotFoundError,
     NoTriggerDefinedError,
     ToolsError,
 )
-from ...tools import coerce_bool, coerce_int, coerce_str_to_csv, int_days_map, json_dump, json_load
-from .base import BaseModel, BaseSchema, BaseSchemaJson
+from ...tools import (
+    check_confirm_prompt,
+    coerce_bool,
+    coerce_int,
+    coerce_str_to_csv,
+    int_days_map,
+    is_str,
+    json_dump,
+    json_load,
+    parse_value_copy,
+)
+from .base import BaseModel, BaseSchemaJson
 from .custom_fields import SchemaBool, SchemaDatetime, get_field_dc_mm, get_schema_dc
+from .generic import Deleted, IntValue, IntValueSchema
+from .saved_queries import QueryTypes
 from .selection import IdSelection, IdSelectionSchema
 
 
-class SetDefaults:
+class EnforcementDefaults:
     """Pass."""
 
     query_name: t.Optional[str] = None
-    query_type: t.Union["QueryType", str] = "devices"
-    schedule_type: t.Union["Schedule", str] = "never"
+    query_type: t.Union["QueryTypes", str] = "devices"
+    schedule_type: t.Union["EnforcementSchedule", str] = "never"
     schedule_hour: int = 13
     schedule_minute: int = 0
     schedule_recurrence: t.Optional[t.Union[int, t.List[str]]] = None
@@ -44,13 +59,6 @@ class ActionCategory(BaseEnum):
     success: str = "success"
     failure: str = "failure"
     post: str = "post"
-
-
-class QueryType(BaseEnum):
-    """Pass."""
-
-    devices: str = "devices"
-    users: str = "users"
 
 
 class OnlyNewAssets(BaseEnum):
@@ -82,7 +90,7 @@ class OnlyNewAssets(BaseEnum):
         return None
 
 
-class Schedule(BaseEnum):
+class EnforcementSchedule(BaseEnum):
     """Pass."""
 
     never: str = "never"
@@ -93,39 +101,42 @@ class Schedule(BaseEnum):
     weekly: str = "weekly"
 
     @classmethod
-    def get_value(cls, value: t.Union["Schedule", str] = SetDefaults.schedule_type) -> "Schedule":
+    def get_value(
+        cls, value: t.Union["EnforcementSchedule", str] = EnforcementDefaults.schedule_type
+    ) -> "EnforcementSchedule":
         """Pass."""
         return super().get_value(value=value)
 
-    def get_recurrence(self, value: t.Any = SetDefaults.schedule_recurrence) -> t.Any:
+    def get_recurrence(self, value: t.Any = EnforcementDefaults.schedule_recurrence) -> t.Any:
         """Pass."""
         return getattr(self, f"calc_{self.name}")(value=value)
 
     @staticmethod
     def get_time(
-        hour: int = SetDefaults.schedule_hour, minute: int = SetDefaults.schedule_minute
+        hour: int = EnforcementDefaults.schedule_hour,
+        minute: int = EnforcementDefaults.schedule_minute,
     ) -> str:
         """Pass."""
         hour = coerce_int(
             obj=hour,
             min_value=0,
             max_value=23,
-            errmsg="Schedule time hour value must be an integer between 0 and 23",
+            errmsg="EnforcementSchedule time hour value must be an integer between 0 and 23",
         )
         minute = coerce_int(
             obj=minute,
             min_value=0,
             max_value=59,
-            errmsg="Schedule time minute value must be an integer between 0 and 59",
+            errmsg="EnforcementSchedule time minute value must be an integer between 0 and 59",
         )
         return f"{hour:0>2}:{minute:0>2}"
 
     @staticmethod
     def get_conditions(
-        on_count_above: t.Optional[int] = SetDefaults.on_count_above,
-        on_count_below: t.Optional[int] = SetDefaults.on_count_below,
-        on_count_increased: bool = SetDefaults.on_count_increased,
-        on_count_decreased: bool = SetDefaults.on_count_decreased,
+        on_count_above: t.Optional[int] = EnforcementDefaults.on_count_above,
+        on_count_below: t.Optional[int] = EnforcementDefaults.on_count_below,
+        on_count_increased: bool = EnforcementDefaults.on_count_increased,
+        on_count_decreased: bool = EnforcementDefaults.on_count_decreased,
     ) -> dict:
         """Pass."""
         return {
@@ -152,10 +163,10 @@ class Schedule(BaseEnum):
     @staticmethod
     def get_view(
         query_uuid: t.Optional[str] = None,
-        query_type: t.Union[QueryType, str] = SetDefaults.query_type,
+        query_type: t.Union[QueryTypes, str] = EnforcementDefaults.query_type,
     ) -> t.Optional[dict]:
         """Pass."""
-        query_type = QueryType.get_value(query_type)
+        query_type = QueryTypes.get_value(query_type)
         if isinstance(query_uuid, str) and query_uuid:
             return {"id": query_uuid, "entity": query_type.value}
         return None
@@ -164,18 +175,18 @@ class Schedule(BaseEnum):
     def get_trigger(
         cls,
         query_uuid: t.Optional[str] = None,
-        query_type: t.Union[QueryType, str] = SetDefaults.query_type,
-        schedule_type: t.Union["Schedule", str] = SetDefaults.schedule_type,
-        schedule_hour: int = SetDefaults.schedule_hour,
-        schedule_minute: int = SetDefaults.schedule_minute,
+        query_type: t.Union[QueryTypes, str] = EnforcementDefaults.query_type,
+        schedule_type: t.Union["EnforcementSchedule", str] = EnforcementDefaults.schedule_type,
+        schedule_hour: int = EnforcementDefaults.schedule_hour,
+        schedule_minute: int = EnforcementDefaults.schedule_minute,
         schedule_recurrence: t.Optional[
             t.Union[int, t.List[str]]
-        ] = SetDefaults.schedule_recurrence,
-        only_new_assets: bool = SetDefaults.only_new_assets,
-        on_count_above: t.Optional[int] = SetDefaults.on_count_above,
-        on_count_below: t.Optional[int] = SetDefaults.on_count_below,
-        on_count_increased: bool = SetDefaults.on_count_increased,
-        on_count_decreased: bool = SetDefaults.on_count_decreased,
+        ] = EnforcementDefaults.schedule_recurrence,
+        only_new_assets: bool = EnforcementDefaults.only_new_assets,
+        on_count_above: t.Optional[int] = EnforcementDefaults.on_count_above,
+        on_count_below: t.Optional[int] = EnforcementDefaults.on_count_below,
+        on_count_increased: bool = EnforcementDefaults.on_count_increased,
+        on_count_decreased: bool = EnforcementDefaults.on_count_decreased,
     ) -> dict:
         """Pass."""
         schedule_type = cls.get_value(value=schedule_type)
@@ -206,14 +217,14 @@ class Schedule(BaseEnum):
     @staticmethod
     def calc_hourly(value: t.Any = None) -> int:
         """Pass."""
-        pre = "Schedule Recurrence of 'hourly'"
+        pre = "EnforcementSchedule Recurrence of 'hourly'"
         err_value = f"{pre} must be an integer between 1 and 24"
         return coerce_int(obj=value, max_value=24, min_value=1, errmsg=err_value)
 
     @staticmethod
     def calc_monthly(value: t.Any = None) -> t.List[str]:
         """Pass."""
-        pre = "Schedule Recurrence of 'monthly'"
+        pre = "EnforcementSchedule Recurrence of 'monthly'"
         err_values = f"{pre} must be a list or CSV of integers between 1 and 29"
         err_value = f"{pre} must be an integer between 1 and 29"
 
@@ -224,7 +235,7 @@ class Schedule(BaseEnum):
     @staticmethod
     def calc_weekly(value: t.Any = None) -> t.List[str]:
         """Pass."""
-        pre = "Schedule Recurrence of 'weekly'"
+        pre = "EnforcementSchedule Recurrence of 'weekly'"
         err_value = f"{pre} must be a list or CSV of integers between 0 and 6 or day names"
         try:
             return int_days_map(value=value, names=False)
@@ -234,7 +245,7 @@ class Schedule(BaseEnum):
     @staticmethod
     def calc_daily(value: t.Any = None) -> int:
         """Pass."""
-        pre = "Schedule Recurrence of 'daily'"
+        pre = "EnforcementSchedule Recurrence of 'daily'"
         err_value = f"{pre} must be an integer higher than 1"
         return coerce_int(obj=value, min_value=1, errmsg=err_value)
 
@@ -249,7 +260,7 @@ class Schedule(BaseEnum):
         return None
 
 
-class SetBasicSchema(BaseSchemaJson):
+class EnforcementBasicSchema(BaseSchemaJson):
     """Pass."""
 
     uuid = marshmallow_jsonapi.fields.Str()
@@ -274,6 +285,7 @@ class SetBasicSchema(BaseSchemaJson):
         load_default=None, dump_default=None, allow_none=True
     )
     next_run = SchemaDatetime(allow_none=True)
+    created_by_quick_action = SchemaBool(load_default=False, dump_default=False)
 
     class Meta:
         """Pass."""
@@ -281,9 +293,9 @@ class SetBasicSchema(BaseSchemaJson):
         type_ = "enforcements_details_schema"
 
     @staticmethod
-    def get_model_cls() -> type:
+    def get_model_cls() -> t.Optional[type]:
         """Pass."""
-        return SetBasic
+        return EnforcementBasicModel
 
     @marshmallow.pre_load
     def pre_load_fix(self, data, **kwargs):
@@ -291,39 +303,470 @@ class SetBasicSchema(BaseSchemaJson):
         return {k.replace(".", "_"): v for k, v in data.items()}
 
 
-@dataclasses.dataclass
-class SetBasic(BaseModel):
+class EnforcementFullSchema(BaseSchemaJson):
     """Pass."""
 
-    id: str
-    uuid: str
-    name: str
-
-    actions_main: str
-    actions_main_name: str
-    actions_main_type: str
-
-    triggers_period: t.Optional[str] = None
-    triggers_view_name: t.Optional[str] = None
-    triggers_last_triggered: t.Optional[str] = None
-    triggers_times_triggered: t.Optional[int] = None
-
-    updated_by: t.Optional[str] = None
-    last_updated: t.Optional[datetime.datetime] = get_field_dc_mm(
-        mm_field=SchemaDatetime(allow_none=True, load_default=None, dump_default=None), default=None
+    name = marshmallow_jsonapi.fields.Str()
+    uuid = marshmallow_jsonapi.fields.Str()
+    actions = marshmallow_jsonapi.fields.Dict()
+    triggers = marshmallow_jsonapi.fields.List(marshmallow_jsonapi.fields.Dict())
+    description = marshmallow_jsonapi.fields.Str(allow_none=True, load_default="", dump_default="")
+    settings = marshmallow_jsonapi.fields.Dict(load_default={}, dump_default={})
+    folder_id = marshmallow_jsonapi.fields.Str(
+        load_default=None, dump_default=None, allow_none=True
     )
-    last_triggered: t.Optional[datetime.datetime] = get_field_dc_mm(
-        mm_field=SchemaDatetime(allow_none=True, load_default=None, dump_default=None), default=None
+    created_by_quick_action = SchemaBool(load_default=False, dump_default=False)
+
+    class Meta:
+        """Pass."""
+
+        type_ = "enforcements_details_schema"
+
+    @staticmethod
+    def get_model_cls() -> t.Optional[type]:
+        """Pass."""
+        return EnforcementFullModel
+
+
+class UpdateDescriptionRequestSchema(BaseSchemaJson):
+    """Pass."""
+
+    description = marshmallow_jsonapi.fields.Str()
+
+    class Meta:
+        """Pass."""
+
+        type_ = "update_enforcement_description"
+
+    @staticmethod
+    def get_model_cls() -> t.Optional[type]:
+        """Pass."""
+        return UpdateDescriptionRequestModel
+
+
+class UpdateEnforcementRequestSchema(BaseSchemaJson):
+    """Pass."""
+
+    name = marshmallow_jsonapi.fields.Str()
+    uuid = marshmallow_jsonapi.fields.Str()
+    actions = marshmallow_jsonapi.fields.Dict()
+    triggers = marshmallow_jsonapi.fields.List(marshmallow_jsonapi.fields.Dict())
+
+    class Meta:
+        """Pass."""
+
+        type_ = "enforcements_schema"
+
+    @staticmethod
+    def get_model_cls() -> t.Optional[type]:
+        """Pass."""
+        return UpdateEnforcementRequestModel
+
+
+class MoveEnforcementsRequestSchema(BaseSchemaJson):
+    """Pass."""
+
+    folder_id = marshmallow_jsonapi.fields.Str()
+    enforcements_ids = marshmallow_jsonapi.fields.List(marshmallow_jsonapi.fields.Str())
+
+    class Meta:
+        """Pass."""
+
+        type_ = "update_enforcements_folder_schema"
+
+    @staticmethod
+    def get_model_cls() -> t.Optional[type]:
+        """Pass."""
+        return MoveEnforcementsRequestModel
+
+
+class MoveEnforcementsResponseSchema(IntValueSchema):
+    """Pass."""
+
+    @staticmethod
+    def get_model_cls() -> t.Optional[type]:
+        """Pass."""
+        return MoveEnforcementsResponseModel
+
+
+class UpdateEnforcementResponseSchema(BaseSchemaJson):
+    """Pass."""
+
+    name = marshmallow_jsonapi.fields.Str()
+    uuid = marshmallow_jsonapi.fields.Str()
+    actions = marshmallow_jsonapi.fields.Dict()
+    triggers = marshmallow_jsonapi.fields.List(marshmallow_jsonapi.fields.Dict())
+    updated_by = marshmallow_jsonapi.fields.Str(allow_none=True)
+    last_updated = SchemaDatetime(allow_none=True)
+    last_updated = SchemaDatetime(allow_none=True)
+    description = marshmallow_jsonapi.fields.Str(allow_none=True, load_default="", dump_default="")
+    settings = marshmallow_jsonapi.fields.Dict(load_default={}, dump_default={})
+    folder_id = marshmallow_jsonapi.fields.Str(
+        load_default=None, dump_default=None, allow_none=True
     )
-    action_names: t.Optional[t.List[str]] = dataclasses.field(default_factory=list)
-    document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
-    history: t.Optional[dict] = dataclasses.field(default_factory=dict)
-    last_run_status: t.Optional[str] = None
-    folder_id: t.Optional[str] = None
-    next_run: t.Optional[datetime.datetime] = get_field_dc_mm(
-        mm_field=SchemaDatetime(allow_none=True, load_default=None, dump_default=None), default=None
-    )
-    document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
+    created_by_quick_action = SchemaBool(load_default=False, dump_default=False)
+
+    class Meta:
+        """Pass."""
+
+        type_ = "enforcements_details_schema"
+
+    @staticmethod
+    def get_model_cls() -> t.Optional[type]:
+        """Pass."""
+        return UpdateEnforcementResponseModel
+
+
+class CopyEnforcementSchema(BaseSchemaJson):
+    """Pass."""
+
+    uuid = marshmallow_jsonapi.fields.Str()
+    name = marshmallow_jsonapi.fields.Str()
+    clone_triggers = marshmallow_jsonapi.fields.Bool(load_default=True, dump_default=True)
+
+    class Meta:
+        """Pass."""
+
+        type_ = "duplicate_enforcements_schema"
+
+    @staticmethod
+    def get_model_cls() -> t.Optional[type]:
+        """Pass."""
+        return CopyEnforcementModel
+
+
+class CreateEnforcementSchema(BaseSchemaJson):
+    """Pass."""
+
+    name = marshmallow_jsonapi.fields.Str()
+    actions = marshmallow_jsonapi.fields.Dict()
+    triggers = marshmallow_jsonapi.fields.List(marshmallow_jsonapi.fields.Dict())
+    description = marshmallow_jsonapi.fields.Str(allow_none=True, load_default="", dump_default="")
+
+    class Meta:
+        """Pass."""
+
+        type_ = "enforcements_schema"
+
+    @staticmethod
+    def get_model_cls() -> t.Optional[type]:
+        """Pass."""
+        return CreateEnforcementModel
+
+
+class ActionTypeSchema(BaseSchemaJson):
+    """Pass."""
+
+    default = marshmallow_jsonapi.fields.Dict(allow_none=True)
+    schema = marshmallow_jsonapi.fields.Dict()
+    test_connection = marshmallow_jsonapi.fields.Dict()
+    adapter_fields = marshmallow_jsonapi.fields.List(marshmallow_jsonapi.fields.Str())
+
+    class Meta:
+        """Pass."""
+
+        type_ = "actions_schema"
+
+    @staticmethod
+    def get_model_cls() -> t.Optional[type]:
+        """Pass."""
+        return ActionType
+
+
+class RunEnforcementAgainstTriggerRequestSchema(BaseSchemaJson):
+    """Pass."""
+
+    ec_page_run = SchemaBool(load_default=False, dump_default=False)
+    use_conditions = SchemaBool(load_default=False, dump_default=False)
+
+    class Meta:
+        """Pass."""
+
+        type_ = "run_enforcements_schema"
+
+    @staticmethod
+    def get_model_cls() -> t.Optional[type]:
+        """Pass."""
+        return RunEnforcementAgainstTriggerRequestModel
+
+
+class RunEnforcementsAgainstTriggerRequestSchema(BaseSchemaJson):
+    """Pass."""
+
+    value = marshmallow_jsonapi.fields.Nested(IdSelectionSchema)
+    use_conditions = SchemaBool(load_default=False, dump_default=False)
+
+    class Meta:
+        """Pass."""
+
+        type_ = "run_multiple_enforcements_schema"
+
+    @staticmethod
+    def get_model_cls() -> t.Optional[type]:
+        """Pass."""
+        return RunEnforcementsAgainstTriggerRequestModel
+
+
+class Enforcement:
+    """Pass."""
+
+    @property
+    def folder(self):
+        """Pass."""
+        return self.HTTP.CLIENT.folders.enforcements.find_cached(folder=self.folder_id)
+
+    @classmethod
+    def get_tree_type(cls) -> str:
+        """Get the name to use for objects in tree outputs."""
+        return "EnforcementSet"
+
+    @property
+    def folder_path(self) -> str:
+        """Pass."""
+        return self.folder.path
+
+    def _check_update_ok(self, reason: str = ""):
+        """Pass."""
+        return
+
+    def get_names(self) -> t.List[str]:
+        """Pass."""
+        names: t.List[str] = [x.name for x in self._api.get_sets(full=False)]
+        return names
+
+    def move(
+        self,
+        folder: t.Union[str, FolderBase],
+        create: bool = FolderDefaults.create_action,
+        refresh: Refreshables = FolderDefaults.refresh_action,
+        echo: bool = FolderDefaults.echo_action,
+        root: t.Optional[FolderBase] = None,
+    ) -> "Enforcement":
+        """Move an object to another folder.
+
+        Args:
+            folder (t.Union[str, FolderBase]): folder to move an object to
+            create (bool, optional): create folder if it does not exist
+            refresh (Refreshables, optional): refresh the folders before searching
+            echo (bool, optional): echo output to console
+            root (t.Optional[FolderBase], optional): root folders to use to find folder
+                instead of root folders from self.folder
+        """
+        reason: str = f"Move '{self.folder_path}/@{self.name}' to {folder!r}"
+        self._check_update_ok(reason=reason)
+        if not isinstance(root, FolderBase):
+            root: FolderBase = self.folder.root_folders
+            root.refresh(value=refresh)
+
+        folder: FolderBase = root.find(
+            folder=folder,
+            create=create,
+            refresh=False,
+            echo=echo,
+            minimum_depth=2,
+            reason=reason,
+        )
+        self.folder_id = folder.id
+        move_response: MoveEnforcementsResponseModel = self._api._move_sets(
+            folder_id=folder.id, enforcements_ids=self.uuid
+        )
+        updated_obj = self._api.get_set(value=self.uuid)
+        updated_obj.move_response = move_response
+        return updated_obj
+
+    def copy(
+        self,
+        folder: t.Optional[t.Union[str, FolderBase]] = None,
+        name: t.Optional[str] = None,
+        copy_prefix: str = FolderDefaults.copy_prefix,
+        create: bool = FolderDefaults.create_action,
+        echo: bool = FolderDefaults.echo_action,
+        refresh: Refreshables = FolderDefaults.refresh_action,
+        root: t.Optional[FolderBase] = None,
+    ) -> "Enforcement":
+        """Create a copy of an object, optionally in a different folder.
+
+        Args:
+            folder (t.Optional[t.Union[str, FolderBase]], optional): Folder to copy an object to
+            name (t.Optional[str], optional): if supplied, name to give copy, otherwise use
+                self.name + copy_prefix
+            copy_prefix (str, optional): value to prepend to current name if no new name supplied
+            create (bool, optional): create folder if it does not exist
+            echo (bool, optional): echo output to console
+            refresh (Refreshables, optional): refresh the folders before searching
+            root (t.Optional[FolderBase], optional): root folders to use to find folder
+                instead of root folders from self.folder
+
+        """
+        names: t.List[str] = self.get_names()
+        name: str = parse_value_copy(
+            default=self.name, value=name, copy_prefix=copy_prefix, existing=names
+        )
+        if not isinstance(root, FolderBase):
+            root: FolderBase = self.folder.root_folders
+            root.refresh(value=refresh)
+
+        reason: str = f"Copy '{self.folder_path}/@{self.name}' to '{folder}/@{name}'"
+        default: FolderBase = None if self.folder.read_only else self.folder
+        folder: FolderBase = root.resolve_folder(
+            folder=folder,
+            create=create,
+            refresh=False,
+            echo=echo,
+            reason=reason,
+            default=default,
+        )
+        full: EnforcementFullModel = self.get_full()
+        create_obj: CreateEnforcementModel = CreateEnforcementModel(
+            name=name, actions=full.actions, triggers=full.triggers, description=full.description
+        )
+        create_response_obj: EnforcementFullModel = self._api._create_from_model(
+            request_obj=create_obj
+        )
+        if folder.depth > 1 and folder.id != create_response_obj.folder.id:
+            self._api._move_sets(folder_id=folder.id, enforcements_ids=create_response_obj.uuid)
+        created_obj = self._api.get_set(value=create_response_obj)
+        return created_obj
+
+    @property
+    def _api(self) -> object:
+        """Pass."""
+        return self.HTTP.CLIENT.enforcements
+
+    def delete(
+        self,
+        confirm: bool = FolderDefaults.confirm,
+        echo: bool = FolderDefaults.echo_action,
+        prompt: bool = FolderDefaults.prompt,
+        prompt_default: bool = FolderDefaults.prompt_default,
+    ) -> Deleted:
+        """Delete an object.
+
+        Args:
+            confirm (bool, optional): if not True, will throw exc
+            echo (bool, optional): echo output to console
+            prompt (bool, optional): if confirm is not True and this is True, prompt user
+                to delete an object
+            prompt_default (bool, optional): if prompt is True, default choice to offer user
+                in prompt
+        """
+        reason: str = f"Delete {self.name!r} from {self.folder_path!r}"
+        self._check_update_ok(reason=reason)
+        check_confirm_prompt(
+            reason=reason,
+            src=self,
+            value=confirm,
+            prompt=prompt,
+            default=prompt_default,
+        )
+        return self._api._delete(uuid=self.uuid)
+
+    @property
+    def _tree_summary(self) -> dict:
+        """Pass."""
+        basic, full = self._basic_full
+        return {
+            "name": basic.name,
+            "main_action_name": full.main_action_name,
+            "main_action_type": full.main_action_type,
+            "query_name": full.query_name,
+            "query_type": full.query_type,
+            "schedule": full.schedule,
+        }
+
+    @property
+    def _tree_details(self) -> dict:
+        """Pass."""
+        basic, full = self._basic_full
+        return {
+            "name": basic.name,
+            "uuid": basic.uuid,
+            "description": full.description,
+            "main_action_name": full.main_action_name,
+            "main_action_type": full.main_action_type,
+            "query_name": full.query_name,
+            "query_type": full.query_type,
+            "schedule": full.schedule,
+            "updated_by": basic.updated_by_str,
+            "last_updated": basic.last_updated_str,
+            "last_run_status": basic.last_run_status,
+            "next_run": str(basic.next_run),
+        }
+
+    @property
+    def _basic_full(self) -> t.Tuple[t.Type[BaseModel], t.Type[BaseModel]]:
+        """Pass."""
+        if isinstance(self, EnforcementBasic):
+            return self, self.get_full()
+        elif isinstance(self, EnforcementFull):
+            return self.get_basic(), self
+        else:
+            raise ApiError(f"Unexpected type {type(self)}")
+
+    def get_tree_entry(self, include_details: bool = False) -> str:
+        """Pass."""
+
+        def to_str(value):
+            return str(value) if isinstance(value, datetime.datetime) else value
+
+        obj: dict = self._tree_details if include_details else self._tree_summary
+        items: t.List[str] = [f"{k}={to_str(v)!r}" for k, v in obj.items()]
+        items: str = ", ".join(items)
+        return f"{self.get_tree_type()}({items})"
+
+
+class EnforcementBasic(Enforcement):
+    """Pass."""
+
+    FULL: t.ClassVar["EnforcementFullModel"] = None
+
+    @property
+    def description(self) -> str:
+        """Pass."""
+        return self.get_full().description
+
+    def get_basic(self, refresh: bool = False) -> "EnforcementBasicModel":
+        """Pass."""
+        if not refresh:
+            return self
+
+        result: t.List[EnforcementBasicModel] = self._api._get_sets(
+            filter=f'name == "{self.name}"',
+            search=f"{self.name}",
+        )
+        if not result:
+            raise NotFoundError(f"Unable to find Enforcement Set with name of {self.name!r}")
+
+        return result[0]
+
+    def get_full(self, refresh: bool = False) -> "EnforcementFullModel":
+        """Pass."""
+        if self.FULL and not refresh:
+            return self.FULL
+
+        self.FULL: EnforcementFullModel = self._api._get_set(uuid=self.uuid)
+        self.FULL.BASIC = self
+        return self.FULL
+
+    def update_description(self, value: str, append: bool = False) -> "EnforcementBasicModel":
+        """Pass."""
+        return self.get_full().update_description(value=value, append=append)
+
+    @property
+    def updated_by_str(self) -> str:
+        """Pass."""
+        from .system_users import SystemUser
+
+        return SystemUser.get_user_source(value=self.updated_by)
+
+    @property
+    def last_updated_str(self) -> str:
+        """Get the last updated in str format."""
+        return (
+            self.last_updated.strftime("%Y-%m-%dT%H:%M:%S%z")
+            if isinstance(self.last_updated, datetime.datetime)
+            else self.last_updated
+        )
 
     @property
     def query_name(self) -> t.Optional[str]:
@@ -394,19 +837,22 @@ class SetBasic(BaseModel):
         """Pass."""
         return f"{self.updated_user_source}/{self.updated_user_name}"
 
-    @staticmethod
-    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
+    def delete(self, confirm: bool = False) -> Deleted:
         """Pass."""
-        return SetBasicSchema
+        if confirm is True:
+            return self._api._delete(uuid=self.uuid)
+        raise ConfirmNotTrue(f"Confirm is {confirm}, not {True} - can not delete {self}")
 
     def __str__(self) -> str:
         """Pass."""
         items = [
             f"Name: {self.name!r}",
             f"UUID: {self.uuid!r}",
+            f"Folder: {self.folder_path!r}",
+            f"Description: {self.description!r}",
             self.main_action_str,
             f"Query Name: {self.query_name}",
-            f"Schedule: {self.schedule}",
+            f"EnforcementSchedule: {self.schedule}",
             f"Triggered Last Date: {self.triggered_last_date}",
             f"Triggered Count: {self.triggered_count}",
             f"Updated Date: {self.updated_date}",
@@ -419,15 +865,17 @@ class SetBasic(BaseModel):
         ident = [
             f"Name: {self.name!r}",
             f"UUID: {self.uuid!r}",
-            f"Updated Date: {self.updated_date}",
-            f"Updated User: {self.updated_user!r}",
+            f"Folder: {self.folder_path!r}",
+            f"Description: {self.description!r}",
         ]
         details = [
             self.main_action_str,
             f"Query Name: {self.query_name!r}",
-            f"Schedule: {self.schedule}",
+            f"EnforcementSchedule: {self.schedule}",
             f"Triggered Last Date: {self.triggered_last_date}",
             f"Triggered Count: {self.triggered_count}",
+            f"Updated Date: {self.updated_date}",
+            f"Updated User: {self.updated_user!r}",
         ]
         return {
             "Identifier": "\n".join(ident),
@@ -439,64 +887,29 @@ class SetBasic(BaseModel):
         return self.__str__()
 
 
-class SetFullSchema(BaseSchemaJson):
+class EnforcementFull(Enforcement):
     """Pass."""
 
-    name = marshmallow_jsonapi.fields.Str()
-    uuid = marshmallow_jsonapi.fields.Str()
-    actions = marshmallow_jsonapi.fields.Dict()
-    triggers = marshmallow_jsonapi.fields.List(marshmallow_jsonapi.fields.Dict())
-    description = marshmallow_jsonapi.fields.Str()
-    settings = marshmallow_jsonapi.fields.Dict(load_default={}, dump_default={})
-    folder_id = marshmallow_jsonapi.fields.Str(
-        load_default=None, dump_default=None, allow_none=True
-    )
-
-    class Meta:
-        """Pass."""
-
-        type_ = "enforcements_details_schema"
-
-    @staticmethod
-    def get_model_cls() -> type:
-        """Pass."""
-        return SetFull
-
-
-@dataclasses.dataclass
-class SetFull(BaseModel):
-    """Pass."""
-
-    id: str
-    uuid: str
-    name: str
-    actions: dict
-    triggers: t.List[dict]
-    description: t.Optional[str] = ""
-    settings: t.Optional[dict] = dataclasses.field(default_factory=dict)
-    folder_id: t.Optional[str] = None
-    document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
-
-    BASIC: t.ClassVar[SetBasic] = None
+    BASIC: t.ClassVar["EnforcementBasicModel"] = None
 
     def set_trigger(
         self,
         query_uuid: t.Optional[str] = None,
-        query_type: str = SetDefaults.query_type,
-        schedule_type: t.Union["Schedule", str] = SetDefaults.schedule_type,
-        schedule_hour: int = SetDefaults.schedule_hour,
-        schedule_minute: int = SetDefaults.schedule_minute,
+        query_type: str = EnforcementDefaults.query_type,
+        schedule_type: t.Union["EnforcementSchedule", str] = EnforcementDefaults.schedule_type,
+        schedule_hour: int = EnforcementDefaults.schedule_hour,
+        schedule_minute: int = EnforcementDefaults.schedule_minute,
         schedule_recurrence: t.Optional[
             t.Union[int, t.List[str]]
-        ] = SetDefaults.schedule_recurrence,
-        only_new_assets: bool = SetDefaults.only_new_assets,
-        on_count_above: t.Optional[int] = SetDefaults.on_count_above,
-        on_count_below: t.Optional[int] = SetDefaults.on_count_below,
-        on_count_increased: bool = SetDefaults.on_count_increased,
-        on_count_decreased: bool = SetDefaults.on_count_decreased,
+        ] = EnforcementDefaults.schedule_recurrence,
+        only_new_assets: bool = EnforcementDefaults.only_new_assets,
+        on_count_above: t.Optional[int] = EnforcementDefaults.on_count_above,
+        on_count_below: t.Optional[int] = EnforcementDefaults.on_count_below,
+        on_count_increased: bool = EnforcementDefaults.on_count_increased,
+        on_count_decreased: bool = EnforcementDefaults.on_count_decreased,
     ):
         """Pass."""
-        trigger = Schedule.get_trigger(
+        trigger = EnforcementSchedule.get_trigger(
             query_uuid=query_uuid,
             query_type=query_type,
             schedule_type=schedule_type,
@@ -511,6 +924,15 @@ class SetFull(BaseModel):
         )
         self.triggers = [trigger]
 
+    def update_description(self, value: str, append: bool = False) -> "EnforcementBasicModel":
+        """Pass."""
+        if append and is_str(self.description):
+            value = f"{self.description} {value}"
+
+        self.description = value
+        response = self._api._update_description(uuid=self.uuid, description=value)
+        return response
+
     @property
     def main_action_name(self) -> str:
         """Pass."""
@@ -521,24 +943,28 @@ class SetFull(BaseModel):
         """Pass."""
         return self.main_action["action"]["action_name"]
 
-    def get_basic(self, refresh: bool = False) -> SetBasic:
+    def get_basic(self, refresh: bool = False) -> "EnforcementBasicModel":
         """Pass."""
         if self.BASIC and not refresh:
             return self.BASIC
 
-        from .. import ApiEndpoints
-
-        api_endpoint = ApiEndpoints.enforcements.get_sets
-        request_obj = api_endpoint.load_request(
+        result: t.List[EnforcementBasicModel] = self._api._get_sets(
             filter=f'name == "{self.name}"',
             search=f"{self.name}",
         )
-        result = api_endpoint.perform_request(http=self.HTTP, request_obj=request_obj)
         if not result:
             raise NotFoundError(f"Unable to find Enforcement Set with name of {self.name!r}")
 
-        self.BASIC = result[0]
+        self.BASIC: EnforcementBasicModel = result[0]
+        self.BASIC.FULL = self
         return self.BASIC
+
+    def get_full(self, refresh: bool = False) -> "EnforcementFullModel":
+        """Pass."""
+        if not refresh:
+            return self
+
+        return self._api._get_set(uuid=self.uuid)
 
     @staticmethod
     def get_action_obj(name: str, action_type: "ActionType", config: dict) -> dict:
@@ -558,7 +984,7 @@ class SetFull(BaseModel):
             if error:
                 raise NoTriggerDefinedError(f"{self}\n{err}")
             else:
-                self._log.warning(err)
+                self.logger.warning(err)
         return self.has_trigger
 
     @property
@@ -579,10 +1005,10 @@ class SetFull(BaseModel):
         self.check_trigger_exists("remove query")
         self.triggers = []
 
-    def query_update(self, query_uuid: str, query_type: str = SetDefaults.query_type):
+    def query_update(self, query_uuid: str, query_type: str = EnforcementDefaults.query_type):
         """Pass."""
         if self._trigger_obj:
-            self._trigger_obj["view"] = Schedule.get_view(
+            self._trigger_obj["view"] = EnforcementSchedule.get_view(
                 query_uuid=query_uuid, query_type=query_type
             )
         else:
@@ -591,74 +1017,80 @@ class SetFull(BaseModel):
     def set_schedule_never(self):
         """Pass."""
         self.check_trigger_exists("set schedule to never")
-        self._trigger_obj["period"] = str(Schedule.never)
-        self._trigger_obj["period_time"] = self._trigger_obj.get("period_time", Schedule.get_time())
+        self._trigger_obj["period"] = str(EnforcementSchedule.never)
+        self._trigger_obj["period_time"] = self._trigger_obj.get(
+            "period_time", EnforcementSchedule.get_time()
+        )
         self._trigger_obj.pop("period_recurrence", None)
 
     def set_schedule_discovery(self):
         """Pass."""
         self.check_trigger_exists("set schedule to discovery")
-        self._trigger_obj["period"] = str(Schedule.discovery)
-        self._trigger_obj["period_time"] = self._trigger_obj.get("period_time", Schedule.get_time())
+        self._trigger_obj["period"] = str(EnforcementSchedule.discovery)
+        self._trigger_obj["period_time"] = self._trigger_obj.get(
+            "period_time", EnforcementSchedule.get_time()
+        )
         self._trigger_obj.pop("period_recurrence", None)
 
     def set_schedule_hourly(self, recurrence: int):
         """Pass."""
         self.check_trigger_exists(f"set schedule to hourly hours {recurrence!r}")
-        period_recurrence = Schedule.calc_hourly(value=recurrence)
+        period_recurrence = EnforcementSchedule.calc_hourly(value=recurrence)
 
-        self._trigger_obj["period"] = str(Schedule.hourly)
-        self._trigger_obj["period_time"] = self._trigger_obj.get("period_time", Schedule.get_time())
+        self._trigger_obj["period"] = str(EnforcementSchedule.hourly)
+        self._trigger_obj["period_time"] = self._trigger_obj.get(
+            "period_time", EnforcementSchedule.get_time()
+        )
         self._trigger_obj["period_recurrence"] = period_recurrence
 
     def set_schedule_daily(
         self,
         recurrence: int,
-        hour: int = SetDefaults.schedule_hour,
-        minute: int = SetDefaults.schedule_minute,
+        hour: int = EnforcementDefaults.schedule_hour,
+        minute: int = EnforcementDefaults.schedule_minute,
     ):
         """Pass."""
         self.check_trigger_exists(
             f"set schedule to daily days {recurrence!r} hour {hour!r} minute {minute!r}"
         )
-        period_recurrence = Schedule.calc_daily(value=recurrence)
-        period_time = Schedule.get_time(hour=hour, minute=minute)
+        period_recurrence = EnforcementSchedule.calc_daily(value=recurrence)
+        period_time = EnforcementSchedule.get_time(hour=hour, minute=minute)
 
-        self._trigger_obj["period"] = str(Schedule.daily)
+        self._trigger_obj["period"] = str(EnforcementSchedule.daily)
         self._trigger_obj["period_time"] = period_time
         self._trigger_obj["period_recurrence"] = period_recurrence
 
     def set_schedule_weekly(
         self,
         recurrence: t.Union[str, t.List[t.Union[str, int]]],
-        hour: int = SetDefaults.schedule_hour,
-        minute: int = SetDefaults.schedule_minute,
+        hour: int = EnforcementDefaults.schedule_hour,
+        minute: int = EnforcementDefaults.schedule_minute,
     ):
         """Pass."""
         self.check_trigger_exists(
             f"set schedule to weekly days {recurrence!r} hour {hour!r} minute {minute!r}"
         )
-        period_recurrence = Schedule.calc_weekly(value=recurrence)
-        period_time = Schedule.get_time(hour=hour, minute=minute)
+        period_recurrence = EnforcementSchedule.calc_weekly(value=recurrence)
+        period_time = EnforcementSchedule.get_time(hour=hour, minute=minute)
 
-        self._trigger_obj["period"] = str(Schedule.weekly)
+        self._trigger_obj["period"] = str(EnforcementSchedule.weekly)
         self._trigger_obj["period_time"] = period_time
         self._trigger_obj["period_recurrence"] = period_recurrence
 
     def set_schedule_monthly(
         self,
         recurrence: t.Union[str, t.List[int]],
-        hour: int = SetDefaults.schedule_hour,
-        minute: int = SetDefaults.schedule_minute,
+        hour: int = EnforcementDefaults.schedule_hour,
+        minute: int = EnforcementDefaults.schedule_minute,
     ):
         """Pass."""
         self.check_trigger_exists(
             f"set schedule to monthly days {recurrence!r} hour {hour!r} minute {minute!r}"
         )
-        period_recurrence = Schedule.calc_monthly(value=recurrence)
-        period_time = Schedule.get_time(hour=hour, minute=minute)
+        period_recurrence = EnforcementSchedule.calc_monthly(value=recurrence)
+        period_time = EnforcementSchedule.get_time(hour=hour, minute=minute)
 
-        self._trigger_obj["period"] = str(Schedule.monthly)
+        self._trigger_obj["period"] = str(EnforcementSchedule.monthly)
         self._trigger_obj["period_time"] = period_time
         self._trigger_obj["period_recurrence"] = period_recurrence
 
@@ -889,8 +1321,8 @@ class SetFull(BaseModel):
         ident = [
             f"Name: {self.name!r}",
             f"UUID: {self.uuid!r}",
-            f"Updated Date: {self.updated_date}",
-            f"Updated User: {self.updated_user!r}",
+            f"Folder: {self.folder_path!r}",
+            f"Description: {self.description!r}",
         ]
         details = [
             self.main_action_str,
@@ -899,8 +1331,8 @@ class SetFull(BaseModel):
             *self.post_actions_str,
             f"Query Name: {self.query_name!r}",
             f"Query Type: {self.query_type!r}",
-            f"Schedule: {self.schedule}",
-            f"Schedule Type: {self.schedule_type}",
+            f"EnforcementSchedule: {self.schedule}",
+            f"EnforcementSchedule Type: {self.schedule_type}",
             f"Only New Assets: {self.only_new_assets}",
             f"On Count Above: {self.on_count_above}",
             f"On Count Below: {self.on_count_below}",
@@ -908,6 +1340,8 @@ class SetFull(BaseModel):
             f"On Count Decreased: {self.on_count_decreased}",
             f"Triggered Last Date: {self.triggered_last_date}",
             f"Triggered Count: {self.triggered_count}",
+            f"Updated Date: {self.updated_date}",
+            f"Updated User: {self.updated_user!r}",
         ]
         return {
             "Identifier": "\n".join(ident),
@@ -945,11 +1379,11 @@ class SetFull(BaseModel):
         return self._trigger_obj.get("period", "")
 
     @property
-    def _schedule_type(self) -> t.Optional[Schedule]:
+    def _schedule_type(self) -> t.Optional[EnforcementSchedule]:
         """Pass."""
         period = self._trigger_obj.get("period", "")
         if period:
-            return Schedule.get_value(value=period)
+            return EnforcementSchedule.get_value(value=period)
         return None
 
     def __str__(self) -> str:
@@ -957,14 +1391,16 @@ class SetFull(BaseModel):
         items = [
             f"Name: {self.name!r}",
             f"UUID: {self.uuid!r}",
+            f"Folder: {self.folder_path!r}",
+            f"Description: {self.description!r}",
             self.main_action_str,
             *self.success_actions_str,
             *self.failure_actions_str,
             *self.post_actions_str,
             f"Query Name: {self.query_name}",
             f"Query Type: {self.query_type}",
-            f"Schedule: {self.schedule}",
-            f"Schedule Type: {self.schedule_type}",
+            f"EnforcementSchedule: {self.schedule}",
+            f"EnforcementSchedule Type: {self.schedule_type}",
             f"Only New Assets: {self.only_new_assets}",
             f"On Count Above: {self.on_count_above}",
             f"On Count Below: {self.on_count_below}",
@@ -981,33 +1417,88 @@ class SetFull(BaseModel):
         """Pass."""
         return self.__str__()
 
-    @staticmethod
-    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
-        """Pass."""
-        return SetFullSchema
 
-
-class UpdateRequestSchema(BaseSchemaJson):
+@dataclasses.dataclass(repr=False)
+class EnforcementBasicModel(BaseModel, EnforcementBasic):
     """Pass."""
 
-    name = marshmallow_jsonapi.fields.Str()
-    uuid = marshmallow_jsonapi.fields.Str()
-    actions = marshmallow_jsonapi.fields.Dict()
-    triggers = marshmallow_jsonapi.fields.List(marshmallow_jsonapi.fields.Dict())
+    id: str
+    uuid: str
+    name: str
 
-    class Meta:
-        """Pass."""
+    actions_main: str
+    actions_main_name: str
+    actions_main_type: str
 
-        type_ = "enforcements_schema"
+    triggers_period: t.Optional[str] = None
+    triggers_view_name: t.Optional[str] = None
+    triggers_last_triggered: t.Optional[str] = None
+    triggers_times_triggered: t.Optional[int] = None
+
+    updated_by: t.Optional[str] = None
+    last_updated: t.Optional[datetime.datetime] = get_field_dc_mm(
+        mm_field=SchemaDatetime(allow_none=True, load_default=None, dump_default=None), default=None
+    )
+    last_triggered: t.Optional[datetime.datetime] = get_field_dc_mm(
+        mm_field=SchemaDatetime(allow_none=True, load_default=None, dump_default=None), default=None
+    )
+    action_names: t.Optional[t.List[str]] = dataclasses.field(default_factory=list)
+    document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
+    history: t.Optional[dict] = dataclasses.field(default_factory=dict)
+    last_run_status: t.Optional[str] = None
+    folder_id: t.Optional[str] = None
+    next_run: t.Optional[datetime.datetime] = get_field_dc_mm(
+        mm_field=SchemaDatetime(allow_none=True, load_default=None, dump_default=None), default=None
+    )
+    created_by_quick_action: t.Optional[bool] = False
+    document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     @staticmethod
-    def get_model_cls() -> type:
+    def get_schema_cls() -> t.Optional[type]:
         """Pass."""
-        return UpdateRequest
+        return EnforcementBasicSchema
 
 
 @dataclasses.dataclass
-class UpdateRequest(BaseModel):
+class EnforcementFullModel(BaseModel, EnforcementFull):
+    """Pass."""
+
+    id: str
+    uuid: str
+    name: str
+    actions: dict
+    triggers: t.List[dict]
+    description: t.Optional[str] = ""
+    settings: t.Optional[dict] = dataclasses.field(default_factory=dict)
+    folder_id: t.Optional[str] = None
+    document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
+    created_by_quick_action: t.Optional[bool] = False
+
+    @staticmethod
+    def get_schema_cls() -> t.Optional[type]:
+        """Pass."""
+        return EnforcementFullSchema
+
+    @property
+    def main(self):
+        """Pass."""
+        return self.main_action
+
+
+@dataclasses.dataclass
+class UpdateDescriptionRequestModel(BaseModel):
+    """Pass."""
+
+    description: str
+
+    @staticmethod
+    def get_schema_cls() -> t.Optional[type]:
+        """Pass."""
+        return UpdateDescriptionRequestSchema
+
+
+@dataclasses.dataclass
+class UpdateEnforcementRequestModel(BaseModel):
     """Pass."""
 
     id: str
@@ -1017,40 +1508,36 @@ class UpdateRequest(BaseModel):
     triggers: t.List[dict]
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[type]:
         """Pass."""
-        return UpdateRequestSchema
-
-
-class UpdateResponseSchema(BaseSchemaJson):
-    """Pass."""
-
-    name = marshmallow_jsonapi.fields.Str()
-    uuid = marshmallow_jsonapi.fields.Str()
-    actions = marshmallow_jsonapi.fields.Dict()
-    triggers = marshmallow_jsonapi.fields.List(marshmallow_jsonapi.fields.Dict())
-    updated_by = marshmallow_jsonapi.fields.Str(allow_none=True)
-    last_updated = SchemaDatetime(allow_none=True)
-    last_updated = SchemaDatetime(allow_none=True)
-    description = marshmallow_jsonapi.fields.Str()
-    settings = marshmallow_jsonapi.fields.Dict(load_default={}, dump_default={})
-    folder_id = marshmallow_jsonapi.fields.Str(
-        load_default=None, dump_default=None, allow_none=True
-    )
-
-    class Meta:
-        """Pass."""
-
-        type_ = "enforcements_details_schema"
-
-    @staticmethod
-    def get_model_cls() -> type:
-        """Pass."""
-        return UpdateResponse
+        return UpdateEnforcementRequestSchema
 
 
 @dataclasses.dataclass
-class UpdateResponse(BaseModel):
+class MoveEnforcementsRequestModel(BaseModel):
+    """Pass."""
+
+    folder_id: str
+    enforcements_ids: t.List[str]
+
+    @staticmethod
+    def get_schema_cls() -> t.Optional[type]:
+        """Pass."""
+        return MoveEnforcementsRequestSchema
+
+
+@dataclasses.dataclass
+class MoveEnforcementsResponseModel(IntValue):
+    """Pass."""
+
+    @staticmethod
+    def get_schema_cls() -> t.Optional[type]:
+        """Pass."""
+        return MoveEnforcementsResponseSchema
+
+
+@dataclasses.dataclass
+class UpdateEnforcementResponseModel(BaseModel):
     """Pass."""
 
     id: str
@@ -1064,12 +1551,18 @@ class UpdateResponse(BaseModel):
     description: t.Optional[str] = ""
     folder_id: t.Optional[str] = None
     settings: t.Optional[dict] = dataclasses.field(default_factory=dict)
+    created_by_quick_action: t.Optional[bool] = False
     document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
-    @staticmethod
-    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
+    def __post_init__(self):
         """Pass."""
-        return UpdateResponseSchema
+        if not is_str(self.description):
+            self.description = ""
+
+    @staticmethod
+    def get_schema_cls() -> t.Optional[type]:
+        """Pass."""
+        return UpdateEnforcementResponseSchema
 
     @property
     def uuid(self) -> str:
@@ -1077,26 +1570,8 @@ class UpdateResponse(BaseModel):
         return self.id
 
 
-class DuplicateSchema(BaseSchemaJson):
-    """Pass."""
-
-    uuid = marshmallow_jsonapi.fields.Str()
-    name = marshmallow_jsonapi.fields.Str()
-    clone_triggers = marshmallow_jsonapi.fields.Bool(load_default=True, dump_default=True)
-
-    class Meta:
-        """Pass."""
-
-        type_ = "duplicate_enforcements_schema"
-
-    @staticmethod
-    def get_model_cls() -> type:
-        """Pass."""
-        return Duplicate
-
-
 @dataclasses.dataclass
-class Duplicate(BaseModel):
+class CopyEnforcementModel(BaseModel):
     """Pass."""
 
     id: str
@@ -1105,60 +1580,29 @@ class Duplicate(BaseModel):
     clone_triggers: bool = True
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[type]:
         """Pass."""
-        return DuplicateSchema
-
-
-class CreateSchema(BaseSchemaJson):
-    """Pass."""
-
-    name = marshmallow_jsonapi.fields.Str()
-    actions = marshmallow_jsonapi.fields.Dict()
-    triggers = marshmallow_jsonapi.fields.List(marshmallow_jsonapi.fields.Dict())
-
-    class Meta:
-        """Pass."""
-
-        type_ = "enforcements_schema"
-
-    @staticmethod
-    def get_model_cls() -> type:
-        """Pass."""
-        return Create
+        return CopyEnforcementSchema
 
 
 @dataclasses.dataclass
-class Create(BaseModel):
+class CreateEnforcementModel(BaseModel):
     """Pass."""
 
     name: str
     actions: dict
     triggers: t.List[dict]
+    description: t.Optional[str] = ""
+
+    def __post_init__(self):
+        """Pass."""
+        if not is_str(self.description):
+            self.description = ""
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[type]:
         """Pass."""
-        return CreateSchema
-
-
-class ActionTypeSchema(BaseSchemaJson):
-    """Pass."""
-
-    default = marshmallow_jsonapi.fields.Dict(allow_none=True)
-    schema = marshmallow_jsonapi.fields.Dict()
-    test_connection = marshmallow_jsonapi.fields.Dict()
-    adapter_fields = marshmallow_jsonapi.fields.List(marshmallow_jsonapi.fields.Str())
-
-    class Meta:
-        """Pass."""
-
-        type_ = "actions_schema"
-
-    @staticmethod
-    def get_model_cls() -> type:
-        """Pass."""
-        return ActionType
+        return CreateEnforcementSchema
 
 
 @dataclasses.dataclass
@@ -1173,7 +1617,7 @@ class ActionType(BaseModel):
     document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[type]:
         """Pass."""
         return ActionTypeSchema
 
@@ -1271,85 +1715,42 @@ class ActionType(BaseModel):
         return self.__str__()
 
 
-class RunSetAgainstTriggerRequestSchema(BaseSchemaJson):
-    """Pass."""
-
-    ec_page_run = SchemaBool(
-        load_default=False,
-        dump_default=False,
-    )
-    use_conditions = SchemaBool(
-        load_default=False,
-        dump_default=False,
-    )
-
-    class Meta:
-        """Pass."""
-
-        type_ = "run_enforcements_schema"
-
-    @staticmethod
-    def get_model_cls() -> type:
-        """Pass."""
-        return RunSetAgainstTriggerRequest
-
-
 @dataclasses.dataclass
-class RunSetAgainstTriggerRequest(BaseModel):
+class RunEnforcementAgainstTriggerRequestModel(BaseModel):
     """Pass."""
 
     ec_page_run: bool = get_schema_dc(
-        schema=RunSetAgainstTriggerRequestSchema,
+        schema=RunEnforcementAgainstTriggerRequestSchema,
         key="ec_page_run",
         default=False,
     )
     use_conditions: bool = get_schema_dc(
-        schema=RunSetAgainstTriggerRequestSchema,
+        schema=RunEnforcementAgainstTriggerRequestSchema,
         key="use_conditions",
         default=False,
     )
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[type]:
         """Pass."""
-        return RunSetAgainstTriggerRequestSchema
-
-
-class RunSetsAgainstTriggerRequestSchema(BaseSchemaJson):
-    """Pass."""
-
-    value = marshmallow_jsonapi.fields.Nested(IdSelectionSchema)
-    use_conditions = SchemaBool(
-        load_default=False,
-        dump_default=False,
-    )
-
-    class Meta:
-        """Pass."""
-
-        type_ = "run_multiple_enforcements_schema"
-
-    @staticmethod
-    def get_model_cls() -> type:
-        """Pass."""
-        return RunSetsAgainstTriggerRequest
+        return RunEnforcementAgainstTriggerRequestSchema
 
 
 @dataclasses.dataclass
-class RunSetsAgainstTriggerRequest(BaseModel):
+class RunEnforcementsAgainstTriggerRequestModel(BaseModel):
     """Pass."""
 
     value: IdSelection = get_schema_dc(
-        schema=RunSetsAgainstTriggerRequestSchema,
+        schema=RunEnforcementsAgainstTriggerRequestSchema,
         key="value",
     )
     use_conditions: bool = get_schema_dc(
-        schema=RunSetsAgainstTriggerRequestSchema,
+        schema=RunEnforcementsAgainstTriggerRequestSchema,
         key="use_conditions",
         default=False,
     )
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[type]:
         """Pass."""
-        return RunSetsAgainstTriggerRequestSchema
+        return RunEnforcementsAgainstTriggerRequestSchema

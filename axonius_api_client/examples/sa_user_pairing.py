@@ -140,7 +140,6 @@ class AdminMap(PropsDataToDict):
         admin_disabled = None
 
         if self.admin and self.admin.is_disabled:
-
             if isinstance(self.admin.is_disabled, (bool, str)):
                 admin_disabled = normalize_bool(self.admin.is_disabled)
 
@@ -152,7 +151,6 @@ class AdminMap(PropsDataToDict):
                     admin_disabled = normalize_bool(self.admin.is_disabled[index])
 
         if self.normal and self.normal.is_disabled:
-
             if isinstance(self.normal.is_disabled, (bool, str)):
                 normal_disabled = self.normal.is_disabled
 
@@ -190,7 +188,6 @@ class CustomConnect(axonapi.Connect):
         admin_maps = list(self.get_admin_maps(assets=assets))
 
         # return self.get_tag_actions(admin_maps=admin_maps)
-        # XXX HERE
 
         return admin_maps
 
@@ -284,7 +281,6 @@ def write_csv(results, path="sa_user_pairing.csv", fields=None, ignores=None):
         writer.writerow(dict(zip(fields, fields)))
 
         for result in results:
-
             flattened = flatten_dict(result.to_dict())
 
             for k, v in flattened.items():

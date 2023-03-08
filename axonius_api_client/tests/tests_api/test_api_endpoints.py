@@ -3,6 +3,7 @@ from typing import List, Type
 
 import pytest
 import requests
+
 from axonius_api_client.api import json_api
 from axonius_api_client.api.api_endpoints import ApiEndpoint, ApiEndpointGroup, ApiEndpoints
 from axonius_api_client.exceptions import (
@@ -32,7 +33,8 @@ MODELS_EXCLUDE = [
     json_api.adapters.AdapterNodeCnx,
     json_api.adapters.AdapterClientsCount,
     json_api.adapters.AdapterNode,
-    json_api.saved_queries.Folder,
+    json_api.folders.queries.FolderModel,
+    json_api.folders.enforcements.FolderModel,
     json_api.data_scopes.DataScope,
     json_api.time_range.TimeRange,
     json_api.paging_state.Page,

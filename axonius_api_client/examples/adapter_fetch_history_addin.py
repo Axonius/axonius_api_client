@@ -298,7 +298,6 @@ class FetchHistory(ModelMixins):
 
 
 if __name__ == "__main__" and CLI_MODE:
-
     # This is the entry point for the CLI mode.
     # It patches in additional functionality to the CLI and then executes the original CLI script.
 

@@ -9,29 +9,34 @@ import typing as t
 import marshmallow
 import marshmallow_jsonapi
 
-from ...constants.api import GUI_PAGE_SIZES
-from ...constants.ctypes import PatternLikeListy
-from ...exceptions import ApiAttributeTypeError, ApiError, NotFoundError
+from ...constants.api import GUI_PAGE_SIZES, FolderDefaults
+from ...constants.ctypes import FolderBase, PatternLikeListy, Refreshables
+from ...data import BaseEnum
+from ...exceptions import ApiAttributeTypeError, ApiError, NotAllowedError, NotFoundError
 from ...parsers.tables import tablize
-from ...tools import coerce_bool, coerce_int, dt_now, dt_parse, json_load, listify
-from .base import BaseModel, BaseSchema, BaseSchemaJson
-from .custom_fields import SchemaBool, SchemaDatetime, get_schema_dc
+from ...tools import (
+    check_confirm_prompt,
+    coerce_bool,
+    coerce_int,
+    dt_now,
+    dt_parse,
+    is_str,
+    listify,
+    parse_value_copy,
+)
+from .base import BaseModel, BaseSchemaJson
+from .custom_fields import SchemaBool, SchemaDatetime, UnionField, get_schema_dc
+from .generic import Metadata
 from .nested_access import Access, AccessSchema
 from .resources import PaginationRequest, PaginationSchema, ResourcesGet, ResourcesGetSchema
 
 
-def get_user_source(value: t.Union[str, dict]) -> str:
+class QueryTypes(BaseEnum):
     """Pass."""
-    user_name = None
-    source = None
-    if isinstance(value, str) and value:
-        value = json_load(obj=value, error=False)
-    if isinstance(value, dict):
-        user_name = value.get("user_name")
-        source = value.get("source")
 
-    ret = [x for x in [source, user_name, value] if isinstance(x, str) and x.strip()]
-    return "/".join(ret)
+    devices: str = "devices"
+    users: str = "users"
+    vulnerabilities: str = "vulnerabilities"
 
 
 class SavedQueryGetSchema(ResourcesGetSchema):
@@ -40,11 +45,12 @@ class SavedQueryGetSchema(ResourcesGetSchema):
     folder_id = marshmallow_jsonapi.fields.Str(load_default="", dump_default="")
     creator_ids = marshmallow_jsonapi.fields.List(marshmallow_jsonapi.fields.Str())
     used_in = marshmallow_jsonapi.fields.List(marshmallow_jsonapi.fields.Str())
+    used_adapters = marshmallow_jsonapi.fields.List(marshmallow_jsonapi.fields.Str())
     get_view_data = SchemaBool(load_default=True, dump_default=True)
-    include_usage = SchemaBool(load_default=False, dump_default=False)
+    include_usage = SchemaBool(load_default=True, dump_default=True)
 
     @staticmethod
-    def get_model_cls() -> type:
+    def get_model_cls() -> t.Optional[type]:
         """Pass."""
         return SavedQueryGet
 
@@ -82,7 +88,7 @@ class QueryHistorySchema(BaseSchemaJson):
         type_ = "entities_queries_history_response_schema"
 
     @staticmethod
-    def get_model_cls() -> type:
+    def get_model_cls() -> t.Optional[type]:
         """Pass."""
         return QueryHistory
 
@@ -114,7 +120,7 @@ class QueryHistoryRequestSchema(BaseSchemaJson):
     filter = marshmallow_jsonapi.fields.Str(allow_none=True, load_default="", dump_default="")
 
     @staticmethod
-    def get_model_cls() -> type:
+    def get_model_cls() -> t.Optional[type]:
         """Pass."""
         return QueryHistoryRequest
 
@@ -162,16 +168,17 @@ class SavedQuerySchema(BaseSchemaJson):
     created_by = marshmallow_jsonapi.fields.Str(
         allow_none=True, load_default=None, dump_default=None
     )
-    used_in = marshmallow_jsonapi.fields.List(marshmallow_jsonapi.fields.Str)
+    used_in = marshmallow_jsonapi.fields.List(UnionField(types=[dict, str]))
     module = marshmallow_jsonapi.fields.Str(allow_none=True, load_default=None, dump_default=None)
     access = marshmallow_jsonapi.fields.Nested(
         AccessSchema,
         load_default=Access().to_dict(),
         dump_default=Access().to_dict(),
     )
+    user_archived = SchemaBool(allow_none=True, load_default=False, dump_default=False)
 
     @staticmethod
-    def get_model_cls() -> type:
+    def get_model_cls() -> t.Optional[type]:
         """Pass."""
         return SavedQuery
 
@@ -179,22 +186,6 @@ class SavedQuerySchema(BaseSchemaJson):
         """Pass."""
 
         type_ = "views_details_schema"
-
-
-class FoldersResponseSchema(BaseSchemaJson):
-    """Pass."""
-
-    folders = marshmallow_jsonapi.fields.List(marshmallow_jsonapi.fields.Dict())
-
-    @staticmethod
-    def get_model_cls() -> type:
-        """Pass."""
-        return FoldersResponse
-
-    class Meta:
-        """Pass."""
-
-        type_ = "queries_folders_response_schema"
 
 
 class SavedQueryCreateSchema(BaseSchemaJson):
@@ -215,7 +206,7 @@ class SavedQueryCreateSchema(BaseSchemaJson):
     folder_id = marshmallow_jsonapi.fields.Str(load_default="", dump_default="")
 
     @staticmethod
-    def get_model_cls() -> type:
+    def get_model_cls() -> t.Optional[type]:
         """Pass."""
         return SavedQueryCreate
 
@@ -227,6 +218,187 @@ class SavedQueryCreateSchema(BaseSchemaJson):
 
 class SavedQueryMixins:
     """Pass."""
+
+    @property
+    def folder(self) -> FolderBase:
+        """Pass."""
+        return self.HTTP.CLIENT.folders.queries.find_cached(folder=self.folder_id)
+
+    @property
+    def folder_path(self) -> str:
+        """Pass."""
+        return self.folder.path
+
+    @property
+    def _api(self) -> object:
+        """Pass."""
+        return getattr(self.HTTP.CLIENT, self.module)
+
+    def get_names(self) -> t.List[str]:
+        """Pass."""
+        names: t.List[str] = [
+            x.name
+            for x in self._api.saved_query.get(
+                as_dataclass=True, include_usage=False, get_view_data=False
+            )
+        ]
+        return names
+
+    def move(
+        self,
+        folder: t.Union[str, FolderBase],
+        create: bool = FolderDefaults.create_action,
+        refresh: Refreshables = FolderDefaults.refresh_action,
+        echo: bool = FolderDefaults.echo_action,
+        root: t.Optional[FolderBase] = None,
+    ) -> "SavedQuery":
+        """Move an object to another folder.
+
+        Args:
+            folder (t.Union[str, FolderBase]): folder to move an object to
+            create (bool, optional): create folder if it does not exist
+            refresh (Refreshables, optional): refresh the folders before searching
+            echo (bool, optional): echo output to console
+            root (t.Optional[FolderBase], optional): root folders to use to find folder
+                instead of root folders from self.folder
+        """
+        reason: str = f"Move '{self.folder.path}/@{self.name}' to {folder!r}/@{self.name}"
+        self._check_update_ok(reason=reason)
+
+        if not isinstance(root, FolderBase):
+            root: FolderBase = self.folder.root_folders
+            root.refresh(value=refresh)
+
+        folder: FolderBase = root.find(
+            folder=folder,
+            create=create,
+            refresh=False,
+            echo=echo,
+            minimum_depth=1,
+            reason=reason,
+        )
+        self.folder_id = folder.id
+        return self._api.saved_query._update_handler(sq=self, as_dataclass=True)
+
+    def copy(
+        self,
+        folder: t.Optional[t.Union[str, FolderBase]] = None,
+        name: t.Optional[str] = None,
+        copy_prefix: str = FolderDefaults.copy_prefix,
+        create: bool = FolderDefaults.create_action,
+        echo: bool = FolderDefaults.echo_action,
+        refresh: Refreshables = FolderDefaults.refresh_action,
+        private: bool = False,
+        asset_scope: bool = False,
+        always_cached: bool = False,
+        root: t.Optional[FolderBase] = None,
+    ) -> "SavedQuery":
+        """Create a copy of an object, optionally in a different folder.
+
+        Args:
+            folder (t.Optional[t.Union[str, FolderBase]], optional): Folder to copy an object to
+            name (t.Optional[str], optional): if supplied, name to give copy, otherwise use
+                self.name + copy_prefix
+            copy_prefix (str, optional): value to prepend to current name if no new name supplied
+            create (bool, optional): create folder if it does not exist
+            echo (bool, optional): echo output to console
+            refresh (Refreshables, optional): refresh the folders before searching
+            private (bool, optional): set copy as private, will change default folder used
+            asset_scope (bool, optional): set copy as asset scope, will change default folder used
+            root (t.Optional[FolderBase], optional): root folders to use to find folder
+                instead of root folders from self.folder
+
+        """
+        private: bool = coerce_bool(private)
+        asset_scope: bool = coerce_bool(asset_scope)
+        always_cached: bool = coerce_bool(always_cached)
+
+        names: t.List[str] = self.get_names()
+        name: str = parse_value_copy(
+            default=self.name, value=name, copy_prefix=copy_prefix, existing=names
+        )
+
+        if not isinstance(root, FolderBase):
+            root: FolderBase = self.folder.root_folders
+            root.refresh(value=refresh)
+
+        fallback: t.Optional[FolderBase] = None
+        if asset_scope:
+            # PBUG currently problematic in dev
+            self.HTTP.CLIENT.data_scopes.check_feature_enabled()
+            fallback: t.Optional[FolderBase] = root.path_asset_scope
+
+        default: FolderBase = None if self.folder.read_only else self.folder
+
+        reason: str = f"Copy '{self.folder_path}/@{self.name}' to '{folder}/@{name}'"
+
+        folder: FolderBase = root.resolve_folder(
+            folder=folder,
+            create=create,
+            echo=echo,
+            reason=reason,
+            refresh=False,
+            default=default,
+            private=private,
+            asset_scope=asset_scope,
+            fallback=fallback,
+        )
+        create_obj: SavedQueryCreate = SavedQueryCreate(
+            name=name,
+            view=self.view,
+            description=self.description,
+            always_cached=always_cached,
+            asset_scope=asset_scope,
+            private=private,
+            tags=self.tags,
+            access=self.access,
+            folder_id=folder.id,
+        )
+        create_response_obj = self._api.saved_query._add_from_dataclass(obj=create_obj)
+        created_obj: SavedQuery = self._api.saved_query.get_by_uuid(
+            value=create_response_obj.id, as_dataclass=True
+        )
+        return created_obj
+
+    def _check_update_ok(self, reason: str = ""):
+        """Pass."""
+        errs: t.List[str] = []
+        if self.predefined is True:
+            errs.append("Saved Query is predefined")
+
+        if errs:
+            raise NotAllowedError([f"Unable to {reason}", *errs, "", "While in object:", f"{self}"])
+
+    def delete(
+        self,
+        confirm: bool = FolderDefaults.confirm,
+        echo: bool = FolderDefaults.echo_action,
+        prompt: bool = FolderDefaults.prompt,
+        prompt_default: bool = FolderDefaults.prompt_default,
+    ) -> Metadata:
+        """Delete an object.
+
+        Args:
+            confirm (bool, optional): if not True, will throw exc
+            echo (bool, optional): echo output to console
+            prompt (bool, optional): if confirm is not True and this is True, prompt user
+                to delete an object
+            prompt_default (bool, optional): if prompt is True, default choice to offer user
+                in prompt
+        """
+        reason: str = f"Delete '{self.folder.path}/@{self.name}'"
+        self._check_update_ok(reason=reason)
+        check_confirm_prompt(
+            reason=reason,
+            src=self,
+            value=confirm,
+            prompt=prompt,
+            default=prompt_default,
+            do_echo=echo,
+        )
+        self.delete_response = self.HTTP.CLIENT.devices.saved_query._delete(uuid=self.uuid)
+        self.delete_response.deleted_object = self
+        return self.delete_response
 
     @classmethod
     def create_from_other(cls, other: "SavedQueryMixins") -> "SavedQueryCreate":
@@ -369,8 +541,21 @@ class SavedQueryMixins:
 
         self.view["pageSize"] = value
 
+    def update_description(
+        self, value: str, append: bool = False, as_dataclass: bool = True
+    ) -> t.Union["SavedQuery", dict]:
+        """Pass."""
+        if append and is_str(self.description):
+            value = f"{self.description}{value}"
+        reason: str = "update description to {value}"
+        self._check_update_ok(reason=reason)
+        self.set_description(value=value)
+        apiobj = getattr(self.HTTP.CLIENT, self.module)
+        response = apiobj.saved_query._update_handler(sq=self, as_dataclass=as_dataclass)
+        return response
 
-@dataclasses.dataclass
+
+@dataclasses.dataclass(repr=False)
 class SavedQuery(BaseModel, SavedQueryMixins):
     """Pass."""
 
@@ -407,18 +592,25 @@ class SavedQuery(BaseModel, SavedQueryMixins):
     )
     created_by: t.Optional[str] = dataclasses.field(default=None, metadata={"update": False})
     module: t.Optional[str] = dataclasses.field(default=None, metadata={"update": False})
-    used_in: t.Optional[t.List[str]] = dataclasses.field(default_factory=list)
+    used_in: t.Optional[t.List[t.Union[str, dict]]] = dataclasses.field(default_factory=list)
     access: t.Optional[Access] = dataclasses.field(default_factory=Access)
+    user_archived: t.Optional[bool] = dataclasses.field(default=False, metadata={"update": False})
 
     document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     def __post_init__(self):
         """Pass."""
         self.uuid = self.uuid or self.id
-        self.folder_id = self.folder_id or ""
+        if not is_str(self.folder_id):
+            self.folder_id = ""
+
+    @classmethod
+    def get_tree_type(cls) -> str:
+        """Get the name to use for objects in tree outputs."""
+        return "SavedQuery"
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[type]:
         """Pass."""
         return SavedQuerySchema
 
@@ -428,6 +620,7 @@ class SavedQuery(BaseModel, SavedQueryMixins):
         return [
             "name",
             "uuid",
+            "folder_path",
             "description",
             "tags",
             "query",
@@ -452,12 +645,87 @@ class SavedQuery(BaseModel, SavedQueryMixins):
     @property
     def created_by_str(self) -> str:
         """Pass."""
-        return get_user_source(value=self.created_by)
+        from .system_users import SystemUser
+
+        return SystemUser.get_user_source(value=self.created_by)
 
     @property
     def updated_by_str(self) -> str:
         """Pass."""
-        return get_user_source(value=self.updated_by)
+        from .system_users import SystemUser
+
+        return SystemUser.get_user_source(value=self.updated_by)
+
+    @property
+    def _tree_summary(self) -> dict:
+        """Pass."""
+        return {
+            "name": self.name,
+            "query_type": self.module,
+        }
+
+    @property
+    def _tree_details(self) -> dict:
+        """Pass."""
+        return {
+            "name": self.name,
+            "query_type": self.module,
+            "description": self.description,
+            "uuid": self.uuid,
+            "query": self.query,
+            "tags": self.tags,
+            "fields": self.fields,
+            "is_predefined": self.predefined,
+            "is_referenced": self.is_referenced,
+            "is_private": self.private,
+            "is_always_cached": self.always_cached,
+            "is_asset_scope": self.asset_scope,
+            "is_asset_scope_ready": self.is_asset_scope_query_ready,
+            "created_by": self.created_by_str,
+            "updated_by": self.updated_by_str,
+            "last_updated": self.last_updated_str,
+            "last_run_time": self.last_run_time,
+        }
+
+    def get_tree_entry(self, include_details: bool = False) -> str:
+        """Pass."""
+
+        def to_str(value):
+            return str(value) if isinstance(value, datetime.datetime) else value
+
+        obj: dict = self._tree_details if include_details else self._tree_summary
+        items: t.List[str] = [f"{k}={to_str(v)!r}" for k, v in obj.items()]
+        items: str = ", ".join(items)
+        return f"{self.get_tree_type()}({items})"
+
+    @property
+    def tags_str(self) -> str:
+        """Pass."""
+        return ", ".join(self.tags or [])
+
+    def to_strs(self) -> t.List[str]:
+        """Pass."""
+        items = list(self.col_info.items()) + list(self.col_details.items())
+        return [f"{k}: {v}" for k, v in items]
+
+    def to_tablize(self) -> dict:
+        """Get tablize-able repr of this obj."""
+        col_info = [
+            f"{k.upper()}={textwrap.fill(v or '', width=30)}" for k, v in self.col_info.items()
+        ]
+        col_details = [f"{k}: {v}" for k, v in self.col_details.items()]
+        ret = {}
+        ret["Info"] = "\n".join(col_info)
+        ret["Details"] = "\n".join(col_details)
+        return ret
+
+    @property
+    def str_details(self) -> str:
+        """Pass."""
+        items = {}
+        items.update(self.col_info)
+        items.update(self.col_details)
+        return "\n".join([f"{k.upper()}={v}" for k, v in items.items()])
 
     @property
     def col_details(self) -> dict:
@@ -483,32 +751,11 @@ class SavedQuery(BaseModel, SavedQueryMixins):
         return {
             "name": self.name,
             "uuid": self.uuid,
-            "folder": self.folder_id,
-            "module": self.module,
+            "folder": self.folder_path,
+            "asset_type": self.module,
             "description": self.description if isinstance(self.description, str) else "",
             "tags": self.tags_str,
         }
-
-    @property
-    def tags_str(self) -> str:
-        """Pass."""
-        return ", ".join(self.tags or [])
-
-    def to_strs(self) -> t.List[str]:
-        """Pass."""
-        items = list(self.col_info.items()) + list(self.col_details.items())
-        return [f"{k}: {v}" for k, v in items]
-
-    def to_tablize(self) -> dict:
-        """Get tablize-able repr of this obj."""
-        col_info = [
-            f"{k.upper()}={textwrap.fill(v or '', width=30)}" for k, v in self.col_info.items()
-        ]
-        col_details = [f"{k}: {v}" for k, v in self.col_details.items()]
-        ret = {}
-        ret["Info"] = "\n".join(col_info)
-        ret["Details"] = "\n".join(col_details)
-        return ret
 
 
 @dataclasses.dataclass
@@ -526,7 +773,7 @@ class SavedQueryCreate(BaseModel, SavedQueryMixins):
     folder_id: str = ""
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[type]:
         """Pass."""
         return SavedQueryCreateSchema
 
@@ -538,8 +785,9 @@ class SavedQueryGet(ResourcesGet):
     folder_id: str = ""
     creator_ids: t.Optional[t.List[str]] = dataclasses.field(default_factory=list)
     used_in: t.Optional[t.List[str]] = dataclasses.field(default_factory=list)
+    used_adapters: t.Optional[t.List[str]] = dataclasses.field(default_factory=list)
     get_view_data: bool = True
-    include_usage: bool = False
+    include_usage: bool = True
 
     def __post_init__(self):
         """Pass."""
@@ -549,7 +797,7 @@ class SavedQueryGet(ResourcesGet):
         self.page = self.page if self.page else PaginationRequest()
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[type]:
         """Pass."""
         return SavedQueryGetSchema
 
@@ -712,7 +960,7 @@ class QueryHistoryRequest(BaseModel):
                 if isinstance(check, str):
                     matches.append(check)
 
-        self._log.debug(f"Resolved {prop} values {values} to matches {matches}")
+        self.logger.debug(f"Resolved {prop} values {values} to matches {matches}")
         setattr(self, prop, matches)
         return matches
 
@@ -732,7 +980,7 @@ class QueryHistoryRequest(BaseModel):
         return (search, filter)
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[type]:
         """Pass."""
         return QueryHistoryRequestSchema
 
@@ -880,159 +1128,3 @@ class QueryHistory(BaseModel):
     def _props_results(cls) -> t.List[str]:
         """Pass."""
         return ["status", "results_count"]
-
-
-# WIP: folders
-FOLDER_SEP: str = "//"
-
-
-# WIP: folders
-@dataclasses.dataclass
-class Folder(BaseModel):  # pragma: no cover
-    """Pass."""
-
-    _id: str
-    children_ids: t.List[str]
-    depth: int
-    name: str
-    root_type: str
-    created_at: datetime.datetime = dataclasses.field(
-        metadata={"dataclasses_json": {"mm_field": SchemaDatetime()}}
-    )
-    updated_at: datetime.datetime = dataclasses.field(
-        metadata={"dataclasses_json": {"mm_field": SchemaDatetime()}}
-    )
-    path: t.List[str]
-    children: t.Optional[t.List[dict]] = dataclasses.field(default_factory=list)
-    root_id: t.Optional[str] = None
-    created_by: t.Optional[str] = None
-    parent_id: t.Optional[str] = None
-    read_only: bool = False
-    document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
-
-    PARENT: t.ClassVar[t.Optional[t.Union["Folder", "FoldersResponse"]]] = None
-
-    @property
-    def id(self) -> str:
-        """Pass."""
-        return self._id
-
-    @property
-    def path_str(self) -> str:
-        """Pass."""
-        return f" {FOLDER_SEP} ".join(self.path)
-
-    @property
-    def children_count(self) -> int:
-        """Pass."""
-        return len(self.children_ids)
-
-    @property
-    def models(self) -> t.List["Folder"]:
-        """Pass."""
-        schema = self.schema(many=True)
-        items = schema.load(self.children, unknown=marshmallow.INCLUDE)
-        for item in items:
-            item.HTTP = self.HTTP
-            item.PARENT = self
-        return items
-
-    def find_folder(self, value: str) -> "Folder":
-        """Pass."""
-        err = f"No folder named {value!r} found under {self.path_str!r}"
-        if not self.children:
-            raise ApiError(f"{err}No folders exist under {self.path_str!r}")
-
-        for model in self.models:
-            if model.name == value:
-                return model
-
-        valids = "\n" + "\n".join([str(x) for x in self.models])
-        raise ApiError(f"{err}, valids:{valids}")
-
-    def __str__(self) -> str:
-        """Pass."""
-        children = [x.name for x in self.models]
-        items = [
-            f"id: {self.id!r}",
-            f"name: {self.name!r}",
-            f"path: {self.path_str!r}",
-            f"children: {children}",
-        ]
-        items = ", ".join(items)
-        return f"Folder({items})"
-
-    def __repr__(self) -> str:
-        """Pass."""
-        return self.__str__()
-
-
-# WIP: folders
-@dataclasses.dataclass
-class FoldersResponse(BaseModel):  # pragma: no cover
-    """Pass."""
-
-    folders: t.List[dict]
-    document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
-
-    @staticmethod
-    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
-        """Pass."""
-        return FoldersResponseSchema
-
-    @property
-    def models(self) -> t.List[Folder]:
-        """Pass."""
-        schema = Folder.schema(many=True)
-        items = schema.load(self.folders, unknown=marshmallow.INCLUDE)
-        for item in items:
-            item.HTTP = self.HTTP
-            item.PARENT = self
-        return items
-
-    def find_folder(self, value: str) -> "Folder":
-        """Pass."""
-        for model in self.models:
-            if model.name == value:
-                return model
-
-        valids = "\n" + "\n".join([str(x) for x in self.models])
-        raise ApiError(f"No root folder named {value!r} found, valids:{valids}")
-
-    def search(self, value: t.Union[str, t.List[str]]) -> Folder:
-        """Find a folder by path."""
-        if isinstance(value, str):
-            value = [x.strip() for x in value.split(FOLDER_SEP) if x.strip()]
-
-        if not isinstance(value, list) and value and all([isinstance(x, str) and x for x in value]):
-            msg = (
-                f"Invalid folder search value {value!r} ({type(value)})\n"
-                f"Folder search value must be a list of str or a str separated by {FOLDER_SEP!r}"
-            )
-            raise ApiError(msg)
-
-        folder = None
-        for item in value:
-            folder = folder.find_folder(value=item) if folder else self.find_folder(value=item)
-        return folder
-
-    def get_tree(self, models: t.Optional[t.List["Folder"]] = None):
-        """Pass."""
-        models = self.models if models is None else models
-
-        items = []
-        for model in models:
-            items.append(f"{model.path_str}")
-            items += self.get_tree(models=model.models)
-        return items
-
-    def __str__(self) -> str:
-        """Pass."""
-        items = ",\n".join(
-            [f"Folder(name={x.name!r}, children={[y.name for y in x.models]})" for x in self.models]
-        )
-        return items
-
-    def __repr__(self) -> str:
-        """Pass."""
-        return self.__str__()

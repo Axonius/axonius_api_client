@@ -554,7 +554,9 @@ class Instances(ModelMixins):
         response["execute_result"] = self._admin_script_execute(uuid=response["file_uuid"])
         return response
 
-    def admin_script_upload_path(self, path: Union[str, pathlib.Path], **kwargs) -> dict:
+    def admin_script_upload_path(
+        self, path: Union[str, pathlib.Path], path_verify: bool = True, **kwargs
+    ) -> dict:
         """Upload an admin script from a file or URL and execute it.
 
         Args:
@@ -567,8 +569,10 @@ class Instances(ModelMixins):
             parser = UrlParser(url=path)
             path_part = pathlib.Path(parser.parsed.path)
             file_name = path_part.name
-
-            response = requests.get(url=path, verify=False)
+            request: dict = {}
+            request["url"] = path
+            request["verify"] = path_verify
+            response = requests.get(**request)
             file_content = response.content
         else:
             path_part, file_content = path_read(obj=path, binary=True, is_json=False)

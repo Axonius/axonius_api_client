@@ -13,7 +13,6 @@ class TestGrpDiscoverCmdGet:
     def test_json_exports(self, request, monkeypatch, export_format):
         runner = load_clirunner(request, monkeypatch)
         with runner.isolated_filesystem():
-
             args1 = [
                 "system",
                 "discover",
@@ -34,7 +33,6 @@ class TestGrpDiscoverCmdGet:
     def test_str_exports(self, request, monkeypatch, export_format):
         runner = load_clirunner(request, monkeypatch)
         with runner.isolated_filesystem():
-
             args1 = [
                 "system",
                 "discover",

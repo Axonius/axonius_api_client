@@ -11,6 +11,7 @@ from . import (
     dashboard_spaces,
     data_scopes,
     enforcements,
+    folders,
     generic,
     instances,
     lifecycle,
@@ -55,4 +56,5 @@ __all__ = (
     "selection",
     "dashboard_spaces",
     "spaces_export",
+    "folders",
 )

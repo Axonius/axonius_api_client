@@ -198,6 +198,106 @@ class Assets(ApiEndpointGroup):
 
 
 @dataclasses.dataclass(eq=True, frozen=True, repr=False)
+class FoldersQueries(ApiEndpointGroup):
+    """Pass."""
+
+    get: ApiEndpoint = ApiEndpoint(
+        method="get",
+        path="api/queries/folders",
+        request_schema_cls=None,
+        request_model_cls=None,
+        response_schema_cls=json_api.folders.queries.FoldersSchema,
+        response_model_cls=json_api.folders.queries.FoldersModel,
+    )
+
+    create: ApiEndpoint = ApiEndpoint(
+        method="post",
+        path="api/queries/folders",
+        request_schema_cls=json_api.folders.queries.CreateFolderRequestSchema,
+        request_model_cls=json_api.folders.queries.CreateFolderRequestModel,
+        response_schema_cls=json_api.folders.queries.CreateFolderResponseSchema,
+        response_model_cls=json_api.folders.queries.CreateFolderResponseModel,
+    )
+
+    delete: ApiEndpoint = ApiEndpoint(
+        method="delete",
+        path="api/queries/folders/{id}",
+        request_schema_cls=None,
+        request_model_cls=None,
+        response_schema_cls=json_api.folders.queries.DeleteFolderResponseSchema,
+        response_model_cls=json_api.folders.queries.DeleteFolderResponseModel,
+    )
+
+    rename: ApiEndpoint = ApiEndpoint(
+        method="put",
+        path="api/queries/folders/{id}/rename",
+        request_schema_cls=json_api.folders.queries.RenameFolderRequestSchema,
+        request_model_cls=json_api.folders.queries.RenameFolderRequestModel,
+        response_schema_cls=json_api.folders.queries.RenameFolderResponseSchema,
+        response_model_cls=json_api.folders.queries.RenameFolderResponseModel,
+    )
+
+    move: ApiEndpoint = ApiEndpoint(
+        method="put",
+        path="api/queries/folders/{id}/parent",
+        request_schema_cls=json_api.folders.queries.MoveFolderRequestSchema,
+        request_model_cls=json_api.folders.queries.MoveFolderRequestModel,
+        response_schema_cls=json_api.folders.queries.MoveFolderResponseSchema,
+        response_model_cls=json_api.folders.queries.MoveFolderResponseModel,
+    )
+
+
+@dataclasses.dataclass(eq=True, frozen=True, repr=False)
+class FoldersEnforcements(ApiEndpointGroup):
+    """Pass."""
+
+    get: ApiEndpoint = ApiEndpoint(
+        method="get",
+        path="api/enforcements_folders",
+        request_schema_cls=None,
+        request_model_cls=None,
+        response_schema_cls=json_api.folders.enforcements.FoldersSchema,
+        response_model_cls=json_api.folders.enforcements.FoldersModel,
+    )
+
+    create: ApiEndpoint = ApiEndpoint(
+        method="post",
+        path="api/enforcements_folders",
+        request_schema_cls=json_api.folders.enforcements.CreateFolderRequestSchema,
+        request_model_cls=json_api.folders.enforcements.CreateFolderRequestModel,
+        response_schema_cls=json_api.folders.enforcements.CreateFolderResponseSchema,
+        response_model_cls=json_api.folders.enforcements.CreateFolderResponseModel,
+    )
+
+    delete: ApiEndpoint = ApiEndpoint(
+        method="delete",
+        path="api/enforcements_folders/{id}",
+        request_schema_cls=None,
+        request_model_cls=None,
+        response_schema_cls=json_api.folders.enforcements.DeleteFolderResponseSchema,
+        response_model_cls=json_api.folders.enforcements.DeleteFolderResponseModel,
+    )
+
+    rename: ApiEndpoint = ApiEndpoint(
+        method="put",
+        path="api/enforcements_folders/{id}/rename",
+        request_schema_cls=json_api.folders.enforcements.RenameFolderRequestSchema,
+        request_model_cls=json_api.folders.enforcements.RenameFolderRequestModel,
+        response_schema_cls=json_api.folders.enforcements.RenameFolderResponseSchema,
+        response_model_cls=json_api.folders.enforcements.RenameFolderResponseModel,
+    )
+
+    move: ApiEndpoint = ApiEndpoint(
+        method="put",
+        path="api/enforcements_folders/{id}/parent",
+        request_schema_cls=json_api.folders.enforcements.MoveFolderRequestSchema,
+        request_model_cls=json_api.folders.enforcements.MoveFolderRequestModel,
+        response_schema_cls=json_api.folders.enforcements.MoveFolderResponseSchema,
+        response_model_cls=json_api.folders.enforcements.MoveFolderResponseModel,
+    )
+
+
+@dataclasses.dataclass(eq=True, frozen=True, repr=False)
 class SavedQueries(ApiEndpointGroup):
     """Pass."""
 
@@ -210,16 +310,14 @@ class SavedQueries(ApiEndpointGroup):
         response_model_cls=json_api.saved_queries.SavedQuery,
     )
 
-    # WIP: folders
-    get_folders: ApiEndpoint = ApiEndpoint(
+    get_count: ApiEndpoint = ApiEndpoint(
         method="get",
-        path="api/V4.5/queries/folders",
-        request_schema_cls=None,
-        request_model_cls=None,
-        response_schema_cls=json_api.saved_queries.FoldersResponseSchema,
-        response_model_cls=json_api.saved_queries.FoldersResponse,
+        path="api/queries/saved/count",
+        request_schema_cls=json_api.saved_queries.SavedQueryGetSchema,
+        request_model_cls=json_api.saved_queries.SavedQueryGet,
+        response_schema_cls=json_api.generic.IntValueSchema,
+        response_model_cls=json_api.generic.IntValue,
     )
-    # PBUG: response not properly modeled
 
     get_tags: ApiEndpoint = ApiEndpoint(
         method="get",
@@ -773,25 +871,34 @@ class Enforcements(ApiEndpointGroup):
 
     get_sets: ApiEndpoint = ApiEndpoint(
         method="get",
-        path="api/V4.5/enforcements",
+        path="api/enforcements",
         request_schema_cls=json_api.resources.ResourcesGetSchema,
         request_model_cls=json_api.resources.ResourcesGet,
-        response_schema_cls=json_api.enforcements.SetBasicSchema,
-        response_model_cls=json_api.enforcements.SetBasic,
+        response_schema_cls=json_api.enforcements.EnforcementBasicSchema,
+        response_model_cls=json_api.enforcements.EnforcementBasicModel,
+    )
+
+    update_description: ApiEndpoint = ApiEndpoint(
+        method="put",
+        path="api/enforcements/{uuid}/description",
+        request_schema_cls=json_api.enforcements.UpdateDescriptionRequestSchema,
+        request_model_cls=json_api.enforcements.UpdateDescriptionRequestModel,
+        response_schema_cls=None,
+        response_model_cls=None,
     )
 
     get_set: ApiEndpoint = ApiEndpoint(
         method="get",
-        path="api/V4.5/enforcements/{uuid}",
+        path="api/enforcements/{uuid}",
         request_schema_cls=None,
         request_model_cls=None,
-        response_schema_cls=json_api.enforcements.SetFullSchema,
-        response_model_cls=json_api.enforcements.SetFull,
+        response_schema_cls=json_api.enforcements.EnforcementFullSchema,
+        response_model_cls=json_api.enforcements.EnforcementFullModel,
     )
 
     delete_set: ApiEndpoint = ApiEndpoint(
         method="delete",
-        path="api/V4.5/enforcements",
+        path="api/enforcements",
         request_schema_cls=json_api.generic.DictValueSchema,
         request_model_cls=json_api.generic.DictValue,
         response_schema_cls=json_api.generic.DeletedSchema,
@@ -800,34 +907,43 @@ class Enforcements(ApiEndpointGroup):
 
     create_set: ApiEndpoint = ApiEndpoint(
         method="post",
-        path="api/V4.5/enforcements",
-        request_schema_cls=json_api.enforcements.CreateSchema,
-        request_model_cls=json_api.enforcements.Create,
-        response_schema_cls=json_api.enforcements.SetFullSchema,
-        response_model_cls=json_api.enforcements.SetFull,
+        path="api/enforcements",
+        request_schema_cls=json_api.enforcements.CreateEnforcementSchema,
+        request_model_cls=json_api.enforcements.CreateEnforcementModel,
+        response_schema_cls=json_api.enforcements.EnforcementFullSchema,
+        response_model_cls=json_api.enforcements.EnforcementFullModel,
     )
 
     update_set: ApiEndpoint = ApiEndpoint(
         method="put",
-        path="api/V4.5/enforcements/{uuid}",
-        request_schema_cls=json_api.enforcements.UpdateRequestSchema,
-        request_model_cls=json_api.enforcements.UpdateRequest,
-        response_schema_cls=json_api.enforcements.UpdateResponseSchema,
-        response_model_cls=json_api.enforcements.UpdateResponse,
+        path="api/enforcements/{uuid}",
+        request_schema_cls=json_api.enforcements.UpdateEnforcementRequestSchema,
+        request_model_cls=json_api.enforcements.UpdateEnforcementRequestModel,
+        response_schema_cls=json_api.enforcements.UpdateEnforcementResponseSchema,
+        response_model_cls=json_api.enforcements.UpdateEnforcementResponseModel,
+    )
+
+    move_sets: ApiEndpoint = ApiEndpoint(
+        method="put",
+        path="api/enforcements/move_to_folder",
+        request_schema_cls=json_api.enforcements.MoveEnforcementsRequestSchema,
+        request_model_cls=json_api.enforcements.MoveEnforcementsRequestModel,
+        response_schema_cls=json_api.enforcements.MoveEnforcementsResponseSchema,
+        response_model_cls=json_api.enforcements.MoveEnforcementsResponseModel,
     )
 
     copy_set: ApiEndpoint = ApiEndpoint(
         method="POST",
-        path="api/V4.5/enforcements/duplicate/{uuid}",
-        request_schema_cls=json_api.enforcements.DuplicateSchema,
-        request_model_cls=json_api.enforcements.Duplicate,
-        response_schema_cls=json_api.enforcements.SetFullSchema,
-        response_model_cls=json_api.enforcements.SetFull,
+        path="api/enforcements/duplicate/{uuid}",
+        request_schema_cls=json_api.enforcements.CopyEnforcementSchema,
+        request_model_cls=json_api.enforcements.CopyEnforcementModel,
+        response_schema_cls=json_api.enforcements.EnforcementFullSchema,
+        response_model_cls=json_api.enforcements.EnforcementFullModel,
     )
 
     get_action_types: ApiEndpoint = ApiEndpoint(
         method="get",
-        path="api/V4.5/enforcements/actions",
+        path="api/enforcements/actions",
         request_schema_cls=None,
         request_model_cls=None,
         response_schema_cls=json_api.enforcements.ActionTypeSchema,
@@ -835,17 +951,17 @@ class Enforcements(ApiEndpointGroup):
     )
     run_set_against_trigger: ApiEndpoint = ApiEndpoint(
         method="put",
-        path="api/V4.5/enforcements/{uuid}/trigger",
-        request_schema_cls=json_api.enforcements.RunSetAgainstTriggerRequestSchema,
-        request_model_cls=json_api.enforcements.RunSetAgainstTriggerRequest,
+        path="api/enforcements/{uuid}/trigger",
+        request_schema_cls=json_api.enforcements.RunEnforcementAgainstTriggerRequestSchema,
+        request_model_cls=json_api.enforcements.RunEnforcementAgainstTriggerRequestModel,
         response_schema_cls=json_api.generic.NameSchema,
         response_model_cls=json_api.generic.Name,
     )
     run_sets_against_trigger: ApiEndpoint = ApiEndpoint(
         method="post",
-        path="api/V4.5/enforcements/trigger",
-        request_schema_cls=json_api.enforcements.RunSetsAgainstTriggerRequestSchema,
-        request_model_cls=json_api.enforcements.RunSetsAgainstTriggerRequest,
+        path="api/enforcements/trigger",
+        request_schema_cls=json_api.enforcements.RunEnforcementsAgainstTriggerRequestSchema,
+        request_model_cls=json_api.enforcements.RunEnforcementsAgainstTriggerRequestModel,
         response_schema_cls=json_api.generic.ListDictValueSchema,
         response_model_cls=json_api.generic.ListDictValue,
     )
@@ -1195,6 +1311,8 @@ class ApiEndpoints(BaseData):
     openapi: ApiEndpointGroup = OpenAPISpec()
     data_scopes: ApiEndpointGroup = DataScopes()
     dashboard_spaces: ApiEndpointGroup = DashboardSpaces()
+    folders_queries: ApiEndpointGroup = FoldersQueries()
+    folders_enforcements: ApiEndpointGroup = FoldersEnforcements()
 
     @classmethod
     def get_groups(cls) -> Dict[str, ApiEndpointGroup]:

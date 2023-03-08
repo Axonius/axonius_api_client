@@ -9,8 +9,9 @@ import marshmallow
 import marshmallow_jsonapi
 from cachetools import TTLCache, cached
 
-from .base import BaseModel, BaseSchema, BaseSchemaJson
+from .base import BaseModel, BaseSchemaJson
 from .custom_fields import SchemaBool, SchemaDatetime, get_field_dc_mm
+from .data_scopes import DataScope
 
 
 def parse_cat_actions(raw: dict) -> dict:
@@ -118,7 +119,7 @@ class SystemRoleSchema(BaseSchemaJson):
     users_count = marshmallow_jsonapi.fields.Int(required=False, load_default=0, dump_default=0)
 
     @staticmethod
-    def get_model_cls() -> type:
+    def get_model_cls() -> t.Optional[type]:
         """Pass."""
         return SystemRole
 
@@ -153,7 +154,7 @@ class SystemRoleUpdateSchema(BaseSchemaJson):
         type_ = "roles_schema"
 
     @staticmethod
-    def get_model_cls() -> type:
+    def get_model_cls() -> t.Optional[type]:
         """Pass."""
         return SystemRoleUpdate
 
@@ -166,7 +167,7 @@ class SystemRoleCreateSchema(BaseSchemaJson):
     data_scope_restriction = marshmallow_jsonapi.fields.Dict(required=False)
 
     @staticmethod
-    def get_model_cls() -> type:
+    def get_model_cls() -> t.Optional[type]:
         """Pass."""
         return SystemRoleCreate
 
@@ -216,7 +217,7 @@ class SystemRole(BaseModel):
         return fix_data_scope_restriction(data)
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[type]:
         """Pass."""
         return SystemRoleSchema
 
@@ -225,21 +226,31 @@ class SystemRole(BaseModel):
         self.id = self.uuid if self.id is None and self.uuid is not None else self.id
         self.data_scope_restriction = build_data_scope_restriction(self.data_scope_restriction)
 
-    def to_dict_old(self, data_scopes: t.Optional[t.List[dict]] = None) -> dict:
+    def to_dict_old(self) -> dict:
         """Pass."""
-        data_scopes = data_scopes or []
         obj = self.to_dict()
         obj["permissions_flat"] = self.permissions_flat()
         obj["permissions_flat_descriptions"] = self.permissions_flat_descriptions()
-
-        data_scope_name = None
-        if self.data_scope_id:
-            data_scope = [x for x in data_scopes if x.uuid == self.data_scope_id]
-            if data_scope:
-                data_scope_name = data_scope[0].name
-
-        obj["data_scope_name"] = data_scope_name
+        obj["data_scope_name"] = self.data_scope_name
         return obj
+
+    @property
+    def data_scope_name(self) -> t.Optional[str]:
+        """Pass."""
+        if isinstance(self.data_scope, DataScope):
+            return self.data_scope.name
+        return None
+
+    @property
+    def data_scope(self) -> t.Optional[DataScope]:
+        """Pass."""
+        if not hasattr(self, "_data_scope"):
+            self._data_scope = None
+            if isinstance(self.data_scope_id, str) and self.data_scope_id.strip():
+                self._data_scope = self.HTTP.CLIENT.data_scopes.get_cached_single(
+                    value=self.data_scope_id
+                )
+        return self._data_scope
 
     @property
     def data_scope_id(self) -> t.Optional[str]:
@@ -297,7 +308,7 @@ class SystemRoleUpdate(BaseModel):
     data_scope_restriction: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[type]:
         """Pass."""
         return SystemRoleUpdateSchema
 
@@ -311,7 +322,7 @@ class SystemRoleCreate(BaseModel):
     data_scope_restriction: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[type]:
         """Pass."""
         return SystemRoleCreateSchema
 

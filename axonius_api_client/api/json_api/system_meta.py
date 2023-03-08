@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 """Models for API requests & responses."""
+import typing as t
+
 import marshmallow
 import marshmallow_jsonapi
 
@@ -39,6 +41,6 @@ class SystemMetaSchema(BaseSchemaJson):
         return data
 
     @staticmethod
-    def get_model_cls() -> type:
+    def get_model_cls() -> t.Optional[type]:
         """Pass."""
         return dict

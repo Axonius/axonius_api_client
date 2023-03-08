@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 """Exceptions and warnings."""
-from typing import List, Optional, Union
+import typing as t
 
 import requests
 
 
-def get_exc_str(exc: Optional[Exception] = None) -> str:
+def get_exc_str(exc: t.Optional[Exception] = None) -> str:
     """Pass."""
     if exc:
         return f"Original exception {type(exc)}: {exc}"
@@ -35,15 +35,84 @@ class UnknownFieldSchema(ApiWarning):
 class AxonError(Exception):
     """Base class for all exceptions in this package."""
 
-    def __init__(self, msg):
+    def __init__(self, msg: t.Union[str, t.List[t.Any]]):
         """Pass."""
         if isinstance(msg, (list, tuple)):
             msg = "\n".join([str(x) for x in msg])
         super().__init__(msg)
 
 
+class AxonTypeError(AxonError):
+    """Pass."""
+
+    def __init__(
+        self,
+        attr: str,
+        value: t.Any,
+        expected: t.Any,
+        src: t.Any = None,
+        extra: t.Any = None,
+    ):
+        """Pass."""
+        self.src: t.Any = src
+        self.attr: str = attr
+        self.value: t.Any = value
+        self.expected: t.Any = expected
+        self.extra: t.Any = extra
+        err: str = f"Incorrect value type supplied to {attr!r}"
+        msgs: t.List[str] = [
+            err,
+            "",
+            f"Source: {src}",
+            f"Supplied value: {value!r}",
+            f"Supplied value type: {type(value)}",
+            f"Expected value type: {expected!r}",
+            "",
+            err,
+        ]
+        if extra:
+            if isinstance(extra, (list, tuple)):
+                msgs += [str(x) for x in extra]
+            else:
+                msgs.append(str(extra))
+        super().__init__(msgs)
+
+
 class ApiError(AxonError):
     """Errors for API models."""
+
+
+class ConfirmNotTrue(AxonError):
+    """Error for when confirm != True."""
+
+    def __init__(
+        self,
+        confirm: t.Any = False,
+        prompt: t.Any = False,
+        reason: t.Any = "",
+        src: t.Any = None,
+        extra: t.Any = None,
+    ):
+        """Pass."""
+        self.confirm: t.Any = confirm
+        self.reason: t.Any = reason
+        msgs: t.List[str] = [
+            f"Unable to {reason}",
+            f"confirm is {confirm} and prompt is {prompt}, confirm must be {True}",
+        ]
+        if src is not None:
+            msgs += ["", "While in object:", f"{src!r}"]
+
+        if extra:
+            if isinstance(extra, (list, tuple)):
+                msgs += [str(x) for x in extra]
+            else:
+                msgs.append(str(extra))
+        super().__init__(msgs)
+
+
+class NotAllowedError(AxonError):
+    """Error when something not allowed."""
 
 
 class ToolsError(AxonError):
@@ -61,21 +130,27 @@ class NotFoundError(ApiError):
 class SavedQueryNotFoundError(NotFoundError):
     """Error when something is not found."""
 
-    def __init__(self, details: str, sqs: List[Union[dict, object]]):
+    def __init__(self, details: str, sqs: t.List[t.Union[dict, object]]):
         """Pass."""
         from .parsers.tables import tablize_sqs
 
         self.sqs = sqs
         self.details = details
         self.msg = f"Saved Query not found with {details}"
-        self.tablemsg = tablize_sqs(data=sqs, err=self.msg)
+        try:
+            barrier = "#" * 80
+            barrier = f"\n{barrier}\n"
+            details = barrier + barrier.join([x.str_details for x in sqs])
+            self.tablemsg = [self.msg, "", details, "", self.msg]
+        except Exception:
+            self.tablemsg = tablize_sqs(data=sqs, err=self.msg)
         super().__init__(self.tablemsg)
 
 
 class SavedQueryTagsNotFoundError(SavedQueryNotFoundError):
     """Error when something is not found."""
 
-    def __init__(self, value: List[str], valid: List[str]):
+    def __init__(self, value: t.List[str], valid: t.List[str]):
         """Pass."""
         self.value = value
         self.valid = valid
@@ -149,7 +224,9 @@ class CnxAddError(CnxError):
 class ResponseError(ApiError):
     """Errors when checking responses."""
 
-    def __init__(self, msg: Optional[str] = None, response=None, exc: Optional[Exception] = None):
+    def __init__(
+        self, msg: t.Optional[str] = None, response=None, exc: t.Optional[Exception] = None
+    ):
         """Error in responses received from REST API.
 
         Args:
@@ -165,7 +242,7 @@ class ResponseError(ApiError):
 
     @classmethod
     def build_errmsg(
-        cls, response, msg: Optional[str] = None, exc: Optional[Exception] = None
+        cls, response, msg: t.Optional[str] = None, exc: t.Optional[Exception] = None
     ) -> str:
         """Build an error message from a response.
 
@@ -292,8 +369,8 @@ class RequestError(ApiError):
         self,
         api_endpoint,
         err: str,
-        details: Optional[List[str]] = None,
-        exc: Optional[Exception] = None,
+        details: t.Optional[t.List[str]] = None,
+        exc: t.Optional[Exception] = None,
     ):
         """Pass."""
         self.api_endpoint = api_endpoint
@@ -344,7 +421,7 @@ class ResponseLoadObjectError(RequestError):
 class FeatureNotEnabledError(ApiError):
     """Pass."""
 
-    def __init__(self, name: str, extra: Optional[str] = None):
+    def __init__(self, name: str, extra: t.Optional[str] = None):
         """Pass."""
         msg = (
             f"The {name} feature is not enabled on this instance, "
@@ -368,4 +445,33 @@ class GrabberError(ApiError):
 
 
 class GrabberWarning(ApiWarning):
+    """Pass."""
+
+
+class FolderAlreadyExistsError(AlreadyExists):
+    """Error when something exists with same name."""
+
+
+class FolderNotFoundError(NotFoundError):
+    """Error when something is not found."""
+
+    def __init__(self, msg: str, folder: t.Optional[object] = None):
+        """Pass."""
+        self.folder: t.Optional[object] = folder
+        super().__init__(msg)
+
+
+class SearchError(AxonError):
+    """Pass."""
+
+
+class SearchUnmatchedError(SearchError):
+    """Pass."""
+
+
+class SearchNoMatchesError(SearchError):
+    """Pass."""
+
+
+class SearchNoObjectsError(SearchError):
     """Pass."""

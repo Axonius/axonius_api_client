@@ -5,6 +5,8 @@
 Shell Quoting Rules
 ###############################################
 
+TBD: Add to axonshell --help-detailed
+
 Different shells (powershell, cmd, bash, zsh) have their own nested quoting rules.
 
 This becomes important when supplying queries built from the Query Wizard in the GUI,

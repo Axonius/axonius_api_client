@@ -3,6 +3,7 @@
 import datetime
 
 import pytest
+
 from axonius_api_client.api import Instances, json_api
 from axonius_api_client.api.api_endpoints import ApiEndpoints
 from axonius_api_client.exceptions import FeatureNotEnabledError, NotFoundError
@@ -137,7 +138,7 @@ class TestInstancesPublic(InstancesBase):
 
     def test_admin_script_upload_path_url(self, apiobj):
         path = f"{apiobj.http.url}/{ApiEndpoints.system_settings.meta_about.path}"
-        data = apiobj.admin_script_upload_path(path=path)
+        data = apiobj.admin_script_upload_path(path=path, path_verify=False)
         assert isinstance(data, dict) and data
         assert data["file_name"] == "about"
         assert isinstance(data["file_uuid"], str) and data["file_uuid"]

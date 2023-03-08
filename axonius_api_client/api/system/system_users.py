@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """API for working with system users."""
-from typing import Generator, List, Optional, Tuple, Union
+import typing as t
+
+import cachetools
 
 from ...constants.api import MAX_PAGE_SIZE
 from ...exceptions import ApiError, NotFoundError
@@ -10,11 +12,14 @@ from .. import json_api
 from ..api_endpoints import ApiEndpoints
 from ..mixins import ModelMixins
 
+CACHE_GET: cachetools.TTLCache = cachetools.TTLCache(maxsize=1024, ttl=60)
+MODEL = json_api.system_users.SystemUser
+
 
 class SystemUsers(ModelMixins):
     """API for working with system users."""
 
-    def get(self, generator: bool = False) -> Union[Generator[dict, None, None], List[dict]]:
+    def get(self, generator: bool = False) -> t.Union[t.Generator[dict, None, None], t.List[dict]]:
         """Get Axonius system users.
 
         Examples:
@@ -31,10 +36,8 @@ class SystemUsers(ModelMixins):
         gen = self.get_generator()
         return gen if generator else list(gen)
 
-    def get_generator(self) -> Generator[dict, None, None]:
+    def get_generator(self) -> t.Generator[dict, None, None]:
         """Get Axonius system users using a generator."""
-        system_roles = self.roles.get()
-
         offset = 0
 
         while True:
@@ -45,7 +48,32 @@ class SystemUsers(ModelMixins):
                 break
 
             for row in rows:
-                yield row.to_dict_old(system_roles=system_roles)
+                yield row.to_dict_old()
+
+    def get_cached_single(self, value: t.Union[str, dict, MODEL]) -> MODEL:
+        """Pass."""
+        name = MODEL._get_attr_value(value=value, attr="user_name")
+        uuid = MODEL._get_attr_value(value=value, attr="uuid")
+        items = self.get_cached()
+        for item in items:
+            if name == item.user_name or uuid == item.uuid:
+                return item
+
+        err = f"No user found with name of {name!r} or UUID of {uuid!r}"
+        raise NotFoundError(tablize_users(users=[x.to_dict_old() for x in items], err=err))
+
+    @cachetools.cached(cache=CACHE_GET)
+    def get_cached(self) -> t.List[MODEL]:
+        """Get Axonius system users using a cache mechanism."""
+        offset = 0
+        ret = []
+        while True:
+            rows = self._get(offset=offset)
+            offset += len(rows)
+            ret += rows
+            if not rows:
+                break
+        return ret
 
     def get_by_name(self, name: str) -> dict:
         """Get a user by name.
@@ -316,8 +344,8 @@ class SystemUsers(ModelMixins):
         return self._tokens_generate(uuid=user["uuid"], user_name=user["user_name"])
 
     def email_password_reset_link(
-        self, name: str, email: Optional[str] = None, for_new_user: bool = False, link: str = ""
-    ) -> Tuple[str, str]:
+        self, name: str, email: t.Optional[str] = None, for_new_user: bool = False, link: str = ""
+    ) -> t.Tuple[str, str]:
         """Email a password reset link for a user.
 
         Examples:
@@ -372,9 +400,7 @@ class SystemUsers(ModelMixins):
         self._tokens_notify(uuid=user["uuid"], email=email, invite=for_new_user)
         return link, email
 
-    def _get(
-        self, limit: int = MAX_PAGE_SIZE, offset: int = 0
-    ) -> List[json_api.system_users.SystemUser]:
+    def _get(self, limit: int = MAX_PAGE_SIZE, offset: int = 0, **kwargs) -> t.List[MODEL]:
         """Direct API method to get all users.
 
         Args:
@@ -382,19 +408,20 @@ class SystemUsers(ModelMixins):
             offset: start at row N
         """
         api_endpoint = ApiEndpoints.system_users.get
-        request_obj = api_endpoint.load_request(page={"limit": limit, "offset": offset})
+        kwargs.setdefault("page", {"limit": limit, "offset": offset})
+        request_obj = api_endpoint.load_request(**kwargs)
         return api_endpoint.perform_request(http=self.auth.http, request_obj=request_obj)
 
     def _add(
         self,
         user_name: str,
         role_id: str,
-        password: Optional[str] = None,
+        password: t.Optional[str] = None,
         auto_generated_password: bool = False,
         first_name: str = "",
         last_name: str = "",
         email: str = "",
-    ) -> json_api.system_users.SystemUser:
+    ) -> MODEL:
         """Direct API method to add a user.
 
         Args:
@@ -418,7 +445,7 @@ class SystemUsers(ModelMixins):
         )
         return api_endpoint.perform_request(http=self.auth.http, request_obj=request_obj)
 
-    def _delete(self, uuid: str) -> json_api.system_users.SystemUser:
+    def _delete(self, uuid: str) -> MODEL:
         """Direct API method to delete a user.
 
         Args:
@@ -434,15 +461,15 @@ class SystemUsers(ModelMixins):
         user_name: str,
         role_id: str,
         password: str,
-        first_name: Optional[str] = None,
-        last_name: Optional[str] = None,
-        email: Optional[str] = None,
-        last_updated: Optional[str] = None,
-        source: Optional[str] = None,
-        pic_name: Optional[str] = None,
-        ignore_role_assignment_rules: Optional[bool] = None,
+        first_name: t.Optional[str] = None,
+        last_name: t.Optional[str] = None,
+        email: t.Optional[str] = None,
+        last_updated: t.Optional[str] = None,
+        source: t.Optional[str] = None,
+        pic_name: t.Optional[str] = None,
+        ignore_role_assignment_rules: t.Optional[bool] = None,
         **kwargs,
-    ) -> json_api.system_users.SystemUser:
+    ) -> MODEL:
         """Direct API method to update a user.
 
         Args:
@@ -502,7 +529,7 @@ class SystemUsers(ModelMixins):
         """Work with roles"""
 
     def _update_user_attr(
-        self, name: str, must_be_internal: bool, attr: str, value: Union[str, bool, dict]
+        self, name: str, must_be_internal: bool, attr: str, value: t.Union[str, bool, dict]
     ) -> dict:
         """Set an attribute on a user.
 

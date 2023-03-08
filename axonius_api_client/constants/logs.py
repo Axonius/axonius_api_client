@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """Constants for logging."""
 import logging
-from typing import List
+import os
+import typing as t
 
 from .. import DEFAULT_PATH, PACKAGE_ROOT
 from ..setup_env import DEBUG
@@ -51,15 +52,23 @@ LOG_LEVEL_WIZARD: str = "debug"
 LOG_LEVEL_PACKAGE: str = "debug"
 """default logging level for the entire package"""
 
+LOG_LEVEL_ENDPOINTS_ENV: t.Optional[str] = os.environ.get("AX_ENDPOINT_LOG_LEVEL")
+
+LOG_LEVEL_ENDPOINTS: str = (
+    LOG_LEVEL_ENDPOINTS_ENV.strip()
+    if (isinstance(LOG_LEVEL_ENDPOINTS_ENV, str) and LOG_LEVEL_ENDPOINTS_ENV.strip())
+    else "info"
+)
+
 LOG_LEVEL_PARSE: str = "debug"
 
-LOG_LEVELS_STR: List[str] = ["debug", "info", "warning", "error", "fatal"]
+LOG_LEVELS_STR: t.List[str] = ["debug", "info", "warning", "error", "fatal"]
 """list of valid logging level strs"""
 
 LOG_LEVELS_STR_CSV: str = ", ".join(LOG_LEVELS_STR)
 """csv of valid logging level strs"""
 
-LOG_LEVELS_INT: List[int] = [getattr(logging, x.upper()) for x in LOG_LEVELS_STR]
+LOG_LEVELS_INT: t.List[int] = [getattr(logging, x.upper()) for x in LOG_LEVELS_STR]
 """list of valid logging level ints"""
 
 LOG_LEVELS_INT_CSV: str = ", ".join([str(x) for x in LOG_LEVELS_INT])
@@ -89,7 +98,7 @@ LOG_NAME_STDOUT: str = "handler_stdout"
 LOG_NAME_FILE: str = "handler_file"
 """default handler name for file log"""
 
-MAX_BODY_LEN: int = 50
+MAX_BODY_LEN: int = 100
 """maximum body length to trim when printing request/response bodies"""
 
 RESPONSE_ATTR_MAP: dict = {

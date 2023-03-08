@@ -7,7 +7,7 @@ import typing as t
 import marshmallow_jsonapi
 
 from ...tools import calc_gb, calc_percent, json_load
-from .base import BaseModel, BaseSchema, BaseSchemaJson
+from .base import BaseModel, BaseSchemaJson
 from .custom_fields import SchemaBool, SchemaDatetime, get_field_dc_mm
 
 
@@ -46,7 +46,7 @@ class InstanceSchema(BaseSchemaJson):
     installed_version = marshmallow_jsonapi.fields.Str(allow_none=True)
 
     @staticmethod
-    def get_model_cls() -> type:
+    def get_model_cls() -> t.Optional[type]:
         """Pass."""
         return Instance
 
@@ -141,7 +141,7 @@ class Instance(BaseModel):
         )
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[type]:
         """Pass."""
         return InstanceSchema
 
@@ -153,7 +153,7 @@ class InstanceDeleteRequest(BaseModel):
     nodeIds: t.List[str]
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[type]:
         """Pass."""
         return None
 
@@ -166,7 +166,7 @@ class InstanceUpdateActiveRequest(BaseModel):
     status: bool
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[type]:
         """Pass."""
         return None
 
@@ -181,7 +181,7 @@ class InstanceUpdateAttributesRequest(BaseModel):
     use_as_environment_name: bool
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[type]:
         """Pass."""
         return None
 
@@ -194,7 +194,7 @@ class FactoryResetRequestSchema(BaseSchemaJson):
     )
 
     @staticmethod
-    def get_model_cls() -> type:
+    def get_model_cls() -> t.Optional[type]:
         """Pass."""
         return FactoryResetRequest
 
@@ -211,7 +211,7 @@ class FactoryResetRequest(BaseModel):
     approve_not_recoverable_action: bool = False
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[type]:
         """Pass."""
         return FactoryResetRequestSchema
 
@@ -223,7 +223,7 @@ class FactoryResetSchema(BaseSchemaJson):
     msg = marshmallow_jsonapi.fields.Str()
 
     @staticmethod
-    def get_model_cls() -> type:
+    def get_model_cls() -> t.Optional[type]:
         """Pass."""
         return FactoryReset
 
@@ -242,7 +242,7 @@ class FactoryReset(BaseModel):
     document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[type]:
         """Pass."""
         return FactoryResetSchema
 
@@ -330,7 +330,7 @@ class Tunnel(BaseModel):
         }
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[t.Type[BaseSchema]]:
+    def get_schema_cls() -> t.Optional[type]:
         """Pass."""
         return None
 

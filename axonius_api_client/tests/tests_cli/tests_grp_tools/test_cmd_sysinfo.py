@@ -11,7 +11,6 @@ class TestCmdSysInfo(object):
     def test_get_str(self, request, monkeypatch):
         runner = CliRunner(mix_stderr=False)
         with runner.isolated_filesystem():
-
             args = ["tools", "sysinfo", "--export-format", "str"]
 
             result1 = runner.invoke(cli=cli, args=args)
@@ -21,7 +20,6 @@ class TestCmdSysInfo(object):
     def test_get_json(self, request, monkeypatch):
         runner = CliRunner(mix_stderr=False)
         with runner.isolated_filesystem():
-
             args = ["tools", "sysinfo", "--export-format", "json"]
 
             result1 = runner.invoke(cli=cli, args=args)

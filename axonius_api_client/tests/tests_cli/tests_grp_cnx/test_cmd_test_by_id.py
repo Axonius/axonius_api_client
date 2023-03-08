@@ -3,8 +3,8 @@
 from axonius_api_client.cli import cli
 from axonius_api_client.exceptions import CnxAddError
 from axonius_api_client.tools import json_load
-from ...tests_api.tests_adapters.test_cnx import skip_if_no_adapter
 
+from ...tests_api.tests_adapters.test_cnx import skip_if_no_adapter
 from ...utils import get_cnx_working, load_clirunner
 from .test_cnx_base import CnxTools
 

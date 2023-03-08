@@ -11,7 +11,6 @@ class GrpSavedQueryCmdUpdates:
     def test_cmd_update_always_cached(self, apiobj, request, monkeypatch, sq_added):
         runner = load_clirunner(request, monkeypatch)
         with runner.isolated_filesystem():
-
             args = [
                 apiobj.ASSET_TYPE,
                 "saved-query",
@@ -30,7 +29,6 @@ class GrpSavedQueryCmdUpdates:
     def test_cmd_update_page_size(self, apiobj, request, monkeypatch, sq_added):
         runner = load_clirunner(request, monkeypatch)
         with runner.isolated_filesystem():
-
             args = [
                 apiobj.ASSET_TYPE,
                 "saved-query",
@@ -49,7 +47,6 @@ class GrpSavedQueryCmdUpdates:
     def test_cmd_update_private(self, apiobj, request, monkeypatch, sq_added):
         runner = load_clirunner(request, monkeypatch)
         with runner.isolated_filesystem():
-
             args = [
                 apiobj.ASSET_TYPE,
                 "saved-query",
@@ -71,7 +68,6 @@ class GrpSavedQueryCmdUpdates:
 
         runner = load_clirunner(request, monkeypatch)
         with runner.isolated_filesystem():
-
             args = [
                 apiobj.ASSET_TYPE,
                 "saved-query",
@@ -91,7 +87,6 @@ class GrpSavedQueryCmdUpdates:
     def test_cmd_update_name_failure_exists(self, apiobj, request, monkeypatch, sq_added):
         runner = load_clirunner(request, monkeypatch)
         with runner.isolated_filesystem():
-
             args = [
                 apiobj.ASSET_TYPE,
                 "saved-query",

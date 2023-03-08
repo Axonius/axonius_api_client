@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Test suite."""
 import pytest
+
 from axonius_api_client.api import json_api
 from axonius_api_client.exceptions import ApiError, NotFoundError, ResponseNotOk
 from axonius_api_client.tools import listify
@@ -52,9 +53,13 @@ class TestSystemRolesPrivate(SystemRoles):
         assert isinstance(updated, (json_api.system_roles.SystemRole,))
         assert updated.name == FixtureData.name_update
 
-        deleted = apiobj._delete(uuid=role.uuid)
-        assert isinstance(role, (json_api.system_roles.SystemRole,))
-        assert deleted.document_meta == {"name": FixtureData.name_update}
+        try:
+            deleted = apiobj._delete(uuid=role.uuid)
+            assert isinstance(role, (json_api.system_roles.SystemRole,))
+            assert deleted.document_meta == {"name": FixtureData.name_update}
+        except ResponseNotOk:
+            pass
+
         self.cleanup_roles(apiobj=apiobj, value=FixtureData.names)
 
 

@@ -1,20 +1,23 @@
 # -*- coding: utf-8 -*-
 """Test suite."""
 import pytest
+
 from axonius_api_client.api.json_api.enforcements import (
     ActionCategory,
     ActionType,
+    EnforcementBasicModel,
+    EnforcementFullModel,
+    EnforcementSchedule,
     OnlyNewAssets,
-    QueryType,
-    Schedule,
-    SetBasic,
-    SetFull,
 )
+from axonius_api_client.api.json_api.saved_queries import QueryTypes
 from axonius_api_client.exceptions import (
+    AlreadyExists,
     ApiError,
     ApiWarning,
     ConfigRequired,
     ConfigUnknown,
+    NotAllowedError,
     NotFoundError,
     NoTriggerDefinedError,
     ToolsError,
@@ -24,6 +27,7 @@ from axonius_api_client.exceptions import (
 class Meta:
     name = "badwolf EC"
     name_trigger = "badwolf EC with trigger"
+    description = "badwolf badwolf badwolf"
     name_cli = "Badwolf FROM CLI"
     name_copy = "yan badwolf EC"
     name_rename = "badwolf vittles"
@@ -46,7 +50,7 @@ class EnforcementsBase:
     def apiobj(self, api_enforcements):
         return api_enforcements
 
-    @pytest.fixture(scope="class")
+    @pytest.fixture(scope="function")
     def created_set(self, apiobj):
         try:
             created_set = apiobj.get_set(value=Meta.name)
@@ -59,12 +63,12 @@ class EnforcementsBase:
                     main_action_config=Meta.action_config,
                 )
 
-        assert isinstance(created_set, SetFull)
+        assert isinstance(created_set, EnforcementFullModel)
 
         yield created_set
 
         deleted = self.cleanup(apiobj=apiobj, value=created_set)
-        assert isinstance(deleted, SetFull)
+        assert isinstance(deleted, EnforcementFullModel)
 
     @pytest.fixture(scope="class")
     def created_set_trigger(self, apiobj):
@@ -81,12 +85,12 @@ class EnforcementsBase:
                     query_type=Meta.trigger_type,
                 )
 
-        assert isinstance(created_set, SetFull)
+        assert isinstance(created_set, EnforcementFullModel)
 
         yield created_set
 
         deleted = self.cleanup(apiobj=apiobj, value=created_set)
-        assert isinstance(deleted, SetFull)
+        assert isinstance(deleted, EnforcementFullModel)
 
     def cleanup(self, apiobj, value):
         try:
@@ -111,7 +115,7 @@ class TestEnforcements(EnforcementsBase):
         ret = apiobj.run(values=created_set_trigger, error=True)
         assert isinstance(ret, list)
         for item in ret:
-            assert isinstance(item, SetFull)
+            assert isinstance(item, EnforcementFullModel)
         assert [created_set_trigger.name] == [x.name for x in ret]
 
     def test_create_delete(self, apiobj):
@@ -119,27 +123,34 @@ class TestEnforcements(EnforcementsBase):
         with pytest.warns(ApiWarning):
             created_set = apiobj.create(
                 name=Meta.name_create,
+                description=Meta.description,
                 main_action_type=Meta.action_type,
                 main_action_name=Meta.action_name,
                 main_action_config=Meta.action_config,
             )
 
-        assert isinstance(created_set, SetFull)
-        assert isinstance(created_set.BASIC, SetBasic)
+        with pytest.raises(AlreadyExists):
+            apiobj.create(
+                name=Meta.name_create,
+                description=Meta.description,
+                main_action_type=Meta.action_type,
+                main_action_name=Meta.action_name,
+                main_action_config=Meta.action_config,
+            )
+
+        assert created_set.description == Meta.description
+        assert isinstance(created_set, EnforcementFullModel)
+        assert isinstance(created_set.BASIC, EnforcementBasicModel)
 
         basic = created_set.get_basic(refresh=True)
-        assert isinstance(basic, SetBasic)
+        assert isinstance(basic, EnforcementBasicModel)
 
         deleted = apiobj.delete(value=created_set)
-        assert isinstance(deleted, SetFull)
-        assert isinstance(deleted.BASIC, SetBasic)
+        assert isinstance(deleted, EnforcementFullModel)
+        assert isinstance(deleted.BASIC, EnforcementBasicModel)
 
         with pytest.raises(NotFoundError):
             deleted.get_basic(refresh=True)
-
-    def test_attach_full_set_bad_type(self, apiobj):
-        with pytest.raises(ApiError):
-            apiobj.attach_full_set({})
 
     def test_get_action_type_bad_type(self, apiobj):
         with pytest.raises(ApiError):
@@ -242,7 +253,7 @@ class TestEnforcements(EnforcementsBase):
                 action_type=Meta.action_type,
                 config=Meta.action_config,
             )
-        assert isinstance(added, SetFull)
+        assert isinstance(added, EnforcementFullModel)
         assert action_name in " ".join(added.failure_actions_str)
 
         removed = apiobj.update_action_remove(
@@ -290,14 +301,11 @@ class TestEnforcements(EnforcementsBase):
         assert updated.on_count_below is None
 
     def test_update_schedule(self, created_set, apiobj):
-        sq = apiobj.api_devices.saved_query.get(as_dataclass=True)[0]
-        if created_set.query_name:
-            updated = apiobj.update_query_remove(value=created_set)
-            assert not updated._trigger_obj
-
-        updated = apiobj.update_query(value=created_set, query_name=sq, query_type="devices")
-        assert sq.name in str(updated)
-        assert updated._trigger_obj
+        if not created_set.query_name:
+            sq = apiobj.api_devices.saved_query.get(as_dataclass=True)[0]
+            updated = apiobj.update_query(value=created_set, query_name=sq, query_type="devices")
+            assert sq.name in str(updated)
+            assert updated._trigger_obj
 
         updated = apiobj.update_schedule_never(value=updated)
         assert "never" in str(updated)
@@ -317,30 +325,17 @@ class TestEnforcements(EnforcementsBase):
         updated = apiobj.update_schedule_monthly(value=updated, recurrence="1,3,6,29")
         assert "monthly" in str(updated)
 
-        updated = apiobj.update_query_remove(value=updated)
-        assert not updated._trigger_obj
-
     def test_update_query(self, created_set, apiobj):
         sq = apiobj.api_devices.saved_query.get(as_dataclass=True)[0]
-        if created_set.query_name:
-            updated = apiobj.update_query_remove(value=created_set)
-            assert not updated._trigger_obj
-
         updated = apiobj.update_query(value=created_set, query_name=sq, query_type="devices")
         assert sq.name in str(updated)
         assert updated._trigger_obj
 
-        updated = apiobj.update_query_remove(value=updated)
-        assert not updated._trigger_obj
-
-    def test_update_no_trigger_failures(self, created_set, apiobj):
-        if created_set.query_name:
-            updated = apiobj.update_query_remove(value=created_set)
-            assert not updated._trigger_obj
-
-        with pytest.raises(NoTriggerDefinedError):
+    def test_update_remove_query_not_allowed(self, created_set, apiobj):
+        with pytest.raises(NotAllowedError):
             apiobj.update_query_remove(value=created_set)
 
+    def test_update_no_trigger_failures(self, created_set, apiobj):
         with pytest.raises(NoTriggerDefinedError):
             apiobj.update_schedule_never(value=created_set)
 
@@ -427,53 +422,53 @@ class TestOnlyNewAssets:
         assert OnlyNewAssets.get_bool(value=str(OnlyNewAssets.all_entities)) is False
 
 
-class TestQueryType:
+class TestAssetTypes:
     def test_get_value(self):
-        assert QueryType.get_value("devices") == QueryType.devices
+        assert QueryTypes.get_value("devices") == QueryTypes.devices
 
     def test_get_value_fail(self):
         with pytest.raises(ApiError):
-            QueryType.get_value("x")
+            QueryTypes.get_value("x")
 
 
-class TestSchedule:
+class TestEnforcementSchedule:
     def test_get_value(self):
-        for i in Schedule.keys():
-            value = Schedule.get_value(i)
+        for i in EnforcementSchedule.keys():
+            value = EnforcementSchedule.get_value(i)
             assert value.name == i
 
-        for i in Schedule.values():
-            value = Schedule.get_value(i)
+        for i in EnforcementSchedule.values():
+            value = EnforcementSchedule.get_value(i)
             assert value.value == i
             assert str(value) == i
 
     def test_get_value_fail(self):
         with pytest.raises(ApiError):
-            Schedule.get_value("x")
+            EnforcementSchedule.get_value("x")
 
     def test_get_time_default(self):
-        value = Schedule.get_time()
+        value = EnforcementSchedule.get_time()
         assert isinstance(value, str) and ":" in value
 
     def test_get_time(self):
-        value = Schedule.get_time(hour=22, minute=2)
+        value = EnforcementSchedule.get_time(hour=22, minute=2)
         assert value == "22:02"
 
     def test_get_time_hour_fail(self):
         with pytest.raises(ToolsError):
-            Schedule.get_time(hour=24)
+            EnforcementSchedule.get_time(hour=24)
 
     def test_get_time_minute_fail(self):
         with pytest.raises(ToolsError):
-            Schedule.get_time(minute=60)
+            EnforcementSchedule.get_time(minute=60)
 
     def test_get_conditions_default(self):
-        value = Schedule.get_conditions()
+        value = EnforcementSchedule.get_conditions()
         exp = {"new_entities": False, "previous_entities": False, "above": None, "below": None}
         assert value == exp
 
     def test_get_conditions(self):
-        value = Schedule.get_conditions(
+        value = EnforcementSchedule.get_conditions(
             on_count_above="100",
             on_count_below="5",
             on_count_increased=True,
@@ -484,40 +479,40 @@ class TestSchedule:
 
     def test_get_conditions_fail(self):
         with pytest.raises(ToolsError):
-            Schedule.get_conditions(on_count_above=-1)
+            EnforcementSchedule.get_conditions(on_count_above=-1)
 
         with pytest.raises(ToolsError):
-            Schedule.get_conditions(on_count_below=-1)
+            EnforcementSchedule.get_conditions(on_count_below=-1)
 
         with pytest.raises(ToolsError):
-            Schedule.get_conditions(on_count_increased="x")
+            EnforcementSchedule.get_conditions(on_count_increased="x")
 
         with pytest.raises(ToolsError):
-            Schedule.get_conditions(on_count_decreased="x")
+            EnforcementSchedule.get_conditions(on_count_decreased="x")
 
     def test_get_view_default(self):
-        assert Schedule.get_view() is None
+        assert EnforcementSchedule.get_view() is None
 
     def test_get_view_fail(self):
         with pytest.raises(ApiError):
-            Schedule.get_view(query_type="x")
+            EnforcementSchedule.get_view(query_type="x")
 
     def test_get_view(self):
-        assert Schedule.get_view(query_uuid="xxx", query_type="users") == {
+        assert EnforcementSchedule.get_view(query_uuid="xxx", query_type="users") == {
             "id": "xxx",
             "entity": "users",
         }
 
     def test_get_recurrence_never(self):
-        sched = Schedule.never
+        sched = EnforcementSchedule.never
         assert sched.get_recurrence() is None
 
     def test_get_recurrence_discovery(self):
-        sched = Schedule.discovery
+        sched = EnforcementSchedule.discovery
         assert sched.get_recurrence() is None
 
     def test_get_recurrence_hourly(self):
-        sched = Schedule.hourly
+        sched = EnforcementSchedule.hourly
         with pytest.raises(ToolsError):
             sched.get_recurrence()
 
@@ -527,7 +522,7 @@ class TestSchedule:
             sched.get_recurrence(25)
 
     def test_get_recurrence_daily(self):
-        sched = Schedule.daily
+        sched = EnforcementSchedule.daily
         with pytest.raises(ToolsError):
             sched.get_recurrence()
 
@@ -537,7 +532,7 @@ class TestSchedule:
             sched.get_recurrence(0)
 
     def test_get_recurrence_weekly(self):
-        sched = Schedule.weekly
+        sched = EnforcementSchedule.weekly
         with pytest.raises(ToolsError):
             sched.get_recurrence()
 
@@ -550,7 +545,7 @@ class TestSchedule:
             sched.get_recurrence("7")
 
     def test_get_recurrence_monthly(self):
-        sched = Schedule.monthly
+        sched = EnforcementSchedule.monthly
         with pytest.raises(ToolsError):
             sched.get_recurrence()
 
@@ -574,5 +569,5 @@ class TestSchedule:
             },
             "run_on": "AllEntities",
         }
-        value = Schedule.get_trigger()
+        value = EnforcementSchedule.get_trigger()
         assert value == exp

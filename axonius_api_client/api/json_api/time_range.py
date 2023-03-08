@@ -84,6 +84,11 @@ class TimeRange(BaseModel):
         mm_field=TimeRangeSchema._declared_fields["count"], default=None
     )
 
+    @staticmethod
+    def get_schema_cls() -> t.Optional[type]:
+        """Pass."""
+        return TimeRangeSchema
+
     @classmethod
     def build(
         cls,

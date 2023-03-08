@@ -2,6 +2,7 @@
 """Command line interface for Axonius API Client."""
 from ....constants.api import GUI_PAGE_SIZES
 from ...context import CONTEXT_SETTINGS, click
+from ...grp_folders.grp_options import OPTS_OBJECT_CREATE
 from ...options import (
     AUTH,
     FIELDS_SELECT_BASE,
@@ -117,6 +118,7 @@ OPTIONS = [
         show_envvar=True,
         show_default=True,
     ),
+    *OPTS_OBJECT_CREATE,
 ]
 
 
@@ -133,7 +135,7 @@ def cmd(ctx, url, key, secret, export_format, table_format, wizard_content, **kw
 
     with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
         kwargs = load_wiz(apiobj=apiobj, wizard_content=wizard_content, exprs=True, kwargs=kwargs)
-        data = apiobj.saved_query.add(as_dataclass=True, **kwargs)
+        data = apiobj.saved_query.add(as_dataclass=True, echo=True, **kwargs)
 
     ctx.obj.echo_ok(f"Successfully created saved query: {data.name}")
     click.secho(EXPORT_FORMATS[export_format](data=data, table_format=table_format))

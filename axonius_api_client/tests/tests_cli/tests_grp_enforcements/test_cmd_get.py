@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Test suite for axonius_api_client.tools."""
 import pytest
+
 from axonius_api_client.cli import cli
 from axonius_api_client.tools import json_load
 
@@ -12,7 +13,6 @@ class TestGrpEnforcementsCmdGet(EnforcementsBase):
     def test_json_export(self, request, monkeypatch, created_set):
         runner = load_clirunner(request, monkeypatch)
         with runner.isolated_filesystem():
-
             args = [
                 "enforcements",
                 "get",
@@ -35,7 +35,6 @@ class TestGrpEnforcementsCmdGet(EnforcementsBase):
     def test_str_exports(self, request, monkeypatch, created_set, export_format):
         runner = load_clirunner(request, monkeypatch)
         with runner.isolated_filesystem():
-
             args = [
                 "enforcements",
                 "get",
@@ -52,7 +51,6 @@ class TestGrpEnforcementsCmdGet(EnforcementsBase):
     def test_single_json_export(self, request, monkeypatch, created_set):
         runner = load_clirunner(request, monkeypatch)
         with runner.isolated_filesystem():
-
             args = [
                 "enforcements",
                 "get",
@@ -75,7 +73,6 @@ class TestGrpEnforcementsCmdGet(EnforcementsBase):
     def test_single_str_exports(self, request, monkeypatch, created_set, export_format):
         runner = load_clirunner(request, monkeypatch)
         with runner.isolated_filesystem():
-
             args = [
                 "enforcements",
                 "get",

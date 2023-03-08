@@ -10,7 +10,6 @@ class GrpSavedQueryCmdDeleteByTags:
     def test_json(self, apiobj, request, monkeypatch, sq_added):
         runner = load_clirunner(request, monkeypatch)
         with runner.isolated_filesystem():
-
             args1 = [
                 apiobj.ASSET_TYPE,
                 "saved-query",

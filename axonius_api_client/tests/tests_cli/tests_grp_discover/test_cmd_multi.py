@@ -8,7 +8,6 @@ from ...utils import load_clirunner
 class TestGrpDiscoverCmdMulti:
     def check_is_running(self, runner, started: bool):
         with runner.isolated_filesystem():
-
             args = [
                 "system",
                 "discover",
@@ -27,7 +26,6 @@ class TestGrpDiscoverCmdMulti:
 
     def check_is_stable(self, runner, started: bool):
         with runner.isolated_filesystem():
-
             args = [
                 "system",
                 "discover",
@@ -52,7 +50,6 @@ class TestGrpDiscoverCmdMulti:
     def test_multi(self, request, monkeypatch):
         runner = load_clirunner(request, monkeypatch)
         with runner.isolated_filesystem():
-
             start_args = ["system", "discover", "start"]
             start_result = runner.invoke(cli=cli, args=start_args)
             self.check_result(result=start_result)

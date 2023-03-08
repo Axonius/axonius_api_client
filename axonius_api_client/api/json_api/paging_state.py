@@ -29,6 +29,11 @@ class Page(BaseModel):
     duration: t.ClassVar[t.Optional[datetime.timedelta]] = None
     page_number: t.ClassVar[int] = 0
 
+    @staticmethod
+    def get_model_cls() -> t.Optional[type]:
+        """Pass."""
+        return None
+
     def __post_init__(self):
         """Pass."""
         self.state.page_number += 1

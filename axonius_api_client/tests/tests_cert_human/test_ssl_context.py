@@ -2,6 +2,7 @@
 """Test suite."""
 import OpenSSL
 import pytest
+
 from axonius_api_client.cert_human import ssl_context
 
 
