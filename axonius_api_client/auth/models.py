@@ -2,6 +2,7 @@
 """Authentication models."""
 import abc
 import logging
+import typing as t
 
 from ..api.api_endpoint import ApiEndpoint
 from ..api.api_endpoints import ApiEndpoints
@@ -46,10 +47,7 @@ class Mixins(Model):
     _logged_in: bool = False
     """Attribute checked by :meth:`is_logged_in`."""
 
-    _validate_endpoint: ApiEndpoint = ApiEndpoints.system_settings.get_constants
-    """Endpoint to use to validate logins."""
-
-    def __init__(self, http: Http, creds: dict, **kwargs):
+    def __init__(self, http: Http, creds: t.Any, **kwargs):
         """Mixins for Auth Models.
 
         Args:
@@ -64,7 +62,7 @@ class Mixins(Model):
         self._http: Http = http
         """HTTP Client."""
 
-        self._creds: dict = creds
+        self._creds: t.Any = creds
         """Credential store."""
 
         self._check_http_lock()
@@ -97,6 +95,25 @@ class Mixins(Model):
         """Check if login has been called."""
         return self._logged_in
 
+    def get_api_keys(self) -> dict:
+        """Get the API key and secret for the current user."""
+        return self._get_api_keys()
+
+    @property
+    def endpoints(self) -> ApiEndpoints:
+        """Get the endpoint group for this module."""
+        return ApiEndpoints.account
+
+    def _validate(self):
+        """Validate credentials."""
+        try:
+            self.endpoints.validate.perform_request(http=self.http)
+        except Exception:
+            self._logged_in = False
+            raise
+        else:
+            self._logged_in = True
+
     def __str__(self) -> str:
         """Show object info."""
         bits = [f"url={self.http.url!r}", f"is_logged_in={self.is_logged_in}"]
@@ -119,16 +136,12 @@ class Mixins(Model):
         if auth_lock:
             raise AuthError(f"{self.http} already being used by {auth_lock}")
 
+    def _get_api_keys(self, **http_args) -> dict:
+        """Direct API method to get the API keys for the current user."""
+        endpoint: ApiEndpoint = self.endpoints.get_api_keys
+        response: dict = endpoint.perform_request(http=self.http, http_args=http_args)
+        return response
+
     def _set_http_lock(self):
         """Set HTTP Client auth lock."""
         self._http._auth_lock = self
-
-    def _validate(self):
-        """Validate credentials."""
-        try:
-            self._validate_endpoint.perform_request(http=self.http)
-        except Exception:
-            self._logged_in = False
-            raise
-        else:
-            self._logged_in = True

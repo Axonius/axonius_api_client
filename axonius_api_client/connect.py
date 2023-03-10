@@ -30,7 +30,7 @@ from .api import (
     Users,
     Vulnerabilities,
 )
-from .auth import ApiKey
+from .auth import ApiKey, Credentials
 from .constants.api import TIMEOUT_CONNECT, TIMEOUT_RESPONSE
 from .constants.logs import (
     LOG_FILE_MAX_FILES,
@@ -117,6 +117,7 @@ class Connect:
         proxy: Optional[str] = None,
         headers: Optional[T_Headers] = None,
         cookies: Optional[T_Cookies] = None,
+        credentials: bool = False,
         **kwargs,
     ):
         """Easy all-in-one connection handler.
@@ -295,14 +296,18 @@ class Connect:
         }
         """arguments to use for creating :attr:`HTTP`"""
 
-        self.AUTH_ARGS: dict = {"key": key, "secret": secret, "log_level": self.LOG_LEVEL_AUTH}
-        """arguments to use for creating :attr:`AUTH`"""
-
         self.HTTP = Http(**self.HTTP_ARGS)
         """:obj:`axonius_api_client.http.Http` client to use for :attr:`AUTH`"""
+        self.AUTH_ARGS: dict = {"log_level": self.LOG_LEVEL_AUTH}
 
-        self.AUTH = ApiKey(http=self.HTTP, **self.AUTH_ARGS)
-        """:obj:`axonius_api_client.auth.api_key.ApiKey` auth method to use for all API models"""
+        if credentials:
+            self.AUTH_ARGS.update({"username": key, "password": secret})
+            self.AUTH = Credentials(http=self.HTTP, **self.AUTH_ARGS)
+            """:obj:`Credentials` auth method to use for all API models"""
+        else:
+            self.AUTH_ARGS.update({"key": key, "secret": secret})
+            self.AUTH = ApiKey(http=self.HTTP, **self.AUTH_ARGS)
+            """:obj:`ApiKey` auth method to use for all API models"""
 
         self.API_ARGS: dict = {"auth": self.AUTH, "log_level": self.LOG_LEVEL_API}
         """arguments to use for all API models"""
@@ -553,6 +558,11 @@ class Connect:
         if not hasattr(self, "_folders"):
             self._folders = Folders(**self.API_ARGS)
         return self._folders
+
+    @property
+    def api_keys(self) -> dict:
+        """Get the API keys for the current user."""
+        return self.AUTH.get_api_keys()
 
     @classmethod
     def _get_exc_reason(cls, exc: Exception) -> str:

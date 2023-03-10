@@ -36,8 +36,8 @@ OPTIONS = [URL, TOKEN, PASSWORD]
 @click.pass_context
 def cmd(ctx, url, token, password):
     """Use a password reset token."""
-    entry = Signup(url=url)
+    client = Signup(url=url)
     with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
-        name = entry.use_password_reset_token(token=token, password=password)
+        name = client.use_password_reset_token(token=token, password=password)
 
     ctx.obj.echo_ok(f"Password successfully reset for user {name!r}")

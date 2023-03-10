@@ -2,6 +2,7 @@
 """Models for API requests & responses."""
 
 from . import (
+    account,
     adapters,
     assets,
     audit_logs,
@@ -57,4 +58,5 @@ __all__ = (
     "dashboard_spaces",
     "spaces_export",
     "folders",
+    "account",
 )

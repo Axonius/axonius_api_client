@@ -110,15 +110,11 @@ class ApiEndpoint:
     def str_properties(self) -> t.List[str]:
         """Get the properties for this endpoint as a list of strs."""
         return [
-            f"method={self.method!r}",
-            f"path={self.path!r}",
+            f"method={self.method!r}, path={self.path!r}",
             f"request_schema={get_cls_path(self.request_schema_cls)}",
             f"request_model={get_cls_path(self.request_model_cls)}",
             f"response_schema={get_cls_path(self.response_schema_cls)}",
             f"response_model={get_cls_path(self.response_model_cls)}",
-            f"request_as_none={self.request_as_none}",
-            f"response_as_text={self.response_as_text}",
-            f"http_args_required={self.http_args_required}",
         ]
 
     def perform_request(
@@ -253,6 +249,10 @@ class ApiEndpoint:
             data = self.load_response(
                 http=http, response=response, **combo_dicts(kwargs, data=data)
             )
+            try:
+                data.RESPONSE = response
+            except Exception:
+                pass
         return data
 
     def get_response_json(self, response: requests.Response) -> JSON_TYPES:

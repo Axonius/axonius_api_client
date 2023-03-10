@@ -143,4 +143,4 @@ class Signup:
         log_level = kwargs.get("log_level", LOG_LEVEL_API)
         self.LOG = get_obj_log(obj=self, level=log_level)
         kwargs.setdefault("certwarn", False)
-        self.http = Http(url=url, **kwargs)
+        self.HTTP = self.http = Http(url=url, **kwargs)
