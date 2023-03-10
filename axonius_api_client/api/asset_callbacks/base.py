@@ -190,6 +190,7 @@ class Base:
             "custom_cbs": [],
             "debug_timing": False,
             "explode_entities": False,
+            "include_dates": False,
         }
 
     def get_arg_value(self, arg: str) -> Union[str, list, bool, int]:
@@ -358,6 +359,7 @@ class Base:
             self.process_tags_to_remove,
             self.add_report_adapters_missing,
             self.add_report_software_whitelist,
+            self.add_include_dates,
             self.do_excludes,
             self.do_add_null_values,
             self.do_explode_entities,
@@ -883,6 +885,32 @@ class Base:
         row[schemas["software_whitelist"]["name_qual"]] = whitelists
         row[schemas["software_extra"]["name_qual"]] = sorted(list(set(extras)))
 
+    def add_include_dates(self, rows: Union[List[dict], dict]) -> List[dict]:
+        """Process report: Add dates (history and current)
+
+        Args:
+            rows: rows to process
+        """
+        def _add_date(row):
+            row.update(updater)
+            return row
+
+        rows = listify(rows)
+        enabled = self.get_arg_value("include_dates")
+        if not enabled:
+            return rows
+
+        history_date = self.STORE.get("history_date_parsed")
+        current_date = str(dt_now())
+        schemas = SCHEMAS_CUSTOM["include_dates"]
+        updater = {
+                schemas["history_date"]["name_qual"]: history_date,
+                schemas["current_date"]["name_qual"]: current_date
+        }
+        rows = [_add_date(row) for row in rows]
+        return rows
+
+
     def add_report_adapters_missing(self, rows: Union[List[dict], dict]) -> List[dict]:
         """Process report: Missing adapters.
 
@@ -1018,6 +1046,8 @@ class Base:
             schemas += list(SCHEMAS_CUSTOM["report_adapters_missing"].values())
         if self.get_arg_value("report_software_whitelist"):
             schemas += list(SCHEMAS_CUSTOM["report_software_whitelist"].values())
+        if self.get_arg_value("include_dates"):
+            schemas += list(SCHEMAS_CUSTOM["include_dates"].values())
         return schemas
 
     @property
@@ -1402,5 +1432,6 @@ ARG_DESCRIPTIONS: dict = {
     "xlsx_cell_format": "For XLSX Export: Formatting to apply to every cell",
     "debug_timing": "Enable logging of time taken for each callback",
     "explode_entities": "Split rows into one row for each asset entity",
+    "include_dates": "Include history date and current date as a columns in the output",
 }
 """Descriptions of all arguments for all callbacks"""
