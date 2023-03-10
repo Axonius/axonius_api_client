@@ -514,8 +514,6 @@ def json_load(
             f"Unable to load JSON from supplied {tlens(obj)}",
             f"error: {exc}",
         ]
-        msgs = "\n".join(msgs)
-        LOG.exception(msgs)
         if error:
             nexc = ToolsError(msgs)
             nexc.obj = obj

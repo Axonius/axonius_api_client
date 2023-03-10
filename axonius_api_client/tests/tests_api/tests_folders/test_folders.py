@@ -3,7 +3,6 @@
 import datetime
 
 import pytest
-
 from axonius_api_client.api.json_api import folders
 from axonius_api_client.data import BaseEnum
 from axonius_api_client.exceptions import (  # SearchZeroObjectsError,
@@ -1068,13 +1067,14 @@ class TestFolderQueries(FolderBase, FolderBaseQueries):
 
 
 class TestFoldersQueries(FoldersBase, FolderBaseQueries):
-    def test_property_path_archive(self, apiobj, jsonapi_module):
-        root = apiobj.get()
+    # NEXT: not in release yet
+    # def test_property_path_archive(self, apiobj, jsonapi_module):
+    #     root = apiobj.get()
 
-        archive_name: str = str(root.get_enum_names().archive)
-        assert isinstance(root.path_archive, jsonapi_module.FolderModel)
-        assert root.path_archive.name == archive_name
-        assert root.path_archive.depth == 1
+    #     archive_name: str = str(root.get_enum_names().archive)
+    #     assert isinstance(root.path_archive, jsonapi_module.FolderModel)
+    #     assert root.path_archive.name == archive_name
+    #     assert root.path_archive.depth == 1
 
     def test_property_path_predefined(self, apiobj, jsonapi_module):
         root = apiobj.get()

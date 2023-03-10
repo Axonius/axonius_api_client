@@ -5,36 +5,6 @@ from ..context import click
 from ..options import TABLE_FMT
 from .grp_common import SEARCH_EXPORT_DEFAULT, SEARCH_EXPORTS
 
-# OPT_FOLDER = click.option(
-#     "--folder",
-#     "-F",
-#     "folder",
-#     help="Path of folder to store object in",
-#     required=False,
-#     show_envvar=True,
-#     show_default=True,
-# )
-# OPT_REQ_FOLDER = click.option(
-#     "--folder",
-#     "-F",
-#     "folder",
-#     help="Path of folder to store object in",
-#     required=False,
-#     show_envvar=True,
-#     show_default=True,
-# )
-# OPT_FOLDER_CREATE = click.option(
-#     "--create/--no-create",
-#     "-c/-nc",
-#     "create",
-#     default=FolderDefaults.create_action,
-#     help="Create --folder if not found.",
-#     show_envvar=True,
-#     show_default=True,
-# )
-# OPTS_FOLDER = [OPT_FOLDER, OPT_FOLDER_CREATE]
-# OPTS_REQ_FOLDER = [OPT_REQ_FOLDER, OPT_FOLDER_CREATE]
-
 OPT_FOLDER = click.option(
     "--folder",
     "-f",
@@ -451,13 +421,14 @@ OPTS_DELETE = [
     OPT_FOLDER_DELETE,
 ]
 
-# update-folder
+# object.update-folder
 OPTS_UPDATE_FOLDER = [
     OPT_ECHO,
     OPT_CREATE_FOLDER_REQ,
     OPT_FOLDER_UPDATE,
 ]
 
+# object.copy/add/create/etc
 OPTS_OBJECT_CREATE = [
     OPT_ECHO,
     OPT_CREATE_FOLDER_REQ,
