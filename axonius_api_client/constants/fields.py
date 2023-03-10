@@ -179,6 +179,42 @@ SCHEMAS_CUSTOM: t.Dict[str, dict] = {
             "is_custom": True,
         },
     },
+    "include_dates": {
+        "history_date": {
+            "adapter_name": "report",
+            "column_name": "report:history_date",
+            "column_title": "Report: History Date",
+            "is_complex": False,
+            "is_list": False,
+            "is_root": True,
+            "parent": "root",
+            "name": "history_date",
+            "name_base": "history_date",
+            "name_qual": "history_date",
+            "title": "History Date",
+            "type": "string",
+            "type_norm": "string_datetime",
+            "format": "date-time",
+            "is_custom": True,
+        },
+        "current_date": {
+            "adapter_name": "report",
+            "column_name": "report:current_date",
+            "column_title": "Report: Current Date",
+            "is_complex": False,
+            "is_list": False,
+            "is_root": True,
+            "parent": "root",
+            "name": "current_date",
+            "name_base": "current_date",
+            "name_qual": "current_date",
+            "title": "Current Date",
+            "type": "string",
+            "type_norm": "string_datetime",
+            "format": "date-time",
+            "is_custom": True,
+        }
+    },
 }
 """custom schemas for reports in asset callbacks"""
 

@@ -314,6 +314,16 @@ GET_EXPORT = [
         hidden=False,
     ),
     click.option(
+        "--include-dates/--no-include-dates",
+        "include_dates",
+        default=asset_callbacks.Base.args_map()["include_dates"],
+        help="Include history date and current date as columns in each asset",
+        show_envvar=True,
+        show_default=True,
+        is_flag=True,
+        hidden=False,
+    ),
+    click.option(
         "--software-whitelist-file",
         "whitelist",
         default=None,

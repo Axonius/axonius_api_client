@@ -113,6 +113,41 @@ class CallbacksFull(Callbacks):
             assert schema in cbobj.custom_schemas
             assert schema in cbobj.final_schemas
 
+    def test_include_dates_false(self, cbexport, apiobj, caplog):
+        original_row = copy.deepcopy(apiobj.ORIGINAL_ROWS[0])
+        test_row = copy.deepcopy(original_row)
+
+        cbobj = self.get_cbobj(
+            apiobj=apiobj, cbexport=cbexport, getargs={"include_dates": False}
+        )
+
+        rows = cbobj.add_include_dates(rows=test_row)
+        assert isinstance(rows, list)
+        assert len(rows) == 1
+        assert rows[0] == original_row
+
+        assert isinstance(cbobj.custom_schemas, list)
+        assert not cbobj.custom_schemas
+
+    def test_include_dates_true(self, cbexport, apiobj, caplog):
+        original_row = copy.deepcopy(apiobj.ORIGINAL_ROWS[0])
+        test_row = copy.deepcopy(original_row)
+
+        cbobj = self.get_cbobj(
+            apiobj=apiobj, cbexport=cbexport, getargs={"include_dates": True}
+        )
+
+        rows = cbobj.add_include_dates(rows=test_row)
+        assert isinstance(rows, list)
+        assert len(rows) == 1
+        assert original_row != rows[0]
+
+        assert isinstance(cbobj.custom_schemas, list)
+        for field, schema in SCHEMAS_CUSTOM["include_dates"].items():
+            assert schema["name_qual"] in test_row
+            assert schema in cbobj.custom_schemas
+            assert schema in cbobj.final_schemas
+
     def test_echo_page_progress_0(self, cbexport, apiobj, caplog):
         cbobj = self.get_cbobj(
             apiobj=apiobj,
