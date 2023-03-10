@@ -27,6 +27,7 @@ from ..logs import LOG
 from ..setup_env import DEFAULT_ENV_FILE
 from . import (
     context,
+    grp_account,
     grp_adapters,
     grp_assets,
     grp_certs,
@@ -371,6 +372,16 @@ Tips:
     type=click.INT,
     show_default=True,
 )
+@click.option(
+    "--credentials/--keys",
+    "-creds/-keys",
+    "credentials",
+    default=False,
+    help="Treat key as Username and secret as password",
+    is_flag=True,
+    show_envvar=True,
+    show_default=True,
+)
 @click.version_option(version.__version__)
 @context.pass_context
 @click.pass_context
@@ -397,3 +408,4 @@ cli.add_command(grp_certs.certs)
 cli.add_command(grp_enforcements.enforcements)
 cli.add_command(grp_spaces.spaces)
 cli.add_command(grp_folders.folders)
+cli.add_command(grp_account.account)

@@ -516,8 +516,6 @@ class Http:
             body: content to log
             body_type: 'request' or 'response'
         """
-        if not isinstance(body, str):
-            body = ""
         body = json_log(obj=coerce_str(value=body), trim=self.LOG_BODY_MAX_LEN)
         return f"{body_type} BODY:\n{body}"
 

@@ -1291,6 +1291,31 @@ class DataScopes(ApiEndpointGroup):
 
 
 @dataclasses.dataclass(eq=True, frozen=True, repr=False)
+class Account(ApiEndpointGroup):
+    """Pass."""
+
+    login: ApiEndpoint = ApiEndpoint(
+        method="post",
+        path="api/login",
+        request_schema_cls=json_api.account.LoginRequestSchema,
+        request_model_cls=json_api.account.LoginRequest,
+        response_schema_cls=json_api.account.LoginResponseSchema,
+        response_model_cls=json_api.account.LoginResponse,
+    )
+
+    get_api_keys: ApiEndpoint = ApiEndpoint(
+        method="get",
+        path="api/settings/api_key",
+        request_schema_cls=None,
+        request_model_cls=None,
+        response_schema_cls=None,
+        response_model_cls=None,
+    )
+
+    validate: ApiEndpoint = SystemSettings.get_constants
+
+
+@dataclasses.dataclass(eq=True, frozen=True, repr=False)
 class ApiEndpoints(BaseData):
     """Pass."""
 
@@ -1313,6 +1338,7 @@ class ApiEndpoints(BaseData):
     dashboard_spaces: ApiEndpointGroup = DashboardSpaces()
     folders_queries: ApiEndpointGroup = FoldersQueries()
     folders_enforcements: ApiEndpointGroup = FoldersEnforcements()
+    account: ApiEndpointGroup = Account()
 
     @classmethod
     def get_groups(cls) -> Dict[str, ApiEndpointGroup]:

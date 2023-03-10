@@ -3,8 +3,10 @@
 import logging
 import logging.handlers
 import pathlib
+import re
 import sys
 import time
+import typing as t
 from typing import Callable, Dict, List, Optional, Tuple, Union
 
 from . import LOG
@@ -39,6 +41,24 @@ ECHOERS: Tuple[Tuple[int, Callable]] = (
 )
 
 
+class HideFormatter(logging.Formatter):
+    """Hide the rest of the line for any lines against :attr:`HIDE_REGEX`."""
+
+    HIDE_ENABLED: bool = True
+    """Enable hiding of matches to HIDE_REGEX."""
+    HIDE_REGEX: t.Pattern = re.compile(r"(password|secret).*", re.I)
+    """Pattern of sensitive info to hide."""
+    HIDE_REPLACE: str = r"\1 ...REST OF LINE HIDDEN..."
+    """Value to replace matches to HIDE_REGEX with."""
+
+    def format(self, record):
+        """Pass."""
+        record = super().format(record)
+        if self.HIDE_ENABLED:
+            record = self.HIDE_REGEX.sub(self.HIDE_REPLACE, record)
+        return record
+
+
 def get_echoer(level: Union[int, str]) -> Callable:
     """Pass."""
     level_str = str_level(level=level)
@@ -59,11 +79,13 @@ def get_log_method(obj: logging.Logger, level: Optional[str] = None) -> Callable
 def gmtime():
     """Set the logging system to use GMT for time strings."""
     logging.Formatter.converter = time.gmtime
+    HideFormatter.converter = time.gmtime
 
 
 def localtime():
     """Set the logging system to use local time for time strings."""
     logging.Formatter.converter = time.localtime
+    HideFormatter.converter = time.localtime
 
 
 def get_obj_log(obj: object, level: Optional[Union[int, str]] = None, **kwargs) -> logging.Logger:
@@ -261,7 +283,7 @@ def add_handler(
     handler = htype(**kwargs)
     handler.name = hname
     set_log_level(obj=handler, level=level)
-    handler.setFormatter(logging.Formatter(fmt=fmt, datefmt=datefmt))
+    handler.setFormatter(HideFormatter(fmt=fmt, datefmt=datefmt))
     obj.addHandler(handler)
     return handler
 
