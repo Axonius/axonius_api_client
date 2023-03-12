@@ -119,7 +119,7 @@ class SystemRoleSchema(BaseSchemaJson):
     users_count = marshmallow_jsonapi.fields.Int(required=False, load_default=0, dump_default=0)
 
     @staticmethod
-    def get_model_cls() -> t.Optional[type]:
+    def get_model_cls() -> t.Any:
         """Pass."""
         return SystemRole
 
@@ -154,7 +154,7 @@ class SystemRoleUpdateSchema(BaseSchemaJson):
         type_ = "roles_schema"
 
     @staticmethod
-    def get_model_cls() -> t.Optional[type]:
+    def get_model_cls() -> t.Any:
         """Pass."""
         return SystemRoleUpdate
 
@@ -167,7 +167,7 @@ class SystemRoleCreateSchema(BaseSchemaJson):
     data_scope_restriction = marshmallow_jsonapi.fields.Dict(required=False)
 
     @staticmethod
-    def get_model_cls() -> t.Optional[type]:
+    def get_model_cls() -> t.Any:
         """Pass."""
         return SystemRoleCreate
 
@@ -217,7 +217,7 @@ class SystemRole(BaseModel):
         return fix_data_scope_restriction(data)
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[type]:
+    def get_schema_cls() -> t.Any:
         """Pass."""
         return SystemRoleSchema
 
@@ -308,7 +308,7 @@ class SystemRoleUpdate(BaseModel):
     data_scope_restriction: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[type]:
+    def get_schema_cls() -> t.Any:
         """Pass."""
         return SystemRoleUpdateSchema
 
@@ -322,7 +322,7 @@ class SystemRoleCreate(BaseModel):
     data_scope_restriction: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[type]:
+    def get_schema_cls() -> t.Any:
         """Pass."""
         return SystemRoleCreateSchema
 

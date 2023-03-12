@@ -41,6 +41,6 @@ class SystemMetaSchema(BaseSchemaJson):
         return data
 
     @staticmethod
-    def get_model_cls() -> t.Optional[type]:
+    def get_model_cls() -> t.Any:
         """Pass."""
         return dict

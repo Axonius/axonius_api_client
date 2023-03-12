@@ -34,7 +34,7 @@ class ModifyTagsSchema(BaseSchemaJson):
         type_ = "add_tags_schema"
 
     @staticmethod
-    def get_model_cls() -> t.Optional[type]:
+    def get_model_cls() -> t.Any:
         """Pass."""
         return ModifyTags
 
@@ -48,7 +48,7 @@ class ModifyTags(BaseModel):
     filter: t.Optional[str] = None
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[type]:
+    def get_schema_cls() -> t.Any:
         """Pass."""
         return ModifyTagsSchema
 
@@ -57,7 +57,7 @@ class HistoryDatesSchema(DictValueSchema):
     """Pass."""
 
     @staticmethod
-    def get_model_cls() -> t.Optional[type]:
+    def get_model_cls() -> t.Any:
         """Pass."""
         return HistoryDates
 
@@ -93,7 +93,7 @@ class AssetTypeHistoryDate(BaseModel):
         return f"date={self.date}, days_ago={self.days_ago}"
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[type]:
+    def get_schema_cls() -> t.Any:
         """Pass."""
         return None
 
@@ -211,7 +211,7 @@ class AssetTypeHistoryDates(BaseModel):
         )
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[type]:
+    def get_schema_cls() -> t.Any:
         """Pass."""
         return None
 
@@ -235,7 +235,7 @@ class HistoryDates(DictValue):
     parsed: t.ClassVar[dict] = None
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[type]:
+    def get_schema_cls() -> t.Any:
         """Pass."""
         return HistoryDatesSchema
 
@@ -295,7 +295,7 @@ class AssetRequestSchema(BaseSchemaJson):
         type_ = "entity_request_schema"
 
     @staticmethod
-    def get_model_cls() -> t.Optional[type]:
+    def get_model_cls() -> t.Any:
         """Pass."""
         return AssetRequest
 
@@ -341,7 +341,7 @@ class AssetRequest(AssetMixins, BaseModel):
         self.expressions = self.expressions or []
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[type]:
+    def get_schema_cls() -> t.Any:
         """Pass."""
         return AssetRequestSchema
 
@@ -564,7 +564,7 @@ class AssetsPage(BaseModel):
         raise StopFetch(reason=reason, state=state)
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[type]:
+    def get_schema_cls() -> t.Any:
         """Pass."""
         return None
 
@@ -578,7 +578,7 @@ class AssetById(BaseModel):
     document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[type]:
+    def get_schema_cls() -> t.Any:
         """Pass."""
         return None
 
@@ -610,7 +610,7 @@ class CountRequestSchema(BaseSchemaJson):
         type_ = "entities_count_schema"
 
     @staticmethod
-    def get_model_cls() -> t.Optional[type]:
+    def get_model_cls() -> t.Any:
         """Pass."""
         return CountRequest
 
@@ -631,7 +631,7 @@ class CountRequest(BaseModel, AssetMixins):
     saved_query_id: t.Optional[str] = None
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[type]:
+    def get_schema_cls() -> t.Any:
         """Pass."""
         return CountRequestSchema
 
@@ -644,7 +644,7 @@ class Count(BaseModel):
     document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[type]:
+    def get_schema_cls() -> t.Any:
         """Pass."""
         return None
 
@@ -668,7 +668,7 @@ class DestroyRequest(BaseModel):
     history: bool = False
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[type]:
+    def get_schema_cls() -> t.Any:
         """Pass."""
         return None
 
@@ -687,7 +687,7 @@ class RunEnforcementRequestSchema(BaseSchemaJson):
         type_ = "enforce_entity_schema"
 
     @staticmethod
-    def get_model_cls() -> t.Optional[type]:
+    def get_model_cls() -> t.Any:
         """Pass."""
         return RunEnforcementRequest
 
@@ -716,6 +716,6 @@ class RunEnforcementRequest(BaseModel):
     )
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[type]:
+    def get_schema_cls() -> t.Any:
         """Pass."""
         return RunEnforcementRequestSchema
