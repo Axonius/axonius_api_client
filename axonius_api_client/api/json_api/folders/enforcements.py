@@ -85,7 +85,7 @@ class CreateFolderRequestSchema(BaseSchemaJson, base.CreateFolderRequestSchema):
     """Marshmallow schema for request to create folder."""
 
     @staticmethod
-    def get_model_cls() -> t.Optional[type]:
+    def get_model_cls() -> t.Any:
         """Pass."""
         return CreateFolderRequestModel
 
@@ -99,7 +99,7 @@ class CreateFolderResponseSchema(MetadataSchema):
     """Marshmallow schema for response to create folder."""
 
     @staticmethod
-    def get_model_cls() -> t.Optional[type]:
+    def get_model_cls() -> t.Any:
         """Pass."""
         return CreateFolderResponseModel
 
@@ -113,7 +113,7 @@ class RenameFolderRequestSchema(BaseSchemaJson, base.RenameFolderRequestSchema):
     """Marshmallow schema for request to rename a folder."""
 
     @staticmethod
-    def get_model_cls() -> t.Optional[type]:
+    def get_model_cls() -> t.Any:
         """Pass."""
         return RenameFolderRequestModel
 
@@ -127,7 +127,7 @@ class RenameFolderResponseSchema(MetadataSchema):
     """Marshmallow schema for response to rename folder."""
 
     @staticmethod
-    def get_model_cls() -> t.Optional[type]:
+    def get_model_cls() -> t.Any:
         """Pass."""
         return RenameFolderResponseModel
 
@@ -141,7 +141,7 @@ class MoveFolderRequestSchema(BaseSchemaJson, base.MoveFolderRequestSchema):
     """Marshmallow schema for request to move a folder."""
 
     @staticmethod
-    def get_model_cls() -> t.Optional[type]:
+    def get_model_cls() -> t.Any:
         """Pass."""
         return MoveFolderRequestModel
 
@@ -155,7 +155,7 @@ class MoveFolderResponseSchema(MetadataSchema):
     """Marshmallow schema for response to move a folder."""
 
     @staticmethod
-    def get_model_cls() -> t.Optional[type]:
+    def get_model_cls() -> t.Any:
         """Pass."""
         return MoveFolderResponseModel
 
@@ -169,7 +169,7 @@ class DeleteFolderResponseSchema(MetadataSchema):
     """Marshmallow schema  for response to delete folder."""
 
     @staticmethod
-    def get_model_cls() -> t.Optional[type]:
+    def get_model_cls() -> t.Any:
         """Pass."""
         return DeleteFolderResponseModel
 
@@ -183,7 +183,7 @@ class FoldersSchema(base.FoldersSchema, BaseSchemaJson):
     """Marshmallow schema for response to get folders."""
 
     @staticmethod
-    def get_model_cls() -> t.Optional[type]:
+    def get_model_cls() -> t.Any:
         """Pass."""
         return FoldersModel
 
@@ -198,7 +198,7 @@ class CreateFolderRequestModel(base.CreateFolderRequestModel, BaseModel):
     """Dataclass model for request to create folder."""
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[type]:
+    def get_schema_cls() -> t.Any:
         """Pass."""
         return CreateFolderRequestSchema
 
@@ -208,7 +208,7 @@ class CreateFolderResponseModel(base.CreateFolderResponseModel, Metadata):
     """Dataclass model for response to create folder."""
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[type]:
+    def get_schema_cls() -> t.Any:
         """Pass."""
         return CreateFolderResponseSchema
 
@@ -218,7 +218,7 @@ class RenameFolderRequestModel(Metadata, base.RenameFolderRequestModel):
     """Dataclass model for request to rename a folder."""
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[type]:
+    def get_schema_cls() -> t.Any:
         """Pass."""
         return RenameFolderRequestSchema
 
@@ -228,7 +228,7 @@ class RenameFolderResponseModel(Metadata, base.RenameFolderResponseModel):
     """Dataclass model for response to rename a folder."""
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[type]:
+    def get_schema_cls() -> t.Any:
         """Pass."""
         return RenameFolderResponseSchema
 
@@ -238,7 +238,7 @@ class MoveFolderRequestModel(Metadata, base.MoveFolderRequestModel):
     """Dataclass model for request to rename a folder."""
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[type]:
+    def get_schema_cls() -> t.Any:
         """Pass."""
         return MoveFolderRequestSchema
 
@@ -248,7 +248,7 @@ class MoveFolderResponseModel(Metadata, base.MoveFolderResponseModel):
     """Dataclass model for response to rename a folder."""
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[type]:
+    def get_schema_cls() -> t.Any:
         """Pass."""
         return MoveFolderResponseSchema
 
@@ -258,7 +258,7 @@ class DeleteFolderResponseModel(base.DeleteFolderResponseModel, Metadata):
     """Dataclass model for response to delete folder."""
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[type]:
+    def get_schema_cls() -> t.Any:
         """Pass."""
         return DeleteFolderResponseSchema
 
@@ -268,7 +268,7 @@ class FolderModel(Folder, BaseModel, base.FolderModel):
     """Dataclass model for unmodeled folder objects in RootFolders."""
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[type]:
+    def get_schema_cls() -> t.Any:
         """Pass."""
         return None
 
@@ -278,6 +278,6 @@ class FoldersModel(Folder, BaseModel, base.FoldersModel):
     """Dataclass model for unmodeled folder objects in RootFolders."""
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[type]:
+    def get_schema_cls() -> t.Any:
         """Pass."""
         return FoldersSchema

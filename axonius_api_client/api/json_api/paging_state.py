@@ -30,7 +30,7 @@ class Page(BaseModel):
     page_number: t.ClassVar[int] = 0
 
     @staticmethod
-    def get_model_cls() -> t.Optional[type]:
+    def get_model_cls() -> t.Any:
         """Pass."""
         return None
 

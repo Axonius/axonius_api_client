@@ -21,7 +21,7 @@ class CentralCoreSettingsUpdateSchema(BaseSchemaJson):
         type_ = "central_core_settings_schema"
 
     @staticmethod
-    def get_model_cls() -> t.Optional[type]:
+    def get_model_cls() -> t.Any:
         """Pass."""
         return CentralCoreSettingsUpdate
 
@@ -34,7 +34,7 @@ class CentralCoreSettingsUpdate(BaseModel):
     enabled: bool
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[type]:
+    def get_schema_cls() -> t.Any:
         """Pass."""
         return CentralCoreSettingsUpdateSchema
 
@@ -63,7 +63,7 @@ class AdditionalDataAws(BaseSchema):
     )
 
     @staticmethod
-    def get_model_cls() -> t.Optional[type]:
+    def get_model_cls() -> t.Any:
         """Pass."""
         return dict
 
@@ -88,7 +88,7 @@ class CentralCoreRestoreAwsRequestSchema(BaseSchemaJson):
         type_ = "central_core_restore_request_schema"
 
     @staticmethod
-    def get_model_cls() -> t.Optional[type]:
+    def get_model_cls() -> t.Any:
         """Pass."""
         return CentralCoreRestoreAwsRequest
 
@@ -101,7 +101,7 @@ class CentralCoreRestoreAwsRequest(BaseModel):
     restore_type: str = "aws"
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[type]:
+    def get_schema_cls() -> t.Any:
         """Pass."""
         return CentralCoreRestoreAwsRequestSchema
 
@@ -119,7 +119,7 @@ class CentralCoreRestoreSchema(BaseSchemaJson):
         type_ = "central_core_restore_response_schema"
 
     @staticmethod
-    def get_model_cls() -> t.Optional[type]:
+    def get_model_cls() -> t.Any:
         """Pass."""
         return CentralCoreRestore
 
@@ -134,6 +134,6 @@ class CentralCoreRestore(BaseModel):
     document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[type]:
+    def get_schema_cls() -> t.Any:
         """Pass."""
         return CentralCoreRestoreSchema

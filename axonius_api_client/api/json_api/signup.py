@@ -25,7 +25,7 @@ class SignupRequestSchema(BaseSchemaJson):
         type_ = "signup_schema"
 
     @staticmethod
-    def get_model_cls() -> t.Optional[type]:
+    def get_model_cls() -> t.Any:
         """Pass."""
         return SignupRequest
 
@@ -38,7 +38,7 @@ class SystemStatusSchema(BaseSchemaJson):
     status_code = marshmallow_jsonapi.fields.Int()
 
     @staticmethod
-    def get_model_cls() -> t.Optional[type]:
+    def get_model_cls() -> t.Any:
         """Pass."""
         return SystemStatus
 
@@ -65,7 +65,7 @@ class SignupRequest(BaseModel):
     )
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[type]:
+    def get_schema_cls() -> t.Any:
         """Pass."""
         return SignupRequestSchema
 
@@ -82,7 +82,7 @@ class SignupResponseSchema(BaseSchemaJson):
         type_ = "signup_response_schema"
 
     @staticmethod
-    def get_model_cls() -> t.Optional[type]:
+    def get_model_cls() -> t.Any:
         """Pass."""
         return SignupResponse
 
@@ -96,7 +96,7 @@ class SignupResponse(BaseModel):
     document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[type]:
+    def get_schema_cls() -> t.Any:
         """Pass."""
         return SignupResponseSchema
 
@@ -111,7 +111,7 @@ class SystemStatus(BaseModel):
     document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[type]:
+    def get_schema_cls() -> t.Any:
         """Pass."""
         return SystemStatusSchema
 

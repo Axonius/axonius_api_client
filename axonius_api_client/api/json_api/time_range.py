@@ -85,7 +85,7 @@ class TimeRange(BaseModel):
     )
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[type]:
+    def get_schema_cls() -> t.Any:
         """Pass."""
         return TimeRangeSchema
 

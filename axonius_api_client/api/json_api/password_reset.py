@@ -16,7 +16,7 @@ class CreateRequest(BaseModel):
     user_name: str
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[type]:
+    def get_schema_cls() -> t.Any:
         """Pass."""
         return None
 
@@ -30,7 +30,7 @@ class SendRequest(BaseModel):
     invite: bool = False
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[type]:
+    def get_schema_cls() -> t.Any:
         """Pass."""
         return None
 
@@ -42,7 +42,7 @@ class SendResponse(BaseModel):
     user_name: str
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[type]:
+    def get_schema_cls() -> t.Any:
         """Pass."""
         return None
 
@@ -58,7 +58,7 @@ class ValidateRequest(BaseModel):
         return None
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[type]:
+    def get_schema_cls() -> t.Any:
         """Pass."""
         return None
 
@@ -69,7 +69,7 @@ class ValidateResponse(BoolValue):
 
     @classmethod
     def load_response(
-        cls, data: t.Union[dict, list], http: Http, schema_cls: t.Optional[type] = None, **kwargs
+        cls, data: t.Union[dict, list], http: Http, schema_cls: t.Any = None, **kwargs
     ):
         """Pass."""
         data = {"value": data["valid"]}
@@ -77,7 +77,7 @@ class ValidateResponse(BoolValue):
         # PBUG: forced into BoolValue model
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[type]:
+    def get_schema_cls() -> t.Any:
         """Pass."""
         return None
 
@@ -90,7 +90,7 @@ class UseRequest(BaseModel):
     password: str
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[type]:
+    def get_schema_cls() -> t.Any:
         """Pass."""
         return None
 
@@ -103,6 +103,6 @@ class UseResponse(BaseModel):
     document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[type]:
+    def get_schema_cls() -> t.Any:
         """Pass."""
         return None

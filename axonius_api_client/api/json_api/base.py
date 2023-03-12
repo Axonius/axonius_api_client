@@ -123,7 +123,7 @@ class BaseSchema(BaseCommon, marshmallow.Schema):
     """Schema base class for validating non JSON API data."""
 
     @staticmethod
-    def get_model_cls() -> t.Optional[type]:
+    def get_model_cls() -> t.Any:
         """Get the BaseModel or type that data should be loaded into.
 
         Returns:
@@ -251,7 +251,7 @@ class BaseModel(dataclasses_json.DataClassJsonMixin, BaseCommon):
     """Model base class for holding data."""
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[type]:
+    def get_schema_cls() -> t.Any:
         """Get the BaseSchema that should be used to validate the data for this model.
 
         Returns:

@@ -32,7 +32,7 @@ class PaginationRequest(BaseModel):
     """Number of rows to return"""
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[type]:
+    def get_schema_cls() -> t.Any:
         """Pass."""
         return None
 
@@ -82,7 +82,7 @@ class PageSortRequest(BaseModel):
         self.page = self.page if self.page else PaginationRequest()
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[type]:
+    def get_schema_cls() -> t.Any:
         """Pass."""
         return None
 
@@ -97,7 +97,7 @@ class ResourcesGetSchema(BaseSchemaJson):
     get_metadata = SchemaBool(load_default=True, dump_default=True)
 
     @staticmethod
-    def get_model_cls() -> t.Optional[type]:
+    def get_model_cls() -> t.Any:
         """Pass."""
         return ResourcesGet
 
@@ -139,7 +139,7 @@ class ResourcesGet(PageSortRequest):
     )
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[type]:
+    def get_schema_cls() -> t.Any:
         """Pass."""
         return ResourcesGetSchema
 
@@ -151,6 +151,6 @@ class ResourceDelete(BaseModel):
     uuid: str
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[type]:
+    def get_schema_cls() -> t.Any:
         """Pass."""
         return None

@@ -293,7 +293,7 @@ class EnforcementBasicSchema(BaseSchemaJson):
         type_ = "enforcements_details_schema"
 
     @staticmethod
-    def get_model_cls() -> t.Optional[type]:
+    def get_model_cls() -> t.Any:
         """Pass."""
         return EnforcementBasicModel
 
@@ -323,7 +323,7 @@ class EnforcementFullSchema(BaseSchemaJson):
         type_ = "enforcements_details_schema"
 
     @staticmethod
-    def get_model_cls() -> t.Optional[type]:
+    def get_model_cls() -> t.Any:
         """Pass."""
         return EnforcementFullModel
 
@@ -339,7 +339,7 @@ class UpdateDescriptionRequestSchema(BaseSchemaJson):
         type_ = "update_enforcement_description"
 
     @staticmethod
-    def get_model_cls() -> t.Optional[type]:
+    def get_model_cls() -> t.Any:
         """Pass."""
         return UpdateDescriptionRequestModel
 
@@ -358,7 +358,7 @@ class UpdateEnforcementRequestSchema(BaseSchemaJson):
         type_ = "enforcements_schema"
 
     @staticmethod
-    def get_model_cls() -> t.Optional[type]:
+    def get_model_cls() -> t.Any:
         """Pass."""
         return UpdateEnforcementRequestModel
 
@@ -375,7 +375,7 @@ class MoveEnforcementsRequestSchema(BaseSchemaJson):
         type_ = "update_enforcements_folder_schema"
 
     @staticmethod
-    def get_model_cls() -> t.Optional[type]:
+    def get_model_cls() -> t.Any:
         """Pass."""
         return MoveEnforcementsRequestModel
 
@@ -384,7 +384,7 @@ class MoveEnforcementsResponseSchema(IntValueSchema):
     """Pass."""
 
     @staticmethod
-    def get_model_cls() -> t.Optional[type]:
+    def get_model_cls() -> t.Any:
         """Pass."""
         return MoveEnforcementsResponseModel
 
@@ -412,7 +412,7 @@ class UpdateEnforcementResponseSchema(BaseSchemaJson):
         type_ = "enforcements_details_schema"
 
     @staticmethod
-    def get_model_cls() -> t.Optional[type]:
+    def get_model_cls() -> t.Any:
         """Pass."""
         return UpdateEnforcementResponseModel
 
@@ -430,7 +430,7 @@ class CopyEnforcementSchema(BaseSchemaJson):
         type_ = "duplicate_enforcements_schema"
 
     @staticmethod
-    def get_model_cls() -> t.Optional[type]:
+    def get_model_cls() -> t.Any:
         """Pass."""
         return CopyEnforcementModel
 
@@ -449,7 +449,7 @@ class CreateEnforcementSchema(BaseSchemaJson):
         type_ = "enforcements_schema"
 
     @staticmethod
-    def get_model_cls() -> t.Optional[type]:
+    def get_model_cls() -> t.Any:
         """Pass."""
         return CreateEnforcementModel
 
@@ -468,7 +468,7 @@ class ActionTypeSchema(BaseSchemaJson):
         type_ = "actions_schema"
 
     @staticmethod
-    def get_model_cls() -> t.Optional[type]:
+    def get_model_cls() -> t.Any:
         """Pass."""
         return ActionType
 
@@ -485,7 +485,7 @@ class RunEnforcementAgainstTriggerRequestSchema(BaseSchemaJson):
         type_ = "run_enforcements_schema"
 
     @staticmethod
-    def get_model_cls() -> t.Optional[type]:
+    def get_model_cls() -> t.Any:
         """Pass."""
         return RunEnforcementAgainstTriggerRequestModel
 
@@ -502,7 +502,7 @@ class RunEnforcementsAgainstTriggerRequestSchema(BaseSchemaJson):
         type_ = "run_multiple_enforcements_schema"
 
     @staticmethod
-    def get_model_cls() -> t.Optional[type]:
+    def get_model_cls() -> t.Any:
         """Pass."""
         return RunEnforcementsAgainstTriggerRequestModel
 
@@ -1454,7 +1454,7 @@ class EnforcementBasicModel(BaseModel, EnforcementBasic):
     document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[type]:
+    def get_schema_cls() -> t.Any:
         """Pass."""
         return EnforcementBasicSchema
 
@@ -1475,7 +1475,7 @@ class EnforcementFullModel(BaseModel, EnforcementFull):
     created_by_quick_action: t.Optional[bool] = False
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[type]:
+    def get_schema_cls() -> t.Any:
         """Pass."""
         return EnforcementFullSchema
 
@@ -1492,7 +1492,7 @@ class UpdateDescriptionRequestModel(BaseModel):
     description: str
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[type]:
+    def get_schema_cls() -> t.Any:
         """Pass."""
         return UpdateDescriptionRequestSchema
 
@@ -1508,7 +1508,7 @@ class UpdateEnforcementRequestModel(BaseModel):
     triggers: t.List[dict]
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[type]:
+    def get_schema_cls() -> t.Any:
         """Pass."""
         return UpdateEnforcementRequestSchema
 
@@ -1521,7 +1521,7 @@ class MoveEnforcementsRequestModel(BaseModel):
     enforcements_ids: t.List[str]
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[type]:
+    def get_schema_cls() -> t.Any:
         """Pass."""
         return MoveEnforcementsRequestSchema
 
@@ -1531,7 +1531,7 @@ class MoveEnforcementsResponseModel(IntValue):
     """Pass."""
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[type]:
+    def get_schema_cls() -> t.Any:
         """Pass."""
         return MoveEnforcementsResponseSchema
 
@@ -1560,7 +1560,7 @@ class UpdateEnforcementResponseModel(BaseModel):
             self.description = ""
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[type]:
+    def get_schema_cls() -> t.Any:
         """Pass."""
         return UpdateEnforcementResponseSchema
 
@@ -1580,7 +1580,7 @@ class CopyEnforcementModel(BaseModel):
     clone_triggers: bool = True
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[type]:
+    def get_schema_cls() -> t.Any:
         """Pass."""
         return CopyEnforcementSchema
 
@@ -1600,7 +1600,7 @@ class CreateEnforcementModel(BaseModel):
             self.description = ""
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[type]:
+    def get_schema_cls() -> t.Any:
         """Pass."""
         return CreateEnforcementSchema
 
@@ -1617,7 +1617,7 @@ class ActionType(BaseModel):
     document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[type]:
+    def get_schema_cls() -> t.Any:
         """Pass."""
         return ActionTypeSchema
 
@@ -1731,7 +1731,7 @@ class RunEnforcementAgainstTriggerRequestModel(BaseModel):
     )
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[type]:
+    def get_schema_cls() -> t.Any:
         """Pass."""
         return RunEnforcementAgainstTriggerRequestSchema
 
@@ -1751,6 +1751,6 @@ class RunEnforcementsAgainstTriggerRequestModel(BaseModel):
     )
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[type]:
+    def get_schema_cls() -> t.Any:
         """Pass."""
         return RunEnforcementsAgainstTriggerRequestSchema
