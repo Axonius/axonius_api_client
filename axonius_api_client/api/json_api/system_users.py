@@ -39,7 +39,7 @@ class SystemUserSchema(BaseSchemaJson):
     )
 
     @staticmethod
-    def get_model_cls() -> t.Optional[type]:
+    def get_model_cls() -> t.Any:
         """Pass."""
         return SystemUser
 
@@ -60,7 +60,7 @@ class SystemUserUpdateSchema(SystemUserSchema):
         type_ = "users_schema"
 
     @staticmethod
-    def get_model_cls() -> t.Optional[type]:
+    def get_model_cls() -> t.Any:
         """Pass."""
         return SystemUserUpdate
 
@@ -111,7 +111,7 @@ class SystemUser(BaseModel):
     document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[type]:
+    def get_schema_cls() -> t.Any:
         """Pass."""
         return SystemUserSchema
 
@@ -173,7 +173,7 @@ class SystemUserUpdate(SystemUser):
     """Pass."""
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[type]:
+    def get_schema_cls() -> t.Any:
         """Pass."""
         return SystemUserUpdateSchema
 
@@ -191,7 +191,7 @@ class SystemUserCreateSchema(BaseSchemaJson):
     password = SchemaPassword(load_default="", dump_default="", allow_none=True)
 
     @staticmethod
-    def get_model_cls() -> t.Optional[type]:
+    def get_model_cls() -> t.Any:
         """Pass."""
         return SystemUserCreate
 
@@ -232,6 +232,6 @@ class SystemUserCreate(BaseModel):
         self.password = self.password or ""
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[type]:
+    def get_schema_cls() -> t.Any:
         """Pass."""
         return SystemUserCreateSchema

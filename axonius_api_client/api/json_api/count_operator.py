@@ -35,7 +35,7 @@ class CountOperatorSchema(marshmallow.Schema):
         type_ = "count_operator_schema"
 
     @staticmethod
-    def get_model_cls() -> t.Optional[type]:
+    def get_model_cls() -> t.Any:
         """Pass."""
         return CountOperator
 
@@ -55,6 +55,6 @@ class CountOperator(BaseModel):
     )
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[type]:
+    def get_schema_cls() -> t.Any:
         """Pass."""
         return CountOperatorSchema

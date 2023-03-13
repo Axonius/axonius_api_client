@@ -24,7 +24,7 @@ class ExportableSpacesResponseSchema(BaseSchemaJson):
     )
 
     @staticmethod
-    def get_model_cls() -> t.Optional[type]:
+    def get_model_cls() -> t.Any:
         """Pass."""
         return ExportableSpacesResponse
 
@@ -44,7 +44,7 @@ class ExportableSpacesResponse(BaseModel):
     document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[type]:
+    def get_schema_cls() -> t.Any:
         """Pass."""
         return ExportableSpacesResponseSchema
 
@@ -63,7 +63,7 @@ class ExportSpacesRequestSchema(BaseSchemaJson):
     )
 
     @staticmethod
-    def get_model_cls() -> t.Optional[type]:
+    def get_model_cls() -> t.Any:
         """Pass."""
         return ExportSpacesRequest
 
@@ -86,7 +86,7 @@ class ExportSpacesRequest(BaseModel):
     document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[type]:
+    def get_schema_cls() -> t.Any:
         """Pass."""
         return ExportSpacesRequestSchema
 
@@ -102,7 +102,7 @@ class ImportSpacesRequestSchema(BaseSchemaJson):
     )
 
     @staticmethod
-    def get_model_cls() -> t.Optional[type]:
+    def get_model_cls() -> t.Any:
         """Pass."""
         return ImportSpacesRequest
 
@@ -123,7 +123,7 @@ class ImportSpacesRequest(BaseModel):
     document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[type]:
+    def get_schema_cls() -> t.Any:
         """Pass."""
         return ImportSpacesRequestSchema
 
@@ -152,7 +152,7 @@ class ImportSpacesResponseSchema(BaseSchema):
     document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     @staticmethod
-    def get_model_cls() -> t.Optional[type]:
+    def get_model_cls() -> t.Any:
         """Pass."""
         return ImportSpacesResponse
 
@@ -189,7 +189,7 @@ class ImportSpacesResponse(BaseModel):
     document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[type]:
+    def get_schema_cls() -> t.Any:
         """Pass."""
         return ImportSpacesResponseSchema
 
@@ -215,7 +215,7 @@ class SizeSchema(BaseSchema):
     row = marshmallow_jsonapi.fields.Int()
 
     @staticmethod
-    def get_model_cls() -> t.Optional[type]:
+    def get_model_cls() -> t.Any:
         """Pass."""
         return Size
 
@@ -242,7 +242,7 @@ class ChartSchema(BaseSchema):
     size = marshmallow.fields.Nested(SizeSchema)
 
     @staticmethod
-    def get_model_cls() -> t.Optional[type]:
+    def get_model_cls() -> t.Any:
         """Pass."""
         return Chart
 
@@ -296,7 +296,7 @@ class SpacesDetailsSchema(BaseSchemaJson):
     )
 
     @staticmethod
-    def get_model_cls() -> t.Optional[type]:
+    def get_model_cls() -> t.Any:
         """Pass."""
         return SpacesDetails
 
@@ -370,7 +370,7 @@ class SpaceChartsSchema(BaseSchemaJson):
     )
 
     @staticmethod
-    def get_model_cls() -> t.Optional[type]:
+    def get_model_cls() -> t.Any:
         """Pass."""
         return SpaceCharts
 
@@ -388,7 +388,7 @@ class Size(BaseModel):
     row: int
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[type]:
+    def get_schema_cls() -> t.Any:
         """Pass."""
         return SizeSchema
 
@@ -450,7 +450,7 @@ class Chart(BaseModel):
     last_updated: t.Optional[datetime.datetime] = None
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[type]:
+    def get_schema_cls() -> t.Any:
         """Pass."""
         return ChartSchema
 
@@ -647,7 +647,7 @@ class SpacesDetails(BaseModel):
     document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[type]:
+    def get_schema_cls() -> t.Any:
         """Pass."""
         return SpacesDetailsSchema
 
@@ -717,7 +717,7 @@ class SpaceCharts(BaseModel):
         return [x.name for x in self.charts_by_order]
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[type]:
+    def get_schema_cls() -> t.Any:
         """Pass."""
         return SpaceChartsSchema
 

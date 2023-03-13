@@ -50,7 +50,7 @@ class SavedQueryGetSchema(ResourcesGetSchema):
     include_usage = SchemaBool(load_default=True, dump_default=True)
 
     @staticmethod
-    def get_model_cls() -> t.Optional[type]:
+    def get_model_cls() -> t.Any:
         """Pass."""
         return SavedQueryGet
 
@@ -88,7 +88,7 @@ class QueryHistorySchema(BaseSchemaJson):
         type_ = "entities_queries_history_response_schema"
 
     @staticmethod
-    def get_model_cls() -> t.Optional[type]:
+    def get_model_cls() -> t.Any:
         """Pass."""
         return QueryHistory
 
@@ -120,7 +120,7 @@ class QueryHistoryRequestSchema(BaseSchemaJson):
     filter = marshmallow_jsonapi.fields.Str(allow_none=True, load_default="", dump_default="")
 
     @staticmethod
-    def get_model_cls() -> t.Optional[type]:
+    def get_model_cls() -> t.Any:
         """Pass."""
         return QueryHistoryRequest
 
@@ -178,7 +178,7 @@ class SavedQuerySchema(BaseSchemaJson):
     user_archived = SchemaBool(allow_none=True, load_default=False, dump_default=False)
 
     @staticmethod
-    def get_model_cls() -> t.Optional[type]:
+    def get_model_cls() -> t.Any:
         """Pass."""
         return SavedQuery
 
@@ -206,7 +206,7 @@ class SavedQueryCreateSchema(BaseSchemaJson):
     folder_id = marshmallow_jsonapi.fields.Str(load_default="", dump_default="")
 
     @staticmethod
-    def get_model_cls() -> t.Optional[type]:
+    def get_model_cls() -> t.Any:
         """Pass."""
         return SavedQueryCreate
 
@@ -610,7 +610,7 @@ class SavedQuery(BaseModel, SavedQueryMixins):
         return "SavedQuery"
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[type]:
+    def get_schema_cls() -> t.Any:
         """Pass."""
         return SavedQuerySchema
 
@@ -773,7 +773,7 @@ class SavedQueryCreate(BaseModel, SavedQueryMixins):
     folder_id: str = ""
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[type]:
+    def get_schema_cls() -> t.Any:
         """Pass."""
         return SavedQueryCreateSchema
 
@@ -797,7 +797,7 @@ class SavedQueryGet(ResourcesGet):
         self.page = self.page if self.page else PaginationRequest()
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[type]:
+    def get_schema_cls() -> t.Any:
         """Pass."""
         return SavedQueryGetSchema
 
@@ -980,7 +980,7 @@ class QueryHistoryRequest(BaseModel):
         return (search, filter)
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[type]:
+    def get_schema_cls() -> t.Any:
         """Pass."""
         return QueryHistoryRequestSchema
 

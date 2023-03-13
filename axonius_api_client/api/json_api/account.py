@@ -45,7 +45,7 @@ class LoginRequestSchema(BaseSchemaJson):
         type_ = "login_schema"
 
     @staticmethod
-    def get_model_cls() -> t.Optional[type]:
+    def get_model_cls() -> t.Any:
         """Pass."""
         return LoginRequest
 
@@ -64,7 +64,7 @@ class LoginRequest(BaseModel):
     eula_agreed: bool = False
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[type]:
+    def get_schema_cls() -> t.Any:
         """Pass."""
         return LoginRequestSchema
 
@@ -100,7 +100,7 @@ class LoginResponseSchema(MetadataSchema):
         type_ = "metadata_schema"
 
     @staticmethod
-    def get_model_cls() -> t.Optional[type]:
+    def get_model_cls() -> t.Any:
         """Pass."""
         return LoginResponse
 
@@ -112,7 +112,7 @@ class LoginResponse(Metadata):
     document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     @staticmethod
-    def get_schema_cls() -> t.Optional[type]:
+    def get_schema_cls() -> t.Any:
         """Pass."""
         return LoginResponseSchema
 

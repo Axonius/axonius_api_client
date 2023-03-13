@@ -26,7 +26,7 @@ class AuditLogRequestSchema(ResourcesGetSchema):
         type_ = "audit_request_schema"
 
     @classmethod
-    def get_model_cls(cls) -> t.Optional[type]:
+    def get_model_cls(cls) -> t.Any:
         """Pass."""
         return AuditLogRequest
 
@@ -43,7 +43,7 @@ class AuditLogRequest(ResourcesGet):
     )
 
     @classmethod
-    def get_schema_cls(cls) -> t.Optional[type]:
+    def get_schema_cls(cls) -> t.Any:
         """Pass."""
         return AuditLogRequestSchema
 
@@ -68,7 +68,7 @@ class AuditLogSchema(BaseSchemaJson):
         type_ = "audit_schema"
 
     @classmethod
-    def get_model_cls(cls) -> t.Optional[type]:
+    def get_model_cls(cls) -> t.Any:
         """Pass."""
         return AuditLog
 
@@ -90,7 +90,7 @@ class AuditLog(BaseModel):
     document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     @classmethod
-    def get_schema_cls(cls) -> t.Optional[type]:
+    def get_schema_cls(cls) -> t.Any:
         """Pass."""
         return AuditLogSchema
 
