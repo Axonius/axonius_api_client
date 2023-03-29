@@ -25,7 +25,7 @@ class CountOperatorSchema(marshmallow.Schema):
         load_default=None,
         dump_default=None,
         allow_none=True,
-        validate=marshmallow.validate.OneOf([x.name for x in OperatorTypes]),
+        validate=marshmallow.validate.OneOf([None, *[x.name for x in OperatorTypes]]),
     )
     count = marshmallow.fields.Integer(dump_default=None, load_default=None, allow_none=True)
 

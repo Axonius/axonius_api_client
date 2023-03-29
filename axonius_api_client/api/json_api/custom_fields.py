@@ -4,6 +4,7 @@ import dataclasses
 import datetime
 import typing as t
 
+import bson
 import dataclasses_json
 import dateutil
 import marshmallow
@@ -99,6 +100,25 @@ class SchemaDatetime(marshmallow_jsonapi.fields.DateTime):
             raise marshmallow.ValidationError(str(exc))
 
 
+class SchemaObjectIDDatetime(marshmallow_jsonapi.fields.DateTime):
+    """Field that deserializes multi-type input data to app-level objects."""
+
+    def _serialize(self, value, attr, obj, **kwargs):
+        if value is None and self.allow_none:
+            return None
+
+        return dump_date(value)
+
+    def _deserialize(self, value, attr, data, **kwargs):
+        if value is None and self.allow_none:
+            return None
+
+        try:
+            return bson.ObjectId(value).generation_time
+        except Exception as exc:
+            raise marshmallow.ValidationError(str(exc))
+
+
 class SchemaPassword(marshmallow_jsonapi.fields.Field):
     """Field that serializes to a string or an array and deserializes to a string or an array."""
 
@@ -153,3 +173,10 @@ def validator_wrapper(fn: callable) -> callable:
 #     kwargs["validate"] = marshmallow.validate.OneOf(choices=choices)
 #     kwargs.setdefault("required", True)
 #     return field(**kwargs)
+
+
+def desc_field(description: str, **kwargs) -> dataclasses.Field:
+    """Pass."""
+    kwargs["metadata"] = {"description": description}
+    field = dataclasses.field(**kwargs)
+    return field

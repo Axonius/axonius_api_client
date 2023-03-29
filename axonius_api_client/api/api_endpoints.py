@@ -864,10 +864,43 @@ class PasswordReset(ApiEndpointGroup):
 
 
 @dataclasses.dataclass(eq=True, frozen=True, repr=False)
+class Tasks(ApiEndpointGroup):
+    """Pass."""
+
+    get_basic: ApiEndpoint = ApiEndpoint(
+        method="get",
+        path="api/enforcements/tasks",
+        request_schema_cls=json_api.tasks.GetTasksSchema,
+        request_model_cls=json_api.tasks.GetTasks,
+        response_schema_cls=json_api.tasks.TaskBasicSchema,
+        response_model_cls=json_api.tasks.TaskBasic,
+    )
+
+    get_full: ApiEndpoint = ApiEndpoint(
+        method="get",
+        path="api/enforcements/tasks/{uuid}",
+        request_schema_cls=None,
+        request_model_cls=None,
+        response_schema_cls=json_api.tasks.TaskFullSchema,
+        response_model_cls=json_api.tasks.TaskFull,
+    )
+
+    get_filters: ApiEndpoint = ApiEndpoint(
+        method="get",
+        path="api/enforcements/tasks/filters",
+        request_schema_cls=None,
+        request_model_cls=None,
+        response_schema_cls=None,
+        response_model_cls=None,
+    )
+
+
+# PBUG: so many things wrong with this
+@dataclasses.dataclass(eq=True, frozen=True, repr=False)
 class Enforcements(ApiEndpointGroup):
     """Pass."""
 
-    # PBUG: so many things wrong with this
+    tasks: ApiEndpointGroup = Tasks()
 
     get_sets: ApiEndpoint = ApiEndpoint(
         method="get",

@@ -382,6 +382,16 @@ Tips:
     show_envvar=True,
     show_default=True,
 )
+@click.option(
+    "--log-hide-secrets/--no-log-hide-secrets",
+    "-lhs/-nlhs",
+    "log_hide_secrets",
+    default=True,
+    help="Enable hiding of secrets in log output",
+    is_flag=True,
+    show_envvar=True,
+    show_default=True,
+)
 @click.version_option(version.__version__)
 @context.pass_context
 @click.pass_context
@@ -409,3 +419,5 @@ cli.add_command(grp_enforcements.enforcements)
 cli.add_command(grp_spaces.spaces)
 cli.add_command(grp_folders.folders)
 cli.add_command(grp_account.account)
+
+# XXX add log_hide_secrets:bool = True

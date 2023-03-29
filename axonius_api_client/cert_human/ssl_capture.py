@@ -127,7 +127,7 @@ class CaptureHTTPSConnection(connectionpool.HTTPSConnectionPool.ConnectionCls):
                     return
 
         if not self.captured_chain:
-            logger.error(f"Unable to fetch {info}")
+            logger.debug(f"Unable to fetch {info}")
 
     def connect(self):
         """Pass."""

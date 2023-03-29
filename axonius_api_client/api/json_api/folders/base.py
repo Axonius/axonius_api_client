@@ -24,15 +24,7 @@ from ....exceptions import (
 )
 from ....logs import get_echoer
 from ....parsers.searchers import Search, Searches
-from ....tools import (
-    bytes_to_str,
-    check_confirm_prompt,
-    coerce_bool,
-    coerce_int_float,
-    combo_dicts,
-    is_str,
-    listify,
-)
+from ....tools import check_confirm_prompt, combo_dicts, is_str, listify, parse_refresh
 from ..base import BaseModel
 from ..custom_fields import SchemaDatetime, get_field_dc_mm
 from ..system_users import SystemUser
@@ -198,7 +190,7 @@ class Folder(abc.ABC, FolderBase):
             root (t.Optional["FoldersModel"], optional): dont fetch a new root, use this one yo
 
         """
-        check: bool = self._parse_refresh(value=value)
+        check: bool = parse_refresh(value=value, refresh_elapsed=self.refresh_elapsed)
         if check is True or force is True:
             return self._refresh(root=root)
         return self
@@ -412,7 +404,7 @@ class Folder(abc.ABC, FolderBase):
                 in this folder directly
             refresh (Refreshables, optional): refresh the object cache if this is True
         """
-        refresh = self._parse_refresh(value=refresh)
+        refresh = parse_refresh(value=refresh, refresh_elapsed=self.refresh_elapsed)
         if refresh is True:
             self._clear_objects_cache()
 
@@ -1448,24 +1440,6 @@ class Folder(abc.ABC, FolderBase):
             updated: Folder = self.root_folders.find(folder=self, refresh=False)
             self.__dict__.update(updated.__dict__)
         return self
-
-    def _parse_refresh(self, value: t.Any = FolderDefaults.refresh, elapsed: bool = True) -> bool:
-        """Check if value is True or is int/float and minimum < elapsed >= value."""
-        # if bytes, convert to str
-        value = bytes_to_str(value=value)
-
-        # try to coerce to bool
-        value = coerce_bool(obj=value, error=False)
-        if isinstance(value, bool):
-            return value
-
-        if elapsed:
-            # try to coerce to int or float
-            value = coerce_int_float(value=value, error=False, ret_value=True)
-            if isinstance(value, (int, float)) and self.refresh_elapsed >= value:
-                return True
-
-        return False
 
     def _get_tree_entries_objects_prefix(
         self,

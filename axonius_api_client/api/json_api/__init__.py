@@ -11,6 +11,7 @@ from . import (
     custom_fields,
     dashboard_spaces,
     data_scopes,
+    duration_operator,
     enforcements,
     folders,
     generic,
@@ -28,11 +29,14 @@ from . import (
     system_roles,
     system_settings,
     system_users,
+    tasks,
     time_range,
 )
 
 __all__ = (
     "data_scopes",
+    "duration_operator",
+    "tasks",
     "base",
     "custom_fields",
     "resources",

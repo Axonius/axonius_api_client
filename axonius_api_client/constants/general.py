@@ -86,3 +86,6 @@ SPLITTER: t.Pattern = re.compile(",")
 HIDDEN: str = "**HIDDEN**"
 ECHO: bool = False
 RERAISE: bool = False
+
+EMPTIES: t.List[t.Any] = [None, list(), set(), dict(), "", "none", "null"]
+TRIM_POST: str = "... trimmed {trim_count} characters"
