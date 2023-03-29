@@ -56,7 +56,7 @@ class SSLExtension:
             if subcls.EXTN_ID == extn_id or subcls.DOTTED == dotted:
                 return subcls(ext=ext, **kwargs)
 
-        LOG.getChild(cls.__name__).warning(f"Unmapped extension ID {extn_id!r} dotted {dotted!r}")
+        LOG.getChild(cls.__name__).debug(f"Unmapped extension ID {extn_id!r} dotted {dotted!r}")
         return cls(ext=ext, **kwargs)
 
     @classmethod
@@ -267,7 +267,7 @@ class SignedCertificateTimestampList(SSLExtension):
         try:
             return [x.to_dict() for x in SctParser.from_bytes(data=self.EXT.children[2].contents)]
         except Exception:
-            self.LOG.exception(f"Failed to parse SCT data from {self.EXT}")
+            self.LOG.debug(f"Failed to parse SCT data from {self.EXT}", exc_info=True)
             return []
 
     @property
