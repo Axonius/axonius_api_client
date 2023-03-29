@@ -108,9 +108,9 @@ def octify(
             )
         return resolved, oval
     except Exception:
-        LOG.exception(f"Error while converting value {value!r} to octal")
         if error:
             raise
+        LOG.debug(f"Error while converting value {value!r} to octal", exc_info=True)
 
     return fallback
 
@@ -217,9 +217,9 @@ def create_file(
             resolved.chmod(mode=perm_file_int)
 
     except Exception as exc:
-        LOG.exception(f"{rstr} Error creating file: {exc}")
         if error:
             raise
+        LOG.debug(f"{rstr} Error creating file: {exc}", exc_info=True)
 
     return resolved
 
