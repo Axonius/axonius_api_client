@@ -49,7 +49,7 @@ class CaptureHTTPSConnection(connectionpool.HTTPSConnectionPool.ConnectionCls):
                 cert_bytes: bytes = self.sock.getpeercert(True)
             except Exception as exc:
                 self.captured_cert_errors.append({"how": how, "method": method, "exc": exc})
-                logger.exception(f"Failure fetching {info} using method {method}")
+                logger.debug(f"Failure fetching {info} using method {method}", exc_info=True)
             else:
                 self.captured_cert: OpenSSL.crypto.X509 = OpenSSL.crypto.load_certificate(
                     OpenSSL.crypto.FILETYPE_ASN1, cert_bytes
@@ -58,7 +58,7 @@ class CaptureHTTPSConnection(connectionpool.HTTPSConnectionPool.ConnectionCls):
                 return
 
         if not self.captured_cert:
-            logger.error(f"Unable to fetch {info}")
+            logger.debug(f"Unable to fetch {info}")
 
     def set_captured_chain(self):
         """Pass."""
@@ -78,7 +78,7 @@ class CaptureHTTPSConnection(connectionpool.HTTPSConnectionPool.ConnectionCls):
                     # List[_ssl.Certificate]
                 except Exception as exc:
                     self.captured_chain_errors.append({"how": how, "method": method, "exc": exc})
-                    logger.exception(f"Failure fetching {info} using method {method}")
+                    logger.debug(f"Failure fetching {info} using method {method}", exc_info=True)
                 else:
                     self.captured_chain: List[OpenSSL.crypto.X509] = [
                         OpenSSL.crypto.load_certificate(
@@ -97,7 +97,7 @@ class CaptureHTTPSConnection(connectionpool.HTTPSConnectionPool.ConnectionCls):
                     # List[_ssl.Certificate]
                 except Exception as exc:
                     self.captured_chain_errors.append({"how": how, "method": method, "exc": exc})
-                    logger.exception(f"Failure fetching {info} using method {method}")
+                    logger.debug(f"Failure fetching {info} using method {method}", exc_info=True)
                 else:
                     self.captured_chain: List[OpenSSL.crypto.X509] = [
                         OpenSSL.crypto.load_certificate(

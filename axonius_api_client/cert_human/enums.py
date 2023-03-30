@@ -16,7 +16,7 @@ class Enum(enum.Enum):
         for x in cls:
             if x.value == value:
                 return x.name
-        LOG.getChild(cls.__name__).error(f"Unmappable {cls.__name__} value={value!r}")
+        LOG.getChild(cls.__name__).debug(f"Unmappable {cls.__name__} value={value!r}")
         return None
 
     @classmethod
@@ -25,7 +25,7 @@ class Enum(enum.Enum):
         for x in cls:
             if x.name == value:
                 return x.value
-        LOG.getChild(cls.__name__).error(f"Unmappable {cls.__name__} value={value!r}")
+        LOG.getChild(cls.__name__).debug(f"Unmappable {cls.__name__} value={value!r}")
         return None
 
 
