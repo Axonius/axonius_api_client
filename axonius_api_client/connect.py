@@ -144,6 +144,7 @@ class Connect:
         certverify = coerce_bool(certverify)
         log_console = coerce_bool(log_console)
         log_file = coerce_bool(log_file)
+        self.LOG_HIDE_SECRETS: bool = coerce_bool(log_hide_secrets)
 
         self.LOG_HIDE_SECRETS: bool = coerce_bool(log_hide_secrets)
         self.TIMEOUT_CONNECT: int = coerce_int(kwargs.get("timeout_connect", TIMEOUT_CONNECT))
