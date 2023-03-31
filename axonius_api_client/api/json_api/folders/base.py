@@ -1526,7 +1526,9 @@ class Folder(abc.ABC, FolderBase):
 
         values = listify(values)
         values = [load(value=x, idx=idx) for idx, x in enumerate(values)]
-        items: t.List[Folder] = model.schema(many=True).load(values, unknown=marshmallow.INCLUDE)
+        items: t.List[Folder] = model.schema(many=True, unknown=marshmallow.INCLUDE).load(
+            values, unknown=marshmallow.INCLUDE
+        )
         return items
 
     @property
