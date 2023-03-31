@@ -18,21 +18,20 @@ class TestCmdWriteConfig(object):
 
         prompt_input = "\n".join([url, key, secret])
 
-        args = ["tools", "write-config"]
-
         with runner.isolated_filesystem():
             path = pathlib.Path(os.getcwd())
             envfile = path / ".env"
+            args = ["tools", "write-config", "--env", f"{envfile}"]
             result1 = runner.invoke(cli=cli, args=args, input=prompt_input)
             assert envfile.is_file()
-            assert result1.stdout
+            assert not result1.stdout
             assert result1.stderr
             assert "Creating file" in result1.stderr
             assert result1.exit_code == 0
 
             result2 = runner.invoke(cli=cli, args=args, input=prompt_input)
             assert envfile.is_file()
-            assert result2.stdout
+            assert not result2.stdout
             assert result2.stderr
             assert "Updating file" in result2.stderr
             assert result2.exit_code == 0

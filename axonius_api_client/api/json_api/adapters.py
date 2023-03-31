@@ -124,6 +124,12 @@ class AdapterFetchHistorySchema(BaseSchemaJson):
         load_default=None,
         dump_default=None,
     )
+    axonius_version = marshmallow.fields.Str(
+        description="The installed version of Axonius system at the time the fetch was initiated",
+        allow_none=True,
+        load_default=None,
+        dump_default=None,
+    )
 
     class Meta:
         """Pass."""
@@ -166,6 +172,11 @@ class AdapterFetchHistory(BaseModel):
 
     discovery_id: t.Optional[str] = get_field_dc_mm(
         mm_field=AdapterFetchHistorySchema._declared_fields["discovery_id"],
+        default=None,
+    )
+
+    axonius_version: t.Optional[str] = get_field_dc_mm(
+        mm_field=AdapterFetchHistorySchema._declared_fields["axonius_version"],
         default=None,
     )
 

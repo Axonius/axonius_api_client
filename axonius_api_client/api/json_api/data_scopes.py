@@ -221,7 +221,7 @@ class DataScopeDetails(BaseModel):
 
     def get_scopes(self) -> t.List[DataScope]:
         """Pass."""
-        schema = DataScope.schema(many=True)
+        schema = DataScope.schema(many=True, unknown=marshmallow.INCLUDE)
         objs = schema.load(self.scopes, unknown=marshmallow.INCLUDE)
         for obj in objs:
             obj.HTTP = self.HTTP

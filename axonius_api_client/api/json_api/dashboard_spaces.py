@@ -240,6 +240,8 @@ class ChartSchema(BaseSchema):
     )  # ??
     last_updated = SchemaDatetime(allow_none=True)
     size = marshmallow.fields.Nested(SizeSchema)
+    private = SchemaBool(allow_none=True, load_default=False, dump_default=False)
+    shared = SchemaBool(allow_none=True, load_default=None, dump_default=False)
 
     @staticmethod
     def get_model_cls() -> t.Any:
@@ -261,6 +263,9 @@ class SpacesDetailsSchema(BaseSchemaJson):
     adapter_categories = marshmallow_jsonapi.fields.List(
         marshmallow_jsonapi.fields.Int(),
         description="A list of the Relevant adapter categories ids (predefined adapter categories)",
+        allow_none=True,
+        load_default=list,
+        dump_default=list,
     )
     access = marshmallow_jsonapi.fields.Nested(
         AccessSchemaJson,
@@ -294,6 +299,9 @@ class SpacesDetailsSchema(BaseSchemaJson):
         allow_none=True,
         description="The last time this space charts was updated",
     )
+    created_by = marshmallow_jsonapi.fields.Str(
+        description="user that created", load_default=None, dump_default=None, allow_none=True
+    )
 
     @staticmethod
     def get_model_cls() -> t.Any:
@@ -323,6 +331,9 @@ class SpaceChartsSchema(BaseSchemaJson):
     adapter_categories = marshmallow_jsonapi.fields.List(
         marshmallow_jsonapi.fields.Int(),
         description="A list of the Relevant adapter categories ids (predefined adapter categories)",
+        allow_none=True,
+        load_default=None,
+        dump_default=None,
     )
     access = marshmallow_jsonapi.fields.Nested(
         AccessSchemaJson,
@@ -365,8 +376,11 @@ class SpaceChartsSchema(BaseSchemaJson):
         )
     )
     charts = marshmallow_jsonapi.fields.List(
-        marshmallow.fields.Nested(ChartSchema),
+        marshmallow.fields.Dict(),
         description="The list of chart configurations of the space",
+    )
+    created_by = marshmallow_jsonapi.fields.Str(
+        description="user that created", load_default=None, dump_default=None, allow_none=True
     )
 
     @staticmethod
@@ -444,6 +458,8 @@ class Chart(BaseModel):
     view: str
     config: dict
     size: Size
+    private: t.Optional[bool] = False
+    shared: t.Optional[bool] = None
     description: t.Optional[str] = None
     adapter_categories: t.Optional[t.List[int]] = None
     used_adapters: t.Optional[t.List[str]] = None
@@ -644,6 +660,10 @@ class SpacesDetails(BaseModel):
     access: t.Optional[Access] = get_field_dc_mm(
         mm_field=SpacesDetailsSchema._declared_fields["access"], default_factory=Access
     )
+    created_by: t.Optional[str] = get_field_dc_mm(
+        mm_field=SpacesDetailsSchema._declared_fields["created_by"], default=None
+    )
+
     document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     @staticmethod
@@ -675,7 +695,7 @@ class SpaceCharts(BaseModel):
     user_interests: t.List[int] = get_field_dc_mm(
         mm_field=SpacesDetailsSchema._declared_fields["user_interests"], default_factory=list
     )
-    adapter_categories: t.List[int] = get_field_dc_mm(
+    adapter_categories: t.Optional[t.List[int]] = get_field_dc_mm(
         mm_field=SpacesDetailsSchema._declared_fields["adapter_categories"], default_factory=list
     )
     initiated: bool = get_field_dc_mm(
@@ -693,8 +713,11 @@ class SpaceCharts(BaseModel):
     panels_order: t.List[str] = get_field_dc_mm(
         mm_field=SpaceChartsSchema._declared_fields["panels_order"], default_factory=list
     )
-    charts: t.List[Chart] = get_field_dc_mm(
+    charts: t.List[dict] = get_field_dc_mm(
         mm_field=SpaceChartsSchema._declared_fields["charts"], default_factory=list
+    )
+    created_by: t.Optional[str] = get_field_dc_mm(
+        mm_field=SpaceChartsSchema._declared_fields["created_by"], default=None
     )
     document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
@@ -702,8 +725,18 @@ class SpaceCharts(BaseModel):
         """Pass."""
         if not isinstance(self.public, bool):
             self.public = self.access.mode == AccessMode.public.value
-        for chart in self.charts:
-            chart.SPACE = self
+
+        fields_known: t.List[str] = [x.name for x in dataclasses.fields(Chart)]
+        schema: marshmallow.Schema = ChartSchema(many=False, unknown=marshmallow.INCLUDE)
+
+        def load(data: dict) -> Chart:
+            extra_attributes: dict = {k: data.pop(k) for k in list(data) if k not in fields_known}
+            loaded: Chart = schema.load(data, unknown=marshmallow.INCLUDE)
+            loaded.SPACE = self
+            loaded.extra_attributes = extra_attributes
+            return loaded
+
+        self.charts: t.List[Chart] = [load(x) for x in self.charts]
 
     @property
     def charts_by_order(self) -> t.List[Chart]:
