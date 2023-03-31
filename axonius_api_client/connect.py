@@ -49,7 +49,7 @@ from .constants.logs import (
 )
 from .exceptions import ConnectError, InvalidCredentials
 from .http import Http, T_Cookies, T_Headers
-from .logs import LOG, add_file, add_stderr, get_obj_log, set_log_level
+from .logs import LOG, HideFormatter, add_file, add_stderr, get_obj_log, set_log_level
 from .setup_env import get_env_ax
 from .tools import coerce_bool, coerce_int, json_dump, json_reload, sysinfo
 from .version import __version__ as VERSION
@@ -118,6 +118,7 @@ class Connect:
         headers: Optional[T_Headers] = None,
         cookies: Optional[T_Cookies] = None,
         credentials: bool = False,
+        log_hide_secrets: bool = True,
         **kwargs,
     ):
         """Easy all-in-one connection handler.
@@ -143,6 +144,7 @@ class Connect:
         certverify = coerce_bool(certverify)
         log_console = coerce_bool(log_console)
         log_file = coerce_bool(log_file)
+        self.LOG_HIDE_SECRETS: bool = coerce_bool(log_hide_secrets)
 
         self.TIMEOUT_CONNECT: int = coerce_int(kwargs.get("timeout_connect", TIMEOUT_CONNECT))
         """Seconds to wait for connections to open to :attr:`url` ``kwargs=timeout_connect``"""
@@ -252,6 +254,7 @@ class Connect:
 
         self.HANDLER_CON: logging.StreamHandler = None
         """console logging handler"""
+        HideFormatter.HIDE_ENABLED = self.LOG_HIDE_SECRETS
 
         if log_console:
             self.HANDLER_CON = add_stderr(

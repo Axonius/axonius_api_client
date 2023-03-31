@@ -151,7 +151,7 @@ class BaseSchema(BaseCommon, marshmallow.Schema):
             SchemaError: if data is not a dict or list
         """
         many = isinstance(data, (list, tuple))
-        schema = cls(many=many)
+        schema = cls(many=many, unknown=marshmallow.INCLUDE)
 
         if not isinstance(data, (dict, list, tuple)):
             exc = ApiError(
@@ -212,9 +212,9 @@ class BaseSchemaJson(BaseSchema, marshmallow_jsonapi.Schema):
             else:
                 exc = ApiError(f"Data to load must be a dictionary, not a {type(data).__name__}")
                 raise SchemaError(schema=cls, exc=exc, data=data, obj=cls)
-
-        many = isinstance(data.get("data"), (list, tuple))
-        schema = cls(many=many)
+        inner_data: t.Any = data.get("data")
+        many: bool = isinstance(inner_data, (list, tuple))
+        schema = cls(many=many, unknown=marshmallow.INCLUDE)
         return cls._load_schema(**combo_dicts(kwargs, schema=schema, data=data))
 
     @classmethod
@@ -322,7 +322,7 @@ class BaseModel(dataclasses_json.DataClassJsonMixin, BaseCommon):
             return schema_cls.load_response(data=data, **kwargs)
 
         many = isinstance(data, (list, tuple))
-        schema = schema_cls(many=many)
+        schema = schema_cls(many=many, unknown=marshmallow.INCLUDE)
         if not isinstance(data, (dict, list, tuple)):
             exc = ApiError(
                 f"Data to load must be a dictionary or list, not a {type(data).__name__}"

@@ -250,7 +250,7 @@ class ApiEndpoint:
                 http=http, response=response, **combo_dicts(kwargs, data=data)
             )
             try:
-                data.RESPONSE = response
+                setattr(data, "RESPONSE", response)
             except Exception:
                 pass
         return data
