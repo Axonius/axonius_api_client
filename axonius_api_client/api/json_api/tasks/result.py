@@ -1,115 +1,172 @@
 # -*- coding: utf-8 -*-
 """Models for API requests & responses."""
 import dataclasses
+import datetime
+import types
 import typing as t
-from datetime import datetime
 
-from ....constants.enforcements import StatusResult, Workflow
-from ....tools import coerce_bool, coerce_int, dt_parse, get_diff_seconds
-from ..base import BaseModel
-from ..custom_fields import desc_field
-from .mixins import SerialMixins
+import marshmallow
+
+from ..custom_fields import SchemaDatetime, SchemaBool, field_from_mm
+from ..base2 import BaseModel, BaseSchema
+from ....constants import enforcements as enums
+
+
+class ResultSchema(BaseSchema):
+    """Schema of result for an action in a flow_type of a task for an enforcement."""
+
+    flow_type = marshmallow.fields.Str(description="The type of flow of the result", required=True)
+    flow_position = marshmallow.fields.Int(
+        description="The position of the result in the flow_type", required=True
+    )
+    flow_count = marshmallow.fields.Int(
+        description="The total number of results in the flow_type", required=True
+    )
+
+    name = marshmallow.fields.Str(description="The name of the action", required=True)
+    uuid = marshmallow.fields.Str(description="The uuid of the action", required=True)
+    type = marshmallow.fields.Str(description="The type of the action", required=True)
+    category = marshmallow.fields.Str(
+        description="The category of the action", allow_none=True, load_default=None
+    )
+
+    config = marshmallow.fields.Dict(
+        description="The config of the action", allow_none=True, load_default=dict
+    )
+    ifttt = marshmallow.fields.Str(
+        description="The if-this-then-that content for the action",
+        allow_none=True,
+        load_default=None,
+    )
+    is_ifttt_enabled = SchemaBool(
+        description="Whether if-this-then-that is enabled", allow_none=True, load_default=None
+    )
+
+    started_at = SchemaDatetime(
+        description="The time the action started", allow_none=True, load_default=None
+    )
+    stopped_at = SchemaDatetime(
+        description="The time the action stopped", allow_none=True, load_default=None
+    )
+    duration_seconds = marshmallow.fields.Float(
+        description="The duration of the action in seconds", allow_none=True, load_default=None
+    )
+
+    total_count = marshmallow.fields.Int(
+        description="The total count of the action", allow_none=True, load_default=None
+    )
+    failure_count = marshmallow.fields.Int(
+        description="The failure count of the action", allow_none=True, load_default=None
+    )
+    success_count = marshmallow.fields.Int(
+        description="The success count of the action", allow_none=True, load_default=None
+    )
+
+    is_started = SchemaBool(
+        data_key="is_started",
+        description="Whether the action is started",
+        allow_none=True,
+        load_default=None,
+    )
+    is_stopped = SchemaBool(
+        data_key="is_stopped",
+        description="Whether the action is stopped",
+        allow_none=True,
+        load_default=None,
+    )
+    is_running = SchemaBool(
+        data_key="is_running",
+        description="Whether the action is running",
+        allow_none=True,
+        load_default=None,
+    )
+    is_error = SchemaBool(
+        data_key="is_error",
+        description="Whether the action finished with errors",
+        allow_none=True,
+        load_default=None,
+    )
+    is_success = SchemaBool(
+        data_key="is_success",
+        description="Whether the action finished without errors",
+        allow_none=True,
+        load_default=None,
+    )
+    is_terminated = SchemaBool(
+        data_key="is_terminated",
+        description="Whether the action is terminated",
+        allow_none=True,
+        load_default=None,
+    )
+    is_pending = SchemaBool(
+        data_key="is_pending",
+        description="Whether the action is pending",
+        allow_none=True,
+        load_default=None,
+    )
+
+    message = marshmallow.fields.Str(
+        description="The message of the action", allow_none=True, load_default=None
+    )
+    status = marshmallow.fields.Str(
+        description="The status of the action", allow_none=True, load_default=None
+    )
+
+    @staticmethod
+    def get_model_cls() -> t.Any:
+        """Return the model class this schema is for."""
+        return Result
+
+    class Meta:
+        """Meta."""
+
+        type_ = "PROTO_TASK_RESULT"
+        unknown = marshmallow.INCLUDE
+
+
+SCHEMA: marshmallow.Schema = ResultSchema()
 
 
 @dataclasses.dataclass(frozen=True)
-class Result(SerialMixins, BaseModel):
-    """Model of result for an action in a workflow of a task for an enforcement."""
+class Result(BaseModel):
+    """Model of result for an action in a flow_type of a task for an enforcement."""
 
-    workflow: str = desc_field("Workflow type for action")
-    workflow_position: int = desc_field("Position of result within workflow")
-    workflow_count: int = desc_field("Count of total results within workflow")
+    flow_type: str = field_from_mm(SCHEMA, "flow_type")
+    flow_position: int = field_from_mm(SCHEMA, "flow_position")
+    flow_count: int = field_from_mm(SCHEMA, "flow_count")
 
-    action_name: t.Optional[str] = desc_field("Name of action", default=None)
-    action_uuid: t.Optional[str] = desc_field("UUID of action", default=None)
-    action_type: t.Optional[str] = desc_field("Type of action", default=None)
-    action_category: t.Optional[str] = desc_field("Category of action", default=None)
-    action_config: t.Optional[dict] = desc_field("Configuration of action", default_factory=dict)
-    action_ifttt: t.Optional[str] = desc_field("Configuration of if-this-then-that", default=None)
+    name: str = field_from_mm(SCHEMA, "name")
+    uuid: str = field_from_mm(SCHEMA, "uuid")
+    type: str = field_from_mm(SCHEMA, "type")
+    category: t.Optional[str] = field_from_mm(SCHEMA, "category")
 
-    duration_seconds: t.Optional[float] = desc_field("Number of seconds action took to run", default=None)
-    started_at: t.Optional[datetime] = desc_field("When action started", default=None)
-    stopped_at: t.Optional[datetime] = desc_field("When action finished", default=None)
+    config: dict = field_from_mm(SCHEMA, "config")
+    ifttt: t.Optional[str] = field_from_mm(SCHEMA, "ifttt")
+    is_ifttt_enabled: t.Optional[bool] = field_from_mm(SCHEMA, "is_ifttt_enabled")
 
-    failure_count: t.Optional[int] = desc_field("Count of assets with failure", default=None)
-    success_count: t.Optional[int] = desc_field("Count of assets with success", default=None)
-    total_count: t.Optional[int] = desc_field("Count of assets total", default=None)
+    started_at: t.Optional[datetime.datetime] = field_from_mm(SCHEMA, "started_at")
+    stopped_at: t.Optional[datetime.datetime] = field_from_mm(SCHEMA, "stopped_at")
+    duration_seconds: t.Optional[float] = field_from_mm(SCHEMA, "duration_seconds")
 
-    is_ifttt_enabled: t.Optional[bool] = desc_field("Is if-this-then-that enabled", default=None)
-    is_running: t.Optional[bool] = desc_field("Is status=running", default=None)
-    is_stopped: t.Optional[bool] = desc_field("Is stopped_at!=None", default=None)
-    is_successful: t.Optional[bool] = desc_field("Is status=success", default=None)
+    total_count: t.Optional[int] = field_from_mm(SCHEMA, "total_count")
+    success_count: t.Optional[int] = field_from_mm(SCHEMA, "success_count")
+    failure_count: t.Optional[int] = field_from_mm(SCHEMA, "failure_count")
 
-    message: t.Optional[str] = desc_field("Message from action", default=None)
-    status: t.Optional[str] = desc_field("Status of action", default=None)
+    is_started: t.Optional[bool] = field_from_mm(SCHEMA, "is_started")
+    is_stopped: t.Optional[bool] = field_from_mm(SCHEMA, "is_stopped")
+    is_running: t.Optional[bool] = field_from_mm(SCHEMA, "is_running")
+    is_error: t.Optional[bool] = field_from_mm(SCHEMA, "is_error")
+    is_success: t.Optional[bool] = field_from_mm(SCHEMA, "is_success")
+    is_terminated: t.Optional[bool] = field_from_mm(SCHEMA, "is_terminated")
+    is_pending: t.Optional[bool] = field_from_mm(SCHEMA, "is_pending")
 
-    enum_status: t.ClassVar[StatusResult] = StatusResult
-    """Enum for `status`."""
+    message: t.Optional[str] = field_from_mm(SCHEMA, "message")
+    status: t.Optional[str] = field_from_mm(SCHEMA, "status")
 
-    enum_workflow: t.ClassVar[Workflow] = Workflow
-    """Enum for `workflow`."""
+    SCHEMA: t.ClassVar[marshmallow.Schema] = SCHEMA
+    ENUMS: t.ClassVar[types.ModuleType] = enums
 
-    @classmethod
-    def _csv_key(cls, key: str) -> str:
-        """Build a key for use in CSV."""
-        return f"result_{key}"
-
-    @classmethod
-    def load(cls, workflow: str, index: int, total: int, basic: dict, full: dict) -> "Result":
-        """Create a Result object from a result for an action in a result of a basic task."""
-        # basic attributes
-        action_name: t.Optional[str] = basic.get("action_name")
-        action_type: t.Optional[str] = basic.get("name")
-        failure_count: t.Optional[int] = basic.get("unsuccessful_count")
-        message: t.Optional[str] = basic.get("status_details")
-        started_at: t.Optional[str] = basic.get("start_date")
-        status: t.Optional[str] = basic.get("status")
-        stopped_at: t.Optional[str] = basic.get("end_date")
-        success_count: t.Optional[int] = basic.get("successful_count")
-        total_count: t.Optional[int] = basic.get("total_affected")
-
-        # full attributes, none of these are in basic
-        _action: dict = full.get("action") or {}
-        _ifttt: dict = full.get("ifttt") or {}
-        action_category: t.Optional[str] = _action.get("action_type")
-        action_config: dict = _action.get("config") or {}
-        action_ifttt: t.Optional[str] = _ifttt.get("content")
-        action_uuid: t.Optional[str] = _action.get("action_id")
-        is_ifttt_enabled: t.Optional[bool] = _ifttt.get("enable")
-
-        # coercions
-        failure_count: t.Optional[int] = coerce_int(failure_count, allow_none=True)
-        is_ifttt_enabled: t.Optional[bool] = coerce_bool(is_ifttt_enabled, allow_none=True)
-        is_running: bool = cls.enum_status.running._enums_check(status)
-        is_stopped: bool = bool(stopped_at)
-        is_successful: bool = cls.enum_status.success._enums_check(status)
-        started_at: t.Optional[datetime] = dt_parse(started_at, allow_none=True)
-        stopped_at: t.Optional[datetime] = dt_parse(stopped_at, allow_none=True)
-        success_count: t.Optional[int] = coerce_int(success_count, allow_none=True)
-        total_count: t.Optional[int] = coerce_int(total_count, allow_none=True)
-        workflow_position: int = index + 1
-        duration_seconds: t.Optional[int] = get_diff_seconds(start=started_at, stop=stopped_at)
-
-        ret: Result = cls(
-            action_category=action_category,
-            action_config=action_config,
-            action_ifttt=action_ifttt,
-            action_name=action_name,
-            action_type=action_type,
-            action_uuid=action_uuid,
-            failure_count=failure_count,
-            duration_seconds=duration_seconds,
-            success_count=success_count,
-            total_count=total_count,
-            workflow_position=workflow_position,
-            workflow_count=total,
-            started_at=started_at,
-            stopped_at=stopped_at,
-            is_ifttt_enabled=is_ifttt_enabled,
-            is_running=is_running,
-            is_stopped=is_stopped,
-            is_successful=is_successful,
-            message=message,
-            status=status,
-            workflow=workflow,
-        )
-        return ret
+    @staticmethod
+    def get_schema_cls() -> t.Any:
+        """Get schema class for this model."""
+        return ResultSchema

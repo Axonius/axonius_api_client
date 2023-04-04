@@ -429,5 +429,3 @@ cli.add_command(grp_enforcements.enforcements)
 cli.add_command(grp_spaces.spaces)
 cli.add_command(grp_folders.folders)
 cli.add_command(grp_account.account)
-
-# XXX add log_hide_secrets:bool = True

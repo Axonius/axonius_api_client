@@ -4,11 +4,13 @@ import dataclasses
 import datetime
 import typing as t
 
+from marshmallow import validate as marshmallow_validate
 import bson
 import dataclasses_json
 import dateutil
+import dateutil.parser
+import dateutil.tz
 import marshmallow
-import marshmallow_jsonapi
 
 from ...tools import coerce_bool, listify
 
@@ -34,7 +36,7 @@ class UnionField(marshmallow.fields.Field):
             return value
         else:
             raise marshmallow.ValidationError(
-                f"Field shoud be any of the following types: {self.types_str}"
+                f"Field should be any of the following types: {self.types_str}"
             )
 
 
@@ -59,7 +61,7 @@ def dump_date(value: t.Optional[t.Union[str, datetime.datetime]]) -> t.Optional[
     return value
 
 
-class SchemaBool(marshmallow_jsonapi.fields.Bool):
+class SchemaBool(marshmallow.fields.Bool):
     """Support parsing boolean as strings/etc."""
 
     def _deserialize(self, value, attr, data, **kwargs):
@@ -81,7 +83,7 @@ class SchemaBool(marshmallow_jsonapi.fields.Bool):
             raise marshmallow.ValidationError(str(exc))
 
 
-class SchemaDatetime(marshmallow_jsonapi.fields.DateTime):
+class SchemaDatetime(marshmallow.fields.DateTime):
     """Field that deserializes multi-type input data to app-level objects."""
 
     def _serialize(self, value, attr, obj, **kwargs):
@@ -100,7 +102,7 @@ class SchemaDatetime(marshmallow_jsonapi.fields.DateTime):
             raise marshmallow.ValidationError(str(exc))
 
 
-class SchemaObjectIDDatetime(marshmallow_jsonapi.fields.DateTime):
+class SchemaObjectIDDatetime(marshmallow.fields.DateTime):
     """Field that deserializes multi-type input data to app-level objects."""
 
     def _serialize(self, value, attr, obj, **kwargs):
@@ -114,12 +116,12 @@ class SchemaObjectIDDatetime(marshmallow_jsonapi.fields.DateTime):
             return None
 
         try:
-            return bson.ObjectId(value).generation_time
+            return bson.ObjectId(value).generation_time.replace(tzinfo=dateutil.tz.tzutc())
         except Exception as exc:
             raise marshmallow.ValidationError(str(exc))
 
 
-class SchemaPassword(marshmallow_jsonapi.fields.Field):
+class SchemaPassword(marshmallow.fields.Field):
     """Field that serializes to a string or an array and deserializes to a string or an array."""
 
     """
@@ -138,8 +140,8 @@ def get_field_str_req(**kwargs):
     """Pass."""
     kwargs.setdefault("required", True)
     kwargs.setdefault("allow_none", False)
-    kwargs.setdefault("validate", marshmallow.validate.Length(min=1))
-    return marshmallow_jsonapi.fields.Str(**kwargs)
+    kwargs.setdefault("validate", marshmallow_validate.Length(min=1))
+    return marshmallow.fields.Str(**kwargs)
 
 
 def get_field_dc_mm(mm_field: marshmallow.fields.Field, **kwargs) -> dataclasses.Field:
@@ -148,35 +150,54 @@ def get_field_dc_mm(mm_field: marshmallow.fields.Field, **kwargs) -> dataclasses
     return dataclasses.field(**kwargs)
 
 
-def get_schema_dc(schema: marshmallow.Schema, key: str, **kwargs) -> dataclasses.Field:
+def get_schema_dc(schema: t.Type[marshmallow.Schema], key: str, **kwargs) -> dataclasses.Field:
     """Pass."""
-    kwargs["mm_field"] = schema._declared_fields[key]
+    # noinspection PyProtectedMember
+    field: marshmallow.fields.Field = schema._declared_fields[key]
+    kwargs["mm_field"] = field
     return get_field_dc_mm(**kwargs)
+
+
+def setdefault(mm_field: marshmallow.fields.Field, attr: str, kwargs: dict) -> dict:
+    """Add the default or default factory to kwargs accordingly."""
+    default = getattr(mm_field, attr, marshmallow.missing)
+    if (
+        default is not marshmallow.missing
+        and "default" not in kwargs
+        and "default_factory" not in kwargs
+    ):
+        if callable(default):
+            kwargs.setdefault("default_factory", default)
+        else:
+            kwargs.setdefault("default", default)
+    return kwargs
+
+
+def field_from_mm(
+    schema: t.Union[t.Type[marshmallow.Schema], marshmallow.Schema], key: str, **kwargs
+) -> dataclasses.Field:
+    """Pass."""
+    if isinstance(schema, marshmallow.Schema):
+        mm_field: marshmallow.fields.Field = schema.fields[key]
+    else:
+        # noinspection PyProtectedMember
+        mm_field: marshmallow.fields.Field = schema._declared_fields[key]
+    if mm_field.required is not True:
+        kwargs = setdefault(mm_field=mm_field, attr="load_default", kwargs=kwargs)
+        kwargs = setdefault(mm_field=mm_field, attr="dump_default", kwargs=kwargs)
+    kwargs["metadata"] = dataclasses_json.config(mm_field=mm_field, metadata=kwargs.get("metadata"))
+    dc_field: dataclasses.Field = dataclasses.field(**kwargs)
+    return dc_field
 
 
 def validator_wrapper(fn: callable) -> callable:
     """Pass."""
 
     def validator(value):
+        """Pass."""
         try:
             return fn(value=value)
         except Exception as exc:
             raise marshmallow.ValidationError(str(exc))
 
     return validator
-
-
-# def get_field_oneof(
-#     choices: List[str], field: Type[marshmallow.fields.Field] = marshmallow.fields.Str, **kwargs
-# ) -> marshmallow.fields.Field:
-#     """Pass."""
-#     kwargs["validate"] = marshmallow.validate.OneOf(choices=choices)
-#     kwargs.setdefault("required", True)
-#     return field(**kwargs)
-
-
-def desc_field(description: str, **kwargs) -> dataclasses.Field:
-    """Pass."""
-    kwargs["metadata"] = {"description": description}
-    field = dataclasses.field(**kwargs)
-    return field

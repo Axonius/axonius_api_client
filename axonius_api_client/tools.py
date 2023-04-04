@@ -2,6 +2,7 @@
 """Utilities and tools."""
 import codecs
 import csv
+import dataclasses
 import inspect
 import io
 import ipaddress
@@ -22,6 +23,7 @@ import click
 import dateutil.parser
 import dateutil.relativedelta
 import dateutil.tz
+import marshmallow
 
 from . import INIT_DOTENV, PACKAGE_FILE, PACKAGE_ROOT, VERSION
 from .constants.api import GUI_PAGE_SIZES, REFRESH, FolderDefaults
@@ -2358,12 +2360,95 @@ def get_diff_seconds(
 ) -> t.Optional[float]:
     """Pass."""
     seconds: t.Optional[float] = None
-    if isinstance(start, datetime):
-        if not isinstance(stop, datetime):
-            stop = dt_now()
+    if start is not None:
+        start: datetime = dt_parse(obj=start)
+        stop: datetime = dt_now if stop is None else dt_parse(stop)
         delta: timedelta = stop - start
         seconds: float = delta.total_seconds()
         if isinstance(places, int):
             seconds: float = float(f"{seconds:.{places}f}")
-
     return seconds
+
+
+def score_prefix(value: str, prefix: t.Optional[t.List[str]] = None, join: str = "_") -> str:
+    """Prefix a value."""
+    prefix: t.List[str] = listify(prefix)
+    use_prefix: str = f"{join.join(prefix)}{join}" if prefix else ""
+    return f"{use_prefix}{value}" if isinstance(prefix, (list, tuple)) and prefix else value
+
+
+def get_mm_field(value: t.Any) -> t.Optional[marshmallow.fields.Field]:
+    """Get the marshmallow field from a dataclasses field.
+
+    Args:
+        value: The field to check.
+
+    Returns:
+        marshmallow.fields.Field: The marshmallow field.
+    """
+    if isinstance(value, marshmallow.fields.Field):
+        return value
+    if isinstance(value, dataclasses.Field):
+        return getattr(value, "metadata", {}).get("dataclasses_json", {}).get("mm_field")
+    return None
+
+
+def get_mm_description(value: dataclasses.Field) -> t.Optional[str]:
+    """Get the marshmallow description from a dataclasses field.
+
+    Args:
+        value: The field to check.
+
+    Returns:
+        str: The marshmallow description.
+    """
+    return getattr(get_mm_field(value=value), "metadata", {}).get("description")
+
+
+def is_nested_schema(value: marshmallow.fields.Field) -> bool:
+    """Check if a marshmallow field is a nested schema.
+
+    Args:
+        value: The field to check.
+
+    Returns:
+        bool: True if the field is a nested schema.
+    """
+    return isinstance(get_nested_schema(value=value), marshmallow.Schema)
+
+
+def get_nested_schema(value: marshmallow.fields.Field) -> t.Optional[marshmallow.Schema]:
+    """Get the nested schema from a marshmallow field.
+
+    Args:
+        value: The field to check.
+
+    Returns:
+        marshmallow.Schema: The nested schema.
+    """
+    return getattr(getattr(value, "inner", None), "nested", None)
+
+
+def get_hint_type(value: t.Any) -> t.Any:
+    """Get the type from a type hint.
+
+    Args:
+        value: If type hint, return the type.
+
+    Returns:
+        Any: The type if value is a type hint, else None.
+    """
+    if isinstance(value, type):
+        return value
+    args: t.Tuple[t.Any] = t.get_args(value)
+    return args[0] if len(args) == 1 else args
+
+
+def is_subclass(value: t.Any, expected_types: t.Any = None, as_none: bool = False) -> bool:
+    """Determine if value is a subclass of the type for this field."""
+    if expected_types is None:
+        return as_none
+    try:
+        return issubclass(value, expected_types)
+    except TypeError:
+        return False

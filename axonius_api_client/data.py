@@ -28,11 +28,11 @@ class BaseEnum(enum.Enum):
                 ret.append(self.value.lower())
         return ret
 
-    def _enums_check(self, value: Any, lower: bool = True) -> bool:
+    def value_matches(self, value: Any, lower: bool = True) -> bool:
         """Pass."""
-        if isinstance(value, str) and lower:
-            value = value.lower()
-        return value in self._enums(lower=lower)
+        return (value.lower() if isinstance(value, str) and lower else value) in self._enums(
+            lower=lower
+        )
 
     @classmethod
     def get_value(cls, value: Union["BaseEnum", str]) -> "BaseEnum":
