@@ -143,6 +143,20 @@ class TaskBasicSchema(BaseSchemaJson):
         load_default=dict,
     )
 
+    class Meta:
+        """Marshmallow JSONAPI metaclass."""
+
+        type_: str = "tasks_schema"
+        self_url: str = "/api/tasks/{id}"
+        self_url_kwargs: t.Dict[str, str] = {"id": "<id>"}
+        self_url_many: str = "/api/tasks"
+        unknown: str = marshmallow.INCLUDE
+
+    @staticmethod
+    def get_model_cls() -> t.Any:
+        """Pass."""
+        return TaskBasic
+
     @marshmallow.pre_load
     def _fix_names(self, data: dict, **kwargs) -> dict:
         """Replace dots with underscores in field names.
@@ -159,20 +173,6 @@ class TaskBasicSchema(BaseSchemaJson):
         fix_find: str = kwargs.get("fix_find", ".")
         fix_replace: str = kwargs.get("fix_replace", "_")
         return {k.replace(fix_find, fix_replace): v for k, v in data.items()}
-
-    class Meta:
-        """Marshmallow JSONAPI metaclass."""
-
-        type_: str = "tasks_schema"
-        self_url: str = "/api/tasks/{id}"
-        self_url_kwargs: t.Dict[str, str] = {"id": "<id>"}
-        self_url_many: str = "/api/tasks"
-        unknown: str = marshmallow.INCLUDE
-
-    @staticmethod
-    def get_model_cls() -> t.Any:
-        """Pass."""
-        return TaskBasic
 
 
 SCHEMA: marshmallow.Schema = TaskBasicSchema()
@@ -228,4 +228,4 @@ class TaskBasic(BaseModel):
     def get_full(self) -> "TaskFull":
         """Pass."""
         # TODO: ensure cached!
-        return self.HTTP.CLIENT.enforcements.tasks.direct_get_full(uuid=self.uuid)
+        return self.HTTP.CLIENT.enforcements.tasks.get_full(uuid=self.uuid)

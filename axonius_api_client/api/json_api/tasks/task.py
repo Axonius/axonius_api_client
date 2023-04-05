@@ -55,7 +55,6 @@ class TaskSchema(BaseSchema):
         load_default=None,
     )
 
-    # TODO: is this data_scope or asset_scope?
     data_scope_uuid = marshmallow.fields.Str(
         data_key="data_scope_uuid",
         description="The uuid of the data scope of the query, if any",
@@ -347,6 +346,11 @@ class Task(BaseModel):
     SCHEMA: t.ClassVar[marshmallow.Schema] = SCHEMA
     ENUMS: t.ClassVar[types.ModuleType] = enums
 
+    @staticmethod
+    def get_schema_cls() -> t.Any:
+        """Get schema class for this model."""
+        return TaskSchema
+
     @classmethod
     def load(
         cls, basic: t.Union[TaskBasic, dict], full: t.Union[TaskFull, dict], http: Http
@@ -364,98 +368,6 @@ class Task(BaseModel):
         data: dict = {"http": http, **cls.load_tasks(basic=basic, full=full)}
         task: Task = cls.SCHEMA.load(data)
         return task
-
-    @classmethod
-    def load_result(
-        cls,
-        flow_type: str,
-        flow_index: int,
-        flow_count: int,
-        basic: dict,
-        full: dict,
-    ) -> dict:
-        """Load a basic and full result into a new result model.
-
-        Args:
-            flow_type (str): The flow type.
-            flow_index (int): The flow index.
-            flow_count (int): The flow count.
-            basic (dict): The basic result.
-            full (dict): The full result.
-        """
-        _action: dict = full.get("action") or {}
-        _ifttt: dict = full.get("ifttt") or {}
-
-        started_at: t.Optional[str] = basic.get("start_date")
-        stopped_at: t.Optional[str] = basic.get("end_date")
-        duration_seconds: t.Optional[float] = get_diff_seconds(started_at, stopped_at)
-        failure_count: t.Optional[int] = basic.get("unsuccessful_count")
-        status: str = basic.get("status")
-        is_started: bool = bool(started_at)
-        is_stopped: bool = bool(stopped_at)
-        is_running: bool = is_started and not is_stopped
-        is_success: bool = cls.ENUMS.StatusResult.is_success(status)
-        is_error: bool = bool(failure_count) or cls.ENUMS.StatusResult.is_error(status)
-        is_terminated: bool = cls.ENUMS.StatusResult.is_terminated(status)
-        is_pending: bool = cls.ENUMS.StatusResult.is_pending(status)
-
-        result: dict = {
-            "flow_type": flow_type,
-            "flow_position": flow_index + 1,
-            "flow_count": flow_count,
-            "name": basic.get("action_name"),
-            "uuid": _action.get("action_id"),
-            "type": basic.get("name"),
-            "category": _action.get("action_type"),
-            "config": _action.get("config") or {},
-            "ifttt": _ifttt.get("content"),
-            "is_ifttt_enabled": _ifttt.get("enable"),
-            "started_at": started_at,
-            "stopped_at": stopped_at,
-            "duration_seconds": duration_seconds,
-            "total_count": basic.get("total_affected"),
-            "success_count": basic.get("successful_count"),
-            "failure_count": failure_count,
-            "message": basic.get("status_details"),
-            "is_started": is_started,
-            "is_stopped": is_stopped,
-            "is_running": is_running,
-            "is_success": is_success,
-            "is_error": is_error,
-            "is_terminated": is_terminated,
-            "is_pending": is_pending,
-            "status": status,
-        }
-        return result
-
-    @classmethod
-    def load_results(
-        cls, basic: t.Union[TaskBasic, dict], full: t.Union[TaskFull, dict]
-    ) -> t.List[dict]:
-        """Load the basic and full results into new result models.
-
-        Args:
-            basic (t.Union[TaskBasic, dict]): The basic task.
-            full (t.Union[TaskFull, dict]): The full task.
-        """
-        basic_results: t.Dict[str, t.List[dict]] = basic["actions_details"]
-        full_results: dict = full["result"]
-        results: t.List[dict] = []
-
-        for flow_type in cls.ENUMS.FlowTypes:
-            basic_flow_results: t.List[dict] = listify(basic_results.get(flow_type.name, []))
-            full_flow_results: t.List[dict] = listify(full_results.get(flow_type.name, []))
-            flow_count = len(basic_flow_results)
-            for flow_index, result_basic in enumerate(basic_flow_results):
-                result: dict = cls.load_result(
-                    flow_type=flow_type.name,
-                    flow_index=flow_index,
-                    flow_count=flow_count,
-                    basic=result_basic,
-                    full=full_flow_results[flow_index],
-                )
-                results.append(result)
-        return results
 
     @classmethod
     def load_tasks(cls, basic: t.Union[TaskBasic, dict], full: t.Union[TaskFull, dict]) -> dict:
@@ -536,7 +448,94 @@ class Task(BaseModel):
         }
         return task
 
-    @staticmethod
-    def get_schema_cls() -> t.Any:
-        """Get schema class for this model."""
-        return TaskSchema
+    @classmethod
+    def load_results(
+        cls, basic: t.Union[TaskBasic, dict], full: t.Union[TaskFull, dict]
+    ) -> t.List[dict]:
+        """Load the basic and full results into new result models.
+
+        Args:
+            basic (t.Union[TaskBasic, dict]): The basic task.
+            full (t.Union[TaskFull, dict]): The full task.
+        """
+        basic_results: t.Dict[str, t.List[dict]] = basic["actions_details"]
+        full_results: dict = full["result"]
+        results: t.List[dict] = []
+
+        for flow_type in cls.ENUMS.FlowTypes:
+            basic_flow_results: t.List[dict] = listify(basic_results.get(flow_type.name, []))
+            full_flow_results: t.List[dict] = listify(full_results.get(flow_type.name, []))
+            flow_count = len(basic_flow_results)
+            for flow_index, result_basic in enumerate(basic_flow_results):
+                result: dict = cls.load_result(
+                    flow_type=flow_type.name,
+                    flow_index=flow_index,
+                    flow_count=flow_count,
+                    basic=result_basic,
+                    full=full_flow_results[flow_index],
+                )
+                results.append(result)
+        return results
+
+    @classmethod
+    def load_result(
+        cls,
+        flow_type: str,
+        flow_index: int,
+        flow_count: int,
+        basic: dict,
+        full: dict,
+    ) -> dict:
+        """Load a basic and full result into a new result model.
+
+        Args:
+            flow_type (str): The flow type.
+            flow_index (int): The flow index.
+            flow_count (int): The flow count.
+            basic (dict): The basic result.
+            full (dict): The full result.
+        """
+        _action: dict = full.get("action") or {}
+        _ifttt: dict = full.get("ifttt") or {}
+
+        started_at: t.Optional[str] = basic.get("start_date")
+        stopped_at: t.Optional[str] = basic.get("end_date")
+        duration_seconds: t.Optional[float] = get_diff_seconds(started_at, stopped_at)
+        failure_count: t.Optional[int] = basic.get("unsuccessful_count")
+        status: str = basic.get("status")
+        is_started: bool = bool(started_at)
+        is_stopped: bool = bool(stopped_at)
+        is_running: bool = is_started and not is_stopped
+        is_success: bool = cls.ENUMS.StatusResult.is_success(status)
+        is_error: bool = bool(failure_count) or cls.ENUMS.StatusResult.is_error(status)
+        is_terminated: bool = cls.ENUMS.StatusResult.is_terminated(status)
+        is_pending: bool = cls.ENUMS.StatusResult.is_pending(status)
+
+        result: dict = {
+            "flow_type": flow_type,
+            "flow_position": flow_index + 1,
+            "flow_count": flow_count,
+            "name": basic.get("action_name"),
+            "uuid": _action.get("action_id"),
+            "type": basic.get("name"),
+            "category": _action.get("action_type"),
+            "config": _action.get("config") or {},
+            "ifttt": _ifttt.get("content"),
+            "is_ifttt_enabled": _ifttt.get("enable"),
+            "started_at": started_at,
+            "stopped_at": stopped_at,
+            "duration_seconds": duration_seconds,
+            "total_count": basic.get("total_affected"),
+            "success_count": basic.get("successful_count"),
+            "failure_count": failure_count,
+            "message": basic.get("status_details"),
+            "is_started": is_started,
+            "is_stopped": is_stopped,
+            "is_running": is_running,
+            "is_success": is_success,
+            "is_error": is_error,
+            "is_terminated": is_terminated,
+            "is_pending": is_pending,
+            "status": status,
+        }
+        return result

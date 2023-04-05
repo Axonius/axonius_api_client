@@ -890,8 +890,8 @@ class Tasks(ApiEndpointGroup):
         path="api/enforcements/tasks/filters",
         request_schema_cls=None,
         request_model_cls=None,
-        response_schema_cls=None,
-        response_model_cls=None,
+        response_schema_cls=json_api.tasks.TaskFiltersSchema,
+        response_model_cls=json_api.tasks.TaskFilters,
     )
 
 

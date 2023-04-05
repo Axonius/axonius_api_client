@@ -36,7 +36,6 @@ class GetTasksSchema(BaseSchemaJson):
         load_default=None,
         dump_default=None,
     )
-
     history = SchemaDatetime(
         data_key="history",
         description="Historical date ISO formatted",
@@ -58,7 +57,6 @@ class GetTasksSchema(BaseSchemaJson):
         load_default=None,
         dump_default=None,
     )
-
     task_id = marshmallow.fields.Integer(
         data_key="task_id",
         description="A specific task pretty id to filter by",
@@ -66,14 +64,6 @@ class GetTasksSchema(BaseSchemaJson):
         load_default=None,
         dump_default=None,
     )
-    is_refresh = marshmallow.fields.Bool(
-        data_key="is_refresh",
-        description='Whether this request is made for "refresh" and should not be logged',
-        allow_none=True,
-        load_default=None,
-        dump_default=None,
-    )
-
     statuses_filter = marshmallow.fields.List(
         marshmallow.fields.Str(),
         data_key="statuses_filter",
@@ -114,7 +104,13 @@ class GetTasksSchema(BaseSchemaJson):
         load_default=list,
         dump_default=list,
     )
-
+    is_refresh = marshmallow.fields.Bool(
+        data_key="is_refresh",
+        description='Whether this request is made for "refresh" and should not be logged',
+        allow_none=True,
+        load_default=None,
+        dump_default=None,
+    )
     duration_filter = marshmallow.fields.Nested(
         DurationOperatorSchema(),
         data_key="duration_filter",
@@ -154,20 +150,17 @@ class GetTasks(BaseModel):
     search: t.Optional[str] = field_from_mm(SCHEMA, "search")
     filter: t.Optional[str] = field_from_mm(SCHEMA, "filter")
     sort: t.Optional[str] = field_from_mm(SCHEMA, "sort")
-
     history: t.Optional[datetime.datetime] = field_from_mm(SCHEMA, "history")
+
     date_from: t.Optional[datetime.datetime] = field_from_mm(SCHEMA, "date_from")
     date_to: t.Optional[datetime.datetime] = field_from_mm(SCHEMA, "date_to")
-
-    is_refresh: t.Optional[bool] = field_from_mm(SCHEMA, "is_refresh")
     task_id: t.Optional[str] = field_from_mm(SCHEMA, "task_id")
-
     statuses_filter: t.Optional[t.List[str]] = field_from_mm(SCHEMA, "statuses_filter")
     action_names: t.Optional[t.List[str]] = field_from_mm(SCHEMA, "action_names")
     enforcement_ids: t.Optional[t.List[str]] = field_from_mm(SCHEMA, "enforcement_ids")
     aggregated_status: t.Optional[t.List[str]] = field_from_mm(SCHEMA, "aggregated_status")
     discovery_cycle: t.Optional[t.List[str]] = field_from_mm(SCHEMA, "discovery_cycle")
-
+    is_refresh: t.Optional[bool] = field_from_mm(SCHEMA, "is_refresh")
     duration_filter: t.Optional[DurationOperator] = field_from_mm(SCHEMA, "duration_filter")
     page: t.Optional[PaginationRequest] = field_from_mm(SCHEMA, "page")
 

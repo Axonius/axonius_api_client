@@ -3,7 +3,7 @@
 import typing as t
 from ..api_endpoints import ApiEndpoint, ApiEndpoints
 from ..json_api.paging_state import PagingState
-from ..json_api.tasks import GetTasks, Task, TaskBasic, TaskFull, TaskTypes
+from ..json_api.tasks import GetTasks, Task, TaskBasic, TaskFull, TaskTypes, TaskFilters
 from ..mixins import ModelMixins
 
 # from cachetools import TTLCache, cached
@@ -13,6 +13,11 @@ class Tasks(ModelMixins):
     """API working with tasks for enforcements."""
 
     # XXX need get enums
+    def get_filters(self) -> TaskFilters:
+        """Get all filters for all enforcements."""
+        api_endpoint: ApiEndpoint = ApiEndpoints.enforcements.tasks.get_filters
+        response: TaskFilters = api_endpoint.perform_request(http=self.auth.http)
+        return response
 
     def get(
         self, generator: bool = False, **kwargs
@@ -92,7 +97,7 @@ class Tasks(ModelMixins):
         )
         return response
 
-    def direct_get_full(self, uuid: str) -> TaskFull:
+    def get_full(self, uuid: str) -> TaskFull:
         """Direct API layer to get a single task for an enforcement in full model."""
         api_endpoint: ApiEndpoint = ApiEndpoints.enforcements.tasks.get_full
         response: TaskFull = api_endpoint.perform_request(

@@ -112,16 +112,16 @@ class ResultSchema(BaseSchema):
         description="The status of the action", allow_none=True, load_default=None
     )
 
-    @staticmethod
-    def get_model_cls() -> t.Any:
-        """Return the model class this schema is for."""
-        return Result
-
     class Meta:
         """Meta."""
 
         type_ = "PROTO_TASK_RESULT"
         unknown = marshmallow.INCLUDE
+
+    @staticmethod
+    def get_model_cls() -> t.Any:
+        """Return the model class this schema is for."""
+        return Result
 
 
 SCHEMA: marshmallow.Schema = ResultSchema()

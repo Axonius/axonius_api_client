@@ -6,6 +6,7 @@ from .result import Result
 from .task import Task
 from .task_basic import TaskBasic, TaskBasicSchema
 from .task_full import TaskFull, TaskFullSchema
+from .task_filters import TaskFiltersSchema, TaskFilters
 
 TASK_TYPES: tuple = (TaskBasic, TaskFull, Task)
 # noinspection PyTypeHints
@@ -22,4 +23,6 @@ __all__ = (
     "TaskFullSchema",
     "GetTasksSchema",
     "GetTasks",
+    "TaskFiltersSchema",
+    "TaskFilters",
 )
