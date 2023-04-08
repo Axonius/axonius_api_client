@@ -66,8 +66,6 @@ def cmd(ctx, url, password, company_name, contact_email, export_format, env):
             password=password, company_name=company_name, contact_email=contact_email
         )
 
-    click.secho(
-        EXPORT_FORMATS[export_format](data=data, signup=True, env=env, url=entry.auth.http.url)
-    )
+    click.secho(EXPORT_FORMATS[export_format](data=data, signup=True, env=env, url=entry.http.url))
     ctx.obj.echo_ok("Signup completed successfully!")
     ctx.exit(0)

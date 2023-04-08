@@ -2,6 +2,7 @@
 """Utilities and tools."""
 import codecs
 import csv
+import dataclasses
 import inspect
 import io
 import ipaddress
@@ -17,14 +18,17 @@ from datetime import datetime, timedelta, timezone
 from itertools import zip_longest
 from urllib.parse import urljoin
 
+import bson
 import click
 import dateutil.parser
 import dateutil.relativedelta
 import dateutil.tz
+import marshmallow
 
 from . import INIT_DOTENV, PACKAGE_FILE, PACKAGE_ROOT, VERSION
-from .constants.api import GUI_PAGE_SIZES, FolderDefaults
+from .constants.api import GUI_PAGE_SIZES, REFRESH, FolderDefaults
 from .constants.ctypes import PathLike, PatternLike, PatternLikeListy
+
 from .constants.general import (
     DAYS_MAP,
     DEBUG_ARGS,
@@ -289,7 +293,9 @@ def coerce_int_float(
     return value if ret_value is True else None
 
 
-def coerce_bool(obj: t.Any, errmsg: t.Optional[str] = None, error: bool = True) -> bool:
+def coerce_bool(
+    obj: t.Any, errmsg: t.Optional[str] = None, error: bool = True, allow_none: bool = False
+) -> bool:
     """Convert an object into bool.
 
     Args:
@@ -300,6 +306,8 @@ def coerce_bool(obj: t.Any, errmsg: t.Optional[str] = None, error: bool = True) 
     Raises:
         :exc:`ToolsError`: obj is not able to be converted to bool
     """
+    if allow_none and (obj is None or str(obj).lower().strip() in ["none", "null"]):
+        return None
 
     def combine(obj):
         return ", ".join([f"{x!r}" for x in obj])
@@ -715,7 +723,23 @@ def text_load(
             pass
 
 
-def dt_parse(obj: t.Union[str, timedelta, datetime], default_tz_utc: bool = False) -> datetime:
+def dt_parse_uuid(
+    value: str, default_tz_utc: bool = False, allow_none=False, error: bool = False
+) -> t.Optional[datetime]:
+    """Parse the date from an object UUID."""
+    if allow_none and (value is None or str(value).lower().strip() in ["none", "null"]):
+        return None
+    try:
+        return dt_parse(obj=bson.ObjectId(value).generation_time, default_tz_utc=default_tz_utc)
+    except Exception:
+        if error:
+            raise
+        return None
+
+
+def dt_parse(
+    obj: t.Union[str, timedelta, datetime], default_tz_utc: bool = False, allow_none=False
+) -> t.Optional[datetime]:
     """Parse a str, datetime, or timedelta into a datetime object.
 
     Notes:
@@ -726,7 +750,10 @@ def dt_parse(obj: t.Union[str, timedelta, datetime], default_tz_utc: bool = Fals
     Args:
         obj: object or list of objects to parse into datetime
     """
-    if isinstance(obj, list) and all([isinstance(x, str) for x in obj]):
+    if allow_none and (obj is None or str(obj).lower().strip() in ["none", "null"]):
+        return None
+
+    if isinstance(obj, list) and all([isinstance(x, (str, datetime, timedelta)) for x in obj]):
         return [dt_parse(obj=x) for x in obj]
 
     if isinstance(obj, datetime):
@@ -965,7 +992,7 @@ def auto_suffix(
 
 
 def path_write(
-    obj: PathLike,
+    obj: t.Optional[PathLike],
     data: t.Union[bytes, str],
     overwrite: bool = False,
     backup: bool = False,
@@ -977,6 +1004,8 @@ def path_write(
     protect_file=0o600,
     protect_parent=0o700,
     suffix_auto: bool = True,
+    path_default: t.Optional[PathLike] = None,
+    use_default: bool = False,
     **kwargs,
 ) -> t.Tuple[pathlib.Path, t.Tuple[int, t.Optional[pathlib.Path]]]:
     """Write data to a file.
@@ -1000,7 +1029,11 @@ def path_write(
         :exc:`ToolsError`: path exists as file and overwrite is False
         :exc:`ToolsError`: if parent path does not exist and make_parent is False
     """
-    obj = get_path(obj=obj)
+    if obj is None:
+        if use_default:
+            obj = get_path(path_default)
+    else:
+        obj = get_path(obj=obj)
 
     if is_json:
         data = json_dump(**combo_dicts(kwargs, obj=data))
@@ -1730,29 +1763,34 @@ def csv_writer(
     line_ending: str = "\n",
     stream: t.Optional[t.IO] = None,
     key_extra_error: bool = False,
+    write_headers: bool = True,
     key_missing_value: t.Optional[t.Any] = None,
 ) -> str:  # pragma: no cover
     """Pass."""
-    quotes = getattr(csv, f"QUOTE_{quotes.upper()}")
-    if not columns:
-        columns = []
+    quotes: int = getattr(csv, f"QUOTE_{quotes.upper()}")
+    if not isinstance(columns, (list, tuple)):
+        columns: t.List[str] = []
+        # this will kill a generator
         for row in rows:
             columns += [x for x in row if x not in columns]
 
-    stream = stream if is_file_like(stream) else io.StringIO()
-    writer = csv.DictWriter(
+    extrasaction: str = "raise" if key_extra_error else "ignore"
+    stream: t.IO = stream if is_file_like(stream) else io.StringIO()
+    writer: csv.DictWriter = csv.DictWriter(
         stream,
         fieldnames=columns,
         quoting=quotes,
         lineterminator=line_ending,
         dialect=dialect,
         restval=key_missing_value,
-        extrasaction="raise" if key_extra_error else "ignore",
+        extrasaction=extrasaction,
     )
-    writer.writerow(dict(zip(columns, columns)))
-    writer.writerows(rows)
+    if write_headers:
+        writer.writerow(dict(zip(columns, columns)))
+    for row in rows:
+        writer.writerow(row)
     stream.seek(0)
-    content = stream.getvalue()
+    content: str = stream.getvalue()
     return content
 
 
@@ -2291,3 +2329,127 @@ def parse_value_copy(
 #         secs_ago: float = dt_sec_ago(obj=value, exact=exact)
 #         return trim_float(value=secs_ago / 60 / 60)
 #     return None
+
+
+def parse_refresh(
+    value: t.Any = REFRESH,
+    elapsed: bool = True,
+    refresh_elapsed: t.Optional[t.Union[int, float]] = None,
+) -> bool:
+    """Check if value is True or is int/float and minimum < elapsed >= value."""
+    # if bytes, convert to str
+    value = bytes_to_str(value=value)
+
+    # try to coerce to bool
+    value = coerce_bool(obj=value, error=False)
+    if isinstance(value, bool):
+        return value
+
+    if elapsed is True and isinstance(refresh_elapsed, (int, float)):
+        # try to coerce to int or float
+        value = coerce_int_float(value=value, error=False, ret_value=True)
+        if isinstance(value, (int, float)) and refresh_elapsed >= value:
+            return True
+
+    return False
+
+
+def get_diff_seconds(
+    start: t.Optional[datetime] = None,
+    stop: t.Optional[datetime] = None,
+    places: t.Optional[int] = 5,
+) -> t.Optional[float]:
+    """Pass."""
+    seconds: t.Optional[float] = None
+    if start is not None:
+        start: datetime = dt_parse(obj=start)
+        stop: datetime = dt_now if stop is None else dt_parse(stop)
+        delta: timedelta = stop - start
+        seconds: float = delta.total_seconds()
+        if isinstance(places, int):
+            seconds: float = float(f"{seconds:.{places}f}")
+    return seconds
+
+
+def score_prefix(value: str, prefix: t.Optional[t.List[str]] = None, join: str = "_") -> str:
+    """Prefix a value."""
+    prefix: t.List[str] = listify(prefix)
+    use_prefix: str = f"{join.join(prefix)}{join}" if prefix else ""
+    return f"{use_prefix}{value}" if isinstance(prefix, (list, tuple)) and prefix else value
+
+
+def get_mm_field(value: t.Any) -> t.Optional[marshmallow.fields.Field]:
+    """Get the marshmallow field from a dataclasses field.
+
+    Args:
+        value: The field to check.
+
+    Returns:
+        marshmallow.fields.Field: The marshmallow field.
+    """
+    if isinstance(value, marshmallow.fields.Field):
+        return value
+    if isinstance(value, dataclasses.Field):
+        return getattr(value, "metadata", {}).get("dataclasses_json", {}).get("mm_field")
+    return None
+
+
+def get_mm_description(value: dataclasses.Field) -> t.Optional[str]:
+    """Get the marshmallow description from a dataclasses field.
+
+    Args:
+        value: The field to check.
+
+    Returns:
+        str: The marshmallow description.
+    """
+    return getattr(get_mm_field(value=value), "metadata", {}).get("description")
+
+
+def is_nested_schema(value: marshmallow.fields.Field) -> bool:
+    """Check if a marshmallow field is a nested schema.
+
+    Args:
+        value: The field to check.
+
+    Returns:
+        bool: True if the field is a nested schema.
+    """
+    return isinstance(get_nested_schema(value=value), marshmallow.Schema)
+
+
+def get_nested_schema(value: marshmallow.fields.Field) -> t.Optional[marshmallow.Schema]:
+    """Get the nested schema from a marshmallow field.
+
+    Args:
+        value: The field to check.
+
+    Returns:
+        marshmallow.Schema: The nested schema.
+    """
+    return getattr(getattr(value, "inner", None), "nested", None)
+
+
+def get_hint_type(value: t.Any) -> t.Any:
+    """Get the type from a type hint.
+
+    Args:
+        value: If type hint, return the type.
+
+    Returns:
+        Any: The type if value is a type hint, else None.
+    """
+    if isinstance(value, type):
+        return value
+    args: t.Tuple[t.Any] = t.get_args(value)
+    return args[0] if len(args) == 1 else args
+
+
+def is_subclass(value: t.Any, expected_types: t.Any = None, as_none: bool = False) -> bool:
+    """Determine if value is a subclass of the type for this field."""
+    if expected_types is None:
+        return as_none
+    try:
+        return issubclass(value, expected_types)
+    except TypeError:
+        return False

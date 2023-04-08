@@ -19,6 +19,21 @@ class BaseEnum(enum.Enum):
         """Pass."""
         return str(self.value)
 
+    def _enums(self, lower: bool = True) -> List[Any]:
+        """Pass."""
+        ret = [self, self.name, self.value]
+        if lower:
+            ret.append(self.name.lower())
+            if isinstance(self.value, str):
+                ret.append(self.value.lower())
+        return ret
+
+    def value_matches(self, value: Any, lower: bool = True) -> bool:
+        """Pass."""
+        return (value.lower() if isinstance(value, str) and lower else value) in self._enums(
+            lower=lower
+        )
+
     @classmethod
     def get_value(cls, value: Union["BaseEnum", str]) -> "BaseEnum":
         """Pass."""

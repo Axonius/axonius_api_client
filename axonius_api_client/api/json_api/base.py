@@ -4,6 +4,8 @@ import dataclasses
 import logging
 import typing as t
 import warnings
+from dataclasses import Field
+from typing import Any, Tuple
 
 import dataclasses_json
 import marshmallow
@@ -179,6 +181,12 @@ class BaseSchema(BaseCommon, marshmallow.Schema):
             return model_cls(**data) if callable(model_cls) else data
         return model_cls.from_dict(data)
 
+    @classmethod
+    def get_model_fields(cls) -> t.List[dataclasses.Field]:
+        """Get the fields of the model class that this schema loads into."""
+        # noinspection PyProtectedMember
+        return cls.get_model_cls()._get_fields()
+
 
 class BaseSchemaJson(BaseSchema, marshmallow_jsonapi.Schema):
     """Schema base class for validating JSON API data."""
@@ -249,6 +257,13 @@ class BaseSchemaJson(BaseSchema, marshmallow_jsonapi.Schema):
 
 class BaseModel(dataclasses_json.DataClassJsonMixin, BaseCommon):
     """Model base class for holding data."""
+
+    @classmethod
+    def get_request_if_not_request(
+        cls, request_obj: t.Optional["BaseModel"] = None, *args, **kwargs
+    ) -> "BaseModel":
+        """If request is not of this type, build one using args and kwargs."""
+        return request_obj if isinstance(request_obj, cls) else cls(*args, **kwargs)
 
     @staticmethod
     def get_schema_cls() -> t.Any:
@@ -426,7 +441,11 @@ class BaseModel(dataclasses_json.DataClassJsonMixin, BaseCommon):
         fields_known = [x.name for x in dataclasses.fields(cls)]
         extra_attributes = {k: data.pop(k) for k in list(data) if k not in fields_known}
         obj = super().from_dict(data)
-        obj.extra_attributes = extra_attributes
+        if extra_attributes:
+            if hasattr(obj, "_extra_attributes"):
+                obj._extra_attributes.update(extra_attributes)
+            else:
+                obj.extra_attributes = extra_attributes
         return obj
 
     @staticmethod
@@ -466,7 +485,7 @@ class BaseModel(dataclasses_json.DataClassJsonMixin, BaseCommon):
         return [x.name for x in cls._get_fields()]
 
     @classmethod
-    def _get_fields(cls) -> t.List[dataclasses.Field]:
+    def _get_fields(cls) -> t.Tuple[Field]:
         """Get a list of fields defined for this dataclass."""
         return dataclasses.fields(cls)
 

@@ -475,3 +475,111 @@ class SearchNoMatchesError(SearchError):
 
 class SearchNoObjectsError(SearchError):
     """Pass."""
+
+
+class DecodeError(ValueError, AxonError):
+    """Raised when a byte string cannot be decoded to a valid ObjectId string.
+
+    Attributes:
+        value (bytes): The input byte string.
+        encoding_format (str): The encoding format used for decoding.
+        encoding_errors (str): The error handling method used for decoding.
+    """
+
+    def __init__(
+        self,
+        value: t.Any,
+        encoding_format: t.Optional[str] = None,
+        encoding_errors: t.Optional[str] = None,
+    ) -> None:
+        """Initialize a new instance of the DecodeError exception.
+
+        Args:
+            value (t.Any):
+                The input value.
+            encoding_format (t.Optional[str], optional):
+                The encoding format used for decoding.
+            encoding_errors (t.Optional[str], optional):
+                The error handling method used for decoding.
+        """
+        from .utils import trim_value_repr
+
+        self.value: bytes = value
+        self.encoding_format: t.Optional[str] = encoding_format
+        self.encoding_errors: t.Optional[str] = encoding_errors
+        super().__init__(
+            f"The input byte string {trim_value_repr(self.value)} cannot be decoded to a valid "
+            f"ObjectId string using encoding_format {self.encoding_format!r} "
+            f" and encoding_errors {self.encoding_errors!r}."
+        )
+
+
+class InvalidObjectIdError(ValueError, AxonError):
+    """Raised when an input string is not a valid ObjectId.
+
+    Attributes:
+        value (str): The input string.
+    """
+
+    def __init__(self, value: str):
+        """Initialize a new instance of the InvalidObjectIdError exception.
+
+        Args:
+            value (str): The input string.
+        """
+        from .utils import trim_value_repr
+
+        self.value: t.Any = value
+        super().__init__(f"The input string {trim_value_repr(self.value)} is not a valid ObjectId.")
+
+
+class InvalidTypeError(TypeError, AxonError):
+    """Raised when an input value is not one of the allowed types.
+
+    Attributes:
+        value (t.Any): The input value.
+        allowed_types (t.Tuple[type]): The tuple of allowed types.
+    """
+
+    def __init__(self, value: t.Any, allowed_types: t.Optional[t.Tuple[type]] = ()) -> None:
+        """Initialize a new instance of the InvalidTypeError exception.
+
+        Args:
+            value (t.Any): The input value.
+            allowed_types (t.Optional[t.Tuple[type]], optional): The tuple of allowed types.
+        """
+        self.value: t.Any = value
+        self.allowed_types: t.Optional[t.Tuple[type]] = allowed_types
+        from .utils import get_type_str
+
+        super().__init__(
+            f"The input value {self.value!r} type {get_type_str(self.value)} is not "
+            f"one of the allowed types: {get_type_str(allowed_types)}."
+        )
+
+
+class FormatError(KeyError, AxonError):
+    """Raised when there is a KeyError in when doing a string formatting."""
+
+    def __init__(
+        self, template: str, error: Exception, args: t.Any = None, kwargs: t.Dict[str, t.Any] = None
+    ) -> None:
+        """Initialize a new instance of the FormatError exception.
+
+        Args:
+            template (str): The string template that had the problem.
+            error (Exception): The original error that occurred.
+            *args (t.Any): The args passed to the template
+            **kwargs (t.Dict[str, t.Any]): The kwargs passed to the template
+        """
+        self.template: str = template
+        self.error: Exception = error
+        self.args: t.Any = args
+        self.kwargs: t.Dict[str, t.Any] = kwargs
+
+        super().__init__(
+            f"Error formatting template {template!r}\n"
+            f"{type(self.error)}: {self.error}\n"
+            f"args: {self.args}\n",
+            f"kwargs: {self.kwargs}\n",
+        )

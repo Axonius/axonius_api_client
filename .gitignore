@@ -299,3 +299,4 @@ axonius_oas*.yaml
 artifacts/
 /*.pem
 data.*
+Pipfile.lock

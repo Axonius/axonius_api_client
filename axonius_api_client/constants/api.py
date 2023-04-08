@@ -59,6 +59,7 @@ AS_DATACLASS: bool = False
 BARRIER: str = "-" * 15
 ASSET_TMPL: str = "{k}: {v}"
 # ALL_ID: str = "all"
+REFRESH: bool = 60
 
 
 class FolderDefaults:
@@ -88,6 +89,6 @@ class FolderDefaults:
     prompt_shell: bool = True
     query_type: str = "devices"
     recursive: bool = False
-    refresh: int = 60
+    refresh: int = REFRESH
     refresh_action: bool = True
     sep: str = "/"
