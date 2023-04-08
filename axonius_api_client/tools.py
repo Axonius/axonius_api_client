@@ -27,7 +27,8 @@ import marshmallow
 
 from . import INIT_DOTENV, PACKAGE_FILE, PACKAGE_ROOT, VERSION
 from .constants.api import GUI_PAGE_SIZES, REFRESH, FolderDefaults
-from .constants.ctypes import PathLike, PatternLike
+from .constants.ctypes import PathLike, PatternLike, PatternLikeListy
+
 from .constants.general import (
     DAYS_MAP,
     DEBUG_ARGS,
@@ -2082,7 +2083,7 @@ def extract_kvs_csv(
     return ret
 
 
-def tilde_re(value: t.Any) -> t.Optional[t.Union[str, t.Pattern]]:
+def tilde_re(value: t.Any) -> PatternLikeListy:
     """Pass."""
     if isinstance(value, (list, tuple)):
         return [tilde_re(x) for x in value]
