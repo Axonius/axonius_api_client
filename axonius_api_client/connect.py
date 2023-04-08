@@ -274,8 +274,11 @@ class Connect:
             if log_file_rotate:
                 LOG.info("Forcing file logs to rotate")
                 self.HANDLER_FILE.flush()
-                self.HANDLER_FILE.doRollover()
-                LOG.info("Forced file logs to rotate")
+                try:
+                    self.HANDLER_FILE.doRollover()
+                    LOG.info("Forced file logs to rotate")
+                except Exception as exc:
+                    LOG.exception("Failed to force file logs to rotate: %s", exc)
 
         self.HTTP_ARGS: dict = {
             "url": url,
