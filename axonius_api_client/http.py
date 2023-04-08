@@ -1,14 +1,20 @@
 # -*- coding: utf-8 -*-
 """HTTP client."""
+import typing as t
 import logging
 import pathlib
 import warnings
-from typing import Any, List, Optional, Pattern, TypeVar, Union
+from typing import Any, List, Optional, Pattern, Union
 
 import requests
+import requests.cookies
+import requests.structures
+import urllib3
+import urllib3.exceptions
 
 from . import cert_human
 from .constants.api import TIMEOUT_CONNECT, TIMEOUT_RESPONSE
+from .constants.ctypes import PatternLikeListy
 from .constants.logs import LOG_LEVEL_HTTP, MAX_BODY_LEN, REQUEST_ATTR_MAP, RESPONSE_ATTR_MAP
 from .exceptions import HttpError
 from .logs import get_obj_log, set_log_level
@@ -17,12 +23,11 @@ from .setup_env import get_env_user_agent
 from .tools import coerce_str, join_url, json_log, listify, path_read, tilde_re
 from .version import __version__
 
-cert_human.ssl_capture.inject_into_urllib3()
-T_Cookies: TypeVar = Union[dict, requests.cookies.RequestsCookieJar]
-T_Headers: TypeVar = Union[dict, requests.structures.CaseInsensitiveDict]
-T_StrPattern: TypeVar = Union[str, Pattern]
+INJECT_RESULTS: t.Tuple[bool, t.List[str]] = cert_human.ssl_capture.inject_into_urllib3()
+T_Cookies: t.Type = t.Union[dict, requests.cookies.RequestsCookieJar]
+T_Headers: t.Type = t.Union[dict, requests.structures.CaseInsensitiveDict]
 
-HIDE_HEADERS: str = [
+HIDE_HEADERS: t.List[str] = [
     "~cookie",
     "~auth",
     "~token",
@@ -35,7 +40,7 @@ HIDE_HEADERS: str = [
 
 
 class Http:
-    """HTTP client that wraps around around :obj:`requests.Session`."""
+    """HTTP client that wraps around :obj:`requests.Session`."""
 
     HIDE_STR = "*********"
 
@@ -83,8 +88,8 @@ class Http:
         self.url: str = self.URLPARSED.url
         """URL to connect to"""
 
-        self.LOG_HIDE_HEADERS: List[T_StrPattern] = tilde_re(
-            kwargs.get("log_hide_headers", HIDE_HEADERS)
+        self.LOG_HIDE_HEADERS: PatternLikeListy = tilde_re(
+            listify(kwargs.get("log_hide_headers", HIDE_HEADERS))
         )
         """Headers to hide when logging."""
 
@@ -160,7 +165,7 @@ class Http:
         )
         self.log_request_attrs: Optional[List[str]] = self.LOG_REQUEST_ATTRS
         self.log_response_attrs: Optional[List[str]] = self.LOG_RESPONSE_ATTRS
-
+        self.session: requests.Session = requests.Session()
         self.set_urllib_warnings()
         self.set_urllib_log()
         self.new_session()
@@ -215,9 +220,7 @@ class Http:
 
     def set_session_proxies(self):
         """Pass."""
-        self.session.proxies = {}
-        self.session.proxies["https"] = self.HTTPS_PROXY
-        self.session.proxies["http"] = self.HTTP_PROXY
+        self.session.proxies = {"https": self.HTTPS_PROXY, "http": self.HTTP_PROXY}
 
     def set_session_verify(self):
         """Pass."""
@@ -259,9 +262,9 @@ class Http:
     def set_urllib_warnings(self):
         """Pass."""
         if self.CERT_WARN is True:
-            warnings.simplefilter("once", requests.urllib3.exceptions.InsecureRequestWarning)
+            warnings.simplefilter("once", urllib3.exceptions.InsecureRequestWarning)
         elif self.CERT_WARN is False:
-            warnings.simplefilter("ignore", requests.urllib3.exceptions.InsecureRequestWarning)
+            warnings.simplefilter("ignore", urllib3.exceptions.InsecureRequestWarning)
 
     def set_urllib_log(self):
         """Pass."""
@@ -295,7 +298,7 @@ class Http:
             **kwargs: overrides for object attributes
 
                 * connect_timeout: seconds to wait for connection to open for this request
-                * response_timeout: seconds to wait for for response for this request
+                * response_timeout: seconds to wait for response for this request
                 * proxies: proxies for this request
                 * verify: verification of cert for this request
                 * cert: client cert to offer for this request
@@ -305,6 +308,7 @@ class Http:
         """
 
         def log_if_headers(msg: str):
+            """Pass."""
             if "headers" in self.log_request_attrs:
                 self.LOG.debug(msg)
 
@@ -389,12 +393,14 @@ class Http:
             request (:obj:`requests.PreparedRequest`): prepared request to log attrs/body of
         """
         if self.log_request_attrs:
+            cookies = getattr(request, "_cookies", {})
+            headers = getattr(request, "headers", {})
             lattrs = ", ".join(self.log_request_attrs).format(
                 url=request.url,
                 body_size=len(request.body or ""),
                 method=request.method,
-                headers=self._clean_headers(headers=request.headers),
-                cookies=self._clean_headers(headers=request._cookies),
+                headers=self._clean_headers(headers=headers),
+                cookies=self._clean_headers(headers=cookies),
             )
             self.LOG.debug(f"REQUEST ATTRS: {lattrs}")
 
@@ -409,6 +415,7 @@ class Http:
         """
 
         def getval(key, value):
+            """Pass."""
             skey = str(key).lower()
             for check in self.LOG_HIDE_HEADERS:
                 if (isinstance(check, str) and check.lower() == skey) or (
@@ -417,6 +424,7 @@ class Http:
                     return self.HIDE_STR
             return value
 
+        # noinspection PyBroadException
         try:
             return {k: getval(k, v) for k, v in headers.items()}
         except Exception:
@@ -509,15 +517,17 @@ class Http:
                 if entry not in log_attrs:
                     log_attrs.append(entry)
 
-    def log_body(self, body: Any, body_type: str, src=None) -> str:
+    def log_body(self, body: Any, body_type: str, src: t.Optional[t.Any] = None) -> str:
         """Get a string for logging a request or response body.
 
         Args:
             body: content to log
             body_type: 'request' or 'response'
+            src: source of the body
+
         """
         body = json_log(obj=coerce_str(value=body), trim=self.LOG_BODY_MAX_LEN)
-        return f"{body_type} BODY:\n{body}"
+        return f"{body_type} BODY from {src}:\n{body}"
 
     def _init(self):
         """Pass."""
