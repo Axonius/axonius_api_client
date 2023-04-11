@@ -14,7 +14,8 @@ import re
 import sys
 import types
 import typing as t
-from datetime import datetime, timedelta, timezone
+import uuid
+from datetime import datetime, timedelta, timezone, tzinfo
 from itertools import zip_longest
 from urllib.parse import urljoin
 
@@ -738,23 +739,26 @@ def dt_parse_uuid(
 
 
 def dt_parse(
-    obj: t.Union[str, timedelta, datetime], default_tz_utc: bool = False, allow_none=False
-) -> t.Optional[datetime]:
+    obj: t.Union[str, timedelta, datetime],
+    default_tz_utc: bool = False,
+    allow_none=False,
+    as_none: t.Any = None,
+    as_tz: t.Optional[t.Union[str, tzinfo]] = timezone.utc,
+) -> t.Optional[t.Union[datetime, t.List[datetime]]]:
     """Parse a str, datetime, or timedelta into a datetime object.
-
-    Notes:
-        * :obj:`str`: will be parsed into datetime obj
-        * :obj:`datetime.timedelta`: will be parsed into datetime obj as now - timedelta
-        * :obj:`datetime.datetime`: will be re-parsed into datetime obj
 
     Args:
         obj: object or list of objects to parse into datetime
+        default_tz_utc: if no timezone is found, assume UTC
+        allow_none: if obj is None or "none" or "null", return None
+        as_none: if allow_none and obj is None, return this value
+        as_tz: if not None, convert to this timezone
     """
-    if allow_none and (obj is None or str(obj).lower().strip() in ["none", "null"]):
-        return None
-
     if isinstance(obj, list) and all([isinstance(x, (str, datetime, timedelta)) for x in obj]):
-        return [dt_parse(obj=x) for x in obj]
+        return [
+            dt_parse(obj=x, default_tz_utc=default_tz_utc, as_none=as_none, allow_none=allow_none)
+            for x in obj
+        ]
 
     if isinstance(obj, datetime):
         obj = str(obj)
@@ -762,11 +766,16 @@ def dt_parse(
     if isinstance(obj, timedelta):
         obj = str(dt_now() - obj)
 
-    value = dateutil.parser.parse(obj)
-
-    if default_tz_utc and not value.tzinfo:
-        value = value.replace(tzinfo=dateutil.tz.tzutc())
-
+    obj = bytes_to_str(obj)
+    if allow_none and (obj is None or str(obj).lower().strip() in ["none", "null"]):
+        value = as_none
+    else:
+        value = dateutil.parser.parse(obj)
+    if isinstance(value, datetime):
+        if default_tz_utc and not value.tzinfo:
+            value = value.replace(tzinfo=as_tz)
+        if isinstance(as_tz, tzinfo):
+            value = value.astimezone(as_tz)
     return value
 
 
@@ -2453,3 +2462,15 @@ def is_subclass(value: t.Any, expected_types: t.Any = None, as_none: bool = Fals
         return issubclass(value, expected_types)
     except TypeError:
         return False
+
+
+def get_query_id(value: t.Optional[t.Union[str, bytes, uuid.UUID]] = None) -> str:
+    """Get or build a query id."""
+    if isinstance(value, uuid.UUID):
+        return str(value)
+    if isinstance(value, (str, bytes)) and value.strip():
+        try:
+            return str(uuid.UUID(bytes_to_str(value)))
+        except ValueError:
+            pass
+    return str(uuid.uuid4())

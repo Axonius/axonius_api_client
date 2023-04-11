@@ -102,7 +102,7 @@ class Wizard:
 
         self._init()
 
-    def parse(self, entries: List[dict], source: str = Sources.LOD) -> List[dict]:
+    def parse(self, entries: List[dict], source: str = Sources.LOD) -> dict:
         """Parse a list of entries into a query and the associated GUI query wizard expressions.
 
         Args:

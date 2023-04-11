@@ -39,6 +39,70 @@ OPT_EXPORT_PATH = click.option(
     show_default=True,
 )
 OPTS_EXPORT = [OPT_EXPORT_FILE, OPT_EXPORT_PATH, OPT_EXPORT_OVERWRITE, OPT_EXPORT_BACKUP]
+OPT_INCLUDE_FIELDS = click.option(
+    "--include-fields/--no-include-fields",
+    "-if/-nif",
+    "include_fields",
+    default=True,
+    help="Include fields defined in the saved query",
+    show_envvar=True,
+    show_default=True,
+)
+OPT_INCLUDE_EXCLUDED_ADAPTERS = click.option(
+    "--include-excluded-adapters/--no-include-excluded-adapters",
+    "-iea/-niea",
+    "include_exclude_adapters",
+    default=True,
+    help="Include excluded adapters defined in the saved query",
+    show_envvar=True,
+    show_default=True,
+)
+OPT_ASSET_INCLUDE_EXCLUDED_ADAPTERS = click.option(
+    "--include-asset-excluded-adapters/--no-include-asset-excluded-adapters",
+    "-iaea/-niaea",
+    "include_asset_exclude_adapters",
+    default=True,
+    help="Include asset excluded adapters fields defined in the saved query",
+    show_envvar=True,
+    show_default=True,
+)
+OPT_INCLUDE_FIELD_FILTERS = click.option(
+    "--include-field-filters/--no-include-field-filters",
+    "-iff/-niff",
+    "include_field_filters",
+    default=True,
+    help="Include field filters defined in the saved query",
+    show_envvar=True,
+    show_default=True,
+)
+OPT_USE_CACHE_ENTRY = click.option(
+    "--use-cache-entry/--no-use-cache-entry",
+    "-uce/-nuce",
+    "use_cache_entry",
+    default=False,
+    help="Use cache entry for query",
+    show_envvar=True,
+    show_default=True,
+)
+OPT_USE_HEAVY_FIELDS_COLLECTION = click.option(
+    "--use-heavy-fields-collection/--no-use-heavy-fields-collection",
+    "-uhfc/-nuhfc",
+    "use_heavy_fields_collection",
+    default=False,
+    help="Use heavy fields collection for query",
+    show_envvar=True,
+    show_default=True,
+)
+
+
+OPTS_GET_BY_SQ = [
+    OPT_INCLUDE_FIELDS,
+    OPT_INCLUDE_EXCLUDED_ADAPTERS,
+    OPT_ASSET_INCLUDE_EXCLUDED_ADAPTERS,
+    OPT_INCLUDE_FIELD_FILTERS,
+    OPT_USE_CACHE_ENTRY,
+    OPT_USE_HEAVY_FIELDS_COLLECTION,
+]
 
 HISTORY = [
     click.option(
@@ -79,12 +143,14 @@ def wiz_callback(ctx, param, value):
     if value:
         for i in value:
             etype = i[0].strip().lower()
-            if etype not in Types.CLI:  # pragma: no cover
+            if etype not in Types.CLI:
                 types = ", ".join(Types.CLI)
                 echo_error(msg=f"Invalid expression type {etype!r}, valid types: {types}")
             expr = i[1]
-            if etype == Types.FILE:  # pragma: no cover
+            if etype == Types.FILE:
                 contents += path_read(obj=expr)[1].strip().splitlines()
+            elif etype == Types.LINES:
+                contents += expr.strip().splitlines()
             else:
                 contents.append(f"{etype} {expr}")
     return "\n".join(contents)
@@ -102,7 +168,7 @@ WIZ = [
         show_envvar=True,
         hidden=False,
         callback=wiz_callback,
-        metavar='TYPE "EXPRESSION"',
+        metavar='"file|simple|complex" "EXPRESSION"',
     ),
 ]
 
@@ -517,10 +583,14 @@ def gen_get_by_cmd(options, doc, cmd_name, method):
     return cmd
 
 
-def load_wiz(apiobj, wizard_content, kwargs, exprs=False):
+def load_wiz(apiobj, wizard_content, kwargs, wizard_file=None, exprs=False):
     """Pass."""
+    result = None
+    if wizard_file:
+        result = apiobj.wizard_file.parse_path(path=wizard_file)
     if wizard_content:
         result = apiobj.wizard_text.parse(content=wizard_content)
+    if result:
         query = result[Results.QUERY]
         click.secho(f"Wizard built a query: {query}", err=True, fg="green")
         kwargs["query"] = query

@@ -5,15 +5,28 @@ import datetime
 import typing as t
 
 import marshmallow
-import marshmallow_jsonapi
-
+import marshmallow_jsonapi.fields as mm_fields
 from ... import LOG
 from ...constants.api import MAX_PAGE_SIZE, PAGE_SIZE
 from ...exceptions import ApiError, StopFetch
 from ...http import Http
-from ...tools import coerce_int, dt_now, dt_parse, dt_sec_ago, json_dump, parse_int_min_max
+from ...tools import (
+    coerce_int,
+    dt_now,
+    dt_parse,
+    dt_sec_ago,
+    json_dump,
+    parse_int_min_max,
+    get_query_id,
+    listify,
+)
 from .base import BaseModel, BaseSchemaJson
-from .custom_fields import SchemaBool, get_field_dc_mm, get_schema_dc
+from .custom_fields import (
+    SchemaBool,
+    get_schema_dc,
+    field_from_mm,
+    SchemaDatetime,
+)
 from .generic import DictValue, DictValueSchema
 from .resources import PaginationRequest, PaginationSchema
 from .selection import IdSelection, IdSelectionSchema
@@ -24,9 +37,9 @@ LOGGER = LOG.getChild("__name__")
 class ModifyTagsSchema(BaseSchemaJson):
     """Pass."""
 
-    entities = marshmallow_jsonapi.fields.Dict()
-    labels = marshmallow_jsonapi.fields.List(marshmallow_jsonapi.fields.Str())
-    filter = marshmallow_jsonapi.fields.Str(load_default="", dump_default="", allow_none=True)
+    entities = mm_fields.Dict()
+    labels = mm_fields.List(mm_fields.Str())
+    filter = mm_fields.Str(load_default="", dump_default="", allow_none=True)
 
     class Meta:
         """Pass."""
@@ -112,6 +125,7 @@ class AssetTypeHistoryDates(BaseModel):
     def dates(self) -> t.List[AssetTypeHistoryDate]:
         """Pass."""
         if not hasattr(self, "_dates"):
+            # noinspection PyAttributeOutsideInit
             self._dates = [
                 AssetTypeHistoryDate(date_api=k, date_api_exact=v, asset_type=self.asset_type)
                 for k, v in self.values.items()
@@ -259,35 +273,101 @@ class AssetMixins:
 class AssetRequestSchema(BaseSchemaJson):
     """Pass."""
 
-    always_cached_query = SchemaBool(load_default=False, dump_default=False)
-    use_cache_entry = SchemaBool(load_default=False, dump_default=False)
-    include_details = SchemaBool(load_default=False, dump_default=False)
-    include_notes = SchemaBool(load_default=False, dump_default=False)
-    get_metadata = SchemaBool(load_default=True, dump_default=True)
-    use_cursor = SchemaBool(load_default=True, dump_default=True)
-
-    history = marshmallow_jsonapi.fields.Str(load_default=None, dump_default=None, allow_none=True)
-    filter = marshmallow_jsonapi.fields.Str(load_default="", dump_default="", allow_none=True)
-    cursor_id = marshmallow_jsonapi.fields.Str(
+    page = mm_fields.Nested(
+        PaginationSchema(), load_default=PaginationRequest, dump_default=PaginationRequest
+    )  # ResourceRequestSchema
+    search = mm_fields.Str(load_default="", dump_default="", allow_none=True)  # FilterSchema
+    filter = mm_fields.Str(load_default="", dump_default="", allow_none=True)  # FilterSchema
+    history = SchemaDatetime(load_default=None, dump_default=None, allow_none=True)  # FilterSchema
+    sort = mm_fields.Str(
         load_default=None, dump_default=None, allow_none=True
-    )
-    sort = marshmallow_jsonapi.fields.Str(load_default=None, dump_default=None, allow_none=True)
-
-    excluded_adapters = marshmallow_jsonapi.fields.Dict(
-        load_default={}, dump_default={}, allow_none=True
-    )
-    field_filters = marshmallow_jsonapi.fields.Dict(
-        load_default={}, dump_default={}, allow_none=True
-    )
-    fields = marshmallow_jsonapi.fields.Dict(load_default={}, dump_default={}, allow_none=True)
-
-    page = marshmallow_jsonapi.fields.Nested(PaginationSchema)
-    saved_query_id = marshmallow_jsonapi.fields.Str(
+    )  # ResourceRequestSchema
+    get_metadata = SchemaBool(
+        load_default=True,
+        dump_default=True,
+        description="Whether to add metadata for the resource (the pagination offset)",
+    )  # ResourceWithMetadataRequestSchema
+    field_filters = mm_fields.List(
+        mm_fields.Dict(), load_default=list, dump_default=list, allow_none=True
+    )  # EntityRequestSchema
+    excluded_adapters = mm_fields.List(
+        mm_fields.Dict(), load_default=list, dump_default=list, allow_none=True
+    )  # EntityRequestSchema
+    asset_excluded_adapters = mm_fields.List(
+        mm_fields.Dict(), load_default=list, dump_default=list, allow_none=True
+    )  # EntityRequestSchema
+    asset_filters = mm_fields.List(
+        mm_fields.Dict(), load_default=list, dump_default=list, allow_none=True
+    )  # EntityRequestSchema
+    expressions = mm_fields.List(
+        mm_fields.Dict(), load_default=list, dump_default=list
+    )  # EntityRequestSchema
+    fields = mm_fields.Dict(
+        load_default=dict, dump_default=dict, allow_none=True
+    )  # EntityRequestSchema
+    include_details = SchemaBool(load_default=False, dump_default=False)  # EntityRequestSchema
+    include_notes = SchemaBool(load_default=False, dump_default=False)  # EntityRequestSchema
+    use_cursor = SchemaBool(load_default=True, dump_default=True)  # EntityRequestSchema
+    cursor_id = mm_fields.Str(
         load_default=None, dump_default=None, allow_none=True
-    )
-    expressions = marshmallow_jsonapi.fields.List(
-        marshmallow_jsonapi.fields.Dict(), load_default=[], dump_default=[]
-    )
+    )  # EntityRequestSchema
+    saved_query_id = mm_fields.Str(
+        load_default=None, dump_default=None, allow_none=True
+    )  # EntityRequestSchema
+    query_id = mm_fields.Str(
+        load_default=None, dump_default=None, allow_none=True
+    )  # EntityRequestSchema
+    source_component = mm_fields.Str(
+        load_default=None, dump_default=None, allow_none=True
+    )  # EntityRequestSchema
+    frontend_sent_time = SchemaDatetime(
+        load_default=None, dump_default=None, allow_none=True
+    )  # EntityRequestSchema
+    filter_out_non_existing_fields = SchemaBool(
+        load_default=True, dump_default=True
+    )  # EntityRequestSchema
+    is_refresh = SchemaBool(load_default=False, dump_default=False)  # EntityRequestSchema
+    null_for_non_exist = SchemaBool(load_default=False, dump_default=False)  # EntityRequestSchema
+    max_field_items = mm_fields.Integer(load_default=None, dump_default=None)  # EntityRequestSchema
+    complex_fields_preview_limit = mm_fields.Integer(
+        load_default=None, dump_default=None, allow_none=True
+    )  # EntityRequestSchema
+    use_heavy_fields_collection = SchemaBool(
+        load_default=None, dump_default=None, allow_none=True
+    )  # ForceHeavyFieldsSchema
+    download_id = mm_fields.Str(
+        load_default=None, dump_default=None, allow_none=True
+    )  # ExportLargeCsvSchema, not used when use_cursor=True
+    use_cache_entry = SchemaBool(
+        load_default=False, dump_default=False
+    )  # UseCacheEntrySchema, not used when use_cursor=True
+    always_cached_query = SchemaBool(
+        load_default=False, dump_default=False
+    )  # EntityRequestSchema, not used when use_cursor=True
+    wait_for_data = SchemaBool(
+        load_default=False, dump_default=False
+    )  # EntityRequestSchema, not used when use_cursor=True
+    should_exclude_complex_fields = SchemaBool(
+        load_default=False, dump_default=False
+    )  # EntityRequestSchema, not used when use_cursor=True
+    should_split_by_adapter = SchemaBool(
+        load_default=False, dump_default=False
+    )  # EntityRequestSchema, not used when use_cursor=True
+    should_split_complex_objects = SchemaBool(
+        load_default=True, dump_default=True
+    )  # EntityRequestSchema, not used when use_cursor=True
+    delimiter = mm_fields.Str(
+        load_default=None, dump_default=None, allow_none=True
+    )  # EntityRequestSchema, not used when use_cursor=True
+    field_to_split_by = mm_fields.Str(
+        load_default=None, dump_default=None, allow_none=True
+    )  # EntityRequestSchema, not used when use_cursor=True
+    file_name = mm_fields.Str(
+        load_default=None, dump_default=None, allow_none=True
+    )  # EntityRequestSchema, not used when use_cursor=True
+    max_rows = mm_fields.Integer(
+        load_default=None, dump_default=None
+    )  # EntityRequestSchema, not used when use_cursor=True
 
     class Meta:
         """Pass."""
@@ -299,6 +379,7 @@ class AssetRequestSchema(BaseSchemaJson):
         """Pass."""
         return AssetRequest
 
+    # noinspection PyUnusedLocal
     @marshmallow.post_dump
     def post_dump_process(self, data, **kwargs) -> dict:
         """Pass."""
@@ -306,50 +387,111 @@ class AssetRequestSchema(BaseSchemaJson):
         return data
 
 
+GET_ASSETS = AssetRequestSchema()
+
+
 @dataclasses.dataclass
 class AssetRequest(AssetMixins, BaseModel):
     """Pass."""
 
-    always_cached_query: bool = False
-    use_cache_entry: bool = False
-    include_details: bool = False
-    include_notes: bool = False
-    get_metadata: bool = True
-    use_cursor: bool = True
-
-    history: t.Optional[str] = None
-    filter: t.Optional[str] = None
-    cursor_id: t.Optional[str] = None
-    sort: t.Optional[str] = None
-
-    excluded_adapters: t.Optional[dict] = dataclasses.field(default_factory=dict)
-    field_filters: t.Optional[dict] = dataclasses.field(default_factory=dict)
-    fields: t.Optional[dict] = dataclasses.field(default_factory=dict)
-
-    page: t.Optional[PaginationRequest] = get_field_dc_mm(
-        marshmallow_jsonapi.fields.Nested(PaginationSchema), default=None
+    page: t.Optional[PaginationRequest] = field_from_mm(GET_ASSETS, "page")
+    search: t.Optional[str] = field_from_mm(GET_ASSETS, "search")
+    filter: t.Optional[str] = field_from_mm(GET_ASSETS, "filter")
+    history: t.Optional[datetime] = field_from_mm(GET_ASSETS, "history")
+    sort: t.Optional[str] = field_from_mm(GET_ASSETS, "sort")
+    get_metadata: bool = field_from_mm(GET_ASSETS, "get_metadata")
+    field_filters: t.Optional[t.List[dict]] = field_from_mm(GET_ASSETS, "field_filters")
+    excluded_adapters: t.Optional[t.List[dict]] = field_from_mm(GET_ASSETS, "excluded_adapters")
+    asset_excluded_adapters: t.Optional[t.List[dict]] = field_from_mm(
+        GET_ASSETS, "excluded_adapters"
     )
-    saved_query_id: t.Optional[str] = None
-    expressions: t.Optional[t.List[dict]] = dataclasses.field(default_factory=list)
+    asset_filters: t.Optional[t.List[dict]] = field_from_mm(GET_ASSETS, "asset_filters")
+    expressions: t.Optional[t.List[dict]] = field_from_mm(GET_ASSETS, "expressions")
+    fields: t.Optional[dict] = field_from_mm(GET_ASSETS, "fields")
+    include_details: bool = field_from_mm(GET_ASSETS, "include_details")
+    include_notes: bool = field_from_mm(GET_ASSETS, "include_notes")
+    use_cursor: bool = field_from_mm(GET_ASSETS, "use_cursor")
+    cursor_id: t.Optional[str] = field_from_mm(GET_ASSETS, "cursor_id")
+    saved_query_id: t.Optional[str] = field_from_mm(GET_ASSETS, "saved_query_id")
+    query_id: t.Optional[str] = field_from_mm(GET_ASSETS, "query_id")
+    source_component: t.Optional[str] = field_from_mm(GET_ASSETS, "source_component")
+    frontend_sent_time: t.Optional[datetime] = field_from_mm(GET_ASSETS, "frontend_sent_time")
+    filter_out_non_existing_fields: bool = field_from_mm(
+        GET_ASSETS, "filter_out_non_existing_fields"
+    )
+    is_refresh: bool = field_from_mm(GET_ASSETS, "is_refresh")
+    null_for_non_exist: bool = field_from_mm(GET_ASSETS, "null_for_non_exist")
+    max_field_items: t.Optional[int] = field_from_mm(GET_ASSETS, "max_field_items")
+    complex_fields_preview_limit: t.Optional[int] = field_from_mm(
+        GET_ASSETS, "complex_fields_preview_limit"
+    )
+
+    download_id: t.Optional[str] = field_from_mm(GET_ASSETS, "download_id")
+    use_heavy_fields_collection: t.Optional[bool] = field_from_mm(
+        GET_ASSETS, "use_heavy_fields_collection"
+    )
+    use_cache_entry: bool = field_from_mm(GET_ASSETS, "use_cache_entry")
+    always_cached_query: bool = field_from_mm(GET_ASSETS, "always_cached_query")
+    wait_for_data: bool = field_from_mm(GET_ASSETS, "wait_for_data")
+    should_exclude_complex_fields: bool = field_from_mm(GET_ASSETS, "should_exclude_complex_fields")
+    should_split_by_adapter: bool = field_from_mm(GET_ASSETS, "should_split_by_adapter")
+    should_split_complex_objects: bool = field_from_mm(GET_ASSETS, "should_split_complex_objects")
+    delimiter: t.Optional[str] = field_from_mm(GET_ASSETS, "delimiter")
+    field_to_split_by: t.Optional[str] = field_from_mm(GET_ASSETS, "field_to_split_by")
+    file_name: t.Optional[str] = field_from_mm(GET_ASSETS, "file_name")
+    max_rows: t.Optional[int] = field_from_mm(GET_ASSETS, "max_rows")
 
     def __post_init__(self):
         """Pass."""
-        self.excluded_adapters = self.excluded_adapters or {}
-        self.field_filters = self.field_filters or {}
+        if not isinstance(self.page, PaginationRequest):
+            self.page = PaginationRequest()
+
+        self.field_filters: t.List[dict] = listify(self.field_filters)
+        self.excluded_adapters: t.List[dict] = listify(self.excluded_adapters)
+        self.asset_excluded_adapters: t.List[dict] = listify(self.asset_excluded_adapters)
+        self.asset_filters: t.List[dict] = listify(self.asset_filters)
+        self.expressions: t.List[dict] = listify(self.expressions)
         self.fields = self.fields or {}
-        self.page = self.page or PaginationRequest()
-        self.expressions = self.expressions or []
+        self.query_id: str = get_query_id(self.query_id)
+        self.frontend_sent_time: t.Optional[datetime.datetime] = dt_parse(
+            obj=self.frontend_sent_time,
+            allow_none=True,
+            as_none=dt_now(),
+        )
 
     @staticmethod
     def get_schema_cls() -> t.Any:
         """Pass."""
         return AssetRequestSchema
 
-    def set_page(self, limit: int = 0, offset: int = PAGE_SIZE):
+    @property
+    def page_size(self) -> t.Optional[int]:
         """Pass."""
-        self.page = PaginationRequest(limit=limit, offset=offset)
+        return self.page.page_size
+
+    @page_size.setter
+    def page_size(self, value: t.Optional[int]):
+        """Pass."""
+        self.page.page_size = value
+
+    @property
+    def row_start(self) -> t.Optional[int]:
+        """Pass."""
+        return self.page.row_start
+
+    @row_start.setter
+    def row_start(self, value: t.Optional[int]):
+        """Pass."""
+        if isinstance(value, int):
+            self.page.offset = value
+
+    def set_page(self, limit: t.Optional[int] = 0, offset: t.Optional[int] = PAGE_SIZE):
+        """Pass."""
+        self.row_start = offset
+        self.page_size = limit
 
 
+# noinspection PyUnusedLocal,PyAttributeOutsideInit
 @dataclasses.dataclass
 class AssetsPage(BaseModel):
     """Pass."""
@@ -364,6 +506,7 @@ class AssetsPage(BaseModel):
         self.page_start_dt = dt_now()
         self.row_start_dt = dt_now()
 
+    # noinspection PyMethodOverriding
     @classmethod
     def load_response(cls, data: dict, http: Http, **kwargs):
         """Pass."""
@@ -555,7 +698,8 @@ class AssetsPage(BaseModel):
         apiobj.LOG.debug(f"Processing page took {process_page_took} seconds")
         return state
 
-    def process_stop(self, state: dict, reason: str, apiobj):
+    @staticmethod
+    def process_stop(state: dict, reason: str, apiobj):
         """Pass."""
         reason = f"{state['stop_msg']} and {reason}" if state["stop_msg"] else reason
         state["stop_msg"] = reason
@@ -582,6 +726,7 @@ class AssetById(BaseModel):
         """Pass."""
         return None
 
+    # noinspection PyMethodOverriding
     @classmethod
     def load_response(cls, data: dict, http: Http, **kwargs):
         """Pass."""
@@ -597,12 +742,22 @@ class AssetById(BaseModel):
 class CountRequestSchema(BaseSchemaJson):
     """Pass."""
 
-    use_cache_entry = SchemaBool(load_default=False, dump_default=False)
-    history = marshmallow_jsonapi.fields.Str(load_default=None, dump_default=None, allow_none=True)
-    filter = marshmallow_jsonapi.fields.Str(load_default="", dump_default="", allow_none=True)
-    saved_query_id = marshmallow_jsonapi.fields.Str(
+    history = mm_fields.Str(load_default=None, dump_default=None, allow_none=True)  # FilterSchema
+    search = mm_fields.Str(load_default="", dump_default="", allow_none=True)  # FilterSchema
+    filter = mm_fields.Str(load_default="", dump_default="", allow_none=True)  # FilterSchema
+    use_heavy_fields_collection = SchemaBool(
+        load_default=False, dump_default=False
+    )  # ForceHeavyFieldsSchema
+    use_cache_entry = SchemaBool(load_default=False, dump_default=False)  # EntitiesCountSchema
+    query_id = mm_fields.Str(
         load_default=None, dump_default=None, allow_none=True
-    )
+    )  # EntitiesCountSchema
+    saved_query_id = mm_fields.Str(
+        load_default=None, dump_default=None, allow_none=True
+    )  # EntitiesCountSchema
+    frontend_sent_time = SchemaDatetime(
+        load_default=None, dump_default=None, allow_none=True
+    )  # EntitiesCountSchema
 
     class Meta:
         """Pass."""
@@ -614,6 +769,7 @@ class CountRequestSchema(BaseSchemaJson):
         """Pass."""
         return CountRequest
 
+    # noinspection PyUnusedLocal
     @marshmallow.post_dump
     def post_dump_process(self, data, **kwargs) -> dict:
         """Pass."""
@@ -621,19 +777,35 @@ class CountRequestSchema(BaseSchemaJson):
         return data
 
 
+GET_COUNT = CountRequestSchema()
+
+
 @dataclasses.dataclass
 class CountRequest(BaseModel, AssetMixins):
     """Pass."""
 
-    use_cache_entry: bool = False
-    history: t.Optional[str] = None
-    filter: t.Optional[str] = None
-    saved_query_id: t.Optional[str] = None
+    history: t.Optional[str] = field_from_mm(GET_COUNT, "history")
+    search: t.Optional[str] = field_from_mm(GET_COUNT, "search")
+    filter: t.Optional[str] = field_from_mm(GET_COUNT, "filter")
+    use_heavy_fields_collection: bool = field_from_mm(GET_COUNT, "use_heavy_fields_collection")
+    use_cache_entry: bool = field_from_mm(GET_COUNT, "use_cache_entry")
+    query_id: t.Optional[str] = field_from_mm(GET_COUNT, "query_id")
+    saved_query_id: t.Optional[str] = field_from_mm(GET_COUNT, "saved_query_id")
+    frontend_sent_time: t.Optional[datetime.datetime] = field_from_mm(
+        GET_COUNT, "frontend_sent_time"
+    )
 
     @staticmethod
     def get_schema_cls() -> t.Any:
         """Pass."""
         return CountRequestSchema
+
+    def __post_init__(self):
+        """Pass."""
+        self.query_id: str = get_query_id(self.query_id)
+        self.frontend_sent_time: t.Optional[datetime.datetime] = dt_parse(
+            obj=self.frontend_sent_time, allow_none=True, default_tz_utc=True
+        )
 
 
 @dataclasses.dataclass
@@ -648,6 +820,7 @@ class Count(BaseModel):
         """Pass."""
         return None
 
+    # noinspection PyMethodOverriding
     @classmethod
     def load_response(cls, data: dict, http: Http, **kwargs):
         """Pass."""
@@ -676,10 +849,10 @@ class DestroyRequest(BaseModel):
 class RunEnforcementRequestSchema(BaseSchemaJson):
     """Pass."""
 
-    name = marshmallow_jsonapi.fields.Str(required=True)
-    selection = marshmallow_jsonapi.fields.Nested(IdSelectionSchema)
-    filter = marshmallow_jsonapi.fields.Str(load_default="", dump_default="")
-    view = marshmallow_jsonapi.fields.Dict()
+    name = mm_fields.Str(required=True)
+    selection = mm_fields.Nested(IdSelectionSchema())
+    filter = mm_fields.Str(load_default="", dump_default="")
+    view = mm_fields.Dict()
 
     class Meta:
         """Pass."""

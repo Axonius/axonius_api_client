@@ -178,6 +178,10 @@ def field_from_mm(
 ) -> dataclasses.Field:
     """Pass."""
     if isinstance(schema, marshmallow.Schema):
+        if key not in schema.fields:
+            valids = "\n" + "\n".join(f" - {k}: {v}" for k, v in schema.fields.items())
+            raise ValueError(f"Key {key!r} not found in schema {schema}\nValids: {valids}")
+
         mm_field: marshmallow.fields.Field = schema.fields[key]
     else:
         # noinspection PyProtectedMember

@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """API model mixin for device and user assets."""
+import uuid
 import datetime
 import pathlib
 import time
@@ -12,10 +13,18 @@ from ...constants.api import DEFAULT_CALLBACKS_CLS, MAX_PAGE_SIZE, PAGE_SIZE
 from ...constants.fields import AXID
 from ...exceptions import ApiError, NotFoundError, ResponseNotOk, StopFetch
 from ...parsers.grabber import Grabber
-from ...tools import PathLike, dt_now, dt_now_file, get_subcls, json_dump, listify
+from ...tools import (
+    PathLike,
+    dt_now,
+    dt_now_file,
+    get_subcls,
+    json_dump,
+    listify,
+)
 from .. import json_api
-from ..api_endpoints import ApiEndpoints
+from ..api_endpoints import ApiEndpoints, ApiEndpoint
 from ..asset_callbacks.tools import get_callbacks_cls
+from ..asset_callbacks.tools import Base as BaseCallbacks
 from ..mixins import ModelMixins
 from ..wizards import Wizard, WizardCsv, WizardText
 from .runner import ENFORCEMENT, Runner
@@ -25,14 +34,11 @@ HISTORY_DATES_OBJ_CACHE = cachetools.TTLCache(maxsize=1, ttl=300)
 HISTORY_DATES_CACHE = cachetools.TTLCache(maxsize=1, ttl=300)
 
 
+# noinspection PyAttributeOutsideInit,PyShadowingBuiltins
 class AssetMixin(ModelMixins):
     """API model mixin for device and user assets.
 
     Examples:
-        Create a ``client`` using :obj:`axonius_api_client.connect.Connect` and assume
-        ``apiobj`` is either ``client.devices`` or ``client.users``
-
-        >>> apiobj = client.devices  # or client.users
 
         * Get count of assets: :meth:`count`
         * Get count of assets from a saved query: :meth:`count_by_saved_query`
@@ -49,7 +55,6 @@ class AssetMixin(ModelMixins):
 
         * Device assets :obj:`axonius_api_client.api.assets.devices.Devices`
         * User assets :obj:`axonius_api_client.api.assets.users.Users`
-
     """
 
     ASSET_TYPE: str = ""
@@ -82,18 +87,20 @@ class AssetMixin(ModelMixins):
         """Run an enforcement set against a manually selected list of assets.
 
         Examples:
-            '''Get a list of assets from a query and manually extract the IDs.
+            >>> import axonius_api_client
+            >>> connect_args: dict = axonius_api_client.get_env_connect()
+            >>> client: axonius_api_client.Connect = axonius_api_client.Connect(**connect_args)
+            >>> apiobj: axonius_api_client.api.assets.AssetMixin = client.devices
+            >>>       # or client.users or client.vulnerabilities
+            >>> WIZ: str = "simple os.type equals Windows"  # "query of assets to target"
+            >>> ESET: str = "test"  # "name or uuid of enforcement set"
+
+            Get a list of assets from a query and manually extract the IDs.
             We know assets are valid because we just got them, so we pass verified=True.
-            '''
-            client = globals()['client']  # instance of axonius_api_client.Connect
-            apiobj = client.devices  # client.devices, client.users, or client.vulnerabilities
-            WIZ = "simple os.type equals Windows"  # "query of assets to target"
-            ESET = "test"  # "name or uuid of enforcement set"
-            ITEMS = apiobj.get(wiz_entries=WIZ)
-            IDS = [x['internal_axon_id'] for x in ITEMS]
-            runner = apiobj.run_enforcement(eset=ESET, ids=IDS, verified=True)
-            print(runner)
-            '''
+            >>> ITEMS: list[dict] = apiobj.get(wiz_entries=WIZ)
+            >>> IDS: list[str] = list(map(lambda x: x['internal_axon_id'], ITEMS))
+            >>> RUNNER: Runner = apiobj.run_enforcement(eset=ESET, ids=IDS, verified=True)
+            >>> print(RUNNER)
             Runner(
               state='Ran Enforcement Set against 31 supplied Asset IDs',
               eset='test',
@@ -105,7 +112,6 @@ class AssetMixin(ModelMixins):
               prompt=False,
               grabber=None,
             )
-            '''
 
         Args:
             eset (ENFORCEMENT): name, uuid, or Enforcement Set object to run
@@ -119,6 +125,8 @@ class AssetMixin(ModelMixins):
             prompt (bool): Prompt user for verification when applicable.
             do_echo (bool): Echo output to console as well as log
             refetch (bool): refetch $eset even if it is already a model
+            src_query (str): query to use to get $ids
+            src_fields (list): fields to use to get $ids
             check_stdin (bool): check if stdin is a TTY when prompting
             grabber: (grabber): Grabber used to get IDs
 
@@ -137,6 +145,7 @@ class AssetMixin(ModelMixins):
             src_query=src_query,
             src_fields=src_fields,
             grabber=grabber,
+            check_stdin=check_stdin,
         )
         if verify_and_run:
             runner.verify_and_run()
@@ -154,17 +163,20 @@ class AssetMixin(ModelMixins):
         """Get Asset IDs from a list of dicts or strs and run $eset against them.
 
         Examples:
-            '''Get a list of assets from a query and use the grabber get the IDs.
+            >>> import axonius_api_client
+            >>> connect_args: dict = axonius_api_client.get_env_connect()
+            >>> client: axonius_api_client.Connect = axonius_api_client.Connect(**connect_args)
+            >>> apiobj: axonius_api_client.api.assets.AssetMixin = client.devices
+            >>>       # or client.users or client.vulnerabilities
+            >>> WIZ: str = "simple os.type equals Windows"  # "query of assets to target"
+            >>> ESET: str = "test"  # "name or uuid of enforcement set"
+
+            Get a list of assets from a query and use the grabber get the IDs.
             We know assets are valid because we just got them, so we pass verified=True.
-            '''
-            client = globals()['client']  # instance of axonius_api_client.Connect
-            apiobj = client.devices  # client.devices, client.users, or client.vulnerabilities
-            WIZ = "simple os.type equals Windows"  # "query of assets to target"
-            ESET = "test"  # "name or uuid of enforcement set"
-            ITEMS = apiobj.get(wiz_entries=WIZ)
-            runner = apiobj.run_enforcement_from_items(eset=ESET, items=ITEMS, verified=True)
-            print(runner)
-            '''
+            >>> ITEMS: list[dict] = apiobj.get(wiz_entries=WIZ)
+            >>> RUNNER: Runner = apiobj.run_enforcement_from_items(eset=ESET, items=ITEMS,
+            ... verified=True)
+            >>> print(RUNNER)
             Runner(
               state='Ran Enforcement Set against 31 supplied Asset IDs',
               eset='test',
@@ -180,9 +192,7 @@ class AssetMixin(ModelMixins):
               do_echo=True,
               do_raise=False,
               source=None,
-            ),
             )
-            '''
 
         Args:
             eset (ENFORCEMENT): name, uuid, or Enforcement Set object to run
@@ -219,22 +229,25 @@ class AssetMixin(ModelMixins):
         """Get Asset IDs from a JSON string with a list of dicts and run $eset against them.
 
         Examples:
-            '''Get a list of assets from a query and export the assets to a JSON str
+            >>> import axonius_api_client
+            >>> connect_args: dict = axonius_api_client.get_env_connect()
+            >>> client: axonius_api_client.Connect = axonius_api_client.Connect(**connect_args)
+            >>> apiobj: axonius_api_client.api.assets.AssetMixin = client.devices
+            >>>       # or client.users or client.vulnerabilities
+            >>> WIZ: str = "simple os.type equals Windows"  # "query of assets to target"
+            >>> ESET: str = "test"  # "name or uuid of enforcement set"
+
+            Get a list of assets from a query and export the assets to a JSON str
             then run an enforcement against all asset IDs from the JSON str.
             We know assets are valid because we just got them, so we pass verified=True.
-            '''
-            import io
-            client = globals()['client']  # instance of axonius_api_client.Connect
-            apiobj = client.devices  # client.devices, client.users, or client.vulnerabilities
-            WIZ = "simple os.type equals Windows"  # "query of assets to target"
-            ESET = "test"  # "name or uuid of enforcement set"
-            FH = io.StringIO()
-            z = apiobj.get(wiz_entries=WIZ, export="json", export_fd=FH, export_fd_close=False)
-            FH.seek(0)
-            ITEMS = FH.getvalue()
-            runner = apiobj.run_enforcement_from_json(eset=ESET, items=ITEMS, verified=True)
-            print(runner)
-            '''
+            >>> import io
+            >>> FH = io.StringIO()
+            >>> _ = apiobj.get(wiz_entries=WIZ, export="json", export_fd=FH, export_fd_close=False)
+            >>> FH.seek(0)
+            >>> ITEMS: str = FH.getvalue()
+            >>> RUNNER: Runner = apiobj.run_enforcement_from_json(eset=ESET, items=ITEMS,
+            ... verified=True)
+            >>> print(RUNNER)
             Runner(
               state='Ran Enforcement Set against 31 supplied Asset IDs',
               eset='test',
@@ -252,22 +265,16 @@ class AssetMixin(ModelMixins):
               source='from_json items type=str, length=15519 post_load type=list, length=31',
             ),
             )
-            '''
 
-            '''Get a list of assets from a query and export the assets to a JSON file
+            Get a list of assets from a query and export the assets to a JSON file
             then run an enforcement against all asset IDs from the JSON file.
             We know assets are valid because we just got them, so we pass verified=True.
-            '''
-            import pathlib
-            client = globals()['client']  # instance of axonius_api_client.Connect
-            apiobj = client.devices  # client.devices, client.users, or client.vulnerabilities
-            WIZ = "simple os.type equals Windows"  # "query of assets to target"
-            ESET = "test"  # "name or uuid of enforcement set"
-            PATH = pathlib.Path("data.json")
-            z = apiobj.get(wiz_entries=WIZ, export="json", export_file=PATH, export_overwrite=True)
-            runner = apiobj.run_enforcement_from_json(eset=ESET, items=PATH, verified=True)
-            print(runner)
-            '''
+            >>> import pathlib
+            >>> PATH: pathlib.Path = pathlib.Path("data.json")
+            >>> _ = apiobj.get(wiz_entries=WIZ, export="json", export_file=PATH)
+            >>> RUNNER: Runner = apiobj.run_enforcement_from_json(eset=ESET, items=PATH,
+            ... verified=True)
+            >>> print(RUNNER)
             Runner(
               state='Ran Enforcement Set against 31 supplied Asset IDs',
               eset='test',
@@ -285,7 +292,6 @@ class AssetMixin(ModelMixins):
               source='from_json items type=PosixPath, length=None post_load type=list, length=31',
             ),
             )
-            '''
 
         Args:
             eset (ENFORCEMENT): name, uuid, or Enforcement Set object to run
@@ -322,22 +328,25 @@ class AssetMixin(ModelMixins):
         """Get Asset IDs from a JSONL string with one dict per line and run $eset against them.
 
         Examples:
-            '''Get a list of assets from a query and export the assets to a JSONL str
+            >>> import axonius_api_client
+            >>> connect_args: dict = axonius_api_client.get_env_connect()
+            >>> client: axonius_api_client.Connect = axonius_api_client.Connect(**connect_args)
+            >>> apiobj: axonius_api_client.api.assets.AssetMixin = client.devices
+            >>>       # or client.users or client.vulnerabilities
+            >>> WIZ: str = "simple os.type equals Windows"  # "query of assets to target"
+            >>> ESET: str = "test"  # "name or uuid of enforcement set"
+
+            Get a list of assets from a query and export the assets to a JSONL str
             then run an enforcement against all asset IDs from the JSONL str.
             We know assets are valid because we just got them, so we pass verified=True.
-            '''
-            import io
-            client = globals()['client']  # instance of axonius_api_client.Connect
-            apiobj = client.devices  # client.devices, client.users, or client.vulnerabilities
-            WIZ = "simple os.type equals Windows"  # "query of assets to target"
-            ESET = "test"  # "name or uuid of enforcement set"
-            FH = io.StringIO()
-            z = apiobj.get(
-              wiz_entries=WIZ, export="json", json_flat=True, export_fd=FH, export_fd_close=False)
-            FH.seek(0)
-            runner = apiobj.run_enforcement_from_jsonl(eset=ESET, items=FH, verified=True)
-            print(runner)
-            '''
+            >>> import io
+            >>> FH = io.StringIO()
+            >>> _ = apiobj.get(wiz_entries=WIZ, export="json", json_flat=True,
+            ... export_fd=FH, export_fd_close=False)
+            >>> FH.seek(0)
+            >>> RUNNER: Runner = apiobj.run_enforcement_from_jsonl(eset=ESET, items=FH,
+            ... verified=True)
+            >>> print(RUNNER)
             Runner(
               state='Ran Enforcement Set against 31 supplied Asset IDs',
               eset='test',
@@ -355,24 +364,18 @@ class AssetMixin(ModelMixins):
               source='from_jsonl items type=StringIO, length=None post_load type=list, length=31',
             ),
             )
-            '''
 
-            '''Get a list of assets from a query and export the assets to a JSONL file
+            Get a list of assets from a query and export the assets to a JSONL file
             then run an enforcement against all asset IDs from the JSONL file.
             We know assets are valid because we just got them, so we pass verified=True.
-            '''
-            import pathlib
-            client = globals()['client']  # instance of axonius_api_client.Connect
-            apiobj = client.devices  # client.devices, client.users, or client.vulnerabilities
-            WIZ = "simple os.type equals Windows"  # "query of assets to target"
-            ESET = "test"  # "name or uuid of enforcement set"
-            PATH = pathlib.Path("data.jsonl")
-            z = apiobj.get(
-              wiz_entries=WIZ, export="json", json_flat=True, export_file=PATH,
-              export_overwrite=True)
-            runner = apiobj.run_enforcement_from_jsonl(eset=ESET, items=PATH, verified=True)
-            print(runner)
-            '''
+            >>> import pathlib
+            >>> PATH = pathlib.Path("data.jsonl")
+            >>> _ = apiobj.get(
+            ...  wiz_entries=WIZ, export="json", json_flat=True, export_file=PATH,
+            ... export_overwrite=True)
+            >>> RUNNER: Runner = apiobj.run_enforcement_from_jsonl(eset=ESET, items=PATH,
+            ... verified=True)
+            >>> print(RUNNER)
             Runner(
               state='Ran Enforcement Set against 31 supplied Asset IDs',
               eset='test',
@@ -390,7 +393,6 @@ class AssetMixin(ModelMixins):
               source='from_jsonl items type=PosixPath, length=None post_load type=list, length=31',
             ),
             )
-            '''
 
         Args:
             eset (ENFORCEMENT): name, uuid, or Enforcement Set object to run
@@ -428,24 +430,27 @@ class AssetMixin(ModelMixins):
         """Get Asset IDs from a CSV string and run $eset against them.
 
         Examples:
-            '''Get a list of assets from a query and export the assets to a JSONL str
+            >>> import axonius_api_client
+            >>> connect_args: dict = axonius_api_client.get_env_connect()
+            >>> client: axonius_api_client.Connect = axonius_api_client.Connect(**connect_args)
+            >>> apiobj: axonius_api_client.api.assets.AssetMixin = client.devices
+            >>>       # or client.users or client.vulnerabilities
+            >>> WIZ: str = "simple os.type equals Windows"  # "query of assets to target"
+            >>> ESET: str = "test"  # "name or uuid of enforcement set"
+
+            Get a list of assets from a query and export the assets to a JSONL str
             then run an enforcement against all asset IDs from the JSONL str.
             We can also use a CSV file exported from the GUI.
             We know assets are valid because we just got them, so we pass verified=True.
-            '''
-            from axonius_api_client.tools import bom_strip
-            import io
-            client = globals()['client']  # instance of axonius_api_client.Connect
-            apiobj = client.devices  # client.devices, client.users, or client.vulnerabilities
-            WIZ = "simple os.type equals Windows"  # "query of assets to target"
-            ESET = "test"  # "name or uuid of enforcement set"
-            FH = io.StringIO()
-            z = apiobj.get(wiz_entries=WIZ, export="csv", export_fd=FH, export_fd_close=False)
-            FH.seek(0)
-            ITEMS = bom_strip(FH.getvalue())
-            runner = apiobj.run_enforcement_from_csv(eset=ESET, items=ITEMS, verified=True)
-            print(runner)
-            '''
+
+            >>> import io
+            >>> FH: io.StringIO = io.StringIO()
+            >>> _ = apiobj.get(wiz_entries=WIZ, export="csv", export_fd=FH, export_fd_close=False)
+            >>> FH.seek(0)
+            >>> ITEMS: str = axonius_api_client.tools.bom_strip(FH.getvalue())
+            >>> RUNNER: Runner = apiobj.run_enforcement_from_csv(eset=ESET, items=ITEMS,
+            ... verified=True)
+            >>> print(RUNNER)
             Runner(
               state='Ran Enforcement Set against 31 supplied Asset IDs',
               eset='test',
@@ -463,23 +468,17 @@ class AssetMixin(ModelMixins):
               source='from_csv items type=str, length=6556 post_load type=list, length=33',
             ),
             )
-            '''
 
-            '''Get a list of assets from a query and export the assets to a CSV file
+            Get a list of assets from a query and export the assets to a CSV file
             then run an enforcement against all asset IDs from the CSV file.
             We can also use a CSV file exported from the GUI.
             We know assets are valid because we just got them, so we pass verified=True.
-            '''
-            import pathlib
-            client = globals()['client']  # instance of axonius_api_client.Connect
-            apiobj = client.devices  # client.devices, client.users, or client.vulnerabilities
-            WIZ = "simple os.type equals Windows"  # "query of assets to target"
-            ESET = "test"  # "name or uuid of enforcement set"
-            PATH = pathlib.Path("data.csv")
-            z = apiobj.get(wiz_entries=WIZ, export="csv", export_file=PATH, export_overwrite=True)
-            runner = apiobj.run_enforcement_from_csv(eset=ESET, items=PATH, verified=True)
-            print(runner)
-            '''
+            >>> import pathlib
+            >>> PATH: pathlib.Path = pathlib.Path("data.csv")
+            >>> _ = apiobj.get(wiz_entries=WIZ, export="csv", export_file=PATH)
+            >>> RUNNER: Runner = apiobj.run_enforcement_from_csv(eset=ESET, items=PATH,
+            ... verified=True)
+            >>> print(RUNNER)
             Runner(
               state='Ran Enforcement Set against 31 supplied Asset IDs',
               eset='test',
@@ -497,7 +496,6 @@ class AssetMixin(ModelMixins):
               source='from_csv items type=PosixPath, length=None post_load type=list, length=33',
             ),
             )
-            '''
 
         Args:
             eset (ENFORCEMENT): name, uuid, or Enforcement Set object to run
@@ -507,6 +505,7 @@ class AssetMixin(ModelMixins):
             do_echo_grab (bool, optional): Echo output of Asset ID grabber to console as well as log
             do_raise_grab (bool, optional): Throw an error if grabber fails to find an Asset ID
                 in any items
+            load_args: passed to :func:`pandas.read_csv`
             **kwargs: passed to :method:`run_enforcement`
 
         Returns:
@@ -535,24 +534,27 @@ class AssetMixin(ModelMixins):
         r"""Get Asset IDs from a text string and run $eset against them.
 
         Examples:
-            '''Get a list of assets from a query and export the assets to a text file
+            >>> import axonius_api_client
+            >>> connect_args: dict = axonius_api_client.get_env_connect()
+            >>> client: axonius_api_client.Connect = axonius_api_client.Connect(**connect_args)
+            >>> apiobj: axonius_api_client.api.assets.AssetMixin = client.devices
+            >>>       # or client.users or client.vulnerabilities
+            >>> WIZ: str = "simple os.type equals Windows"  # "query of assets to target"
+            >>> ESET: str = "test"  # "name or uuid of enforcement set"
+
+            Get a list of assets from a query and export the assets to a text file
             then run an enforcement against all asset IDs from the text file.
-            All lines will have any non alpha-numeric characters removed from them and if a
-            32 character alpha numeric string is found it is considered an Asset ID.
+            All lines will have any non-alphanumeric characters removed from them and if a
+            32 character alphanumeric string is found it is considered an Asset ID.
             We know assets are valid because we just got them, so we pass verified=True.
-            '''
-            import pathlib
-            client = globals()['client']  # instance of axonius_api_client.Connect
-            apiobj = client.devices  # client.devices, client.users, or client.vulnerabilities
-            WIZ = "simple os.type equals Windows"  # "query of assets to target"
-            ESET = "test"  # "name or uuid of enforcement set"
-            PATH = pathlib.Path("data.txt")
-            ASSETS = apiobj.get(wiz_entries=WIZ)
-            IDS = [x['internal_axon_id'] for x in ASSETS]
-            PATH.write_text('\n'.join(IDS))
-            runner = apiobj.run_enforcement_from_text(eset=ESET, items=PATH, verified=True)
-            print(runner)
-            '''
+            >>> import pathlib
+            >>> PATH: pathlib.Path = pathlib.Path("data.txt")
+            >>> ITEMS: list[dict] = apiobj.get(wiz_entries=WIZ)
+            >>> IDS: list[str] = list(map(lambda x: x['internal_axon_id'], ITEMS))
+            >>> PATH.write_text('\n'.join(IDS))
+            >>> RUNNER: Runner = apiobj.run_enforcement_from_text(
+            ... eset=ESET, items=PATH, verified=True)
+            >>> print(RUNNER)
             Runner(
               state='Ran Enforcement Set against 31 supplied Asset IDs',
               eset='test',
@@ -570,7 +572,6 @@ class AssetMixin(ModelMixins):
               source='from_text items type=PosixPath, length=None',
             ),
             )
-            '''
 
         Args:
             eset (ENFORCEMENT): name, uuid, or Enforcement Set object to run
@@ -607,17 +608,19 @@ class AssetMixin(ModelMixins):
         """Get Asset IDs from a JSON file with a list of dicts and run $eset against them.
 
         Examples:
-            '''Run an enforcement against all asset IDs from a JSON file.
-            We are unsure if Asset IDs are still valid for this instance so
+            >>> import axonius_api_client
+            >>> connect_args: dict = axonius_api_client.get_env_connect()
+            >>> client: axonius_api_client.Connect = axonius_api_client.Connect(**connect_args)
+            >>> apiobj: axonius_api_client.api.assets.AssetMixin = client.devices
+            >>>       # or client.users or client.vulnerabilities
+            >>> ESET: str = "test"  # "name or uuid of enforcement set"
+
+            Run an enforcement against all asset IDs from a JSON file.
+            We are unsure if Asset IDs are still valid for this instance of Axonius, so
             we do not pass verified=True.
-            '''
-            client = globals()['client']  # instance of axonius_api_client.Connect
-            apiobj = client.devices  # client.devices, client.users, or client.vulnerabilities
-            PATH = "data.json"
-            ESET = "test"  # "name or uuid of enforcement set"
-            runner = apiobj.run_enforcement_from_json_path(eset=ESET, path=PATH)
-            print(runner)
-            '''
+            >>> PATH: str = "data.json"
+            >>> RUNNER: Runner = apiobj.run_enforcement_from_json_path(eset=ESET, path=PATH)
+            >>> print(RUNNER)
             Runner(
               state='Ran Enforcement Set against 31 supplied Asset IDs',
               eset='test',
@@ -637,7 +640,6 @@ class AssetMixin(ModelMixins):
             type=list, length=31',
             ),
             )
-            '''
 
         Args:
             eset (ENFORCEMENT): name, uuid, or Enforcement Set object to run
@@ -673,17 +675,19 @@ class AssetMixin(ModelMixins):
         """Get Asset IDs from a JSONL file with one dict per line and run $eset against them.
 
         Examples:
-            '''Run an enforcement against all asset IDs from a JSONL file.
-            We are unsure if Asset IDs are still valid for this instance so
+            >>> import axonius_api_client
+            >>> connect_args: dict = axonius_api_client.get_env_connect()
+            >>> client: axonius_api_client.Connect = axonius_api_client.Connect(**connect_args)
+            >>> apiobj: axonius_api_client.api.assets.AssetMixin = client.devices
+            >>>       # or client.users or client.vulnerabilities
+            >>> ESET: str = "test"  # "name or uuid of enforcement set"
+
+            Run an enforcement against all asset IDs from a JSONL file.
+            We are unsure if Asset IDs are still valid for this instance, so
             we do not pass verified=True.
-            '''
-            client = globals()['client']  # instance of axonius_api_client.Connect
-            apiobj = client.devices  # client.devices, client.users, or client.vulnerabilities
-            PATH = "data.jsonl"
-            ESET = "test"  # "name or uuid of enforcement set"
-            runner = apiobj.run_enforcement_from_jsonl_path(eset=ESET, path=PATH)
-            print(runner)
-            '''
+            >>> PATH: str = "data.jsonl"
+            >>> RUNNER: Runner = apiobj.run_enforcement_from_jsonl_path(eset=ESET, path=PATH)
+            >>> print(RUNNER)
             Runner(
               state='Ran Enforcement Set against 31 supplied Asset IDs',
               eset='test',
@@ -702,7 +706,6 @@ class AssetMixin(ModelMixins):
             from_jsonl items type=PosixPath, length=None post_load type=list, length=31',
             ),
             )
-            '''
 
         Args:
             eset (ENFORCEMENT): name, uuid, or Enforcement Set object to run
@@ -738,17 +741,19 @@ class AssetMixin(ModelMixins):
         """Get Asset IDs from a CSV file and run $eset against them.
 
         Examples:
-            '''Run an enforcement against all asset IDs from a JSONL file.
+            >>> import axonius_api_client
+            >>> connect_args: dict = axonius_api_client.get_env_connect()
+            >>> client: axonius_api_client.Connect = axonius_api_client.Connect(**connect_args)
+            >>> apiobj: axonius_api_client.api.assets.AssetMixin = client.devices
+            >>>       # or client.users or client.vulnerabilities
+            >>> ESET: str = "test"  # "name or uuid of enforcement set"
+
+            Run an enforcement against all asset IDs from a JSONL file.
             We are unsure if Asset IDs are still valid for this instance so
             we do not pass verified=True.
-            '''
-            client = globals()['client']  # instance of axonius_api_client.Connect
-            apiobj = client.devices  # client.devices, client.users, or client.vulnerabilities
-            PATH = "data.csv"
-            ESET = "test"  # "name or uuid of enforcement set"
-            runner = apiobj.run_enforcement_from_csv_path(eset=ESET, path=PATH)
-            print(runner)
-            '''
+            >>> PATH: str = "data.csv"
+            >>> RUNNER: Runner = apiobj.run_enforcement_from_csv_path(eset=ESET, path=PATH)
+            >>> print(RUNNER)
             Runner(
               state='Ran Enforcement Set against 31 supplied Asset IDs',
               eset='test',
@@ -767,7 +772,6 @@ class AssetMixin(ModelMixins):
             from_csv items type=PosixPath, length=None post_load type=list, length=33',
             ),
             )
-            '''
 
         Args:
             eset (ENFORCEMENT): name, uuid, or Enforcement Set object to run
@@ -803,19 +807,21 @@ class AssetMixin(ModelMixins):
         """Get Asset IDs from a text file and run $eset against them.
 
         Examples:
-            '''Run an enforcement against all asset IDs from a text file.
-            All lines will have any non alpha-numeric characters removed from them and if a
-            32 character alpha numeric string is found it is considered an Asset ID.
-            We are unsure if Asset IDs are still valid for this instance so
+            >>> import axonius_api_client
+            >>> connect_args: dict = axonius_api_client.get_env_connect()
+            >>> client: axonius_api_client.Connect = axonius_api_client.Connect(**connect_args)
+            >>> apiobj: axonius_api_client.api.assets.AssetMixin = client.devices
+            >>>       # or client.users or client.vulnerabilities
+            >>> ESET: str = "test"  # "name or uuid of enforcement set"
+
+            Run an enforcement against all asset IDs from a text file.
+            All lines will have any non-alphanumeric characters removed from them and if a
+            32 character alphanumeric string is found it is considered an Asset ID.
+            We are unsure if Asset IDs are still valid for this instance, so
             we do not pass verified=True.
-            '''
-            client = globals()['client']  # instance of axonius_api_client.Connect
-            apiobj = client.devices  # client.devices, client.users, or client.vulnerabilities
-            PATH = "data.txt"
-            ESET = "test"  # "name or uuid of enforcement set"
-            runner = apiobj.run_enforcement_from_text_path(eset=ESET, path=PATH)
-            print(runner)
-            '''
+            >>> PATH: str = "data.txt"
+            >>> RUNNER: Runner = apiobj.run_enforcement_from_text_path(eset=ESET, path=PATH)
+            >>> print(RUNNER)
             Runner(
               state='Ran Enforcement Set against 31 supplied Asset IDs',
               eset='test',
@@ -834,7 +840,6 @@ class AssetMixin(ModelMixins):
             from_text items type=PosixPath, length=None post_load type=generator, length=None',
             ),
             )
-            '''
 
         Args:
             eset (ENFORCEMENT): name, uuid, or Enforcement Set object to run
@@ -860,13 +865,14 @@ class AssetMixin(ModelMixins):
 
     @property
     def enforcements(self):
-        """Work with data scopes."""
+        """Work with enforcements."""
         if not hasattr(self, "_enforcements"):
             from ..enforcements import Enforcements
 
             self._enforcements: Enforcements = Enforcements(auth=self.auth)
         return self._enforcements
 
+    # noinspection PyUnusedLocal
     def count(
         self,
         query: t.Optional[str] = None,
@@ -874,78 +880,122 @@ class AssetMixin(ModelMixins):
         history_days_ago: t.Optional[int] = None,
         history_exact: bool = False,
         wiz_entries: t.Optional[t.Union[t.List[dict], t.List[str], dict, str]] = None,
+        wiz_parsed: t.Optional[t.List[dict]] = None,
+        history_date_parsed: t.Optional[str] = None,
         use_cache_entry: bool = False,
+        use_heavy_fields_collection: bool = False,
+        frontend_sent_time: t.Optional[datetime.datetime] = None,
+        query_id: t.Optional[t.Union[str, uuid.UUID]] = None,
         saved_query_id: t.Optional[str] = None,
+        request_obj: t.Optional[json_api.assets.CountRequest] = None,
+        http_args: t.Optional[dict] = None,
+        sleep: t.Optional[t.Union[int, float]] = 0.5,
         **kwargs,
     ) -> int:
         """Get the count of assets from a query.
 
         Examples:
+            >>> import axonius_api_client
+            >>> connect_args: dict = axonius_api_client.get_env_connect()
+            >>> client: axonius_api_client.Connect = axonius_api_client.Connect(**connect_args)
+            >>> apiobj: axonius_api_client.api.assets.AssetMixin = client.devices
+            >>>       # or client.users or client.vulnerabilities
             Get count of all assets
-
-            >>> count = apiobj.count()
-
+            >>> value: int = apiobj.count()
             Get count of all assets for a given date
-
-            >>> count = apiobj.count(history_date="2020-09-29")
-
+            >>> value: int = apiobj.count(history_date="2020-09-29")
             Get count of assets matching a query built by the GUI query wizard
-
-            >>> query='(specific_data.data.name == "test")'
-            >>> count = apiobj.count(query=query)
-
+            >>> use_query: str = '(specific_data.data.name == "test")'
+            >>> value: int = apiobj.count(query=use_query)
             Get count of assets matching a query built by the API client query wizard
-
-            >>> entries = [{'type': 'simple', 'value': 'name equals test'}]
-            >>> count = apiobj.count(wiz_entries=entries)
+            >>> entries: str = 'simple name equals test'
+            >>> value: int = apiobj.count(wiz_entries=entries)
+            Same as above but using a list of dicts instead of a string for wiz_entries
+            >>> entries: t.List[dict] = [{'type': 'simple', 'value': 'name equals test'}]
+            >>> value: int = apiobj.count(wiz_entries=entries)
 
         Args:
-            query: if supplied, only return the count of assets that match the query
-                if not supplied, the count of all assets will be returned
+            query: only return the count of assets that match the query
             history_date: return asset count for a given historical date
-            wiz_entries: wizard expressions to create query from
-
+            history_days_ago: return asset count for a given historical date that is N days ago
+            history_exact: if True, return the exact asset count for a given historical date
+                if False, return the asset count for the closest historical date
+            wiz_entries: build a query from the entries and return the count of
+                assets that match the query
+            wiz_parsed: previously parsed wiz_entries
+            history_date_parsed: previously parsed history_date
+            use_cache_entry: if True, use the last query that was run to get the count
+            use_heavy_fields_collection: if True, use the HEAVV fields collection to get the count
+            frontend_sent_time: time that the query was sent from the frontend
+            query_id: ID to identify this query
+            saved_query_id: ID of saved query that count is being issued for
+            request_obj: request object to use instead of building one
+            http_args: args to pass to http request
+            sleep: time to sleep between requests
+            **kwargs: unused
         """
-        wiz_parsed = self.get_wiz_entries(wiz_entries=wiz_entries)
+        if not isinstance(request_obj, json_api.assets.CountRequest):
+            request_obj = json_api.assets.CountRequest(
+                filter=query,
+                history=history_date_parsed,
+                use_cache_entry=use_cache_entry,
+                saved_query_id=saved_query_id,
+                query_id=query_id,
+                use_heavy_fields_collection=use_heavy_fields_collection,
+                frontend_sent_time=frontend_sent_time,
+            )
+
+        if not isinstance(http_args, dict):
+            http_args = {}
+
+        if not isinstance(wiz_parsed, dict):
+            wiz_parsed = self.get_wiz_entries(wiz_entries=wiz_entries)
 
         if isinstance(wiz_parsed, dict):
-            if wiz_parsed.get("query"):
-                query = wiz_parsed["query"]
+            wiz_query: t.Optional[str] = wiz_parsed.get("query")
+            if isinstance(wiz_query, str) and wiz_query:
+                request_obj.filter = wiz_query
 
-        history_date = self.get_history_date(
-            date=history_date, days_ago=history_days_ago, exact=history_exact
-        )
+        if not isinstance(history_date_parsed, str) and not request_obj.history:
+            request_obj.history = self.get_history_date(
+                date=history_date, days_ago=history_days_ago, exact=history_exact
+            )
 
-        value = None
-
-        while value is None:
-            value = self._count(
-                filter=query,
-                history_date=history_date,
-                use_cache_entry=use_cache_entry,
-            ).value
-            use_cache_entry = True
-
-        return value
+        count: t.Optional[int] = None
+        while not isinstance(count, int):
+            response: json_api.assets.Count = self._count_by_request(
+                request_obj=request_obj, http_args=http_args
+            )
+            count: t.Optional[int] = response.value
+            if isinstance(count, int):
+                break
+            request_obj.use_cache_entry = True
+            if isinstance(sleep, (int, float)):
+                time.sleep(sleep)
+        return count
 
     def count_by_saved_query(self, name: str, **kwargs) -> int:
         """Get the count of assets for a query defined in a saved query.
 
         Examples:
+            >>> import axonius_api_client
+            >>> connect_args: dict = axonius_api_client.get_env_connect()
+            >>> client: axonius_api_client.Connect = axonius_api_client.Connect(**connect_args)
+            >>> apiobj: axonius_api_client.api.assets.AssetMixin = client.devices
+            >>>       # or client.users or client.vulnerabilities
             Get count of assets returned from a saved query
-
-            >>> count = apiobj.count_by_saved_query(name="test")
-
+            >>> count: int = apiobj.count_by_saved_query(name="test")
             Get count of assets returned from a saved query for a given date
-
-            >>> count = apiobj.count_by_saved_query(name="test", history_date="2020-09-29")
+            >>> count: int = apiobj.count_by_saved_query(name="test", history_date="2020-09-29")
 
         Args:
             name: saved query to get count of assets from
             kwargs: supplied to :meth:`count`
         """
         sq = self.saved_query.get_by_multi(sq=name)
-        kwargs["query"] = sq["view"]["query"]["filter"]
+        _view: dict = sq.get("view", {})
+        _query: dict = _view.get("query", {})
+        kwargs["query"]: t.Optional[str] = _query.get("filter")
         kwargs["saved_query_id"] = sq["id"]
         return self.count(**kwargs)
 
@@ -953,51 +1003,40 @@ class AssetMixin(ModelMixins):
         r"""Get assets from a query.
 
         Examples:
+            >>> import axonius_api_client
+            >>> connect_args: dict = axonius_api_client.get_env_connect()
+            >>> client: axonius_api_client.Connect = axonius_api_client.Connect(**connect_args)
+            >>> apiobj: axonius_api_client.api.assets.AssetMixin = client.devices
+            >>>       # or client.users or client.vulnerabilities
             Get all assets with the default fields defined in the API client
-
-            >>> assets = apiobj.get()
-
-            Get all assets using an iterator
-
-            >>> assets = [x for x in apiobj.get(generator=True)]
-
-            Get all assets with fields that equal names
-
-            >>> assets = apiobj.get(fields=["os.type", "aws:aws_device_type"])
-
-            Get all assets with fields that fuzzy match names and no default fields
-
-            >>> assets = apiobj.get(fields_fuzzy=["last", "os"], fields_default=False)
-
-            Get all assets with fields that regex match names a
-
-            >>> assets = apiobj.get(fields_regex=["^os\."])
-
-            Get all assets with all root fields for an adapter
-
-            >>> assets = apiobj.get(fields_root="aws")
-
+            >>> assets: list[dict] = apiobj.get()
+            Get all assets using a generator
+            >>> assets: list[dict] = list(apiobj.get(generator=True))
+            Get all assets and include more fields
+            >>> fields: list[str] = ["os.type", "aws:aws_device_type"]
+            >>> assets: list[dict] = apiobj.get(fields=fields)
+            Get all assets and include fields that fuzzy match names and no default fields
+            >>> fields_fuzzy: list[str] = ["last", "os"]
+            >>> assets: list[dict] = apiobj.get(fields_fuzzy=fields_fuzzy, fields_default=False)
+            Get all assets and include fields that regex match names a
+            >>> fields_regex: list[str] = ["^os\."]
+            >>> assets: list[dict] = apiobj.get(fields_regex=fields_regex)
+            Get all assets and include all root fields for an adapter
+            >>> assets: list[dict] = apiobj.get(fields_root="aws")
             Get all assets for a given date in history and sort the rows on a field
-
-            >>> assets = apiobj.get(history_date="2020-09-29", sort_field="name")
-
-            Get all assets with details of which adapter connection provided the agg data
-
-            >>> assets = apiobj.get(include_details=True)
-
+            >>> assets: list[dict] = apiobj.get(history_date="2020-09-29", sort_field="name")
+            Get all assets with details of which adapter connection provided the aggregated data
+            >>> assets: list[dict] = apiobj.get(include_details=True)
             Get assets matching a query built by the GUI query wizard
-
-            >>> query='(specific_data.data.name == "test")'
-            >>> assets = apiobj.get(query=query)
-
+            >>> query: str ='(specific_data.data.name == "test")'
+            >>> assets: list[dict] = apiobj.get(query=query)
             Get assets matching a query built by the API client query wizard
-
-            >>> entries=[{'type': 'simple', 'value': 'name equals test'}]
-            >>> assets = apiobj.get(wiz_entries=entries)
+            >>> wiz_entries: list[dict] = [{'type': 'simple', 'value': 'name equals test'}]
+            >>> assets: list[dict] = apiobj.get(wiz_entries=wiz_entries)
 
         See Also:
             This method is used by all other get* methods under the hood and their kwargs are
-            passed thru to this method and passed to :meth:`get_generator` which are then passed
+            passed through to this method and passed to :meth:`get_generator` which are then passed
             to whatever callback is used based on the ``export`` argument.
 
             If ``export`` is not supplied, see
@@ -1025,44 +1064,6 @@ class AssetMixin(ModelMixins):
         gen = self.get_generator(**kwargs)
         return gen if generator else list(gen)
 
-    def get_wiz_entries(
-        self, wiz_entries: t.Optional[t.Union[t.List[dict], t.List[str], dict, str]] = None
-    ) -> t.Optional[dict]:
-        """Pass."""
-        wiz_entries = listify(wiz_entries) if wiz_entries else []
-        if not wiz_entries:
-            return None
-
-        if all([isinstance(x, dict) for x in wiz_entries]):
-            return self.wizard.parse(entries=wiz_entries)
-
-        if all([isinstance(x, str) for x in wiz_entries]):
-            return self.wizard_text.parse(content=wiz_entries)
-
-        raise ApiError("wiz_entries must be a single or list of dict or str")
-
-    def get_sort_field(
-        self, field: t.Optional[str] = None, descending: bool = False
-    ) -> t.Optional[str]:
-        """Pass."""
-        if isinstance(field, str) and field:
-            field = self.fields.get_field_name(value=field)
-            field = f"-{field}" if descending else field
-        else:
-            field = None
-        return field
-
-    def get_history_date(
-        self,
-        date: t.Optional[t.Union[str, datetime.timedelta, datetime.datetime]] = None,
-        days_ago: t.Optional[int] = None,
-        exact: bool = False,
-    ) -> t.Optional[str]:
-        """Pass."""
-        if date is not None or days_ago is not None:
-            return self.history_dates_obj().get_date(date=date, days_ago=days_ago, exact=exact)
-        return None
-
     def get_generator(
         self,
         query: t.Optional[str] = None,
@@ -1081,16 +1082,40 @@ class AssetMixin(ModelMixins):
         page_start: int = 0,
         page_sleep: int = 0,
         export: str = DEFAULT_CALLBACKS_CLS,
-        include_notes: bool = False,
-        include_details: bool = False,
         sort_field: t.Optional[str] = None,
         sort_descending: bool = False,
         history_date: t.Optional[t.Union[str, datetime.timedelta, datetime.datetime]] = None,
         history_days_ago: t.Optional[int] = None,
         history_exact: bool = False,
         wiz_entries: t.Optional[t.Union[t.List[dict], t.List[str], dict, str]] = None,
-        saved_query_id: t.Optional[str] = None,
+        wiz_parsed: t.Optional[dict] = None,
+        file_date: t.Optional[str] = None,
+        use_heavy_fields_collection: bool = False,
+        sort_field_parsed: t.Optional[str] = None,
+        search: t.Optional[str] = None,
+        history_date_parsed: t.Optional[str] = None,
+        field_filters: t.Optional[t.List[dict]] = None,
+        excluded_adapters: t.Optional[t.List[dict]] = None,
+        asset_excluded_adapters: t.Optional[t.List[dict]] = None,
+        asset_filters: t.Optional[t.List[dict]] = None,
         expressions: t.Optional[t.List[dict]] = None,
+        fields_parsed: t.Optional[t.Union[dict, t.List[str]]] = None,
+        include_details: bool = False,
+        include_notes: bool = False,
+        use_cursor: bool = True,
+        cursor_id: t.Optional[str] = None,
+        saved_query_id: t.Optional[str] = None,
+        query_id: t.Optional[t.Union[str, uuid.UUID]] = None,
+        is_refresh: bool = False,
+        null_for_non_exist: bool = True,
+        source_component: t.Optional[str] = None,
+        frontend_sent_time: t.Optional[datetime.datetime] = None,
+        filter_out_non_existing_fields: bool = True,
+        complex_fields_preview_limit: t.Optional[int] = None,
+        max_field_items: t.Optional[int] = None,
+        initial_count: t.Optional[int] = None,
+        request_obj: t.Optional[json_api.assets.AssetRequest] = None,
+        export_templates: t.Optional[dict] = None,
         http_args: t.Optional[dict] = None,
         **kwargs,
     ) -> t.Generator[dict, None, None]:
@@ -1115,27 +1140,85 @@ class AssetMixin(ModelMixins):
             export: export assets using a callback method
             include_notes: include any defined notes for each adapter
             include_details: include details fields showing the adapter source of agg values
+            saved_query_id: ID of saved query this fetch is associated with
+            expressions: expressions used by query wizard to create query
             sort_field: sort the returned assets on a given field
             sort_descending: reverse the sort of the returned assets
             history_date: return assets for a given historical date
             history_days_ago: return assets for a history date N days ago
             history_exact: Use the closest match for history_date and history_days_ago
             wiz_entries: wizard expressions to create query from
+            file_date: string to use in filename templates for {DATE}
+            wiz_parsed: parsed output from a query wizard
+            fields_parsed: previously parsed fields
+            sort_field_parsed: previously parsed sort field
+            history_date_parsed: previously parsed history date
+            initial_count: previously fetched initial count
+            search: search string to use for this query
+            use_heavy_fields_collection: unknown
+            use_cursor: use cursor based pagination
+            field_filters: field filters to apply to this query
+            excluded_adapters: adapters to exclude from this query
+            asset_excluded_adapters: adapters to exclude from this query
+            asset_filters: asset filters to apply to this query
+            cursor_id: cursor ID to use for this query
+            query_id: query ID to use for this query
+            is_refresh: is this a refresh query
+            null_for_non_exist: return null for non existent fields
+            source_component: source component to use for this query
+            export_templates: filename template replacement mappings
+            filter_out_non_existing_fields: filter out fields that do not exist
+            complex_fields_preview_limit: limit the number of complex fields to preview
+            max_field_items: max number of items to return for a field
+            frontend_sent_time: frontend sent time to use for this query
+            http_args: http args to pass to :meth:`axonius_api_client.http.Http.__call__` for each
+                page fetched
+            request_obj: request object to use for this query
             **kwargs: passed thru to the asset callback defined in ``export``
         """
-        wiz_parsed: t.Optional[dict] = kwargs.get(
-            "_wiz_parsed", self.get_wiz_entries(wiz_entries=wiz_entries)
-        )
+        if not isinstance(request_obj, json_api.assets.AssetRequest):
+            request_obj: json_api.assets.AssetRequest = json_api.assets.AssetRequest(
+                search=search,
+                filter=query,
+                history=history_date_parsed,
+                sort=sort_field_parsed,
+                field_filters=field_filters,
+                excluded_adapters=excluded_adapters,
+                asset_filters=asset_filters,
+                expressions=expressions,
+                include_details=include_details,
+                include_notes=include_notes,
+                use_cursor=use_cursor,
+                cursor_id=cursor_id,
+                saved_query_id=saved_query_id,
+                query_id=query_id,
+                source_component=source_component,
+                frontend_sent_time=frontend_sent_time,
+                filter_out_non_existing_fields=filter_out_non_existing_fields,
+                is_refresh=is_refresh,
+                null_for_non_exist=null_for_non_exist,
+                max_field_items=max_field_items,
+                complex_fields_preview_limit=complex_fields_preview_limit,
+                use_heavy_fields_collection=use_heavy_fields_collection,
+                asset_excluded_adapters=asset_excluded_adapters,
+            )
+
+        if not isinstance(http_args, dict):
+            http_args: dict = {}
+
+        if not isinstance(wiz_parsed, dict) and wiz_parsed:
+            wiz_parsed: dict = self.get_wiz_entries(wiz_entries=wiz_entries)
 
         if isinstance(wiz_parsed, dict):
-            if wiz_parsed.get("query"):
-                query = wiz_parsed["query"]
-            if wiz_parsed.get("expressions"):
-                expressions = wiz_parsed["expressions"]
+            wiz_query: t.Optional[str] = wiz_parsed.get("query")
+            wiz_expressions: t.Optional[t.List[dict]] = wiz_parsed.get("expressions")
+            if isinstance(wiz_query, str) and wiz_query:
+                query = wiz_query
+            if isinstance(wiz_expressions, list) and wiz_expressions:
+                request_obj.expressions = wiz_expressions
 
-        fields_parsed: t.List[str] = kwargs.get(
-            "_fields_parsed",
-            self.fields.validate(
+        if not isinstance(fields_parsed, (list, tuple)):
+            fields_parsed = self.fields.validate(
                 fields=fields,
                 fields_manual=fields_manual,
                 fields_regex=fields_regex,
@@ -1144,29 +1227,36 @@ class AssetMixin(ModelMixins):
                 fields_root=fields_root,
                 fields_fuzzy=fields_fuzzy,
                 fields_error=fields_error,
-            ),
-        )
+            )
 
-        sort_field_parsed: t.Optional[str] = kwargs.get(
-            "_sort_field_parsed", self.get_sort_field(field=sort_field, descending=sort_descending)
-        )
+        if not isinstance(sort_field_parsed, str):
+            request_obj.sort = sort_field_parsed = self.get_sort_field(
+                field=sort_field, descending=sort_descending
+            )
 
-        history_date_parsed: t.Optional[str] = kwargs.get(
-            "_history_date_parsed",
-            self.get_history_date(
+        if not isinstance(history_date_parsed, (str, datetime.datetime)):
+            request_obj.history = history_date_parsed = self.get_history_date(
                 date=history_date, days_ago=history_days_ago, exact=history_exact
-            ),
-        )
+            )
 
-        initial_count: int = kwargs.get(
-            "_initial_count", self.count(query=query, history_date=history_date)
-        )
+        if not isinstance(initial_count, int):
+            initial_count: int = self.count(
+                query=query,
+                frontend_sent_time=request_obj.frontend_sent_time,
+                history_date_parsed=history_date_parsed,
+                query_id=request_obj.query_id,
+                saved_query_id=request_obj.saved_query_id,
+                use_heavy_fields_collection=request_obj.use_heavy_fields_collection,
+            )
 
-        file_date: str = kwargs.get("_file_date", dt_now_file())
-        export_templates: dict = {
-            "{DATE}": file_date,
-            "{HISTORY_DATE}": history_date_parsed or file_date,
-        }
+        if not isinstance(file_date, str):
+            file_date: str = dt_now_file()
+
+        if not isinstance(export_templates, dict):
+            export_templates = {}
+
+        export_templates.setdefault("{DATE}", file_date)
+        export_templates.setdefault("{HISTORY_DATE}", history_date_parsed or file_date)
 
         store: dict = {
             "export": export,
@@ -1196,9 +1286,9 @@ class AssetMixin(ModelMixins):
             "row_start": row_start,
             "initial_count": initial_count,
             "export_templates": export_templates,
+            "request_obj": request_obj,
         }
-
-        state = json_api.assets.AssetsPage.create_state(
+        state: dict = json_api.assets.AssetsPage.create_state(
             max_pages=max_pages,
             max_rows=max_rows,
             page_sleep=page_sleep,
@@ -1207,92 +1297,234 @@ class AssetMixin(ModelMixins):
             row_start=row_start,
             initial_count=initial_count,
         )
-
-        callbacks_cls = get_callbacks_cls(export=export)
-        callbacks = callbacks_cls(apiobj=self, getargs=kwargs, state=state, store=store)
-
-        self.LAST_CALLBACKS = callbacks
+        callbacks_cls: t.Type[BaseCallbacks] = get_callbacks_cls(export=export)
+        callbacks: BaseCallbacks = callbacks_cls(
+            apiobj=self, getargs=kwargs, state=state, store=store
+        )
+        self.LAST_CALLBACKS: BaseCallbacks = callbacks
         callbacks.start()
-
         self.LOG.info(f"STARTING FETCH store={json_dump(store)}")
         self.LOG.debug(f"STARTING FETCH state={json_dump(state)}")
 
+        request_obj.page_size = state["page_size"]
+        request_obj.get_metadata = True
+        request_obj.use_cursor = use_cursor
+        request_obj.cursor_id = cursor_id
+
         while not state["stop_fetch"]:
+            request_obj.filter = store["query"]
+            request_obj.fields = {self.ASSET_TYPE: store["fields_parsed"]}
+            request_obj.include_details = store["include_details"]
+            request_obj.include_notes = store["include_notes"]
+            request_obj.cursor_id = state["page_cursor"]
+            request_obj.row_start = state["rows_offset"]
+
             try:
-                start_dt = dt_now()
-
-                page = self._get(
-                    include_details=store["include_details"],
-                    include_notes=store["include_notes"],
-                    sort=store["sort_field_parsed"],
-                    history_date=store["history_date_parsed"],
-                    filter=store["query"],
-                    fields=store["fields_parsed"],
-                    cursor_id=state["page_cursor"],
-                    offset=state["rows_offset"],
-                    limit=state["page_size"],
-                    saved_query_id=saved_query_id,
-                    expressions=expressions,
-                    always_cached_query=False,
-                    use_cache_entry=False,
-                    get_metadata=True,
-                    use_cursor=True,
-                    http_args=http_args,
+                start_dt: datetime.datetime = dt_now()
+                page: json_api.assets.AssetsPage = self._get_by_request(
+                    request_obj=request_obj, http_args=http_args
                 )
-
-                state = page.process_page(state=state, start_dt=start_dt, apiobj=self)
-
+                state: dict = page.process_page(state=state, start_dt=start_dt, apiobj=self)
                 for row in page.assets:
-                    state = page.start_row(state=state, apiobj=self, row=row)
+                    state: dict = page.start_row(state=state, apiobj=self, row=row)
                     yield from listify(obj=callbacks.process_row(row=row))
-                    state = page.process_row(state=state, apiobj=self, row=row)
-
-                state = page.process_loop(state=state, apiobj=self)
-
+                    state: dict = page.process_row(state=state, apiobj=self, row=row)
+                state: dict = page.process_loop(state=state, apiobj=self)
                 time.sleep(state["page_sleep"])
             except StopFetch as exc:
                 self.LOG.debug(f"Received {type(exc)}: {exc.reason}")
                 break
-
         self.LOG.info(f"FINISHED FETCH store={json_dump(store)}")
         self.LOG.debug(f"FINISHED FETCH state={json_dump(state)}")
-
         callbacks.stop()
 
-    def get_by_saved_query(self, name: str, **kwargs) -> GEN_TYPE:
+    def get_by_saved_query(
+        self,
+        name: str,
+        include_fields: bool = True,
+        include_excluded_adapters: bool = True,
+        include_asset_excluded_adapters: bool = True,
+        include_field_filters: bool = True,
+        fields_default: bool = False,
+        **kwargs,
+    ) -> GEN_TYPE:
         """Get assets that would be returned by a saved query.
 
         Examples:
             First, create a ``client`` using :obj:`axonius_api_client.connect.Connect` and assume
             ``apiobj`` is ``client.devices`` or ``client.users``
-
-            >>> apiobj = client.devices
+            >>> import axonius_api_client
+            >>> connect_args: dict = axonius_api_client.get_env_connect()
+            >>> client: axonius_api_client.Connect = axonius_api_client.Connect(**connect_args)
+            >>> apiobj: axonius_api_client.api.assets.AssetMixin = client.devices
+            >>>       # or client.users or client.vulnerabilities
 
             Get assets from a saved query with complex fields flattened
-
-            >>> assets = apiobj.get_by_saved_query(name="test", field_flatten=True)
+            >>> assets: t.List[dict] = apiobj.get_by_saved_query(name="test", field_flatten=True)
 
         Notes:
-            The query and the fields defined in the saved query will be used to
+            The query, fields, expressions, excluded adapters, asset excluded adapters,
+            and column filters defined in the saved query will be used to
             get the assets.
 
         Args:
             name: name of saved query to get assets from
+            include_fields: include fields from saved query
+            include_excluded_adapters: include excluded adapters from saved query
+            include_asset_excluded_adapters: include asset excluded adapters from saved query
+            include_field_filters: include field filters from saved query
+            fields_default: include default fields, defaults to False for get by sq
             **kwargs: passed to :meth:`get`
         """
         sq = self.saved_query.get_by_multi(sq=name)
-        kwargs["query"] = sq["view"]["query"]["filter"]
-        kwargs["fields_manual"] = sq["view"]["fields"]
+        _view: dict = sq.get("view", {})
+        _query: dict = _view.get("query", {})
+
         kwargs["saved_query_id"] = sq["id"]
-        kwargs["expressions"] = sq["view"]["query"]["expressions"]
-        kwargs.setdefault("fields_default", False)
+        kwargs["query"] = _query.get("filter")
+        kwargs["expressions"] = _query.get("expressions")
+
+        if include_fields:
+            kwargs["fields_manual"] = _view.get("fields")
+
+        if include_excluded_adapters:
+            kwargs["excluded_adapters"] = _view.get("colExcludedAdapters")
+
+        if include_asset_excluded_adapters:
+            kwargs["asset_excluded_adapters"] = _view.get("assetExcludeAdapters")
+
+        if include_field_filters:
+            kwargs["field_filters"] = _view.get("fieldFilters")
+
+        kwargs["fields_default"] = fields_default
         return self.get(**kwargs)
+
+    def get_wiz_entries(
+        self, wiz_entries: t.Optional[t.Union[t.List[dict], t.List[str], dict, str]] = None
+    ) -> t.Optional[dict]:
+        """Build a query and expressions.
+
+        Examples:
+            >>> import axonius_api_client
+            >>> connect_args: dict = axonius_api_client.get_env_connect()
+            >>> client: axonius_api_client.Connect = axonius_api_client.Connect(**connect_args)
+            >>> apiobj: axonius_api_client.api.assets.AssetMixin = client.devices
+            >>>       # or client.users or client.vulnerabilities
+
+            None is returned if no wiz_entries are passed
+            >>> items = None
+            >>> parsed = apiobj.get_wiz_entries(wiz_entries=items)
+            >>> print(parsed)
+            None
+
+            A string or list of strings will be parsed into a query and expressions:
+            >>> items = "simple hostname contains test"
+            >>> parsed = apiobj.get_wiz_entries(wiz_entries=items)
+            >>> client.jdump(parsed)
+           {
+              "expressions": [
+                {
+                  "bracketWeight": 0,
+                  "children": [
+                    {
+                      "condition": "",
+                      "expression": {
+                        "compOp": "",
+                        "field": "",
+                        "filteredAdapters": null,
+                        "value": null
+                      },
+                      "i": 0
+                    }
+                  ],
+                  "compOp": "contains",
+                  "field": "specific_data.data.hostname",
+                  "fieldType": "axonius",
+                  "filter": "(\"specific_data.data.hostname\" == regex(\"test\", \"i\"))",
+                  "filteredAdapters": null,
+                  "leftBracket": false,
+                  "logicOp": "",
+                  "not": false,
+                  "rightBracket": false,
+                  "value": "test"
+                }
+              ],
+              "query": "(\"specific_data.data.hostname\" == regex(\"test\", \"i\"))"
+            }
+
+            A dict or list of dicts will be parsed into a query and expressions
+            >>> items = {"type": "simple", "value": "hostname contains test"}
+            >>> parsed = client.devices.get_wiz_entries(items)
+            >>> # same output as above
+
+        Args:
+            wiz_entries: list of dicts or list of strings or single dict or single string
+        """
+        wiz_entries = listify(wiz_entries) if wiz_entries else []
+        if not wiz_entries:
+            return None
+
+        if all([isinstance(x, dict) for x in wiz_entries]):
+            return self.wizard.parse(entries=wiz_entries)
+
+        if all([isinstance(x, str) for x in wiz_entries]):
+            return self.wizard_text.parse(content=wiz_entries)
+
+        raise ApiError("wiz_entries must be a single or list of dict or str")
+
+    def get_sort_field(
+        self, field: t.Optional[str] = None, descending: bool = False, validate: bool = True
+    ) -> t.Optional[str]:
+        """Build the parsed sort field based off of field and descending.
+
+        Args:
+            field: field to sort by
+            descending: if True, sort descending
+            validate: if True, validate field name
+
+        Returns:
+            field (prefixed with - if descending), None if field is None
+        """
+        if isinstance(field, str) and field:
+            if validate:
+                field = self.fields.get_field_name(value=field)
+            field = f"-{field}" if descending else field
+        else:
+            field = None
+        return field
+
+    def get_history_date(
+        self,
+        date: t.Optional[t.Union[str, datetime.timedelta, datetime.datetime]] = None,
+        days_ago: t.Optional[int] = None,
+        exact: bool = False,
+    ) -> t.Optional[str]:
+        """Get a history date.
+
+        Args:
+            date: date to get
+            days_ago: days ago to get
+            exact: if True, do not round to the nearest day
+
+        Returns:
+            date in YYYY-MM-DD format or None
+        """
+        if date is not None or days_ago is not None:
+            return self.history_dates_obj().get_date(date=date, days_ago=days_ago, exact=exact)
+        return None
 
     def get_by_id(self, id: str) -> dict:
         """Get the full data set of all adapters for a single asset.
 
         Examples:
-            >>> asset = apiobj.get_by_id(id="3d69adf54879faade7a44068e4ecea6e")
+            >>> import axonius_api_client
+            >>> connect_args: dict = axonius_api_client.get_env_connect()
+            >>> client: axonius_api_client.Connect = axonius_api_client.Connect(**connect_args)
+            >>> apiobj: axonius_api_client.api.assets.AssetMixin = client.devices
+            >>>       # or client.users or client.vulnerabilities
+            >>> assets: list[dict] = apiobj.get(max_rows=1)
+            >>> asset_id: str = assets[0]["internal_axon_id"]
+            >>> asset: dict = apiobj.get_by_id(id=as)
 
         Args:
             id: internal_axon_id of asset to get all data set for
@@ -1346,7 +1578,7 @@ class AssetMixin(ModelMixins):
             to build queries!
 
         Args:
-            values: list of values that must match field
+            values: list of values that must match `field`
             field: name of field to query against
             not_flag: prefix query with 'not'
             pre: query to add to the beginning of the query
@@ -1389,9 +1621,9 @@ class AssetMixin(ModelMixins):
             to build queries!
 
         Args:
-            value: regex that must match field
+            value: regex that must match `field`
             field: name of field to query against
-            case_insensitive: ignore case when performing the regex match
+            cast_insensitive: ignore case when performing the regex match
             not_flag: prefix query with 'not'
             pre: query to add to the beginning of the query
             post: query to add to the end of the query
@@ -1426,7 +1658,7 @@ class AssetMixin(ModelMixins):
             to build queries!
 
         Args:
-            value: value that must equal field
+            value: value that must equal `field`
             field: name of field to query against
             not_flag: prefix query with 'not'
             pre: query to add to the beginning of the query
@@ -1525,16 +1757,41 @@ class AssetMixin(ModelMixins):
         self.wizard_csv: WizardCsv = WizardCsv(apiobj=self)
         """Query wizard builder from CSV."""
 
-        self.LAST_GET: dict = {}
+        self.LAST_GET: t.Optional[dict] = None
         """Request object sent for last :meth:`get` request"""
 
-        self.LAST_GET_REQUEST_OBJ: json_api.assets.AssetRequest = None
+        self.LAST_GET_REQUEST_OBJ: t.Optional[json_api.assets.AssetRequest] = None
         """Request data model sent for last :meth:`get` request"""
 
-        self.LAST_CALLBACKS: Base = None
+        self.LAST_CALLBACKS: t.Optional[Base] = None
         """Callbacks object used for last :meth:`get` request."""
 
         super(AssetMixin, self)._init(**kwargs)
+
+    def _get_by_request(
+        self,
+        request_obj: t.Optional[json_api.assets.AssetRequest] = None,
+        row_start: t.Optional[int] = None,
+        http_args: t.Optional[dict] = None,
+    ) -> json_api.assets.AssetsPage:
+        """Private API method to get a page of assets using a request object.
+
+        Args:
+            request_obj: request object to use
+
+        """
+        if not isinstance(request_obj, json_api.assets.AssetRequest):
+            request_obj = json_api.assets.AssetRequest()
+        asset_type: str = self.ASSET_TYPE
+        api_endpoint: ApiEndpoint = ApiEndpoints.assets.get
+        request_obj.row_start = row_start
+        self.LAST_GET_REQUEST_OBJ: json_api.assets.AssetRequest = request_obj
+        self.LAST_GET: dict = request_obj.to_dict()
+        http_args: dict = http_args or {}
+        response: json_api.assets.AssetsPage = api_endpoint.perform_request(
+            http=self.auth.http, request_obj=request_obj, asset_type=asset_type, http_args=http_args
+        )
+        return response
 
     def _get(
         self,
@@ -1544,7 +1801,6 @@ class AssetMixin(ModelMixins):
         include_notes: bool = False,
         get_metadata: bool = True,
         use_cursor: bool = True,
-        sort_descending: bool = False,
         history_date: t.Optional[str] = None,
         filter: t.Optional[str] = None,
         cursor_id: t.Optional[str] = None,
@@ -1568,7 +1824,6 @@ class AssetMixin(ModelMixins):
             include_notes (bool, optional): Description
             get_metadata (bool, optional): Description
             use_cursor (bool, optional): Description
-            sort_descending (bool, optional): reverse the sort of the returned assets
             history_date (t.Optional[str], optional): return assets for a given historical date
             filter (t.Optional[str], optional): Description
             cursor_id (t.Optional[str], optional): Description
@@ -1580,9 +1835,8 @@ class AssetMixin(ModelMixins):
             limit (int, optional): Description
 
         """
-        asset_type = self.ASSET_TYPE
-        api_endpoint = ApiEndpoints.assets.get
-        request_obj = api_endpoint.load_request(
+        api_endpoint: ApiEndpoint = ApiEndpoints.assets.get
+        request_obj: json_api.assets.AssetRequest = api_endpoint.load_request(
             always_cached_query=always_cached_query,
             use_cache_entry=use_cache_entry,
             include_details=include_details,
@@ -1600,12 +1854,7 @@ class AssetMixin(ModelMixins):
             expressions=expressions or [],
         )
         request_obj.set_page(limit=limit, offset=offset)
-        self.LAST_GET_REQUEST_OBJ = request_obj
-        self.LAST_GET = request_obj.to_dict()
-        http_args = http_args or {}
-        return api_endpoint.perform_request(
-            http=self.auth.http, request_obj=request_obj, asset_type=asset_type, http_args=http_args
-        )
+        return self._get_by_request(request_obj=request_obj, http_args=http_args)
 
     def _get_by_id(self, id: str) -> json_api.assets.AssetById:
         """Private API method to get the full metadata of all adapters for a single asset.
@@ -1619,11 +1868,41 @@ class AssetMixin(ModelMixins):
             http=self.auth.http, asset_type=asset_type, internal_axon_id=id
         )
 
+    def _count_by_request(
+        self,
+        request_obj: t.Optional[json_api.assets.CountRequest] = None,
+        http_args: t.Optional[dict] = None,
+    ) -> json_api.assets.Count:
+        """Private API method to get the count of assets using a request object.
+
+        Args:
+            request_obj: request object to use
+
+        """
+        if not isinstance(request_obj, json_api.assets.CountRequest):
+            request_obj = json_api.assets.CountRequest()
+        asset_type: str = self.ASSET_TYPE
+        api_endpoint: ApiEndpoint = ApiEndpoints.assets.count
+        self.LAST_COUNT_REQUEST_OBJ: json_api.assets.CountRequest = request_obj
+        self.LAST_COUNT: dict = request_obj.to_dict()
+        if not isinstance(http_args, dict):
+            http_args = {}
+
+        http_args: dict = http_args or {}
+        response: json_api.assets.Count = api_endpoint.perform_request(
+            http=self.auth.http, request_obj=request_obj, asset_type=asset_type, http_args=http_args
+        )
+        return response
+
     def _count(
         self,
         filter: t.Optional[str] = None,
+        search: t.Optional[str] = None,
+        use_heavy_fields_collection: bool = False,
+        frontend_sent_time: t.Optional[datetime.datetime] = None,
         history_date: t.Optional[str] = None,
         use_cache_entry: bool = False,
+        query_id: t.Optional[str] = None,
         saved_query_id: t.Optional[str] = None,
     ) -> json_api.assets.Count:
         """Private API method to get the count of assets.
@@ -1635,16 +1914,18 @@ class AssetMixin(ModelMixins):
             use_cache_entry (bool, optional): Description
 
         """
-        asset_type = self.ASSET_TYPE
-        api_endpoint = ApiEndpoints.assets.count
+        api_endpoint: ApiEndpoint = ApiEndpoints.assets.count
         request_obj = api_endpoint.load_request(
             use_cache_entry=use_cache_entry,
             filter=filter,
             saved_query_id=saved_query_id,
+            history=history_date,
+            search=search,
+            use_heavy_fields_collection=use_heavy_fields_collection,
+            frontend_sent_time=frontend_sent_time,
+            query_id=query_id,
         )
-        return api_endpoint.perform_request(
-            http=self.auth.http, request_obj=request_obj, asset_type=asset_type
-        )
+        return self._count_by_request(request_obj=request_obj)
 
     def _destroy(self, destroy: bool, history: bool) -> dict:  # pragma: no cover
         """Private API method to destroy ALL assets.
@@ -1680,7 +1961,7 @@ class AssetMixin(ModelMixins):
         """Run an enforcement set manually against a list of assets internal_axon_ids.
 
         Args:
-            name (str): Name of enforcement set to exectue
+            name (str): Name of enforcement set to execute
             ids (t.List[str]): internal_axon_id's of assets to run enforcement set against
             include (bool, optional): select IDs in DB or IDs NOT in DB
             fields (t.Optional[t.List[str]], optional): list of fields used to select assets

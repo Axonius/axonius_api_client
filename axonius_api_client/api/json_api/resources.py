@@ -4,7 +4,7 @@ import dataclasses
 import typing as t
 
 import marshmallow
-import marshmallow_jsonapi
+import marshmallow_jsonapi.fields as mm_fields
 
 from ...constants.api import MAX_PAGE_SIZE, PAGE_SIZE
 from ...tools import parse_int_min_max
@@ -15,10 +15,8 @@ from .custom_fields import SchemaBool
 class PaginationSchema(marshmallow.Schema):
     """Pass."""
 
-    offset = marshmallow_jsonapi.fields.Integer(load_default=0, dump_default=0)
-    limit = marshmallow_jsonapi.fields.Integer(
-        load_default=MAX_PAGE_SIZE, dump_default=MAX_PAGE_SIZE
-    )
+    offset = mm_fields.Integer(load_default=0, dump_default=0)
+    limit = mm_fields.Integer(load_default=MAX_PAGE_SIZE, dump_default=MAX_PAGE_SIZE)
 
 
 @dataclasses.dataclass
@@ -36,12 +34,32 @@ class PaginationRequest(BaseModel):
         """Pass."""
         return None
 
-    def __post_init__(self):
+    @property
+    def page_size(self) -> t.Optional[int]:
+        """Pass."""
+        return self.limit
+
+    @page_size.setter
+    def page_size(self, value: t.Optional[int]):
         """Pass."""
         self.limit = parse_int_min_max(
-            value=self.limit, default=PAGE_SIZE, min_value=1, max_value=MAX_PAGE_SIZE
+            value=value, default=PAGE_SIZE, min_value=1, max_value=MAX_PAGE_SIZE
         )
-        self.offset = parse_int_min_max(value=self.offset, default=0, min_value=0, max_value=None)
+
+    @property
+    def row_start(self) -> t.Optional[int]:
+        """Pass."""
+        return self.offset
+
+    @row_start.setter
+    def row_start(self, value: t.Optional[int]):
+        """Pass."""
+        self.offset = parse_int_min_max(value=value, default=0, min_value=0, max_value=None)
+
+    def __post_init__(self):
+        """Pass."""
+        self.row_start = self.limit
+        self.page_size = self.offset
 
 
 @dataclasses.dataclass
@@ -61,7 +79,7 @@ class PageSortRequest(BaseModel):
     page: t.Optional[PaginationRequest] = dataclasses.field(
         default=None,
         metadata={
-            "dataclasses_json": {"mm_field": marshmallow_jsonapi.fields.Nested(PaginationSchema)},
+            "dataclasses_json": {"mm_field": mm_fields.Nested(PaginationSchema())},
         },
     )
     """Row to start at and number of rows to return.
@@ -70,7 +88,7 @@ class PageSortRequest(BaseModel):
         in get request: page[offset]=0&page[limit]=2000
         in post request: {"data": {"attributes": {"page": {"offset": 0, "limit": 2000}}}
     """
-    # FYI: with out using mm_field metadata for nested schemas for dataclasses_json,
+    # FYI: without using mm_field metadata for nested schemas for dataclasses_json,
     # the mm field that dataclasses_json dynamically creates produces warnings
     # about using deprecated additional_meta args
 
@@ -90,10 +108,10 @@ class PageSortRequest(BaseModel):
 class ResourcesGetSchema(BaseSchemaJson):
     """Pass."""
 
-    sort = marshmallow_jsonapi.fields.Str(allow_none=True, load_default=None, dump_default=None)
-    page = marshmallow_jsonapi.fields.Nested(PaginationSchema)
-    search = marshmallow_jsonapi.fields.Str(load_default="", dump_default="")
-    filter = marshmallow_jsonapi.fields.Str(allow_none=True, load_default="", dump_default="")
+    sort = mm_fields.Str(allow_none=True, load_default=None, dump_default=None)
+    page = mm_fields.Nested(PaginationSchema())
+    search = mm_fields.Str(load_default="", dump_default="")
+    filter = mm_fields.Str(allow_none=True, load_default="", dump_default="")
     get_metadata = SchemaBool(load_default=True, dump_default=True)
 
     @staticmethod
@@ -114,9 +132,7 @@ class ResourcesGet(PageSortRequest):
     search: str = dataclasses.field(
         default="",
         metadata={
-            "dataclasses_json": {
-                "mm_field": marshmallow_jsonapi.fields.Str(load_default="", dump_default="")
-            },
+            "dataclasses_json": {"mm_field": mm_fields.Str(load_default="", dump_default="")},
         },
     )
     """AQL search term
@@ -131,9 +147,7 @@ class ResourcesGet(PageSortRequest):
         default=None,
         metadata={
             "dataclasses_json": {
-                "mm_field": marshmallow_jsonapi.fields.Str(
-                    allow_none=True, load_default="", dump_default=""
-                )
+                "mm_field": mm_fields.Str(allow_none=True, load_default="", dump_default="")
             },
         },
     )

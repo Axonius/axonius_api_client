@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """Parsers for API models."""
-from . import config, fields, grabber, matcher, searchers, tables, url_parser, wizards, dt_delta
+from . import config, fields, grabber, matcher, searchers, tables, url_parser, wizards, delta
 
 __all__ = (
     "config",
@@ -11,5 +11,5 @@ __all__ = (
     "wizards",
     "matcher",
     "searchers",
-    "dt_delta",
+    "delta",
 )

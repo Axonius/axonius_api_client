@@ -157,7 +157,7 @@ class ApiEndpoint:
         response = http(**http_args)
         return response
 
-    def load_request(self, **kwargs) -> t.Union[BaseModel, dict, None]:
+    def load_request(self, **kwargs) -> t.Any:
         """Create a dataclass for a request_obj to send using :meth:`perform_request`.
 
         Args:

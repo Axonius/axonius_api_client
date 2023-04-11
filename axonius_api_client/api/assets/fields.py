@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """API for working with fields for assets."""
+import typing as t
 import re
 from typing import List, Optional, Tuple, Union
 
@@ -75,7 +76,7 @@ class Fields(ChildMixins):
         fields_error: bool = True,
         fields_root: Optional[str] = None,
         empty_ok: bool = False,
-    ) -> List[dict]:
+    ) -> List[str]:
         """Get the fully qualified field names for getting asset data.
 
         Examples:
@@ -102,11 +103,10 @@ class Fields(ChildMixins):
 
         Raises:
             :exc:`ApiError`: if no fields selected after all processing is done
-
         """
 
         def add(items):
-            for item in items:
+            for item in listify(items):
                 if item not in selected:
                     selected.append(item)
 
@@ -114,7 +114,7 @@ class Fields(ChildMixins):
         fields_manual = listify(obj=fields_manual)
         fields_fuzzy = listify(obj=fields_fuzzy)
 
-        selected = []
+        selected: t.List[str] = []
 
         if fields_default and not fields_root:
             add(self.parent.fields_default)
