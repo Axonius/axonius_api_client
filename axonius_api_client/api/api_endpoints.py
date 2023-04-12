@@ -1,25 +1,47 @@
 # -*- coding: utf-8 -*-
-"""Models for API requests & responses."""
+"""Containers for API Endpoint definitions."""
 import dataclasses
-from typing import Dict
-
+import typing as t
 from ..data import BaseData
 from . import json_api
 from .api_endpoint import ApiEndpoint
 
 
 class ApiEndpointGroup(BaseData):
-    """Pass."""
+    """Container for API endpoint definitions."""
 
     @classmethod
-    def get_endpoints(cls) -> Dict[str, ApiEndpoint]:
-        """Pass."""
-        return {x.name: x.default for x in cls.get_fields()}
+    def get_subgroups(cls, recursive: bool = False) -> t.Dict[str, "ApiEndpointGroup"]:
+        """Get all subgroups defined in this group."""
+        groups: t.Dict[str, "ApiEndpointGroup"] = {
+            x.name: x.default for x in cls.get_fields() if isinstance(x.default, ApiEndpointGroup)
+        }
+        if recursive:
+            for group_name, group in list(groups.items()):
+                for subgroup_name, subgroup in group.get_subgroups(recursive=recursive).items():
+                    groups[f"{group_name}.{subgroup_name}"] = subgroup
+        return groups
+
+    @classmethod
+    def get_endpoints(cls, recursive: bool = False) -> t.Dict[str, ApiEndpoint]:
+        """Get all endpoints defined in this group."""
+        endpoints: t.Dict[str, ApiEndpoint] = {
+            x.name: x.default for x in cls.get_fields() if isinstance(x.default, ApiEndpoint)
+        }
+        if recursive:
+            for group_name, group in cls.get_subgroups(recursive=recursive).items():
+                for endpoint_name, endpoint in group.get_endpoints(recursive=recursive).items():
+                    endpoints[f"{group_name}.{endpoint_name}"] = endpoint
+        return endpoints
 
     def __str__(self):
         """Pass."""
-        names = [x.name for x in self.get_fields()]
-        return f"{self.__class__.__name__}(endpoints={names})"
+        items: t.List[str] = [
+            f"endpoints={list(self.get_endpoints())}",
+            f"subgroups={list(self.get_subgroups())}",
+        ]
+        items: str = ", ".join(items)
+        return f"{self.__class__.__name__}({items})"
 
     def __repr__(self):
         """Pass."""
@@ -28,7 +50,7 @@ class ApiEndpointGroup(BaseData):
 
 @dataclasses.dataclass(eq=True, frozen=True, repr=False)
 class DashboardSpaces(ApiEndpointGroup):
-    """Pass."""
+    """Container for all API endpoints for working with dashboard spaces."""
 
     get: ApiEndpoint = ApiEndpoint(
         method="get",
@@ -88,11 +110,11 @@ class DashboardSpaces(ApiEndpointGroup):
 
 @dataclasses.dataclass(eq=True, frozen=True, repr=False)
 class Assets(ApiEndpointGroup):
-    """Pass."""
+    """Container for all API endpoints for working with assets."""
 
     get: ApiEndpoint = ApiEndpoint(
         method="post",
-        path="api/V4.0/{asset_type}",
+        path="api/{asset_type}",
         request_schema_cls=json_api.assets.AssetRequestSchema,
         request_model_cls=json_api.assets.AssetRequest,
         response_schema_cls=None,
@@ -102,40 +124,40 @@ class Assets(ApiEndpointGroup):
 
     get_by_id: ApiEndpoint = ApiEndpoint(
         method="get",
-        path="api/V4.0/{asset_type}/{internal_axon_id}",
-        request_schema_cls=None,
-        request_model_cls=None,
-        response_schema_cls=None,
+        path="api/{asset_type}/{internal_axon_id}",
+        request_schema_cls=json_api.assets.AssetByIdRequestSchema,
+        request_model_cls=json_api.assets.AssetByIdRequest,
+        response_schema_cls=json_api.assets.AssetByIdSchema,
         response_model_cls=json_api.assets.AssetById,
     )
     # loose model!
 
     count: ApiEndpoint = ApiEndpoint(
         method="post",
-        path="api/V4.0/{asset_type}/count",
+        path="api/{asset_type}/count",
         request_schema_cls=json_api.assets.CountRequestSchema,
         request_model_cls=json_api.assets.CountRequest,
-        response_schema_cls=None,
+        response_schema_cls=json_api.assets.CountSchema,
         response_model_cls=json_api.assets.Count,
     )
     # PBUG: returns None until celery finished, want a blocking return until celery returns
 
     fields: ApiEndpoint = ApiEndpoint(
         method="get",
-        path="api/V4.0/{asset_type}/fields",
+        path="api/{asset_type}/fields",
         request_schema_cls=None,
         request_model_cls=None,
-        response_schema_cls=json_api.generic.MetadataSchema,
-        response_model_cls=json_api.generic.Metadata,
+        response_schema_cls=json_api.assets.FieldsSchema,
+        response_model_cls=json_api.assets.Fields,
     )
 
     destroy: ApiEndpoint = ApiEndpoint(
         method="post",
-        path="api/V4.0/{asset_type}/destroy",
-        request_schema_cls=None,
+        path="api/{asset_type}/destroy",
+        request_schema_cls=json_api.assets.DestroyRequestSchema,
         request_model_cls=json_api.assets.DestroyRequest,
-        response_schema_cls=json_api.generic.MetadataSchema,
-        response_model_cls=json_api.generic.Metadata,
+        response_schema_cls=json_api.assets.DestroySchema,
+        response_model_cls=json_api.assets.Destroy,
     )
     # PBUG: returns 403 status code "You are lacking some permissions for this request"
     # PBUG: REST API0: historical_prefix hardcoded to 'historical_users_'
@@ -143,7 +165,7 @@ class Assets(ApiEndpointGroup):
 
     tags_get: ApiEndpoint = ApiEndpoint(
         method="get",
-        path="api/V4.0/{asset_type}/labels",
+        path="api/{asset_type}/labels",
         request_schema_cls=None,
         request_model_cls=None,
         response_schema_cls=json_api.generic.StrValueSchema,
@@ -152,7 +174,7 @@ class Assets(ApiEndpointGroup):
 
     tags_get_expirable_names: ApiEndpoint = ApiEndpoint(
         method="get",
-        path="api/V4.0/{asset_type}/expirable_tags_names",
+        path="api/{asset_type}/expirable_tags_names",
         request_schema_cls=None,
         request_model_cls=None,
         response_schema_cls=json_api.generic.StrValueSchema,
@@ -161,25 +183,25 @@ class Assets(ApiEndpointGroup):
 
     tags_add: ApiEndpoint = ApiEndpoint(
         method="put",
-        path="api/V4.0/{asset_type}/labels",
-        request_schema_cls=json_api.assets.ModifyTagsSchema,
-        request_model_cls=json_api.assets.ModifyTags,
-        response_schema_cls=json_api.generic.IntValueSchema,
-        response_model_cls=json_api.generic.IntValue,
+        path="api/{asset_type}/labels",
+        request_schema_cls=json_api.assets.ModifyTagsRequestSchema,
+        request_model_cls=json_api.assets.ModifyTagsRequest,
+        response_schema_cls=json_api.assets.ModifyTagsSchema,
+        response_model_cls=json_api.assets.ModifyTags,
     )
 
     tags_remove: ApiEndpoint = ApiEndpoint(
         method="delete",
-        path="api/V4.0/{asset_type}/labels",
-        request_schema_cls=json_api.assets.ModifyTagsSchema,
-        request_model_cls=json_api.assets.ModifyTags,
-        response_schema_cls=json_api.generic.IntValueSchema,
-        response_model_cls=json_api.generic.IntValue,
+        path="api/{asset_type}/labels",
+        request_schema_cls=json_api.assets.ModifyTagsRequestSchema,
+        request_model_cls=json_api.assets.ModifyTagsRequest,
+        response_schema_cls=json_api.assets.ModifyTagsSchema,
+        response_model_cls=json_api.assets.ModifyTags,
     )
 
     history_dates: ApiEndpoint = ApiEndpoint(
         method="get",
-        path="api/V4.0/dashboard/get_allowed_dates",
+        path="api/dashboard/get_allowed_dates",
         request_schema_cls=None,
         request_model_cls=None,
         response_schema_cls=json_api.assets.HistoryDatesSchema,
@@ -199,7 +221,7 @@ class Assets(ApiEndpointGroup):
 
 @dataclasses.dataclass(eq=True, frozen=True, repr=False)
 class FoldersQueries(ApiEndpointGroup):
-    """Pass."""
+    """Container for all API endpoints for working with folders for saved queries."""
 
     get: ApiEndpoint = ApiEndpoint(
         method="get",
@@ -249,7 +271,7 @@ class FoldersQueries(ApiEndpointGroup):
 
 @dataclasses.dataclass(eq=True, frozen=True, repr=False)
 class FoldersEnforcements(ApiEndpointGroup):
-    """Pass."""
+    """Container for all API endpoints for working with folders for enforcements."""
 
     get: ApiEndpoint = ApiEndpoint(
         method="get",
@@ -299,7 +321,7 @@ class FoldersEnforcements(ApiEndpointGroup):
 
 @dataclasses.dataclass(eq=True, frozen=True, repr=False)
 class SavedQueries(ApiEndpointGroup):
-    """Pass."""
+    """Container for all API endpoints for working with saved queries."""
 
     get: ApiEndpoint = ApiEndpoint(
         method="get",
@@ -386,11 +408,11 @@ class SavedQueries(ApiEndpointGroup):
 
 @dataclasses.dataclass(eq=True, frozen=True, repr=False)
 class Instances(ApiEndpointGroup):
-    """Pass."""
+    """Container for all API endpoints for working with Axonius instances."""
 
     get: ApiEndpoint = ApiEndpoint(
         method="get",
-        path="api/V4.0/instances",
+        path="api/instances",
         request_schema_cls=None,
         request_model_cls=None,
         response_schema_cls=json_api.instances.InstanceSchema,
@@ -399,7 +421,7 @@ class Instances(ApiEndpointGroup):
 
     delete: ApiEndpoint = ApiEndpoint(
         method="delete",
-        path="api/V4.0/instances",
+        path="api/instances",
         request_schema_cls=None,
         request_model_cls=json_api.instances.InstanceDeleteRequest,
         response_schema_cls=None,
@@ -412,7 +434,7 @@ class Instances(ApiEndpointGroup):
 
     update_attrs: ApiEndpoint = ApiEndpoint(
         method="put",
-        path="api/V4.0/instances",
+        path="api/instances",
         request_schema_cls=None,
         request_model_cls=json_api.instances.InstanceUpdateAttributesRequest,
         response_schema_cls=None,
@@ -424,7 +446,7 @@ class Instances(ApiEndpointGroup):
 
     update_active: ApiEndpoint = ApiEndpoint(
         method="put",
-        path="api/V4.0/instances",
+        path="api/instances",
         request_schema_cls=None,
         request_model_cls=json_api.instances.InstanceUpdateActiveRequest,
         response_schema_cls=None,
@@ -437,7 +459,7 @@ class Instances(ApiEndpointGroup):
 
     factory_reset: ApiEndpoint = ApiEndpoint(
         method="post",
-        path="api/V4.0/factory_reset",
+        path="api/factory_reset",
         request_schema_cls=json_api.instances.FactoryResetRequestSchema,
         request_model_cls=json_api.instances.FactoryResetRequest,
         response_schema_cls=json_api.instances.FactoryResetSchema,
@@ -446,7 +468,7 @@ class Instances(ApiEndpointGroup):
 
     admin_script_upload_start: ApiEndpoint = ApiEndpoint(
         method="put",
-        path="api/V4.0/settings/configuration/upload_file",
+        path="api/settings/configuration/upload_file",
         request_schema_cls=None,
         request_model_cls=None,
         response_schema_cls=None,
@@ -456,7 +478,7 @@ class Instances(ApiEndpointGroup):
 
     admin_script_upload_chunk: ApiEndpoint = ApiEndpoint(
         method="patch",
-        path="api/V4.0/settings/configuration/upload_file?patch={uuid}",
+        path="api/settings/configuration/upload_file?patch={uuid}",
         request_schema_cls=None,
         request_model_cls=None,
         response_schema_cls=None,
@@ -466,7 +488,7 @@ class Instances(ApiEndpointGroup):
 
     admin_script_execute: ApiEndpoint = ApiEndpoint(
         method="put",
-        path="api/V4.0/settings/configuration/execute/{uuid}",
+        path="api/settings/configuration/execute/{uuid}",
         request_schema_cls=None,
         request_model_cls=None,
         response_schema_cls=None,
@@ -507,11 +529,11 @@ class Instances(ApiEndpointGroup):
 
 @dataclasses.dataclass(eq=True, frozen=True, repr=False)
 class CentralCore(ApiEndpointGroup):
-    """Pass."""
+    """Container for all API endpoints for working with Axonius Central Cores."""
 
     settings_get: ApiEndpoint = ApiEndpoint(
         method="get",
-        path="api/V4.0/settings/central_core",
+        path="api/settings/central_core",
         request_schema_cls=None,
         request_model_cls=None,
         response_schema_cls=json_api.system_settings.SystemSettingsSchema,
@@ -520,7 +542,7 @@ class CentralCore(ApiEndpointGroup):
 
     settings_update: ApiEndpoint = ApiEndpoint(
         method="put",
-        path="api/V4.0/settings/central_core",
+        path="api/settings/central_core",
         request_schema_cls=json_api.central_core.CentralCoreSettingsUpdateSchema,
         request_model_cls=json_api.central_core.CentralCoreSettingsUpdate,
         response_schema_cls=json_api.system_settings.SystemSettingsSchema,
@@ -529,7 +551,7 @@ class CentralCore(ApiEndpointGroup):
 
     restore_aws: ApiEndpoint = ApiEndpoint(
         method="post",
-        path="api/V4.0/settings/central_core/restore",
+        path="api/settings/central_core/restore",
         request_schema_cls=json_api.central_core.CentralCoreRestoreAwsRequestSchema,
         request_model_cls=json_api.central_core.CentralCoreRestoreAwsRequest,
         response_schema_cls=json_api.central_core.CentralCoreRestoreSchema,
@@ -542,7 +564,7 @@ class CentralCore(ApiEndpointGroup):
 
 @dataclasses.dataclass(eq=True, frozen=True, repr=False)
 class SystemSettings(ApiEndpointGroup):
-    """Pass."""
+    """Container for all API endpoints for working with Axonius system settings."""
 
     # PBUG: schema differences between settings update and get
     # PBUG: no configName returned in get
@@ -550,7 +572,7 @@ class SystemSettings(ApiEndpointGroup):
     # PBUG: update response returns config_name and pluginId, which are not returned by get
     settings_get: ApiEndpoint = ApiEndpoint(
         method="get",
-        path="api/V4.0/settings/plugins/{plugin_name}/{config_name}",
+        path="api/settings/plugins/{plugin_name}/{config_name}",
         request_schema_cls=None,
         request_model_cls=None,
         response_schema_cls=json_api.system_settings.SystemSettingsSchema,
@@ -559,7 +581,7 @@ class SystemSettings(ApiEndpointGroup):
 
     settings_update: ApiEndpoint = ApiEndpoint(
         method="put",
-        path="api/V4.0/settings/plugins/{plugin_name}/{config_name}",
+        path="api/settings/plugins/{plugin_name}/{config_name}",
         request_schema_cls=json_api.system_settings.SystemSettingsUpdateSchema,
         request_model_cls=json_api.system_settings.SystemSettingsUpdate,
         response_schema_cls=json_api.system_settings.SystemSettingsSchema,
@@ -568,7 +590,7 @@ class SystemSettings(ApiEndpointGroup):
 
     feature_flags_get: ApiEndpoint = ApiEndpoint(
         method="get",
-        path="api/V4.0/settings/plugins/gui/FeatureFlags",
+        path="api/settings/plugins/gui/FeatureFlags",
         request_schema_cls=None,
         request_model_cls=None,
         response_schema_cls=json_api.system_settings.FeatureFlagsSchema,
@@ -577,7 +599,7 @@ class SystemSettings(ApiEndpointGroup):
 
     meta_about: ApiEndpoint = ApiEndpoint(
         method="get",
-        path="api/V4.0/settings/meta/about",
+        path="api/settings/meta/about",
         request_schema_cls=None,
         request_model_cls=None,
         response_schema_cls=json_api.system_meta.SystemMetaSchema,
@@ -603,7 +625,7 @@ class SystemSettings(ApiEndpointGroup):
 
     historical_sizes: ApiEndpoint = ApiEndpoint(
         method="get",
-        path="api/V4.0/settings/historical_sizes",
+        path="api/settings/historical_sizes",
         request_schema_cls=None,
         request_model_cls=None,
         response_schema_cls=None,
@@ -613,7 +635,7 @@ class SystemSettings(ApiEndpointGroup):
 
     file_upload: ApiEndpoint = ApiEndpoint(
         method="put",
-        path="api/V4.0/settings/plugins/{plugin}/upload_file",
+        path="api/settings/plugins/{plugin}/upload_file",
         request_schema_cls=None,
         request_model_cls=None,
         response_schema_cls=json_api.generic.ApiBaseSchema,
@@ -623,7 +645,7 @@ class SystemSettings(ApiEndpointGroup):
 
     cert_uploaded: ApiEndpoint = ApiEndpoint(
         method="get",
-        path="api/V4.0/certificate/global_ssl",
+        path="api/certificate/global_ssl",
         request_schema_cls=None,
         request_model_cls=None,
         response_schema_cls=None,
@@ -632,7 +654,7 @@ class SystemSettings(ApiEndpointGroup):
 
     gui_cert_update: ApiEndpoint = ApiEndpoint(
         method="put",
-        path="api/V4.0/certificate/global_ssl",
+        path="api/certificate/global_ssl",
         request_schema_cls=None,
         request_model_cls=json_api.system_settings.CertificateUpdateRequest,
         response_schema_cls=None,
@@ -642,7 +664,7 @@ class SystemSettings(ApiEndpointGroup):
 
     gui_cert_info: ApiEndpoint = ApiEndpoint(
         method="get",
-        path="api/V4.0/certificate/details",
+        path="api/certificate/details",
         request_schema_cls=None,
         request_model_cls=None,
         response_schema_cls=json_api.system_settings.CertificateDetailsSchema,
@@ -651,7 +673,7 @@ class SystemSettings(ApiEndpointGroup):
 
     gui_cert_reset: ApiEndpoint = ApiEndpoint(
         method="put",
-        path="api/V4.0/certificate/reset_to_defaults",
+        path="api/certificate/reset_to_defaults",
         request_schema_cls=None,
         request_model_cls=None,
         response_schema_cls=json_api.generic.BoolValueSchema,
@@ -661,7 +683,7 @@ class SystemSettings(ApiEndpointGroup):
 
     cert_settings: ApiEndpoint = ApiEndpoint(
         method="put",
-        path="api/V4.0/certificate/certificate_settings",
+        path="api/certificate/certificate_settings",
         request_schema_cls=json_api.system_settings.CertificateConfigSchema,
         request_model_cls=json_api.system_settings.CertificateConfig,
         response_schema_cls=json_api.generic.BoolValueSchema,
@@ -672,7 +694,7 @@ class SystemSettings(ApiEndpointGroup):
 
     csr_get: ApiEndpoint = ApiEndpoint(
         method="get",
-        path="api/V4.0/certificate/csr",
+        path="api/certificate/csr",
         request_schema_cls=None,
         request_model_cls=None,
         response_schema_cls=None,
@@ -681,7 +703,7 @@ class SystemSettings(ApiEndpointGroup):
     )
     csr_create: ApiEndpoint = ApiEndpoint(
         method="put",
-        path="api/V4.0/certificate/csr",
+        path="api/certificate/csr",
         request_schema_cls=None,
         request_model_cls=None,
         response_schema_cls=json_api.generic.BoolValueSchema,
@@ -691,7 +713,7 @@ class SystemSettings(ApiEndpointGroup):
 
     csr_cancel: ApiEndpoint = ApiEndpoint(
         method="put",
-        path="api/V4.0/certificate/cancel_csr",
+        path="api/certificate/cancel_csr",
         request_schema_cls=None,
         request_model_cls=None,
         response_schema_cls=json_api.generic.BoolValueSchema,
@@ -701,11 +723,11 @@ class SystemSettings(ApiEndpointGroup):
 
 @dataclasses.dataclass(eq=True, frozen=True, repr=False)
 class RemoteSupport(ApiEndpointGroup):
-    """Pass."""
+    """Container for all API endpoints for working with remote support."""
 
     get: ApiEndpoint = ApiEndpoint(
         method="get",
-        path="api/V4.0/settings/maintenance",
+        path="api/settings/maintenance",
         request_schema_cls=None,
         request_model_cls=None,
         response_schema_cls=json_api.remote_support.RemoteSupportSchema,
@@ -715,7 +737,7 @@ class RemoteSupport(ApiEndpointGroup):
 
     temporary_enable: ApiEndpoint = ApiEndpoint(
         method="post",
-        path="api/V4.0/settings/maintenance",
+        path="api/settings/maintenance",
         request_schema_cls=json_api.remote_support.UpdateTemporaryRequestSchema,
         request_model_cls=json_api.remote_support.UpdateTemporaryRequest,
         response_schema_cls=None,
@@ -726,7 +748,7 @@ class RemoteSupport(ApiEndpointGroup):
 
     temporary_disable: ApiEndpoint = ApiEndpoint(
         method="delete",
-        path="api/V4.0/settings/maintenance",
+        path="api/settings/maintenance",
         request_schema_cls=None,
         request_model_cls=None,
         response_schema_cls=None,
@@ -737,7 +759,7 @@ class RemoteSupport(ApiEndpointGroup):
 
     permanent_update: ApiEndpoint = ApiEndpoint(
         method="put",
-        path="api/V4.0/settings/maintenance",
+        path="api/settings/maintenance",
         request_schema_cls=json_api.remote_support.UpdatePermanentRequestSchema,
         request_model_cls=json_api.remote_support.UpdatePermanentRequest,
         response_schema_cls=None,
@@ -749,7 +771,7 @@ class RemoteSupport(ApiEndpointGroup):
 
     analytics_update: ApiEndpoint = ApiEndpoint(
         method="put",
-        path="api/V4.0/settings/maintenance",
+        path="api/settings/maintenance",
         request_schema_cls=json_api.remote_support.UpdateAnalyticsRequestSchema,
         request_model_cls=json_api.remote_support.UpdateAnalyticsRequest,
         response_schema_cls=None,
@@ -761,7 +783,7 @@ class RemoteSupport(ApiEndpointGroup):
 
     troubleshooting_update: ApiEndpoint = ApiEndpoint(
         method="put",
-        path="api/V4.0/settings/maintenance",
+        path="api/settings/maintenance",
         request_schema_cls=json_api.remote_support.UpdateTroubleshootingRequestSchema,
         request_model_cls=json_api.remote_support.UpdateTroubleshootingRequest,
         response_schema_cls=None,
@@ -774,11 +796,11 @@ class RemoteSupport(ApiEndpointGroup):
 
 @dataclasses.dataclass(eq=True, frozen=True, repr=False)
 class SystemUsers(ApiEndpointGroup):
-    """Pass."""
+    """Container for all API endpoints for working with Axonius user accounts."""
 
     get: ApiEndpoint = ApiEndpoint(
         method="get",
-        path="api/V4.0/settings/users",
+        path="api/settings/users",
         request_schema_cls=json_api.resources.ResourcesGetSchema,
         request_model_cls=json_api.resources.ResourcesGet,
         response_schema_cls=json_api.system_users.SystemUserSchema,
@@ -787,7 +809,7 @@ class SystemUsers(ApiEndpointGroup):
 
     create: ApiEndpoint = ApiEndpoint(
         method="post",
-        path="api/V4.0/settings/users",
+        path="api/settings/users",
         request_schema_cls=json_api.system_users.SystemUserCreateSchema,
         request_model_cls=json_api.system_users.SystemUserCreate,
         response_schema_cls=json_api.system_users.SystemUserSchema,
@@ -796,8 +818,8 @@ class SystemUsers(ApiEndpointGroup):
 
     delete: ApiEndpoint = ApiEndpoint(
         method="delete",
-        path="api/V4.0/settings/users/{uuid}",
-        request_schema_cls=None,
+        path="api/settings/users/{uuid}",
+        request_schema_cls=json_api.resources.ResourceDeleteSchema,
         request_model_cls=json_api.resources.ResourceDelete,
         response_schema_cls=json_api.generic.MetadataSchema,
         response_model_cls=json_api.generic.Metadata,
@@ -805,7 +827,7 @@ class SystemUsers(ApiEndpointGroup):
 
     update: ApiEndpoint = ApiEndpoint(
         method="put",
-        path="api/V4.0/settings/users/{uuid}",
+        path="api/settings/users/{uuid}",
         request_schema_cls=json_api.system_users.SystemUserUpdateSchema,
         request_model_cls=json_api.system_users.SystemUserUpdate,
         response_schema_cls=json_api.system_users.SystemUserSchema,
@@ -815,11 +837,11 @@ class SystemUsers(ApiEndpointGroup):
 
 @dataclasses.dataclass(eq=True, frozen=True, repr=False)
 class PasswordReset(ApiEndpointGroup):
-    """Pass."""
+    """Container for all API endpoints for working with password resets."""
 
     create: ApiEndpoint = ApiEndpoint(
         method="post",
-        path="api/V4.0/settings/users/tokens/generate",
+        path="api/settings/users/tokens/generate",
         request_schema_cls=None,
         request_model_cls=json_api.password_reset.CreateRequest,
         response_schema_cls=None,
@@ -831,7 +853,7 @@ class PasswordReset(ApiEndpointGroup):
 
     send: ApiEndpoint = ApiEndpoint(
         method="post",
-        path="api/V4.0/settings/users/tokens/notify",
+        path="api/settings/users/tokens/notify",
         request_schema_cls=None,
         request_model_cls=json_api.password_reset.SendRequest,
         response_schema_cls=None,
@@ -842,7 +864,7 @@ class PasswordReset(ApiEndpointGroup):
 
     validate: ApiEndpoint = ApiEndpoint(
         method="get",
-        path="api/V4.0/settings/users/tokens/validate/{token}",
+        path="api/settings/users/tokens/validate/{token}",
         request_schema_cls=None,
         request_model_cls=json_api.password_reset.ValidateRequest,
         response_schema_cls=None,
@@ -853,7 +875,7 @@ class PasswordReset(ApiEndpointGroup):
 
     use: ApiEndpoint = ApiEndpoint(
         method="put",
-        path="api/V4.0/settings/users/tokens/reset",
+        path="api/settings/users/tokens/reset",
         request_schema_cls=None,
         request_model_cls=json_api.password_reset.UseRequest,
         response_schema_cls=None,
@@ -865,7 +887,7 @@ class PasswordReset(ApiEndpointGroup):
 
 @dataclasses.dataclass(eq=True, frozen=True, repr=False)
 class Tasks(ApiEndpointGroup):
-    """Pass."""
+    """Container for all API endpoints for working with enforcement tasks."""
 
     get_basic: ApiEndpoint = ApiEndpoint(
         method="get",
@@ -898,7 +920,7 @@ class Tasks(ApiEndpointGroup):
 # PBUG: so many things wrong with this
 @dataclasses.dataclass(eq=True, frozen=True, repr=False)
 class Enforcements(ApiEndpointGroup):
-    """Pass."""
+    """Container for all API endpoints for working with enforcements."""
 
     tasks: Tasks = Tasks()
 
@@ -1002,7 +1024,7 @@ class Enforcements(ApiEndpointGroup):
 
 @dataclasses.dataclass(eq=True, frozen=True, repr=False)
 class SystemRoles(ApiEndpointGroup):
-    """Pass."""
+    """Container for all API endpoints for working with Axonius roles."""
 
     get: ApiEndpoint = ApiEndpoint(
         method="get",
@@ -1026,7 +1048,7 @@ class SystemRoles(ApiEndpointGroup):
     delete: ApiEndpoint = ApiEndpoint(
         method="delete",
         path="api/settings/roles/{uuid}",
-        request_schema_cls=None,
+        request_schema_cls=json_api.resources.ResourceDeleteSchema,
         request_model_cls=json_api.resources.ResourceDelete,
         response_schema_cls=json_api.generic.MetadataSchema,
         response_model_cls=json_api.generic.Metadata,
@@ -1055,11 +1077,11 @@ class SystemRoles(ApiEndpointGroup):
 
 @dataclasses.dataclass(eq=True, frozen=True, repr=False)
 class Lifecycle(ApiEndpointGroup):
-    """Pass."""
+    """Container for all API endpoints for working with the discover lifecycle."""
 
     get: ApiEndpoint = ApiEndpoint(
         method="get",
-        path="api/V4.0/dashboard/lifecycle",
+        path="api/dashboard/lifecycle",
         request_schema_cls=None,
         request_model_cls=None,
         response_schema_cls=json_api.lifecycle.LifecycleSchema,
@@ -1068,7 +1090,7 @@ class Lifecycle(ApiEndpointGroup):
 
     start: ApiEndpoint = ApiEndpoint(
         method="post",
-        path="api/V4.0/settings/run_manual_discovery",
+        path="api/settings/run_manual_discovery",
         request_schema_cls=None,
         request_model_cls=None,
         response_schema_cls=None,
@@ -1079,7 +1101,7 @@ class Lifecycle(ApiEndpointGroup):
 
     stop: ApiEndpoint = ApiEndpoint(
         method="post",
-        path="api/V4.0/settings/stop_research_phase",
+        path="api/settings/stop_research_phase",
         request_schema_cls=None,
         request_model_cls=None,
         response_schema_cls=None,
@@ -1091,11 +1113,11 @@ class Lifecycle(ApiEndpointGroup):
 
 @dataclasses.dataclass(eq=True, frozen=True, repr=False)
 class Adapters(ApiEndpointGroup):
-    """Pass."""
+    """Container for all API endpoints for working with adapters."""
 
     get: ApiEndpoint = ApiEndpoint(
         method="get",
-        path="api/V4.0/adapters",
+        path="api/adapters",
         request_schema_cls=json_api.adapters.AdaptersRequestSchema,
         request_model_cls=json_api.adapters.AdaptersRequest,
         response_schema_cls=json_api.adapters.AdapterSchema,
@@ -1106,7 +1128,7 @@ class Adapters(ApiEndpointGroup):
 
     get_basic: ApiEndpoint = ApiEndpoint(
         method="get",
-        path="api/V4.0/adapters/list",
+        path="api/adapters/list",
         request_schema_cls=None,
         request_model_cls=None,
         response_schema_cls=json_api.adapters.AdaptersListSchema,
@@ -1135,7 +1157,7 @@ class Adapters(ApiEndpointGroup):
 
     settings_get: ApiEndpoint = ApiEndpoint(
         method="get",
-        path="api/V4.0/adapters/{adapter_name}/advanced_settings",
+        path="api/adapters/{adapter_name}/advanced_settings",
         request_schema_cls=None,
         request_model_cls=None,
         response_schema_cls=json_api.adapters.AdapterSettingsSchema,
@@ -1144,7 +1166,7 @@ class Adapters(ApiEndpointGroup):
 
     settings_update: ApiEndpoint = ApiEndpoint(
         method="put",
-        path="api/V4.0/adapters/{adapter_name}/{config_name}",
+        path="api/adapters/{adapter_name}/{config_name}",
         request_schema_cls=json_api.adapters.AdapterSettingsUpdateSchema,
         request_model_cls=json_api.adapters.AdapterSettingsUpdate,
         response_schema_cls=json_api.system_settings.SystemSettingsSchema,
@@ -1153,7 +1175,7 @@ class Adapters(ApiEndpointGroup):
 
     file_upload: ApiEndpoint = ApiEndpoint(
         method="put",
-        path="api/V4.0/adapters/{adapter_name}/{node_id}/upload_file",
+        path="api/adapters/{adapter_name}/{node_id}/upload_file",
         request_schema_cls=None,
         request_model_cls=None,
         response_schema_cls=None,
@@ -1166,7 +1188,7 @@ class Adapters(ApiEndpointGroup):
 
     labels_get: ApiEndpoint = ApiEndpoint(
         method="get",
-        path="api/V4.0/adapters/labels",
+        path="api/adapters/labels",
         request_schema_cls=None,
         request_model_cls=None,
         response_schema_cls=json_api.adapters.CnxLabelsSchema,
@@ -1175,7 +1197,7 @@ class Adapters(ApiEndpointGroup):
 
     cnx_get: ApiEndpoint = ApiEndpoint(
         method="get",
-        path="api/V4.0/adapters/{adapter_name}/connections",
+        path="api/adapters/{adapter_name}/connections",
         request_schema_cls=None,
         request_model_cls=None,
         response_schema_cls=None,
@@ -1184,7 +1206,7 @@ class Adapters(ApiEndpointGroup):
 
     cnx_create: ApiEndpoint = ApiEndpoint(
         method="post",
-        path="api/V4.0/adapters/{adapter_name}/connections",
+        path="api/adapters/{adapter_name}/connections",
         request_schema_cls=json_api.adapters.CnxCreateRequestSchema,
         request_model_cls=json_api.adapters.CnxCreateRequest,
         response_schema_cls=json_api.adapters.CnxModifyResponseSchema,
@@ -1193,7 +1215,7 @@ class Adapters(ApiEndpointGroup):
 
     cnx_update: ApiEndpoint = ApiEndpoint(
         method="put",
-        path="api/V4.0/adapters/{adapter_name}/connections/{uuid}",
+        path="api/adapters/{adapter_name}/connections/{uuid}",
         request_schema_cls=json_api.adapters.CnxUpdateRequestSchema,
         request_model_cls=json_api.adapters.CnxUpdateRequest,
         response_schema_cls=json_api.adapters.CnxModifyResponseSchema,
@@ -1202,7 +1224,7 @@ class Adapters(ApiEndpointGroup):
 
     cnx_test: ApiEndpoint = ApiEndpoint(
         method="put",
-        path="api/V4.0/adapters/{adapter_name}/connections/test",
+        path="api/adapters/{adapter_name}/connections/test",
         request_schema_cls=json_api.adapters.CnxTestRequestSchema,
         request_model_cls=json_api.adapters.CnxTestRequest,
         response_schema_cls=None,
@@ -1211,7 +1233,7 @@ class Adapters(ApiEndpointGroup):
 
     cnx_delete: ApiEndpoint = ApiEndpoint(
         method="delete",
-        path="api/V4.0/adapters/{adapter_name}/connections/{uuid}",
+        path="api/adapters/{adapter_name}/connections/{uuid}",
         request_schema_cls=json_api.adapters.CnxDeleteRequestSchema,
         request_model_cls=json_api.adapters.CnxDeleteRequest,
         response_schema_cls=json_api.adapters.CnxDeleteSchema,
@@ -1223,11 +1245,11 @@ class Adapters(ApiEndpointGroup):
 
 @dataclasses.dataclass(eq=True, frozen=True, repr=False)
 class Signup(ApiEndpointGroup):
-    """Pass."""
+    """Container for all API endpoints for working with initial signup."""
 
     get: ApiEndpoint = ApiEndpoint(
         method="get",
-        path="api/V4.0/signup",
+        path="api/signup",
         request_schema_cls=None,
         request_model_cls=None,
         response_schema_cls=json_api.generic.BoolValueSchema,
@@ -1236,7 +1258,7 @@ class Signup(ApiEndpointGroup):
 
     perform: ApiEndpoint = ApiEndpoint(
         method="post",
-        path="api/V4.0/signup",
+        path="api/signup",
         request_schema_cls=json_api.signup.SignupRequestSchema,
         request_model_cls=json_api.signup.SignupRequest,
         response_schema_cls=json_api.signup.SignupResponseSchema,
@@ -1245,7 +1267,7 @@ class Signup(ApiEndpointGroup):
 
     status: ApiEndpoint = ApiEndpoint(
         method="get",
-        path="api/V4.0/status",
+        path="api/status",
         request_schema_cls=None,
         request_model_cls=None,
         response_schema_cls=json_api.signup.SystemStatusSchema,
@@ -1255,11 +1277,11 @@ class Signup(ApiEndpointGroup):
 
 @dataclasses.dataclass(eq=True, frozen=True, repr=False)
 class AuditLogs(ApiEndpointGroup):
-    """Pass."""
+    """Container for all API endpoints for working with audit logs."""
 
     get: ApiEndpoint = ApiEndpoint(
         method="get",
-        path="api/V4.0/settings/audit",
+        path="api/settings/audit",
         request_schema_cls=json_api.audit_logs.AuditLogRequestSchema,
         request_model_cls=json_api.audit_logs.AuditLogRequest,
         response_schema_cls=json_api.audit_logs.AuditLogSchema,
@@ -1269,7 +1291,7 @@ class AuditLogs(ApiEndpointGroup):
 
 @dataclasses.dataclass(eq=True, frozen=True, repr=False)
 class OpenAPISpec(ApiEndpointGroup):
-    """Pass."""
+    """Container for all API endpoints for working with OPENAPI."""
 
     get_spec: ApiEndpoint = ApiEndpoint(
         method="get",
@@ -1284,7 +1306,7 @@ class OpenAPISpec(ApiEndpointGroup):
 
 @dataclasses.dataclass(eq=True, frozen=True, repr=False)
 class DataScopes(ApiEndpointGroup):
-    """Pass."""
+    """Container for all API endpoints for working with data scopes."""
 
     get: ApiEndpoint = ApiEndpoint(
         method="get",
@@ -1325,7 +1347,7 @@ class DataScopes(ApiEndpointGroup):
 
 @dataclasses.dataclass(eq=True, frozen=True, repr=False)
 class Account(ApiEndpointGroup):
-    """Pass."""
+    """Container for all API endpoints for working with Axonius accounts."""
 
     login: ApiEndpoint = ApiEndpoint(
         method="post",
@@ -1349,8 +1371,8 @@ class Account(ApiEndpointGroup):
 
 
 @dataclasses.dataclass(eq=True, frozen=True, repr=False)
-class ApiEndpoints(BaseData):
-    """Pass."""
+class ApiEndpointsGroups(ApiEndpointGroup):
+    """Container for all API endpoint groups."""
 
     instances: Instances = Instances()
     central_core: CentralCore = CentralCore()
@@ -1373,19 +1395,5 @@ class ApiEndpoints(BaseData):
     folders_enforcements: FoldersEnforcements = FoldersEnforcements()
     account: Account = Account()
 
-    @classmethod
-    def get_groups(cls) -> Dict[str, ApiEndpointGroup]:
-        """Pass."""
-        return {x.name: x.default for x in cls.get_fields()}
 
-    def __str__(self):
-        """Pass."""
-        names = [x.name for x in self.get_fields()]
-        return f"{self.__class__.__name__}(groups={names})"
-
-    def __repr__(self):
-        """Pass."""
-        return self.__str__()
-
-
-ApiEndpoints = ApiEndpoints()
+ApiEndpoints = ApiEndpointsGroups()

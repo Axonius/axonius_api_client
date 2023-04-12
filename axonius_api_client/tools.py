@@ -15,7 +15,6 @@ import sys
 import types
 import typing as t
 import uuid
-from datetime import datetime, timedelta, timezone, tzinfo
 from itertools import zip_longest
 from urllib.parse import urljoin
 
@@ -24,6 +23,7 @@ import click
 import dateutil.parser
 import dateutil.relativedelta
 import dateutil.tz
+import datetime
 import marshmallow
 
 from . import INIT_DOTENV, PACKAGE_FILE, PACKAGE_ROOT, VERSION
@@ -83,14 +83,13 @@ def pathify(
 ) -> pathlib.Path:
     """Convert a str into a fully resolved & expanded Path object."""
     check_type(value=path, exp=(str, bytes, pathlib.Path))
+    path = bytes_to_str(value=path, encoding=path_encoding, strict=path_strict)
 
-    if isinstance(path, bytes):
-        path = bytes_to_str(value=path, strict=path_strict, encoding=path_encoding)
-        resolved = pathlib.Path(path.splitlines()[0])
-    elif isinstance(path, str):
-        resolved = pathlib.Path(path.splitlines()[0])
-    elif isinstance(path, pathlib.Path):
+    if isinstance(path, pathlib.Path):
         resolved = path
+    else:
+        path = bytes_to_str(value=path, encoding=path_encoding, strict=path_strict)
+        resolved = pathlib.Path(path.splitlines()[0])
 
     if expanduser:
         resolved = resolved.expanduser()
@@ -424,7 +423,7 @@ class AxJSONEncoder(json.JSONEncoder):
 
     def default(self, obj):
         """Pass."""
-        if isinstance(obj, datetime):
+        if isinstance(obj, datetime.datetime):
             return obj.isoformat()
 
         if has_to_dict(obj):
@@ -726,7 +725,7 @@ def text_load(
 
 def dt_parse_uuid(
     value: str, default_tz_utc: bool = False, allow_none=False, error: bool = False
-) -> t.Optional[datetime]:
+) -> t.Optional[datetime.datetime]:
     """Parse the date from an object UUID."""
     if allow_none and (value is None or str(value).lower().strip() in ["none", "null"]):
         return None
@@ -739,12 +738,15 @@ def dt_parse_uuid(
 
 
 def dt_parse(
-    obj: t.Union[str, timedelta, datetime],
+    obj: t.Union[
+        t.List[t.Union[str, datetime.timedelta, datetime]],
+        t.Union[str, datetime.timedelta, datetime],
+    ],
     default_tz_utc: bool = False,
     allow_none=False,
     as_none: t.Any = None,
-    as_tz: t.Optional[t.Union[str, tzinfo]] = timezone.utc,
-) -> t.Optional[t.Union[datetime, t.List[datetime]]]:
+    as_tz: t.Optional[t.Union[str, datetime.tzinfo]] = datetime.timezone.utc,
+) -> t.Optional[t.Union[datetime.datetime, t.List[datetime.datetime]]]:
     """Parse a str, datetime, or timedelta into a datetime object.
 
     Args:
@@ -754,16 +756,18 @@ def dt_parse(
         as_none: if allow_none and obj is None, return this value
         as_tz: if not None, convert to this timezone
     """
-    if isinstance(obj, list) and all([isinstance(x, (str, datetime, timedelta)) for x in obj]):
+    if isinstance(obj, list) and all(
+        [isinstance(x, (str, datetime.datetime, datetime.timedelta)) for x in obj]
+    ):
         return [
             dt_parse(obj=x, default_tz_utc=default_tz_utc, as_none=as_none, allow_none=allow_none)
             for x in obj
         ]
 
-    if isinstance(obj, datetime):
+    if isinstance(obj, datetime.datetime):
         obj = str(obj)
 
-    if isinstance(obj, timedelta):
+    if isinstance(obj, datetime.timedelta):
         obj = str(dt_now() - obj)
 
     obj = bytes_to_str(obj)
@@ -771,15 +775,17 @@ def dt_parse(
         value = as_none
     else:
         value = dateutil.parser.parse(obj)
-    if isinstance(value, datetime):
+    if isinstance(value, datetime.datetime):
         if default_tz_utc and not value.tzinfo:
             value = value.replace(tzinfo=as_tz)
-        if isinstance(as_tz, tzinfo):
+        if isinstance(as_tz, datetime.tzinfo):
             value = value.astimezone(as_tz)
     return value
 
 
-def dt_parse_tmpl(obj: t.Union[str, timedelta, datetime], tmpl: str = "%Y-%m-%d") -> str:
+def dt_parse_tmpl(
+    obj: t.Union[str, datetime.timedelta, datetime.datetime], tmpl: str = "%Y-%m-%d"
+) -> str:
     """Parse a string into the format used by the REST API.
 
     Args:
@@ -805,8 +811,8 @@ def dt_parse_tmpl(obj: t.Union[str, timedelta, datetime], tmpl: str = "%Y-%m-%d"
 
 
 def dt_now(
-    delta: t.Optional[timedelta] = None,
-    tz: timezone = dateutil.tz.tzutc(),
+    delta: t.Optional[datetime.timedelta] = None,
+    tz: t.Optional[datetime.timezone] = datetime.timezone.utc,
 ) -> datetime:
     """Get the current datetime in for a specific tz.
 
@@ -814,9 +820,9 @@ def dt_now(
         delta: convert delta into datetime str instead of returning now
         tz: timezone to return datetime in
     """
-    if isinstance(delta, timedelta):
+    if isinstance(delta, datetime.timedelta):
         return dt_parse(obj=delta)
-    return datetime.now(tz)
+    return datetime.datetime.now(tz)
 
 
 def dt_now_file(fmt: str = FILE_DATE_FMT, **kwargs):
@@ -824,7 +830,9 @@ def dt_now_file(fmt: str = FILE_DATE_FMT, **kwargs):
     return dt_now(**kwargs).strftime(fmt)
 
 
-def dt_sec_ago(obj: t.Union[str, timedelta, datetime], exact: bool = False) -> int:
+def dt_sec_ago(
+    obj: t.Union[str, datetime.timedelta, datetime.datetime], exact: bool = False
+) -> int:
     """Get number of seconds ago a given datetime was.
 
     Args:
@@ -836,7 +844,7 @@ def dt_sec_ago(obj: t.Union[str, timedelta, datetime], exact: bool = False) -> i
     return value if exact else round(value)
 
 
-def dt_min_ago(obj: t.Union[str, timedelta, datetime]) -> int:
+def dt_min_ago(obj: t.Union[str, datetime.timedelta, datetime.datetime]) -> int:
     """Get number of minutes ago a given datetime was.
 
     Args:
@@ -845,7 +853,9 @@ def dt_min_ago(obj: t.Union[str, timedelta, datetime]) -> int:
     return round(dt_sec_ago(obj=obj) / 60)
 
 
-def dt_days_left(obj: t.Optional[t.Union[str, timedelta, datetime]]) -> t.Optional[int]:
+def dt_days_left(
+    obj: t.Optional[t.Union[str, datetime.timedelta, datetime.datetime]]
+) -> t.Optional[int]:
     """Get number of days left until a given datetime.
 
     Args:
@@ -861,7 +871,7 @@ def dt_days_left(obj: t.Optional[t.Union[str, timedelta, datetime]]) -> t.Option
 
 
 def dt_within_min(
-    obj: t.Union[str, timedelta, datetime],
+    obj: t.Union[str, datetime.timedelta, datetime.datetime],
     n: t.Optional[t.Union[str, int]] = None,
 ) -> bool:
     """Check if given datetime is within the past n minutes.
@@ -1657,17 +1667,26 @@ def is_url(value: str) -> bool:
     return isinstance(value, str) and any([value.startswith(x) for x in URL_STARTS])
 
 
-def bytes_to_str(value: t.Any, encoding: str = "utf-8", errors: str = "replace") -> t.Any:
+def bytes_to_str(
+    value: t.Any, encoding: str = "utf-8", ignore: bool = False, strict: bool = False
+) -> t.Any:
     """Convert value to str if value is bytes.
 
     Args:
         value (t.Any): value to convert to str
         encoding (str, optional): encoding to use
-        errors (str, optional): how to handle errors
+        ignore (bool, optional): ignore errors instead of replacing them
+        strict (bool, optional): raise an exception if there are decoding errors
 
     Returns:
-        t.Any: str if value is bytes, else orginal value
+        t.Any: str if value is bytes, else original value
     """
+    if strict:
+        errors = "strict"
+    elif ignore:
+        errors = "ignore"
+    else:
+        errors = "replace"
     return value.decode(encoding=encoding, errors=errors) if isinstance(value, bytes) else value
 
 
@@ -2123,14 +2142,14 @@ def coerce_str_re(value: t.Any, prefix: str = "~") -> t.Any:
 def human_size(
     value: t.Union[int, str, bytes, float], decimals: int = 2, error: bool = True
 ) -> str:
-    """Convert bytes to human readable.
+    """Convert bytes to human-readable.
 
     Args:
         value (t.Union[int, str, bytes, float]): value to coerce into int/float
         decimals (int, optional): number of decimal places to include in str output
 
     Returns:
-        str: human readable size of value if value is int, float, int as str, or float as str
+        str: human-readable size of value if value is int, float, int as str, or float as str
              else empty str
     """
     value = coerce_int_float(value=value, error=error)
@@ -2364,16 +2383,16 @@ def parse_refresh(
 
 
 def get_diff_seconds(
-    start: t.Optional[datetime] = None,
-    stop: t.Optional[datetime] = None,
+    start: t.Optional[datetime.datetime] = None,
+    stop: t.Optional[datetime.datetime] = None,
     places: t.Optional[int] = 5,
 ) -> t.Optional[float]:
     """Pass."""
     seconds: t.Optional[float] = None
     if start is not None:
-        start: datetime = dt_parse(obj=start)
-        stop: datetime = dt_now if stop is None else dt_parse(stop)
-        delta: timedelta = stop - start
+        start: datetime.datetime = dt_parse(obj=start)
+        stop: datetime.datetime = dt_now if stop is None else dt_parse(stop)
+        delta: datetime.timedelta = stop - start
         seconds: float = delta.total_seconds()
         if isinstance(places, int):
             seconds: float = float(f"{seconds:.{places}f}")

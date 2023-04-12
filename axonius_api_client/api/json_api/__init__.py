@@ -32,6 +32,8 @@ from . import (
     system_users,
     tasks,
     time_range,
+    nested_access,
+    count_operator,
 )
 
 __all__ = (
@@ -65,4 +67,6 @@ __all__ = (
     "spaces_export",
     "folders",
     "account",
+    "nested_access",
+    "count_operator",
 )

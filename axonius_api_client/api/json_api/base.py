@@ -5,7 +5,7 @@ import logging
 import typing as t
 import warnings
 from dataclasses import Field
-from typing import Any, Tuple
+import marshmallow_jsonapi.fields as mm_fields
 
 import dataclasses_json
 import marshmallow
@@ -26,10 +26,10 @@ from ...setup_env import get_env_extra_warn
 from ...tools import coerce_bool, combo_dicts, json_dump, json_load, listify, strip_right
 
 LOGGER = logging.getLogger(__name__)
-WARN_TRACKER: t.Dict["BaseModel", t.Set[str]] = {}
+WARN_TRACKER: t.Dict[t.Type["BaseModel"], t.Set[str]] = {}
 
 
-def get_warn_help(value: Warning) -> t.List[str]:
+def get_warn_help(value: t.Type[Warning]) -> t.List[str]:
     """Pass."""
     name = value.__name__
     ret = [
@@ -53,6 +53,7 @@ class BaseCommon:
         """Pass."""
         return get_obj_log(self)
 
+    # noinspection PyUnusedLocal
     @classmethod
     def _post_load_attrs(
         cls,
@@ -68,6 +69,7 @@ class BaseCommon:
             **kwargs: n/a
         """
         for item in listify(data):
+            # noinspection PyBroadException
             try:
                 item.HTTP = http
             except Exception:  # pragma: no cover
@@ -78,13 +80,12 @@ class BaseCommon:
         cls,
         schema: marshmallow.Schema,
         data: t.Union[dict, t.List[dict]],
-        reraise: bool = RERAISE,
         **kwargs,
     ) -> t.Union["BaseModel", t.List["BaseModel"]]:
         """Load data using a marshmallow schema.
 
         Args:
-            schema (marshmallow.Schema): Schema to use to load data
+            schema (marshmallow.Schema): Schema to use to load `data`
             data (t.Union[dict, t.List[dict]]): Data to load
             **kwargs: passed to :meth:`_post_load_attrs`
 
@@ -95,10 +96,11 @@ class BaseCommon:
             JsonApiError: when "type" of JSON API data does not match Meta._type of schema
             ValidationError: when marshmallow schema validation fails
         """
+        kwargs["reraise"] = kwargs.get("reraise", RERAISE)
         try:
             loaded = schema.load(data, unknown=marshmallow.INCLUDE)
         except Exception as exc:
-            if reraise:
+            if kwargs["reraise"]:
                 raise
             raise SchemaError(schema=schema, exc=exc, obj=cls, data=data)
 
@@ -163,6 +165,7 @@ class BaseSchema(BaseCommon, marshmallow.Schema):
 
         return cls._load_schema(**combo_dicts(kwargs, schema=schema, data=data))
 
+    # noinspection PyUnusedLocal
     @marshmallow.post_load
     def post_load_process(self, data: dict, **kwargs) -> t.Union[dict, "BaseModel"]:
         """Marshmallow post_load hook to load validated data into a model class.
@@ -182,7 +185,7 @@ class BaseSchema(BaseCommon, marshmallow.Schema):
         return model_cls.from_dict(data)
 
     @classmethod
-    def get_model_fields(cls) -> t.List[dataclasses.Field]:
+    def get_model_fields(cls) -> t.List[Field]:
         """Get the fields of the model class that this schema loads into."""
         # noinspection PyProtectedMember
         return cls.get_model_cls()._get_fields()
@@ -191,8 +194,8 @@ class BaseSchema(BaseCommon, marshmallow.Schema):
 class BaseSchemaJson(BaseSchema, marshmallow_jsonapi.Schema):
     """Schema base class for validating JSON API data."""
 
-    id = marshmallow_jsonapi.fields.Str()
-    document_meta = marshmallow_jsonapi.fields.DocumentMeta()
+    id = mm_fields.Str()
+    document_meta = mm_fields.DocumentMeta()
 
     class Meta:
         """Pass."""
@@ -255,6 +258,7 @@ class BaseSchemaJson(BaseSchema, marshmallow_jsonapi.Schema):
         raise exc_cls(f"Invalid attribute {value!r}, valids: {valids}")
 
 
+# noinspection PyDataclass
 class BaseModel(dataclasses_json.DataClassJsonMixin, BaseCommon):
     """Model base class for holding data."""
 
@@ -263,6 +267,7 @@ class BaseModel(dataclasses_json.DataClassJsonMixin, BaseCommon):
         cls, request_obj: t.Optional["BaseModel"] = None, *args, **kwargs
     ) -> "BaseModel":
         """If request is not of this type, build one using args and kwargs."""
+        # noinspection PyArgumentList
         return request_obj if isinstance(request_obj, cls) else cls(*args, **kwargs)
 
     @staticmethod
@@ -323,7 +328,7 @@ class BaseModel(dataclasses_json.DataClassJsonMixin, BaseCommon):
         Args:
             data (t.Union[dict, list, tuple]): Response data to load using this schema
             schema_cls (Optional[BaseSchema], optional): Schema class to use to validate data
-                will fallback to :meth:`get_schema_cls` or dataclasses_json automatic schema
+                will fall back to :meth:`get_schema_cls` or dataclasses_json automatic schema
             **kwargs: passed to :meth:`BaseCommon._load_schema`
 
         Returns:
@@ -367,7 +372,7 @@ class BaseModel(dataclasses_json.DataClassJsonMixin, BaseCommon):
 
         Args:
             schema_cls (Optional[BaseSchema], optional): Schema class to use to validate data
-                will fallback to :meth:`get_schema_cls` or dataclasses_json automatic schema
+                will fall back to :meth:`get_schema_cls` or dataclasses_json automatic schema
             **kwargs: passed to :meth:`BaseCommon._load_schema` as part of reloading the data
                 to validate it
 
@@ -385,9 +390,9 @@ class BaseModel(dataclasses_json.DataClassJsonMixin, BaseCommon):
                 dumped = {"data": {"attributes": dumped, "type": schema.Meta.type_}}
 
         loaded = self._load_schema(**combo_dicts(kwargs, schema=schema, data=dumped))
-        redumped = schema.dump(loaded)
-        redumped.pop("document_meta", None)
-        return redumped
+        re_dumped = schema.dump(loaded)
+        re_dumped.pop("document_meta", None)
+        return re_dumped
 
     def dump_request_params(self, **kwargs) -> dict:
         """Convert this object into a set of GET URL parameters.
@@ -436,13 +441,14 @@ class BaseModel(dataclasses_json.DataClassJsonMixin, BaseCommon):
         return self.__str__()
 
     @classmethod
-    def from_dict(cls, data: dict):
+    def from_dict(cls, data: dict, **kwargs):
         """Pass."""
-        fields_known = [x.name for x in dataclasses.fields(cls)]
+        fields_known: t.Dict[str, Field] = cls._get_fields_dict()
         extra_attributes = {k: data.pop(k) for k in list(data) if k not in fields_known}
-        obj = super().from_dict(data)
+        obj = super().from_dict(data, **kwargs)
         if extra_attributes:
             if hasattr(obj, "_extra_attributes"):
+                # noinspection PyProtectedMember
                 obj._extra_attributes.update(extra_attributes)
             else:
                 obj.extra_attributes = extra_attributes
@@ -485,9 +491,52 @@ class BaseModel(dataclasses_json.DataClassJsonMixin, BaseCommon):
         return [x.name for x in cls._get_fields()]
 
     @classmethod
-    def _get_fields(cls) -> t.Tuple[Field]:
+    def _get_fields(cls) -> t.Tuple[Field, ...]:
         """Get a list of fields defined for this dataclass."""
         return dataclasses.fields(cls)
+
+    @classmethod
+    def _get_fields_dict(cls) -> t.Dict[str, Field]:
+        """Get a list of fields defined for this dataclass."""
+        return {x.name: x for x in dataclasses.fields(cls)}
+
+    @classmethod
+    def remove_unknown_arguments(
+        cls,
+        remove_unknown_arguments: bool = True,
+        warn_unknown_arguments: bool = True,
+        kwargs: t.Optional[dict] = None,
+    ) -> t.Tuple[dict, dict]:
+        """Remove unknown arguments from the kwargs.
+
+        Args:
+            remove_unknown_arguments (bool, optional): Whether to remove unknown arguments
+                from the kwargs. Defaults to True.
+            warn_unknown_arguments (bool, optional): Whether to warn about unknown arguments.
+                Defaults to True.
+            kwargs (t.Optional[dict], optional): The kwargs to remove unknown arguments from.
+                Defaults to None.
+
+        Returns:
+            t.Tuple[dict, dict]: The kwargs with unknown arguments removed, and the unknown
+                arguments.
+        """
+        if not isinstance(kwargs, dict):
+            kwargs = {}
+
+        known_arguments: t.Dict[str, dataclasses.Field] = cls._get_fields_dict()
+        unknown_arguments: t.Dict[str, t.Any] = {
+            k: v for k, v in kwargs.items() if k not in known_arguments
+        }
+        if unknown_arguments:
+            msg = f"Unknown arguments passed to {cls}: {unknown_arguments}"
+            LOGGER.warning(msg)
+            if warn_unknown_arguments and get_env_extra_warn():
+                warnings.warn(message=msg, category=ExtraAttributeWarning)
+            if remove_unknown_arguments:
+                for k in unknown_arguments:
+                    kwargs.pop(k)
+        return kwargs, unknown_arguments
 
     def __getitem__(self, key):
         """Pass."""
@@ -506,9 +555,9 @@ class BaseModel(dataclasses_json.DataClassJsonMixin, BaseCommon):
     def new_from_dict(cls, obj: dict) -> "BaseModel":  # pragma: no cover
         """Beta concept for our own deserializer."""
 
-        def is_missing(obj) -> bool:
+        def is_missing(check) -> bool:
             """Pass."""
-            return obj == dataclasses.MISSING
+            return check == dataclasses.MISSING
 
         if not isinstance(obj, dict):
             raise ApiError(f"Object to load must be type {dict}, not {type(obj)}")
@@ -524,16 +573,17 @@ class BaseModel(dataclasses_json.DataClassJsonMixin, BaseCommon):
 
             required = True
 
+            default_text = ""
             if not is_missing(field.default_factory):
                 default = field.default_factory
                 required = False
+                default_text = f", default={default}"
             if not is_missing(field.default):
                 default = field.default
                 required = False
+                default_text = f", default={default}"
 
-            finfo = f"Attribute name={fname!r}, type={ftype}, required={required}"
-            if not required:
-                finfo += f", default={default!r}"
+            finfo = f"Attribute name={fname!r}, type={ftype}, required={required}{default_text}"
 
             if fname not in obj:
                 if required:
@@ -596,6 +646,7 @@ class BaseModel(dataclasses_json.DataClassJsonMixin, BaseCommon):
 
                 # int, float, dataclass, etc
 
+        # noinspection PyArgumentList
         ret = cls(**cls_args)
         extra_attributes = {k: v for k, v in obj.items() if k not in [x.name for x in fields]}
         ret._extra_attributes = extra_attributes
@@ -603,7 +654,7 @@ class BaseModel(dataclasses_json.DataClassJsonMixin, BaseCommon):
 
     @property
     def extra_attributes(self) -> dict:
-        """Extra atttributes supplied during deserialization."""
+        """Extra attributes supplied during deserialization."""
         return getattr(self, "_extra_attributes", {})
 
     @extra_attributes.setter
@@ -631,4 +682,5 @@ class BaseModel(dataclasses_json.DataClassJsonMixin, BaseCommon):
                 if get_env_extra_warn():
                     warnings.warn(message=msg, category=ExtraAttributeWarning)
 
+        # noinspection PyAttributeOutsideInit
         self._extra_attributes = value

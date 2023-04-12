@@ -273,20 +273,6 @@ class TestAsTimezone:
         assert result == dt
 
 
-def get_approximate_datetime(seconds=1):
-    """
-
-    Args:
-        seconds:
-
-    Returns:
-
-    """
-    return (datetime.datetime.utcnow() + datetime.timedelta(seconds=seconds)).astimezone(
-        datetime.timezone.utc
-    )
-
-
 class TestParseDatetime:
     @pytest.mark.parametrize(
         "input_value,expected",

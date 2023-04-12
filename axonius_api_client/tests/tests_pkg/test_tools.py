@@ -6,6 +6,7 @@ import tempfile
 
 import dateutil.tz
 import pytest
+from datetime import timezone
 
 from axonius_api_client.api.json_api.generic import IntValue
 from axonius_api_client.constants.api import GUI_PAGE_SIZES
@@ -72,7 +73,6 @@ from axonius_api_client.tools import (
     strip_right,
     strip_str,
     sysinfo,
-    timedelta,
     token_parse,
 )
 
@@ -126,7 +126,7 @@ class TestCoerceStr:
 
 class TestDtDaysLeft:
     def test_valid(self):
-        assert dt_days_left(datetime.utcnow() + timedelta(days=100)) == 100
+        assert dt_days_left(datetime.datetime.utcnow() + datetime.timedelta(days=100)) == 100
 
 
 class TestKvDump:
@@ -1195,7 +1195,7 @@ class TestJsonDump:
 
     def test_serial(self):
         dc = IntValue(value=1111)
-        now = datetime.utcnow()
+        now = datetime.datetime.utcnow()
         obj = {"foo": json_dump, "now": now, "dc": dc}
 
         exp = [
@@ -1395,27 +1395,27 @@ class TestDtMinAgo:
 
     def test_min_ago_utc_str(self):
         """Simple test."""
-        then = format(dt_now() - timedelta(minutes=1))
+        then = format(dt_now() - datetime.timedelta(minutes=1))
         assert dt_min_ago(obj=then) == 1
 
     def test_min_ago_utc_dt(self):
         """Simple test."""
-        then = dt_now() - timedelta(minutes=1)
+        then = dt_now() - datetime.timedelta(minutes=1)
         assert dt_min_ago(obj=then) == 1
 
     def test_min_ago_utc_dt_naive(self):
         """Simple test."""
-        then = dt_now(None) - timedelta(minutes=1)
+        then = dt_now(None) - datetime.timedelta(minutes=1)
         assert dt_min_ago(obj=then) == 1
 
     def test_min_ago_utc_dtdelta(self):
         """Simple test."""
-        then = timedelta(minutes=3)
+        then = datetime.timedelta(minutes=3)
         assert dt_min_ago(obj=then) == 3
 
     def test_min_ago_naive(self):
         """Simple test."""
-        then = datetime.now() - timedelta(minutes=1)
+        then = datetime.datetime.now() - datetime.timedelta(minutes=1)
         assert dt_min_ago(obj=format(then)) == 1
 
 
@@ -1431,7 +1431,7 @@ class TestDtNow:
         assert not now.tzinfo
 
     def test_now_delta(self):
-        then = dt_now(delta=timedelta(minutes=5))
+        then = dt_now(delta=datetime.timedelta(minutes=5))
         assert dt_min_ago(then) == 5
 
 
@@ -1440,24 +1440,24 @@ class TestDtParse:
 
     @pytest.mark.parametrize(
         "val",
-        [format(dt_now()), dt_now(), timedelta(minutes=1)],
+        [format(dt_now()), dt_now(), datetime.timedelta(minutes=1)],
         scope="class",
     )
     def test_val(self, val):
         now = dt_parse(obj=val)
-        assert isinstance(now, datetime)
+        assert isinstance(now, datetime.datetime)
 
     def test_list(self):
         now = [format(dt_now())]
         now = dt_parse(obj=now)
         assert isinstance(now, list)
-        assert [isinstance(x, datetime) for x in now]
+        assert [isinstance(x, datetime.datetime) for x in now]
 
     def test_default_tz(self):
-        now = datetime.now()
+        now = datetime.datetime.now()
         assert not now.tzinfo
         ret = dt_parse(obj=now, default_tz_utc=True)
-        assert ret.tzinfo == dateutil.tz.tzutc()
+        assert ret.tzinfo in [dateutil.tz.tzutc(), timezone.utc]
 
 
 class TestDtWithinMin:
@@ -1465,12 +1465,12 @@ class TestDtWithinMin:
 
     @pytest.mark.parametrize("val", [None, "x", False, True, {}, [], 6, "8", b"9"], scope="class")
     def test_bad(self, val):
-        then = dt_now(delta=timedelta(minutes=5))
+        then = dt_now(delta=datetime.timedelta(minutes=5))
         assert dt_within_min(obj=then, n=val) is False
 
     @pytest.mark.parametrize("val", [0, 4, "1", b"2"], scope="class")
     def test_ok(self, val):
-        then = dt_now(delta=timedelta(minutes=5))
+        then = dt_now(delta=datetime.timedelta(minutes=5))
         assert dt_within_min(obj=then, n=val) is True
 
 

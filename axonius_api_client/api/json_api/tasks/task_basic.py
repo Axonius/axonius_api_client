@@ -2,7 +2,7 @@
 """Models for API requests & responses."""
 import dataclasses
 import typing as t
-from datetime import datetime
+import datetime
 
 import marshmallow
 
@@ -212,8 +212,8 @@ class TaskBasic(BaseModel):
         SCHEMA, "result_metadata_trigger_condition"
     )
     discovery_id: t.Optional[str] = field_from_mm(SCHEMA, "discovery_id")
-    finished_at: t.Optional[datetime] = field_from_mm(SCHEMA, "finished_at")
-    started_at: t.Optional[datetime] = field_from_mm(SCHEMA, "started_at")
+    finished_at: t.Optional[datetime.datetime] = field_from_mm(SCHEMA, "finished_at")
+    started_at: t.Optional[datetime.datetime] = field_from_mm(SCHEMA, "started_at")
 
     action_names: t.List[str] = field_from_mm(SCHEMA, "action_names")
     actions_details: dict = field_from_mm(SCHEMA, "actions_details")

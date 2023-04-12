@@ -21,7 +21,15 @@ from ...tools import (
     json_dump,
     listify,
 )
-from .. import json_api
+from ..json_api.assets import (
+    AssetRequest,
+    CountRequest,
+    Count,
+    AssetById,
+    HistoryDates,
+    AssetsPage,
+    AssetTypeHistoryDates,
+)
 from ..api_endpoints import ApiEndpoints, ApiEndpoint
 from ..asset_callbacks.tools import get_callbacks_cls
 from ..asset_callbacks.tools import Base as BaseCallbacks
@@ -887,7 +895,7 @@ class AssetMixin(ModelMixins):
         frontend_sent_time: t.Optional[datetime.datetime] = None,
         query_id: t.Optional[t.Union[str, uuid.UUID]] = None,
         saved_query_id: t.Optional[str] = None,
-        request_obj: t.Optional[json_api.assets.CountRequest] = None,
+        request_obj: t.Optional[CountRequest] = None,
         http_args: t.Optional[dict] = None,
         sleep: t.Optional[t.Union[int, float]] = 0.5,
         **kwargs,
@@ -932,40 +940,34 @@ class AssetMixin(ModelMixins):
             request_obj: request object to use instead of building one
             http_args: args to pass to http request
             sleep: time to sleep between requests
-            **kwargs: unused
+            **kwargs: sent to :meth:`build_count_request`
         """
-        if not isinstance(request_obj, json_api.assets.CountRequest):
-            request_obj = json_api.assets.CountRequest(
-                filter=query,
-                history=history_date_parsed,
-                use_cache_entry=use_cache_entry,
-                saved_query_id=saved_query_id,
-                query_id=query_id,
-                use_heavy_fields_collection=use_heavy_fields_collection,
-                frontend_sent_time=frontend_sent_time,
-            )
-
+        request_obj = self.build_count_request(
+            request_obj=request_obj,
+            filter=query,
+            history=history_date_parsed,
+            use_cache_entry=use_cache_entry,
+            saved_query_id=saved_query_id,
+            query_id=query_id,
+            use_heavy_fields_collection=use_heavy_fields_collection,
+            frontend_sent_time=frontend_sent_time,
+            **kwargs,
+        )
         if not isinstance(http_args, dict):
             http_args = {}
-
         if not isinstance(wiz_parsed, dict):
             wiz_parsed = self.get_wiz_entries(wiz_entries=wiz_entries)
-
         if isinstance(wiz_parsed, dict):
             wiz_query: t.Optional[str] = wiz_parsed.get("query")
             if isinstance(wiz_query, str) and wiz_query:
                 request_obj.filter = wiz_query
-
-        if not isinstance(history_date_parsed, str) and not request_obj.history:
+        if not history_date_parsed and not request_obj.history:
             request_obj.history = self.get_history_date(
                 date=history_date, days_ago=history_days_ago, exact=history_exact
             )
-
         count: t.Optional[int] = None
         while not isinstance(count, int):
-            response: json_api.assets.Count = self._count_by_request(
-                request_obj=request_obj, http_args=http_args
-            )
+            response: Count = self._count(request_obj=request_obj, http_args=http_args)
             count: t.Optional[int] = response.value
             if isinstance(count, int):
                 break
@@ -1057,6 +1059,10 @@ class AssetMixin(ModelMixins):
             If ``export`` equals ``xlsx``, see
             :meth:`axonius_api_client.api.asset_callbacks.base_xlsx.Xlsx.args_map`.
 
+            :obj:`axonius_api_client.constants.asset_helpers.ASSET_HELPERS` for a list of
+            helpers that translate between GUI titles, API request attributes, and saved query
+            paths.
+
         Args:
             generator: return an iterator for assets that will yield rows as they are fetched
             **kwargs: passed to :meth:`get_generator`
@@ -1107,19 +1113,42 @@ class AssetMixin(ModelMixins):
         saved_query_id: t.Optional[str] = None,
         query_id: t.Optional[t.Union[str, uuid.UUID]] = None,
         is_refresh: bool = False,
-        null_for_non_exist: bool = True,
+        null_for_non_exist: bool = False,
         source_component: t.Optional[str] = None,
         frontend_sent_time: t.Optional[datetime.datetime] = None,
         filter_out_non_existing_fields: bool = True,
         complex_fields_preview_limit: t.Optional[int] = None,
         max_field_items: t.Optional[int] = None,
         initial_count: t.Optional[int] = None,
-        request_obj: t.Optional[json_api.assets.AssetRequest] = None,
+        request_obj: t.Optional[AssetRequest] = None,
         export_templates: t.Optional[dict] = None,
         http_args: t.Optional[dict] = None,
         **kwargs,
     ) -> t.Generator[dict, None, None]:
         """Get assets from a query.
+
+        See Also:
+            If ``export`` is not supplied, see
+            :meth:`axonius_api_client.api.asset_callbacks.base.Base.args_map`.
+
+            If ``export`` equals ``json``, see
+            :meth:`axonius_api_client.api.asset_callbacks.base_json.Json.args_map`.
+
+            If ``export`` equals ``csv``, see
+            :meth:`axonius_api_client.api.asset_callbacks.base_csv.Csv.args_map`.
+
+            If ``export`` equals ``json_to_csv``, see
+            :meth:`axonius_api_client.api.asset_callbacks.base_json_to_csv.JsonToCsv.args_map`.
+
+            If ``export`` equals ``table``, see
+            :meth:`axonius_api_client.api.asset_callbacks.base_table.Table.args_map`.
+
+            If ``export`` equals ``xlsx``, see
+            :meth:`axonius_api_client.api.asset_callbacks.base_xlsx.Xlsx.args_map`.
+
+            :obj:`axonius_api_client.constants.asset_helpers.ASSET_HELPERS` for a list of
+            helpers that translate between GUI titles, API request attributes, and saved query
+            paths.
 
         Args:
             query: if supplied, only get the assets that match the query
@@ -1176,32 +1205,34 @@ class AssetMixin(ModelMixins):
             request_obj: request object to use for this query
             **kwargs: passed thru to the asset callback defined in ``export``
         """
-        if not isinstance(request_obj, json_api.assets.AssetRequest):
-            request_obj: json_api.assets.AssetRequest = json_api.assets.AssetRequest(
-                search=search,
-                filter=query,
-                history=history_date_parsed,
-                sort=sort_field_parsed,
-                field_filters=field_filters,
-                excluded_adapters=excluded_adapters,
-                asset_filters=asset_filters,
-                expressions=expressions,
-                include_details=include_details,
-                include_notes=include_notes,
-                use_cursor=use_cursor,
-                cursor_id=cursor_id,
-                saved_query_id=saved_query_id,
-                query_id=query_id,
-                source_component=source_component,
-                frontend_sent_time=frontend_sent_time,
-                filter_out_non_existing_fields=filter_out_non_existing_fields,
-                is_refresh=is_refresh,
-                null_for_non_exist=null_for_non_exist,
-                max_field_items=max_field_items,
-                complex_fields_preview_limit=complex_fields_preview_limit,
-                use_heavy_fields_collection=use_heavy_fields_collection,
-                asset_excluded_adapters=asset_excluded_adapters,
-            )
+        request_obj: AssetRequest = self.build_get_request(
+            request_obj=request_obj,
+            search=search,
+            filter=query,
+            history=history_date_parsed,
+            sort=sort_field_parsed,
+            field_filters=field_filters,
+            excluded_adapters=excluded_adapters,
+            asset_filters=asset_filters,
+            expressions=expressions,
+            include_details=include_details,
+            include_notes=include_notes,
+            use_cursor=use_cursor,
+            cursor_id=cursor_id,
+            saved_query_id=saved_query_id,
+            query_id=query_id,
+            source_component=source_component,
+            frontend_sent_time=frontend_sent_time,
+            filter_out_non_existing_fields=filter_out_non_existing_fields,
+            is_refresh=is_refresh,
+            null_for_non_exist=null_for_non_exist,
+            max_field_items=max_field_items,
+            complex_fields_preview_limit=complex_fields_preview_limit,
+            use_heavy_fields_collection=use_heavy_fields_collection,
+            asset_excluded_adapters=asset_excluded_adapters,
+        )
+        request_obj.get_metadata = True
+        request_obj.use_cursor = use_cursor
 
         if not isinstance(http_args, dict):
             http_args: dict = {}
@@ -1288,7 +1319,7 @@ class AssetMixin(ModelMixins):
             "export_templates": export_templates,
             "request_obj": request_obj,
         }
-        state: dict = json_api.assets.AssetsPage.create_state(
+        state: dict = AssetsPage.create_state(
             max_pages=max_pages,
             max_rows=max_rows,
             page_sleep=page_sleep,
@@ -1306,24 +1337,19 @@ class AssetMixin(ModelMixins):
         self.LOG.info(f"STARTING FETCH store={json_dump(store)}")
         self.LOG.debug(f"STARTING FETCH state={json_dump(state)}")
 
-        request_obj.page_size = state["page_size"]
-        request_obj.get_metadata = True
-        request_obj.use_cursor = use_cursor
-        request_obj.cursor_id = cursor_id
-
         while not state["stop_fetch"]:
             request_obj.filter = store["query"]
             request_obj.fields = {self.ASSET_TYPE: store["fields_parsed"]}
             request_obj.include_details = store["include_details"]
             request_obj.include_notes = store["include_notes"]
-            request_obj.cursor_id = state["page_cursor"]
-            request_obj.row_start = state["rows_offset"]
+            request_obj.set_offset(state["rows_offset"])
+            request_obj.set_limit(state["page_size"])
 
             try:
                 start_dt: datetime.datetime = dt_now()
-                page: json_api.assets.AssetsPage = self._get_by_request(
-                    request_obj=request_obj, http_args=http_args
-                )
+                page: AssetsPage = self._get(request_obj=request_obj, http_args=http_args)
+                if request_obj.use_cursor:
+                    request_obj.cursor_id = page.cursor
                 state: dict = page.process_page(state=state, start_dt=start_dt, apiobj=self)
                 for row in page.assets:
                     state: dict = page.start_row(state=state, apiobj=self, row=row)
@@ -1345,7 +1371,7 @@ class AssetMixin(ModelMixins):
         include_excluded_adapters: bool = True,
         include_asset_excluded_adapters: bool = True,
         include_field_filters: bool = True,
-        fields_default: bool = False,
+        include_asset_filters: bool = True,
         **kwargs,
     ) -> GEN_TYPE:
         """Get assets that would be returned by a saved query.
@@ -1362,18 +1388,19 @@ class AssetMixin(ModelMixins):
             Get assets from a saved query with complex fields flattened
             >>> assets: t.List[dict] = apiobj.get_by_saved_query(name="test", field_flatten=True)
 
-        Notes:
-            The query, fields, expressions, excluded adapters, asset excluded adapters,
-            and column filters defined in the saved query will be used to
-            get the assets.
+        See Also:
+            :obj:`axonius_api_client.constants.asset_helpers.ASSET_HELPERS` for a list of
+            helpers that translate between GUI titles, API request attributes, and saved query
+            paths.
 
         Args:
             name: name of saved query to get assets from
             include_fields: include fields from saved query
-            include_excluded_adapters: include excluded adapters from saved query
-            include_asset_excluded_adapters: include asset excluded adapters from saved query
-            include_field_filters: include field filters from saved query
-            fields_default: include default fields, defaults to False for get by sq
+            include_excluded_adapters: include column filters for excluded adapters from saved query
+            include_asset_excluded_adapters: include column filters for asset excluded adapters
+                from saved query
+            include_field_filters: include column filters for field filters from saved query
+            include_asset_filters: include column filters for asset filters from saved query
             **kwargs: passed to :meth:`get`
         """
         sq = self.saved_query.get_by_multi(sq=name)
@@ -1396,7 +1423,12 @@ class AssetMixin(ModelMixins):
         if include_field_filters:
             kwargs["field_filters"] = _view.get("fieldFilters")
 
-        kwargs["fields_default"] = fields_default
+        if include_asset_filters:
+            kwargs["asset_filters"] = _view.get("assetFilters")
+
+        if kwargs.get("fields_manual"):
+            kwargs.setdefault("fields_default", False)
+
         return self.get(**kwargs)
 
     def get_wiz_entries(
@@ -1534,7 +1566,7 @@ class AssetMixin(ModelMixins):
 
         """
         try:
-            return self._get_by_id(id=id).asset
+            return self._get_by_id(id=id).to_dict()
         except ResponseNotOk as exc:
             if exc.response.status_code == 404:
                 asset_type = self.ASSET_TYPE
@@ -1680,7 +1712,7 @@ class AssetMixin(ModelMixins):
         return self.get(**kwargs)
 
     @cachetools.cached(cache=HISTORY_DATES_OBJ_CACHE)
-    def history_dates_obj(self) -> json_api.assets.AssetTypeHistoryDates:
+    def history_dates_obj(self) -> AssetTypeHistoryDates:
         """Pass."""
         return self._history_dates().parsed[self.ASSET_TYPE]
 
@@ -1714,6 +1746,61 @@ class AssetMixin(ModelMixins):
 
         self.LOG.debug(f"Built query: {query!r}")
         return query
+
+    @staticmethod
+    def build_get_request(
+        request_obj: t.Optional[AssetRequest] = None,
+        offset: t.Optional[int] = 0,
+        limit: t.Optional[int] = PAGE_SIZE,
+        remove_unknown_arguments: bool = True,
+        warn_unknown_arguments: bool = True,
+        **kwargs,
+    ) -> AssetRequest:
+        """Build a request object for a get assets request.
+
+        Args:
+            request_obj: request object to use
+            offset: offset to start at
+            limit: number of assets to return
+            remove_unknown_arguments: remove unknown arguments from kwargs
+            warn_unknown_arguments: warn about unknown arguments
+            **kwargs: passed to :meth:`load_request`
+        """
+        if not isinstance(request_obj, AssetRequest):
+            api_endpoint: ApiEndpoint = ApiEndpoints.assets.get
+            request_obj: AssetRequest = api_endpoint.load_request(
+                remove_unknown_arguments=remove_unknown_arguments,
+                warn_unknown_arguments=warn_unknown_arguments,
+                **kwargs,
+            )
+            request_obj.set_limit(limit)
+            request_obj.set_offset(offset)
+        return request_obj
+
+    @staticmethod
+    def build_count_request(
+        request_obj: t.Optional[CountRequest] = None,
+        remove_unknown_arguments: bool = True,
+        warn_unknown_arguments: bool = True,
+        **kwargs,
+    ) -> CountRequest:
+        """Build a request object for a get asset count request.
+
+        Args:
+            request_obj: request object to use
+            remove_unknown_arguments: remove unknown arguments from kwargs
+            warn_unknown_arguments: warn about unknown arguments
+            **kwargs: passed to :meth:`load_request`
+        """
+        if not isinstance(request_obj, CountRequest):
+            api_endpoint: ApiEndpoint = ApiEndpoints.assets.count
+            kwargs, _ = CountRequest.remove_unknown_arguments(
+                kwargs=kwargs,
+                remove_unknown_arguments=remove_unknown_arguments,
+                warn_unknown_arguments=warn_unknown_arguments,
+            )
+            request_obj: CountRequest = api_endpoint.load_request(**kwargs)
+        return request_obj
 
     @property
     def data_scopes(self):
@@ -1758,105 +1845,83 @@ class AssetMixin(ModelMixins):
         """Query wizard builder from CSV."""
 
         self.LAST_GET: t.Optional[dict] = None
-        """Request object sent for last :meth:`get` request"""
+        """Request object sent for last :meth:`_get` request"""
 
-        self.LAST_GET_REQUEST_OBJ: t.Optional[json_api.assets.AssetRequest] = None
-        """Request data model sent for last :meth:`get` request"""
+        self.LAST_COUNT: t.Optional[dict] = None
+        """Request object sent for last :meth:`_count` request"""
+
+        self.LAST_GET_REQUEST_OBJ: t.Optional[AssetRequest] = None
+        """Request data model sent for last :meth:`_get` request"""
+
+        self.LAST_COUNT_REQUEST_OBJ: t.Optional[CountRequest] = None
+        """Request data model sent for last :meth:`_count` request"""
 
         self.LAST_CALLBACKS: t.Optional[Base] = None
         """Callbacks object used for last :meth:`get` request."""
 
         super(AssetMixin, self)._init(**kwargs)
 
-    def _get_by_request(
+    def _get(
         self,
-        request_obj: t.Optional[json_api.assets.AssetRequest] = None,
-        row_start: t.Optional[int] = None,
+        request_obj: t.Optional[AssetRequest] = None,
+        offset: t.Optional[int] = 0,
+        limit: t.Optional[int] = PAGE_SIZE,
         http_args: t.Optional[dict] = None,
-    ) -> json_api.assets.AssetsPage:
+        **kwargs,
+    ) -> AssetsPage:
         """Private API method to get a page of assets using a request object.
 
         Args:
             request_obj: request object to use
-
+            offset: offset to start at
+            limit: number of assets to return
+            http_args: arguments to pass to :meth:`requests.Session.request`
+            **kwargs: passed to :meth:`build_get_request`
         """
-        if not isinstance(request_obj, json_api.assets.AssetRequest):
-            request_obj = json_api.assets.AssetRequest()
-        asset_type: str = self.ASSET_TYPE
-        api_endpoint: ApiEndpoint = ApiEndpoints.assets.get
-        request_obj.row_start = row_start
-        self.LAST_GET_REQUEST_OBJ: json_api.assets.AssetRequest = request_obj
+        request_obj: AssetRequest = self.build_get_request(
+            request_obj=request_obj, offset=offset, limit=limit, **kwargs
+        )
+        self.LOG.debug(f"Getting {self.ASSET_TYPE} assets with request {json_dump(request_obj)}")
+        self.LAST_GET_REQUEST_OBJ: AssetRequest = request_obj
         self.LAST_GET: dict = request_obj.to_dict()
-        http_args: dict = http_args or {}
-        response: json_api.assets.AssetsPage = api_endpoint.perform_request(
-            http=self.auth.http, request_obj=request_obj, asset_type=asset_type, http_args=http_args
+        api_endpoint: ApiEndpoint = ApiEndpoints.assets.get
+        response: AssetsPage = api_endpoint.perform_request(
+            http=self.auth.http,
+            request_obj=request_obj,
+            asset_type=self.ASSET_TYPE,
+            http_args=http_args,
         )
         return response
 
-    def _get(
+    def _count(
         self,
-        always_cached_query: bool = False,
-        use_cache_entry: bool = False,
-        include_details: bool = False,
-        include_notes: bool = False,
-        get_metadata: bool = True,
-        use_cursor: bool = True,
-        history_date: t.Optional[str] = None,
-        filter: t.Optional[str] = None,
-        cursor_id: t.Optional[str] = None,
-        sort: t.Optional[str] = None,
-        excluded_adapters: t.Optional[dict] = None,
-        field_filters: t.Optional[dict] = None,
-        fields: t.Optional[dict] = None,
-        saved_query_id: t.Optional[str] = None,
-        expressions: t.Optional[t.List[dict]] = None,
-        offset: int = 0,
-        limit: int = PAGE_SIZE,
+        request_obj: t.Optional[CountRequest] = None,
         http_args: t.Optional[dict] = None,
-    ) -> json_api.assets.AssetsPage:
-        """Private API method to get a page of assets.
+        **kwargs,
+    ) -> Count:
+        """Direct API method to get the count of assets using a request object.
 
         Args:
-            always_cached_query (bool, optional): UNK
-            use_cache_entry (bool, optional): UNK
-            include_details (bool, optional): include details fields showing the adapter source
-                of agg values
-            include_notes (bool, optional): Description
-            get_metadata (bool, optional): Description
-            use_cursor (bool, optional): Description
-            history_date (t.Optional[str], optional): return assets for a given historical date
-            filter (t.Optional[str], optional): Description
-            cursor_id (t.Optional[str], optional): Description
-            sort (t.Optional[str], optional): Description
-            excluded_adapters (t.Optional[dict], optional): Description
-            field_filters (t.Optional[dict], optional): Description
-            fields (t.Optional[dict], optional): CSV or list of fields to include in return
-            offset (int, optional): Description
-            limit (int, optional): Description
-
+            request_obj: request object to use
+            http_args: Arguments to pass to the HTTP request
+            kwargs: Arguments to pass to :meth:`build_count_request`
         """
-        api_endpoint: ApiEndpoint = ApiEndpoints.assets.get
-        request_obj: json_api.assets.AssetRequest = api_endpoint.load_request(
-            always_cached_query=always_cached_query,
-            use_cache_entry=use_cache_entry,
-            include_details=include_details,
-            include_notes=include_notes,
-            get_metadata=get_metadata,
-            use_cursor=use_cursor,
-            filter=filter,
-            cursor_id=cursor_id,
-            history=history_date,
-            fields={self.ASSET_TYPE: listify(fields)},
-            sort=sort,
-            excluded_adapters=excluded_adapters or {},
-            field_filters=field_filters or {},
-            saved_query_id=saved_query_id,
-            expressions=expressions or [],
+        request_obj = self.build_count_request(request_obj=request_obj, **kwargs)
+        self.LOG.debug(
+            f"Getting count of {self.ASSET_TYPE} assets with request {json_dump(request_obj)}"
         )
-        request_obj.set_page(limit=limit, offset=offset)
-        return self._get_by_request(request_obj=request_obj, http_args=http_args)
+        self.LAST_COUNT_REQUEST_OBJ: CountRequest = request_obj
+        self.LAST_COUNT: dict = request_obj.to_dict()
+        api_endpoint: ApiEndpoint = ApiEndpoints.assets.count
+        response: Count = api_endpoint.perform_request(
+            http=self.auth.http,
+            request_obj=request_obj,
+            asset_type=self.ASSET_TYPE,
+            http_args=http_args,
+        )
+        return response
 
-    def _get_by_id(self, id: str) -> json_api.assets.AssetById:
+    def _get_by_id(self, id: str) -> AssetById:
         """Private API method to get the full metadata of all adapters for a single asset.
 
         Args:
@@ -1867,65 +1932,6 @@ class AssetMixin(ModelMixins):
         return api_endpoint.perform_request(
             http=self.auth.http, asset_type=asset_type, internal_axon_id=id
         )
-
-    def _count_by_request(
-        self,
-        request_obj: t.Optional[json_api.assets.CountRequest] = None,
-        http_args: t.Optional[dict] = None,
-    ) -> json_api.assets.Count:
-        """Private API method to get the count of assets using a request object.
-
-        Args:
-            request_obj: request object to use
-
-        """
-        if not isinstance(request_obj, json_api.assets.CountRequest):
-            request_obj = json_api.assets.CountRequest()
-        asset_type: str = self.ASSET_TYPE
-        api_endpoint: ApiEndpoint = ApiEndpoints.assets.count
-        self.LAST_COUNT_REQUEST_OBJ: json_api.assets.CountRequest = request_obj
-        self.LAST_COUNT: dict = request_obj.to_dict()
-        if not isinstance(http_args, dict):
-            http_args = {}
-
-        http_args: dict = http_args or {}
-        response: json_api.assets.Count = api_endpoint.perform_request(
-            http=self.auth.http, request_obj=request_obj, asset_type=asset_type, http_args=http_args
-        )
-        return response
-
-    def _count(
-        self,
-        filter: t.Optional[str] = None,
-        search: t.Optional[str] = None,
-        use_heavy_fields_collection: bool = False,
-        frontend_sent_time: t.Optional[datetime.datetime] = None,
-        history_date: t.Optional[str] = None,
-        use_cache_entry: bool = False,
-        query_id: t.Optional[str] = None,
-        saved_query_id: t.Optional[str] = None,
-    ) -> json_api.assets.Count:
-        """Private API method to get the count of assets.
-
-        Args:
-            filter (t.Optional[str], optional): if supplied,
-                only return the count of assets that match the query
-            history_date (t.Optional[t.Union[str, timedelta, datetime]], optional): Description
-            use_cache_entry (bool, optional): Description
-
-        """
-        api_endpoint: ApiEndpoint = ApiEndpoints.assets.count
-        request_obj = api_endpoint.load_request(
-            use_cache_entry=use_cache_entry,
-            filter=filter,
-            saved_query_id=saved_query_id,
-            history=history_date,
-            search=search,
-            use_heavy_fields_collection=use_heavy_fields_collection,
-            frontend_sent_time=frontend_sent_time,
-            query_id=query_id,
-        )
-        return self._count_by_request(request_obj=request_obj)
 
     def _destroy(self, destroy: bool, history: bool) -> dict:  # pragma: no cover
         """Private API method to destroy ALL assets.
@@ -1945,7 +1951,7 @@ class AssetMixin(ModelMixins):
             http=self.auth.http, request_obj=request_obj, asset_type=asset_type
         )
 
-    def _history_dates(self) -> json_api.assets.HistoryDates:
+    def _history_dates(self) -> HistoryDates:
         """Private API method to get all known historical dates."""
         api_endpoint = ApiEndpoints.assets.history_dates
         return api_endpoint.perform_request(http=self.auth.http)

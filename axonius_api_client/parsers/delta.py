@@ -249,7 +249,11 @@ def as_timezone(
         empty=empty,
         as_none=as_none,
     )
-    return value.astimezone(tz) if isinstance(tz, datetime.tzinfo) else value
+    return (
+        value.astimezone(tz)
+        if isinstance(value, datetime.datetime) and isinstance(tz, datetime.tzinfo)
+        else value
+    )
 
 
 def parse_dt(

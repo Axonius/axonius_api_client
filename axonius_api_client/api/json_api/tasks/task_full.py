@@ -2,7 +2,7 @@
 """Models for API requests & responses."""
 import dataclasses
 import typing as t
-from datetime import datetime
+import datetime
 
 import marshmallow
 
@@ -121,8 +121,8 @@ class TaskFull(BaseModel):
     view: t.Optional[str] = field_from_mm(SCHEMA, "view")
     period: t.Optional[str] = field_from_mm(SCHEMA, "period")
     condition: t.Optional[str] = field_from_mm(SCHEMA, "condition")
-    started: t.Optional[datetime] = field_from_mm(SCHEMA, "started")
-    finished: t.Optional[datetime] = field_from_mm(SCHEMA, "finished")
+    started: t.Optional[datetime.datetime] = field_from_mm(SCHEMA, "started")
+    finished: t.Optional[datetime.datetime] = field_from_mm(SCHEMA, "finished")
 
     SCHEMA: t.ClassVar[marshmallow.Schema] = SCHEMA
 

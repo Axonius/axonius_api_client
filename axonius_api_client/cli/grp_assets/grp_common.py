@@ -16,6 +16,7 @@ from ..options import (
     get_option_fields_default,
     get_option_help,
 )
+from ...constants.asset_helpers import ASSETS_HELPERS
 
 TEMPLATES = "(supports templating: {DATE}, {HISTORY_DATE})"
 OPT_EXPORT_FILE = click.option(
@@ -44,7 +45,7 @@ OPT_INCLUDE_FIELDS = click.option(
     "-if/-nif",
     "include_fields",
     default=True,
-    help="Include fields defined in the saved query",
+    help=f"Include fields from the saved query {ASSETS_HELPERS.fields}",
     show_envvar=True,
     show_default=True,
 )
@@ -53,7 +54,10 @@ OPT_INCLUDE_EXCLUDED_ADAPTERS = click.option(
     "-iea/-niea",
     "include_exclude_adapters",
     default=True,
-    help="Include excluded adapters defined in the saved query",
+    help=(
+        "Include column filters for excluded adapters from the saved query"
+        f" {ASSETS_HELPERS.excluded_adapters}"
+    ),
     show_envvar=True,
     show_default=True,
 )
@@ -62,7 +66,10 @@ OPT_ASSET_INCLUDE_EXCLUDED_ADAPTERS = click.option(
     "-iaea/-niaea",
     "include_asset_exclude_adapters",
     default=True,
-    help="Include asset excluded adapters fields defined in the saved query",
+    help=(
+        "Include column filters for asset excluded adapters fields from the saved query"
+        f" {ASSETS_HELPERS.excluded_adapters}"
+    ),
     show_envvar=True,
     show_default=True,
 )
@@ -71,7 +78,22 @@ OPT_INCLUDE_FIELD_FILTERS = click.option(
     "-iff/-niff",
     "include_field_filters",
     default=True,
-    help="Include field filters defined in the saved query",
+    help=(
+        "Include column filters for field filters from the saved query"
+        f" {ASSETS_HELPERS.field_filters}"
+    ),
+    show_envvar=True,
+    show_default=True,
+)
+OPT_INCLUDE_ASSET_FILTERS = click.option(
+    "--include-asset-filters/--no-include-asset-filters",
+    "-iaf/-niaf",
+    "include_asset_filters",
+    default=True,
+    help=(
+        "Include column filters for asset filters from the saved query"
+        f" {ASSETS_HELPERS.asset_filters}"
+    ),
     show_envvar=True,
     show_default=True,
 )
@@ -100,6 +122,7 @@ OPTS_GET_BY_SQ = [
     OPT_INCLUDE_EXCLUDED_ADAPTERS,
     OPT_ASSET_INCLUDE_EXCLUDED_ADAPTERS,
     OPT_INCLUDE_FIELD_FILTERS,
+    OPT_INCLUDE_ASSET_FILTERS,
     OPT_USE_CACHE_ENTRY,
     OPT_USE_HEAVY_FIELDS_COLLECTION,
 ]

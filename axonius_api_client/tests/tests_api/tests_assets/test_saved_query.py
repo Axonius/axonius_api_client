@@ -1079,6 +1079,10 @@ def validate_sq(asset):
     queryStrings = view.pop("queryStrings", {})
     assert isinstance(queryStrings, dict)
 
+    # 4.9: 2023/04/11
+    folder_id = query.pop("folder_id", None)
+    assert folder_id is None or isinstance(folder_id, str)
+
     assert not query, list(query)
     assert not view, list(view)
 

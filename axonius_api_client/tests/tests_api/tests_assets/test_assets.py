@@ -316,7 +316,7 @@ class TestAssetsPublic(ModelMixinsBase):
 
     def validate_raw_data(self, apiobj, row, field):
         adapters = row["adapters"]
-        raw_datas = row[field]
+        raw_datas = row.get(field)
         assert isinstance(raw_datas, (dict, list)) and raw_datas
 
         raw_datas = listify(raw_datas)

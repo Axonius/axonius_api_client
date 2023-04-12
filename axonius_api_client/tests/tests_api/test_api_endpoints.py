@@ -5,7 +5,12 @@ import pytest
 import requests
 
 from axonius_api_client.api import json_api
-from axonius_api_client.api.api_endpoints import ApiEndpoint, ApiEndpointGroup, ApiEndpoints
+from axonius_api_client.api.api_endpoints import (
+    ApiEndpoint,
+    ApiEndpointGroup,
+    ApiEndpoints,
+    ApiEndpointsGroups,
+)
 from axonius_api_client.exceptions import (
     InvalidCredentials,
     JsonInvalidError,
@@ -23,39 +28,46 @@ from axonius_api_client.tools import get_subcls
 from ..utils import get_auth, get_url
 
 MODELS_EXCLUDE = [
-    json_api.base.BaseModel,
-    json_api.resources.PaginationRequest,
-    json_api.resources.PageSortRequest,
-    json_api.assets.AssetTypeHistoryDates,
-    json_api.adapters.Cnx,
-    json_api.system_settings.SystemSettingsUpdate,
-    json_api.assets.AssetTypeHistoryDate,
-    json_api.adapters.AdapterNodeCnx,
     json_api.adapters.AdapterClientsCount,
     json_api.adapters.AdapterNode,
-    json_api.folders.queries.FolderModel,
-    json_api.folders.enforcements.FolderModel,
+    json_api.adapters.AdapterNodeCnx,
+    json_api.adapters.Cnx,
+    json_api.assets.AssetTypeHistoryDate,
+    json_api.assets.AssetTypeHistoryDates,
+    json_api.base.BaseModel,
+    json_api.base2.BaseModel,
+    json_api.count_operator.CountOperator,
+    json_api.dashboard_spaces.Chart,
+    json_api.dashboard_spaces.ChartQuery,
+    json_api.dashboard_spaces.Size,
     json_api.data_scopes.DataScope,
-    json_api.time_range.TimeRange,
+    json_api.folders.enforcements.FolderModel,
+    json_api.folders.queries.FolderModel,
+    json_api.nested_access.Access,
     json_api.paging_state.Page,
     json_api.paging_state.PagingState,
+    json_api.resources.PaginationRequest,
     json_api.selection.IdSelection,
-    json_api.nested_access.Access,
-    json_api.dashboard_spaces.Size,
-    json_api.dashboard_spaces.ChartQuery,
-    json_api.dashboard_spaces.Chart,
+    json_api.system_settings.SystemSettingsUpdate,
+    json_api.tasks.result.Result,
+    json_api.tasks.task.Task,
+    json_api.time_range.TimeRange,
 ]
 
 SCHEMAS_EXCLUDE = [
     json_api.base.BaseSchema,
     json_api.base.BaseSchemaJson,
+    json_api.base2.BaseSchema,
     json_api.central_core.AdditionalDataAws,
-    json_api.system_settings.SystemSettingsUpdateSchema,
-    json_api.selection.IdSelectionSchema,
-    json_api.nested_access.AccessSchema,
-    json_api.dashboard_spaces.SizeSchema,
+    json_api.count_operator.CountOperatorSchema,
     json_api.dashboard_spaces.ChartSchema,
+    json_api.dashboard_spaces.SizeSchema,
+    json_api.nested_access.AccessSchema,
     json_api.nested_access.AccessSchemaJson,
+    json_api.selection.IdSelectionSchema,
+    json_api.system_settings.SystemSettingsUpdateSchema,
+    json_api.tasks.result.ResultSchema,
+    json_api.tasks.task.TaskSchema,
 ]
 
 
@@ -77,7 +89,8 @@ def get_schema_classes() -> List[Type[json_api.base.BaseSchema]]:
 
 GROUPS_SUBCLS: List[Type[ApiEndpointGroup]] = get_subcls(ApiEndpointGroup)
 GROUPS_SUBCLS_USED: List[Type[ApiEndpointGroup]] = [
-    x.__class__ for x in ApiEndpoints.get_groups().values()
+    ApiEndpointsGroups,
+    *[x.__class__ for x in ApiEndpoints.get_subgroups(recursive=True).values()],
 ]
 
 
@@ -553,7 +566,7 @@ class TestApiEndpoint:
 
 class TestApiEndpointGroups:
     def test_strs(self):
-        for group_name, group in ApiEndpoints.get_groups().items():
+        for group_name, group in ApiEndpoints.get_subgroups().items():
             assert group_name in str(ApiEndpoints)
             for endpoint_name, endpoint in group.get_endpoints().items():
                 assert endpoint_name in str(group)
