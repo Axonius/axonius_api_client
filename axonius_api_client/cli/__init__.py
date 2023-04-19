@@ -392,6 +392,16 @@ Tips:
     show_envvar=True,
     show_default=True,
 )
+@click.option(
+    "--log-hide-secrets/--no-log-hide-secrets",
+    "-lhs/-nlhs",
+    "log_hide_secrets",
+    default=True,
+    help="Enable hiding of secrets in log output",
+    is_flag=True,
+    show_envvar=True,
+    show_default=True,
+)
 @click.version_option(version.__version__)
 @context.pass_context
 @click.pass_context

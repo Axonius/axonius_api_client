@@ -119,7 +119,7 @@ class ApiEndpoint:
 
     def perform_request(
         self, http: Http, request_obj: t.Optional[BaseModel] = None, raw: bool = False, **kwargs
-    ) -> t.Union[BaseModel, JSON_TYPES]:
+    ) -> t.Union[BaseModel, JSON_TYPES, t.Any]:
         """Perform a request to this endpoint using an http object.
 
         Args:

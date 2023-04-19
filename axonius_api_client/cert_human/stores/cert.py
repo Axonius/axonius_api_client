@@ -265,7 +265,7 @@ class Cert(Store):
         """Pass."""
         url_parsed = UrlParser(url=url, default_scheme="https")
         url = url_parsed.url
-        inject_into_urllib3()
+        cls.inject_results = inject_into_urllib3()
         source = {"url": url, "method": f"{cls.__module__}.{cls.__name__}.from_requests_cert"}
         kwargs.setdefault("verify", False)
         response: requests.Response = requests.get(url, **kwargs)
@@ -279,7 +279,7 @@ class Cert(Store):
         """Pass."""
         url_parsed = UrlParser(url=url, default_scheme="https")
         url = url_parsed.url
-        inject_into_urllib3()
+        cls.inject_results = inject_into_urllib3()
         source = {"url": url, "method": f"{cls.__module__}.{cls.__name__}.from_requests_chain"}
         kwargs.setdefault("verify", False)
         response: requests.Response = requests.get(url, **kwargs)

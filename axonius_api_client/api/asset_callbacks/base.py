@@ -1214,7 +1214,7 @@ class Base:
     CB_NAME: str = "base"
     """name for this callback"""
 
-    FIND_KEYS: List[str] = ["name", "name_qual", "column_title", "name_base"]
+    FIND_KEYS: List[str] = ["name", "name_qual", "column_title"]
     """field schema keys to use when finding a fields schema"""
 
     APIOBJ = None

@@ -28,6 +28,7 @@ from ..json_api.folders.base import FolderDefaults
 from ..json_api.folders.enforcements import Folder, FolderModel, FoldersModel
 from ..json_api.saved_queries import QueryTypes, SavedQuery
 from ..mixins import ModelMixins
+from .tasks import Tasks
 
 MULTI_SQ = t.Union[str, dict, SavedQuery]
 MULTI_SET = t.Union[
@@ -817,6 +818,9 @@ class Enforcements(ModelMixins):
 
         self.api_instances: Instances = Instances(auth=self.auth, **kwargs)
         """API model for cross reference."""
+
+        self.tasks: Tasks = Tasks(auth=self.auth, **kwargs)
+        """API model for working with tasks for enforcements."""
 
     @property
     def _triggers_map(self) -> dict:

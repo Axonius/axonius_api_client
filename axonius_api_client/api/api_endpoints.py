@@ -667,7 +667,7 @@ class SystemSettings(ApiEndpointGroup):
         response_schema_cls=json_api.generic.BoolValueSchema,
         response_model_cls=json_api.generic.BoolValue,
     )
-    # PBUG: dict's not modeled
+    # PBUG: dicts not modeled
     # PBUG: bool value useless
 
     csr_get: ApiEndpoint = ApiEndpoint(
@@ -864,10 +864,43 @@ class PasswordReset(ApiEndpointGroup):
 
 
 @dataclasses.dataclass(eq=True, frozen=True, repr=False)
+class Tasks(ApiEndpointGroup):
+    """Pass."""
+
+    get_basic: ApiEndpoint = ApiEndpoint(
+        method="get",
+        path="api/enforcements/tasks",
+        request_schema_cls=json_api.tasks.GetTasksSchema,
+        request_model_cls=json_api.tasks.GetTasks,
+        response_schema_cls=json_api.tasks.TaskBasicSchema,
+        response_model_cls=json_api.tasks.TaskBasic,
+    )
+
+    get_full: ApiEndpoint = ApiEndpoint(
+        method="get",
+        path="api/enforcements/tasks/{uuid}",
+        request_schema_cls=None,
+        request_model_cls=None,
+        response_schema_cls=json_api.tasks.TaskFullSchema,
+        response_model_cls=json_api.tasks.TaskFull,
+    )
+
+    get_filters: ApiEndpoint = ApiEndpoint(
+        method="get",
+        path="api/enforcements/tasks/filters",
+        request_schema_cls=None,
+        request_model_cls=None,
+        response_schema_cls=json_api.tasks.TaskFiltersSchema,
+        response_model_cls=json_api.tasks.TaskFilters,
+    )
+
+
+# PBUG: so many things wrong with this
+@dataclasses.dataclass(eq=True, frozen=True, repr=False)
 class Enforcements(ApiEndpointGroup):
     """Pass."""
 
-    # PBUG: so many things wrong with this
+    tasks: Tasks = Tasks()
 
     get_sets: ApiEndpoint = ApiEndpoint(
         method="get",
@@ -1319,26 +1352,26 @@ class Account(ApiEndpointGroup):
 class ApiEndpoints(BaseData):
     """Pass."""
 
-    instances: ApiEndpointGroup = Instances()
-    central_core: ApiEndpointGroup = CentralCore()
-    system_settings: ApiEndpointGroup = SystemSettings()
-    remote_support: ApiEndpointGroup = RemoteSupport()
-    system_users: ApiEndpointGroup = SystemUsers()
-    system_roles: ApiEndpointGroup = SystemRoles()
-    lifecycle: ApiEndpointGroup = Lifecycle()
-    adapters: ApiEndpointGroup = Adapters()
-    signup: ApiEndpointGroup = Signup()
-    password_reset: ApiEndpointGroup = PasswordReset()
-    audit_logs: ApiEndpointGroup = AuditLogs()
-    enforcements: ApiEndpointGroup = Enforcements()
-    saved_queries: ApiEndpointGroup = SavedQueries()
-    assets: ApiEndpointGroup = Assets()
-    openapi: ApiEndpointGroup = OpenAPISpec()
-    data_scopes: ApiEndpointGroup = DataScopes()
-    dashboard_spaces: ApiEndpointGroup = DashboardSpaces()
-    folders_queries: ApiEndpointGroup = FoldersQueries()
-    folders_enforcements: ApiEndpointGroup = FoldersEnforcements()
-    account: ApiEndpointGroup = Account()
+    instances: Instances = Instances()
+    central_core: CentralCore = CentralCore()
+    system_settings: SystemSettings = SystemSettings()
+    remote_support: RemoteSupport = RemoteSupport()
+    system_users: SystemUsers = SystemUsers()
+    system_roles: SystemRoles = SystemRoles()
+    lifecycle: Lifecycle = Lifecycle()
+    adapters: Adapters = Adapters()
+    signup: Signup = Signup()
+    password_reset: PasswordReset = PasswordReset()
+    audit_logs: AuditLogs = AuditLogs()
+    enforcements: Enforcements = Enforcements()
+    saved_queries: SavedQueries = SavedQueries()
+    assets: Assets = Assets()
+    openapi: OpenAPISpec = OpenAPISpec()
+    data_scopes: DataScopes = DataScopes()
+    dashboard_spaces: DashboardSpaces = DashboardSpaces()
+    folders_queries: FoldersQueries = FoldersQueries()
+    folders_enforcements: FoldersEnforcements = FoldersEnforcements()
+    account: Account = Account()
 
     @classmethod
     def get_groups(cls) -> Dict[str, ApiEndpointGroup]:

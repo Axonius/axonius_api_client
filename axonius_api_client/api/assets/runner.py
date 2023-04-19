@@ -52,7 +52,7 @@ NOTES: str = """# Run Enforcement via manual selection
 - $count_error (int): 100000
 - $is_match (bool): $count_ids equals $count_result
 
-## Workflow: VERIFY
+## FlowTypes: VERIFY
 
 - If not $verified and not $verify_count
   - ERROR(must supply verified or verify_count as True)
@@ -86,7 +86,7 @@ NOTES: str = """# Run Enforcement via manual selection
       - set $state=re-run with $prompt=True or $verified=True to $action
       - ERROR($state)
 
-## Workflow: RUN
+## FlowTypes: RUN
 
 - If verification has not been performed:
   - If $force=False: ERROR(not verified yet, must supply force=True)

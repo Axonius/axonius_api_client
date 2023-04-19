@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 """Easy all-in-one connection handler."""
+import typing as t
+import types
 import logging
+import logging.handlers
 import pathlib
 import re
 from typing import List, Optional, Union
@@ -53,6 +56,7 @@ from .logs import LOG, HideFormatter, add_file, add_stderr, get_obj_log, set_log
 from .setup_env import get_env_ax
 from .tools import coerce_bool, coerce_int, json_dump, json_reload, sysinfo
 from .version import __version__ as VERSION
+from . import tools
 
 
 class Connect:
@@ -103,6 +107,9 @@ class Connect:
 
     """
 
+    TOOLS: types.ModuleType = tools
+    """Tools module."""
+
     def __init__(
         self,
         url: str,
@@ -146,6 +153,7 @@ class Connect:
         log_file = coerce_bool(log_file)
         self.LOG_HIDE_SECRETS: bool = coerce_bool(log_hide_secrets)
 
+        self.LOG_HIDE_SECRETS: bool = coerce_bool(log_hide_secrets)
         self.TIMEOUT_CONNECT: int = coerce_int(kwargs.get("timeout_connect", TIMEOUT_CONNECT))
         """Seconds to wait for connections to open to :attr:`url` ``kwargs=timeout_connect``"""
 
@@ -249,10 +257,10 @@ class Connect:
         self.STARTED: bool = False
         """track if :meth:`start` has been called"""
 
-        self.HANDLER_FILE: logging.handlers.RotatingFileHandler = None
+        self.HANDLER_FILE: t.Optional[logging.handlers.RotatingFileHandler] = None
         """file logging handler"""
 
-        self.HANDLER_CON: logging.StreamHandler = None
+        self.HANDLER_CON: t.Optional[logging.StreamHandler] = None
         """console logging handler"""
         HideFormatter.HIDE_ENABLED = self.LOG_HIDE_SECRETS
 
@@ -271,11 +279,8 @@ class Connect:
                 max_files=self.LOG_FILE_MAX_FILES,
                 fmt=self.LOG_FILE_FMT,
             )
-            if log_file_rotate:
-                LOG.info("Forcing file logs to rotate")
-                self.HANDLER_FILE.flush()
-                self.HANDLER_FILE.doRollover()
-                LOG.info("Forced file logs to rotate")
+        if log_file_rotate:
+            self.do_rollover()
 
         self.HTTP_ARGS: dict = {
             "url": url,
@@ -322,6 +327,17 @@ class Connect:
 
         self._init()
 
+    def do_rollover(self):
+        """Rollover log file."""
+        if self.HANDLER_FILE:
+            LOG.info("Forcing file logs to rotate")
+            self.HANDLER_FILE.flush()
+            try:
+                self.HANDLER_FILE.doRollover()
+                LOG.info("Forced file logs to rotate")
+            except Exception as exc:
+                LOG.exception("Failed to force file logs to rotate: %s", exc)
+
     def start(self):
         """Connect to and authenticate with Axonius."""
         if not self.STARTED:
@@ -339,16 +355,16 @@ class Connect:
                 if isinstance(exc, requests.ConnectTimeout):
                     timeout = self.HTTP.CONNECT_TIMEOUT
                     msg = f"{pre}: connection timed out after {timeout} seconds"
-                    cnxexc = ConnectError(msg)
+                    connect_exc = ConnectError(msg)
                 elif isinstance(exc, requests.ConnectionError):
                     reason = self._get_exc_reason(exc=exc)
-                    cnxexc = ConnectError(f"{pre}: {reason}")
+                    connect_exc = ConnectError(f"{pre}: {reason}")
                 elif isinstance(exc, InvalidCredentials):
-                    cnxexc = ConnectError(f"{pre}: Invalid Credentials supplied")
+                    connect_exc = ConnectError(f"{pre}: Invalid Credentials supplied")
                 else:
-                    cnxexc = ConnectError(f"{pre}: {exc}")
-                cnxexc.exc = exc
-                raise cnxexc
+                    connect_exc = ConnectError(f"{pre}: {exc}")
+                connect_exc.exc = exc
+                raise connect_exc
 
             self.STARTED = True
             LOG.info(str(self))
@@ -369,7 +385,7 @@ class Connect:
         return self._users
 
     @property
-    def vulnerabilities(self) -> Users:
+    def vulnerabilities(self) -> Vulnerabilities:
         """Work with user assets."""
         self.start()
         if not hasattr(self, "_vulnerabilities"):
@@ -569,9 +585,9 @@ class Connect:
 
     @classmethod
     def _get_exc_reason(cls, exc: Exception) -> str:
-        """Trim exceptions down to a more user friendly display.
+        """Trim exceptions down to a more user-friendly display.
 
-        Uses :attr:`REASON_RES` to do regex substituions.
+        Uses :attr:`REASON_RES` to do regex substitutions.
         """
         reason = str(exc)
         for reason_re in cls.REASON_RES:
@@ -584,7 +600,7 @@ class Connect:
         """JSON dump utility."""
         print(json_reload(obj, **kwargs))
 
-    REASON_RES: List[str] = [
+    REASON_RES: List[t.Pattern] = [
         re.compile(r".*?object at.*?\>\: ([a-zA-Z0-9\]\[: ]+)"),
         re.compile(r".*?\] (.*) "),
     ]

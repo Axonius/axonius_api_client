@@ -5,10 +5,10 @@ import typing as t
 
 PathLike: t.TypeVar = t.TypeVar("PathLike", pathlib.Path, str, bytes)
 PatternLike: t.TypeVar = t.TypeVar("PatternLike", t.Pattern, str, bytes)
-PatternLikeListy: t.TypeVar = t.TypeVar("PatternLikeListy", PatternLike, t.List[PatternLike])
-ComplexLike: t.Tuple[t.Type] = (dict, list, tuple)
-SimpleLike: t.Tuple[t.Type] = (str, int, bool, float)
-Refreshables = t.Optional[t.Union[str, bytes, int, float, bool]]
+PatternLikeListy: t.Type = t.Union[PatternLike, t.List[PatternLike]]
+ComplexLike: t.Tuple[t.Type, ...] = (dict, list, tuple)
+SimpleLike: t.Tuple[t.Type, ...] = (str, int, bool, float)
+Refreshables: t.Type = t.Optional[t.Union[str, bytes, int, float, bool]]
 
 
 class FolderBase:
