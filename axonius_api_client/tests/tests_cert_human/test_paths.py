@@ -4,7 +4,7 @@ import datetime
 
 import pytest
 
-from axonius_api_client.cert_human import paths
+from axonius_api_client.projects.cert_human import paths
 
 
 class TestFileInfo:

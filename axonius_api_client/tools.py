@@ -3,6 +3,7 @@
 import codecs
 import csv
 import dataclasses
+import datetime
 import inspect
 import io
 import ipaddress
@@ -14,7 +15,7 @@ import re
 import sys
 import types
 import typing as t
-from datetime import datetime, timedelta, timezone
+import uuid
 from itertools import zip_longest
 from urllib.parse import urljoin
 
@@ -27,8 +28,14 @@ import marshmallow
 
 from . import INIT_DOTENV, PACKAGE_FILE, PACKAGE_ROOT, VERSION
 from .constants.api import GUI_PAGE_SIZES, REFRESH, FolderDefaults
-from .constants.ctypes import PathLike, PatternLike, PatternLikeListy
-
+from .constants.ctypes import (
+    PathLike,
+    PatternLike,
+    PatternLikeListy,
+    TypeDate,
+    TypeFloat,
+    TypeDelta,
+)
 from .constants.general import (
     DAYS_MAP,
     DEBUG_ARGS,
@@ -44,13 +51,16 @@ from .constants.general import (
     SECHO_ARGS,
     SPLITTER,
     TRIM_MSG,
+    TRIM_POST,
     URL_STARTS,
     WARN_ARGS,
     WARN_TMPL,
     YES,
+    YES_STR,
+    NO_STR,
 )
 from .constants.logs import MAX_BODY_LEN
-from .exceptions import ToolsError
+from .exceptions import FormatError, ToolsError
 from .setup_env import find_dotenv, get_env_ax
 
 LOG: logging.Logger = logging.getLogger(PACKAGE_ROOT).getChild("tools")
@@ -82,14 +92,13 @@ def pathify(
 ) -> pathlib.Path:
     """Convert a str into a fully resolved & expanded Path object."""
     check_type(value=path, exp=(str, bytes, pathlib.Path))
+    path = bytes_to_str(value=path, encoding=path_encoding, strict=path_strict)
 
-    if isinstance(path, bytes):
-        path = bytes_to_str(value=path, strict=path_strict, encoding=path_encoding)
-        resolved = pathlib.Path(path.splitlines()[0])
-    elif isinstance(path, str):
-        resolved = pathlib.Path(path.splitlines()[0])
-    elif isinstance(path, pathlib.Path):
+    if isinstance(path, pathlib.Path):
         resolved = path
+    else:
+        path = bytes_to_str(value=path, encoding=path_encoding, strict=path_strict)
+        resolved = pathlib.Path(path.splitlines()[0])
 
     if expanduser:
         resolved = resolved.expanduser()
@@ -129,7 +138,7 @@ def is_existing_file(path: t.Any, **kwargs) -> bool:
 def listify(
     obj: t.Any = None,
     split: bool = False,
-    split_max: int = -1,
+    split_max: t.Optional[int] = -1,
     split_sep: t.Optional[PatternLike] = SPLITTER,
     strip: bool = True,
     strip_chars: t.Optional[str] = None,
@@ -153,7 +162,8 @@ def listify(
         dictkeys: if obj is dict, return list of keys of obj
     """
 
-    def do_strip(values):
+    def stripper(values: t.List[str]) -> t.List[str]:
+        """Pass."""
         return [y for y in [x.strip(strip_chars) for x in values] if y] if strip else values
 
     if "value" in kwargs:
@@ -171,10 +181,13 @@ def listify(
         if isinstance(obj, bytes):
             obj = obj.decode(encoding=encoding, errors=errors)
         if isinstance(obj, str):
+            split_args = (
+                {"maxsplit": split_max} if isinstance(split_max, int) and split_max >= 0 else {}
+            )
             if is_pattern(value=split_sep):
-                split_max = 0 if split_max == -1 else split_max
-                return do_strip(split_sep.split(obj, maxsplit=split_max))
-            return do_strip(obj.split(sep=split_sep, maxsplit=split_max))
+                return stripper(split_sep.split(obj, **split_args))
+            return stripper(obj.split(sep=split_sep, **split_args))
+
     return [obj]
 
 
@@ -182,7 +195,7 @@ def grouper(iterable: t.Iterable, n: int, fillvalue: t.Optional[t.Any] = None) -
     """Split an iterable into chunks.
 
     Args:
-        iterable: iterable to split into chunks of size n
+        iterable: iterable to split into chunks of size `n`
         n: length to split iterable into
         fillvalue: value to use as filler for last chunk
     """
@@ -194,26 +207,29 @@ def coerce_int(
     max_value: t.Optional[int] = None,
     min_value: t.Optional[int] = None,
     allow_none: bool = False,
+    as_none: t.Any = None,
     valid_values: t.Optional[t.List[int]] = None,
     errmsg: t.Optional[str] = None,
-) -> int:
+) -> t.Optional[int]:
     """Convert an object into int.
 
     Args:
         obj: object to convert to int
 
     Raises:
-        :exc:`ToolsError`: if obj is not able to be converted to int
+        :exc:`ToolsError`: if obj is not int
     """
     if allow_none and (obj is None or str(obj).lower().strip() in ["none", "null"]):
-        return None
+        return as_none
 
     pre = f"{errmsg}\n" if errmsg else ""
 
     try:
         value = int(obj)
-    except Exception:
-        raise ToolsError(f"{pre}Supplied value {obj!r} of type {trype(obj)} is not an integer.")
+    except Exception as exc:
+        raise ToolsError(
+            f"{pre}Supplied value {obj!r} of type {trype(obj)} is not an integer.\n{exc}"
+        )
 
     if max_value is not None and value > max_value:
         raise ToolsError(f"{pre}Supplied value {obj!r} is greater than max value of {max_value}.")
@@ -227,45 +243,21 @@ def coerce_int(
     return value
 
 
-# def coerce_int_float(value: t.Union[int, float, str]) -> t.Union[int, float]:
-#     """Convert an object into int or float.
-
-#     Args:
-#         obj: object to convert to int or float
-
-#     Raises:
-#         :exc:`ToolsError`: if obj is not able to be converted to int or float
-#     """
-#     if isinstance(value, float):
-#         return value
-
-#     if isinstance(value, int):
-#         return value
-
-#     if isinstance(value, str):
-#         value = value.strip()
-
-#         if value.isdigit():
-#             return int(value)
-
-#         if value.replace(".", "").isdigit():
-#             return float(value)
-
-#     vtype = trype(value)
-#     raise ToolsError(f"Supplied value {value!r} of type {vtype} is not an integer or float.")
-
-
 def coerce_int_float(
     value: t.Union[int, float, str, bytes],
     as_float: bool = False,
     error: bool = True,
     ret_value: bool = False,
+    as_none: t.Any = None,
 ) -> t.Optional[t.Union[int, float]]:
     """Coerce a value into int or float.
 
     Args:
         value (t.Union[int, float, str, bytes]): value to coerce
         as_float (bool, optional): if value is an integer, coerce to float
+        error (bool, optional): raise error if value cannot be coerced
+        ret_value (bool, optional): return value if it can be coerced
+        as_none (t.Any, optional): value to return if value cannot be coerced
 
     Returns:
         t.Optional[t.Union[int, float]]:
@@ -276,7 +268,7 @@ def coerce_int_float(
 
     value = bytes_to_str(value=value)
 
-    if is_str(value=value):
+    if isinstance(value, str):
         value = value.strip()
 
         if "." in value and value.replace(".", "").isdigit():
@@ -290,11 +282,16 @@ def coerce_int_float(
             f"Supplied value {value!r} of type {trype(value)} is not an integer or float."
         )
 
-    return value if ret_value is True else None
+    return value if ret_value is True else as_none
 
 
 def coerce_bool(
-    obj: t.Any, errmsg: t.Optional[str] = None, error: bool = True, allow_none: bool = False
+    obj: t.Any,
+    errmsg: t.Optional[str] = None,
+    error: bool = True,
+    allow_none: bool = False,
+    as_none: t.Any = None,
+    as_original: bool = False,
 ) -> bool:
     """Convert an object into bool.
 
@@ -304,15 +301,16 @@ def coerce_bool(
             :data:`axonius_api_client.constants.general.NO`
 
     Raises:
-        :exc:`ToolsError`: obj is not able to be converted to bool
+        :exc:`ToolsError`: obj is not bool
     """
-    if allow_none and (obj is None or str(obj).lower().strip() in ["none", "null"]):
-        return None
 
-    def combine(obj):
-        return ", ".join([f"{x!r}" for x in obj])
+    def combine(items):
+        return ", ".join([f"{x!r}" for x in items])
 
     coerce_obj = obj
+
+    if isinstance(obj, bytes):
+        coerce_obj = coerce_obj.decode("utf-8", errors="ignore")
 
     if isinstance(obj, str):
         coerce_obj = coerce_obj.lower().strip()
@@ -322,20 +320,24 @@ def coerce_bool(
 
     if coerce_obj in NO:
         return False
-    if error is True:
-        vtype = trype(obj)
-        msg = listify(errmsg)
-        msg += [
-            f"Supplied value {coerce_obj!r} of type {vtype} must be one of:",
-            f"  For True: {combine(YES)}",
-            f"  For False: {combine(NO)}",
-        ]
-        raise ToolsError("\n".join(msg))
-    return obj
+
+    if not error or (
+        allow_none and (obj is None or str(coerce_obj).lower().strip() in ["none", "null"])
+    ):
+        return obj if as_original else as_none
+
+    vtype = trype(obj)
+    msg = listify(errmsg)
+    msg += [
+        f"Supplied value {coerce_obj!r} of type {vtype} must be one of:",
+        f"  For True: {combine(YES)}",
+        f"  For False: {combine(NO)}",
+    ]
+    raise ToolsError("\n".join(msg))
 
 
 def is_str(value: t.Any, not_empty: bool = True) -> bool:
-    """Check if value is non empty string."""
+    """Check if value is non-empty string."""
     return not (not_empty and not value) if isinstance(value, str) else False
 
 
@@ -423,7 +425,7 @@ class AxJSONEncoder(json.JSONEncoder):
 
     def default(self, obj):
         """Pass."""
-        if isinstance(obj, datetime):
+        if isinstance(obj, datetime.datetime):
             return obj.isoformat()
 
         if has_to_dict(obj):
@@ -442,7 +444,7 @@ def has_to_dict(obj: t.Any) -> bool:
 
 def json_dump(
     obj: t.Any,
-    indent: int = 2,
+    indent: t.Optional[int] = 2,
     sort_keys: bool = False,
     error: bool = True,
     fallback: t.Any = str,
@@ -725,7 +727,7 @@ def text_load(
 
 def dt_parse_uuid(
     value: str, default_tz_utc: bool = False, allow_none=False, error: bool = False
-) -> t.Optional[datetime]:
+) -> t.Optional[datetime.datetime]:
     """Parse the date from an object UUID."""
     if allow_none and (value is None or str(value).lower().strip() in ["none", "null"]):
         return None
@@ -738,39 +740,51 @@ def dt_parse_uuid(
 
 
 def dt_parse(
-    obj: t.Union[str, timedelta, datetime], default_tz_utc: bool = False, allow_none=False
-) -> t.Optional[datetime]:
+    obj: t.Optional[t.Union[TypeDate, t.List[TypeDate]]],
+    default_tz_utc: bool = False,
+    allow_none=False,
+    as_none: t.Any = None,
+    as_tz: t.Optional[t.Union[str, datetime.tzinfo]] = datetime.timezone.utc,
+) -> t.Optional[t.Union[datetime.datetime, t.List[datetime.datetime]]]:
     """Parse a str, datetime, or timedelta into a datetime object.
-
-    Notes:
-        * :obj:`str`: will be parsed into datetime obj
-        * :obj:`datetime.timedelta`: will be parsed into datetime obj as now - timedelta
-        * :obj:`datetime.datetime`: will be re-parsed into datetime obj
 
     Args:
         obj: object or list of objects to parse into datetime
+        default_tz_utc: if no timezone is found, assume UTC
+        allow_none: if obj is None or "none" or "null", return None
+        as_none: if allow_none and obj is None, return this value
+        as_tz: if not None, convert to this timezone
     """
-    if allow_none and (obj is None or str(obj).lower().strip() in ["none", "null"]):
-        return None
+    if isinstance(obj, list) and all(
+        [isinstance(x, (str, datetime.datetime, datetime.timedelta)) for x in obj]
+    ):
+        return [
+            dt_parse(obj=x, default_tz_utc=default_tz_utc, as_none=as_none, allow_none=allow_none)
+            for x in obj
+        ]
 
-    if isinstance(obj, list) and all([isinstance(x, (str, datetime, timedelta)) for x in obj]):
-        return [dt_parse(obj=x) for x in obj]
-
-    if isinstance(obj, datetime):
+    if isinstance(obj, datetime.datetime):
         obj = str(obj)
 
-    if isinstance(obj, timedelta):
+    if isinstance(obj, datetime.timedelta):
         obj = str(dt_now() - obj)
 
-    value = dateutil.parser.parse(obj)
-
-    if default_tz_utc and not value.tzinfo:
-        value = value.replace(tzinfo=dateutil.tz.tzutc())
-
+    obj = bytes_to_str(obj)
+    if allow_none and (obj is None or str(obj).lower().strip() in ["none", "null"]):
+        value = as_none
+    else:
+        value = dateutil.parser.parse(obj)
+    if isinstance(value, datetime.datetime):
+        if default_tz_utc and not value.tzinfo:
+            value = value.replace(tzinfo=as_tz)
+        if isinstance(as_tz, datetime.tzinfo):
+            value = value.astimezone(as_tz)
     return value
 
 
-def dt_parse_tmpl(obj: t.Union[str, timedelta, datetime], tmpl: str = "%Y-%m-%d") -> str:
+def dt_parse_tmpl(
+    obj: t.Union[str, datetime.timedelta, datetime.datetime], tmpl: str = "%Y-%m-%d"
+) -> str:
     """Parse a string into the format used by the REST API.
 
     Args:
@@ -796,8 +810,8 @@ def dt_parse_tmpl(obj: t.Union[str, timedelta, datetime], tmpl: str = "%Y-%m-%d"
 
 
 def dt_now(
-    delta: t.Optional[timedelta] = None,
-    tz: timezone = dateutil.tz.tzutc(),
+    delta: t.Optional[datetime.timedelta] = None,
+    tz: t.Optional[datetime.timezone] = datetime.timezone.utc,
 ) -> datetime:
     """Get the current datetime in for a specific tz.
 
@@ -805,9 +819,9 @@ def dt_now(
         delta: convert delta into datetime str instead of returning now
         tz: timezone to return datetime in
     """
-    if isinstance(delta, timedelta):
+    if isinstance(delta, datetime.timedelta):
         return dt_parse(obj=delta)
-    return datetime.now(tz)
+    return datetime.datetime.now(tz)
 
 
 def dt_now_file(fmt: str = FILE_DATE_FMT, **kwargs):
@@ -815,19 +829,47 @@ def dt_now_file(fmt: str = FILE_DATE_FMT, **kwargs):
     return dt_now(**kwargs).strftime(fmt)
 
 
-def dt_sec_ago(obj: t.Union[str, timedelta, datetime], exact: bool = False) -> int:
+def dt_sec_ago(
+    obj: t.Union[str, datetime.timedelta, datetime.datetime], exact: bool = False, places: int = 2
+) -> int:
     """Get number of seconds ago a given datetime was.
 
     Args:
         obj: parsed by :meth:`dt_parse` into a datetime obj
+        exact: if True, return exact seconds, otherwise round to places
+        places: number of places to round to
     """
     obj = dt_parse(obj=obj)
     now = dt_now(tz=obj.tzinfo)
     value = (now - obj).total_seconds()
-    return value if exact else round(value)
+    return value if exact else round(value, places)
 
 
-def dt_min_ago(obj: t.Union[str, timedelta, datetime]) -> int:
+def dt_days_ago(
+    obj: t.Union[str, datetime.timedelta, datetime.datetime],
+    error: bool = False,
+    from_now: bool = True,
+) -> t.Optional[int]:
+    """Get number of days ago a given datetime was.
+
+    Args:
+        obj: parsed by :meth:`dt_sec_ago` into seconds ago
+        error: if True, raise any errors, otherwise return None
+        from_now: if True, return days from now, otherwise return days ago
+    """
+    # noinspection PyBroadException
+    try:
+        obj: datetime.datetime = dt_parse(obj=obj)
+        now: datetime.datetime = dt_now(tz=obj.tzinfo)
+        delta: datetime.timedelta = now - obj if from_now else obj - now
+        return delta.days
+    except Exception:
+        if error:
+            raise
+        return None
+
+
+def dt_min_ago(obj: t.Union[str, datetime.timedelta, datetime.datetime]) -> int:
     """Get number of minutes ago a given datetime was.
 
     Args:
@@ -836,7 +878,9 @@ def dt_min_ago(obj: t.Union[str, timedelta, datetime]) -> int:
     return round(dt_sec_ago(obj=obj) / 60)
 
 
-def dt_days_left(obj: t.Optional[t.Union[str, timedelta, datetime]]) -> t.Optional[int]:
+def dt_days_left(
+    obj: t.Optional[t.Union[str, datetime.timedelta, datetime.datetime]]
+) -> t.Optional[int]:
     """Get number of days left until a given datetime.
 
     Args:
@@ -852,7 +896,7 @@ def dt_days_left(obj: t.Optional[t.Union[str, timedelta, datetime]]) -> t.Option
 
 
 def dt_within_min(
-    obj: t.Union[str, timedelta, datetime],
+    obj: t.Union[str, datetime.timedelta, datetime.datetime],
     n: t.Optional[t.Union[str, int]] = None,
 ) -> bool:
     """Check if given datetime is within the past n minutes.
@@ -1094,7 +1138,7 @@ def split_str(
     """Split a string or list of strings into a list of strings.
 
     Args:
-        obj: string or list of strings to split
+        obj: string or list of strings to `split`
         split: character to split on
         strip: characters to strip
         do_strip: strip each item from the split
@@ -1133,7 +1177,7 @@ def split_str(
     return ret
 
 
-def echo_debug(msg: str, **kwargs):
+def echo_debug(msg: t.Optional[t.Union[str, t.List[str]]] = None, **kwargs):
     """Echo a message to console.
 
     Args:
@@ -1146,7 +1190,7 @@ def echo_debug(msg: str, **kwargs):
     return echo(msg=msg, **kwargs)
 
 
-def echo_ok(msg: str, **kwargs):
+def echo_ok(msg: t.Optional[t.Union[str, t.List[str]]] = None, **kwargs):
     """Echo a message to console.
 
     Args:
@@ -1159,7 +1203,7 @@ def echo_ok(msg: str, **kwargs):
     return echo(msg=msg, **kwargs)
 
 
-def echo_warn(msg: str, **kwargs):
+def echo_warn(msg: t.Optional[t.Union[str, t.List[str]]] = None, **kwargs):
     """Echo a warning message to console.
 
     Args:
@@ -1173,7 +1217,7 @@ def echo_warn(msg: str, **kwargs):
     return echo(msg=msg, **kwargs)
 
 
-def echo_error(msg: str, abort=True, **kwargs):
+def echo_error(msg: t.Optional[t.Union[str, t.List[str]]] = None, abort: bool = True, **kwargs):
     """Echo an error message to console.
 
     Args:
@@ -1287,8 +1331,8 @@ def calc_percent(part: t.Union[int, float], whole: t.Union[int, float], places: 
     """Calculate the percentage of part out of whole.
 
     Args:
-        part: number to get percent of whole
-        whole: number to caclulate against part
+        part: number to get percent of `whole`
+        whole: number to calculate against `part`
         places: number of decimal places to return
     """
     if 0 in [part, whole]:
@@ -1648,18 +1692,29 @@ def is_url(value: str) -> bool:
     return isinstance(value, str) and any([value.startswith(x) for x in URL_STARTS])
 
 
-def bytes_to_str(value: t.Any, encoding: str = "utf-8", errors: str = "replace") -> t.Any:
+def bytes_to_str(
+    value: t.Any, encoding: str = "utf-8", ignore: bool = False, strict: bool = False
+) -> t.Any:
     """Convert value to str if value is bytes.
 
     Args:
         value (t.Any): value to convert to str
         encoding (str, optional): encoding to use
-        errors (str, optional): how to handle errors
+        ignore (bool, optional): ignore errors instead of replacing them
+        strict (bool, optional): raise an exception if there are decoding errors
 
     Returns:
-        t.Any: str if value is bytes, else orginal value
+        t.Any: str if value is bytes, else original value
     """
-    return value.decode(encoding=encoding, errors=errors) if isinstance(value, bytes) else value
+    if isinstance(value, bytes):
+        if strict:
+            errors = "strict"
+        elif ignore:
+            errors = "ignore"
+        else:
+            errors = "replace"
+        return value.decode(encoding, errors=errors)
+    return value
 
 
 def strip_str(value: t.Any) -> t.Union[str, t.Any]:
@@ -1756,8 +1811,8 @@ def get_cls_path(value: t.Any) -> str:
 
 
 def csv_writer(
-    rows: t.List[dict],
-    columns: t.Optional[t.List[str]] = None,
+    rows: t.Iterable[dict],
+    columns: t.Optional[t.Iterable[str]] = None,
     quotes: str = "nonnumeric",
     dialect: str = "excel",
     line_ending: str = "\n",
@@ -1768,11 +1823,12 @@ def csv_writer(
 ) -> str:  # pragma: no cover
     """Pass."""
     quotes: int = getattr(csv, f"QUOTE_{quotes.upper()}")
-    if not isinstance(columns, (list, tuple)):
+    if not isinstance(columns, (list, tuple)) and write_headers:
         columns: t.List[str] = []
         # this will kill a generator
-        for row in rows:
-            columns += [x for x in row if x not in columns]
+        if write_headers:
+            for row in rows:
+                columns += [x for x in row if x not in columns]
 
     extrasaction: str = "raise" if key_extra_error else "ignore"
     stream: t.IO = stream if is_file_like(stream) else io.StringIO()
@@ -1790,7 +1846,7 @@ def csv_writer(
     for row in rows:
         writer.writerow(row)
     stream.seek(0)
-    content: str = stream.getvalue()
+    content: t.Union[str, bytes] = stream.getvalue()
     return content
 
 
@@ -2105,23 +2161,26 @@ def coerce_str_re(value: t.Any, prefix: str = "~") -> t.Any:
     if isinstance(value, (list, tuple)):
         return [coerce_str_re(value=x, prefix=prefix) for x in value]
 
+    prefix_len: int = len(prefix)
+
     value = bytes_to_str(value=value)
-    return (
-        re.compile(value[1:], re.I) if (is_str(value=value) and value.startswith(prefix)) else value
-    )
+    if is_str(value=value) and value.startswith(prefix):
+        value = re.compile(value[prefix_len:], re.I)
+
+    return value
 
 
 def human_size(
     value: t.Union[int, str, bytes, float], decimals: int = 2, error: bool = True
 ) -> str:
-    """Convert bytes to human readable.
+    """Convert bytes to human-readable.
 
     Args:
         value (t.Union[int, str, bytes, float]): value to coerce into int/float
         decimals (int, optional): number of decimal places to include in str output
 
     Returns:
-        str: human readable size of value if value is int, float, int as str, or float as str
+        str: human-readable size of value if value is int, float, int as str, or float as str
              else empty str
     """
     value = coerce_int_float(value=value, error=error)
@@ -2336,35 +2395,59 @@ def parse_refresh(
     elapsed: bool = True,
     refresh_elapsed: t.Optional[t.Union[int, float]] = None,
 ) -> bool:
-    """Check if value is True or is int/float and minimum < elapsed >= value."""
-    # if bytes, convert to str
-    value = bytes_to_str(value=value)
+    """Check if an object should be refreshed.
 
-    # try to coerce to bool
-    value = coerce_bool(obj=value, error=False)
-    if isinstance(value, bool):
-        return value
+    Notes:
+        If the value is bytes, it will be converted to string.
+        If the value is string, it will try to safely coerce to float, int, or bool.
+        If the value is True or False it will be returned as is.
+        If the value is a float or int and refresh_elapsed is a float or int and elapsed is True
+        it will return True if the value is greater than refresh_elapsed.
 
-    if elapsed is True and isinstance(refresh_elapsed, (int, float)):
-        # try to coerce to int or float
-        value = coerce_int_float(value=value, error=False, ret_value=True)
-        if isinstance(value, (int, float)) and refresh_elapsed >= value:
-            return True
+    Args:
+        value: The value to check.
+        elapsed: If True, check if the value is an int or float and if it is greater than
+            refresh_elapsed if refresh_elapsed is an int or float.
+        refresh_elapsed: The elapsed time to check against if elapsed is True.
+    """
+    if isinstance(value, bytes):
+        value = value.decode("utf-8", errors="ignore")
 
-    return False
+    if isinstance(value, str):
+        check_value = value.strip().lower()
+        if "." in check_value and check_value.replace(".", "").isdigit():
+            value = float(check_value)
+        elif check_value.isdigit():
+            value = int(check_value)
+        elif check_value in YES_STR:
+            value = True
+        elif check_value in NO_STR:
+            value = False
+
+    if value is True:
+        return True
+    if value is False:
+        return False
+
+    return (
+        elapsed is True
+        and isinstance(value, (int, float))
+        and isinstance(refresh_elapsed, (int, float))
+        and refresh_elapsed >= value
+    )
 
 
 def get_diff_seconds(
-    start: t.Optional[datetime] = None,
-    stop: t.Optional[datetime] = None,
+    start: t.Optional[datetime.datetime] = None,
+    stop: t.Optional[datetime.datetime] = None,
     places: t.Optional[int] = 5,
 ) -> t.Optional[float]:
     """Pass."""
     seconds: t.Optional[float] = None
     if start is not None:
-        start: datetime = dt_parse(obj=start)
-        stop: datetime = dt_now if stop is None else dt_parse(stop)
-        delta: timedelta = stop - start
+        start: datetime.datetime = dt_parse(obj=start)
+        stop: datetime.datetime = dt_now if stop is None else dt_parse(stop)
+        delta: datetime.timedelta = stop - start
         seconds: float = delta.total_seconds()
         if isinstance(places, int):
             seconds: float = float(f"{seconds:.{places}f}")
@@ -2453,3 +2536,124 @@ def is_subclass(value: t.Any, expected_types: t.Any = None, as_none: bool = Fals
         return issubclass(value, expected_types)
     except TypeError:
         return False
+
+
+def get_query_id(value: t.Optional[t.Union[str, bytes, uuid.UUID]] = None) -> str:
+    """Get or build a query id."""
+    if isinstance(value, uuid.UUID):
+        return str(value)
+    if isinstance(value, (str, bytes)) and value.strip():
+        try:
+            return str(uuid.UUID(bytes_to_str(value)))
+        except ValueError:
+            pass
+    return str(uuid.uuid4())
+
+
+def jdump(obj, **kwargs):
+    """JSON dump utility."""
+    data = json_reload(obj, **kwargs)
+    print(data)
+
+
+def is_subclass_safe(value: t.Any, expected_type: t.Any) -> bool:
+    """Check if value is a subclass of a type."""
+    try:
+        return issubclass(value, expected_type)
+    except TypeError:
+        return False
+
+
+def trim_value_repr(
+    value: t.Any, max_length: t.Optional[int] = 30, trim_post: t.Optional[str] = TRIM_POST
+) -> str:
+    """Trim the value to a maximum length and appends info about the number of trimmed characters.
+
+    Args:
+        value: The input value to be trimmed.
+        max_length: The maximum allowed length of the value repr.
+        trim_post: The string to add
+
+    Returns:
+        str: The trimmed value representation with info about the number of trimmed characters.
+    """
+    value_repr: str = repr(value)
+    if isinstance(max_length, int) and max_length >= 0:
+        original_length: int = len(value_repr)
+        if original_length > max_length:
+            value_repr: str = value_repr[:max_length]
+            modified_length: int = len(value_repr)
+            if isinstance(trim_post, str):
+                removed_length: int = original_length - modified_length
+                locals_dict: t.Dict[str, t.Any] = locals()
+                try:
+                    value_repr += trim_post.format(**locals_dict)
+                except KeyError as exc:
+                    raise FormatError(template=trim_post, error=exc, kwargs=locals_dict)
+    return value_repr
+
+
+def coerce_seconds(value: t.Optional[TypeFloat] = None) -> t.Optional[float]:
+    """Coerce a value to seconds."""
+    if value is None:
+        return None
+
+    if isinstance(value, float):
+        return value
+
+    if isinstance(value, int):
+        return float(value)
+
+    value = bytes_to_str(value)
+    if isinstance(value, str) and value.strip():
+        try:
+            return float(value.strip())
+        except ValueError:
+            raise ValueError(f"Invalid float/integer provided for seconds: {value!r}")
+    return None
+
+
+def coerce_delta(value: t.Optional[TypeDelta] = None) -> t.Optional[datetime.timedelta]:
+    """Coerce a value to a timedelta.
+
+    Args:
+        value: value to coerce - if None or already a timedelta, return as is, otherwise
+            pass to :meth:`coerce_seconds` and return as a timedelta if it returns a float,
+            otherwise return None
+    """
+    if value is None or isinstance(value, datetime.timedelta):
+        return value
+    value = coerce_seconds(value=value)
+    return datetime.timedelta(seconds=value) if isinstance(value, float) else None
+
+
+def coerce_date_delta(
+    value: t.Optional[TypeDate] = None,
+    add: t.Optional[TypeDelta] = None,
+    subtract: t.Optional[TypeDelta] = None,
+) -> t.Optional[datetime.datetime]:
+    """Coerce a value to a date.
+
+    Notes:
+        Value will be parsed by :meth:`dt_parse` into a datetime.datetime or None.
+        If add or subtract are provided, value will be added to or subtracted from
+        the parsed value or now if value not provided.
+
+    Args:
+        value: value to coerce
+        add: seconds to add to value
+        subtract: seconds to subtract from value
+
+    Returns:
+        datetime.datetime: coerced value
+    """
+    parsed: t.Optional[datetime.datetime] = dt_parse(value, allow_none=True)
+    add: t.Optional[datetime.timedelta] = coerce_delta(add)
+    subtract: t.Optional[datetime.timedelta] = coerce_delta(subtract)
+    if isinstance(add, datetime.timedelta):
+        parsed = parsed or dt_now()
+        parsed += add
+    if isinstance(subtract, datetime.timedelta):
+        parsed = parsed or dt_now()
+        parsed -= subtract
+    return parsed

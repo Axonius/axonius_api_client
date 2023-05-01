@@ -37,6 +37,9 @@ class SystemUserSchema(BaseSchemaJson):
     ignore_role_assignment_rules = SchemaBool(
         load_default=False, dump_default=False, allow_none=True
     )
+    allowed_scopes_impersonation = marshmallow_jsonapi.fields.List(
+        marshmallow_jsonapi.fields.Str(), load_default=list, dump_default=list
+    )
 
     @staticmethod
     def get_model_cls() -> t.Any:
@@ -108,6 +111,7 @@ class SystemUser(BaseModel):
     department: t.Optional[str] = None
     source: t.Optional[str] = None
     ignore_role_assignment_rules: bool = False
+    allowed_scopes_impersonation: t.List[str] = dataclasses.field(default_factory=list)
     document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     @staticmethod

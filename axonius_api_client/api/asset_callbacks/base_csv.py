@@ -113,9 +113,9 @@ class Csv(ExportMixins):
 
     def _init(self, **kwargs):
         """Override arguments to make export readable."""
-        self.set_arg_value("field_null", True)
-        self.set_arg_value("field_flatten", True)
-        self.set_arg_value("field_join", True)
+        self.set_arg_value("field_null", self.get_arg_value("csv_field_null"))
+        self.set_arg_value("field_flatten", self.get_arg_value("csv_field_flatten"))
+        self.set_arg_value("field_join", self.get_arg_value("csv_field_join"))
 
     def start(self, **kwargs):
         """Start this callbacks object."""

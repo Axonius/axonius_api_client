@@ -6,11 +6,16 @@ See Also:
 
 """
 import logging
+import sys
+import pathlib
 
 from . import setup_env, version
 
 PACKAGE_ROOT: str = __package__
 PACKAGE_FILE: str = __file__
+PACKAGE_PATH: pathlib.Path = pathlib.Path(PACKAGE_FILE).parent.absolute()
+PROJECTS_PATH: pathlib.Path = PACKAGE_PATH / "projects"
+
 VERSION: str = version.__version__
 __version__ = VERSION
 
@@ -32,8 +37,30 @@ INIT_DOTENV: str = load_dotenv()
 POST_DOTENV: dict = setup_env.get_env_ax()
 """AX.* env variables after loading dotenv."""
 
+# short term hack for projects until they are moved to their own repos
 try:
-    from . import api, auth, cert_human, cli, constants, data, exceptions, http, logs, tools
+    sys.path.insert(0, str(PROJECTS_PATH))
+    from .projects import cf_token, cert_human, url_parser
+
+except Exception:  # pragma: no cover
+    raise
+
+
+try:
+    # noinspection PyCompatibility
+    from . import (
+        api,
+        auth,
+        cli,
+        constants,
+        data,
+        exceptions,
+        http,
+        logs,
+        tools,
+        projects,
+    )
+
     from .api import (
         ActivityLogs,
         Adapters,
@@ -58,8 +85,9 @@ try:
         Wizard,
         WizardCsv,
         WizardText,
+        json_api,
     )
-    from .auth import ApiKey
+    from .auth import AuthApiKey, AuthCredentials, AuthModel, AuthNull
     from .connect import Connect
     from .features import Features
     from .http import Http
@@ -70,12 +98,16 @@ except Exception:  # pragma: no cover
 LOG = logs.LOG
 
 __all__ = (
+    "PACKAGE_ROOT",
     # API client
     "Connect",
     # HTTP client
     "Http",
     # API authentication
-    "ApiKey",
+    "AuthApiKey",
+    "AuthModel",
+    "AuthCredentials",
+    "AuthNull",
     # API
     "Adapters",
     "Cnx",
@@ -115,5 +147,10 @@ __all__ = (
     "logs",
     "tools",
     "version",
+    "json_api",
+    # projects
+    "projects",
     "cert_human",
+    "cf_token",
+    "url_parser",
 )

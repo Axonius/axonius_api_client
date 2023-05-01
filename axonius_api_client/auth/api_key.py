@@ -1,14 +1,13 @@
 # -*- coding: utf-8 -*-
 """Authentication via API key and API secret."""
-from typing import List
+import typing as t
 
-from ..exceptions import AlreadyLoggedIn
 from ..http import Http
 from ..tools import strip_str
-from .models import Mixins
+from .model import AuthModel
 
 
-class ApiKey(Mixins):
+class AuthApiKey(AuthModel):
     """Authentication method using API key & API secret."""
 
     def __init__(self, http: Http, key: str, secret: str, **kwargs):
@@ -20,30 +19,29 @@ class ApiKey(Mixins):
             secret: API secret to use in credentials
 
         """
-        creds = {"key": strip_str(key), "secret": strip_str(secret)}
-        super().__init__(http=http, creds=creds, **kwargs)
+        creds: t.Dict[str, str] = {"key": strip_str(key), "secret": strip_str(secret)}
+        kwargs["creds"] = creds
+        super().__init__(http=http, **kwargs)
 
-    def login(self):
+    def login(self) -> bool:
         """Login to API."""
-        if self.is_logged_in:
-            raise AlreadyLoggedIn(f"Already logged in on {self}")
-
-        self.http.session.headers["api-key"] = self._creds["key"]
-        self.http.session.headers["api-secret"] = self._creds["secret"]
-        self._validate()
-        self._logged_in = True
-        self.LOG.debug(f"Successfully logged in using {self._cred_fields}")
-
-    def logout(self):
-        """Logout from API."""
-        super().logout()
+        if not self.is_logged_in:
+            self.http.session.headers["api-key"] = self._creds["key"]
+            self.http.session.headers["api-secret"] = self._creds["secret"]
+            self.is_logged_in = self.validate()
+            return True
+        return False
 
     @property
-    def _cred_fields(self) -> List[str]:
+    def fields(self) -> t.List[str]:
         """Credential fields used by this auth model."""
         return ["key", "secret"]
 
-    def _logout(self):
+    def logout(self) -> bool:
         """Logout from API."""
-        self._logged_in = False
-        self.http.session.headers = {}
+        if self.is_logged_in:
+            self.http.session.headers.pop("api-key", None)
+            self.http.session.headers.pop("api-secret", None)
+            self.is_logged_in = False
+            return True
+        return False

@@ -13,7 +13,7 @@ from ...utils import load_clirunner
 
 
 class TestGrpEnforcementsCmdCreateDelete(EnforcementsBase):
-    def test_config_stdin(self, request, monkeypatch, apiobj):
+    def test_config_stdin(self, request, monkeypatch, apiobj, device_sq_predefined):
         self.cleanup(apiobj=apiobj, value=Meta.name_cli)
         runner = load_clirunner(request, monkeypatch)
         with runner.isolated_filesystem():
@@ -22,6 +22,8 @@ class TestGrpEnforcementsCmdCreateDelete(EnforcementsBase):
                 "create",
                 "--name",
                 Meta.name_cli,
+                "--query-name",
+                device_sq_predefined.name,
                 "--main-action-name",
                 Meta.action_name,
                 "--main-action-type",
@@ -63,7 +65,7 @@ class TestGrpEnforcementsCmdCreateDelete(EnforcementsBase):
 
         self.cleanup(apiobj=apiobj, value=Meta.name_cli)
 
-    def test_config_file(self, request, monkeypatch, apiobj):
+    def test_config_file(self, request, monkeypatch, apiobj, device_sq_predefined):
         self.cleanup(apiobj=apiobj, value=Meta.name_cli)
         runner = load_clirunner(request, monkeypatch)
         with runner.isolated_filesystem():
@@ -76,6 +78,8 @@ class TestGrpEnforcementsCmdCreateDelete(EnforcementsBase):
                 "create",
                 "--name",
                 Meta.name_cli,
+                "--query-name",
+                device_sq_predefined.name,
                 "--main-action-name",
                 Meta.action_name,
                 "--main-action-type",

@@ -78,7 +78,7 @@ LOG_FILE_PATH: str = DEFAULT_PATH
 """default path for log files"""
 
 LOG_FILE_PATH_MODE = 0o700
-""":obj:`oct` default permisisons to use when creating directories"""
+""":obj:`oct` default permissions to use when creating directories"""
 
 LOG_FILE_NAME: str = f"{PACKAGE_ROOT}.log"
 """default log file name to use"""
@@ -121,3 +121,15 @@ REQUEST_ATTR_MAP: dict = {
     "cookies": "{cookies}",
 }
 """Mapping of request attributes to log to their formatting strings."""
+
+RESPONSE_ATTRS: t.List[str] = list(RESPONSE_ATTR_MAP) + ["all"]
+"""List of valid response attributes to log."""
+
+REQUEST_ATTRS: t.List[str] = list(REQUEST_ATTR_MAP) + ["all"]
+"""List of valid request attributes to log."""
+
+RESPONSE_ATTRS_DEFAULT: t.Tuple[str, ...] = ("url", "status", "reason", "elapsed")
+"""Default response attributes to log."""
+
+REQUEST_ATTRS_DEFAULT: t.Tuple[str, ...] = ("url", "size")
+"""Default request attributes to log."""

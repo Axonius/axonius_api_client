@@ -212,7 +212,7 @@ class WizardCsv(Wizard):
         return entry
 
     def _process_sqs(self, entries: List[dict]) -> List[dict]:
-        """Process all of the saved queries defined in the CSV.
+        """Process the saved queries defined in the CSV.
 
         Args:
             entries: the entries produced by parsing the rows

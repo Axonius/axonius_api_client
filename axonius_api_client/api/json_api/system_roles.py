@@ -26,7 +26,7 @@ def parse_cat_actions(raw: dict) -> dict:
     cat_actions = {}
     lengths = {"categories": 0, "actions": 0, "categories_desc": 0, "actions_desc": 0}
 
-    # first pass, get all of the categories
+    # first pass, get all the categories
     for label, desc in raw.items():
         pre, rest = label.split(".", 1)
         if pre != "permissions":
@@ -44,7 +44,7 @@ def parse_cat_actions(raw: dict) -> dict:
 
             cat_actions[cat] = {}
 
-    # second pass, get all of the actions
+    # second pass, get all the actions
     for label, desc in raw.items():
         pre, rest = label.split(".", 1)
         if pre != "permissions":

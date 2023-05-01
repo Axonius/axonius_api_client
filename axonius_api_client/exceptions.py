@@ -141,10 +141,10 @@ class SavedQueryNotFoundError(NotFoundError):
             barrier = "#" * 80
             barrier = f"\n{barrier}\n"
             details = barrier + barrier.join([x.str_details for x in sqs])
-            self.tablemsg = [self.msg, "", details, "", self.msg]
+            self.msg_table = [self.msg, "", details, "", self.msg]
         except Exception:
-            self.tablemsg = tablize_sqs(data=sqs, err=self.msg)
-        super().__init__(self.tablemsg)
+            self.msg_table = tablize_sqs(data=sqs, err=self.msg)
+        super().__init__(self.msg_table)
 
 
 class SavedQueryTagsNotFoundError(SavedQueryNotFoundError):
@@ -219,6 +219,8 @@ class CnxTestError(CnxError):
 
 class CnxAddError(CnxError):
     """Errors when adding a new connection."""
+
+    cnx_new: t.ClassVar[t.Optional[dict]] = None
 
 
 class ResponseError(ApiError):
@@ -502,7 +504,7 @@ class DecodeError(ValueError, AxonError):
             encoding_errors (t.Optional[str], optional):
                 The error handling method used for decoding.
         """
-        from .utils import trim_value_repr
+        from .tools import trim_value_repr
 
         self.value: bytes = value
         self.encoding_format: t.Optional[str] = encoding_format
@@ -527,7 +529,7 @@ class InvalidObjectIdError(ValueError, AxonError):
         Args:
             value (str): The input string.
         """
-        from .utils import trim_value_repr
+        from .tools import trim_value_repr
 
         self.value: t.Any = value
         super().__init__(f"The input string {trim_value_repr(self.value)} is not a valid ObjectId.")
@@ -550,7 +552,7 @@ class InvalidTypeError(TypeError, AxonError):
         """
         self.value: t.Any = value
         self.allowed_types: t.Optional[t.Tuple[type]] = allowed_types
-        from .utils import get_type_str
+        from .tools import get_type_str
 
         super().__init__(
             f"The input value {self.value!r} type {get_type_str(self.value)} is not "

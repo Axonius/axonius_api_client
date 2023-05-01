@@ -39,7 +39,7 @@ from ...tools import (
     strip_right,
 )
 from ..api_endpoints import ApiEndpoints
-from ..json_api.adapters import CnxDelete, CnxModifyResponse, Cnxs
+from ..json_api.adapters import CnxCreate, CnxDelete, CnxLabels, Cnxs, CnxUpdate
 from ..json_api.instances import Tunnel
 from ..mixins import ChildMixins
 
@@ -845,7 +845,7 @@ class Cnx(ChildMixins):
 
         Raises:
             :exc:`ConfigInvalidValue`: When value is a path that does not exist, or
-                a dictionary that does not have 'uuid' and 'filename' keys',
+                a dictionary that does not have 'uuid' and 'filename' keys,
                 or if value is not a file
         """
 
@@ -901,7 +901,7 @@ class Cnx(ChildMixins):
         connection_label: Optional[str] = None,
         tunnel_id: Optional[str] = None,
         response_status_hook: Optional[Callable] = None,
-    ) -> CnxModifyResponse:
+    ) -> CnxCreate:
         """Pass."""
         api_endpoint = ApiEndpoints.adapters.cnx_create
         request_obj = api_endpoint.load_request(
@@ -971,6 +971,14 @@ class Cnx(ChildMixins):
         ret.adapter_name = strip_right(obj=adapter_name, fix="_adapter")
         return ret
 
+    def _get_labels(self) -> CnxLabels:
+        """Get all connection labels.
+
+        Returns:
+            CnxLabels: dataclass model containing response
+        """
+        return ApiEndpoints.adapters.cnx_get_labels.perform_request(http=self.auth.http)
+
     def _delete(
         self,
         uuid: str,
@@ -1027,7 +1035,7 @@ class Cnx(ChildMixins):
         active: bool = True,
         connection_label: Optional[str] = None,
         response_status_hook: Optional[Callable] = None,
-    ) -> CnxModifyResponse:
+    ) -> CnxUpdate:
         """Pass.
 
         Args:

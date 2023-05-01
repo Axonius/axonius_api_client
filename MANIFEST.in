@@ -1,6 +1,6 @@
 include MANIFEST.in
 include requirements*.txt
-include axonius_api_client/cert_human/all_logs_list.json
+include axonius_api_client/projects/cert_human/all_logs_list.json
 graft axonius_api_client/tests/datafiles/
 global-exclude __pycache__
 global-exclude *.py[co]

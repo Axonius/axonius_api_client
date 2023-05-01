@@ -24,7 +24,9 @@ from ...utils import get_schema, random_string
 
 
 class FixtureData:
-    name = "badwolf torked"
+    """Pass."""
+
+    name = "badwolf forked"
     name_asset_scope = "badwolf asset scope"
     fields = [
         "adapters",
@@ -34,18 +36,22 @@ class FixtureData:
     sort_desc = False
     gui_page_size = GUI_PAGE_SIZES[-1]
     tags = ["badwolf1", "badwolf2"]
-    description = "badwolf torked"
+    description = "badwolf forked"
     query = 'not ("specific_data.data.last_seen" >= date("NOW - 1d"))'
-    wiz_name = "badwolf torked wiz"
+    wiz_name = "badwolf forked wiz"
     wiz_entries = "simple !last_seen last_days 1"
 
 
 class SavedQueryBase:
+    """Pass."""
+
     @pytest.fixture(params=["api_devices"], scope="class")
     def apiobj(self, request):
+        """Pass."""
         return request.getfixturevalue(request.param)
 
 
+# noinspection PyBroadException
 class TestSavedQueryPrivate(SavedQueryBase):
     def test_get(self, apiobj):
         request_obj = json_api.saved_queries.SavedQueryGet()
@@ -55,8 +61,9 @@ class TestSavedQueryPrivate(SavedQueryBase):
             assert isinstance(item, json_api.saved_queries.SavedQuery)
             validate_sq(item.to_dict())
 
+    # noinspection PyTypeChecker
     def test_add(self, apiobj):
-        name = "badwolfvvv"
+        name = "badwolf why why why"
         view = {
             "colExcludedAdapters": [],
             "colFilters": [],
@@ -179,6 +186,7 @@ class TestQueryHistoryModel(SavedQueryBase):
         ret = request_obj.set_name_term(value=value)
         assert ret == exp
 
+    # noinspection PyTypeChecker
     def test_set_date_no_start_date(self, apiobj):
         request_obj = json_api.saved_queries.QueryHistoryRequest()
         with pytest.raises(ApiError):
@@ -921,6 +929,10 @@ def validate_sq(asset):
             val = updated_by.pop(updated_str_key, None)
             assert isinstance(val, (str, int, float)) or val is None
 
+        # 20230420
+        allowed_scopes_impersonation = updated_by.pop("allowed_scopes_impersonation", [])
+        assert isinstance(allowed_scopes_impersonation, list)
+
         assert not updated_by
 
     tags = asset.pop("tags", [])
@@ -949,7 +961,7 @@ def validate_sq(asset):
     pagesize = view.pop("pageSize", 0)
     assert isinstance(pagesize, int)
 
-    # in 4.6 SQ 'New devices seen in the last day' has no sort key
+    # in 4.6 SQ 'New devices seen in the last day' has no sort keys
     if "sort" in view:
         sort = view.pop("sort")
         assert isinstance(sort, dict)
@@ -961,7 +973,7 @@ def validate_sq(asset):
         assert isinstance(sort_field, str)
         assert not sort
 
-    # in 4.6 SQ 'New devices seen in the last day' has no fields key
+    # in 4.6 SQ 'New devices seen in the last day' has no fields keys
     if "fields" in view:
         fields = view.pop("fields")
         assert isinstance(fields, list)
@@ -1078,6 +1090,10 @@ def validate_sq(asset):
     # 4.6: 2022/04/19
     queryStrings = view.pop("queryStrings", {})
     assert isinstance(queryStrings, dict)
+
+    # 4.9: 2023/04/11
+    folder_id = query.pop("folder_id", None)
+    assert folder_id is None or isinstance(folder_id, str)
 
     assert not query, list(query)
     assert not view, list(view)

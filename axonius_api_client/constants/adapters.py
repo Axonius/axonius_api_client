@@ -67,7 +67,7 @@ CONFIG_TYPES: List[str] = ["generic", "specific", "discovery"]
 #     ("connection_label", "Connection Label", 0),
 #     ("schemas", None, 0),
 # ]
-# """Tablize map of field name to user friendly title for adapter connections."""
+# """Tablize map of field name to user-friendly title for adapter connections."""
 
 # KEY_MAP_ADAPTER: List[Tuple[str, Optional[str], int]] = [
 #     ("name", "Name", 0),
@@ -77,7 +77,7 @@ CONFIG_TYPES: List[str] = ["generic", "specific", "discovery"]
 #     ("cnx_count_working", "Working", 0),
 #     ("cnx_count_inactive", "Inactive", 0),
 # ]
-# """Tablize map of field name to user friendly title for adapters."""
+# """Tablize map of field name to user-friendly title for adapters."""
 
 # KEY_MAP_SCHEMA: List[Tuple[str, Optional[str], int]] = [
 #     ("name", "Name", 0),
@@ -88,7 +88,7 @@ CONFIG_TYPES: List[str] = ["generic", "specific", "discovery"]
 #     ("description", "Description", 20),
 #     ("format", "Format", 0),
 # ]
-# """Tablize map of field name to user friendly title for config schemas."""
+# """Tablize map of field name to user-friendly title for config schemas."""
 
 CNX_GONE: str = "Server is already gone, please try again after refreshing the page"
 """Message to print when an adapter connection disappears"""

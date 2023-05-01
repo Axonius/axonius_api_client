@@ -153,7 +153,7 @@ class SystemUsers(ModelMixins):
             '5f7ca7f1e4557d5cba415f12'
 
         Args:
-            name: user name
+            name: username
             password: password
             role_name: role name
             first_name: first name
@@ -217,7 +217,7 @@ class SystemUsers(ModelMixins):
             'Viewer'
 
         Args:
-            name: user name
+            name: username
             role_name: name of role
         """
         role = self.roles.get_by_name(name=role_name)
@@ -240,7 +240,7 @@ class SystemUsers(ModelMixins):
             'Bad Wolf'
 
         Args:
-            name: user name
+            name: username
             first: first name
             last: last name
         """
@@ -332,12 +332,12 @@ class SystemUsers(ModelMixins):
             'https://10.20.0.61/login?token=LUayznSkfLUjm3A2fIs_zAF-4CzcxRZc7DHOfhOkMRI'
 
         Notes:
-            This link can be provided to the user and they can browse to it, or they can use
-            ``axonshell tools axonshell tools use-password-reset-token`` or use
+            This link can be provided to the user. They can browse to it, or they can use
+            `axonshell tools use-password-reset-token` or use
             :meth:`axonius_api_client.api.system.signup.Signup.use_password_reset_token`
 
         Args:
-            name: user name
+            name: username
 
         """
         user = self.get_by_name(name=name)
@@ -380,7 +380,7 @@ class SystemUsers(ModelMixins):
             address that was used to send the email.
 
         Args:
-            name: user name
+            name: username
             email: use a custom email address to send the email instead of the users defined email
                 address. required if the user has no defined email address.
             for_new_user: use the new user email template instead of the password reset email
@@ -428,8 +428,8 @@ class SystemUsers(ModelMixins):
             user_name: user name
             password: password
             role_id: role UUID
-            first: first name
-            last: last name
+            first_name: first name
+            last_name: last name
             email: email address
             auto_generated_password: generate a password
         """
@@ -534,7 +534,7 @@ class SystemUsers(ModelMixins):
         """Set an attribute on a user.
 
         Args:
-            name: user name
+            name: username
             must_be_internal: user must be internal or external for this attr to be set
             attr: attribute of user object to set
             value: value to set on attribute

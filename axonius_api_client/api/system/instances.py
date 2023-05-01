@@ -476,8 +476,8 @@ class Instances(ModelMixins):
                 this core
             bucket_name: Name of bucket in S3 to get [key_name] from
                 (Overrides ``Global Settings > Amazon S3 Settings > Amazon S3 bucket name``)
-            access_key_id: AWS Access Key Id to use to access [bucket_name]
-                (Overrides ``Global Settings > Amazon S3 Settings > AWS Access Key Id``)
+            access_key_id: AWS Access Key ID to use to access [bucket_name]
+                (Overrides ``Global Settings > Amazon S3 Settings > AWS Access Key ID``)
             secret_access_key: AWS Secret Access Key to use to access [bucket_name]
                 (Overrides ``Global Settings > Amazon S3 Settings > AWS Secret Access Key``)
             preshared_key: Password to use to decrypt [key_name]
@@ -564,7 +564,7 @@ class Instances(ModelMixins):
             **kwargs: passed to :meth:`upload_script`
         """
         if is_url(value=path):
-            from ...parsers.url_parser import UrlParser
+            from axonius_api_client.projects.url_parser import UrlParser
 
             parser = UrlParser(url=path)
             path_part = pathlib.Path(parser.parsed.path)

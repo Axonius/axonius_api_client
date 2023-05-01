@@ -3,7 +3,7 @@
 import pathlib
 from typing import Any, List, Optional, Tuple, Union
 
-from ... import cert_human
+from axonius_api_client.projects import cert_human
 from ...constants.api import USE_CA_PATH
 from ...exceptions import ApiError, NotFoundError
 from ...parsers.config import config_build, config_unchanged, config_unknown, parse_settings
@@ -64,11 +64,11 @@ class SettingsMixins(ModelMixins):
         raise NotFoundError(tablize(value=valid_sections, err=err))
 
     def get_sub_section(self, section: str, sub_section: str, full_config: bool = False) -> dict:
-        """Get the current settings for a sub-section of a section of system settings.
+        """Get the current settings for a subsection of a section of system settings.
 
         Args:
             section: name of section
-            sub_section: name of sub section of section
+            sub_section: name of subsection of section
             full_config: return the full configuration
         """
         settings = self.get_section(section=section, full_config=full_config)
@@ -143,11 +143,11 @@ class SettingsMixins(ModelMixins):
         return self.get_section(section=section)
 
     def update_sub_section(self, section: str, sub_section: str, **kwargs) -> dict:
-        """Update the current settings for a sub-section of a section of system settings.
+        """Update the current settings for a subsection of a section of system settings.
 
         Args:
             section: name of section
-            sub_section: name of sub section of section
+            sub_section: name of subsection of section
             **kwargs: settings to update
         """
         settings = self.get_sub_section(section=section, sub_section=sub_section, full_config=True)
@@ -290,7 +290,7 @@ class SettingsGlobal(SettingsMixins):
         return self.ca_get()
 
     @staticmethod
-    def check_cert_is_ca(contents: CONTENT, source: Any = None) -> cert_human.Cert:
+    def check_cert_is_ca(contents: CONTENT, source: Any = None) -> cert_human.Store:
         """Pass."""
         stores = cert_human.Cert.from_content(value=contents, source=source)
         store = stores[0]

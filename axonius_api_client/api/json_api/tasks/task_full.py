@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 """Models for API requests & responses."""
 import dataclasses
+import datetime
 import typing as t
-from datetime import datetime
 
 import marshmallow
+import marshmallow_jsonapi.fields as mm_fields
 
 from ..base import BaseModel, BaseSchemaJson
 from ..custom_fields import SchemaDatetime, field_from_mm
@@ -13,66 +14,42 @@ from ..custom_fields import SchemaDatetime, field_from_mm
 class TaskFullSchema(BaseSchemaJson):
     """Schema for enforcement task in full model."""
 
-    id = marshmallow.fields.Str(
-        data_key="id",
-        description="The task id",
-        required=True,
+    id = mm_fields.Str(data_key="id", description="The task id", required=True)
+    uuid = mm_fields.Str(data_key="uuid", description="The task id", required=True)
+    pretty_id = mm_fields.Int(
+        data_key="pretty_id", description="The task ID as it appears in the UI"
     )
-    uuid = marshmallow.fields.Str(
-        data_key="uuid",
-        description="The task id",
-        required=True,
+    date_fetched = mm_fields.Str(
+        data_key="date_fetched", description="The date when the task was created", required=True
     )
-    pretty_id = marshmallow.fields.Int(
-        data_key="pretty_id",
-        description="The task ID as it appears in the UI",
+    enforcement = mm_fields.Str(
+        data_key="enforcement", description="The enforcement name", required=True
     )
-    date_fetched = marshmallow.fields.Str(
-        data_key="date_fetched",
-        description="The date when the task was created",
-        required=True,
+    enforcement_id = mm_fields.Str(
+        data_key="enforcement_id", description="The Enforcement set ID", required=True
     )
-    enforcement = marshmallow.fields.Str(
-        data_key="enforcement",
-        description="The enforcement name",
-        required=True,
+    task_name = mm_fields.Str(data_key="task_name", description="The task name", required=True)
+    result = mm_fields.Dict(
+        data_key="result", description="The Task results per Action", load_default=dict
     )
-    enforcement_id = marshmallow.fields.Str(
-        data_key="enforcement_id",
-        description="The Enforcement set ID",
-        required=True,
-    )
-    task_name = marshmallow.fields.Str(
-        data_key="task_name",
-        description="The task name",
-        required=True,
-    )
-
-    result = marshmallow.fields.Dict(
-        data_key="result",
-        description="The Task results per Action",
-        load_default=dict,
-    )
-
-    view = marshmallow.fields.Str(
+    view = mm_fields.Str(
         data_key="view",
         description="The name of the query defined as the enforcement set trigger",
         allow_none=True,
         load_default=None,
     )
-    period = marshmallow.fields.Str(
+    period = mm_fields.Str(
         data_key="period",
         description="The period scheduled for running the task",
         allow_none=True,
         load_default=None,
     )
-    condition = marshmallow.fields.Str(
+    condition = mm_fields.Str(
         data_key="condition",
         description="The condition which triggered the run",
         allow_none=True,
         load_default=None,
     )
-
     started = SchemaDatetime(
         data_key="started",
         description="The timestamp when the task started running",
@@ -121,8 +98,8 @@ class TaskFull(BaseModel):
     view: t.Optional[str] = field_from_mm(SCHEMA, "view")
     period: t.Optional[str] = field_from_mm(SCHEMA, "period")
     condition: t.Optional[str] = field_from_mm(SCHEMA, "condition")
-    started: t.Optional[datetime] = field_from_mm(SCHEMA, "started")
-    finished: t.Optional[datetime] = field_from_mm(SCHEMA, "finished")
+    started: t.Optional[datetime.datetime] = field_from_mm(SCHEMA, "started")
+    finished: t.Optional[datetime.datetime] = field_from_mm(SCHEMA, "finished")
 
     SCHEMA: t.ClassVar[marshmallow.Schema] = SCHEMA
 

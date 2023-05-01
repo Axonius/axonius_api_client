@@ -9,6 +9,8 @@ from axonius_api_client.api.system.dashboard import DiscoverData, DiscoverPhase
 
 
 class DashboardBase:
+    """Pass."""
+
     @pytest.fixture(scope="class")
     def apiobj(self, api_dashboard):
         return api_dashboard

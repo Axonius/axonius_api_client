@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Command line interface for Axonius API Client."""
 from ..constants.wizards import Docs
+from ..constants.asset_helpers import ASSETS_HELPERS
 
 HELPSTR_AUTH = """
 Detailed help for authentication:
@@ -226,3 +227,4 @@ HELPSTRS["query"] = HELPSTR_QUERY
 HELPSTRS["wizard"] = Docs.TEXT
 HELPSTRS["wizard_csv"] = Docs.CSV
 HELPSTRS["multiple_cnx_json"] = HELPSTR_MULTI_CNX_JSON
+HELPSTRS["asset_helper"] = ASSETS_HELPERS.to_str()

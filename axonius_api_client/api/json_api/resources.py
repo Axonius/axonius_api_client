@@ -3,154 +3,163 @@
 import dataclasses
 import typing as t
 
-import marshmallow
-import marshmallow_jsonapi
+import marshmallow_jsonapi.fields as mm_fields
 
 from ...constants.api import MAX_PAGE_SIZE, PAGE_SIZE
-from ...tools import parse_int_min_max
-from .base import BaseModel, BaseSchemaJson
-from .custom_fields import SchemaBool
+from ...tools import combo_dicts, parse_int_min_max
+from .base import BaseModel, BaseSchema, BaseSchemaJson
+from .custom_fields import SchemaBool, field_from_mm
 
 
-class PaginationSchema(marshmallow.Schema):
-    """Pass."""
+class PaginationSchema(BaseSchema):
+    """Schema for requests that use pagination."""
 
-    offset = marshmallow_jsonapi.fields.Integer(load_default=0, dump_default=0)
-    limit = marshmallow_jsonapi.fields.Integer(
-        load_default=MAX_PAGE_SIZE, dump_default=MAX_PAGE_SIZE
+    offset = mm_fields.Integer(
+        load_default=0,
+        dump_default=0,
+        description="Row start",
     )
+    limit = mm_fields.Integer(
+        load_default=MAX_PAGE_SIZE,
+        dump_default=MAX_PAGE_SIZE,
+        description=f"Page size (max: {MAX_PAGE_SIZE})",
+    )
+
+    @staticmethod
+    def get_model_cls() -> t.Any:
+        """Get the model for this schema."""
+        return PaginationRequest
+
+
+PAGE_SCHEMA = PaginationSchema()
 
 
 @dataclasses.dataclass
 class PaginationRequest(BaseModel):
-    """Pass."""
+    """Model for requests that use pagination."""
 
-    offset: t.Optional[int] = 0
-    """Row to start from"""
-
-    limit: t.Optional[int] = MAX_PAGE_SIZE
-    """Number of rows to return"""
+    offset: t.Optional[int] = field_from_mm(PAGE_SCHEMA, "offset")
+    limit: t.Optional[int] = field_from_mm(PAGE_SCHEMA, "limit")
 
     @staticmethod
     def get_schema_cls() -> t.Any:
-        """Pass."""
-        return None
+        """Get the schema for this model."""
+        return PaginationSchema
 
-    def __post_init__(self):
-        """Pass."""
+    def set_offset(self, value: t.Optional[int]) -> int:
+        """Set the offset (row start) for this request."""
+        self.offset = parse_int_min_max(value=value, default=0, min_value=0, max_value=None)
+        return self.offset
+
+    def set_limit(self, value: t.Optional[int]) -> int:
+        """Set the limit (page size) for this request."""
         self.limit = parse_int_min_max(
-            value=self.limit, default=PAGE_SIZE, min_value=1, max_value=MAX_PAGE_SIZE
+            value=value, default=PAGE_SIZE, min_value=1, max_value=MAX_PAGE_SIZE
         )
-        self.offset = parse_int_min_max(value=self.offset, default=0, min_value=0, max_value=None)
+        return self.limit
 
-
-@dataclasses.dataclass
-class PageSortRequest(BaseModel):
-    """Data attributes for pagination and sort."""
-
-    sort: t.Optional[str] = None
-    """Field to sort on and direction to sort.
-
-    not used by api client (sort using client side logic)
-
-    examples:
-        for descending: "-field"
-        for ascending: "field"
-    """
-
-    page: t.Optional[PaginationRequest] = dataclasses.field(
-        default=None,
-        metadata={
-            "dataclasses_json": {"mm_field": marshmallow_jsonapi.fields.Nested(PaginationSchema)},
-        },
-    )
-    """Row to start at and number of rows to return.
-
-    examples:
-        in get request: page[offset]=0&page[limit]=2000
-        in post request: {"data": {"attributes": {"page": {"offset": 0, "limit": 2000}}}
-    """
-    # FYI: with out using mm_field metadata for nested schemas for dataclasses_json,
-    # the mm field that dataclasses_json dynamically creates produces warnings
-    # about using deprecated additional_meta args
-
-    get_metadata: bool = True
-    """Return pagination metadata in response."""
+    @classmethod
+    def load_if_needed(cls, value: t.Any) -> t.Any:
+        """Pass through if already an instance of this model, else load from dict."""
+        if isinstance(value, cls):
+            return value
+        return cls(**combo_dicts(value))
 
     def __post_init__(self):
-        """Pass."""
-        self.page = self.page if self.page else PaginationRequest()
-
-    @staticmethod
-    def get_schema_cls() -> t.Any:
-        """Pass."""
-        return None
+        """Dataclass post init."""
+        self.set_offset(self.offset)
+        self.set_limit(self.limit)
 
 
 class ResourcesGetSchema(BaseSchemaJson):
-    """Pass."""
+    """Schema used for getting numerous object types throughout the API."""
 
-    sort = marshmallow_jsonapi.fields.Str(allow_none=True, load_default=None, dump_default=None)
-    page = marshmallow_jsonapi.fields.Nested(PaginationSchema)
-    search = marshmallow_jsonapi.fields.Str(load_default="", dump_default="")
-    filter = marshmallow_jsonapi.fields.Str(allow_none=True, load_default="", dump_default="")
-    get_metadata = SchemaBool(load_default=True, dump_default=True)
+    page = mm_fields.Nested(
+        PaginationSchema(),
+        load_default=PaginationRequest,
+        dump_default=PaginationRequest,
+        allow_none=True,
+        description="Pagination parameters",
+    )
+    sort = mm_fields.Str(
+        load_default=None,
+        dump_default=None,
+        allow_none=True,
+        description="Field to sort by, prefix with '-' for descending",
+    )
+    search = mm_fields.Str(
+        load_default=None,
+        dump_default=None,
+        allow_none=True,
+        description="Search term",
+    )
+    filter = mm_fields.Str(
+        load_default=None,
+        dump_default=None,
+        allow_none=True,
+        description="Filter to limit results, aql-ish",
+    )
+    get_metadata = SchemaBool(
+        load_default=True,
+        dump_default=True,
+        description="Include pagination metadata in response",
+    )
 
     @staticmethod
     def get_model_cls() -> t.Any:
-        """Pass."""
+        """Get the model for this schema."""
         return ResourcesGet
 
     class Meta:
-        """Pass."""
+        """JSONAPI config."""
 
         type_ = "resource_request_schema"
 
 
+RESOURCES_GET_SCHEMA = ResourcesGetSchema()
+
+
 @dataclasses.dataclass
-class ResourcesGet(PageSortRequest):
-    """Request attributes for getting resources."""
+class ResourcesGet(BaseModel):
+    """Model used for getting numerous object types throughout the API."""
 
-    search: str = dataclasses.field(
-        default="",
-        metadata={
-            "dataclasses_json": {
-                "mm_field": marshmallow_jsonapi.fields.Str(load_default="", dump_default="")
-            },
-        },
-    )
-    """AQL search term
-
-    not used by api client (filter using client side logic)
-
-    examples:
-        (name == regex("test", "i"))
-        (name == regex("test", "i")) and tags in ["Linux"]
-    """
-    filter: t.Optional[str] = dataclasses.field(
-        default=None,
-        metadata={
-            "dataclasses_json": {
-                "mm_field": marshmallow_jsonapi.fields.Str(
-                    allow_none=True, load_default="", dump_default=""
-                )
-            },
-        },
-    )
+    page: t.Optional[t.Union[dict, PaginationRequest]] = field_from_mm(RESOURCES_GET_SCHEMA, "page")
+    sort: t.Optional[str] = field_from_mm(RESOURCES_GET_SCHEMA, "sort")
+    search: t.Optional[str] = field_from_mm(RESOURCES_GET_SCHEMA, "search")
+    filter: t.Optional[str] = field_from_mm(RESOURCES_GET_SCHEMA, "filter")
+    get_metadata: bool = field_from_mm(RESOURCES_GET_SCHEMA, "get_metadata")
 
     @staticmethod
     def get_schema_cls() -> t.Any:
-        """Pass."""
+        """Get the schema for this model."""
         return ResourcesGetSchema
+
+    def __post_init__(self):
+        """Dataclass post init."""
+        if isinstance(self.page, dict):
+            self.page = PaginationRequest(**self.page)
+        if not isinstance(self.page, PaginationRequest):
+            self.page = PaginationRequest()
+
+
+class ResourceDeleteSchema(BaseSchemaJson):
+    """Schema used for deleting numerous object types throughout the API."""
+
+    uuid = mm_fields.Str()
+
+    @staticmethod
+    def get_model_cls() -> t.Any:
+        """Get the model for this schema."""
+        return ResourceDelete
 
 
 @dataclasses.dataclass
 class ResourceDelete(BaseModel):
-    """Pass."""
+    """Model used for deleting numerous object types throughout the API."""
 
     uuid: str
 
     @staticmethod
     def get_schema_cls() -> t.Any:
-        """Pass."""
-        return None
+        """Get the schema for this model."""
+        return ResourceDeleteSchema

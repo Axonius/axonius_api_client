@@ -12,7 +12,7 @@ OPTIONS = [*AUTH, OPT_EXPORT_FORMAT, OPT_SECTION, OPT_SUB_SECTION]
 @add_options(OPTIONS)
 @click.pass_context
 def cmd(ctx, url, key, secret, section, sub_section, export_format, **kwargs):
-    """Get settings for a sub-section."""
+    """Get settings for a subsection."""
     client = ctx.obj.start_client(url=url, key=key, secret=secret)
 
     apiname = ctx.parent.command.name.replace("-", "_")

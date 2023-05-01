@@ -213,7 +213,7 @@ SCHEMAS_CUSTOM: t.Dict[str, dict] = {
             "type_norm": "string_datetime",
             "format": "date-time",
             "is_custom": True,
-        }
+        },
     },
 }
 """custom schemas for reports in asset callbacks"""

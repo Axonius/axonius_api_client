@@ -7,8 +7,6 @@ from .grp_common import EXPORT_FORMATS, OPT_EXPORT_FORMAT, OPTS_CREATE
 
 OPTIONS = [*AUTH, OPT_EXPORT_FORMAT, *OPTS_CREATE, *OPTS_OBJECT_CREATE]
 
-# XXX test
-
 
 @click.command(name="create", context_settings=CONTEXT_SETTINGS)
 @add_options(OPTIONS)

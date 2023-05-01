@@ -9,10 +9,10 @@ import pytest
 from axonius_api_client.exceptions import ApiError, StopFetch
 
 from ...utils import get_schema
-from .test_callbacks import Callbacks, Exports
+from .test_callbacks import Exports
 
 
-class TestCallbacksTable(Callbacks, Exports):
+class TestCallbacksTable(Exports):
     @pytest.fixture(params=["api_devices"], scope="class")
     def apiobj(self, request):
         return request.getfixturevalue(request.param)

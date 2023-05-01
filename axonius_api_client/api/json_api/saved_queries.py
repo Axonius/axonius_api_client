@@ -260,7 +260,7 @@ class SavedQueryMixins:
             refresh (Refreshables, optional): refresh the folders before searching
             echo (bool, optional): echo output to console
             root (t.Optional[FolderBase], optional): root folders to use to find folder
-                instead of root folders from self.folder
+                instead of root folders from `self.folder`
         """
         reason: str = f"Move '{self.folder.path}/@{self.name}' to {folder!r}/@{self.name}"
         self._check_update_ok(reason=reason)
@@ -306,7 +306,7 @@ class SavedQueryMixins:
             private (bool, optional): set copy as private, will change default folder used
             asset_scope (bool, optional): set copy as asset scope, will change default folder used
             root (t.Optional[FolderBase], optional): root folders to use to find folder
-                instead of root folders from self.folder
+                instead of root folders from `self.folder`
 
         """
         private: bool = coerce_bool(private)

@@ -22,7 +22,7 @@ from axonius_api_client.api.mixins import ModelMixins
 from axonius_api_client.cli import cli, grp_adapters
 from axonius_api_client.cli.context import CONTEXT_SETTINGS
 from axonius_api_client.cli.options import AUTH, add_options
-from axonius_api_client.constants.tables import TABLE_FMT
+from axonius_api_client.constants.api import TABLE_FORMAT
 from axonius_api_client.exceptions import NotFoundError
 from axonius_api_client.parsers.tables import tablize
 from axonius_api_client.tools import coerce_bool, coerce_int, dt_now, dt_parse, json_dump, listify
@@ -109,7 +109,7 @@ class AdapterFetchHistory(BaseModel):
 
 
 class FetchHistory(ModelMixins):
-    """Handle all of the interactions."""
+    """Handle all the interactions."""
 
     def get(
         self, generator: bool = False, **kwargs
@@ -394,7 +394,7 @@ if __name__ == "__main__" and CLI_MODE:
     @click.option(
         "--table-format",
         "table_format",
-        default=TABLE_FMT,
+        default=TABLE_FORMAT,
         help="Base format to use for --export-format=table",
         type=click.Choice(tabulate.tabulate_formats),
         show_envvar=True,
@@ -414,7 +414,7 @@ if __name__ == "__main__" and CLI_MODE:
         clients: Optional[List[str]] = None,
         exclude_realtime: bool = False,
         export_format: str = "table",
-        table_format: str = TABLE_FMT,
+        table_format: str = TABLE_FORMAT,
     ):
         """Process business_units assets using regex searches against fields."""
         client = ctx.obj.start_client(url=url, key=key, secret=secret)

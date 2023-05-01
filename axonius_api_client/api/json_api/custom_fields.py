@@ -4,13 +4,13 @@ import dataclasses
 import datetime
 import typing as t
 
-from marshmallow import validate as marshmallow_validate
 import bson
 import dataclasses_json
 import dateutil
 import dateutil.parser
 import dateutil.tz
 import marshmallow
+from marshmallow import validate as marshmallow_validate
 
 from ...tools import coerce_bool, listify
 
@@ -178,6 +178,10 @@ def field_from_mm(
 ) -> dataclasses.Field:
     """Pass."""
     if isinstance(schema, marshmallow.Schema):
+        if key not in schema.fields:
+            valids = "\n" + "\n".join(f" - {k}: {v}" for k, v in schema.fields.items())
+            raise ValueError(f"Key {key!r} not found in schema {schema}\nValids: {valids}")
+
         mm_field: marshmallow.fields.Field = schema.fields[key]
     else:
         # noinspection PyProtectedMember

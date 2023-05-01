@@ -26,7 +26,7 @@ class UpdatedByMixins:
 
     @property
     def updated_user_name(self) -> str:
-        """Get the user name of the user that last updated this object."""
+        """Get the username of the user that last updated this object."""
         return self.updated_user_obj.get("user_name") or ""
 
     @property

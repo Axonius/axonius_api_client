@@ -3,7 +3,7 @@
 import OpenSSL
 import pytest
 
-from axonius_api_client.cert_human import ssl_context
+from axonius_api_client.projects.cert_human import ssl_context
 
 
 def test_resolve_host_fail():

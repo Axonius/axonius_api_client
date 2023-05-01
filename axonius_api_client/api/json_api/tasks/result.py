@@ -6,34 +6,35 @@ import types
 import typing as t
 
 import marshmallow
+import marshmallow.fields as mm_fields
 
-from ..custom_fields import SchemaDatetime, SchemaBool, field_from_mm
-from ..base2 import BaseModel, BaseSchema
 from ....constants import enforcements as enums
+from ..base2 import BaseModel, BaseSchema
+from ..custom_fields import SchemaBool, SchemaDatetime, field_from_mm
 
 
 class ResultSchema(BaseSchema):
     """Schema of result for an action in a flow_type of a task for an enforcement."""
 
-    flow_type = marshmallow.fields.Str(description="The type of flow of the result", required=True)
-    flow_position = marshmallow.fields.Int(
+    flow_type = mm_fields.Str(description="The type of flow of the result", required=True)
+    flow_position = mm_fields.Int(
         description="The position of the result in the flow_type", required=True
     )
-    flow_count = marshmallow.fields.Int(
+    flow_count = mm_fields.Int(
         description="The total number of results in the flow_type", required=True
     )
 
-    name = marshmallow.fields.Str(description="The name of the action", required=True)
-    uuid = marshmallow.fields.Str(description="The uuid of the action", required=True)
-    type = marshmallow.fields.Str(description="The type of the action", required=True)
-    category = marshmallow.fields.Str(
+    name = mm_fields.Str(description="The name of the action", required=True)
+    uuid = mm_fields.Str(description="The uuid of the action", required=True)
+    type = mm_fields.Str(description="The type of the action", required=True)
+    category = mm_fields.Str(
         description="The category of the action", allow_none=True, load_default=None
     )
 
-    config = marshmallow.fields.Dict(
+    config = mm_fields.Dict(
         description="The config of the action", allow_none=True, load_default=dict
     )
-    ifttt = marshmallow.fields.Str(
+    ifttt = mm_fields.Str(
         description="The if-this-then-that content for the action",
         allow_none=True,
         load_default=None,
@@ -48,17 +49,17 @@ class ResultSchema(BaseSchema):
     stopped_at = SchemaDatetime(
         description="The time the action stopped", allow_none=True, load_default=None
     )
-    duration_seconds = marshmallow.fields.Float(
+    duration_seconds = mm_fields.Float(
         description="The duration of the action in seconds", allow_none=True, load_default=None
     )
 
-    total_count = marshmallow.fields.Int(
+    total_count = mm_fields.Int(
         description="The total count of the action", allow_none=True, load_default=None
     )
-    failure_count = marshmallow.fields.Int(
+    failure_count = mm_fields.Int(
         description="The failure count of the action", allow_none=True, load_default=None
     )
-    success_count = marshmallow.fields.Int(
+    success_count = mm_fields.Int(
         description="The success count of the action", allow_none=True, load_default=None
     )
 
@@ -105,10 +106,10 @@ class ResultSchema(BaseSchema):
         load_default=None,
     )
 
-    message = marshmallow.fields.Str(
+    message = mm_fields.Str(
         description="The message of the action", allow_none=True, load_default=None
     )
-    status = marshmallow.fields.Str(
+    status = mm_fields.Str(
         description="The status of the action", allow_none=True, load_default=None
     )
 

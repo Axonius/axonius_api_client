@@ -6,93 +6,89 @@ import types
 import typing as t
 
 import marshmallow
+import marshmallow.fields as mm_fields
 
+
+from ....constants import enforcements as enums
 from ....http import Http
 from ....tools import get_diff_seconds, listify
-from ..custom_fields import SchemaBool, SchemaDatetime, field_from_mm, SchemaObjectIDDatetime
 from ..base2 import BaseModel, BaseSchema
+from ..custom_fields import SchemaBool, SchemaDatetime, SchemaObjectIDDatetime, field_from_mm
 from .result import Result, ResultSchema
 from .task_basic import TaskBasic
 from .task_full import TaskFull
-from ....constants import enforcements as enums
 
 
 class TaskSchema(BaseSchema):
     """Schema for human friendly version of tasks for enforcements."""
 
-    id = marshmallow.fields.Int(
-        data_key="id", description="The id of the task in the UI", required=True
-    )
-    uuid = marshmallow.fields.Str(
-        data_key="uuid", description="The uuid of the task", required=True
-    )
-    name = marshmallow.fields.Str(
-        data_key="name", description="The name of the task", required=True
-    )
-    enforcement_name = marshmallow.fields.Str(
+    id = mm_fields.Int(data_key="id", description="The id of the task in the UI", required=True)
+    uuid = mm_fields.Str(data_key="uuid", description="The uuid of the task", required=True)
+    name = mm_fields.Str(data_key="name", description="The name of the task", required=True)
+    enforcement_name = mm_fields.Str(
         data_key="enforcement_name", description="The name of the enforcement", required=True
     )
-    enforcement_uuid = marshmallow.fields.Str(
+    enforcement_uuid = mm_fields.Str(
         data_key="enforcement_uuid", description="The uuid of the enforcement", required=True
     )
 
-    query_type = marshmallow.fields.Str(
+    query_type = mm_fields.Str(
         data_key="query_type",
         description="The type of the query",
         allow_none=True,
         load_default=None,
     )
-    query_name = marshmallow.fields.Str(
+    query_name = mm_fields.Str(
         data_key="query_name",
         description="The name of the query",
         allow_none=True,
         load_default=None,
     )
-    query_uuid = marshmallow.fields.Str(
+    query_uuid = mm_fields.Str(
         data_key="query_uuid",
         description="The uuid of the query",
         allow_none=True,
         load_default=None,
     )
 
-    data_scope_uuid = marshmallow.fields.Str(
+    data_scope_uuid = mm_fields.Str(
         data_key="data_scope_uuid",
         description="The uuid of the data scope of the query, if any",
         allow_none=True,
         load_default=None,
     )
-    discover_uuid = marshmallow.fields.Str(
+    discover_uuid = mm_fields.Str(
         data_key="discover_uuid",
         description="The uuid of the discover cycle that created this task, if any",
         allow_none=True,
         load_default=None,
     )
 
-    schedule_method = marshmallow.fields.Str(
+    schedule_method = mm_fields.Str(
         data_key="schedule_method",
         description="Method of scheduling",
         allow_none=True,
         load_default=None,
     )
-    schedule_conditions = marshmallow.fields.Str(
+    schedule_conditions = mm_fields.Str(
         data_key="schedule_conditions",
         description="The conditions of the schedule",
         allow_none=True,
         load_default=None,
     )
-    schedule_period = marshmallow.fields.Str(
+    schedule_period = mm_fields.Str(
         data_key="schedule_period",
         description="The period of the schedule",
         allow_none=True,
         load_default=None,
     )
-    schedule_recurrence = marshmallow.fields.Int(
+    schedule_recurrence = mm_fields.Int(
         data_key="schedule_recurrence",
         description="The recurrence of the schedule",
         allow_none=True,
         load_default=None,
     )
-    schedule_time = marshmallow.fields.Str(
+    schedule_time = mm_fields.Str(
         data_key="schedule_time",
         description="The time of the schedule",
         allow_none=True,
@@ -105,19 +101,19 @@ class TaskSchema(BaseSchema):
         allow_none=True,
         load_default=None,
     )
-    only_against_first_count = marshmallow.fields.Int(
+    only_against_first_count = mm_fields.Int(
         data_key="only_against_first_count",
         description="Only run against the first N assets",
         allow_none=True,
         load_default=None,
     )
-    only_when_above_count = marshmallow.fields.Int(
+    only_when_above_count = mm_fields.Int(
         data_key="only_when_above_count",
         description="Only run when the asset count is above N",
         allow_none=True,
         load_default=None,
     )
-    only_when_below_count = marshmallow.fields.Int(
+    only_when_below_count = mm_fields.Int(
         data_key="only_when_below_count",
         description="Only run when the asset count is below N",
         allow_none=True,
@@ -136,7 +132,7 @@ class TaskSchema(BaseSchema):
         load_default=None,
     )
 
-    previous_count = marshmallow.fields.Int(
+    previous_count = mm_fields.Int(
         data_key="previous_count",
         description="The number of times task has been run",
         allow_none=True,
@@ -166,26 +162,26 @@ class TaskSchema(BaseSchema):
         allow_none=True,
         load_default=None,
     )
-    duration_seconds = marshmallow.fields.Float(
+    duration_seconds = mm_fields.Float(
         data_key="duration_seconds",
         description="The duration of the task in seconds",
         allow_none=True,
         load_default=None,
     )
 
-    total_count = marshmallow.fields.Int(
+    total_count = mm_fields.Int(
         data_key="total_count",
         description="The total number of assets",
         allow_none=True,
         load_default=None,
     )
-    success_count = marshmallow.fields.Int(
+    success_count = mm_fields.Int(
         data_key="success_count",
         description="The number of assets that had no errors",
         allow_none=True,
         load_default=None,
     )
-    failure_count = marshmallow.fields.Int(
+    failure_count = mm_fields.Int(
         data_key="failure_count",
         description="The number of assets that had errors",
         allow_none=True,
@@ -241,21 +237,21 @@ class TaskSchema(BaseSchema):
         load_default=None,
     )
 
-    status = marshmallow.fields.Str(
+    status = mm_fields.Str(
         data_key="status",
         description="The status of the task",
         allow_none=True,
         load_default=None,
     )
-    status_results = marshmallow.fields.Str(
+    status_results = mm_fields.Str(
         data_key="status_results",
         description="The aggregate status of the results for the task",
         allow_none=True,
         load_default=None,
     )
 
-    results = marshmallow.fields.List(
-        marshmallow.fields.Nested(ResultSchema()),
+    results = mm_fields.List(
+        mm_fields.Nested(ResultSchema()),
         data_key="results",
         description="The results of the task",
         allow_none=True,
@@ -345,6 +341,33 @@ class Task(BaseModel):
 
     SCHEMA: t.ClassVar[marshmallow.Schema] = SCHEMA
     ENUMS: t.ClassVar[types.ModuleType] = enums
+
+    @property
+    def action_types(self) -> t.List[str]:
+        """Return all action types used by this task."""
+        return [result.type for result in self.results]
+
+    @property
+    def result_main(self) -> t.Optional[Result]:
+        """Return the result for the "main" workflow for this task."""
+        for result in self.results:
+            if result.flow_type == self.ENUMS.FlowTypes.main.value:
+                return result
+
+    @property
+    def results_success(self) -> t.List[Result]:
+        """Return the results for the "success" workflow for this task."""
+        return [x for x in self.results if x.flow_type == self.ENUMS.FlowTypes.success.value]
+
+    @property
+    def results_failure(self) -> t.List[Result]:
+        """Return the results for the "failure" workflow for this task."""
+        return [x for x in self.results if x.flow_type == self.ENUMS.FlowTypes.failure.value]
+
+    @property
+    def results_post(self) -> t.List[Result]:
+        """Return the results for the "post" workflow for this task."""
+        return [x for x in self.results if x.flow_type == self.ENUMS.FlowTypes.post.value]
 
     @staticmethod
     def get_schema_cls() -> t.Any:
@@ -521,7 +544,7 @@ class Task(BaseModel):
             "category": _action.get("action_type"),
             "config": _action.get("config") or {},
             "ifttt": _ifttt.get("content"),
-            "is_ifttt_enabled": _ifttt.get("enable"),
+            "is_ifttt_enabled": _ifttt.get("include_output"),
             "started_at": started_at,
             "stopped_at": stopped_at,
             "duration_seconds": duration_seconds,
@@ -539,3 +562,26 @@ class Task(BaseModel):
             "status": status,
         }
         return result
+
+    @staticmethod
+    def _str_properties() -> t.List[str]:
+        return [
+            "name",
+            "enforcement_name",
+            "query_name",
+            "query_type",
+            "schedule_method",
+            "schedule_conditions",
+            "started_at",
+            "stopped_at",
+            "duration_seconds",
+            "total_count",
+            "success_count",
+            "failure_count",
+            "status",
+            "status_results",
+            "action_types",
+        ]
+
+    def __repr__(self):
+        return self.__str__()

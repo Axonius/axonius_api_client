@@ -47,7 +47,7 @@ class FoldersMixins(ModelMixins, abc.ABC):
 
     @cached(cache=TTLCache(maxsize=1024, ttl=60))
     def get_cached(self) -> t.Union[FoldersModel, FolderModel]:
-        """Get the root for this folders object type using a 60 second cache."""
+        """Get the root for this folders object type using a cache with a TTL of 60."""
         return self.get()
 
     def get_tree(
@@ -99,7 +99,7 @@ class FoldersMixins(ModelMixins, abc.ABC):
 
     @cached(cache=TTLCache(maxsize=1024, ttl=60))
     def find_cached(self, *args, **kwargs) -> t.Union[FoldersModel, FolderModel]:
-        """Find a folder for this folders object type using a 60 second cache."""
+        """Find a folder for this folders object type using a cache with a TTL of 60."""
         return self.find(*args, **kwargs)
 
     def search_objects(

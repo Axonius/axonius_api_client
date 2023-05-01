@@ -5,10 +5,9 @@ from typing import Any, List
 
 import pytest
 
-from axonius_api_client.api import json_api, mixins
+from axonius_api_client.api import json_api, mixins, AssetMixin
 
-# from axonius_api_client.constants.api import MAX_PAGE_SIZE
-from axonius_api_client.exceptions import ApiError, NotFoundError, StopFetch
+from axonius_api_client.exceptions import ApiError, NotFoundError, StopFetch, ToolsError
 from axonius_api_client.tools import listify
 
 from ...meta import QUERIES
@@ -16,6 +15,8 @@ from ...utils import FLAKY, check_asset, check_assets
 
 
 class WizData:
+    """Pass."""
+
     wiz_str: str = "simple active_directory:id exists"
     wiz_dict: dict = {"type": "simple", "value": "active_directory:id exists"}
     exp: dict = {
@@ -55,7 +56,10 @@ class WizData:
 
 
 class ModelMixinsBase:
-    def test_model_child(self, apiobj):
+    """Pass."""
+
+    @staticmethod
+    def test_model_child(apiobj):
         child = mixins.ChildMixins(parent=apiobj)
         assert str(apiobj) in str(child)
         assert repr(apiobj) in repr(child)
@@ -64,17 +68,22 @@ class ModelMixinsBase:
 @pytest.mark.slow
 @pytest.mark.trylast
 class TestAssetsPrivate(ModelMixinsBase):
+    """Pass."""
+
     @pytest.fixture(params=["api_devices"], scope="class")
     def apiobj(self, request):
+        """Pass."""
         return request.getfixturevalue(request.param)
 
     def test_history_dates(self, apiobj):
         def check_asset_type_history_date(obj):
+            """Pass."""
             assert isinstance(obj, json_api.assets.AssetTypeHistoryDate)
             assert str(obj)
             assert repr(obj)
 
         def check_asset_type_history_dates(obj):
+            """Pass."""
             assert isinstance(obj, json_api.assets.AssetTypeHistoryDates)
             assert str(obj)
             assert repr(obj)
@@ -93,7 +102,7 @@ class TestAssetsPrivate(ModelMixinsBase):
 
             date_oldest = sorted(obj.dates, key=lambda x: x.date)[0]
 
-            with pytest.raises(ApiError):
+            with pytest.raises(ToolsError):
                 obj.get_date_by_days_ago(value="xxx")
 
             date = obj.get_date_by_days_ago(value="0")
@@ -139,6 +148,7 @@ class TestAssetsPrivate(ModelMixinsBase):
 
     def test_get_asset_page(self, apiobj, monkeypatch):
         def check_page(page):
+            """Pass."""
             state = page.create_state()
             assert isinstance(state, dict)
             assert isinstance(page, json_api.assets.AssetsPage)
@@ -265,7 +275,20 @@ class TestAssetsPrivate(ModelMixinsBase):
 class TestAssetsPublic(ModelMixinsBase):
     @pytest.fixture(params=["api_devices"], scope="class")
     def apiobj(self, request):
+        """Pass."""
         return request.getfixturevalue(request.param)
+
+    def test_cls_asset_modules(self, apiobj):
+        data = apiobj.asset_modules()
+        assert isinstance(data, list) and data
+        for item in data:
+            assert issubclass(item, AssetMixin)
+
+    def test_cls_asset_types(self, apiobj):
+        data = apiobj.asset_types()
+        assert isinstance(data, list) and data
+        for item in data:
+            assert isinstance(item, str)
 
     @FLAKY()
     def test_sort(self, apiobj):
@@ -300,23 +323,17 @@ class TestAssetsPublic(ModelMixinsBase):
         data = apiobj.count_by_saved_query(name=sq_name)
         assert isinstance(data, int)
 
-    # def test_get_no_dups(self, apiobj):
-    #     rows = apiobj.get(generator=True)
-    #     ids = {}
-    #     for idx, row in enumerate(rows):
-    #         id = row["internal_axon_id"]
-    #         if id in ids:
-    #             raise Exception(f"Duplicate id {id} at row {idx}")
-
     @FLAKY()
     def test_get_agg_raw_data(self, apiobj):
         rows = apiobj.get(max_rows=1, fields=["agg:raw_data"], http_args={"response_timeout": 30})
         for row in rows:
             self.validate_raw_data(apiobj=apiobj, row=row, field="specific_data.data.raw_data")
 
-    def validate_raw_data(self, apiobj, row, field):
+    @staticmethod
+    def validate_raw_data(apiobj, row, field):
+        """Pass."""
         adapters = row["adapters"]
-        raw_datas = row[field]
+        raw_datas = row.get(field)
         assert isinstance(raw_datas, (dict, list)) and raw_datas
 
         raw_datas = listify(raw_datas)
@@ -328,26 +345,14 @@ class TestAssetsPublic(ModelMixinsBase):
 
     @FLAKY()
     def test_get_adapter_raw_data(self, apiobj):
-        rows = apiobj.get(
-            max_rows=1,
-            fields=["active_directory:raw_data"],
-            wiz_entries="simple active_directory:id exists",
-            http_args={"response_timeout": 30},
-        )
+        field = "adapters_data.active_directory_adapter.raw_data"
+        fields = ["active_directory:raw_data"]
+        wiz = "simple active_directory:id exists"
+        http_args = {"response_timeout": 30}
+
+        rows = apiobj.get(max_rows=1, fields=fields, wiz_entries=wiz, http_args=http_args)
         for row in rows:
-            self.validate_raw_data(
-                apiobj=apiobj, row=row, field="adapters_data.active_directory_adapter.raw_data"
-            )
-
-    # def test_get_page_size_over_max(self, apiobj):
-    #     rows = apiobj.get(page_size=3000, max_pages=1)
-    #     check_assets(rows)
-    #     assert len(rows) <= MAX_PAGE_SIZE
-
-    # def test_get_maxpages(self, apiobj):
-    #     rows = apiobj.get(page_size=2, max_pages=1)
-    #     check_assets(rows)
-    #     assert len(rows) == 2
+            self.validate_raw_data(apiobj=apiobj, row=row, field=field)
 
     @FLAKY()
     def test_get_all_agg(self, apiobj):
@@ -388,11 +393,11 @@ class TestAssetsPublic(ModelMixinsBase):
 
     @FLAKY()
     def test_get_id(self, apiobj):
-        axid = apiobj.ORIGINAL_ROWS[0]["internal_axon_id"]
+        axon_id = apiobj.ORIGINAL_ROWS[0]["internal_axon_id"]
 
-        row = apiobj.get_by_id(id=axid)
+        row = apiobj.get_by_id(id=axon_id)
         check_asset(row)
-        assert row["internal_axon_id"] == axid
+        assert row["internal_axon_id"] == axon_id
 
     def test_get_id_error(self, apiobj):
         with pytest.raises(NotFoundError):

@@ -11,7 +11,7 @@ OPTIONS = [*AUTH, *OPTS_EXPORT]
 @add_options(OPTIONS)
 @click.pass_context
 def cmd(ctx, url, key, secret, export_format, phases, progress):
-    """Return exit code 0 if discover is running, 1 if it is not."""
+    """Return exit code 0 if discovery is running, 1 if it is not."""
     client = ctx.obj.start_client(url=url, key=key, secret=secret)
 
     with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
