@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 """Models for API requests & responses."""
-import typing as t
 import dataclasses
-from ..generic import MetadataSchema, Metadata
+import typing as t
+
+from ..generic import Metadata, MetadataSchema
 
 
 class FieldsSchema(MetadataSchema):

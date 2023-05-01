@@ -7,12 +7,7 @@ import typing as t
 
 from ....constants.api import MAX_PAGE_SIZE, PAGE_SIZE
 from ....exceptions import StopFetch
-from ....tools import (
-    dt_now,
-    dt_sec_ago,
-    json_dump,
-    parse_int_min_max,
-)
+from ....tools import dt_now, dt_sec_ago, json_dump, parse_int_min_max
 from ..base import BaseModel
 
 LOGGER = logging.getLogger(__name__)
@@ -131,7 +126,7 @@ class AssetsPage(BaseModel):
 
     @property
     def page(self) -> dict:
-        """Page metadata, returned if get_metadata=True."""
+        """Page metadata, returned when get_metadata=True."""
         return self.meta.get("page") or {}
 
     @property

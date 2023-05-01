@@ -6,7 +6,7 @@
 
 import pytest
 
-from axonius_api_client import cert_human
+from axonius_api_client.projects import cert_human
 from axonius_api_client.api.json_api.generic import ApiBase
 from axonius_api_client.api.json_api.system_settings import CertificateDetails
 from axonius_api_client.exceptions import ApiError, NotFoundError
@@ -31,7 +31,7 @@ class SettingsBasePublic:
         assert meta["name"] == name
         assert isinstance(meta["title"], str)
         assert isinstance(meta["schemas"], dict) and meta["schemas"]
-        # pre-4.3 sub section "login_settings" of "system_settings" (GUI Settings)
+        # pre-4.3 sub section "login_settings" of "system_settings" (GUI SettingsUpdate)
         # has its own sub section ldap_login
         assert isinstance(meta["sub_sections"], dict)  # and not meta["sub_sections"]
         assert isinstance(meta["parent_name"], str) and meta["parent_name"]
@@ -298,9 +298,9 @@ class TestSettingsGlobal(SettingsBasePublic):
         }
         """
         {
-            "settings_title": "Global Settings",
+            "settings_title": "Global SettingsUpdate",
             "name": "api_settings",
-            "title": "API Settings",
+            "title": "API SettingsUpdate",
             "schemas": {
                 "enabled": {
                     "name": "enabled",

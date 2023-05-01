@@ -2,29 +2,22 @@
 """Command line interface for Axonius API Client."""
 import os
 import sys
+import typing as t
 
 import click
 
-from .. import INIT_DOTENV, version
-from ..constants.api import TIMEOUT_CONNECT, TIMEOUT_RESPONSE
+from ..projects.cf_token import constants as cf_constants
+from .. import INIT_DOTENV, connect, version
 from ..constants.logs import (
-    LOG_FILE_MAX_FILES,
-    LOG_FILE_MAX_MB,
-    LOG_FILE_NAME,
-    LOG_FILE_PATH,
-    LOG_LEVEL_API,
-    LOG_LEVEL_AUTH,
-    LOG_LEVEL_CONSOLE,
-    LOG_LEVEL_ENDPOINTS,
-    LOG_LEVEL_FILE,
-    LOG_LEVEL_HTTP,
-    LOG_LEVEL_PACKAGE,
     LOG_LEVELS_STR,
-    REQUEST_ATTR_MAP,
-    RESPONSE_ATTR_MAP,
+    REQUEST_ATTRS,
+    REQUEST_ATTRS_DEFAULT,
+    RESPONSE_ATTRS,
+    RESPONSE_ATTRS_DEFAULT,
 )
 from ..logs import LOG
 from ..setup_env import DEFAULT_ENV_FILE
+from ..tools import json_dump
 from . import (
     context,
     grp_account,
@@ -67,8 +60,9 @@ Tips:
   - As CSV with , as delimiter: AX_COOKIES="key1=value1,key2=value2,key3=value4"
   - As CSV with ; as delimiter: AX_COOKIES="semi:key1=value1;key2=value2;key3=value4"
   - As JSON str: AX_HEADERS='json:{{"key1": "value1", "key2": "value2"}}'
-- Use AX_URL, AX_KEY, AX_SECRET to specify credentials
+- Use AX_URL, AX_KEY, AX_SECRET, AX_CREDENTIALS to specify credentials
 """
+CF = cf_constants.CLIENT_DESC
 
 
 @click.group(
@@ -81,7 +75,7 @@ Tips:
     "-q/-nq",
     "quiet",
     default=False,
-    help="Silence green text.",
+    help="Silence most green & blue output.",
     show_envvar=True,
     show_default=True,
 )
@@ -100,10 +94,147 @@ Tips:
     cls=context.DictOption,
 )
 @click.option(
+    "--cf-url",
+    "-cfu",
+    "cf_url",
+    help=f"{CF}URL to use in cloudflared commands, will fallback to url if not supplied",
+    default=None,
+    envvar=["CF_URL", "AX_URL"],
+    show_envvar=True,
+    show_default=True,
+)
+@click.option(
+    "--cf-token",
+    "-cft",
+    "cf_token",
+    help=f"{CF}token supplied by user, will be checked for validity if not empty",
+    default=None,
+    envvar="CF_TOKEN",
+    show_envvar=True,
+    show_default=True,
+)
+@click.option(
+    "--cf-run/--no-cf-run",
+    "-cfr/-ncfr",
+    "cf_run",
+    help=(
+        f"{CF}If no token supplied or in OS env vars, try to get token from cloudflared commands"
+    ),
+    default=cf_constants.CLIENT_RUN,
+    envvar="CF_RUN",
+    show_envvar=True,
+    show_default=True,
+)
+@click.option(
+    "--cf-run-access/--no-cf-run-access",
+    "-cfrac/-ncfrac",
+    "cf_run_access",
+    help=f"{CF}If run is True, try to get token from `access token` command",
+    default=cf_constants.FLOW_RUN_ACCESS,
+    envvar="CF_RUN_ACCESS",
+    show_envvar=True,
+    show_default=True,
+)
+@click.option(
+    "--cf-run-login/--no-cf-run-login",
+    "-cfrlc/-ncfrlc",
+    "cf_run_login",
+    help=(
+        f"{CF}If run is True and no token returned from `access token` command, "
+        f"try to get token from `access login` command"
+    ),
+    envvar="CF_RUN_LOGIN",
+    default=cf_constants.FLOW_RUN_LOGIN,
+    show_envvar=True,
+    show_default=True,
+)
+@click.option(
+    "--cf-path",
+    "-cfp",
+    "cf_path",
+    help=f"{CF}Path to cloudflared binary to run, can be full path or path in OS env var $PATH",
+    default=cf_constants.CF_PATH,
+    envvar="CF_PATH",
+    show_envvar=True,
+    show_default=True,
+)
+@click.option(
+    "--cf-timeout-access",
+    "-cfta",
+    "cf_timeout_access",
+    help=f"{CF}Timeout for `access token` command in seconds",
+    default=cf_constants.TIMEOUT_ACCESS,
+    type=click.INT,
+    envvar="CF_TIMEOUT_ACCESS",
+    show_envvar=True,
+    show_default=True,
+)
+@click.option(
+    "--cf-timeout-login",
+    "-cftl",
+    "cf_timeout_login",
+    help=f"{CF}Timeout for `access login` command in seconds",
+    default=cf_constants.TIMEOUT_LOGIN,
+    type=click.INT,
+    envvar="CF_TIMEOUT_LOGIN",
+    show_envvar=True,
+    show_default=True,
+)
+@click.option(
+    "--cf-error/--no-cf-error",
+    "-cfe/-ncfe",
+    "cf_error",
+    help=f"{CF}Raise error if an invalid token is found or no token can be found",
+    default=cf_constants.CLIENT_ERROR,
+    envvar="CF_ERROR",
+    show_envvar=True,
+    show_default=True,
+)
+@click.option(
+    "--cf-error-access/--no-cf-error-access",
+    "-cfeac/-ncfeac",
+    "cf_error_access",
+    help=f"{CF}Raise exc if `access token` command fails and login is False",
+    default=cf_constants.FLOW_ERROR,
+    envvar="CF_ERROR_ACCESS",
+    show_envvar=True,
+    show_default=True,
+)
+@click.option(
+    "--cf-error-login/--no-cf-error-login",
+    "-cfel/-ncfel",
+    "cf_error_login",
+    help=f"{CF}Raise exc if `access login` command fails",
+    default=cf_constants.FLOW_ERROR,
+    envvar="CF_ERROR_LOGIN",
+    show_envvar=True,
+    show_default=True,
+)
+@click.option(
+    "--cf-echo/--no-cf-echo",
+    "-cfec/-ncfec",
+    "cf_echo",
+    help=f"{CF}Echo commands and results to STDERR",
+    default=cf_constants.FLOW_ECHO,
+    envvar="CF_ECHO",
+    show_envvar=True,
+    show_default=True,
+)
+@click.option(
+    "--cf-echo-verbose/--no-cf-echo-verbose",
+    "-cfev/-ncfev",
+    "cf_echo_verbose",
+    help=f"{CF}Echo more stuff to STDERR",
+    default=cf_constants.FLOW_ECHO_VERBOSE,
+    envvar="CF_ECHO_VERBOSE",
+    show_envvar=True,
+    show_default=True,
+)
+@click.option(
     "--log-level-package",
     "-lvlpkg",
     "log_level_package",
-    default=LOG_LEVEL_PACKAGE,
+    default=connect.LOG_LEVEL_PACKAGE,
     help="Logging level to use for entire package.",
     type=click.Choice(LOG_LEVELS_STR),
     show_envvar=True,
@@ -113,7 +244,7 @@ Tips:
     "--log-level-http",
     "-lvlhttp",
     "log_level_http",
-    default=LOG_LEVEL_HTTP,
+    default=connect.Http.LOG_LEVEL,
     help="Logging level to use for http client.",
     type=click.Choice(LOG_LEVELS_STR),
     show_envvar=True,
@@ -123,7 +254,7 @@ Tips:
     "--log-level-auth",
     "-lvlauth",
     "log_level_auth",
-    default=LOG_LEVEL_AUTH,
+    default=connect.LOG_LEVEL_AUTH,
     help="Logging level to use for auth client.",
     type=click.Choice(LOG_LEVELS_STR),
     show_envvar=True,
@@ -133,7 +264,7 @@ Tips:
     "--log-level-api",
     "-lvlapi",
     "log_level_api",
-    default=LOG_LEVEL_API,
+    default=connect.LOG_LEVEL_API,
     help="Logging level to use for API models.",
     type=click.Choice(LOG_LEVELS_STR),
     show_envvar=True,
@@ -143,7 +274,7 @@ Tips:
     "--log-level-endpoints",
     "-lvlep",
     "log_level_endpoints",
-    default=LOG_LEVEL_ENDPOINTS,
+    default=connect.LOG_LEVEL_ENDPOINTS,
     help="Logging level to use for API endpoints.",
     type=click.Choice(LOG_LEVELS_STR),
     show_envvar=True,
@@ -153,7 +284,7 @@ Tips:
     "--log-level-console",
     "-lvlcon",
     "log_level_console",
-    default=LOG_LEVEL_CONSOLE,
+    default=connect.LOG_LEVEL_CONSOLE,
     help="Logging level to use for console output.",
     type=click.Choice(LOG_LEVELS_STR),
     show_envvar=True,
@@ -163,7 +294,7 @@ Tips:
     "--log-level-file",
     "-lvlfile",
     "log_level_file",
-    default=LOG_LEVEL_FILE,
+    default=connect.LOG_LEVEL_FILE,
     help="Logging level to use for file output.",
     type=click.Choice(LOG_LEVELS_STR),
     show_envvar=True,
@@ -174,19 +305,19 @@ Tips:
     "-reqattr",
     "log_request_attrs",
     help="Log http client request attributes (multiples)",
-    default=["size", "url"],
+    default=REQUEST_ATTRS_DEFAULT,
     multiple=True,
-    type=click.Choice(list(REQUEST_ATTR_MAP) + ["all"]),
+    type=click.Choice(REQUEST_ATTRS),
     show_envvar=True,
 )
 @click.option(
     "--log-response-attrs",
     "-respattr",
     "log_response_attrs",
-    default=["size", "url", "status", "elapsed"],
+    default=RESPONSE_ATTRS_DEFAULT,
     help="Log http client response attributes (multiples)",
     multiple=True,
-    type=click.Choice(list(RESPONSE_ATTR_MAP) + ["all"]),
+    type=click.Choice(RESPONSE_ATTRS),
     show_envvar=True,
 )
 @click.option(
@@ -206,6 +337,16 @@ Tips:
     default=False,
     is_flag=True,
     show_envvar=True,
+)
+@click.option(
+    "--log-body-lines",
+    "-lbl",
+    "log_body_lines",
+    default=connect.Http.LOG_BODY_LINES,
+    help="Number of lines to log from request/response body.",
+    type=click.INT,
+    show_envvar=True,
+    show_default=True,
 )
 @click.option(
     "--log-hide-secrets/--no-log-hide-secrets",
@@ -249,17 +390,17 @@ Tips:
     "-fn",
     "log_file_name",
     metavar="FILENAME",
-    default=LOG_FILE_NAME,
+    default=connect.LOG_FILE_NAME,
     help="Log file to save logs to if -f/--log-file supplied.",
     show_envvar=True,
     show_default=True,
 )
 @click.option(
-    "--log-file-path",
+    "--log-file-token",
     "-fp",
     "log_file_path",
     metavar="PATH",
-    default=LOG_FILE_PATH,
+    default=connect.LOG_FILE_PATH,
     help="Directory to use for -fn/--log-file-name (Defaults to current directory).",
     show_envvar=True,
 )
@@ -267,7 +408,7 @@ Tips:
     "--log-file-max-mb",
     "-fmb",
     "log_file_max_mb",
-    default=LOG_FILE_MAX_MB,
+    default=connect.LOG_FILE_MAX_MB,
     help="Rollover -fn/--log-file-name at this many megabytes.",
     type=click.INT,
     show_envvar=True,
@@ -277,9 +418,29 @@ Tips:
     "--log-file-max-files",
     "-fmf",
     "log_file_max_files",
-    default=LOG_FILE_MAX_FILES,
+    default=connect.LOG_FILE_MAX_FILES,
     help="Keep this many rollover logs.",
     type=click.INT,
+    show_envvar=True,
+    show_default=True,
+)
+@click.option(
+    "--log-hide-secrets/--no-log-hide-secrets",
+    "-lhs/-nlhs",
+    "log_hide_secrets",
+    default=True,
+    help="Enable hiding of secrets in log output",
+    is_flag=True,
+    show_envvar=True,
+    show_default=True,
+)
+@click.option(
+    "--log-http-max/--no-log-http-max",
+    "-lmax/-nlmax",
+    "log_http_max",
+    default=connect.Connect.LOG_HTTP_MAX,
+    help=f"Shortcut to include_output http logging - overrides: {connect.Connect.HTTP_MAX_CLI}",
+    is_flag=True,
     show_envvar=True,
     show_default=True,
 )
@@ -367,7 +528,7 @@ Tips:
     "--timeout-connect",
     "-tc",
     "timeout_connect",
-    default=TIMEOUT_CONNECT,
+    default=connect.Http.CONNECT_TIMEOUT,
     help="Seconds to wait for connections to API",
     type=click.INT,
     show_envvar=True,
@@ -377,7 +538,7 @@ Tips:
     "--timeout-response",
     "-tr",
     "timeout_response",
-    default=TIMEOUT_RESPONSE,
+    default=connect.Http.RESPONSE_TIMEOUT,
     help="Seconds to wait for responses from API",
     type=click.INT,
     show_default=True,
@@ -392,40 +553,38 @@ Tips:
     show_envvar=True,
     show_default=True,
 )
-@click.option(
-    "--log-hide-secrets/--no-log-hide-secrets",
-    "-lhs/-nlhs",
-    "log_hide_secrets",
-    default=True,
-    help="Enable hiding of secrets in log output",
-    is_flag=True,
-    show_envvar=True,
-    show_default=True,
-)
 @click.version_option(version.__version__)
 @context.pass_context
 @click.pass_context
 def cli(click_ctx, ctx, quiet, **kwargs):
     """Command line interface for the Axonius API Client."""
+    # noinspection PyBroadException
     try:
         cli_args = sys.argv
     except Exception:  # pragma: no cover
         cli_args = "No sys.argv!"
-    LOG.debug(f"sys.argv: {cli_args}")
+    LOG.debug(f"sys.argv: {json_dump(cli_args)}")
+    LOG.debug(f"kwargs: {json_dump(kwargs)}")
     ctx._click_ctx = click_ctx
     ctx.QUIET = quiet
+    # noinspection PyProtectedMember
     ctx._connect_args.update(kwargs)
 
 
-cli.add_command(grp_adapters.adapters)
-cli.add_command(grp_assets.devices)
-cli.add_command(grp_assets.users)
-cli.add_command(grp_assets.vulnerabilities)
-cli.add_command(grp_system.system)
-cli.add_command(grp_tools.tools)
-cli.add_command(grp_openapi.openapi)
-cli.add_command(grp_certs.certs)
-cli.add_command(grp_enforcements.enforcements)
-cli.add_command(grp_spaces.spaces)
-cli.add_command(grp_folders.folders)
-cli.add_command(grp_account.account)
+GROUPS: t.List[click.Group] = [
+    grp_adapters.adapters,
+    grp_assets.devices,
+    grp_assets.users,
+    grp_assets.vulnerabilities,
+    grp_system.system,
+    grp_tools.tools,
+    grp_openapi.openapi,
+    grp_certs.certs,
+    grp_enforcements.enforcements,
+    grp_spaces.spaces,
+    grp_folders.folders,
+    grp_account.account,
+]
+
+for grp in GROUPS:
+    cli.add_command(grp)

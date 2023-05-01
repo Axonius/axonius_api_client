@@ -5,10 +5,10 @@ import io
 
 import pytest
 
-from .test_callbacks import Callbacks, Exports
+from .test_callbacks import Exports
 
 
-class TestCallbacksJsonToCsv(Callbacks, Exports):
+class TestCallbacksJsonToCsv(Exports):
     @pytest.fixture(params=["api_devices"], scope="class")
     def apiobj(self, request):
         return request.getfixturevalue(request.param)

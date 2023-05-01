@@ -2,6 +2,8 @@
 """Command line interface for Axonius API Client."""
 from ... import DEFAULT_PATH
 from ...api import asset_callbacks
+from ...api.asset_callbacks.base import ARG_DESCRIPTIONS
+from ...constants.asset_helpers import ASSETS_HELPERS
 from ...constants.wizards import Results, Types
 from ...tools import echo_error, path_read
 from ..context import CONTEXT_SETTINGS, SplitEquals, click
@@ -16,7 +18,6 @@ from ..options import (
     get_option_fields_default,
     get_option_help,
 )
-from ...constants.asset_helpers import ASSETS_HELPERS
 
 TEMPLATES = "(supports templating: {DATE}, {HISTORY_DATE})"
 OPT_EXPORT_FILE = click.option(
@@ -45,7 +46,7 @@ OPT_INCLUDE_FIELDS = click.option(
     "-if/-nif",
     "include_fields",
     default=True,
-    help=f"Include fields from the saved query {ASSETS_HELPERS.fields}",
+    help=f"Include fields from the saved query {ASSETS_HELPERS.fields.to_str_short()}",
     show_envvar=True,
     show_default=True,
 )
@@ -56,19 +57,19 @@ OPT_INCLUDE_EXCLUDED_ADAPTERS = click.option(
     default=True,
     help=(
         "Include column filters for excluded adapters from the saved query"
-        f" {ASSETS_HELPERS.excluded_adapters}"
+        f" {ASSETS_HELPERS.excluded_adapters.to_str_short()}"
     ),
     show_envvar=True,
     show_default=True,
 )
-OPT_ASSET_INCLUDE_EXCLUDED_ADAPTERS = click.option(
+OPT_INCLUDE_ASSET_EXCLUDED_ADAPTERS = click.option(
     "--include-asset-excluded-adapters/--no-include-asset-excluded-adapters",
     "-iaea/-niaea",
     "include_asset_exclude_adapters",
     default=True,
     help=(
         "Include column filters for asset excluded adapters fields from the saved query"
-        f" {ASSETS_HELPERS.excluded_adapters}"
+        f" {ASSETS_HELPERS.excluded_adapters.to_str_short()}"
     ),
     show_envvar=True,
     show_default=True,
@@ -80,7 +81,7 @@ OPT_INCLUDE_FIELD_FILTERS = click.option(
     default=True,
     help=(
         "Include column filters for field filters from the saved query"
-        f" {ASSETS_HELPERS.field_filters}"
+        f" {ASSETS_HELPERS.field_filters.to_str_short()}"
     ),
     show_envvar=True,
     show_default=True,
@@ -92,7 +93,7 @@ OPT_INCLUDE_ASSET_FILTERS = click.option(
     default=True,
     help=(
         "Include column filters for asset filters from the saved query"
-        f" {ASSETS_HELPERS.asset_filters}"
+        f" {ASSETS_HELPERS.asset_filters.to_str_short()}"
     ),
     show_envvar=True,
     show_default=True,
@@ -102,7 +103,7 @@ OPT_USE_CACHE_ENTRY = click.option(
     "-uce/-nuce",
     "use_cache_entry",
     default=False,
-    help="Use cache entry for query",
+    help="Ask the API to use a cache entry for this query, if available",
     show_envvar=True,
     show_default=True,
 )
@@ -111,7 +112,7 @@ OPT_USE_HEAVY_FIELDS_COLLECTION = click.option(
     "-uhfc/-nuhfc",
     "use_heavy_fields_collection",
     default=False,
-    help="Use heavy fields collection for query",
+    help="Ask the API to use a heavy fields collection for this query",
     show_envvar=True,
     show_default=True,
 )
@@ -120,11 +121,10 @@ OPT_USE_HEAVY_FIELDS_COLLECTION = click.option(
 OPTS_GET_BY_SQ = [
     OPT_INCLUDE_FIELDS,
     OPT_INCLUDE_EXCLUDED_ADAPTERS,
-    OPT_ASSET_INCLUDE_EXCLUDED_ADAPTERS,
+    OPT_INCLUDE_ASSET_EXCLUDED_ADAPTERS,
     OPT_INCLUDE_FIELD_FILTERS,
     OPT_INCLUDE_ASSET_FILTERS,
     OPT_USE_CACHE_ENTRY,
-    OPT_USE_HEAVY_FIELDS_COLLECTION,
 ]
 
 HISTORY = [
@@ -184,17 +184,76 @@ WIZ = [
         "--wiz",
         "-wz",
         "wizard_content",
-        help="Build a query using an expression (multiples, will override --query)",
+        help=(
+            "Build a query using an expression (multiples, will override --query). "
+            '--wiz "file" "<token>" - Read expressions from a file. '
+            '--wiz "lines" "simple expr1<CR>simple expr2" - Read multiple '
+            "expressions from a string. "
+            '--wiz "simple" "<expr>" - Simple expression. '
+            '--wiz "complex" "<expr>" - Complex expression. '
+        ),
         nargs=2,
         multiple=True,
         default=[],
         show_envvar=True,
         hidden=False,
         callback=wiz_callback,
-        metavar='"file|simple|complex" "EXPRESSION"',
+        metavar=f'"{"|".join(Types.CLI)}" "EXPRESSION"',
     ),
 ]
-
+OPTS_GET_API = [
+    # 2023-04-22
+    click.option(
+        "--api-null-for-non-exist/--no-api-null-for-non-exist",
+        "-anfne/-nanfne",
+        "null_for_non_exist",
+        help="Ask the REST API to return null for non existent fields",
+        is_flag=True,
+        default=False,
+        show_envvar=True,
+        show_default=True,
+    ),
+    click.option(
+        "--api-filter-out-non-existing-fields/--no-api-filter-out-non-existing-fields",
+        "-afonef/-nafonef",
+        "filter_out_non_existing_fields",
+        help="Ask the REST API to filter out non existent fields",
+        is_flag=True,
+        default=True,
+        show_envvar=True,
+        show_default=True,
+    ),
+    click.option(
+        "--api-max-field-items",
+        "-amfi",
+        "max_field_items",
+        help="Ask the REST API to limit the number of values returned for a field",
+        default=None,
+        show_envvar=True,
+        show_default=True,
+        type=click.INT,
+    ),
+    click.option(
+        "--api-complex-fields-preview-limit",
+        "-amcfi",
+        "complex_fields_preview_limit",
+        help="Ask the REST API to limit the number of values returned for a complex field",
+        default=None,
+        show_envvar=True,
+        show_default=True,
+        type=click.INT,
+    ),
+    click.option(
+        "--api-use-heavy-fields-collection/--no-api-use-heavy-fields-collection",
+        "-ahfc/-nahfc",
+        "use_heavy_fields_collection",
+        help="Ask the REST API to use the heavy fields collection",
+        is_flag=True,
+        default=False,
+        show_envvar=True,
+        show_default=True,
+    ),
+]
 GET_EXPORT = [
     click.option(
         "--echo/--no-echo",
@@ -472,6 +531,37 @@ GET_EXPORT = [
         show_envvar=True,
         show_default=True,
     ),
+    click.option(
+        "--csv-field-flatten/--no-csv-field-flatten",
+        "csv_field_flatten",
+        default=asset_callbacks.Csv.args_map()["csv_field_flatten"],
+        help=ARG_DESCRIPTIONS["csv_field_flatten"],
+        show_envvar=True,
+        show_default=True,
+        is_flag=True,
+        hidden=False,
+    ),
+    click.option(
+        "--csv-field-join/--no-csv-field-join",
+        "csv_field_join",
+        default=asset_callbacks.Csv.args_map()["csv_field_join"],
+        help=ARG_DESCRIPTIONS["csv_field_join"],
+        show_envvar=True,
+        show_default=True,
+        is_flag=True,
+        hidden=False,
+    ),
+    click.option(
+        "--csv-field-null/--no-csv-field-null",
+        "csv_field_null",
+        default=asset_callbacks.Csv.args_map()["csv_field_null"],
+        help=ARG_DESCRIPTIONS["csv_field_null"],
+        show_envvar=True,
+        show_default=True,
+        is_flag=True,
+        hidden=False,
+    ),
+    *OPTS_GET_API,
 ]
 
 GET_BUILDERS = [

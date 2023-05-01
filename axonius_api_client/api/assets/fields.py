@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
 """API for working with fields for assets."""
-import typing as t
 import re
+import typing as t
 from typing import List, Optional, Tuple, Union
 
 from cachetools import TTLCache, cached
-from fuzzyfinder import fuzzyfinder
 
 from ...constants.fields import (
     AGG_ADAPTER_ALTS,
@@ -21,6 +20,32 @@ from ...tools import listify, split_str, strip_right
 from .. import json_api
 from ..api_endpoints import ApiEndpoints
 from ..mixins import ChildMixins
+
+
+def fuzzyfinder(value: str, collection: t.Iterable, accessor: t.Callable = lambda x: x):
+    """Fuzzy finder
+
+    Args:
+        value: A partial string which is typically entered by a user.
+        collection: A collection of strings which will be filtered based on the `value`.
+        accessor: If the `collection` is not an iterable of strings, then use the accessor
+         to fetch the string that will be used for fuzzy matching.
+
+    Returns:
+        suggestions: A list of suggestions narrowed down from `collection` using the `value`.
+    """
+    suggestions = []
+    value = str(value) if not isinstance(value, str) else value
+    pat = ".*?".join(map(re.escape, value))
+    pat = "(?=({0}))".format(pat)  # lookahead regex to manage overlapping matches
+    regex = re.compile(pat, re.IGNORECASE)
+    for item in collection:
+        r = list(regex.finditer(accessor(item)))
+        if r:
+            best = min(r, key=lambda x: len(x.group(1)))  # find the shortest match
+            suggestions.append((len(best.group(1)), best.start(), accessor(item), item))
+
+    return (z[-1] for z in sorted(suggestions))
 
 
 class Fields(ChildMixins):
@@ -168,7 +193,7 @@ class Fields(ChildMixins):
         Args:
             value: field to find in format of ``adapter_name:field_name``
             field_manual: treat the field name as fully qualified
-            fields_custom: custom schemas to search thru in addition to API schemas
+            fields_custom: custom schemas to search in addition to API schemas
             key: key of schema to return, or if empty return the schema itself
 
         Raises:
@@ -257,12 +282,14 @@ class Fields(ChildMixins):
 
             for adapter in adapters:
                 for field_re in fields_re:
-                    fschemas = self.get_field_schemas(value=field_re, schemas=fields[adapter])
-                    fschemas = [x for x in fschemas if x["name_base"] not in ["all", "raw_data"]]
+                    found_schemas = self.get_field_schemas(value=field_re, schemas=fields[adapter])
+                    found_schemas = [
+                        x for x in found_schemas if x["name_base"] not in ["all", "raw_data"]
+                    ]
                     if root_only:
-                        fschemas = [x for x in fschemas if x["is_root"]]
+                        found_schemas = [x for x in found_schemas if x["is_root"]]
 
-                    names = [x[key] for x in fschemas]
+                    names = [x[key] for x in found_schemas]
                     matches += [x for x in names if x not in matches]
         return matches
 
@@ -367,7 +394,7 @@ class Fields(ChildMixins):
             root fields are fields that are fields that are not sub-fields of complex fields
 
             For instance 'specific_data.data.network_interfaces.ips' is NOT a root field,
-            since 'ips' is a sub field of 'specific_data.data.network_interfaces'
+            since 'ips' is a sub-field of 'specific_data.data.network_interfaces'
 
         """
         fields = self.get()

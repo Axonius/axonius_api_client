@@ -23,7 +23,9 @@ OPTIONS = [
     *HISTORY,
     *QUERY,
     *WIZ,
-    get_option_help(choices=["auth", "query", "assetexport", "selectfields", "wizard"]),
+    get_option_help(
+        choices=["auth", "query", "assetexport", "selectfields", "wizard", "asset_helper"]
+    ),
 ]
 
 

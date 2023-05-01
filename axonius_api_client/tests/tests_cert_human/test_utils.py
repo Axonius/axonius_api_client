@@ -2,7 +2,7 @@
 """Test suite."""
 import pytest
 
-from axonius_api_client.cert_human import utils
+from axonius_api_client.projects.cert_human import utils
 
 
 class TestTypeStr:

@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 """Models for API requests & responses."""
-import typing as t
+import dataclasses
 import datetime
 import logging
+import typing as t
 
-import dataclasses
-from ..base import BaseModel
-from ....tools import dt_parse, dt_now, coerce_int
 from ....exceptions import ApiError
+from ....tools import coerce_int, dt_now, dt_parse
+from ..base import BaseModel
 
 LOGGER = logging.getLogger(__name__)
 
@@ -100,7 +100,10 @@ class AssetTypeHistoryDates(BaseModel):
 
         if self.dates:
             pivot: int = coerce_int(value)
-            nearest = min(self.dates, key=lambda x: x.calculate_days_ago(pivot))
+            nearest = min(
+                self.dates,
+                key=lambda x: x.days_ago - pivot if x.days_ago >= pivot else pivot - x.days_ago,
+            )
             LOGGER.info(f"Closest {self.asset_type} history days ago to {pivot} found: {nearest}")
         return nearest
 

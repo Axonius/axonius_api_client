@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 """Models for API requests & responses."""
-import typing as t
 import dataclasses
-from .history_dates_human import AssetTypeHistoryDates
+import typing as t
+
 from ..generic import DictValue, DictValueSchema
+from .history_dates_human import AssetTypeHistoryDates
 
 
 class HistoryDatesSchema(DictValueSchema):

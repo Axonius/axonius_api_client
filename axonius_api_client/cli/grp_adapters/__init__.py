@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 """Command line interface for Axonius API Client."""
+import typing as t
+
 import click
 
 from ..context import AliasedGroup, load_cmds
@@ -12,4 +14,9 @@ def adapters():
 
 
 load_cmds(path=__file__, package=__package__, group=adapters)
-adapters.add_command(grp_cnx.cnx)
+
+GROUPS: t.List[t.Any] = [grp_cnx.cnx]
+# Type hint doesn't recognize click.Group because of decorator?
+
+for grp in GROUPS:
+    adapters.add_command(grp)

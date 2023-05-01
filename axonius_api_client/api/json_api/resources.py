@@ -6,7 +6,7 @@ import typing as t
 import marshmallow_jsonapi.fields as mm_fields
 
 from ...constants.api import MAX_PAGE_SIZE, PAGE_SIZE
-from ...tools import parse_int_min_max
+from ...tools import combo_dicts, parse_int_min_max
 from .base import BaseModel, BaseSchema, BaseSchemaJson
 from .custom_fields import SchemaBool, field_from_mm
 
@@ -57,6 +57,13 @@ class PaginationRequest(BaseModel):
             value=value, default=PAGE_SIZE, min_value=1, max_value=MAX_PAGE_SIZE
         )
         return self.limit
+
+    @classmethod
+    def load_if_needed(cls, value: t.Any) -> t.Any:
+        """Pass through if already an instance of this model, else load from dict."""
+        if isinstance(value, cls):
+            return value
+        return cls(**combo_dicts(value))
 
     def __post_init__(self):
         """Dataclass post init."""
@@ -116,7 +123,7 @@ RESOURCES_GET_SCHEMA = ResourcesGetSchema()
 class ResourcesGet(BaseModel):
     """Model used for getting numerous object types throughout the API."""
 
-    page: t.Optional[PaginationRequest] = field_from_mm(RESOURCES_GET_SCHEMA, "page")
+    page: t.Optional[t.Union[dict, PaginationRequest]] = field_from_mm(RESOURCES_GET_SCHEMA, "page")
     sort: t.Optional[str] = field_from_mm(RESOURCES_GET_SCHEMA, "sort")
     search: t.Optional[str] = field_from_mm(RESOURCES_GET_SCHEMA, "search")
     filter: t.Optional[str] = field_from_mm(RESOURCES_GET_SCHEMA, "filter")
@@ -129,6 +136,8 @@ class ResourcesGet(BaseModel):
 
     def __post_init__(self):
         """Dataclass post init."""
+        if isinstance(self.page, dict):
+            self.page = PaginationRequest(**self.page)
         if not isinstance(self.page, PaginationRequest):
             self.page = PaginationRequest()
 

@@ -325,7 +325,7 @@ def config_unchanged(
         callbacks: callback operations to use for schemas
 
     Raises:
-        :exc:`ConfigUnchanged`: if the supplied new config is empty or is not different than old
+        :exc:`ConfigUnchanged`: if the supplied new config is empty or is not different from old
             config
     """
     if new_config == old_config or not new_config:
@@ -383,7 +383,7 @@ def config_required(
         callbacks: callback operations to use for schemas
 
     Raises:
-        :exc:`ConfigRequired`: if the supplied new config is empty or is not different than old
+        :exc:`ConfigRequired`: if the supplied new config is empty or is not different from old
             config
     """
     missing = []
@@ -411,7 +411,7 @@ def config_empty(
         callbacks: callback operations to use for schemas
 
     Raises:
-        :exc:`ConfigRequired`: if the supplied new config is empty or is not different than old
+        :exc:`ConfigRequired`: if the supplied new config is empty or is not different from old
             config
     """
     if not new_config:
@@ -457,7 +457,7 @@ def is_uploaded_file(value: Union[str, dict]) -> Tuple[bool, Union[str, dict]]:
 
 
 def parse_schema(raw: dict) -> dict:
-    """Parse a field, adapter, or config schema into a more user friendly format.
+    """Parse a field, adapter, or config schema into a more user-friendly format.
 
     Args:
         raw: original schema
@@ -481,7 +481,7 @@ def parse_schema(raw: dict) -> dict:
 
 
 def parse_schema_enum(schema: dict):
-    """Parse a field, adapter, or config schema into a more user friendly format.
+    """Parse a field, adapter, or config schema into a more user-friendly format.
 
     Args:
         raw: original schema
@@ -494,7 +494,7 @@ def parse_schema_enum(schema: dict):
 
 # TBD: re-tool to return cleaned up 'raw'
 def parse_section(raw: dict, raw_config: dict, parent: dict, settings: dict) -> dict:
-    """Parse a section of system settings into a more user friendly format."""
+    """Parse a section of system settings into a more user-friendly format."""
     # FYI has no title:
     #   settings_gui::saml_login_settings::configure_authncc
     title = raw.get("title", raw["name"].replace("_", " ").title())
@@ -537,7 +537,7 @@ def parse_section(raw: dict, raw_config: dict, parent: dict, settings: dict) -> 
 
         # non sub_sections:
         #   no items key in schema
-        #   {"items": {"type": ""} "type": "array"}
+        #   {{"items": {"type": ""} "type": "array"}
         # FYI some things have a required key already that is a bool 3.6
         if not isinstance(schema.get("required", []), bool):
             schema["required"] = schema_name in required

@@ -153,10 +153,10 @@ def parse_schemas(
 
     Args:
         adapter_name_raw: raw name of current adapter (aws_adapter)
-        adapter_name: user friendly name of current adapter (aws)
+        adapter_name: user-friendly name of current adapter (aws)
         adapter_prefix: fully qualified prefix of adapter (specific_data.data or
             adapters_data.aws_adapter)
-        adapter_title: user friendly title of adapter
+        adapter_title: user-friendly title of adapter
         all_field: name to use for all field schema
         raw_fields: raw unparsed fields for current adapter
         agg_base_names: used to determine if a field is aggregated or not

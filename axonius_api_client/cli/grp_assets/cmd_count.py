@@ -2,7 +2,7 @@
 """Command line interface for Axonius API Client."""
 from ..context import CONTEXT_SETTINGS, click
 from ..options import AUTH, QUERY, add_options, get_option_help
-from .grp_common import HISTORY, WIZ, load_wiz, OPT_USE_CACHE_ENTRY, OPT_USE_HEAVY_FIELDS_COLLECTION
+from .grp_common import HISTORY, OPT_USE_CACHE_ENTRY, OPT_USE_HEAVY_FIELDS_COLLECTION, WIZ, load_wiz
 
 OPTIONS = [
     *AUTH,

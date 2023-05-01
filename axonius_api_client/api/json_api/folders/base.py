@@ -292,7 +292,7 @@ class Folder(abc.ABC, FolderBase):
 
     @abc.abstractmethod
     def _create_object(self, **kwargs) -> BaseModel:
-        """Create pass thru for the object type in question."""
+        """Create pass-thru for the object type in question."""
         raise NotImplementedError()
 
     @classmethod
@@ -1363,7 +1363,7 @@ class Folder(abc.ABC, FolderBase):
 
     @property
     def created_by_user_source(self) -> t.Optional[str]:
-        """Get the user name and user source attributes for self.created_by."""
+        """Get the username and user source attributes for self.created_by."""
         if isinstance(self.created_by_user, SystemUser):
             return self.created_by_user.user_source
         return None
@@ -1439,7 +1439,7 @@ class Folder(abc.ABC, FolderBase):
         return data
 
     def _refresh(self, root: t.Optional["FoldersModel"] = None) -> "Folder":
-        """Refresh the root folders data."""
+        """Refresh the root folder data."""
         self._clear_objects_cache()
         if self.is_model_folders(self):
             root: FoldersModel = (
@@ -1721,7 +1721,7 @@ class FolderModel:
     root_folders: "FoldersModel" = get_field_dc_mm(mm_field=FoldersSchema)
     root_type: t.Optional[str] = None
     predefined: t.Optional[bool] = False
-    path: t.Union[t.List[str], str] = dataclasses.field(default_factory=[])
+    path: t.Union[t.List[str], str] = dataclasses.field(default_factory=list)
     created_at: t.Optional[datetime.datetime] = get_field_dc_mm(
         mm_field=SchemaDatetime(), default=None
     )

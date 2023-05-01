@@ -1,6 +1,6 @@
 #!/usr/bin/env python -i
 # -*- coding: utf-8 -*-
-"""Example of getting all OS types and post processing for missing build versions."""
+"""Example of getting all OS types and post-processing for missing build versions."""
 import csv
 import json  # noqa: F401
 import os

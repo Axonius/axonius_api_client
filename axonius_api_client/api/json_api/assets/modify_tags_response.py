@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """Models for API requests & responses."""
-import typing as t
 import dataclasses
+import typing as t
+
 from ..generic import IntValue, IntValueSchema
 
 

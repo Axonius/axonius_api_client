@@ -1,13 +1,15 @@
 # -*- coding: utf-8 -*-
 """Models for API requests & responses."""
-import typing as t
-import marshmallow
-import datetime
 import dataclasses
+import datetime
+import typing as t
+
+import marshmallow
 import marshmallow_jsonapi.fields as mm_fields
+
+from ....tools import dt_now, dt_parse, get_query_id
 from ..base import BaseModel, BaseSchemaJson
 from ..custom_fields import SchemaBool, SchemaDatetime, field_from_mm
-from ....tools import dt_parse, get_query_id, dt_now
 
 
 class CountRequestSchema(BaseSchemaJson):
@@ -72,17 +74,6 @@ class CountRequestSchema(BaseSchemaJson):
     def get_model_cls() -> t.Any:
         """Get the model for this schema."""
         return CountRequest
-
-    # noinspection PyUnusedLocal
-    # @marshmallow.post_dump
-    # def post_dump_process(self, data, **kwargs) -> dict:
-    #     """Drop all values that are None.
-    #
-    #     REST API complains about some fields being None values due to some schema
-    #     confusion, and the errors are not helpful.
-    #     """
-    #     data = {k: v for k, v in data.items() if v is not None}
-    #     return data
 
 
 SCHEMA = CountRequestSchema()

@@ -18,6 +18,7 @@ from cachetools import TTLCache, cached
 from click.testing import CliRunner
 from flaky import flaky
 
+
 IS_WINDOWS = sys.platform == "win32"
 IS_LINUX = sys.platform == "linux"
 IS_MAC = sys.platform == "darwin"
@@ -28,6 +29,7 @@ SOURCE: str = string.ascii_lowercase + string.digits
 CACHE: TTLCache = TTLCache(maxsize=1024, ttl=600)
 
 
+# noinspection PyUnusedLocal
 def flaky_filter(err, *args):
     """Pass."""
     if issubclass(err[0], requests.exceptions.ReadTimeout):
@@ -97,19 +99,19 @@ def get_schema(apiobj, field, key=None, adapter=None):
         )
     except NotFoundError as exc:
         pytest.skip(f"field {field} not found, exc:\n{exc}")
-
-    return schema[key] if key else schema
+    else:
+        return schema[key] if key else schema
 
 
 def random_string(length: int = 32, source: str = SOURCE):
     """Test utility."""
-    result_str = "".join(random.choice(source) for i in range(length))
+    result_str = "".join(random.choice(source) for _ in range(length))
     return result_str
 
 
 def random_strs(num: int = 1, length: int = 32, source: str = SOURCE) -> t.List[str]:
     """Test utility."""
-    return [random_string(length=length, source=source) for i in range(num)]
+    return [random_string(length=length, source=source) for _ in range(num)]
 
 
 def random_string_salt(length: int, source: str = SOURCE) -> str:
@@ -130,10 +132,10 @@ def get_rows_exist(apiobj, fields=None, max_rows=1, not_exist=False, **kwargs):
         rows = apiobj.get(fields=fields, max_rows=max_rows, query=query, **kwargs)
     except NotFoundError as exc:
         pytest.skip(f"fields {fields} not found, exc:\n{exc}")
-
-    if not rows:
-        pytest.skip(f"No {apiobj} assets with fields {fields}")
-    return rows[0] if max_rows == 1 else rows
+    else:
+        if not rows:
+            pytest.skip(f"No {apiobj} assets with fields {fields}")
+        return rows[0] if max_rows == 1 else rows
 
 
 @cached(cache=CACHE)
@@ -162,7 +164,6 @@ def log_check(caplog, entries, exists=True):
                 raise Exception(error)
 
 
-#
 def get_cnx_existing(apiobj, name=None, reqkeys=None):
     """Test utility."""
     found = get_cnx(apiobj=apiobj, name=name, reqkeys=reqkeys)
@@ -197,6 +198,7 @@ def get_cnx_broken(apiobj, name=None, reqkeys=None):
     return found
 
 
+# noinspection PyProtectedMember
 def get_cnx(apiobj, cntkey="total_count", name=None, reqkeys=None, problems=None):
     """Pass."""
     adapters = apiobj._get(get_clients=False)
@@ -230,26 +232,106 @@ def get_cnx(apiobj, cntkey="total_count", name=None, reqkeys=None, problems=None
     return None
 
 
-def get_url(request):
+def get_arg_url(request):
     """Test utility."""
-    return request.config.getoption("--ax-url").rstrip("/")
+    value = request.config.getoption("--ax-url").rstrip("/")
+
+    if isinstance(value, str):
+        value = value.rstrip("/")
+    return value
+
+
+get_url = get_arg_url
 
 
 def get_key_creds(request):
     """Test utility."""
-    key = request.config.getoption("--ax-key")
-    secret = request.config.getoption("--ax-secret")
-    return {"key": key, "secret": secret}
+    key = get_arg_key(request)
+    secret = get_arg_secret(request)
+    creds = get_arg_credentials(request)
+    return {"username": key, "password": secret} if creds else {"keys": key, "secret": secret}
+
+
+def get_http(request, **kwargs):
+    """Test utility."""
+    from axonius_api_client.http import Http
+
+    kwargs.setdefault("url", get_url(request))
+    kwargs.setdefault("cf_run", get_arg_cf_run(request))
+    kwargs.setdefault("cf_error", get_arg_cf_error(request))
+    kwargs.setdefault("cf_token", get_arg_cf_token(request))
+    kwargs.setdefault("certwarn", False)
+
+    http = Http(**kwargs)
+    return http
+
+
+def get_connect(request, **kwargs):
+    """Test utility."""
+    from axonius_api_client.connect import Connect
+
+    kwargs.setdefault("url", get_url(request))
+    kwargs.setdefault("key", get_arg_key(request))
+    kwargs.setdefault("secret", get_arg_secret(request))
+    kwargs.setdefault("credentials", get_arg_credentials(request))
+    kwargs.setdefault("cf_run", get_arg_cf_run(request))
+    kwargs.setdefault("cf_error", get_arg_cf_error(request))
+    kwargs.setdefault("cf_token", get_arg_cf_token(request))
+    kwargs.setdefault("certwarn", False)
+
+    connect = Connect(**kwargs)
+    return connect
+
+
+def get_arg_key(request):
+    """Test utility."""
+    return request.config.getoption("--ax-key")
+
+
+def get_arg_secret(request):
+    """Test utility."""
+    return request.config.getoption("--ax-secret")
+
+
+def get_arg_cf_token(request):
+    """Test utility."""
+    return request.config.getoption("--cf-token")
+
+
+def get_arg_cf_run(request):
+    """Test utility."""
+    return request.config.getoption("--cf-run")
+
+
+def get_arg_cf_error(request):
+    """Test utility."""
+    return request.config.getoption("--cf-error")
+
+
+def get_arg_credentials(request):
+    """Test utility."""
+    value = request.config.getoption("--ax-credentials")
+    return value
+
+
+def get_auth_obj(request):
+    """Test utility."""
+    from axonius_api_client.auth import AuthApiKey, AuthCredentials
+
+    arg_credentials: bool = get_arg_credentials(request)
+    arg_key: str = get_arg_key(request)
+    arg_secret: str = get_arg_secret(request)
+    http = get_http(request)
+    if arg_credentials:
+        obj = AuthCredentials(http=http, username=arg_key, password=arg_secret)
+    else:
+        obj = AuthApiKey(http=http, key=arg_key, secret=arg_secret)
+    return obj
 
 
 def get_auth(request):
     """Test utility."""
-    from axonius_api_client import auth
-    from axonius_api_client.http import Http
-
-    http = Http(url=get_url(request), certwarn=False, save_history=True)
-
-    obj = auth.ApiKey(http=http, **get_key_creds(request))
+    obj = get_auth_obj(request)
     obj.login()
     return obj
 
@@ -259,14 +341,17 @@ def check_apiobj(authobj, apiobj):
     from axonius_api_client import auth
     from axonius_api_client.http import Http
 
-    url = authobj._http.url
-    authclsname = format(authobj.__class__.__name__)
-    assert authclsname in format(apiobj)
-    assert authclsname in repr(apiobj)
-    assert url in format(apiobj)
-    assert url in repr(apiobj)
+    url = authobj.http.url
+    name = authobj.__class__.__name__
 
-    assert isinstance(apiobj.auth, auth.Model)
+    obj_str = str(apiobj)
+    obj_repr = repr(apiobj)
+    assert name in obj_str
+    assert url in obj_str
+    assert name in obj_repr
+    assert url in obj_repr
+
+    assert isinstance(apiobj.auth, auth.AuthModel)
     assert isinstance(apiobj.http, Http)
 
 
@@ -277,16 +362,16 @@ def check_apiobj_children(apiobj, **kwargs):
 
     for k, v in kwargs.items():
         attr = getattr(apiobj, k)
-        attrclsname = format(attr.__class__.__name__)
+        name = format(attr.__class__.__name__)
 
         assert isinstance(attr, api.mixins.ChildMixins)
         assert isinstance(attr, v)
 
-        assert isinstance(attr.auth, auth.Model)
+        assert isinstance(attr.auth, auth.AuthModel)
         assert isinstance(attr.http, Http)
         assert isinstance(attr.parent, api.mixins.Model)
-        assert attrclsname in format(attr)
-        assert attrclsname in repr(attr)
+        assert name in str(attr)
+        assert name in repr(attr)
 
 
 def check_apiobj_xref(apiobj, **kwargs):
@@ -330,6 +415,7 @@ class MockCtx:
     """Test utility."""
 
 
+# noinspection PyUnusedLocal
 def mock_failure(*args, **kwargs):
     """Test utility."""
     raise MockError("badwolf")
@@ -346,11 +432,11 @@ def get_mockctx():
 
 def check_csv_cols(content, cols):
     """Test utility."""
-    QUOTING = csv.QUOTE_NONNUMERIC
+    quoting = csv.QUOTE_NONNUMERIC
     fh = StringIO()
     fh.write(content)
     fh.seek(0)
-    reader = csv.DictReader(fh, quoting=QUOTING)
+    reader = csv.DictReader(fh, quoting=quoting)
     rows = []
     for row in reader:
         rows.append(row)

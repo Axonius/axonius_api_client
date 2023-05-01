@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 """Models for API requests & responses."""
-import typing as t
 import dataclasses
+import typing as t
 
 import marshmallow
 import marshmallow_jsonapi.fields as mm_fields
+
 from ..base import BaseModel, BaseSchemaJson
 from ..custom_fields import SchemaDatetime, field_from_mm
 

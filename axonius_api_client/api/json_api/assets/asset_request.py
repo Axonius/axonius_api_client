@@ -1,15 +1,17 @@
 # -*- coding: utf-8 -*-
 """Models for API requests & responses."""
-import typing as t
-import marshmallow
-import datetime
 import dataclasses
+import datetime
+import typing as t
+
+import marshmallow
 import marshmallow_jsonapi.fields as mm_fields
+
+from ....constants.api import PAGE_SIZE
+from ....tools import dt_now, dt_parse, get_query_id, listify
 from ..base import BaseModel, BaseSchemaJson
 from ..custom_fields import SchemaBool, SchemaDatetime, field_from_mm
 from ..resources import PaginationRequest, PaginationSchema
-from ....tools import dt_parse, get_query_id, dt_now, listify
-from ....constants.api import PAGE_SIZE
 
 
 class AssetRequestSchema(BaseSchemaJson):
@@ -41,8 +43,8 @@ class AssetRequestSchema(BaseSchemaJson):
         description="Get asset data for a specific point in time",
     )  # FilterSchema
     sort = mm_fields.Str(
-        load_default="",
-        dump_default="",
+        load_default=None,
+        dump_default=None,
         allow_none=True,
     )  # ResourceRequestSchema
     get_metadata = SchemaBool(
@@ -241,15 +243,31 @@ class AssetRequestSchema(BaseSchemaJson):
     # noinspection PyUnusedLocal
     @marshmallow.post_dump
     def post_dump_process(self, data, **kwargs) -> dict:
-        """Drop all values that are None.
+        """Fix up request data for the REST API.
 
-        REST API complains about some fields being None values due to some schema
-        confusion, and the errors are not helpful.
+        Notes:
+            PBUG: No assets come back if:
+                - sort is an empty string
+            PBUG: 400 Error "Type error: got an unexpected keyword argument" if:
+                - sort is None
+            PBUG: 422 Error "Field may not be null." if:
+                - search is None
+                - file_name is None
         """
-        ensure_strings = ["search", "file_name", "sort"]
-        for ensure_string in ensure_strings:
-            if not isinstance(data.get(ensure_string), str):
-                data[ensure_string] = ""
+        sort = data.get("sort")
+        if not (isinstance(sort, str) and sort.strip()):
+            data.pop("sort", None)
+
+        search = data.get("search")
+        if not isinstance(search, str):
+            data["search"] = ""
+
+        file_name = data.get("file_name")
+        if not isinstance(file_name, str):
+            data["file_name"] = ""
+
+        # strip out any None values to reduce unknown behavior
+        data = {k: v for k, v in data.items() if v is not None}
         return data
 
 

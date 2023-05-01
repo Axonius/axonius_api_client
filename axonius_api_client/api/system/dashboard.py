@@ -238,7 +238,7 @@ class DiscoverData(PropsData):
 
         return [get_phase(x) for x in self.raw["sub_phases"]]
 
-    def next_run_within_minutes(self, value: int) -> bool:
+    def next_run_within_minutes(self, value: t.Union[int, str]) -> bool:
         """Pass."""
         return coerce_int(obj=value, min_value=0) >= int(self.next_run_starts_in_minutes)
 

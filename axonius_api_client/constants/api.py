@@ -60,6 +60,16 @@ BARRIER: str = "-" * 15
 ASSET_TMPL: str = "{k}: {v}"
 # ALL_ID: str = "all"
 REFRESH: bool = 60
+RE_PREFIX: str = "~"
+
+TASK_SLOW_WARNING = """
+
+Notice:
+  Fetching a page of tasks as "basic models" is fast, but fetching each task
+  individually to get the "full models" is quite slow.
+  Use as many filters as possible to minimize the number of "full models" that must be fetched.
+
+"""
 
 
 class FolderDefaults:
@@ -83,7 +93,7 @@ class FolderDefaults:
     include_objects: bool = False
     include_subfolders: bool = False
     copy_prefix: str = "Copy of"
-    pattern_prefix: str = "~"
+    pattern_prefix: str = RE_PREFIX
     prompt: bool = False
     prompt_default: bool = False
     prompt_shell: bool = True

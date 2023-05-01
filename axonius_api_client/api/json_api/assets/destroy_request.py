@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 """Models for API requests & responses."""
-import typing as t
-import marshmallow
 import dataclasses
+import typing as t
+
+import marshmallow
+
 from ..base import BaseModel, BaseSchema
-from ..custom_fields import field_from_mm, SchemaBool
+from ..custom_fields import SchemaBool, field_from_mm
 
 
 class DestroyRequestSchema(BaseSchema):

@@ -2,6 +2,7 @@
 """Containers for API Endpoint definitions."""
 import dataclasses
 import typing as t
+
 from ..data import BaseData
 from . import json_api
 from .api_endpoint import ApiEndpoint
@@ -129,6 +130,7 @@ class Assets(ApiEndpointGroup):
         request_model_cls=json_api.assets.AssetByIdRequest,
         response_schema_cls=json_api.assets.AssetByIdSchema,
         response_model_cls=json_api.assets.AssetById,
+        request_as_none=True,
     )
     # loose model!
 
@@ -889,6 +891,15 @@ class PasswordReset(ApiEndpointGroup):
 class Tasks(ApiEndpointGroup):
     """Container for all API endpoints for working with enforcement tasks."""
 
+    count: ApiEndpoint = ApiEndpoint(
+        method="get",
+        path="api/enforcements/tasks/count",
+        request_schema_cls=json_api.tasks.GetTasksSchema,
+        request_model_cls=json_api.tasks.GetTasks,
+        response_schema_cls=json_api.generic.IntValueSchema,
+        response_model_cls=json_api.generic.IntValue,
+    )
+
     get_basic: ApiEndpoint = ApiEndpoint(
         method="get",
         path="api/enforcements/tasks",
@@ -1167,7 +1178,7 @@ class Adapters(ApiEndpointGroup):
     settings_update: ApiEndpoint = ApiEndpoint(
         method="put",
         path="api/adapters/{adapter_name}/{config_name}",
-        request_schema_cls=json_api.adapters.AdapterSettingsUpdateSchema,
+        request_schema_cls=json_api.adapters.AdapterSettingsUpdateUpdateSchema,
         request_model_cls=json_api.adapters.AdapterSettingsUpdate,
         response_schema_cls=json_api.system_settings.SystemSettingsSchema,
         response_model_cls=json_api.system_settings.SystemSettings,
@@ -1186,7 +1197,7 @@ class Adapters(ApiEndpointGroup):
     # PBUG: response not modeled correctly!
     # PBUG: can get filename returned in response?
 
-    labels_get: ApiEndpoint = ApiEndpoint(
+    cnx_get_labels: ApiEndpoint = ApiEndpoint(
         method="get",
         path="api/adapters/labels",
         request_schema_cls=None,
@@ -1209,8 +1220,8 @@ class Adapters(ApiEndpointGroup):
         path="api/adapters/{adapter_name}/connections",
         request_schema_cls=json_api.adapters.CnxCreateRequestSchema,
         request_model_cls=json_api.adapters.CnxCreateRequest,
-        response_schema_cls=json_api.adapters.CnxModifyResponseSchema,
-        response_model_cls=json_api.adapters.CnxModifyResponse,
+        response_schema_cls=json_api.adapters.CnxCreateSchema,
+        response_model_cls=json_api.adapters.CnxCreate,
     )
 
     cnx_update: ApiEndpoint = ApiEndpoint(
@@ -1218,8 +1229,8 @@ class Adapters(ApiEndpointGroup):
         path="api/adapters/{adapter_name}/connections/{uuid}",
         request_schema_cls=json_api.adapters.CnxUpdateRequestSchema,
         request_model_cls=json_api.adapters.CnxUpdateRequest,
-        response_schema_cls=json_api.adapters.CnxModifyResponseSchema,
-        response_model_cls=json_api.adapters.CnxModifyResponse,
+        response_schema_cls=json_api.adapters.CnxUpdateSchema,
+        response_model_cls=json_api.adapters.CnxUpdate,
     )
 
     cnx_test: ApiEndpoint = ApiEndpoint(
@@ -1254,6 +1265,42 @@ class Signup(ApiEndpointGroup):
         request_model_cls=None,
         response_schema_cls=json_api.generic.BoolValueSchema,
         response_model_cls=json_api.generic.BoolValue,
+    )
+
+    expired: ApiEndpoint = ApiEndpoint(
+        method="get",
+        path="api/system/expired",
+        request_schema_cls=None,
+        request_model_cls=None,
+        response_schema_cls=json_api.generic.BoolValueSchema,
+        response_model_cls=json_api.generic.BoolValue,
+    )
+
+    license_status: ApiEndpoint = ApiEndpoint(
+        method="get",
+        path="api/license_status",
+        request_schema_cls=None,
+        request_model_cls=None,
+        response_schema_cls=json_api.generic.BoolValueSchema,
+        response_model_cls=json_api.generic.BoolValue,
+    )
+
+    get_indication_color: ApiEndpoint = ApiEndpoint(
+        method="get",
+        path="api/get_master_indication_color",
+        request_schema_cls=None,
+        request_model_cls=None,
+        response_schema_cls=json_api.generic.StrValueSchema,
+        response_model_cls=json_api.generic.StrValue,
+    )
+
+    get_login_options: ApiEndpoint = ApiEndpoint(
+        method="get",
+        path="api/get_login_options",
+        request_schema_cls=None,
+        request_model_cls=None,
+        response_schema_cls=json_api.generic.MetadataSchema,
+        response_model_cls=json_api.generic.Metadata,
     )
 
     perform: ApiEndpoint = ApiEndpoint(
@@ -1356,6 +1403,15 @@ class Account(ApiEndpointGroup):
         request_model_cls=json_api.account.LoginRequest,
         response_schema_cls=json_api.account.LoginResponseSchema,
         response_model_cls=json_api.account.LoginResponse,
+    )
+
+    get_current_user: ApiEndpoint = ApiEndpoint(
+        method="get",
+        path="api/login",
+        request_schema_cls=None,
+        request_model_cls=None,
+        response_schema_cls=json_api.account.CurrentUserSchema,
+        response_model_cls=json_api.account.CurrentUser,
     )
 
     get_api_keys: ApiEndpoint = ApiEndpoint(

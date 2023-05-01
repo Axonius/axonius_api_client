@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 """Models for API requests & responses."""
 import dataclasses
-import typing as t
 import datetime
+import typing as t
 
 import marshmallow
+import marshmallow_jsonapi.fields as mm_fields
 
 from ..base import BaseModel, BaseSchemaJson
 from ..custom_fields import SchemaDatetime, field_from_mm
@@ -14,105 +15,105 @@ from .task_full import TaskFull
 class TaskBasicSchema(BaseSchemaJson):
     """Schema for enforcement task in basic model."""
 
-    id = marshmallow.fields.Str(data_key="id", description="The task id", required=True)
-    uuid = marshmallow.fields.Str(data_key="uuid", description="The task id", required=True)
-    pretty_id = marshmallow.fields.Str(
+    id = mm_fields.Str(data_key="id", description="The task id", required=True)
+    uuid = mm_fields.Str(data_key="uuid", description="The task id", required=True)
+    pretty_id = mm_fields.Str(
         data_key="pretty_id", description="The ID of the task in the UI", required=True
     )
-    date_fetched = marshmallow.fields.Str(
+    date_fetched = mm_fields.Str(
         data_key="date_fetched", description="The date when the task was created", required=True
     )
-    enforcement_name = marshmallow.fields.Str(
+    enforcement_name = mm_fields.Str(
         data_key="enforcement_name",
         description="The enforcement set name",
         required=True,
     )
-    result_main_action_action_name = marshmallow.fields.Str(
+    result_main_action_action_name = mm_fields.Str(
         data_key="result_main_action_action_name",
         description="The action type",
         required=True,
     )
-    result_metadata_task_name = marshmallow.fields.Str(
+    result_metadata_task_name = mm_fields.Str(
         data_key="result_metadata_task_name",
         description="The action name",
         required=True,
     )
-    result_main_name = marshmallow.fields.Str(
+    result_main_name = mm_fields.Str(
         data_key="result_main_name",
         description="The task name",
         required=True,
     )
 
-    affected_assets = marshmallow.fields.Int(
+    affected_assets = mm_fields.Int(
         data_key="affected_assets",
         description="Total amount of affected assets by task",
         allow_none=True,
         load_default=None,
     )
-    success_count = marshmallow.fields.Int(
+    success_count = mm_fields.Int(
         data_key="success_count",
         description="Amount of assets succeeded in the main action",
         allow_none=True,
         load_default=None,
     )
-    failure_count = marshmallow.fields.Int(
+    failure_count = mm_fields.Int(
         data_key="failure_count",
         description="Amount of assets failed in the main " "action",
         allow_none=True,
         load_default=None,
     )
-    result_metadata_successful_total = marshmallow.fields.Str(
+    result_metadata_successful_total = mm_fields.Str(
         data_key="result_metadata_successful_total",
         description="The numbers of successful tasks / all tasks",
         allow_none=True,
         load_default=None,
     )
 
-    module = marshmallow.fields.Str(
+    module = mm_fields.Str(
         data_key="module",
         description="The asset type of the query used",
         allow_none=True,
         load_default=None,
     )
-    result_metadata_trigger_view_name = marshmallow.fields.Str(
+    result_metadata_trigger_view_name = mm_fields.Str(
         data_key="result_metadata_trigger_view_name",
         description="The name of the query defined as the enforcement set trigger",
         allow_none=True,
         load_default=None,
     )
 
-    aggregated_status = marshmallow.fields.Str(
+    aggregated_status = mm_fields.Str(
         data_key="aggregated_status",
         description="The aggregated status of task",
         allow_none=True,
         load_default=None,
     )
-    result_metadata_status = marshmallow.fields.Str(
+    result_metadata_status = mm_fields.Str(
         data_key="result_metadata_status",
         description="The status of the task",
         allow_none=True,
         load_default=None,
     )
 
-    scheduling = marshmallow.fields.Str(
+    scheduling = mm_fields.Str(
         data_key="scheduling",
         description="The task run scheduling",
         allow_none=True,
         load_default=None,
     )
-    duration = marshmallow.fields.Str(
+    duration = mm_fields.Str(
         data_key="duration",
         description="The task run duration, in HH:mm:ss.SS format",
         allow_none=True,
         load_default=None,
     )
-    result_metadata_trigger_condition = marshmallow.fields.Str(
+    result_metadata_trigger_condition = mm_fields.Str(
         data_key="result_metadata_trigger_condition",
         description="The condition which triggered the run",
         allow_none=True,
         load_default=None,
     )
-    discovery_id = marshmallow.fields.Str(
+    discovery_id = mm_fields.Str(
         data_key="discovery_id",
         description="The ID of the discovery cycle that originated the set run record",
         allow_none=True,
@@ -131,13 +132,13 @@ class TaskBasicSchema(BaseSchemaJson):
         load_default=None,
     )
 
-    action_names = marshmallow.fields.List(
-        marshmallow.fields.Str(),
+    action_names = mm_fields.List(
+        mm_fields.Str(),
         data_key="action_names",
         description="List of names for all actions in task.",
         load_default=list,
     )
-    actions_details = marshmallow.fields.Dict(
+    actions_details = mm_fields.Dict(
         data_key="actions_details",
         description="The details of all actions contained in the task.",
         load_default=dict,
@@ -228,4 +229,5 @@ class TaskBasic(BaseModel):
     def get_full(self) -> "TaskFull":
         """Pass."""
         # TODO: ensure cached!
+        # noinspection PyUnresolvedReferences
         return self.HTTP.CLIENT.enforcements.tasks.get_full(uuid=self.uuid)

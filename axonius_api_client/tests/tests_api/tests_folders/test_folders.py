@@ -3,6 +3,7 @@
 import datetime
 
 import pytest
+
 from axonius_api_client.api.json_api import folders
 from axonius_api_client.data import BaseEnum
 from axonius_api_client.exceptions import (  # SearchZeroObjectsError,
@@ -103,7 +104,8 @@ class FolderBaseEnforcements(FolderBase):
 
         with pytest.raises(ResponseNotOk) as exc:
             created_obj.delete(confirm=True)
-        assert "was not found" in str(exc.value)
+        # 2023-04-21 error changed from "...was not found" to "No enforcement was deleted"
+        assert "was not found" in str(exc.value) or "No enforcement was deleted" in str(exc.value)
 
 
 class FolderBase:
@@ -664,8 +666,10 @@ class FoldersBase:
 
     def test_property_path_public(self, apiobj, jsonapi_module):
         root = apiobj.get()
+        enum_names = root.get_enum_names()
         assert isinstance(root.path_public, jsonapi_module.FolderModel)
-        assert root.path_public.name == root.get_enum_names().public.value
+        expected_name = str(enum_names.public)
+        assert root.path_public.name == expected_name
         assert root.path_public.depth == 1
 
     def test_property_count_total(self, apiobj):
@@ -1075,6 +1079,19 @@ class TestFoldersQueries(FoldersBase, FolderBaseQueries):
     #     assert isinstance(root.path_archive, jsonapi_module.FolderModel)
     #     assert root.path_archive.name == archive_name
     #     assert root.path_archive.depth == 1
+
+    def test_property_path_public(self, api_client, apiobj, jsonapi_module):
+        root = apiobj.get()
+        enum_names = root.get_enum_names()
+        assert isinstance(root.path_public, jsonapi_module.FolderModel)
+
+        if api_client.data_scopes.is_feature_enabled:
+            expected_name = str(enum_names.global_scope)
+        else:
+            expected_name = str(enum_names.public)
+
+        assert root.path_public.name == expected_name
+        assert root.path_public.depth == 1
 
     def test_property_path_predefined(self, apiobj, jsonapi_module):
         root = apiobj.get()

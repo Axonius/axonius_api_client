@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 """API model mixin for device and user assets."""
-import uuid
 import datetime
 import pathlib
 import time
 import types
 import typing as t
+import uuid
 
 import cachetools
 
@@ -13,26 +13,19 @@ from ...constants.api import DEFAULT_CALLBACKS_CLS, MAX_PAGE_SIZE, PAGE_SIZE
 from ...constants.fields import AXID
 from ...exceptions import ApiError, NotFoundError, ResponseNotOk, StopFetch
 from ...parsers.grabber import Grabber
-from ...tools import (
-    PathLike,
-    dt_now,
-    dt_now_file,
-    get_subcls,
-    json_dump,
-    listify,
-)
+from ...tools import PathLike, dt_now, dt_now_file, get_subcls, json_dump, listify
+from ..api_endpoints import ApiEndpoint, ApiEndpoints
+from ..asset_callbacks.tools import Base as BaseCallbacks
+from ..asset_callbacks.tools import get_callbacks_cls
 from ..json_api.assets import (
-    AssetRequest,
-    CountRequest,
-    Count,
     AssetById,
-    HistoryDates,
+    AssetRequest,
     AssetsPage,
     AssetTypeHistoryDates,
+    Count,
+    CountRequest,
+    HistoryDates,
 )
-from ..api_endpoints import ApiEndpoints, ApiEndpoint
-from ..asset_callbacks.tools import get_callbacks_cls
-from ..asset_callbacks.tools import Base as BaseCallbacks
 from ..mixins import ModelMixins
 from ..wizards import Wizard, WizardCsv, WizardText
 from .runner import ENFORCEMENT, Runner
@@ -73,7 +66,7 @@ class AssetMixin(ModelMixins):
         return [x.ASSET_TYPE for x in cls.asset_modules()]
 
     @classmethod
-    def asset_modules(cls) -> t.List["AssetMixin"]:
+    def asset_modules(cls) -> t.List[t.Type["AssetMixin"]]:
         """Pass."""
         return get_subcls(AssetMixin)
 
@@ -95,10 +88,10 @@ class AssetMixin(ModelMixins):
         """Run an enforcement set against a manually selected list of assets.
 
         Examples:
-            >>> import axonius_api_client
-            >>> connect_args: dict = axonius_api_client.get_env_connect()
-            >>> client: axonius_api_client.Connect = axonius_api_client.Connect(**connect_args)
-            >>> apiobj: axonius_api_client.api.assets.AssetMixin = client.devices
+            >>> import axonius_api_client as axonapi
+            >>> connect_args: dict = axonapi.get_env_connect()
+            >>> client: axonapi.Connect = axonapi.Connect(**connect_args)
+            >>> apiobj: axonapi.api.assets.AssetMixin = client.devices
             >>>       # or client.users or client.vulnerabilities
             >>> WIZ: str = "simple os.type equals Windows"  # "query of assets to target"
             >>> ESET: str = "test"  # "name or uuid of enforcement set"
@@ -135,7 +128,7 @@ class AssetMixin(ModelMixins):
             refetch (bool): refetch $eset even if it is already a model
             src_query (str): query to use to get $ids
             src_fields (list): fields to use to get $ids
-            check_stdin (bool): check if stdin is a TTY when prompting
+            check_stdin (bool): error if stdin is a TTY when prompting
             grabber: (grabber): Grabber used to get IDs
 
         Returns:
@@ -171,10 +164,10 @@ class AssetMixin(ModelMixins):
         """Get Asset IDs from a list of dicts or strs and run $eset against them.
 
         Examples:
-            >>> import axonius_api_client
-            >>> connect_args: dict = axonius_api_client.get_env_connect()
-            >>> client: axonius_api_client.Connect = axonius_api_client.Connect(**connect_args)
-            >>> apiobj: axonius_api_client.api.assets.AssetMixin = client.devices
+            >>> import axonius_api_client as axonapi
+            >>> connect_args: dict = axonapi.get_env_connect()
+            >>> client: axonapi.Connect = axonapi.Connect(**connect_args)
+            >>> apiobj: axonapi.api.assets.AssetMixin = client.devices
             >>>       # or client.users or client.vulnerabilities
             >>> WIZ: str = "simple os.type equals Windows"  # "query of assets to target"
             >>> ESET: str = "test"  # "name or uuid of enforcement set"
@@ -237,10 +230,10 @@ class AssetMixin(ModelMixins):
         """Get Asset IDs from a JSON string with a list of dicts and run $eset against them.
 
         Examples:
-            >>> import axonius_api_client
-            >>> connect_args: dict = axonius_api_client.get_env_connect()
-            >>> client: axonius_api_client.Connect = axonius_api_client.Connect(**connect_args)
-            >>> apiobj: axonius_api_client.api.assets.AssetMixin = client.devices
+            >>> import axonius_api_client as axonapi
+            >>> connect_args: dict = axonapi.get_env_connect()
+            >>> client: axonapi.Connect = axonapi.Connect(**connect_args)
+            >>> apiobj: axonapi.api.assets.AssetMixin = client.devices
             >>>       # or client.users or client.vulnerabilities
             >>> WIZ: str = "simple os.type equals Windows"  # "query of assets to target"
             >>> ESET: str = "test"  # "name or uuid of enforcement set"
@@ -336,10 +329,10 @@ class AssetMixin(ModelMixins):
         """Get Asset IDs from a JSONL string with one dict per line and run $eset against them.
 
         Examples:
-            >>> import axonius_api_client
-            >>> connect_args: dict = axonius_api_client.get_env_connect()
-            >>> client: axonius_api_client.Connect = axonius_api_client.Connect(**connect_args)
-            >>> apiobj: axonius_api_client.api.assets.AssetMixin = client.devices
+            >>> import axonius_api_client as axonapi
+            >>> connect_args: dict = axonapi.get_env_connect()
+            >>> client: axonapi.Connect = axonapi.Connect(**connect_args)
+            >>> apiobj: axonapi.api.assets.AssetMixin = client.devices
             >>>       # or client.users or client.vulnerabilities
             >>> WIZ: str = "simple os.type equals Windows"  # "query of assets to target"
             >>> ESET: str = "test"  # "name or uuid of enforcement set"
@@ -438,10 +431,10 @@ class AssetMixin(ModelMixins):
         """Get Asset IDs from a CSV string and run $eset against them.
 
         Examples:
-            >>> import axonius_api_client
-            >>> connect_args: dict = axonius_api_client.get_env_connect()
-            >>> client: axonius_api_client.Connect = axonius_api_client.Connect(**connect_args)
-            >>> apiobj: axonius_api_client.api.assets.AssetMixin = client.devices
+            >>> import axonius_api_client as axonapi
+            >>> connect_args: dict = axonapi.get_env_connect()
+            >>> client: axonapi.Connect = axonapi.Connect(**connect_args)
+            >>> apiobj: axonapi.api.assets.AssetMixin = client.devices
             >>>       # or client.users or client.vulnerabilities
             >>> WIZ: str = "simple os.type equals Windows"  # "query of assets to target"
             >>> ESET: str = "test"  # "name or uuid of enforcement set"
@@ -455,7 +448,7 @@ class AssetMixin(ModelMixins):
             >>> FH: io.StringIO = io.StringIO()
             >>> _ = apiobj.get(wiz_entries=WIZ, export="csv", export_fd=FH, export_fd_close=False)
             >>> FH.seek(0)
-            >>> ITEMS: str = axonius_api_client.tools.bom_strip(FH.getvalue())
+            >>> ITEMS: str = axonapi.tools.bom_strip(FH.getvalue())
             >>> RUNNER: Runner = apiobj.run_enforcement_from_csv(eset=ESET, items=ITEMS,
             ... verified=True)
             >>> print(RUNNER)
@@ -542,10 +535,10 @@ class AssetMixin(ModelMixins):
         r"""Get Asset IDs from a text string and run $eset against them.
 
         Examples:
-            >>> import axonius_api_client
-            >>> connect_args: dict = axonius_api_client.get_env_connect()
-            >>> client: axonius_api_client.Connect = axonius_api_client.Connect(**connect_args)
-            >>> apiobj: axonius_api_client.api.assets.AssetMixin = client.devices
+            >>> import axonius_api_client as axonapi
+            >>> connect_args: dict = axonapi.get_env_connect()
+            >>> client: axonapi.Connect = axonapi.Connect(**connect_args)
+            >>> apiobj: axonapi.api.assets.AssetMixin = client.devices
             >>>       # or client.users or client.vulnerabilities
             >>> WIZ: str = "simple os.type equals Windows"  # "query of assets to target"
             >>> ESET: str = "test"  # "name or uuid of enforcement set"
@@ -616,10 +609,10 @@ class AssetMixin(ModelMixins):
         """Get Asset IDs from a JSON file with a list of dicts and run $eset against them.
 
         Examples:
-            >>> import axonius_api_client
-            >>> connect_args: dict = axonius_api_client.get_env_connect()
-            >>> client: axonius_api_client.Connect = axonius_api_client.Connect(**connect_args)
-            >>> apiobj: axonius_api_client.api.assets.AssetMixin = client.devices
+            >>> import axonius_api_client as axonapi
+            >>> connect_args: dict = axonapi.get_env_connect()
+            >>> client: axonapi.Connect = axonapi.Connect(**connect_args)
+            >>> apiobj: axonapi.api.assets.AssetMixin = client.devices
             >>>       # or client.users or client.vulnerabilities
             >>> ESET: str = "test"  # "name or uuid of enforcement set"
 
@@ -683,10 +676,10 @@ class AssetMixin(ModelMixins):
         """Get Asset IDs from a JSONL file with one dict per line and run $eset against them.
 
         Examples:
-            >>> import axonius_api_client
-            >>> connect_args: dict = axonius_api_client.get_env_connect()
-            >>> client: axonius_api_client.Connect = axonius_api_client.Connect(**connect_args)
-            >>> apiobj: axonius_api_client.api.assets.AssetMixin = client.devices
+            >>> import axonius_api_client as axonapi
+            >>> connect_args: dict = axonapi.get_env_connect()
+            >>> client: axonapi.Connect = axonapi.Connect(**connect_args)
+            >>> apiobj: axonapi.api.assets.AssetMixin = client.devices
             >>>       # or client.users or client.vulnerabilities
             >>> ESET: str = "test"  # "name or uuid of enforcement set"
 
@@ -749,16 +742,16 @@ class AssetMixin(ModelMixins):
         """Get Asset IDs from a CSV file and run $eset against them.
 
         Examples:
-            >>> import axonius_api_client
-            >>> connect_args: dict = axonius_api_client.get_env_connect()
-            >>> client: axonius_api_client.Connect = axonius_api_client.Connect(**connect_args)
-            >>> apiobj: axonius_api_client.api.assets.AssetMixin = client.devices
+            >>> import axonius_api_client as axonapi
+            >>> connect_args: dict = axonapi.get_env_connect()
+            >>> client: axonapi.Connect = axonapi.Connect(**connect_args)
+            >>> apiobj: axonapi.api.assets.AssetMixin = client.devices
             >>>       # or client.users or client.vulnerabilities
             >>> ESET: str = "test"  # "name or uuid of enforcement set"
 
             Run an enforcement against all asset IDs from a JSONL file.
-            We are unsure if Asset IDs are still valid for this instance so
-            we do not pass verified=True.
+            We are unsure if Asset IDs are still valid for this instance,
+            so we do not pass verified=True.
             >>> PATH: str = "data.csv"
             >>> RUNNER: Runner = apiobj.run_enforcement_from_csv_path(eset=ESET, path=PATH)
             >>> print(RUNNER)
@@ -815,10 +808,10 @@ class AssetMixin(ModelMixins):
         """Get Asset IDs from a text file and run $eset against them.
 
         Examples:
-            >>> import axonius_api_client
-            >>> connect_args: dict = axonius_api_client.get_env_connect()
-            >>> client: axonius_api_client.Connect = axonius_api_client.Connect(**connect_args)
-            >>> apiobj: axonius_api_client.api.assets.AssetMixin = client.devices
+            >>> import axonius_api_client as axonapi
+            >>> connect_args: dict = axonapi.get_env_connect()
+            >>> client: axonapi.Connect = axonapi.Connect(**connect_args)
+            >>> apiobj: axonapi.api.assets.AssetMixin = client.devices
             >>>       # or client.users or client.vulnerabilities
             >>> ESET: str = "test"  # "name or uuid of enforcement set"
 
@@ -903,24 +896,24 @@ class AssetMixin(ModelMixins):
         """Get the count of assets from a query.
 
         Examples:
-            >>> import axonius_api_client
-            >>> connect_args: dict = axonius_api_client.get_env_connect()
-            >>> client: axonius_api_client.Connect = axonius_api_client.Connect(**connect_args)
-            >>> apiobj: axonius_api_client.api.assets.AssetMixin = client.devices
+            >>> import axonius_api_client as axonapi
+            >>> connect_args: dict = axonapi.get_env_connect()
+            >>> client: axonapi.Connect = axonapi.Connect(**connect_args)
+            >>> apiobj: axonapi.api.assets.AssetMixin = client.devices
             >>>       # or client.users or client.vulnerabilities
             Get count of all assets
-            >>> value: int = apiobj.count()
+            >>> path: int = apiobj.count()
             Get count of all assets for a given date
-            >>> value: int = apiobj.count(history_date="2020-09-29")
+            >>> path: int = apiobj.count(history_date="2020-09-29")
             Get count of assets matching a query built by the GUI query wizard
             >>> use_query: str = '(specific_data.data.name == "test")'
-            >>> value: int = apiobj.count(query=use_query)
+            >>> path: int = apiobj.count(query=use_query)
             Get count of assets matching a query built by the API client query wizard
             >>> entries: str = 'simple name equals test'
-            >>> value: int = apiobj.count(wiz_entries=entries)
+            >>> path: int = apiobj.count(wiz_entries=entries)
             Same as above but using a list of dicts instead of a string for wiz_entries
-            >>> entries: t.List[dict] = [{'type': 'simple', 'value': 'name equals test'}]
-            >>> value: int = apiobj.count(wiz_entries=entries)
+            >>> entries: t.List[dict] = [{'type': 'simple', 'path': 'name equals test'}]
+            >>> path: int = apiobj.count(wiz_entries=entries)
 
         Args:
             query: only return the count of assets that match the query
@@ -980,10 +973,10 @@ class AssetMixin(ModelMixins):
         """Get the count of assets for a query defined in a saved query.
 
         Examples:
-            >>> import axonius_api_client
-            >>> connect_args: dict = axonius_api_client.get_env_connect()
-            >>> client: axonius_api_client.Connect = axonius_api_client.Connect(**connect_args)
-            >>> apiobj: axonius_api_client.api.assets.AssetMixin = client.devices
+            >>> import axonius_api_client as axonapi
+            >>> connect_args: dict = axonapi.get_env_connect()
+            >>> client: axonapi.Connect = axonapi.Connect(**connect_args)
+            >>> apiobj: axonapi.api.assets.AssetMixin = client.devices
             >>>       # or client.users or client.vulnerabilities
             Get count of assets returned from a saved query
             >>> count: int = apiobj.count_by_saved_query(name="test")
@@ -1005,10 +998,10 @@ class AssetMixin(ModelMixins):
         r"""Get assets from a query.
 
         Examples:
-            >>> import axonius_api_client
-            >>> connect_args: dict = axonius_api_client.get_env_connect()
-            >>> client: axonius_api_client.Connect = axonius_api_client.Connect(**connect_args)
-            >>> apiobj: axonius_api_client.api.assets.AssetMixin = client.devices
+            >>> import axonius_api_client as axonapi
+            >>> connect_args: dict = axonapi.get_env_connect()
+            >>> client: axonapi.Connect = axonapi.Connect(**connect_args)
+            >>> apiobj: axonapi.api.assets.AssetMixin = client.devices
             >>>       # or client.users or client.vulnerabilities
             Get all assets with the default fields defined in the API client
             >>> assets: list[dict] = apiobj.get()
@@ -1033,7 +1026,7 @@ class AssetMixin(ModelMixins):
             >>> query: str ='(specific_data.data.name == "test")'
             >>> assets: list[dict] = apiobj.get(query=query)
             Get assets matching a query built by the API client query wizard
-            >>> wiz_entries: list[dict] = [{'type': 'simple', 'value': 'name equals test'}]
+            >>> wiz_entries: list[dict] = [{'type': 'simple', 'path': 'name equals test'}]
             >>> assets: list[dict] = apiobj.get(wiz_entries=wiz_entries)
 
         See Also:
@@ -1237,7 +1230,7 @@ class AssetMixin(ModelMixins):
         if not isinstance(http_args, dict):
             http_args: dict = {}
 
-        if not isinstance(wiz_parsed, dict) and wiz_parsed:
+        if not isinstance(wiz_parsed, dict):
             wiz_parsed: dict = self.get_wiz_entries(wiz_entries=wiz_entries)
 
         if isinstance(wiz_parsed, dict):
@@ -1348,6 +1341,7 @@ class AssetMixin(ModelMixins):
             try:
                 start_dt: datetime.datetime = dt_now()
                 page: AssetsPage = self._get(request_obj=request_obj, http_args=http_args)
+
                 if request_obj.use_cursor:
                     request_obj.cursor_id = page.cursor
                 state: dict = page.process_page(state=state, start_dt=start_dt, apiobj=self)
@@ -1379,10 +1373,10 @@ class AssetMixin(ModelMixins):
         Examples:
             First, create a ``client`` using :obj:`axonius_api_client.connect.Connect` and assume
             ``apiobj`` is ``client.devices`` or ``client.users``
-            >>> import axonius_api_client
-            >>> connect_args: dict = axonius_api_client.get_env_connect()
-            >>> client: axonius_api_client.Connect = axonius_api_client.Connect(**connect_args)
-            >>> apiobj: axonius_api_client.api.assets.AssetMixin = client.devices
+            >>> import axonius_api_client as axonapi
+            >>> connect_args: dict = axonapi.get_env_connect()
+            >>> client: axonapi.Connect = axonapi.Connect(**connect_args)
+            >>> apiobj: axonapi.api.assets.AssetMixin = client.devices
             >>>       # or client.users or client.vulnerabilities
 
             Get assets from a saved query with complex fields flattened
@@ -1437,10 +1431,10 @@ class AssetMixin(ModelMixins):
         """Build a query and expressions.
 
         Examples:
-            >>> import axonius_api_client
-            >>> connect_args: dict = axonius_api_client.get_env_connect()
-            >>> client: axonius_api_client.Connect = axonius_api_client.Connect(**connect_args)
-            >>> apiobj: axonius_api_client.api.assets.AssetMixin = client.devices
+            >>> import axonius_api_client as axonapi
+            >>> connect_args: dict = axonapi.get_env_connect()
+            >>> client: axonapi.Connect = axonapi.Connect(**connect_args)
+            >>> apiobj: axonapi.api.assets.AssetMixin = client.devices
             >>>       # or client.users or client.vulnerabilities
 
             None is returned if no wiz_entries are passed
@@ -1549,10 +1543,10 @@ class AssetMixin(ModelMixins):
         """Get the full data set of all adapters for a single asset.
 
         Examples:
-            >>> import axonius_api_client
-            >>> connect_args: dict = axonius_api_client.get_env_connect()
-            >>> client: axonius_api_client.Connect = axonius_api_client.Connect(**connect_args)
-            >>> apiobj: axonius_api_client.api.assets.AssetMixin = client.devices
+            >>> import axonius_api_client as axonapi
+            >>> connect_args: dict = axonapi.get_env_connect()
+            >>> client: axonapi.Connect = axonapi.Connect(**connect_args)
+            >>> apiobj: axonapi.api.assets.AssetMixin = client.devices
             >>>       # or client.users or client.vulnerabilities
             >>> assets: list[dict] = apiobj.get(max_rows=1)
             >>> asset_id: str = assets[0]["internal_axon_id"]

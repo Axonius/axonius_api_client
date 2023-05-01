@@ -42,10 +42,12 @@ JSON_TYPES = t.Union[int, str, float, bool, dict, list, tuple, None]
 EMPTY: t.List[t.Union[str, list, dict, tuple]] = [None, "", [], {}, ()]
 """Values that should be considered as empty"""
 
-YES: t.List[t.Union[bool, int, str]] = [True, 1, "1", "true", "t", "yes", "y", "on"]
+YES_STR: t.Tuple[str, ...] = ("1", "true", "t", "yes", "y", "on")
+YES: t.List[t.Union[bool, int, str]] = [True, 1, *YES_STR]
 """Values that should be considered as truthy"""
 
-NO: t.List[t.Union[bool, int, str]] = [False, 0, "0", "false", "f", "no", "n", "off"]
+NO_STR: t.Tuple[str, ...] = ("0", "false", "f", "no", "n", "off")
+NO: t.List[t.Union[bool, int, str]] = [False, 0, *NO_STR]
 """Values that should be considered as falsey"""
 
 IS_WINDOWS: bool = sys.platform == "win32"

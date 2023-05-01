@@ -5,11 +5,11 @@ import logging
 import typing as t
 import warnings
 from dataclasses import Field
-import marshmallow_jsonapi.fields as mm_fields
 
 import dataclasses_json
 import marshmallow
 import marshmallow_jsonapi
+import marshmallow_jsonapi.fields as mm_fields
 
 from ...constants.ctypes import SimpleLike
 from ...constants.general import RERAISE
@@ -262,13 +262,22 @@ class BaseSchemaJson(BaseSchema, marshmallow_jsonapi.Schema):
 class BaseModel(dataclasses_json.DataClassJsonMixin, BaseCommon):
     """Model base class for holding data."""
 
+    HTTP: t.ClassVar[Http] = None
+    """HTTP client to use for requests."""
+
     @classmethod
     def get_request_if_not_request(
-        cls, request_obj: t.Optional["BaseModel"] = None, *args, **kwargs
+        cls,
+        http: Http,
+        request_obj: t.Optional["BaseModel"] = None,
+        *args,
+        **kwargs,
     ) -> "BaseModel":
         """If request is not of this type, build one using args and kwargs."""
         # noinspection PyArgumentList
-        return request_obj if isinstance(request_obj, cls) else cls(*args, **kwargs)
+        data = request_obj if isinstance(request_obj, cls) else cls(*args, **kwargs)
+        cls._post_load_attrs(data, http=http)
+        return data
 
     @staticmethod
     def get_schema_cls() -> t.Any:

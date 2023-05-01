@@ -14,12 +14,12 @@ from ...tools import path_read
 from ..api_endpoints import ApiEndpoints
 from ..json_api.adapters import (
     Adapter,
-    AdapterFetchHistory,
-    AdapterFetchHistoryFilters,
     AdapterFetchHistoryRequest,
     AdapterSettings,
     AdaptersList,
     CnxLabels,
+    AdapterFetchHistory,
+    AdapterFetchHistoryFilters,
 )
 from ..json_api.paging_state import PagingState
 from ..json_api.system_settings import SystemSettings
@@ -461,7 +461,7 @@ class Adapters(ModelMixins):
 
         Args:
             name: name of adapter to upload file to
-            node: name of node to to upload file to
+            node: name of node to upload file to
             field_name: name of field (should match configuration schema key name)
             file_name: name of file to upload
             file_content: content of file to upload
@@ -622,7 +622,7 @@ class Adapters(ModelMixins):
         Returns:
             CnxLabels: dataclass model containing response
         """
-        api_endpoint = ApiEndpoints.adapters.labels_get
+        api_endpoint = ApiEndpoints.adapters.cnx_get_labels
         response = api_endpoint.perform_request(http=self.http)
         return response
 

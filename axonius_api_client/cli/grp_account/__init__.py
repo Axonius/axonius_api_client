@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 """Command line interface for Axonius API Client."""
+import typing as t
+
 import click
 
 from ..context import AliasedGroup, load_cmds
@@ -12,6 +14,12 @@ def account():
 
 
 load_cmds(path=__file__, package=__package__, group=account)
-account.add_command(cmd_write_config.cmd)
-account.add_command(cmd_signup.cmd)
-account.add_command(cmd_use_token_reset_token.cmd)
+
+COMMANDS: t.List[t.Any] = [
+    cmd_write_config.cmd,
+    cmd_signup.cmd,
+    cmd_use_token_reset_token.cmd,
+]
+
+for cmd in COMMANDS:
+    account.add_command(cmd)

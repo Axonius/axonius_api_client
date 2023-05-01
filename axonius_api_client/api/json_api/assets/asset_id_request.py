@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 """Models for API requests & responses."""
-import typing as t
-import datetime
 import dataclasses
+import datetime
+import typing as t
 
 import marshmallow
 
 from ..base import BaseModel, BaseSchemaJson
-from ..custom_fields import field_from_mm, SchemaDatetime, SchemaBool
+from ..custom_fields import SchemaBool, SchemaDatetime, field_from_mm
 
 
 class AssetByIdRequestSchema(BaseSchemaJson):

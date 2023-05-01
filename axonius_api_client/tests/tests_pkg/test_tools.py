@@ -3,10 +3,10 @@
 import codecs
 import io
 import tempfile
+from datetime import timezone
 
 import dateutil.tz
 import pytest
-from datetime import timezone
 
 from axonius_api_client.api.json_api.generic import IntValue
 from axonius_api_client.constants.api import GUI_PAGE_SIZES

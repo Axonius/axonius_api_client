@@ -219,7 +219,7 @@ class Runner(BaseData, Mixins):
         """Run the Enforcement Set.
 
         Args:
-            force (bool, optional): if verified=False or already run, ignore and run anyways
+            force (bool, optional): if verified=False or already run, ignore and run anyway
 
         """
         self.init()

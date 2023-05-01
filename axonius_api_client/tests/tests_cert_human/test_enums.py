@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """Test suite."""
-from axonius_api_client.cert_human import enums
+from axonius_api_client.projects.cert_human import enums
 
 
 class TestGetNameByValue:

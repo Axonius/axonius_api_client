@@ -71,7 +71,7 @@ class EnforcementsBase:
         assert isinstance(deleted, EnforcementFullModel)
 
     @pytest.fixture(scope="class")
-    def created_set_trigger(self, apiobj):
+    def created_set_trigger(self, apiobj, device_sq_predefined):
         try:
             created_set = apiobj.get_set(value=Meta.name_trigger)
         except NotFoundError:
@@ -81,8 +81,8 @@ class EnforcementsBase:
                     main_action_type=Meta.action_type,
                     main_action_name=Meta.action_name,
                     main_action_config=Meta.action_config,
-                    query_name=Meta.trigger_name,
-                    query_type=Meta.trigger_type,
+                    query_name=device_sq_predefined.name,
+                    query_type=device_sq_predefined.module,
                 )
 
         assert isinstance(created_set, EnforcementFullModel)

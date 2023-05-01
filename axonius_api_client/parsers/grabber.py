@@ -7,12 +7,22 @@ import types
 import typing as t
 import warnings
 
-from ..cert_human.paths import PathLike, pathify
 from ..constants.fields import AXID
+from ..constants.ctypes import PathLike
 from ..data import BaseData
 from ..exceptions import GrabberError, GrabberWarning
 from ..logs import get_echoer, get_obj_log
-from ..tools import add_source, csv_able, csv_load, json_load, jsonl_load, listify, text_load, tlens
+from ..tools import (
+    add_source,
+    csv_able,
+    csv_load,
+    json_load,
+    jsonl_load,
+    listify,
+    text_load,
+    tlens,
+    pathify,
+)
 
 
 class Mixins:

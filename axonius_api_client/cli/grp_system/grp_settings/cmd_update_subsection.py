@@ -21,7 +21,7 @@ def cmd(
     sub_section,
     export_format,
 ):
-    """Update a sub-section from arguments."""
+    """Update a subsection from arguments."""
     client = ctx.obj.start_client(url=url, key=key, secret=secret)
     config = dict(config)
 

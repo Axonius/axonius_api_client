@@ -6,10 +6,10 @@ import io
 import pytest
 
 from ...utils import get_schema
-from .test_callbacks import Callbacks, Exports
+from .test_callbacks import Exports
 
 
-class TestCallbacksCsv(Callbacks, Exports):
+class TestCallbacksCsv(Exports):
     @pytest.fixture(params=["api_devices"], scope="class")
     def apiobj(self, request):
         return request.getfixturevalue(request.param)

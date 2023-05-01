@@ -1,40 +1,19 @@
 # -*- coding: utf-8 -*-
 """Easy all-in-one connection handler."""
-import typing as t
-import types
 import logging
 import logging.handlers
-import pathlib
+import platform
 import re
-from typing import List, Optional, Union
+import types
+import typing as t
 
 import requests
 
-from .api import (
-    ActivityLogs,
-    Adapters,
-    Dashboard,
-    DashboardSpaces,
-    DataScopes,
-    Devices,
-    Enforcements,
-    Folders,
-    Instances,
-    Meta,
-    OpenAPISpec,
-    RemoteSupport,
-    SettingsGlobal,
-    SettingsGui,
-    SettingsIdentityProviders,
-    SettingsLifecycle,
-    Signup,
-    SystemRoles,
-    SystemUsers,
-    Users,
-    Vulnerabilities,
-)
-from .auth import ApiKey, Credentials
-from .constants.api import TIMEOUT_CONNECT, TIMEOUT_RESPONSE
+from . import api, logs, tools, version
+from .projects import cert_human
+from .projects.cf_token import constants as cf_constants
+from .auth import AuthApiKey, AuthCredentials, AuthModel, AuthNull
+from .constants.ctypes import PathLike
 from .constants.logs import (
     LOG_FILE_MAX_FILES,
     LOG_FILE_MAX_MB,
@@ -47,16 +26,11 @@ from .constants.logs import (
     LOG_LEVEL_CONSOLE,
     LOG_LEVEL_ENDPOINTS,
     LOG_LEVEL_FILE,
-    LOG_LEVEL_HTTP,
     LOG_LEVEL_PACKAGE,
 )
 from .exceptions import ConnectError, InvalidCredentials
 from .http import Http, T_Cookies, T_Headers
-from .logs import LOG, HideFormatter, add_file, add_stderr, get_obj_log, set_log_level
 from .setup_env import get_env_ax
-from .tools import coerce_bool, coerce_int, json_dump, json_reload, sysinfo
-from .version import __version__ as VERSION
-from . import tools
 
 
 class Connect:
@@ -79,36 +53,156 @@ class Connect:
         >>>
         >>> j = client.jdump  # json dump helper
         >>>
-        >>> client.start()                  # connect to axonius
+        >>> client.start()  # connect to axonius
         >>>
-        >>> # client.activity_logs          # get audit logs
-        >>> # client.adapters               # get adapters and update adapter settings
-        >>> # client.adapters.cnx           # CRUD for adapter connections
-        >>> # client.dashboard              # get/start/stop discovery cycles
-        >>> # client.devices                # get device assets
-        >>> # client.devices.fields         # get field schemas for device assets
-        >>> # client.devices.labels         # add/remove/get tags for device assets
-        >>> # client.devices.saved_queries  # CRUD for saved queries for device assets
-        >>> # client.enforcements           # CRUD for enforcements
-        >>> # client.instances              # get instances and instance meta data
-        >>> # client.meta                   # get product meta data
-        >>> # client.remote_support         # enable/disable remote support settings
-        >>> # client.settings_global        # get/update global system settings
-        >>> # client.settings_gui           # get/update gui system settings
-        >>> # client.settings_ip            # get/update identity provider system settings
-        >>> # client.settings_lifecycle     # get/update lifecycle system settings
-        >>> # client.signup                 # perform initial signup and use password reset tokens
-        >>> # client.system_roles           # CRUD for system roles
-        >>> # client.system_users           # CRUD for system users
-        >>> # client.users                  # get user assets
-        >>> # client.users.fields           # get field schemas for user assets
-        >>> # client.users.labels           # add/remove/get tags for user assets
-        >>> # client.users.saved_queries    # CRUD for saved queries for user assets
-
+        >>> # client.activity_logs                 # get audit logs
+        >>> # client.adapters                      # get adapters and update adapter settings
+        >>> # client.adapters.cnx                  # CRUD for adapter connections
+        >>> # client.dashboard                     # get/start/stop discovery cycles
+        >>> # client.dashboard_spaces              # CRUD for dashboard spaces
+        >>> # client.data_scopes                   # CRUD for data scopes
+        >>> # client.devices                       # get device assets
+        >>> # client.devices.fields                # get field schemas for device assets
+        >>> # client.devices.labels                # add/remove/get tags for device assets
+        >>> # client.devices.saved_queries         # CRUD for saved queries for device assets
+        >>> # client.enforcements                  # CRUD for enforcements
+        >>> # client.folders                       # CRUD for folders
+        >>> # client.folders.enforcements          # CRUD for enforcements folders
+        >>> # client.folders.queries               # CRUD for queries folders
+        >>> # client.instances                     # get instances and instance meta data
+        >>> # client.openapi                       # get openapi spec
+        >>> # client.meta                          # get product meta data
+        >>> # client.remote_support                # include_output/disable remote support settings
+        >>> # client.settings_global               # get/update global system settings
+        >>> # client.settings_gui                  # get/update gui system settings
+        >>> # client.settings_ip                   # get/update identity provider system settings
+        >>> # client.settings_lifecycle            # get/update lifecycle system settings
+        >>> # client.signup                        # initial signup, password resets
+        >>> # client.system_roles                  # CRUD for system roles
+        >>> # client.system_users                  # CRUD for system users
+        >>> # client.users                         # get user assets
+        >>> # client.users.fields                  # get field schemas for user assets
+        >>> # client.users.labels                  # add/remove/get tags for user assets
+        >>> # client.users.saved_queries           # CRUD for saved queries for user assets
+        >>> # client.vulnerabilities               # get vulnerability assets
+        >>> # client.vulnerabilities.fields        # get field schemas for vulnerability assets
+        >>> # client.vulnerabilities.labels        # add/remove/get tags for vulnerability assets
+        >>> # client.vulnerabilities.saved_queries # CRUD for saved queries for vulnerability assets
     """
 
     TOOLS: types.ModuleType = tools
     """Tools module."""
+
+    LOG_LOGGER: logging.Logger = logs.LOG
+    """Logger for the entire package, where console and file output handlers will be attached to."""
+
+    LOG: logging.Logger = None
+    """Logger for this class."""
+
+    LOG_HTTP_MAX: bool = False
+    """Shortcut to include_output ALL http logging *warning: very heavy log output*."""
+
+    STARTED: bool = False
+    """Flag to indicate if client has been started."""
+
+    WRAPERROR: bool = True
+    """Flag to indicate if client should wrap exceptions."""
+
+    _url: str = None
+    """Initially supplied URL of the Axonius instance."""
+
+    ARGS_HANDLER_CON: dict = None
+    """Arguments to use when setting up console logging."""
+
+    ARGS_HANDLER_FILE: dict = None
+    """Arguments to use when setting up file logging."""
+
+    ARGS_API: dict = None
+    """Arguments to use when setting up models."""
+
+    ARGS_ORIG: dict = None
+    """Original arguments supplied to the constructor."""
+
+    HANDLER_CON: t.Optional[logging.StreamHandler] = None
+    """Console logging handler."""
+
+    HANDLER_FILE: t.Optional[logging.handlers.RotatingFileHandler] = None
+    """File logging handler."""
+
+    http: Http = None
+    HTTP: Http = None
+    """HTTP client."""
+
+    auth: AuthModel = None
+    AUTH: AuthModel = None
+    """Authentication handler."""
+
+    AUTH_NULL: AuthModel = None
+    """Auth model for authenticating with no auth."""
+
+    CREDENTIALS: bool = False
+    """Flag to indicate if key & secret are actually username & password."""
+
+    API_CACHE: t.Dict[t.Type[api.ModelMixins], api.ModelMixins] = None
+    """Cache for API Models."""
+
+    API_ATTRS: t.List[str] = [
+        "activity_logs",
+        "adapters",
+        "dashboard",
+        "dashboard_spaces",
+        "data_scopes",
+        "devices",
+        "enforcements",
+        "folders",
+        "instances",
+        "meta",
+        "openapi",
+        "remote_support",
+        "settings_global",
+        "settings_gui",
+        "settings_ip",
+        "settings_lifecycle",
+        "signup",
+        "system_roles",
+        "system_users",
+        "users",
+        "vulnerabilities",
+    ]
+    """Attributes that are API Models."""
+
+    API_LOG_LEVEL: t.Union[int, str] = LOG_LEVEL_API
+    """Log level for API Models."""
+
+    REASON_RES: t.List[t.Pattern] = [
+        re.compile(r".*?object at.*?>: ([a-zA-Z0-9\]\[: ]+)"),
+        re.compile(r".*?] (.*) "),
+    ]
+    """Patterns to look for in exceptions that we can pretty up for user display."""
+
+    PKG_VERSION: str = version.__version__
+    """Version of this package."""
+
+    PY_VERSION: str = platform.python_version()
+    """Version of Python that this package is running on."""
+
+    ABOUT_CACHE: t.Optional[dict] = None
+    """Cached data from the /about endpoint."""
+
+    HTTP_MAX: str = """log_request_body = True
+log_response_body = True
+log_level_http = "debug"
+log_level_package = "debug"
+log_level_console = "debug"
+log_level_file = "debug"
+log_request_attrs = "all"
+log_response_attrs = "all"
+log_body_lines = 10000
+"""
+    """Override values used when log_http_max is True."""
+
+    HTTP_MAX_CLI: str = ", ".join(HTTP_MAX.splitlines())
+    """CLI Help string for log_http_max."""
 
     def __init__(
         self,
@@ -118,14 +212,59 @@ class Connect:
         log_console: bool = False,
         log_file: bool = False,
         log_file_rotate: bool = False,
-        certpath: Optional[Union[str, pathlib.Path]] = None,
+        certpath: t.Optional[PathLike] = None,
         certverify: bool = False,
         certwarn: bool = True,
-        proxy: Optional[str] = None,
-        headers: Optional[T_Headers] = None,
-        cookies: Optional[T_Cookies] = None,
+        proxy: t.Optional[str] = None,
+        headers: t.Optional[T_Headers] = None,
+        cookies: t.Optional[T_Cookies] = None,
         credentials: bool = False,
+        timeout_connect: t.Optional[t.Union[int, float]] = Http.CONNECT_TIMEOUT,
+        timeout_response: t.Optional[t.Union[int, float]] = Http.RESPONSE_TIMEOUT,
+        cert_client_key: t.Optional[PathLike] = None,
+        cert_client_cert: t.Optional[PathLike] = None,
+        cert_client_both: t.Optional[PathLike] = None,
+        save_history: bool = False,
+        log_level: t.Union[str, int] = "debug",
+        log_request_attrs: t.Optional[t.Union[str, t.Iterable[str]]] = None,
+        log_response_attrs: t.Optional[t.Union[str, t.Iterable[str]]] = None,
+        log_request_body: bool = False,
+        log_response_body: bool = False,
+        log_logger: logging.Logger = LOG_LOGGER,
+        log_level_package: t.Union[str, int] = LOG_LEVEL_PACKAGE,
+        log_level_endpoints: t.Union[str, int] = LOG_LEVEL_ENDPOINTS,
+        log_level_http: t.Union[str, int] = Http.LOG_LEVEL,
+        log_level_auth: t.Union[str, int] = LOG_LEVEL_AUTH,
+        log_level_api: t.Union[str, int] = LOG_LEVEL_API,
+        log_level_console: t.Union[str, int] = LOG_LEVEL_CONSOLE,
+        log_level_file: t.Union[str, int] = LOG_LEVEL_FILE,
+        log_console_fmt: str = LOG_FMT_BRIEF,
+        log_http_max: bool = LOG_HTTP_MAX,
+        log_file_fmt: str = LOG_FMT_VERBOSE,
+        log_file_name: t.Optional[PathLike] = LOG_FILE_NAME,
+        log_file_path: t.Optional[PathLike] = LOG_FILE_PATH,
+        log_file_max_mb: int = LOG_FILE_MAX_MB,
+        log_file_max_files: int = LOG_FILE_MAX_FILES,
         log_hide_secrets: bool = True,
+        log_body_lines: int = Http.LOG_BODY_LINES,
+        wraperror: bool = True,
+        cf_token: t.Optional[str] = None,
+        cf_url: t.Optional[str] = None,
+        cf_path: t.Optional[PathLike] = cf_constants.CF_PATH,
+        cf_run: bool = cf_constants.CLIENT_RUN,
+        cf_run_login: bool = cf_constants.FLOW_RUN_LOGIN,
+        cf_run_access: bool = cf_constants.FLOW_RUN_ACCESS,
+        cf_env: bool = cf_constants.FLOW_ENV,
+        cf_echo: bool = cf_constants.FLOW_ECHO,
+        cf_echo_verbose: bool = cf_constants.FLOW_ECHO_VERBOSE,
+        cf_error: bool = cf_constants.CLIENT_ERROR,
+        cf_error_login: bool = cf_constants.FLOW_ERROR,
+        cf_error_access: bool = cf_constants.FLOW_ERROR,
+        cf_timeout_access: t.Optional[int] = cf_constants.TIMEOUT_ACCESS,
+        cf_timeout_login: t.Optional[int] = cf_constants.TIMEOUT_LOGIN,
+        http: t.Optional[Http] = None,
+        auth: t.Optional[AuthModel] = None,
+        auth_null: t.Optional[AuthModel] = None,
         **kwargs,
     ):
         """Easy all-in-one connection handler.
@@ -134,215 +273,161 @@ class Connect:
             url: URL, hostname, or IP address of Axonius instance
             key: API Key from account page in Axonius instance
             secret: API Secret from account page in Axonius instance
-            log_console: enable logging to console
-            log_file: enable logging to file
-            certpath: path to CA bundle file to use when verifying certs offered by :attr:`url`
+            log_console: include_output logging to console
+            log_file: include_output logging to file
+            certpath: path to CA bundle file to use when verifying certs offered by url
             certverify: raise exception if cert is self-signed or only if cert is invalid
             certwarn: show insecure warning once or never show insecure warning
-            proxy: proxy to use when making https requests to :attr:`url`
+            proxy: proxy to use when making https requests to url
             headers: additional headers to supply with every request
             cookies: additional cookies to supply with every request
-            **kwargs: documented as properties
+            credentials: treat key as username as secret as password
+            timeout_connect: seconds to wait for connections to open to url
+            timeout_response: seconds to wait for responses from url
+            cert_client_key: file with private key to offer to url
+            cert_client_cert: file with client cert to offer to url
+            cert_client_both: file with client cert and private key to offer to url
+            save_history: save history of responses to Http.HISTORY
+            log_level: log level to use for this object
+            log_request_attrs: list of request attributes to log
+            log_response_attrs: list of response attributes to log
+            log_request_body: log request body
+            log_response_body: log response body
+            log_logger: Logger for the entire package, where console and file output
+                handlers will be attached to
+            log_level_package: log level to use for package root logger
+            log_level_endpoints: log level to use for endpoint loggers
+            log_level_http: log level to use for http loggers
+            log_level_auth: log level to use for auth loggers
+            log_level_api: log level to use for api loggers
+            log_level_console: log level to use for console loggers
+            log_level_file: log level to use for file loggers
+            log_console_fmt: format string to use for console logging
+            log_file_fmt: format string to use for file logging
+            log_file_name: name of file to log to
+            log_file_path: path to directory to log to
+            log_file_max_mb: max size of log file in MB
+            log_file_max_files: max number of log files to keep
+            log_body_lines: max length of request/response body to log
+            log_hide_secrets: hide secrets in logs
+            log_http_max: Shortcut to include_output ALL http logging *warning: heavy log output*
+            wraperror: wrap certain errors in a more user friendly format
+            cf_url: URL to use in `access token` and `access login` commands,
+                will fallback to url if not supplied
+            cf_token: access token supplied by user, will be checked for validity if not empty
+            cf_env: if no token supplied, try to get token from OS env var CF_TOKEN
+            cf_run: if no token supplied or in OS env vars, try to get token from `access token` and
+                `access login` commands
+            cf_run_access: if run is True, try to get token from `access token`,
+            cf_run_login: if run is True and no token returned from `access token` command,
+                try to get token from `access login` command
+            cf_path: path to cloudflared binary to run, can be full path or path in OS env var $PATH
+            cf_timeout_access: timeout for `access token` command in seconds
+            cf_timeout_login: timeout for `access login` command in seconds
+            cf_error: raise error if an invalid token is found or no token can be found
+            cf_error_access: raise exc if `access token` command fails and login is False
+            cf_error_login: raise exc if `access login` command fails
+            cf_echo: echo commands and results to stderr
+            cf_echo_verbose: echo more to stderr
+            http: http object to use for this connection
+            auth: auth model to use for this connection
+            auth_null: null auth model to use for this connection
+            **kwargs: unused
         """
-        self.url: str = url
-        """URL of Axonius instance to use"""
+        self._url: str = url
+        self.__key: str = key
+        self.__secret: str = secret
+        self.CLIENT = self
+        self.API_CACHE: dict = {}
+        self.ARGS_ORIG: dict = kwargs
+        self.LOG_LOGGER: logging.Logger = log_logger
+        self.LOG: logging.Logger = logs.get_obj_log(obj=self, log_level=log_level)
+        self.LOG_HTTP_MAX: bool = tools.coerce_bool(log_http_max)
+        self.CREDENTIALS: bool = tools.coerce_bool(credentials)
 
-        certwarn = coerce_bool(certwarn)
-        certverify = coerce_bool(certverify)
-        log_console = coerce_bool(log_console)
-        log_file = coerce_bool(log_file)
-        self.LOG_HIDE_SECRETS: bool = coerce_bool(log_hide_secrets)
+        if self.LOG_HTTP_MAX:
+            log_request_body = True
+            log_response_body = True
+            log_level_http = "debug"
+            log_level_package = "debug"
+            log_level_console = "debug"
+            log_level_file = "debug"
+            log_request_attrs = "all"
+            log_response_attrs = "all"
+            if not isinstance(log_body_lines, int) or (
+                isinstance(log_body_lines, int) and log_body_lines < 10000
+            ):
+                log_body_lines = 10000
 
-        self.LOG_HIDE_SECRETS: bool = coerce_bool(log_hide_secrets)
-        self.TIMEOUT_CONNECT: int = coerce_int(kwargs.get("timeout_connect", TIMEOUT_CONNECT))
-        """Seconds to wait for connections to open to :attr:`url` ``kwargs=timeout_connect``"""
-
-        self.TIMEOUT_RESPONSE: int = coerce_int(kwargs.get("timeout_response", TIMEOUT_RESPONSE))
-        """Seconds to wait for responses from :attr:`url` ``kwargs=timeout_response``"""
-
-        self.CERT_CLIENT_KEY: Optional[Union[str, pathlib.Path]] = kwargs.get(
-            "cert_client_key", None
-        )
-        """Private key file for cert_client_cert ``kwargs=cert_client_key``"""
-
-        self.CERT_CLIENT_CERT: Optional[Union[str, pathlib.Path]] = kwargs.get(
-            "cert_client_cert", None
-        )
-        """cert file to offer to :attr:`url` ``kwargs=cert_client_cert``"""
-
-        self.CERT_CLIENT_BOTH: Optional[Union[str, pathlib.Path]] = kwargs.get(
-            "cert_client_both", None
-        )
-        """cert file with both private key and cert to offer to :attr:`url`
-        ``kwargs=cert_client_both``"""
-
-        self.SAVE_HISTORY: bool = kwargs.get("save_history", False)
-        """append responses to :attr:`axonius_api_client.http.Http.HISTORY`
-        ``kwargs=save_history``"""
-
-        self.LOG_LEVEL: Union[str, int] = kwargs.get("log_level", "debug")
-        """log level for this class ``kwargs=log_level``"""
-
-        self.LOG_REQUEST_ATTRS: Optional[List[str]] = kwargs.get("log_request_attrs", None)
-        """request attrs to log :attr:`axonius_api_client.constants.logs.REQUEST_ATTR_MAP`
-        ``kwargs=log_request_attrs``"""
-
-        self.LOG_RESPONSE_ATTRS: Optional[List[str]] = kwargs.get("log_response_attrs", None)
-        """response attrs to log :attr:`axonius_api_client.constants.logs.RESPONSE_ATTR_MAP`
-        ``kwargs=log_response_attrs``"""
-
-        self.LOG_REQUEST_BODY: bool = kwargs.get("log_request_body", False)
-        """log request bodies ``kwargs=log_request_body``"""
-
-        self.LOG_RESPONSE_BODY: bool = kwargs.get("log_response_body", False)
-        """log response bodies ``kwargs=log_response_body``"""
-
-        self.LOG_LOGGER: logging.Logger = kwargs.get("log_logger", LOG)
-        """logger to use as package root logger ``kwargs=log_logger``"""
-
-        self.LOG_LEVEL_PACKAGE: Union[str, int] = kwargs.get("log_level_package", LOG_LEVEL_PACKAGE)
-        """log level for entire package ``kwargs=log_level_package``"""
-
-        self.LOG_LEVEL_ENDPOINTS: Union[str, int] = kwargs.get(
-            "log_level_endpoints", LOG_LEVEL_ENDPOINTS
-        )
-        """log level for entire package ``kwargs=log_level_package``"""
-
-        self.LOG_LEVEL_HTTP: Union[str, int] = kwargs.get("log_level_http", LOG_LEVEL_HTTP)
-        """log level for :obj:`axonius_api_client.http.Http` ``kwargs=log_level_http``"""
-
-        self.LOG_LEVEL_AUTH: Union[str, int] = kwargs.get("log_level_auth", LOG_LEVEL_AUTH)
-        """log level for :obj:`axonius_api_client.auth.models.Mixins` ``kwargs=log_level_auth``"""
-
-        self.LOG_LEVEL_API: Union[str, int] = kwargs.get("log_level_api", LOG_LEVEL_API)
-        """log level for :obj:`axonius_api_client.api.mixins.ModelMixins`
-        ``kwargs=log_level_api``"""
-
-        self.LOG_LEVEL_CONSOLE: Union[str, int] = kwargs.get("log_level_console", LOG_LEVEL_CONSOLE)
-        """log level for logs sent to console ``kwargs=log_level_console``"""
-
-        self.LOG_LEVEL_FILE: Union[str, int] = kwargs.get("log_level_file", LOG_LEVEL_FILE)
-        """log level for logs sent to file ``kwargs=log_level_file``"""
-
-        self.LOG_CONSOLE_FMT: str = kwargs.get("log_console_fmt", LOG_FMT_BRIEF)
-        """logging format to use for logs sent to console ``kwargs=log_console_fmt``"""
-
-        self.LOG_FILE_FMT: str = kwargs.get("log_file_fmt", LOG_FMT_VERBOSE)
-        """logging format to use for logs sent to file ``kwargs=log_file_fmt``"""
-
-        self.LOG_FILE_NAME: Union[str, pathlib.Path] = kwargs.get("log_file_name", LOG_FILE_NAME)
-        """name of file to write logs to under :attr:`LOG_FILE_PATH` ``kwargs=log_file_name``"""
-
-        self.LOG_FILE_PATH: Union[str, pathlib.Path] = kwargs.get("log_file_path", LOG_FILE_PATH)
-        """path to write :attr:`LOG_FILE_NAME` to ``kwargs=log_file_path``"""
-
-        self.LOG_FILE_MAX_MB: int = kwargs.get("log_file_max_mb", LOG_FILE_MAX_MB)
-        """rollover file logs at this many MB ``kwargs=log_file_max_mb``"""
-
-        self.LOG_FILE_MAX_FILES: int = kwargs.get("log_file_max_files", LOG_FILE_MAX_FILES)
-        """number of rollover file logs to keep ``kwargs=log_file_max_files``"""
-
-        self.WRAPERROR: bool = coerce_bool(kwargs.get("wraperror", True))
-        """wrap errors in human friendly way or show full traceback ``kwargs=wraperror``"""
-
-        self.LOG: logging.Logger = get_obj_log(obj=self, level=self.LOG_LEVEL)
-        """logger object to use"""
-
-        set_log_level(obj=self.LOG_LOGGER, level=self.LOG_LEVEL_PACKAGE)
-
-        from .api.api_endpoint import LOGGER as LOGGER_ENDPOINT
-
-        set_log_level(obj=LOGGER_ENDPOINT, level=self.LOG_LEVEL_ENDPOINTS)
-
-        self.STARTED: bool = False
-        """track if :meth:`start` has been called"""
-
-        self.HANDLER_FILE: t.Optional[logging.handlers.RotatingFileHandler] = None
-        """file logging handler"""
-
-        self.HANDLER_CON: t.Optional[logging.StreamHandler] = None
-        """console logging handler"""
-        HideFormatter.HIDE_ENABLED = self.LOG_HIDE_SECRETS
-
-        if log_console:
-            self.HANDLER_CON = add_stderr(
-                obj=self.LOG_LOGGER, level=self.LOG_LEVEL_CONSOLE, fmt=self.LOG_CONSOLE_FMT
-            )
-
-        if log_file:
-            self.HANDLER_FILE = add_file(
-                obj=self.LOG_LOGGER,
-                level=self.LOG_LEVEL_FILE,
-                file_path=self.LOG_FILE_PATH,
-                file_name=self.LOG_FILE_NAME,
-                max_mb=self.LOG_FILE_MAX_MB,
-                max_files=self.LOG_FILE_MAX_FILES,
-                fmt=self.LOG_FILE_FMT,
-            )
-        if log_file_rotate:
-            self.do_rollover()
-
-        self.HTTP_ARGS: dict = {
+        self.ARGS_HANDLER_CON: dict = {
+            "obj": log_logger,
+            "level": log_level_console,
+            "fmt": log_console_fmt,
+        }
+        self.ARGS_HANDLER_FILE: dict = {
+            "obj": log_logger,
+            "level": log_level_file,
+            "file_path": log_file_path,
+            "file_name": log_file_name,
+            "max_mb": log_file_max_mb,
+            "max_files": log_file_max_files,
+            "fmt": log_file_fmt,
+        }
+        self.ARGS_HTTP: dict = {
             "url": url,
             "https_proxy": proxy,
             "certpath": certpath,
             "certwarn": certwarn,
             "certverify": certverify,
-            "cert_client_both": self.CERT_CLIENT_BOTH,
-            "cert_client_cert": self.CERT_CLIENT_CERT,
-            "cert_client_key": self.CERT_CLIENT_KEY,
-            "log_level": self.LOG_LEVEL_HTTP,
-            "log_request_attrs": self.LOG_REQUEST_ATTRS,
-            "log_response_attrs": self.LOG_RESPONSE_ATTRS,
-            "log_request_body": self.LOG_REQUEST_BODY,
-            "log_response_body": self.LOG_RESPONSE_BODY,
-            "save_history": self.SAVE_HISTORY,
-            "connect_timeout": self.TIMEOUT_CONNECT,
-            "response_timeout": self.TIMEOUT_RESPONSE,
+            "cert_client_both": cert_client_both,
+            "cert_client_cert": cert_client_cert,
+            "cert_client_key": cert_client_key,
+            "log_level": log_level_http,
+            "log_body_lines": log_body_lines,
+            "log_request_attrs": log_request_attrs,
+            "log_response_attrs": log_response_attrs,
+            "log_request_body": log_request_body,
+            "log_response_body": log_response_body,
+            "save_history": save_history,
+            "connect_timeout": timeout_connect,
+            "response_timeout": timeout_response,
             "headers": headers,
             "cookies": cookies,
+            "cf_url": cf_url,
+            "cf_token": cf_token,
+            "cf_env": cf_env,
+            "cf_run": cf_run,
+            "cf_run_login": cf_run_login,
+            "cf_run_access": cf_run_access,
+            "cf_path": cf_path,
+            "cf_timeout_access": cf_timeout_access,
+            "cf_timeout_login": cf_timeout_login,
+            "cf_error": cf_error,
+            "cf_error_access": cf_error_access,
+            "cf_error_login": cf_error_login,
+            "cf_echo": cf_echo,
+            "cf_echo_verbose": cf_echo_verbose,
         }
-        """arguments to use for creating :attr:`HTTP`"""
 
-        self.HTTP = Http(**self.HTTP_ARGS)
-        """:obj:`axonius_api_client.http.Http` client to use for :attr:`AUTH`"""
-        self.AUTH_ARGS: dict = {"log_level": self.LOG_LEVEL_AUTH}
-
-        if credentials:
-            self.AUTH_ARGS.update({"username": key, "password": secret})
-            self.AUTH = Credentials(http=self.HTTP, **self.AUTH_ARGS)
-            """:obj:`Credentials` auth method to use for all API models"""
-        else:
-            self.AUTH_ARGS.update({"key": key, "secret": secret})
-            self.AUTH = ApiKey(http=self.HTTP, **self.AUTH_ARGS)
-            """:obj:`ApiKey` auth method to use for all API models"""
-
-        self.API_ARGS: dict = {"auth": self.AUTH, "log_level": self.LOG_LEVEL_API}
-        """arguments to use for all API models"""
-
-        self.SIGNUP = Signup(**self.HTTP_ARGS)
-        """Easy access to signup."""
-
-        self.HTTP.CLIENT = self
-
+        self.set_wraperror(wraperror)
+        self.set_log_hide_secrets(value=log_hide_secrets)
+        self.set_log_level_api(value=log_level_api)
+        self.set_log_level_package(value=log_level_package)
+        self.set_log_level_endpoints(value=log_level_endpoints)
+        self.control_log_file(enable=log_file, rotate=log_file_rotate)
+        self.control_log_console(enable=log_console)
+        self.HTTP = self.http = self._init_http(http=http)
+        self.AUTH = self.auth = self._init_auth(auth=auth, log_level=log_level_auth)
+        self.AUTH_NULL: AuthModel = self._init_auth_null(
+            auth_null=auth_null, log_level=log_level_auth
+        )
         self._init()
-
-    def do_rollover(self):
-        """Rollover log file."""
-        if self.HANDLER_FILE:
-            LOG.info("Forcing file logs to rotate")
-            self.HANDLER_FILE.flush()
-            try:
-                self.HANDLER_FILE.doRollover()
-                LOG.info("Forced file logs to rotate")
-            except Exception as exc:
-                LOG.exception("Failed to force file logs to rotate: %s", exc)
 
     def start(self):
         """Connect to and authenticate with Axonius."""
         if not self.STARTED:
-            sysinfo_dump = json_dump(sysinfo())
-            LOG.debug(f"SYSTEM INFO: {sysinfo_dump}")
+            sysinfo_dump: dict = tools.sysinfo()
+            self.LOG.debug(f"SYSTEM INFO: {tools.json_dump(sysinfo_dump)}")
 
             try:
                 self.AUTH.login()
@@ -350,7 +435,8 @@ class Connect:
                 if not self.WRAPERROR:
                     raise
 
-                pre = f"Unable to connect to {self.HTTP.url!r}"
+                pre = f"Unable to connect to {self.url!r}"
+                connect_exc = ConnectError(f"{pre}: {exc}")
 
                 if isinstance(exc, requests.ConnectTimeout):
                     timeout = self.HTTP.CONNECT_TIMEOUT
@@ -361,227 +447,327 @@ class Connect:
                     connect_exc = ConnectError(f"{pre}: {reason}")
                 elif isinstance(exc, InvalidCredentials):
                     connect_exc = ConnectError(f"{pre}: Invalid Credentials supplied")
-                else:
-                    connect_exc = ConnectError(f"{pre}: {exc}")
+
                 connect_exc.exc = exc
                 raise connect_exc
 
             self.STARTED = True
-            LOG.info(str(self))
+            self.LOG.info(str(self))
 
+    # --> MODELS
     @property
-    def signup(self) -> Signup:
-        """Work with signup endpoints."""
-        if not hasattr(self, "_signup"):  # pragma: no cover
-            self._signup = Signup(**self.HTTP_ARGS)
-        return self._signup
-
-    @property
-    def users(self) -> Users:
-        """Work with user assets."""
-        self.start()
-        if not hasattr(self, "_users"):
-            self._users = Users(**self.API_ARGS)
-        return self._users
-
-    @property
-    def vulnerabilities(self) -> Vulnerabilities:
-        """Work with user assets."""
-        self.start()
-        if not hasattr(self, "_vulnerabilities"):
-            self._vulnerabilities = Vulnerabilities(**self.API_ARGS)
-        return self._vulnerabilities
-
-    @property
-    def devices(self) -> Devices:
-        """Work with device assets."""
-        self.start()
-        if not hasattr(self, "_devices"):
-            self._devices = Devices(**self.API_ARGS)
-        return self._devices
-
-    @property
-    def adapters(self) -> Adapters:
-        """Work with adapters and adapter connections."""
-        self.start()
-        if not hasattr(self, "_adapters"):
-            self._adapters = Adapters(**self.API_ARGS)
-        return self._adapters
-
-    @property
-    def instances(self) -> Instances:
-        """Work with instances."""
-        self.start()
-        if not hasattr(self, "_instances"):
-            self._instances = Instances(**self.API_ARGS)
-        return self._instances
-
-    @property
-    def activity_logs(self) -> ActivityLogs:
+    def activity_logs(self) -> api.ActivityLogs:
         """Work with activity logs."""
-        self.start()
-        if not hasattr(self, "_activity_logs"):
-            self._activity_logs = ActivityLogs(**self.API_ARGS)
-        return self._activity_logs
+        return self._get_model(model=api.ActivityLogs)
 
     @property
-    def remote_support(self) -> RemoteSupport:
-        """Work with configuring remote support."""
-        self.start()
-        if not hasattr(self, "_remote_support"):
-            self._remote_support = RemoteSupport(**self.API_ARGS)
-        return self._remote_support
+    def adapters(self) -> api.Adapters:
+        """Work with adapters and adapter connections."""
+        return self._get_model(model=api.Adapters)
 
     @property
-    def dashboard(self) -> Dashboard:
+    def dashboard(self) -> api.Dashboard:
         """Work with discovery cycles."""
-        self.start()
-        if not hasattr(self, "_dashboard"):
-            self._dashboard = Dashboard(**self.API_ARGS)
-        return self._dashboard
+        return self._get_model(model=api.Dashboard)
 
     @property
-    def dashboard_spaces(self) -> DashboardSpaces:
+    def dashboard_spaces(self) -> api.DashboardSpaces:
         """Work with dashboard spaces."""
-        self.start()
-        if not hasattr(self, "_dashboard_spaces"):
-            self._dashboard_spaces = DashboardSpaces(**self.API_ARGS)
-        return self._dashboard_spaces
+        return self._get_model(model=api.DashboardSpaces)
 
     @property
-    def enforcements(self) -> Enforcements:
+    def data_scopes(self) -> api.DataScopes:
+        """Work with data scopes."""
+        return self._get_model(model=api.DataScopes)
+
+    @property
+    def devices(self) -> api.Devices:
+        """Work with device assets."""
+        return self._get_model(model=api.Devices)
+
+    @property
+    def enforcements(self) -> api.Enforcements:
         """Work with Enforcement Center."""
-        self.start()
-        if not hasattr(self, "_enforcements"):
-            self._enforcements = Enforcements(**self.API_ARGS)
-        return self._enforcements
+        return self._get_model(model=api.Enforcements)
 
     @property
-    def system_users(self) -> SystemUsers:
-        """Work with system users."""
-        self.start()
-        if not hasattr(self, "_system_users"):
-            self._system_users = SystemUsers(**self.API_ARGS)
-        return self._system_users
+    def folders(self) -> api.Folders:
+        """Work with folders for enforcements and queries."""
+        return self._get_model(model=api.Folders)
 
     @property
-    def system_roles(self) -> SystemRoles:
-        """Work with system roles."""
-        self.start()
-        if not hasattr(self, "_system_roles"):
-            self._system_roles = SystemRoles(**self.API_ARGS)
-        return self._system_roles
+    def instances(self) -> api.Instances:
+        """Work with instances."""
+        return self._get_model(model=api.Instances)
 
     @property
-    def meta(self) -> Meta:
-        """Work with instance metadata."""
-        self.start()
-        if not hasattr(self, "_meta"):
-            self._meta = Meta(**self.API_ARGS)
-        return self._meta
-
-    @property
-    def settings_ip(self) -> SettingsIdentityProviders:
-        """Work with identity providers settings."""
-        self.start()
-        if not hasattr(self, "_settings_ip"):
-            self._settings_ip = SettingsIdentityProviders(**self.API_ARGS)
-        return self._settings_ip
-
-    @property
-    def settings_global(self) -> SettingsGlobal:
-        """Work with core system settings."""
-        self.start()
-        if not hasattr(self, "_settings_global"):
-            self._settings_global = SettingsGlobal(**self.API_ARGS)
-        return self._settings_global
-
-    @property
-    def settings_gui(self) -> SettingsGui:
-        """Work with gui system settings."""
-        self.start()
-        if not hasattr(self, "_settings_gui"):
-            self._settings_gui = SettingsGui(**self.API_ARGS)
-        return self._settings_gui
-
-    @property
-    def settings_lifecycle(self) -> SettingsLifecycle:
-        """Work with lifecycle system settings."""
-        self.start()
-        if not hasattr(self, "_settings_lifecycle"):
-            self._settings_lifecycle = SettingsLifecycle(**self.API_ARGS)
-        return self._settings_lifecycle
-
-    def __str__(self) -> str:
-        """Show object info."""
-        client = getattr(self, "HTTP", "")
-        url = getattr(client, "URL", self.HTTP_ARGS["url"])
-        ax_env = get_env_ax()
-        banner = ax_env.get("AX_BANNER")
-        banner = f"[{banner}]" if banner else ""
-        pkg_ver = f"API Client v{VERSION}"
-
-        if self.STARTED:
-            about = self.meta.about(error=False)
-            if about:
-                version = about.get("Version", "") or about.get("Installed Version", "") or "DEMO"
-                build_date = about.get("Build Date", "")
-                bits = [f"version: {version}", f"(RELEASE DATE: {build_date})"]
-            else:
-                version = "unknown (no permissions)"
-                bits = [f"version: {version}"]
-
-            msg = [f"Connected to {url!r}", *bits]
-        else:
-            msg = [f"Not connected to {url!r}"]
-
-        bits = [x for x in [*msg, pkg_ver, banner] if x]
-        return " ".join(bits)
-
-    def __repr__(self) -> str:
-        """Show object info."""
-        return self.__str__()
-
-    @property
-    def build_date(self) -> str:
-        """Pass."""
-        return self.meta.about().get("Build Date", "")
-
-    @property
-    def version(self) -> str:
-        """Pass."""
-        about = self.meta.about()
-        version = about.get("Version", "") or about.get("Installed Version", "") or "DEMO"
-        return version.replace("_", ".")
-
-    @property
-    def openapi(self) -> OpenAPISpec:
+    def openapi(self) -> api.OpenAPISpec:
         """Work with the OpenAPI specification file."""
-        self.start()
-        if not hasattr(self, "_openapi"):
-            self._openapi = OpenAPISpec(**self.API_ARGS)
-        return self._openapi
+        return self._get_model(model=api.OpenAPISpec)
 
     @property
-    def data_scopes(self) -> DataScopes:
-        """Work with data scopes."""
-        self.start()
-        if not hasattr(self, "_data_scopes"):
-            self._data_scopes = DataScopes(**self.API_ARGS)
-        return self._data_scopes
+    def meta(self) -> api.Meta:
+        """Work with instance metadata."""
+        return self._get_model(model=api.Meta)
 
     @property
-    def folders(self) -> Folders:
-        """Work with data scopes."""
-        self.start()
-        if not hasattr(self, "_folders"):
-            self._folders = Folders(**self.API_ARGS)
-        return self._folders
+    def remote_support(self) -> api.RemoteSupport:
+        """Work with configuring remote support."""
+        return self._get_model(model=api.RemoteSupport)
+
+    @property
+    def settings_global(self) -> api.SettingsGlobal:
+        """Work with core system settings."""
+        return self._get_model(model=api.SettingsGlobal)
+
+    @property
+    def settings_gui(self) -> api.SettingsGui:
+        """Work with gui system settings."""
+        return self._get_model(model=api.SettingsGui)
+
+    @property
+    def settings_ip(self) -> api.SettingsIdentityProviders:
+        """Work with identity providers settings."""
+        return self._get_model(model=api.SettingsIdentityProviders)
+
+    @property
+    def settings_lifecycle(self) -> api.SettingsLifecycle:
+        """Work with lifecycle system settings."""
+        return self._get_model(model=api.SettingsLifecycle)
+
+    @property
+    def signup(self) -> api.Signup:
+        """Perform initial signup, password reset, and other unauthenticated endpoints."""
+        return self._get_model(model=api.Signup, start=False, auth=self.AUTH_NULL)
+
+    @property
+    def system_users(self) -> api.SystemUsers:
+        """Work with system users."""
+        return self._get_model(model=api.SystemUsers)
+
+    @property
+    def system_roles(self) -> api.SystemRoles:
+        """Work with system roles."""
+        return self._get_model(model=api.SystemRoles)
+
+    @property
+    def users(self) -> api.Users:
+        """Work with user assets."""
+        return self._get_model(model=api.Users)
+
+    @property
+    def vulnerabilities(self) -> api.Vulnerabilities:
+        """Work with vulnerability assets."""
+        return self._get_model(model=api.Vulnerabilities)
+
+    def set_wraperror(self, value: bool = True):
+        """Set whether to wrap errors in a more user-friendly format."""
+        self.WRAPERROR = tools.coerce_bool(value)
+
+    # <-- METHODS
+
+    @staticmethod
+    def set_log_hide_secrets(value: bool = True):
+        """Set whether to hide secrets in logs."""
+        logs.HideFormatter.HIDE_ENABLED = tools.coerce_bool(value)
+
+    def set_log_level_console(self, value: t.Union[str, int] = LOG_LEVEL_CONSOLE):
+        """Set the log level for this client's console output."""
+        if isinstance(self.ARGS_HANDLER_CON, dict):
+            self.ARGS_HANDLER_CON["level"] = logs.str_level(value)
+        if self.HANDLER_CON:
+            logs.set_log_level(obj=self.HANDLER_CON, level=value)
+
+    def set_log_level_file(self, value: t.Union[str, int] = LOG_LEVEL_FILE):
+        """Set the log level for this client's file output."""
+        if isinstance(self.ARGS_HANDLER_FILE, dict):
+            self.ARGS_HANDLER_FILE["level"] = logs.str_level(value)
+        if self.HANDLER_FILE:
+            logs.set_log_level(obj=self.HANDLER_FILE, level=value)
+
+    def set_log_level_api(self, value: t.Union[str, int] = LOG_LEVEL_API):
+        """Set the log level for this client's api objects."""
+        self.API_LOG_LEVEL: str = logs.str_level(value)
+        for obj in self.API_CACHE.values():
+            if isinstance(obj, api.ModelMixins):
+                logs.set_log_level(obj=obj.LOG, level=self.API_LOG_LEVEL)
+
+    def set_log_level_connect(self, value: t.Union[str, int] = "debug"):
+        """Set the log level for this client."""
+        logs.set_log_level(obj=self.LOG, level=value)
+
+    def set_log_level_http(self, value: t.Union[str, int] = Http.LOG_LEVEL):
+        """Set the log level for this client's http object."""
+        if isinstance(self.HTTP, Http):
+            logs.set_log_level(obj=self.HTTP.LOG, level=value)
+
+    def set_log_level_auth(self, value: t.Union[str, int] = LOG_LEVEL_AUTH):
+        """Set the log level for this client's auth objects."""
+        for obj in self.AUTH, self.AUTH_NULL:
+            if isinstance(obj, AuthModel):
+                logs.set_log_level(obj=obj.LOG, level=value)
+
+    def set_log_level_package(self, value: t.Union[str, int] = LOG_LEVEL_PACKAGE):
+        """Set the log level for this client's package."""
+        logs.set_log_level(obj=self.LOG_LOGGER, level=value)
+
+    @staticmethod
+    def set_log_level_endpoints(value: t.Union[str, int] = LOG_LEVEL_ENDPOINTS):
+        """Set the log level for this client's endpoints."""
+        from .api.api_endpoint import LOGGER as LOGGER_ENDPOINT
+
+        logs.set_log_level(obj=LOGGER_ENDPOINT, level=value)
+
+    def control_log_console(self, enable: bool = False) -> bool:
+        """Add logging to console for this client."""
+        enable = tools.coerce_bool(enable)
+        if enable and not self.HANDLER_CON:
+            self.HANDLER_CON = logs.add_stderr(**self.ARGS_HANDLER_CON)
+            self.LOG.debug("Logging to console enabled.")
+            return True
+        if not enable and self.HANDLER_CON:
+            self.LOG.debug("Logging to console disabled.")
+            self.HANDLER_CON.close()
+            logs.del_stderr(obj=self.LOG_LOGGER)
+            self.HANDLER_CON = None
+            return True
+        return False
+
+    def control_log_file(self, enable: bool = False, rotate: bool = False) -> bool:
+        """Add logging to file for this client."""
+        enable = tools.coerce_bool(enable)
+        if enable and not self.HANDLER_FILE:
+            self.HANDLER_FILE = logs.add_file(**self.ARGS_HANDLER_FILE)
+            self.LOG.debug("Logging to file enabled.")
+            return True
+        self.rotate_log_files(value=rotate)
+        if not enable and self.HANDLER_FILE:
+            self.LOG.debug("Logging to file disabled.")
+            self.HANDLER_FILE.close()
+            logs.del_file(obj=self.LOG_LOGGER)
+            self.HANDLER_FILE = None
+            return True
+        return False
+
+    def rotate_log_files(self, value: bool = False):
+        """Rollover log file."""
+        value = tools.coerce_bool(value)
+        if value and self.HANDLER_FILE:
+            self.LOG.debug("Forcing file logs to rotate")
+            self.HANDLER_FILE.flush()
+            try:
+                self.HANDLER_FILE.doRollover()
+                self.LOG.debug("Forced file logs to rotate")
+            except Exception as exc:  # pragma: no cover
+                self.LOG.exception("Failed to force file logs to rotate: %s", exc)
+
+    @property
+    def url(self) -> str:
+        """Get the URL of the current instance."""
+        return self.HTTP.url if self.HTTP else self._url
 
     @property
     def api_keys(self) -> dict:
         """Get the API keys for the current user."""
         return self.AUTH.get_api_keys()
+
+    @property
+    def current_user(self) -> api.json_api.account.CurrentUser:
+        """Get the current user."""
+        return self.AUTH.get_current_user()
+
+    @property
+    def about(self):
+        """Cached data from the /about endpoint."""
+        if self.ABOUT_CACHE:
+            return self.ABOUT_CACHE
+        value = self.meta.about(error=False)
+        if value:
+            self.ABOUT_CACHE = value
+        return value
+
+    @property
+    def version(self) -> str:
+        """Get the Axonius instance version."""
+        data = "none yet"
+        if self.STARTED:
+            data = self.about.get("Version") or self.about.get("Installed Version") or "DEMO"
+            data = data.replace("_", ".")
+        return data
+
+    @property
+    def build_date(self) -> str:
+        """Get the Axonius instance build date."""
+        data = "none yet"
+        if self.STARTED:
+            data = self.about.get("Build Date", "UNKNOWN")
+        return data
+
+    @property
+    def str_ax_version(self) -> str:
+        """Get the Axonius instance version & build date for use in str."""
+        days = f"({tools.dt_days_ago(self.build_date)} days ago)"
+        return f"Axonius Version {self.version!r}, Build Date: {self.build_date!r} {days}"
+
+    @property
+    def str_ax_user(self) -> str:
+        """Get the Axonius instance user for use in str."""
+        value = "User: ??"
+        if self.STARTED:
+            value = self.current_user.str_connect
+        return value
+
+    @property
+    def ssl_days_left(self) -> t.Optional[int]:
+        """Get the number of days left until the SSL certificate expires."""
+        value = None
+        if isinstance(self.HTTP, Http):
+            cert: t.Optional[cert_human.Cert] = self.HTTP.get_cert()
+            if isinstance(cert, cert_human.Cert):
+                value = tools.dt_days_ago(cert.not_valid_after, from_now=False)
+        return value
+
+    @property
+    def str_ax_cert(self) -> str:
+        """Get the Axonius instance SSL certificate for use in str."""
+        value = "SSL: ??"
+        if isinstance(self.HTTP, Http):
+            cert: t.Optional[cert_human.Cert] = self.HTTP.get_cert()
+            if isinstance(cert, cert_human.Cert):
+                dt = str(cert.not_valid_after)
+                value = f"SSL Issued To: {cert.subject_short!r}, Expires On: {dt!r}"
+        return value
+
+    @property
+    def str_state(self) -> str:
+        """Get the connection state for use in str."""
+        value = "Not connected"
+        if self.STARTED:
+            value = "Connected"
+        value = f"{value} to {self.url!r}, CLIENT v{self.PKG_VERSION}, PYTHON v{self.PY_VERSION}"
+        banner = get_env_ax().get("AX_BANNER")
+        if banner:
+            value = f"{value} [{banner}]"
+        return value
+
+    @staticmethod
+    def jdump(obj: t.Any, **kwargs) -> None:
+        """Print object as JSON."""
+        tools.jdump(obj=obj, **kwargs)
+
+    def __str__(self) -> str:
+        """Show object info."""
+        items: t.List[str] = [
+            self.str_state,
+            self.str_ax_version,
+            self.str_ax_cert,
+            self.str_ax_user,
+        ]
+        return "\n".join(x for x in items if x)
+
+    def __repr__(self) -> str:
+        """Show object info."""
+        return self.__str__()
 
     @classmethod
     def _get_exc_reason(cls, exc: Exception) -> str:
@@ -595,17 +781,75 @@ class Connect:
                 return reason_re.sub(r"\1", reason).rstrip("')")
         return reason
 
-    @staticmethod
-    def jdump(obj, **kwargs):  # pragma: no cover
-        """JSON dump utility."""
-        print(json_reload(obj, **kwargs))
+    def _check_binding(self, value: t.Any) -> t.Any:
+        """Check if an object is already bound to a different client."""
+        client = getattr(value, "CLIENT", value)
+        if isinstance(client, self.__class__) and client is not self:
+            raise ConnectError(
+                f"{value} is already set to {client!r} and cannot be set to {self!r}"
+            )
+        setattr(value, "CLIENT", self)
+        return value
 
-    REASON_RES: List[t.Pattern] = [
-        re.compile(r".*?object at.*?\>\: ([a-zA-Z0-9\]\[: ]+)"),
-        re.compile(r".*?\] (.*) "),
-    ]
-    """patterns to look for in exceptions that we can pretty up for user display."""
+    def _init_http(self, http: t.Optional[Http] = None) -> Http:
+        """Initialize the HTTP object."""
+        if not isinstance(http, Http):
+            http: Http = Http(**self.ARGS_HTTP)
+        return self._check_binding(http)
+
+    def _init_auth(
+        self, auth: t.Optional[AuthModel] = None, log_level: t.Union[str, int] = LOG_LEVEL_AUTH
+    ) -> AuthModel:
+        """Initialize the Auth object."""
+        if not isinstance(auth, AuthModel):
+            if self.CREDENTIALS:
+                auth: AuthCredentials = AuthCredentials(
+                    username=self.__key,
+                    password=self.__secret,
+                    http=self.http,
+                    log_level=log_level,
+                )
+            else:
+                auth: AuthApiKey = AuthApiKey(
+                    key=self.__key,
+                    secret=self.__secret,
+                    http=self.http,
+                    log_level=log_level,
+                )
+        return self._check_binding(auth)
+
+    def _init_auth_null(
+        self, auth_null: t.Optional[AuthModel] = None, log_level: t.Union[str, int] = LOG_LEVEL_AUTH
+    ) -> AuthModel:
+        """Initialize the null Auth object."""
+        if not isinstance(auth_null, AuthModel):
+            auth_null: AuthNull = AuthNull(http=self.http, log_level=log_level)
+        return self._check_binding(auth_null)
 
     def _init(self):
-        """Pass."""
-        pass
+        """Custom init for this class."""
+
+    def _get_model(
+        self, model: t.Type[api.ModelMixins], start: bool = True, auth: t.Optional[AuthModel] = None
+    ) -> t.Any:
+        """Create or get an API model.
+
+        Args:
+            model: model to create or get
+            start: start :attr:`AUTH` if not already started
+            auth: auth to use for this model, if not supplied default to :attr:`AUTH`
+
+        Returns:
+            model instance
+        """
+        if start:
+            self.start()
+
+        if model in self.API_CACHE:
+            return self.API_CACHE[model]
+
+        if not isinstance(auth, AuthModel):
+            auth = self.AUTH
+
+        self.API_CACHE[model] = model(auth=auth, log_level=self.API_LOG_LEVEL)
+        return self.API_CACHE[model]
