@@ -550,7 +550,7 @@ class Enforcement:
             refresh (Refreshables, optional): refresh the folders before searching
             echo (bool, optional): echo output to console
             root (t.Optional[FolderBase], optional): root folders to use to find folder
-                instead of root folders from self.folder
+                instead of root folders from `self.folder`
         """
         reason: str = f"Move '{self.folder_path}/@{self.name}' to {folder!r}"
         self._check_update_ok(reason=reason)
@@ -595,7 +595,7 @@ class Enforcement:
             echo (bool, optional): echo output to console
             refresh (Refreshables, optional): refresh the folders before searching
             root (t.Optional[FolderBase], optional): root folders to use to find folder
-                instead of root folders from self.folder
+                instead of root folders from `self.folder`
 
         """
         names: t.List[str] = self.get_names()
@@ -807,7 +807,7 @@ class EnforcementBasic(Enforcement):
 
     @property
     def updated_user_name(self) -> str:
-        """Get the user name of the user that last updated this set."""
+        """Get the username of the user that last updated this set."""
         return self.updated_user_obj.get("user_name", "")
 
     @property
@@ -1214,7 +1214,7 @@ class EnforcementFull(Enforcement):
     # BASIC MODEL attribute
     @property
     def updated_user_name(self) -> str:
-        """Get the user name of the user that last updated this set."""
+        """Get the username of the user that last updated this set."""
         return self.get_basic().updated_user_name
 
     # BASIC MODEL attribute

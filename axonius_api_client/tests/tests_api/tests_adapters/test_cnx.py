@@ -19,7 +19,9 @@ from ...meta import CSV_FILECONTENT_STR, CsvData, CsvKeys, TanData, TanKeys
 from ...utils import get_cnx_existing, get_cnx_working
 
 
+# noinspection PyProtectedMember
 def skip_if_no_adapter(api_adapters, adapter):
+    """Pass."""
     if not adapter.endswith("_adapter"):
         adapter = f"{adapter}_adapter"
 
@@ -31,103 +33,7 @@ def skip_if_no_adapter(api_adapters, adapter):
     return found
 
 
-"""
-cnx errors
- adapters.cnx._delete(
-    uuid='x',
-    adapter_name='tanium_adapter',
-    instance_id=core['id'],
-    instance_name=core['name'],
-)
-{
-    "status": "error",
-    "type": "InvalidId",
-    "message": "An error occurred. Please contact Axonius support. AX-ID: ",
-}
-
-
- adapters.cnx._delete(
-    uuid='61eae13dc44696465eacb18a',
-    adapter_name='tanium_adapter',
-    instance_id=core['id'],
-    instance_name=core['name'],
-)
-{
-    "errors": [
-        {
-            "additional_data": None,
-            "detail": "Server is already gone, please try again after refreshing the page",
-        }
-    ]
-}
-
- adapters.cnx._delete(
-    uuid='61eae13dc44696465eacb18a',
-    adapter_name='x',
-    instance_id=core['id'],
-    instance_name=core['name'],
-)
-{
-    "errors": [
-        {
-            "additional_data": None,
-            "detail": "Adapter tanium_adapter with Instance None or x not found",
-        }
-    ]
-}
-
-adapters.cnx._test(
-    adapter_name='tanium_adapter',
-    instance=instances.get_core()["id"],
-    connection={}
-)
-{
-    "errors": [
-        {
-            "additional_data": None,
-            "detail": "Adapter name and connection data are required",
-        },
-    ]
-}
-adapters.cnx._test(
-    adapter_name='tanium_adapter',
-    instance=instances.get_core()["id"],
-    connection={"d": "x"}
-)
-
-adapters.cnx._test(
-    adapter_name='tanium_adapter',
-    instance=instances.get_core()["id"],
-    connection={"username": "x"}
-)
-{
-    "status": "error",
-    "type": "JSONDecodeError",
-    "message": "An error occurred. Please contact Axonius support. AX-ID: ",
-}
-
-
-
-adapters.cnx._test(
-    adapter_name="tanium_adapter",
-    instance="53ccf92e6a1940ed9493c277312bbc6b",
-    connection={"domain": "dumdum", "username": "dumdum", "password": "dumdum"},
-)
-{
-    "errors": [
-        {
-            "additional_data": {
-                "additional_data": None,
-                "message": "Client is not reachable.",
-                "status": "error",
-            },
-            "detail": "Client is not reachable.",
-        }
-    ]
-}
-"""
-
-
+# noinspection PyMissingOrEmptyDocstring,PyProtectedMember,PyBroadException
 class TestCnxBase:
     @pytest.fixture(scope="class")
     def apiobj(self, api_adapters):
@@ -158,15 +64,22 @@ class TestCnxBase:
             instance_name=core_instance["name"],
             adapter_name=CsvData.adapter_name_raw,
         )
-        fetched = [
-            x
-            for x in apiobj.cnx._get(adapter_name=CsvData.adapter_name_raw).cnxs
-            if x.uuid == added.id
-        ][0]
-        yield fetched
 
-        cnxs = apiobj.cnx._get(adapter_name=CsvData.adapter_name_raw).cnxs
-        for cnx in cnxs:
+        data = apiobj.cnx._get(adapter_name=CsvData.adapter_name_raw)
+
+        for cnx in data.cnxs:
+            if cnx.uuid == added.id:
+                yield cnx
+                break
+        # fetched = [
+        #     x
+        #     for x in apiobj.cnx._get(adapter_name=CsvData.adapter_name_raw).cnxs
+        #     if x.uuid == added.id
+        # ][0]
+        # yield fetched
+
+        data = apiobj.cnx._get(adapter_name=CsvData.adapter_name_raw)
+        for cnx in data.cnxs:
             user_id = cnx.client_config.get(CsvKeys.user_id) or ""
             if user_id == CsvData.user_id:
                 try:
@@ -226,6 +139,7 @@ class TestCnxBase:
                 break
 
 
+# noinspection PyMissingOrEmptyDocstring
 class TestCnxPrivate(TestCnxBase):
     pass
 
@@ -268,6 +182,7 @@ class TestCnxTunnel(TestCnxBase):
         assert cnx_deleted.client_id == cnx_new["id"]
 
 
+# noinspection PyMissingOrEmptyDocstring,PyUnusedLocal
 class TestCnxPublic(TestCnxBase):
     def test_add_update_fail(self, apiobj):
         skip_if_no_adapter(apiobj, TanData.adapter_name)
@@ -358,7 +273,7 @@ class TestCnxPublic(TestCnxBase):
         with pytest.raises(NotFoundError):
             apiobj.cnx.get_by_adapter(adapter_name="badwolf")
 
-    def test_get_by_adapter_badnode(self, apiobj):
+    def test_get_by_adapter_bad_node(self, apiobj):
         skip_if_no_adapter(apiobj, "csv")
         with pytest.raises(NotFoundError):
             apiobj.cnx.get_by_adapter(adapter_name=CSV_ADAPTER, adapter_node="badwolf")
@@ -450,6 +365,7 @@ class TestCnxPublic(TestCnxBase):
     def test_cb_file_upload_dict(self, apiobj, csv_file_path, monkeypatch):
         mock_return = {"filename": "badwolf", "uuid": "badwolf"}
 
+        # noinspection PyUnusedLocal
         def mock_file_upload(name, field_name, file_name, file_content, node):
             return mock_return
 
@@ -509,7 +425,7 @@ class TestCnxPublic(TestCnxBase):
             )
 
     def test_cb_file_upload_str(self, apiobj, tmp_path, monkeypatch):
-        file_path = tmp_path / "testcsv"
+        file_path = tmp_path / "test_csv"
         file_path.write_text(CSV_FILECONTENT_STR)
 
         def mock_file_upload(name, field_name, file_name, file_content, node):
@@ -525,7 +441,7 @@ class TestCnxPublic(TestCnxBase):
         assert result == {"filename": str(file_path.name), "uuid": "badwolf"}
 
     def test_cb_file_upload_str_fail(self, apiobj, tmp_path, monkeypatch):
-        file_path = tmp_path / "testfail.csv"
+        file_path = tmp_path / "test_fail.csv"
 
         def mock_file_upload(name, field_name, file_name, file_content, node):
             return {"filename": file_name, "uuid": "badwolf"}
@@ -592,9 +508,9 @@ class TestCnxPublic(TestCnxBase):
                 adapter_name=CSV_ADAPTER,
             )
 
-    def test_add_remove_path_notexists(self, apiobj, tmp_path):
+    def test_add_remove_path_not_exists(self, apiobj, tmp_path):
         skip_if_no_adapter(apiobj, "csv")
-        file_path = tmp_path / "badtest.csv"
+        file_path = tmp_path / "bad_test.csv"
         config = {
             "user_id": "badwolf",
             "file_path": file_path,

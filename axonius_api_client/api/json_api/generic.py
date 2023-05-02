@@ -3,7 +3,7 @@
 import dataclasses
 import typing as t
 
-import marshmallow_jsonapi
+import marshmallow_jsonapi.fields as mm_fields
 
 from ...http import Http
 from .base import BaseModel, BaseSchemaJson
@@ -18,6 +18,7 @@ class MetadataSchema(BaseSchemaJson):
         """Pass."""
         return Metadata
 
+    # noinspection PyMethodOverriding
     @classmethod
     def load_response(cls, data: dict, http: Http, **kwargs):
         """Pass."""
@@ -77,7 +78,7 @@ class BoolValue(BaseModel):
 class NameSchema(BaseSchemaJson):
     """Pass."""
 
-    name = marshmallow_jsonapi.fields.Str()
+    name = mm_fields.Str()
 
     class Meta:
         """Pass."""
@@ -106,7 +107,7 @@ class Name(BaseModel):
 class IntValueSchema(BaseSchemaJson):
     """Pass."""
 
-    value = marshmallow_jsonapi.fields.Int(required=True)
+    value = mm_fields.Int(required=True)
 
     class Meta:
         """Pass."""
@@ -135,7 +136,7 @@ class IntValue(BaseModel):
 class ApiBaseSchema(BaseSchemaJson):
     """Pass."""
 
-    id = marshmallow_jsonapi.fields.Str(required=True)
+    id = mm_fields.Str(required=True)
 
     class Meta:
         """Pass."""
@@ -169,7 +170,7 @@ class ApiBase(BaseModel):
 class StrValueSchema(BaseSchemaJson):
     """Pass."""
 
-    value = marshmallow_jsonapi.fields.Str(required=True)
+    value = mm_fields.Str(required=True)
 
     class Meta:
         """Pass."""
@@ -198,7 +199,7 @@ class StrValue(BaseModel):
 class ListValueSchema(BaseSchemaJson):
     """Pass."""
 
-    value = marshmallow_jsonapi.fields.List(marshmallow_jsonapi.fields.Str())
+    value = mm_fields.List(mm_fields.Str())
 
     class Meta:
         """Pass."""
@@ -227,7 +228,7 @@ class ListValue(BaseModel):
 class ListDictValueSchema(BaseSchemaJson):
     """Pass."""
 
-    value = marshmallow_jsonapi.fields.List(marshmallow_jsonapi.fields.Dict())
+    value = mm_fields.List(mm_fields.Dict())
 
     class Meta:
         """Pass."""
@@ -258,7 +259,7 @@ class ListDictValue(BaseModel):
 class DictValueSchema(BaseSchemaJson):
     """Pass."""
 
-    value = marshmallow_jsonapi.fields.Dict()
+    value = mm_fields.Dict()
 
     class Meta:
         """Pass."""
@@ -287,7 +288,7 @@ class DictValue(BaseModel):
 class DeletedSchema(BaseSchemaJson):
     """Pass."""
 
-    deleted = marshmallow_jsonapi.fields.Int()
+    deleted = mm_fields.Int()
 
     class Meta:
         """Pass."""
@@ -329,7 +330,7 @@ class PrivateRequest(BaseModel):
 class PrivateRequestSchema(BaseSchemaJson):
     """Pass."""
 
-    private = marshmallow_jsonapi.fields.Bool(load_default=False, dump_default=False)
+    private = mm_fields.Bool(load_default=False, dump_default=False)
 
     class Meta:
         """Pass."""

@@ -1,53 +1,63 @@
 # -*- coding: utf-8 -*-
-"""Authentication via API key and API secret."""
+"""Authentication via username and password."""
 import typing as t
 
-from ..api.api_endpoints import ApiEndpoint
-from ..api.json_api.account import LoginRequest, LoginResponse
 from ..http import Http
-from .models import Mixins
+from .model import AuthModel
+from ..api.json_api.account import LoginRequest, LoginResponse
+from ..api.api_endpoints import ApiEndpoint, ApiEndpoints
 
 
-class Credentials(Mixins):
+class AuthCredentials(AuthModel):
     """Authentication method using username and password credentials."""
 
     def __init__(
         self,
         http: Http,
-        username: t.Optional[str] = None,
-        password: t.Optional[str] = None,
+        username: str,
+        password: str,
         **kwargs,
     ):
         """Authenticate using username and password.
 
         Args:
-            http (Http): HTTP client to use to send requests
-            username (t.Optional[str], optional): Axonius User Name
-            password (t.Optional[str], optional): Axonius Password
-            prompt (bool, optional): Prompt for credentials that are not non-empty strings
+            http: HTTP client to use to send requests
+            username: Axonius Username
+            password: Axonius Password
         """
         creds: LoginRequest = LoginRequest(user_name=username, password=password, eula_agreed=True)
-        super().__init__(http=http, creds=creds, **kwargs)
+        kwargs["creds"] = creds
+        super().__init__(http=http, **kwargs)
 
     def login(self):
         """Login to API."""
         if not self.is_logged_in:
-            self._creds.check_credentials()
-            self._login_response: LoginResponse = self._login(request_obj=self._creds)
-            headers: dict = {"authorization": self._login_response.authorization}
-            self._api_keys: dict = self._get_api_keys(headers=headers)
-            self.http.session.headers["api-key"] = self._api_keys["api_key"]
-            self.http.session.headers["api-secret"] = self._api_keys["api_secret"]
-            self._validate()
-            self._logged_in = True
-            self.LOG.debug(f"Successfully logged in using {self._cred_fields}")
+            self.LOGIN_RESPONSE: t.ClassVar[LoginResponse] = self._login(request_obj=self._creds)
+            # now that we logged in with username & password
+            # get the API keys and use for the rest of the session
+            api_keys: dict = self._get_api_keys(http_args=self.LOGIN_RESPONSE.http_args)
+            self.http.session.headers["api-key"] = api_keys["api_key"]
+            self.http.session.headers["api-secret"] = api_keys["api_secret"]
+            self.is_logged_in = self.validate()
+            return True
+        return False
 
     def logout(self):
         """Logout from API."""
-        super().logout()
+        if self.is_logged_in:
+            self.http.session.headers.pop("api-key", None)
+            self.http.session.headers.pop("api-secret", None)
+            self.is_logged_in = False
+            return True
+        return False
+
+    @property
+    def fields(self) -> t.List[str]:
+        """Credential fields used by this auth model."""
+        return [f"username={self._creds.user_name!r}", "password"]
 
     def _login(self, request_obj: LoginRequest) -> LoginResponse:
-        """Direct API method to issue a login request.
+        """Direct API method to issue a login request using credentials.
 
         Args:
             request_obj (LoginRequest): Request object to send
@@ -55,16 +65,6 @@ class Credentials(Mixins):
         Returns:
             LoginResponse: Response object received
         """
-        endpoint: ApiEndpoint = self.endpoints.login
+        endpoint: ApiEndpoint = ApiEndpoints.account.login
         response: LoginResponse = endpoint.perform_request(http=self.http, request_obj=request_obj)
         return response
-
-    @property
-    def _cred_fields(self) -> t.List[str]:
-        """Credential fields used by this auth model."""
-        return [f"username={self._creds.user_name!r}", "password"]
-
-    def _logout(self):
-        """Logout from API."""
-        self._logged_in = False
-        self.http.session.headers = {}

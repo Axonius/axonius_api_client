@@ -52,8 +52,8 @@ class TestCmdShell:
         outlines1 = stdout1.splitlines()
 
         assert outlines1[0] == "URL: {}".format(url)
-        assert outlines1[1] == "API Key of user: "
-        assert outlines1[2] == "API Secret of user: "
+        assert outlines1[1].startswith("API Key")
+        assert outlines1[2].startswith("API Secret")
 
     def test_no_prompt(self, request, monkeypatch):
         try:

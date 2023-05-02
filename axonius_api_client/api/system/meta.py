@@ -90,7 +90,8 @@ class Meta(ModelMixins):
             '3.10'
 
         """
-        return self.about().get("Version", "")
+        about: dict = self.about()
+        return about.get("Version", about.get("Installed Version", ""))
 
     def _about(self) -> dict:
         """Direct API method to get the About page."""

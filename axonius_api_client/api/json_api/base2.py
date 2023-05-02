@@ -1,22 +1,20 @@
 # -*- coding: utf-8 -*-
 """Models for API requests & responses."""
 import dataclasses
+import typing as t
 
 import marshmallow
 
-from . import base
-
-import typing as t
-
 from ...tools import (
-    listify,
+    get_hint_type,
+    get_mm_description,
+    get_mm_field,
     is_nested_schema,
     is_subclass,
-    get_hint_type,
-    get_mm_field,
-    get_mm_description,
+    listify,
     score_prefix,
 )
+from . import base
 
 
 def is_complex_field(value: t.Union[dataclasses.Field, marshmallow.fields.Field]) -> bool:
@@ -68,7 +66,7 @@ class BaseModel(base.BaseModel):
         cls,
         values: t.Any,
         explode: bool = False,
-        include_schemas: bool = False,
+        schemas: bool = False,
         as_csv: bool = False,
     ) -> t.Generator[dict, None, None]:
         """Convert a list of models to a list of dicts.
@@ -76,25 +74,24 @@ class BaseModel(base.BaseModel):
         Args:
             values: The values to convert.
             explode: Explode the values.
-            include_schemas: Include the schemas.
+            schemas: Include the schemas.
             as_csv: Return the data as csv.
 
         Yields:
-            dict: if as_csv is True, the headers, then the schemas if include_schemas=True,
+            dict: if as_csv is True, the headers, then the schemas if schemas=True,
                 and then the converted values.
-            dict: if as_csv is False, the schemas if include_schemas=True and then the
+            dict: if as_csv is False, the schemas if schemas=True and then the
                 converted values.
-
         """
         values: t.List[t.Any] = listify(values)
-        schemas: t.Dict[str, dataclasses.Field] = cls._get_fields_explode(explode=explode)
+        fields: t.Dict[str, dataclasses.Field] = cls._get_fields_explode(explode=explode)
 
         if as_csv:
-            yield {k: k for k in schemas}
-            if include_schemas:
-                yield from cls._get_schemas_out_csv(schemas=schemas)
-        else:
-            yield {"schemas": cls._get_schemas_out(schemas=schemas)}
+            yield {k: k for k in fields}
+            if schemas:
+                yield from cls._get_fields_out_csv(fields=fields)
+        elif schemas:
+            yield {"schemas": cls._get_fields_out(fields=fields)}
 
         for value in values:
             if isinstance(value, cls):
@@ -105,12 +102,12 @@ class BaseModel(base.BaseModel):
                     yield value_dicts
 
     @classmethod
-    def _get_schemas_out(cls, schemas: t.Dict[str, dataclasses.Field]) -> dict:
-        """Get the schemas for the to_dict."""
-        schemas_out: dict = {}
-        for k, v in schemas.items():
+    def _get_fields_out(cls, fields: t.Dict[str, dataclasses.Field]) -> dict:
+        """Get the fields for the to_dict."""
+        fields_out: dict = {}
+        for k, v in fields.items():
             mm_field = get_mm_field(v)
-            schemas_out[k] = {
+            fields_out[k] = {
                 "name": k,
                 "type": str(v.type),
                 "description": get_mm_description(mm_field),
@@ -118,14 +115,14 @@ class BaseModel(base.BaseModel):
                 "required": mm_field.required,
                 "default": str(mm_field.load_default),
             }
-        return schemas_out
+        return fields_out
 
     @classmethod
-    def _get_schemas_out_csv(cls, schemas: t.Dict[str, dataclasses.Field]) -> t.List[dict]:
-        """Get the schemas for the to_dict."""
+    def _get_fields_out_csv(cls, fields: t.Dict[str, dataclasses.Field]) -> t.List[dict]:
+        """Get the fields for the to_dict."""
         return [
-            {k: str(v.type) for k, v in schemas.items()},
-            {k: get_mm_description(v) for k, v in schemas.items()},
+            {k: str(v.type) for k, v in fields.items()},
+            {k: get_mm_description(v) for k, v in fields.items()},
         ]
 
     @classmethod
@@ -141,7 +138,6 @@ class BaseModel(base.BaseModel):
         Returns:
             t.Dict[str, dataclasses.Field]: The headers.
         """
-
         schemas: t.Dict[str, dataclasses.Field] = {}
         prefix: t.List[str] = listify(prefix)
 

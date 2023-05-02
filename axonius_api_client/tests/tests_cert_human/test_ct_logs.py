@@ -3,7 +3,7 @@
 import datetime
 import json
 
-from axonius_api_client.cert_human import all_logs_list, ct_logs
+from axonius_api_client.projects.cert_human import all_logs_list, ct_logs
 
 FALLBACK = json.loads(all_logs_list.FALLBACK_JSON)
 

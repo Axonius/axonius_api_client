@@ -1,96 +1,132 @@
 # -*- coding: utf-8 -*-
 """Test suite for axonius_api_client.tools."""
+import typing as t
 import pytest
 
-# from axonius_api_client.api.routers import API_VERSION
-from axonius_api_client.auth import ApiKey
-from axonius_api_client.exceptions import (
-    AlreadyLoggedIn,
-    AuthError,
-    InvalidCredentials,
-    NotLoggedIn,
-)
+from axonius_api_client.auth import AuthApiKey, AuthCredentials, AuthModel, AuthNull
+from axonius_api_client.exceptions import InvalidCredentials, NotLoggedIn
 from axonius_api_client.http import Http
+from ..utils import get_connect
 
-from ..utils import get_key_creds, get_url
+BAD_CREDS = "bad wolf"
 
 
-class TestApiKey:
-    """Test axonius_api_client.auth."""
+# noinspection PyMethodMayBeStatic
+class AuthBase:
+    """Base class for auth tests."""
 
-    def test_valid_creds(self, request):
-        """Test str/repr has URL."""
-        http = Http(url=get_url(request), certwarn=False)
-
-        auth = ApiKey(http=http, **get_key_creds(request))
-
-        auth.login()
-
-        assert auth.is_logged_in
-        assert "url" in format(auth)
+    def test_str(self, auth_valid: dict, auth_cls: t.Type[AuthModel]):
+        auth: AuthModel = auth_cls(**auth_valid)
+        assert isinstance(auth.fields, list)
+        assert "url" in str(auth)
         assert "url" in repr(auth)
 
-    def test_logout(self, request):
-        """Test no exc when logout() after login()."""
-        http = Http(url=get_url(request), certwarn=False)
+    def test_logout(self, auth_valid: dict, auth_cls: t.Type[AuthModel]):
+        auth: AuthModel = auth_cls(**auth_valid)
 
-        auth = ApiKey(http=http, **get_key_creds(request))
+        action = auth.logout()
+        assert action is False
+        assert auth.is_logged_in is False
 
-        auth.login()
+        action = auth.login()
+        assert action is True
+        assert auth.is_logged_in is True
 
-        assert auth.is_logged_in
+        action = auth.logout()
+        assert action is True
+        assert auth.is_logged_in is False
 
-        auth.logout()
+        action = auth.logout()
+        assert action is False
 
-        assert not auth.is_logged_in
+    def test_login_already_logged_in(self, auth_valid: dict, auth_cls: t.Type[AuthModel]):
+        auth: AuthModel = auth_cls(**auth_valid)
 
-    # def test_old_version(self, request, monkeypatch):
-    #     """Test exc thrown when login() and login() already called."""
-    #     monkeypatch.setattr(ApiKey, "_validate_path", "api/badwolf")
+        action = auth.login()
+        assert action is True
+        assert auth.is_logged_in is True
 
-    #     http = Http(url=get_url(request), certwarn=False)
-    #     auth = ApiKey(http=http, **get_key_creds(request))
-    #     with pytest.raises(AuthError):
-    #         auth.login()
+        action = auth.login()
+        assert action is False
+        assert auth.is_logged_in is True
 
-    def test_login_already_logged_in(self, request):
-        """Test exc thrown when login() and login() already called."""
-        http = Http(url=get_url(request), certwarn=False)
-
-        auth = ApiKey(http=http, **get_key_creds(request))
-
-        auth.login()
-
-        with pytest.raises(AlreadyLoggedIn):
-            auth.login()
-
-    def test_logout_not_logged_in(self, request):
-        """Test exc thrown when logout() but login() not called."""
-        http = Http(url=get_url(request), certwarn=False)
-
-        auth = ApiKey(http=http, **get_key_creds(request))
-
-        with pytest.raises(NotLoggedIn):
-            auth.logout()
-
-    def test_invalid_creds(self, request):
-        """Test str/repr has URL."""
-        http = Http(url=get_url(request), certwarn=False)
-
-        bad = "badwolf"
-
-        auth = ApiKey(http=http, key=bad, secret=bad)
-
+    def test_login_invalid_credentials(self, auth_invalid: dict, auth_cls: t.Type[AuthModel]):
+        auth: AuthModel = auth_cls(**auth_invalid)
         with pytest.raises(InvalidCredentials):
             auth.login()
 
-    def test_http_lock_fail(self, request):
-        """Test using an http client from another authmethod throws exc."""
-        http = Http(url=get_url(request), certwarn=False)
+    def test_not_logged_in(self, auth_invalid: dict, auth_cls: t.Type[AuthModel]):
+        auth: AuthModel = auth_cls(**auth_invalid)
+        with pytest.raises(NotLoggedIn):
+            auth.check_login()
 
-        auth = ApiKey(http=http, **get_key_creds(request))
 
-        assert auth.http._auth_lock
+class TestNull(AuthBase):
+    @pytest.fixture()
+    def auth_valid(self, arg_url_http: Http) -> dict:
+        """Get credentials from command line args."""
+        return {"http": arg_url_http}
 
-        with pytest.raises(AuthError):
-            auth = ApiKey(http=http, **get_key_creds(request))
+    @pytest.fixture()
+    def auth_invalid(self, arg_url_http: Http) -> dict:
+        """Get credentials from command line args."""
+        return {"http": arg_url_http}
+
+    @pytest.fixture()
+    def auth_cls(self) -> t.Type[AuthModel]:
+        """Get the class to run tests against."""
+        return AuthNull
+
+    def test_login_invalid_credentials(self, auth_invalid: dict, auth_cls: t.Type[AuthModel]):
+        auth: AuthModel = auth_cls(**auth_invalid)
+        action = auth.login()
+        assert action is True
+        assert auth.is_logged_in is True
+
+
+class TestCredentials(AuthBase):
+    """Test suite for axonius_api_client.auth.AuthCredentials."""
+
+    @pytest.fixture()
+    def auth_valid(
+        self, arg_url_http: Http, arg_key: str, arg_secret: str, arg_credentials: bool
+    ) -> dict:
+        """Get credentials from command line args."""
+        if not arg_credentials:
+            pytest.skip("credentials=False, skipping test")
+        return {"http": arg_url_http, "username": arg_key, "password": arg_secret}
+
+    @pytest.fixture()
+    def auth_invalid(self, arg_url_http: Http) -> dict:
+        """Get credentials from command line args."""
+        return {"http": arg_url_http, "username": BAD_CREDS, "password": BAD_CREDS}
+
+    @pytest.fixture()
+    def auth_cls(self) -> t.Type[AuthModel]:
+        """Get the class to run tests against."""
+        return AuthCredentials
+
+
+class TestApiKey(AuthBase):
+    @pytest.fixture()
+    def auth_valid(
+        self, request, arg_url_http: Http, arg_key: str, arg_secret: str, arg_credentials: bool
+    ) -> dict:
+        """Get credentials from command line args."""
+        if arg_credentials:
+            client = get_connect(request)
+            client.start()
+            arg_key = client.api_keys["api_key"]
+            arg_secret = client.api_keys["api_secret"]
+
+        return {"http": arg_url_http, "key": arg_key, "secret": arg_secret}
+
+    @pytest.fixture()
+    def auth_invalid(self, arg_url_http: Http) -> dict:
+        """Get credentials from command line args."""
+        return {"http": arg_url_http, "key": BAD_CREDS, "secret": BAD_CREDS}
+
+    @pytest.fixture()
+    def auth_cls(self) -> t.Type[AuthModel]:
+        """Get the class to run tests against."""
+        return AuthApiKey

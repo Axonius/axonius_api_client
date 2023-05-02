@@ -2,8 +2,8 @@
 """Command line interface for Axonius API Client."""
 import click
 
-from ... import INIT_DOTENV, cert_human
-from ...parsers.url_parser import UrlParser
+from ... import INIT_DOTENV
+from ...projects import cert_human, url_parser
 from ...setup_env import KEY_CERTPATH, set_env
 from ...tools import echo_ok, echo_warn, get_path, json_dump, path_write
 
@@ -283,7 +283,7 @@ def split_leaf(chain):
 
 def from_url(url, split=True, ca_only=False):
     """Pass."""
-    url_parsed = UrlParser(url=url, default_scheme="https")
+    url_parsed = url_parser.UrlParser(url=url, default_scheme="https")
     echo_ok(f"Parsed {url} to {url_parsed}")
     chain = cert_human.Cert.from_requests_chain(url=url_parsed.url)
     leaf_cert, intm_certs = split_leaf(chain=chain)

@@ -26,14 +26,10 @@ ERRORS = {
         "'config' key is required but was not supplied",
         "'config' with value None type <class 'NoneType'> is not a <class 'dict'> or is empty",
     ],
-    '[{"adapter": 111, "config": [], "save_and_fetch": "doot", "active": "foot"}]': [
+    '[{"adapter": 111, "config": [], "save_and_fetch": "bad", "active": "foot"}]': [
         "Connection item #1/1 initial parsing errors:",
-        "'active' is not a valid bool: Supplied value 'foot' of type str must be one of:",
-        "  For True: True, 1, '1', 'true', 't', 'yes', 'y', 'on'",
-        "  For False: False, 0, '0', 'false', 'f', 'no', 'n', 'off'",
-        "'save_and_fetch' is not a valid bool: Supplied value 'doot' of type str must be one of:",
-        "  For True: True, 1, '1', 'true', 't', 'yes', 'y', 'on'",
-        "  For False: False, 0, '0', 'false', 'f', 'no', 'n', 'off'",
+        "'active' is not a valid bool",
+        "'save_and_fetch' is not a valid bool",
         "'adapter_name' with value 111 type <class 'int'> is not a <class 'str'> or is empty",
         "'config' with value [] type <class 'list'> is not a <class 'dict'> or is empty",
     ],
@@ -169,7 +165,7 @@ class TestGrpCnxCmdAddMultipleFromJson(CnxTools):
     def test_errors_no_abort_add_error(self, api_adapters, request, monkeypatch):
         runner = load_clirunner(request, monkeypatch)
         with runner.isolated_filesystem():
-            content = '[{"adapter_name": "csv", "config": {"user_id": "shanananannanana"}}]'
+            content = '[{"adapter_name": "csv", "config": {"user_id": "badwolf"}}]'
             exps = [
                 "Connection item #1/1 Connection added with error:",
                 # "Error: Error - No way to find the resource from config.",
@@ -205,7 +201,7 @@ class TestGrpCnxCmdAddMultipleFromJson(CnxTools):
             content_obj = [
                 {
                     "adapter_name": "csv",
-                    "config": {"user_id": "alllll from str", "file_path": file_path},
+                    "config": {"user_id": "badwolf from str", "file_path": file_path},
                 }
             ]
             content = json_dump(content_obj)

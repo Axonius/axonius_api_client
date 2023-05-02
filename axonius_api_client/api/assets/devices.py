@@ -133,7 +133,7 @@ class Devices(AssetMixin):
         """Build a query to get assets where :attr:`FIELD_IP` regex matches value.
 
         Args:
-            values: regex of ip address to match to match
+            values: regex of ip address to match
             **kwargs: passed to :meth:`get_by_value_regex`
         """
         kwargs["field"] = self.FIELD_IP

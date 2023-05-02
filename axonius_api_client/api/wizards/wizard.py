@@ -102,7 +102,7 @@ class Wizard:
 
         self._init()
 
-    def parse(self, entries: List[dict], source: str = Sources.LOD) -> List[dict]:
+    def parse(self, entries: List[dict], source: str = Sources.LOD) -> dict:
         """Parse a list of entries into a query and the associated GUI query wizard expressions.
 
         Args:
@@ -154,10 +154,10 @@ class Wizard:
         """Parse flags from an entry.
 
         Args:
-            entry: entry to parse with Entry.VALUE key
+            entry: entry to parse with `Entry.VALUE` key
             idx: index of this entry
             entries: all entries
-            tracker: tracker for Entry.WEIGHT key
+            tracker: tracker for `Entry.WEIGHT` key
             is_open: parenthesis are currently open
         """
         value_raw = entry[Entry.VALUE]
@@ -315,7 +315,7 @@ class Wizard:
         return expr
 
     def _parse_sub(self, field: dict, value_raw: str, idx: int) -> dict:
-        """Parse an sub expression of an entry of type complex.
+        """Parse sub expression of an entry of type complex.
 
         Args:
             field: complex field schema
@@ -324,7 +324,7 @@ class Wizard:
 
         Raises:
             :exc:`axonius_api_client.exceptions.WizardError`:
-                if sub field supplied is not a valid sub field of the complex field
+                if sub-field supplied is not a valid sub-field of the complex field
         """
         sub_field, operator, sub_value = self._split_simple(value_raw=value_raw)
 
@@ -439,7 +439,7 @@ class Wizard:
         return field, operator, value
 
     def _split_complex(self, value_raw: str) -> Tuple[str, List[str]]:
-        """Split a complex query wizard expression into field and sub field expressions.
+        """Split a complex query wizard expression into field and sub-field expressions.
 
         Args:
             value_raw: the raw unparsed value to parse

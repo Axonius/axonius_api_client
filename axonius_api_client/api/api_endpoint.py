@@ -30,7 +30,7 @@ set_log_level(obj=LOGGER, level=LOG_LEVEL_ENDPOINTS)
 
 
 def check_mappings(endpoint: "ApiEndpoint"):
-    """Pass."""
+    """Check that the mappings for an endpoint are valid."""
     model_attrs: t.List[str] = ["request_model_cls", "response_model_cls"]
     schema_attrs: t.List[str] = ["request_schema_cls", "response_schema_cls"]
 
@@ -44,7 +44,7 @@ def check_mappings(endpoint: "ApiEndpoint"):
 
 
 def check_model_cls(obj: type, src: str):
-    """Pass."""
+    """Check that supplied object is a subclass of BaseModel."""
     invalid = [BaseModel]
     if obj:
         if not inspect.isclass(obj) or obj in invalid or not issubclass(obj, BaseModel):
@@ -52,7 +52,7 @@ def check_model_cls(obj: type, src: str):
 
 
 def check_schema_cls(obj: type, src: str):
-    """Pass."""
+    """Check that supplied object is a subclass of BaseSchema."""
     invalid = [BaseSchema, BaseSchemaJson]
     if obj:
         if not inspect.isclass(obj) or obj in invalid or not issubclass(obj, BaseSchema):
@@ -95,6 +95,7 @@ class ApiEndpoint:
 
     response_json_error: bool = True
     """Throw errors if the JSON can not be serialized."""
+    log: t.ClassVar[logging.Logger] = LOGGER.getChild("ApiEndpoint")
 
     def __str__(self):
         """Get a pretty str for this object."""
@@ -102,7 +103,7 @@ class ApiEndpoint:
         return f"{self.__class__.__name__}({items})"
 
     def __post_init__(self):
-        """Pass."""
+        """Dataclass post init."""
         super().__setattr__("log", LOGGER.getChild(self.__class__.__name__))
         check_mappings(endpoint=self)
 
@@ -119,8 +120,8 @@ class ApiEndpoint:
 
     def perform_request(
         self, http: Http, request_obj: t.Optional[BaseModel] = None, raw: bool = False, **kwargs
-    ) -> t.Union[BaseModel, JSON_TYPES, t.Any]:
-        """Perform a request to this endpoint using an http object.
+    ) -> t.Any:
+        """Perform a request to this endpoint using a http object.
 
         Args:
             http (Http): HTTP object to use to send request
@@ -130,19 +131,20 @@ class ApiEndpoint:
             **kwargs: passed to :meth:`perform_request_raw` and :meth:`handle_response`
 
         Returns:
-            t.Union[BaseModel, JSON_TYPES]: the data loaded from the response received
+            the data loaded from the response received
         """
         self.log.debug(f"{self!r} Performing request with request_obj type {type(request_obj)}")
-        kwargs["response"] = response = self.perform_request_raw(
+        response: requests.Response = self.perform_request_raw(
             http=http, request_obj=request_obj, **kwargs
         )
         self.log.debug(f"{self!r} Received response {response}")
+        kwargs["response"] = response
         return response if raw else self.handle_response(http=http, **kwargs)
 
     def perform_request_raw(
         self, http: Http, request_obj: t.Optional[BaseModel] = None, **kwargs
-    ) -> t.Union[BaseModel, JSON_TYPES]:
-        """Perform a request to this endpoint using an http object.
+    ) -> requests.Response:
+        """Perform a request to this endpoint using a http object.
 
         Args:
             http (Http): HTTP object to use to send request
@@ -151,16 +153,23 @@ class ApiEndpoint:
             **kwargs: passed to :meth:`get_http_args` and :meth:`Http.__call__`
 
         Returns:
-            t.Union[BaseModel, JSON_TYPES]: the data loaded from the response received
+            requests.Response: the response received
         """
-        http_args = self.get_http_args(request_obj=request_obj, **kwargs)
-        response = http(**http_args)
-        return response
+        return http(**self.get_http_args(request_obj=request_obj, **kwargs))
 
-    def load_request(self, **kwargs) -> t.Union[BaseModel, dict, None]:
+    def load_request(
+        self,
+        remove_unknown_arguments: bool = False,
+        warn_unknown_arguments: bool = False,
+        reraise: bool = RERAISE,
+        **kwargs,
+    ) -> t.Any:
         """Create a dataclass for a request_obj to send using :meth:`perform_request`.
 
         Args:
+            remove_unknown_arguments (bool, optional): remove unknown arguments from kwargs
+            warn_unknown_arguments (bool, optional): warn about unknown arguments in kwargs
+            reraise (bool, optional): reraise exceptions
             **kwargs: passed to :meth:`BaseModel.load_request` if :attr:`request_model_cls`
                 is set
 
@@ -169,12 +178,22 @@ class ApiEndpoint:
                 kwargs empty
         """
         load_cls = self.request_load_cls
+
         ret = kwargs or None
         if load_cls:
+            args_cleaner = getattr(load_cls, "remove_unknown_arguments", False)
+            if callable(args_cleaner):
+                kwargs, _ = args_cleaner(
+                    kwargs=kwargs,
+                    remove_unknown_arguments=remove_unknown_arguments,
+                    warn_unknown_arguments=warn_unknown_arguments,
+                )
             self.log.debug(f"{self!r} Loading request with load_cls {load_cls} kwargs {kwargs}")
             try:
                 ret = load_cls.load_request(**kwargs)
             except Exception as exc:
+                if reraise:
+                    raise
                 err = "Failed to load request object"
                 details = [f"cls: {load_cls}", f"kwargs: {json_log(kwargs)}"]
                 raise RequestLoadObjectError(api_endpoint=self, err=err, details=details, exc=exc)
@@ -183,7 +202,7 @@ class ApiEndpoint:
         return ret
 
     def load_response(
-        self, data: dict, http: Http, unloaded: bool = False, reraise: bool = RERAISE, **kwargs
+        self, data: dict, http: Http, unloaded: bool = False, **kwargs
     ) -> t.Union[BaseModel, JSON_TYPES]:
         """Load the response data into a dataclass model object.
 
@@ -196,6 +215,8 @@ class ApiEndpoint:
         Returns:
             t.Union[BaseModel, JSON_TYPES]: Loaded dataclass model or JSON data
         """
+        kwargs["reraise"] = kwargs.get("reraise", RERAISE)
+
         if not unloaded:
             load_cls = self.response_load_cls
             if load_cls:
@@ -205,7 +226,7 @@ class ApiEndpoint:
                 try:
                     data = load_cls.load_response(data=data, http=http, **kwargs)
                 except Exception as exc:
-                    if reraise:
+                    if kwargs["reraise"]:
                         raise
                     err = "Failed to load response object"
                     details = [f"load_cls: {load_cls}"]
@@ -232,7 +253,7 @@ class ApiEndpoint:
         """Get the response data.
 
         Args:
-            http (Http): HTTP object used to receive response
+            http (Http): HTTP object used to receive `response`
             response (requests.Response): response to handle
             **kwargs: passed to :meth:`get_response_json` and :meth:`load_response`
 
@@ -244,18 +265,19 @@ class ApiEndpoint:
             data = response.text
             self.check_response_status(http=http, response=response, **kwargs)
         else:
-            data = self.get_response_json(response=response)
+            data = self.get_response_json(response=response, **kwargs)
             self.check_response_status(http=http, response=response, **kwargs)
             data = self.load_response(
                 http=http, response=response, **combo_dicts(kwargs, data=data)
             )
+            # noinspection PyBroadException
             try:
                 setattr(data, "RESPONSE", response)
             except Exception:
                 pass
         return data
 
-    def get_response_json(self, response: requests.Response) -> JSON_TYPES:
+    def get_response_json(self, response: requests.Response, **kwargs) -> JSON_TYPES:
         """Get the JSON from a response.
 
         Args:
@@ -267,9 +289,13 @@ class ApiEndpoint:
         Returns:
             JSON_TYPES: deserialized JSON from response
         """
+        reraise = kwargs.get("reraise", RERAISE)
+
         try:
             return response.json()
         except Exception as exc:
+            if reraise:
+                raise
             msg = f"Response has invalid JSON\nWhile in {self}"
             if self.response_json_error:
                 raise JsonInvalidError(msg=msg, response=response, exc=exc)
@@ -285,7 +311,7 @@ class ApiEndpoint:
         """Check the status code of a response.
 
         Args:
-            http (Http): HTTP object used to receive response
+            http (Http): HTTP object used to receive `response`
             response (requests.Response): response to handle
             response_status_hook (t.Optional[callable], optional): callable to perform
                 extra checks of response status that takes args: http, response, kwargs
@@ -297,9 +323,11 @@ class ApiEndpoint:
             workflow will be skipped
 
         Raises:
-            InvalidCredentials: if response has has a 401 status code
+            InvalidCredentials: if response has a 401 status code
             ResponseNotOk: if response has a bad status code
         """
+        kwargs.setdefault("reraise", RERAISE)
+
         if callable(response_status_hook):
             hook_ret = response_status_hook(http=http, response=response, **kwargs)
             if hook_ret is True:
@@ -317,6 +345,8 @@ class ApiEndpoint:
         try:
             response.raise_for_status()
         except Exception as exc:
+            if kwargs["reraise"]:
+                raise
             raise ResponseNotOk(msg="\n".join(msgs), response=response, exc=exc)
 
     def get_http_args(
@@ -336,26 +366,47 @@ class ApiEndpoint:
             dict: The arguments to make the request using :obj:`Http`.
         """
         self.check_request_obj(request_obj=request_obj)
-        args = {}
-        args["method"] = self.method
-        args["path"] = self.dump_path(request_obj=request_obj, http_args=http_args, **kwargs)
-        args.update(self.dump_object(request_obj=request_obj, **kwargs))
-        args.update(self.http_args or {})
-        args.update(http_args or {})
+        data_args: dict = self.dump_object(request_obj=request_obj, **kwargs)
+        path: str = self.dump_path(request_obj=request_obj, http_args=http_args, **kwargs)
+        base_args: dict = dict(path=path, method=self.method)
+        args: dict = combo_dicts(self.http_args, data_args, base_args, http_args)
         self.check_missing_args(args=args)
         return args
 
-    def _get_dump_object_method(
-        self, request_obj: t.Optional[BaseModel] = None, **kwargs
-    ) -> t.Tuple[str, callable]:
+    def dump_object(self, request_obj: t.Any = None, **kwargs) -> dict:
+        """Dump a request object to a python object.
+
+        Args:
+            request_obj (t.Any, optional): dataclass model to serialize for request
+            **kwargs: passed to dump_method
+
+        Returns:
+            dict: dict with 'json' or 'params' keys to send to :meth:`Http.__call__`.
+        """
+        data: dict = {}
+        if request_obj and not self.request_as_none:
+            data_key, dump_method = self._get_dump_method(request_obj=request_obj)
+            data[data_key] = self._call_dump_method(
+                **combo_dicts(kwargs, dump_method=dump_method, request_obj=request_obj)
+            )
+        return data
+
+    # noinspection PyUnusedLocal
+    def _get_dump_method(
+        self, request_obj: t.Optional[BaseModel] = None
+    ) -> t.Tuple[str, t.Optional[callable]]:
         """Get the method that should be used to dump a model and the arg for the request."""
-        if self.method == "get" and callable(getattr(request_obj, "dump_request_params", None)):
-            dump_method = request_obj.dump_request_params
+        dump_get: t.Optional[callable] = getattr(request_obj, "dump_request_params", None)
+        dump_post: t.Optional[callable] = getattr(request_obj, "dump_request", None)
+        key: str = ""
+        dump_method: t.Optional[callable] = None
+        if self.method == "get" and callable(dump_get):
+            dump_method = dump_get
             key = "params"
-        elif callable(getattr(request_obj, "dump_request", None)):
-            dump_method = request_obj.dump_request
+        elif callable(dump_post):
+            dump_method = dump_post
             key = "json"
-        else:
+        elif request_obj:
             err = f"Request object does not have dump_request methods: {request_obj!r}"
             details = [
                 f"request_obj type: {type(request_obj)}",
@@ -364,14 +415,18 @@ class ApiEndpoint:
             raise RequestFormatObjectError(api_endpoint=self, err=err, details=details)
         return key, dump_method
 
-    def _call_dump_object_method(
+    def _call_dump_method(
         self, dump_method: callable, request_obj: t.Optional[BaseModel] = None, **kwargs
     ) -> dict:
         """Pass."""
-        kwargs = combo_dicts(kwargs, schema_cls=self.request_schema_cls)
+        kwargs.setdefault("reraise", RERAISE)
+        kwargs.setdefault("schema_cls", self.request_schema_cls)
+
         try:
             return dump_method(**kwargs)
         except Exception as exc:
+            if kwargs["reraise"]:
+                raise
             err = f"Request formatting failed for object: {request_obj!r}"
             details = [
                 f"dump_method: {dump_method}",
@@ -379,28 +434,6 @@ class ApiEndpoint:
                 f"request_obj: {request_obj!r}",
             ]
             raise RequestFormatObjectError(api_endpoint=self, err=err, details=details, exc=exc)
-
-    def dump_object(self, request_obj: t.Optional[BaseModel] = None, **kwargs) -> dict:
-        """Serialize a dataclass model for a request.
-
-        Args:
-            request_obj (t.Optional[BaseModel], optional): dataclass model to serialize for request
-            **kwargs: passed to :meth:`BaseModel.dump_request_params` if method is GET, else
-                passed to :meth:`BaseModel.dump_request`
-
-        Returns:
-            dict: dict with 'json' or 'params' key to send to :meth:`Http.__call__`.
-
-        Raises:
-            RequestFormatObjectError: if dumping the request_obj fails
-        """
-        ret = {}
-        if request_obj and not self.request_as_none:
-            key, dump_method = self._get_dump_object_method(request_obj=request_obj, **kwargs)
-            ret[key] = self._call_dump_object_method(
-                dump_method=dump_method, request_obj=request_obj, **kwargs
-            )
-        return ret
 
     def dump_path(self, request_obj: t.Optional[BaseModel] = None, **kwargs) -> str:
         """Get the path to use for this endpoint.
@@ -413,13 +446,17 @@ class ApiEndpoint:
         Returns:
             str: formatted string of :attr:`path`
         """
-        kwargs = combo_dicts(kwargs, path=self.path)
+        kwargs.setdefault("path", self.path)
+        kwargs.setdefault("reraise", RERAISE)
+
         cls_dump = getattr(request_obj, "dump_request_path", None)
         method = cls_dump if callable(cls_dump) else self.path.format
 
         try:
             return method(**kwargs)
         except Exception as exc:
+            if kwargs["reraise"]:
+                raise
             err = f"Request formatting failed for path: {self.path!r}"
             details = [
                 f"method: {method}",
@@ -452,10 +489,11 @@ class ApiEndpoint:
         Raises:
             RequestObjectTypeError: if request_obj is not an instance of :attr:`request_model_cls`
         """
-        if self.request_model_cls and not isinstance(request_obj, self.request_model_cls):
-            err = f"Request object must be of type {self.request_model_cls!r}"
-            details = [
-                f"Request object type supplied: {type(request_obj)}",
-                f"Request object supplied: {request_obj!r}",
-            ]
-            raise RequestObjectTypeError(api_endpoint=self, err=err, details=details)
+        if self.request_model_cls and not self.request_as_none:
+            if not isinstance(request_obj, self.request_model_cls):
+                err = f"Request object must be of type {self.request_model_cls!r}"
+                details = [
+                    f"Request object type supplied: {type(request_obj)}",
+                    f"Request object supplied: {request_obj!r}",
+                ]
+                raise RequestObjectTypeError(api_endpoint=self, err=err, details=details)

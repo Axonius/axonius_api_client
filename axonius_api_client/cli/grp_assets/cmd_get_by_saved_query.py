@@ -2,7 +2,7 @@
 """Command line interface for Axonius API Client."""
 from ..context import CONTEXT_SETTINGS, click
 from ..options import AUTH, FIELDS_SELECT, PAGING, SQ_NAME, add_options, get_option_help
-from .grp_common import GET_EXPORT, HISTORY, OPTS_EXPORT, load_whitelist
+from .grp_common import GET_EXPORT, HISTORY, OPTS_EXPORT, OPTS_GET_BY_SQ, load_whitelist
 
 METHOD = "get-by-saved-query"
 OPTIONS = [
@@ -12,8 +12,9 @@ OPTIONS = [
     *GET_EXPORT,
     *FIELDS_SELECT,
     *HISTORY,
+    *OPTS_GET_BY_SQ,
     SQ_NAME,
-    get_option_help(choices=["auth", "assetexport", "selectfields"]),
+    get_option_help(choices=["auth", "assetexport", "selectfields", "asset_helper"]),
 ]
 
 

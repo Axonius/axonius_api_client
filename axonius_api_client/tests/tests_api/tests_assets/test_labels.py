@@ -36,7 +36,7 @@ class TestLabelsPrivate:
         assets_added_ids = [x["internal_axon_id"] for x in assets_added]
         assert asset_id in assets_added_ids
 
-        # check the each label has been added
+        # check each label has been added
         for x in assets_added:
             for label in labels:
                 assert label in x["labels"]
@@ -61,7 +61,7 @@ class TestLabelsPrivate:
         wiz_entries = f"simple internal_axon_id equals {asset_id}"
         assets_removed = apiobj.get(wiz_entries=wiz_entries, fields="labels", max_rows=1)
 
-        # check the each label has been removed
+        # check each label has been removed
         for x in assets_removed:
             for label in labels:
                 assert label not in x.get("labels", [])
@@ -99,7 +99,7 @@ class LabelsPublic:
         assets_added_ids = [x["internal_axon_id"] for x in assets_added]
         assert asset_id in assets_added_ids
 
-        # check the each label has been added
+        # check each label has been added
         for x in assets_added:
             for label in labels:
                 assert label in x["labels"]
@@ -121,7 +121,7 @@ class LabelsPublic:
         # re-get the asset and check that it has the label
         wiz_entries = f"simple internal_axon_id equals {asset_id}"
         assets_removed = apiobj.get(wiz_entries=wiz_entries, fields="labels", max_rows=1)
-        # check the each label has been removed
+        # check each label has been removed
         for x in assets_removed:
             for label in labels:
                 assert label not in x.get("labels", [])

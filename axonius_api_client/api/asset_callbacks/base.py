@@ -4,6 +4,7 @@ import logging
 import pathlib
 import re
 import sys
+import typing as t
 from typing import IO, Generator, List, Optional, Tuple, Union
 
 from ... import DEFAULT_PATH
@@ -16,11 +17,9 @@ from ...constants.fields import (
     SCHEMAS_CUSTOM,
 )
 from ...exceptions import ApiError
-
-# from ...parsers.fields import schema_custom
-from ...tools import calc_percent  # json_dump,
 from ...tools import (
     PathLike,
+    calc_percent,
     check_path_is_not_dir,
     coerce_int,
     dt_now,
@@ -30,6 +29,7 @@ from ...tools import (
     echo_warn,
     get_path,
     get_paths_format,
+    is_subclass_safe,
     join_kv,
     listify,
     longest_str,
@@ -60,7 +60,7 @@ class Base:
 
     @classmethod
     def args_map(cls) -> dict:
-        """Get all of the argument names and their defaults for this callbacks object.
+        """Get all the argument names and their defaults for this callbacks object.
 
         Examples:
             Create a ``client`` using :obj:`axonius_api_client.connect.Connect` and assume
@@ -68,7 +68,7 @@ class Base:
 
             >>> apiobj = client.devices  # or client.users
 
-            Flatten complex fields -  Will take all sub fields of complex fields and put them
+            Flatten complex fields -  Will take all sub-fields of complex fields and put them
             on the root level with their values index correlated to each other.
 
             >>> assets = apiobj.get(fields=["network_interfaces"], field_flatten=True)
@@ -123,7 +123,7 @@ class Base:
 
             >>> assets = apiobj.get(do_echo=True)
 
-            Change the amount of assets that echo page progress if do_echo is true.
+            Change the amount of assets that echo page progress when do_echo is true.
 
             >>> assets = apiobj.get(do_echo=True, page_progress=100)
 
@@ -191,6 +191,9 @@ class Base:
             "debug_timing": False,
             "explode_entities": False,
             "include_dates": False,
+            "csv_field_flatten": True,
+            "csv_field_join": True,
+            "csv_field_null": True,
         }
 
     def get_arg_value(self, arg: str) -> Union[str, list, bool, int]:
@@ -222,8 +225,8 @@ class Base:
         Args:
             apiobj (:obj:`axonius_api_client.api.assets.asset_mixin.AssetMixin`): Asset object
                 that created this callback
-            store: store tracker of assets get method that created this callback
-            state: state tracker of assets get method that created this callback
+            store: store tracker of get method that created this callback
+            state: state tracker of get method that created this callback
             getargs: kwargs passed to assets get method that created this callback
         """
         self.LOG: logging.Logger = apiobj.LOG.getChild(self.__class__.__name__)
@@ -677,11 +680,11 @@ class Base:
             sub_field = sub_schema["name_qual"]
             sub_short = sub_schema["name"]
 
-            # for each sub field, ensure there is an empty list to store values
+            # for each sub-field, ensure there is an empty list to store values
             row[sub_field] = []
 
-            # for each complex item, remove the sub field, force it into a list,
-            # and append it to the sub fields fully qualified name at the root row level
+            # for each complex item, remove the sub-field, force it into a list,
+            # and append it to the sub-fields fully qualified name at the root row level
             for item in items:
                 value = item.pop(sub_short, null_value)
                 value = value if isinstance(value, list) else [value]
@@ -891,6 +894,7 @@ class Base:
         Args:
             rows: rows to process
         """
+
         def _add_date(row):
             row.update(updater)
             return row
@@ -904,12 +908,11 @@ class Base:
         current_date = str(dt_now())
         schemas = SCHEMAS_CUSTOM["include_dates"]
         updater = {
-                schemas["history_date"]["name_qual"]: history_date,
-                schemas["current_date"]["name_qual"]: current_date
+            schemas["history_date"]["name_qual"]: history_date,
+            schemas["current_date"]["name_qual"]: current_date,
         }
         rows = [_add_date(row) for row in rows]
         return rows
-
 
     def add_report_adapters_missing(self, rows: Union[List[dict], dict]) -> List[dict]:
         """Process report: Missing adapters.
@@ -982,7 +985,7 @@ class Base:
         self,
         msg: str,
         debug: bool = False,
-        error: Union[bool, Exception] = False,
+        error: Union[bool, t.Type[Exception]] = False,
         warning: bool = False,
         level: str = "info",
         level_debug: str = "debug",
@@ -1016,7 +1019,7 @@ class Base:
             if error:
                 getattr(self.LOG, level_error)(msg)
                 if abort:
-                    if not isinstance(error, Exception):
+                    if not is_subclass_safe(error, Exception):
                         error = ApiError
                     raise error(msg)
             elif warning:
@@ -1027,7 +1030,7 @@ class Base:
                 getattr(self.LOG, level)(msg)
 
     def get_sub_schemas(self, schema: dict) -> Generator[dict, None, None]:
-        """Get all the schemas of sub fields for a complex field.
+        """Get all the schemas of sub-fields for a complex field.
 
         Args:
             schema: schema of complex field
@@ -1418,6 +1421,9 @@ ARG_DESCRIPTIONS: dict = {
     "csv_key_extras": "For CSV Export: What to do with extra CSV columns",
     "csv_dialect": "For CSV Export: CSV Dialect to use",
     "csv_quoting": "For CSV Export: CSV quoting style",
+    "csv_field_flatten": "For CSV/XLSX Export: Enable flattening of complex fields",
+    "csv_field_join": "For CSV/XLSX Export: Enable joining of list fields",
+    "csv_field_null": "For CSV/XLSX Export: Enable null values for missing fields",
     "export_file": "File to export data to",
     "export_path": "Directory to export data to",
     "export_overwrite": "Overwrite export_file if it exists",

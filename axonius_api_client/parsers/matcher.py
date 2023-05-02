@@ -5,12 +5,15 @@ import typing as t
 
 import cachetools
 
+from ..constants.api import RE_PREFIX
 from ..constants.ctypes import PatternLike, PatternLikeListy
 from ..constants.general import HIDDEN, SPLITTER
 from ..tools import bytes_to_str, coerce_str_re, is_pattern, is_str, listify
 
 CACHE_SIZE: int = 1024
-MatcherLoad: t.TypeVar = t.TypeVar("MatcherLoad", PatternLikeListy, "Matcher")
+MatcherLoad: t.TypeVar = t.TypeVar(
+    "MatcherLoad", "Matcher", str, t.Pattern, t.Iterable[t.Union[str, t.Pattern]]
+)
 
 
 class Matcher:
@@ -30,7 +33,7 @@ class Matcher:
     def __init__(
         self,
         values: t.Optional[PatternLikeListy] = None,
-        re_prefix: str = "~",
+        re_prefix: str = RE_PREFIX,
         split: bool = True,
         split_max: int = -1,
         split_sep: t.Optional[PatternLike] = SPLITTER,
@@ -44,7 +47,7 @@ class Matcher:
         self.split: bool = split
         self.split_sep: t.Optional[PatternLike] = split_sep
         self.split_max: int = split_max
-        self.strip: t.Optional[PatternLike] = strip
+        self.strip: bool = strip
         self.strip_chars: t.Optional[str] = strip_chars
         self.hidden: t.Optional[str] = hidden
         self.strings: t.List[str] = []
@@ -80,7 +83,13 @@ class Matcher:
 
         Args:
             values (t.Optional[MATCHER]): Matcher or values to parse into Matcher
-            **kwargs: passed to Matcher instantiation
+            re_prefix (str, optional): prefix to use for regexes
+            split (bool, optional): split values on split_sep
+            split_max (int, optional): max number of splits to perform
+            split_sep (t.Optional[PatternLike], optional): separator to split values on
+            strip (bool, optional): strip values
+            strip_chars (t.Optional[str], optional): chars to strip from values
+            hidden (t.Optional[str], optional): token to use for hidden values
 
         Returns:
             Matcher: Matcher object

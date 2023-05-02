@@ -67,10 +67,6 @@ class Page(BaseModel):
 
     def __repr__(self):
         """Pass."""
-        return self.__str__()
-
-    def __str__(self) -> t.List[str]:
-        """Pass."""
 
         def getval(prop):
             value = getattr(self, prop, None)
@@ -85,6 +81,23 @@ class Page(BaseModel):
             "page_number",
             "row_count",
             "method",
+        ]
+        vals = ", ".join([f"{p}={getval(p)}" for p in props])
+        return f"{self.__class__.__name__}({vals})"
+
+    def __str__(self) -> t.List[str]:
+        """Pass."""
+
+        def getval(prop):
+            value = getattr(self, prop, None)
+            if value is not None and not isinstance(value, (str, int, float, bool)):
+                value = str(value)
+            return repr(value)
+
+        props = [
+            "duration",
+            "page_number",
+            "row_count",
         ]
         vals = ", ".join([f"{p}={getval(p)}" for p in props])
         return f"{self.__class__.__name__}({vals})"

@@ -5,9 +5,12 @@ import enum
 import typing as t
 
 import marshmallow
+import marshmallow.validate as mm_validate
+import marshmallow.fields as mm_fields
 
 from .base import BaseModel
 from .custom_fields import get_field_dc_mm
+from ...tools import bytes_to_str
 
 
 class OperatorTypes(enum.Enum):
@@ -21,13 +24,14 @@ class OperatorTypes(enum.Enum):
 class CountOperatorSchema(marshmallow.Schema):
     """Pass."""
 
-    type = marshmallow.fields.Str(
+    # noinspection PyTypeChecker
+    type = mm_fields.Str(
         load_default=None,
         dump_default=None,
         allow_none=True,
-        validate=marshmallow.validate.OneOf([None, *[x.name for x in OperatorTypes]]),
+        validate=mm_validate.OneOf([None, *[x.name for x in OperatorTypes]]),
     )
-    count = marshmallow.fields.Integer(dump_default=None, load_default=None, allow_none=True)
+    count = mm_fields.Integer(dump_default=None, load_default=None, allow_none=True)
 
     class Meta:
         """Pass."""
@@ -58,3 +62,21 @@ class CountOperator(BaseModel):
     def get_schema_cls() -> t.Any:
         """Pass."""
         return CountOperatorSchema
+
+
+TypeOperator: t.TypeVar = t.TypeVar("TypeOperator", str, bytes, OperatorTypes)
+
+
+def coerce_operator(value: TypeOperator = OperatorTypes.less) -> str:
+    """Coerce a value to an operator."""
+    if isinstance(value, OperatorTypes):
+        return value.name
+    value = bytes_to_str(value)
+    if isinstance(value, str):
+        value = value.lower().strip()
+        for operator in OperatorTypes:
+            if value in [operator.value, operator.name]:
+                return operator.name
+    valids = [f"{x.name} ({x.value})" for x in OperatorTypes]
+    valids = "\n" + "\n".join(valids)
+    raise ValueError(f"Invalid duration_operator: {value}, valids:{valids}")

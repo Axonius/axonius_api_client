@@ -329,7 +329,7 @@ class Schema(abc.ABC):
 
     @classmethod
     def get_types(cls) -> Dict[str, Type]:
-        """Get all sub classes mapped by type key."""
+        """Get all subclasses mapped by type key."""
         return {x.for_type(): x for x in get_subcls(cls)}
 
     def __str__(self) -> str:

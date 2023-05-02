@@ -4,10 +4,11 @@ import copy
 import io
 import logging
 import sys
+import typing as t
 
 import pytest
 
-from axonius_api_client.api.asset_callbacks import get_callbacks_cls
+from axonius_api_client.api.asset_callbacks import Base, ExportMixins, get_callbacks_cls
 from axonius_api_client.constants.api import FIELD_TRIM_LEN
 from axonius_api_client.constants.fields import SCHEMAS_CUSTOM
 from axonius_api_client.exceptions import ApiError
@@ -15,15 +16,18 @@ from axonius_api_client.exceptions import ApiError
 from ...utils import get_rows_exist, get_schema, log_check, random_string
 
 
-def get_cbobj_main(apiobj, cbexport, getargs=None, state=None, store=None):
+def get_cbobj_main(
+    apiobj, cbexport, getargs=None, state=None, store=None
+) -> t.Union[Base, ExportMixins]:
+    """Get a callback object."""
     state = state or {}
     getargs = getargs or {}
     store = store or {}
 
-    cbcls = get_callbacks_cls(export=cbexport)
-    assert cbcls.CB_NAME == cbexport
+    cb_cls = get_callbacks_cls(export=cbexport)
+    assert cb_cls.CB_NAME == cbexport
 
-    cbobj = cbcls(apiobj=apiobj, getargs=getargs, state=state, store=store)
+    cbobj = cb_cls(apiobj=apiobj, getargs=getargs, state=state, store=store)
     assert cbobj.CB_NAME == cbexport
     assert cbobj.APIOBJ == apiobj
     assert cbobj.STORE == store
@@ -61,13 +65,19 @@ def get_cbobj_main(apiobj, cbexport, getargs=None, state=None, store=None):
 @pytest.mark.slow
 @pytest.mark.trylast
 class Callbacks:
-    def get_cbobj(self, apiobj, cbexport, getargs=None, state=None, store=None):
+    """Base class for all tests for all callbacks."""
+
+    @staticmethod
+    def get_cbobj(apiobj, cbexport, getargs=None, state=None, store=None):
+        """Get a callback object for testing."""
         return get_cbobj_main(
             apiobj=apiobj, cbexport=cbexport, getargs=getargs, state=state, store=store
         )
 
 
 class CallbacksFull(Callbacks):
+    """All tests for all callbacks."""
+
     def test_start_stop(self, cbexport, apiobj, caplog):
         getargs = {}
         cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs=getargs)
@@ -113,13 +123,11 @@ class CallbacksFull(Callbacks):
             assert schema in cbobj.custom_schemas
             assert schema in cbobj.final_schemas
 
-    def test_include_dates_false(self, cbexport, apiobj, caplog):
+    def test_include_dates_false(self, cbexport, apiobj):
         original_row = copy.deepcopy(apiobj.ORIGINAL_ROWS[0])
         test_row = copy.deepcopy(original_row)
 
-        cbobj = self.get_cbobj(
-            apiobj=apiobj, cbexport=cbexport, getargs={"include_dates": False}
-        )
+        cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs={"include_dates": False})
 
         rows = cbobj.add_include_dates(rows=test_row)
         assert isinstance(rows, list)
@@ -129,13 +137,11 @@ class CallbacksFull(Callbacks):
         assert isinstance(cbobj.custom_schemas, list)
         assert not cbobj.custom_schemas
 
-    def test_include_dates_true(self, cbexport, apiobj, caplog):
+    def test_include_dates_true(self, cbexport, apiobj):
         original_row = copy.deepcopy(apiobj.ORIGINAL_ROWS[0])
         test_row = copy.deepcopy(original_row)
 
-        cbobj = self.get_cbobj(
-            apiobj=apiobj, cbexport=cbexport, getargs={"include_dates": True}
-        )
+        cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs={"include_dates": True})
 
         rows = cbobj.add_include_dates(rows=test_row)
         assert isinstance(rows, list)
@@ -255,7 +261,9 @@ class CallbacksFull(Callbacks):
         assert apiobj.FIELD_ADAPTERS not in rows[0]
 
     def test_do_custom_cb(self, cbexport, apiobj):
+        # noinspection PyShadowingNames
         def cb1(self, rows):
+            """Custom callback that modifies the rows."""
             for row in rows:
                 self._row_idx = getattr(self, "_row_idx", 0)
                 row["idcaps"] = row[apiobj.FIELD_AXON_ID].upper()
@@ -279,8 +287,10 @@ class CallbacksFull(Callbacks):
             assert row["idcaps"] == row[apiobj.FIELD_AXON_ID].upper()
 
     def test_do_custom_cb_fail(self, cbexport, apiobj):
+        # noinspection PyShadowingNames
         def cb1(self, rows):
-            raise ValueError("boom")
+            """Fake custom callback that raises an exception."""
+            raise ValueError(f"boom {self} {rows}")
 
         original_row = copy.deepcopy(apiobj.ORIGINAL_ROWS[0])
 
@@ -572,7 +582,7 @@ class CallbacksFull(Callbacks):
             if not isinstance(value[0], dict):
                 continue
 
-            # make sure the orginal complex field got removed from the new row
+            # make sure the original complex field got removed from the new row
             assert field not in test_row
 
             for sub_value in value:
@@ -588,7 +598,7 @@ class CallbacksFull(Callbacks):
             assert not any([isinstance(i, (list, dict)) for i in value])
 
             if field not in original_row:
-                # assert subfields from complex added to new row are fully qual'd
+                # assert subfields from complex added to new row are fully qualified
                 assert "specific_data.data." in field
 
             if field in original_row:
@@ -676,7 +686,7 @@ class CallbacksFull(Callbacks):
             if not isinstance(value[0], dict):
                 continue
 
-            # make sure the orginal complex field got removed from the new row
+            # make sure the original complex field got removed from the new row
             assert field not in test_row
 
             for sub_value in value:
@@ -692,7 +702,7 @@ class CallbacksFull(Callbacks):
             assert not any([isinstance(i, (list, dict)) for i in value])
 
             if field not in original_row:
-                # assert subfields from complex added to new row are fully qual'd
+                # assert subfields from complex added to new row are fully qualified
                 assert "specific_data.data." in field
 
             if field in original_row:
@@ -778,6 +788,7 @@ class CallbacksFull(Callbacks):
             apiobj=apiobj, cbexport=cbexport, getargs={"field_explode": "badwolf"}
         )
         with pytest.raises(ApiError):
+            # noinspection PyStatementEffect
             cbobj.schema_to_explode
 
     def test_schema_to_explode_success(self, cbexport, apiobj):
@@ -787,7 +798,7 @@ class CallbacksFull(Callbacks):
         assert schema["name_qual"] == field
 
     def test_echo_ok_doecho_yes(self, cbexport, apiobj, capsys, caplog):
-        entry = "xxxxxxx"
+        entry = "badwolf"
 
         cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs={"do_echo": True})
         cbobj.echo(msg=entry)
@@ -797,7 +808,7 @@ class CallbacksFull(Callbacks):
         log_check(caplog=caplog, entries=[entry], exists=True)
 
     def test_echo_debug_doecho_yes(self, cbexport, apiobj, capsys, caplog):
-        entry = "xxxxxxx"
+        entry = "badwolf"
 
         cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs={"do_echo": True})
         cbobj.echo(msg=entry, debug=True)
@@ -807,7 +818,7 @@ class CallbacksFull(Callbacks):
         log_check(caplog=caplog, entries=[entry], exists=True)
 
     def test_echo_warning_doecho_yes(self, cbexport, apiobj, capsys, caplog):
-        entry = "xxxxxxx"
+        entry = "badwolf"
 
         cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs={"do_echo": True})
         cbobj.echo(msg=entry, warning=True)
@@ -817,7 +828,7 @@ class CallbacksFull(Callbacks):
         log_check(caplog=caplog, entries=[entry], exists=True)
 
     def test_echo_error_doecho_yes(self, cbexport, apiobj, capsys, caplog):
-        entry = "xxxxxxx"
+        entry = "badwolf"
 
         cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs={"do_echo": True})
         with pytest.raises(SystemExit):
@@ -829,7 +840,7 @@ class CallbacksFull(Callbacks):
         log_check(caplog=caplog, entries=[entry], exists=True)
 
     def test_echo_ok_doecho_no(self, cbexport, apiobj, capsys, caplog):
-        entry = "xxxxxxx"
+        entry = "badwolf"
 
         cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs={"do_echo": False})
         cbobj.echo(msg=entry)
@@ -840,7 +851,7 @@ class CallbacksFull(Callbacks):
         log_check(caplog=caplog, entries=[entry], exists=True)
 
     def test_echo_error_doecho_no(self, cbexport, apiobj, capsys, caplog):
-        entry = "xxxxxxx"
+        entry = "badwolf"
 
         cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs={"do_echo": False})
         with pytest.raises(ApiError):
@@ -855,7 +866,7 @@ class CallbacksFull(Callbacks):
         log_check(caplog=caplog, entries=[entry], exists=True)
 
     def test_echo_error_doecho_yes_abort_no(self, cbexport, apiobj, capsys, caplog):
-        entry = "xxxxxxx"
+        entry = "badwolf"
 
         cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport, getargs={"do_echo": True})
         cbobj.echo(msg=entry, error=ApiError, abort=False)
@@ -865,11 +876,12 @@ class CallbacksFull(Callbacks):
         assert not capture.out
         log_check(caplog=caplog, entries=[entry], exists=True)
 
+    # noinspection PyMethodMayBeStatic
     def test_get_callbacks_cls_error(self):
         with pytest.raises(ApiError):
             get_callbacks_cls(export="badwolf")
 
-    def test_sw_whitelist_fail_no_sw_field(self, cbexport, apiobj, caplog):
+    def test_sw_whitelist_fail_no_sw_field(self, cbexport, apiobj):
         whitelist = ["chrome"]
         rows = copy.deepcopy(apiobj.ORIGINAL_ROWS)
 
@@ -1018,7 +1030,9 @@ class CallbacksFull(Callbacks):
                 assert "." not in key
 
 
-class Exports:
+class Exports(Callbacks):
+    """Tests for the exports class."""
+
     def test_fd_stdout_open_no_close(self, cbexport, apiobj):
         cbobj = self.get_cbobj(apiobj=apiobj, cbexport=cbexport)
 

@@ -224,6 +224,6 @@ class TestJsonApi:
 
     def test_dump_request_params(self):
         data = json_api.resources.ResourcesGet(page={"limit": 20, "offset": 3})
-        exp = {"page[limit]": 20, "page[offset]": 3, "get_metadata": True, "search": ""}
+        exp = {"page[limit]": 20, "page[offset]": 3, "get_metadata": True}
         ret = data.dump_request_params()
         assert ret == exp

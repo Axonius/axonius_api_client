@@ -1,16 +1,14 @@
 # -*- coding: utf-8 -*-
 """API for performing initial signup."""
-from ...constants.logs import LOG_LEVEL_API
 from ...exceptions import ApiError
-from ...http import Http
-from ...logs import get_obj_log
 from ...tools import token_parse
 from .. import json_api
 from ..api_endpoints import ApiEndpoints
+from ..mixins import ModelMixins
 
 
-class Signup:
-    """API for performing initial signup.
+class Signup(ModelMixins):
+    """API for performing initial signup and other unauthenticated endpoints.
 
     Examples:
         * Check if initial signup has been done: :meth:`is_signed_up`
@@ -23,8 +21,10 @@ class Signup:
         """Check if initial signup has been done.
 
         Examples:
-            >>> signup = axonius_api_client.Signup(url="10.20.0.61")
-            >>> signup.is_signed_up
+            >>> import axonius_api_client as axonapi
+            >>> url: str = "10.0.3.2"
+            >>> client: axonapi.Connect = axonapi.Connect(url=url, key="", secret="")
+            >>> client.signup.is_signed_up
             True
         """
         return self._get().value
@@ -38,8 +38,10 @@ class Signup:
         """Perform the initial signup and get the API key and API secret of admin user.
 
         Examples:
-            >>> signup = axonius_api_client.Signup(url="10.20.0.61")
-            >>> data = signup.signup(
+            >>> import axonius_api_client as axonapi
+            >>> url: str = "10.0.3.2"
+            >>> client: axonapi.Connect = axonapi.Connect(url=url, key="", secret="")
+            >>> data = client.signup.signup(
             ...     password="demo", company_name="Axonius", contact_email="jim@axonius.com"
             ... )
             >>> data
@@ -55,7 +57,7 @@ class Signup:
         ).to_dict()
 
     def validate_password_reset_token(self, token: str) -> bool:
-        """Pass."""
+        """Validate that a password reset token is legit."""
         token = token_parse(token)
         data = self._token_validate(token=token)
         return data.value
@@ -84,6 +86,46 @@ class Signup:
 
         data = self._token_use(token=token, password=password)
         return data
+
+    @property
+    def is_expired(self) -> bool:
+        """Check if the system has expired."""
+        return self._expired().value
+
+    @property
+    def is_licensed(self) -> bool:
+        """Check if the system is licensed."""
+        return self._license_status().value
+
+    @property
+    def indication_color(self) -> str:
+        """Get the indication color."""
+        return self._get_indication_color().value
+
+    @property
+    def login_options(self) -> dict:
+        """Get the login options."""
+        return self._get_login_options().document_meta
+
+    def _get_login_options(self) -> json_api.generic.Metadata:
+        """Direct API method to get the login options."""
+        api_endpoint = ApiEndpoints.signup.get_login_options
+        return api_endpoint.perform_request(http=self.http)
+
+    def _get_indication_color(self) -> json_api.generic.StrValue:
+        """Direct API method to get the indication color."""
+        api_endpoint = ApiEndpoints.signup.get_indication_color
+        return api_endpoint.perform_request(http=self.http)
+
+    def _license_status(self) -> json_api.generic.BoolValue:
+        """Direct API method to get the license status."""
+        api_endpoint = ApiEndpoints.signup.license_status
+        return api_endpoint.perform_request(http=self.http)
+
+    def _expired(self) -> json_api.generic.BoolValue:
+        """Direct API method to get the expiry status."""
+        api_endpoint = ApiEndpoints.signup.expired
+        return api_endpoint.perform_request(http=self.http)
 
     def _status(self) -> json_api.signup.SystemStatus:
         """Direct API method to get the status of the overall system."""
@@ -132,15 +174,3 @@ class Signup:
             api_keys=True,
         )
         return api_endpoint.perform_request(http=self.http, request_obj=request_obj)
-
-    def __init__(self, url, **kwargs):
-        """Provide an API for performing initial signup.
-
-        Args:
-            url: url of instance to perform signup against
-            **kwargs: passed thru to :obj:`axonius_api_client.http.Http`
-        """
-        log_level = kwargs.get("log_level", LOG_LEVEL_API)
-        self.LOG = get_obj_log(obj=self, level=log_level)
-        kwargs.setdefault("certwarn", False)
-        self.HTTP = self.http = Http(url=url, **kwargs)

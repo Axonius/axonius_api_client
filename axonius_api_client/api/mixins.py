@@ -1,36 +1,62 @@
 # -*- coding: utf-8 -*-
 """API model base classes and mixins."""
 import logging
+import typing as t
 
-from .. import auth
+from ..auth import AuthModel
 from ..constants.logs import LOG_LEVEL_API
+from ..http import Http
 from ..logs import get_obj_log
 
 
 class Model:
     """API model base class."""
 
+    http: t.ClassVar[Http] = None
+    """HTTP client to use to send requests."""
 
+    auth: t.ClassVar[AuthModel] = None
+    """Authentication object to use to send requests."""
+
+    LOG: t.ClassVar[logging.Logger] = None
+    """Logger for this object."""
+
+
+# noinspection PyUnusedLocal
 class ModelMixins(Model):
     """Mixins for API Models."""
 
-    def __init__(self, auth: auth.Model, **kwargs):
+    LOG: logging.Logger = None
+    """Logger for this object."""
+
+    auth: AuthModel = None
+    """Authentication model with bound Http object to use for requests."""
+
+    http: Http = None
+    """Http object to use for requests."""
+
+    def __init__(
+        self,
+        auth: AuthModel,
+        log_level: t.Union[int, str] = LOG_LEVEL_API,
+        **kwargs,
+    ):
         """Mixins for API Models.
 
         Args:
             auth: object to use for auth and sending API requests
+            log_level: logging level to use for this objects logger
             **kwargs: passed to :meth:`_init`
         """
-        log_level = kwargs.get("log_level", LOG_LEVEL_API)
         self.LOG: logging.Logger = get_obj_log(obj=self, level=log_level)
-        """Logger for this object."""
-        self.auth = auth
-        """:obj:`axonius_api_client.auth.models.Mixins` authentication object."""
-        self.http = auth.http
-        """:obj:`axonius_api_client.http.Http` client to use to send requests,"""
-
+        self.auth: AuthModel = auth
+        self.http: Http = auth.http
         self._init(**kwargs)
-        auth.check_login()
+        self._init_auth(**kwargs)
+
+    def _init_auth(self, **kwargs):
+        """Post init method for subclasses to use for overriding auth setup."""
+        self.auth.login()
 
     def _init(self, **kwargs):
         """Post init method for subclasses to use for extra setup."""
@@ -48,8 +74,20 @@ class ModelMixins(Model):
         return self.__str__()
 
 
-class ChildMixins:
+class ChildMixins(Model):
     """Mixins model for API child objects."""
+
+    parent: Model = None
+    """Parent API model of this child."""
+
+    LOG: logging.Logger = None
+    """Logger for this object."""
+
+    auth: AuthModel = None
+    """Authentication model with bound Http object to use for requests."""
+
+    http: Http = None
+    """Http object to use for requests."""
 
     def __init__(self, parent: Model):
         """Mixins model for API child objects.
@@ -57,10 +95,10 @@ class ChildMixins:
         Args:
             parent: parent API model of this child
         """
-        self.parent = parent
-        self.http = parent.http
-        self.auth = parent.auth
-        self.LOG = parent.LOG.getChild(self.__class__.__name__)
+        self.parent: Model = parent
+        self.http: Http = parent.http
+        self.auth: AuthModel = parent.auth
+        self.LOG: logging.Logger = parent.LOG.getChild(self.__class__.__name__)
         self._init(parent=parent)
 
     def _init(self, parent: Model):

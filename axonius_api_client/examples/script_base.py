@@ -34,7 +34,6 @@ client_args = {}
 
 # --- get the URL, API key, API secret, & certwarn from the default ".env" file
 client_args.update(axonapi.get_env_connect())
-
 # --- OR override OS env vars with the values from a custom .env file
 # client_args.update(axonapi.get_env_connect(ax_env="/path/to/envfile", override=True))
 

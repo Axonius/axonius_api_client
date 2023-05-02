@@ -39,7 +39,11 @@ class SavedQuery(ChildMixins):
         Create a ``client`` using :obj:`axonius_api_client.connect.Connect` and assume
         ``apiobj`` is either ``client.devices`` or ``client.users``
 
-        >>> apiobj = client.devices  # or client.users
+        >>> import axonius_api_client as axonapi
+        >>> connect_args: dict = axonapi.get_env_connect()
+        >>> client: axonapi.Connect = axonapi.Connect(**connect_args)
+        >>> apiobj: axonapi.api.assets.AssetMixin = client.devices
+        >>>       # or client.users or client.vulnerabilities
 
         * Get a saved query by name: :meth:`get_by_name`
         * Get a saved query by UUID: :meth:`get_by_uuid`
@@ -59,6 +63,7 @@ class SavedQuery(ChildMixins):
     @property
     def folders(self) -> FoldersQueries:
         """Get the folders api for this object type."""
+        # noinspection PyUnresolvedReferences
         return self.auth.http.CLIENT.folders.queries
 
     def update_folder(
@@ -72,9 +77,11 @@ class SavedQuery(ChildMixins):
         """Update the name of a Saved Query.
 
         Args:
-            sq (MULTI): str with name or uuid, or saved query dict or dataclass
-            value (str): new name
-            as_dataclass (bool, optional): Return saved query dataclass instead of dict
+            sq: str with name or uuid, or saved query dict or dataclass
+            folder: new name
+            as_dataclass: Return saved query dataclass instead of dict
+            create: create folder if it does not exist
+            echo: echo status to stdout
 
         Returns:
             t.Union[dict, models.SavedQuery]: saved query dataclass or dict
@@ -147,7 +154,7 @@ class SavedQuery(ChildMixins):
         descending: bool = True,
         as_dataclass: bool = AS_DATACLASS,
     ) -> t.Union[dict, models.SavedQuery]:
-        """Update the sort of a Saved Query.
+        """Update the sort field of a Saved Query.
 
         Args:
             sq (MULTI): str with name or uuid, or saved query dict or dataclass
@@ -886,7 +893,7 @@ class SavedQuery(ChildMixins):
         Notes:
             Saved Queries created without expressions will not be editable using the query wizard
             in the GUI. Use :obj:`axonius_api_client.api.wizards.wizard.Wizard` to produce a query
-            and it's accordant expressions for the GUI query wizard.
+            and expressions for the GUI query wizard.
 
         Args:
             as_dataclass (bool, optional): return saved query dataclass or dict
@@ -933,15 +940,25 @@ class SavedQuery(ChildMixins):
         Examples:
             Create a saved query using a :obj:`axonius_api_client.api.wizards.wizard.Wizard`
 
-            >>> parsed = apiobj.wizard_text.parse(content="simple hostname contains blah")
-            >>> query = parsed["query"]
-            >>> expressions = parsed["expressions"]
+            >>> import axonius_api_client as axonapi
+            >>> connect_args: dict = axonapi.get_env_connect()
+            >>> client: axonapi.Connect = axonapi.Connect(**connect_args)
+            >>> apiobj: axonapi.api.assets.AssetMixin = client.devices
+            >>>       # or client.users or client.vulnerabilities
+            >>> wiz: str = "simple hostname contains blah"
+            >>> parsed: dict = apiobj.wizard_text.parse(content=wiz)
+            >>> sq_name: str = "test"
+            >>> sq_query: str = parsed["query"]
+            >>> sq_expressions: list[dict] = parsed["expressions"]
+            >>> sq_description: str = "meep meep"
+            >>> sq_tags: list[str] = ["nice1", "nice2", "nice3"]
             >>> sq = apiobj.saved_query.add(
-            ...     name="test",
-            ...     query=query,
-            ...     expressions=expressions,
-            ...     description="meep meep",
-            ...     tags=["nyuck1", "nyuck2", "nyuck3"],
+            ...     name=sq_name,
+            ...     query=sq_query,
+            ...     expressions=sq_expressions,
+            ...     description=sq_description,
+            ...     tags=sq_tags,
+            ...     as_dataclass=True,
             ... )
 
         Notes:

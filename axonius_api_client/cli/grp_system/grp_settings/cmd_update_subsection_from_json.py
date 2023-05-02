@@ -22,7 +22,7 @@ def cmd(
     export_format,
     **kwargs,
 ):
-    """Update a sub-section from a JSON file."""
+    """Update a subsection from a JSON file."""
     client = ctx.obj.start_client(url=url, key=key, secret=secret)
     new_config = ctx.obj.read_stream_json(stream=input_file, expect=dict)
 

@@ -13,7 +13,7 @@ from ...utils import load_clirunner
 
 
 class TestGrpEnforcementsCmdCopyUpdate(EnforcementsBase):
-    def test_multi(self, request, monkeypatch, apiobj, created_set):
+    def test_multi(self, request, monkeypatch, apiobj, created_set_trigger):
         self.cleanup(apiobj=apiobj, value=Meta.name_copy)
         self.cleanup(apiobj=apiobj, value=Meta.name_rename_cli)
 
@@ -24,7 +24,7 @@ class TestGrpEnforcementsCmdCopyUpdate(EnforcementsBase):
                 "enforcements",
                 "copy",
                 "--value",
-                created_set.name,
+                created_set_trigger.name,
                 "--name",
                 Meta.name_copy,
                 "--export-format",
@@ -35,7 +35,8 @@ class TestGrpEnforcementsCmdCopyUpdate(EnforcementsBase):
             assert result.stdout
             assert result.stderr
             assert result.exit_code == 0
-            assert created_set.name in result.stdout
+            assert Meta.name_copy in result.stdout
+            assert created_set_trigger.name not in result.stdout
 
             data = json_load(result.stdout)
             assert isinstance(data, dict) and data
@@ -57,7 +58,8 @@ class TestGrpEnforcementsCmdCopyUpdate(EnforcementsBase):
             assert result.stderr
             assert result.exit_code == 0
             assert Meta.name_rename_cli in result.stdout
-            assert Meta.name not in result.stdout
+            assert Meta.name_copy not in result.stdout
+            assert created_set_trigger.name not in result.stdout
 
             data = json_load(result.stdout)
             assert isinstance(data, dict) and data

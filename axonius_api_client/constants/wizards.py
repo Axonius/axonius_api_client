@@ -206,6 +206,9 @@ class Types:
     FILE: str = "file"
     """file type, used in CLI wizards"""
 
+    LINES: str = "lines"
+    """lines type, used in CLI wizards"""
+
     DICT: List[str] = [SIMPLE, COMPLEX]
     """valid types for the base Wizard class."""
 
@@ -215,7 +218,7 @@ class Types:
     SQ: List[str] = [*DICT, SAVED_QUERY]
     """valid types for the WizardCsv class."""
 
-    CLI: List[str] = [*DICT, FILE]
+    CLI: List[str] = [*DICT, FILE, LINES]
     """valid types for the CLI."""
 
 

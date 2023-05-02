@@ -1,14 +1,28 @@
 # -*- coding: utf-8 -*-
 """Custom types."""
+import datetime
 import pathlib
 import typing as t
 
 PathLike: t.TypeVar = t.TypeVar("PathLike", pathlib.Path, str, bytes)
 PatternLike: t.TypeVar = t.TypeVar("PatternLike", t.Pattern, str, bytes)
-PatternLikeListy: t.Type = t.Union[PatternLike, t.List[PatternLike]]
+PatternLikeListy: t.Type = t.Union[PatternLike, t.Iterable[PatternLike]]
 ComplexLike: t.Tuple[t.Type, ...] = (dict, list, tuple)
 SimpleLike: t.Tuple[t.Type, ...] = (str, int, bool, float)
 Refreshables: t.Type = t.Optional[t.Union[str, bytes, int, float, bool]]
+TypeDate: t.TypeVar = t.TypeVar("TypeDate", str, bytes, datetime.datetime, datetime.timedelta)
+TypeDelta: t.TypeVar = t.TypeVar("TypeDelta", str, bytes, float, int, datetime.timedelta)
+TypeFloat: t.TypeVar = t.TypeVar("TypeFloat", float, int, str, bytes)
+TypeMatch: t.TypeVar = t.TypeVar(
+    "TypeMatch",
+    str,
+    bytes,
+    t.Pattern,
+    t.List[t.Union[str, bytes, t.Pattern]],
+    t.Tuple[t.Union[str, bytes, t.Pattern]],
+)
+TypeInt: t.TypeVar = t.TypeVar("TypeInt", int, str, bytes)
+TypeBool: t.TypeVar = t.TypeVar("TypeBool", bool, str, bytes, int, float)
 
 
 class FolderBase:

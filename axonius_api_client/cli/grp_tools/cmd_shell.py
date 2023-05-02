@@ -12,14 +12,15 @@ from ...tools import echo_error, json_reload, pathlib
 from ..context import CONTEXT_SETTINGS
 from ..options import AUTH, add_options
 
-SHELL_BANNER = """Welcome human. We have some refreshments available for you:
-
+HELP: str = """
+Local variables available:
     - axonapi: API client package itself
     - client/c: API Client connection object
     - ctx: Click context object
     - jdump/j: Helper function to pretty print python objects
+    - j(HELP): this message
 
-API Objects:
+Local variables as shortcuts from client properties:
     - activity_logs/al: Work with activity logs
     - adapters/a: Work with adapters and adapter connections
     - dashboard/db: Work with discovery cycle
@@ -32,15 +33,17 @@ API Objects:
     - remote_support/rs: Work with configuring system remote support
     - settings_global/sgl: Work with Global system settings
     - settings_gui/sgu: Work with GUI system settings
-    - settings_lifecycle/sl: Work with Lifecyle system settings
+    - settings_lifecycle/sl: Work with lifecycle system settings
     - settings_ip/sip: Work with Identity Provider system settings
+    - enforcements/e: Work with enforcements   
     - system_roles/sr: Work with system roles
     - system_users/su: Work with system users
     - users/u: Work with user assets
     - openapi/oas: Work with the OpenAPI specification file
     - vulnerabilities/v: Work with vulnerability assets
-
 """
+
+SHELL_BANNER = f"Welcome human. We have some refreshments available for you:\n{HELP}"
 
 SHELL_EXIT = """Goodbye human. We hope you enjoyed your stay."""
 
@@ -54,41 +57,14 @@ def jdump(data):
     print(json_reload(data))
 
 
-@click.command(name="shell", context_settings=CONTEXT_SETTINGS)
+@click.command(name="shell", context_settings=CONTEXT_SETTINGS, epilog=f"\b\n\n{HELP}")
 @add_options(AUTH)
 @click.pass_context
 def cmd(ctx, url, key, secret):  # noqa: D301
-    """Start an interactive python shell.
+    f"""Start an interactive python shell with Axonius API Client loaded.
 
     The shell will authenticate to Axonius, setup autocompletion, enable history,
     and create the following objects:
-
-    \b
-        - axonapi: API Client package itself
-        - client/c: API Client connection object
-        - ctx: Click context object
-        - jdump/j: Helper function to pretty print python objects
-
-        - activity_logs/al: Work with activity logs
-        - adapters/a: Work with adapters and adapter connections
-        - dashboard/db: Work with discovery cycle
-        - dashboard_spaces/dbs: Work with dashboard spaces
-        - data_scopes/ds: Work with data scopes
-        - devices/d: Work with device assets
-        - folders/f: Work with folders
-        - instances/i: Work with instances
-        - meta/m: Work with instance metadata
-        - remote_support/rs: Work with configuring system remote support
-        - settings_global/sgl: Work with Global system settings
-        - settings_gui/sgu: Work with GUI system settings
-        - settings_lifecycle/sl: Work with Lifecyle system settings
-        - settings_ip/sip: Work with Identity Provider system settings
-        - system_roles/sr: Work with system roles
-        - system_users/su: Work with system users
-        - users/u: Work with user assets
-        - openapi/oas: Work with the OpenAPI specification file
-        - vulnerabilities/v: Work with vulnerability assets
-
     """
     client = ctx.obj.start_client(url=url, key=key, secret=secret, save_history=True)
 
@@ -141,6 +117,7 @@ def cmd(ctx, url, key, secret):  # noqa: D301
         "su": client.system_users,
         "u": client.users,
         "v": client.vulnerabilities,
+        "HELP": HELP,
     }
 
     spawn_shell(shellvars)
@@ -151,13 +128,13 @@ def write_hist_file():
     try:
         import readline
 
-        histpath = pathlib.Path(HISTPATH)
-        histfile = histpath / HISTFILE
+        hist_path = pathlib.Path(HISTPATH)
+        hist_file = hist_path / HISTFILE
 
-        histpath.mkdir(mode=0o700, exist_ok=True)
-        histfile.touch(mode=0o600, exist_ok=True)
+        hist_path.mkdir(mode=0o700, exist_ok=True)
+        hist_file.touch(mode=0o600, exist_ok=True)
 
-        readline.write_history_file(format(histfile))
+        readline.write_history_file(format(hist_file))
     except Exception as exc:  # pragma: no cover
         msg = f"Unable to import readline! {exc}"
         echo_error(msg, abort=False)
@@ -167,21 +144,22 @@ def register_readline(shellvars=None):
     """Pass."""
     shellvars = shellvars or {}
 
-    histpath = pathlib.Path(HISTPATH)
-    histfile = histpath / HISTFILE
+    hist_path = pathlib.Path(HISTPATH)
+    hist_file = hist_path / HISTFILE
 
-    histpath.mkdir(mode=0o700, exist_ok=True)
-    histfile.touch(mode=0o600, exist_ok=True)
+    hist_path.mkdir(mode=0o700, exist_ok=True)
+    hist_file.touch(mode=0o600, exist_ok=True)
 
     try:
         try:
             import readline
-        except Exception:  # pragma: no cover
+        except ImportError:  # pragma: no cover
+            # noinspection PyUnresolvedReferences
             import pyreadline as readline
 
         import rlcompleter
 
-        readline.read_history_file(format(histfile))
+        readline.read_history_file(format(hist_file))
         atexit.register(write_hist_file)
 
         readline.set_completer(rlcompleter.Completer(shellvars).complete)

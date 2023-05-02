@@ -8,7 +8,7 @@ import typing as t
 
 import click
 import marshmallow
-import marshmallow_jsonapi
+import marshmallow_jsonapi.fields as mm_fields
 
 from ....constants.api import FolderDefaults
 from ....constants.ctypes import FolderBase, Refreshables
@@ -33,34 +33,35 @@ from ..system_users import SystemUser
 class CreateFolderRequestSchema:
     """Marshmallow schema for request to create a folder."""
 
-    name = marshmallow_jsonapi.fields.Str()
-    parent_id = marshmallow_jsonapi.fields.Str()
+    name = mm_fields.Str()
+    parent_id = mm_fields.Str()
 
 
 class RenameFolderRequestSchema:
     """Marshmallow schema for request to rename a folder."""
 
-    name = marshmallow_jsonapi.fields.Str()
+    name = mm_fields.Str()
 
 
 class MoveFolderRequestSchema:
     """Marshmallow schema for request to move a folder."""
 
-    parent_id = marshmallow_jsonapi.fields.Str()
+    parent_id = mm_fields.Str()
 
 
 class FoldersSchema:
     """Marshmallow schema for response to get folders."""
 
-    folders = marshmallow_jsonapi.fields.List(marshmallow_jsonapi.fields.Dict())
+    folders = mm_fields.List(mm_fields.Dict())
 
 
+# noinspection PyUnresolvedReferences
 class FolderDataMixin:
     """Mixins for Metadata responses with 'folder_data' as dict."""
 
     @property
     def folder_data(self) -> dict:
-        """Get the folder_data dict from the create response metadata."""
+        """Get the folder_data dict from the creation response metadata."""
         return self.document_meta.get("folder_data") or {}
 
     @property
@@ -142,6 +143,7 @@ class MoveFolderResponseModel(FolderDataMixin):
     pass
 
 
+# noinspection PyUnresolvedReferences
 @dataclasses.dataclass(repr=False)
 class DeleteFolderResponseModel:
     """Dataclass model for response to delete a folder."""
@@ -181,7 +183,7 @@ class Folder(abc.ABC, FolderBase):
         force: bool = False,
         root: t.Optional["FoldersModel"] = None,
     ) -> "Folder":
-        """Refresh the root folders data.
+        """Refresh the root folder data.
 
         Args:
             value (Refreshables, optional): only perform if refresh is True or is
@@ -190,10 +192,14 @@ class Folder(abc.ABC, FolderBase):
             root (t.Optional["FoldersModel"], optional): dont fetch a new root, use this one yo
 
         """
-        check: bool = parse_refresh(value=value, refresh_elapsed=self.refresh_elapsed)
+        check: bool = self._parse_refresh(value)
         if check is True or force is True:
             return self._refresh(root=root)
         return self
+
+    def _parse_refresh(self, value: Refreshables) -> bool:
+        """Parse the refresh value."""
+        return parse_refresh(value=value, refresh_elapsed=self.refresh_elapsed)
 
     @property
     def refreshed(self) -> datetime.datetime:
@@ -230,42 +236,51 @@ class Folder(abc.ABC, FolderBase):
             return (datetime.datetime.now() - self._refresh_dt).total_seconds()
         return self.root_folders.refresh_elapsed
 
-    @abc.abstractclassmethod
+    @classmethod
+    @abc.abstractmethod
     def get_enum_names(cls) -> BaseEnum:
         """Get the enum containing folder names for this folders object type."""
         raise NotImplementedError()
 
-    @abc.abstractclassmethod
+    @classmethod
+    @abc.abstractmethod
     def get_enum_paths(cls) -> BaseEnum:
         """Get the enum containing folder paths for this folders object type."""
         raise NotImplementedError()
 
-    @abc.abstractclassmethod
+    @classmethod
+    @abc.abstractmethod
     def get_model_folder(cls) -> t.Type["FolderModel"]:
         """Get the folder model for this folders object type."""
         raise NotImplementedError()
 
-    @abc.abstractclassmethod
+    @classmethod
+    @abc.abstractmethod
     def get_model_folders(cls) -> t.Type["FoldersModel"]:
         """Get the folders model for this folders object type."""
         raise NotImplementedError()
 
     @classmethod
-    def get_models_folders(cls) -> t.Tuple[t.Type["Folder"]]:
+    def get_models_folders(
+        cls,
+    ) -> t.Tuple[t.Type[t.Union["Folder", "FoldersModel", "FolderModel"]], ...]:
         """Get all folder models for this folders object type."""
         return (cls.get_model_folder(), cls.get_model_folders())
 
-    @abc.abstractclassmethod
+    @classmethod
+    @abc.abstractmethod
     def get_models_objects(cls) -> t.Tuple[t.Type[BaseModel]]:
         """Get the object models for this folders object type."""
         raise NotImplementedError()
 
-    @abc.abstractclassmethod
+    @classmethod
+    @abc.abstractmethod
     def get_model_create_response(cls) -> t.Type[BaseModel]:
         """Get the folder create model for this folders object type."""
         raise NotImplementedError()
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def api_folders(self):
         """Get the folders API for this type of folders."""
         raise NotImplementedError()
@@ -277,11 +292,11 @@ class Folder(abc.ABC, FolderBase):
 
     @abc.abstractmethod
     def _create_object(self, **kwargs) -> BaseModel:
-        """Create passthru for the object type in question."""
+        """Create pass-thru for the object type in question."""
         raise NotImplementedError()
 
     @classmethod
-    def get_types_findable(cls) -> t.Tuple[type]:
+    def get_types_findable(cls) -> t.Tuple[type, ...]:
         """Get the types that are allowed for `value` in find."""
         return (str, *cls._get_types_findable())
 
@@ -348,6 +363,7 @@ class Folder(abc.ABC, FolderBase):
                 )
         return "\n".join(items) if as_str else items
 
+    # noinspection PyMethodFirstArgAssignment
     def find(
         self,
         folder: t.Union[str, enum.Enum, "Folder", "CreateFolderResponseModel"],
@@ -404,7 +420,7 @@ class Folder(abc.ABC, FolderBase):
                 in this folder directly
             refresh (Refreshables, optional): refresh the object cache if this is True
         """
-        refresh = parse_refresh(value=refresh, refresh_elapsed=self.refresh_elapsed)
+        refresh = self._parse_refresh(value=refresh)
         if refresh is True:
             self._clear_objects_cache()
 
@@ -440,7 +456,7 @@ class Folder(abc.ABC, FolderBase):
         full_objects: bool = FolderDefaults.full_objects_search,
         echo: bool = FolderDefaults.echo,
         refresh: Refreshables = FolderDefaults.refresh,
-    ) -> t.List[BaseModel]:
+    ) -> t.List[object]:
         """Search for objects in this folder.
 
         Args:
@@ -491,7 +507,7 @@ class Folder(abc.ABC, FolderBase):
         )
         self.spew([f"Loaded {searches}"], echo=echo)
 
-        matches: t.List[BaseModel] = searches.matches
+        matches: t.List[object] = searches.matches
         matches_txt: str = f"{searches.str_matches} (error_no_matches={error_no_matches})"
         matches_errs: t.List[str] = [matches_txt, f"{searches}"]
         self.spew(matches_txt, echo=echo, level="info" if matches else "warning")
@@ -560,7 +576,7 @@ class Folder(abc.ABC, FolderBase):
             echo (bool, optional): echo output to console
             refresh (Refreshables, optional): refresh the folders before searching
         """
-        matches: t.List[BaseModel] = self.search_objects(
+        matches: t.List[object] = self.search_objects(
             searches=searches,
             pattern_prefix=pattern_prefix,
             ignore_case=ignore_case,
@@ -1347,7 +1363,7 @@ class Folder(abc.ABC, FolderBase):
 
     @property
     def created_by_user_source(self) -> t.Optional[str]:
-        """Get the user name and user source attributes for self.created_by."""
+        """Get the username and user source attributes for self.created_by."""
         if isinstance(self.created_by_user, SystemUser):
             return self.created_by_user.user_source
         return None
@@ -1423,7 +1439,7 @@ class Folder(abc.ABC, FolderBase):
         return data
 
     def _refresh(self, root: t.Optional["FoldersModel"] = None) -> "Folder":
-        """Refresh the root folders data."""
+        """Refresh the root folder data."""
         self._clear_objects_cache()
         if self.is_model_folders(self):
             root: FoldersModel = (
@@ -1705,7 +1721,7 @@ class FolderModel:
     root_folders: "FoldersModel" = get_field_dc_mm(mm_field=FoldersSchema)
     root_type: t.Optional[str] = None
     predefined: t.Optional[bool] = False
-    path: t.Union[t.List[str], str] = dataclasses.field(default_factory=[])
+    path: t.Union[t.List[str], str] = dataclasses.field(default_factory=list)
     created_at: t.Optional[datetime.datetime] = get_field_dc_mm(
         mm_field=SchemaDatetime(), default=None
     )

@@ -9,6 +9,7 @@ from . import (
     base,
     base2,
     central_core,
+    count_operator,
     custom_fields,
     dashboard_spaces,
     data_scopes,
@@ -18,6 +19,7 @@ from . import (
     generic,
     instances,
     lifecycle,
+    nested_access,
     paging_state,
     password_reset,
     remote_support,
@@ -65,4 +67,6 @@ __all__ = (
     "spaces_export",
     "folders",
     "account",
+    "nested_access",
+    "count_operator",
 )

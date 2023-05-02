@@ -20,6 +20,7 @@ class FolderNames(BaseEnum):
     predefined: str = "Predefined Queries"
     untitled: str = "untitled folder"
     archive: str = "Archive"
+    global_scope: str = "Global"
 
 
 class FolderPaths(BaseEnum):
@@ -30,6 +31,7 @@ class FolderPaths(BaseEnum):
     asset_scope: str = base.Folder.join(FolderNames.asset_scope)
     predefined: str = base.Folder.join(FolderNames.public, FolderNames.predefined)
     archive: str = base.Folder.join(FolderNames.archive)
+    global_scope: str = base.Folder.join(FolderNames.global_scope)
 
 
 class RootTypes(BaseEnum):
@@ -39,23 +41,24 @@ class RootTypes(BaseEnum):
     private: str = "PRIVATE"
     asset_scope: str = "ASSET_SCOPE"
     archive: str = "ARCHIVE"
+    current_scope: str = "CURRENT_SCOPE"
 
 
 class Folder(base.Folder):
     """Mixins for folders for queries."""
 
     @classmethod
-    def get_enum_names(cls) -> BaseEnum:
+    def get_enum_names(cls) -> t.Type[BaseEnum]:
         """Pass."""
         return FolderNames
 
     @classmethod
-    def get_enum_paths(cls) -> BaseEnum:
+    def get_enum_paths(cls) -> t.Type[BaseEnum]:
         """Pass."""
         return FolderPaths
 
     @classmethod
-    def get_root_types(cls) -> BaseEnum:
+    def get_root_types(cls) -> t.Type[BaseEnum]:
         """Pass."""
         return RootTypes
 
@@ -112,11 +115,27 @@ class Folder(base.Folder):
         created: SavedQuery = apiobj.saved_query.add(**kwargs)
         return created
 
-    def get_default_folder(self, asset_scope: bool = False, **kwargs) -> "FolderModel":
+    def get_default_folder(
+        self, asset_scope: bool = False, private: bool = False, **kwargs
+    ) -> "FolderModel":
         """Determine folder to use."""
         if asset_scope is True:
             return self.path_asset_scope
-        return super().get_default_folder(**kwargs)
+        if private is True:
+            return self.path_private
+
+        return self.path_public
+
+    @property
+    def path_public(self) -> "FolderModel":
+        """Get the root of the public folders."""
+        # hack to use /Global instead of /Shared Queries when data_scopes feature is enabled
+        try:
+            if self.HTTP.CLIENT.data_scopes.is_feature_enabled:
+                return self.path_global_scope
+        except Exception:
+            pass
+        return super().path_public
 
     def _check_resolved_folder(
         self,
@@ -126,7 +145,7 @@ class Folder(base.Folder):
         **kwargs,
     ) -> "Folder":
         """Check if resolved folder meets object type specific restrictions."""
-        if asset_scope is True and self.path.root_type != str(RootTypes.asset_scope):
+        if asset_scope is True and self.root_type != str(RootTypes.asset_scope):
             msgs: t.List[str] = [
                 f"Supplied path is not an asset scope folder but asset_scope={asset_scope}",
                 f"Supplied path: {self!r}",
@@ -153,6 +172,11 @@ class Folder(base.Folder):
     def path_asset_scope(self) -> "FolderModel":
         """Get the root of the asset scope folders."""
         return self.find(folder=self.get_enum_paths().asset_scope)
+
+    @property
+    def path_global_scope(self) -> "FolderModel":
+        """Get the root of the global scope folders."""
+        return self.find(folder=self.get_enum_paths().global_scope)
 
 
 class CreateFolderRequestSchema(BaseSchemaJson, base.CreateFolderRequestSchema):
