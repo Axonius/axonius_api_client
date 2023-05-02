@@ -266,6 +266,7 @@ class SavedQuery(ChildMixins):
             fields_fuzzy (t.Optional[t.Union[t.List[str], str]], optional): fields via fuzzy
             fields_default (bool, optional): Include default fields
             fields_root (t.Optional[str], optional): fields via root
+            fields_regex_root_only (bool, optional): only match root fields in fields_regex
             remove (bool, optional): remove supplied fields from saved query fields
             append (bool, optional): append supplied fields in value to pre-existing saved query
                 fields
@@ -294,6 +295,7 @@ class SavedQuery(ChildMixins):
         sq.fields = value
         return self._update_handler(sq=sq, as_dataclass=as_dataclass)
 
+    # noinspection PyUnusedLocal
     def update_query(
         self,
         sq: MULTI,
@@ -392,6 +394,10 @@ class SavedQuery(ChildMixins):
             private (bool, optional): Set new sq as private
             asset_scope (bool, optional): Set new sq as asset scope query
             as_dataclass (bool, optional): Return saved query dataclass instead of dict
+            always_cached (bool, optional): Set new sq as always cached
+            folder (t.Optional[t.Union[str, FolderModel]], optional): Folder to create new sq in
+            create (bool, optional): Create folder if it doesn't exist
+            echo (bool, optional): Echo API response
 
         Returns:
             t.Union[dict, models.SavedQuery]: saved query dataclass or dict
@@ -421,6 +427,8 @@ class SavedQuery(ChildMixins):
         Args:
             sq (MULTI): str with name or uuid, or saved query dict or dataclass
             as_dataclass (bool, optional): Return saved query dataclass instead of dict
+            asset_scopes (bool, optional): Only search asset scope queries
+            cache (bool, optional): Get cached results
             **kwargs: passed to :meth:`get`
 
         Returns:
@@ -470,12 +478,17 @@ class SavedQuery(ChildMixins):
         Examples:
             Get a saved query by name
 
-            >>> sq = apiobj.saved_query.get_by_name(name="test")
-            >>> sq['tags']
+            >>> import axonius_api_client as axonapi
+            >>> connect_args: dict = axonapi.get_env_connect()
+            >>> client: axonapi.Connect = axonapi.Connect(**connect_args)
+            >>> apiobj: axonapi.api.assets.AssetMixin = client.devices
+            >>>       # or client.users or client.vulnerabilities
+            >>> data = apiobj.saved_query.get_by_name(name="test")
+            >>> data['tags']
             ['Unmanaged Devices']
-            >>> sq['description'][:80]
+            >>> data['description'][:80]
             'Devices that have been seen by at least one agent or at least one endpoint manag'
-            >>> sq['view']['fields']
+            >>> data['view']['fields']
             [
                 'adapters',
                 'specific_data.data.name',
@@ -487,7 +500,7 @@ class SavedQuery(ChildMixins):
                 'specific_data.data.os.type',
                 'labels'
             ]
-            >>> sq['view']['query']['filter'][:80]
+            >>> data['view']['query']['filter'][:80]
             '(specific_data.data.adapter_properties == "Agent") or (specific_data.data.adapte'
 
         Args:
@@ -517,7 +530,12 @@ class SavedQuery(ChildMixins):
         Examples:
             Get a saved query by uuid
 
-            >>> sq = apiobj.saved_query.get_by_uuid(value="5f76721ce4557d5cba93f59e")
+            >>> import axonius_api_client as axonapi
+            >>> connect_args: dict = axonapi.get_env_connect()
+            >>> client: axonapi.Connect = axonapi.Connect(**connect_args)
+            >>> apiobj: axonapi.api.assets.AssetMixin = client.devices
+            >>>       # or client.users or client.vulnerabilities
+            >>> data = apiobj.saved_query.get_by_uuid(value="5f76721ce4557d5cba93f59e")
 
         Args:
             value (str): uuid of saved query
@@ -544,15 +562,18 @@ class SavedQuery(ChildMixins):
 
         Examples:
             Get all saved queries with tagged with 'AD'
-
-            >>> sqs = apiobj.saved_query.get_by_tags('AD')
-            >>> len(sqs)
+            >>> import axonius_api_client as axonapi
+            >>> connect_args: dict = axonapi.get_env_connect()
+            >>> client: axonapi.Connect = axonapi.Connect(**connect_args)
+            >>> apiobj: axonapi.api.assets.AssetMixin = client.devices
+            >>>       # or client.users or client.vulnerabilities
+            >>> data = apiobj.saved_query.get_by_tags('AD')
+            >>> len(data)
             2
 
             Get all saved queries with tagged with 'AD' or 'AWS'
-
-            >>> sqs = apiobj.saved_query.get_by_tags(['AD', 'AWS'])
-            >>> len(sqs)
+            >>> data = apiobj.saved_query.get_by_tags(['AD', 'AWS'])
+            >>> len(data)
             5
 
         Args:
@@ -578,7 +599,7 @@ class SavedQuery(ChildMixins):
                 found.append(sq)
 
         if not found:
-            raise SavedQueryTagsNotFoundError(value=value, valid=valid)
+            raise SavedQueryTagsNotFoundError(value=value, valid=list(valid))
         return found if as_dataclass else [x.to_dict() for x in found]
 
     def get_tags_slow(self) -> t.List[str]:
@@ -587,8 +608,13 @@ class SavedQuery(ChildMixins):
         Examples:
             Get all known tags for all saved queries
 
-            >>> tags = apiobj.saved_query.get_tags()
-            >>> len(tags)
+            >>> import axonius_api_client as axonapi
+            >>> connect_args: dict = axonapi.get_env_connect()
+            >>> client: axonapi.Connect = axonapi.Connect(**connect_args)
+            >>> apiobj: axonapi.api.assets.AssetMixin = client.devices
+            >>>       # or client.users or client.vulnerabilities
+            >>> data = apiobj.saved_query.get_tags()
+            >>> len(data)
             19
 
         Returns:
@@ -630,6 +656,7 @@ class SavedQuery(ChildMixins):
         gen = self.get_query_history_generator(**kwargs)
         return gen if generator else list(gen)
 
+    # noinspection PyShadowingBuiltins
     def get_query_history_generator(
         self,
         run_by: t.Optional[PatternLikeListy] = None,
@@ -700,6 +727,7 @@ class SavedQuery(ChildMixins):
             values=tags,
             enum_callback=self.get_tags,
         )
+        # noinspection PyUnresolvedReferences
         request_obj.set_list(
             prop="modules",
             values=modules or self.parent.ASSET_TYPE,
@@ -743,8 +771,13 @@ class SavedQuery(ChildMixins):
         Examples:
             Get all saved queries
 
-            >>> sqs = apiobj.saved_query.get()
-            >>> len(sqs)
+            >>> import axonius_api_client as axonapi
+            >>> connect_args: dict = axonapi.get_env_connect()
+            >>> client: axonapi.Connect = axonapi.Connect(**connect_args)
+            >>> apiobj: axonapi.api.assets.AssetMixin = client.devices
+            >>>       # or client.users or client.vulnerabilities
+            >>> data = apiobj.saved_query.get()
+            >>> len(data)
             39
 
         Args:
@@ -776,12 +809,14 @@ class SavedQuery(ChildMixins):
         Examples:
             Get all saved queries
 
-            >>> sqs = apiobj.saved_query.get()
-            >>> len(sqs)
+            >>> import axonius_api_client as axonapi
+            >>> connect_args: dict = axonapi.get_env_connect()
+            >>> client: axonapi.Connect = axonapi.Connect(**connect_args)
+            >>> apiobj: axonapi.api.assets.AssetMixin = client.devices
+            >>>       # or client.users or client.vulnerabilities
+            >>> data = apiobj.saved_query.get()
+            >>> len(data)
             39
-
-        Args:
-            generator: return an iterator
 
         Yields:
             t.Generator[QueryHistory, None, None]: if generator = True, saved query
@@ -794,6 +829,7 @@ class SavedQuery(ChildMixins):
         """
         return list(self.get_generator(**kwargs))
 
+    # noinspection PyProtectedMember
     def get_cached_single(self, value: t.Union[str, dict, models.SavedQuery]) -> models.SavedQuery:
         """Pass."""
         name = models.SavedQuery._get_attr_value(value=value, attr="name")
@@ -805,6 +841,7 @@ class SavedQuery(ChildMixins):
 
         raise SavedQueryNotFoundError(sqs=items, details=f"name={name!r} and uuid={value!r}")
 
+    # noinspection PyUnresolvedReferences
     @property
     def query_by_asset_type(self) -> str:
         """Pass."""
@@ -839,11 +876,23 @@ class SavedQuery(ChildMixins):
         log_level: t.Union[int, str] = LOG_LEVEL_API,
         query: t.Optional[str] = None,
         request_obj: t.Optional[models.SavedQueryGet] = None,
-    ) -> t.Generator[models.QueryHistory, None, None]:
+    ) -> t.Generator[models.SavedQuery, None, None]:
         """Get Saved Queries using a generator.
 
         Args:
             as_dataclass (bool, optional): Return saved query dataclass instead of dict
+            folder_id (str, optional): folder id, will return all if "all", otherwise
+                will return only saved queries directly in or under the folder
+            include_usage (bool, optional): include usage data
+            get_view_data (bool, optional): include view data
+            page_sleep (int, optional): sleep in seconds between pages
+            page_size (int, optional): page size
+            row_start (int, optional): row start
+            row_stop (int, optional): row stop
+            add_query_by_asset_type (bool, optional): add query by asset type to query string
+            log_level (int, optional): log level
+            query (str, optional): query to filter saved queries
+            request_obj (t.Optional[models.SavedQueryGet], optional): request object
 
         Yields:
             t.Generator[QueryHistory, None, None]: saved query dataclass or dict
@@ -879,6 +928,11 @@ class SavedQuery(ChildMixins):
         Examples:
             Create a saved query using a :obj:`axonius_api_client.api.wizards.wizard.Wizard`
 
+            >>> import axonius_api_client as axonapi
+            >>> connect_args: dict = axonapi.get_env_connect()
+            >>> client: axonapi.Connect = axonapi.Connect(**connect_args)
+            >>> apiobj: axonapi.api.assets.AssetMixin = client.devices
+            >>>       # or client.users or client.vulnerabilities
             >>> parsed = apiobj.wizard_text.parse(content="simple hostname contains blah")
             >>> query = parsed["query"]
             >>> expressions = parsed["expressions"]
@@ -887,7 +941,7 @@ class SavedQuery(ChildMixins):
             ...     query=query,
             ...     expressions=expressions,
             ...     description="meep meep",
-            ...     tags=["nyuck1", "nyuck2", "nyuck3"],
+            ...     tags=["tag1", "tag2", "tag3"],
             ... )
 
         Notes:
@@ -923,9 +977,14 @@ class SavedQuery(ChildMixins):
         fields_fuzzy: t.Optional[t.Union[t.List[str], str]] = None,
         fields_default: bool = True,
         fields_root: t.Optional[str] = None,
+        fields_parsed: t.Optional[t.Union[dict, t.List[str]]] = None,
         sort_field: t.Optional[str] = None,
         sort_descending: bool = True,
-        column_filters: t.Optional[dict] = None,
+        sort_field_parsed: t.Optional[str] = None,
+        field_filters: t.Optional[t.List[dict]] = None,
+        excluded_adapters: t.Optional[t.List[dict]] = None,
+        asset_excluded_adapters: t.Optional[t.List[dict]] = None,
+        asset_filters: t.Optional[t.List[dict]] = None,
         gui_page_size: t.Optional[int] = None,
         private: bool = False,
         always_cached: bool = False,
@@ -968,6 +1027,8 @@ class SavedQuery(ChildMixins):
 
         Args:
             name: name of saved query
+            description: description of saved query
+
             query: query built by GUI or API query wizard
             wiz_entries (t.Optional[t.Union[str, t.List[dict]]]): API query wizard entries to parse
                 into query and GUI query wizard expressions
@@ -978,14 +1039,25 @@ class SavedQuery(ChildMixins):
             fields_regex: regex of fields to return for each asset
             fields_fuzzy: string to fuzzy match of fields to return for each asset
             fields_default: include the default fields defined in the parent asset object
+            fields_regex_root_only: only match fields in fields_regex that are not sub-fields of
+                other fields
             fields_root: include all fields of an adapter that are not complex sub-fields
+            fields_parsed: previously parsed fields
             sort_field: sort the returned assets on a given field
             sort_descending: reverse the sort of the returned assets
-            column_filters: NOT_SUPPORTED
+            field_filters: field filters to apply to this query
+            excluded_adapters: adapters to exclude from this query
+            asset_excluded_adapters: adapters to exclude from this query
+            asset_filters: asset filters to apply to this query
             gui_page_size: show N rows per page in GUI
             private: make this saved query private to current user
             always_cached: always keep this query cached
             asset_scope: make this query an asset scope query
+            folder: folder to create saved query in
+            create: create folder if it does not exist
+            echo: echo folder actions to stdout/stderr
+            sort_field_parsed: previously parsed sort field
+
 
         Returns:
             models.SavedQueryCreate: saved query dataclass to create
@@ -1000,7 +1072,7 @@ class SavedQuery(ChildMixins):
         root: FoldersModel = self.folders.get()
         fallback: t.Optional[FolderModel] = None
         if asset_scope:
-            self.auth.http.CLIENT.data_scopes.check_feature_enabled()
+            self.auth.CLIENT.data_scopes.check_feature_enabled()
             fallback: t.Optional[FolderModel] = root.path_asset_scope
 
         reason: str = f"Create Saved Query {name!r}"
@@ -1022,37 +1094,43 @@ class SavedQuery(ChildMixins):
 
         gui_page_size = check_gui_page_size(size=gui_page_size)
 
-        fields = self.parent.fields.validate(
-            fields=fields,
-            fields_manual=fields_manual,
-            fields_regex=fields_regex,
-            fields_default=fields_default,
-            fields_root=fields_root,
-            fields_fuzzy=fields_fuzzy,
-            fields_regex_root_only=fields_regex_root_only,
-            fields_error=True,
-        )
+        if not isinstance(fields_parsed, (list, tuple)):
+            fields_parsed = self.parent.fields.validate(
+                fields=fields,
+                fields_manual=fields_manual,
+                fields_regex=fields_regex,
+                fields_default=fields_default,
+                fields_root=fields_root,
+                fields_fuzzy=fields_fuzzy,
+                fields_regex_root_only=fields_regex_root_only,
+                fields_error=True,
+            )
+        if not isinstance(sort_field_parsed, str):
+            sort_field_parsed: str = self.parent.fields.get_field_name(value=sort_field) or ""
 
-        if sort_field:
-            sort_field = self.parent.fields.get_field_name(value=sort_field)
-
-        view = {}
-        view["query"] = {}
-        view["query"]["filter"] = query or ""
-        view["query"]["expressions"] = expressions or []
-        view["query"]["search"] = None  # TBD
-        view["query"]["meta"] = {}  # TBD
-        view["query"]["meta"]["enforcementFilter"] = None  # TBD
-        view["query"]["meta"]["uniqueAdapters"] = False  # TBD
-
-        if query_expr:
-            view["query"]["onlyExpressionsFilter"] = query_expr
-
-        view["sort"] = {}
-        view["sort"]["desc"] = sort_descending
-        view["sort"]["field"] = sort_field or ""
-        view["fields"] = fields
-        view["pageSize"] = gui_page_size
+        view_sort: dict = {
+            "desc": sort_descending,
+            "field": sort_field_parsed,
+        }
+        view_query: dict = {
+            "filter": query or "",
+            "expressions": expressions or [],
+            "search": None,
+            "meta": {},
+            "enforcementFilter": None,
+            "uniqueAdapters": False,
+            "onlyExpressionsFilter": query_expr or "",
+        }
+        view: dict = {
+            "fields": fields_parsed,
+            "pageSize": gui_page_size,
+            "sort": view_sort,
+            "query": view_query,
+            "colFilters": listify(field_filters),
+            "colExcludeAdapters": listify(excluded_adapters),
+            "assetConditionExpressions": listify(asset_filters),
+            "assetExcludeAdapters": listify(asset_excluded_adapters),
+        }
         return models.SavedQueryCreate.new_from_kwargs(
             name=name,
             description=description,
@@ -1072,6 +1150,11 @@ class SavedQuery(ChildMixins):
         Examples:
             Delete the saved query by name
 
+            >>> import axonius_api_client as axonapi
+            >>> connect_args: dict = axonapi.get_env_connect()
+            >>> client: axonapi.Connect = axonapi.Connect(**connect_args)
+            >>> apiobj: axonapi.api.assets.AssetMixin = client.devices
+            >>>       # or client.users or client.vulnerabilities
             >>> deleted = apiobj.saved_query.delete_by_name(name="test")
 
         Args:
@@ -1164,7 +1247,7 @@ class SavedQuery(ChildMixins):
             t.Union[dict, models.SavedQuery]: saved query dataclass or dict
         """
         ret = self._update_from_dataclass(obj=sq)
-        return self.get_by_multi(sq=ret, as_dataclass=True)
+        return self.get_by_multi(sq=ret, as_dataclass=as_dataclass)
 
     def _update_from_dataclass(
         self, obj: models.SavedQueryMixins, uuid: t.Optional[str] = None
@@ -1192,6 +1275,7 @@ class SavedQuery(ChildMixins):
         self.get_cached.cache_clear()
         return response
 
+    # noinspection PyUnresolvedReferences
     def _add_from_dataclass(self, obj: models.SavedQueryCreate) -> models.SavedQuery:
         """Direct API method to create a saved query.
 
@@ -1267,6 +1351,7 @@ class SavedQuery(ChildMixins):
         api_endpoint = ApiEndpoints.saved_queries.get_run_from
         return api_endpoint.perform_request(http=self.auth.http)
 
+    # noinspection PyUnresolvedReferences
     def _get_tags(self) -> ListValueSchema:
         """Get the valid tags."""
         api_endpoint = ApiEndpoints.saved_queries.get_tags

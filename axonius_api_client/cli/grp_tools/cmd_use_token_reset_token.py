@@ -2,7 +2,6 @@
 """Command line interface for Axonius API Client."""
 import click
 
-from ...api import Signup
 from ..context import CONTEXT_SETTINGS
 from ..options import URL, add_options
 
@@ -36,8 +35,8 @@ OPTIONS = [URL, TOKEN, PASSWORD]
 @click.pass_context
 def cmd(ctx, url, token, password):
     """Use a password reset token."""
-    client = Signup(url=url)
+    client = ctx.obj.create_client(url=url)
     with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
-        name = client.use_password_reset_token(token=token, password=password)
+        name = client.signup.use_password_reset_token(token=token, password=password)
 
     ctx.obj.echo_ok(f"Password successfully reset for user {name!r}")
