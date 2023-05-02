@@ -1,10 +1,7 @@
 # -*- coding: utf-8 -*-
 """Command line interface for Axonius API Client."""
-from axonius_api_client.api.json_api.tasks.task_filters import (
-    TaskFilters,
-    ATTR_MAP,
-)
-from axonius_api_client.tools import json_dump, path_write
+from ....api.json_api.tasks.task_filters import TaskFilters, ATTR_MAP
+from ....tools import json_dump, path_write
 from ...context import click
 
 

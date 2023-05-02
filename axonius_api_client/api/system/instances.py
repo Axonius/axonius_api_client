@@ -564,7 +564,7 @@ class Instances(ModelMixins):
             **kwargs: passed to :meth:`upload_script`
         """
         if is_url(value=path):
-            from axonius_api_client.projects.url_parser import UrlParser
+            from ...projects.url_parser import UrlParser
 
             parser = UrlParser(url=path)
             path_part = pathlib.Path(parser.parsed.path)

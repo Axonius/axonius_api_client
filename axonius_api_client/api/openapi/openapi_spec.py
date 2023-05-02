@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
 """API for working with the OpenAPI specification file."""
 
-
-from axonius_api_client.api.api_endpoints import ApiEndpoints
-from axonius_api_client.api.mixins import ModelMixins
+from ..api_endpoints import ApiEndpoints
+from ..mixins import ModelMixins
 
 
 class OpenAPISpec(ModelMixins):

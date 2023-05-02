@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """Command line interface for Axonius API Client."""
 from ..constants.wizards import Docs
-from ..constants.asset_helpers import ASSETS_HELPERS
 
 HELPSTR_AUTH = """
 Detailed help for authentication:
@@ -219,12 +218,21 @@ Tips:
     - node key now needs to be 'node_name'
 """
 
-HELPSTRS = {}
-HELPSTRS["auth"] = HELPSTR_AUTH
-HELPSTRS["assetexport"] = HELPSTR_EXPORT_ASSET
-HELPSTRS["selectfields"] = HELPSTR_SELECT_FIELDS
-HELPSTRS["query"] = HELPSTR_QUERY
-HELPSTRS["wizard"] = Docs.TEXT
-HELPSTRS["wizard_csv"] = Docs.CSV
-HELPSTRS["multiple_cnx_json"] = HELPSTR_MULTI_CNX_JSON
-HELPSTRS["asset_helper"] = ASSETS_HELPERS.to_str()
+
+def asset_helper(**kwargs) -> str:
+    """Return the help string for the asset helpers"""
+    from ..constants.asset_helpers import ASSETS_HELPERS
+
+    return ASSETS_HELPERS.to_str()
+
+
+HELPSTRS = {
+    "auth": HELPSTR_AUTH,
+    "assetexport": HELPSTR_EXPORT_ASSET,
+    "selectfields": HELPSTR_SELECT_FIELDS,
+    "query": HELPSTR_QUERY,
+    "wizard": Docs.TEXT,
+    "wizard_csv": Docs.CSV,
+    "multiple_cnx_json": HELPSTR_MULTI_CNX_JSON,
+    "asset_helper": asset_helper,
+}

@@ -4,8 +4,8 @@ import codecs
 import csv
 import io
 
-from axonius_api_client.api.json_api.tasks import Task
-from axonius_api_client.tools import json_dump, path_write
+from ....api.json_api.tasks import Task
+from ....tools import json_dump, path_write
 from ...context import click
 
 

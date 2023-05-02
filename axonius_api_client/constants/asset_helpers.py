@@ -3,7 +3,6 @@ import dataclasses
 import typing as t
 
 from ..data import BaseData
-from ..tools import json_dump, listify
 
 
 def to_json_api(value: t.Any, schema: str) -> dict:
@@ -36,6 +35,8 @@ class AssetsHelper(BaseData):
     @staticmethod
     def join_path(values: t.List[str]) -> str:
         """Join a list of strings with ' => '"""
+        from axonius_api_client.tools import listify
+
         return " => ".join(listify(values))
 
     @property
@@ -61,6 +62,8 @@ class AssetsHelper(BaseData):
 
     def to_str(self) -> str:
         """Return a string describing this helper."""
+        from axonius_api_client.tools import json_dump
+
         value: str = f"""
 ## {self.name}
 

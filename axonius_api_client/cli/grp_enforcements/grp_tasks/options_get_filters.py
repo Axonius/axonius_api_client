@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 """Command line interface for Axonius API Client."""
-from axonius_api_client.api.json_api.tasks.task_filters import (
-    build_include_options,
-)
+from ....api.json_api.tasks.task_filters import build_include_options
 from ...context import click
 from ...options import AUTH, OPT_EXPORT_FILE, OPT_EXPORT_OVERWRITE
 from .export_get_filters import EXPORT_FORMATS, DEFAULT_EXPORT_FORMAT

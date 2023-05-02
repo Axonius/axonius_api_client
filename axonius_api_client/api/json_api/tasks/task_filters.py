@@ -7,12 +7,12 @@ import marshmallow
 import marshmallow_jsonapi.fields as mm_fields
 import click
 
-from axonius_api_client.constants.api import RE_PREFIX
-from axonius_api_client.constants.ctypes import PatternLike, TypeMatch
-from axonius_api_client.constants.general import SPLITTER
-from axonius_api_client.exceptions import NotFoundError
-from axonius_api_client.parsers.matcher import Matcher
-from axonius_api_client.tools import coerce_int, listify
+from ....constants.api import RE_PREFIX
+from ....constants.ctypes import PatternLike, TypeMatch
+from ....constants.general import SPLITTER
+from ....exceptions import NotFoundError
+from ....parsers.matcher import Matcher
+from ....tools import coerce_int, listify
 from ..base2 import BaseModel, BaseSchema
 from ..custom_fields import field_from_mm
 
