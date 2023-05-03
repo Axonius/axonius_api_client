@@ -56,7 +56,9 @@ class Labels(ChildMixins):
         """
         return [x.value for x in self._get_expirable_names()]
 
-    def add(self, rows: Union[List[dict], str], labels: List[str]) -> int:
+    def add(
+        self, rows: Union[List[dict], str], labels: List[str], invert_selection: bool = False
+    ) -> int:
         """Add tags to assets.
 
         Examples:
@@ -77,21 +79,33 @@ class Labels(ChildMixins):
         Args:
             rows: list of internal_axon_id strs or list of assets returned from a get method
             labels: tags to add
+            invert_selection: True=add tags to assets that ARE NOT supplied in rows;
+                False=add tags to assets that ARE supplied in rows
+
         """
         ids = self._get_ids(rows=rows)
-        return self._add(labels=labels, ids=ids).value
+        return self._add(labels=labels, ids=ids, include=not invert_selection).value
 
-        # processed = 0
+    def _add(
+        self, labels: List[str], ids: List[str], include: bool = True
+    ) -> json_api.generic.IntValue:
+        """Direct API method to add labels/tags to assets.
 
-        # # only do 100 labels at a time, more seems to break API
-        # for group in grouper(ids, 100):
-        #     group = [x for x in group if x is not None]
-        #     response = self._add(labels=labels, ids=group)
-        #     processed += response
+        Args:
+            labels: tags to process
+            ids: internal_axon_id of assets to add tags to
+            include: True=add tags to assets that ARE supplied in rows;
+                False=add tags to assets that ARE NOT supplied in rows
+        """
+        api_endpoint = ApiEndpoints.assets.tags_add
 
-        # return processed
+        entities = {"ids": listify(ids), "include": include}
+        request_obj = api_endpoint.load_request(entities=entities, labels=listify(labels))
+        return api_endpoint.perform_request(
+            http=self.auth.http, request_obj=request_obj, asset_type=self.asset_type
+        )
 
-    def remove(self, rows: List[dict], labels: List[str]) -> int:
+    def remove(self, rows: List[dict], labels: List[str], invert_selection: bool = False) -> int:
         """Remove tags from assets.
 
         Examples:
@@ -110,9 +124,31 @@ class Labels(ChildMixins):
         Args:
             rows: list of internal_axon_id strs or list of assets returned from a get method
             labels: tags to remove
+            invert_selection: True=remove tags from assets that ARE NOT supplied in rows;
+                False=remove tags from assets that ARE supplied in rows
+
         """
-        ids = self._get_ids(rows=rows)
-        return self._remove(labels=labels, ids=ids).value
+        ids: List[str] = self._get_ids(rows=rows)
+        return self._remove(labels=labels, ids=ids, include=not invert_selection).value
+
+    def _remove(
+        self, labels: List[str], ids: List[str], include: bool = True
+    ) -> json_api.generic.IntValue:
+        """Direct API method to remove labels/tags from assets.
+
+        Args:
+            labels: tags to process
+            ids: internal_axon_id of assets to remove tags from
+            include: True=remove tags from assets that ARE supplied in rows;
+                False=remove tags from assets that ARE NOT supplied in rows
+        """
+        api_endpoint = ApiEndpoints.assets.tags_remove
+
+        entities = {"ids": listify(ids), "include": include}
+        request_obj = api_endpoint.load_request(entities=entities, labels=listify(labels))
+        return api_endpoint.perform_request(
+            http=self.auth.http, request_obj=request_obj, asset_type=self.asset_type
+        )
 
     @staticmethod
     def _get_ids(rows: Union[List[dict], str]) -> List[str]:
@@ -122,21 +158,6 @@ class Labels(ChildMixins):
             rows: list of internal_axon_id strs or list of assets returned from a get method
         """
         return [x["internal_axon_id"] if isinstance(x, dict) else x for x in listify(rows)]
-
-    def _add(self, labels: List[str], ids: List[str]) -> json_api.generic.IntValue:
-        """Direct API method to add labels/tags to assets.
-
-        Args:
-            labels: tags to process
-            ids: internal_axon_id of assets to add tags to
-        """
-        api_endpoint = ApiEndpoints.assets.tags_add
-
-        entities = {"ids": listify(ids), "include": True}
-        request_obj = api_endpoint.load_request(entities=entities, labels=listify(labels))
-        return api_endpoint.perform_request(
-            http=self.auth.http, request_obj=request_obj, asset_type=self.asset_type
-        )
 
     # noinspection PyUnresolvedReferences
     @property
@@ -153,18 +174,3 @@ class Labels(ChildMixins):
         """Direct API method to get all known expirable labels/tags."""
         api_endpoint = ApiEndpoints.assets.tags_get_expirable_names
         return api_endpoint.perform_request(http=self.auth.http, asset_type=self.asset_type)
-
-    def _remove(self, labels: List[str], ids: List[str]) -> json_api.generic.IntValue:
-        """Direct API method to remove labels/tags from assets.
-
-        Args:
-            labels: tags to process
-            ids: internal_axon_id of assets to remove tags from
-        """
-        api_endpoint = ApiEndpoints.assets.tags_remove
-
-        entities = {"ids": listify(ids), "include": True}
-        request_obj = api_endpoint.load_request(entities=entities, labels=listify(labels))
-        return api_endpoint.perform_request(
-            http=self.auth.http, request_obj=request_obj, asset_type=self.asset_type
-        )
