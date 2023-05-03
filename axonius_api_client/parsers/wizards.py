@@ -18,7 +18,7 @@ from ..tools import (
     parse_ip_network,
     strip_right,
 )
-from .tables import tablize, tablize_sqs
+from .tables import tablize
 
 CACHE_MAXSIZE: int = 4096
 CACHE_TTL: int = 30
@@ -411,7 +411,9 @@ class WizardParser:
 
     def enum_cb_sq(self, value: Any) -> str:
         """Pass."""
-        data = self.get_sqs()
+        from ..api.json_api.saved_queries import SavedQuery
+
+        data: List[SavedQuery] = self.get_sqs()
         value_check = lowish(value)
 
         for item in data:
@@ -419,7 +421,8 @@ class WizardParser:
                 return item.uuid
 
         err = f"No Saved Query found with name or UUID of {value!r} out of {len(data)} items"
-        err_table = tablize_sqs(data=data, err=err)
+        err_table = tablize(value=[x.to_tablize() for x in data], err=err)
+        # err_table = tablize_sqs(data=data, err=err)
         raise WizardError(err_table)
 
     def enum_cb_cnx_label(self, value: Any) -> str:

@@ -259,7 +259,9 @@ class Context:
         """Pass."""
         return self._connect_args.get("wraperror", True)
 
-    def create_client(self, url, key, secret, **kwargs):
+    def create_client(
+        self, url: str, key: t.Optional[str] = None, secret: t.Optional[str] = None, **kwargs
+    ):
         """Pass."""
         connect_args = {}
         connect_args.update(self._connect_args)

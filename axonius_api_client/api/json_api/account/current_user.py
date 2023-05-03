@@ -11,32 +11,40 @@ from ..custom_fields import SchemaBool, SchemaDatetime, field_from_mm
 
 
 class CurrentUserSchema(BaseSchemaJson):
-    """Schema for receiving current user response."""
+    """Schema for receiving current user response.
 
-    id = mm_fields.Str()
-    uuid = mm_fields.Str()
-    role_id = mm_fields.Str()
-    role_name = mm_fields.Str()
-    user_name = mm_fields.Str()
-    password = mm_fields.Str()
-    source = mm_fields.Str()
-    first_name = mm_fields.Str()
-    last_name = mm_fields.Str()
-    email = mm_fields.Str()
-    department = mm_fields.Str()
-    title = mm_fields.Str()
-    pic_name = mm_fields.Str()
-    predefined = SchemaBool()
-    is_axonius_role = SchemaBool()
-    interests = mm_fields.Dict(load_default=dict, dump_default=dict)
-    permissions = mm_fields.Dict(load_default=dict, dump_default=dict)
-    data_scope = mm_fields.Dict(dump_default=dict, load_default=dict)
+    This schema does not match the REST API definition because it does not
+    follow its own rules. email is defined as allow_none=False in REST API,
+    however it can come back as None from REST API.
+
+    Since it happened once, we are setting allow_none=True on all fields for
+    safety since we get this object anytime str(Connect()) is called.
+    """
+
+    id = mm_fields.Str(allow_none=True, load_default=None, dump_default=None)
+    uuid = mm_fields.Str(allow_none=True, load_default=None, dump_default=None)
+    role_id = mm_fields.Str(allow_none=True, load_default=None, dump_default=None)
+    role_name = mm_fields.Str(allow_none=True, load_default=None, dump_default=None)
+    user_name = mm_fields.Str(allow_none=True, load_default=None, dump_default=None)
+    password = mm_fields.Str(allow_none=True, load_default=None, dump_default=None)
+    source = mm_fields.Str(allow_none=True, load_default=None, dump_default=None)
+    first_name = mm_fields.Str(allow_none=True, load_default=None, dump_default=None)
+    last_name = mm_fields.Str(allow_none=True, load_default=None, dump_default=None)
+    email = mm_fields.Str(allow_none=True, load_default=None, dump_default=None)
+    department = mm_fields.Str(allow_none=True, load_default=None, dump_default=None)
+    title = mm_fields.Str(allow_none=True, load_default=None, dump_default=None)
+    pic_name = mm_fields.Str(allow_none=True, load_default=None, dump_default=None)
+    predefined = SchemaBool(allow_none=True, load_default=False, dump_default=False)
+    is_axonius_role = SchemaBool(allow_none=True, load_default=False, dump_default=False)
+    interests = mm_fields.Dict(allow_none=True, load_default=dict, dump_default=dict)
+    permissions = mm_fields.Dict(allow_none=True, load_default=dict, dump_default=dict)
+    data_scope = mm_fields.Dict(allow_none=True, dump_default=dict, load_default=dict)
     allowed_scopes_impersonation = mm_fields.List(
-        mm_fields.Str, load_default=list, dump_default=list
+        mm_fields.Str, allow_none=True, load_default=list, dump_default=list
     )
-    timeout = mm_fields.Integer(load_default=None, dump_default=None, alllow_none=True)
-    last_updated = SchemaDatetime(load_default=None, dump_default=None, allow_none=True)
-    last_login = SchemaDatetime(load_default=None, dump_default=None, allow_none=True)
+    timeout = mm_fields.Integer(allow_none=True, load_default=None, dump_default=None)
+    last_updated = SchemaDatetime(allow_none=True, load_default=None, dump_default=None)
+    last_login = SchemaDatetime(allow_none=True, load_default=None, dump_default=None)
 
     class Meta:
         """JSONAPI config."""
@@ -56,24 +64,24 @@ SCHEMA = CurrentUserSchema()
 class CurrentUser(BaseModel):
     """Model for receiving current user response."""
 
-    id: str = field_from_mm(SCHEMA, "id")
-    uuid: str = field_from_mm(SCHEMA, "uuid")
-    role_id: str = field_from_mm(SCHEMA, "role_id")
-    role_name: str = field_from_mm(SCHEMA, "role_name")
-    user_name: str = field_from_mm(SCHEMA, "user_name")
-    password: str = field_from_mm(SCHEMA, "password")
-    source: str = field_from_mm(SCHEMA, "source")
-    first_name: str = field_from_mm(SCHEMA, "first_name")
-    last_name: str = field_from_mm(SCHEMA, "last_name")
-    email: str = field_from_mm(SCHEMA, "email")
-    department: str = field_from_mm(SCHEMA, "department")
-    title: str = field_from_mm(SCHEMA, "title")
-    pic_name: str = field_from_mm(SCHEMA, "pic_name")
-    predefined: bool = field_from_mm(SCHEMA, "predefined")
-    is_axonius_role: bool = field_from_mm(SCHEMA, "is_axonius_role")
-    permissions: dict = field_from_mm(SCHEMA, "permissions", repr=False)
-    interests: dict = field_from_mm(SCHEMA, "interests")
-    data_scope: dict = field_from_mm(SCHEMA, "data_scope")
+    id: t.Optional[str] = field_from_mm(SCHEMA, "id")
+    uuid: t.Optional[str] = field_from_mm(SCHEMA, "uuid")
+    role_id: t.Optional[str] = field_from_mm(SCHEMA, "role_id")
+    role_name: t.Optional[str] = field_from_mm(SCHEMA, "role_name")
+    user_name: t.Optional[str] = field_from_mm(SCHEMA, "user_name")
+    password: t.Optional[str] = field_from_mm(SCHEMA, "password")
+    source: t.Optional[str] = field_from_mm(SCHEMA, "source")
+    first_name: t.Optional[str] = field_from_mm(SCHEMA, "first_name")
+    last_name: t.Optional[str] = field_from_mm(SCHEMA, "last_name")
+    email: t.Optional[str] = field_from_mm(SCHEMA, "email")
+    department: t.Optional[str] = field_from_mm(SCHEMA, "department")
+    title: t.Optional[str] = field_from_mm(SCHEMA, "title")
+    pic_name: t.Optional[str] = field_from_mm(SCHEMA, "pic_name")
+    predefined: t.Optional[bool] = field_from_mm(SCHEMA, "predefined")
+    is_axonius_role: t.Optional[bool] = field_from_mm(SCHEMA, "is_axonius_role")
+    permissions: t.Optional[dict] = field_from_mm(SCHEMA, "permissions", repr=False)
+    interests: t.Optional[dict] = field_from_mm(SCHEMA, "interests")
+    data_scope: t.Optional[dict] = field_from_mm(SCHEMA, "data_scope")
     allowed_scopes_impersonation: t.List[str] = field_from_mm(
         SCHEMA, "allowed_scopes_impersonation"
     )
@@ -91,14 +99,20 @@ class CurrentUser(BaseModel):
         return CurrentUserSchema
 
     @property
-    def last_login_seconds_ago(self) -> float:
+    def last_login_seconds_ago(self) -> t.Optional[float]:
         """Get the number of seconds since last login."""
-        return round(self.last_login_delta.total_seconds(), 2)
+        delta = self.last_login_delta
+        if isinstance(delta, datetime.timedelta):
+            return round(delta.total_seconds(), 2)
 
     @property
-    def last_login_delta(self) -> datetime.timedelta:
+    def last_login_delta(self) -> t.Optional[datetime.timedelta]:
         """Get the timedelta since last login."""
-        return datetime.datetime.now(datetime.timezone.utc) - self.last_login
+        from ....tools import dt_parse
+
+        last_login = dt_parse(self.last_login, allow_none=True)
+        if last_login:
+            return datetime.datetime.now(datetime.timezone.utc) - last_login
 
     @property
     def str_connect(self) -> str:

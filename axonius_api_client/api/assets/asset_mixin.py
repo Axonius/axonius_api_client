@@ -1153,6 +1153,7 @@ class AssetMixin(ModelMixins):
             fields_default: include the default fields in :attr:`fields_default`
             fields_root: include all fields of an adapter that are not complex sub-fields
             fields_error: throw validation errors on supplied fields
+            fields_parsed: previously parsed fields
             max_rows: only return N rows
             max_pages: only return N pages
             row_start: start at row N
@@ -1172,7 +1173,6 @@ class AssetMixin(ModelMixins):
             wiz_entries: wizard expressions to create query from
             file_date: string to use in filename templates for {DATE}
             wiz_parsed: parsed output from a query wizard
-            fields_parsed: previously parsed fields
             sort_field_parsed: previously parsed sort field
             history_date_parsed: previously parsed history date
             initial_count: previously fetched initial count
@@ -1822,6 +1822,9 @@ class AssetMixin(ModelMixins):
 
         self.labels: Labels = Labels(parent=self)
         """Work with labels (tags)."""
+
+        self.tags = self.labels
+        """Alias for :attr:`labels`."""
 
         self.saved_query: SavedQuery = SavedQuery(parent=self)
         """Work with saved queries."""

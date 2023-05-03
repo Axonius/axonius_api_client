@@ -5,7 +5,6 @@ import time
 
 import click
 
-from ...api import Signup
 from ...tools import dt_now
 from ..context import CONTEXT_SETTINGS
 from ..options import URL, add_options
@@ -52,26 +51,27 @@ def cmd(ctx, url, wait, sleep, max_wait):
     def get_status():
         """Get the system status safely."""
         try:
-            data = entry.system_status
-            message = data.msg
-            status_code = data.status_code
-            is_ready = data.is_ready
+            data = client.signup.system_status
+            _message = data.msg
+            _status_code = data.status_code
+            _is_ready = data.is_ready
         except Exception as exc:
-            message = f"HTTP Error: {exc}"
-            status_code = 1000
-            is_ready = False
+            _message = f"HTTP Error: {exc}"
+            _status_code = 1000
+            _is_ready = False
 
         msg = [
-            f"URL: {entry.http.url}",
+            f"URL: {client.signup.http.url}",
             f"Date: {dt_now()}",
-            f"Message: {message}",
-            f"Status Code: {status_code}",
-            f"Ready: {is_ready}",
+            f"Message: {_message}",
+            f"Status Code: {_status_code}",
+            f"Ready: {_is_ready}",
         ]
         click.secho("\n".join(msg))
-        return is_ready, status_code
+        return _is_ready, _status_code
 
-    entry = Signup(url=url)
+    client = ctx.obj.create_client(url=url)
+
     with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
         is_ready, status_code = get_status()
 

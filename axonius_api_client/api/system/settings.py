@@ -3,7 +3,7 @@
 import pathlib
 from typing import Any, List, Optional, Tuple, Union
 
-from axonius_api_client.projects import cert_human
+from ...projects import cert_human
 from ...constants.api import USE_CA_PATH
 from ...exceptions import ApiError, NotFoundError
 from ...parsers.config import config_build, config_unchanged, config_unknown, parse_settings

@@ -7,7 +7,6 @@ from .. import DEFAULT_PATH
 from ..constants.api import MAX_PAGE_SIZE, TABLE_FORMAT
 from ..tools import coerce_int
 from . import context
-from .helps import HELPSTRS
 
 
 def build_filter_opt(value_type: str):
@@ -46,7 +45,11 @@ def int_callback(ctx, param, value):
 def help_callback(ctx, param, value):
     """Pass."""
     if value:
+        from .helps import HELPSTRS
+
         helpstr = HELPSTRS[value]
+        if callable(helpstr):
+            helpstr = helpstr(ctx=ctx, param=param, value=value)
         click.secho(helpstr, err=True, fg="blue")
         ctx.exit(0)
 

@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """Command line interface for Axonius API Client."""
-from axonius_api_client.constants.fields import AXID
-
+from ...constants.fields import AXID
 from ..context import CONTEXT_SETTINGS, click
 from ..options import AUTH, add_options
 
