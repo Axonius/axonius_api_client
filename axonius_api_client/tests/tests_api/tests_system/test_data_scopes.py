@@ -69,6 +69,8 @@ class DataScopeFixtures:
         self.cleanup_data_scopes(apiobj=apiobj, value=row.uuid)
 
     def create_asset_scope(self, apiasset, name):
+        if not apiasset.data_scopes.is_feature_enabled:
+            pytest.skip("Data Scopes Feature Flag not enabled")
         self.cleanup_asset_scopes(apiasset=apiasset, value=name)
 
         row = apiasset.saved_query.add(
