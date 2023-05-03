@@ -116,6 +116,17 @@ class AdapterFetchHistorySchema(BaseSchemaJson):
         load_default=None,
         dump_default=None,
     )
+    has_configuration_changed = SchemaBool(
+        description="Shows if the configuration changed since last fetch",
+        load_default=False,
+        dump_default=False,
+    )
+    last_fetch_time = SchemaDatetime(
+        description="The last fetch time",
+        allow_none=True,
+        load_default=None,
+        dump_default=None,
+    )
 
     class Meta:
         """JSONAPI config."""
@@ -159,6 +170,8 @@ class AdapterFetchHistory(BaseModel):
     ignored_devices_count: t.Optional[int] = field_from_mm(SCHEMA, "ignored_devices_count")
     ignored_users_count: t.Optional[int] = field_from_mm(SCHEMA, "ignored_users_count")
     realtime: bool = field_from_mm(SCHEMA, "realtime")
+    has_configuration_changed: bool = field_from_mm(SCHEMA, "has_configuration_changed")
+    last_fetch_time: t.Optional[datetime.datetime] = field_from_mm(SCHEMA, "last_fetch_time")
 
     document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
@@ -211,7 +224,9 @@ class AdapterFetchHistory(BaseModel):
         def getval(prop: str, width: t.Optional[int] = 30) -> str:
             """Pass."""
             value = getattr(self, prop, None)
-            if isinstance(width, int) and len(str(value)) > width:
+            if not isinstance(value, str):
+                value = "" if value is None else str(value)
+            if isinstance(width, int) and len(value) > width:
                 value = textwrap.fill(value, width=width)
             prop = prop.replace("_", " ").title()
             return f"{prop}: {value}"

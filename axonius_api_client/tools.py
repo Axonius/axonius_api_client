@@ -33,8 +33,8 @@ from .constants.ctypes import (
     PatternLike,
     PatternLikeListy,
     TypeDate,
-    TypeFloat,
     TypeDelta,
+    TypeFloat,
 )
 from .constants.general import (
     DAYS_MAP,
@@ -46,6 +46,7 @@ from .constants.general import (
     FILE_DATE_FMT,
     HUMAN_SIZES,
     NO,
+    NO_STR,
     OK_ARGS,
     OK_TMPL,
     SECHO_ARGS,
@@ -57,7 +58,6 @@ from .constants.general import (
     WARN_TMPL,
     YES,
     YES_STR,
-    NO_STR,
 )
 from .constants.logs import MAX_BODY_LEN
 from .exceptions import FormatError, ToolsError
@@ -1546,18 +1546,19 @@ def bom_strip(content: t.Union[str, bytes], strip=True, bom: bytes = codecs.BOM_
         content: string to remove BOM marker from if found
         strip: remove whitespace before & after removing BOM marker
     """
-    content = content.strip() if strip else content
+    if isinstance(content, (str, bytes)):
+        content = content.strip() if strip else content
 
-    if isinstance(bom, bytes) and isinstance(content, str):
-        bom = bom.decode()
-    elif isinstance(bom, str) and isinstance(content, bytes):
-        bom = bom.encode()
+        if isinstance(bom, bytes) and isinstance(content, str):
+            bom = bom.decode()
+        elif isinstance(bom, str) and isinstance(content, bytes):
+            bom = bom.encode()
 
-    bom_len = len(bom)
-    if content.startswith(bom):
-        content = content[bom_len:]
+        bom_len = len(bom)
+        if content.startswith(bom):
+            content = content[bom_len:]
 
-    content = content.strip() if strip else content
+        content = content.strip() if strip else content
     return content
 
 
@@ -2446,7 +2447,10 @@ def get_diff_seconds(
     seconds: t.Optional[float] = None
     if start is not None:
         start: datetime.datetime = dt_parse(obj=start)
-        stop: datetime.datetime = dt_now if stop is None else dt_parse(stop)
+        if stop is None:
+            stop = dt_now()
+        else:
+            stop = dt_parse(stop)
         delta: datetime.timedelta = stop - start
         seconds: float = delta.total_seconds()
         if isinstance(places, int):

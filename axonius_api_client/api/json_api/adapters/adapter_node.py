@@ -257,6 +257,13 @@ class AdapterNodeCnx(BaseModel):
     did_notify_error: t.Optional[bool] = None
     note: t.Optional[t.Any] = None
 
+    # 2023/04/02
+    last_successful_fetch: t.Optional[datetime.datetime] = get_field_dc_mm(
+        mm_field=SchemaDatetime(allow_none=True), default=None
+    )
+    latest_configuration_change: t.Optional[datetime.datetime] = get_field_dc_mm(
+        mm_field=SchemaDatetime(allow_none=True), default=None
+    )
     document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
     AdapterNode: t.ClassVar[AdapterNode] = None

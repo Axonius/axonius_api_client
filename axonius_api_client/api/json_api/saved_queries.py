@@ -711,7 +711,8 @@ class SavedQuery(BaseModel, SavedQueryMixins):
     def to_tablize(self) -> dict:
         """Get tablize-able repr of this obj."""
         col_info = [
-            f"{k.upper()}={textwrap.fill(v or '', width=30)}" for k, v in self.col_info.items()
+            f"{k.upper()}={textwrap.fill('' if v is None else str(v), width=30)}"
+            for k, v in self.col_info.items()
         ]
         col_details = [f"{k}: {v}" for k, v in self.col_details.items()]
         ret = {}
@@ -1066,7 +1067,7 @@ class QueryHistory(BaseModel):
         def getval(prop):
             value = getattr(self, prop, None)
             if isinstance(value, list):
-                value = "\n".join(value)
+                value = "\n".join([str(x) for x in value])
             return value
 
         return {k: getval(k) for k in self._props_csv()}
@@ -1076,7 +1077,9 @@ class QueryHistory(BaseModel):
 
         def getval(prop, width=30):
             value = getattr(self, prop, None)
-            if isinstance(width, int) and len(str(value)) > width:
+            if not isinstance(value, str):
+                value = "" if value is None else str(value)
+            if isinstance(width, int) and len(value) > width:
                 value = textwrap.fill(value, width=width)
             prop = prop.replace("_", " ").title()
             return f"{prop}: {value}"

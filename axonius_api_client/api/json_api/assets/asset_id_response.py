@@ -52,7 +52,7 @@ class AssetByIdSchema(BaseSchemaJson):
         description="Data for this asset",
     )
     labels = mm_fields.List(
-        mm_fields.Dict(),
+        mm_fields.Str(),
         load_default=list,
         dump_default=list,
         allow_none=True,
@@ -110,7 +110,7 @@ class AssetById(BaseModel):
     basic: dict = field_from_mm(SCHEMA, "basic")
     aggregated_specific_data: dict = field_from_mm(SCHEMA, "aggregated_specific_data")
     data: t.List[dict] = field_from_mm(SCHEMA, "data")
-    labels: t.List[dict] = field_from_mm(SCHEMA, "labels")
+    labels: t.List[str] = field_from_mm(SCHEMA, "labels")
     expirable_tags: t.List[dict] = field_from_mm(SCHEMA, "expirable_tags")
     labels_metadata: t.List[dict] = field_from_mm(SCHEMA, "labels_metadata")
     compliance_meta: dict = field_from_mm(SCHEMA, "compliance_meta")

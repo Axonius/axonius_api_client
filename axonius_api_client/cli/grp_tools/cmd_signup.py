@@ -2,7 +2,6 @@
 """Command line interface for Axonius API Client."""
 import click
 
-from ...api import Signup
 from ..options import add_options
 from .grp_common import EXPORT_FORMATS
 from .grp_options import OPT_ENV, OPT_EXPORT
@@ -60,12 +59,11 @@ OPTIONS = [URL, PASSWORD, COMPANY, CONTACT, OPT_EXPORT, OPT_ENV]
 @click.pass_context
 def cmd(ctx, url, password, company_name, contact_email, export_format, env):
     """Perform the initial signup to an instance."""
-    entry = Signup(url=url)
+    client = ctx.obj.create_client(url=url)
     with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
-        data = entry.signup(
+        data = client.signup.signup(
             password=password, company_name=company_name, contact_email=contact_email
         )
-
-    click.secho(EXPORT_FORMATS[export_format](data=data, signup=True, env=env, url=entry.http.url))
+    click.secho(EXPORT_FORMATS[export_format](data=data, signup=True, env=env, url=client.http.url))
     ctx.obj.echo_ok("Signup completed successfully!")
     ctx.exit(0)

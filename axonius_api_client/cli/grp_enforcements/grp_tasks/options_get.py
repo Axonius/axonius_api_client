@@ -2,10 +2,10 @@
 """Common options for the "enforcements tasks" group of commands."""
 import click
 
-from axonius_api_client.api.json_api.count_operator import OperatorTypes
-from axonius_api_client.api.json_api.paging_state import PagingState
-from axonius_api_client.constants.api import RE_PREFIX
-from axonius_api_client.constants.general import SPLITTER
+from ....api.json_api.count_operator import OperatorTypes
+from ....api.json_api.paging_state import PagingState
+from ....constants.api import RE_PREFIX
+from ....constants.general import SPLITTER
 from .export_get import DEFAULT_EXPORT_FORMAT, EXPORT_FORMATS
 
 from ...options import AUTH, OPT_EXPORT_FILE, OPT_EXPORT_OVERWRITE

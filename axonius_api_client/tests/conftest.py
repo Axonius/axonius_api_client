@@ -15,7 +15,6 @@ from .utils import (
     get_arg_key,
     get_arg_secret,
     get_arg_url,
-    get_http,
     get_connect,
     get_arg_cf_token,
     get_arg_cf_error,
@@ -255,13 +254,8 @@ def api_settings_ip(api_client):
 @pytest.fixture(scope="session")
 def api_signup(request):
     """Test utility."""
-    from axonius_api_client.api import Signup
-    from axonius_api_client.auth import AuthNull
-
-    http = get_http(request)
-    auth = AuthNull(http=http)
-    obj = Signup(auth=auth)
-    return obj
+    client = get_connect(request=request)
+    return client.signup
 
 
 @pytest.fixture(scope="session")

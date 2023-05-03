@@ -5,7 +5,6 @@ import typing as t
 
 from marshmallow_jsonapi import fields as mm_fields
 
-from ....exceptions import AuthError
 from ..base import BaseModel, BaseSchemaJson
 from ..custom_fields import SchemaBool, field_from_mm
 
@@ -68,33 +67,7 @@ class LoginRequest(BaseModel):
 
     SCHEMA: t.ClassVar[BaseSchemaJson] = SCHEMA
 
-    def __post_init__(self):
-        """Post init."""
-        self.check_credentials()
-
     @staticmethod
     def get_schema_cls() -> t.Any:
         """Pass."""
         return LoginRequestSchema
-
-    def _check_credential(self, attr: str) -> str:
-        """Check that a credential is a non-empty string."""
-        value: t.Any = getattr(self, attr)
-
-        if isinstance(value, str) and value.strip():
-            value = value.strip()
-            setattr(self, attr, value)
-            return value
-
-        field: mm_fields.Field = SCHEMA.declared_fields[attr]
-        description: str = field.metadata.get("description", f"{attr}")
-        msgs: t.List[str] = [
-            f"Value provided for {description} is not a non-empty string",
-            f"Provided type {type(value)}, value: {value!r}",
-        ]
-        raise AuthError(msgs)
-
-    def check_credentials(self):
-        """Check that username and password are not empty."""
-        self._check_credential(attr="user_name")
-        self._check_credential(attr="password")

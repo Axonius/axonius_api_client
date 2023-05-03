@@ -492,6 +492,16 @@ GET_EXPORT = [
         metavar="TAG",
     ),
     click.option(
+        "--tag-invert/--no-tag-invert",
+        "tags_add_invert_selection",
+        default=asset_callbacks.Base.args_map()["tags_add_invert_selection"],
+        help="Only add tags to assets that do NOT match the query provided",
+        show_envvar=True,
+        show_default=True,
+        is_flag=True,
+        hidden=False,
+    ),
+    click.option(
         "--untag",
         "tags_remove",
         help="Tags to remove from each asset (multiples)",
@@ -501,6 +511,16 @@ GET_EXPORT = [
         show_default=True,
         hidden=False,
         metavar="TAG",
+    ),
+    click.option(
+        "--untag-invert/--no-untag-invert",
+        "tags_remove_invert_selection",
+        default=asset_callbacks.Base.args_map()["tags_remove_invert_selection"],
+        help="Only remove tags from assets that do NOT match the query provided",
+        show_envvar=True,
+        show_default=True,
+        is_flag=True,
+        hidden=False,
     ),
     click.option(
         "--include-details/--no-include-details",
