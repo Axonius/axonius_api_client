@@ -183,7 +183,9 @@ class Base:
             "field_null_value": None,
             "field_null_value_complex": [],
             "tags_add": [],
+            "tags_add_invert_selection": False,
             "tags_remove": [],
+            "tags_remove_invert_selection": False,
             "report_adapters_missing": False,
             "report_software_whitelist": [],
             "page_progress": 10000,
@@ -804,17 +806,23 @@ class Base:
         """Add tags to assets."""
         tags_add = listify(self.get_arg_value("tags_add"))
         rows_add = self.TAG_ROWS_ADD
+        invert_selection = self.get_arg_value("tags_add_invert_selection")
         if tags_add and rows_add:
             self.echo(msg=f"Adding tags {tags_add} to {len(rows_add)} assets")
-            self.APIOBJ.labels.add(rows=rows_add, labels=tags_add)
+            self.APIOBJ.labels.add(
+                rows=rows_add, labels=tags_add, invert_selection=invert_selection
+            )
 
     def do_tag_remove(self):
         """Remove tags from assets."""
         tags_remove = listify(self.get_arg_value("tags_remove"))
         rows_remove = self.TAG_ROWS_REMOVE
+        invert_selection = self.get_arg_value("tags_remove_invert_selection")
         if tags_remove and rows_remove:
             self.echo(msg=f"Removing tags {tags_remove} from {len(rows_remove)} assets")
-            self.APIOBJ.labels.remove(rows=rows_remove, labels=tags_remove)
+            self.APIOBJ.labels.remove(
+                rows=rows_remove, labels=tags_remove, invert_selection=invert_selection
+            )
 
     def process_tags_to_add(self, rows: Union[List[dict], dict]) -> List[dict]:
         """Add assets to tracker for adding tags.
@@ -1420,7 +1428,9 @@ ARG_DESCRIPTIONS: dict = {
     "field_null_value": "Null value to use for missing simple fields",
     "field_null_value_complex": "Null value to use for missing complex fields",
     "tags_add": "Tags to add to assets",
+    "tags_add_invert_selection": "Invert selection for tags to add",
     "tags_remove": "Tags to remove from assets",
+    "tags_remove_invert_selection": "Invert selection for tags to remove",
     "report_adapters_missing": "Add Missing Adapters calculation",
     "report_software_whitelist": "Missing Software to calculate",
     "page_progress": "Echo page progress every N assets",
