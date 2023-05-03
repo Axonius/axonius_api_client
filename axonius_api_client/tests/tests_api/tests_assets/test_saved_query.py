@@ -1095,7 +1095,18 @@ def validate_sq(asset):
     folder_id = query.pop("folder_id", None)
     assert folder_id is None or isinstance(folder_id, str)
 
+    # 2023/04/02: {'enforcementFilter': None, 'uniqueAdapters': False}
+    enforcement_filter = query.pop("enforcementFilter", None)
+    assert isinstance(enforcement_filter, str) or enforcement_filter is None
+
+    unique_adapters = query.pop("uniqueAdapters", None)
+    assert isinstance(unique_adapters, bool) or unique_adapters is None
+
     assert not query, list(query)
+
+    # 2023/04/02: {'colExcludeAdapters': []}
+    col_exclude_adapters = view.pop("colExcludeAdapters", [])
+    assert isinstance(col_exclude_adapters, list) or col_exclude_adapters is None
     assert not view, list(view)
 
     document_meta = asset.pop("document_meta", {})

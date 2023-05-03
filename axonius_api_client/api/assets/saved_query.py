@@ -992,6 +992,8 @@ class SavedQuery(ChildMixins):
         folder: t.Optional[t.Union[str, FolderModel]] = None,
         create: bool = FolderDefaults.create_action,
         echo: bool = FolderDefaults.echo_action,
+        enforcement_filter: t.Optional[str] = None,
+        unique_adapters: bool = False,
         **kwargs,
     ) -> models.SavedQueryCreate:
         """Create a saved query.
@@ -1057,11 +1059,11 @@ class SavedQuery(ChildMixins):
             create: create folder if it does not exist
             echo: echo folder actions to stdout/stderr
             sort_field_parsed: previously parsed sort field
-
+            enforcement_filter: unknown
+            unique_adapters: unknown
 
         Returns:
             models.SavedQueryCreate: saved query dataclass to create
-
         """
         asset_scope = coerce_bool(asset_scope)
         private = coerce_bool(private)
@@ -1106,20 +1108,24 @@ class SavedQuery(ChildMixins):
                 fields_error=True,
             )
         if not isinstance(sort_field_parsed, str):
-            sort_field_parsed: str = self.parent.fields.get_field_name(value=sort_field) or ""
+            sort_field_parsed: str = (
+                self.parent.fields.get_field_name(value=sort_field) if sort_field else ""
+            )
 
-        view_sort: dict = {
-            "desc": sort_descending,
-            "field": sort_field_parsed,
+        view_query_meta: dict = {
+            "enforcementFilter": enforcement_filter or "",
+            "uniqueAdapters": unique_adapters,
         }
         view_query: dict = {
             "filter": query or "",
             "expressions": expressions or [],
             "search": None,
-            "meta": {},
-            "enforcementFilter": None,
-            "uniqueAdapters": False,
+            "meta": view_query_meta,
             "onlyExpressionsFilter": query_expr or "",
+        }
+        view_sort: dict = {
+            "desc": sort_descending,
+            "field": sort_field_parsed or "",
         }
         view: dict = {
             "fields": fields_parsed,
