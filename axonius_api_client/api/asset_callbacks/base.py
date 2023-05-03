@@ -38,21 +38,18 @@ from ...tools import (
 )
 
 
+# noinspection SpellCheckingInspection
 def crjoin(value):
     """Pass."""
     joiner = "\n   - "
     return joiner + joiner.join(value)
 
 
+# noinspection PyProtectedMember,PyUnresolvedReferences,PyAttributeOutsideInit
 class Base:
     """Callbacks for formatting asset data.
 
     Examples:
-        Create a ``client`` using :obj:`axonius_api_client.connect.Connect` and assume
-        ``apiobj`` is either ``client.devices`` or ``client.users``
-
-        >>> apiobj = client.devices  # or client.users
-
         * :meth:`args_map` for callback generic arguments to format assets.
         * :meth:`args_map_custom` for callback specific arguments to format and export data.
 
@@ -66,7 +63,11 @@ class Base:
             Create a ``client`` using :obj:`axonius_api_client.connect.Connect` and assume
             ``apiobj`` is either ``client.devices`` or ``client.users``
 
-            >>> apiobj = client.devices  # or client.users
+            >>> import axonius_api_client as axonapi
+            >>> connect_args: dict = axonapi.get_env_connect()
+            >>> client: axonapi.Connect = axonapi.Connect(**connect_args)
+            >>> apiobj: axonapi.api.assets.AssetMixin = client.devices
+            >>>       # or client.users or client.vulnerabilities
 
             Flatten complex fields -  Will take all sub-fields of complex fields and put them
             on the root level with their values index correlated to each other.
@@ -196,7 +197,7 @@ class Base:
             "csv_field_null": True,
         }
 
-    def get_arg_value(self, arg: str) -> Union[str, list, bool, int]:
+    def get_arg_value(self, arg: str) -> t.Any:
         """Get an argument value.
 
         Args:
@@ -204,7 +205,7 @@ class Base:
         """
         return self.GETARGS.get(arg, self.args_map()[arg])
 
-    def set_arg_value(self, arg: str, value: Union[str, list, bool, int]):
+    def set_arg_value(self, arg: str, value: t.Any):
         """Set an argument value.
 
         Args:
@@ -267,8 +268,8 @@ class Base:
             self.echo(msg=f"Adding fields {missing} to field_excludes: {excludes}", debug=True)
             self.set_arg_value("field_excludes", value=excludes + missing)
 
-        cbargs = crjoin(join_kv(obj=self.GETARGS))
-        self.LOG.debug(f"Get Extra Arguments: {cbargs}")
+        cb_args = crjoin(join_kv(obj=self.GETARGS))
+        self.LOG.debug(f"Get Extra Arguments: {cb_args}")
 
         config = crjoin(self.args_strs)
         self.echo(msg=f"Configuration: {config}")
@@ -276,6 +277,7 @@ class Base:
         store = crjoin(join_kv(obj=self.STORE))
         self.echo(msg=f"Get Arguments: {store}")
 
+    # noinspection PyUnusedLocal
     def echo_columns(self, **kwargs):
         """Echo the columns of the fields selected."""
         if getattr(self, "ECHO_DONE", False):
@@ -382,6 +384,8 @@ class Base:
         """
         debug_timing = self.get_arg_value("debug_timing")
 
+        p_start = None
+        cb_start = None
         if debug_timing:  # pragma: no cover
             p_start = dt_now()
 
@@ -391,11 +395,11 @@ class Base:
 
             rows = cb(rows=rows)
             # print(f"{cb} {json_dump(rows)}")
-            if debug_timing:  # pragma: no cover
+            if debug_timing and cb_start:  # pragma: no cover
                 cb_delta = dt_now() - cb_start
                 self.LOG.debug(f"CALLBACK {cb} took {cb_delta} for {len(rows)} rows")
 
-        if debug_timing:  # pragma: no cover
+        if debug_timing and p_start:  # pragma: no cover
             p_delta = dt_now() - p_start
             self.LOG.debug(f"CALLBACKS TOOK {p_delta} for {len(rows)} rows")
 
@@ -531,7 +535,8 @@ class Base:
             if trim_len and isinstance(value, str) and len(value) >= trim_len:
                 field_len = len(value)
                 msg = trim_str.format(field_len=field_len, trim_len=trim_len)
-                row[field] = value = joiner.join([value[:trim_len], msg])
+                value = [value[:trim_len], msg]
+                row[field] = joiner.join(value)
 
     def do_change_field_replace(self, rows: Union[List[dict], dict]) -> List[dict]:
         """Asset callback to replace characters.
@@ -558,6 +563,7 @@ class Base:
         """Parse the supplied list of field name replacements."""
 
         def parse_replace(replace):
+            """Parse the supplied list of field name replacements."""
             if isinstance(replace, str):
                 replace = replace.split("=", maxsplit=1)
 
@@ -593,7 +599,6 @@ class Base:
             return key
 
         splits = key.split(".")
-        prefix = ""
 
         if splits[0] == "specific_data":
             prefix = AGG_ADAPTER_NAME
@@ -715,6 +720,7 @@ class Base:
         """
 
         def explode(idx: int, adapter: str) -> dict:
+            """Explode a row into a row for each asset entity."""
             new_row = {"adapters": adapter}
 
             for k, v in row.items():
@@ -985,7 +991,7 @@ class Base:
         self,
         msg: str,
         debug: bool = False,
-        error: Union[bool, t.Type[Exception]] = False,
+        error: Union[bool, str, t.Type[Exception]] = False,
         warning: bool = False,
         level: str = "info",
         level_debug: str = "debug",
@@ -1000,9 +1006,11 @@ class Base:
             error: message is an error
             warning: message is a warning
             level: logging level for non error/non warning messages
+            level_debug: logging level for debug messages
             level_error: logging level for error messages
             level_warning: logging level for warning messages
             abort: sys.exit(1) if error is true
+            debug: message is a debug message
         """
         do_echo = self.get_arg_value("do_echo")
 
@@ -1086,6 +1094,7 @@ class Base:
         """Get the columns that will be returned."""
 
         def get_key(s):
+            """Get the key for a schema."""
             return self._field_replace(self._field_compress(s[key]))
 
         if hasattr(self, "_final_columns"):
@@ -1232,7 +1241,7 @@ class Base:
     STORE: dict = None
     """store dict used by get assets method to track arguments."""
 
-    CURRENT_ROWS: None
+    CURRENT_ROWS: t.Optional[t.List[dict]] = None
     """current rows being processed"""
 
     GETARGS: dict = None
@@ -1248,6 +1257,7 @@ class Base:
     """tracker of custom callbacks that have been executed by :meth:`do_custom_cbs`"""
 
 
+# noinspection PyAttributeOutsideInit
 class ExportMixins(Base):
     """Export mixins for callbacks."""
 
@@ -1316,7 +1326,7 @@ class ExportMixins(Base):
                     debug=True,
                 )
             elif not export_overwrite:
-                msg = f"Export file {str(self._file_path)!r} already exists and overwite is False!"
+                msg = f"Export file {str(self._file_path)!r} already exists and overwrite is False!"
                 self.echo(msg=msg, error=ApiError, level="error")
             else:
                 self._file_mode: str = "Overwrote existing file"
