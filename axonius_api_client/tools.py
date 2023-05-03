@@ -2447,7 +2447,10 @@ def get_diff_seconds(
     seconds: t.Optional[float] = None
     if start is not None:
         start: datetime.datetime = dt_parse(obj=start)
-        stop: datetime.datetime = dt_now if stop is None else dt_parse(stop)
+        if stop is None:
+            stop = dt_now()
+        else:
+            stop = dt_parse(stop)
         delta: datetime.timedelta = stop - start
         seconds: float = delta.total_seconds()
         if isinstance(places, int):
