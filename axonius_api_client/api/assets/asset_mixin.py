@@ -1823,6 +1823,9 @@ class AssetMixin(ModelMixins):
         self.labels: Labels = Labels(parent=self)
         """Work with labels (tags)."""
 
+        self.tags = self.labels
+        """Alias for :attr:`labels`."""
+
         self.saved_query: SavedQuery = SavedQuery(parent=self)
         """Work with saved queries."""
 
