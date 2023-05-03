@@ -211,7 +211,9 @@ class AdapterFetchHistory(BaseModel):
         def getval(prop: str, width: t.Optional[int] = 30) -> str:
             """Pass."""
             value = getattr(self, prop, None)
-            if isinstance(width, int) and len(str(value)) > width:
+            if not isinstance(value, str):
+                value = "" if value is None else str(value)
+            if isinstance(width, int) and len(value) > width:
                 value = textwrap.fill(value, width=width)
             prop = prop.replace("_", " ").title()
             return f"{prop}: {value}"
