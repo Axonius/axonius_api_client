@@ -308,8 +308,10 @@ class TestCnxPublic(TestCnxBase):
 
     def test_get_by_label(self, apiobj):
         cnx = get_cnx_existing(apiobj)
+        # 2023/04/03 - connection_label not returned in config any longer?
+        label = cnx["config"].get("connection_label") or cnx.get("connection_label") or ""
         found = apiobj.cnx.get_by_label(
-            value=cnx["config"].get("connection_label") or "",
+            value=label,
             adapter_name=cnx["adapter_name"],
             adapter_node=cnx["node_name"],
         )
