@@ -45,7 +45,7 @@ def crjoin(value):
     return joiner + joiner.join(value)
 
 
-# noinspection PyProtectedMember,PyUnresolvedReferences,PyAttributeOutsideInit
+# noinspection PyProtectedMember,PyAttributeOutsideInit
 class Base:
     """Callbacks for formatting asset data.
 
@@ -804,25 +804,46 @@ class Base:
 
     def do_tag_add(self):
         """Add tags to assets."""
-        tags_add = listify(self.get_arg_value("tags_add"))
-        rows_add = self.TAG_ROWS_ADD
+        tags = listify(self.get_arg_value("tags_add"))
+        rows = self.TAG_ROWS_ADD
         invert_selection = self.get_arg_value("tags_add_invert_selection")
-        if tags_add and rows_add:
-            self.echo(msg=f"Adding tags {tags_add} to {len(rows_add)} assets")
-            self.APIOBJ.labels.add(
-                rows=rows_add, labels=tags_add, invert_selection=invert_selection
+        count_tags = len(tags)
+        count_supplied = len(rows)
+        msgs = [
+            f"   Tags supplied ({count_tags}): {tags}",
+            f"   Asset IDs supplied ({count_supplied})",
+            f"   Invert selection: {invert_selection}",
+        ]
+        if tags:
+            self.echo(["Performing API call to add tags to assets", *msgs])
+            count_modified = self.APIOBJ.labels.add(
+                rows=rows, labels=tags, invert_selection=invert_selection
             )
+            self.echo(msg=[f"API added tags to {count_modified} assets", *msgs])
 
     def do_tag_remove(self):
         """Remove tags from assets."""
-        tags_remove = listify(self.get_arg_value("tags_remove"))
-        rows_remove = self.TAG_ROWS_REMOVE
+        tags = listify(self.get_arg_value("tags_remove"))
+        rows = self.TAG_ROWS_REMOVE
         invert_selection = self.get_arg_value("tags_remove_invert_selection")
-        if tags_remove and rows_remove:
-            self.echo(msg=f"Removing tags {tags_remove} from {len(rows_remove)} assets")
-            self.APIOBJ.labels.remove(
-                rows=rows_remove, labels=tags_remove, invert_selection=invert_selection
+        count_tags = len(tags)
+        count_supplied = len(rows)
+        msgs = [
+            f"   Asset IDs supplied ({count_supplied})",
+            f"   Tags supplied ({count_tags}): {tags}",
+            f"   Invert selection: {invert_selection}",
+        ]
+        if tags:
+            self.echo(["Performing API call to remove tags from assets", *msgs])
+            count_modified = self.APIOBJ.labels.remove(
+                rows=rows, labels=tags, invert_selection=invert_selection
             )
+            msgs = [
+                f"API finished removing tags from assets",
+                f"   Asset IDs modified: " f"{count_modified}",
+                *msgs,
+            ]
+            self.echo(msg=msgs)
 
     def process_tags_to_add(self, rows: Union[List[dict], dict]) -> List[dict]:
         """Add assets to tracker for adding tags.
@@ -997,7 +1018,7 @@ class Base:
 
     def echo(
         self,
-        msg: str,
+        msg: t.Union[str, t.List[str]],
         debug: bool = False,
         error: Union[bool, str, t.Type[Exception]] = False,
         warning: bool = False,
@@ -1021,7 +1042,7 @@ class Base:
             debug: message is a debug message
         """
         do_echo = self.get_arg_value("do_echo")
-
+        msg = "\n".join(listify(msg))
         if do_echo:
             if error:
                 echo_error(msg=msg, abort=abort)
@@ -1184,7 +1205,7 @@ class Base:
     def adapter_map(self) -> dict:
         """Build a map of adapters that have connections."""
         if getattr(self, "_adapter_map", None):
-            return self._adapter_map
+            return getattr(self, "_adapter_map", None)
 
         self._adapters_meta = getattr(
             self, "_adapters_meta", self.APIOBJ.adapters.get(get_clients=False)
