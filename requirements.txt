@@ -15,3 +15,6 @@ dataclasses-json>=0.5.2
 pyOpenSSL>=21.0.0
 asn1crypto>=1.4.0
 bson>=0.5.0
+# TODO: security implication, need to update cert_human and http.Http
+# urllib3 v2 requires python 3.7 or later, so that will be a breaking change
+urllib3<2
