@@ -1358,6 +1358,72 @@ class AssetMixin(ModelMixins):
         self.LOG.debug(f"FINISHED FETCH state={json_dump(state)}")
         callbacks.stop()
 
+    def parsed_or_query(
+        self,
+        query: t.Optional[str] = "",
+        wiz_entries: t.Optional[t.Union[t.List[dict], t.List[str], dict, str]] = None,
+        wiz_parsed: t.Optional[dict] = None,
+        request_obj: t.Any = None,
+    ) -> str:
+        """Determine the final query to use.
+
+        Args:
+            query: query to use
+            wiz_entries: wizard entries to use
+            wiz_parsed: parsed wizard entries to use
+            request_obj: request object to check for `filter` value if `query` is not set
+
+        Returns:
+            query to use
+        """
+        request_value: t.Optional[str] = getattr(request_obj, "filter", None)
+        if isinstance(request_value, str) and request_value.strip():
+            return request_value
+
+        if not isinstance(wiz_parsed, dict):
+            wiz_parsed: dict = self.get_wiz_entries(wiz_entries=wiz_entries)
+
+        if isinstance(wiz_parsed, dict):
+            wiz_query: t.Optional[str] = wiz_parsed.get("query")
+            if isinstance(wiz_query, str) and wiz_query.strip():
+                return wiz_query
+
+        return query or ""
+
+    def parsed_or_date(
+        self,
+        history_date: t.Optional[str] = None,
+        history_days_ago: t.Optional[int] = None,
+        history_exact: t.Optional[bool] = None,
+        history_date_parsed: t.Optional[str] = None,
+        request_obj: t.Any = None,
+    ) -> t.Optional[t.Union[str, datetime.datetime]]:
+        """Determine the final history date to use.
+
+        Args:
+            history_date: history date to use
+            history_days_ago: history days ago to use
+            history_exact: history exact to use
+            history_date_parsed: parsed history date to use
+            request_obj: request object to check for `history` value if `history_date` is not set
+
+        Returns:
+            history date to use
+        """
+        request_value: t.Optional[str] = getattr(request_obj, "history", None)
+        if (
+            isinstance(request_value, str)
+            and request_value.strip()
+            or isinstance(request_value, datetime.datetime)
+        ):
+            return request_value
+
+        if not isinstance(history_date_parsed, (str, datetime.datetime)):
+            history_date_parsed: str = self.get_history_date(
+                date=history_date, days_ago=history_days_ago, exact=history_exact
+            )
+        return history_date_parsed
+
     def get_by_saved_query(
         self,
         name: str,
@@ -1813,6 +1879,7 @@ class AssetMixin(ModelMixins):
         from .fields import Fields
         from .labels import Labels
         from .saved_query import SavedQuery
+        from .tags import Tags
 
         self.adapters: Adapters = Adapters(auth=self.auth, **kwargs)
         """Adapters API model for cross reference."""
@@ -1821,10 +1888,10 @@ class AssetMixin(ModelMixins):
         """Adapters API model for cross reference."""
 
         self.labels: Labels = Labels(parent=self)
-        """Work with labels (tags)."""
+        """Work with labels (tags) [DEPRECATED]."""
 
-        self.tags = self.labels
-        """Alias for :attr:`labels`."""
+        self.tags: Tags = Tags(parent=self)
+        """Replacement for `labels`."""
 
         self.saved_query: SavedQuery = SavedQuery(parent=self)
         """Work with saved queries."""

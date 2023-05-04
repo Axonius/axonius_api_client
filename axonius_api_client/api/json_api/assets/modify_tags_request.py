@@ -6,6 +6,7 @@ import typing as t
 
 import marshmallow_jsonapi.fields as mm_fields
 
+from ....tools import coerce_bool, listify
 from ..base import BaseModel, BaseSchemaJson
 from ..custom_fields import SchemaDatetime, field_from_mm
 
@@ -79,3 +80,26 @@ class ModifyTagsRequest(BaseModel):
         """Dataclasses post init."""
         if not isinstance(self.search, str):
             self.search = ""
+
+        if not isinstance(self.entities, dict):
+            self.entities = {}
+
+    @property
+    def ids(self) -> t.List[str]:
+        """Get the ids from entities."""
+        return listify(self.entities.get("ids"))
+
+    @ids.setter
+    def ids(self, value: t.Union[str, t.List[str]]):
+        """Set the ids on entities."""
+        self.entities["ids"] = listify(value)
+
+    @property
+    def include(self) -> bool:
+        """Get the `include` value from entities."""
+        return self.entities.get("include", True)
+
+    @include.setter
+    def include(self, value: bool):
+        """Set the `include` value on entities."""
+        self.entities["include"] = coerce_bool(value)
