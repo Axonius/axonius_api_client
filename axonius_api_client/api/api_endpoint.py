@@ -4,12 +4,14 @@ import dataclasses
 import inspect
 import logging
 import typing as t
+import warnings
 
 import requests
 
 from ..constants.general import JSON_TYPES, RERAISE
 from ..constants.logs import LOG_LEVEL_ENDPOINTS
 from ..exceptions import (
+    ApiWarning,
     InvalidCredentials,
     JsonInvalidError,
     RequestFormatObjectError,
@@ -97,6 +99,12 @@ class ApiEndpoint:
     """Throw errors if the JSON can not be serialized."""
     log: t.ClassVar[logging.Logger] = LOGGER.getChild("ApiEndpoint")
 
+    deprecated: bool = False
+    """Mark this endpoint as deprecated."""
+
+    deprecated_help: str = ""
+    """Message to display when using a deprecated endpoint."""
+
     def __str__(self):
         """Get a pretty str for this object."""
         items = "\n  " + ",\n  ".join(self.str_properties) + ",\n"
@@ -119,7 +127,7 @@ class ApiEndpoint:
         ]
 
     def perform_request(
-        self, http: Http, request_obj: t.Optional[BaseModel] = None, raw: bool = False, **kwargs
+        self, http: Http, request_obj: t.Any = None, raw: bool = False, **kwargs
     ) -> t.Any:
         """Perform a request to this endpoint using a http object.
 
@@ -133,7 +141,17 @@ class ApiEndpoint:
         Returns:
             the data loaded from the response received
         """
-        self.log.debug(f"{self!r} Performing request with request_obj type {type(request_obj)}")
+        msgs = [
+            f"Performing request to:\n{self!r}",
+            f"Using http object: {http!r}",
+            f"Using request_obj: {type(request_obj)}",
+        ]
+        if self.deprecated:
+            msgs += [f"Endpoint usage in API Client is deprecated! " f"{self.deprecated_help}"]
+            warnings.warn("\n".join(msgs), ApiWarning, stacklevel=2)
+        else:
+            self.log.debug("\n".join(msgs))
+
         response: requests.Response = self.perform_request_raw(
             http=http, request_obj=request_obj, **kwargs
         )
