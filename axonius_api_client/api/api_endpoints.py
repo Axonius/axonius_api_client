@@ -110,6 +110,52 @@ class DashboardSpaces(ApiEndpointGroup):
 
 
 @dataclasses.dataclass(eq=True, frozen=True, repr=False)
+class AssetExpirableTags(ApiEndpointGroup):
+    """Container for all API endpoints for working with tags for asset types."""
+
+    names: ApiEndpoint = ApiEndpoint(
+        method="get",
+        path="api/{asset_type}/expirable_tags_names",
+        request_schema_cls=None,
+        request_model_cls=None,
+        response_schema_cls=json_api.generic.StrValueSchema,
+        response_model_cls=json_api.generic.StrValue,
+    )
+
+
+@dataclasses.dataclass(eq=True, frozen=True, repr=False)
+class AssetTags(ApiEndpointGroup):
+    """Container for all API endpoints for working with tags for asset types."""
+
+    get: ApiEndpoint = ApiEndpoint(
+        method="get",
+        path="api/{asset_type}/labels",
+        request_schema_cls=None,
+        request_model_cls=None,
+        response_schema_cls=json_api.generic.StrValueSchema,
+        response_model_cls=json_api.generic.StrValue,
+    )
+
+    add: ApiEndpoint = ApiEndpoint(
+        method="put",
+        path="api/{asset_type}/labels",
+        request_schema_cls=json_api.assets.ModifyTagsRequestSchema,
+        request_model_cls=json_api.assets.ModifyTagsRequest,
+        response_schema_cls=json_api.assets.ModifyTagsSchema,
+        response_model_cls=json_api.assets.ModifyTags,
+    )
+
+    remove: ApiEndpoint = ApiEndpoint(
+        method="delete",
+        path="api/{asset_type}/labels",
+        request_schema_cls=json_api.assets.ModifyTagsRequestSchema,
+        request_model_cls=json_api.assets.ModifyTagsRequest,
+        response_schema_cls=json_api.assets.ModifyTagsSchema,
+        response_model_cls=json_api.assets.ModifyTags,
+    )
+
+
+@dataclasses.dataclass(eq=True, frozen=True, repr=False)
 class Assets(ApiEndpointGroup):
     """Container for all API endpoints for working with assets."""
 
@@ -165,6 +211,9 @@ class Assets(ApiEndpointGroup):
     # PBUG: REST API0: historical_prefix hardcoded to 'historical_users_'
     # PBUG: request not modeled
 
+    tags: AssetTags = AssetTags()
+    expirable_tags: AssetExpirableTags = AssetExpirableTags()
+
     tags_get: ApiEndpoint = ApiEndpoint(
         method="get",
         path="api/{asset_type}/labels",
@@ -172,6 +221,8 @@ class Assets(ApiEndpointGroup):
         request_model_cls=None,
         response_schema_cls=json_api.generic.StrValueSchema,
         response_model_cls=json_api.generic.StrValue,
+        deprecated=True,
+        deprecated_help="Use client.{asset_type}.tags.get instead",
     )
 
     tags_get_expirable_names: ApiEndpoint = ApiEndpoint(
@@ -181,6 +232,8 @@ class Assets(ApiEndpointGroup):
         request_model_cls=None,
         response_schema_cls=json_api.generic.StrValueSchema,
         response_model_cls=json_api.generic.StrValue,
+        deprecated=True,
+        deprecated_help="Use client.{asset_type}.expirable_tags.get instead",
     )
 
     tags_add: ApiEndpoint = ApiEndpoint(
@@ -190,6 +243,8 @@ class Assets(ApiEndpointGroup):
         request_model_cls=json_api.assets.ModifyTagsRequest,
         response_schema_cls=json_api.assets.ModifyTagsSchema,
         response_model_cls=json_api.assets.ModifyTags,
+        deprecated=True,
+        deprecated_help="Use client.{asset_type}.tags.add instead",
     )
 
     tags_remove: ApiEndpoint = ApiEndpoint(
@@ -199,6 +254,8 @@ class Assets(ApiEndpointGroup):
         request_model_cls=json_api.assets.ModifyTagsRequest,
         response_schema_cls=json_api.assets.ModifyTagsSchema,
         response_model_cls=json_api.assets.ModifyTags,
+        deprecated=True,
+        deprecated_help="Use client.{asset_type}.tags.remove instead",
     )
 
     history_dates: ApiEndpoint = ApiEndpoint(
