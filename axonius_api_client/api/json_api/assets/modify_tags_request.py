@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 """Models for API requests & responses."""
 import dataclasses
+import datetime
 import typing as t
 
 import marshmallow_jsonapi.fields as mm_fields
 
 from ..base import BaseModel, BaseSchemaJson
-from ..custom_fields import field_from_mm
+from ..custom_fields import SchemaDatetime, field_from_mm
 
 
 class ModifyTagsRequestSchema(BaseSchemaJson):
@@ -24,11 +25,24 @@ class ModifyTagsRequestSchema(BaseSchemaJson):
         description="Tags to modify",
     )
     filter = mm_fields.Str(
+        load_default="",
+        dump_default="",
+        allow_none=True,
+        description="AQL for the request",
+    )  # FilterSchema
+    history = SchemaDatetime(
         load_default=None,
         dump_default=None,
         allow_none=True,
-        description="Filter to use to select assets?",
-    )
+        description="Get asset data for a specific point in time",
+    )  # FilterSchema
+    search = mm_fields.Str(
+        load_default="",
+        dump_default="",
+        allow_none=True,
+        # cortex does not allow_none, but we do to allow for empty searches
+        description="search term for the request (unused?)",
+    )  # FilterSchema
 
     class Meta:
         """JSONAPI config."""
@@ -51,6 +65,8 @@ class ModifyTagsRequest(BaseModel):
     entities: dict = field_from_mm(SCHEMA, "entities")
     labels: t.List[str] = field_from_mm(SCHEMA, "labels")
     filter: t.Optional[str] = field_from_mm(SCHEMA, "filter")
+    history: t.Optional[datetime.datetime] = field_from_mm(SCHEMA, "history")
+    search: t.Optional[str] = field_from_mm(SCHEMA, "search")
 
     SCHEMA: t.ClassVar[t.Any] = SCHEMA
 
@@ -58,3 +74,8 @@ class ModifyTagsRequest(BaseModel):
     def get_schema_cls() -> t.Any:
         """Get the schema for this model."""
         return ModifyTagsRequestSchema
+
+    def __post_init__(self):
+        """Dataclasses post init."""
+        if not isinstance(self.search, str):
+            self.search = ""
