@@ -2661,3 +2661,12 @@ def coerce_date_delta(
         parsed = parsed or dt_now()
         parsed -= subtract
     return parsed
+
+
+def get_axon_ids(rows: t.Union[t.List[dict], str]) -> t.List[str]:
+    """Get the internal_axon_id from a list of assets.
+
+    Args:
+        rows: list of internal_axon_id strs or list of assets returned from a get method
+    """
+    return [x["internal_axon_id"] if isinstance(x, dict) else x for x in listify(rows)]

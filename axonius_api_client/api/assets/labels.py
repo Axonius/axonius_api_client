@@ -2,7 +2,7 @@
 """API for working with tags for assets."""
 from typing import List, Union
 
-from ...tools import listify
+from ...tools import listify, get_axon_ids
 from .. import json_api
 from ..api_endpoints import ApiEndpoints
 from ..mixins import ChildMixins
@@ -83,7 +83,7 @@ class Labels(ChildMixins):
                 False=add tags to assets that ARE supplied in rows
 
         """
-        ids = self._get_ids(rows=rows)
+        ids = get_axon_ids(rows=rows)
         return self._add(labels=labels, ids=ids, include=not invert_selection).value
 
     def _add(
@@ -128,7 +128,7 @@ class Labels(ChildMixins):
                 False=remove tags from assets that ARE supplied in rows
 
         """
-        ids: List[str] = self._get_ids(rows=rows)
+        ids: List[str] = get_axon_ids(rows=rows)
         return self._remove(labels=labels, ids=ids, include=not invert_selection).value
 
     def _remove(
@@ -149,15 +149,6 @@ class Labels(ChildMixins):
         return api_endpoint.perform_request(
             http=self.auth.http, request_obj=request_obj, asset_type=self.asset_type
         )
-
-    @staticmethod
-    def _get_ids(rows: Union[List[dict], str]) -> List[str]:
-        """Get the internal_axon_id from a list of assets.
-
-        Args:
-            rows: list of internal_axon_id strs or list of assets returned from a get method
-        """
-        return [x["internal_axon_id"] if isinstance(x, dict) else x for x in listify(rows)]
 
     # noinspection PyUnresolvedReferences
     @property
