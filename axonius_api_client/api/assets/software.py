@@ -5,10 +5,13 @@ from typing import List
 from .asset_mixin import AssetMixin
 
 
-class Vulnerabilities(AssetMixin):
-    """API for working with the asset type 'vulnerabilities'."""
+class Software(AssetMixin):
+    """API for working with the asset type 'software'.
 
-    ASSET_TYPE: str = "vulnerabilities"
+    TODO: this is a stub place holder for now
+    """
+
+    ASSET_TYPE: str = "software"
 
     @property
     def fields_default(self) -> List[str]:

@@ -4,7 +4,7 @@ from . import api_endpoints, json_api
 from .adapters import Adapters, Cnx
 from .api_endpoint import ApiEndpoint
 from .api_endpoints import ApiEndpoints
-from .assets import Devices, Runner, Users, Vulnerabilities, AssetMixin
+from .assets import Devices, Runner, Users, Vulnerabilities, AssetMixin, Software
 from .enforcements import Enforcements
 from .folders import Folders
 from .mixins import ChildMixins, ModelMixins
@@ -61,4 +61,5 @@ __all__ = (
     "ModelMixins",
     "ChildMixins",
     "AssetMixin",
+    "Software",
 )

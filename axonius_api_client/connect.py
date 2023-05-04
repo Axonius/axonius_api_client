@@ -541,6 +541,14 @@ log_body_lines = 10000
         return self._get_model(model=api.Signup, start=False, auth=self.AUTH_NULL)
 
     @property
+    def software(self) -> api.Software:
+        """Work with software assets.
+
+        TODO: BETA - just a stub for implementing later.
+        """
+        return self._get_model(model=api.Software)
+
+    @property
     def system_users(self) -> api.SystemUsers:
         """Work with system users."""
         return self._get_model(model=api.SystemUsers)

@@ -8,6 +8,7 @@ from .runner import Runner
 from .saved_query import SavedQuery
 from .users import Users
 from .vulnerabilities import Vulnerabilities
+from .software import Software
 
 __all__ = (
     "Users",
@@ -18,4 +19,5 @@ __all__ = (
     "Labels",
     "Vulnerabilities",
     "Runner",
+    "Software",
 )
