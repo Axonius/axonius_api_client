@@ -127,6 +127,8 @@ class AssetExpirableTags(ApiEndpointGroup):
 class AssetTags(ApiEndpointGroup):
     """Container for all API endpoints for working with tags for asset types."""
 
+    expirable: AssetExpirableTags = AssetExpirableTags()
+
     get: ApiEndpoint = ApiEndpoint(
         method="get",
         path="api/{asset_type}/labels",
@@ -212,7 +214,6 @@ class Assets(ApiEndpointGroup):
     # PBUG: request not modeled
 
     tags: AssetTags = AssetTags()
-    expirable_tags: AssetExpirableTags = AssetExpirableTags()
 
     tags_get: ApiEndpoint = ApiEndpoint(
         method="get",

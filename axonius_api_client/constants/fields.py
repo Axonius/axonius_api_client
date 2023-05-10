@@ -2,6 +2,7 @@
 """Constants for field schemas."""
 import dataclasses
 import enum
+import re
 import string
 import typing as t
 import warnings
@@ -22,9 +23,12 @@ class AXID:
 
     name: str = "internal_axon_id"
     title: str = "Asset Unique ID"
+    column_short: str = f"{AGG_ADAPTER_NAME}:{name}"
     column_title: str = f"{AGG_ADAPTER_TITLE}: {title}"
-    keys_title: t.List[str] = [column_title, title]
+    keys_title: t.List[str] = [column_title, title, column_short]
     keys: t.List[str] = [name, *keys_title]
+    KEYS: t.Tuple[str, ...] = tuple(keys)
+    KEYS_RE: t.Tuple[t.Pattern, ...] = tuple(re.compile(x) for x in keys)
     keys_str: str = ",".join(keys)
     chars: str = string.ascii_lowercase + string.digits
     length: int = 32
@@ -42,14 +46,47 @@ class AXID:
     ]
 
     @classmethod
-    def strip(cls, value: str):
-        """Pass."""
+    def strip(cls, value: str) -> str:
+        """Remove non-alphanumeric characters from the input string.
+
+        Args:
+            value (str): The input string.
+
+        Returns:
+            str: The cleaned string containing only alphanumeric characters.
+        """
         return "".join(x for x in value if x in cls.chars)
 
     @staticmethod
     def is_axid(value: t.Any) -> bool:
-        """Pass."""
-        return is_str(value) and value.isalnum() and len(value) == AXID.length
+        """Check if a value is a valid internal_axon_id.
+
+        Args:
+            value (t.Any): The value to check.
+
+        Returns:
+            bool: True if the value is a valid internal_axon_id, otherwise False.
+        """
+        return isinstance(value, str) and len(value) == AXID.length and value.isalnum()
+
+    @classmethod
+    def is_internal_axon_id(cls, value: t.Any, full_strip: bool = False) -> bool:
+        """Check if a value is a valid internal_axon_id, optionally stripping non-alphanumerics.
+
+        Args:
+            value (t.Any): The value to check.
+            full_strip (bool, optional): If True, non-alphanumerics are stripped from the value.
+                If False (default), only whitespace characters are stripped.
+
+        Returns:
+            bool: True if the value is a valid internal_axon_id, otherwise False.
+        """
+        if not isinstance(value, (str, bytes)):
+            return False
+        value = cls.strip(value=value) if full_strip else value.strip()
+        if len(value) != AXID.length:
+            return False
+        return value.isalnum()
 
 
 ALL_NAME: str = "all"

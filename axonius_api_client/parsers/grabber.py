@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Utilities and tools."""
+import csv
 import dataclasses
 import logging
 import pathlib
@@ -26,16 +27,25 @@ from ..tools import (
 
 
 class Mixins:
-    """Pass."""
+    """Base mixins for all grabbers."""
 
-    _exc_cls: t.ClassVar[Exception] = GrabberError
-    _warn_cls: t.ClassVar[Warning] = GrabberWarning
+    _exc_cls: t.ClassVar[t.Type[Exception]] = GrabberError
+    _warn_cls: t.ClassVar[t.Type[Warning]] = GrabberWarning
+    do_echo: t.ClassVar[bool] = True
+    _initialized: t.ClassVar[bool] = False
+    log: t.ClassVar[logging.Logger] = None
+
+    @property
+    def _tstr_items(self) -> t.List[str]:
+        """Dunder."""
+        items = []
+        return items
 
     def spew(
         self,
-        msgs: t.Optional[t.List[str]] = None,
+        msgs: t.Optional[t.Union[str, t.List[str]]] = None,
         top: bool = False,
-        exc: t.Optional[t.Union[bool, Exception]] = None,
+        exc: t.Optional[t.Union[bool, t.Type[Exception]]] = None,
         warn: bool = False,
         **kwargs,
     ):
@@ -67,7 +77,7 @@ class Mixins:
 
         if warn:
             if not do_echo:
-                warnings.warn(msgs, self._warn_cls)
+                warnings.warn(message=msgs, category=self._warn_cls)
                 return
         echoer: t.Callable = get_echoer(level=level)
         echoer(msg=msgs, log_level=level, log=self.log, do_echo=do_echo, abort=False)
@@ -77,7 +87,9 @@ class Mixins:
         items = "\n  " + ",\n  ".join(self._tstr_items) + ",\n"
         return f"{self.__class__.__name__}({items})"
 
-    def infos(self, msgs: t.Optional[t.List[str]] = None, top: bool = True) -> t.List[str]:
+    def infos(
+        self, msgs: t.Optional[t.Union[str, t.List[str]]] = None, top: bool = True
+    ) -> t.List[str]:
         """Get info on self."""
         ret = []
         if top:
@@ -99,10 +111,11 @@ class Hunter(BaseData, Mixins):
     log: t.ClassVar[logging.Logger] = None
     found: t.ClassVar[bool] = False
     found_key: t.ClassVar[t.Optional[str]] = None
-    error: t.ClassVar[t.Optional[str]] = None
     axid: t.ClassVar[t.Optional[str]] = None
     msgs: t.ClassVar[t.List[str]] = None
     had_error: t.ClassVar[bool] = None
+    final_error: t.ClassVar[t.Optional[str]] = None
+
     _initialized: t.ClassVar[bool] = True
     _tbadtype: t.ClassVar[str] = "is not a dict or str, is instead"
     _trules: t.ClassVar[str] = AXID.rules_short
@@ -176,7 +189,7 @@ class Hunter(BaseData, Mixins):
         """Pass."""
         self.spew(msgs=f"{self._tin_item}: {msg}", level="error")
         if final:
-            self.error = msg
+            self.final_error = msg
             self.had_error = True
 
     @property
@@ -241,8 +254,8 @@ class Grabber(BaseData, Mixins):
         """Get Asset IDs from a CSV string."""
         load_args = load_args if isinstance(load_args, dict) else {}
         load_args["value"] = items
-
-        kwargs["items"] = post_load = csv_load(**load_args).rows
+        reader: csv.DictReader = csv_load(**load_args)
+        kwargs["items"] = post_load = reader.rows
         kwargs["source"] = add_source(
             source=f"from_csv items {tlens(items)} post_load {tlens(post_load)}", kwargs=kwargs
         )
@@ -382,6 +395,7 @@ class Grabber(BaseData, Mixins):
         """Pass."""
 
         def get_nums(value):
+            """Pass."""
             return ", ".join([f"{x.num}" for x in value])
 
         return {k: get_nums(v) for k, v in self._error_map.items()}

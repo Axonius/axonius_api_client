@@ -2669,4 +2669,8 @@ def get_axon_ids(rows: t.Union[t.List[dict], str]) -> t.List[str]:
     Args:
         rows: list of internal_axon_id strs or list of assets returned from a get method
     """
-    return [x["internal_axon_id"] if isinstance(x, dict) else x for x in listify(rows)]
+    return [
+        x["internal_axon_id"] if isinstance(x, dict) else x
+        for x in listify(rows)
+        if (isinstance(x, dict) and "internal_axon_id" in x) or (isinstance(x, str) and x)
+    ]
