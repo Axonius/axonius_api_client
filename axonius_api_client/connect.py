@@ -672,9 +672,12 @@ log_body_lines = 10000
         return self.AUTH.get_api_keys()
 
     @property
-    def current_user(self) -> api.json_api.account.CurrentUser:
-        """Get the current user."""
-        return self.AUTH.get_current_user()
+    def current_user(self) -> t.Optional[api.json_api.account.CurrentUser]:
+        """Get the current user (returns 404 for service accounts)."""
+        try:
+            return self.AUTH.get_current_user()
+        except Exception:
+            return None
 
     @property
     def about(self):
@@ -714,7 +717,8 @@ log_body_lines = 10000
         """Get the Axonius instance user for use in str."""
         value = "User: ??"
         if self.STARTED:
-            value = self.current_user.str_connect
+            if self.current_user:
+                value = self.current_user.str_connect
         return value
 
     @property
