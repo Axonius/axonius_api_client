@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """Package setup."""
 import codecs
 import os
@@ -46,7 +45,7 @@ setup(
     python_requires=">=3.5",
     install_requires=INSTALL_REQUIRES,
     keywords=["Axonius", "API Library"],
-    tests_require=["pytest", "pytest-cov", "pytest-httpbin", "coverage"],
+    tests_require=["pytest", "pytest-cov", "flaky", "coverage"],
     license=ABOUT["__license__"],
     classifiers=[
         "Development Status :: 5 - Production/Stable",
