@@ -47,19 +47,12 @@ pipenv_clean:
 	pipenv --rm || true
 
 lint:
-	pipenv run isort $(PACKAGE) setup.py shell.py
-	pipenv run black -l 100 $(PACKAGE) setup.py shell.py
-	pipenv run flake8 --max-line-length 100 --exclude $(PACKAGE)/tests --exclude $(PACKAGE)/examples $(PACKAGE) setup.py shell.py
-	# TBD DISABLED FOR NOW
-	# 	pipenv run pydocstyle \
-	# 		--match-dir='(?!tests).*'\
-	# 		--match-dir='(?!examples).*' \
-	# 		$(PACKAGE) setup.py shell.py
-	# 	pipenv run bandit \
-	# 		-x $(PACKAGE)/examples,$(PACKAGE)/tests \
-	# 		--skip B101,B107 \
-	# 		-r \
-	# 		$(PACKAGE)
+	pipenv run ruff check --show-source --show-fixes $(PACKAGE) setup.py shell.py
+	pipenv run black --diff --line-length 100 $(PACKAGE) setup.py shell.py
+
+lint_fix:
+	pipenv run ruff check --fix $(PACKAGE) setup.py shell.py
+	pipenv run black --line-length 100 $(PACKAGE) setup.py shell.py
 
 cov_open:
 	open artifacts/cov_html/index.html

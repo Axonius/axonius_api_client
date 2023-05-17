@@ -2,6 +2,129 @@
 requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta:__legacy__"
 
+[tool.ruff]
+select = [
+    "ALL", # Enable all checks.
+]
+ignore = [
+    "FBT", # While I agree with the concept, i'm not ready to enforce it yet.
+    "ANN", # Type hints related, let mypy handle these for now.
+]
+# Allow autofix for all enabled rules (when `--fix`) is provided.
+fixable = [
+    "A",
+    "B",
+    "C",
+    "D",
+    "E",
+    "F",
+    "G",
+    "I",
+    "N",
+    "Q",
+    "S",
+    "T",
+    "W",
+    "ANN",
+    "ARG",
+    "BLE",
+    "COM",
+    "DJ",
+    "DTZ",
+    "EM",
+    "ERA",
+    "EXE",
+    "FBT",
+    "ICN",
+    "INP",
+    "ISC",
+    "NPY",
+    "PD",
+    "PGH",
+    "PIE",
+    "PL",
+    "PT",
+    "PTH",
+    "PYI",
+    "RET",
+    "RSE",
+    "RUF",
+    "SIM",
+    "SLF",
+    "TCH",
+    "TID",
+    "TRY",
+    "UP",
+    "YTT",
+]
+unfixable = []
+
+# A list of task tags to recognize (e.g., "TODO", "FIXME", "XXX").
+task-tags = ["TODO", "FIXME", "XXX"]
+
+# Exclude a variety of commonly ignored directories.
+exclude = [
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".git-rewrite",
+    ".hg",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".pytype",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    "__pypackages__",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "node_modules",
+    "venv",
+    "artifacts",
+    "docs",
+    "examples",
+    "tests",
+]
+per-file-ignores = {}
+
+# 100 is a sane default for readability imho
+line-length = 100
+# show-source = true
+# Allow unused variables when underscore-prefixed.
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+# Python 3.7+
+target-version = "py37"
+
+[tool.ruff.flake8-quotes]
+docstring-quotes = "double"
+inline-quotes = "double"
+multiline-quotes = "double"
+
+[tool.ruff.flake8-unused-arguments]
+ignore-variadic-names = true
+
+# This code is used to check the number of arguments in a function.
+
+[tool.ruff.pylint]
+max-args = 20
+
+[tool.ruff.flake8-annotations]
+allow-star-arg-any = true
+ignore-fully-untyped = true
+
+[tool.ruff.mccabe]
+# Unlike Flake8, default to a complexity level of 10.
+max-complexity = 10
+
+[tool.ruff.pydocstyle]
+convention = "google" # Accepts: "google", "numpy", or "pep257".
+
 [tool.pytest.ini_options]
 addopts = "--verbosity=2 -ra --strict-config --strict-markers --showlocals --cov-config=.coveragerc --cov=axonius_api_client --cov-report=html --cov-report=xml --cov-report=term:skip-covered --cov-append"
 testpaths = ["axonius_api_client/tests"]
@@ -21,9 +144,51 @@ filterwarnings = [
     "ignore::pytest.PytestUnhandledThreadExceptionWarning",
 ]
 
-
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
     "datafiles: load a set of datafiles",
     "tunneltests: tests for tunnels",
 ]
+
+# WIP - stubs missing just about everywhere
+[tool.mypy]
+python_version = "3.7"
+warn_return_any = true
+warn_unused_configs = true
+disallow_any_unimported = true
+disallow_untyped_defs = true
+no_implicit_optional = true
+strict_equality = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+check_untyped_defs = true
+show_error_codes = true
+files = "axonius_api_client"
+exclude = [
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".git-rewrite",
+    ".hg",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".pytype",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    "__pypackages__",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "node_modules",
+    "venv",
+]
+
+[[tool.mypy.overrides]]
+module = ['tests.*']
+disallow_untyped_defs = false
+strict_equality = false
