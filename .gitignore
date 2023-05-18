@@ -300,3 +300,4 @@ artifacts/
 /*.pem
 data.*
 Pipfile.lock
+.vscode
