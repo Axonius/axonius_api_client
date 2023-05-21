@@ -27,7 +27,8 @@ pkg_build               make clean, make pipenv_install_build, build the package
 pkg_publish             make lint, make pkg_build, make git_check, publish the package to pypi
 
 # testing
-lint                    run isort, black, pydocstyle, flake8, and bandit
+lint                    run ruff and black but do not modify files
+lint_fix                run ruff and black and modify files (DANGEROUS!!!)
 cov_open                open the test coverage html docs in a browser
 
 # clean up

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Easy all-in-one connection handler."""
 import logging
 import logging.handlers
@@ -10,8 +9,6 @@ import typing as t
 import requests
 
 from . import api, logs, tools, version
-from .projects import cert_human
-from .projects.cf_token import constants as cf_constants
 from .auth import AuthApiKey, AuthCredentials, AuthModel, AuthNull
 from .constants.ctypes import PathLike
 from .constants.logs import (
@@ -30,6 +27,8 @@ from .constants.logs import (
 )
 from .exceptions import ConnectError, InvalidCredentials
 from .http import Http, T_Cookies, T_Headers
+from .projects import cert_human
+from .projects.cf_token import constants as cf_constants
 from .setup_env import get_env_ax
 
 
@@ -96,7 +95,7 @@ class Connect:
     LOG_LOGGER: logging.Logger = logs.LOG
     """Logger for the entire package, where console and file output handlers will be attached to."""
 
-    LOG: logging.Logger = None
+    LOG: t.Optional[logging.Logger] = None
     """Logger for this class."""
 
     LOG_HTTP_MAX: bool = False
@@ -108,19 +107,19 @@ class Connect:
     WRAPERROR: bool = True
     """Flag to indicate if client should wrap exceptions."""
 
-    _url: str = None
+    _url: str = ""
     """Initially supplied URL of the Axonius instance."""
 
-    ARGS_HANDLER_CON: dict = None
+    ARGS_HANDLER_CON: dict = {}
     """Arguments to use when setting up console logging."""
 
-    ARGS_HANDLER_FILE: dict = None
+    ARGS_HANDLER_FILE: dict = {}
     """Arguments to use when setting up file logging."""
 
-    ARGS_API: dict = None
+    ARGS_API: dict = {}
     """Arguments to use when setting up models."""
 
-    ARGS_ORIG: dict = None
+    ARGS_ORIG: dict = {}
     """Original arguments supplied to the constructor."""
 
     HANDLER_CON: t.Optional[logging.StreamHandler] = None
@@ -204,7 +203,7 @@ log_body_lines = 10000
     HTTP_MAX_CLI: str = ", ".join(HTTP_MAX.splitlines())
     """CLI Help string for log_http_max."""
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         url: str,
         key: str,
@@ -265,8 +264,8 @@ log_body_lines = 10000
         http: t.Optional[Http] = None,
         auth: t.Optional[AuthModel] = None,
         auth_null: t.Optional[AuthModel] = None,
-        **kwargs,
-    ):
+        **kwargs: t.Dict[str, t.Any],
+    ) -> None:
         """Easy all-in-one connection handler.
 
         Args:
@@ -308,6 +307,7 @@ log_body_lines = 10000
             log_file_path: path to directory to log to
             log_file_max_mb: max size of log file in MB
             log_file_max_files: max number of log files to keep
+            log_file_rotate: rotate log file on startup
             log_body_lines: max length of request/response body to log
             log_hide_secrets: hide secrets in logs
             log_http_max: Shortcut to include_output ALL http logging *warning: heavy log output*
@@ -355,7 +355,8 @@ log_body_lines = 10000
             log_request_attrs = "all"
             log_response_attrs = "all"
             if not isinstance(log_body_lines, int) or (
-                isinstance(log_body_lines, int) and log_body_lines < 10000
+                isinstance(log_body_lines, int)
+                and log_body_lines < 10000  # noqa: PLR2004
             ):
                 log_body_lines = 10000
 
@@ -419,11 +420,12 @@ log_body_lines = 10000
         self.HTTP = self.http = self._init_http(http=http)
         self.AUTH = self.auth = self._init_auth(auth=auth, log_level=log_level_auth)
         self.AUTH_NULL: AuthModel = self._init_auth_null(
-            auth_null=auth_null, log_level=log_level_auth
+            auth_null=auth_null,
+            log_level=log_level_auth,
         )
         self._init()
 
-    def start(self):
+    def start(self) -> None:
         """Connect to and authenticate with Axonius."""
         if not self.STARTED:
             sysinfo_dump: dict = tools.sysinfo()
@@ -431,7 +433,7 @@ log_body_lines = 10000
 
             try:
                 self.AUTH.login()
-            except Exception as exc:
+            except Exception as exc:  # noqa: BLE001
                 if not self.WRAPERROR:
                     raise
 
@@ -449,7 +451,7 @@ log_body_lines = 10000
                     connect_exc = ConnectError(f"{pre}: Invalid Credentials supplied")
 
                 connect_exc.exc = exc
-                raise connect_exc
+                raise connect_exc from exc
 
             self.STARTED = True
             self.LOG.info(str(self))
@@ -560,61 +562,70 @@ log_body_lines = 10000
         """Work with vulnerability assets."""
         return self._get_model(model=api.Vulnerabilities)
 
-    def set_wraperror(self, value: bool = True):
+    def set_wraperror(self, value: bool = True) -> None:
         """Set whether to wrap errors in a more user-friendly format."""
         self.WRAPERROR = tools.coerce_bool(value)
 
     # <-- METHODS
 
     @staticmethod
-    def set_log_hide_secrets(value: bool = True):
+    def set_log_hide_secrets(value: bool = True) -> None:
         """Set whether to hide secrets in logs."""
         logs.HideFormatter.HIDE_ENABLED = tools.coerce_bool(value)
 
-    def set_log_level_console(self, value: t.Union[str, int] = LOG_LEVEL_CONSOLE):
+    def set_log_level_console(
+        self,
+        value: t.Union[str, int] = LOG_LEVEL_CONSOLE,
+    ) -> None:
         """Set the log level for this client's console output."""
         if isinstance(self.ARGS_HANDLER_CON, dict):
             self.ARGS_HANDLER_CON["level"] = logs.str_level(value)
         if self.HANDLER_CON:
             logs.set_log_level(obj=self.HANDLER_CON, level=value)
 
-    def set_log_level_file(self, value: t.Union[str, int] = LOG_LEVEL_FILE):
+    def set_log_level_file(self, value: t.Union[str, int] = LOG_LEVEL_FILE) -> None:
         """Set the log level for this client's file output."""
         if isinstance(self.ARGS_HANDLER_FILE, dict):
             self.ARGS_HANDLER_FILE["level"] = logs.str_level(value)
         if self.HANDLER_FILE:
             logs.set_log_level(obj=self.HANDLER_FILE, level=value)
 
-    def set_log_level_api(self, value: t.Union[str, int] = LOG_LEVEL_API):
+    def set_log_level_api(self, value: t.Union[str, int] = LOG_LEVEL_API) -> None:
         """Set the log level for this client's api objects."""
         self.API_LOG_LEVEL: str = logs.str_level(value)
         for obj in self.API_CACHE.values():
             if isinstance(obj, api.ModelMixins):
                 logs.set_log_level(obj=obj.LOG, level=self.API_LOG_LEVEL)
 
-    def set_log_level_connect(self, value: t.Union[str, int] = "debug"):
+    def set_log_level_connect(self, value: t.Union[str, int] = "debug") -> None:
         """Set the log level for this client."""
-        logs.set_log_level(obj=self.LOG, level=value)
+        if self.LOG:
+            logs.set_log_level(obj=self.LOG, level=value)
 
-    def set_log_level_http(self, value: t.Union[str, int] = Http.LOG_LEVEL):
+    def set_log_level_http(self, value: t.Union[str, int] = Http.LOG_LEVEL) -> None:
         """Set the log level for this client's http object."""
         if isinstance(self.HTTP, Http):
             logs.set_log_level(obj=self.HTTP.LOG, level=value)
 
-    def set_log_level_auth(self, value: t.Union[str, int] = LOG_LEVEL_AUTH):
+    def set_log_level_auth(self, value: t.Union[str, int] = LOG_LEVEL_AUTH) -> None:
         """Set the log level for this client's auth objects."""
         for obj in self.AUTH, self.AUTH_NULL:
             if isinstance(obj, AuthModel):
                 logs.set_log_level(obj=obj.LOG, level=value)
 
-    def set_log_level_package(self, value: t.Union[str, int] = LOG_LEVEL_PACKAGE):
+    def set_log_level_package(
+        self,
+        value: t.Union[str, int] = LOG_LEVEL_PACKAGE,
+    ) -> None:
         """Set the log level for this client's package."""
         logs.set_log_level(obj=self.LOG_LOGGER, level=value)
 
     @staticmethod
-    def set_log_level_endpoints(value: t.Union[str, int] = LOG_LEVEL_ENDPOINTS):
+    def set_log_level_endpoints(value: t.Union[str, int] = LOG_LEVEL_ENDPOINTS) -> None:
         """Set the log level for this client's endpoints."""
-        from .api.api_endpoint import LOGGER as LOGGER_ENDPOINT
+        from axonius_api_client.api.api_endpoint import (
+            LOGGER as LOGGER_ENDPOINT,
+        )
 
         logs.set_log_level(obj=LOGGER_ENDPOINT, level=value)
 
@@ -649,7 +660,7 @@ log_body_lines = 10000
             return True
         return False
 
-    def rotate_log_files(self, value: bool = False):
+    def rotate_log_files(self, value: bool = False) -> None:
         """Rollover log file."""
         value = tools.coerce_bool(value)
         if value and self.HANDLER_FILE:
@@ -657,9 +668,10 @@ log_body_lines = 10000
             self.HANDLER_FILE.flush()
             try:
                 self.HANDLER_FILE.doRollover()
-                self.LOG.debug("Forced file logs to rotate")
-            except Exception as exc:  # pragma: no cover
+            except Exception as exc:  # pragma: no cover  # noqa: BLE001
                 self.LOG.exception("Failed to force file logs to rotate: %s", exc)
+            else:
+                self.LOG.debug("Forced file logs to rotate")
 
     @property
     def url(self) -> str:
@@ -676,11 +688,11 @@ log_body_lines = 10000
         """Get the current user (returns 404 for service accounts)."""
         try:
             return self.AUTH.get_current_user()
-        except Exception:
+        except Exception:  # noqa: BLE001
             return None
 
     @property
-    def about(self):
+    def about(self) -> dict:
         """Cached data from the /about endpoint."""
         if self.ABOUT_CACHE:
             return self.ABOUT_CACHE
@@ -694,7 +706,11 @@ log_body_lines = 10000
         """Get the Axonius instance version."""
         data = "none yet"
         if self.STARTED:
-            data = self.about.get("Version") or self.about.get("Installed Version") or "DEMO"
+            data = (
+                self.about.get("Version")
+                or self.about.get("Installed Version")
+                or "DEMO"
+            )
             data = data.replace("_", ".")
         return data
 
@@ -710,15 +726,16 @@ log_body_lines = 10000
     def str_ax_version(self) -> str:
         """Get the Axonius instance version & build date for use in str."""
         days = f"({tools.dt_days_ago(self.build_date)} days ago)"
-        return f"Axonius Version {self.version!r}, Build Date: {self.build_date!r} {days}"
+        return (
+            f"Axonius Version {self.version!r}, Build Date: {self.build_date!r} {days}"
+        )
 
     @property
     def str_ax_user(self) -> str:
         """Get the Axonius instance user for use in str."""
         value = "User: ??"
-        if self.STARTED:
-            if self.current_user:
-                value = self.current_user.str_connect
+        if self.STARTED and self.current_user:
+            value = self.current_user.str_connect
         return value
 
     @property
@@ -738,8 +755,8 @@ log_body_lines = 10000
         if isinstance(self.HTTP, Http):
             cert: t.Optional[cert_human.Cert] = self.HTTP.get_cert()
             if isinstance(cert, cert_human.Cert):
-                dt = str(cert.not_valid_after)
-                value = f"SSL Issued To: {cert.subject_short!r}, Expires On: {dt!r}"
+                not_valid_after = str(cert.not_valid_after)
+                value = f"SSL Issued To: {cert.subject_short!r}, Expires On: {not_valid_after!r}"
         return value
 
     @property
@@ -789,10 +806,9 @@ log_body_lines = 10000
         """Check if an object is already bound to a different client."""
         client = getattr(value, "CLIENT", value)
         if isinstance(client, self.__class__) and client is not self:
-            raise ConnectError(
-                f"{value} is already set to {client!r} and cannot be set to {self!r}"
-            )
-        setattr(value, "CLIENT", self)
+            err = f"{value} is already set to {client!r} and cannot be set to {self!r}"
+            raise ConnectError(err)
+        value.CLIENT = self
         return value
 
     def _init_http(self, http: t.Optional[Http] = None) -> Http:
@@ -802,7 +818,9 @@ log_body_lines = 10000
         return self._check_binding(http)
 
     def _init_auth(
-        self, auth: t.Optional[AuthModel] = None, log_level: t.Union[str, int] = LOG_LEVEL_AUTH
+        self,
+        auth: t.Optional[AuthModel] = None,
+        log_level: t.Union[str, int] = LOG_LEVEL_AUTH,
     ) -> AuthModel:
         """Initialize the Auth object."""
         if not isinstance(auth, AuthModel):
@@ -823,7 +841,9 @@ log_body_lines = 10000
         return self._check_binding(auth)
 
     def _init_auth_null(
-        self, auth_null: t.Optional[AuthModel] = None, log_level: t.Union[str, int] = LOG_LEVEL_AUTH
+        self,
+        auth_null: t.Optional[AuthModel] = None,
+        log_level: t.Union[str, int] = LOG_LEVEL_AUTH,
     ) -> AuthModel:
         """Initialize the null Auth object."""
         if not isinstance(auth_null, AuthModel):
@@ -834,7 +854,10 @@ log_body_lines = 10000
         """Custom init for this class."""
 
     def _get_model(
-        self, model: t.Type[api.ModelMixins], start: bool = True, auth: t.Optional[AuthModel] = None
+        self,
+        model: t.Type[api.ModelMixins],
+        start: bool = True,
+        auth: t.Optional[AuthModel] = None,
     ) -> t.Any:
         """Create or get an API model.
 

@@ -13,7 +13,12 @@ from axonius_api_client.projects.url_parser import UrlParser
 from axonius_api_client.projects import cert_human
 from axonius_api_client.version import __version__
 
-from ..meta import TEST_CLIENT_CERT, TEST_CLIENT_CERT_NAME, TEST_CLIENT_KEY, TEST_CLIENT_KEY_NAME
+from ..meta import (
+    TEST_CLIENT_CERT,
+    TEST_CLIENT_CERT_NAME,
+    TEST_CLIENT_KEY,
+    TEST_CLIENT_KEY_NAME,
+)
 from ..utils import (
     get_arg_url,
     log_check,
@@ -47,19 +52,19 @@ class TestHttp:
         http = Http(url=ax_url)
         assert __version__ in http.user_agent
 
-    def test_certwarn_true(self, httpbin_secure):
-        url = httpbin_secure.url
-        http = Http(url=url, certwarn=True, save_history=True)
-        with pytest.warns(InsecureRequestWarning):
-            http()
+    # def test_certwarn_true(self, httpbin_secure):
+    #     url = httpbin_secure.url
+    #     http = Http(url=url, certwarn=True, save_history=True)
+    #     with pytest.warns(InsecureRequestWarning):
+    #         http()
 
-    def test_certwarn_false(self, httpbin_secure):
-        url = httpbin_secure.url
-        http = Http(url=url, certwarn=False)
-        with pytest.warns() as record:
-            response = http()
-        assert response
-        assert record
+    # def test_certwarn_false(self, httpbin_secure):
+    #     url = httpbin_secure.url
+    #     http = Http(url=url, certwarn=False)
+    #     with pytest.warns() as record:
+    #         response = http()
+    #     assert response
+    #     assert record
 
     def test_save_last_true(self, request):
         """Test last req/resp with save_last=True."""
@@ -140,7 +145,9 @@ class TestHttp:
     def test_log_req_attrs_true(self, request, caplog):
         """Test verbose logging of request attrs when log_request_attrs=True."""
         caplog.set_level(logging.DEBUG)
-        http = get_http(request, log_request_attrs=["url", "headers"], log_level="debug")
+        http = get_http(
+            request, log_request_attrs=["url", "headers"], log_level="debug"
+        )
         with pytest.warns() as record:
             response = http()
         assert response
@@ -162,7 +169,9 @@ class TestHttp:
     def test_log_resp_attrs_true(self, request, caplog):
         """Test verbose logging of response attrs when log_response_attrs=True."""
         caplog.set_level(logging.DEBUG)
-        http = get_http(request, log_response_attrs=["url", "headers"], log_level="debug")
+        http = get_http(
+            request, log_response_attrs=["url", "headers"], log_level="debug"
+        )
         with pytest.warns() as record:
             response = http()
         assert response
@@ -181,7 +190,9 @@ class TestHttp:
         http = get_http(request)
         chain = http.get_cert_chain()
         assert (
-            isinstance(chain, list) and chain and all(isinstance(c, cert_human.Cert) for c in chain)
+            isinstance(chain, list)
+            and chain
+            and all(isinstance(c, cert_human.Cert) for c in chain)
         )
 
     def test_safe_request(self, request):

@@ -243,7 +243,7 @@ class SettingsMixins(ModelMixins):
         """
         api_endpoint = ApiEndpoints.system_settings.settings_update
         request_obj = api_endpoint.load_request(
-            config=new_config, configNmae=self.CONFIG_NAME, pluginId=self.PLUGIN_NAME
+            config=new_config, configName=self.CONFIG_NAME, pluginId=self.PLUGIN_NAME
         )
         return api_endpoint.perform_request(
             http=self.auth.http,

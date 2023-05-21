@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Exceptions and warnings."""
 import typing as t
 
@@ -35,7 +34,7 @@ class UnknownFieldSchema(ApiWarning):
 class AxonError(Exception):
     """Base class for all exceptions in this package."""
 
-    def __init__(self, msg: t.Union[str, t.List[t.Any]]):
+    def __init__(self, msg: t.Union[str, t.List[t.Any]]) -> None:
         """Pass."""
         if isinstance(msg, (list, tuple)):
             msg = "\n".join([str(x) for x in msg])
@@ -52,7 +51,7 @@ class AxonTypeError(AxonError):
         expected: t.Any,
         src: t.Any = None,
         extra: t.Any = None,
-    ):
+    ) -> None:
         """Pass."""
         self.src: t.Any = src
         self.attr: str = attr
@@ -92,7 +91,7 @@ class ConfirmNotTrue(AxonError):
         reason: t.Any = "",
         src: t.Any = None,
         extra: t.Any = None,
-    ):
+    ) -> None:
         """Pass."""
         self.confirm: t.Any = confirm
         self.reason: t.Any = reason
@@ -130,7 +129,7 @@ class NotFoundError(ApiError):
 class SavedQueryNotFoundError(NotFoundError):
     """Error when something is not found."""
 
-    def __init__(self, details: str, sqs: t.List[t.Union[dict, object]]):
+    def __init__(self, details: str, sqs: t.List[t.Union[dict, object]]) -> None:
         """Pass."""
         from .parsers.tables import tablize_sqs
 
@@ -150,14 +149,16 @@ class SavedQueryNotFoundError(NotFoundError):
 class SavedQueryTagsNotFoundError(SavedQueryNotFoundError):
     """Error when something is not found."""
 
-    def __init__(self, value: t.List[str], valid: t.List[str]):
+    def __init__(self, value: t.List[str], valid: t.List[str]) -> None:
         """Pass."""
         self.value = value
         self.valid = valid
 
         value_txt = ", ".join(value)
         valid_txt = "\n" + "\n".join(valid)
-        self.msg = f"Saved Query not found with tags: {value_txt}, valid tags:{valid_txt}"
+        self.msg = (
+            f"Saved Query not found with tags: {value_txt}, valid tags:{valid_txt}"
+        )
         super(NotFoundError, self).__init__(self.msg)
 
 
@@ -227,8 +228,11 @@ class ResponseError(ApiError):
     """Errors when checking responses."""
 
     def __init__(
-        self, msg: t.Optional[str] = None, response=None, exc: t.Optional[Exception] = None
-    ):
+        self,
+        msg: t.Optional[str] = None,
+        response=None,
+        exc: t.Optional[Exception] = None,
+    ) -> None:
         """Error in responses received from REST API.
 
         Args:
@@ -244,7 +248,10 @@ class ResponseError(ApiError):
 
     @classmethod
     def build_errmsg(
-        cls, response, msg: t.Optional[str] = None, exc: t.Optional[Exception] = None
+        cls,
+        response,
+        msg: t.Optional[str] = None,
+        exc: t.Optional[Exception] = None,
     ) -> str:
         """Build an error message from a response.
 
@@ -322,7 +329,7 @@ class NoTriggerDefinedError(ApiError):
 class StopFetch(ApiError):
     """Pass."""
 
-    def __init__(self, reason: str, state: dict):
+    def __init__(self, reason: str, state: dict) -> None:
         """Pass."""
         self.reason = reason
         self.state = state
@@ -332,7 +339,7 @@ class StopFetch(ApiError):
 class SchemaError(ApiError):
     """Pass."""
 
-    def __init__(self, obj, schema, exc, data):
+    def __init__(self, obj, schema, exc, data) -> None:
         """Pass."""
         from .tools import json_log, prettify_obj
 
@@ -373,7 +380,7 @@ class RequestError(ApiError):
         err: str,
         details: t.Optional[t.List[str]] = None,
         exc: t.Optional[Exception] = None,
-    ):
+    ) -> None:
         """Pass."""
         self.api_endpoint = api_endpoint
         self.err = err
@@ -423,7 +430,7 @@ class ResponseLoadObjectError(RequestError):
 class FeatureNotEnabledError(ApiError):
     """Pass."""
 
-    def __init__(self, name: str, extra: t.Optional[str] = None):
+    def __init__(self, name: str, extra: t.Optional[str] = None) -> None:
         """Pass."""
         msg = (
             f"The {name} feature is not enabled on this instance, "
@@ -457,7 +464,7 @@ class FolderAlreadyExistsError(AlreadyExists):
 class FolderNotFoundError(NotFoundError):
     """Error when something is not found."""
 
-    def __init__(self, msg: str, folder: t.Optional[object] = None):
+    def __init__(self, msg: str, folder: t.Optional[object] = None) -> None:
         """Pass."""
         self.folder: t.Optional[object] = folder
         super().__init__(msg)
@@ -512,7 +519,7 @@ class DecodeError(ValueError, AxonError):
         super().__init__(
             f"The input byte string {trim_value_repr(self.value)} cannot be decoded to a valid "
             f"ObjectId string using encoding_format {self.encoding_format!r} "
-            f" and encoding_errors {self.encoding_errors!r}."
+            f" and encoding_errors {self.encoding_errors!r}.",
         )
 
 
@@ -523,7 +530,7 @@ class InvalidObjectIdError(ValueError, AxonError):
         value (str): The input string.
     """
 
-    def __init__(self, value: str):
+    def __init__(self, value: str) -> None:
         """Initialize a new instance of the InvalidObjectIdError exception.
 
         Args:
@@ -532,7 +539,9 @@ class InvalidObjectIdError(ValueError, AxonError):
         from .tools import trim_value_repr
 
         self.value: t.Any = value
-        super().__init__(f"The input string {trim_value_repr(self.value)} is not a valid ObjectId.")
+        super().__init__(
+            f"The input string {trim_value_repr(self.value)} is not a valid ObjectId.",
+        )
 
 
 class InvalidTypeError(TypeError, AxonError):
@@ -543,7 +552,11 @@ class InvalidTypeError(TypeError, AxonError):
         allowed_types (t.Tuple[type]): The tuple of allowed types.
     """
 
-    def __init__(self, value: t.Any, allowed_types: t.Optional[t.Tuple[type]] = ()) -> None:
+    def __init__(
+        self,
+        value: t.Any,
+        allowed_types: t.Optional[t.Tuple[type]] = (),
+    ) -> None:
         """Initialize a new instance of the InvalidTypeError exception.
 
         Args:
@@ -556,7 +569,7 @@ class InvalidTypeError(TypeError, AxonError):
 
         super().__init__(
             f"The input value {self.value!r} type {get_type_str(self.value)} is not "
-            f"one of the allowed types: {get_type_str(allowed_types)}."
+            f"one of the allowed types: {get_type_str(allowed_types)}.",
         )
 
 
@@ -564,7 +577,11 @@ class FormatError(KeyError, AxonError):
     """Raised when there is a KeyError in when doing a string formatting."""
 
     def __init__(
-        self, template: str, error: Exception, args: t.Any = None, kwargs: t.Dict[str, t.Any] = None
+        self,
+        template: str,
+        error: Exception,
+        args: t.Any = None,
+        kwargs: t.Dict[str, t.Any] = None,
     ) -> None:
         """Initialize a new instance of the FormatError exception.
 

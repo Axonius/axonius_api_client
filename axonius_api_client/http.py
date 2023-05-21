@@ -1,11 +1,10 @@
-# -*- coding: utf-8 -*-
 """HTTP client."""
 import logging
 import pathlib
 import typing as t
 import warnings
 
-import OpenSSL
+import OpenSSL  # noqa: TCH002
 import requests
 import requests.cookies
 import requests.structures
@@ -13,17 +12,21 @@ import urllib3
 import urllib3.exceptions
 
 from . import version
+from .constants.api import TIMEOUT_CONNECT, TIMEOUT_RESPONSE
+from .constants.ctypes import PathLike, PatternLikeListy
+from .constants.logs import (
+    LOG_LEVEL_HTTP,
+    MAX_BODY_LEN,
+    REQUEST_ATTR_MAP,
+    RESPONSE_ATTR_MAP,
+)
+from .exceptions import HttpError
+from .logs import get_obj_log, set_log_level
 from .projects import cert_human
 from .projects.cf_token import constants as cf_constants
 from .projects.cf_token.flows import flow_get_token
-from .projects.cf_token.tools import is_url, get_env_url
+from .projects.cf_token.tools import get_env_url, is_url
 from .projects.url_parser import UrlParser
-from .constants.api import TIMEOUT_CONNECT, TIMEOUT_RESPONSE
-from .constants.ctypes import PathLike, PatternLikeListy
-from .constants.logs import LOG_LEVEL_HTTP, MAX_BODY_LEN, REQUEST_ATTR_MAP, RESPONSE_ATTR_MAP
-from .exceptions import HttpError
-from .logs import get_obj_log, set_log_level
-
 from .setup_env import get_env_user_agent
 from .tools import (
     coerce_bool,
@@ -36,7 +39,10 @@ from .tools import (
     tilde_re,
 )
 
-INJECT_RESULTS: t.Tuple[bool, t.List[str]] = cert_human.ssl_capture.inject_into_urllib3()
+INJECT_RESULTS: t.Tuple[
+    bool,
+    t.List[str],
+] = cert_human.ssl_capture.inject_into_urllib3()
 T_Cookies: t.Type = t.Union[dict, requests.cookies.RequestsCookieJar]
 T_Headers: t.Type = t.Union[dict, requests.structures.CaseInsensitiveDict]
 
@@ -165,7 +171,7 @@ class Http:
     """Client object that created this object."""
     # TBD: Connect needs an interface for proper type hinting without circular reference
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         url: t.Union[UrlParser, str],
         certpath: t.Optional[PathLike] = None,
@@ -206,7 +212,7 @@ class Http:
         cf_timeout_access: t.Optional[int] = cf_constants.TIMEOUT_ACCESS,
         cf_timeout_login: t.Optional[int] = cf_constants.TIMEOUT_LOGIN,
         **kwargs,
-    ):
+    ) -> None:
         """HTTP client that wraps around :obj:`requests.Session`.
 
         Notes:
@@ -224,6 +230,9 @@ class Http:
             log_level: log level to use for this object
             log_body_lines: max length of request and response bodies to log
             log_hide_headers: headers to hide when logging
+            log_hide_str: string to use to hide sensitive data in logs
+            log_request_attrs: attributes of request to log
+            log_response_attrs: attributes of response to log
             save_last: save last request and response to :attr:`last_request` and
                 :attr:`last_response`
             save_history: save all requests and responses to :attr:`history`
@@ -272,7 +281,10 @@ class Http:
         self.LAST_REQUEST: t.Optional[requests.PreparedRequest] = None
         self.LAST_RESPONSE: t.Optional[requests.Response] = None
 
-        self.LOG_BODY_LINES: t.Optional[int] = coerce_int_float(log_body_lines, error=False)
+        self.LOG_BODY_LINES: t.Optional[int] = coerce_int_float(
+            log_body_lines,
+            error=False,
+        )
         self.LOG_HIDE_HEADERS: PatternLikeListy = tilde_re(listify(log_hide_headers))
         self.LOG_HIDE_STR: t.Optional[str] = log_hide_str
         self.LOG_LEVEL_URLLIB: str = log_level_urllib
@@ -314,10 +326,12 @@ class Http:
         self.CERT_CLIENT_KEY: t.Optional[PathLike] = cert_client_key
 
         self.CONNECT_TIMEOUT: t.Optional[t.Union[int, float]] = coerce_int_float(
-            connect_timeout, error=False
+            connect_timeout,
+            error=False,
         )
         self.RESPONSE_TIMEOUT: t.Optional[t.Union[int, float]] = coerce_int_float(
-            response_timeout, error=False
+            response_timeout,
+            error=False,
         )
 
         self.HTTP_PROXY: t.Optional[str] = http_proxy
@@ -382,7 +396,11 @@ class Http:
         Returns:
             None or token, depending on `error` and `error_access` and `error_login`
         """
-        url = url if is_url(url) else get_env_url(error=True, error_empty=False) or self.url
+        url = (
+            url
+            if is_url(url)
+            else get_env_url(error=True, error_empty=False) or self.url
+        )
         token = flow_get_token(
             url=url,
             path=path,
@@ -403,7 +421,11 @@ class Http:
         self.session.headers["cf-access-token"] = token
         return token
 
-    def safe_request(self, error: bool = False, **kwargs) -> t.Optional[requests.Response]:
+    def safe_request(
+        self,
+        error: bool = False,
+        **kwargs,
+    ) -> t.Optional[requests.Response]:
         """Make a request, but catch all exceptions and return None."""
         kwargs.setdefault("verify", False)
         kwargs.setdefault("connect_timeout", 10)
@@ -411,7 +433,7 @@ class Http:
         # noinspection PyBroadException
         try:
             return self(**kwargs)
-        except Exception:  # pragma: no cover
+        except Exception:  # pragma: no cover  # noqa: BLE001
             if error:
                 raise
         return None  # pragma: no cover
@@ -434,8 +456,13 @@ class Http:
             response: t.Optional[requests.Response] = self.safe_request(error=error)
             value = []
             if response:
-                chain: t.List[OpenSSL.crypto.X509] = listify(response.raw.captured_chain)
-                source: dict = {"url": self.url, "method": f"{self.get_cert_chain.__name__}"}
+                chain: t.List[OpenSSL.crypto.X509] = listify(
+                    response.raw.captured_chain,
+                )
+                source: dict = {
+                    "url": self.url,
+                    "method": f"{self.get_cert_chain.__name__}",
+                }
                 value = [cert_human.Cert(cert=x, source=source) for x in chain]
             self.URL_CERT_CHAIN = value
         return self.URL_CERT_CHAIN
@@ -488,24 +515,29 @@ class Http:
             # TBD: verify cert and key
             self.CERT_CLIENT_BOTH, _ = path_read(obj=self.CERT_CLIENT_BOTH, binary=True)
             self.LOG.debug(
-                f"Resolved client cert with both cert and key to {self.CERT_CLIENT_BOTH}"
+                f"Resolved client cert with both cert and key to {self.CERT_CLIENT_BOTH}",
             )
             self.session.cert = str(self.CERT_CLIENT_BOTH)
 
         if (self.CERT_CLIENT_CERT or self.CERT_CLIENT_KEY) and not (
             self.CERT_CLIENT_CERT and self.CERT_CLIENT_KEY
         ):
+            msg = "Must supply 'cert_client_cert' and 'cert_client_key' or 'cert_client_both'"
             raise HttpError(
-                "Must supply 'cert_client_cert' and 'cert_client_key' or 'cert_client_both'"
+                msg,
             )
 
         if self.CERT_CLIENT_CERT and self.CERT_CLIENT_KEY:
             # TBD: verify cert and key
             self.CERT_CLIENT_CERT, _ = path_read(obj=self.CERT_CLIENT_CERT, binary=True)
-            self.LOG.debug(f"Resolved client cert with cert only to {self.CERT_CLIENT_CERT}")
+            self.LOG.debug(
+                f"Resolved client cert with cert only to {self.CERT_CLIENT_CERT}",
+            )
 
             self.CERT_CLIENT_KEY, _ = path_read(obj=self.CERT_CLIENT_KEY, binary=True)
-            self.LOG.debug(f"Resolved client cert with key only to {self.CERT_CLIENT_KEY}")
+            self.LOG.debug(
+                f"Resolved client cert with key only to {self.CERT_CLIENT_KEY}",
+            )
             self.session.cert = (str(self.CERT_CLIENT_CERT), str(self.CERT_CLIENT_KEY))
 
     def set_urllib_warnings(self):
@@ -522,7 +554,10 @@ class Http:
 
     def set_urllib_log(self):
         """Set the urllib3 logging level to :attr:`LOG_LEVEL_URLLIB`."""
-        set_log_level(obj=logging.getLogger("urllib3.connectionpool"), level=self.LOG_LEVEL_URLLIB)
+        set_log_level(
+            obj=logging.getLogger("urllib3.connectionpool"),
+            level=self.LOG_LEVEL_URLLIB,
+        )
 
     def __call__(
         self,
@@ -546,6 +581,7 @@ class Http:
             data: body to send
             params: parameters to url encode
             headers: headers to send
+            cookies: cookies to send
             json: obj to encode as json
             files: files to send
             **kwargs: overrides for object attributes
@@ -615,7 +651,11 @@ class Http:
         )
         log_if_headers(f"Request arguments after environment merge: {send_args}")
 
-        response = self.session.send(request=prepped_request, timeout=timeout, **send_args)
+        response = self.session.send(
+            request=prepped_request,
+            timeout=timeout,
+            **send_args,
+        )
 
         if self.SAVE_LAST:
             self.LAST_RESPONSE = response
@@ -629,7 +669,10 @@ class Http:
 
     def __str__(self) -> str:
         """Show object info."""
-        return "{c.__module__}.{c.__name__}(url={url!r})".format(c=self.__class__, url=self.url)
+        return "{c.__module__}.{c.__name__}(url={url!r})".format(
+            c=self.__class__,
+            url=self.url,
+        )
 
     def __repr__(self) -> str:
         """Show object info."""
@@ -660,7 +703,9 @@ class Http:
             self.LOG.debug(f"REQUEST ATTRS: {lattrs}")
 
         if self.LOG_REQUEST_BODY:
-            self.LOG.debug(self.log_body(body=request.body, body_type="REQUEST", src=request))
+            self.LOG.debug(
+                self.log_body(body=request.body, body_type="REQUEST", src=request),
+            )
 
     def _clean_headers(self, headers: dict) -> dict:
         """Clean headers with sensitive information.
@@ -683,7 +728,7 @@ class Http:
         # noinspection PyBroadException
         try:
             return {k: getval(k, v) for k, v in headers.items()}
-        except Exception:  # pragma: no cover
+        except Exception:  # pragma: no cover  # noqa: BLE001
             return headers
 
     def _do_log_response(self, response):
@@ -706,7 +751,9 @@ class Http:
             self.LOG.debug(f"RESPONSE ATTRS: {lattrs}")
 
         if self.LOG_RESPONSE_BODY:
-            self.LOG.debug(self.log_body(body=response.text, body_type="RESPONSE", src=response))
+            self.LOG.debug(
+                self.log_body(body=response.text, body_type="RESPONSE", src=response),
+            )
 
     @property
     def log_request_attrs(self) -> t.List[str]:
@@ -740,7 +787,12 @@ class Http:
         """
         return getattr(self, "_LOG_ATTRS", {}).get(attr_type, [])
 
-    def _set_log_attrs(self, attr_map: dict, attr_type: str, value: t.Union[str, t.List[str]]):
+    def _set_log_attrs(
+        self,
+        attr_map: dict,
+        attr_type: str,
+        value: t.Union[str, t.List[str]],
+    ):
         """Set the log attributes for a specific type.
 
         Args:
@@ -773,7 +825,12 @@ class Http:
                 if entry not in log_attrs:
                     log_attrs.append(entry)
 
-    def log_body(self, body: t.Any, body_type: str, src: t.Optional[t.Any] = None) -> str:
+    def log_body(
+        self,
+        body: t.Any,
+        body_type: str,
+        src: t.Optional[t.Any] = None,
+    ) -> str:
         """Get a string for logging a request or response body.
 
         Args:
@@ -787,4 +844,3 @@ class Http:
 
     def _init(self):
         """Pass."""
-        pass
