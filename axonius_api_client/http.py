@@ -300,22 +300,23 @@ class Http:
         self.HTTP_HEADERS: T_Headers = headers if is_headers(headers) else {}
         self.HTTP_COOKIES: T_Cookies = cookies if is_cookies(cookies) else {}
 
-        self.set_cf_token(
-            url=cf_url,
-            token=cf_token,
-            run=cf_run,
-            path=cf_path,
-            run_login=cf_run_login,
-            run_access=cf_run_access,
-            env=cf_env,
-            echo=cf_echo,
-            echo_verbose=cf_echo_verbose,
-            error=cf_error,
-            error_login=cf_error_login,
-            error_access=cf_error_access,
-            timeout_access=cf_timeout_access,
-            timeout_login=cf_timeout_login,
-        )
+        if cf_token or cf_env or cf_run:
+            self.set_cf_token(
+                url=cf_url,
+                token=cf_token,
+                run=cf_run,
+                path=cf_path,
+                run_login=cf_run_login,
+                run_access=cf_run_access,
+                env=cf_env,
+                echo=cf_echo,
+                echo_verbose=cf_echo_verbose,
+                error=cf_error,
+                error_login=cf_error_login,
+                error_access=cf_error_access,
+                timeout_access=cf_timeout_access,
+                timeout_login=cf_timeout_login,
+            )
 
         self.CERT_PATH: t.Optional[PathLike] = certpath
         self.CERT_WARN: bool = coerce_bool(certwarn)
