@@ -173,7 +173,7 @@ FLOW_ECHO_VERBOSE: bool = False
 FLOW_ERROR: bool = True
 """Default value for `error` argument used in workflows"""
 
-FLOW_ENV: bool = True
+FLOW_ENV: bool = False
 """Default value for `env` argument used in workflows"""
 
 FLOW_RUN: bool = True
