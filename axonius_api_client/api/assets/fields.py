@@ -572,7 +572,7 @@ class Fields(ChildMixins):
                     return schema
 
         if not fields_error:
-            self.LOG.warning(f"No schema found for field {search!r}, creating custom schema")
+            self.LOG.debug(f"No schema found for field {search!r}, creating custom schema")
             schema = schema_custom(name=search)
             return schema
 
