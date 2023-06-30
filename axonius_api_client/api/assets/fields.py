@@ -614,14 +614,15 @@ class Fields(ChildMixins):
         """
         search = value.strip().lower()
 
-        if ":" in search:
+        # Problem are fields containing ":" from adapters that populate dynamic fields
+        # PBUG: special check for 'custom attributes' coming from esx adapter.
+        if ":" in search and 'custom attributes' not in search:
             adapter_split, field = [x.strip() for x in search.split(":", 1)]
             if not adapter_split:
                 adapter_split = adapter
         else:
             field = search
             adapter_split = adapter
-
         qual_check = re.match(r"adapters_data\.(.*?)\.", field)
         if qual_check and len(qual_check.groups()) == 1:
             adapter_split = qual_check.groups()[0]
@@ -639,7 +640,6 @@ class Fields(ChildMixins):
 
         if not fields:
             raise ApiError(f"No fields provided in {value!r}, format must be 'adapter:field'")
-
         return adapter_split, fields
 
     def _prettify_schemas(
