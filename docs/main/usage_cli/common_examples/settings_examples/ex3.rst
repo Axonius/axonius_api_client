@@ -61,14 +61,14 @@ you could use would be the ``update-sub-section`` command.
                                       (multiples)  [env var: AX_CONFIG]
       --help                          Show this message and exit.
 
-An example might look like this:
+Here is an example:
 
 .. code:: shell
 
     $ axonshell system settings-global update-sub-section --section "email_settings" \
     --config "sender_address=no-reply@yourdomain.com"
 
-To update a section or sub-section using json from a file you could use the ``update-sub-section-json`` command.
+To update a section or sub-section using json from a file you could use the ``update-sub-section-from-json`` command.
 
 .. code:: shell
 
@@ -108,4 +108,12 @@ and save it in a file. Then update that file to the desired configuration. So if
     $ axonshell system settings-global update-sub-section-from-json --section "email_settings" \
     --sub-section "smtpAuth" --input-file "./smtp_auth_settings.json"
 
-Where ``smtp_auth_settings.json`` would be a file containing the json object you wanted to set that sub-section to.
+Where ``smtp_auth_settings.json`` would be a file containing the json object you wanted to set that sub-section to
+such as:
+
+.. code:: shell
+
+    {
+      "smtpPassword": "example_password",
+      "smtpUser": "example_user"
+    }
