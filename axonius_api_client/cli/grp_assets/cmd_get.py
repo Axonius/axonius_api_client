@@ -13,6 +13,7 @@ from ..options import (
 )
 from .grp_common import GET_EXPORT, HISTORY, OPTS_EXPORT, WIZ, load_whitelist, load_wiz
 
+
 OPTIONS = [
     *AUTH,
     *PAGING,
@@ -26,6 +27,16 @@ OPTIONS = [
     get_option_help(
         choices=["auth", "query", "assetexport", "selectfields", "wizard", "asset_helper"]
     ),
+    click.option(
+        "--return-plain-data/--no-return-plain-data",
+        "-rpd/-nrpd",
+        "return_plain_data",
+        default=None,
+        help="Skip some GUI specific functions to speed up the request",
+        is_flag=True,
+        show_envvar=True,
+        show_default=True,
+    ),
 ]
 
 
@@ -38,6 +49,13 @@ def cmd(ctx, url, key, secret, query_file, wizard_content, whitelist=None, **kwa
     kwargs["report_software_whitelist"] = load_whitelist(whitelist)
     client = ctx.obj.start_client(url=url, key=key, secret=secret)
     p_grp = ctx.parent.command.name
+
+    # this is a forced override as this parameter is only applicable to devices currently
+    if p_grp != 'devices':
+        kwargs['return_plain_data'] = None
+        # I do not know if this is needed, just doing it to be safe
+        ctx.params['return_plain_data'] = None
+
     apiobj = getattr(client, p_grp)
     with ctx.obj.exc_wrap(wraperror=ctx.obj.wraperror):
         kwargs = load_wiz(apiobj=apiobj, wizard_content=wizard_content, kwargs=kwargs)
