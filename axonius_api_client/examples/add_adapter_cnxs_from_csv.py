@@ -92,17 +92,24 @@ def print_adapter_schema(schema: dict):
 def check_schema(schema: dict, configs: List, ignore_unknown_keys: bool = False) -> List:
     """Checks that the configs from the CSV match what is needed to add a connection."""
     schema_keys = schema.keys()
+
     required_keys = [v.get("name") for k, v in schema.items() if v.get("required")]
     for key in required_keys:
         if key not in configs:
             raise KeyError(f"Required key `{key}` is missing from CSV configs.")
+
     for i, key in enumerate(configs):
         if key not in schema_keys:
+            # add an execption here for special supported keys
+            if key.startswith('*'):
+                continue
+            # process the rest like normal
             message = f"Unknown key `{key}` found in CSV configs."
             if not ignore_unknown_keys:
                 raise KeyError(message)
             print(message + " Ignoring...", file=sys.stderr, end="\n\n")
             configs[i] = None
+
     return configs
 
 
@@ -114,14 +121,28 @@ def add_adapter_connection(
     save_and_fetch: bool = False,
 ) -> None:
     """Add an adapter using the adapter str and config."""
+
+    # create our config
     config = {}
     for i, value in enumerate(row):
         if not value:
             continue
         config[configs[i]] = value
+
+    # do some post-processing to pull out supported special flags
+    label = None
+    tunnel = None
+    if '*label' in config:
+        label = config.get('*label')
+        del(config['*label'])
+    if '*tunnel' in config:
+        tunnel = config.get('*tunnel')
+        del(config['*tunnel'])
+
     try:
-        cnx = client.adapters.cnx.add(
-            adapter_name=adapter, active=active, save_and_fetch=save_and_fetch, **config
+        cnx = client.adapters.cnx.add(adapter_name=adapter, active=active,
+                                      save_and_fetch=save_and_fetch,
+                                      connection_label=label, tunnel=tunnel, **config
         )
     except axonapi.exceptions.CnxAddError as err:
         print(err, file=sys.stderr, end="\n\n")
