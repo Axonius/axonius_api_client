@@ -229,6 +229,11 @@ class AssetRequestSchema(BaseSchemaJson):
         dump_default=None,
         description="Maximum number of rows to return for CSV export, ignored when using cursor",
     )  # EntityRequestSchema
+    return_plain_data = SchemaBool(
+        load_default=None,
+        dump_default=None,
+        description="Skip some GUI specific functions to speed up the request",
+    )  # EntityRequestSchema
 
     class Meta:
         """Pass."""
@@ -322,6 +327,7 @@ class AssetRequest(BaseModel):
     field_to_split_by: t.Optional[str] = field_from_mm(SCHEMA, "field_to_split_by")
     file_name: t.Optional[str] = field_from_mm(SCHEMA, "file_name")
     max_rows: t.Optional[int] = field_from_mm(SCHEMA, "max_rows")
+    return_plain_data: t.Optional[bool] = field_from_mm(SCHEMA, "return_plain_data")
 
     SCHEMA: t.ClassVar[marshmallow.Schema] = SCHEMA
 
