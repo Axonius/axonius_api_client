@@ -165,7 +165,7 @@ def config_check_int(
 
 
 def config_check_array(
-    value: Union[str, List[str]],
+    value: Union[str, List[Any]],
     schema: dict,
     source: str,
     callbacks: Optional[dict] = None,
@@ -186,7 +186,7 @@ def config_check_array(
 
     is_list = isinstance(value, list)
 
-    if not is_list or (is_list and not all([isinstance(x, str) for x in value])):
+    if not is_list:
         sinfo = config_info(schema=schema, value=value, source=source)
         msg = f"{sinfo}\nIs not a list of strings or a comma seperated string!"
         raise ConfigInvalidValue(msg)

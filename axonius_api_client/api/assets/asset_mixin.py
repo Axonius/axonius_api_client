@@ -1116,6 +1116,7 @@ class AssetMixin(ModelMixins):
         request_obj: t.Optional[AssetRequest] = None,
         export_templates: t.Optional[dict] = None,
         http_args: t.Optional[dict] = None,
+        return_plain_data: t.Optional[bool] = None,
         **kwargs,
     ) -> t.Generator[dict, None, None]:
         """Get assets from a query.
@@ -1223,6 +1224,7 @@ class AssetMixin(ModelMixins):
             complex_fields_preview_limit=complex_fields_preview_limit,
             use_heavy_fields_collection=use_heavy_fields_collection,
             asset_excluded_adapters=asset_excluded_adapters,
+            return_plain_data=return_plain_data,
         )
         request_obj.get_metadata = True
         request_obj.use_cursor = use_cursor
