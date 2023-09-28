@@ -107,16 +107,6 @@ OPT_USE_CACHE_ENTRY = click.option(
     show_envvar=True,
     show_default=True,
 )
-OPT_USE_HEAVY_FIELDS_COLLECTION = click.option(
-    "--use-heavy-fields-collection/--no-use-heavy-fields-collection",
-    "-uhfc/-nuhfc",
-    "use_heavy_fields_collection",
-    default=False,
-    help="Ask the API to use a heavy fields collection for this query",
-    show_envvar=True,
-    show_default=True,
-)
-
 
 OPTS_GET_BY_SQ = [
     OPT_INCLUDE_FIELDS,
@@ -242,16 +232,6 @@ OPTS_GET_API = [
         show_envvar=True,
         show_default=True,
         type=click.INT,
-    ),
-    click.option(
-        "--api-use-heavy-fields-collection/--no-api-use-heavy-fields-collection",
-        "-ahfc/-nahfc",
-        "use_heavy_fields_collection",
-        help="Ask the REST API to use the heavy fields collection",
-        is_flag=True,
-        default=False,
-        show_envvar=True,
-        show_default=True,
     ),
 ]
 GET_EXPORT = [
