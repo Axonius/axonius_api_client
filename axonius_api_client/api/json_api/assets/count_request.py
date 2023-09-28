@@ -35,11 +35,6 @@ class CountRequestSchema(BaseSchemaJson):
         description="AQL to filter assets",
     )  #
     # FilterSchema
-    use_heavy_fields_collection = SchemaBool(
-        load_default=False,
-        dump_default=False,
-        description="unknown",
-    )  # ForceHeavyFieldsSchema
     use_cache_entry = SchemaBool(
         load_default=False,
         dump_default=False,
@@ -86,7 +81,6 @@ class CountRequest(BaseModel):
     history: t.Optional[str] = field_from_mm(SCHEMA, "history")
     search: t.Optional[str] = field_from_mm(SCHEMA, "search")
     filter: t.Optional[str] = field_from_mm(SCHEMA, "filter")
-    use_heavy_fields_collection: bool = field_from_mm(SCHEMA, "use_heavy_fields_collection")
     use_cache_entry: bool = field_from_mm(SCHEMA, "use_cache_entry")
     query_id: t.Optional[str] = field_from_mm(SCHEMA, "query_id")
     saved_query_id: t.Optional[str] = field_from_mm(SCHEMA, "saved_query_id")
