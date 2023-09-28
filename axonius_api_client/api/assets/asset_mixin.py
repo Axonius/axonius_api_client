@@ -884,7 +884,6 @@ class AssetMixin(ModelMixins):
         wiz_parsed: t.Optional[t.List[dict]] = None,
         history_date_parsed: t.Optional[str] = None,
         use_cache_entry: bool = False,
-        use_heavy_fields_collection: bool = False,
         frontend_sent_time: t.Optional[datetime.datetime] = None,
         query_id: t.Optional[t.Union[str, uuid.UUID]] = None,
         saved_query_id: t.Optional[str] = None,
@@ -926,7 +925,6 @@ class AssetMixin(ModelMixins):
             wiz_parsed: previously parsed wiz_entries
             history_date_parsed: previously parsed history_date
             use_cache_entry: if True, use the last query that was run to get the count
-            use_heavy_fields_collection: if True, use the HEAVV fields collection to get the count
             frontend_sent_time: time that the query was sent from the frontend
             query_id: ID to identify this query
             saved_query_id: ID of saved query that count is being issued for
@@ -942,7 +940,6 @@ class AssetMixin(ModelMixins):
             use_cache_entry=use_cache_entry,
             saved_query_id=saved_query_id,
             query_id=query_id,
-            use_heavy_fields_collection=use_heavy_fields_collection,
             frontend_sent_time=frontend_sent_time,
             **kwargs,
         )
@@ -1089,7 +1086,6 @@ class AssetMixin(ModelMixins):
         wiz_entries: t.Optional[t.Union[t.List[dict], t.List[str], dict, str]] = None,
         wiz_parsed: t.Optional[dict] = None,
         file_date: t.Optional[str] = None,
-        use_heavy_fields_collection: bool = False,
         sort_field_parsed: t.Optional[str] = None,
         search: t.Optional[str] = None,
         history_date_parsed: t.Optional[str] = None,
@@ -1178,7 +1174,6 @@ class AssetMixin(ModelMixins):
             history_date_parsed: previously parsed history date
             initial_count: previously fetched initial count
             search: search string to use for this query
-            use_heavy_fields_collection: unknown
             use_cursor: use cursor based pagination
             field_filters: field filters to apply to this query
             excluded_adapters: adapters to exclude from this query
@@ -1222,7 +1217,6 @@ class AssetMixin(ModelMixins):
             null_for_non_exist=null_for_non_exist,
             max_field_items=max_field_items,
             complex_fields_preview_limit=complex_fields_preview_limit,
-            use_heavy_fields_collection=use_heavy_fields_collection,
             asset_excluded_adapters=asset_excluded_adapters,
             return_plain_data=return_plain_data,
         )
@@ -1272,7 +1266,6 @@ class AssetMixin(ModelMixins):
                 history_date_parsed=history_date_parsed,
                 query_id=request_obj.query_id,
                 saved_query_id=request_obj.saved_query_id,
-                use_heavy_fields_collection=request_obj.use_heavy_fields_collection,
             )
 
         if not isinstance(file_date, str):

@@ -164,12 +164,6 @@ class AssetRequestSchema(BaseSchemaJson):
         allow_none=True,
         description="Maximum number of items to return for complex fields",
     )  # EntityRequestSchema
-    use_heavy_fields_collection = SchemaBool(
-        load_default=None,
-        dump_default=None,
-        allow_none=True,
-        description="Use the heavy fields collection for this request",
-    )  # ForceHeavyFieldsSchema
     download_id = mm_fields.Str(
         load_default=None,
         dump_default=None,
@@ -314,9 +308,6 @@ class AssetRequest(BaseModel):
     )
 
     download_id: t.Optional[str] = field_from_mm(SCHEMA, "download_id")
-    use_heavy_fields_collection: t.Optional[bool] = field_from_mm(
-        SCHEMA, "use_heavy_fields_collection"
-    )
     use_cache_entry: bool = field_from_mm(SCHEMA, "use_cache_entry")
     always_cached_query: bool = field_from_mm(SCHEMA, "always_cached_query")
     wait_for_data: bool = field_from_mm(SCHEMA, "wait_for_data")
