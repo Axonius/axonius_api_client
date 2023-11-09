@@ -192,6 +192,7 @@ def inject_into_urllib3(with_pyopenssl: bool = INJECT_WITH_PYOPENSSL) -> t.Tuple
         performed = True
         poolmanager.pool_classes_by_scheme["https"] = CaptureHTTPSConnectionPool
         reasons.append(f"HTTPS pool class patched with {CaptureHTTPSConnectionPool}")
+
     return performed, reasons
 
 
