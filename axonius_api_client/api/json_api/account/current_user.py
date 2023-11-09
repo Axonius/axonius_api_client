@@ -45,6 +45,8 @@ class CurrentUserSchema(BaseSchemaJson):
     timeout = mm_fields.Integer(allow_none=True, load_default=None, dump_default=None)
     last_updated = SchemaDatetime(allow_none=True, load_default=None, dump_default=None)
     last_login = SchemaDatetime(allow_none=True, load_default=None, dump_default=None)
+    seen_announcement = SchemaBool(allow_none=True, load_default=False, dump_default=False)
+    is_fields_restricted = SchemaBool(allow_none=True, load_default=False, dump_default=False)
 
     class Meta:
         """JSONAPI config."""
@@ -88,6 +90,8 @@ class CurrentUser(BaseModel):
     timeout: t.Optional[int] = field_from_mm(SCHEMA, "timeout")
     last_updated: t.Optional[datetime.datetime] = field_from_mm(SCHEMA, "last_updated")
     last_login: t.Optional[datetime.datetime] = field_from_mm(SCHEMA, "last_login")
+    seen_announcement: t.Optional[bool] = field_from_mm(SCHEMA, "seen_announcement")
+    is_fields_restricted: t.Optional[bool] = field_from_mm(SCHEMA, "is_fields_restricted")
 
     document_meta: t.Optional[dict] = dataclasses.field(default_factory=dict)
 
