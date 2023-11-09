@@ -445,9 +445,10 @@ class Http:
             response: t.Optional[requests.Response] = self.safe_request(error=error)
             value = None
             if response:
-                cert: OpenSSL.crypto.X509 = response.raw.captured_cert
-                source: dict = {"url": self.url, "method": f"{self.get_cert.__name__}"}
-                value = cert_human.Cert(cert=cert, source=source)
+                if hasattr(response.raw, "captured_cert"):
+                    cert: OpenSSL.crypto.X509 = response.raw.captured_cert
+                    source: dict = {"url": self.url, "method": f"{self.get_cert.__name__}"}
+                    value = cert_human.Cert(cert=cert, source=source)
             self.URL_CERT = value
         return self.URL_CERT
 
