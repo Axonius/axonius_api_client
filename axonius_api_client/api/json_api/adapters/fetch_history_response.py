@@ -166,7 +166,7 @@ class AdapterFetchHistory(BaseModel):
     end_time: t.Optional[datetime.datetime] = field_from_mm(SCHEMA, "end_time")
     duration: t.Optional[str] = field_from_mm(SCHEMA, "duration")
     error: t.Optional[str] = field_from_mm(SCHEMA, "error")
-    fetch_events_count: t.Optional[int] = field_from_mm(SCHEMA, "fetch_events_count")
+    fetch_events_count: t.Optional[dict] = field_from_mm(SCHEMA, "fetch_events_count")
     ignored_devices_count: t.Optional[int] = field_from_mm(SCHEMA, "ignored_devices_count")
     ignored_users_count: t.Optional[int] = field_from_mm(SCHEMA, "ignored_users_count")
     realtime: bool = field_from_mm(SCHEMA, "realtime")
