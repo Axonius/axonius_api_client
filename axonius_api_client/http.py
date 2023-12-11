@@ -175,8 +175,8 @@ class Http:
     RETRY_COUNT: t.Optional[int] = 3
     """Number of times to retry a request if it fails."""
 
-    RETRY_BACKOFF: t.Optional[int] = 1
-    """Number of seconds to wait between retries. This value will be doubled after each retry."""
+    RETRY_BACKOFF: t.Optional[int] = 5
+    """Number of seconds to wait between retries, will be multiplied against the current retry attempt."""
 
     def __init__(  # noqa: PLR0913
         self,
