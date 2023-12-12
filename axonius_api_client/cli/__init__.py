@@ -544,10 +544,10 @@ CF = cf_constants.CLIENT_DESC
     show_default=True,
 )
 @click.option(
-    "--retry-count",
+    "--max-retries",
     "-rc",
-    "retry_count",
-    default=connect.Http.RETRY_COUNT,
+    "max_retries",
+    default=connect.Http.MAX_RETRIES,
     help="Number of times to retry failed connections.",
     type=click.INT,
     show_envvar=True,
