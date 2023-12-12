@@ -3,6 +3,7 @@ import logging
 import pathlib
 import typing as t
 import warnings
+import time
 
 import OpenSSL  # noqa: TCH002
 import requests
@@ -171,6 +172,12 @@ class Http:
     """Client object that created this object."""
     # TBD: Connect needs an interface for proper type hinting without circular reference
 
+    RETRY_COUNT: t.Optional[int] = 3
+    """Number of times to retry a request if it fails."""
+
+    RETRY_BACKOFF: t.Optional[int] = 5
+    """Number of seconds to wait between retries, will be multiplied against the current retry attempt."""
+
     def __init__(  # noqa: PLR0913
         self,
         url: t.Union[UrlParser, str],
@@ -211,6 +218,8 @@ class Http:
         cf_error_access: bool = cf_constants.FLOW_ERROR,
         cf_timeout_access: t.Optional[int] = cf_constants.TIMEOUT_ACCESS,
         cf_timeout_login: t.Optional[int] = cf_constants.TIMEOUT_LOGIN,
+        retry_count: t.Optional[int] = RETRY_COUNT,
+        retry_backoff: t.Optional[int] = RETRY_BACKOFF,
         **kwargs,
     ) -> None:
         """HTTP client that wraps around :obj:`requests.Session`.
@@ -263,6 +272,8 @@ class Http:
             cf_error_login: raise exc if `access login` command fails
             cf_echo: echo commands and results to stdout
             cf_echo_verbose: echo checks to stdout
+            retry_count: number of times to retry a failed connection
+            retry_backoff: number of seconds to wait between retries, will be multiplied against the current retry attempt
             **kwargs: no longer used, will throw a deprecation warning
 
         Raises:
@@ -340,6 +351,15 @@ class Http:
 
         self.SAVE_HISTORY: bool = coerce_bool(save_history)
         self.SAVE_LAST: bool = coerce_bool(save_last)
+
+        self.RETRY_COUNT: t.Optional[int] = coerce_int_float(
+            retry_count,
+            error=False,
+        )
+        self.RETRY_BACKOFF: t.Optional[int] = coerce_int_float(
+            retry_backoff,
+            error=False,
+        )
 
         self.set_urllib_warnings()
         self.set_urllib_log()
@@ -637,7 +657,6 @@ class Http:
         if self.SAVE_LAST:
             self.LAST_REQUEST = prepped_request
 
-        self._do_log_request(request=prepped_request)
 
         pre_send_args = {
             "proxies": kwargs.get("proxies", self.session.proxies),
@@ -653,11 +672,29 @@ class Http:
         )
         log_if_headers(f"Request arguments after environment merge: {send_args}")
 
-        response = self.session.send(
-            request=prepped_request,
-            timeout=timeout,
-            **send_args,
-        )
+        if self.RETRY_COUNT < 1:
+            self.RETRY_COUNT = 1
+
+        response = None
+        for attempt in range(self.RETRY_COUNT):
+            attempt_count = attempt + 1
+            attempt_backoff = attempt_count * self.RETRY_BACKOFF
+            try:
+                self.LOG.debug(f"Attempt {attempt_count} of {self.RETRY_COUNT}.")
+                response = self.session.send(
+                    request=prepped_request,
+                    timeout=timeout,
+                    **send_args,
+                )
+                break
+            except Exception as exc:
+                self.LOG.error(f"Connect Error: {exc}")
+                if attempt == self.RETRY_COUNT - 1:
+                    self.LOG.error(f"Max attempts ({self.RETRY_COUNT}) reached.")
+                    raise exc
+                self.LOG.warning(f"Retrying after {attempt_backoff} seconds...")
+                time.sleep(attempt_backoff)
+                continue
 
         if self.SAVE_LAST:
             self.LAST_RESPONSE = response

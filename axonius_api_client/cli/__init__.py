@@ -544,6 +544,25 @@ CF = cf_constants.CLIENT_DESC
     show_default=True,
 )
 @click.option(
+    "--retry-count",
+    "-rc",
+    "retry_count",
+    default=connect.Http.RETRY_COUNT,
+    help="Number of times to retry failed connections.",
+    type=click.INT,
+    show_envvar=True,
+    show_default=True,
+)
+@click.option(
+    "--retry-backoff",
+    "-rb",
+    "retry_backoff",
+    default=connect.Http.RETRY_BACKOFF,
+    help="Seconds to wait between retry attempts. This value is multiplied by the retry attempt.",
+    type=click.INT,
+    show_default=True,
+)
+@click.option(
     "--credentials/--keys",
     "-creds/-keys",
     "credentials",
