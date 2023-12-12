@@ -264,6 +264,8 @@ log_body_lines = 10000
         http: t.Optional[Http] = None,
         auth: t.Optional[AuthModel] = None,
         auth_null: t.Optional[AuthModel] = None,
+        max_retries: t.Optional[int] = Http.MAX_RETRIES,
+        retry_backoff: t.Optional[int] = Http.RETRY_BACKOFF,
         **kwargs: t.Dict[str, t.Any],
     ) -> None:
         """Easy all-in-one connection handler.
@@ -332,6 +334,8 @@ log_body_lines = 10000
             http: http object to use for this connection
             auth: auth model to use for this connection
             auth_null: null auth model to use for this connection
+            max_retries: number of times to retry a failed connection
+            retry_backoff: number of seconds to wait between retries, will be multiplied against the current retry attempt
             **kwargs: unused
         """
         self._url: str = url
@@ -408,6 +412,8 @@ log_body_lines = 10000
             "cf_error_login": cf_error_login,
             "cf_echo": cf_echo,
             "cf_echo_verbose": cf_echo_verbose,
+            "max_retries": max_retries,
+            "retry_backoff": retry_backoff,
         }
 
         self.set_wraperror(wraperror)
