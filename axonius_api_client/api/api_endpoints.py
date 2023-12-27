@@ -407,6 +407,24 @@ class SavedQueries(ApiEndpointGroup):
         response_model_cls=json_api.saved_queries.SavedQuery,
     )
 
+    sq_export: ApiEndpoint = ApiEndpoint(
+        method="post",
+        path="api/queries/export",
+        request_schema_cls=json_api.saved_queries.SavedQueryExportSchema,
+        request_model_cls=json_api.saved_queries.SavedQueryExport,
+        response_schema_cls=None,
+        response_model_cls=None,
+    )
+
+    sq_import: ApiEndpoint = ApiEndpoint(
+        method="post",
+        path="api/queries/import",
+        request_schema_cls=None,
+        request_model_cls=None,
+        response_schema_cls=json_api.saved_queries.SavedQueryImportSchema,
+        response_model_cls=json_api.saved_queries.SavedQueryImport,
+    )
+
 
 @dataclasses.dataclass(eq=True, frozen=True, repr=False)
 class Instances(ApiEndpointGroup):
