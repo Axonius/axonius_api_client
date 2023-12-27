@@ -24,7 +24,7 @@ from ...tools import (
     listify,
     parse_value_copy,
 )
-from .base import BaseModel, BaseSchemaJson
+from .base import BaseModel, BaseSchemaJson, BaseSchema
 from .custom_fields import SchemaBool, SchemaDatetime, UnionField, get_schema_dc
 from .generic import Metadata
 from .nested_access import Access, AccessSchema
@@ -214,6 +214,45 @@ class SavedQueryCreateSchema(BaseSchemaJson):
         """Pass."""
 
         type_ = "views_schema"
+
+
+class SavedQueryExportSchema(BaseSchemaJson):
+    """Pass."""
+
+    include = SchemaBool(load_default=True, dump_default=True)
+    ids = marshmallow_jsonapi.fields.List(marshmallow_jsonapi.fields.Str())
+    filter = marshmallow_jsonapi.fields.Str(load_default="", dump_default="", allow_none=True)
+    folder_id = marshmallow_jsonapi.fields.Str(load_default="", dump_default="")
+    creator_ids = marshmallow_jsonapi.fields.List(marshmallow_jsonapi.fields.Str())
+    used_in = marshmallow_jsonapi.fields.List(marshmallow_jsonapi.fields.Str())
+    used_adapters = marshmallow_jsonapi.fields.List(marshmallow_jsonapi.fields.Str())
+
+    @staticmethod
+    def get_model_cls() -> t.Any:
+        return SavedQueryExport
+
+    class Meta:
+        """Pass."""
+
+        type_ = "export_saved_queries_schema"
+
+
+class SavedQueryImportSchema(BaseSchema):
+    """Pass."""
+
+    failed_queries: marshmallow.fields.Integer(
+        load_default=None, dump_default=None
+    )
+    inserted_queries: marshmallow.fields.Integer(
+        load_default=None, dump_default=None
+    )
+    replaced_queries: marshmallow.fields.Integer(
+        load_default=None, dump_default=None
+    )
+
+    @staticmethod
+    def get_model_cls() -> t.Any:
+        return SavedQueryImport
 
 
 class SavedQueryMixins:
@@ -1131,3 +1170,42 @@ class QueryHistory(BaseModel):
     def _props_results(cls) -> t.List[str]:
         """Pass."""
         return ["status", "results_count"]
+
+
+@dataclasses.dataclass
+class SavedQueryExport(BaseModel):
+    """Pass."""
+
+    include: bool = True
+    ids: t.Optional[t.List[str]] = dataclasses.field(default_factory=list)
+    filter: t.Optional[str] = ""
+    folder_id: str = ""
+    creator_ids: t.Optional[t.List[str]] = dataclasses.field(default_factory=list)
+    used_in: t.Optional[t.List[str]] = dataclasses.field(default_factory=list)
+    used_adapters: t.Optional[t.List[str]] = dataclasses.field(default_factory=list)
+
+    def __post_init__(self):
+        """Pass."""
+        self.ids = self.ids or []
+        self.creator_ids = self.creator_ids or []
+        self.used_in = self.used_in or []
+        self.used_adapters = self.used_adapters or []
+
+    @staticmethod
+    def get_schema_cls() -> t.Any:
+        """Pass."""
+        return SavedQueryExportSchema
+
+
+@dataclasses.dataclass
+class SavedQueryImport(BaseModel):
+    """Pass."""
+
+    failed_queries: int = None
+    inserted_queries: int = None
+    replaced_queries: int = None
+
+    @staticmethod
+    def get_schema_cls() -> t.Any:
+        """Pass."""
+        return SavedQueryImportSchema
