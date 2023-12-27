@@ -3,6 +3,7 @@
 import datetime
 import typing as t
 import warnings
+import pathlib
 
 from cachetools import TTLCache, cached
 
@@ -15,13 +16,13 @@ from ...exceptions import (
     SavedQueryNotFoundError,
     SavedQueryTagsNotFoundError,
 )
-from ...tools import check_gui_page_size, coerce_bool, echo_ok, echo_warn, listify
+from ...tools import check_gui_page_size, coerce_bool, echo_ok, echo_warn, listify, path_read
 from ..api_endpoints import ApiEndpoints
 from ..folders import FoldersQueries
 from ..json_api import saved_queries as models
 from ..json_api.folders.base import FolderDefaults
 from ..json_api.folders.queries import FolderModel, FoldersModel
-from ..json_api.generic import ListValueSchema, Metadata
+from ..json_api.generic import ListValueSchema, Metadata, ApiBase
 from ..json_api.paging_state import LOG_LEVEL_API, PAGE_SIZE, PagingState
 from ..mixins import ChildMixins
 
@@ -30,7 +31,8 @@ CACHE_TAGS = TTLCache(maxsize=1024, ttl=60)
 CACHE_RUN_BY = TTLCache(maxsize=1024, ttl=60)
 CACHE_RUN_FROM = TTLCache(maxsize=1024, ttl=60)
 CACHE_GET = TTLCache(maxsize=1024, ttl=60)
-
+CONTENT = t.Union[str, bytes]
+STR_PATH = t.Union[str, pathlib.Path]
 
 class SavedQuery(ChildMixins):
     """API object for working with saved queries for the parent asset type.
@@ -1220,6 +1222,62 @@ class SavedQuery(ChildMixins):
                 echo_warn(msg=msg) if do_echo else self.LOG.warning(msg)
                 continue
         return deleted if as_dataclass else [x.to_dict() for x in deleted]
+
+    def saved_query_import(
+        self,
+        field_name: str,
+        file_name: str,
+        file_content: CONTENT,
+        file_content_type: t.Optional[str] = None,
+    ) -> ApiBase:
+        """Pass."""
+        return self._saved_query_import(
+            file_name=file_name,
+            field_name=field_name,
+            file_content=file_content,
+            file_content_type=file_content_type,
+        )
+
+    def saved_query_import_path(self, field_name: str, path: STR_PATH, **kwargs):
+        """Pass."""
+        path, file_content = path_read(obj=path, binary=True, is_json=False)
+        if path.suffix == ".json":
+            kwargs.setdefault("file_content_type", "application/json")
+        kwargs.setdefault("file_name", path.name)
+        kwargs["file_content"] = file_content
+        return self.saved_query_import(field_name=field_name, **kwargs)
+
+    def _saved_query_import(
+        self,
+        field_name: str,
+        file_name: str,
+        file_content: CONTENT,
+        file_content_type: t.Optional[str] = None,
+        file_headers: t.Optional[dict] = None,
+    ) -> ApiBase:
+        """Pass."""
+        api_endpoint = ApiEndpoints.saved_queries.sq_import
+
+        data = {"field_name": field_name}
+        files = {"userfile": (file_name, file_content, file_content_type, file_headers)}
+        http_args = {"files": files, "data": data}
+
+        response = api_endpoint.perform_request(
+            http=self.auth.http, http_args=http_args
+        )
+        return response
+
+    def saved_query_export(self, ids: t.List[str], folder_id: str = "", **kwargs) -> t.List[dict]:
+        """Exports saved queries given a list of IDs."""
+
+        return self._saved_query_export(ids=ids, folder_id=folder_id, **kwargs)
+
+    def _saved_query_export(self, ids: t.List[str], folder_id: str = "", **kwargs) -> t.List[dict]:
+        """Private method to export saved queries given a list of IDs."""
+
+        api_endpoint = ApiEndpoints.saved_queries.sq_export
+        request_obj = api_endpoint.load_request(ids=ids, folder_id=folder_id)
+        return api_endpoint.perform_request(http=self.auth.http, request_obj=request_obj)
 
     def _update_flag(
         self, attr: str, sq: MULTI, value: bool, as_dataclass: bool = AS_DATACLASS
