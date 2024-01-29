@@ -34,7 +34,7 @@ class Labels(ChildMixins):
             >>> apiobj: axonapi.api.assets.AssetMixin = client.devices
             >>>       # or client.users or client.vulnerabilities
             >>> apiobj.labels.get()
-            ['tag1', 'tag2']
+            ['tag1', 'tag2', 'tag3']
 
         """
         return [x.value for x in self._get()]
