@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """API for working with tags for assets."""
-from typing import List, Union
+from typing import List, Optional, Union
 
 from ...tools import listify
 from .. import json_api
@@ -57,7 +57,11 @@ class Labels(ChildMixins):
         return [x.value for x in self._get_expirable_names()]
 
     def add(
-        self, rows: Union[List[dict], str], labels: List[str], invert_selection: bool = False
+        self,
+        rows: Union[List[dict], str],
+        labels: List[str],
+        invert_selection: bool = False,
+        expirable_tags: Optional[List[dict]] = None,
     ) -> int:
         """Add tags to assets.
 
@@ -69,11 +73,15 @@ class Labels(ChildMixins):
             >>> client: axonapi.Connect = axonapi.Connect(**connect_args)
             >>> apiobj: axonapi.api.assets.AssetMixin = client.devices
             >>>       # or client.users or client.vulnerabilities
-            >>> data = apiobj.get(wiz_entries=[{'type': 'simple', 'value': 'name equals test'}])
-            >>> len(data)
+            >>> rows = apiobj.get(wiz_entries=[{'type': 'simple', 'value': 'name equals test'}])
+            >>> len(rows)
             1
 
-            >>> apiobj.labels.add(rows=rows, labels=['api tag 1', 'api tag 2'])
+            >>> apiobj.labels.add(
+                    rows=rows,
+                    labels=['api tag 1', 'api tag 2'],
+                    expirable_tags=[{'name': 'api tag 1', 'expiration_date': '2024-01-25T05:00:00.000Z'}],
+                )
             1
 
         Args:
@@ -81,13 +89,15 @@ class Labels(ChildMixins):
             labels: tags to add
             invert_selection: True=add tags to assets that ARE NOT supplied in rows;
                 False=add tags to assets that ARE supplied in rows
+            expirable_tags: List of dicts, each dict with name and expiration_date as keys
 
         """
         ids = self._get_ids(rows=rows)
-        return self._add(labels=labels, ids=ids, include=not invert_selection).value
+        expirable_tags = expirable_tags or []
+        return self._add(labels=labels, ids=ids, include=not invert_selection, expirable_tags=expirable_tags).value
 
     def _add(
-        self, labels: List[str], ids: List[str], include: bool = True
+        self, labels: List[str], ids: List[str], include: bool = True, expirable_tags: List[dict] = None,
     ) -> json_api.generic.IntValue:
         """Direct API method to add labels/tags to assets.
 
@@ -96,11 +106,14 @@ class Labels(ChildMixins):
             ids: internal_axon_id of assets to add tags to
             include: True=add tags to assets that ARE supplied in rows;
                 False=add tags to assets that ARE NOT supplied in rows
+            expirable_tags: List of dicts, each dict with tag name and expiration_date
         """
         api_endpoint = ApiEndpoints.assets.tags_add
 
         entities = {"ids": listify(ids), "include": include}
-        request_obj = api_endpoint.load_request(entities=entities, labels=listify(labels))
+        request_obj = api_endpoint.load_request(
+            entities=entities, labels=listify(labels), expirable_tags=expirable_tags,
+        )
         return api_endpoint.perform_request(
             http=self.auth.http, request_obj=request_obj, asset_type=self.asset_type
         )
