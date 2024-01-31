@@ -16,6 +16,13 @@ class AdapterClientsCount(BaseModel):
     total_count: t.Optional[int] = None
     warning_count: t.Optional[int] = None
 
+    def __init__(self, **kwargs):
+        names = set([f.name for f in dataclasses.fields(self)])
+        for k, v in kwargs.items():
+            if k in names:
+                setattr(self, k, v)
+        self.__post_init__()
+
     def __post_init__(self):
         """Pass."""
         for field in self._get_fields():
