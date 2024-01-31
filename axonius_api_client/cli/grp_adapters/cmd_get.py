@@ -19,13 +19,16 @@ def export_json(data, **kwargs):
         "cnx_count_total",
         "cnx_count_broken",
         "cnx_count_working",
+        "cnx_count_warning",
     ]
 
     basic = []
+
     for row in data:
         new_row = {k: row[k] for k in basic_keys}
         new_row["cnx_ids_broken"] = [x["id"] for x in row["cnx"] if not x["working"]]
         new_row["cnx_ids_working"] = [x["id"] for x in row["cnx"] if x["working"]]
+        new_row["cnx_ids_warning"] = [x["id"] for x in row["cnx"] if x["warning"]]
         basic.append(new_row)
 
     return json_dump(basic)

@@ -301,7 +301,7 @@ class EnforcementBasicSchema(BaseSchemaJson):
     def pre_load_fix(self, data, **kwargs):
         """Pass."""
         # PBUG : Updated by is now coming back as an empty string sometimes.
-        if data.get('updated_by') is "":
+        if data.get('updated_by') == "":
             data['updated_by'] = "{}"
         return {k.replace(".", "_"): v for k, v in data.items()}
 
