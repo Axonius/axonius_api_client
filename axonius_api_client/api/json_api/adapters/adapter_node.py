@@ -223,6 +223,7 @@ class AdapterNode(BaseModel):
             "cnx_count_broken": self.clients_count.error_count,
             "cnx_count_working": self.clients_count.success_count,
             "cnx_count_inactive": self.clients_count.inactive_count,
+            "cnx_count_warning": self.clients_count.warning_count,
         }
         return ret
 
