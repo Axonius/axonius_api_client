@@ -14,6 +14,7 @@ class AdapterClientsCount(BaseModel):
     inactive_count: t.Optional[int] = None
     success_count: t.Optional[int] = None
     total_count: t.Optional[int] = None
+    warning_count: t.Optional[int] = None
 
     def __post_init__(self):
         """Pass."""

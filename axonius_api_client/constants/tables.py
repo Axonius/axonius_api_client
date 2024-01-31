@@ -20,6 +20,7 @@ KEY_MAP_ADAPTER: List[Tuple[str, Optional[str], int]] = [
     ("cnx_count_broken", "Broken", 0),
     ("cnx_count_working", "Working", 0),
     ("cnx_count_inactive", "Inactive", 0),
+    ("cnx_count_warning", "Warning", 0),
 ]
 """Tablize map of field name to user friendly title for adapters."""
 

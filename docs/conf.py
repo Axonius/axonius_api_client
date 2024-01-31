@@ -156,3 +156,5 @@ autodoc_default_options = {
     "show-inheritance": True,
     "exclude-members": "__weakref__,__str__,__repr__",
 }
+# --
+rtd_sphinx_search_file_type = "un-minified"
