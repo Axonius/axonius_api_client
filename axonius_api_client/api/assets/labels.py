@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """API for working with tags for assets."""
-from datetime import timedelta, date
+from datetime import datetime, timedelta
 from typing import List, Optional, Union
 
 from ...tools import listify
@@ -81,7 +81,7 @@ class Labels(ChildMixins):
             >>> apiobj.labels.add(
                     rows=rows,
                     labels=['api tag 1', 'api tag 2'],
-                    expirable_tags={'api tag 1', '2024-01-25T05:00:00.000Z', 'api tag 2': 5},
+                    expirable_tags={'api tag 1': '2024-01-25', 'api tag 2': 5},
                 )
             1
 
@@ -91,7 +91,7 @@ class Labels(ChildMixins):
             invert_selection: True=add tags to assets that ARE NOT supplied in rows;
                 False=add tags to assets that ARE supplied in rows
             expirable_tags: Dict with tag name and expiration_date (string or int) as keys
-             - expiration_date as string is a date
+             - expiration_date as string is a date (YYYY-MM-DD)
              - expiration_date as int is days from now
 
         """
@@ -180,21 +180,28 @@ class Labels(ChildMixins):
         """
             Get dict with tags as keys and expiration date as values
             expiration date can be as either
-             - date as a string
+             - date as a string (YYYY-MM-DD)
              - int specify the "days from now"
             Converts it to a List of dicts for each tag
         Args:
             expireable_tags: Dict with tag name and tag expiration date
+            {'tag1': '2024-01-01', 'tag2': 5}
         Returns:
             List of dicts, each dict contains single tag name and tag expiration date
+            [{'name': 'tag1', 'expiration_date': '2024-01-01'}, ...]
         """
         expirable_tags: list = []
         if not expirations:
             return expirable_tags
 
         for tag_name, tag_expiration_date in expirations.items():
-            if isinstance(tag_expiration_date, int):
-                tag_expiration_date = str(date.today() + timedelta(days=tag_expiration_date))
+            if isinstance(tag_expiration_date, int) or tag_expiration_date.isdigit():
+                tag_expiration_date = int(tag_expiration_date)
+                tag_expiration_date = str(datetime.utcnow().date() + timedelta(days=tag_expiration_date))
+            elif isinstance(tag_expiration_date, str):
+                # If the format is not correct, an exception will be raised
+                bool(datetime.strptime(tag_expiration_date, '%Y-%m-%d'))
+
             expirable_tags.append({
                 'name': tag_name,
                 'expiration_date': tag_expiration_date,

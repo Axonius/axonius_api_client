@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Command line interface for Axonius API Client."""
+from datetime import datetime, timedelta
 from ... import DEFAULT_PATH
 from ...api import asset_callbacks
 from ...api.asset_callbacks.base import ARG_DESCRIPTIONS
@@ -168,6 +169,32 @@ def wiz_callback(ctx, param, value):
                 contents.append(f"{etype} {expr}")
     return "\n".join(contents)
 
+
+def expirable_tags_callback(ctx, param, values) -> dict:
+    expirable_tags: dict = {}
+
+    if not values:
+        return expirable_tags
+
+    for value in values:
+        ctx.obj.echo_ok(f'value {value}')
+        if "=" not in value:
+            echo_error(msg=f"Invalid expression, must contain tag_name=expired_date or tag_name=days_from_now")
+
+        tag_name, tag_expiration_date = value.split('=')
+        if isinstance(tag_expiration_date, int) or tag_expiration_date.isdigit():
+            tag_expiration_date = int(tag_expiration_date)
+            tag_expiration_date = str(datetime.utcnow().date() + timedelta(days=tag_expiration_date))
+
+        elif isinstance(tag_expiration_date, str):
+            # If the format is not correct, an exception will be raised
+            bool(datetime.strptime(tag_expiration_date, '%Y-%m-%d'))
+
+        expirable_tags.update({
+             tag_name: tag_expiration_date,
+        })
+
+    return expirable_tags
 
 WIZ = [
     click.option(
@@ -470,6 +497,17 @@ GET_EXPORT = [
         show_default=True,
         hidden=False,
         metavar="TAG",
+    ),
+    click.option(
+        "--expirable_tags",
+        "-exp",
+        "expirable_tags",
+        help="Expirable date for tag to set in the format of tag_name=YYYY-MM-DD or tag_name=days_from_now (multiple)",
+        multiple=True,
+        show_envvar=True,
+        show_default=True,
+        required=False,
+        callback=expirable_tags_callback,
     ),
     click.option(
         "--tag-invert/--no-tag-invert",
