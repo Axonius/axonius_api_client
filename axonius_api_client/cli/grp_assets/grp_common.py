@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 """Command line interface for Axonius API Client."""
-from datetime import datetime, timedelta
 from ... import DEFAULT_PATH
 from ...api import asset_callbacks
 from ...api.asset_callbacks.base import ARG_DESCRIPTIONS
@@ -171,30 +170,32 @@ def wiz_callback(ctx, param, value):
 
 
 def expirable_tags_callback(ctx, param, values) -> dict:
-    expirable_tags: dict = {}
+    """
+    Args:
+        values: set of values, each value is a string with the format of tag_name=expiration_date
+                  - each value must contain "=" sign
+                expiration date can be either
+                  - date as a string (YYYY-MM-DD)
+                  - int specify the "days from now"
+                example: ('E=2024-05-05', 'F=10')
+    Returns:
+        Dict with tags as keys and expiration date as values
+        example: {'E': '2024-05-05', 'F': '10'}
+    """
+    expirations: dict = {}
 
     if not values:
-        return expirable_tags
+        return []
 
     for value in values:
-        ctx.obj.echo_ok(f'value {value}')
         if "=" not in value:
             echo_error(msg=f"Invalid expression, must contain tag_name=expired_date or tag_name=days_from_now")
 
         tag_name, tag_expiration_date = value.split('=')
-        if isinstance(tag_expiration_date, int) or tag_expiration_date.isdigit():
-            tag_expiration_date = int(tag_expiration_date)
-            tag_expiration_date = str(datetime.utcnow().date() + timedelta(days=tag_expiration_date))
+        expirations[tag_name] = tag_expiration_date
 
-        elif isinstance(tag_expiration_date, str):
-            # If the format is not correct, an exception will be raised
-            bool(datetime.strptime(tag_expiration_date, '%Y-%m-%d'))
+    return expirations
 
-        expirable_tags.update({
-             tag_name: tag_expiration_date,
-        })
-
-    return expirable_tags
 
 WIZ = [
     click.option(

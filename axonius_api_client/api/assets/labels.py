@@ -57,6 +57,40 @@ class Labels(ChildMixins):
         """
         return [x.value for x in self._get_expirable_names()]
 
+    @staticmethod
+    def _set_expirable_tags(expirations: dict) -> List[dict]:
+        """
+            Get dict with tags as keys and expiration date as values
+            expiration date can be as either
+             - date as a string (YYYY-MM-DD)
+             - int specify the "days from now"
+            Converts it to a List of dicts for each tag
+        Args:
+            expirations: Dict with tag name and tag expiration date
+            {'tag1': '2024-01-01', 'tag2': 5}
+        Returns:
+            List of dicts, each dict contains single tag name and tag expiration date
+            [{'name': 'tag1', 'expiration_date': '2024-01-01'}, ...]
+        """
+        expirable_tags: list = []
+        if not expirations:
+            return expirable_tags
+
+        for tag_name, tag_expiration_date in expirations.items():
+            if isinstance(tag_expiration_date, int) or tag_expiration_date.isdigit():
+                tag_expiration_date = int(tag_expiration_date)
+                tag_expiration_date = str(datetime.today() + timedelta(days=tag_expiration_date))
+            elif isinstance(tag_expiration_date, str):
+                # If the format is not correct, an exception will be raised
+                datetime.strptime(tag_expiration_date, '%Y-%m-%d')
+
+            expirable_tags.append({
+                'name': tag_name,
+                'expiration_date': tag_expiration_date,
+            })
+
+        return expirable_tags
+
     def add(
         self,
         rows: Union[List[dict], str],
@@ -96,7 +130,7 @@ class Labels(ChildMixins):
 
         """
         ids = self._get_ids(rows=rows)
-        expirable_tags = self._set_expirable_tags(expirations=expirable_tags)
+        expirable_tags: List[dict] = self._set_expirable_tags(expirations=expirable_tags)
         return self._add(labels=labels, ids=ids, include=not invert_selection, expirable_tags=expirable_tags).value
 
     def _add(
@@ -174,40 +208,6 @@ class Labels(ChildMixins):
             rows: list of internal_axon_id strs or list of assets returned from a get method
         """
         return [x["internal_axon_id"] if isinstance(x, dict) else x for x in listify(rows)]
-
-    @staticmethod
-    def _set_expirable_tags(expirations: dict) -> List[dict]:
-        """
-            Get dict with tags as keys and expiration date as values
-            expiration date can be as either
-             - date as a string (YYYY-MM-DD)
-             - int specify the "days from now"
-            Converts it to a List of dicts for each tag
-        Args:
-            expireable_tags: Dict with tag name and tag expiration date
-            {'tag1': '2024-01-01', 'tag2': 5}
-        Returns:
-            List of dicts, each dict contains single tag name and tag expiration date
-            [{'name': 'tag1', 'expiration_date': '2024-01-01'}, ...]
-        """
-        expirable_tags: list = []
-        if not expirations:
-            return expirable_tags
-
-        for tag_name, tag_expiration_date in expirations.items():
-            if isinstance(tag_expiration_date, int) or tag_expiration_date.isdigit():
-                tag_expiration_date = int(tag_expiration_date)
-                tag_expiration_date = str(datetime.utcnow().date() + timedelta(days=tag_expiration_date))
-            elif isinstance(tag_expiration_date, str):
-                # If the format is not correct, an exception will be raised
-                bool(datetime.strptime(tag_expiration_date, '%Y-%m-%d'))
-
-            expirable_tags.append({
-                'name': tag_name,
-                'expiration_date': tag_expiration_date,
-            })
-
-        return expirable_tags
 
     # noinspection PyUnresolvedReferences
     @property
