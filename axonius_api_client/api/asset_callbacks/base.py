@@ -183,6 +183,7 @@ class Base:
             "field_null_value": None,
             "field_null_value_complex": [],
             "tags_add": [],
+            "expirable_tags": [],
             "tags_add_invert_selection": False,
             "tags_remove": [],
             "tags_remove_invert_selection": False,
@@ -805,6 +806,7 @@ class Base:
     def do_tag_add(self):
         """Add tags to assets."""
         tags = listify(self.get_arg_value("tags_add"))
+        expirable_tags = self.get_arg_value("expirable_tags")
         rows = self.TAG_ROWS_ADD
         invert_selection = self.get_arg_value("tags_add_invert_selection")
         count_tags = len(tags)
@@ -817,7 +819,7 @@ class Base:
         if tags:
             self.echo(["Performing API call to add tags to assets", *msgs])
             count_modified = self.APIOBJ.labels.add(
-                rows=rows, labels=tags, invert_selection=invert_selection
+                rows=rows, labels=tags, invert_selection=invert_selection, expirable_tags=expirable_tags,
             )
             self.echo(msg=[f"API added tags to {count_modified} assets", *msgs])
 
@@ -1449,6 +1451,7 @@ ARG_DESCRIPTIONS: dict = {
     "field_null_value": "Null value to use for missing simple fields",
     "field_null_value_complex": "Null value to use for missing complex fields",
     "tags_add": "Tags to add to assets",
+    "expirable_tags": "Expiration dates for tags",
     "tags_add_invert_selection": "Invert selection for tags to add",
     "tags_remove": "Tags to remove from assets",
     "tags_remove_invert_selection": "Invert selection for tags to remove",
