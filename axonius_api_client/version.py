@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Version information for this package."""
 
-__version__ = "5.0.13"
+__version__ = "5.0.14"
 VERSION: str = __version__
 """Version of package."""
 
@@ -37,6 +37,6 @@ __license__ = "MIT"
 LICENSE: str = __license__
 """License of package."""
 
-__copyright__ = "Copyright Axonius 2023"
+__copyright__ = "Copyright Axonius 2024"
 COPYRIGHT: str = __copyright__
 """Copyright of package."""
