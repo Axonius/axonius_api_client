@@ -29,6 +29,13 @@ class ModifyTagsRequestSchema(BaseSchemaJson):
         allow_none=True,
         description="Filter to use to select assets?",
     )
+    expirable_tags = mm_fields.List(
+        mm_fields.Dict(),
+        load_default=list,
+        dump_default=list,
+        allow_none=True,
+        description="List of dict with tags and expiration dates",
+    )
 
     class Meta:
         """JSONAPI config."""
@@ -51,6 +58,7 @@ class ModifyTagsRequest(BaseModel):
     entities: dict = field_from_mm(SCHEMA, "entities")
     labels: t.List[str] = field_from_mm(SCHEMA, "labels")
     filter: t.Optional[str] = field_from_mm(SCHEMA, "filter")
+    expirable_tags: t.Optional[list] = field_from_mm(SCHEMA, "expirable_tags")
 
     SCHEMA: t.ClassVar[t.Any] = SCHEMA
 

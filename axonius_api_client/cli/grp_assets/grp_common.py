@@ -169,6 +169,34 @@ def wiz_callback(ctx, param, value):
     return "\n".join(contents)
 
 
+def expirable_tags_callback(ctx, param, values) -> dict:
+    """
+    Args:
+        values: set of values, each value is a string with the format of tag_name=expiration_date
+                  - each value must contain "=" sign
+                expiration date can be either
+                  - date as a string (YYYY-MM-DD)
+                  - int specify the "days from now"
+                example: ('E=2024-05-05', 'F=10')
+    Returns:
+        Dict with tags as keys and expiration date as values
+        example: {'E': '2024-05-05', 'F': '10'}
+    """
+    expirations: dict = {}
+
+    if not values:
+        return []
+
+    for value in values:
+        if "=" not in value:
+            echo_error(msg=f"Invalid expression, must contain tag_name=expired_date or tag_name=days_from_now")
+
+        tag_name, tag_expiration_date = value.split('=')
+        expirations[tag_name] = tag_expiration_date
+
+    return expirations
+
+
 WIZ = [
     click.option(
         "--wiz",
@@ -470,6 +498,17 @@ GET_EXPORT = [
         show_default=True,
         hidden=False,
         metavar="TAG",
+    ),
+    click.option(
+        "--expirable_tags",
+        "-exp",
+        "expirable_tags",
+        help="Expirable date for tag to set in the format of tag_name=YYYY-MM-DD or tag_name=days_from_now (multiple)",
+        multiple=True,
+        show_envvar=True,
+        show_default=True,
+        required=False,
+        callback=expirable_tags_callback,
     ),
     click.option(
         "--tag-invert/--no-tag-invert",
