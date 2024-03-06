@@ -1410,7 +1410,7 @@ class AssetMixin(ModelMixins):
             kwargs["asset_excluded_adapters"] = _view.get("assetExcludeAdapters")
 
         if include_field_filters:
-            kwargs["field_filters"] = _view.get("colFilters")
+            kwargs["field_filters"] = _view.get("fieldFilters")
 
         if include_asset_filters:
             kwargs["asset_filters"] = _view.get("assetFilters")
