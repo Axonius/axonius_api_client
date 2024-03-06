@@ -86,7 +86,7 @@ def cmd(
         chain = cert_human.Cert.from_file(path=cert_file_path)
         leaf_cert, _ = split_leaf(chain=chain)
 
-        input_file = leaf_cert.SOURCE.get("path") or leaf_cert.SOURCE.get("value")
+        input_file = leaf_cert.SOURCE.get('path') or leaf_cert.SOURCE.get('value')
         _, valid_hosts = leaf_cert.is_valid_host(host=host)
         ctx.obj.echo_ok(f"Host {host!r} is valid for certificate, is one of: {valid_hosts}")
 
