@@ -908,18 +908,21 @@ class Cnx(ChildMixins):
     ) -> CnxCreate:
         """Pass."""
         api_endpoint = ApiEndpoints.adapters.cnx_create
-        request_obj = api_endpoint.load_request(
-            connection=connection,
-            connection_discovery=connection_discovery,
-            instance=instance_id,
-            instance_name=instance_name,
-            is_instances_mode=is_instances_mode,
-            active=active,
-            save_and_fetch=save_and_fetch,
-            connection_label=connection_label,
-            tunnel_id=tunnel_id,
-            internal_axon_tenant_id=internal_axon_tenant_id,
-        )
+        request_payload: dict = {
+            "connection": connection,
+            "connection_discovery": connection_discovery,
+            "instance": instance_id,
+            "instance_name": instance_name,
+            "is_instances_mode": is_instances_mode,
+            "active": active,
+            "save_and_fetch": save_and_fetch,
+            "connection_label": connection_label,
+            "tunnel_id": tunnel_id,
+        }
+        if internal_axon_tenant_id:
+            request_payload["internal_axon_tenant_id"] = internal_axon_tenant_id
+
+        request_obj = api_endpoint.load_request(**request_payload)
         return api_endpoint.perform_request(
             http=self.auth.http,
             request_obj=request_obj,
