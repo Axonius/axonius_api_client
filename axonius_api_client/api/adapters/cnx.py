@@ -392,6 +392,7 @@ class Cnx(ChildMixins):
         kwargs_config: Optional[dict] = None,
         new_config: Optional[dict] = None,
         parse_config: bool = True,
+        internal_axon_tenant_id: Optional[str] = None,
         **kwargs,
     ) -> dict:
         """Add a connection to an adapter on a node.
@@ -425,6 +426,7 @@ class Cnx(ChildMixins):
             kwargs_config: connection args that conflict with this methods signature
             new_config: connection args that conflict with this methods signature
             parse_config: perform api client side parsing of connection args
+            internal_axon_tenant_id: The ID of the Tenant that the connection is associated with
             **kwargs: configuration of new connection
 
         Raises:
@@ -471,6 +473,7 @@ class Cnx(ChildMixins):
             connection_label=connection_label,
             response_status_hook=response_status_hook,
             tunnel_id=tunnel_id,
+            internal_axon_tenant_id=internal_axon_tenant_id
         )
         cnx_new = self.get_by_uuid(
             cnx_uuid=result.id,
@@ -901,6 +904,7 @@ class Cnx(ChildMixins):
         connection_label: Optional[str] = None,
         tunnel_id: Optional[str] = None,
         response_status_hook: Optional[Callable] = None,
+        internal_axon_tenant_id: Optional[str] = None,
     ) -> CnxCreate:
         """Pass."""
         api_endpoint = ApiEndpoints.adapters.cnx_create
@@ -914,6 +918,7 @@ class Cnx(ChildMixins):
             save_and_fetch=save_and_fetch,
             connection_label=connection_label,
             tunnel_id=tunnel_id,
+            internal_axon_tenant_id=internal_axon_tenant_id,
         )
         return api_endpoint.perform_request(
             http=self.auth.http,
