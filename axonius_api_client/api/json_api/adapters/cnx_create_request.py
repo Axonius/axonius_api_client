@@ -62,6 +62,13 @@ class CnxCreateRequestSchema(BaseSchemaJson):
         description="Tunnel ID",
     )
 
+    internal_axon_tenant_id = mm_fields.Str(
+        load_default=None,
+        dump_default=None,
+        allow_none=True,
+        description="Internal Axonius tenant ID",
+    )
+
     @staticmethod
     def get_model_cls() -> t.Any:
         """Get the model for this schema."""
@@ -101,6 +108,7 @@ class CnxCreateRequest(BaseModel):
     save_and_fetch: bool = field_from_mm(SCHEMA, "save_and_fetch")
     is_instances_mode: bool = field_from_mm(SCHEMA, "is_instances_mode")
     tunnel_id: t.Optional[str] = field_from_mm(SCHEMA, "tunnel_id")
+    internal_axon_tenant_id: t.Optional[str] = field_from_mm(SCHEMA, "internal_axon_tenant_id")
 
     SCHEMA: t.ClassVar[BaseSchemaJson] = SCHEMA
 
