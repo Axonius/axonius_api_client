@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Version information for this package."""
 
-__version__ = "5.0.15"
+__version__ = "5.0.16"
 VERSION: str = __version__
 """Version of package."""
 
