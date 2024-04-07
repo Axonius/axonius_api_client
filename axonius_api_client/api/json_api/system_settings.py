@@ -121,6 +121,9 @@ class FeatureFlags(SystemSettings):
     @property
     def saas_enabled(self) -> bool:
         """Get the status of SAAS & tunnel support being enabled."""
+        # From version 6.1 the FF doesn't exist
+        if 'enable_saas' not in self.config:
+            return True
         return self.config.get("enable_saas", False)
 
     @property
