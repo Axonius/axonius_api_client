@@ -1,0 +1,22 @@
+name: jira-description-action
+on:
+  pull_request:
+    types: [opened, reopened, edited, synchronize]
+# Set the minimum required permissions for the GITHUB_TOKEN
+# This action only needs read access to pull requests for
+# reading PR titles and checking PR context. These permissions
+# are set to adhere to the principle of least privilege, ensuring
+# the token cannot perform unintended actions.
+permissions:
+  pull-requests: read
+jobs:
+  add-jira-description:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: Axonius/jira-description-action@v0.4.0
+        name: jira-description-action
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          jira-token: ${{ secrets.JIRA_TOKEN }}
+          jira-base-url: https://axonius.atlassian.net
+          fail-when-jira-issue-not-found: true

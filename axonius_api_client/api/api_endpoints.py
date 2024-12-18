@@ -983,8 +983,8 @@ class Enforcements(ApiEndpointGroup):
     delete_set: ApiEndpoint = ApiEndpoint(
         method="delete",
         path="api/enforcements",
-        request_schema_cls=json_api.generic.DictValueSchema,
-        request_model_cls=json_api.generic.DictValue,
+        request_schema_cls=json_api.enforcements.DeleteEnforcementSchema,
+        request_model_cls=json_api.enforcements.DeleteEnforcementModel,
         response_schema_cls=json_api.generic.DeletedSchema,
         response_model_cls=json_api.generic.Deleted,
     )

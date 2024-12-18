@@ -1608,6 +1608,33 @@ class CreateEnforcementModel(BaseModel):
         return CreateEnforcementSchema
 
 
+class DeleteEnforcementSchema(BaseSchemaJson):
+    """Pass."""
+    value = marshmallow_jsonapi.fields.Dict()
+
+
+    class Meta:
+        """Pass."""
+
+        type_ = "enforcements_delete_schema"
+
+    @staticmethod
+    def get_model_cls() -> t.Any:
+        """Pass."""
+        return DeleteEnforcementModel
+
+
+@dataclasses.dataclass
+class DeleteEnforcementModel(BaseModel):
+    """Pass."""
+    value: dict
+
+    @staticmethod
+    def get_schema_cls() -> t.Any:
+        """Pass."""
+        return DeleteEnforcementSchema
+
+
 @dataclasses.dataclass
 class ActionType(BaseModel):
     """Pass."""
