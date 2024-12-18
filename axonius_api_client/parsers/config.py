@@ -184,11 +184,11 @@ def config_check_array(
     if isinstance(value, str):
         value = [x.strip() for x in value.split(",") if x.strip()]
 
-    is_list_or_dict = isinstance(value, list) or isinstance(value, dict)
+    is_list = isinstance(value, list)
 
-    if not is_list_or_dict:
+    if not is_list:
         sinfo = config_info(schema=schema, value=value, source=source)
-        msg = f"{sinfo}\nIs not a dict of values or list of strings or a comma seperated string!"
+        msg = f"{sinfo}\nIs not a list of strings or a comma seperated string!"
         raise ConfigInvalidValue(msg)
 
     return value
