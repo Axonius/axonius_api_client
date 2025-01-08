@@ -98,11 +98,6 @@ class AssetRequestSchema(BaseSchemaJson):
         dump_default=False,
         description="Include aggregation details in the response",
     )  # EntityRequestSchema
-    include_notes = SchemaBool(
-        load_default=False,
-        dump_default=False,
-        description="Include notes objects for each asset in the response",
-    )  # EntityRequestSchema
     use_cursor = SchemaBool(
         load_default=True,
         dump_default=True,
@@ -292,7 +287,6 @@ class AssetRequest(BaseModel):
     expressions: t.Optional[t.List[dict]] = field_from_mm(SCHEMA, "expressions")
     fields: t.Optional[dict] = field_from_mm(SCHEMA, "fields")
     include_details: bool = field_from_mm(SCHEMA, "include_details")
-    include_notes: bool = field_from_mm(SCHEMA, "include_notes")
     use_cursor: bool = field_from_mm(SCHEMA, "use_cursor")
     cursor_id: t.Optional[str] = field_from_mm(SCHEMA, "cursor_id")
     saved_query_id: t.Optional[str] = field_from_mm(SCHEMA, "saved_query_id")

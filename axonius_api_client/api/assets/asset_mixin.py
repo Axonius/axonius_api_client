@@ -1096,7 +1096,6 @@ class AssetMixin(ModelMixins):
         expressions: t.Optional[t.List[dict]] = None,
         fields_parsed: t.Optional[t.Union[dict, t.List[str]]] = None,
         include_details: bool = False,
-        include_notes: bool = False,
         use_cursor: bool = True,
         cursor_id: t.Optional[str] = None,
         saved_query_id: t.Optional[str] = None,
@@ -1158,7 +1157,6 @@ class AssetMixin(ModelMixins):
             page_start: start at page N
             page_sleep: sleep for N seconds between each page fetch
             export: export assets using a callback method
-            include_notes: include any defined notes for each adapter
             include_details: include details fields showing the adapter source of agg values
             saved_query_id: ID of saved query this fetch is associated with
             expressions: expressions used by query wizard to create query
@@ -1205,7 +1203,6 @@ class AssetMixin(ModelMixins):
             asset_filters=asset_filters,
             expressions=expressions,
             include_details=include_details,
-            include_notes=include_notes,
             use_cursor=use_cursor,
             cursor_id=cursor_id,
             saved_query_id=saved_query_id,
@@ -1296,7 +1293,6 @@ class AssetMixin(ModelMixins):
             "history_days_ago": history_days_ago,
             "history_exact": history_exact,
             "include_details": include_details,
-            "include_notes": include_notes,
             "max_rows": max_rows,
             "max_pages": max_pages,
             "page_size": page_size,
@@ -1329,7 +1325,6 @@ class AssetMixin(ModelMixins):
             request_obj.filter = store["query"]
             request_obj.fields = {self.ASSET_TYPE: store["fields_parsed"]}
             request_obj.include_details = store["include_details"]
-            request_obj.include_notes = store["include_notes"]
             request_obj.set_offset(state["rows_offset"])
             request_obj.set_limit(state["page_size"])
 
