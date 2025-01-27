@@ -15,6 +15,7 @@ from ...constants.fields import (
     FIELDS_DETAILS_EXCLUDE,
     FIELDS_ENTITY_PASSTHRU,
     SCHEMAS_CUSTOM,
+    EXCLUDED_DEFAULT_FIELDS_MAP,
 )
 from ...exceptions import ApiError
 from ...tools import (
@@ -266,10 +267,7 @@ class Base:
                 )
                 self.STORE["include_details"] = include_details = True
 
-        if include_details:
-            missing = [x for x in FIELDS_DETAILS_EXCLUDE if x not in excludes]
-            self.echo(msg=f"Adding fields {missing} to field_excludes: {excludes}", debug=True)
-            self.set_arg_value("field_excludes", value=excludes + missing)
+        self._expand_field_excludes(excludes=excludes, include_details=include_details)
 
         cb_args = crjoin(join_kv(obj=self.GETARGS))
         self.LOG.debug(f"Get Extra Arguments: {cb_args}")
@@ -279,6 +277,18 @@ class Base:
 
         store = crjoin(join_kv(obj=self.STORE))
         self.echo(msg=f"Get Arguments: {store}")
+
+    def _expand_field_excludes(self, excludes: list, include_details: bool):
+        # enriches the excluded fields param when necessary
+        if include_details:
+            missing = [x for x in FIELDS_DETAILS_EXCLUDE if x not in excludes]
+            self.echo(msg=f"Adding fields {missing} to field_excludes: {excludes}", debug=True)
+            self.set_arg_value("field_excludes", value=excludes + missing)
+
+        fields = listify(self.STORE.get("fields", []))
+        default_fields_to_exclude = [field[1] for field in EXCLUDED_DEFAULT_FIELDS_MAP if field[0] not in fields]
+        if default_fields_to_exclude:
+            self.set_arg_value("field_excludes", value=excludes + default_fields_to_exclude)
 
     # noinspection PyUnusedLocal
     def echo_columns(self, **kwargs):
