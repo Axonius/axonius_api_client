@@ -104,10 +104,6 @@ FIELDS_DETAILS_EXCLUDE: t.List[str] = [
 """Fields that should be excluded when include_details=True"""
 
 EXCLUDED_DEFAULT_FIELDS_MAP: t.List[tuple] = [
-    ("agg:axon_id", "internal_axon_id"),
-    ("agg:adapters", "adapters"),
-    ("agg:labels", "labels"),
-    ("agg:adapter_list_length", "adapter_list_length"),
     ("agg:short_axon_id", "short_axon_id"),
     ("agg:axon_id", "specific_data.data.axon_id"),
 ]
