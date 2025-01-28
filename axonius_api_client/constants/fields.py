@@ -109,6 +109,9 @@ EXCLUDED_DEFAULT_FIELDS_MAP: t.List[tuple] = [
 ]
 """Fields that are manually excluded unless specifically requested"""
 
+ALL_FIELDS_KEY: str = "agg:all"
+"""Field that's being used to retrieve all fields from entities"""
+
 FIELDS_ENTITY_PASSTHRU: t.List[str] = [
     "adapter_list_length",
     "internal_axon_id",
