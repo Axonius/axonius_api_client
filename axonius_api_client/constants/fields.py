@@ -103,15 +103,6 @@ FIELDS_DETAILS_EXCLUDE: t.List[str] = [
 ]
 """Fields that should be excluded when include_details=True"""
 
-EXCLUDED_DEFAULT_FIELDS_MAP: t.List[tuple] = [
-    ("agg:short_axon_id", "short_axon_id"),
-    ("agg:axon_id", "specific_data.data.axon_id"),
-]
-"""Fields that are manually excluded unless specifically requested"""
-
-ALL_FIELDS_KEY: str = "agg:all"
-"""Field that's being used to retrieve all fields from entities"""
-
 FIELDS_ENTITY_PASSTHRU: t.List[str] = [
     "adapter_list_length",
     "internal_axon_id",
