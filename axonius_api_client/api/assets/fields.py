@@ -616,7 +616,7 @@ class Fields(ChildMixins):
 
         # Problem are fields containing ":" from adapters that populate dynamic fields
         # PBUG: special check for 'custom attributes' coming from esx adapter.
-        if ":" in search and 'custom attributes' not in search:
+        if ":" in search and 'custom_attributes' not in search:
             adapter_split, field = [x.strip() for x in search.split(":", 1)]
             if not adapter_split:
                 adapter_split = adapter
