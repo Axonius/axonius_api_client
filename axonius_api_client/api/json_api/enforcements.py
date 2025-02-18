@@ -99,6 +99,7 @@ class EnforcementSchedule(BaseEnum):
     monthly: str = "monthly"
     daily: str = "daily"
     weekly: str = "weekly"
+    custom: str = "custom"
 
     @classmethod
     def get_value(
