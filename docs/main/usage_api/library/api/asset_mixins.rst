@@ -1,3 +1,5 @@
+.. include:: /main/deprecation_banner.rst
+
 Asset API models
 ###############################################
 

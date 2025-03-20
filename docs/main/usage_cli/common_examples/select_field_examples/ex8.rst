@@ -1,4 +1,5 @@
 .. include:: /main/.special.rst
+.. include:: /main/deprecation_banner.rst
 
 Select Fields: Using Regular Expressions Case 2
 ###############################################

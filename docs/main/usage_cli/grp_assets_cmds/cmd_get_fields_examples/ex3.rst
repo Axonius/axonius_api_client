@@ -1,4 +1,5 @@
 .. include:: /main/.special.rst
+.. include:: /main/deprecation_banner.rst
 
 Adapter Regex Filter And Fields Regex Filter
 ###############################################

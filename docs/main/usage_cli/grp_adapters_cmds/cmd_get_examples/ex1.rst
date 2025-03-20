@@ -1,4 +1,5 @@
 .. include:: /main/.special.rst
+.. include:: /main/deprecation_banner.rst
 
 No filters, json and json-full exports
 ###############################################

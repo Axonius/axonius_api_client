@@ -1,4 +1,5 @@
 .. include:: /main/.special.rst
+.. include:: /main/deprecation_banner.rst
 
 Viewing Section and Sub-Section Values
 ###############################################
