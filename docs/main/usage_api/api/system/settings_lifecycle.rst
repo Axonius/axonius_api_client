@@ -1,3 +1,5 @@
+.. include:: /main/deprecation_banner.rst
+
 System Settings -> Lifecycle Settings
 ###########################################################
 

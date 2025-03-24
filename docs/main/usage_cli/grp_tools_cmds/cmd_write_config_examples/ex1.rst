@@ -1,4 +1,5 @@
 .. include:: /main/.special.rst
+.. include:: /main/deprecation_banner.rst
 
 Prompt for connection info, test connection, write .env file
 ############################################################

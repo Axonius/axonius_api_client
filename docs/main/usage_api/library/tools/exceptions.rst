@@ -1,3 +1,5 @@
+.. include:: /main/deprecation_banner.rst
+
 Exceptions and warnings
 ###############################################
 

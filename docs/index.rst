@@ -1,4 +1,5 @@
 .. include:: /main/.special.rst
+.. include:: /main/deprecation_banner.rst
 
 |MIT license| |made-with-python| |PyPi| |github| |doc-status| |Downloads|
 
