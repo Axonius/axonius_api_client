@@ -1,8 +1,9 @@
 .. include:: /main/.special.rst
-.. include:: /main/deprecation_banner.rst
 
 Command Group Aliases
 ###############################################
+
+.. include:: /main/deprecation_banner.rst
 
 All command groups can be referenced using the most unique short name.
 

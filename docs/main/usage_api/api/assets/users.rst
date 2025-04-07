@@ -1,7 +1,8 @@
-.. include:: /main/deprecation_banner.rst
 
 User assets
 ###############################################
+
+.. include:: /main/deprecation_banner.rst
 
 .. automodule:: axonius_api_client.api.assets.users
    :members:

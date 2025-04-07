@@ -1,8 +1,9 @@
 .. include:: /main/.special.rst
-.. include:: /main/deprecation_banner.rst
 
 devices/users get-fields
 ###############################################
+
+.. include:: /main/deprecation_banner.rst
 
 This command will produce a report of all fields for users or devices.
 

@@ -1,8 +1,9 @@
 .. include:: /main/.special.rst
-.. include:: /main/deprecation_banner.rst
 
 devices/users get-tags
 ###############################################
+
+.. include:: /main/deprecation_banner.rst
 
 This allows you to get all of the current tags in the system for devices or users.
 

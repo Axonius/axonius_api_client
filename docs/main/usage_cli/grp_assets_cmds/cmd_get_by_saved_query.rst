@@ -1,8 +1,9 @@
 .. include:: /main/.special.rst
-.. include:: /main/deprecation_banner.rst
 
 devices/users get-by-saved-query
 ###############################################
+
+.. include:: /main/deprecation_banner.rst
 
 This command will get assets returned from a saved query for users or devices.
 

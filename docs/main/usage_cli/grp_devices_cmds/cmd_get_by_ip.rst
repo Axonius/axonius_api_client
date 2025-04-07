@@ -1,8 +1,9 @@
 .. include:: /main/.special.rst
-.. include:: /main/deprecation_banner.rst
 
 devices get-by-ip
 ###############################################
+
+.. include:: /main/deprecation_banner.rst
 
 This command lets you search for devices by IP Address and export the data to CSV or JSON.
 

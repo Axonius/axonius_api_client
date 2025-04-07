@@ -1,8 +1,9 @@
 .. include:: /main/.special.rst
-.. include:: /main/deprecation_banner.rst
 
 adapters cnx get
 ###############################################
+
+.. include:: /main/deprecation_banner.rst
 
 This command is used to extract the metadata for connections from the output of
 the `adapters get` command and optionally filter the connections based on status or id.

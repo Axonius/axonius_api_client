@@ -1,8 +1,9 @@
 .. include:: /main/.special.rst
-.. include:: /main/deprecation_banner.rst
 
 Delete with no options
 ###############################################
+
+.. include:: /main/deprecation_banner.rst
 
 This will throw an error because we didn't supply --force.
 

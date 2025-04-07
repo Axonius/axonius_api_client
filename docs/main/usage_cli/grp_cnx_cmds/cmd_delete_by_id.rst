@@ -1,8 +1,9 @@
 .. include:: /main/.special.rst
-.. include:: /main/deprecation_banner.rst
 
 adapters cnx delete-by-id
 ###############################################
+
+.. include:: /main/deprecation_banner.rst
 
 This command will delete a connection from an adapter on a node.
 

@@ -1,8 +1,9 @@
 .. include:: /main/.special.rst
-.. include:: /main/deprecation_banner.rst
 
 devices saved_query
 ###############################################
+
+.. include:: /main/deprecation_banner.rst
 
 This is a sub-command group under :doc:`grp_devices` that has commands
 to add, delete, or get saved queries for device assets.

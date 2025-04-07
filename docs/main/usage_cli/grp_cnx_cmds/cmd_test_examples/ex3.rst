@@ -1,8 +1,9 @@
 .. include:: /main/.special.rst
-.. include:: /main/deprecation_banner.rst
 
 Discover a single connection on an adapter
 ###############################################
+
+.. include:: /main/deprecation_banner.rst
 
 .. code:: shell
 

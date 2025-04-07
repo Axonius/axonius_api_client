@@ -1,8 +1,9 @@
 .. include:: /main/.special.rst
-.. include:: /main/deprecation_banner.rst
 
 devices get-by-hostname
 ###############################################
+
+.. include:: /main/deprecation_banner.rst
 
 This command lets you search for devices by hostname and export the data to CSV or JSON.
 

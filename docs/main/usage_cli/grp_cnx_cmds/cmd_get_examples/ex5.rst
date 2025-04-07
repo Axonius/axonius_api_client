@@ -1,8 +1,9 @@
 .. include:: /main/.special.rst
-.. include:: /main/deprecation_banner.rst
 
 Single adapter: single connection by valid ID
 ###############################################
+
+.. include:: /main/deprecation_banner.rst
 
 This does the following:
 

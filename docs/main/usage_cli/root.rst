@@ -1,8 +1,9 @@
 .. include:: /main/.special.rst
-.. include:: /main/deprecation_banner.rst
 
 root
 ###############################################
+
+.. include:: /main/deprecation_banner.rst
 
 This is the root group of axonshell (aka running the script with no arguments).
 

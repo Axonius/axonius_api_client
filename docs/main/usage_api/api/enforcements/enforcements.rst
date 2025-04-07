@@ -1,7 +1,8 @@
-.. include:: /main/deprecation_banner.rst
 
 Enforcements
 ###############################################
+
+.. include:: /main/deprecation_banner.rst
 
 .. automodule:: axonius_api_client.api.enforcements.enforcements
    :members:

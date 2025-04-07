@@ -1,7 +1,8 @@
-.. include:: /main/deprecation_banner.rst
 
 Tags
 ###############################################
+
+.. include:: /main/deprecation_banner.rst
 
 .. automodule:: axonius_api_client.api.assets.labels
    :members:

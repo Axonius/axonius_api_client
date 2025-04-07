@@ -1,8 +1,9 @@
 .. include:: /main/.special.rst
-.. include:: /main/deprecation_banner.rst
 
 Find Single Item - Match Found
 ###############################################
+
+.. include:: /main/deprecation_banner.rst
 
 This does the following:
 

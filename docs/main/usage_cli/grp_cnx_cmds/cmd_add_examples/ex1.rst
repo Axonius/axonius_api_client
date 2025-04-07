@@ -1,8 +1,9 @@
 .. include:: /main/.special.rst
-.. include:: /main/deprecation_banner.rst
 
 Prompt for settings
 ###############################################
+
+.. include:: /main/deprecation_banner.rst
 
 If you don't supply any configuration items on the command line, this command
 will prompt for the value of each setting for connections of the supplied adapter.

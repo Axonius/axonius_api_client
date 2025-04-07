@@ -1,10 +1,11 @@
 .. include:: /main/.special.rst
-.. include:: /main/deprecation_banner.rst
 
 |MIT license| |made-with-python| |PyPi| |github| |doc-status| |Downloads|
 
 Axonius API Client
 ##################################################################
+
+.. include:: /main/deprecation_banner.rst
 
 axonius-api-client is an API client for `Axonius`_. You can :doc:`Install it <main/install>` today!
 It provides:

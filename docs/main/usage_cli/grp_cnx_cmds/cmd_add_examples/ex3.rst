@@ -1,8 +1,9 @@
 .. include:: /main/.special.rst
-.. include:: /main/deprecation_banner.rst
 
 Show the settings needed for a connection in text format
 ########################################################
+
+.. include:: /main/deprecation_banner.rst
 
 This can be used to show the connection settings needed so you can build a command line
 that contains all the necessary settings using ``--config setting_name=setting_value``

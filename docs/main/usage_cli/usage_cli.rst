@@ -1,8 +1,9 @@
 .. include:: /main/.special.rst
-.. include:: /main/deprecation_banner.rst
 
 Using the Command Line Interface
 ###############################################
+
+.. include:: /main/deprecation_banner.rst
 
 .. toctree::
    :maxdepth: 1

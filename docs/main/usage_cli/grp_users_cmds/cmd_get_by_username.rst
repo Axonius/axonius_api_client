@@ -1,8 +1,9 @@
 .. include:: /main/.special.rst
-.. include:: /main/deprecation_banner.rst
 
 users get-by-username
 ###############################################
+
+.. include:: /main/deprecation_banner.rst
 
 This command lets you search for users by username and export the data to CSV or JSON.
 

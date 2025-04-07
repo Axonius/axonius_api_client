@@ -1,8 +1,9 @@
 .. include:: /main/.special.rst
-.. include:: /main/deprecation_banner.rst
 
 devices/users saved-query delete-by-tags
 ###############################################
+
+.. include:: /main/deprecation_banner.rst
 
 This command will delete a saved query by tags for users or devices.
 

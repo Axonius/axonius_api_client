@@ -1,8 +1,9 @@
 .. include:: /main/.special.rst
-.. include:: /main/deprecation_banner.rst
 
 With Query Using File
 ###############################################
+
+.. include:: /main/deprecation_banner.rst
 
 This does the following:
 

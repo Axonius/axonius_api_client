@@ -1,8 +1,9 @@
 .. include:: /main/.special.rst
-.. include:: /main/deprecation_banner.rst
 
 users get-by-mail
 ###############################################
+
+.. include:: /main/deprecation_banner.rst
 
 This command lets you search for users by email address and export the data to CSV or JSON.
 

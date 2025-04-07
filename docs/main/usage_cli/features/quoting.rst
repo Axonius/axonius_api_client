@@ -1,10 +1,11 @@
 .. include:: /main/.special.rst
-.. include:: /main/deprecation_banner.rst
 
 .. _shellhell:
 
 Shell Quoting Rules
 ###############################################
+
+.. include:: /main/deprecation_banner.rst
 
 TBD: Add to axonshell --help-detailed
 

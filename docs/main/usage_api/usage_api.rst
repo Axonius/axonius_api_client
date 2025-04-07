@@ -1,8 +1,9 @@
 .. include:: /main/.special.rst
-.. include:: /main/deprecation_banner.rst
 
 Using the API library
 ###############################################
+
+.. include:: /main/deprecation_banner.rst
 
 .. toctree::
    :maxdepth: 1

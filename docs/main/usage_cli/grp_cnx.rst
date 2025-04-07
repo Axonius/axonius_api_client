@@ -1,8 +1,10 @@
 .. include:: /main/.special.rst
-.. include:: /main/deprecation_banner.rst
+
 
 adapters cnx
 ###############################################
+
+.. include:: /main/deprecation_banner.rst
 
 This is a sub-command group under :doc:`grp_adapters` that has commands for getting,
 adding, deleting, checking (test reachability), and discovering (triggering a fetch)

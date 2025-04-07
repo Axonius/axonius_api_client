@@ -1,10 +1,11 @@
 .. include:: /main/.special.rst
-.. include:: /main/deprecation_banner.rst
 
 .. _tagging_example:
 
 Tag/Untag Assets Found In Query
 ###############################################
+
+.. include:: /main/deprecation_banner.rst
 
 This does the following:
 

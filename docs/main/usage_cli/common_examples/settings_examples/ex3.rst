@@ -1,8 +1,9 @@
 .. include:: /main/.special.rst
-.. include:: /main/deprecation_banner.rst
 
 Modifying Values
 ###############################################
+
+.. include:: /main/deprecation_banner.rst
 
 Viewing settings is all well and good but modifying settings is even better.
 You are able to modify full sections at once or individual sub-sections. In both cases they can

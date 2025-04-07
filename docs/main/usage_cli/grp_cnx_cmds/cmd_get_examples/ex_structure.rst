@@ -1,10 +1,11 @@
 .. include:: /main/.special.rst
-.. include:: /main/deprecation_banner.rst
 
 .. _cnx_structure:
 
 Connecton Metadata JSON Data Structure
 ==============================================
+
+.. include:: /main/deprecation_banner.rst
 
 The JSON format returns a list of dictionaries.
 

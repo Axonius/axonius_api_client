@@ -1,8 +1,9 @@
 .. include:: /main/.special.rst
-.. include:: /main/deprecation_banner.rst
 
 Select Fields: Invalid Generic Field
 ###############################################
+
+.. include:: /main/deprecation_banner.rst
 
 This does the following:
 

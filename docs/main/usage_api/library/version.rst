@@ -1,7 +1,8 @@
-.. include:: /main/deprecation_banner.rst
 
 Version metadata
 ###############################################
+
+.. include:: /main/deprecation_banner.rst
 
 .. automodule:: axonius_api_client.version
    :members:

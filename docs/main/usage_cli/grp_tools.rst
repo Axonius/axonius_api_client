@@ -1,8 +1,9 @@
 .. include:: /main/.special.rst
-.. include:: /main/deprecation_banner.rst
 
 tools
 ###############################################
+
+.. include:: /main/deprecation_banner.rst
 
 This is a command group under the main :doc:`root` that has commands for
 starting a python interactive shell and writing a .env configuration file with

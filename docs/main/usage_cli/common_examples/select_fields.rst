@@ -1,10 +1,11 @@
 .. include:: /main/.special.rst
-.. include:: /main/deprecation_banner.rst
 
 .. _select_fields_ex:
 
 Selecting Fields Examples
 ###############################################
+
+.. include:: /main/deprecation_banner.rst
 
 These examples show how to select what fields (columns in the GUI) are included
 in responses for getting assets.

@@ -1,8 +1,9 @@
 .. include:: /main/.special.rst
-.. include:: /main/deprecation_banner.rst
 
 devices/users saved-query add
 ###############################################
+
+.. include:: /main/deprecation_banner.rst
 
 This command will add a saved query for users or devices.
 

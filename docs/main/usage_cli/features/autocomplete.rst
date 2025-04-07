@@ -1,8 +1,9 @@
 .. include:: /main/.special.rst
-.. include:: /main/deprecation_banner.rst
 
 Autocompletion
 ###############################################
+
+.. include:: /main/deprecation_banner.rst
 
 Since axonshell is built using `click`_, there is automatic support for bash and zsh `autocompletion`_.
 

@@ -1,4 +1,3 @@
-.. include:: /main/deprecation_banner.rst
 
 API models
 ###############################################

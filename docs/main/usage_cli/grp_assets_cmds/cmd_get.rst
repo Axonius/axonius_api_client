@@ -1,8 +1,9 @@
 .. include:: /main/.special.rst
-.. include:: /main/deprecation_banner.rst
 
 devices/users get
 ###############################################
+
+.. include:: /main/deprecation_banner.rst
 
 This allows you to get all of the assets for devices or users and export the data
 to CSV or JSON.

@@ -1,7 +1,8 @@
-.. include:: /main/deprecation_banner.rst
 
 Dashboards and discovery cycles
 ###############################################
+
+.. include:: /main/deprecation_banner.rst
 
 .. automodule:: axonius_api_client.api.system.dashboard
    :members:

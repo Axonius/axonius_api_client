@@ -1,10 +1,11 @@
 .. include:: /main/.special.rst
-.. include:: /main/deprecation_banner.rst
 
 .. _get_by_ex:
 
 Get By Examples
 ###############################################
+
+.. include:: /main/deprecation_banner.rst
 
 These examples show the various ways that get-by commands can be used. The examples
 only show individual options being used for the most part, but you can combine any

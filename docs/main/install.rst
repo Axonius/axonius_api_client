@@ -1,10 +1,11 @@
 .. include:: /main/.special.rst
-.. include:: /main/deprecation_banner.rst
 
 .. _installation:
 
 Installation
 #########################
+
+.. include:: /main/deprecation_banner.rst
 
 Install Python
 ============================================================

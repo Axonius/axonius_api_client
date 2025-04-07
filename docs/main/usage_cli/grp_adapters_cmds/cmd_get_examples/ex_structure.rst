@@ -1,10 +1,11 @@
 .. include:: /main/.special.rst
-.. include:: /main/deprecation_banner.rst
 
 .. _adapter_structure:
 
 Adapter Metadata JSON-FULL Data Structure
 ###############################################
+
+.. include:: /main/deprecation_banner.rst
 
 The JSON-FULL format returns a list of dictionaries.
 
