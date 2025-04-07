@@ -1,7 +1,8 @@
-.. include:: /main/deprecation_banner.rst
 
 Adapters and connections
 ###############################################
+
+.. include:: /main/deprecation_banner.rst
 
 .. toctree::
     adapters

@@ -1,7 +1,8 @@
-.. include:: /main/deprecation_banner.rst
 
 JSON
 ###############################################
+
+.. include:: /main/deprecation_banner.rst
 
 .. automodule:: axonius_api_client.api.asset_callbacks.base_json
    :members:

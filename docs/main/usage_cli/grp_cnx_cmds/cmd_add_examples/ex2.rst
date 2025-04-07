@@ -1,8 +1,9 @@
 .. include:: /main/.special.rst
-.. include:: /main/deprecation_banner.rst
 
 Command line options for settings
 ###############################################
+
+.. include:: /main/deprecation_banner.rst
 
 This way you won't be prompted for the values of each setting, which will allow
 you to automate adding a new connection.

@@ -1,8 +1,9 @@
 .. include:: /main/.special.rst
-.. include:: /main/deprecation_banner.rst
 
 devices/users get-fields-default
 ###############################################
+
+.. include:: /main/deprecation_banner.rst
 
 This command will produce a report of the default fields (columns) for users or devices.
 

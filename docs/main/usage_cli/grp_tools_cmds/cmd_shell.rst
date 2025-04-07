@@ -1,8 +1,9 @@
 .. include:: /main/.special.rst
-.. include:: /main/deprecation_banner.rst
 
 tools shell
 ###############################################
+
+.. include:: /main/deprecation_banner.rst
 
 This command launches a python interactive shell session.
 

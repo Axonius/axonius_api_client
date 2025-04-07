@@ -1,7 +1,8 @@
-.. include:: /main/deprecation_banner.rst
 
 Library backend
 ###############################################
+
+.. include:: /main/deprecation_banner.rst
 
 .. toctree::
     api/index

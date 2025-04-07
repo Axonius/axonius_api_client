@@ -1,8 +1,9 @@
 .. include:: /main/.special.rst
-.. include:: /main/deprecation_banner.rst
 
 Viewing Sections and Sub-Sections
 ###############################################
+
+.. include:: /main/deprecation_banner.rst
 
 There are a lot of settings that can be configured for the Axonius platform.
 These are seperated into three groups: ``settings-global``, ``settings-gui`` and `settings-lifecycle``.

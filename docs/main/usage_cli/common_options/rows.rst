@@ -1,10 +1,11 @@
 .. include:: /main/.special.rst
-.. include:: /main/deprecation_banner.rst
 
 .. _rows_option:
 
 Rows Option
 ###############################################
+
+.. include:: /main/deprecation_banner.rst
 
 Any command that has a "-r / --rows" option expects it's input to be from
 another commands output.

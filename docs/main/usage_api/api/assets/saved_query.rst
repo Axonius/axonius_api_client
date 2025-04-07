@@ -1,7 +1,8 @@
-.. include:: /main/deprecation_banner.rst
 
 Saved queries
 ###############################################
+
+.. include:: /main/deprecation_banner.rst
 
 .. automodule:: axonius_api_client.api.assets.saved_query
    :members:

@@ -1,8 +1,9 @@
 .. include:: /main/.special.rst
-.. include:: /main/deprecation_banner.rst
 
 devices/users saved-query get-by-name
 ###############################################
+
+.. include:: /main/deprecation_banner.rst
 
 This command will get a saved query by name for users or devices.
 

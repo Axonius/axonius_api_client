@@ -1,7 +1,8 @@
-.. include:: /main/deprecation_banner.rst
 
 Connection Handler
 ###############################################
+
+.. include:: /main/deprecation_banner.rst
 
 .. automodule:: axonius_api_client.connect
    :members:

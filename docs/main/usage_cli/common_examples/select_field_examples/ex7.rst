@@ -1,8 +1,9 @@
 .. include:: /main/.special.rst
-.. include:: /main/deprecation_banner.rst
 
 Select Fields: Using Regular Expressions Case 1
 ###############################################
+
+.. include:: /main/deprecation_banner.rst
 
 .. note::
    :blue:`added in 2.1.4`

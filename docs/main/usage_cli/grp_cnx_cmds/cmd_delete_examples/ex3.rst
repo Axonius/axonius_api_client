@@ -1,8 +1,9 @@
 .. include:: /main/.special.rst
-.. include:: /main/deprecation_banner.rst
 
 Delete with --force --wait 0 --delete-entities
 ###############################################
+
+.. include:: /main/deprecation_banner.rst
 
 This will delete a connection and all of its associated entities in 0 seconds.
 

@@ -1,8 +1,9 @@
 .. include:: /main/.special.rst
-.. include:: /main/deprecation_banner.rst
 
 Viewing Section and Sub-Section Values
 ###############################################
+
+.. include:: /main/deprecation_banner.rst
 
 Now that we know how to see all the sections and sub-sections we can work with. Lets take a
 look at one and see how it is currently configured. For this example, lets take a look at

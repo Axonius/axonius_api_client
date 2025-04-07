@@ -1,10 +1,11 @@
 .. include:: /main/.special.rst
-.. include:: /main/deprecation_banner.rst
 
 .. _api_quickstart:
 
 API Quickstart
 ###############################################
+
+.. include:: /main/deprecation_banner.rst
 
 * Follow the :ref:`Installation` steps
 * Setup the connection arguments using axonshell :ref:`tools_write_config`

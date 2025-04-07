@@ -1,8 +1,10 @@
 .. include:: /main/.special.rst
-.. include:: /main/deprecation_banner.rst
 
 Contribution
 ###################################################
+
+.. include:: /main/deprecation_banner.rst
+
 
 We welcome all contributions to `axonius-api-client`.
 

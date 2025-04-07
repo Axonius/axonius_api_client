@@ -1,8 +1,9 @@
 .. include:: /main/.special.rst
-.. include:: /main/deprecation_banner.rst
 
 users
 ###############################################
+
+.. include:: /main/deprecation_banner.rst
 
 This is a command group under the main :doc:`root` that has commands for getting
 user assets using queries built by the Query Wizard in the GUI, saved queries, and

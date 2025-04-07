@@ -1,8 +1,9 @@
 .. include:: /main/.special.rst
-.. include:: /main/deprecation_banner.rst
 
 adapters
 ###############################################
+
+.. include:: /main/deprecation_banner.rst
 
 This is a command group under the main :doc:`root` that has commands for getting
 metadata for adapters.

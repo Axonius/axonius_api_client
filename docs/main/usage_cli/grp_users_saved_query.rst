@@ -1,8 +1,9 @@
 .. include:: /main/.special.rst
-.. include:: /main/deprecation_banner.rst
 
 users saved_query
 ###############################################
+
+.. include:: /main/deprecation_banner.rst
 
 This is a sub-command group under :doc:`grp_users` that has commands
 to add, delete, or get saved queries for user assets.

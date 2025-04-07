@@ -1,7 +1,8 @@
-.. include:: /main/deprecation_banner.rst
 
 Enforcements and actions
 ###############################################
+
+.. include:: /main/deprecation_banner.rst
 
 .. toctree::
     enforcements

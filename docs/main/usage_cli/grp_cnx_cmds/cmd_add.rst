@@ -1,8 +1,9 @@
 .. include:: /main/.special.rst
-.. include:: /main/deprecation_banner.rst
 
 adapters cnx add
 ###############################################
+
+.. include:: /main/deprecation_banner.rst
 
 This command will add a new connection for an adapter on a node.
 

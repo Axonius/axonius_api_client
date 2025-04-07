@@ -1,8 +1,9 @@
 .. include:: /main/.special.rst
-.. include:: /main/deprecation_banner.rst
 
 Delete with --force
 ###############################################
+
+.. include:: /main/deprecation_banner.rst
 
 This will delete a connection in --wait seconds (30 by default).
 

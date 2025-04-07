@@ -1,8 +1,9 @@
 .. include:: /main/.special.rst
-.. include:: /main/deprecation_banner.rst
 
 adapters cnx test
 ###############################################
+
+.. include:: /main/deprecation_banner.rst
 
 This command will trigger a test (aka fetch) for a connection of an adapter on a node.
 

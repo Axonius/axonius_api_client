@@ -1,7 +1,8 @@
-.. include:: /main/deprecation_banner.rst
 
 Query Wizards
 ###############################################
+
+.. include:: /main/deprecation_banner.rst
 
 .. toctree::
    wizard

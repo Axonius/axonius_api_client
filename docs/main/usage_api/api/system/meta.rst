@@ -1,7 +1,8 @@
-.. include:: /main/deprecation_banner.rst
 
 Product metadata
 ###########################################################
+
+.. include:: /main/deprecation_banner.rst
 
 .. automodule:: axonius_api_client.api.system.meta
    :members:

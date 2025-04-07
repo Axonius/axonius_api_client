@@ -1,8 +1,9 @@
 .. include:: /main/.special.rst
-.. include:: /main/deprecation_banner.rst
 
 adapters cnx add-from-json
 ###############################################
+
+.. include:: /main/deprecation_banner.rst
 
 This command will add a perform a connectivity test for a connection for an adapter on
 a node.

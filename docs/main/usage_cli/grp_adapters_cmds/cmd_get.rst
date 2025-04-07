@@ -1,8 +1,9 @@
 .. include:: /main/.special.rst
-.. include:: /main/deprecation_banner.rst
 
 adapters get
 ###############################################
+
+.. include:: /main/deprecation_banner.rst
 
 This command allows you to get metadata of adapters and their connections.
 

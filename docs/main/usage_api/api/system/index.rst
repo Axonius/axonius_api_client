@@ -1,7 +1,8 @@
-.. include:: /main/deprecation_banner.rst
 
 System
 ###########################################################
+
+.. include:: /main/deprecation_banner.rst
 
 .. toctree::
     dashboard

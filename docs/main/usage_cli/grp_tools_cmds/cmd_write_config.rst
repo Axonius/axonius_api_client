@@ -1,10 +1,11 @@
 .. include:: /main/.special.rst
-.. include:: /main/deprecation_banner.rst
 
 .. _tools_write_config:
 
 tools write-config
 ###############################################
+
+.. include:: /main/deprecation_banner.rst
 
 This command will prompt for the :ref:`connection_options`, test if the supplied values connect properly, then write the variables to a .env file in the current
 working directory.

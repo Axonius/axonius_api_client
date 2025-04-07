@@ -1,8 +1,9 @@
 .. include:: /main/.special.rst
-.. include:: /main/deprecation_banner.rst
 
 devices/users count-by-saved-query
 ###############################################
+
+.. include:: /main/deprecation_banner.rst
 
 This command will get the count of assets that a saved query would return
 for users or devices and could be used as part of a script to do something based on

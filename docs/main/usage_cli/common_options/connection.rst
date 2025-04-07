@@ -1,10 +1,11 @@
 .. include:: /main/.special.rst
-.. include:: /main/deprecation_banner.rst
 
 .. _connection_options:
 
 Connection Options
 ###############################################
+
+.. include:: /main/deprecation_banner.rst
 
 All commands have a standard set of required options for connecting to an
 instance of Axonius:

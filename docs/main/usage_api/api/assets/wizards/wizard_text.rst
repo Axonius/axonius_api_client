@@ -1,7 +1,8 @@
-.. include:: /main/deprecation_banner.rst
 
 From text files
 ###############################################
+
+.. include:: /main/deprecation_banner.rst
 
 .. automodule:: axonius_api_client.api.wizards.wizard_text
    :members:

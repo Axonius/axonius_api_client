@@ -1,8 +1,9 @@
 .. include:: /main/.special.rst
-.. include:: /main/deprecation_banner.rst
 
 devices get-by-mac
 ###############################################
+
+.. include:: /main/deprecation_banner.rst
 
 This command lets you search for devices by MAC Address and export the data to CSV or JSON.
 

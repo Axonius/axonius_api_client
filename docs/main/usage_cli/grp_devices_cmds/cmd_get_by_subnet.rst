@@ -1,8 +1,9 @@
 .. include:: /main/.special.rst
-.. include:: /main/deprecation_banner.rst
 
 devices get-by-subnet
 ###############################################
+
+.. include:: /main/deprecation_banner.rst
 
 This command lets you search for devices that are in a given subnet and export the data to CSV or JSON.
 

@@ -1,7 +1,8 @@
-.. include:: /main/deprecation_banner.rst
 
 Export callbacks
 ###############################################
+
+.. include:: /main/deprecation_banner.rst
 
 .. toctree::
    base

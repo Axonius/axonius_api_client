@@ -1,8 +1,9 @@
 .. include:: /main/.special.rst
-.. include:: /main/deprecation_banner.rst
 
 Find Using Regular Expressions - No Matches Found
 #################################################
+
+.. include:: /main/deprecation_banner.rst
 
 This does the following:
 

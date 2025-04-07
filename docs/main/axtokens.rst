@@ -1,10 +1,11 @@
 .. include:: /main/.special.rst
-.. include:: /main/deprecation_banner.rst
 
 .. _axtokens:
 
 API Key and Secret
 #########################
+
+.. include:: /main/deprecation_banner.rst
 
 The API Key and Secret for an Axonius user is available from the :blue:`My Account` page.
 

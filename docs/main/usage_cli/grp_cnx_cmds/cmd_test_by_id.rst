@@ -1,8 +1,9 @@
 .. include:: /main/.special.rst
-.. include:: /main/deprecation_banner.rst
 
 adapters cnx test-by-id
 ###############################################
+
+.. include:: /main/deprecation_banner.rst
 
 This command will trigger a test_by_id (aka fetch) for a connection of an adapter on a node.
 

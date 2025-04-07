@@ -1,10 +1,11 @@
 .. include:: /main/.special.rst
-.. include:: /main/deprecation_banner.rst
 
 .. _export_options:
 
 Export Options
 ###############################################
+
+.. include:: /main/deprecation_banner.rst
 
 Commands return their data to STDOUT in JSON format by default. You can redirect
 STDOUT to a file in order to save the data.

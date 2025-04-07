@@ -1,8 +1,9 @@
 .. include:: /main/.special.rst
-.. include:: /main/deprecation_banner.rst
 
 Valid Name
 ###############################################
+
+.. include:: /main/deprecation_banner.rst
 
 This does the following:
 

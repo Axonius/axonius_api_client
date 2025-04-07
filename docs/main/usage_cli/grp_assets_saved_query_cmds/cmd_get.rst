@@ -1,8 +1,9 @@
 .. include:: /main/.special.rst
-.. include:: /main/deprecation_banner.rst
 
 devices/users saved-query get
 ###############################################
+
+.. include:: /main/deprecation_banner.rst
 
 This command will get all saved queries for users or devices.
 

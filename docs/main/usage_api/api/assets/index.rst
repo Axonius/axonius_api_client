@@ -1,7 +1,8 @@
-.. include:: /main/deprecation_banner.rst
 
 Assets
 ###############################################
+
+.. include:: /main/deprecation_banner.rst
 
 .. toctree::
    devices
