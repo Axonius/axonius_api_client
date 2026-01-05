@@ -2,6 +2,7 @@
 """API for working with adapter connections."""
 import dataclasses
 import re
+import time
 from typing import Callable, List, Optional, Type, Union
 
 import requests
@@ -483,11 +484,24 @@ class Cnx(ChildMixins):
         )
 
         if not result.working and not cnx_new["working"]:
-            err = f"Connection was added but had a failure connecting:\n{result}"
-            exc = CnxAddError(err)
-            exc.result = result
-            exc.cnx_new = cnx_new
-            raise exc
+            # Retry get_by_uuid for up to 10 seconds - allowing enough time for client to connect
+            retry_until = time.monotonic() + 10
+
+            while not cnx_new["working"] and time.monotonic() < retry_until:
+                time.sleep(1)
+                cnx_new = self.get_by_uuid(
+                    cnx_uuid=result.id,
+                    adapter_name=adapter["name"],
+                    adapter_node=adapter["node_meta"]["name"],
+                    tunnel=tunnel_id,
+                )
+
+            if not cnx_new["working"]:
+                err = f"Connection was added but had a failure connecting:\n{result}"
+                exc = CnxAddError(err)
+                exc.result = result
+                exc.cnx_new = cnx_new
+                raise exc
 
         return cnx_new
 
