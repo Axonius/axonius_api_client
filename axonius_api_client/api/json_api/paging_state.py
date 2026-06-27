@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""API for working with adapters."""
+"""API for working with paging state."""
 import dataclasses
 import datetime
 import logging

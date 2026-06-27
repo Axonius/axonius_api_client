@@ -100,7 +100,7 @@ def check_schema(schema: dict, configs: List, ignore_unknown_keys: bool = False)
 
     for i, key in enumerate(configs):
         if key not in schema_keys:
-            # add an execption here for special supported keys
+            # add an exception here for special supported keys
             if key.startswith('*'):
                 continue
             # process the rest like normal
