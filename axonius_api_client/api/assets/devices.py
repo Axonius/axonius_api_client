@@ -85,7 +85,7 @@ class Devices(AssetMixin):
         """Build a query to get assets where :attr:`FIELD_MAC` in values.
 
         Args:
-            values: list of mac addresss
+            values: list of mac addresses
             **kwargs: passed to :meth:`get_by_values`
         """
         kwargs["field"] = self.FIELD_MAC
@@ -97,7 +97,7 @@ class Devices(AssetMixin):
         """Build a query to get assets where :attr:`FIELD_MAC` regex matches value.
 
         Args:
-            value: regex of mac adress to match
+            value: regex of mac address to match
             **kwargs: passed to :meth:`get_by_value_regex`
         """
         kwargs["field"] = self.FIELD_MAC
@@ -109,7 +109,7 @@ class Devices(AssetMixin):
         """Build a query to get assets where :attr:`FIELD_MAC` == value.
 
         Args:
-            value: mac adress
+            value: mac address
             **kwargs: passed to :meth:`get_by_value`
         """
         kwargs["field"] = self.FIELD_MAC
@@ -121,7 +121,7 @@ class Devices(AssetMixin):
         """Build a query to get assets where :attr:`FIELD_IP` in values.
 
         Args:
-            values: list of ip address
+            values: list of ip addresses
             **kwargs: passed to :meth:`get_by_values`
         """
         kwargs["field"] = self.FIELD_IP
@@ -133,7 +133,7 @@ class Devices(AssetMixin):
         """Build a query to get assets where :attr:`FIELD_IP` regex matches value.
 
         Args:
-            values: regex of ip address to match
+            value: regex of ip address to match
             **kwargs: passed to :meth:`get_by_value_regex`
         """
         kwargs["field"] = self.FIELD_IP
