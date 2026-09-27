@@ -11,6 +11,12 @@ import OpenSSL
 from .enums import CertTypes
 from .utils import bytes_to_str, check_type, listify, str_to_bytes
 
+# pyOpenSSL 26.3.0 removed the CSR API (X509Req, dump_certificate_request,
+# load_certificate_request). Resolve it lazily so this module imports on both
+# older and newer pyOpenSSL; CSR support degrades to asn1crypto-only when absent.
+X509_REQ = getattr(OpenSSL.crypto, "X509Req", None)
+X509_TYPES = (OpenSSL.crypto.X509,) if X509_REQ is None else (OpenSSL.crypto.X509, X509_REQ)
+
 
 def get_der_cert_count(value: Union[str, bytes]) -> int:
     """Pass."""
@@ -222,19 +228,13 @@ def asn1_to_der(
     return value.dump()
 
 
-def x509_to_der(
-    value: Union[
-        OpenSSL.crypto.X509,
-        OpenSSL.crypto.X509Req,
-        List[Union[OpenSSL.crypto.X509, OpenSSL.crypto.X509Req]],
-    ]
-) -> Union[bytes, List[bytes]]:
-    """Pass."""
+def x509_to_der(value) -> Union[bytes, List[bytes]]:
+    """Convert an OpenSSL.crypto.X509 (or legacy X509Req) object, or a list of them, to DER."""
     if isinstance(value, list):
         return [x509_to_der(value=x) for x in value]
 
-    check_type(value=value, exp=(OpenSSL.crypto.X509, OpenSSL.crypto.X509Req))
+    check_type(value=value, exp=X509_TYPES)
     if isinstance(value, OpenSSL.crypto.X509):
         return OpenSSL.crypto.dump_certificate(OpenSSL.crypto.FILETYPE_ASN1, value)
-    if isinstance(value, OpenSSL.crypto.X509Req):
+    if X509_REQ is not None and isinstance(value, X509_REQ):
         return OpenSSL.crypto.dump_certificate_request(OpenSSL.crypto.FILETYPE_ASN1, value)

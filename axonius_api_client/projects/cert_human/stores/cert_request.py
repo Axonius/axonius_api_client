@@ -7,9 +7,9 @@ import asn1crypto.core
 import asn1crypto.csr
 import asn1crypto.keys
 import asn1crypto.x509
-import OpenSSL
 
 from ..convert import (
+    X509_REQ,
     asn1_to_der,
     der_to_asn1_csr,
     get_der_csr_count,
@@ -39,11 +39,12 @@ class CertRequest(Store):
     # EXTEND
     def __init__(
         self,
-        cert: Union[bytes, asn1crypto.csr.CertificationRequest, OpenSSL.crypto.X509Req],
+        cert: Union[bytes, asn1crypto.csr.CertificationRequest],
         **kwargs,
     ):
         """Pass."""
-        kwargs["exp"] = (bytes, asn1crypto.csr.CertificationRequest, OpenSSL.crypto.X509Req)
+        exp = (bytes, asn1crypto.csr.CertificationRequest)
+        kwargs["exp"] = exp if X509_REQ is None else (*exp, X509_REQ)
         super().__init__(cert=cert, **kwargs)
 
         if isinstance(cert, bytes):
@@ -54,7 +55,7 @@ class CertRequest(Store):
         elif isinstance(cert, asn1crypto.csr.CertificationRequest):
             self.CERT: bytes = asn1_to_der(value=cert)
             self.ASN1: asn1crypto.csr.CertificationRequest = cert
-        elif isinstance(cert, OpenSSL.crypto.X509Req):
+        elif X509_REQ is not None and isinstance(cert, X509_REQ):
             self.CERT: bytes = x509_to_der(value=cert)
             self.ASN1: asn1crypto.csr.CertificationRequest = der_to_asn1_csr(
                 value=self.CERT, source=self.SOURCE
